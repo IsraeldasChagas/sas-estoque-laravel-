@@ -1,0 +1,129 @@
+<section id="comprasSection" class="view-section hidden">
+  <div class="actions">
+    <button class="btn primary" id="openListaCompra">+ Nova lista</button>
+    <select id="listaCompraFiltroStatus" class="lista-compras__filtro">
+      <option value="ativas">Em andamento</option>
+      <option value="todas">Todas</option>
+      <option value="finalizadas">Finalizadas</option>
+    </select>
+  </div>
+  <div class="compras-grid">
+    <div class="table-card compras-listas-card">
+      <header>Listas de compras</header>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Lista</th>
+              <th>Unidade</th>
+              <th>Status</th>
+              <th>Planejado</th>
+              <th>Realizado</th>
+              <th>Itens</th>
+            </tr>
+          </thead>
+          <tbody id="listasComprasTable">
+            <tr>
+              <td colspan="6" style="text-align:center; color:#607d8b">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="table-card compras-detalhes-card">
+      <header>
+        <div>
+          <h2 id="listaCompraTitulo">Selecione uma lista</h2>
+          <p id="listaCompraSubtitulo" class="subtle-text"></p>
+        </div>
+        <div class="compras-status">
+          <span id="listaCompraStatus" class="status-pill status-pill--muted">--</span>
+          <button type="button" class="btn secondary" data-status="RASCUNHO" id="listaCompraStatusRascunho">Rascunho</button>
+          <button type="button" class="btn secondary" data-status="EM_COMPRAS" id="listaCompraStatusEmCompras">Em compras</button>
+          <button type="button" class="btn secondary" data-status="PAUSADA" id="listaCompraStatusPausada">Pausar</button>
+        </div>
+      </header>
+      <div class="compras-detalhes-body">
+        <div class="compras-detalhes-resumo">
+          <div>
+            <strong>Planejado</strong>
+            <span id="listaCompraTotalPlanejado">R$ 0,00</span>
+          </div>
+          <div>
+            <strong>Realizado</strong>
+            <span id="listaCompraTotalRealizado">R$ 0,00</span>
+          </div>
+          <div>
+            <strong>Itens Comprados</strong>
+            <span id="listaCompraItensResumo">0/0</span>
+          </div>
+        </div>
+        <label class="compras-observacoes">
+          Observacoes gerais
+          <textarea id="listaCompraObservacoes" rows="3" placeholder="Instrucoes, fornecedores preferenciais, alertas..."></textarea>
+        </label>
+        <div class="compras-detalhes-acoes">
+          <button type="button" class="btn secondary" id="listaCompraAdicionarItem">Adicionar Item</button>
+          <button type="button" class="btn secondary" id="listaCompraAdicionarEstabelecimento">Adicionar Estabelecimento</button>
+          <button type="button" class="btn danger" id="listaCompraFinalizar">Finalizar</button>
+          <button type="button" class="btn primary" id="listaCompraGerarPdf" disabled>Gerar PDF</button>
+          <button type="button" class="btn neutral" id="listaCompraPdf" disabled>Abrir PDF</button>
+          <button type="button" class="btn primary" id="listaCompraLancarEstoque" disabled>Lancar no Estoque</button>
+        </div>
+        <section>
+          <h3>Itens da lista</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Planejado</th>
+                  <th>Comprado</th>
+                  <th>Preco unitario</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Estabelecimento</th>
+                  <th>Observacoes</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="listaComprasItensTable">
+                <tr>
+                  <td colspan="9" style="text-align:center; color:#607d8b">Selecione uma lista para visualizar os itens.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h3>Estabelecimentos visitados</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Localizacao</th>
+                  <th>Pagamento</th>
+                  <th>Observacoes</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="listaComprasEstabelecimentosTable">
+                <tr>
+                  <td colspan="5" style="text-align:center; color:#607d8b">Nenhum estabelecimento.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h3>Anexos</h3>
+          <ul id="listaComprasAnexos" class="anexos-lista">
+            <li>Nenhum anexo enviado.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+

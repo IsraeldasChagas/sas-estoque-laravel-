@@ -1,0 +1,212 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║      🔍 FILTROS DE BOLETOS - 3 FILTROS COMBINADOS! 🔍         ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+✅ IMPLEMENTADO:
+
+3 FILTROS LADO A LADO:
+  📅 Mês/Ano        🏢 Unidade        📊 Status        🔄 Limpar
+
+
+🎯 FILTROS DISPONÍVEIS:
+
+1️⃣ FILTRO POR MÊS/ANO 📅
+   → Últimos 12 meses + "Todos os boletos"
+   → Filtra pela data de vencimento
+
+2️⃣ FILTRO POR UNIDADE 🏢
+   → Carregado automaticamente da API
+   → "Todas as unidades" + suas unidades
+
+3️⃣ FILTRO POR STATUS 📊
+   → Todos os status (padrão)
+   → A vencer
+   → Vencido
+   → Pago
+   → Cancelado
+
+4️⃣ BOTÃO LIMPAR 🔄
+   → Remove todos os filtros
+   → Volta para "Todos"
+
+
+🚀 COMO USAR:
+
+1️⃣ FILTRO SIMPLES:
+   a) Selecione apenas um filtro
+   b) Exemplo: Status = "Vencido"
+   c) ✅ Mostra apenas boletos vencidos
+
+2️⃣ FILTROS COMBINADOS:
+   a) Selecione múltiplos filtros
+   b) Exemplo:
+      • Mês: Janeiro 2026
+      • Unidade: Matriz
+      • Status: Pago
+   c) ✅ Mostra apenas:
+      - Boletos de Janeiro 2026
+      - Da unidade Matriz
+      - Que estão pagos
+
+3️⃣ LIMPAR FILTROS:
+   a) Clique no botão "🔄 Limpar Filtros"
+   b) ✅ Todos os filtros voltam para "Todos"
+   c) ✅ Mostra todos os boletos
+
+
+🧪 TESTES:
+
+TESTE 1 - Filtro de Status:
+  1. Vá em: Financeiro > Boletos
+  2. Selecione: Status = "Vencido"
+  3. ✅ Deve mostrar só vencidos
+  4. Clique em: "🔄 Limpar Filtros"
+  5. ✅ Volta a mostrar todos
+
+TESTE 2 - Filtros Combinados:
+  1. Selecione: Mês = "Janeiro 2026"
+  2. Selecione: Status = "Pago"
+  3. ✅ Mostra boletos pagos de Janeiro
+  4. Selecione: Unidade = (escolha uma)
+  5. ✅ Refina ainda mais a busca
+
+TESTE 3 - Filtro de Unidade:
+  1. Selecione: Unidade = "Matriz"
+  2. ✅ Mostra apenas boletos da Matriz
+  3. Troque: Unidade = "Filial"
+  4. ✅ Atualiza automaticamente
+
+TESTE 4 - Limpar Tudo:
+  1. Aplique vários filtros
+  2. Clique: "🔄 Limpar Filtros"
+  3. ✅ Todos os selects voltam para "Todos"
+  4. ✅ Tabela mostra tudo
+
+
+📊 EXEMPLOS DE USO:
+
+EXEMPLO 1 - Conferir Vencidos:
+  Status: [Vencido]
+  → Resultado: Todos os boletos vencidos
+
+EXEMPLO 2 - Pagamentos do Mês:
+  Mês: [Janeiro 2026]
+  Status: [Pago]
+  → Resultado: Tudo que foi pago em Janeiro
+
+EXEMPLO 3 - Pendências de uma Unidade:
+  Unidade: [Filial Centro]
+  Status: [A vencer]
+  → Resultado: Boletos pendentes da Filial
+
+EXEMPLO 4 - Auditoria Específica:
+  Mês: [Dezembro 2025]
+  Unidade: [Matriz]
+  Status: [Pago]
+  → Resultado: Pagamentos de Dez na Matriz
+
+
+🎨 VISUAL:
+
+┌──────────────────────────────────────────────────────────────┐
+│                                                              │
+│  📅 Mês/Ano:          🏢 Unidade:         📊 Status:        │
+│  [Janeiro 2026 ▼]    [Matriz ▼]         [Pago ▼]     [🔄]  │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+
+
+✨ FUNCIONALIDADES:
+
+✅ Atualização automática
+   → Ao mudar filtro, tabela atualiza sozinha
+
+✅ Cards atualizam também
+   → Resumo financeiro reflete os filtros
+
+✅ Feedback visual
+   → Toast: "✅ Filtros aplicados"
+   → Toast: "✅ Filtros limpos"
+
+✅ Combinação livre
+   → Use 1, 2 ou 3 filtros
+   → Todos são opcionais
+
+
+💡 DICAS:
+
+DICA 1: Ver apenas vencidos
+  → Deixe Mês e Unidade em "Todos"
+  → Selecione Status: "Vencido"
+
+DICA 2: Auditoria mensal
+  → Selecione o mês desejado
+  → Deixe outros em "Todos"
+  → Confira tudo do período
+
+DICA 3: Por unidade específica
+  → Selecione a unidade
+  → Veja todos os boletos dela
+
+DICA 4: Limpar rapidamente
+  → Use o botão "🔄 Limpar Filtros"
+  → Não precisa limpar um por um
+
+
+📋 CENÁRIOS PRÁTICOS:
+
+CENÁRIO 1: "Quero cobrar os vencidos"
+  Status: [Vencido]
+  ✅ Lista completa para cobrar
+
+CENÁRIO 2: "O que foi pago este mês?"
+  Mês: [Janeiro 2026]
+  Status: [Pago]
+  ✅ Relatório de pagamentos
+
+CENÁRIO 3: "Boletos da filial"
+  Unidade: [Filial Centro]
+  ✅ Tudo da filial
+
+CENÁRIO 4: "Pagos na matriz em dez"
+  Mês: [Dezembro 2025]
+  Unidade: [Matriz]
+  Status: [Pago]
+  ✅ Auditoria específica
+
+
+✅ IMPLEMENTADO:
+
+• 3 filtros funcionais
+• Botão limpar filtros
+• Atualização automática
+• Carregamento dinâmico de unidades
+• Feedback visual
+• Backend já suportava
+
+
+📖 DOCUMENTAÇÃO COMPLETA:
+
+Leia: FILTROS-BOLETOS.md
+
+Contém:
+• Exemplos detalhados
+• Código técnico
+• Cenários de uso
+• Como testar
+
+
+════════════════════════════════════════════════════════════════
+
+TESTE AGORA:
+
+1. Vá em: Financeiro > Boletos
+2. Veja os 3 filtros lado a lado
+3. Teste combinando filtros diferentes
+4. Use "🔄 Limpar Filtros" para resetar
+5. ✅ Funciona perfeitamente!
+
+
+🎉 FILTROS 100% FUNCIONAIS! 🎉

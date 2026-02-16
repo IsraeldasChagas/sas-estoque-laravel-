@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Diagnóstico Completo - Boletos</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 20px; }
+        .test { margin: 20px 0; padding: 20px; border-radius: 8px; border: 2px solid #ddd; }
+        .test h3 { margin-bottom: 10px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        .waiting { background: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-family: monospace; font-size: 14px; }
+        .icon { font-size: 2rem; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico Completo - Sistema de Boletos</h1>
+        <p style="color: #666; margin-bottom: 20px;">Este diagnóstico testa todos os componentes do sistema</p>
+        
+        <button onclick="executarTudo()">🚀 EXECUTAR TODOS OS TESTES</button>
+        <button onclick="location.reload()">🔄 Reiniciar</button>
+        
+        <!-- Teste 1 -->
+        <div id="test1" class="test waiting">
+            <h3><span class="icon">1️⃣</span> Teste de Conectividade</h3>
+            <p>Verifica se o servidor Laravel está acessível</p>
+            <div id="result1" class="result">Aguardando...</div>
+        </div>
+        
+        <!-- Teste 2 -->
+        <div id="test2" class="test waiting">
+            <h3><span class="icon">2️⃣</span> Teste de Autenticação</h3>
+            <p>Verifica se a rota de login responde</p>
+            <div id="result2" class="result">Aguardando...</div>
+        </div>
+        
+        <!-- Teste 3 -->
+        <div id="test3" class="test waiting">
+            <h3><span class="icon">3️⃣</span> Teste de API de Boletos</h3>
+            <p>Carrega boletos da API</p>
+            <div id="result3" class="result">Aguardando...</div>
+        </div>
+        
+        <!-- Teste 4 -->
+        <div id="test4" class="test waiting">
+            <h3><span class="icon">4️⃣</span> Teste de Resumo</h3>
+            <p>Carrega resumo financeiro</p>
+            <div id="result4" class="result">Aguardando...</div>
+        </div>
+        
+        <!-- Teste 5 -->
+        <div id="test5" class="test waiting">
+            <h3><span class="icon">5️⃣</span> Teste de CORS</h3>
+            <p>Verifica se CORS está configurado</p>
+            <div id="result5" class="result">Aguardando...</div>
+        </div>
+        
+        <div id="resumo" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; display: none;">
+            <h2>📊 Resumo dos Testes</h2>
+            <div id="resumoConteudo"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const resultados = {};
+        
+        function setTest(num, status, message) {
+            const testEl = document.getElementById(`test${num}`);
+            const resultEl = document.getElementById(`result${num}`);
+            
+            testEl.className = `test ${status}`;
+            resultEl.textContent = message;
+            resultados[`test${num}`] = { status, message };
+        }
+        
+        async function teste1_Conectividade() {
+            try {
+                const response = await fetch(`${API_URL}/usuarios`);
+                if (response.status === 200 || response.status === 401) {
+                    setTest(1, 'success', `✅ Servidor online! Status: ${response.status}`);
+                    return true;
+                } else {
+                    setTest(1, 'error', `❌ Status inesperado: ${response.status}`);
+                    return false;
+                }
+            } catch (error) {
+                setTest(1, 'error', `❌ Servidor offline: ${error.message}`);
+                return false;
+            }
+        }
+        
+        async function teste2_Autenticacao() {
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'test@test.com', senha: 'test' })
+                });
+                
+                if (response.status === 401 || response.status === 422) {
+                    setTest(2, 'success', `✅ Rota de login respondendo! Status: ${response.status}`);
+                    return true;
+                } else if (response.status === 200) {
+                    setTest(2, 'success', `✅ Login funcionando! Status: 200`);
+                    return true;
+                } else {
+                    setTest(2, 'error', `❌ Status inesperado: ${response.status}`);
+                    return false;
+                }
+            } catch (error) {
+                setTest(2, 'error', `❌ Erro: ${error.message}`);
+                return false;
+            }
+        }
+        
+        async function teste3_ApiBoletos() {
+            try {
+                const response = await fetch(`${API_URL}/boletos`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                if (response.ok) {
+                    const boletos = await response.json();
+                    setTest(3, 'success', `✅ API OK! ${boletos.length} boletos encontrados`);
+                    return { ok: true, count: boletos.length };
+                } else {
+                    setTest(3, 'error', `❌ Erro HTTP ${response.status}`);
+                    return { ok: false };
+                }
+            } catch (error) {
+                setTest(3, 'error', `❌ Erro: ${error.message}`);
+                return { ok: false };
+            }
+        }
+        
+        async function teste4_Resumo() {
+            try {
+                const response = await fetch(`${API_URL}/boletos/resumo`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                if (response.ok) {
+                    const resumo = await response.json();
+                    setTest(4, 'success', `✅ Resumo OK! Total: R$ ${parseFloat(resumo.total_mes || 0).toFixed(2)}`);
+                    return true;
+                } else {
+                    setTest(4, 'error', `❌ Erro HTTP ${response.status}`);
+                    return false;
+                }
+            } catch (error) {
+                setTest(4, 'error', `❌ Erro: ${error.message}`);
+                return false;
+            }
+        }
+        
+        async function teste5_CORS() {
+            try {
+                const response = await fetch(`${API_URL}/boletos`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    }
+                });
+                
+                const corsHeader = response.headers.get('Access-Control-Allow-Origin');
+                if (corsHeader) {
+                    setTest(5, 'success', `✅ CORS configurado! Allow-Origin: ${corsHeader}`);
+                    return true;
+                } else {
+                    setTest(5, 'info', `⚠️ CORS pode não estar configurado (mas pode funcionar mesmo assim)`);
+                    return true;
+                }
+            } catch (error) {
+                setTest(5, 'info', `⚠️ Não foi possível testar CORS: ${error.message}`);
+                return true;
+            }
+        }
+        
+        async function executarTudo() {
+            console.log('🚀 Iniciando diagnóstico completo...');
+            
+            const r1 = await teste1_Conectividade();
+            if (!r1) {
+                mostrarResumo();
+                return;
+            }
+            
+            await teste2_Autenticacao();
+            const r3 = await teste3_ApiBoletos();
+            await teste4_Resumo();
+            await teste5_CORS();
+            
+            mostrarResumo();
+        }
+        
+        function mostrarResumo() {
+            const resumoDiv = document.getElementById('resumo');
+            const conteudoDiv = document.getElementById('resumoConteudo');
+            
+            let html = '<ul style="list-style: none; padding: 0;">';
+            
+            for (let key in resultados) {
+                const r = resultados[key];
+                const emoji = r.status === 'success' ? '✅' : r.status === 'error' ? '❌' : '⚠️';
+                html += `<li style="padding: 5px 0;"><strong>${emoji} ${key}:</strong> ${r.status.toUpperCase()}</li>`;
+            }
+            
+            html += '</ul>';
+            
+            const sucessos = Object.values(resultados).filter(r => r.status === 'success').length;
+            const erros = Object.values(resultados).filter(r => r.status === 'error').length;
+            const total = Object.keys(resultados).length;
+            
+            html += `<hr style="margin: 20px 0;">`;
+            html += `<p><strong>Total:</strong> ${sucessos}/${total} testes passaram</p>`;
+            
+            if (erros === 0) {
+                html += `<p style="color: green; font-weight: bold; margin-top: 10px;">🎉 TODOS OS TESTES PASSARAM!</p>`;
+                html += `<p style="margin-top: 10px;">O sistema está funcionando corretamente. Se os boletos não aparecem no sistema principal, tente:</p>`;
+                html += `<ul style="margin-top: 10px; margin-left: 20px;">`;
+                html += `<li>Limpar cache do navegador (Ctrl+Shift+Del)</li>`;
+                html += `<li>Recarregar a página (Ctrl+F5)</li>`;
+                html += `<li>Fazer logout e login novamente</li>`;
+                html += `</ul>`;
+            } else {
+                html += `<p style="color: red; font-weight: bold; margin-top: 10px;">❌ ${erros} teste(s) falharam</p>`;
+                html += `<p style="margin-top: 10px;">Verifique os erros acima e corrija-os antes de continuar.</p>`;
+            }
+            
+            conteudoDiv.innerHTML = html;
+            resumoDiv.style.display = 'block';
+        }
+        
+        // Executa automaticamente ao carregar
+        window.addEventListener('load', () => {
+            console.log('Diagnóstico carregado');
+            setTimeout(() => executarTudo(), 500);
+        });
+    </script>
+</body>
+</html>

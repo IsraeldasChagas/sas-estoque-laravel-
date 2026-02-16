@@ -1,0 +1,10 @@
+// Arquivo de configuração do frontend
+// Copie este arquivo para config.js e ajuste a URL da API conforme necessário
+
+window.APP_CONFIG = {
+  // URL base da API backend
+  // Para servidor remoto, use o IP ou domínio do servidor
+  // Exemplo: "http://186.209.113.112:5000/api" ou "http://seu-dominio.com:5000/api"
+  API_URL: "http://localhost:5000/api"
+};
+

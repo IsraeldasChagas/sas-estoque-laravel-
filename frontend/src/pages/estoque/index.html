@@ -1,0 +1,55 @@
+<section id="estoqueSection" class="view-section hidden">
+  <div class="actions">
+    <h2>Consulta de Estoque</h2>
+  </div>
+  <div class="table-card">
+    <header>Selecione um produto para consultar o estoque</header>
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+        Produto
+      </label>
+      <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px;">
+        <option value="">Selecione um produto</option>
+      </select>
+    </div>
+    <div id="estoqueInfo" style="display: none;">
+      <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <h3 id="estoqueProdutoNome" style="margin: 0 0 1rem 0; color: #1976d2;"></h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <div style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Quantidade Total</div>
+            <div id="estoqueTotalQtd" style="font-size: 1.5rem; font-weight: 700; color: #1976d2;">0</div>
+            <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;" id="estoqueUnidadeBase"></div>
+          </div>
+          <div id="estoqueCardUnitario" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Unitário Médio</div>
+            <div id="estoqueTotalUnitario" style="font-size: 1.5rem; font-weight: 700; color: #ff9800;">R$ 0,00</div>
+          </div>
+          <div id="estoqueCardTotal" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Total</div>
+            <div id="estoqueTotalValor" style="font-size: 1.5rem; font-weight: 700; color: #4caf50;">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Unidade</th>
+              <th>Quantidade</th>
+              <th class="estoque-col-valor-unitario">Valor Unitário</th>
+              <th class="estoque-col-valor-total">Valor Total</th>
+              <th>Nº de Lotes</th>
+            </tr>
+          </thead>
+          <tbody id="estoqueTable">
+            <tr>
+              <td colspan="5" style="text-align: center; color: #607d8b;">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+

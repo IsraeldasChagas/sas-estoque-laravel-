@@ -1,0 +1,1 @@
+window.APP_CONFIG = { API_URL: "http://186.209.113.112:5000" }; 

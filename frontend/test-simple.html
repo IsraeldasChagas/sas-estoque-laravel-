@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Simples - Boletos</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; }
+        .success { background: #4CAF50; color: white; }
+        .info { background: #2196F3; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste Simples - Carregar Boletos</h1>
+    
+    <button class="success" onclick="carregarBoletos()">📋 Carregar Todos os Boletos</button>
+    <button class="info" onclick="carregarResumo()">💰 Carregar Resumo</button>
+    
+    <h2 id="titulo">Carregando...</h2>
+    <div id="resultado"></div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        
+        async function carregarBoletos() {
+            console.log('🚀 Iniciando...');
+            const titulo = document.getElementById('titulo');
+            const resultado = document.getElementById('resultado');
+            
+            titulo.textContent = 'Carregando boletos...';
+            resultado.innerHTML = '';
+            
+            try {
+                const url = `${API_URL}/boletos`;
+                console.log('📤 URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                console.log('📥 Status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Erro ${response.status}: ${errorText}`);
+                }
+                
+                const boletos = await response.json();
+                console.log('✅ Boletos recebidos:', boletos.length);
+                console.log('📋 Dados:', boletos);
+                
+                titulo.textContent = `Total de Boletos: ${boletos.length}`;
+                
+                if (boletos.length === 0) {
+                    resultado.innerHTML = '<p>Nenhum boleto encontrado!</p>';
+                    return;
+                }
+                
+                let html = '<table><thead><tr>';
+                html += '<th>ID</th><th>Fornecedor</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th>';
+                html += '</tr></thead><tbody>';
+                
+                boletos.forEach(b => {
+                    html += '<tr>';
+                    html += `<td>${b.id}</td>`;
+                    html += `<td>${b.fornecedor}</td>`;
+                    html += `<td>${b.descricao}</td>`;
+                    html += `<td>R$ ${parseFloat(b.valor).toFixed(2)}</td>`;
+                    html += `<td>${b.data_vencimento}</td>`;
+                    html += `<td>${b.status}</td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                resultado.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                titulo.textContent = 'ERRO!';
+                resultado.innerHTML = `<p style="color: red;"><strong>Erro:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        async function carregarResumo() {
+            console.log('💰 Carregando resumo...');
+            const titulo = document.getElementById('titulo');
+            const resultado = document.getElementById('resultado');
+            
+            titulo.textContent = 'Carregando resumo...';
+            
+            try {
+                const url = `${API_URL}/boletos/resumo`;
+                console.log('📤 URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                console.log('📥 Status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}`);
+                }
+                
+                const resumo = await response.json();
+                console.log('✅ Resumo:', resumo);
+                
+                titulo.textContent = 'Resumo Financeiro';
+                resultado.innerHTML = `
+                    <div style="background: #f0f0f0; padding: 20px; border-radius: 8px;">
+                        <h3>💳 Total do Mês: R$ ${parseFloat(resumo.total_mes || 0).toFixed(2)}</h3>
+                        <h3>✅ Pago em Dia: R$ ${parseFloat(resumo.pago_em_dia || 0).toFixed(2)}</h3>
+                        <h3>⚠️ Juros Pagos: R$ ${parseFloat(resumo.juros_pagos || 0).toFixed(2)}</h3>
+                        <h3>💸 Economia: R$ ${parseFloat(resumo.economia || 0).toFixed(2)}</h3>
+                        <hr>
+                        <p>Total de Boletos: ${resumo.total_boletos}</p>
+                        <p>Boletos Pagos: ${resumo.boletos_pagos}</p>
+                        <p>Boletos Vencidos: ${resumo.boletos_vencidos}</p>
+                        <p>Boletos a Vencer: ${resumo.boletos_a_vencer}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                titulo.textContent = 'ERRO!';
+                resultado.innerHTML = `<p style="color: red;"><strong>Erro:</strong> ${error.message}</p>`;
+            }
+        }
+        
+        // Carrega automaticamente ao abrir a página
+        window.onload = () => {
+            carregarBoletos();
+        };
+    </script>
+</body>
+</html>

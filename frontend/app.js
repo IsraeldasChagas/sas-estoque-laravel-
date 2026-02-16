@@ -1,0 +1,10288 @@
+/* eslint-disable no-alert */
+
+// ⚠️ CONFIGURAÇÃO CRÍTICA - MODIFICAR COM CUIDADO ⚠️
+// Resolve a URL base para chamadas ao backend permitindo sobrescrever via configuracao externa.
+// Fallback deve ser http://localhost:5000/api (porta do backend Laravel)
+const API_URL = (() => {
+  const fallback = "http://localhost:5000/api";
+  if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
+    return window.APP_CONFIG.API_URL;
+  }
+  return fallback;
+})();
+
+const storageKey = "sas-estoque-user";
+const currentSectionKey = "sas-estoque-current-section";
+
+// Colecao das principais referencias de interface usadas pelos modulos.
+const dom = {
+  toast: document.getElementById("toast"),
+  loginOverlay: document.getElementById("loginOverlay"),
+  appShell: document.getElementById("appShell"),
+  userName: document.getElementById("userName"),
+  userRole: document.getElementById("userRole"),
+  userEmail: document.getElementById("userEmail"),
+  loginForm: document.getElementById("loginForm"),
+  logoutBtn: document.getElementById("logoutBtn"),
+  matrixCanvas: document.getElementById("matrixCanvas"),
+  sidebar: document.getElementById("sidebar"),
+  sidebarBackdrop: document.getElementById("sidebarBackdrop"),
+  menuToggle: document.getElementById("menuToggle"),
+  navLinks: Array.from(document.querySelectorAll(".nav-link[data-section]")),
+  sections: Array.from(document.querySelectorAll(".view-section")),
+  movTable: document.getElementById("movTable"),
+  lotesTable: document.getElementById("lotesTable"),
+  lotesManageTable: document.getElementById("lotesManageTable"),
+  produtosTable: document.getElementById("produtosTable"),
+  estoqueSection: document.getElementById("estoqueSection"),
+  estoqueProdutoSelect: document.getElementById("estoqueProdutoSelect"),
+  estoqueInfo: document.getElementById("estoqueInfo"),
+  estoqueProdutoNome: document.getElementById("estoqueProdutoNome"),
+  estoqueTotalQtd: document.getElementById("estoqueTotalQtd"),
+  estoqueTotalUnitario: document.getElementById("estoqueTotalUnitario"),
+  estoqueTotalValor: document.getElementById("estoqueTotalValor"),
+  estoqueUnidadeBase: document.getElementById("estoqueUnidadeBase"),
+  estoqueTable: document.getElementById("estoqueTable"),
+  unidadesTable: document.getElementById("unidadesTable"),
+  usuariosTable: document.getElementById("usuariosTable"),
+  listasComprasTable: document.getElementById("listasComprasTable"),
+  listaComprasItensTable: document.getElementById("listaComprasItensTable"),
+  listaComprasEstabelecimentosTable: document.getElementById("listaComprasEstabelecimentosTable"),
+  listaComprasAnexos: document.getElementById("listaComprasAnexos"),
+  produtosDashboardTable: document.getElementById("produtosDashboardTable"),
+  kpiProdutos: document.getElementById("kpiProdutos"),
+  kpiVencer: document.getElementById("kpiVencer"),
+  kpiLotesAVencer: document.getElementById("kpiLotesAVencer"),
+  kpiLotesVencidos: document.getElementById("kpiLotesVencidos"),
+  kpiMinimo: document.getElementById("kpiMinimo"),
+  cardMinimo: document.getElementById("cardMinimo"),
+  cardMinimoHint: document.getElementById("cardMinimoHint"),
+  kpiPerdas: document.getElementById("kpiPerdas"),
+  cardPerdas: document.getElementById("cardPerdas"),
+  cardPerdasHint: document.getElementById("cardPerdasHint"),
+  cardLotesAVencer: document.getElementById("cardLotesAVencer"),
+  cardLotesVencidos: document.getElementById("cardLotesVencidos"),
+  cardComprasAndamento: document.getElementById("cardComprasAndamento"),
+  cardProdutosAtivos: document.getElementById("cardProdutosAtivos"),
+  cardLotes7Dias: document.getElementById("cardLotes7Dias"),
+  kpiComprasAtivas: document.getElementById("kpiComprasAtivas"),
+  loteStatusChart: document.getElementById("loteStatusChart"),
+  lotesFilterForm: document.getElementById("lotesFilterForm"),
+  lotesFiltroPesquisa: document.getElementById("lotesFiltroPesquisa"),
+  lotesFiltroProduto: document.getElementById("lotesFiltroProduto"),
+  lotesFiltroUnidade: document.getElementById("lotesFiltroUnidade"),
+  lotesFiltroStatus: document.getElementById("lotesFiltroStatus"),
+  lotesFiltroValidadeDe: document.getElementById("lotesFiltroValidadeDe"),
+  lotesFiltroValidadeAte: document.getElementById("lotesFiltroValidadeAte"),
+  aplicarFiltrosLotes: document.getElementById("aplicarFiltrosLotes"),
+  limparFiltrosLotes: document.getElementById("limparFiltrosLotes"),
+  openNovoLoteBtn: document.getElementById("openNovoLote"),
+  produtosModal: document.getElementById("produtoModal"),
+  produtosForm: document.getElementById("produtoForm"),
+  produtoModalTitle: document.getElementById("produtoModalTitle"),
+  produtoFormFeedback: document.getElementById("produtoFormFeedback"),
+  openProdutoBtn: document.getElementById("openProduto"),
+  closeProdutoBtn: document.getElementById("closeProduto"),
+  cancelProdutoBtn: document.getElementById("cancelProduto"),
+  usuarioModal: document.getElementById("usuarioModal"),
+  usuarioForm: document.getElementById("usuarioForm"),
+  usuarioModalTitle: document.getElementById("usuarioModalTitle"),
+  usuarioFormFeedback: document.getElementById("usuarioFormFeedback"),
+  usuarioFotoInput: document.getElementById("usuarioFotoInput"),
+  usuarioFotoTrocar: document.getElementById("usuarioFotoTrocar"),
+  usuarioFotoRemover: document.getElementById("usuarioFotoRemover"),
+  usuarioAvatarPreview: document.getElementById("usuarioAvatarPreview"),
+  openUsuarioBtn: document.getElementById("openUsuario"),
+  closeUsuarioBtn: document.getElementById("closeUsuario"),
+  cancelUsuarioBtn: document.getElementById("cancelUsuario"),
+  openListaCompraBtn: document.getElementById("openListaCompra"),
+  listaCompraModal: document.getElementById("listaCompraModal"),
+  listaCompraForm: document.getElementById("listaCompraForm"),
+  listaCompraModalTitle: document.getElementById("listaCompraModalTitle"),
+  closeListaCompraBtn: document.getElementById("closeListaCompra"),
+  cancelListaCompraBtn: document.getElementById("cancelListaCompra"),
+  openSugestoesComprasBtn: document.getElementById("openSugestoesCompras"),
+  sugestoesComprasModal: document.getElementById("sugestoesComprasModal"),
+  closeSugestoesComprasBtn: document.getElementById("closeSugestoesCompras"),
+  sugestoesFiltroUnidade: document.getElementById("sugestoesFiltroUnidade"),
+  sugestoesDiasAnalise: document.getElementById("sugestoesDiasAnalise"),
+  sugestoesDiasProjecao: document.getElementById("sugestoesDiasProjecao"),
+  sugestoesBuscarBtn: document.getElementById("sugestoesBuscar"),
+  sugestoesComprasContent: document.getElementById("sugestoesComprasContent"),
+  sugestoesComprasLoading: document.getElementById("sugestoesComprasLoading"),
+  listaCompraTitulo: document.getElementById("listaCompraTitulo"),
+  listaCompraSubtitulo: document.getElementById("listaCompraSubtitulo"),
+  listaCompraStatus: document.getElementById("listaCompraStatus"),
+  listaCompraObservacoes: document.getElementById("listaCompraObservacoes"),
+  listaCompraTotalPlanejado: document.getElementById("listaCompraTotalPlanejado"),
+  listaCompraTotalRealizado: document.getElementById("listaCompraTotalRealizado"),
+  loteModal: document.getElementById("loteModal"),
+  loteModalTitle: document.getElementById("loteModalTitle"),
+  loteForm: document.getElementById("loteForm"),
+  closeLoteBtn: document.getElementById("closeLote"),
+  cancelLoteBtn: document.getElementById("cancelLote"),
+  boletoModal: document.getElementById("boletoModal"),
+  boletoForm: document.getElementById("boletoForm"),
+  boletoModalTitle: document.getElementById("boletoModalTitle"),
+  closeBoletoBtn: document.getElementById("closeBoleto"),
+  cancelBoletoBtn: document.getElementById("cancelBoleto"),
+  openNovoBoletoBtn: document.getElementById("openNovoBoleto"),
+  boletosMesAnoFiltro: document.getElementById("boletosMesAnoFiltro"),
+  boletosUnidadeFiltro: document.getElementById("boletosUnidadeFiltro"),
+  boletosStatusFiltro: document.getElementById("boletosStatusFiltro"),
+  limparFiltrosBoletos: document.getElementById("limparFiltrosBoletos"),
+  boletosTable: document.getElementById("boletosTable"),
+  boletosTotalMes: document.getElementById("boletosTotalMes"),
+  boletosPagoEmDia: document.getElementById("boletosPagoEmDia"),
+  boletosJurosPagos: document.getElementById("boletosJurosPagos"),
+  boletosAtrasados: document.getElementById("boletosAtrasados"),
+  passwordToggles: Array.from(document.querySelectorAll(".password-toggle")),
+  listaCompraItensResumo: document.getElementById("listaCompraItensResumo"),
+  listaCompraStatusRascunho: document.getElementById("listaCompraStatusRascunho"),
+  listaCompraStatusEmCompras: document.getElementById("listaCompraStatusEmCompras"),
+  listaCompraStatusPausada: document.getElementById("listaCompraStatusPausada"),
+  listaCompraAdicionarItem: document.getElementById("listaCompraAdicionarItem"),
+  listaCompraAdicionarEstabelecimento: document.getElementById("listaCompraAdicionarEstabelecimento"),
+  listaCompraFinalizar: document.getElementById("listaCompraFinalizar"),
+  listaCompraGerarPdf: document.getElementById("listaCompraGerarPdf"),
+  listaCompraPdf: document.getElementById("listaCompraPdf"),
+  listaCompraLancarEstoque: document.getElementById("listaCompraLancarEstoque"),
+  listaCompraFiltroStatus: document.getElementById("listaCompraFiltroStatus"),
+  locaisTable: document.getElementById("locaisTable"),
+  openLocalModalBtn: document.getElementById("openLocalModal"),
+  localModal: document.getElementById("localModal"),
+  localModalTitle: document.querySelector("#localModal h2"),
+  localForm: document.getElementById("localForm"),
+  closeLocalModalBtn: document.getElementById("closeLocalModal"),
+  cancelLocalBtn: document.getElementById("cancelLocal"),
+  localUnidadeSelect: document.getElementById("localUnidadeSelect"),
+  localTipoSelect: document.getElementById("localTipoSelect"),
+  localNivelAcessoSelect: document.getElementById("localNivelAcesso"),
+  itemCompraModal: document.getElementById("itemCompraModal"),
+  itemCompraForm: document.getElementById("itemCompraForm"),
+  itemCompraModalTitle: document.getElementById("itemCompraModalTitle"),
+  closeItemCompraBtn: document.getElementById("closeItemCompra"),
+  cancelItemCompraBtn: document.getElementById("cancelItemCompra"),
+  estabelecimentoCompraModal: document.getElementById("estabelecimentoCompraModal"),
+  estabelecimentoCompraForm: document.getElementById("estabelecimentoCompraForm"),
+  estabelecimentoCompraModalTitle: document.getElementById("estabelecimentoCompraModalTitle"),
+  closeEstabelecimentoCompraBtn: document.getElementById("closeEstabelecimentoCompra"),
+  cancelEstabelecimentoCompraBtn: document.getElementById("cancelEstabelecimentoCompra"),
+  finalizarListaModal: document.getElementById("finalizarListaModal"),
+  finalizarListaForm: document.getElementById("finalizarListaForm"),
+  closeFinalizarListaBtn: document.getElementById("closeFinalizarLista"),
+  cancelFinalizarListaBtn: document.getElementById("cancelFinalizarLista"),
+  erroMovimentacaoModal: document.getElementById("erroMovimentacaoModal"),
+  erroMovimentacaoTitulo: document.getElementById("erroMovimentacaoTitulo"),
+  erroMovimentacaoMensagem: document.getElementById("erroMovimentacaoMensagem"),
+  erroMovimentacaoDetalhes: document.getElementById("erroMovimentacaoDetalhes"),
+  closeErroMovimentacaoBtn: document.getElementById("closeErroMovimentacao"),
+  fecharErroMovimentacaoBtn: document.getElementById("fecharErroMovimentacao"),
+  unidadeModal: document.getElementById("unidadeModal"),
+  unidadeForm: document.getElementById("unidadeForm"),
+  unidadeInlineForm: document.getElementById("unidadeInlineForm"),
+  unidadeInlineFormCard: document.getElementById("unidadeInlineCard"),
+  cancelInlineUnidadeBtn: document.getElementById("cancelInlineUnidade"),
+  unidadeModalTitle: document.getElementById("unidadeModalTitle"),
+  openUnidadeBtn: document.getElementById("openUnidade"),
+  closeUnidadeBtn: document.getElementById("closeUnidade"),
+  cancelUnidadeBtn: document.getElementById("cancelUnidade"),
+  entradaModal: document.getElementById("entradaModal"),
+  entradaForm: document.getElementById("entradaForm"),
+  openEntradaBtn: document.getElementById("openEntrada"),
+  closeEntradaBtn: document.getElementById("closeEntrada"),
+  entradaUnidadeSelect: document.getElementById("entradaUnidadeSelect"),
+  entradaLocalSelect: document.getElementById("entradaLocalSelect"),
+  saidaModal: document.getElementById("saidaModal"),
+  saidaForm: document.getElementById("saidaForm"),
+  saidaProdutoSelect: document.getElementById("saidaProdutoSelect"),
+  saidaOrigemSelect: document.getElementById("saidaOrigemUnidade"),
+  saidaMotivo: document.getElementById("saidaMotivo"),
+  saidaDestinoWrapper: document.getElementById("saidaDestinoWrapper"),
+  saidaDestinoSelect: document.getElementById("saidaDestinoUnidade"),
+  openSaidaBtn: document.getElementById("openSaida"),
+  closeSaidaBtn: document.getElementById("closeSaida"),
+  cancelSaidaBtn: document.getElementById("cancelSaida"),
+  entradaSubmitBtn: document.querySelector("#entradaForm button[type='submit']"),
+  cancelEntradaBtn: document.getElementById("cancelEntrada"),
+  movFilterForm: document.getElementById("movFilterForm"),
+  movFiltroTipo: document.getElementById("movFiltroTipo"),
+  movFiltroProduto: document.getElementById("movFiltroProduto"),
+  movFiltroUnidade: document.getElementById("movFiltroUnidade"),
+  movFiltroDataDe: document.getElementById("movFiltroDataDe"),
+  movFiltroDataAte: document.getElementById("movFiltroDataAte"),
+  movFiltrosLimpar: document.getElementById("movFiltrosLimpar"),
+  movimentacoesTable: document.getElementById("movimentacoesTable"),
+  relatorioFilterForm: document.getElementById("relatorioFilterForm"),
+  relatorioAgrupar: document.getElementById("relatorioAgrupar"),
+  relatorioTipo: document.getElementById("relatorioTipo"),
+  relatorioProduto: document.getElementById("relatorioProduto"),
+  relatorioUnidade: document.getElementById("relatorioUnidade"),
+  relatorioDataDe: document.getElementById("relatorioDataDe"),
+  relatorioDataAte: document.getElementById("relatorioDataAte"),
+  relatorioLimpar: document.getElementById("relatorioLimpar"),
+  relatorioResumoTable: document.getElementById("relatorioResumoTable"),
+  relatorioDetalhesTable: document.getElementById("relatorioDetalhesTable"),
+  relResumoColuna: document.getElementById("relResumoColuna"),
+  relatorioExportCsv: document.getElementById("relatorioExportCsv"),
+  relatorioExportPdf: document.getElementById("relatorioExportPdf"),
+};
+
+let stopMatrixAnimation = null;
+
+// Traducao simples de perfis para nomes amigaveis.
+const PERFIL_LABELS = {
+  ADMIN: "Administrador",
+  ESTOQUISTA: "Estoquista",
+  COZINHA: "Cozinha",
+  BAR: "Bar",
+  FINANCEIRO: "Financeiro",
+  ASSISTENTE_ADMINISTRATIVO: "Assistente Administrativo",
+  VISUALIZADOR: "Visualizador",
+  GERENTE: "Gerente",
+};
+
+// Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
+const PERMISSOES = {
+  ADMIN: {
+    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "boletao"],
+    canManageUsuarios: true,
+    canManageProdutos: true,
+    canManageUnidades: true,
+    canManageCompras: true,
+    canRegistrarMovimentacoes: true,
+  },
+  GERENTE: {
+    sections: ["dashboard", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "boletao"],
+    canManageUsuarios: false,
+    canManageProdutos: true,
+    canManageUnidades: false,
+    canManageCompras: true,
+    canRegistrarMovimentacoes: true,
+  },
+  ESTOQUISTA: {
+    sections: ["dashboard", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios"],
+    canManageUsuarios: false,
+    canManageProdutos: true,
+    canManageUnidades: false,
+    canManageCompras: true,
+    canRegistrarMovimentacoes: true,
+  },
+  COZINHA: {
+    sections: ["dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: true,
+    canRegistrarMovimentacoes: true,
+  },
+  BAR: {
+    sections: ["dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: true,
+    canRegistrarMovimentacoes: true,
+  },
+  FINANCEIRO: {
+    sections: ["dashboard", "relatorios", "boletao"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+  ASSISTENTE_ADMINISTRATIVO: {
+    sections: ["dashboard", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "boletao"],
+    canManageUsuarios: false,
+    canManageProdutos: true,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: true,
+  },
+  VISUALIZADOR: {
+    sections: ["dashboard", "relatorios"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+};
+
+const LOCAL_TIPOS_LABELS = {
+  CAMARA_FRIA: "Câmara Fria",
+  FREEZER: "Freezer",
+  GELADEIRA: "Geladeira",
+  DEPOSITO: "Depósito",
+  PRATELEIRA: "Prateleira",
+  ESTOQUE_SECO: "Estoque Seco",
+  COZINHA: "Cozinha",
+  BAR: "Bar",
+  OUTROS: "Outros",
+};
+
+// Estrutura central de estado com colecoes e flags compartilhadas.
+const state = {
+  produtos: [],
+  produtosAbaixoMinimo: [],
+  perdasResumo: { total_registros: 0, quantidade_total: 0, movimentacoes: [] },
+  unidades: [],
+  locais: [],
+  usuarios: [],
+  listasCompras: [],
+  listaCompraAtual: null,
+  listaComprasFiltroStatus: "ativas",
+  listasComprasAtivasSnapshot: [],
+  estabelecimentosGlobais: [],
+  unidadeInlineVisivel: false,
+  lotes: [],
+  movimentacoes: [],
+  movimentacoesRecentes: [],
+  relatorioResumo: [],
+  relatorioDetalhes: [],
+};
+
+// Variáveis auxiliares para session e rastreamento de efeitos.
+let currentUser = null;
+let usuarioFotoFile = null;
+let usuarioFotoRemovida = false;
+let logoDataUrl = null;
+const MOBILE_BREAKPOINT = 1024;
+const LISTA_STATUS_LABEL = {
+  RASCUNHO: "Rascunho",
+  EM_COMPRAS: "Em compras",
+  PAUSADA: "Pausada",
+  FINALIZADA: "Finalizada",
+};
+const LISTA_STATUS_CLASS = {
+  RASCUNHO: "status-pill--info",
+  EM_COMPRAS: "status-pill--success",
+  PAUSADA: "status-pill--warning",
+  FINALIZADA: "status-pill--success",
+};
+let listaCompraItemEdicaoId = null;
+let listaCompraEstabelecimentoEdicaoId = null;
+let finalizarListaArquivos = [];
+const pendingItemUpdates = new Map();
+let listaStatusAtualizando = false;
+let usuariosCarregando = null;
+let saidaProdutosRequestId = 0;
+let loteProdutosRequestId = 0;
+let movimentacoesRequestId = 0;
+let entradaLocaisRequestId = 0;
+let inactivityTimer = null;
+let inactivityResetHandler = null;
+const INACTIVITY_TIMEOUT = 6 * 60 * 1000; // 6 minutos em milissegundos
+
+// --- Utilidades de interface e formatação ---
+function showToast(message, type = "info") {
+  if (!dom.toast) return;
+  dom.toast.textContent = message;
+  dom.toast.className = `toast toast--${type}`;
+  setTimeout(() => {
+    dom.toast.className = "toast";
+  }, 3200);
+}
+
+/**
+ * Exibe um modal de erro detalhado para movimentações
+ * @param {Object} errorData - Dados do erro retornados pelo backend
+ * @param {string} errorData.error - Tipo do erro (ex: "Sem estoque disponível")
+ * @param {string} errorData.message - Mensagem descritiva do erro
+ * @param {number} [errorData.disponivel] - Quantidade disponível (se aplicável)
+ * @param {number} [errorData.solicitado] - Quantidade solicitada (se aplicável)
+ * @param {string} [errorData.produto] - Nome do produto (se aplicável)
+ */
+function showErrorModal(errorData) {
+  if (!dom.erroMovimentacaoModal) {
+    console.error("Modal de erro não encontrado");
+    // Fallback para toast se o modal não existir
+    const message = errorData.message || errorData.error || "Erro ao realizar movimentação";
+    showToast(message, "error");
+    return;
+  }
+
+  // Mapeia tipos de erro para mensagens mais compreensíveis
+  const errorMessages = {
+    "Produto não encontrado": {
+      titulo: "Produto não encontrado",
+      mensagem: "O produto selecionado não existe no sistema ou foi removido.",
+      explicacao: "Isso pode acontecer se o produto foi excluído ou se há um problema com a seleção.",
+      solucao: "Verifique se o produto está cadastrado corretamente e tente novamente.",
+      tipo: "operacional"
+    },
+    "Produto inativo": {
+      titulo: "Produto inativo",
+      mensagem: "O produto selecionado está inativo no sistema.",
+      explicacao: "Produtos inativos não podem receber movimentações de estoque por questões de controle e organização.",
+      solucao: "Ative o produto na tela de cadastro antes de realizar a movimentação.",
+      tipo: "operacional"
+    },
+    "Sem estoque disponível": {
+      titulo: "Produto sem estoque",
+      mensagem: "Este produto não possui estoque disponível na unidade selecionada.",
+      explicacao: "O produto não tem lotes cadastrados ou todo o estoque já foi utilizado. Para realizar uma saída, é necessário ter pelo menos um lote com quantidade disponível.",
+      solucao: "Crie um lote para este produto através de uma entrada de estoque. Acesse 'Entrada de Estoque' e registre um novo lote com a quantidade desejada.",
+      tipo: "estoque",
+      sugereCriarLote: true
+    },
+    "Estoque insuficiente": {
+      titulo: "Estoque insuficiente",
+      mensagem: "A quantidade solicitada é maior que a quantidade disponível em estoque.",
+      explicacao: "Você está tentando retirar mais produtos do que existem no estoque atual. O estoque disponível não é suficiente para atender a quantidade solicitada.",
+      solucao: "Ajuste a quantidade solicitada para o valor disponível, ou registre uma nova entrada de estoque para aumentar o estoque deste produto.",
+      tipo: "estoque"
+    },
+    "Nenhum lote disponível": {
+      titulo: "Produto sem lote cadastrado",
+      mensagem: "Este produto não possui nenhum lote cadastrado na unidade selecionada.",
+      explicacao: "Para realizar uma saída de estoque, é obrigatório ter pelo menos um lote cadastrado com quantidade disponível. Sem lotes, não é possível controlar a origem e validade dos produtos.",
+      solucao: "Crie um lote para este produto. Acesse 'Entrada de Estoque', selecione o produto e a unidade, informe o número do lote e a quantidade. Isso criará automaticamente o lote necessário.",
+      tipo: "estoque",
+      sugereCriarLote: true
+    },
+    "Lotes vencidos bloqueiam a saída": {
+      titulo: "Lotes vencidos impedem a saída",
+      mensagem: "Os lotes disponíveis deste produto estão vencidos e bloqueiam a saída automática.",
+      explicacao: "O sistema identificou que os lotes em estoque estão com a data de validade vencida. Por padrão, o sistema não permite usar lotes vencidos automaticamente para garantir a qualidade e segurança dos produtos.",
+      solucao: "Opção 1: Se você realmente precisa usar lotes vencidos, marque a opção 'Forçar' no formulário de saída. Opção 2: Registre uma nova entrada de estoque com lotes válidos (não vencidos) para este produto.",
+      tipo: "vencimento"
+    },
+    "Dados inválidos": {
+      titulo: "Dados inválidos",
+      mensagem: "Alguns dados informados estão incorretos ou incompletos.",
+      explicacao: "Um ou mais campos obrigatórios não foram preenchidos corretamente, ou contêm valores inválidos que impedem o processamento da movimentação.",
+      solucao: "Revise o formulário e verifique se todos os campos obrigatórios foram preenchidos corretamente. Verifique especialmente: produto selecionado, unidade, quantidade e motivo da movimentação.",
+      tipo: "operacional"
+    }
+  };
+
+  // Obtém o tipo de erro
+  const errorType = errorData.error || "";
+  const errorInfo = errorMessages[errorType] || {
+    titulo: errorData.error || "Erro na movimentação",
+    mensagem: errorData.message || "Não foi possível realizar a movimentação.",
+    explicacao: "Ocorreu um erro ao processar sua solicitação.",
+    solucao: "Tente novamente ou entre em contato com o suporte se o problema persistir."
+  };
+
+  // Define o título do erro
+  dom.erroMovimentacaoTitulo.textContent = errorInfo.titulo;
+
+  // Monta a mensagem completa e compreensível
+  let mensagemCompleta = `<div style="margin-bottom: 1rem;"><strong>O que aconteceu:</strong><br>${escapeHtml(errorInfo.mensagem)}</div>`;
+  
+  mensagemCompleta += `<div style="margin-bottom: 1rem;"><strong>Por que isso aconteceu:</strong><br>${escapeHtml(errorInfo.explicacao)}</div>`;
+  
+  // Adiciona informação sobre tipo de problema
+  if (errorInfo.tipo) {
+    let tipoLabel = "";
+    let tipoIcon = "";
+    if (errorInfo.tipo === "estoque") {
+      tipoLabel = "Problema de Estoque";
+      tipoIcon = "📦";
+    } else if (errorInfo.tipo === "vencimento") {
+      tipoLabel = "Problema de Validade";
+      tipoIcon = "📅";
+    } else if (errorInfo.tipo === "operacional") {
+      tipoLabel = "Problema Operacional";
+      tipoIcon = "⚙️";
+    }
+    
+    if (tipoLabel) {
+      mensagemCompleta += `<div style="margin-bottom: 1rem; padding: 0.75rem; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 0.9rem;">
+        <strong>${tipoIcon} Tipo de problema:</strong> ${tipoLabel}
+      </div>`;
+    }
+  }
+  
+  mensagemCompleta += `<div style="margin-bottom: 0.5rem;"><strong>Como resolver:</strong><br>${escapeHtml(errorInfo.solucao)}</div>`;
+  
+  // Se sugere criar lote, adiciona destaque especial
+  if (errorInfo.sugereCriarLote) {
+    mensagemCompleta += `<div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-left: 3px solid #2196f3; border-radius: 4px; font-size: 0.9rem;">
+      <strong>💡 Dica importante:</strong><br>
+      Para criar um lote, acesse o menu <strong>"Entrada de Estoque"</strong>, selecione este produto, informe o número do lote e a quantidade. O sistema criará automaticamente o lote necessário.
+    </div>`;
+  }
+
+  dom.erroMovimentacaoMensagem.innerHTML = mensagemCompleta;
+
+  // Prepara detalhes adicionais se disponíveis
+  const detalhes = [];
+  
+  if (errorData.produto) {
+    detalhes.push(`<strong>Produto:</strong> ${escapeHtml(errorData.produto)}`);
+  }
+  
+  if (errorData.disponivel !== undefined && errorData.solicitado !== undefined) {
+    detalhes.push(`<strong>Quantidade disponível:</strong> ${errorData.disponivel}`);
+    detalhes.push(`<strong>Quantidade solicitada:</strong> ${errorData.solicitado}`);
+    const diferenca = errorData.solicitado - errorData.disponivel;
+    if (diferenca > 0) {
+      detalhes.push(`<strong>Faltam:</strong> ${diferenca} unidades`);
+    }
+  } else if (errorData.disponivel !== undefined) {
+    detalhes.push(`<strong>Quantidade disponível:</strong> ${errorData.disponivel}`);
+  }
+
+  // Mostra ou esconde a seção de detalhes
+  if (detalhes.length > 0) {
+    dom.erroMovimentacaoDetalhes.innerHTML = `<div style="font-size: 0.9rem;"><strong>Informações detalhadas:</strong><br>${detalhes.join("<br>")}</div>`;
+    dom.erroMovimentacaoDetalhes.style.display = "block";
+  } else {
+    dom.erroMovimentacaoDetalhes.style.display = "none";
+  }
+
+  // Exibe o modal
+  dom.erroMovimentacaoModal.style.display = "flex";
+}
+
+/**
+ * Fecha o modal de erro de movimentação
+ */
+function closeErrorModal() {
+  if (dom.erroMovimentacaoModal) {
+    dom.erroMovimentacaoModal.style.display = "none";
+  }
+}
+
+function buildStatusPill(status) {
+  const label = escapeHtml(status || "--");
+  const normalized = (status || "").toString().trim().toLowerCase();
+  let modifier = "info";
+  if (["ativo", "disponivel", "liberado", "entrada"].includes(normalized)) modifier = "success";
+  else if (["vencido", "bloqueado", "critico", "saida", "perda"].includes(normalized)) modifier = "danger";
+  else if (["a vencer", "avencer", "pendente", "ajuste"].includes(normalized)) modifier = "warning";
+  else if (["esgotado", "inativo"].includes(normalized)) modifier = "muted";
+  else if (["transferencia"].includes(normalized)) modifier = "info";
+  return `<span class="status-pill status-pill--${modifier}">${label}</span>`;
+}
+
+function isMobileViewport() {
+  return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
+}
+
+function setSidebarOpen(open) {
+  if (!dom.sidebar) return;
+  dom.sidebar.classList.toggle("is-open", open);
+  dom.sidebarBackdrop?.classList.toggle("is-active", open);
+  document.body.classList.toggle("sidebar-open", open);
+}
+
+function setupResponsiveSidebar() {
+  if (!dom.menuToggle || !dom.sidebar) return;
+
+  dom.menuToggle.addEventListener("click", () => {
+    const willOpen = !dom.sidebar.classList.contains("is-open");
+    setSidebarOpen(willOpen);
+  });
+
+  dom.sidebarBackdrop?.addEventListener("click", () => setSidebarOpen(false));
+
+  window.addEventListener("resize", () => {
+    if (!isMobileViewport()) setSidebarOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && dom.sidebar?.classList.contains("is-open")) {
+      setSidebarOpen(false);
+    }
+  });
+}
+
+function initMatrixBackground() {
+  const canvas = dom.matrixCanvas;
+  if (!canvas) return null;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const characters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890#$%&";
+  let width = canvas.offsetWidth;
+  let height = canvas.offsetHeight;
+  let fontSize = 16;
+  let columns = 0;
+  let drops = [];
+  let animationId = null;
+
+  const face = {
+    active: false,
+    start: 0,
+    duration: 2200,
+    next: performance.now() + 8000 + Math.random() * 12000,
+  };
+
+  const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
+  const scheduleFace = () => {
+    face.next = performance.now() + 8000 + Math.random() * 12000;
+  };
+
+  const resizeCanvas = () => {
+    const { offsetWidth, offsetHeight } = canvas;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(offsetWidth * dpr);
+    canvas.height = Math.floor(offsetHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    width = offsetWidth;
+    height = offsetHeight;
+    fontSize = Math.max(Math.round(width / 80), 14);
+    columns = Math.max(Math.floor(width / fontSize), 1);
+    drops = new Array(columns).fill(0);
+  };
+
+  const drawNeonFace = (alpha = 1) => {
+    const size = Math.min(width, height) * 0.35;
+    const cx = width * 0.5;
+    const cy = height * 0.45;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, 1.1);
+    ctx.globalAlpha = alpha;
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#00ff88";
+    ctx.shadowColor = "#00ff88";
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, size * 0.38, size * 0.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    for (let i = -3; i <= 3; i += 1) {
+      ctx.beginPath();
+      const yy = (i / 3) * size * 0.42;
+      ctx.moveTo(-size * 0.3, yy);
+      ctx.bezierCurveTo(-size * 0.1, yy * 1.05, size * 0.1, yy * 1.05, size * 0.3, yy);
+      ctx.stroke();
+    }
+
+    const eyeY = -size * 0.08;
+    const eyeX = size * 0.16;
+    const eyeW = size * 0.1;
+    const eyeH = size * 0.04;
+    ctx.beginPath();
+    ctx.ellipse(-eyeX, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(eyeX, eyeY, eyeW, eyeH, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, -size * 0.02);
+    ctx.lineTo(-size * 0.02, size * 0.07);
+    ctx.lineTo(size * 0.02, size * 0.07);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.12, size * 0.14);
+    ctx.quadraticCurveTo(0, size * 0.18, size * 0.12, size * 0.14);
+    ctx.stroke();
+
+    for (let i = 0; i < 5; i += 1) {
+      const px = -size * 0.35;
+      const py = -size * 0.3 + i * (size * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + size * 0.08, py + size * 0.02);
+      ctx.lineTo(px + size * 0.16, py);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-px, py);
+      ctx.lineTo(-px - size * 0.08, py + size * 0.02);
+      ctx.lineTo(-px - size * 0.16, py);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  };
+
+  const drawMatrix = () => {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#31ff7b";
+    ctx.font = `${fontSize}px "Fira Code", "Roboto Mono", monospace`;
+    ctx.textBaseline = "top";
+
+    for (let i = 0; i < columns; i += 1) {
+      const char = characters[Math.floor(Math.random() * characters.length)];
+      const x = i * fontSize;
+      const y = drops[i] * fontSize;
+      ctx.fillText(char, x, y);
+      if (y > height && Math.random() > 0.965) drops[i] = 0;
+      else drops[i] += 1;
+    }
+  };
+
+  const renderNeonFace = (now) => {
+    if (!face.active && now >= face.next) {
+      face.active = true;
+      face.start = now;
+    }
+
+    if (!face.active) return;
+
+    const progress = (now - face.start) / face.duration;
+    if (progress >= 1) {
+      face.active = false;
+      scheduleFace();
+      return;
+    }
+
+    const fadeIn = easeInOut(Math.min(1, Math.max(0, progress * 1.2)));
+    const decayFactor = 1 - (progress - 0.4) / 0.6;
+    const fadeOut = easeInOut(Math.min(1, Math.max(0, decayFactor)));
+    const alpha = Math.min(fadeIn, fadeOut) * 0.9;
+    if (alpha <= 0) return;
+
+    drawNeonFace(alpha);
+
+    if (Math.random() < 0.08) {
+      const glitchY = Math.random() * height;
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.35;
+      ctx.fillStyle = "#00ff88";
+      ctx.fillRect(0, glitchY, width, 1);
+      ctx.restore();
+    }
+  };
+
+  const loop = () => {
+    const now = performance.now();
+    drawMatrix();
+    renderNeonFace(now);
+    animationId = requestAnimationFrame(loop);
+  };
+
+  resizeCanvas();
+  loop();
+
+  const handleResize = debounce(() => {
+    resizeCanvas();
+  }, 200);
+
+  window.addEventListener("resize", handleResize);
+
+  return () => {
+    if (animationId) cancelAnimationFrame(animationId);
+    window.removeEventListener("resize", handleResize);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+}
+
+function escapeHtml(value) {
+  return (value ?? "").replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatCurrency(value) {
+  return `R$ ${formatNumber(value, 2)}`;
+}
+
+function debounce(fn, delay = 600) {
+  let timer = null;
+  return (...args) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+function formatNumber(value, digits = 2) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "0";
+  if (digits === 0 || num === 0) return String(Math.round(num));
+  const texto = num.toFixed(digits);
+  return texto.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+// Formata valor unitário: mostra sem decimais se for inteiro, caso contrário mostra decimais necessários
+function formatUnitValue(value) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "0";
+  // Se for inteiro, retorna sem decimais
+  if (Number.isInteger(num)) return String(num);
+  // Caso contrário, formata com até 2 casas decimais, removendo zeros à direita
+  const texto = num.toFixed(2);
+  return texto.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+function roundToCurrency(value) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return 0;
+  return Math.round(num * 100) / 100;
+}
+
+function formatCurrencyBRL(value) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "R$ 0,00";
+  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function roundToQuantity(value) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return 0;
+  return Math.round(num * 100) / 100;
+}
+
+function formatQuantityDisplay(value) {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num)) return "0";
+  // Se for inteiro, retorna sem decimais
+  if (Number.isInteger(num)) return String(num);
+  // Caso contrário, formata com até 2 casas decimais, removendo zeros à direita
+  const texto = num.toFixed(2);
+  return texto.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+function formatDate(value) {
+  if (!value) return "--";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-");
+    return `${day}/${month}/${year}`;
+  }
+  // Tenta parsear como datetime também
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}\s/.test(value)) {
+    const datePart = value.split(" ")[0];
+    const [year, month, day] = datePart.split("-");
+    return `${day}/${month}/${year}`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const dia = String(date.getDate()).padStart(2, "0");
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const ano = String(date.getFullYear());
+  const hora = String(date.getHours()).padStart(2, "0");
+  const minuto = String(date.getMinutes()).padStart(2, "0");
+  return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+}
+
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Normaliza unidade base: substitui "un" por "UND"
+function normalizarUnidadeBase(value) {
+  if (!value) return "UND";
+  const unidade = String(value).trim().toLowerCase();
+  if (unidade === "un") return "UND";
+  return unidade.toUpperCase();
+}
+
+function toInputDate(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const ano = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const dia = String(date.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function todayInputValue() {
+  const agora = new Date();
+  return toInputDate(agora);
+}
+
+function generateLoteCodigo() {
+  const agora = new Date();
+  const ano = String(agora.getFullYear()).slice(-2);
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+  const sufixo = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `L${ano}${mes}${dia}-${sufixo}`;
+}
+
+async function ensureLocaisCarregados(force = false) {
+  if (force || !Array.isArray(state.locais) || !state.locais.length) {
+    try {
+      await loadLocais(true);
+    } catch (err) {
+      showToast(err?.message || "Falha ao carregar locais.", "error");
+    }
+  }
+  return Array.isArray(state.locais) ? state.locais : [];
+}
+
+function populateEntradaLoteOptions() {
+  const datalist = document.getElementById("entradaLoteOptions");
+  if (!datalist) return;
+  const codigos = new Map();
+  (state.lotes || []).forEach((lote) => {
+    const codigo = (lote.codigo_lote || lote.numero_lote || "").toString().trim();
+    if (!codigo) return;
+    if (codigos.has(codigo)) return;
+    const produto = lote.produto_nome ? ` — ${escapeHtml(lote.produto_nome)}` : "";
+    const unidade = lote.unidade_nome ? ` (${escapeHtml(lote.unidade_nome)})` : "";
+    codigos.set(
+      codigo,
+      `<option value="${escapeHtml(codigo)}">${escapeHtml(codigo)}${produto}${unidade}</option>`,
+    );
+  });
+  datalist.innerHTML = Array.from(codigos.values()).join("");
+}
+
+function populateEntradaLocaisSelect(listaLocais = [], unidadeId = null) {
+  const select = dom.entradaLocalSelect || dom.entradaForm?.querySelector('select[name="local_id"]');
+  if (!select) return;
+  const unidadeNumero = Number(unidadeId);
+  if (!Number.isFinite(unidadeNumero) || unidadeNumero <= 0) {
+    resetEntradaLocalSelect();
+    return;
+  }
+  const lista = Array.isArray(listaLocais)
+    ? listaLocais.filter((local) => Number(local.unidade_id) === unidadeNumero)
+    : [];
+  if (!lista.length) {
+    resetEntradaLocalSelect("Nenhum local cadastrado nesta unidade");
+    return;
+  }
+  const ordenados = [...lista].sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+  const options = ordenados
+    .map((local) =>
+      `<option value="${escapeHtml(String(local.id))}" data-unidade-id="${escapeHtml(String(local.unidade_id ?? ""))}">${escapeHtml(local.nome || `Local ${local.id}`)}</option>`,
+    )
+    .join("");
+  populateSelect(select, options, "Selecione o local");
+  select.disabled = false;
+}
+
+function formatCnpjMask(rawValue) {
+  const digits = (rawValue || "").replace(/\D/g, "").slice(0, 14);
+  const parts = [];
+  if (digits.length <= 2) return digits;
+  parts.push(digits.slice(0, 2));
+  parts.push(digits.slice(2, 5));
+  parts.push(digits.slice(5, 8));
+  const branch = digits.slice(8, 12);
+  const suffix = digits.slice(12, 14);
+  let formatted = `${parts[0]}.${parts[1]}`;
+  if (parts[2]) formatted += `.${parts[2]}`;
+  if (branch) formatted += `/${branch}`;
+  if (suffix) formatted += `-${suffix}`;
+  return formatted;
+}
+
+function attachCnpjMask(input) {
+  if (!input) return;
+  input.addEventListener("input", () => {
+    const formatted = formatCnpjMask(input.value);
+    input.value = formatted;
+  });
+  // Normaliza caso o valor venha preenchido por scripts/outros fluxos.
+  if (input.value) {
+    input.value = formatCnpjMask(input.value);
+  }
+}
+
+function updateSaidaDestinoVisibility() {
+  const motivo = (dom.saidaMotivo?.value || "").toUpperCase();
+  const isTransferencia = motivo === "TRANSFERENCIA";
+  if (dom.saidaDestinoWrapper) dom.saidaDestinoWrapper.classList.toggle("hidden", !isTransferencia);
+  if (!isTransferencia && dom.saidaDestinoSelect) {
+    dom.saidaDestinoSelect.value = "";
+  }
+}
+
+function collectLotesFiltros() {
+  return {
+    pesquisa: dom.lotesFiltroPesquisa?.value || "",
+    produto_id: dom.lotesFiltroProduto?.value || "",
+    unidade_id: dom.lotesFiltroUnidade?.value || "",
+    status: dom.lotesFiltroStatus?.value || "",
+    validade_de: dom.lotesFiltroValidadeDe?.value || "",
+    validade_ate: dom.lotesFiltroValidadeAte?.value || "",
+  };
+}
+
+function collectMovimentacoesFiltros() {
+  return {
+    tipo: dom.movFiltroTipo?.value || "",
+    produto_id: dom.movFiltroProduto?.value || "",
+    unidade_id: dom.movFiltroUnidade?.value || "",
+    data_ini: dom.movFiltroDataDe?.value || "",
+    data_fim: dom.movFiltroDataAte?.value || "",
+  };
+}
+
+function collectRelatorioFiltros() {
+  const agrupar = dom.relatorioAgrupar?.value || "produto";
+  return {
+    agrupar,
+    tipo: dom.relatorioTipo?.value || "",
+    produto_id: dom.relatorioProduto?.value || "",
+    unidade_id: dom.relatorioUnidade?.value || "",
+    data_ini: dom.relatorioDataDe?.value || "",
+    data_fim: dom.relatorioDataAte?.value || "",
+  };
+}
+
+function sortMovimentacoes(lista) {
+  const itens = Array.isArray(lista) ? [...lista] : [];
+  const parseData = (mov) => {
+    const campos = [mov.data_mov, mov.data, mov.created_at, mov.criado_em];
+    for (const valor of campos) {
+      if (!valor) continue;
+      const time = Date.parse(valor);
+      if (!Number.isNaN(time)) return time;
+    }
+    return 0;
+  };
+  return itens.sort((a, b) => {
+    const dataA = parseData(a);
+    const dataB = parseData(b);
+    if (dataA !== dataB) return dataB - dataA;
+    const idA = Number(a.id) || 0;
+    const idB = Number(b.id) || 0;
+    return idB - idA;
+  });
+}
+
+async function fetchJSON(path, options = {}) {
+  const tokenHeaders = currentUser && currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {};
+  const userHeaders =
+    currentUser && typeof currentUser.id !== "undefined" && currentUser.id !== null
+      ? { "X-Usuario-Id": String(currentUser.id) }
+      : {};
+  const { headers, ...rest } = options;
+  const mergedHeaders = {
+    "Content-Type": "application/json",
+    ...tokenHeaders,
+    ...userHeaders,
+    ...(headers || {}),
+  };
+  
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      cache: "no-store",
+      headers: mergedHeaders,
+      ...rest,
+    });
+    
+    const contentType = res.headers.get("Content-Type") || "";
+    let payload;
+    
+    try {
+      // Tenta parsear como JSON primeiro (nosso backend sempre retorna JSON)
+      const text = await res.text();
+      if (text && text.trim()) {
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          // Se não for JSON válido, usa o texto
+          payload = text;
+        }
+      } else {
+        // Resposta vazia - para DELETE com sucesso, pode ser normal
+        // Mas nosso backend sempre retorna JSON, então isso não deveria acontecer
+        payload = { success: res.ok, message: res.statusText || 'Operação realizada' };
+      }
+    } catch (parseError) {
+      throw new Error(`Erro ao processar resposta do servidor (Status: ${res.status}): ${parseError.message}`);
+    }
+    
+    // ✅ 3. Conferir a resposta do backend
+    console.log("Resposta do servidor:", {
+      url: `${API_URL}${path}`,
+      status: res.status,
+      statusText: res.statusText,
+      payload: payload
+    });
+    
+    if (!res.ok) {
+      let message = `Erro ${res.status}: ${res.statusText}`;
+      
+      if (payload) {
+        // ✅ Prioriza message se existir (mensagem mais descritiva)
+        if (payload.message) {
+          message = payload.message;
+        } else if (payload.error) {
+          message = payload.error;
+        } else if (payload.messages && typeof payload.messages === 'object') {
+          // Erros de validação do Laravel
+          const errors = Object.values(payload.messages).flat();
+          message = errors.length > 0 ? errors.join(', ') : message;
+        } else if (typeof payload === 'string') {
+          message = payload;
+        }
+      }
+      
+      console.error("Erro na resposta do servidor:", {
+        status: res.status,
+        message: message,
+        payload: payload
+      });
+      
+      // Cria um erro com os dados completos do payload
+      const error = new Error(message);
+      error.responseData = payload; // Adiciona os dados completos do backend
+      error.status = res.status;
+      throw error;
+    }
+    
+    return payload;
+  } catch (error) {
+    // Trata erros de rede
+    if (error.name === "TypeError" && (error.message.includes("fetch") || error.message.includes("NetworkError"))) {
+      throw new Error(`Não foi possível conectar ao servidor. Verifique se o servidor está rodando em ${API_URL}`);
+    }
+    throw error;
+  }
+}
+
+async function fetchForm(path, method, body) {
+  const tokenHeaders = currentUser && currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {};
+  const userHeaders =
+    currentUser && typeof currentUser.id !== "undefined" && currentUser.id !== null
+      ? { "X-Usuario-Id": String(currentUser.id) }
+      : {};
+  
+  // Quando o body é FormData, NÃO definir Content-Type - o navegador faz isso automaticamente
+  // com o boundary correto para multipart/form-data
+  const headers = { ...tokenHeaders, ...userHeaders };
+  
+  // Se não for FormData, pode definir Content-Type se necessário
+  // Mas para FormData, deixamos o navegador fazer isso
+  
+  console.log("📤 fetchForm:", { path, method, bodyType: body instanceof FormData ? "FormData" : typeof body });
+  
+  const res = await fetch(`${API_URL}${path}`, { method, body, headers });
+  
+  const text = await res.text();
+  let payload = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch (e) {
+    console.error("Erro ao parsear resposta:", text);
+    payload = { error: text || "Resposta inválida do servidor" };
+  }
+  
+  console.log("📥 fetchForm resposta:", { status: res.status, payload });
+  
+  if (!res.ok) {
+    const errorMsg = payload.error || payload.message || `Erro ${res.status}: ${res.statusText}`;
+    throw new Error(errorMsg);
+  }
+  return payload;
+}
+
+function setUser(user) {
+  localStorage.setItem(storageKey, JSON.stringify(user));
+  currentUser = user;
+}
+
+function getUser() {
+  const raw = localStorage.getItem(storageKey);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+function clearUser() {
+  localStorage.removeItem(storageKey);
+  currentUser = null;
+  stopInactivityTimer();
+}
+
+function updateUserHeader() {
+  if (!currentUser) {
+    if (dom.userName) dom.userName.textContent = "Visitante";
+    if (dom.userRole) dom.userRole.textContent = "Responsavel";
+    if (dom.userEmail) dom.userEmail.textContent = "";
+    return;
+  }
+  if (dom.userName) dom.userName.textContent = currentUser.nome || currentUser.email;
+  if (dom.userRole) dom.userRole.textContent = currentUser.perfil || "";
+  if (dom.userEmail) dom.userEmail.textContent = currentUser.email || "";
+}
+
+function canManageCompras() {
+  const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
+  const regras = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  return Boolean(regras.canManageCompras);
+}
+
+// Verifica se o perfil só pode criar lista e adicionar itens (estoquista, cozinha e bar)
+function canOnlyCreateAndAddItems() {
+  if (!currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  // ADMIN e GERENTE podem fazer tudo, não têm restrições
+  if (perfil === "ADMIN" || perfil === "GERENTE") return false;
+  return perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR";
+}
+
+// Verifica se é ADMIN ou GERENTE (permissões totais)
+function isAdminOrGerente() {
+  if (!currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  return perfil === "ADMIN" || perfil === "GERENTE";
+}
+
+// Verifica se é ADMIN (apenas administrador)
+function isAdmin() {
+  if (!currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  return perfil === "ADMIN";
+}
+
+// Verifica se pode imprimir etiquetas (ADMIN, GERENTE ou ESTOQUISTA)
+function podeImprimirEtiqueta() {
+  if (!currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  return perfil === "ADMIN" || perfil === "GERENTE" || perfil === "ESTOQUISTA";
+}
+
+// Mostra modal com opções para imprimir ou baixar etiqueta
+function mostrarOpcoesEtiqueta(loteId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal" style="max-width: 400px;">
+      <header>
+        <h2>Etiqueta de Lote</h2>
+        <button type="button" class="close-btn" data-action="close" aria-label="Fechar">×</button>
+      </header>
+      <div style="padding: 1.5rem;">
+        <p style="margin-bottom: 1.5rem;">Lote salvo com sucesso! Deseja imprimir a etiqueta?</p>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <button type="button" class="btn secondary" data-action="cancel">Cancelar</button>
+          <button type="button" class="btn secondary" data-action="download" data-lote-id="${loteId}">Baixar PDF</button>
+          <button type="button" class="btn primary" data-action="print" data-lote-id="${loteId}">Imprimir</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Event listeners para os botões usando event delegation
+  const closeModal = () => {
+    console.log("🔒 Fechando modal de etiqueta");
+    modal.remove();
+  };
+  
+  // Event listeners diretos nos botões (mais confiável)
+  const modalContent = modal.querySelector('.modal');
+  
+  // Busca os botões após inserir no DOM
+  setTimeout(() => {
+    const closeBtn = modal.querySelector('[data-action="close"]');
+    const cancelBtn = modal.querySelector('[data-action="cancel"]');
+    const downloadBtn = modal.querySelector('[data-action="download"]');
+    const printBtn = modal.querySelector('[data-action="print"]');
+    
+    console.log("🔍 Botões encontrados:", {
+      close: !!closeBtn,
+      cancel: !!cancelBtn,
+      download: !!downloadBtn,
+      print: !!printBtn
+    });
+    
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("🔘 Botão fechar clicado");
+        closeModal();
+      });
+    }
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("🔘 Botão cancelar clicado");
+        closeModal();
+      });
+    }
+    
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = downloadBtn.dataset.loteId ? Number(downloadBtn.dataset.loteId) : loteId;
+        console.log("📥 Botão download clicado, loteId:", id);
+        closeModal();
+        setTimeout(() => {
+          baixarEtiquetaLote(id);
+        }, 150);
+      });
+    }
+    
+    if (printBtn) {
+      printBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = printBtn.dataset.loteId ? Number(printBtn.dataset.loteId) : loteId;
+        console.log("🖨️ Botão imprimir clicado, loteId:", id);
+        closeModal();
+        setTimeout(() => {
+          imprimirEtiquetaLote(id);
+        }, 150);
+      });
+    }
+  }, 10);
+  
+  // Previne fechamento ao clicar dentro do modal
+  if (modalContent) {
+    modalContent.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+  
+  // Fecha ao clicar no backdrop (fora do conteúdo do modal)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      console.log("🔒 Clicou no backdrop, fechando modal");
+      closeModal();
+    }
+  });
+  
+  console.log("✅ Modal de etiqueta criado");
+}
+
+// Imprime etiqueta do lote (usando a mesma lógica da lista de compras)
+async function imprimirEtiquetaLote(loteId) {
+  console.log("🖨️ imprimirEtiquetaLote chamada com loteId:", loteId);
+  
+  if (!podeImprimirEtiqueta()) {
+    showToast("Sem permissão para imprimir etiquetas.", "error");
+    return;
+  }
+  
+  if (!loteId) {
+    showToast("ID do lote não informado.", "error");
+    return;
+  }
+  
+  try {
+    // Busca os dados do lote via API
+    const lote = await fetchJSON(`/lotes/${loteId}`);
+    if (!lote || !lote.id) {
+      showToast("Lote não encontrado.", "error");
+      return;
+    }
+    
+    console.log("✅ Dados do lote carregados:", lote);
+    
+    // Prepara dados da etiqueta
+    const numeroLote = lote.numero_lote || lote.codigo_lote || 'N/A';
+    const produtoNome = lote.produto_nome || 'Produto';
+    const dataValidade = lote.data_validade ? formatDate(lote.data_validade).split(' ')[0] : null; // Remove hora, mantém apenas data
+    
+    // Gera URL do QR Code (aponta para a seção de lotes)
+    const qrUrl = window.location.origin + window.location.pathname + '#lotes?lote=' + loteId;
+    
+    // Gera QR Code usando API externa (mais simples que gerar no backend)
+    // Usando API pública do QR Code: https://api.qrserver.com
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+    
+    // Estilo da etiqueta (tamanho: 50mm x 30mm)
+    const estilo = `
+      <style>
+        @page {
+          size: 50mm 30mm;
+          margin: 2mm;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 8pt;
+          margin: 0;
+          padding: 2mm;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          width: 46mm;
+          height: 26mm;
+        }
+        .etiqueta-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .produto-nome {
+          font-size: 7pt;
+          color: #666;
+          margin-bottom: 2px;
+          line-height: 1.2;
+        }
+        .numero-lote {
+          font-size: 12pt;
+          font-weight: bold;
+          color: #000;
+          line-height: 1.3;
+        }
+        .validade {
+          font-size: 8pt;
+          color: #333;
+          margin-top: 2px;
+        }
+        .qr-code {
+          width: 22mm;
+          height: 22mm;
+          margin-left: 3mm;
+          flex-shrink: 0;
+        }
+      </style>
+    `;
+    
+    // HTML da etiqueta
+    const conteudo = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>Etiqueta Lote ${numeroLote}</title>
+          ${estilo}
+        </head>
+        <body>
+          <div class="etiqueta-info">
+            <div class="produto-nome">${escapeHtml(produtoNome)}</div>
+            <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
+            ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
+          </div>
+          <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
+        </body>
+      </html>
+    `;
+    
+    // Usa a mesma lógica da lista de compras: iframe + doc.write
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.visibility = "hidden";
+    document.body.appendChild(iframe);
+    
+    let timeoutId = null;
+    
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      try {
+        if (iframe.contentWindow) {
+          iframe.contentWindow.onafterprint = null;
+        }
+      } catch (err) {
+        /* noop */
+      }
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    };
+    
+    iframe.onload = () => {
+      const win = iframe.contentWindow;
+      if (!win) {
+        cleanup();
+        showToast("Não foi possível preparar a etiqueta.", "error");
+        return;
+      }
+      win.onafterprint = cleanup;
+      win.focus();
+      try {
+        if (typeof win.print === "function") {
+          win.print();
+          showToast("Etiqueta enviada para impressão!", "success");
+        } else {
+          cleanup();
+          showToast("Seu navegador não suportou a impressão.", "error");
+        }
+      } catch (err) {
+        cleanup();
+        showToast("Falha ao acionar a impressão.", "error");
+      }
+    };
+    
+    iframe.onerror = () => {
+      cleanup();
+      showToast("Não foi possível gerar a etiqueta.", "error");
+    };
+    
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      cleanup();
+      showToast("Não foi possível gerar a etiqueta.", "error");
+      return;
+    }
+    doc.open();
+    doc.write(conteudo);
+    doc.close();
+    
+    timeoutId = setTimeout(() => {
+      if (!document.body.contains(iframe)) return;
+      cleanup();
+      showToast("Falha ao imprimir. Verifique as configurações do navegador.", "error");
+    }, 60000);
+    
+  } catch (err) {
+    console.error("❌ Erro ao imprimir etiqueta:", err);
+    console.error("❌ Stack trace:", err.stack);
+    showToast(err.message || "Falha ao imprimir etiqueta.", "error");
+  }
+}
+
+// Baixa PDF da etiqueta do lote
+async function baixarEtiquetaLote(loteId) {
+  console.log("📥 baixarEtiquetaLote chamada com loteId:", loteId);
+  console.log("📥 currentUser:", currentUser);
+  console.log("📥 podeImprimirEtiqueta():", podeImprimirEtiqueta());
+  console.log("📥 API_URL:", API_URL);
+  
+  if (!podeImprimirEtiqueta()) {
+    showToast("Sem permissão para baixar etiquetas.", "error");
+    return;
+  }
+  
+  if (!loteId) {
+    showToast("ID do lote não informado.", "error");
+    return;
+  }
+  
+  try {
+    // Busca os dados do lote via API
+    const lote = await fetchJSON(`/lotes/${loteId}`);
+    if (!lote || !lote.id) {
+      showToast("Lote não encontrado.", "error");
+      return;
+    }
+    
+    console.log("✅ Dados do lote carregados:", lote);
+    
+    // Prepara dados da etiqueta
+    const numeroLote = lote.numero_lote || lote.codigo_lote || 'N/A';
+    const produtoNome = lote.produto_nome || 'Produto';
+    const dataValidade = lote.data_validade ? formatDate(lote.data_validade).split(' ')[0] : null; // Remove hora, mantém apenas data
+    
+    // Gera URL do QR Code (aponta para a seção de lotes)
+    const qrUrl = window.location.origin + window.location.pathname + '#lotes?lote=' + loteId;
+    
+    // Gera QR Code usando API externa (mais simples que gerar no backend)
+    // Usando API pública do QR Code: https://api.qrserver.com
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+    
+    // Estilo da etiqueta (tamanho: 50mm x 30mm)
+    const estilo = `
+      <style>
+        @page {
+          size: 50mm 30mm;
+          margin: 2mm;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          font-size: 8pt;
+          margin: 0;
+          padding: 2mm;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          width: 46mm;
+          height: 26mm;
+        }
+        .etiqueta-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .produto-nome {
+          font-size: 7pt;
+          color: #666;
+          margin-bottom: 2px;
+          line-height: 1.2;
+        }
+        .numero-lote {
+          font-size: 12pt;
+          font-weight: bold;
+          color: #000;
+          line-height: 1.3;
+        }
+        .validade {
+          font-size: 8pt;
+          color: #333;
+          margin-top: 2px;
+        }
+        .qr-code {
+          width: 22mm;
+          height: 22mm;
+          margin-left: 3mm;
+          flex-shrink: 0;
+        }
+      </style>
+    `;
+    
+    // HTML da etiqueta
+    const conteudo = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>Etiqueta Lote ${numeroLote}</title>
+          ${estilo}
+        </head>
+        <body>
+          <div class="etiqueta-info">
+            <div class="produto-nome">${escapeHtml(produtoNome)}</div>
+            <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
+            ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
+          </div>
+          <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
+        </body>
+      </html>
+    `;
+    
+    // Usa a mesma lógica da lista de compras: iframe + doc.write
+    // Para download, abre diálogo de impressão onde pode salvar como PDF
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.visibility = "hidden";
+    document.body.appendChild(iframe);
+    
+    let timeoutId = null;
+    
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      try {
+        if (iframe.contentWindow) {
+          iframe.contentWindow.onafterprint = null;
+        }
+      } catch (err) {
+        /* noop */
+      }
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    };
+    
+    iframe.onload = () => {
+      const win = iframe.contentWindow;
+      if (!win) {
+        cleanup();
+        showToast("Não foi possível preparar a etiqueta.", "error");
+        return;
+      }
+      win.onafterprint = cleanup;
+      win.focus();
+      try {
+        if (typeof win.print === "function") {
+          // Para download, abre diálogo de impressão onde pode salvar como PDF
+          win.print();
+          showToast("Use 'Salvar como PDF' na impressora para baixar.", "info");
+        } else {
+          cleanup();
+          showToast("Seu navegador não suportou a impressão.", "error");
+        }
+      } catch (err) {
+        cleanup();
+        showToast("Falha ao acionar a impressão.", "error");
+      }
+    };
+    
+    iframe.onerror = () => {
+      cleanup();
+      showToast("Não foi possível gerar a etiqueta.", "error");
+    };
+    
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      cleanup();
+      showToast("Não foi possível gerar a etiqueta.", "error");
+      return;
+    }
+    doc.open();
+    doc.write(conteudo);
+    doc.close();
+    
+    timeoutId = setTimeout(() => {
+      if (!document.body.contains(iframe)) return;
+      cleanup();
+      showToast("Falha ao gerar. Verifique as configurações do navegador.", "error");
+    }, 60000);
+    
+  } catch (err) {
+    console.error("❌ Erro ao baixar etiqueta:", err);
+    console.error("❌ Stack trace:", err.stack);
+    showToast(err.message || "Falha ao baixar etiqueta.", "error");
+  }
+}
+
+// Verifica se pode lançar lista no estoque
+function listaPermiteLancarEstoque(lista = state.listaCompraAtual) {
+  if (!canManageCompras()) return false;
+  if (!lista) return false;
+  
+  // ADMIN e GERENTE podem lançar qualquer lista
+  if (isAdminOrGerente()) {
+    return true;
+  }
+  
+  // ESTOQUISTA pode lançar
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  if (perfil === "ESTOQUISTA") {
+    return true;
+  }
+  
+  // COZINHA e BAR NÃO podem lançar
+  if (perfil === "COZINHA" || perfil === "BAR") {
+    return false;
+  }
+  
+  // Outros perfis: permite se for o dono
+  return isListaOwner(lista);
+}
+
+function canManageProdutos() {
+  const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
+  const regras = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  return Boolean(regras.canManageProdutos);
+}
+
+function canManageUnidades() {
+  const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
+  const regras = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  return Boolean(regras.canManageUnidades);
+}
+
+// Verifica se pode gerenciar usuários BAR (BAR pode gerenciar apenas usuários BAR)
+function canManageUsuariosBar() {
+  if (!currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  return perfil === "BAR";
+}
+
+// Verifica se pode gerenciar um usuário específico
+function canManageUsuario(usuario) {
+  if (!usuario) return false;
+  
+  // ADMIN pode gerenciar todos
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  if (perfilAtual === "ADMIN") return true;
+  
+  // BAR pode gerenciar apenas usuários BAR
+  if (canManageUsuariosBar()) {
+    const perfilUsuario = (usuario.perfil || "").toString().trim().toUpperCase();
+    return perfilUsuario === "BAR";
+  }
+  
+  // Outros perfis seguem regra padrão
+  const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
+  return Boolean(regras.canManageUsuarios);
+}
+
+function isListaOwner(lista = state.listaCompraAtual) {
+  if (!lista || !currentUser) return false;
+  if (typeof lista.responsavel_id === "undefined" || lista.responsavel_id === null) return false;
+  return Number(lista.responsavel_id) === Number(currentUser.id);
+}
+
+function listaPermiteEdicao(lista = state.listaCompraAtual) {
+  if (!canManageCompras()) return false;
+  if (!lista) return false;
+  const status = (lista.status || "").toUpperCase();
+  if (status === "FINALIZADA") return false;
+  
+  // ADMIN e GERENTE podem fazer tudo
+  if (isAdminOrGerente()) {
+    return true;
+  }
+  
+  // Estoquista e Cozinha só podem adicionar itens, não editar lista
+  if (canOnlyCreateAndAddItems()) {
+    return false; // Não permite editar lista, apenas adicionar itens
+  }
+  
+  // Outros perfis: permite edição se for o dono
+  return isListaOwner(lista);
+}
+
+function listaPermiteFinalizar(lista = state.listaCompraAtual) {
+  if (!canManageCompras()) return false;
+  if (!lista) return false;
+  const status = (lista.status || "").toUpperCase();
+  if (status === "FINALIZADA") return false;
+  
+  // ADMIN e GERENTE podem fazer tudo
+  if (isAdminOrGerente()) {
+    return true;
+  }
+  
+  // Estoquista e Cozinha não podem finalizar lista
+  if (canOnlyCreateAndAddItems()) {
+    return false;
+  }
+  
+  // Outros perfis: permite finalizar se for o dono
+  return isListaOwner(lista);
+}
+
+// Verifica se pode adicionar itens à lista (estoquista e cozinha podem)
+function listaPermiteAdicionarItens(lista = state.listaCompraAtual) {
+  if (!canManageCompras()) return false;
+  if (!lista) return false;
+  const status = (lista.status || "").toUpperCase();
+  if (status === "FINALIZADA") return false;
+  
+  // Estoquista e Cozinha podem adicionar itens mesmo sem ser dono
+  if (canOnlyCreateAndAddItems()) {
+    return true;
+  }
+  
+  // ADMIN e GERENTE podem fazer tudo
+  if (isAdminOrGerente()) {
+    return true;
+  }
+  
+  // Outros perfis: permite adicionar se for o dono
+  return isListaOwner(lista);
+}
+
+function canCreateLista() {
+  if (!canManageCompras() || !currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  
+  // ADMIN e GERENTE podem criar listas
+  if (isAdminOrGerente()) {
+    return true;
+  }
+  
+  // ESTOQUISTA, COZINHA e BAR podem criar listas
+  if (perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR") {
+    return true;
+  }
+  
+  // Outros perfis: apenas se for dono da lista atual
+  if (isListaOwner(state.listaCompraAtual)) {
+    return true;
+  }
+  
+  const listasReferencia =
+    state.listasComprasAtivasSnapshot && state.listasComprasAtivasSnapshot.length
+      ? state.listasComprasAtivasSnapshot
+      : state.listasCompras;
+  if (!listasReferencia?.length) return true;
+  return listasReferencia.some((lista) => Number(lista.responsavel_id) === Number(currentUser.id));
+}
+
+function updateNovaListaButton() {
+  if (!dom.openListaCompraBtn) return;
+  const allowed = canCreateLista();
+  dom.openListaCompraBtn.classList.toggle("hidden", !allowed);
+  dom.openListaCompraBtn.disabled = !allowed;
+}
+
+function updateComprasDashboardCard() {
+  if (dom.kpiComprasAtivas) {
+    dom.kpiComprasAtivas.textContent = state.listasComprasAtivasSnapshot.length || 0;
+  }
+}
+
+function updateMinimoDashboardCard() {
+  const quantidade = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo.length : 0;
+  if (dom.kpiMinimo) dom.kpiMinimo.textContent = quantidade;
+  if (dom.cardMinimoHint) {
+    dom.cardMinimoHint.textContent = quantidade ? "Ver produtos abaixo do minimo" : "Tudo em dia";
+  }
+  if (dom.cardMinimo) dom.cardMinimo.classList.toggle("card--alert", quantidade > 0);
+  if (Array.isArray(state.produtos) && state.produtos.length) {
+    renderProdutos(state.produtos);
+  }
+}
+
+function updatePerdasDashboardCard() {
+  const resumo = state.perdasResumo || {};
+  const totalQtd = Number(resumo.quantidade_total || 0);
+  const totalRegistros = Number(resumo.total_registros || 0);
+  // Mostra apenas número inteiro (sem casas decimais)
+  if (dom.kpiPerdas) dom.kpiPerdas.textContent = Math.round(totalQtd);
+  if (dom.cardPerdasHint) {
+    dom.cardPerdasHint.textContent = totalRegistros ? `${totalRegistros} movimentacoes recentes` : "Sem perdas registradas";
+  }
+  if (dom.cardPerdas) dom.cardPerdas.classList.toggle("card--alert", totalQtd > 0);
+}
+
+function updateUnidadeInlineUI(canManage) {
+  const card = dom.unidadeInlineFormCard;
+  const form = dom.unidadeInlineForm;
+  const toggleBtn = dom.openUnidadeBtn;
+  if (!canManage && state.unidadeInlineVisivel) state.unidadeInlineVisivel = false;
+  const shouldShow = Boolean(canManage && state.unidadeInlineVisivel);
+
+  if (card) card.classList.toggle("hidden", !shouldShow);
+  if (toggleBtn) {
+    toggleBtn.classList.toggle("hidden", !canManage);
+    toggleBtn.disabled = !canManage;
+    toggleBtn.textContent = shouldShow ? "Cancelar cadastro" : "+ Nova Unidade";
+  }
+  if (form) {
+    Array.from(form.elements).forEach((element) => {
+      if (element.type !== "hidden") element.disabled = !canManage;
+    });
+  }
+}
+
+// Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
+function applyPermissions() {
+  const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
+  const regras = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  updateUserHeader();
+
+  dom.navLinks.forEach((link) => {
+    const allowed = regras.sections.includes(link.dataset.section);
+    link.classList.toggle("hidden", !allowed);
+  });
+
+  dom.sections.forEach((section) => {
+    const key = section.id.replace("Section", "");
+    const allowed = regras.sections.includes(key);
+    if (!allowed) section.classList.add("hidden");
+  });
+
+  if (dom.openProdutoBtn) dom.openProdutoBtn.classList.toggle("hidden", !regras.canManageProdutos);
+  // BAR pode criar usuários BAR, mesmo sem canManageUsuarios
+  const podeGerenciarUsuarios = regras.canManageUsuarios || canManageUsuariosBar();
+  if (dom.openUsuarioBtn) dom.openUsuarioBtn.classList.toggle("hidden", !podeGerenciarUsuarios);
+  updateUnidadeInlineUI(regras.canManageUnidades);
+  if (dom.openNovoLoteBtn) dom.openNovoLoteBtn.classList.toggle("hidden", !regras.canManageProdutos);
+  // COZINHA e BAR não podem registrar entrada - oculta o botão
+  if (dom.openEntradaBtn) {
+    const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const podeRegistrarEntrada = regras.canRegistrarMovimentacoes && !isCozinhaOuBar;
+    dom.openEntradaBtn.classList.toggle("hidden", !podeRegistrarEntrada);
+  }
+  // COZINHA e BAR podem registrar saída - habilita o botão
+  if (dom.openSaidaBtn) {
+    const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    // Garante que BAR e COZINHA sempre possam usar o botão (têm canRegistrarMovimentacoes: true)
+    const podeRegistrarSaida = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
+    dom.openSaidaBtn.disabled = !podeRegistrarSaida;
+  }
+  updateNovaListaButton();
+  if (dom.listaCompraAdicionarItem) dom.listaCompraAdicionarItem.classList.toggle("hidden", !regras.canManageCompras);
+  // Estoquista e Cozinha não podem gerenciar estabelecimentos
+  if (dom.listaCompraAdicionarEstabelecimento) {
+    const podeGerenciarEstabelecimentos = regras.canManageCompras && !canOnlyCreateAndAddItems();
+    dom.listaCompraAdicionarEstabelecimento.classList.toggle("hidden", !podeGerenciarEstabelecimentos);
+  }
+  // Estoquista e Cozinha não podem finalizar lista
+  if (dom.listaCompraFinalizar) {
+    const podeFinalizar = regras.canManageCompras && !canOnlyCreateAndAddItems();
+    dom.listaCompraFinalizar.classList.toggle("hidden", !podeFinalizar);
+  }
+  // Estoquista e Cozinha não podem alterar status
+  const podeAlterarStatus = regras.canManageCompras && !canOnlyCreateAndAddItems();
+  if (dom.listaCompraStatusRascunho) dom.listaCompraStatusRascunho.classList.toggle("hidden", !podeAlterarStatus);
+  if (dom.listaCompraStatusEmCompras) dom.listaCompraStatusEmCompras.classList.toggle("hidden", !podeAlterarStatus);
+  if (dom.listaCompraStatusPausada) dom.listaCompraStatusPausada.classList.toggle("hidden", !podeAlterarStatus);
+  if (dom.listaCompraObservacoes) {
+    const podeEditarObs = regras.canManageCompras && !canOnlyCreateAndAddItems();
+    dom.listaCompraObservacoes.disabled = !podeEditarObs;
+  }
+  
+  // COZINHA e BAR não podem lançar no estoque - oculta o botão
+  if (dom.listaCompraLancarEstoque) {
+    const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const podeLancar = regras.canManageCompras && !isCozinhaOuBar;
+    dom.listaCompraLancarEstoque.classList.toggle("hidden", !podeLancar);
+  }
+  
+  // COZINHA e BAR não podem ver valores em dinheiro na tela de estoque
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  
+  // Ocultar cards de valores
+  const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
+  const estoqueCardTotal = document.getElementById("estoqueCardTotal");
+  if (estoqueCardUnitario) estoqueCardUnitario.classList.toggle("hidden", isCozinhaOuBar);
+  if (estoqueCardTotal) estoqueCardTotal.classList.toggle("hidden", isCozinhaOuBar);
+  
+  // Ocultar colunas da tabela
+  const estoqueColValorUnitario = document.querySelectorAll(".estoque-col-valor-unitario");
+  const estoqueColValorTotal = document.querySelectorAll(".estoque-col-valor-total");
+  estoqueColValorUnitario.forEach(col => col.classList.toggle("hidden", isCozinhaOuBar));
+  estoqueColValorTotal.forEach(col => col.classList.toggle("hidden", isCozinhaOuBar));
+
+  return regras;
+}
+
+function navigateTo(section) {
+  // Salva a seção atual no localStorage para restaurar após refresh
+  if (section) {
+    try {
+      localStorage.setItem(currentSectionKey, section);
+    } catch (err) {
+      console.warn('Erro ao salvar seção atual:', err);
+    }
+  }
+  
+  // Usa o router global se disponível, caso contrário usa o método antigo
+  if (typeof router !== 'undefined' && router) {
+    router.navigate(section);
+  } else {
+    // Fallback para o método antigo - atualiza de forma atômica para evitar flash
+    dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
+    dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+  }
+}
+
+// Renderizadores auxiliares usados por várias tabelas e painéis.
+function renderTable(target, rowsHtml, emptyMessage, cols) {
+  if (!target) return;
+  if (!rowsHtml) {
+    target.innerHTML = `<tr><td colspan="${cols}" style="text-align:center; color:#607d8b">${emptyMessage}</td></tr>`;
+  } else {
+    target.innerHTML = rowsHtml;
+  }
+}
+function renderMovimentacoes(lista, target, emptyMessage) {
+  console.log("renderMovimentacoes chamado:", {
+    listaLength: Array.isArray(lista) ? lista.length : 0,
+    target: target ? "encontrado" : "não encontrado",
+    emptyMessage
+  });
+  
+  if (!target) {
+    console.error("Target não fornecido para renderMovimentacoes");
+    return;
+  }
+  
+  if (!Array.isArray(lista) || lista.length === 0) {
+    console.log("Lista vazia, renderizando mensagem vazia");
+    renderTable(target, "", emptyMessage, 7);
+    return;
+  }
+  
+  const dadosOrdenados = sortMovimentacoes(lista);
+  console.log("Dados ordenados para renderização:", dadosOrdenados.length);
+  
+  const rows = dadosOrdenados.map((item) => {
+    const quantidadeValor = Number(item.qtd ?? item.quantidade ?? 0);
+    const unidadeLabel = (() => {
+      const unidadeBruta = (item.unidade || "").trim().toUpperCase();
+      if (!unidadeBruta) return "UND";
+      if (["UN", "UND", "UNID", "UNIDADE", "UNIDADES"].includes(unidadeBruta)) return "UND";
+      return unidadeBruta;
+    })();
+    const quantidade = `${formatNumber(quantidadeValor, 3)} ${escapeHtml(unidadeLabel)}`.trim();
+    // ✅ Formata motivo: se for "COMPRA" e tiver "Lista de compras" na observação, mostra "Lista de compras"
+    let motivo = item.motivo || item.observacao || "--";
+    if ((motivo === "COMPRA" || motivo.toUpperCase() === "COMPRA") && 
+        (item.observacao && item.observacao.includes("Lista de compras"))) {
+      motivo = "Lista de compras";
+    }
+    motivo = escapeHtml(motivo);
+    const tipo = (item.tipo || "").trim().toUpperCase();
+    
+    // Formata unidade para transferências - forma simples
+    let unidadeDisplay = item.unidade_nome || "N/A";
+    
+    // Se for transferência, mostra origem → destino
+    if (tipo === "TRANSFERENCIA" && item.para_unidade_id) {
+      const origemNome = item.unidade_origem_nome || item.unidade_nome || "N/A";
+      const destinoNome = item.unidade_destino_nome || "N/A";
+      if (destinoNome !== "N/A") {
+        unidadeDisplay = `${origemNome} → ${destinoNome}`;
+      }
+    } 
+    // Se for entrada de transferência, mostra unidade que recebeu
+    else if (tipo === "ENTRADA" && item.motivo === "TRANSFERENCIA" && item.para_unidade_id) {
+      const destinoNome = item.unidade_destino_nome || item.unidade_nome || "N/A";
+      unidadeDisplay = destinoNome;
+    }
+    
+    return `<tr data-id="${item.id ?? ""}">
+      <td data-label="Data">${formatDate(item.data_mov)}</td>
+      <td data-label="Tipo">${buildStatusPill(tipo || "--")}</td>
+      <td data-label="Produto">${escapeHtml(item.produto_nome || "--")}</td>
+      <td data-label="Unidade">${escapeHtml(unidadeDisplay)}</td>
+      <td data-label="Qtd">${quantidade}</td>
+      <td data-label="Motivo">${motivo}</td>
+      <td data-label="Responsavel">${escapeHtml(item.responsavel_nome || "--")}</td>
+    </tr>`;
+  }).join("");
+  
+  console.log("Renderizando", rows.split("</tr>").length - 1, "linhas na tabela");
+  renderTable(target, rows, emptyMessage, 7);
+  console.log("Tabela renderizada com sucesso");
+}
+
+function renderMovimentacoesDashboard(lista) {
+  console.log("renderMovimentacoesDashboard chamado com:", lista?.length || 0, "itens");
+  
+  // Tenta encontrar o elemento novamente se não estiver disponível
+  if (!dom.movTable) {
+    dom.movTable = document.getElementById("movTable");
+    console.log("movTable buscado novamente:", dom.movTable ? "encontrado" : "não encontrado");
+  }
+  
+  if (!dom.movTable) {
+    console.warn("dom.movTable não encontrado - tentando novamente em 200ms...");
+    // Aguarda um pouco mais e tenta novamente
+    setTimeout(() => {
+      dom.movTable = document.getElementById("movTable");
+      if (dom.movTable) {
+        console.log("movTable encontrado no retry, renderizando...");
+        renderMovimentacoesDashboard(lista);
+      } else {
+        console.error("movTable ainda não encontrado após retry");
+      }
+    }, 200);
+    return;
+  }
+  
+  // Usar a lista passada ou fallback para movimentacoesRecentes
+  const listaParaUsar = Array.isArray(lista) && lista.length > 0 ? lista : (Array.isArray(state.movimentacoesRecentes) ? state.movimentacoesRecentes : []);
+  console.log("Lista para usar:", listaParaUsar.length, "itens");
+  
+  if (listaParaUsar.length === 0) {
+    console.warn("Nenhuma movimentação disponível para renderizar");
+    renderTable(dom.movTable, "", "Sem movimentacoes recentes.", 7);
+    return;
+  }
+  
+  // ✅ Remove duplicatas baseado no ID da movimentação
+  const idsVistos = new Set();
+  const listaSemDuplicatas = listaParaUsar.filter((mov) => {
+    const id = mov.id || mov.movimentacao_id;
+    if (!id) return true; // Mantém se não tiver ID
+    if (idsVistos.has(id)) {
+      console.warn("Movimentação duplicada removida:", id);
+      return false;
+    }
+    idsVistos.add(id);
+    return true;
+  });
+  
+  console.log("Lista sem duplicatas:", listaSemDuplicatas.length, "itens (removidos", listaParaUsar.length - listaSemDuplicatas.length, "duplicatas)");
+  
+  const dados = sortMovimentacoes(listaSemDuplicatas);
+  console.log("Dados ordenados:", dados.length, "itens");
+  
+  // Debug: verificar quantas movimentações temos
+  if (dados.length > 0) {
+    const tipos = dados.reduce((acc, m) => {
+      const tipo = (m.tipo || "DESCONHECIDO").toUpperCase();
+      acc[tipo] = (acc[tipo] || 0) + 1;
+      return acc;
+    }, {});
+    console.log("Renderizando movimentacoes no dashboard:", dados.length, "total. Tipos:", tipos);
+  }
+  
+  // Renderiza as movimentações
+  const dadosParaRenderizar = dados.slice(0, 10);
+  console.log("Renderizando", dadosParaRenderizar.length, "movimentações na tabela");
+  
+  // Verifica novamente se o elemento existe antes de renderizar
+  if (!dom.movTable) {
+    console.error("movTable não encontrado antes de renderizar!");
+    return;
+  }
+  
+  try {
+    renderMovimentacoes(dadosParaRenderizar, dom.movTable, "Sem movimentacoes recentes.");
+    console.log("Movimentações renderizadas com sucesso!");
+  } catch (error) {
+    console.error("Erro ao renderizar movimentações:", error);
+  }
+}
+
+function renderLotesDashboard(lista) {
+  // Tenta encontrar o elemento novamente se não estiver disponível
+  if (!dom.lotesTable) {
+    dom.lotesTable = document.getElementById("lotesTable");
+  }
+  
+  if (!dom.lotesTable) {
+    console.warn("dom.lotesTable não encontrado");
+    return;
+  }
+  
+  const rows = (lista || []).slice(0, 10).map((lote) => {
+    const quantidade = `${formatNumber(lote.qtd_atual ?? lote.quantidade ?? 0, 3)} ${escapeHtml(normalizarUnidadeBase(lote.unidade))}`;
+    return `<tr>
+      <td data-label="Produto">${escapeHtml(lote.produto_nome || "--")}</td>
+      <td data-label="Lote">${escapeHtml(lote.numero_lote || lote.codigo_lote || "--")}</td>
+      <td data-label="Validade">${formatDate(lote.data_validade)}</td>
+      <td data-label="Qtd">${quantidade}</td>
+      <td data-label="Unidade">${escapeHtml(lote.unidade_nome || "--")}</td>
+      <td data-label="Status">${buildStatusPill(lote.status || "--")}</td>
+      <td data-label="Responsavel">${escapeHtml(lote.responsavel_nome || "--")}</td>
+    </tr>`;
+  }).join("");
+  renderTable(dom.lotesTable, rows, "Nenhum lote a vencer", 7);
+}
+
+// Renderiza gráfico de lotes por status
+function renderLotesStatusChart(stats) {
+  if (!dom.loteStatusChart) {
+    console.warn('loteStatusChart não encontrado');
+    return;
+  }
+
+  const statsData = stats || {};
+  const statusLabels = {
+    'ATIVO': 'Ativo',
+    'BLOQUEADO': 'Bloqueado',
+    'VENCIDO': 'Vencido',
+    'ESGOTADO': 'Esgotado',
+    'A_VENCER': 'A Vencer'
+  };
+
+  const statusColors = {
+    'ATIVO': '#4caf50',
+    'BLOQUEADO': '#ff9800',
+    'VENCIDO': '#f44336',
+    'ESGOTADO': '#9e9e9e',
+    'A_VENCER': '#ffc107'
+  };
+
+  // Coleta dados de status
+  const statusData = [];
+  let total = 0;
+  
+  Object.keys(statusLabels).forEach(status => {
+    const count = Number(statsData[status.toLowerCase()] || statsData[status] || 0);
+    if (count > 0) {
+      statusData.push({
+        label: statusLabels[status],
+        count: count,
+        color: statusColors[status] || '#607d8b'
+      });
+      total += count;
+    }
+  });
+
+  if (statusData.length === 0) {
+    dom.loteStatusChart.innerHTML = '<p style="text-align: center; color: #999; padding: 2rem;">Nenhum dado disponível</p>';
+    return;
+  }
+
+  // Cria HTML do gráfico (barra horizontal simples)
+  const maxCount = Math.max(...statusData.map(s => s.count));
+  const chartHTML = statusData.map(item => {
+    const percentage = total > 0 ? (item.count / total * 100).toFixed(1) : 0;
+    const barWidth = maxCount > 0 ? (item.count / maxCount * 100) : 0;
+    
+    return `
+      <div style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <span style="font-weight: 500; color: #333;">${escapeHtml(item.label)}</span>
+          <span style="color: #666; font-size: 0.9rem;">
+            <strong>${item.count}</strong> <span style="color: #999;">(${percentage}%)</span>
+          </span>
+        </div>
+        <div style="background: #f5f5f5; height: 24px; border-radius: 4px; overflow: hidden;">
+          <div style="background: ${item.color}; height: 100%; width: ${barWidth}%; transition: width 0.3s ease; display: flex; align-items: center; padding: 0 8px;">
+            <span style="color: white; font-size: 0.75rem; font-weight: 500; white-space: nowrap;">${item.count}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  dom.loteStatusChart.innerHTML = `
+    <div style="padding: 1rem;">
+      ${chartHTML}
+      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 0.9rem;">
+        <strong>Total:</strong> ${total} lote(s)
+      </div>
+    </div>
+  `;
+}
+
+function renderLotesGerenciamento(lista) {
+  console.log("🔍 renderLotesGerenciamento chamado com", lista?.length || 0, "lotes");
+  
+  let primeiroLoteLogado = false;
+  const rows = (lista || []).map((lote) => {
+    const ativo = Number(lote.ativo) === 1;
+    const quantidade = `${formatNumber(lote.quantidade ?? lote.qtd_atual ?? 0, 3)} ${escapeHtml(normalizarUnidadeBase(lote.unidade))}`.trim();
+    
+    // Formata data de validade - trata diferentes formatos
+    let validadeFormatada = "--";
+    if (lote.data_validade) {
+      const dataStr = String(lote.data_validade).trim();
+      if (dataStr && dataStr !== "null" && dataStr !== "undefined" && dataStr !== "") {
+        // Tenta formatar usando formatDate primeiro
+        const dataFormatada = formatDate(lote.data_validade);
+        if (dataFormatada && dataFormatada !== "--") {
+          validadeFormatada = dataFormatada;
+        } else {
+          // Se formatDate não funcionou, tenta formatar manualmente
+          // Tenta parsear como YYYY-MM-DD
+          if (/^\d{4}-\d{2}-\d{2}/.test(dataStr)) {
+            const partes = dataStr.split(' ')[0].split('-');
+            const [year, month, day] = partes;
+            validadeFormatada = `${day}/${month}/${year}`;
+          } else {
+            // Tenta parsear como Date
+            try {
+              const dateObj = new Date(lote.data_validade);
+              if (!isNaN(dateObj.getTime())) {
+                const dia = String(dateObj.getDate()).padStart(2, "0");
+                const mes = String(dateObj.getMonth() + 1).padStart(2, "0");
+                const ano = String(dateObj.getFullYear());
+                validadeFormatada = `${dia}/${mes}/${ano}`;
+              } else {
+                validadeFormatada = dataStr;
+              }
+            } catch (e) {
+              validadeFormatada = dataStr;
+            }
+          }
+        }
+      }
+    }
+    
+    // Calcula dias para vencer - usa o valor do backend se disponível, senão calcula
+    let dias = "--";
+    let diffDays = null;
+    
+    // Tenta usar o valor calculado pelo backend primeiro
+    if (lote.dias_para_vencer !== null && lote.dias_para_vencer !== undefined && lote.dias_para_vencer !== "") {
+      const diasBackend = Number(lote.dias_para_vencer);
+      if (!isNaN(diasBackend) && isFinite(diasBackend)) {
+        diffDays = diasBackend;
+      }
+    }
+    
+    // Se não veio do backend ou não é válido, calcula no frontend
+    if (diffDays === null && lote.data_validade) {
+      try {
+        // Tenta parsear a data
+        let dataValidade = null;
+        const dataStr = String(lote.data_validade).trim();
+        
+        // Se já está no formato YYYY-MM-DD, usa diretamente
+        if (/^\d{4}-\d{2}-\d{2}/.test(dataStr)) {
+          const partes = dataStr.split(' ')[0].split('-');
+          dataValidade = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+        } else {
+          dataValidade = new Date(lote.data_validade);
+        }
+        
+        if (dataValidade && !isNaN(dataValidade.getTime())) {
+          const hoje = new Date();
+          hoje.setHours(0, 0, 0, 0);
+          dataValidade.setHours(0, 0, 0, 0);
+          const diffTime = dataValidade - hoje;
+          diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+      } catch (e) {
+        console.warn("Erro ao calcular dias para vencer:", e, lote);
+      }
+    }
+    
+    // Formata a exibição dos dias - SEMPRE exibe algo se tiver valor
+    if (diffDays !== null && Number.isFinite(diffDays) && !isNaN(diffDays)) {
+      if (diffDays < 0) {
+        dias = `<span style="color: #f44336; font-weight: bold;">Vencido há ${Math.abs(diffDays)} dia(s)</span>`;
+      } else if (diffDays === 0) {
+        dias = `<span style="color: #ff9800; font-weight: bold;">Vence hoje</span>`;
+      } else if (diffDays <= 7) {
+        dias = `<span style="color: #ff9800; font-weight: bold;">${diffDays} dia(s)</span>`;
+      } else {
+        dias = `${diffDays} dia(s)`;
+      }
+    } else if (lote.data_validade) {
+      // Se tem data mas não conseguiu calcular, mostra que tem data
+      dias = "Calculando...";
+    }
+    
+    const podeImprimir = podeImprimirEtiqueta();
+    const acoes = [
+      '<div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">',
+      '<button class="table-action" data-action="edit">Editar</button>',
+      podeImprimir ? '<button class="table-action" data-action="etiqueta" title="Imprimir etiqueta">Etiqueta</button>' : '',
+      ativo
+        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
+        : '<button class="table-action" data-action="enable">Ativar</button>',
+      '<button class="table-action danger" data-action="delete">Excluir</button>',
+      '</div>',
+    ].join("");
+    
+    // Status baseado em ativo e outras condições
+    let statusLabel = ativo ? "Ativo" : "Inativo";
+    if (ativo) {
+      if ((lote.quantidade ?? lote.qtd_atual ?? 0) <= 0) {
+        statusLabel = "Esgotado";
+      } else if (lote.data_validade && lote.data_validade < new Date().toISOString().split('T')[0]) {
+        statusLabel = "Vencido";
+      }
+    }
+    
+    // Debug: log do primeiro lote para verificar dados
+    if (!primeiroLoteLogado) {
+      console.log("📋 Primeiro lote renderizado:", {
+        id: lote.id,
+        data_validade: lote.data_validade,
+        validadeFormatada: validadeFormatada,
+        dias_para_vencer: lote.dias_para_vencer,
+        diffDays: diffDays,
+        dias: dias
+      });
+      primeiroLoteLogado = true;
+    }
+    
+    return `<tr data-id="${lote.id}">
+      <td data-label="Produto">${escapeHtml(lote.produto_nome || "--")}</td>
+      <td data-label="Unidade">${escapeHtml(lote.unidade_nome || "--")}</td>
+      <td data-label="Codigo">${escapeHtml(lote.codigo_lote || lote.numero_lote || "--")}</td>
+      <td data-label="Qtd">${quantidade}</td>
+      <td data-label="Validade">${validadeFormatada}</td>
+      <td data-label="Dias p/ vencer">${dias}</td>
+      <td data-label="Status">${buildStatusPill(statusLabel)}</td>
+      <td data-label="Valor total">R$ ${formatNumber((lote.quantidade ?? lote.qtd_atual ?? 0) * (lote.custo_unitario ?? 0), 2)}</td>
+      <td data-label="Acoes" class="table-actions">${acoes}</td>
+    </tr>`;
+  }).join("");
+  
+  console.log("✅ Renderizando", rows.split("</tr>").length - 1, "linhas na tabela de lotes");
+  if (!dom.lotesManageTable) {
+    console.error("❌ dom.lotesManageTable não encontrado!");
+    return;
+  }
+  renderTable(dom.lotesManageTable, rows, "Nenhum lote para os filtros.", 9);
+}
+
+function renderProdutos(lista) {
+  const abaixoMinimoMap = new Map((state.produtosAbaixoMinimo || []).map((item) => [String(item.produto_id), item]));
+  
+  // Verifica se é COZINHA ou BAR (não podem gerenciar produtos)
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR";
+  const podeGerenciar = canManageProdutos();
+  
+  // Ocultar coluna de Ações no cabeçalho se for BAR ou COZINHA
+  const produtosTable = dom.produtosTable;
+  if (produtosTable) {
+    const thead = produtosTable.closest('table')?.querySelector('thead');
+    if (thead) {
+      const thAcoes = thead.querySelector('th:last-child');
+      if (thAcoes && thAcoes.textContent.trim() === 'Acoes') {
+        thAcoes.style.display = isCozinhaOuBar ? 'none' : '';
+      }
+    }
+  }
+  
+  const rows = (lista || []).map((produto) => {
+    const ativo = Number(produto.ativo) === 1;
+    const infoMinimo = abaixoMinimoMap.get(String(produto.id));
+    const rowClass = infoMinimo ? ' class="produto-abaixo-minimo"' : "";
+    const badge = infoMinimo
+      ? `<span class="table-flag danger" title="Estoque atual: ${formatNumber(infoMinimo.estoque_atual, 3)}">Estoque atual: ${formatNumber(
+          infoMinimo.estoque_atual,
+          3,
+        )}</span>`
+      : "";
+    
+    // COZINHA e BAR não vêem ações
+    const acoes = (!isCozinhaOuBar && podeGerenciar) ? [
+      '<button class="table-action" data-action="edit">Editar</button>',
+      ativo
+        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
+        : '<button class="table-action" data-action="enable">Ativar</button>',
+      '<button class="table-action danger" data-action="delete">Excluir</button>',
+    ].join("") : "--";
+    
+    // Se for BAR ou COZINHA, não renderiza a coluna de Ações
+    const colunaAcoes = isCozinhaOuBar ? '' : `<td data-label="Acoes" class="table-actions">${acoes}</td>`;
+    
+    return `<tr data-id="${produto.id}"${rowClass}>
+        <td data-label="Nome">${escapeHtml(produto.nome)}</td>
+        <td data-label="Categoria">${escapeHtml(produto.categoria)}</td>
+        <td data-label="Unidade base">${escapeHtml(normalizarUnidadeBase(produto.unidade_base))}</td>
+        <td data-label="Codigo de barras">${escapeHtml(produto.codigo_barras || "--")}</td>
+        <td data-label="Custo medio">R$ ${formatNumber(produto.custo_medio, 2)}</td>
+        <td data-label="Estoque minimo">${formatNumber(produto.estoque_minimo, 3)}${badge}</td>
+        <td data-label="Unidade">${escapeHtml(produto.unidade_nome || "--")}</td>
+        <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${ativo ? "Ativo" : "Inativo"}</span></td>
+        ${colunaAcoes}
+      </tr>`;
+  }).join("");
+  
+  // Ajusta o número de colunas baseado se BAR/COZINHA veem ações ou não
+  const numColunas = isCozinhaOuBar ? 8 : 9;
+  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", numColunas);
+}
+
+function renderProdutosDashboard(lista) {
+  // Tenta encontrar o elemento novamente se não estiver disponível
+  if (!dom.produtosDashboardTable) {
+    dom.produtosDashboardTable = document.getElementById("produtosDashboardTable");
+  }
+  
+  if (!dom.produtosDashboardTable) {
+    console.warn("dom.produtosDashboardTable não encontrado");
+    return;
+  }
+  
+  const rows = (lista || [])
+    .filter((produto) => Number(produto.ativo ?? 1) === 1)
+    .slice(0, 10)
+    .map((produto) => (
+      `<tr><td>${escapeHtml(produto.nome)}</td><td>${escapeHtml(produto.categoria)}</td><td>${escapeHtml(normalizarUnidadeBase(produto.unidade_base))}</td><td>${escapeHtml(produto.unidade_nome || "--")}</td></tr>`
+    ))
+    .join("");
+  renderTable(dom.produtosDashboardTable, rows, "Nenhum produto.", 4);
+}
+
+function renderLocais(lista) {
+  const rows = (lista || []).map((local) => {
+    const ativo = Number(local.ativo ?? 1) === 1;
+    const temperatura = local.temperatura_media !== null && local.temperatura_media !== undefined
+      ? `${formatNumber(Number(local.temperatura_media), 1)} C`
+      : "--";
+    const acesso = local.nivel_acesso ? escapeHtml(local.nivel_acesso) : "--";
+    const cadastro = local.data_cadastro ? formatDate(local.data_cadastro) : "--";
+    const tipoLabel = LOCAL_TIPOS_LABELS[local.tipo] || local.tipo || "--";
+    const observacoes = local.observacoes || local.descricao || "--";
+    const statusPill = buildStatusPill(ativo ? "Ativo" : "Inativo");
+    const acoes = [
+      '<button class="table-action" data-action="edit">Editar</button>',
+      ativo
+        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
+        : '<button class="table-action" data-action="enable">Ativar</button>',
+      '<button class="table-action danger" data-action="delete">Excluir</button>',
+    ].join("");
+    return `<tr data-id="${escapeHtml(String(local.id))}">
+      <td data-label="ID">${escapeHtml(String(local.id))}</td>
+      <td data-label="Nome">${escapeHtml(local.nome || "--")}</td>
+      <td data-label="Unidade">${escapeHtml(local.unidade_nome || "--")}</td>
+      <td data-label="Tipo">${escapeHtml(tipoLabel)}</td>
+      <td data-label="Temperatura">${temperatura}</td>
+      <td data-label="Acesso">${acesso}</td>
+      <td data-label="Observacoes">${escapeHtml(observacoes)}</td>
+      <td data-label="Cadastro">${cadastro}</td>
+      <td data-label="Status">${statusPill}</td>
+      <td data-label="Acoes" class="table-actions">${acoes}</td>
+    </tr>`;
+  }).join("");
+  renderTable(dom.locaisTable, rows, "Nenhum local cadastrado.", 10);
+}
+
+function renderUnidades(lista) {
+  const rows = (lista || []).map((unidade) => {
+    const ativo = Number(unidade.ativo) === 1;
+    const statusLabel = ativo ? "Ativa" : "Desativada";
+    const acoes = [
+      '<button class="table-action" data-action="edit">Editar</button>',
+      ...(ativo ? ['<button class="table-action danger" data-action="disable">Desativar</button>'] : []),
+      '<button class="table-action danger" data-action="delete">Excluir</button>',
+    ].join("");
+    return `<tr data-id="${unidade.id}">
+      <td data-label="Nome">${escapeHtml(unidade.nome)}</td>
+      <td data-label="Endereco">${escapeHtml(unidade.endereco || "--")}</td>
+      <td data-label="CNPJ">${escapeHtml(unidade.cnpj || "--")}</td>
+      <td data-label="Gerente">${escapeHtml(unidade.gerente_nome || "--")}</td>
+      <td data-label="Telefone">${escapeHtml(unidade.telefone || "--")}</td>
+      <td data-label="Email">${escapeHtml(unidade.email || "--")}</td>
+      <td data-label="Observacoes">${escapeHtml(unidade.observacoes || "--")}</td>
+      <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${statusLabel}</span></td>
+      <td data-label="Acoes" class="table-actions">${acoes}</td>
+    </tr>`;
+  }).join("");
+  renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", 9);
+}
+
+function renderUsuarios(lista) {
+  // Verifica se é ADMIN - ADMIN tem acesso total
+  const isAdminUser = isAdmin();
+  const podeGerenciarBar = canManageUsuariosBar(); // BAR
+  
+  // Verifica se o usuário logado é BAR ou COZINHA (não devem ver coluna de Ações)
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isBarOuCozinha = perfilAtual === "BAR" || perfilAtual === "COZINHA";
+  
+  // Ocultar coluna de Ações no cabeçalho se for BAR ou COZINHA
+  const usuariosTable = dom.usuariosTable;
+  if (usuariosTable) {
+    const thead = usuariosTable.closest('table')?.querySelector('thead');
+    if (thead) {
+      const thAcoes = thead.querySelector('th:last-child');
+      if (thAcoes && thAcoes.textContent.trim() === 'Acoes') {
+        thAcoes.style.display = isBarOuCozinha ? 'none' : '';
+      }
+    }
+  }
+  
+  const rows = (lista || []).map((usuario) => {
+    const ativo = Number(usuario.ativo) === 1;
+    const foto = usuario.foto_path
+      ? `<img src="${API_URL}/${usuario.foto_path}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
+    
+    // ADMIN pode gerenciar TODOS os usuários, incluindo outros ADMINs - SEM EXCEÇÕES
+    // Para outros perfis, verifica as permissões normalmente
+    let podeGerenciar = false;
+    if (isAdminUser) {
+      // ADMIN sempre pode gerenciar qualquer usuário
+      podeGerenciar = true;
+    } else {
+      // Outros perfis seguem regras normais
+      podeGerenciar = canManageUsuario(usuario) || (podeGerenciarBar && (usuario.perfil || "").toString().trim().toUpperCase() === "BAR");
+    }
+    
+    // ADMIN pode excluir QUALQUER usuário, incluindo outros ADMINs - SEM NENHUMA RESTRIÇÃO
+    const podeExcluir = isAdminUser;
+    
+    // ADMIN sempre pode ver ações para qualquer usuário
+    // Outros perfis veem ações apenas se puderem gerenciar
+    const podeVerAcoes = !isBarOuCozinha && (isAdminUser || podeGerenciar);
+    
+    // BAR e COZINHA não veem ações
+    let acoes = "--";
+    if (podeVerAcoes) {
+      const botoes = [];
+      
+        // ADMIN sempre vê TODOS os botões para TODOS os usuários, incluindo outros ADMINs
+      // Outros perfis veem apenas se puderem gerenciar
+      if (isAdminUser) {
+        // ADMIN pode editar/ativar/desativar/excluir qualquer usuário
+        botoes.push('<button class="table-action" data-action="edit">Editar</button>');
+        if (ativo) {
+          botoes.push('<button class="table-action danger" data-action="disable">Desativar</button>');
+        } else {
+          botoes.push('<button class="table-action" data-action="enable">Ativar</button>');
+        }
+        botoes.push('<button class="table-action danger" data-action="delete">Excluir</button>');
+      } else if (podeGerenciar) {
+        // Outros perfis veem botões apenas se puderem gerenciar
+        botoes.push('<button class="table-action" data-action="edit">Editar</button>');
+        if (ativo) {
+          botoes.push('<button class="table-action danger" data-action="disable">Desativar</button>');
+        } else {
+          botoes.push('<button class="table-action" data-action="enable">Ativar</button>');
+        }
+      }
+      
+      acoes = botoes.length > 0 ? botoes.join("") : "--";
+    }
+    
+    // Se for BAR ou COZINHA, não renderiza a coluna de Ações
+    const colunaAcoes = isBarOuCozinha ? '' : `<td data-label="Acoes" class="table-actions">${acoes}</td>`;
+    
+    return `<tr data-id="${usuario.id}">
+      <td data-label="Foto">${foto}</td>
+      <td data-label="Nome">${escapeHtml(usuario.nome)}</td>
+      <td data-label="Email">${escapeHtml(usuario.email)}</td>
+      <td data-label="Perfil">${escapeHtml(PERFIL_LABELS[(usuario.perfil || "").toString().trim().toUpperCase()] || (usuario.perfil || "--"))}</td>
+      <td data-label="Unidade">${escapeHtml(usuario.unidade_nome || "--")}</td>
+      <td data-label="Status">${buildStatusPill(ativo ? "Ativo" : "Inativo")}</td>
+      ${colunaAcoes}
+    </tr>`;
+  }).join("");
+  
+  // Ajusta o número de colunas baseado se BAR/COZINHA veem ações ou não
+  const numColunas = isBarOuCozinha ? 6 : 7;
+  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", numColunas);
+}
+
+function renderRelatorioResumo(lista, label) {
+  if (dom.relResumoColuna) dom.relResumoColuna.textContent = label;
+  const rows = (lista || []).map((item) => (
+    `<tr>
+      <td>${escapeHtml(item.nome)}</td>
+      <td>${formatNumber(item.entradasQtd, 3)}</td>
+      <td>R$ ${formatNumber(item.entradasVal, 2)}</td>
+      <td>${formatNumber(item.saidasQtd, 3)}</td>
+      <td>R$ ${formatNumber(item.saidasVal, 2)}</td>
+      <td>${formatNumber(item.saldoQtd, 3)}</td>
+    </tr>`
+  )).join("");
+  renderTable(dom.relatorioResumoTable, rows, "Sem dados no periodo.", 6);
+}
+
+const renderRelatorioDetalhes = (lista) => renderMovimentacoes(lista, dom.relatorioDetalhesTable, "Sem movimentacoes.");
+
+function arrayBufferToBase64(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+let cachedLogoMarkup = null;
+const LOGO_FALLBACK_MARKUP = '<img src="imagens/logo.pdf.png" alt="Logo" />';
+async function getReportLogoMarkup() {
+  if (cachedLogoMarkup !== null) return cachedLogoMarkup;
+  const logos = ["imagens/logo.pdf.png", "imagens/logo.png", "imagens/logo.pdf"];
+  for (const caminho of logos) {
+    try {
+      const resposta = await fetch(caminho);
+      if (!resposta.ok) continue;
+      const contentType = (resposta.headers.get("Content-Type") || "").toLowerCase();
+      if (contentType.includes("image/")) {
+        const blob = await resposta.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error("Falha ao carregar logo"));
+          reader.readAsDataURL(blob);
+        });
+        cachedLogoMarkup = `<img src="${dataUrl}" alt="Logo" />`;
+        return cachedLogoMarkup;
+      }
+      if (contentType.includes("pdf")) {
+        const buffer = await resposta.arrayBuffer();
+        const base64 = arrayBufferToBase64(buffer);
+        const dataUrl = `data:application/pdf;base64,${base64}`;
+        cachedLogoMarkup = `<object data="${dataUrl}" type="application/pdf" width="120" height="120"></object>`;
+        return cachedLogoMarkup;
+      }
+    } catch (err) {
+      /* tenta proximo */
+    }
+  }
+  cachedLogoMarkup = LOGO_FALLBACK_MARKUP;
+  return cachedLogoMarkup;
+}
+
+function getRelatorioSnapshot() {
+  const filtros = collectRelatorioFiltros();
+  return {
+    filtros,
+    resumo: Array.isArray(state.relatorioResumo) ? [...state.relatorioResumo] : [],
+    detalhes: Array.isArray(state.movimentacoes) ? [...state.movimentacoes] : [],
+  };
+}
+
+function exportRelatorioCsv() {
+  const { filtros, resumo, detalhes } = getRelatorioSnapshot();
+  if (!resumo.length && !detalhes.length) {
+    showToast("Gere o relatorio antes de exportar.", "warning");
+    return;
+  }
+  const linhas = [];
+  const agora = new Date();
+  linhas.push(`Relatorio de Movimentacoes;Gerado em;${agora.toLocaleString("pt-BR")}`);
+  linhas.push("");
+  linhas.push("Filtros aplicados;");
+  linhas.push(`Agrupar por;${filtros.agrupar || "produto"}`);
+  linhas.push(`Tipo;${filtros.tipo || "Todos"}`);
+  linhas.push(`Produto ID;${filtros.produto_id || "Todos"}`);
+  linhas.push(`Unidade ID;${filtros.unidade_id || "Todas"}`);
+  linhas.push(`Data inicial;${filtros.data_ini || "--"}`);
+  linhas.push(`Data final;${filtros.data_fim || "--"}`);
+  linhas.push("");
+  linhas.push("Resumo;");
+  linhas.push("Agrupador;Entradas (Qtd);Entradas (Valor);Saidas (Qtd);Saidas (Valor);Saldo (Qtd)");
+  resumo.forEach((item) => {
+    linhas.push(
+      [
+        item.nome,
+        formatNumber(item.entradasQtd, 3),
+        formatNumber(item.entradasVal, 2),
+        formatNumber(item.saidasQtd, 3),
+        formatNumber(item.saidasVal, 2),
+        formatNumber(item.saldoQtd, 3),
+      ].join(";"),
+    );
+  });
+  linhas.push("");
+  linhas.push("Detalhes;");
+  linhas.push("Data;Tipo;Produto;Unidade;Quantidade;Motivo;Responsavel");
+  detalhes.forEach((mov) => {
+    const quantidadeValor = Number(mov.qtd ?? mov.quantidade ?? 0);
+    const quantidade = `${formatNumber(quantidadeValor, 3)} ${mov.unidade || ""}`.trim();
+    linhas.push(
+      [
+        formatDate(mov.data_mov),
+        (mov.tipo || "--").toUpperCase(),
+        mov.produto_nome || "--",
+        mov.unidade_nome || "--",
+        quantidade,
+        mov.motivo || mov.observacao || "--",
+        mov.responsavel_nome || "--",
+      ].map((valor) => String(valor).replace(/;/g, ",")).join(";"),
+    );
+  });
+
+  const blob = new Blob([linhas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `relatorio_movimentacoes_${agora.toISOString().replace(/[:.]/g, "-")}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast("Relatorio exportado em CSV.", "success");
+}
+
+async function exportRelatorioPdf() {
+  const { filtros, resumo, detalhes } = getRelatorioSnapshot();
+  if (!resumo.length && !detalhes.length) {
+    showToast("Gere o relatorio antes de exportar.", "warning");
+    return;
+  }
+  const agora = new Date();
+  const titulo = "Relatorio de Movimentacoes";
+  const logoMarkup = await getReportLogoMarkup();
+  const estilo = `
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+      .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+      .report-header img, .report-header object { height: 64px; width: auto; max-width: 120px; }
+      .report-header object { border: none; }
+      .report-header h1 { margin: 0; font-size: 24px; }
+      .meta { margin-bottom: 24px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+      th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 12px; text-align: left; }
+      th { background: #f0f4f8; }
+      .section-title { font-size: 16px; margin: 24px 0 8px; }
+    </style>
+  `;
+  const filtrosHtml = `
+    <div class="meta">
+      <strong>Gerado em:</strong> ${agora.toLocaleString("pt-BR")}<br />
+      <strong>Agrupar por:</strong> ${filtros.agrupar || "produto"}<br />
+      <strong>Tipo:</strong> ${filtros.tipo || "Todos"}<br />
+      <strong>Produto ID:</strong> ${filtros.produto_id || "Todos"}<br />
+      <strong>Unidade ID:</strong> ${filtros.unidade_id || "Todas"}<br />
+      <strong>Data inicial:</strong> ${filtros.data_ini || "--"}<br />
+      <strong>Data final:</strong> ${filtros.data_fim || "--"}
+    </div>
+  `;
+  const resumoHtml = resumo.length
+    ? `
+      <h2 class="section-title">Resumo por agrupador</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Agrupador</th>
+            <th>Entradas (Qtd)</th>
+            <th>Entradas (Valor)</th>
+            <th>Saidas (Qtd)</th>
+            <th>Saidas (Valor)</th>
+            <th>Saldo (Qtd)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${resumo
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(item.nome)}</td>
+                  <td>${formatNumber(item.entradasQtd, 3)}</td>
+                  <td>R$ ${formatNumber(item.entradasVal, 2)}</td>
+                  <td>${formatNumber(item.saidasQtd, 3)}</td>
+                  <td>R$ ${formatNumber(item.saidasVal, 2)}</td>
+                  <td>${formatNumber(item.saldoQtd, 3)}</td>
+                </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `
+    : "<p>Sem dados de resumo para os filtros selecionados.</p>";
+
+  const detalhesHtml = detalhes.length
+    ? `
+      <h2 class="section-title">Movimentacoes detalhadas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Produto</th>
+            <th>Unidade</th>
+            <th>Quantidade</th>
+            <th>Motivo</th>
+            <th>Responsavel</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${detalhes
+            .map((mov) => {
+              const quantidadeValor = Number(mov.qtd ?? mov.quantidade ?? 0);
+              const quantidade = `${formatNumber(quantidadeValor, 3)} ${escapeHtml(mov.unidade || "")}`.trim();
+              return `
+                <tr>
+                  <td>${formatDate(mov.data_mov)}</td>
+                  <td>${escapeHtml((mov.tipo || "--").toUpperCase())}</td>
+                  <td>${escapeHtml(mov.produto_nome || "--")}</td>
+                  <td>${escapeHtml(mov.unidade_nome || "--")}</td>
+                  <td>${quantidade}</td>
+                  <td>${escapeHtml(mov.motivo || mov.observacao || "--")}</td>
+                  <td>${escapeHtml(mov.responsavel_nome || "--")}</td>
+                </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    `
+    : "<p>Sem movimentacoes para os filtros selecionados.</p>";
+
+  const conteudo = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>${titulo}</title>
+        ${estilo}
+      </head>
+      <body>
+        <div class="report-header">
+          ${logoMarkup}
+          <h1>${titulo}</h1>
+        </div>
+        ${filtrosHtml}
+        ${resumoHtml}
+        ${detalhesHtml}
+      </body>
+    </html>
+  `;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
+
+  let timeoutId = null;
+
+  const cleanup = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    try {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.onafterprint = null;
+      }
+    } catch (err) {
+      /* noop */
+    }
+    if (iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+    }
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      showToast("Nao foi possivel preparar o PDF.", "error");
+      return;
+    }
+    win.onafterprint = cleanup;
+    win.focus();
+    try {
+      if (typeof win.print === "function") {
+        win.print();
+      } else {
+        cleanup();
+        showToast("Seu navegador nao suportou a impressao.", "error");
+      }
+    } catch (err) {
+      cleanup();
+      showToast("Falha ao acionar a impressao.", "error");
+    }
+  };
+
+  iframe.onerror = () => {
+    cleanup();
+    showToast("Nao foi possivel gerar o PDF.", "error");
+  };
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    cleanup();
+    showToast("Nao foi possivel gerar o PDF.", "error");
+    return;
+  }
+  doc.open();
+  doc.write(conteudo);
+  doc.close();
+
+  timeoutId = setTimeout(() => {
+    if (!document.body.contains(iframe)) return;
+    cleanup();
+    showToast("Falha ao imprimir. Verifique as configuracoes do navegador.", "error");
+  }, 60000);
+  showToast("Relatorio enviado para impressao/arquivo PDF.", "success");
+}
+
+function buildListaStatusPill(status) {
+  const label = LISTA_STATUS_LABEL[status] || status || "--";
+  const css = LISTA_STATUS_CLASS[status] || "status-pill--muted";
+  return `<span class="status-pill ${css}">${label}</span>`;
+}
+
+function updateListaStatusButtons(lista) {
+  const statusAtual = (lista?.status || "").toUpperCase();
+  const bloqueado = !lista || statusAtual === "FINALIZADA";
+  // Permite alterar status se for o dono OU se for admin
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isAdmin = perfil === "ADMIN";
+  const permitido = canManageCompras() && (isListaOwner(lista) || isAdmin);
+  const controles = [
+    { el: dom.listaCompraStatusRascunho, codigo: "RASCUNHO" },
+    { el: dom.listaCompraStatusEmCompras, codigo: "EM_COMPRAS" },
+    { el: dom.listaCompraStatusPausada, codigo: "PAUSADA" },
+  ];
+  controles.forEach(({ el, codigo }) => {
+    if (!el) return;
+    const ativo = statusAtual === codigo;
+    const deveDesabilitar = bloqueado || !permitido || listaStatusAtualizando || ativo;
+    el.disabled = deveDesabilitar;
+    el.classList.toggle("is-active", ativo);
+    el.setAttribute("aria-pressed", ativo ? "true" : "false");
+  });
+}
+
+function resolveListaPdfHref(path) {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  return `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function updateListaPdfButton(lista) {
+  const abrirBtn = dom.listaCompraPdf;
+  const gerarBtn = dom.listaCompraGerarPdf;
+  if (gerarBtn && !gerarBtn.dataset.loading) gerarBtn.dataset.loading = "0";
+  if (!lista) {
+    if (abrirBtn) {
+      abrirBtn.textContent = "Abrir PDF";
+      abrirBtn.disabled = true;
+    }
+    if (gerarBtn) {
+      gerarBtn.textContent = "Gerar PDF";
+      gerarBtn.disabled = true;
+      gerarBtn.dataset.loading = "0";
+    }
+    return;
+  }
+  const status = (lista.status || "").toUpperCase();
+  
+  // Verifica se é perfil COZINHA ou BAR - podem gerar PDF mesmo sem lista finalizada
+  const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  
+  // COZINHA e BAR podem gerar PDF se a lista existir, outros perfis precisam que esteja finalizada e tenham permissão
+  const podeGerar = isCozinhaOuBar ? true : (status === "FINALIZADA" && canManageCompras());
+  
+  if (abrirBtn) {
+    abrirBtn.textContent = "Abrir PDF";
+    abrirBtn.disabled = !podeGerar;
+  }
+  
+  if (gerarBtn) {
+    const emProcesso = gerarBtn.dataset.loading === "1";
+    gerarBtn.disabled = emProcesso || !podeGerar;
+    if (!emProcesso) gerarBtn.textContent = "Gerar PDF";
+  }
+}
+
+function buildEstabelecimentoOptions(selectedId) {
+  // Usa estabelecimentos da lista atual, se disponível, senão usa globais
+  const estabelecimentos = (state.listaCompraAtual?.estabelecimentos || state.estabelecimentosGlobais || []);
+  const opts = estabelecimentos.map(
+    (est) => `<option value="${est.id}" ${Number(est.id) === Number(selectedId) ? "selected" : ""}>${escapeHtml(est.nome)}</option>`,
+  );
+  return ['<option value="">Sem vinculo</option>', ...opts].join("");
+}
+
+function renderListasCompras(listas) {
+  const rows = (listas || []).map((lista) => {
+    const selecionada = state.listaCompraAtual && Number(state.listaCompraAtual.id) === Number(lista.id);
+    const classe = selecionada ? "selected" : "";
+    return `<tr data-id="${lista.id}" class="${classe}">
+      <td data-label="Lista">${escapeHtml(lista.nome)}</td>
+      <td data-label="Unidade">${escapeHtml(lista.unidade_nome || "--")}</td>
+      <td data-label="Status">${buildListaStatusPill(lista.status)}</td>
+      <td data-label="Planejado">${formatCurrency(lista.total_planejado || 0)}</td>
+      <td data-label="Realizado">${formatCurrency(lista.total_realizado || 0)}</td>
+      <td data-label="Itens">${Number(lista.itens_comprados || 0)} / ${Number(lista.itens_total || 0)}</td>
+    </tr>`;
+  }).join("");
+  renderTable(dom.listasComprasTable, rows, "Nenhuma lista de compras cadastrada.", 6);
+}
+
+function renderListaCompraDetalhes(lista) {
+  if (!lista) {
+    dom.listaCompraTitulo.textContent = "Selecione uma lista";
+    dom.listaCompraSubtitulo.textContent = "";
+    dom.listaCompraStatus.innerHTML = "--";
+    dom.listaCompraObservacoes.value = "";
+    dom.listaCompraTotalPlanejado.textContent = "R$ 0.00";
+    dom.listaCompraTotalRealizado.textContent = "R$ 0.00";
+    dom.listaCompraItensResumo.textContent = "0/0";
+    updateListaPdfButton(null);
+    if (dom.listaCompraLancarEstoque) {
+      // COZINHA e BAR não podem lançar - oculta o botão
+      const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+      const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+      if (isCozinhaOuBar) {
+        dom.listaCompraLancarEstoque.classList.add("hidden");
+      } else {
+        dom.listaCompraLancarEstoque.classList.remove("hidden");
+        dom.listaCompraLancarEstoque.disabled = true;
+        dom.listaCompraLancarEstoque.textContent = "Lancar no Estoque";
+        dom.listaCompraLancarEstoque.dataset.loading = "0";
+      }
+    }
+    if (dom.listaCompraAdicionarItem) dom.listaCompraAdicionarItem.disabled = true;
+    if (dom.listaCompraAdicionarEstabelecimento) dom.listaCompraAdicionarEstabelecimento.disabled = true;
+    if (dom.listaCompraFinalizar) dom.listaCompraFinalizar.disabled = true;
+    if (dom.listaCompraObservacoes) dom.listaCompraObservacoes.disabled = true;
+    renderListaCompraItens([]);
+    renderListaCompraEstabelecimentos([]);
+    renderListaCompraAnexos([]);
+    updateListaStatusButtons(null);
+    updateNovaListaButton();
+    return;
+  }
+  dom.listaCompraTitulo.textContent = lista.nome;
+  dom.listaCompraSubtitulo.textContent = `Responsavel: ${escapeHtml(lista.responsavel_nome || "--")} • Unidade: ${escapeHtml(lista.unidade_nome || "--")}`;
+  dom.listaCompraStatus.innerHTML = buildListaStatusPill(lista.status);
+  dom.listaCompraObservacoes.value = lista.observacoes || "";
+  dom.listaCompraTotalPlanejado.textContent = formatCurrency(lista.total_planejado || 0);
+  dom.listaCompraTotalRealizado.textContent = formatCurrency(lista.total_realizado || 0);
+  dom.listaCompraItensResumo.textContent = `${Number((lista.itens || []).filter((item) => (item.status || "").toUpperCase() === "COMPRADO").length)} / ${Number(lista.itens?.length || 0)}`;
+  updateListaPdfButton(lista);
+  const podeEditar = listaPermiteEdicao(lista);
+
+  if (dom.listaCompraLancarEstoque) {
+    // COZINHA e BAR não podem lançar - oculta o botão
+    const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    
+    if (isCozinhaOuBar) {
+      dom.listaCompraLancarEstoque.classList.add("hidden");
+    } else {
+      dom.listaCompraLancarEstoque.classList.remove("hidden");
+      
+      if (!dom.listaCompraLancarEstoque.dataset.loading) dom.listaCompraLancarEstoque.dataset.loading = "0";
+      const jaLancado = Boolean(lista.estoque_lancado_em);
+      const emProcesso = dom.listaCompraLancarEstoque.dataset.loading === "1";
+      // ✅ 4. Bloquear botão quando não houver itens comprados
+      const itensComprados = (lista.itens || []).filter((item) => (item.status || "").toUpperCase() === "COMPRADO");
+      const temItensComprados = itensComprados.length > 0;
+      
+      dom.listaCompraLancarEstoque.textContent = jaLancado ? "Lancado" : "Lancar no Estoque";
+      const podeLancar = listaPermiteLancarEstoque(lista);
+      dom.listaCompraLancarEstoque.disabled =
+        jaLancado ||
+        lista.status !== "FINALIZADA" ||
+        emProcesso ||
+        !podeLancar ||
+        !temItensComprados; // Bloqueia se não houver itens comprados
+    }
+  }
+  if (dom.listaCompraFinalizar) {
+    const podeFinalizar = listaPermiteFinalizar(lista);
+    const status = (lista.status || "").toUpperCase();
+    dom.listaCompraFinalizar.disabled = status === "FINALIZADA" || !podeFinalizar;
+    dom.listaCompraFinalizar.textContent = status === "FINALIZADA" ? "Lista finalizada" : "Finalizar lista";
+  }
+  // Estoquista e Cozinha podem adicionar itens, mas não editar lista
+  const podeAdicionarItens = listaPermiteAdicionarItens(lista);
+  if (dom.listaCompraAdicionarItem) dom.listaCompraAdicionarItem.disabled = !podeAdicionarItens;
+  
+  // Estoquista e Cozinha não podem gerenciar estabelecimentos
+  if (dom.listaCompraAdicionarEstabelecimento) {
+    const podeGerenciarEstabelecimentos = canManageCompras() && !canOnlyCreateAndAddItems();
+    dom.listaCompraAdicionarEstabelecimento.disabled = !podeGerenciarEstabelecimentos;
+  }
+  
+  // Estoquista e Cozinha não podem editar observações da lista
+  if (dom.listaCompraObservacoes) dom.listaCompraObservacoes.disabled = !podeEditar;
+  renderListaCompraItens(lista.itens || []);
+  // Renderiza os estabelecimentos visitados desta lista
+  renderListaCompraEstabelecimentos(lista.estabelecimentos || []);
+  renderListaCompraAnexos(lista.anexos || []);
+  updateListaStatusButtons(lista);
+  updateNovaListaButton();
+}
+
+function renderListaCompraItens(itens) {
+  const podeEditar = listaPermiteEdicao();
+  // ADMIN e GERENTE podem editar tudo. Estoquista e Cozinha não podem editar/deletar itens existentes
+  const podeEditarItens = podeEditar && (isAdminOrGerente() || !canOnlyCreateAndAddItems());
+  const inputAttrs = podeEditarItens ? "" : "disabled";
+  const rows = (itens || []).map((item) => {
+    const id = item.id;
+    return `<tr data-id="${id}">
+      <td data-label="Produto">${escapeHtml(item.produto_nome || "--")}</td>
+      <td data-label="Planejado"><input class="lista-compras-item-input" data-field="quantidade_planejada" type="number" step="0.01" min="0" value="${formatQuantityDisplay(item.quantidade_planejada)}" ${inputAttrs} /></td>
+      <td data-label="Comprado"><input class="lista-compras-item-input" data-field="quantidade_comprada" type="number" step="0.01" min="0" value="${formatQuantityDisplay(item.quantidade_comprada)}" ${inputAttrs} /></td>
+      <td data-label="Preco unitario"><input class="lista-compras-item-input" data-field="valor_unitario" type="number" step="0.01" min="0" value="${formatUnitValue(item.valor_unitario || 0)}" ${inputAttrs} /></td>
+      <td data-label="Total" class="lista-compras-total-cell" data-total="${item.valor_total || 0}">${formatCurrency(item.valor_total || 0)}</td>
+      <td data-label="Status"><select class="lista-compras-item-select" data-field="status" ${inputAttrs}>
+        <option value="PENDENTE" ${(item.status || "").toUpperCase() === "PENDENTE" ? "selected" : ""}>Pendente</option>
+        <option value="COMPRADO" ${(item.status || "").toUpperCase() === "COMPRADO" ? "selected" : ""}>Comprado</option>
+        <option value="CANCELADO" ${(item.status || "").toUpperCase() === "CANCELADO" ? "selected" : ""}>Cancelado</option>
+      </select></td>
+      <td data-label="Estabelecimento"><select class="lista-compras-item-select" data-field="estabelecimento_id" ${inputAttrs}>${buildEstabelecimentoOptions(item.estabelecimento_id)}</select></td>
+      <td data-label="Observacoes"><textarea class="lista-compras-item-textarea" data-field="observacoes" ${inputAttrs}>${escapeHtml(item.observacoes || "")}</textarea></td>
+      <td data-label="Acoes" class="compras-table-actions">
+        <button class="table-action" data-action="edit" ${podeEditarItens ? "" : "disabled"}>Editar</button>
+        <button class="table-action danger" data-action="delete" ${podeEditarItens ? "" : "disabled"}>Excluir</button>
+      </td>
+    </tr>`;
+  }).join("");
+  renderTable(dom.listaComprasItensTable, rows, "Nenhum item cadastrado nesta lista.", 9);
+}
+
+function renderListaCompraEstabelecimentos(estabelecimentos) {
+  // Estoquista e Cozinha não podem gerenciar estabelecimentos
+  const podeGerenciar = canManageCompras() && !canOnlyCreateAndAddItems();
+  
+  // Busca os itens da lista atual para verificar vínculos
+  const itensLista = state.listaCompraAtual?.itens || [];
+  
+  const rows = (estabelecimentos || []).map((est) => {
+    // Conta quantos itens estão vinculados a este estabelecimento
+    const itensVinculados = itensLista.filter(item => 
+      item.estabelecimento_id && Number(item.estabelecimento_id) === Number(est.id)
+    );
+    
+    const quantidadeVinculados = itensVinculados.length;
+    
+    // Monta lista de produtos vinculados
+    let vinculoTexto = "--";
+    if (quantidadeVinculados > 0) {
+      const produtosNomes = itensVinculados
+        .map(item => item.produto_nome || "Produto sem nome")
+        .slice(0, 3) // Mostra até 3 produtos
+        .join(", ");
+      
+      const maisItens = quantidadeVinculados > 3 ? ` e mais ${quantidadeVinculados - 3}` : "";
+      vinculoTexto = `${quantidadeVinculados} item(ns): ${produtosNomes}${maisItens}`;
+    }
+    
+    // Classe para destacar estabelecimentos com vínculo
+    const temVinculo = quantidadeVinculados > 0;
+    const classeLinha = temVinculo ? "tem-vinculo" : "";
+    
+    return `<tr data-id="${est.id}" class="${classeLinha}">
+      <td data-label="Nome">${escapeHtml(est.nome)}</td>
+      <td data-label="Localizacao">${escapeHtml(est.localizacao || "--")}</td>
+      <td data-label="Pagamento">${escapeHtml(est.forma_pagamento || "--")}</td>
+      <td data-label="Vinculo" class="vinculo-cell" title="${escapeHtml(vinculoTexto)}">
+        ${temVinculo 
+          ? `<span class="vinculo-badge" title="${escapeHtml(vinculoTexto)}">${quantidadeVinculados} item(ns)</span>` 
+          : '<span class="sem-vinculo">Sem vínculo</span>'}
+      </td>
+      <td data-label="Observacoes">${escapeHtml(est.observacoes || "--")}</td>
+      <td data-label="Acoes" class="compras-table-actions">
+        <button class="table-action" data-action="editar" ${podeGerenciar ? "" : "disabled"}>Editar</button>
+        <button class="table-action danger" data-action="deletar" ${podeGerenciar ? "" : "disabled"}>Deletar</button>
+      </td>
+    </tr>`;
+  }).join("");
+  renderTable(dom.listaComprasEstabelecimentosTable, rows, "Nenhum estabelecimento registrado.", 6);
+}
+
+function renderListaCompraAnexos(anexos) {
+  if (!dom.listaComprasAnexos) return;
+  if (!anexos || anexos.length === 0) {
+    dom.listaComprasAnexos.innerHTML = "<li>Nenhum anexo enviado.</li>";
+    return;
+  }
+  dom.listaComprasAnexos.innerHTML = anexos.map((anexo) => {
+    const caminho = anexo.arquivo_path ? `${API_URL}${anexo.arquivo_path.startsWith("/") ? anexo.arquivo_path : `/${anexo.arquivo_path}`}` : "#";
+    const nome = anexo.nome_original || `Arquivo ${anexo.id}`;
+    const criado = anexo.criado_em ? formatDate(anexo.criado_em) : "--";
+    return `<li><a href="${caminho}" target="_blank" rel="noopener">${escapeHtml(nome)}</a><span>Enviado em ${criado}</span></li>`;
+  }).join("");
+}
+
+function resumoListaDetalhe(lista) {
+  if (!lista) return null;
+  const itens = lista.itens || [];
+  const itensComprados = itens.filter((item) => (item.status || "").toUpperCase() === "COMPRADO").length;
+  return {
+    id: lista.id,
+    nome: lista.nome,
+    responsavel_id: lista.responsavel_id,
+    responsavel_nome: lista.responsavel_nome,
+    unidade_id: lista.unidade_id,
+    unidade_nome: lista.unidade_nome,
+    status: lista.status,
+    total_planejado: lista.total_planejado,
+    total_realizado: lista.total_realizado,
+    itens_total: itens.length,
+    itens_comprados: itensComprados,
+  };
+}
+
+const flushItemUpdates = debounce(async () => {
+  if (!pendingItemUpdates.size) return;
+  const entries = Array.from(pendingItemUpdates.entries());
+  pendingItemUpdates.clear();
+  try {
+    // Recalcula valores totais para garantir que estão corretos antes de enviar
+    const finalEntries = entries.map(([itemId, payload]) => {
+      // Se campos numéricos foram alterados, recalcula o total
+      if (payload.quantidade_planejada !== undefined || 
+          payload.quantidade_comprada !== undefined || 
+          payload.valor_unitario !== undefined) {
+        const row = dom.listaComprasItensTable?.querySelector(`tr[data-id="${itemId}"]`);
+        if (row) {
+          const novoTotal = calcularTotalItemLinha(row);
+          payload.valor_total = novoTotal;
+        }
+      }
+      return [itemId, payload];
+    });
+    
+    await Promise.all(finalEntries.map(([itemId, payload]) => fetchJSON(`/itens/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    })));
+    if (state.listaCompraAtual) await selecionarListaCompra(state.listaCompraAtual.id, true);
+    showToast("Itens atualizados.", "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}, 700);
+
+function calcularTotalItemLinha(row) {
+  if (!row) return 0;
+  const quantidadePlanejadaInput = row.querySelector('input[data-field="quantidade_planejada"]');
+  const quantidadeCompradaInput = row.querySelector('input[data-field="quantidade_comprada"]');
+  const valorUnitarioInput = row.querySelector('input[data-field="valor_unitario"]');
+  
+  let quantidadePlanejada = 0;
+  let quantidadeComprada = 0;
+  let valorUnitario = 0;
+  
+  if (quantidadePlanejadaInput) {
+    const valor = Number(quantidadePlanejadaInput.value) || 0;
+    quantidadePlanejada = Math.max(0, roundToQuantity(valor));
+  }
+  
+  if (quantidadeCompradaInput) {
+    const valor = Number(quantidadeCompradaInput.value) || 0;
+    quantidadeComprada = Math.max(0, roundToQuantity(valor));
+  }
+  
+  if (valorUnitarioInput) {
+    const valor = Number(valorUnitarioInput.value) || 0;
+    valorUnitario = Math.max(0, roundToCurrency(valor));
+  }
+  
+  // Usa quantidade comprada se houver, senão usa quantidade planejada
+  const quantidadeBase = quantidadeComprada > 0 ? quantidadeComprada : quantidadePlanejada;
+  const valorTotal = roundToCurrency(valorUnitario * quantidadeBase);
+  return Math.max(0, valorTotal);
+}
+
+function atualizarTotalItemLinha(row) {
+  if (!row) return;
+  const totalCell = row.querySelector('.lista-compras-total-cell');
+  if (!totalCell) return;
+  const novoTotal = calcularTotalItemLinha(row);
+  totalCell.textContent = formatCurrency(novoTotal);
+  totalCell.setAttribute('data-total', novoTotal);
+}
+
+function queueItemUpdate(itemId, field, value) {
+  if (!itemId) return;
+  if (!pendingItemUpdates.has(itemId)) pendingItemUpdates.set(itemId, {});
+  const payload = pendingItemUpdates.get(itemId);
+  payload[field] = value;
+  
+  // Atualiza visualmente o total se os campos relevantes foram alterados
+  if (["quantidade_planejada", "quantidade_comprada", "valor_unitario"].includes(field)) {
+    const row = dom.listaComprasItensTable?.querySelector(`tr[data-id="${itemId}"]`);
+    if (row) {
+      atualizarTotalItemLinha(row);
+    }
+  }
+  
+  flushItemUpdates();
+}
+
+
+const atualizarObservacoesListaDebounced = debounce(async (listaId, observacoes) => {
+  if (!listaId) return;
+  try {
+    await fetchJSON(`/listas/${listaId}`, {
+      method: "PUT",
+      body: JSON.stringify({ observacoes }),
+    });
+    if (state.listaCompraAtual && Number(state.listaCompraAtual.id) === Number(listaId)) {
+      state.listaCompraAtual.observacoes = observacoes;
+    }
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}, 600);
+
+async function loadListasCompras() {
+  const statusFiltro = state.listaComprasFiltroStatus || "ativas";
+  if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = statusFiltro;
+  try {
+    const todas = await fetchJSON("/listas");
+    const listas = Array.isArray(todas) ? todas : [];
+    const ativas = listas.filter((item) => (item.status || "").toUpperCase() !== "FINALIZADA");
+    const finalizadas = listas.filter((item) => (item.status || "").toUpperCase() === "FINALIZADA");
+    state.listasComprasAtivasSnapshot = ativas;
+
+    let exibicao;
+    if (statusFiltro === "finalizadas") exibicao = finalizadas;
+    else if (statusFiltro === "todas") exibicao = listas;
+    else exibicao = ativas;
+
+    state.listasCompras = exibicao;
+    renderListasCompras(state.listasCompras);
+
+    let alvoId = state.listaCompraAtual?.id ? Number(state.listaCompraAtual.id) : null;
+    if (!alvoId || !state.listasCompras.some((item) => Number(item.id) === alvoId)) {
+      alvoId = state.listasCompras.length ? Number(state.listasCompras[0].id) : null;
+    }
+
+    if (alvoId) {
+      await selecionarListaCompra(alvoId, true);
+    } else {
+      state.listaCompraAtual = null;
+      renderListaCompraDetalhes(null);
+    }
+    updateNovaListaButton();
+    updateComprasDashboardCard();
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function selecionarListaCompra(listaId, silent = false) {
+  if (!listaId) return;
+  try {
+    const detalhes = await fetchJSON(`/listas/${listaId}`);
+    state.listaCompraAtual = detalhes;
+    await loadEstabelecimentosGlobais();
+    if (!silent) {
+      showToast("Lista carregada.", "info");
+    }
+    if (detalhes) {
+      const resumo = resumoListaDetalhe(detalhes);
+      state.listasCompras = state.listasCompras.map((lista) => (Number(lista.id) === Number(listaId) ? { ...lista, ...resumo } : lista));
+    }
+    renderListasCompras(state.listasCompras);
+    renderListaCompraDetalhes(detalhes);
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function atualizarStatusListaCompra(status) {
+  if (!state.listaCompraAtual) return;
+  if (listaStatusAtualizando) return;
+  const statusAtual = (state.listaCompraAtual.status || "").toUpperCase();
+  const destino = (status || "").toUpperCase();
+  if (!destino || statusAtual === destino) return;
+  if (statusAtual === "FINALIZADA") {
+    showToast("Lista finalizada nao permite alterar status.", "warning");
+    updateListaStatusButtons(state.listaCompraAtual);
+    return;
+  }
+  if (!canManageCompras()) {
+    showToast("Sem permissão para alterar status.", "warning");
+    return;
+  }
+  
+  // Estoquista e Cozinha não podem alterar status
+  if (canOnlyCreateAndAddItems()) {
+    showToast("Você não tem permissão para alterar o status da lista.", "warning");
+    updateListaStatusButtons(state.listaCompraAtual);
+    return;
+  }
+  
+  // ADMIN e GERENTE podem fazer tudo
+  if (isAdminOrGerente()) {
+    // Permite alterar status
+  } else {
+    // Outros perfis: permite alterar status se for o dono
+    if (!isListaOwner(state.listaCompraAtual)) {
+      showToast("Somente o criador da lista pode alterar o status.", "warning");
+      updateListaStatusButtons(state.listaCompraAtual);
+      return;
+    }
+  }
+  listaStatusAtualizando = true;
+  updateListaStatusButtons(state.listaCompraAtual);
+  try {
+    const atualizada = await fetchJSON(`/listas/${state.listaCompraAtual.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ status: destino }),
+    });
+    state.listaCompraAtual = atualizada;
+    const resumo = resumoListaDetalhe(atualizada);
+    state.listasCompras = state.listasCompras.map((lista) => (Number(lista.id) === Number(atualizada.id) ? { ...lista, ...resumo } : lista));
+    renderListasCompras(state.listasCompras);
+    renderListaCompraDetalhes(atualizada);
+    showToast("Status da lista atualizado.", "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    listaStatusAtualizando = false;
+    updateListaStatusButtons(state.listaCompraAtual);
+  }
+}
+
+async function abrirListaCompraModal(lista = null) {
+  if (!dom.listaCompraForm) return;
+  
+  // Estoquista e Cozinha só podem criar novas listas, não editar existentes
+  if (lista && canOnlyCreateAndAddItems()) {
+    showToast("Você só pode criar novas listas de compras, não editar listas existentes.", "warning");
+    return;
+  }
+  
+  // Carrega unidades se necessário
+  try {
+    await loadUnidades(false);
+  } catch (error) {
+    console.error("Erro ao carregar unidades:", error);
+    showToast("Erro ao carregar unidades. Tente novamente.", "error");
+    return;
+  }
+  
+  dom.listaCompraForm.reset();
+  dom.listaCompraModalTitle.textContent = lista ? "Editar lista" : "Nova lista";
+  
+  const unidadeSelect = dom.listaCompraForm.elements.unidade_id;
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR";
+  
+  if (lista) {
+    dom.listaCompraForm.elements.id.value = lista.id;
+    dom.listaCompraForm.elements.nome.value = lista.nome || "";
+    dom.listaCompraForm.elements.unidade_id.value = lista.unidade_id || "";
+    dom.listaCompraForm.elements.observacoes.value = lista.observacoes || "";
+    
+    // COZINHA e BAR não podem editar unidade mesmo ao editar (se tivesse permissão)
+    if (isCozinhaOuBar && unidadeSelect) {
+      unidadeSelect.disabled = true;
+    }
+  } else {
+    // Nova lista
+    if (unidadeSelect) {
+      // COZINHA e BAR: mostram apenas sua própria unidade
+      if (isCozinhaOuBar && currentUser?.unidade_id) {
+        // Aguarda um pouco para garantir que as unidades foram carregadas
+        if (!state.unidades || state.unidades.length === 0) {
+          await loadUnidades(false);
+        }
+        
+        // Busca a unidade do usuário (COZINHA ou BAR)
+        const unidadeUsuario = state.unidades.find(u => Number(u.id) === Number(currentUser.unidade_id));
+        if (unidadeUsuario) {
+          // Limpa e mostra apenas a unidade do usuário
+          unidadeSelect.innerHTML = "";
+          const option = document.createElement("option");
+          option.value = String(unidadeUsuario.id);
+          option.textContent = unidadeUsuario.nome;
+          unidadeSelect.appendChild(option);
+          unidadeSelect.value = String(currentUser.unidade_id);
+          unidadeSelect.disabled = true;
+          
+          console.log(`✅ ${perfil} - Select configurado com apenas sua unidade:`, {
+            unidadeId: unidadeUsuario.id,
+            unidadeNome: unidadeUsuario.nome,
+            selectValue: unidadeSelect.value,
+            optionsCount: unidadeSelect.options.length
+          });
+        } else {
+          showToast("Erro: unidade não encontrada. Entre em contato com o administrador.", "error");
+          toggleModal(dom.listaCompraModal, false);
+          return;
+        }
+      } else {
+        // Outros perfis: mostra todas as unidades disponíveis
+        if (state.unidades && state.unidades.length > 0) {
+          unidadeSelect.innerHTML = "";
+          const defaultOption = document.createElement("option");
+          defaultOption.value = "";
+          defaultOption.textContent = "Selecione";
+          unidadeSelect.appendChild(defaultOption);
+          
+          state.unidades.forEach((unidade) => {
+            const option = document.createElement("option");
+            option.value = String(unidade.id);
+            option.textContent = unidade.nome;
+            unidadeSelect.appendChild(option);
+          });
+        }
+        // Preenche com a unidade do usuário se existir
+        if (currentUser?.unidade_id) {
+          unidadeSelect.value = String(currentUser.unidade_id);
+        }
+        unidadeSelect.disabled = false;
+      }
+    }
+  }
+  
+  toggleModal(dom.listaCompraModal, true);
+}
+
+async function submitListaCompra(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  if (!dom.listaCompraForm) {
+    console.error("Formulário não encontrado");
+    showToast("Erro: formulário não encontrado.", "error");
+    return;
+  }
+  
+  // Validação do formulário
+  if (!dom.listaCompraForm.checkValidity()) {
+    dom.listaCompraForm.reportValidity();
+    showToast("Por favor, preencha todos os campos obrigatórios.", "warning");
+    return;
+  }
+  
+  const formData = new FormData(dom.listaCompraForm);
+  const payload = Object.fromEntries(formData.entries());
+  const listaId = payload.id && String(payload.id).trim() !== "" ? String(payload.id).trim() : null;
+  
+  // Obtém referência ao botão de submit
+  const submitButton = dom.listaCompraForm.querySelector('button[type="submit"]');
+  const originalButtonText = submitButton?.textContent || "Salvar";
+  
+  // Validação de campos obrigatórios
+  if (!payload.nome || !String(payload.nome).trim()) {
+    showToast("O nome da lista é obrigatório.", "error");
+    return;
+  }
+  
+  if (!currentUser || !currentUser.id) {
+    showToast("Usuário não identificado. Faça login novamente.", "error");
+    return;
+  }
+  
+  // Validação de unidade (mesma lógica para todos)
+  if (!payload.unidade_id || !String(payload.unidade_id).trim()) {
+    showToast("Selecione uma unidade destino.", "error");
+    return;
+  }
+  
+  // Prepara o payload - remove campos vazios (mesma lógica para todos)
+  const dataToSend = {
+    nome: String(payload.nome).trim(),
+    unidade_id: Number(payload.unidade_id),
+    responsavel_id: Number(currentUser.id),
+  };
+  
+  console.log("📋 Dados finais a serem enviados:", dataToSend);
+  
+  // Adiciona observações apenas se não estiver vazia
+  if (payload.observacoes && String(payload.observacoes).trim()) {
+    dataToSend.observacoes = String(payload.observacoes).trim();
+  }
+  
+  // Desabilita o botão de submit para evitar duplo envio
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Salvando...";
+  }
+  
+  console.log("📤 Dados a serem enviados:", dataToSend);
+  console.log("🔍 URL da API:", API_URL);
+  console.log("👤 Usuário atual:", currentUser);
+  
+  try {
+    const url = listaId ? `/listas/${listaId}` : "/listas";
+    const method = listaId ? "PUT" : "POST";
+    
+    console.log(`📡 Enviando ${method} para: ${API_URL}${url}`);
+    
+    const response = await fetchJSON(url, {
+      method: method,
+      body: JSON.stringify(dataToSend),
+    });
+    
+    console.log("✅ Resposta recebida:", response);
+    
+    if (!response || !response.id) {
+      throw new Error("Resposta inválida do servidor. A lista não foi criada/atualizada.");
+    }
+    
+    if (listaId) {
+      // Edição de lista existente
+      state.listaCompraAtual = response;
+      const resumo = resumoListaDetalhe(response);
+      state.listasCompras = state.listasCompras.map((lista) => 
+        Number(lista.id) === Number(listaId) ? { ...lista, ...resumo } : lista
+      );
+      showToast("Lista atualizada com sucesso!", "success");
+      toggleModal(dom.listaCompraModal, false);
+      renderListasCompras(state.listasCompras);
+      renderListaCompraDetalhes(response);
+    } else {
+      // Criação de nova lista
+      showToast("Lista criada com sucesso!", "success");
+      toggleModal(dom.listaCompraModal, false);
+      // Recarrega as listas para garantir sincronização completa
+      await loadListasCompras();
+    }
+  } catch (error) {
+    console.error("❌ Erro ao salvar lista:", error);
+    console.error("❌ Stack trace:", error.stack);
+    console.error("❌ Dados enviados:", dataToSend);
+    console.error("❌ Payload original:", payload);
+    console.error("❌ currentUser:", currentUser);
+    const errorMessage = error.message || "Falha ao salvar lista. Verifique os dados e tente novamente.";
+    showToast(errorMessage, "error");
+  } finally {
+    // Reabilita o botão
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+    }
+  }
+}
+
+// ============================================
+// SUGESTÕES DE COMPRAS
+// ============================================
+
+// Carrega sugestões de compras baseadas em movimentações
+async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProjecao = 15) {
+  try {
+    const params = new URLSearchParams();
+    if (unidadeId) params.append('unidade_id', unidadeId);
+    params.append('dias', diasAnalise);
+    params.append('dias_projecao', diasProjecao);
+    
+    const url = `/sugestoes-compras?${params.toString()}`;
+    const dados = await fetchJSON(url);
+    
+    return dados;
+  } catch (error) {
+    console.error('Erro ao carregar sugestões:', error);
+    showToast('Erro ao carregar sugestões de compras.', 'error');
+    return { sugestoes: [], total_sugestoes: 0 };
+  }
+}
+
+// Abre modal de sugestões
+async function abrirSugestoesComprasModal() {
+  if (!dom.sugestoesComprasModal) return;
+  
+  // Carrega unidades se necessário
+  try {
+    await loadUnidades(false);
+  } catch (error) {
+    console.error("Erro ao carregar unidades:", error);
+  }
+  
+  // Preenche select de unidades
+  if (dom.sugestoesFiltroUnidade && state.unidades && state.unidades.length > 0) {
+    const options = state.unidades.map((unidade) => 
+      `<option value="${unidade.id}">${escapeHtml(unidade.nome)}</option>`
+    ).join("");
+    dom.sugestoesFiltroUnidade.innerHTML = `<option value="">Todas</option>${options}`;
+    
+    // Preenche com unidade do usuário se existir
+    if (currentUser?.unidade_id) {
+      dom.sugestoesFiltroUnidade.value = currentUser.unidade_id;
+    }
+  }
+  
+  // Limpa conteúdo anterior
+  dom.sugestoesComprasContent.innerHTML = '<p style="text-align: center; color: #607d8b; padding: 2rem;">Clique em "Buscar Sugestões" para ver recomendações baseadas nas movimentações.</p>';
+  
+  toggleModal(dom.sugestoesComprasModal, true);
+}
+
+// Busca e exibe sugestões
+async function buscarSugestoesCompras() {
+  if (!dom.sugestoesComprasContent) return;
+  
+  const unidadeId = dom.sugestoesFiltroUnidade?.value || null;
+  const diasAnalise = parseInt(dom.sugestoesDiasAnalise?.value || 30);
+  const diasProjecao = parseInt(dom.sugestoesDiasProjecao?.value || 15);
+  
+  // Mostra loading
+  dom.sugestoesComprasLoading.style.display = 'block';
+  dom.sugestoesComprasContent.innerHTML = '';
+  
+  try {
+    const dados = await loadSugestoesCompras(unidadeId, diasAnalise, diasProjecao);
+    
+    dom.sugestoesComprasLoading.style.display = 'none';
+    
+    if (!dados.sugestoes || dados.sugestoes.length === 0) {
+      dom.sugestoesComprasContent.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #607d8b;">
+          <p>Nenhuma sugestão encontrada para os parâmetros selecionados.</p>
+          <p style="font-size: 0.9em; margin-top: 0.5rem;">Tente ajustar os filtros ou verifique se há movimentações no período.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Renderiza sugestões
+    let html = `
+      <div style="margin-bottom: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
+        <strong>Total de sugestões:</strong> ${dados.total_sugestoes} | 
+        <strong>Análise:</strong> últimos ${dados.dias_analise} dias | 
+        <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Prioridade</th>
+              <th>Produto</th>
+              <th>Unidade</th>
+              <th>Estoque Atual</th>
+              <th>Estoque Mín.</th>
+              <th>Consumo Médio/Dia</th>
+              <th>Qtd. Sugerida</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    dados.sugestoes.forEach((sugestao) => {
+      const prioridadeClass = sugestao.prioridade === 'ALTA' ? 'status-pill--danger' : 
+                              sugestao.prioridade === 'MEDIA' ? 'status-pill--warning' : 
+                              'status-pill--muted';
+      
+      html += `
+        <tr>
+          <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
+          <td>${escapeHtml(sugestao.produto_nome)}</td>
+          <td>${escapeHtml(sugestao.unidade_nome)}</td>
+          <td>${sugestao.estoque_atual} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
+          <td>${sugestao.estoque_minimo} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
+          <td>${sugestao.consumo_medio_diario.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
+          <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</strong></td>
+          <td>
+            <button type="button" class="btn secondary btn-sm" onclick="adicionarSugestaoALista(${sugestao.produto_id}, ${sugestao.quantidade_sugerida}, '${escapeHtml(normalizarUnidadeBase(sugestao.unidade_base))}', ${sugestao.unidade_id})">
+              Adicionar à Lista
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += `
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 4px;">
+        <strong>💡 Dica:</strong> As sugestões são baseadas no consumo histórico. 
+        Ajuste as quantidades conforme necessário antes de adicionar à lista.
+      </div>
+    `;
+    
+    dom.sugestoesComprasContent.innerHTML = html;
+    
+  } catch (error) {
+    dom.sugestoesComprasLoading.style.display = 'none';
+    dom.sugestoesComprasContent.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #f44336;">
+        <p>Erro ao carregar sugestões.</p>
+        <p style="font-size: 0.9em; margin-top: 0.5rem;">${error.message || 'Tente novamente mais tarde.'}</p>
+      </div>
+    `;
+  }
+}
+
+// Adiciona sugestão à lista atual
+async function adicionarSugestaoALista(produtoId, quantidade, unidade, unidadeId) {
+  if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
+    showToast('Selecione uma lista de compras primeiro.', 'warning');
+    return;
+  }
+  
+  // Verifica se a lista é da mesma unidade
+  if (state.listaCompraAtual.unidade_id && Number(state.listaCompraAtual.unidade_id) !== Number(unidadeId)) {
+    showToast(`Esta sugestão é para a unidade diferente da lista selecionada.`, 'warning');
+    return;
+  }
+  
+  try {
+    await fetchJSON('/itens', {
+      method: 'POST',
+      body: JSON.stringify({
+        lista_id: state.listaCompraAtual.id,
+        produto_id: produtoId,
+        quantidade_planejada: quantidade,
+        unidade: unidade,
+        observacoes: `Sugestão automática baseada em movimentações`
+      })
+    });
+    
+    showToast('Item adicionado à lista com sucesso!', 'success');
+    
+    // Recarrega a lista
+    await loadListaCompraDetalhes(state.listaCompraAtual.id);
+    
+  } catch (error) {
+    console.error('Erro ao adicionar sugestão:', error);
+    showToast(error.message || 'Erro ao adicionar item à lista.', 'error');
+  }
+}
+
+// Adiciona função global para uso no onclick
+window.adicionarSugestaoALista = adicionarSugestaoALista;
+
+// ============================================
+// SUGESTÕES DE COMPRAS
+// ============================================
+
+// Carrega sugestões de compras baseadas em movimentações
+async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProjecao = 15) {
+  try {
+    const params = new URLSearchParams();
+    if (unidadeId) params.append('unidade_id', unidadeId);
+    params.append('dias', diasAnalise);
+    params.append('dias_projecao', diasProjecao);
+    
+    const url = `/sugestoes-compras?${params.toString()}`;
+    const dados = await fetchJSON(url);
+    
+    return dados;
+  } catch (error) {
+    console.error('Erro ao carregar sugestões:', error);
+    showToast('Erro ao carregar sugestões de compras.', 'error');
+    return { sugestoes: [], total_sugestoes: 0 };
+  }
+}
+
+// Abre modal de sugestões
+async function abrirSugestoesComprasModal() {
+  if (!dom.sugestoesComprasModal) return;
+  
+  // Carrega unidades se necessário
+  try {
+    await loadUnidades(false);
+  } catch (error) {
+    console.error("Erro ao carregar unidades:", error);
+  }
+  
+  // Preenche select de unidades
+  if (dom.sugestoesFiltroUnidade && state.unidades && state.unidades.length > 0) {
+    const options = state.unidades.map((unidade) => 
+      `<option value="${unidade.id}">${escapeHtml(unidade.nome)}</option>`
+    ).join("");
+    dom.sugestoesFiltroUnidade.innerHTML = `<option value="">Todas</option>${options}`;
+    
+    // Preenche com unidade do usuário se existir
+    if (currentUser?.unidade_id) {
+      dom.sugestoesFiltroUnidade.value = currentUser.unidade_id;
+    }
+  }
+  
+  // Limpa conteúdo anterior
+  dom.sugestoesComprasContent.innerHTML = '<p style="text-align: center; color: #607d8b; padding: 2rem;">Clique em "Buscar Sugestões" para ver recomendações baseadas nas movimentações.</p>';
+  
+  toggleModal(dom.sugestoesComprasModal, true);
+}
+
+// Busca e exibe sugestões
+async function buscarSugestoesCompras() {
+  if (!dom.sugestoesComprasContent) return;
+  
+  const unidadeId = dom.sugestoesFiltroUnidade?.value || null;
+  const diasAnalise = parseInt(dom.sugestoesDiasAnalise?.value || 30);
+  const diasProjecao = parseInt(dom.sugestoesDiasProjecao?.value || 15);
+  
+  // Mostra loading
+  dom.sugestoesComprasLoading.style.display = 'block';
+  dom.sugestoesComprasContent.innerHTML = '';
+  
+  try {
+    const dados = await loadSugestoesCompras(unidadeId, diasAnalise, diasProjecao);
+    
+    dom.sugestoesComprasLoading.style.display = 'none';
+    
+    if (!dados.sugestoes || dados.sugestoes.length === 0) {
+      dom.sugestoesComprasContent.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #607d8b;">
+          <p>Nenhuma sugestão encontrada para os parâmetros selecionados.</p>
+          <p style="font-size: 0.9em; margin-top: 0.5rem;">Tente ajustar os filtros ou verifique se há movimentações no período.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Renderiza sugestões
+    let html = `
+      <div style="margin-bottom: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
+        <strong>Total de sugestões:</strong> ${dados.total_sugestoes} | 
+        <strong>Análise:</strong> últimos ${dados.dias_analise} dias | 
+        <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Prioridade</th>
+              <th>Produto</th>
+              <th>Unidade</th>
+              <th>Estoque Atual</th>
+              <th>Estoque Mín.</th>
+              <th>Consumo Médio/Dia</th>
+              <th>Qtd. Sugerida</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    dados.sugestoes.forEach((sugestao) => {
+      const prioridadeClass = sugestao.prioridade === 'ALTA' ? 'status-pill--danger' : 
+                              sugestao.prioridade === 'MEDIA' ? 'status-pill--warning' : 
+                              'status-pill--muted';
+      
+      html += `
+        <tr>
+          <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
+          <td>${escapeHtml(sugestao.produto_nome)}</td>
+          <td>${escapeHtml(sugestao.unidade_nome)}</td>
+          <td>${sugestao.estoque_atual} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
+          <td>${sugestao.estoque_minimo} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
+          <td>${sugestao.consumo_medio_diario.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
+          <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</strong></td>
+          <td>
+            <button type="button" class="btn secondary btn-sm" onclick="adicionarSugestaoALista(${sugestao.produto_id}, ${sugestao.quantidade_sugerida}, '${escapeHtml(normalizarUnidadeBase(sugestao.unidade_base))}', ${sugestao.unidade_id})">
+              Adicionar à Lista
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += `
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 4px;">
+        <strong>💡 Dica:</strong> As sugestões são baseadas no consumo histórico. 
+        Ajuste as quantidades conforme necessário antes de adicionar à lista.
+      </div>
+    `;
+    
+    dom.sugestoesComprasContent.innerHTML = html;
+    
+  } catch (error) {
+    dom.sugestoesComprasLoading.style.display = 'none';
+    dom.sugestoesComprasContent.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #f44336;">
+        <p>Erro ao carregar sugestões.</p>
+        <p style="font-size: 0.9em; margin-top: 0.5rem;">${error.message || 'Tente novamente mais tarde.'}</p>
+      </div>
+    `;
+  }
+}
+
+// Adiciona sugestão à lista atual
+async function adicionarSugestaoALista(produtoId, quantidade, unidade, unidadeId) {
+  if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
+    showToast('Selecione uma lista de compras primeiro.', 'warning');
+    return;
+  }
+  
+  // Verifica se a lista é da mesma unidade
+  if (state.listaCompraAtual.unidade_id && Number(state.listaCompraAtual.unidade_id) !== Number(unidadeId)) {
+    showToast(`Esta sugestão é para a unidade diferente da lista selecionada.`, 'warning');
+    return;
+  }
+  
+  try {
+    await fetchJSON('/itens', {
+      method: 'POST',
+      body: JSON.stringify({
+        lista_id: state.listaCompraAtual.id,
+        produto_id: produtoId,
+        quantidade_planejada: quantidade,
+        unidade: unidade,
+        observacoes: `Sugestão automática baseada em movimentações`
+      })
+    });
+    
+    showToast('Item adicionado à lista com sucesso!', 'success');
+    
+    // Recarrega a lista
+    await loadListaCompraDetalhes(state.listaCompraAtual.id);
+    
+  } catch (error) {
+    console.error('Erro ao adicionar sugestão:', error);
+    showToast(error.message || 'Erro ao adicionar item à lista.', 'error');
+  }
+}
+
+// Adiciona função global para uso no onclick
+window.adicionarSugestaoALista = adicionarSugestaoALista;
+
+async function abrirItemCompraModal(item = null) {
+  if (!state.listaCompraAtual) {
+    showToast("Selecione uma lista primeiro.", "warning");
+    return;
+  }
+  
+  // Se for editar item existente, verifica se pode editar
+  if (item) {
+    if (!listaPermiteEdicao()) {
+      showToast("Esta lista não permite alteracoes no momento.", "warning");
+      return;
+    }
+    // Estoquista e Cozinha não podem editar itens existentes
+    if (canOnlyCreateAndAddItems()) {
+      showToast("Você só pode adicionar novos itens, não editar itens existentes.", "warning");
+      return;
+    }
+  } else {
+    // Se for adicionar novo item, verifica se pode adicionar
+    if (!listaPermiteAdicionarItens()) {
+      showToast("Você não tem permissão para adicionar itens nesta lista.", "warning");
+      return;
+    }
+  }
+  
+  // Garante que os produtos estejam carregados
+  if (!state.produtos || state.produtos.length === 0) {
+    try {
+      await loadProdutos();
+    } catch (err) {
+      console.error("Erro ao carregar produtos:", err);
+      showToast("Erro ao carregar produtos. Tente novamente.", "error");
+      return;
+    }
+  }
+  
+  // Atualiza o select de produtos
+  refreshProdutoSelects();
+  
+  listaCompraItemEdicaoId = item ? item.id : null;
+  dom.itemCompraForm?.reset();
+  if (dom.itemCompraForm?.elements.valor_total) {
+    dom.itemCompraForm.elements.valor_total.readOnly = true;
+  }
+  
+  // COZINHA e BAR não podem ver campos de valores ao adicionar itens
+  const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  
+  const quantidadeCompradaLabel = document.getElementById("itemCompraLabelQuantidadeComprada");
+  const valorUnitarioLabel = document.getElementById("itemCompraLabelValorUnitario");
+  const valorTotalLabel = document.getElementById("itemCompraLabelValorTotal");
+  
+  if (quantidadeCompradaLabel) quantidadeCompradaLabel.classList.toggle("hidden", isCozinhaOuBar);
+  if (valorUnitarioLabel) valorUnitarioLabel.classList.toggle("hidden", isCozinhaOuBar);
+  if (valorTotalLabel) valorTotalLabel.classList.toggle("hidden", isCozinhaOuBar);
+  
+  dom.itemCompraModalTitle.textContent = item ? "Editar item" : "Adicionar item";
+  if (dom.itemCompraForm?.elements.lista_id) dom.itemCompraForm.elements.lista_id.value = state.listaCompraAtual.id;
+  if (item && dom.itemCompraForm) {
+    dom.itemCompraForm.elements.id.value = item.id;
+    dom.itemCompraForm.elements.produto_id.value = item.produto_id || "";
+    dom.itemCompraForm.elements.unidade.value = item.unidade || "";
+    dom.itemCompraForm.elements.quantidade_planejada.value = item.quantidade_planejada ?? "";
+    // Só preenche campos de valores se não for COZINHA ou BAR
+    if (!isCozinhaOuBar) {
+      dom.itemCompraForm.elements.quantidade_comprada.value = item.quantidade_comprada ?? "";
+      dom.itemCompraForm.elements.valor_unitario.value = item.valor_unitario ?? "";
+      dom.itemCompraForm.elements.valor_total.value = item.valor_total ?? "";
+    }
+    dom.itemCompraForm.elements.observacoes.value = item.observacoes || "";
+    dom.itemCompraForm.elements.estabelecimento_id.value = item.estabelecimento_id || "";
+  }
+  if (dom.itemCompraForm?.elements.estabelecimento_id) {
+    dom.itemCompraForm.elements.estabelecimento_id.innerHTML = buildEstabelecimentoOptions(item?.estabelecimento_id);
+  }
+  // Só atualiza totais se não for COZINHA ou BAR
+  if (!isCozinhaOuBar) {
+    updateItemModalTotals();
+  }
+  toggleModal(dom.itemCompraModal, true);
+}
+
+function getItemModalNumericValue(name) {
+  if (!dom.itemCompraForm) return 0;
+  const campo = dom.itemCompraForm.elements[name];
+  if (!campo) return 0;
+  const numero = Number(campo.value);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+function computeItemModalTotals() {
+  const quantidadePlanejada = roundToQuantity(getItemModalNumericValue("quantidade_planejada"));
+  const quantidadeComprada = roundToQuantity(getItemModalNumericValue("quantidade_comprada"));
+  const valorUnitario = roundToCurrency(getItemModalNumericValue("valor_unitario"));
+  const quantidadeBase = quantidadeComprada > 0 ? quantidadeComprada : quantidadePlanejada;
+  const valorPlanejado = roundToCurrency(valorUnitario * quantidadePlanejada);
+  const valorTotal = roundToCurrency(valorUnitario * quantidadeBase);
+  return {
+    quantidadePlanejada,
+    quantidadeComprada,
+    valorUnitario,
+    valorPlanejado,
+    valorTotal,
+  };
+}
+
+function updateItemModalTotals() {
+  if (!dom.itemCompraForm) return;
+  
+  // Verifica se é perfil COZINHA ou BAR - não atualiza totais para esses perfis
+  const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  
+  if (isCozinhaOuBar) {
+    const campoTotal = dom.itemCompraForm.elements.valor_total;
+    if (campoTotal) {
+      campoTotal.value = "0.00";
+    }
+    return { quantidadePlanejada: 0, quantidadeComprada: 0, valorUnitario: 0, valorPlanejado: 0, valorTotal: 0 };
+  }
+  
+  const totais = computeItemModalTotals();
+  const campoTotal = dom.itemCompraForm.elements.valor_total;
+  if (campoTotal) {
+    campoTotal.value = formatNumber(totais.valorTotal, 2);
+  }
+  return totais;
+}
+
+async function submitItemCompra(event) {
+  event.preventDefault();
+  if (!dom.itemCompraForm) return;
+  
+  if (!state.listaCompraAtual) {
+    showToast("Erro: nenhuma lista selecionada.", "error");
+    return;
+  }
+  
+  // Verifica se pode adicionar ou editar
+  const isEditando = listaCompraItemEdicaoId;
+  
+  if (isEditando) {
+    // Se for editar, verifica permissão de edição
+    if (!listaPermiteEdicao()) {
+      showToast("Lista finalizada ou sem permissao para alterar.", "warning");
+      return;
+    }
+    // Estoquista e Cozinha não podem editar itens existentes
+    if (canOnlyCreateAndAddItems()) {
+      showToast("Você só pode adicionar novos itens, não editar itens existentes.", "warning");
+      return;
+    }
+  } else {
+    // Se for adicionar, verifica permissão de adicionar
+    if (!listaPermiteAdicionarItens()) {
+      showToast("Você não tem permissão para adicionar itens nesta lista.", "warning");
+      return;
+    }
+  }
+  
+  const formData = new FormData(dom.itemCompraForm);
+  const payload = Object.fromEntries(formData.entries());
+  
+  // Adiciona lista_id
+  payload.lista_id = state.listaCompraAtual.id;
+  
+  // Verifica se é perfil COZINHA ou BAR
+  const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  
+  // Calcula os totais
+  const totais = computeItemModalTotals();
+  payload.quantidade_planejada = Number.isFinite(totais.quantidadePlanejada) ? totais.quantidadePlanejada : 0;
+  
+  // Para COZINHA e BAR, os campos de valores são zerados
+  if (isCozinhaOuBar) {
+    payload.quantidade_comprada = 0;
+    payload.valor_unitario = 0;
+    payload.valor_planejado = 0;
+    payload.valor_total = 0;
+  } else {
+    payload.quantidade_comprada = Number.isFinite(totais.quantidadeComprada) ? totais.quantidadeComprada : 0;
+    payload.valor_unitario = roundToCurrency(totais.valorUnitario);
+    payload.valor_planejado = totais.valorPlanejado;
+    payload.valor_total = totais.valorTotal;
+  }
+  
+  // Converte tipos
+  payload.produto_id = payload.produto_id ? Number(payload.produto_id) : null;
+  payload.estabelecimento_id = payload.estabelecimento_id ? Number(payload.estabelecimento_id) : null;
+  
+  try {
+    if (listaCompraItemEdicaoId) {
+      await fetchJSON(`/itens/${listaCompraItemEdicaoId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      showToast("Item atualizado.", "success");
+    } else {
+      await fetchJSON("/itens", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      showToast("Item adicionado.", "success");
+    }
+    toggleModal(dom.itemCompraModal, false);
+    await selecionarListaCompra(state.listaCompraAtual.id, true);
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function removerItemLista(itemId) {
+  if (!state.listaCompraAtual || !itemId) return;
+  if (!listaPermiteEdicao()) {
+    showToast("Lista finalizada ou sem permissao para alterar.", "warning");
+    return;
+  }
+  if (!window.confirm("Remover este item da lista?")) return;
+  try {
+    await fetchJSON(`/itens/${itemId}`, { method: "DELETE" });
+    showToast("Item removido.", "success");
+    await selecionarListaCompra(state.listaCompraAtual.id, true);
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+function abrirEstabelecimentoModal(est = null) {
+  if (!canManageCompras()) {
+    showToast("Sem permissão para gerenciar estabelecimentos.", "warning");
+    return;
+  }
+  listaCompraEstabelecimentoEdicaoId = est ? est.id : null;
+  dom.estabelecimentoCompraForm?.reset();
+  dom.estabelecimentoCompraModalTitle.textContent = est ? "Editar estabelecimento" : "Adicionar estabelecimento";
+  if (est && dom.estabelecimentoCompraForm) {
+    dom.estabelecimentoCompraForm.elements.id.value = est.id || "";
+    dom.estabelecimentoCompraForm.elements.nome.value = est.nome || "";
+    dom.estabelecimentoCompraForm.elements.localizacao.value = est.localizacao || "";
+    dom.estabelecimentoCompraForm.elements.forma_pagamento.value = est.forma_pagamento || "";
+    dom.estabelecimentoCompraForm.elements.observacoes.value = est.observacoes || "";
+    dom.estabelecimentoCompraForm.elements.latitude.value = est.latitude ?? "";
+    dom.estabelecimentoCompraForm.elements.longitude.value = est.longitude ?? "";
+  }
+  toggleModal(dom.estabelecimentoCompraModal, true);
+}
+
+async function submitEstabelecimentoCompra(event) {
+  event.preventDefault();
+  if (!dom.estabelecimentoCompraForm) return;
+  
+  if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
+    showToast("Erro: nenhuma lista selecionada.", "error");
+    return;
+  }
+  
+  const formData = new FormData(dom.estabelecimentoCompraForm);
+  const payload = Object.fromEntries(formData.entries());
+  payload.latitude = payload.latitude ? Number(payload.latitude) : null;
+  payload.longitude = payload.longitude ? Number(payload.longitude) : null;
+  
+  const listaId = state.listaCompraAtual.id;
+  
+  try {
+    if (listaCompraEstabelecimentoEdicaoId) {
+      await fetchJSON(`/listas/${listaId}/estabelecimentos/${listaCompraEstabelecimentoEdicaoId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      showToast("Estabelecimento atualizado.", "success");
+    } else {
+      await fetchJSON(`/listas/${listaId}/estabelecimentos`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      showToast("Estabelecimento adicionado.", "success");
+    }
+    toggleModal(dom.estabelecimentoCompraModal, false);
+    // Recarrega a lista para atualizar os estabelecimentos
+    await selecionarListaCompra(listaId, true);
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function loadEstabelecimentosGlobais() {
+  try {
+    state.estabelecimentosGlobais = await fetchJSON("/estabelecimentos-globais");
+    renderListaCompraEstabelecimentos(state.estabelecimentosGlobais);
+    // Atualizar selects de estabelecimentos
+    if (dom.itemCompraForm?.elements.estabelecimento_id) {
+      const currentValue = dom.itemCompraForm.elements.estabelecimento_id.value;
+      dom.itemCompraForm.elements.estabelecimento_id.innerHTML = buildEstabelecimentoOptions(currentValue);
+    }
+  } catch (error) {
+    showToast(error.message || "Falha ao carregar estabelecimentos.", "error");
+  }
+}
+
+async function deletarEstabelecimentoLista(estId) {
+  if (!window.confirm("Deseja realmente deletar este estabelecimento?")) return;
+  
+  if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
+    showToast("Erro: nenhuma lista selecionada.", "error");
+    return;
+  }
+  
+  const listaId = state.listaCompraAtual.id;
+  
+  try {
+    await fetchJSON(`/listas/${listaId}/estabelecimentos/${estId}`, { method: "DELETE" });
+    showToast("Estabelecimento deletado.", "success");
+    // Recarrega a lista para atualizar os estabelecimentos
+    await selecionarListaCompra(listaId, true);
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+
+function abrirFinalizarListaModal() {
+  if (!state.listaCompraAtual) {
+    showToast("Selecione uma lista primeiro.", "warning");
+    return;
+  }
+  if (!listaPermiteFinalizar()) {
+    showToast("Sem permissão para finalizar esta lista.", "warning");
+    return;
+  }
+  const status = (state.listaCompraAtual.status || "").toUpperCase();
+  if (status === "FINALIZADA") {
+    showToast("Esta lista já está finalizada.", "info");
+    return;
+  }
+  finalizarListaArquivos = [];
+  dom.finalizarListaForm?.reset();
+  if (dom.finalizarListaForm?.elements.observacoes) {
+    dom.finalizarListaForm.elements.observacoes.value = state.listaCompraAtual.observacoes || "";
+  }
+  toggleModal(dom.finalizarListaModal, true);
+}
+
+async function submitFinalizarLista(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  console.log("submitFinalizarLista chamado");
+  
+  if (!state.listaCompraAtual) {
+    console.error("Nenhuma lista selecionada");
+    showToast("Nenhuma lista selecionada.", "error");
+    return;
+  }
+  
+  if (!dom.finalizarListaForm) {
+    console.error("Formulário não encontrado");
+    showToast("Formulário não encontrado.", "error");
+    return;
+  }
+  
+  const listaId = state.listaCompraAtual.id;
+  console.log("Finalizando lista ID:", listaId);
+  
+  // Validações básicas
+  const status = (state.listaCompraAtual.status || "").toUpperCase();
+  if (status === "FINALIZADA") {
+    showToast("Esta lista já está finalizada.", "info");
+    toggleModal(dom.finalizarListaModal, false);
+    return;
+  }
+  
+  // Verifica permissão de forma mais simples
+  if (!canManageCompras()) {
+    showToast("Sem permissão para finalizar listas.", "warning");
+    toggleModal(dom.finalizarListaModal, false);
+    return;
+  }
+  
+  const formData = new FormData(dom.finalizarListaForm);
+  const observacoes = formData.get("observacoes") || "";
+  
+  const submitButton = dom.finalizarListaForm?.querySelector('button[type="submit"]');
+  const originalText = submitButton?.textContent || "Finalizar";
+  
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Finalizando...";
+  }
+  
+  try {
+    const payloadData = {
+      observacoes: observacoes || null
+    };
+    
+    console.log("Enviando requisição para finalizar lista:", {
+      url: `/listas/${listaId}/finalizar`,
+      method: "PUT",
+      payload: payloadData
+    });
+    
+    const data = await fetchJSON(`/listas/${listaId}/finalizar`, {
+      method: "PUT",
+      body: JSON.stringify(payloadData)
+    });
+    
+    console.log("Resposta recebida:", data);
+    
+    if (!data || !data.id) {
+      throw new Error("Resposta inválida do servidor");
+    }
+    
+    // Atualiza o estado
+    state.listaCompraAtual = data;
+    const resumo = resumoListaDetalhe(data);
+    state.listasCompras = state.listasCompras.map((lista) => 
+      (Number(lista.id) === Number(listaId) ? { ...lista, ...resumo } : lista)
+    );
+    
+    // Re-renderiza tudo
+    renderListasCompras(state.listasCompras);
+    renderListaCompraDetalhes(data);
+    
+    showToast("✅ Lista finalizada com sucesso!", "success");
+    
+    // Recarrega a lista para garantir que está atualizada
+    await selecionarListaCompra(listaId, true);
+    
+  } catch (error) {
+    console.error("Erro ao finalizar lista:", error);
+    const errorMessage = error.message || "Falha ao finalizar lista. Verifique o console para mais detalhes.";
+    showToast(errorMessage, "error");
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
+    toggleModal(dom.finalizarListaModal, false);
+  }
+}
+
+async function lancarListaNoEstoque() {
+  console.log("lancarListaNoEstoque chamado");
+  
+  if (!state.listaCompraAtual) {
+    console.error("Nenhuma lista selecionada");
+    showToast("Nenhuma lista selecionada.", "error");
+    return;
+  }
+  
+  // Verifica permissão para lançar no estoque
+  if (!listaPermiteLancarEstoque()) {
+    const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    if (perfil === "COZINHA" || perfil === "BAR") {
+      showToast("Você não tem permissão para lançar no estoque.", "warning");
+    } else {
+      showToast("Sem permissão para lançar no estoque.", "warning");
+    }
+    return;
+  }
+  
+  const status = (state.listaCompraAtual.status || "").toUpperCase();
+  if (status !== "FINALIZADA") {
+    showToast("Finalize a lista antes de lançar no estoque.", "info");
+    return;
+  }
+  
+  if (state.listaCompraAtual.estoque_lancado_em) {
+    showToast("Lista já lançada no estoque.", "info");
+    return;
+  }
+  
+  if (!currentUser?.id) {
+    showToast("Usuário não identificado. Faça login novamente.", "error");
+    return;
+  }
+  
+  // ✅ 1. Verificar se os itens realmente estão sendo coletados antes do envio
+  // Processa TODOS os itens com quantidade comprada > 0 (não apenas os com status COMPRADO)
+  const itens = state.listaCompraAtual.itens || [];
+  const itensParaLancar = itens.filter((item) => {
+    const qtdComprada = parseFloat(item.quantidade_comprada || 0);
+    return qtdComprada > 0;
+  });
+  
+  console.log("Itens a lançar:", itensParaLancar);
+  console.log("Total de itens na lista:", itens.length);
+  console.log("Total de itens com quantidade comprada:", itensParaLancar.length);
+  
+  if (itensParaLancar.length === 0) {
+    console.error("Nenhum item com quantidade comprada encontrado na lista");
+    showToast("Não há itens com quantidade comprada para lançar no estoque.", "warning");
+    return;
+  }
+  
+  // ✅ 2. Garantir que os itens tenham todos os campos necessários
+  const itensInvalidos = [];
+  itensParaLancar.forEach((item, index) => {
+    const camposFaltando = [];
+    if (!item.id) camposFaltando.push("id");
+    if (item.quantidade_comprada === undefined || item.quantidade_comprada === null || item.quantidade_comprada <= 0) {
+      camposFaltando.push("quantidade_comprada");
+    }
+    if (!item.unidade) camposFaltando.push("unidade");
+    if (item.valor_unitario === undefined || item.valor_unitario === null) {
+      camposFaltando.push("valor_unitario");
+    }
+    
+    if (camposFaltando.length > 0) {
+      itensInvalidos.push({
+        index,
+        itemId: item.id,
+        camposFaltando
+      });
+    }
+  });
+  
+  if (itensInvalidos.length > 0) {
+    console.error("Itens com campos faltando:", itensInvalidos);
+    showToast(`Alguns itens estão incompletos. Verifique o console para detalhes.`, "error");
+    return;
+  }
+  
+  console.log("✅ Todos os itens têm os campos necessários:", itensParaLancar.map(item => ({
+    id: item.id,
+    quantidade: item.quantidade_comprada,
+    unidade: item.unidade,
+    preco: item.valor_unitario,
+    status: item.status
+  })));
+  
+  const btn = dom.listaCompraLancarEstoque;
+  if (btn) {
+    btn.dataset.loading = "1";
+    btn.disabled = true;
+    btn.textContent = "Lançando...";
+  }
+  
+  try {
+    console.log("Enviando requisição para lançar no estoque:", {
+      listaId: state.listaCompraAtual.id,
+      usuarioId: currentUser.id,
+      quantidadeItens: itensParaLancar.length
+    });
+    
+    const resposta = await fetchJSON(`/listas/${state.listaCompraAtual.id}/estoque`, {
+      method: "POST",
+      body: JSON.stringify({ usuario_id: currentUser.id }),
+    });
+    
+    console.log("Resposta recebida:", resposta);
+    
+    if (!resposta || !resposta.id) {
+      throw new Error("Resposta inválida do servidor");
+    }
+    
+    state.listaCompraAtual = resposta;
+    const resumo = resumoListaDetalhe(resposta);
+    state.listasCompras = state.listasCompras.map((lista) => 
+      (Number(lista.id) === Number(resposta.id) ? { ...lista, ...resumo } : lista)
+    );
+    
+    renderListasCompras(state.listasCompras);
+    renderListaCompraDetalhes(resposta);
+    showToast("✅ Itens lançados no estoque com sucesso!", "success");
+    
+    // ✅ Aguarda um pouco para garantir que o commit foi finalizado no banco
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log("🔄 Atualizando todas as telas relacionadas após lançamento...");
+    
+    // ✅ Atualiza TODAS as telas relacionadas para garantir que os produtos apareçam
+    const atualizacoes = [
+      // Dashboard - atualiza cards e movimentações
+      loadDashboard().catch((err) => {
+        console.error("Erro ao atualizar dashboard:", err);
+        showToast(err?.message || "Falha ao atualizar dashboard.", "error");
+      }),
+      // Lotes - mostra os novos lotes criados
+      loadLotes().catch((err) => {
+        console.error("Erro ao atualizar lotes:", err);
+        showToast(err?.message || "Falha ao atualizar lotes.", "error");
+      }),
+      // Produtos - atualiza lista de produtos
+      loadProdutos().catch((err) => {
+        console.error("Erro ao atualizar produtos:", err);
+      }),
+      // Estoque - atualiza visualização de estoque
+      loadEstoqueProdutos().catch((err) => {
+        console.error("Erro ao atualizar estoque:", err);
+      }),
+    ];
+    await Promise.all(atualizacoes);
+    
+    // ✅ Recarrega movimentações com cache busting forçado
+    console.log("Recarregando movimentações após lançamento...");
+    await loadMovimentacoesDetalhadas({}, { refreshDashboard: true }).catch((err) => {
+      console.error("Erro ao atualizar movimentações:", err);
+    });
+    
+    // ✅ Aguarda mais um pouco e força renderização novamente
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Força renderização imediata das movimentações do dashboard
+    if (state.movimentacoesRecentes && state.movimentacoesRecentes.length > 0) {
+      console.log("Renderizando", state.movimentacoesRecentes.length, "movimentações no dashboard");
+      renderMovimentacoesDashboard(state.movimentacoesRecentes);
+    } else {
+      // Se ainda não tiver, tenta recarregar novamente
+      console.log("Movimentações ainda não carregadas, tentando novamente...");
+      const movs = await fetchJSON(`/movimentacoes?limit=50&_=${Date.now()}`).catch(() => []);
+      if (Array.isArray(movs) && movs.length > 0) {
+        state.movimentacoesRecentes = sortMovimentacoes(movs);
+        renderMovimentacoesDashboard(state.movimentacoesRecentes);
+      }
+    }
+    
+    // ✅ Força atualização adicional após 1 segundo para garantir que tudo apareça
+    setTimeout(async () => {
+      console.log("🔄 Atualização final das telas...");
+      await Promise.all([
+        loadDashboard().catch(() => {}),
+        loadLotes().catch(() => {}),
+        loadProdutos().catch(() => {}),
+        loadEstoqueProdutos().catch(() => {}),
+      ]);
+    }, 1000);
+    if (possuiFiltros) {
+      await loadMovimentacoesDetalhadas(movFiltrosAtuais).catch((err) => {
+        console.error("Erro ao atualizar movimentações com filtros:", err);
+      });
+    }
+    if (relFiltrosAtuais) {
+      await loadRelatorio(relFiltrosAtuais).catch((err) => {
+        console.error("Erro ao atualizar relatórios:", err);
+      });
+    }
+    
+    // Recarrega a lista para garantir que está atualizada
+    await selecionarListaCompra(state.listaCompraAtual.id, true);
+    
+  } catch (error) {
+    console.error("Erro ao lançar no estoque:", error);
+    showToast(error.message || "Falha ao lançar no estoque. Verifique o console para mais detalhes.", "error");
+  } finally {
+    if (btn) {
+      btn.dataset.loading = "0";
+      btn.disabled = false;
+      btn.textContent = "Lançar no Estoque";
+    }
+    if (state.listaCompraAtual) {
+      renderListaCompraDetalhes(state.listaCompraAtual);
+    }
+  }
+}
+
+async function gerarPdfLista() {
+  if (!state.listaCompraAtual) {
+    showToast("Nenhuma lista selecionada.", "error");
+    return;
+  }
+  
+  const lista = state.listaCompraAtual;
+  const status = (lista.status || "").toUpperCase();
+  
+  // Verifica se é perfil COZINHA ou BAR - podem gerar PDF mesmo sem lista finalizada
+  const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  
+  // COZINHA e BAR podem gerar PDF em qualquer status, outros perfis precisam que esteja finalizada
+  if (status !== "FINALIZADA" && !isCozinhaOuBar) {
+    showToast("Finalize a lista antes de gerar o PDF.", "info");
+    return;
+  }
+  
+  const agora = new Date();
+  const titulo = `Lista de Compras - ${escapeHtml(lista.nome || "Sem nome")}`;
+  const logoMarkup = await getReportLogoMarkup();
+  
+  const estilo = `
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+      .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+      .report-header img, .report-header object { height: 64px; width: auto; max-width: 120px; }
+      .report-header object { border: none; }
+      .report-header h1 { margin: 0; font-size: 24px; }
+      .meta { margin-bottom: 24px; line-height: 1.6; }
+      .meta strong { display: inline-block; min-width: 140px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+      th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 12px; text-align: left; }
+      th { background: #f0f4f8; font-weight: bold; }
+      .section-title { font-size: 16px; margin: 24px 0 8px; font-weight: bold; }
+      .resumo { display: flex; gap: 24px; margin-bottom: 24px; }
+      .resumo-item { flex: 1; padding: 12px; background: #f0f4f8; border-radius: 4px; }
+      .resumo-item strong { display: block; margin-bottom: 4px; }
+      .resumo-item span { font-size: 18px; font-weight: bold; }
+    </style>
+  `;
+  
+  const metaHtml = `
+    <div class="meta">
+      <strong>Gerado em:</strong> ${agora.toLocaleString("pt-BR")}<br />
+      <strong>Lista:</strong> ${escapeHtml(lista.nome || "--")}<br />
+      <strong>Unidade:</strong> ${escapeHtml(lista.unidade_nome || "--")}<br />
+      <strong>Responsável:</strong> ${escapeHtml(lista.responsavel_nome || "--")}<br />
+      <strong>Status:</strong> ${escapeHtml(lista.status || "--")}<br />
+      ${lista.observacoes ? `<strong>Observações:</strong> ${escapeHtml(lista.observacoes)}<br />` : ""}
+    </div>
+  `;
+  
+  const resumoHtml = `
+    <div class="resumo">
+      <div class="resumo-item">
+        <strong>Total Planejado</strong>
+        <span>${formatCurrency(lista.total_planejado || 0)}</span>
+      </div>
+      <div class="resumo-item">
+        <strong>Total Realizado</strong>
+        <span>${formatCurrency(lista.total_realizado || 0)}</span>
+      </div>
+      <div class="resumo-item">
+        <strong>Itens Comprados</strong>
+        <span>${Number((lista.itens || []).filter((item) => (item.status || "").toUpperCase() === "COMPRADO").length)} / ${Number(lista.itens?.length || 0)}</span>
+      </div>
+    </div>
+  `;
+  
+  const itens = lista.itens || [];
+  const itensHtml = itens.length
+    ? `
+      <h2 class="section-title">Itens da Lista</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Planejado</th>
+            <th>Comprado</th>
+            <th>Preço Unitário</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Estabelecimento</th>
+            <th>Observações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itens
+            .map((item) => {
+              const quantidadePlanejada = `${formatNumber(item.quantidade_planejada || 0, 3)} ${escapeHtml(item.unidade || "")}`.trim();
+              const quantidadeComprada = `${formatNumber(item.quantidade_comprada || 0, 3)} ${escapeHtml(item.unidade || "")}`.trim();
+              const statusLabel = (item.status || "").toUpperCase() === "COMPRADO" ? "Comprado" : 
+                                  (item.status || "").toUpperCase() === "CANCELADO" ? "Cancelado" : "Pendente";
+              return `
+                <tr>
+                  <td>${escapeHtml(item.produto_nome || "--")}</td>
+                  <td>${quantidadePlanejada}</td>
+                  <td>${quantidadeComprada}</td>
+                  <td>R$ ${formatUnitValue(item.valor_unitario || 0)}</td>
+                  <td>${formatCurrency(item.valor_total || 0)}</td>
+                  <td>${escapeHtml(statusLabel)}</td>
+                  <td>${escapeHtml(item.estabelecimento_nome || "--")}</td>
+                  <td>${escapeHtml(item.observacoes || "--")}</td>
+                </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    `
+    : "<p>Nenhum item cadastrado nesta lista.</p>";
+  
+  const conteudo = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>${titulo}</title>
+        ${estilo}
+      </head>
+      <body>
+        <div class="report-header">
+          ${logoMarkup}
+          <h1>${titulo}</h1>
+        </div>
+        ${metaHtml}
+        ${resumoHtml}
+        ${itensHtml}
+      </body>
+    </html>
+  `;
+  
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
+  
+  let timeoutId = null;
+  
+  const cleanup = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    try {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.onafterprint = null;
+      }
+    } catch (err) {
+      /* noop */
+    }
+    if (iframe.parentNode) {
+      iframe.parentNode.removeChild(iframe);
+    }
+  };
+  
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      showToast("Não foi possível preparar o PDF.", "error");
+      return;
+    }
+    win.onafterprint = cleanup;
+    win.focus();
+    try {
+      if (typeof win.print === "function") {
+        win.print();
+      } else {
+        cleanup();
+        showToast("Seu navegador não suportou a impressão.", "error");
+      }
+    } catch (err) {
+      cleanup();
+      showToast("Falha ao acionar a impressão.", "error");
+    }
+  };
+  
+  iframe.onerror = () => {
+    cleanup();
+    showToast("Não foi possível gerar o PDF.", "error");
+  };
+  
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    cleanup();
+    showToast("Não foi possível gerar o PDF.", "error");
+    return;
+  }
+  doc.open();
+  doc.write(conteudo);
+  doc.close();
+  
+  timeoutId = setTimeout(() => {
+    if (!document.body.contains(iframe)) return;
+    cleanup();
+    showToast("Falha ao imprimir. Verifique as configurações do navegador.", "error");
+  }, 60000);
+  showToast("Lista de compras enviada para impressão/arquivo PDF.", "success");
+}
+
+function populateSelect(select, options, emptyLabel) {
+  if (!select) {
+    console.warn("populateSelect: select não fornecido");
+    return;
+  }
+  
+  if (!options && emptyLabel) {
+    select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>`;
+    return;
+  }
+  
+  const previousValue = select.value;
+  const html = emptyLabel ? `<option value="">${escapeHtml(emptyLabel)}</option>${options}` : options;
+  select.innerHTML = html;
+  
+  if (previousValue && Array.from(select.options).some((opt) => opt.value === previousValue)) {
+    select.value = previousValue;
+  }
+  
+  console.log(`populateSelect: ${select.name || 'select'} atualizado com ${select.options.length} opções`);
+}
+
+function refreshProdutoSelects() {
+  if (!state.produtos || !Array.isArray(state.produtos) || state.produtos.length === 0) {
+    console.warn("refreshProdutoSelects: Nenhum produto disponível no state");
+    return;
+  }
+  
+  const ativos = state.produtos.filter((produto) => Number(produto.ativo) === 1);
+  console.log("refreshProdutoSelects: Atualizando selects com", ativos.length, "produtos ativos");
+  
+  const options = ativos.map((produto) => `<option value="${produto.id}">${escapeHtml(produto.nome)}</option>`).join("");
+  populateSelect(dom.lotesFiltroProduto, options, "Todos");
+  populateSelect(dom.movFiltroProduto, options, "Todos");
+  populateSelect(dom.relatorioProduto, options, "Todos");
+  
+  // Atualiza select de produtos no formulário de entrada
+  const entradaProdutoSelect = dom.entradaForm?.querySelector('select[name="produto_id"]');
+  if (entradaProdutoSelect) {
+    populateSelect(entradaProdutoSelect, options, "Selecione");
+    console.log("Select de produtos do formulário de entrada atualizado");
+  } else {
+    console.warn("Select de produtos do formulário de entrada não encontrado");
+  }
+  if (dom.itemCompraForm?.elements.produto_id) populateSelect(dom.itemCompraForm.elements.produto_id, options, "Selecione");
+  if (dom.estoqueProdutoSelect) populateSelect(dom.estoqueProdutoSelect, options, "Selecione um produto");
+  if (dom.loteForm?.elements.produto_id) {
+    resetLoteProdutoSelect();
+    const unidadeAtual = Number(dom.loteForm.elements.unidade_id?.value);
+    if (Number.isFinite(unidadeAtual) && unidadeAtual > 0) {
+      handleLoteUnidadeChange();
+    }
+  }
+  if (Number(dom.saidaOrigemSelect?.value)) {
+    handleSaidaOrigemChange();
+  }
+}
+
+function resetLoteProdutoSelect(message = "Selecione a unidade primeiro") {
+  loteProdutosRequestId += 1;
+  const select = dom.loteForm?.elements?.produto_id;
+  if (!select) return;
+  select.innerHTML = `<option value="">${escapeHtml(message)}</option>`;
+  select.value = "";
+  select.disabled = true;
+}
+
+async function handleLoteUnidadeChange() {
+  const form = dom.loteForm;
+  if (!form) return;
+  const produtoSelect = form.elements?.produto_id;
+  const unidadeSelect = form.elements?.unidade_id;
+  if (!produtoSelect || !unidadeSelect) return;
+  const unidadeId = Number(unidadeSelect.value);
+  if (!Number.isFinite(unidadeId) || unidadeId <= 0) {
+    resetLoteProdutoSelect();
+    return;
+  }
+  loteProdutosRequestId += 1;
+  const requestId = loteProdutosRequestId;
+  const previousValue = produtoSelect.value;
+  produtoSelect.disabled = true;
+  produtoSelect.innerHTML = '<option value="">Carregando produtos...</option>';
+  try {
+    const produtos = await fetchJSON(`/produtos?unidade_id=${encodeURIComponent(unidadeId)}`);
+    if (loteProdutosRequestId !== requestId) return;
+    const ativos = Array.isArray(produtos) ? produtos.filter((produto) => Number(produto.ativo ?? 1) === 1) : [];
+    if (!ativos.length) {
+      resetLoteProdutoSelect("Nenhum produto disponivel");
+      return;
+    }
+    const options = ativos
+      .map(
+        (produto) =>
+          `<option value="${escapeHtml(String(produto.id))}">${escapeHtml(produto.nome || `Produto ${produto.id}`)}</option>`,
+      )
+      .join("");
+    produtoSelect.innerHTML = `<option value="">Selecione o produto</option>${options}`;
+    produtoSelect.disabled = false;
+    if (previousValue && ativos.some((produto) => String(produto.id) === String(previousValue))) {
+      produtoSelect.value = previousValue;
+    }
+  } catch (err) {
+    if (loteProdutosRequestId !== requestId) return;
+    resetLoteProdutoSelect("Falha ao carregar produtos");
+    showToast(err?.message || "Falha ao carregar produtos da unidade.", "error");
+  }
+}
+
+function resetSaidaProdutoSelect(message = "Selecione a unidade de origem") {
+  const select = dom.saidaProdutoSelect || dom.saidaForm?.querySelector('select[name="produto_id"]');
+  if (!select) return;
+  select.innerHTML = `<option value="">${escapeHtml(message)}</option>`;
+  select.value = "";
+  select.disabled = true;
+}
+
+function resetEntradaLocalSelect(message = "Selecione a unidade") {
+  const select = dom.entradaLocalSelect || dom.entradaForm?.querySelector('select[name="local_id"]');
+  if (!select) return;
+  select.innerHTML = `<option value="">${escapeHtml(message)}</option>`;
+  select.value = "";
+  select.disabled = true;
+}
+
+async function handleSaidaOrigemChange() {
+  const select = dom.saidaProdutoSelect || dom.saidaForm?.querySelector('select[name="produto_id"]');
+  if (!select) return;
+  const unidadeIdRaw = dom.saidaOrigemSelect?.value;
+  const unidadeId = Number(unidadeIdRaw);
+  if (!Number.isFinite(unidadeId) || unidadeId <= 0) {
+    resetSaidaProdutoSelect();
+    return;
+  }
+  saidaProdutosRequestId += 1;
+  const requestId = saidaProdutosRequestId;
+  select.disabled = true;
+  select.innerHTML = '<option value="">Carregando produtos...</option>';
+  try {
+    const produtos = await fetchJSON(`/produtos?unidade_id=${encodeURIComponent(unidadeId)}&com_estoque=1`);
+    if (saidaProdutosRequestId !== requestId) return;
+    if (!Array.isArray(produtos) || !produtos.length) {
+      resetSaidaProdutoSelect("Nenhum produto com estoque disponivel");
+      return;
+    }
+    const options = produtos
+      .filter((produto) => Number(produto.ativo ?? 1) === 1)
+      .map((produto) => `<option value="${produto.id}">${escapeHtml(produto.nome)}</option>`)
+      .join("");
+    populateSelect(select, options, "Selecione");
+    select.disabled = false;
+  } catch (err) {
+    if (saidaProdutosRequestId !== requestId) return;
+    resetSaidaProdutoSelect("Falha ao carregar produtos");
+    showToast(err?.message || "Falha ao carregar produtos da unidade.", "error");
+  }
+}
+
+async function handleEntradaUnidadeChange() {
+  const select = dom.entradaLocalSelect || dom.entradaForm?.querySelector('select[name="local_id"]');
+  if (!select) return;
+  const unidadeId = Number(dom.entradaUnidadeSelect?.value);
+  if (!Number.isFinite(unidadeId) || unidadeId <= 0) {
+    resetEntradaLocalSelect();
+    return;
+  }
+  entradaLocaisRequestId += 1;
+  const requestId = entradaLocaisRequestId;
+  select.disabled = true;
+  select.innerHTML = '<option value="">Carregando locais...</option>';
+  try {
+    const locaisDisponiveis = await ensureLocaisCarregados(false);
+    if (entradaLocaisRequestId !== requestId) return;
+    populateEntradaLocaisSelect(locaisDisponiveis, unidadeId);
+  } catch (err) {
+    if (entradaLocaisRequestId !== requestId) return;
+    resetEntradaLocalSelect("Falha ao carregar locais");
+    showToast(err?.message || "Falha ao carregar locais da unidade.", "error");
+  }
+}
+
+function refreshUnidadeSelects() {
+  const options = state.unidades.map((unidade) => `<option value="${unidade.id}">${escapeHtml(unidade.nome)}</option>`).join("");
+  populateSelect(dom.lotesFiltroUnidade, options, "Todas");
+  populateSelect(dom.movFiltroUnidade, options, "Todas");
+  populateSelect(dom.relatorioUnidade, options, "Todas");
+  populateSelect(dom.saidaOrigemSelect, options, "Selecione a unidade");
+  populateSelect(dom.saidaDestinoSelect, options, "Selecione a unidade");
+  if (dom.produtosForm?.elements.unidade_id) populateSelect(dom.produtosForm.elements.unidade_id, options, "Sem unidade");
+  if (dom.loteForm?.elements.unidade_id) populateSelect(dom.loteForm.elements.unidade_id, options, "Selecione a unidade");
+  if (dom.usuarioForm) populateSelect(dom.usuarioForm.querySelector('select[name="unidade_id"]'), options, "Sem unidade");
+  if (dom.entradaForm) populateSelect(dom.entradaForm.querySelector('select[name="unidade_id"]'), options, "Selecione");
+  if (dom.localUnidadeSelect) populateSelect(dom.localUnidadeSelect, options, "Selecione a unidade");
+  
+  // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR";
+  const listaCompraSelect = dom.listaCompraForm?.elements.unidade_id;
+  const isModalOpen = dom.listaCompraModal && !dom.listaCompraModal.classList.contains("hidden");
+  const isNovaLista = !dom.listaCompraForm?.elements.id?.value;
+  
+  if (listaCompraSelect && !(isCozinhaOuBar && isModalOpen && isNovaLista && listaCompraSelect.disabled)) {
+    populateSelect(listaCompraSelect, options, "Selecione");
+  }
+  
+  handleSaidaOrigemChange();
+  handleLoteUnidadeChange();
+  handleEntradaUnidadeChange();
+}
+
+function refreshGerenteSelect(selectedId) {
+  const selects = [];
+  if (dom.unidadeForm?.elements.gerente_usuario_id) selects.push(dom.unidadeForm.elements.gerente_usuario_id);
+  if (dom.unidadeInlineForm?.elements.gerente_usuario_id) selects.push(dom.unidadeInlineForm.elements.gerente_usuario_id);
+  if (!selects.length) return;
+
+  const usuariosAtivos = (state.usuarios || []).filter((usuario) => Number(usuario?.ativo ?? 0) === 1);
+  const usuariosOrdenados = usuariosAtivos
+    .map((usuario) => {
+      const nome = (usuario?.nome || usuario?.email || `Usuario ${usuario?.id ?? ""}`).toString();
+      return { ...usuario, _nomeOrdenacao: nome };
+    })
+    .sort((a, b) => a._nomeOrdenacao.localeCompare(b._nomeOrdenacao, "pt-BR"));
+  const options = usuariosOrdenados
+    .map((usuario) => {
+      const rotulo = usuario.nome || usuario._nomeOrdenacao;
+      return `<option value="${escapeHtml(String(usuario.id ?? ""))}">${escapeHtml(rotulo)}</option>`;
+    })
+    .join("");
+
+  selects.forEach((select) => {
+    const valorAnterior = selectedId !== undefined ? selectedId : select.value;
+    populateSelect(select, options, "Selecione um usuario");
+    const alvo = valorAnterior !== undefined && valorAnterior !== null ? String(valorAnterior) : "";
+    if (alvo && Array.from(select.options).some((opt) => opt.value === alvo)) {
+      select.value = alvo;
+    }
+  });
+}
+
+// --- Rotinas de carregamento principal de dados vindos da API ---
+// Função global para atualizar cards - pode ser chamada de qualquer lugar
+function atualizarCardsDashboard(dados) {
+  const { produtos = [], lotes = [], minimos = {}, perdas = {}, lotesStats = {}, comprasAtivas = 0 } = dados;
+  
+  // Calcula valores
+  const produtosAtivos = Array.isArray(produtos) ? produtos.filter(p => Number(p.ativo) === 1).length : 0;
+  const lotes7Dias = Array.isArray(lotes) ? lotes.length : 0;
+  const lotes15Dias = Number(lotesStats?.a_vencer ?? 0);
+  const lotesVencidos = Number(lotesStats?.vencidos ?? 0);
+  const produtosAbaixoMinimo = Array.isArray(minimos?.produtos) ? minimos.produtos.length : Number(minimos?.total ?? 0);
+  const perdasQtd = Number(perdas?.quantidade_total ?? 0);
+  const perdasRegistros = Number(perdas?.total_registros ?? 0);
+  
+  // Função auxiliar para atualizar
+  function setCardValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = String(value ?? "0");
+      return true;
+    }
+    return false;
+  }
+  
+  // Atualiza todos os cards
+  setCardValue("kpiProdutos", produtosAtivos);
+  setCardValue("kpiVencer", lotes7Dias);
+  setCardValue("kpiLotesAVencer", lotes15Dias);
+  setCardValue("kpiLotesVencidos", lotesVencidos);
+  setCardValue("kpiMinimo", produtosAbaixoMinimo);
+  // Perdas: mostra apenas número inteiro (sem casas decimais)
+  setCardValue("kpiPerdas", Math.round(perdasQtd));
+  setCardValue("kpiComprasAtivas", comprasAtivas);
+  
+  // Atualiza hints
+  const hintMinimo = document.getElementById("cardMinimoHint");
+  if (hintMinimo) hintMinimo.textContent = produtosAbaixoMinimo > 0 ? "Ver produtos abaixo do minimo" : "Tudo em dia";
+  
+  const hintPerdas = document.getElementById("cardPerdasHint");
+  if (hintPerdas) hintPerdas.textContent = perdasRegistros > 0 ? `${perdasRegistros} movimentacoes recentes` : "Sem perdas registradas";
+  
+  // Atualiza classes de alerta
+  const cardMinimo = document.getElementById("cardMinimo");
+  if (cardMinimo) cardMinimo.classList.toggle("card--alert", produtosAbaixoMinimo > 0);
+  
+  const cardPerdas = document.getElementById("cardPerdas");
+  if (cardPerdas) cardPerdas.classList.toggle("card--alert", perdasQtd > 0);
+  
+  const cardLotesVencidos = document.getElementById("cardLotesVencidos");
+  if (cardLotesVencidos) cardLotesVencidos.classList.toggle("card--alert", lotesVencidos > 0);
+}
+
+async function loadDashboard() {
+  try {
+    // Carrega listas de compras para o card de compras
+    try {
+      await loadListasCompras().catch(() => {});
+    } catch (err) {
+      console.error("Erro ao carregar listas:", err);
+    }
+    
+    const estoqueMinimoPromise = fetchJSON("/estoque-abaixo-minimo").catch(() => ({ total: 0, produtos: [] }));
+    const perdasPromise = fetchJSON("/perdas-recentes").catch(() => ({ total_registros: 0, quantidade_total: 0, movimentacoes: [] }));
+    const lotesStatsPromise = fetchJSON("/lotes/stats").catch(() => null);
+    
+    const [produtos, lotes, movs, minimos, perdas, lotesStatsRaw] = await Promise.all([
+      fetchJSON("/produtos?todas=1").catch(() => []),
+      fetchJSON("/lotes-a-vencer").catch(() => []),
+      fetchJSON(`/movimentacoes?limit=50&_=${Date.now()}`).catch(() => []),
+      estoqueMinimoPromise,
+      perdasPromise,
+      lotesStatsPromise,
+    ]);
+    
+    const lotesStats = lotesStatsRaw && typeof lotesStatsRaw === "object" ? lotesStatsRaw : {};
+    state.produtos = produtos;
+    state.produtosAbaixoMinimo = Array.isArray(minimos?.produtos) ? minimos.produtos : [];
+    state.perdasResumo = {
+      total_registros: Number(perdas?.total_registros || 0),
+      quantidade_total: Number(perdas?.quantidade_total || 0),
+      movimentacoes: Array.isArray(perdas?.movimentacoes) ? perdas.movimentacoes : [],
+    };
+    
+    const movsArray = Array.isArray(movs) ? movs : [];
+    const movsOrdenados = sortMovimentacoes(movsArray);
+    state.movimentacoes = movsOrdenados;
+    state.movimentacoesRecentes = movsOrdenados;
+    
+    // Atualiza cards imediatamente
+    atualizarCardsDashboard({
+      produtos,
+      lotes,
+      minimos,
+      perdas,
+      lotesStats,
+      comprasAtivas: state.listasComprasAtivasSnapshot?.length ?? 0
+    });
+    
+    // Aguarda e atualiza novamente para garantir
+    setTimeout(() => {
+      atualizarCardsDashboard({
+        produtos,
+        lotes,
+        minimos,
+        perdas,
+        lotesStats,
+        comprasAtivas: state.listasComprasAtivasSnapshot?.length ?? 0
+      });
+      
+      // Renderiza tabelas e gráficos
+      renderMovimentacoesDashboard(movsOrdenados);
+      renderLotesDashboard(lotes);
+      renderProdutosDashboard(produtos);
+      refreshProdutoSelects();
+    }, 300);
+    
+    // Tenta mais uma vez após 1 segundo para garantir
+    setTimeout(() => {
+      atualizarCardsDashboard({
+        produtos,
+        lotes,
+        minimos,
+        perdas,
+        lotesStats,
+        comprasAtivas: state.listasComprasAtivasSnapshot?.length ?? 0
+      });
+    }, 1000);
+    
+  } catch (err) {
+    console.error("Erro ao carregar dashboard:", err);
+    showToast("Erro ao carregar dashboard.", "error");
+  }
+}
+
+async function loadProdutos() {
+  console.log("loadProdutos: Carregando produtos da API...");
+  try {
+    const produtos = await fetchJSON("/produtos?todas=1");
+    console.log("loadProdutos: Produtos recebidos da API:", produtos?.length || 0);
+    
+    if (!Array.isArray(produtos)) {
+      console.error("loadProdutos: Resposta da API não é um array:", produtos);
+      state.produtos = [];
+      return;
+    }
+    
+    state.produtos = produtos;
+    const produtosAtivos = produtos.filter(p => Number(p.ativo) === 1);
+    console.log("loadProdutos: Produtos ativos:", produtosAtivos.length);
+    console.log("loadProdutos: Total de produtos:", produtos.length);
+    
+    renderProdutos(state.produtos);
+    refreshProdutoSelects();
+  } catch (error) {
+    console.error("loadProdutos: Erro ao carregar produtos:", error);
+    state.produtos = [];
+    throw error;
+  }
+}
+
+async function loadEstoqueProdutos() {
+  try {
+    if (!state.produtos || state.produtos.length === 0) {
+      state.produtos = await fetchJSON("/produtos?todas=1");
+    }
+    
+    const estoqueProdutoSelect = document.getElementById("estoqueProdutoSelect");
+    if (estoqueProdutoSelect) {
+      const ativos = (state.produtos || []).filter((p) => Number(p.ativo ?? 1) === 1);
+      const options = ativos
+        .map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`)
+        .join("");
+      estoqueProdutoSelect.innerHTML = `<option value="">Selecione um produto</option>${options}`;
+    }
+  } catch (err) {
+    console.error("Erro ao carregar produtos para estoque:", err);
+    showToast("Falha ao carregar lista de produtos.", "error");
+  }
+}
+
+async function loadEstoqueProduto(produtoId) {
+  if (!produtoId) {
+    const estoqueInfo = document.getElementById("estoqueInfo");
+    if (estoqueInfo) estoqueInfo.style.display = "none";
+    return;
+  }
+  
+  try {
+    // Busca elementos diretamente pelo ID para garantir que estão disponíveis
+    const estoqueInfo = document.getElementById("estoqueInfo");
+    const estoqueProdutoNome = document.getElementById("estoqueProdutoNome");
+    const estoqueTotalQtd = document.getElementById("estoqueTotalQtd");
+    const estoqueTotalUnitario = document.getElementById("estoqueTotalUnitario");
+    const estoqueTotalValor = document.getElementById("estoqueTotalValor");
+    const estoqueUnidadeBase = document.getElementById("estoqueUnidadeBase");
+    const estoqueTable = document.getElementById("estoqueTable");
+    
+    if (!estoqueInfo || !estoqueProdutoNome || !estoqueTotalQtd || !estoqueTotalUnitario || !estoqueTotalValor || !estoqueUnidadeBase || !estoqueTable) {
+      console.error("Elementos do estoque não encontrados no DOM");
+      return;
+    }
+    
+    const dados = await fetchJSON(`/produtos/${produtoId}/estoque`);
+    
+    if (!dados || !dados.produto || !dados.estoque_total) {
+      showToast("Dados de estoque inválidos.", "error");
+      return;
+    }
+    
+    // Verifica se é perfil COZINHA ou BAR para ocultar valores
+    const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    
+    // Atualiza informações do produto
+    estoqueProdutoNome.textContent = dados.produto.nome || "Produto";
+    estoqueTotalQtd.textContent = (dados.estoque_total.qtd_total || 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    });
+    estoqueUnidadeBase.textContent = `Unidade: ${normalizarUnidadeBase(dados.produto.unidade_base)}`;
+    
+    // Atualiza valores dos cards apenas se não for COZINHA ou BAR
+    if (!isCozinhaOuBar) {
+      estoqueTotalUnitario.textContent = `R$ ${(dados.estoque_total.valor_unitario_medio || 0).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+      estoqueTotalValor.textContent = `R$ ${(dados.estoque_total.valor_total || 0).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    }
+    
+    // Renderiza tabela de estoque por unidade
+    if (!dados.estoque_por_unidade || dados.estoque_por_unidade.length === 0) {
+      const colspan = isCozinhaOuBar ? "3" : "5";
+      estoqueTable.innerHTML = `
+        <tr>
+          <td colspan="${colspan}" style="text-align: center; color: #607d8b;">
+            Nenhum estoque encontrado para este produto
+          </td>
+        </tr>
+      `;
+    } else {
+      const rows = dados.estoque_por_unidade
+        .map((item) => {
+          const valorUnitarioCell = isCozinhaOuBar ? '' : `
+            <td data-label="Valor Unitário" class="estoque-col-valor-unitario">R$ ${(item.valor_unitario_medio || 0).toLocaleString("pt-BR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}</td>
+          `;
+          const valorTotalCell = isCozinhaOuBar ? '' : `
+            <td data-label="Valor Total" class="estoque-col-valor-total">R$ ${(item.valor_total || 0).toLocaleString("pt-BR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}</td>
+          `;
+          
+          return `
+          <tr>
+            <td data-label="Unidade">${escapeHtml(item.unidade_nome || "N/A")}</td>
+            <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 3,
+            })}</td>
+            ${valorUnitarioCell}
+            ${valorTotalCell}
+            <td data-label="Nº de Lotes">${item.num_lotes || 0}</td>
+          </tr>
+        `;
+        })
+        .join("");
+      estoqueTable.innerHTML = rows;
+    }
+    
+    estoqueInfo.style.display = "block";
+  } catch (err) {
+    console.error("Erro ao carregar estoque:", err);
+    showToast(err?.message || "Falha ao carregar estoque do produto.", "error");
+    const estoqueInfo = document.getElementById("estoqueInfo");
+    if (estoqueInfo) estoqueInfo.style.display = "none";
+  }
+}
+
+async function loadUnidades(refresh = true) {
+  if (!refresh && state.unidades.length) {
+    renderUnidades(state.unidades);
+    refreshUnidadeSelects();
+    return;
+  }
+  state.unidades = await fetchJSON("/unidades?todas=1");
+  renderUnidades(state.unidades);
+  refreshUnidadeSelects();
+}
+
+async function loadLocais(force = false) {
+  if (!force && Array.isArray(state.locais) && state.locais.length) {
+    renderLocais(state.locais);
+    handleEntradaUnidadeChange().catch(() => {});
+    return state.locais;
+  }
+  state.locais = await fetchJSON("/locais");
+  renderLocais(state.locais);
+  handleEntradaUnidadeChange().catch(() => {});
+  return state.locais;
+}
+
+async function loadUsuarios(force = false) {
+  if (usuariosCarregando) {
+    await usuariosCarregando;
+    if (!force) return state.usuarios;
+  }
+  if (!force && state.usuarios.length) {
+    renderUsuarios(state.usuarios);
+    refreshGerenteSelect();
+    return state.usuarios;
+  }
+  const tarefa = (async () => {
+    const dados = await fetchJSON("/usuarios?todas=1");
+    state.usuarios = dados;
+    renderUsuarios(state.usuarios);
+    refreshGerenteSelect();
+    return state.usuarios;
+  })();
+  usuariosCarregando = tarefa;
+  try {
+    return await tarefa;
+  } finally {
+    usuariosCarregando = null;
+  }
+}
+
+async function loadLotes(filtros = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filtros).forEach(([key, value]) => { if (value) params.append(key, value); });
+  const dados = await fetchJSON(params.toString() ? `/lotes?${params}` : "/lotes");
+  console.log("📦 Dados recebidos do backend (/lotes):", dados?.length || 0, "lotes");
+  if (dados && dados.length > 0) {
+    console.log("📦 Primeiro lote recebido:", {
+      id: dados[0].id,
+      data_validade: dados[0].data_validade,
+      dias_para_vencer: dados[0].dias_para_vencer,
+      produto_nome: dados[0].produto_nome
+    });
+  }
+  state.lotes = dados;
+  renderLotesGerenciamento(dados);
+  handleSaidaOrigemChange();
+  populateEntradaLoteOptions();
+}
+
+// Recupera movimentacoes com filtros e sincroniza as visoes de detalhes.
+async function loadMovimentacoesDetalhadas(filtros = {}, options = {}) {
+  const resolvedOptions =
+    typeof options === "boolean" ? { refreshDashboard: options } : options || {};
+  const { refreshDashboard = false } = resolvedOptions;
+  movimentacoesRequestId += 1;
+  const requestId = movimentacoesRequestId;
+  
+  // ✅ Prepara parâmetros de query, removendo valores vazios
+  const params = new URLSearchParams();
+  Object.entries(filtros).forEach(([key, value]) => { 
+    if (value && value.toString().trim() !== "") {
+      params.append(key, value.toString().trim());
+    }
+  });
+  
+  const queryString = params.toString();
+  const bustParam = `_=${Date.now()}`;
+  const url = queryString ? `/movimentacoes?${queryString}&${bustParam}` : `/movimentacoes?limit=100&${bustParam}`;
+  
+  console.log("Carregando movimentações:", { filtros, url });
+  
+  try {
+    const dados = await fetchJSON(url);
+    if (movimentacoesRequestId !== requestId) return;
+    
+    // Garantir que dados seja um array
+    const dadosArray = Array.isArray(dados) ? dados : [];
+    const dadosOrdenados = sortMovimentacoes(dadosArray);
+    state.movimentacoes = dadosOrdenados;
+    
+    console.log(`Movimentações carregadas: ${dadosOrdenados.length} registros`);
+    
+    // ✅ Renderiza na tabela de movimentações
+    renderMovimentacoes(dadosOrdenados, dom.movimentacoesTable, "Sem movimentacoes para os filtros selecionados.");
+    
+    // Atualiza state.movimentacoesRecentes quando não há filtros
+    if (!queryString) {
+      state.movimentacoesRecentes = dadosOrdenados;
+      // NÃO renderiza o dashboard aqui se refreshDashboard for true, pois loadDashboard() já vai renderizar
+      if (!refreshDashboard) {
+        renderMovimentacoesDashboard(dadosOrdenados);
+      }
+    }
+    
+    if (refreshDashboard) {
+      try {
+        await loadDashboard();
+      } catch (err) {
+        showToast(err?.message || "Falha ao atualizar dashboard.", "error");
+      }
+    }
+    
+    return dadosOrdenados;
+  } catch (err) {
+    console.error("Erro ao carregar movimentações:", err);
+    renderMovimentacoes([], dom.movimentacoesTable, "Erro ao carregar movimentações.");
+    throw err;
+  }
+}
+
+function agruparMovimentacoes(lista, tipo) {
+  const mapa = new Map();
+  (lista || []).forEach((mov) => {
+    const quantidade = Number(mov.qtd ?? 0) || 0;
+    const valor = quantidade * (Number(mov.custo_unitario ?? 0) || 0);
+    let chave;
+    let nome;
+    if (tipo === "unidade") {
+      chave = mov.unidade_id || mov.de_unidade_id || mov.para_unidade_id || "--";
+      nome = mov.unidade_nome || "--";
+    } else if (tipo === "responsavel") {
+      chave = mov.usuario_id || "--";
+      nome = mov.responsavel_nome || "--";
+    } else {
+      chave = mov.produto_id || "--";
+      nome = mov.produto_nome || "--";
+    }
+    if (!mapa.has(chave)) {
+      mapa.set(chave, { nome, entradasQtd: 0, entradasVal: 0, saidasQtd: 0, saidasVal: 0, saldoQtd: 0 });
+    }
+    const item = mapa.get(chave);
+    if ((mov.tipo || "").toUpperCase() === "ENTRADA") {
+      item.entradasQtd += quantidade;
+      item.entradasVal += valor;
+      item.saldoQtd += quantidade;
+    } else {
+      item.saidasQtd += quantidade;
+      item.saidasVal += valor;
+      item.saldoQtd -= quantidade;
+    }
+  });
+  return Array.from(mapa.values());
+}
+
+// Atualiza os dados de relatorios respeitando os filtros ativos na interface.
+async function loadRelatorio(filtros = {}) {
+  await loadMovimentacoesDetalhadas(filtros);
+  const agruparPor = (filtros.agrupar || dom.relatorioAgrupar?.value || "produto").toLowerCase();
+  const label = agruparPor === "unidade" ? "Unidade" : agruparPor === "responsavel" ? "Responsavel" : "Produto";
+  state.relatorioResumo = agruparMovimentacoes(state.movimentacoes, agruparPor);
+  renderRelatorioResumo(state.relatorioResumo, label);
+  renderRelatorioDetalhes(state.movimentacoes);
+}
+async function startAppSession(user) {
+  if (user) setUser(user);
+  currentUser = getUser();
+  if (!currentUser) {
+    showToast("Erro ao iniciar sessão. Tente fazer login novamente.", "error");
+    return;
+  }
+  
+  applyPermissions();
+  if (typeof stopMatrixAnimation === "function") {
+    stopMatrixAnimation();
+    stopMatrixAnimation = null;
+  }
+  
+  console.log('Iniciando sessão do usuário:', currentUser);
+  
+  // Esconde tela de login e mostra aplicação
+  if (dom.loginOverlay) {
+    dom.loginOverlay.classList.add("hidden");
+    console.log('Tela de login escondida');
+  } else {
+    console.error('loginOverlay não encontrado!');
+  }
+  
+  if (dom.appShell) {
+    dom.appShell.classList.remove("hidden");
+    console.log('App shell mostrado');
+  } else {
+    console.error('appShell não encontrado!');
+  }
+  
+  setSidebarOpen(false);
+  
+  // Carrega dados iniciais em background (não bloqueia o login)
+  Promise.allSettled([
+    loadDashboard().catch(err => console.error("Erro ao carregar dashboard:", err)),
+    loadProdutos().catch(err => console.error("Erro ao carregar produtos:", err)),
+    loadUnidades().catch(err => console.error("Erro ao carregar unidades:", err)),
+    loadLocais().catch(err => console.error("Erro ao carregar locais:", err)),
+    loadUsuarios().catch(err => console.error("Erro ao carregar usuários:", err)),
+    loadLotes().catch(err => console.error("Erro ao carregar lotes:", err)),
+    loadMovimentacoesDetalhadas().catch(err => console.error("Erro ao carregar movimentações:", err)),
+    loadListasCompras().catch(err => console.error("Erro ao carregar listas:", err)),
+    loadRelatorio({}).catch(err => console.error("Erro ao carregar relatório:", err)),
+  ]).then(() => {
+    console.log('Dados iniciais carregados');
+  });
+  
+  // Navega para a seção apropriada
+  // Se foi um login novo (user passado), sempre vai para dashboard
+  // Se foi apenas um refresh (sem user), restaura a seção salva
+  (() => {
+    let sectionToNavigate = 'dashboard'; // padrão
+    
+    // Se foi um login novo (user foi passado), sempre vai para dashboard
+    if (user) {
+      console.log('Login novo detectado, navegando para dashboard');
+      sectionToNavigate = 'dashboard';
+      // Salva dashboard como seção atual
+      try {
+        localStorage.setItem(currentSectionKey, 'dashboard');
+      } catch (err) {
+        console.warn('Erro ao salvar seção:', err);
+      }
+    } else {
+      // Se foi apenas um refresh, tenta restaurar a seção salva
+      try {
+        const savedSection = localStorage.getItem(currentSectionKey);
+        if (savedSection) {
+          // Valida se a seção salva é válida (lista de seções válidas)
+          const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras'];
+          if (validSections.includes(savedSection)) {
+            sectionToNavigate = savedSection;
+            console.log('Restaurando seção salva após refresh:', sectionToNavigate);
+          } else {
+            console.log('Seção salva inválida, usando dashboard');
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao restaurar seção salva:', err);
+      }
+    }
+    
+    // Usa requestAnimationFrame para garantir que o DOM está pronto, mas sem delay visível
+    requestAnimationFrame(() => {
+      // Verifica se já estamos na seção correta para evitar navegação desnecessária
+      if (typeof router !== 'undefined' && router) {
+        if (router.currentSection === sectionToNavigate) {
+          console.log('Já estamos na seção correta:', sectionToNavigate, '- pulando navegação');
+          return;
+        }
+        console.log('Navegando para:', sectionToNavigate, 'usando router');
+        router.navigate(sectionToNavigate);
+      } else if (typeof navigateTo === 'function') {
+        console.log('Router não disponível, usando navigateTo para:', sectionToNavigate);
+        navigateTo(sectionToNavigate);
+      } else {
+        console.warn('Nem router nem navigateTo disponíveis');
+      }
+    });
+  })();
+  
+  // Inicia o monitoramento de inatividade após login
+  startInactivityTimer();
+}
+
+// Funções para gerenciar timeout de inatividade
+function startInactivityTimer() {
+  // Limpa timer anterior se existir
+  stopInactivityTimer();
+  
+  // Reseta o timer quando há atividade do usuário
+  inactivityResetHandler = () => {
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+    }
+    
+    // Define novo timer de 6 minutos
+    inactivityTimer = setTimeout(() => {
+      // Verifica se ainda há usuário logado
+      const user = getUser();
+      if (user && user.token) {
+        showToast("Sessão expirada por inatividade. Faça login novamente.", "warning");
+        handleLogout();
+      }
+    }, INACTIVITY_TIMEOUT);
+  };
+  
+  // Eventos que indicam atividade do usuário
+  const activityEvents = [
+    'mousedown',
+    'mousemove',
+    'keypress',
+    'scroll',
+    'touchstart',
+    'click',
+    'keydown'
+  ];
+  
+  // Adiciona listeners para eventos de atividade
+  activityEvents.forEach(event => {
+    document.addEventListener(event, inactivityResetHandler, true);
+  });
+  
+  // Inicia o timer
+  inactivityResetHandler();
+  
+  console.log('Monitoramento de inatividade iniciado (6 minutos)');
+}
+
+function stopInactivityTimer() {
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = null;
+  }
+  
+  // Remove todos os event listeners de atividade
+  if (inactivityResetHandler) {
+    const activityEvents = [
+      'mousedown',
+      'mousemove',
+      'keypress',
+      'scroll',
+      'touchstart',
+      'click',
+      'keydown'
+    ];
+    
+    activityEvents.forEach(event => {
+      document.removeEventListener(event, inactivityResetHandler, true);
+    });
+    
+    inactivityResetHandler = null;
+  }
+  
+  console.log('Monitoramento de inatividade parado');
+}
+
+function resetForms() {
+  [dom.produtosForm, dom.unidadeForm, dom.unidadeInlineForm, dom.usuarioForm, dom.entradaForm, dom.loteForm, dom.saidaForm, dom.listaCompraForm, dom.itemCompraForm, dom.estabelecimentoCompraForm, dom.finalizarListaForm].forEach((form) => form && form.reset());
+  usuarioFotoFile = null;
+  usuarioFotoRemovida = false;
+  if (dom.unidadeForm?.elements.gerente_usuario_id) dom.unidadeForm.elements.gerente_usuario_id.value = "";
+  if (dom.unidadeInlineForm?.elements.gerente_usuario_id) dom.unidadeInlineForm.elements.gerente_usuario_id.value = "";
+  state.produtos = [];
+  state.produtosAbaixoMinimo = [];
+  state.perdasResumo = { total_registros: 0, quantidade_total: 0, movimentacoes: [] };
+  state.unidades = [];
+  state.locais = [];
+  state.usuarios = [];
+  state.lotes = [];
+  state.movimentacoes = [];
+  state.relatorioResumo = [];
+  state.relatorioDetalhes = [];
+  state.listaComprasFiltroStatus = "ativas";
+  state.listasComprasAtivasSnapshot = [];
+  state.unidadeInlineVisivel = false;
+  usuariosCarregando = null;
+  if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = "ativas";
+  refreshGerenteSelect();
+  updateSaidaDestinoVisibility();
+  resetSaidaProdutoSelect();
+  resetEntradaLocalSelect();
+  if (dom.usuarioAvatarPreview) dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+  state.listaCompraAtual = null;
+  state.listasCompras = [];
+  renderListasCompras([]);
+  renderListaCompraDetalhes(null);
+  updateComprasDashboardCard();
+  updateMinimoDashboardCard();
+  updatePerdasDashboardCard();
+  applyPermissions();
+}
+
+function toggleModal(modal, visible) {
+  if (!modal) return;
+  modal.classList.toggle("active", visible);
+}
+
+async function handleLogin(event) {
+  console.log('=== handleLogin CHAMADO ===');
+  event.preventDefault();
+  console.log('=== INÍCIO DO LOGIN ===');
+  
+  const email = document.getElementById("loginEmail")?.value.trim();
+  const senha = document.getElementById("loginPassword")?.value.trim();
+  
+  console.log('Email:', email ? 'preenchido' : 'vazio');
+  console.log('Senha:', senha ? 'preenchida' : 'vazia');
+  
+  if (!email || !senha) {
+    console.log('Erro: Email ou senha vazios');
+    showToast("Informe email e senha.", "error");
+    return;
+  }
+  
+  // Desabilita botão durante o login
+  const submitBtn = dom.loginForm?.querySelector('button[type="submit"]');
+  const originalText = submitBtn?.textContent;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Entrando...";
+  }
+  
+  try {
+    console.log('=== DETALHES DA REQUISIÇÃO ===');
+    console.log('API_URL:', API_URL);
+    console.log('URL completa:', `${API_URL}/login`);
+    console.log('Payload:', { email, senha: '***' });
+    
+    const payload = await fetchJSON("/login", { method: "POST", body: JSON.stringify({ email, senha }) });
+    
+    console.log('Resposta recebida:', payload);
+    
+    if (!payload || !payload.id) {
+      console.error('Resposta inválida:', payload);
+      throw new Error("Resposta inválida do servidor");
+    }
+    
+    console.log('Login bem-sucedido! Payload:', payload);
+    showToast("Login realizado com sucesso!", "success");
+    
+    // Aguarda um pouco para garantir que o toast seja exibido
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    startAppSession({ 
+      id: payload.id, 
+      nome: payload.nome, 
+      email: payload.email, 
+      perfil: payload.perfil, 
+      token: payload.token 
+    });
+    
+    dom.loginForm.reset();
+    console.log('Sessão iniciada, formulário resetado');
+  } catch (err) {
+    console.error('=== ERRO NO LOGIN ===');
+    console.error('Erro completo:', err);
+    console.error('Mensagem:', err.message);
+    console.error('Stack:', err.stack);
+    
+    let errorMessage = err.message || "Falha ao autenticar.";
+    
+    // Mensagens de erro mais amigáveis
+    if (errorMessage.includes("não foi possível conectar") || errorMessage.includes("fetch") || errorMessage.includes("Failed to fetch")) {
+      errorMessage = "Servidor não está acessível. Verifique se o servidor Laravel está rodando em http://localhost:5000";
+    } else if (errorMessage.includes("401") || errorMessage.includes("Credenciais") || errorMessage.includes("incorretos")) {
+      errorMessage = "Email ou senha incorretos. Verifique suas credenciais.";
+    } else if (errorMessage.includes("500")) {
+      errorMessage = "Erro no servidor. Verifique os logs do Laravel.";
+    } else if (errorMessage.includes("CORS")) {
+      errorMessage = "Erro de CORS. Verifique a configuração do servidor.";
+    }
+    
+    showToast(errorMessage, "error");
+  } finally {
+    // Reabilita botão
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      if (originalText) submitBtn.textContent = originalText;
+    }
+    console.log('=== FIM DO LOGIN ===');
+  }
+}
+
+function handleLogout() {
+  stopInactivityTimer();
+  clearUser();
+  resetForms();
+  dom.appShell.classList.add("hidden");
+  dom.loginOverlay.classList.remove("hidden");
+  setSidebarOpen(false);
+  if (!stopMatrixAnimation) {
+    stopMatrixAnimation = initMatrixBackground();
+  }
+}
+
+async function submitProduto(event) {
+  event.preventDefault();
+  console.log('🚀 === SUBMIT PRODUTO INICIADO ===');
+  
+  const form = dom.produtosForm;
+  
+  if (!form) {
+    console.error('❌ Formulário não encontrado!');
+    showToast("Erro: Formulário não encontrado.", "error");
+    return;
+  }
+  
+  console.log('📝 Coletando dados do formulário...');
+  
+  // Coleta codigo_barras e verifica se não é o texto placeholder
+  const codigoBarrasValue = form.elements.codigo_barras.value.trim();
+  const codigoBarras = (codigoBarrasValue && codigoBarrasValue !== 'Gerado automaticamente') 
+    ? codigoBarrasValue 
+    : null;
+  
+  const payload = {
+    nome: form.elements.nome.value.trim(),
+    categoria: form.elements.categoria.value,
+    unidade_base: form.elements.unidade_base.value,
+    codigo_barras: codigoBarras,
+    descricao: form.elements.descricao.value.trim() || null,
+    custo_medio: Number(form.elements.custo_medio.value || 0),
+    estoque_minimo: Number(form.elements.estoque_minimo.value || 0),
+    unidade_id: form.elements.unidade_id.value || null,
+    ativo: Number(form.elements.ativo.value || 1),
+  };
+  
+  console.log('📊 Payload preparado:', payload);
+  
+  if (!payload.nome || !payload.categoria || !payload.unidade_base) {
+    console.warn('⚠️ Validação falhou - campos obrigatórios vazios');
+    showToast("Preencha os campos obrigatorios.", "error");
+    return;
+  }
+  
+  const id = form.elements.id.value;
+  console.log('🔍 ID do produto:', id || 'NOVO PRODUTO');
+  
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn?.textContent || 'Salvar';
+  
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Salvando...';
+    }
+    
+    console.log('📤 Enviando para API...');
+    const url = id ? `/produtos/${id}` : "/produtos";
+    const method = id ? "PUT" : "POST";
+    console.log(`📍 ${method} ${url}`);
+    
+    const result = await fetchJSON(url, { 
+      method: method, 
+      body: JSON.stringify(payload) 
+    });
+    
+    console.log('✅ Resposta da API:', result);
+    showToast("Produto salvo com sucesso!", "success");
+    toggleModal(dom.produtosModal, false);
+    form.reset();
+    
+    console.log('🔄 Recarregando lista de produtos...');
+    await loadProdutos();
+    console.log('✅ Produto salvo e lista atualizada!');
+    
+  } catch (err) {
+    console.error('❌ Erro ao salvar produto:', err);
+    console.error('❌ Stack:', err.stack);
+    showToast(err.message || "Falha ao salvar produto.", "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+    console.log('🔄 === FIM SUBMIT PRODUTO ===');
+  }
+}
+
+async function submitUnidade(event, formOverride = null) {
+  event.preventDefault();
+  const form = formOverride || dom.unidadeForm;
+  if (!form) return;
+  const isModal = form === dom.unidadeForm;
+
+  const formData = new FormData(form);
+  const id = formData.get("id") || "";
+  formData.delete("id");
+  const data = Object.fromEntries(formData.entries());
+
+  data.nome = (data.nome || "").trim();
+  if (!data.nome) {
+    showToast("Informe o nome da unidade.", "error");
+    return;
+  }
+  data.endereco = (data.endereco || "").trim();
+  data.cnpj = (data.cnpj || "").trim();
+  data.telefone = (data.telefone || "").trim();
+  data.email = (data.email || "").trim();
+  data.observacoes = (data.observacoes || "").trim();
+
+  const gerenteValor = (data.gerente_usuario_id || "").trim();
+  if (!gerenteValor) {
+    data.gerente_usuario_id = null;
+  } else {
+    const numero = Number(gerenteValor);
+    if (Number.isNaN(numero)) {
+      showToast("Selecione um gerente valido.", "error");
+      return;
+    }
+    data.gerente_usuario_id = numero;
+  }
+
+  try {
+    await fetchJSON(id ? `/unidades/${id}` : "/unidades", { method: id ? "PUT" : "POST", body: JSON.stringify(data) });
+    showToast("Unidade salva com sucesso!", "success");
+    if (isModal) {
+      toggleModal(dom.unidadeModal, false);
+    } else {
+      form.reset();
+      refreshGerenteSelect();
+      state.unidadeInlineVisivel = false;
+      dom.unidadeInlineFormCard?.classList.add("hidden");
+      applyPermissions();
+    }
+    await loadUnidades();
+    applyPermissions();
+  } catch (err) {
+    showToast(err.message || "Falha ao salvar unidade.", "error");
+  }
+}
+
+async function submitUsuario(event) {
+  event.preventDefault();
+  const submitButton = dom.usuarioForm?.querySelector('button[type="submit"]');
+  const submitLabel = submitButton?.textContent || "";
+  const form = dom.usuarioForm;
+  if (!form) {
+    showToast("Formulario nao encontrado.", "error");
+    return;
+  }
+  
+  // Pega os valores do formulário diretamente dos elementos (mesmo padrão das outras telas)
+  const id = form.elements.id?.value || "";
+  const nome = (form.elements.nome?.value || "").trim();
+  const email = (form.elements.email?.value || "").trim();
+  const perfilRaw = (form.elements.perfil?.value || "").trim();
+  const perfil = perfilRaw.toUpperCase(); // Garante maiúsculas
+  const senha = (form.elements.senha?.value || "").trim();
+  const confirmar = (form.elements.confirmar_senha?.value || "").trim();
+  const unidade_id = form.elements.unidade_id?.value || null;
+  const ativo = form.elements.ativo?.value ? Number(form.elements.ativo.value) : 1;
+  
+  // Desabilita o botão e muda o texto
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Salvando...";
+  }
+  
+  try {
+    // Validação dos campos obrigatórios
+    if (!nome || !email || !perfil) {
+      showToast("Preencha os campos obrigatorios.", "error");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = submitLabel || "Salvar";
+      }
+      return;
+    }
+    
+    // BAR só pode criar/editar usuários BAR
+    const isBarUser = canManageUsuariosBar();
+    const currentUserPerfil = currentUser?.perfil ? (currentUser.perfil.toString().trim().toUpperCase()) : "";
+    
+    console.log("🔍 Validação de permissões:", {
+      isBarUser,
+      currentUserPerfil,
+      perfilSendoCriado: perfil,
+      id: id || "novo"
+    });
+    
+    if (isBarUser) {
+      // Usuário BAR logado só pode criar/editar usuários BAR
+      if (perfil !== "BAR") {
+        console.warn("❌ BAR tentando criar usuário com perfil diferente de BAR:", perfil);
+        showToast("Você só pode criar e gerenciar usuários do tipo BAR.", "error");
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel || "Salvar";
+        }
+        return;
+      }
+      
+      // Se estiver editando, verifica se o usuário é BAR
+      if (id) {
+        const usuarioExistente = state.usuarios.find(u => String(u.id) === String(id));
+        if (!usuarioExistente) {
+          console.warn("❌ Usuário não encontrado para edição:", id);
+          showToast("Usuário não encontrado.", "error");
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = submitLabel || "Salvar";
+          }
+          return;
+        }
+        const perfilExistente = (usuarioExistente.perfil || "").toString().trim().toUpperCase();
+        console.log("🔍 Verificando perfil existente:", {
+          perfilExistente,
+          perfilSendoEditado: perfil
+        });
+        if (perfilExistente !== "BAR") {
+          console.warn("❌ BAR tentando editar usuário que não é BAR:", perfilExistente);
+          showToast("Você só pode editar usuários do tipo BAR.", "error");
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = submitLabel || "Salvar";
+          }
+          return;
+        }
+      }
+      
+      console.log("✅ Validação BAR passou, continuando com salvamento");
+    } else {
+      console.log("✅ Usuário não é BAR, validação de BAR não se aplica");
+    }
+    
+    // Para novo usuário, senha é obrigatória
+    if (!id && !senha) {
+      showToast("Informe uma senha para o novo usuario.", "error");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = submitLabel || "Salvar";
+      }
+      return;
+    }
+    
+    // Se senha foi preenchida, valida confirmação
+    if (senha) {
+      if (!confirmar) {
+        showToast("Confirme a senha.", "error");
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel || "Salvar";
+        }
+        return;
+      }
+      if (senha !== confirmar) {
+        showToast("As senhas nao conferem.", "error");
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel || "Salvar";
+        }
+        return;
+      }
+      if (senha.length < 6) {
+        showToast("A senha deve ter no minimo 6 caracteres.", "error");
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = submitLabel || "Salvar";
+        }
+        return;
+      }
+    }
+    
+    // Verificação específica para perfil BAR
+    console.log("🔍 Verificação específica BAR:", {
+      perfilNormalizado: perfil,
+      perfilOriginal: perfilRaw,
+      isBar: perfil === "BAR"
+    });
+    
+    // Prepara o payload (mesmo padrão das outras telas que funcionam)
+    const payload = {
+      nome,
+      email,
+      perfil: perfil, // Já está em maiúsculas
+      ativo,
+    };
+    
+    console.log("📦 Preparando payload:", {
+      nome,
+      email,
+      perfil: perfil,
+      ativo,
+      temSenha: !!senha,
+      unidade_id: unidade_id || null,
+      isBar: perfil === "BAR"
+    });
+    
+    // Adiciona senha apenas se foi preenchida
+    if (senha) {
+      payload.senha = senha;
+    }
+    
+    // Adiciona unidade_id apenas se fornecido e válido
+    if (unidade_id && unidade_id !== "" && unidade_id !== "null") {
+      payload.unidade_id = Number(unidade_id);
+      console.log("✅ unidade_id adicionado ao payload:", payload.unidade_id);
+    } else {
+      console.log("ℹ️ unidade_id não adicionado (null/vazio)");
+    }
+    // Se for null/vazio, não adiciona o campo ao payload (backend trata como null)
+    
+    // Se há foto para remover
+    if (usuarioFotoRemovida) {
+      payload.remove_foto = "1";
+    }
+    
+    // Se há foto, usa FormData (como estava antes)
+    const temFoto = !!usuarioFotoFile;
+    const temRemoverFoto = !!usuarioFotoRemovida;
+    
+    // Prepara o payload para logs (sem senha)
+    const payloadLog = {
+      id: id || "novo",
+      nome,
+      email,
+      perfil: perfil,
+      unidade_id: unidade_id || null,
+      ativo,
+      temSenha: !!senha,
+      senhaLength: senha ? senha.length : 0,
+      temFoto: temFoto,
+      removeFoto: temRemoverFoto,
+      sendingMethod: temFoto || temRemoverFoto ? "fetchForm" : "fetchJSON",
+      isBar: perfil === "BAR"
+    };
+    
+    console.log("📋 Dados do formulário (submitUsuario):", payloadLog);
+    
+    let resultado;
+    
+    if (temFoto || temRemoverFoto) {
+      // Se tem foto ou remover foto, usa FormData
+      const formData = new FormData();
+      formData.append("nome", nome);
+      formData.append("email", email);
+      formData.append("perfil", perfil);
+      formData.append("ativo", ativo.toString());
+      if (senha) formData.append("senha", senha);
+      // Adiciona unidade_id apenas se fornecido e válido
+      if (unidade_id && unidade_id !== "" && unidade_id !== "null") {
+        formData.append("unidade_id", unidade_id);
+      }
+      // Se for null/vazio, não adiciona o campo (backend trata como null)
+      if (usuarioFotoRemovida) formData.append("remove_foto", "1");
+      if (usuarioFotoFile) formData.append("foto", usuarioFotoFile);
+      
+      console.log("📤 Enviando via FormData");
+      resultado = await fetchForm(
+        id ? `/usuarios/${id}` : "/usuarios",
+        id ? "PUT" : "POST",
+        formData
+      );
+    } else {
+      // Se não tem foto, usa JSON (mesmo padrão das outras telas)
+      console.log("📤 Enviando via JSON:", payload);
+      resultado = await fetchJSON(
+        id ? `/usuarios/${id}` : "/usuarios",
+        {
+          method: id ? "PUT" : "POST",
+          body: JSON.stringify(payload)
+        }
+      );
+    }
+    
+    console.log("✅ Resposta do servidor:", resultado);
+    console.log("🔍 Verificação da resposta para perfil BAR:", {
+      perfilEnviado: perfil,
+      perfilRetornado: resultado?.perfil,
+      idRetornado: resultado?.id,
+      isBar: perfil === "BAR"
+    });
+    
+    // Verifica se a resposta é válida
+    if (!resultado) {
+      console.error("❌ Resposta vazia do servidor");
+      throw new Error("Resposta inválida do servidor. O usuário não foi criado/atualizado.");
+    }
+    
+    // Para criação, verifica se tem ID na resposta
+    if (!id && !resultado.id) {
+      console.error("❌ Usuário criado mas sem ID na resposta");
+      throw new Error("Resposta inválida do servidor. O usuário não foi criado.");
+    }
+    
+    // Para edição, verifica se a resposta tem dados
+    if (id && !resultado.id && !resultado.nome) {
+      console.error("❌ Usuário editado mas sem dados na resposta");
+      throw new Error("Resposta inválida do servidor. O usuário não foi atualizado.");
+    }
+    
+    // Verifica se o perfil foi salvo corretamente
+    if (resultado.perfil && resultado.perfil.toUpperCase() !== perfil) {
+      console.warn("⚠️ Perfil retornado diferente do enviado:", {
+        enviado: perfil,
+        retornado: resultado.perfil
+      });
+    }
+    
+    showToast("Usuario salvo com sucesso!", "success");
+    toggleModal(dom.usuarioModal, false);
+    
+    // Limpa variáveis de foto
+    usuarioFotoFile = null;
+    usuarioFotoRemovida = false;
+    
+    await loadUsuarios();
+  } catch (err) {
+    console.error("❌ Erro ao salvar usuário:", err);
+    console.error("❌ Stack trace:", err.stack);
+    console.error("❌ ID:", id);
+    console.error("❌ Perfil:", perfil);
+    console.error("❌ Nome:", nome);
+    console.error("❌ Email:", email);
+    
+    // Melhora a mensagem de erro
+    let errorMessage = "Falha ao salvar usuario.";
+    if (err.message) {
+      errorMessage = err.message;
+    } else if (err.error) {
+      errorMessage = err.error;
+    } else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    
+    showToast(errorMessage, "error");
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = submitLabel || "Salvar";
+    }
+  }
+}
+
+async function submitEntrada(event) {
+  event.preventDefault();
+  const submitButton = dom.entradaForm?.querySelector('button[type="submit"]');
+  const submitLabel = submitButton?.textContent || "";
+  const data = Object.fromEntries(new FormData(dom.entradaForm).entries());
+  data.qtd = Number(data.qtd || 0);
+  data.custo_unitario = parseCurrencyInput(dom.entradaForm?.elements.custo_unitario);
+  data.usuario_id = currentUser?.id;
+  if (!data.usuario_id) {
+    showToast("Efetue login primeiro.", "error");
+    return;
+  }
+  if (!Number.isFinite(data.qtd) || data.qtd <= 0) {
+    showToast("Informe uma quantidade valida.", "error");
+    return;
+  }
+  if (!Number.isFinite(data.custo_unitario) || data.custo_unitario < 0) {
+    showToast("Informe um custo unitario valido.", "error");
+    return;
+  }
+  const movFiltrosAtuais = collectMovimentacoesFiltros();
+  const relFiltrosAtuais = dom.relatorioFilterForm ? collectRelatorioFiltros() : null;
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Salvando...";
+  }
+  try {
+    // Validação adicional antes de enviar
+    if (!data.produto_id || !Number(data.produto_id)) {
+      showToast("❌ Selecione um produto válido.", "error");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = submitLabel || "Registrar entrada";
+      }
+      return;
+    }
+    
+    if (!data.unidade_id || !Number(data.unidade_id)) {
+      showToast("❌ Selecione uma unidade válida.", "error");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = submitLabel || "Registrar entrada";
+      }
+      return;
+    }
+    
+    if (!data.numero_lote || !data.numero_lote.trim()) {
+      showToast("❌ Informe o número do lote.", "error");
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = submitLabel || "Registrar entrada";
+      }
+      return;
+    }
+    
+    console.log("Enviando dados de entrada:", { ...data, senha: '***' });
+    const resposta = await fetchJSON("/entrada", { method: "POST", body: JSON.stringify(data) });
+    console.log("Resposta da API de entrada:", resposta);
+    
+    // Mensagem de sucesso detalhada
+    if (resposta.details) {
+      const detalhes = resposta.details;
+      showToast(
+        `✅ Entrada registrada com sucesso! ${detalhes.produto || 'Produto'} - ${detalhes.quantidade || data.qtd} ${detalhes.unidade || ''}`,
+        "success"
+      );
+    } else {
+      showToast(resposta.message || "✅ Entrada registrada com sucesso!", "success");
+    }
+    
+    dom.entradaForm?.reset();
+    if (dom.entradaUnidadeSelect) dom.entradaUnidadeSelect.value = "";
+    resetEntradaLocalSelect();
+    handleEntradaUnidadeChange();
+    toggleModal(dom.entradaModal, false);
+    const possuiFiltros = Object.values(movFiltrosAtuais || {}).some((valor) => Boolean(valor));
+    const atualizacoes = [
+      loadDashboard().catch((err) => {
+        showToast(err?.message || "Falha ao atualizar dashboard.", "error");
+      }),
+      loadLotes().catch((err) => {
+        showToast(err?.message || "Falha ao atualizar lotes.", "error");
+      }),
+    ];
+    await Promise.all(atualizacoes);
+    await loadMovimentacoesDetalhadas().catch((err) => {
+      showToast(err?.message || "Falha ao atualizar movimentacoes.", "error");
+    });
+    if (relFiltrosAtuais) {
+      await loadRelatorio(relFiltrosAtuais).catch((err) => {
+        showToast(err?.message || "Falha ao atualizar relatorios.", "error");
+      });
+    }
+    if (possuiFiltros) {
+      await loadMovimentacoesDetalhadas(movFiltrosAtuais).catch((err) => {
+        showToast(err?.message || "Falha ao atualizar movimentacoes.", "error");
+      });
+    }
+  } catch (err) {
+    console.error("Erro ao registrar entrada:", err);
+    
+    // Tenta extrair dados estruturados do erro
+    let errorData = {
+      error: "Erro ao registrar entrada",
+      message: "Não foi possível registrar a entrada. Verifique os dados e tente novamente."
+    };
+    
+    if (err.responseData) {
+      // Se o fetchJSON retornou dados estruturados do backend
+      errorData = {
+        error: err.responseData.error || "Erro ao registrar entrada",
+        message: err.responseData.message || err.message || "Não foi possível registrar a entrada.",
+        produto: err.responseData.produto,
+        disponivel: err.responseData.disponivel,
+        solicitado: err.responseData.solicitado
+      };
+    } else if (err.message) {
+      // Fallback para mensagens de texto simples
+      errorData.message = err.message;
+      
+      // Tenta identificar o tipo de erro pela mensagem
+      if (err.message.includes("Produto não encontrado") || err.message.includes("não existe")) {
+        errorData.error = "Produto não encontrado";
+        errorData.message = "O produto selecionado não existe no sistema. Verifique o produto e tente novamente.";
+      } else if (err.message.includes("Produto inativo") || err.message.includes("inativo")) {
+        errorData.error = "Produto inativo";
+        errorData.message = "O produto selecionado está inativo. Ative o produto antes de registrar entrada.";
+      } else if (err.message.includes("Dados inválidos") || err.message.includes("inválid")) {
+        errorData.error = "Dados inválidos";
+        errorData.message = "Verifique os campos preenchidos e tente novamente.";
+      }
+    }
+    
+    // Mostra o modal de erro detalhado
+    showErrorModal(errorData);
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = submitLabel || "Registrar entrada";
+    }
+  }
+}
+
+async function submitLote(event) {
+  event.preventDefault();
+  console.log("🔵 submitLote chamado");
+  
+  if (!dom.loteForm) {
+    console.error("❌ dom.loteForm não encontrado!");
+    showToast("Formulário não encontrado.", "error");
+    return;
+  }
+  
+  if (!canManageProdutos()) {
+    showToast("Sem permissao para registrar lotes.", "warning");
+    return;
+  }
+  
+  const submitBtn = dom.loteForm.querySelector('button[type="submit"]');
+  const submitLabel = submitBtn?.textContent || "";
+  const formData = new FormData(dom.loteForm);
+  const data = Object.fromEntries(formData.entries());
+  
+  console.log("📋 Dados do formulário:", data);
+  
+  // Remove campo id se estiver vazio (para criação)
+  if (data.id && (!data.id.trim() || data.id === "0" || data.id === "undefined")) {
+    delete data.id;
+  }
+  const produtoId = Number(data.produto_id);
+  const unidadeId = Number(data.unidade_id);
+  if (!Number.isFinite(produtoId) || produtoId <= 0) {
+    showToast("Selecione o produto.", "error");
+    return;
+  }
+  if (!Number.isFinite(unidadeId) || unidadeId <= 0) {
+    showToast("Selecione a unidade.", "error");
+    return;
+  }
+  const quantidade = Number(data.quantidade || 0);
+  const custoUnitarioInput = dom.loteForm.elements.custo_unitario;
+  
+  if (!custoUnitarioInput) {
+    console.error("❌ Campo custo_unitario não encontrado no formulário!");
+    showToast("Campo de custo unitário não encontrado.", "error");
+    return;
+  }
+  
+  // Tenta obter o valor do dataset primeiro, depois do input
+  let custoUnitario = 0;
+  if (custoUnitarioInput.dataset.value && custoUnitarioInput.dataset.value !== "") {
+    custoUnitario = Number(custoUnitarioInput.dataset.value);
+  } else {
+    custoUnitario = parseCurrencyInput(custoUnitarioInput);
+  }
+  
+  console.log("💰 Custo unitário:", {
+    datasetValue: custoUnitarioInput.dataset.value,
+    inputValue: custoUnitarioInput.value,
+    parseado: custoUnitario
+  });
+  
+  if (!Number.isFinite(quantidade) || quantidade <= 0) {
+    showToast("Informe a quantidade do lote.", "error");
+    return;
+  }
+  
+  if (!Number.isFinite(custoUnitario) || custoUnitario <= 0) {
+    console.error("❌ Custo unitário inválido:", {
+      custoUnitario,
+      inputValue: custoUnitarioInput.value,
+      datasetValue: custoUnitarioInput.dataset.value,
+      isFinite: Number.isFinite(custoUnitario),
+      isPositive: custoUnitario > 0
+    });
+    showToast("Informe o custo unitário válido (maior que zero).", "error");
+    return;
+  }
+  const status = (data.status || "ATIVO").toUpperCase();
+  const STATUS_VALIDOS = new Set(["ATIVO", "BLOQUEADO", "VENCIDO", "ESGOTADO"]);
+  if (!STATUS_VALIDOS.has(status)) {
+    showToast("Status invalido.", "error");
+    return;
+  }
+  // Valida código do lote antes de continuar
+  const codigoLote = (data.codigo_lote || "").trim();
+  if (!codigoLote) {
+    showToast("Informe o codigo do lote.", "error");
+    return;
+  }
+  
+  const payload = {
+    produto_id: produtoId,
+    unidade_id: unidadeId,
+    codigo_lote: codigoLote,
+    quantidade,
+    custo_unitario: custoUnitario,
+    data_fabricacao: (data.data_fabricacao && data.data_fabricacao.trim()) ? data.data_fabricacao.trim() : null,
+    data_validade: (data.data_validade && data.data_validade.trim()) ? data.data_validade.trim() : null,
+    fornecedor: (data.fornecedor || "").trim() || null,
+    nota_fiscal: (data.nota_fiscal || "").trim() || null,
+    localizacao: (data.localizacao || "").trim() || null,
+    status,
+    observacoes: (data.observacoes || "").trim() || null,
+  };
+  // Verifica se é edição ou criação
+  const id = data.id ? String(data.id).trim() : null;
+  const isEdit = id && id !== "" && !isNaN(Number(id));
+  
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Salvando...";
+  }
+  try {
+    console.log("📤 Enviando lote:", { isEdit, id, payload });
+    
+    // Prepara payload apenas com campos que o backend espera
+    const payloadBackend = {
+      produto_id: payload.produto_id,
+      unidade_id: payload.unidade_id,
+      codigo_lote: payload.codigo_lote,
+      quantidade: payload.quantidade,
+      custo_unitario: payload.custo_unitario,
+      data_fabricacao: payload.data_fabricacao || null,
+      data_validade: payload.data_validade || null,
+    };
+    
+    // Adiciona local_id apenas se existir no formulário
+    if (data.local_id && data.local_id.trim()) {
+      const localId = Number(data.local_id);
+      if (Number.isFinite(localId) && localId > 0) {
+        payloadBackend.local_id = localId;
+      }
+    }
+    
+    // Validação final antes de enviar
+    if (!payloadBackend.produto_id || payloadBackend.produto_id <= 0) {
+      throw new Error("Produto inválido");
+    }
+    if (!payloadBackend.unidade_id || payloadBackend.unidade_id <= 0) {
+      throw new Error("Unidade inválida");
+    }
+    if (!payloadBackend.codigo_lote || payloadBackend.codigo_lote.trim() === "") {
+      throw new Error("Código do lote é obrigatório");
+    }
+    if (!payloadBackend.quantidade || payloadBackend.quantidade <= 0) {
+      throw new Error("Quantidade deve ser maior que zero");
+    }
+    if (!payloadBackend.custo_unitario || payloadBackend.custo_unitario <= 0) {
+      throw new Error("Custo unitário deve ser maior que zero");
+    }
+    
+    console.log("📤 Payload para backend:", payloadBackend);
+    console.log("📤 URL:", isEdit ? `/lotes/${id}` : "/lotes");
+    console.log("📤 Method:", isEdit ? "PUT" : "POST");
+    
+    const resultado = await fetchJSON(isEdit ? `/lotes/${id}` : "/lotes", { 
+      method: isEdit ? "PUT" : "POST", 
+      body: JSON.stringify(payloadBackend) 
+    });
+    
+    console.log("✅ Lote salvo com sucesso:", resultado);
+    showToast(isEdit ? "Lote atualizado com sucesso!" : "Lote cadastrado com sucesso!", "success");
+    dom.loteForm.reset();
+    if (dom.loteForm.elements.custo_unitario) {
+      dom.loteForm.elements.custo_unitario.dataset.value = "";
+      dom.loteForm.elements.custo_unitario.value = "";
+    }
+    if (dom.loteForm.elements.status) dom.loteForm.elements.status.value = "ATIVO";
+    toggleModal(dom.loteModal, false);
+    
+    // Se foi criação (não edição) e usuário tem permissão, oferece imprimir etiqueta
+    if (!isEdit && resultado?.id && podeImprimirEtiqueta()) {
+      mostrarOpcoesEtiqueta(resultado.id);
+    }
+    
+    await loadLotes();
+    await loadDashboard();
+  } catch (err) {
+    console.error("❌ Erro ao salvar lote:", err);
+    
+    // Tenta extrair mensagem de erro mais detalhada
+    let errorMessage = "Falha ao salvar lote.";
+    
+    // Verifica se há responseData (dados do backend)
+    const responseData = err.responseData || {};
+    
+    if (err.message) {
+      errorMessage = err.message;
+    } else if (responseData.error) {
+      errorMessage = responseData.error;
+    } else if (responseData.message) {
+      errorMessage = responseData.message;
+    } else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    
+    // Se houver mensagens de validação do Laravel, mostra a primeira
+    if (responseData.messages && typeof responseData.messages === 'object') {
+      const firstError = Object.values(responseData.messages)[0];
+      if (Array.isArray(firstError) && firstError.length > 0) {
+        errorMessage = firstError[0];
+      }
+    }
+    
+    console.error("❌ Detalhes do erro:", {
+      message: err.message,
+      status: err.status,
+      responseData: responseData
+    });
+    
+    showToast(errorMessage, "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitLabel || "Salvar lote";
+    }
+  }
+}
+
+async function submitLocal(event) {
+  event.preventDefault();
+  if (!isAdmin()) {
+    showToast("Apenas administradores podem criar ou editar locais.", "warning");
+    return;
+  }
+  if (!dom.localForm) return;
+  const form = dom.localForm;
+  const formData = new FormData(form);
+  const payload = Object.fromEntries(formData.entries());
+  const localId = Number(payload.id || 0) || null;
+  payload.nome = (payload.nome || "").toString().trim();
+  if (!payload.nome) {
+    showToast("Informe o nome do local.", "error");
+    return;
+  }
+  payload.unidade_id = Number(payload.unidade_id);
+  if (!Number.isFinite(payload.unidade_id) || payload.unidade_id <= 0) {
+    showToast("Selecione a unidade do local.", "error");
+    return;
+  }
+  payload.tipo = (payload.tipo || "").toString().trim().toUpperCase();
+  if (!payload.tipo) {
+    showToast("Selecione o tipo do local.", "error");
+    return;
+  }
+  payload.temperatura_media = payload.temperatura_media ? Number(payload.temperatura_media) : null;
+  if (payload.temperatura_media !== null && !Number.isFinite(payload.temperatura_media)) {
+    showToast("Temperatura media invalida.", "error");
+    return;
+  }
+  payload.descricao = (payload.descricao || "").toString().trim() || null;
+  payload.responsavel = (payload.responsavel || "").toString().trim() || null;
+  payload.nivel_acesso = (payload.nivel_acesso || "").toString().trim() || null;
+  payload.observacoes = (payload.observacoes || "").toString().trim() || null;
+  payload.data_cadastro = (payload.data_cadastro || "").toString().trim() || null;
+  delete payload.id;
+  const endpoint = localId ? `/locais/${localId}` : "/locais";
+  const method = localId ? "PUT" : "POST";
+  try {
+    const criado = await fetchJSON(endpoint, { method, body: JSON.stringify(payload) });
+    showToast(localId ? "Local atualizado com sucesso!" : "Local cadastrado com sucesso!", "success");
+    form.reset();
+    if (dom.localTipoSelect) dom.localTipoSelect.value = "";
+    if (dom.localNivelAcessoSelect) dom.localNivelAcessoSelect.value = "";
+    if (form.elements.id) form.elements.id.value = "";
+    if (dom.localModalTitle) dom.localModalTitle.textContent = "Novo local";
+    toggleModal(dom.localModal, false);
+    await loadLocais(true);
+    refreshUnidadeSelects();
+    if (String(dom.entradaUnidadeSelect?.value || "") === String(payload.unidade_id)) {
+      await handleEntradaUnidadeChange();
+    }
+    return criado;
+  } catch (err) {
+    showToast(err?.message || "Falha ao salvar local.", "error");
+    return null;
+  }
+}
+
+// Flag global para prevenir chamadas duplicadas
+let submittingSaida = false;
+
+async function submitSaida(event) {
+  console.log("🚀 submitSaida chamada");
+  
+  // ✅ Previne processamento duplicado
+  if (submittingSaida) {
+    console.warn("⚠️ submitSaida já está sendo processada, ignorando chamada duplicada");
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    return;
+  }
+  
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  if (!dom.saidaForm) {
+    console.error("❌ Formulário de saída não encontrado");
+    showToast("Formulário não encontrado.", "error");
+    return;
+  }
+  
+  console.log("✅ Formulário encontrado:", dom.saidaForm);
+  
+  const submitButton = dom.saidaForm.querySelector('button[type="submit"]');
+  const submitLabel = submitButton?.textContent || "";
+  
+  if (!submitButton) {
+    console.error("❌ Botão de submit não encontrado");
+    showToast("Botão de submit não encontrado.", "error");
+    return;
+  }
+  
+  console.log("✅ Botão de submit encontrado:", submitButton);
+  
+  // Marca como processando
+  submittingSaida = true;
+  
+  // Coleta dados do formulário - campos disabled não são incluídos no FormData, então pegamos manualmente
+  const formData = new FormData(dom.saidaForm);
+  const data = Object.fromEntries(formData.entries());
+  
+  // Garante que produto_id seja capturado mesmo se o select estiver disabled
+  const produtoSelect = dom.saidaProdutoSelect || dom.saidaForm.querySelector('select[name="produto_id"]');
+  if (produtoSelect) {
+    data.produto_id = produtoSelect.value || data.produto_id || "";
+  }
+  
+  // Garante que de_unidade_id seja capturado
+  const origemSelect = dom.saidaOrigemSelect || dom.saidaForm.querySelector('select[name="de_unidade_id"]');
+  if (origemSelect) {
+    data.de_unidade_id = origemSelect.value || data.de_unidade_id || "";
+  }
+  
+  // Garante que motivo seja capturado
+  const motivoSelect = dom.saidaMotivo || dom.saidaForm.querySelector('select[name="motivo"]');
+  if (motivoSelect) {
+    data.motivo = motivoSelect.value || data.motivo || "";
+  }
+  
+  // Garante que para_unidade_id seja capturado se for transferência
+  const destinoSelect = dom.saidaDestinoSelect || dom.saidaForm.querySelector('select[name="para_unidade_id"]');
+  if (destinoSelect && data.motivo === "TRANSFERENCIA") {
+    data.para_unidade_id = destinoSelect.value || data.para_unidade_id || "";
+  }
+  
+  console.log("📤 Dados coletados do formulário de saída:", data);
+  
+  data.motivo = (data.motivo || "").toString().trim().toUpperCase();
+  data.forcar = Boolean(dom.saidaForm.querySelector('input[name="forcar"]')?.checked);
+  data.qtd = Number(data.qtd ?? 0);
+  if (!Number.isFinite(data.qtd) || data.qtd <= 0) {
+    submittingSaida = false;
+    showToast("Erro: Informe uma quantidade válida.", "error");
+    return;
+  }
+  data.produto_id = Number(data.produto_id);
+  if (!Number.isFinite(data.produto_id) || data.produto_id <= 0) {
+    submittingSaida = false;
+    showToast("Erro: Selecione o produto para a saída.", "error");
+    return;
+  }
+  data.usuario_id = Number(currentUser?.id);
+  if (!Number.isFinite(data.usuario_id) || data.usuario_id <= 0) {
+    submittingSaida = false;
+    showToast("Erro: Efetue login primeiro.", "error");
+    return;
+  }
+  const motivosValidos = new Set(["PRODUCAO", "CONSUMO", "PERDA", "TRANSFERENCIA"]);
+  if (!motivosValidos.has(data.motivo)) {
+    submittingSaida = false;
+    showToast("Erro: Informe o motivo da saída.", "error");
+    return;
+  }
+  if (!data.de_unidade_id) {
+    submittingSaida = false;
+    showToast("Erro: Selecione a unidade de origem.", "error");
+    return;
+  }
+  data.de_unidade_id = Number(data.de_unidade_id);
+  if (!Number.isFinite(data.de_unidade_id) || data.de_unidade_id <= 0) {
+    submittingSaida = false;
+    showToast("Erro: Unidade de origem inválida.", "error");
+    return;
+  }
+  const isTransferencia = data.motivo === "TRANSFERENCIA";
+  if (isTransferencia) {
+    if (!data.para_unidade_id) {
+      submittingSaida = false;
+      showToast("Erro: Selecione a unidade destino da transferência.", "error");
+      return;
+    }
+    data.para_unidade_id = Number(data.para_unidade_id);
+    if (!Number.isFinite(data.para_unidade_id) || data.para_unidade_id <= 0) {
+      submittingSaida = false;
+      showToast("Erro: Unidade destino inválida.", "error");
+      return;
+    }
+    if (data.para_unidade_id === data.de_unidade_id) {
+      submittingSaida = false;
+      showToast("Erro: Origem e destino devem ser diferentes.", "error");
+      return;
+    }
+  } else {
+    delete data.para_unidade_id;
+  }
+  if (!data.usuario_id) {
+    submittingSaida = false;
+    showToast("Erro: Efetue login primeiro.", "error");
+    return;
+  }
+  const movFiltrosAtuais = collectMovimentacoesFiltros();
+  const relFiltrosAtuais = dom.relatorioFilterForm ? collectRelatorioFiltros() : null;
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Salvando...";
+  }
+  try {
+    console.log("📤 Enviando dados para /saida:", data);
+    const resultado = await fetchJSON("/saida", { method: "POST", body: JSON.stringify(data) });
+    console.log("✅ Resposta do servidor:", resultado);
+    
+    // Mostra mensagem de sucesso
+    showToast("Feito com sucesso!", "success");
+    
+    const possuiFiltros = Object.values(movFiltrosAtuais || {}).some((valor) => Boolean(valor));
+    dom.saidaForm?.reset();
+    resetSaidaProdutoSelect();
+    toggleModal(dom.saidaModal, false);
+    const atualizacoes = [
+      loadDashboard().catch((err) => {
+        console.error("Erro ao atualizar dashboard:", err);
+      }),
+      loadLotes().catch((err) => {
+        console.error("Erro ao atualizar lotes:", err);
+      }),
+    ];
+    await Promise.all(atualizacoes);
+    // Passa refreshDashboard: true para evitar renderização duplicada, pois loadDashboard() já renderiza
+    await loadMovimentacoesDetalhadas({}, { refreshDashboard: true }).catch((err) => {
+      console.error("Erro ao atualizar movimentações:", err);
+    });
+    if (possuiFiltros) {
+      await loadMovimentacoesDetalhadas(movFiltrosAtuais).catch((err) => {
+        console.error("Erro ao atualizar movimentações filtradas:", err);
+      });
+    }
+    if (relFiltrosAtuais) {
+      await loadRelatorio(relFiltrosAtuais).catch((err) => {
+        console.error("Erro ao atualizar relatórios:", err);
+      });
+    }
+  } catch (err) {
+    console.error("❌ Erro ao registrar saída:", err);
+    console.error("❌ Mensagem:", err.message);
+    console.error("❌ Stack:", err.stack);
+    
+    // Extrai dados estruturados do erro do backend
+    let errorData = {
+      error: "Erro ao registrar saída",
+      message: "Não foi possível registrar a saída. Verifique os dados e tente novamente."
+    };
+    
+    if (err.responseData) {
+      // Se o fetchJSON retornou dados estruturados do backend
+      const responseData = err.responseData;
+      errorData = {
+        error: responseData.error || "Erro ao registrar saída",
+        message: responseData.message || err.message || "Não foi possível registrar a saída.",
+        produto: responseData.produto,
+        disponivel: responseData.disponivel,
+        solicitado: responseData.solicitado
+      };
+    } else if (err.message) {
+      errorData.message = err.message;
+      
+      // Tenta identificar o tipo de erro pela mensagem
+      if (err.message.includes("Sem estoque") || err.message.includes("estoque disponível")) {
+        errorData.error = "Sem estoque disponível";
+      } else if (err.message.includes("Estoque insuficiente")) {
+        errorData.error = "Estoque insuficiente";
+      } else if (err.message.includes("Nenhum lote") || err.message.includes("lote disponível")) {
+        errorData.error = "Nenhum lote disponível";
+      } else if (err.message.includes("Lotes vencidos")) {
+        errorData.error = "Lotes vencidos bloqueiam a saída";
+      } else if (err.message.includes("Produto não encontrado")) {
+        errorData.error = "Produto não encontrado";
+      } else if (err.message.includes("Produto inativo")) {
+        errorData.error = "Produto inativo";
+      }
+    } else if (err.error) {
+      errorData.error = err.error;
+      errorData.message = err.error;
+    } else if (typeof err === 'string') {
+      errorData.message = err;
+    }
+    
+    // Mostra o modal de erro detalhado
+    showErrorModal(errorData);
+  } finally {
+    // ✅ Libera o flag de processamento
+    submittingSaida = false;
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = submitLabel || "Registrar saida";
+    }
+  }
+}
+
+// Liga as interacoes nas tabelas para permitir edicao e acoes inline.
+function setupTables() {
+  dom.produtosTable?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("tr");
+    const id = row?.dataset.id;
+    const produto = state.produtos.find((item) => String(item.id) === String(id));
+    if (!produto) return;
+    const action = button.dataset.action;
+    if (action === "edit") {
+      await loadUnidades(false);
+      dom.produtoModalTitle.textContent = "Editar produto";
+      dom.produtosForm.elements.id.value = produto.id;
+      dom.produtosForm.elements.nome.value = produto.nome || "";
+      dom.produtosForm.elements.categoria.value = produto.categoria || "";
+      dom.produtosForm.elements.unidade_base.value = normalizarUnidadeBase(produto.unidade_base) || "";
+      dom.produtosForm.elements.codigo_barras.value = produto.codigo_barras || "";
+      dom.produtosForm.elements.descricao.value = produto.descricao || "";
+      dom.produtosForm.elements.custo_medio.value = produto.custo_medio || "";
+      dom.produtosForm.elements.estoque_minimo.value = produto.estoque_minimo || "";
+      dom.produtosForm.elements.unidade_id.value = produto.unidade_id || "";
+      dom.produtosForm.elements.ativo.value = Number(produto.ativo) === 1 ? "1" : "0";
+      toggleModal(dom.produtosModal, true);
+    } else if (action === "disable" || action === "enable") {
+      try {
+        await fetchJSON(`/produtos/${produto.id}`, { method: "PUT", body: JSON.stringify({ ativo: action === "enable" ? 1 : 0 }) });
+        showToast("Status do produto atualizado.", "success");
+        await loadProdutos();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    } else if (action === "delete") {
+      if (!confirm("Remover permanentemente este produto?")) return;
+      try {
+        await fetchJSON(`/produtos/${produto.id}/remover`, { method: "DELETE" });
+        showToast("Produto removido.", "success");
+        await loadProdutos();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+  });
+
+  dom.lotesManageTable?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("tr");
+    const id = row?.dataset.id;
+    const lote = state.lotes?.find((item) => String(item.id) === String(id));
+    if (!lote) return;
+    const action = button.dataset.action;
+    if (action === "edit") {
+      if (!canManageProdutos()) {
+        showToast("Sem permissao para editar lotes.", "warning");
+        return;
+      }
+      await loadProdutos();
+      await loadUnidades(false);
+      if (dom.loteModalTitle) dom.loteModalTitle.textContent = "Editar lote";
+      dom.loteForm.elements.id.value = lote.id;
+      dom.loteForm.elements.produto_id.value = lote.produto_id || "";
+      dom.loteForm.elements.unidade_id.value = lote.unidade_id || "";
+      dom.loteForm.elements.codigo_lote.value = lote.codigo_lote || "";
+      dom.loteForm.elements.quantidade.value = lote.quantidade || "";
+      const custoUnitarioInput = dom.loteForm.elements.custo_unitario;
+      if (custoUnitarioInput && lote.custo_unitario) {
+        custoUnitarioInput.value = formatCurrencyBRL(lote.custo_unitario);
+        custoUnitarioInput.dataset.value = lote.custo_unitario;
+      }
+      // Formata datas para o formato YYYY-MM-DD que o input type="date" espera
+      const formatDateForInput = (dateValue) => {
+        if (!dateValue) return "";
+        try {
+          // Se já está no formato YYYY-MM-DD, retorna direto
+          if (/^\d{4}-\d{2}-\d{2}/.test(String(dateValue))) {
+            return String(dateValue).split(' ')[0]; // Remove hora se houver
+          }
+          // Tenta parsear como Date
+          const date = new Date(dateValue);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+          }
+        } catch (e) {
+          console.warn("Erro ao formatar data para input:", e, dateValue);
+        }
+        return "";
+      };
+      
+      dom.loteForm.elements.data_fabricacao.value = formatDateForInput(lote.data_fabricacao);
+      dom.loteForm.elements.data_validade.value = formatDateForInput(lote.data_validade);
+      dom.loteForm.elements.fornecedor.value = lote.fornecedor || "";
+      dom.loteForm.elements.nota_fiscal.value = lote.nota_fiscal || "";
+      dom.loteForm.elements.localizacao.value = lote.localizacao || "";
+      dom.loteForm.elements.status.value = lote.status || "ATIVO";
+      dom.loteForm.elements.observacoes.value = lote.observacoes || "";
+      toggleModal(dom.loteModal, true);
+    } else if (action === "etiqueta") {
+      if (!podeImprimirEtiqueta()) {
+        showToast("Sem permissão para imprimir etiquetas.", "error");
+        return;
+      }
+      mostrarOpcoesEtiqueta(lote.id);
+    } else if (action === "disable" || action === "enable") {
+      if (!canManageProdutos()) {
+        showToast("Sem permissao para alterar status de lotes.", "warning");
+        return;
+      }
+      try {
+        const novoStatus = action === "enable" ? 1 : 0;
+        console.log("Atualizando lote:", lote.id, "ativo:", novoStatus);
+        const resultado = await fetchJSON(`/lotes/${lote.id}`, { 
+          method: "PUT", 
+          body: JSON.stringify({ ativo: novoStatus }) 
+        });
+        console.log("Lote atualizado:", resultado);
+        showToast("Status do lote atualizado.", "success");
+        await loadLotes(collectLotesFiltros());
+        await loadDashboard();
+      } catch (err) {
+        console.error("Erro ao atualizar lote:", err);
+        showToast(err.message || "Erro ao atualizar status do lote.", "error");
+      }
+    } else if (action === "delete") {
+      if (!canManageProdutos()) {
+        showToast("Sem permissao para excluir lotes.", "warning");
+        return;
+      }
+      if (!confirm("Remover permanentemente este lote?")) return;
+      try {
+        await fetchJSON(`/lotes/${lote.id}`, { method: "DELETE" });
+        showToast("Lote removido.", "success");
+        await loadLotes(collectLotesFiltros());
+        await loadDashboard();
+      } catch (err) {
+        showToast(err.message || "Falha ao remover lote.", "error");
+      }
+    }
+  });
+
+  dom.unidadesTable?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("tr");
+    if (!row) return;
+    const { id } = row.dataset;
+    if (!id) return;
+    const unidade = state.unidades.find((item) => String(item.id) === String(id));
+    if (!unidade) return;
+    const action = button.dataset.action;
+    if (action === "edit") {
+      if (!canManageUnidades()) {
+        showToast("Sem permissao para gerenciar unidades.", "warning");
+        return;
+      }
+      state.unidadeInlineVisivel = true;
+      applyPermissions();
+      if (dom.unidadeInlineForm) {
+        dom.unidadeInlineForm.reset();
+        if (dom.unidadeInlineForm.elements.id) dom.unidadeInlineForm.elements.id.value = unidade.id;
+        dom.unidadeInlineForm.elements.nome.value = unidade.nome || "";
+        dom.unidadeInlineForm.elements.endereco.value = unidade.endereco || "";
+        dom.unidadeInlineForm.elements.cnpj.value = unidade.cnpj || "";
+        dom.unidadeInlineForm.elements.telefone.value = unidade.telefone || "";
+        dom.unidadeInlineForm.elements.email.value = unidade.email || "";
+        dom.unidadeInlineForm.elements.observacoes.value = unidade.observacoes || "";
+      }
+      try {
+        await loadUsuarios(true);
+      } catch (err) {
+        showToast(err.message || "Falha ao carregar usuarios.", "error");
+      }
+      refreshGerenteSelect(unidade.gerente_usuario_id);
+      if (!state.usuarios.length) {
+        showToast("Cadastre usuarios para atribuir um gerente.", "warning");
+      }
+      if (dom.unidadeInlineFormCard) {
+        dom.unidadeInlineFormCard.classList.remove("hidden");
+        dom.unidadeInlineFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      dom.unidadeInlineForm?.elements.nome?.focus();
+      return;
+    } else if (action === "disable" || action === "enable") {
+      const ativo = action === "enable" ? 1 : 0;
+      const mensagem = ativo ? "Ativar esta unidade?" : "Desativar esta unidade?";
+      if (!confirm(mensagem)) return;
+      try {
+        await fetchJSON(`/unidades/${unidade.id}`, { method: "PUT", body: JSON.stringify({ ativo }) });
+        showToast(ativo ? "Unidade ativada." : "Unidade desativada.", "success");
+        await loadUnidades();
+        if (dom.unidadeInlineForm?.elements.id && dom.unidadeInlineForm.elements.id.value === String(unidade.id)) {
+          dom.unidadeInlineForm.reset();
+          dom.unidadeInlineForm.elements.id.value = "";
+          state.unidadeInlineVisivel = false;
+          applyPermissions();
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    } else if (action === "delete") {
+      if (!confirm("Remover permanentemente esta unidade?")) return;
+      try {
+        await fetchJSON(`/unidades/${unidade.id}/remover`, { method: "DELETE" });
+        showToast("Unidade removida.", "success");
+        await loadUnidades();
+        if (dom.unidadeInlineForm?.elements.id && dom.unidadeInlineForm.elements.id.value === String(unidade.id)) {
+          dom.unidadeInlineForm.reset();
+          dom.unidadeInlineForm.elements.id.value = "";
+          state.unidadeInlineVisivel = false;
+          applyPermissions();
+        }
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+  });
+
+  dom.locaisTable?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    if (!isAdmin()) {
+      showToast("Apenas administradores podem gerenciar locais.", "warning");
+      return;
+    }
+    const row = button.closest("tr");
+    const id = row?.dataset.id;
+    if (!id) return;
+    const local = (state.locais || []).find((item) => String(item.id) === String(id));
+    if (!local) return;
+    const action = button.dataset.action;
+    if (action === "edit") {
+      try {
+        await loadUnidades(false);
+      } catch (err) {
+        showToast(err?.message || "Falha ao carregar unidades.", "error");
+        return;
+      }
+      if (dom.localForm) {
+        dom.localForm.reset();
+        if (dom.localForm.elements.id) dom.localForm.elements.id.value = local.id ?? "";
+        if (dom.localForm.elements.nome) dom.localForm.elements.nome.value = local.nome || "";
+        if (dom.localForm.elements.unidade_id) dom.localForm.elements.unidade_id.value = local.unidade_id || "";
+        if (dom.localTipoSelect) dom.localTipoSelect.value = local.tipo || "";
+        if (dom.localForm.elements.temperatura_media) {
+          dom.localForm.elements.temperatura_media.value =
+            local.temperatura_media !== null && local.temperatura_media !== undefined
+              ? Number(local.temperatura_media)
+              : "";
+        }
+        if (dom.localForm.elements.descricao) dom.localForm.elements.descricao.value = local.descricao || "";
+        if (dom.localForm.elements.responsavel) dom.localForm.elements.responsavel.value = local.responsavel || "";
+        if (dom.localNivelAcessoSelect) dom.localNivelAcessoSelect.value = local.nivel_acesso || "";
+        if (dom.localForm.elements.data_cadastro) {
+          dom.localForm.elements.data_cadastro.value = toInputDate(local.data_cadastro);
+        }
+        if (dom.localForm.elements.observacoes) dom.localForm.elements.observacoes.value = local.observacoes || "";
+      }
+      if (dom.localModalTitle) dom.localModalTitle.textContent = "Editar local";
+      toggleModal(dom.localModal, true);
+    } else if (action === "disable" || action === "enable") {
+      const ativo = action === "enable" ? 1 : 0;
+      try {
+        await fetchJSON(`/locais/${local.id}/status`, { method: "PATCH", body: JSON.stringify({ ativo }) });
+        showToast(ativo ? "Local ativado." : "Local desativado.", "success");
+        await loadLocais(true);
+        refreshUnidadeSelects();
+      } catch (err) {
+        showToast(err?.message || "Falha ao atualizar local.", "error");
+      }
+    } else if (action === "delete") {
+      if (!confirm("Remover permanentemente este local?")) return;
+      try {
+        await fetchJSON(`/locais/${local.id}`, { method: "DELETE" });
+        showToast("Local removido.", "success");
+        await loadLocais(true);
+        refreshUnidadeSelects();
+      } catch (err) {
+        showToast(err?.message || "Falha ao remover local.", "error");
+      }
+    }
+  });
+
+  dom.usuariosTable?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("tr");
+    const id = row?.dataset.id;
+    const usuario = state.usuarios.find((item) => String(item.id) === String(id));
+    if (!usuario) return;
+    const action = button.dataset.action;
+    if (action === "edit") {
+      // ADMIN pode editar QUALQUER usuário, incluindo outros ADMINs
+      // Para outros perfis, verifica permissões normalmente
+      if (!isAdmin() && !canManageUsuario(usuario)) {
+        showToast("Você não tem permissão para editar este usuário.", "warning");
+        return;
+      }
+      
+      // Verifica se o formulário existe
+      if (!dom.usuarioForm) {
+        showToast("Formulário de usuário não encontrado.", "error");
+        console.error("dom.usuarioForm não está disponível");
+        return;
+      }
+      
+      // Carrega unidades e usuários se necessário
+      try {
+        if (!state.unidades || state.unidades.length === 0) {
+          await loadUnidades(false);
+        }
+        refreshUnidadeSelects();
+      } catch (err) {
+        console.error("Erro ao carregar unidades:", err);
+      }
+      
+      // Preenche o formulário com os dados do usuário
+      if (dom.usuarioModalTitle) dom.usuarioModalTitle.textContent = "Editar usuario";
+      if (dom.usuarioForm.elements.id) dom.usuarioForm.elements.id.value = usuario.id || "";
+      if (dom.usuarioForm.elements.nome) dom.usuarioForm.elements.nome.value = usuario.nome || "";
+      if (dom.usuarioForm.elements.email) dom.usuarioForm.elements.email.value = usuario.email || "";
+      
+      // Configura select de perfil baseado nas permissões
+      const perfilSelect = dom.usuarioForm.elements.perfil;
+      if (perfilSelect) {
+        const perfilValue = (usuario.perfil || "").toString().trim().toUpperCase();
+        
+        // BAR só pode editar perfil de usuários BAR
+        if (canManageUsuariosBar()) {
+          // Remove todas as opções exceto BAR
+          perfilSelect.innerHTML = '<option value="">Selecione</option><option value="BAR">Bar</option>';
+          perfilSelect.value = perfilValue;
+          perfilSelect.disabled = true; // BAR não pode alterar o perfil
+        } else {
+          // Outros perfis veem todas as opções
+          perfilSelect.innerHTML = `
+            <option value="">Selecione</option>
+            <option value="ADMIN">Administrador</option>
+            <option value="ESTOQUISTA">Estoquista</option>
+            <option value="COZINHA">Cozinha</option>
+            <option value="BAR">Bar</option>
+            <option value="FINANCEIRO">Financeiro</option>
+            <option value="ASSISTENTE_ADMINISTRATIVO">Assistente Administrativo</option>
+            <option value="GERENTE">Gerente</option>
+            <option value="VISUALIZADOR">Visualizador</option>
+          `;
+          perfilSelect.value = perfilValue;
+          perfilSelect.disabled = false;
+        }
+      }
+      if (dom.usuarioForm.elements.unidade_id) {
+        dom.usuarioForm.elements.unidade_id.value = usuario.unidade_id || "";
+      }
+      if (dom.usuarioForm.elements.ativo) {
+        dom.usuarioForm.elements.ativo.value = Number(usuario.ativo) === 1 ? "1" : "0";
+      }
+      if (dom.usuarioForm.elements.senha) dom.usuarioForm.elements.senha.value = "";
+      if (dom.usuarioForm.elements.confirmar_senha) dom.usuarioForm.elements.confirmar_senha.value = "";
+      
+      // Limpa foto se necessário
+      usuarioFotoFile = null;
+      usuarioFotoRemovida = false;
+      if (dom.usuarioAvatarPreview) {
+        if (usuario.foto_path) {
+          dom.usuarioAvatarPreview.innerHTML = `<img src="${API_URL}/${usuario.foto_path}" alt="${escapeHtml(usuario.nome)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
+        } else {
+          dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+        }
+      }
+      
+      toggleModal(dom.usuarioModal, true);
+    } else if (action === "disable" || action === "enable") {
+      // ADMIN pode ativar/desativar QUALQUER usuário, incluindo outros ADMINs
+      // Para outros perfis, verifica permissões normalmente
+      if (!isAdmin() && !canManageUsuario(usuario)) {
+        showToast("Você não tem permissão para alterar o status deste usuário.", "warning");
+        return;
+      }
+      
+      const ativo = action === "enable" ? 1 : 0;
+      const mensagem = ativo ? "Ativar este usuário?" : "Desativar este usuário?";
+      if (!confirm(mensagem)) return;
+      try {
+        await fetchJSON(`/usuarios/${usuario.id}`, { 
+          method: "PUT", 
+          body: JSON.stringify({ ativo }) 
+        });
+        showToast(ativo ? "Usuário ativado." : "Usuário desativado.", "success");
+        await loadUsuarios();
+      } catch (err) {
+        showToast(err?.message || "Falha ao atualizar status do usuário.", "error");
+      }
+    } else if (action === "delete") {
+      // APENAS ADMIN pode excluir usuários
+      // ADMIN pode excluir QUALQUER perfil, incluindo outros ADMINs
+      // NÃO há verificação de perfil do usuário sendo excluído - ADMIN pode excluir qualquer um
+      if (!isAdmin()) {
+        showToast("Apenas administradores podem excluir usuários.", "warning");
+        return;
+      }
+      
+      // Se chegou aqui, é ADMIN - pode excluir qualquer usuário, sem exceções
+      const perfilUsuario = (usuario.perfil || "").toString().trim().toUpperCase();
+      let mensagem = "";
+      
+      if (perfilUsuario === "ADMIN") {
+        mensagem = `Tem certeza que deseja desativar/remover o ADMINISTRADOR "${escapeHtml(usuario.nome || "")}"?\n\n`;
+      } else {
+        mensagem = `Tem certeza que deseja desativar/remover o usuário "${escapeHtml(usuario.nome || "")}"?\n\n`;
+      }
+      
+      mensagem += "⚠️ ATENÇÃO:\n";
+      mensagem += "• Se houver movimentações associadas a este usuário, elas serão automaticamente transferidas para o seu usuário ADMIN.\n";
+      mensagem += "• O usuário será REMOVIDO PERMANENTEMENTE do sistema e do banco de dados.\n";
+      mensagem += "• Esta ação NÃO PODE SER DESFEITA.\n\n";
+      mensagem += "Deseja continuar?";
+      
+      if (!confirm(mensagem)) return;
+      
+      try {
+        // Chama a API - o backend faz todas as validações e transferências
+        const resposta = await fetchJSON(`/usuarios/${usuario.id}`, { method: "DELETE" });
+        
+        // Monta mensagem de sucesso com informações sobre movimentações
+        let mensagemSucesso = resposta.message || "Usuário desativado com sucesso.";
+        
+        if (resposta.qtd_movimentacoes_transferidas && resposta.qtd_movimentacoes_transferidas > 0) {
+          mensagemSucesso += ` ${resposta.qtd_movimentacoes_transferidas} movimentação(ões) transferida(s) para seu usuário ADMIN.`;
+        }
+        
+        showToast(mensagemSucesso, "success");
+        await loadUsuarios();
+      } catch (err) {
+        console.error("Erro ao remover usuário:", err);
+        showToast(err?.message || "Falha ao remover usuário.", "error");
+      }
+    }
+  });
+
+  dom.listasComprasTable?.addEventListener("click", async (event) => {
+    const row = event.target.closest("tr[data-id]");
+    if (!row) return;
+    if (event.target.closest("button")) return;
+    await selecionarListaCompra(row.dataset.id);
+  });
+
+  dom.listaComprasItensTable?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    
+    // Estoquista e Cozinha não podem editar/deletar itens existentes (ADMIN e GERENTE podem)
+    if (canOnlyCreateAndAddItems()) {
+      showToast("Você só pode adicionar novos itens, não editar ou excluir itens existentes.", "warning");
+      return;
+    }
+    
+    if (!listaPermiteEdicao()) return;
+    const row = button.closest("tr[data-id]");
+    if (!row) return;
+    const item = state.listaCompraAtual?.itens?.find((it) => Number(it.id) === Number(row.dataset.id));
+    if (!item) return;
+    if (button.dataset.action === "edit") abrirItemCompraModal(item);
+    else if (button.dataset.action === "delete") removerItemLista(item.id);
+  });
+
+  dom.listaComprasItensTable?.addEventListener("input", (event) => {
+    // Estoquista e Cozinha não podem editar itens inline
+    if (canOnlyCreateAndAddItems()) {
+      event.target.disabled = true;
+      showToast("Você só pode adicionar novos itens, não editar itens existentes.", "warning");
+      return;
+    }
+    if (!listaPermiteEdicao()) return;
+    const field = event.target?.dataset?.field;
+    if (!field) return;
+    const row = event.target.closest("tr[data-id]");
+    if (!row) return;
+    const itemId = Number(row.dataset.id);
+    if (!itemId) return;
+    
+    let value = event.target.value;
+    
+    // Processa valores numéricos
+    if (["quantidade_planejada", "quantidade_comprada", "valor_unitario"].includes(field)) {
+      if (value === "" || value === null || value === undefined) {
+        value = null;
+      } else {
+        const numero = Number(value);
+        if (Number.isFinite(numero) && numero >= 0) {
+          value = ["quantidade_planejada", "quantidade_comprada"].includes(field) 
+            ? roundToQuantity(numero) 
+            : roundToCurrency(numero);
+        } else if (Number.isFinite(numero) && numero < 0) {
+          // Garante que valores negativos sejam convertidos para 0
+          value = 0;
+          event.target.value = field === "valor_unitario" ? "0" : "0.00";
+        } else {
+          value = null;
+        }
+      }
+      
+      // Atualiza o total visualmente em tempo real
+      atualizarTotalItemLinha(row);
+    }
+    
+    queueItemUpdate(itemId, field, value);
+  });
+
+  dom.listaComprasItensTable?.addEventListener("change", async (event) => {
+    if (!listaPermiteEdicao()) return;
+    const field = event.target?.dataset?.field;
+    if (!field) return;
+    const row = event.target.closest("tr[data-id]");
+    if (!row) return;
+    const itemId = Number(row.dataset.id);
+    if (!itemId) return;
+    
+    let value = event.target.value;
+    
+    // Processa diferentes tipos de campos
+    if (field === "estabelecimento_id") {
+      value = value ? Number(value) : null;
+      
+      // Salva imediatamente o estabelecimento_id (sem debounce)
+      try {
+        await fetchJSON(`/itens/${itemId}`, {
+          method: "PUT",
+          body: JSON.stringify({ estabelecimento_id: value }),
+        });
+        
+        // Atualiza o item no state.listaCompraAtual
+        if (state.listaCompraAtual?.itens) {
+          const item = state.listaCompraAtual.itens.find(it => Number(it.id) === itemId);
+          if (item) {
+            item.estabelecimento_id = value;
+            // Atualiza também o nome do estabelecimento se disponível
+            const estabelecimentos = state.listaCompraAtual?.estabelecimentos || state.estabelecimentosGlobais || [];
+            if (value && estabelecimentos.length > 0) {
+              const estabelecimento = estabelecimentos.find(est => Number(est.id) === value);
+              if (estabelecimento) {
+                item.estabelecimento_nome = estabelecimento.nome;
+              }
+            } else {
+              item.estabelecimento_nome = null;
+            }
+          }
+        }
+        
+        // Atualiza a tabela de estabelecimentos para mostrar o novo vínculo
+        if (state.listaCompraAtual?.estabelecimentos) {
+          renderListaCompraEstabelecimentos(state.listaCompraAtual.estabelecimentos);
+        }
+        
+        // Recarrega a lista para garantir que tudo está sincronizado
+        if (state.listaCompraAtual?.id) {
+          await selecionarListaCompra(state.listaCompraAtual.id, true);
+        }
+        
+        showToast("Vínculo com estabelecimento atualizado.", "success");
+      } catch (error) {
+        showToast(error.message || "Erro ao atualizar vínculo.", "error");
+        // Reverte o valor no select em caso de erro
+        if (state.listaCompraAtual?.itens) {
+          const item = state.listaCompraAtual.itens.find(it => Number(it.id) === itemId);
+          if (item) {
+            event.target.value = item.estabelecimento_id || "";
+          }
+        }
+      }
+      return; // Não processa mais, já salvou
+    } else if (field === "status") {
+      value = (value || "").toUpperCase();
+    } else if (["quantidade_planejada", "quantidade_comprada"].includes(field)) {
+      const numero = Number(value);
+      if (Number.isFinite(numero) && numero >= 0) {
+        value = roundToQuantity(numero);
+        event.target.value = formatQuantityDisplay(value);
+      } else {
+        value = 0;
+        event.target.value = "0.00";
+      }
+      // Atualiza o total quando quantidade muda
+      atualizarTotalItemLinha(row);
+    } else if (field === "valor_unitario") {
+      const numero = Number(value);
+      if (Number.isFinite(numero) && numero >= 0) {
+        value = roundToCurrency(numero);
+        event.target.value = formatNumber(value, 2);
+      } else {
+        value = 0;
+        event.target.value = "0";
+      }
+      // Atualiza o total quando valor unitário muda
+      atualizarTotalItemLinha(row);
+    }
+    
+    queueItemUpdate(itemId, field, value);
+  });
+
+  dom.listaComprasEstabelecimentosTable?.addEventListener("click", (event) => {
+    if (!canManageCompras()) return;
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("tr[data-id]");
+    if (!row) return;
+    const estId = Number(row.dataset.id);
+    if (!estId) return;
+    // Busca o estabelecimento na lista atual
+    const est = state.listaCompraAtual?.estabelecimentos?.find((item) => Number(item.id) === estId);
+    if (!est) return;
+    if (button.dataset.action === "editar") {
+      abrirEstabelecimentoModal(est);
+    } else if (button.dataset.action === "deletar") {
+      deletarEstabelecimentoLista(estId);
+    }
+  });
+}
+
+// Configura filtros e botoes de busca usados nas paginas de dados.
+function setupFilters() {
+  const aplicarFiltrosLotes = async () => {
+    await loadLotes(collectLotesFiltros()).catch((err) => showToast(err.message, "error"));
+  };
+
+  dom.lotesFilterForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await aplicarFiltrosLotes();
+  });
+
+  dom.aplicarFiltrosLotes?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    if (dom.lotesFilterForm && typeof dom.lotesFilterForm.requestSubmit === "function") {
+      dom.lotesFilterForm.requestSubmit();
+    } else if (dom.lotesFilterForm) {
+      dom.lotesFilterForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+    } else {
+      await aplicarFiltrosLotes();
+    }
+  });
+
+  dom.limparFiltrosLotes?.addEventListener("click", () => {
+    dom.lotesFilterForm?.reset();
+    loadLotes().catch(() => {});
+  });
+
+  document.body.addEventListener("submit", async (e) => {
+    if (e.target.id === "lotesFilterForm") {
+      e.preventDefault();
+      await loadLotes(collectLotesFiltros()).catch((err) => showToast(err?.message || "Erro ao aplicar filtros", "error"));
+    }
+  });
+  document.body.addEventListener("click", (e) => {
+    if (e.target.id === "limparFiltrosLotes" || e.target.closest("#limparFiltrosLotes")) {
+      e.preventDefault();
+      const form = document.getElementById("lotesFilterForm");
+      if (form) form.reset();
+      loadLotes().catch(() => {});
+    }
+  });
+
+  // Listener para pesquisa por código - abre modal quando encontrar
+  let pesquisaTimeout = null;
+  dom.lotesFiltroPesquisa?.addEventListener("keydown", async (event) => {
+    // Se pressionar Enter, busca imediatamente
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const codigo = dom.lotesFiltroPesquisa.value.trim();
+      
+      if (!codigo || codigo.length < 2) {
+        showToast("Digite pelo menos 2 caracteres para pesquisar.", "warning");
+        return;
+      }
+      
+      try {
+        // Busca na API
+        const lotes = await fetchJSON(`/lotes?pesquisa=${encodeURIComponent(codigo)}`);
+        
+        if (lotes && lotes.length > 0) {
+          // Pega o primeiro lote que corresponde exatamente ao código
+          const loteEncontrado = lotes.find((lote) => {
+            const codigoLote = (lote.codigo_lote || lote.numero_lote || "").toString().trim().toLowerCase();
+            return codigoLote === codigo.toLowerCase();
+          }) || lotes[0]; // Se não encontrar exato, pega o primeiro
+          
+          if (loteEncontrado && canManageProdutos()) {
+            // Abre o modal de edição
+            await loadProdutos();
+            await loadUnidades(false);
+            if (dom.loteModalTitle) dom.loteModalTitle.textContent = "Editar lote";
+            dom.loteForm.elements.id.value = loteEncontrado.id;
+            dom.loteForm.elements.produto_id.value = loteEncontrado.produto_id || "";
+            dom.loteForm.elements.unidade_id.value = loteEncontrado.unidade_id || "";
+            dom.loteForm.elements.codigo_lote.value = loteEncontrado.codigo_lote || loteEncontrado.numero_lote || "";
+            dom.loteForm.elements.quantidade.value = loteEncontrado.quantidade || loteEncontrado.qtd_atual || "";
+            const custoUnitarioInput = dom.loteForm.elements.custo_unitario;
+            if (custoUnitarioInput && loteEncontrado.custo_unitario) {
+              custoUnitarioInput.value = formatCurrencyBRL(loteEncontrado.custo_unitario);
+              custoUnitarioInput.dataset.value = loteEncontrado.custo_unitario;
+            }
+            dom.loteForm.elements.data_fabricacao.value = loteEncontrado.data_fabricacao || "";
+            dom.loteForm.elements.data_validade.value = loteEncontrado.data_validade || "";
+            dom.loteForm.elements.fornecedor.value = loteEncontrado.fornecedor || "";
+            dom.loteForm.elements.nota_fiscal.value = loteEncontrado.nota_fiscal || "";
+            dom.loteForm.elements.localizacao.value = loteEncontrado.localizacao || "";
+            dom.loteForm.elements.status.value = loteEncontrado.status || "ATIVO";
+            dom.loteForm.elements.observacoes.value = loteEncontrado.observacoes || "";
+            toggleModal(dom.loteModal, true);
+            showToast("Lote encontrado e selecionado!", "success");
+          }
+        } else {
+          showToast("Nenhum lote encontrado com esse código.", "warning");
+        }
+      } catch (err) {
+        console.error("Erro ao buscar lote:", err);
+        showToast("Erro ao buscar lote. Tente novamente.", "error");
+      }
+    }
+  });
+
+  dom.movFilterForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const filtros = collectMovimentacoesFiltros();
+    console.log("Aplicando filtros de movimentações:", filtros);
+    try {
+      await loadMovimentacoesDetalhadas(filtros, { refreshDashboard: false });
+      showToast("Filtros aplicados com sucesso!", "success");
+    } catch (err) {
+      console.error("Erro ao aplicar filtros:", err);
+      showToast(err.message || "Erro ao aplicar filtros.", "error");
+    }
+  });
+
+  dom.movFiltrosLimpar?.addEventListener("click", () => {
+    dom.movFilterForm?.reset();
+    // ✅ Carrega movimentações sem filtros ao limpar
+    loadMovimentacoesDetalhadas({}, { refreshDashboard: true }).catch((err) => {
+      showToast(err?.message || "Erro ao carregar movimentações.", "error");
+    });
+  });
+
+  dom.relatorioFilterForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await loadRelatorio(collectRelatorioFiltros()).catch((err) => showToast(err.message, "error"));
+  });
+
+  dom.relatorioLimpar?.addEventListener("click", () => {
+    dom.relatorioFilterForm?.reset();
+    loadRelatorio().catch(() => {});
+  });
+
+  dom.relatorioExportCsv?.addEventListener("click", exportRelatorioCsv);
+  dom.relatorioExportPdf?.addEventListener("click", exportRelatorioPdf);
+}
+
+// Organiza abertura, fechamento e estados default das modais do sistema.
+function setupModals() {
+  dom.openProdutoBtn?.addEventListener("click", async () => {
+    dom.produtoModalTitle.textContent = "Cadastrar produto";
+    dom.produtosForm?.reset();
+    await loadUnidades(false);
+    toggleModal(dom.produtosModal, true);
+  });
+  dom.closeProdutoBtn?.addEventListener("click", () => toggleModal(dom.produtosModal, false));
+  dom.cancelProdutoBtn?.addEventListener("click", () => toggleModal(dom.produtosModal, false));
+
+  dom.openUsuarioBtn?.addEventListener("click", () => {
+    dom.usuarioModalTitle.textContent = "Cadastrar usuario";
+    dom.usuarioForm?.reset();
+    if (dom.usuarioForm?.elements.id) dom.usuarioForm.elements.id.value = "";
+    if (dom.usuarioForm?.elements.unidade_id) dom.usuarioForm.elements.unidade_id.value = "";
+    if (dom.usuarioForm?.elements.ativo) dom.usuarioForm.elements.ativo.value = "1";
+    
+    // Configura select de perfil baseado nas permissões
+    const perfilSelect = dom.usuarioForm?.elements.perfil;
+    if (perfilSelect) {
+      // BAR só pode criar usuários BAR
+      if (canManageUsuariosBar()) {
+        // Remove todas as opções exceto BAR
+        perfilSelect.innerHTML = '<option value="">Selecione</option><option value="BAR">Bar</option>';
+        perfilSelect.value = "BAR";
+        perfilSelect.disabled = true; // BAR não pode alterar o perfil
+      } else {
+        // Outros perfis veem todas as opções
+        perfilSelect.innerHTML = `
+          <option value="">Selecione</option>
+          <option value="ADMIN">Administrador</option>
+          <option value="ESTOQUISTA">Estoquista</option>
+          <option value="COZINHA">Cozinha</option>
+          <option value="BAR">Bar</option>
+          <option value="FINANCEIRO">Financeiro</option>
+          <option value="ASSISTENTE_ADMINISTRATIVO">Assistente Administrativo</option>
+          <option value="GERENTE">Gerente</option>
+          <option value="VISUALIZADOR">Visualizador</option>
+        `;
+        perfilSelect.value = "";
+        perfilSelect.disabled = false;
+      }
+    }
+    
+    usuarioFotoFile = null;
+    usuarioFotoRemovida = false;
+    toggleModal(dom.usuarioModal, true);
+  });
+  dom.closeUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
+  dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
+
+  dom.openUnidadeBtn?.addEventListener("click", async () => {
+    if (!canManageUnidades()) {
+      showToast("Sem permissao para gerenciar unidades.", "warning");
+      return;
+    }
+    if (state.unidadeInlineVisivel) {
+      state.unidadeInlineVisivel = false;
+      applyPermissions();
+      dom.unidadeInlineForm?.reset();
+      if (dom.unidadeInlineForm?.elements.id) dom.unidadeInlineForm.elements.id.value = "";
+      dom.unidadeInlineForm?.elements.nome?.blur();
+      return;
+    }
+    state.unidadeInlineVisivel = true;
+    applyPermissions();
+    if (dom.unidadeInlineForm) {
+      dom.unidadeInlineForm.reset();
+      if (dom.unidadeInlineForm.elements.id) dom.unidadeInlineForm.elements.id.value = "";
+      if (dom.unidadeInlineForm.elements.ativo) dom.unidadeInlineForm.elements.ativo.value = "1";
+    }
+    try {
+      await loadUsuarios();
+    } catch (err) {
+      showToast(err.message || "Falha ao carregar usuarios.", "error");
+    }
+    refreshGerenteSelect();
+    if (!state.usuarios.length) {
+      showToast("Cadastre usuarios para atribuir um gerente.", "warning");
+    }
+    if (dom.unidadeInlineFormCard) {
+      dom.unidadeInlineFormCard.classList.remove("hidden");
+      dom.unidadeInlineFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    const nomeInput = dom.unidadeInlineForm?.elements.nome;
+    if (nomeInput) nomeInput.focus();
+  });
+  dom.closeUnidadeBtn?.addEventListener("click", () => toggleModal(dom.unidadeModal, false));
+  dom.cancelUnidadeBtn?.addEventListener("click", () => toggleModal(dom.unidadeModal, false));
+  dom.cancelInlineUnidadeBtn?.addEventListener("click", () => {
+    state.unidadeInlineVisivel = false;
+    dom.unidadeInlineForm?.reset();
+    if (dom.unidadeInlineForm?.elements.id) dom.unidadeInlineForm.elements.id.value = "";
+    dom.unidadeInlineForm?.elements.nome?.blur();
+    applyPermissions();
+  });
+
+  dom.openLocalModalBtn?.addEventListener("click", async () => {
+    if (!isAdmin()) {
+      showToast("Apenas administradores podem gerenciar locais.", "warning");
+      return;
+    }
+    try {
+      await loadUnidades(false);
+    } catch (err) {
+      showToast(err?.message || "Falha ao carregar unidades.", "error");
+      return;
+    }
+    dom.localForm?.reset();
+    if (dom.localTipoSelect) dom.localTipoSelect.value = "";
+    if (dom.localNivelAcessoSelect) dom.localNivelAcessoSelect.value = "";
+    if (dom.localForm?.elements.data_cadastro) {
+      dom.localForm.elements.data_cadastro.value = todayInputValue();
+    }
+    if (dom.localForm?.elements.id) dom.localForm.elements.id.value = "";
+    if (dom.localModalTitle) dom.localModalTitle.textContent = "Novo local";
+    toggleModal(dom.localModal, true);
+  });
+  dom.closeLocalModalBtn?.addEventListener("click", () => {
+    dom.localForm?.reset();
+    if (dom.localForm?.elements.id) dom.localForm.elements.id.value = "";
+    if (dom.localModalTitle) dom.localModalTitle.textContent = "Novo local";
+    toggleModal(dom.localModal, false);
+  });
+  dom.cancelLocalBtn?.addEventListener("click", () => {
+    dom.localForm?.reset();
+    if (dom.localForm?.elements.id) dom.localForm.elements.id.value = "";
+    if (dom.localModalTitle) dom.localModalTitle.textContent = "Novo local";
+    toggleModal(dom.localModal, false);
+  });
+
+  dom.openEntradaBtn?.addEventListener("click", async () => {
+    console.log("Botão Registrar Entrada clicado");
+    
+    // Abre o modal primeiro para resposta imediata (como o botão de saída)
+    dom.entradaForm?.reset();
+    if (dom.entradaUnidadeSelect) dom.entradaUnidadeSelect.value = "";
+    const entradaCustoInput = dom.entradaForm?.elements.custo_unitario;
+    if (entradaCustoInput) {
+      entradaCustoInput.dataset.value = "";
+      entradaCustoInput.value = "";
+    }
+    resetEntradaLocalSelect();
+    toggleModal(dom.entradaModal, true);
+    
+    // Carrega dados em background após abrir o modal (não bloqueia a abertura)
+    Promise.all([
+      // Carrega produtos se ainda não foram carregados
+      (!state.produtos || state.produtos.length === 0) 
+        ? loadProdutos().catch(err => {
+            console.error("Erro ao carregar produtos:", err);
+            showToast("Erro ao carregar produtos.", "error");
+          })
+        : Promise.resolve(),
+      // Carrega unidades, locais e lotes em paralelo
+      loadUnidades(false).catch(() => {}),
+      loadLocais(true).catch(() => {}),
+      loadLotes().catch(() => {}),
+    ]).then(() => {
+      // Atualiza o select de produtos após carregar
+      refreshProdutoSelects();
+      
+      // Verifica se o select foi populado
+      const entradaProdutoSelect = dom.entradaForm?.querySelector('select[name="produto_id"]');
+      if (entradaProdutoSelect) {
+        const optionsCount = entradaProdutoSelect.options.length;
+        console.log("Select de produtos atualizado. Opções disponíveis:", optionsCount);
+        if (optionsCount <= 1) {
+          console.warn("Apenas a opção padrão encontrada. Produtos podem não ter sido carregados.");
+        }
+      }
+      
+      // Atualiza locais e lotes após carregar
+      ensureLocaisCarregados()
+        .then(() => handleEntradaUnidadeChange())
+        .catch(() => {
+          resetEntradaLocalSelect();
+        });
+      populateEntradaLoteOptions();
+      handleEntradaUnidadeChange();
+    });
+  });
+  dom.closeEntradaBtn?.addEventListener("click", () => toggleModal(dom.entradaModal, false));
+  dom.cancelEntradaBtn?.addEventListener("click", () => {
+    dom.entradaForm?.reset();
+    const entradaCustoInput = dom.entradaForm?.elements.custo_unitario;
+    if (entradaCustoInput) {
+      entradaCustoInput.dataset.value = "";
+      entradaCustoInput.value = "";
+    }
+    resetEntradaLocalSelect();
+    toggleModal(dom.entradaModal, false);
+  });
+
+  function openNovoLoteModal() {
+    if (!canManageProdutos()) {
+      showToast("Sem permissao para cadastrar lotes.", "warning");
+      return;
+    }
+    if (dom.loteModalTitle) dom.loteModalTitle.textContent = "Novo lote";
+    dom.loteForm?.reset();
+    if (dom.loteForm?.elements.id) dom.loteForm.elements.id.value = "";
+    if (dom.loteForm?.elements.status) dom.loteForm.elements.status.value = "ATIVO";
+    if (dom.loteForm?.elements.data_fabricacao) dom.loteForm.elements.data_fabricacao.value = "";
+    if (dom.loteForm?.elements.data_validade) dom.loteForm.elements.data_validade.value = "";
+    const loteCustoInput = dom.loteForm?.elements.custo_unitario;
+    if (loteCustoInput) {
+      loteCustoInput.dataset.value = "";
+      loteCustoInput.value = "";
+    }
+    const codigoInput = dom.loteForm?.elements?.codigo_lote;
+    if (codigoInput) codigoInput.value = generateLoteCodigo();
+    toggleModal(dom.loteModal, true);
+  }
+  document.body.addEventListener("click", (e) => {
+    if (e.target.id === "openNovoLote" || e.target.closest("#openNovoLote")) {
+      e.preventDefault();
+      openNovoLoteModal();
+    }
+  });
+  dom.closeLoteBtn?.addEventListener("click", () => toggleModal(dom.loteModal, false));
+  dom.cancelLoteBtn?.addEventListener("click", () => {
+    dom.loteForm?.reset();
+    if (dom.loteForm?.elements.status) dom.loteForm.elements.status.value = "ATIVO";
+    const loteCustoInput = dom.loteForm?.elements.custo_unitario;
+    if (loteCustoInput) {
+      loteCustoInput.dataset.value = "";
+      loteCustoInput.value = "";
+    }
+    toggleModal(dom.loteModal, false);
+  });
+
+  dom.openSaidaBtn?.addEventListener("click", async () => {
+    console.log("🔓 Abrindo modal de saída");
+    
+    // Verifica se BAR ou COZINHA podem usar (garantia extra)
+    const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
+    const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
+    
+    if (!podeUsar) {
+      showToast("Você não tem permissão para registrar saídas.", "warning");
+      return;
+    }
+    
+    await loadUnidades(false).catch(() => {});
+    
+    // Garante que o formulário está disponível
+    if (!dom.saidaForm) {
+      dom.saidaForm = document.getElementById("saidaForm");
+      console.log("📋 Formulário recuperado:", dom.saidaForm ? "encontrado" : "não encontrado");
+    }
+    
+    // Atualiza referências dos elementos
+    dom.saidaProdutoSelect = document.getElementById("saidaProdutoSelect");
+    dom.saidaOrigemSelect = document.getElementById("saidaOrigemUnidade");
+    dom.saidaMotivo = document.getElementById("saidaMotivo");
+    dom.saidaDestinoSelect = document.getElementById("saidaDestinoUnidade");
+    
+    if (dom.saidaForm) {
+      dom.saidaForm.reset();
+      updateSaidaDestinoVisibility();
+      resetSaidaProdutoSelect();
+      
+      // Garante que o botão de submit tenha o listener quando o modal abre
+      const submitBtn = dom.saidaForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        // Remove qualquer handler anterior e adiciona novo usando onclick direto
+        submitBtn.onclick = null; // Limpa handler anterior
+        submitBtn.onclick = function(e) {
+          console.log("🔘 BOTÃO DE SUBMIT CLICADO - Handler direto no botão");
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Chama submitSaida diretamente
+          submitSaida(e).catch(err => {
+            console.error("❌ Erro ao processar:", err);
+            showToast(err.message || "Erro ao registrar saída", "error");
+          });
+        };
+        console.log("✅ Handler onclick direto anexado ao botão ao abrir modal");
+      } else {
+        console.error("❌ Botão de submit não encontrado ao abrir modal");
+      }
+    }
+    
+    toggleModal(dom.saidaModal, true);
+    console.log("✅ Modal de saída aberto");
+  });
+  dom.closeSaidaBtn?.addEventListener("click", () => {
+    dom.saidaForm?.reset();
+    resetSaidaProdutoSelect();
+    updateSaidaDestinoVisibility();
+    toggleModal(dom.saidaModal, false);
+  });
+  dom.cancelSaidaBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dom.saidaForm) {
+      dom.saidaForm.reset();
+      resetSaidaProdutoSelect();
+      updateSaidaDestinoVisibility();
+      // Garante que o botão de submit está habilitado
+      const submitBtn = dom.saidaForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Registrar saida";
+      }
+    }
+  });
+
+  dom.openListaCompraBtn?.addEventListener("click", async () => {
+    if (!canCreateLista()) {
+      showToast("Você não tem permissão para criar novas listas.", "warning");
+      return;
+    }
+    await abrirListaCompraModal();
+  });
+  dom.closeListaCompraBtn?.addEventListener("click", () => toggleModal(dom.listaCompraModal, false));
+  dom.cancelListaCompraBtn?.addEventListener("click", () => toggleModal(dom.listaCompraModal, false));
+
+  dom.listaCompraAdicionarItem?.addEventListener("click", () => {
+    if (!listaPermiteAdicionarItens()) {
+      showToast("Você não tem permissão para adicionar itens nesta lista.", "warning");
+      return;
+    }
+    abrirItemCompraModal();
+  });
+  dom.closeItemCompraBtn?.addEventListener("click", () => {
+    dom.itemCompraForm?.reset();
+    listaCompraItemEdicaoId = null;
+    // Restaura visibilidade dos campos ao fechar o modal (caso algum perfil diferente abra depois)
+    const quantidadeCompradaLabel = document.getElementById("itemCompraLabelQuantidadeComprada");
+    const valorUnitarioLabel = document.getElementById("itemCompraLabelValorUnitario");
+    const valorTotalLabel = document.getElementById("itemCompraLabelValorTotal");
+    if (quantidadeCompradaLabel) quantidadeCompradaLabel.classList.remove("hidden");
+    if (valorUnitarioLabel) valorUnitarioLabel.classList.remove("hidden");
+    if (valorTotalLabel) valorTotalLabel.classList.remove("hidden");
+    toggleModal(dom.itemCompraModal, false);
+  });
+  dom.cancelItemCompraBtn?.addEventListener("click", () => {
+    dom.itemCompraForm?.reset();
+    listaCompraItemEdicaoId = null;
+    // Restaura visibilidade dos campos ao fechar o modal (caso algum perfil diferente abra depois)
+    const quantidadeCompradaLabel = document.getElementById("itemCompraLabelQuantidadeComprada");
+    const valorUnitarioLabel = document.getElementById("itemCompraLabelValorUnitario");
+    const valorTotalLabel = document.getElementById("itemCompraLabelValorTotal");
+    if (quantidadeCompradaLabel) quantidadeCompradaLabel.classList.remove("hidden");
+    if (valorUnitarioLabel) valorUnitarioLabel.classList.remove("hidden");
+    if (valorTotalLabel) valorTotalLabel.classList.remove("hidden");
+    updateItemModalTotals();
+    toggleModal(dom.itemCompraModal, false);
+  });
+  if (dom.itemCompraForm?.elements.valor_total) {
+    dom.itemCompraForm.elements.valor_total.readOnly = true;
+  }
+  ["quantidade_planejada", "quantidade_comprada", "valor_unitario"].forEach((field) => {
+    const input = dom.itemCompraForm?.elements[field];
+    if (input) {
+      input.addEventListener("input", () => updateItemModalTotals());
+      input.addEventListener("change", () => updateItemModalTotals());
+    }
+  });
+
+  dom.listaCompraAdicionarEstabelecimento?.addEventListener("click", async () => {
+    if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
+      showToast("Erro: nenhuma lista selecionada.", "error");
+      return;
+    }
+    abrirEstabelecimentoModal();
+  });
+  dom.closeEstabelecimentoCompraBtn?.addEventListener("click", () => toggleModal(dom.estabelecimentoCompraModal, false));
+  dom.cancelEstabelecimentoCompraBtn?.addEventListener("click", () => toggleModal(dom.estabelecimentoCompraModal, false));
+
+  dom.listaCompraFinalizar?.addEventListener("click", () => {
+    if (dom.listaCompraFinalizar.disabled) return;
+    abrirFinalizarListaModal();
+  });
+  dom.closeFinalizarListaBtn?.addEventListener("click", () => toggleModal(dom.finalizarListaModal, false));
+  dom.cancelFinalizarListaBtn?.addEventListener("click", () => toggleModal(dom.finalizarListaModal, false));
+
+  // Event listeners para modal de erro de movimentação
+  dom.closeErroMovimentacaoBtn?.addEventListener("click", closeErrorModal);
+  dom.fecharErroMovimentacaoBtn?.addEventListener("click", closeErrorModal);
+  dom.erroMovimentacaoModal?.addEventListener("click", (e) => {
+    if (e.target === dom.erroMovimentacaoModal) {
+      closeErrorModal();
+    }
+  });
+
+  dom.listaCompraStatusRascunho?.addEventListener("click", () => atualizarStatusListaCompra("RASCUNHO"));
+  dom.listaCompraStatusEmCompras?.addEventListener("click", () => atualizarStatusListaCompra("EM_COMPRAS"));
+  dom.listaCompraStatusPausada?.addEventListener("click", () => atualizarStatusListaCompra("PAUSADA"));
+
+  dom.listaCompraPdf?.addEventListener("click", () => {
+    // O botão "Abrir PDF" agora apenas chama a mesma função de gerar PDF
+    // que mostra o PDF diretamente no navegador
+    gerarPdfLista();
+  });
+
+  dom.listaCompraGerarPdf?.addEventListener("click", () => {
+    if (dom.listaCompraGerarPdf.disabled) return;
+    gerarPdfLista();
+  });
+  dom.listaCompraFiltroStatus?.addEventListener("change", (event) => {
+    const value = (event.target.value || "ativas").toString().trim().toLowerCase();
+    const allowed = ["ativas", "todas", "finalizadas"];
+    const selecionado = allowed.includes(value) ? value : "ativas";
+    if (state.listaComprasFiltroStatus === selecionado) return;
+    state.listaComprasFiltroStatus = selecionado;
+    state.listaCompraAtual = null;
+    renderListaCompraDetalhes(null);
+    loadListasCompras();
+  });
+
+  dom.listaCompraLancarEstoque?.addEventListener("click", () => {
+    if (dom.listaCompraLancarEstoque.disabled) return;
+    if (dom.listaCompraLancarEstoque.dataset.loading === "1") return;
+    lancarListaNoEstoque();
+  });
+
+  dom.listaCompraObservacoes?.addEventListener("input", (event) => {
+    if (!state.listaCompraAtual) return;
+    if (!listaPermiteEdicao()) {
+      event.target.value = state.listaCompraAtual.observacoes || "";
+      return;
+    }
+    atualizarObservacoesListaDebounced(state.listaCompraAtual.id, event.target.value);
+  });
+
+  // Sugestões de compras
+  dom.openSugestoesComprasBtn?.addEventListener("click", async () => {
+    await abrirSugestoesComprasModal();
+  });
+  
+  dom.closeSugestoesComprasBtn?.addEventListener("click", () => {
+    toggleModal(dom.sugestoesComprasModal, false);
+  });
+  
+  dom.sugestoesBuscarBtn?.addEventListener("click", async () => {
+    await buscarSugestoesCompras();
+  });
+}
+
+// Habilita interacoes principais nos cards do dashboard para navegacao rapida.
+function setupCards() {
+  dom.cardMinimo?.addEventListener("click", async () => {
+    const listaAtual = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : [];
+    if (!listaAtual.length) {
+      showToast("Nenhum produto abaixo do minimo.", "success");
+      return;
+    }
+    navigateTo("produtos");
+    try {
+      await loadProdutos();
+    } catch (err) {
+      showToast(err?.message || "Falha ao carregar produtos.", "error");
+      return;
+    }
+    const lista = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : listaAtual;
+    const nomes = lista
+      .slice(0, 4)
+      .map((item) => escapeHtml(item.produto))
+      .join(", ");
+    const restante = lista.length - 4;
+    const complemento = restante > 0 ? ` e mais ${restante}` : "";
+    showToast(`Produtos abaixo do minimo: ${nomes}${complemento}.`, "warning");
+  });
+
+  dom.cardLotesAVencer?.addEventListener("click", async () => {
+    navigateTo("lotes");
+    const hoje = new Date();
+    const ate = new Date();
+    ate.setDate(hoje.getDate() + 15);
+    await loadLotes({ validade_de: hoje.toISOString().slice(0, 10), validade_ate: ate.toISOString().slice(0, 10) }).catch(() => {});
+  });
+
+  dom.cardComprasAndamento?.addEventListener("click", async () => {
+    state.listaComprasFiltroStatus = "ativas";
+    if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = "ativas";
+    navigateTo("compras");
+    await loadListasCompras().catch((err) => showToast(err.message || "Falha ao carregar listas.", "error"));
+  });
+
+  dom.cardLotesVencidos?.addEventListener("click", async () => {
+    navigateTo("lotes");
+    await loadLotes({ status: "VENCIDO" }).catch(() => {});
+  });
+}
+
+// Mapeia cliques de navegacao lateral e recarrega secoes conforme necessario.
+function setupNavigation() {
+  dom.navLinks.forEach((link) => {
+    link.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const regras = applyPermissions();
+      const target = link.dataset.section;
+      if (!regras.sections.includes(target)) {
+        showToast("Perfil sem permissao para acessar esta area.", "error");
+        return;
+      }
+      navigateTo(target);
+      if (isMobileViewport()) setSidebarOpen(false);
+      try {
+      if (target === "dashboard") await loadDashboard();
+      else if (target === "produtos") await loadProdutos();
+      else if (target === "estoque") await loadEstoqueProdutos();
+      else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
+      else if (target === "usuarios") await loadUsuarios();
+      else if (target === "lotes") await loadLotes();
+      else if (target === "locais") await Promise.all([loadLocais(), loadUnidades()]);
+      else if (target === "movimentacoes") {
+        // ✅ Garante que produtos e unidades estejam carregados para popular os selects
+        await Promise.all([
+          loadProdutos().catch(() => {}),
+          loadUnidades().catch(() => {})
+        ]);
+        // ✅ Popula os selects
+        refreshProdutoSelects();
+        refreshUnidadeSelects();
+        // ✅ Carrega movimentações
+        await loadMovimentacoesDetalhadas({}, { refreshDashboard: true });
+      }
+      else if (target === "relatorios") await loadRelatorio();
+      else if (target === "compras") await loadListasCompras();
+      else if (target === "boletao") {
+        console.log('🏦 ========================================');
+        console.log('🏦 SEÇÃO BOLETAO ABERTA');
+        console.log('🏦 ========================================');
+        
+        // Aguarda um pouco para garantir que os elementos foram carregados
+        setTimeout(async () => {
+          const tbody = document.getElementById('boletosTable');
+          
+          if (!tbody) {
+            console.error('❌ CRÍTICO: boletosTable não existe!');
+            showToast('Erro: Tabela não encontrada. Recarregue a página.', 'error');
+            return;
+          }
+          
+          console.log('✅ Elemento boletosTable encontrado');
+          console.log('📊 Carregando boletos...');
+          
+          try {
+            await loadBoletos({});
+            await loadBoletosResumo();
+            console.log('✅ Carregamento concluído');
+          } catch (error) {
+            console.error('❌ Erro:', error);
+          }
+        }, 100);
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+      }
+    });
+  });
+
+  // Setup submenu toggle for Financeiro
+  const financeiroMenu = document.getElementById('financeiroMenu');
+  if (financeiroMenu) {
+    financeiroMenu.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = financeiroMenu.closest('.nav-submenu');
+      if (parent) {
+        parent.classList.toggle('open');
+      }
+    });
+  }
+}
+
+function togglePasswordVisibility(button) {
+  if (!button) return;
+  const targetId = button.dataset.target;
+  if (!targetId) return;
+  const input = document.getElementById(targetId);
+  if (!input) return;
+  const isVisible = input.type === "text";
+  input.type = isVisible ? "password" : "text";
+  button.setAttribute("aria-pressed", String(!isVisible));
+  button.setAttribute("aria-label", isVisible ? "Mostrar senha" : "Ocultar senha");
+  button.classList.toggle("is-visible", !isVisible);
+}
+
+function setupPasswordToggles() {
+  dom.passwordToggles.forEach((button) => {
+    button.addEventListener("click", () => togglePasswordVisibility(button));
+  });
+}
+
+// ===== Funcoes do Modulo de Boletos =====
+
+// Popula o select de unidades no modal de boleto
+async function populateBoletosUnidades() {
+  const select = document.querySelector('#boletoForm select[name="unidade_id"]');
+  if (!select) return;
+
+  try {
+    const response = await fetch(`${API_URL}/unidades`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || ''
+      }
+    });
+
+    if (!response.ok) throw new Error('Erro ao buscar unidades');
+
+    const unidades = await response.json();
+    
+    select.innerHTML = '<option value="">Selecione a unidade</option>';
+    unidades.forEach(unidade => {
+      const option = document.createElement('option');
+      option.value = unidade.id;
+      option.textContent = unidade.nome;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Erro ao carregar unidades:', error);
+    showToast('Erro ao carregar unidades', 'error');
+  }
+}
+
+// Carrega boletos do backend
+async function loadBoletos(filtros = {}) {
+  console.log('📊 === LOAD BOLETOS INICIADO ===');
+  console.log('Filtros:', filtros);
+  
+  const tbody = document.getElementById('boletosTable');
+  
+  if (!tbody) {
+    console.error('❌ CRÍTICO: Elemento boletosTable não existe!');
+    showToast('Erro: Tabela não encontrada', 'error');
+    return;
+  }
+  
+  // Mostra carregando
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #2196F3; font-size: 1.1rem;">⏳ Carregando boletos...</td></tr>';
+  
+  try {
+    const params = new URLSearchParams();
+    if (filtros.mes_ano) params.append('mes_ano', filtros.mes_ano);
+    if (filtros.unidade_id) params.append('unidade_id', filtros.unidade_id);
+    if (filtros.status) params.append('status', filtros.status);
+
+    const url = `${API_URL}/boletos?${params.toString()}`;
+    console.log('📤 URL:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || '1'
+      }
+    });
+
+    console.log('📥 Status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro:', errorText);
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #f44336; font-size: 1.1rem;">❌ Erro ao carregar boletos</td></tr>';
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const boletos = await response.json();
+    console.log(`✅ ${boletos.length} boletos recebidos`);
+    
+    if (boletos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #999; font-size: 1.1rem;">📋 Nenhum boleto encontrado</td></tr>';
+      console.log('⚠️ Array de boletos está vazio');
+      return;
+    }
+    
+    renderBoletos(boletos);
+    console.log('✅ === LOAD BOLETOS CONCLUÍDO ===');
+    
+  } catch (error) {
+    console.error('❌ ERRO:', error);
+    showToast('Erro ao carregar: ' + error.message, 'error');
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #f44336;">❌ Erro. Tente novamente.</td></tr>';
+  }
+}
+
+// Renderiza boletos na tabela
+function renderBoletos(boletos) {
+  console.log('🎨 renderBoletos() chamado com:', boletos ? boletos.length : 0, 'boletos');
+  
+  const tbody = document.getElementById('boletosTable');
+  if (!tbody) {
+    console.error('❌ Elemento boletosTable não encontrado!');
+    return;
+  }
+
+  if (!boletos || boletos.length === 0) {
+    console.warn('⚠️ Nenhum boleto para renderizar');
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #607d8b;">Nenhum boleto encontrado</td></tr>';
+    return;
+  }
+
+  console.log('✅ Renderizando', boletos.length, 'boletos');
+
+  const statusMap = {
+    'PAGO': { label: 'Pago', class: 'status-pill--success' },
+    'A_VENCER': { label: 'A vencer', class: 'status-pill--info' },
+    'VENCIDO': { label: 'Vencido', class: 'status-pill--danger' },
+    'CANCELADO': { label: 'Cancelado', class: 'status-pill--muted' }
+  };
+
+  try {
+    const html = boletos.map(boleto => {
+      const status = statusMap[boleto.status] || { label: boleto.status, class: 'status-pill--muted' };
+      const valorJuros = parseFloat(boleto.juros_multa || 0);
+      const isComAtraso = boleto.status === 'PAGO' && valorJuros > 0;
+      const statusClass = isComAtraso ? 'status-pill--warning' : status.class;
+      const statusLabel = isComAtraso ? 'Pago com atraso' : status.label;
+      
+      // Determina o ícone do anexo baseado no tipo
+      let anexoIcon = '';
+      if (boleto.anexo_path) {
+        const tipo = (boleto.anexo_tipo || '').toLowerCase();
+        if (tipo === 'pdf') {
+          anexoIcon = `<a href="${API_URL}/boletos/${boleto.id}/anexo" target="_blank" title="Baixar ${boleto.anexo_nome}" style="font-size: 1.5rem; text-decoration: none;">📄</a>`;
+        } else {
+          anexoIcon = `<a href="${API_URL}/boletos/${boleto.id}/anexo" target="_blank" title="Baixar ${boleto.anexo_nome}" style="font-size: 1.5rem; text-decoration: none;">🖼️</a>`;
+        }
+      } else {
+        anexoIcon = '<span style="color: #ccc;">-</span>';
+      }
+      
+      // Adiciona descrição com indicador de recorrência se aplicável
+      let descricaoCompleta = boleto.descricao || '-';
+      if (boleto.is_recorrente && boleto.meses_recorrencia) {
+        descricaoCompleta += ` <span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">🔄 ${boleto.meses_recorrencia}x</span>`;
+      }
+      
+      return `
+        <tr>
+          <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+          <td>${boleto.fornecedor || '-'}</td>
+          <td>${descricaoCompleta}</td>
+          <td>${formatDate(boleto.data_vencimento)}</td>
+          <td>R$ ${parseFloat(boleto.valor || 0).toFixed(2)}</td>
+          <td>${boleto.data_pagamento ? formatDate(boleto.data_pagamento) : '-'}</td>
+          <td>${boleto.valor_pago ? 'R$ ' + parseFloat(boleto.valor_pago).toFixed(2) : '-'}</td>
+          <td>${valorJuros > 0 ? 'R$ ' + valorJuros.toFixed(2) : 'R$ 0,00'}</td>
+          <td style="text-align: center;">${anexoIcon}</td>
+          <td>
+            <button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>
+            <button class="btn-icon" title="Detalhes" data-id="${boleto.id}">👁️</button>
+            ${boleto.status !== 'PAGO' ? `<button class="btn-icon btn-icon--primary" title="Pagar" data-id="${boleto.id}">💳</button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+    
+    tbody.innerHTML = html;
+    console.log('✅ Boletos renderizados com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao renderizar boletos:', error);
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: red;">Erro ao renderizar boletos</td></tr>';
+  }
+}
+
+// Carrega resumo financeiro
+async function loadBoletosResumo(mesAno) {
+  console.log('💰 Carregando resumo financeiro para:', mesAno || 'todos os boletos');
+  
+  // Primeiro, verifica se os elementos existem no DOM
+  const totalMesEl = document.getElementById('boletosTotalMes');
+  const pagoEmDiaEl = document.getElementById('boletosPagoEmDia');
+  const jurosPagosEl = document.getElementById('boletosJurosPagos');
+  const atrasadosEl = document.getElementById('boletosAtrasados');
+  
+  console.log('🔍 Verificando elementos no DOM:');
+  console.log('  boletosTotalMes:', totalMesEl ? '✅ Encontrado' : '❌ NÃO encontrado');
+  console.log('  boletosPagoEmDia:', pagoEmDiaEl ? '✅ Encontrado' : '❌ NÃO encontrado');
+  console.log('  boletosJurosPagos:', jurosPagosEl ? '✅ Encontrado' : '❌ NÃO encontrado');
+  console.log('  boletosAtrasados:', atrasadosEl ? '✅ Encontrado' : '❌ NÃO encontrado');
+  
+  try {
+    const params = new URLSearchParams();
+    if (mesAno) params.append('mes_ano', mesAno);
+
+    const url = `${API_URL}/boletos/resumo?${params.toString()}`;
+    console.log('📤 Buscando resumo em:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || ''
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro ao buscar resumo:', errorText);
+      throw new Error('Erro ao buscar resumo');
+    }
+
+    const resumo = await response.json();
+    console.log('✅ Resumo carregado:', resumo);
+    console.log('📊 Dados:');
+    console.log('  Total mês:', resumo.total_mes);
+    console.log('  Pago em dia:', resumo.pago_em_dia);
+    console.log('  Juros pagos:', resumo.juros_pagos);
+    console.log('  Boletos pagos com atraso:', resumo.boletos_pagos_com_atraso);
+    console.log('  Total boletos:', resumo.total_boletos);
+    
+    // Atualiza cards
+    if (totalMesEl) {
+      const valorFormatado = `R$ ${parseFloat(resumo.total_mes || 0).toFixed(2)}`;
+      totalMesEl.textContent = valorFormatado;
+      console.log('💳 Total do mês atualizado:', valorFormatado);
+    } else {
+      console.warn('⚠️ Elemento boletosTotalMes não encontrado, não foi possível atualizar');
+    }
+    
+    if (pagoEmDiaEl) {
+      const valorFormatado = `R$ ${parseFloat(resumo.pago_em_dia || 0).toFixed(2)}`;
+      pagoEmDiaEl.textContent = valorFormatado;
+      console.log('✅ Pago em dia atualizado:', valorFormatado);
+    } else {
+      console.warn('⚠️ Elemento boletosPagoEmDia não encontrado, não foi possível atualizar');
+    }
+    
+    if (jurosPagosEl) {
+      const valorFormatado = `R$ ${parseFloat(resumo.juros_pagos || 0).toFixed(2)}`;
+      jurosPagosEl.textContent = valorFormatado;
+      console.log('⚠️ Juros pagos atualizado:', valorFormatado);
+    } else {
+      console.warn('⚠️ Elemento boletosJurosPagos não encontrado, não foi possível atualizar');
+    }
+    
+    if (atrasadosEl) {
+      const quantidade = parseInt(resumo.boletos_pagos_com_atraso || 0);
+      atrasadosEl.textContent = quantidade;
+      console.log('⚠️ Boletos pagos com atraso atualizado:', quantidade);
+    } else {
+      console.warn('⚠️ Elemento boletosAtrasados não encontrado, não foi possível atualizar');
+    }
+    
+    console.log('🎉 Resumo financeiro atualizado com sucesso!');
+    
+  } catch (error) {
+    console.error('❌ Erro ao carregar resumo:', error);
+    console.error('Stack trace:', error.stack);
+  }
+}
+
+function setupBoletosModule() {
+  const openNovoBoletoBtn = document.getElementById('openNovoBoleto');
+  const recarregarTabelaBoletos = document.getElementById('recarregarTabelaBoletos');
+  const boletoModal = document.getElementById('boletoModal');
+  const closeBoletoBtn = document.getElementById('closeBoleto');
+  const cancelBoletoBtn = document.getElementById('cancelBoleto');
+  const boletoForm = document.getElementById('boletoForm');
+  const boletosMesAnoFiltro = document.getElementById('boletosMesAnoFiltro');
+  const boletosUnidadeFiltro = document.getElementById('boletosUnidadeFiltro');
+  const boletosStatusFiltro = document.getElementById('boletosStatusFiltro');
+  const limparFiltrosBoletos = document.getElementById('limparFiltrosBoletos');
+  const boletoAnexoInput = document.getElementById('boletoAnexoInput');
+  const boletoAnexoPreview = document.getElementById('boletoAnexoPreview');
+  const boletoRemoverAnexo = document.getElementById('boletoRemoverAnexo');
+  const boletoRecorrente = document.getElementById('boletoRecorrente');
+  const recorrenteFields = document.getElementById('recorrenteFields');
+  
+  // Popula select de unidades no filtro
+  async function carregarUnidadesFiltro() {
+    if (!boletosUnidadeFiltro) return;
+    
+    try {
+      const unidades = await fetchJSON('/unidades');
+      boletosUnidadeFiltro.innerHTML = '<option value="">Todas as unidades</option>';
+      
+      unidades.forEach(unidade => {
+        const option = document.createElement('option');
+        option.value = unidade.id;
+        option.textContent = unidade.nome;
+        boletosUnidadeFiltro.appendChild(option);
+      });
+      
+      console.log('✅ Unidades carregadas no filtro de boletos:', unidades.length);
+    } catch (error) {
+      console.error('❌ Erro ao carregar unidades no filtro:', error);
+    }
+  }
+  
+  // Carrega unidades ao iniciar
+  carregarUnidadesFiltro();
+  
+  // Botão de atualizar na tabela
+  if (recarregarTabelaBoletos) {
+    recarregarTabelaBoletos.addEventListener('click', async () => {
+      console.log('🔄 === ATUALIZAR TABELA CLICADO ===');
+      
+      try {
+        recarregarTabelaBoletos.disabled = true;
+        recarregarTabelaBoletos.textContent = '⏳ Atualizando...';
+        
+        const mesAno = boletosMesAnoFiltro?.value;
+        
+        if (mesAno && mesAno !== '') {
+          console.log('📅 Recarregando boletos do mês:', mesAno);
+          await loadBoletos({ mes_ano: mesAno });
+          await loadBoletosResumo(mesAno);
+        } else {
+          console.log('📋 Recarregando TODOS os boletos');
+          await loadBoletos({});
+          await loadBoletosResumo();
+        }
+        
+        showToast('✅ Boletos atualizados!', 'success');
+        console.log('✅ Atualização concluída!');
+        
+      } catch (error) {
+        console.error('❌ Erro ao atualizar:', error);
+        showToast('Erro ao atualizar boletos', 'error');
+      } finally {
+        recarregarTabelaBoletos.disabled = false;
+        recarregarTabelaBoletos.textContent = '🔄 Atualizar';
+        console.log('🔄 === FIM ATUALIZAR ===');
+      }
+    });
+  }
+
+  // Controla exibição dos campos de recorrência
+  if (boletoRecorrente && recorrenteFields) {
+    boletoRecorrente.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        recorrenteFields.style.display = 'block';
+        document.getElementById('mesesRecorrencia').required = true;
+      } else {
+        recorrenteFields.style.display = 'none';
+        document.getElementById('mesesRecorrencia').required = false;
+        document.getElementById('mesesRecorrencia').value = '';
+      }
+    });
+  }
+
+  // Preview do anexo
+  if (boletoAnexoInput) {
+    boletoAnexoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // Verifica tamanho (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('Arquivo muito grande! Máximo 5MB', 'error');
+          boletoAnexoInput.value = '';
+          return;
+        }
+
+        // Mostra preview
+        const nomeEl = document.getElementById('boletoAnexoNome');
+        const tamanhoEl = document.getElementById('boletoAnexoTamanho');
+        if (nomeEl) nomeEl.textContent = file.name;
+        if (tamanhoEl) tamanhoEl.textContent = formatFileSize(file.size);
+        if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'block';
+      }
+    });
+  }
+
+  // Remove anexo antes de enviar
+  if (boletoRemoverAnexo) {
+    boletoRemoverAnexo.addEventListener('click', () => {
+      if (boletoAnexoInput) boletoAnexoInput.value = '';
+      if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+    });
+  }
+
+  // Abre modal de novo boleto
+  if (openNovoBoletoBtn) {
+    openNovoBoletoBtn.addEventListener('click', async () => {
+      if (boletoModal) {
+        await populateBoletosUnidades();
+        boletoModal.classList.add('active');
+        document.getElementById('boletoModalTitle').textContent = '💰 Novo Boleto';
+        if (boletoForm) boletoForm.reset();
+        document.getElementById('pagamentoFields').style.display = 'none';
+        if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+      }
+    });
+  }
+
+  // Fecha modal
+  if (closeBoletoBtn) {
+    closeBoletoBtn.addEventListener('click', () => {
+      if (boletoModal) boletoModal.classList.remove('active');
+    });
+  }
+
+  // Cancela modal
+  if (cancelBoletoBtn) {
+    cancelBoletoBtn.addEventListener('click', () => {
+      if (boletoForm) boletoForm.reset();
+    });
+  }
+
+  // Fecha modal ao clicar fora
+  if (boletoModal) {
+    boletoModal.addEventListener('click', (e) => {
+      if (e.target === boletoModal) {
+        boletoModal.classList.remove('active');
+      }
+    });
+  }
+
+  // Controla exibicao dos campos de pagamento
+  const statusSelect = boletoForm?.querySelector('[name="status"]');
+  const pagamentoFields = document.getElementById('pagamentoFields');
+  
+  if (statusSelect && pagamentoFields) {
+    statusSelect.addEventListener('change', (e) => {
+      if (e.target.value === 'PAGO') {
+        pagamentoFields.style.display = 'block';
+      } else {
+        pagamentoFields.style.display = 'none';
+      }
+    });
+  }
+
+  // Função para coletar filtros ativos
+  function getBoletosFilters() {
+    const filtros = {};
+    
+    if (boletosMesAnoFiltro?.value) {
+      filtros.mes_ano = boletosMesAnoFiltro.value;
+    }
+    
+    if (boletosUnidadeFiltro?.value) {
+      filtros.unidade_id = boletosUnidadeFiltro.value;
+    }
+    
+    if (boletosStatusFiltro?.value) {
+      filtros.status = boletosStatusFiltro.value;
+    }
+    
+    return filtros;
+  }
+  
+  // Função para aplicar filtros
+  async function aplicarFiltrosBoletos() {
+    try {
+      const filtros = getBoletosFilters();
+      console.log('🔍 Aplicando filtros:', filtros);
+      
+      await loadBoletos(filtros);
+      await loadBoletosResumo(filtros.mes_ano);
+      
+      showToast('✅ Filtros aplicados', 'success');
+    } catch (error) {
+      console.error('❌ Erro ao filtrar boletos:', error);
+      showToast('Erro ao filtrar boletos', 'error');
+    }
+  }
+  
+  // Event listeners para os filtros
+  if (boletosMesAnoFiltro) {
+    boletosMesAnoFiltro.addEventListener('change', aplicarFiltrosBoletos);
+  }
+  
+  if (boletosUnidadeFiltro) {
+    boletosUnidadeFiltro.addEventListener('change', aplicarFiltrosBoletos);
+  }
+  
+  if (boletosStatusFiltro) {
+    boletosStatusFiltro.addEventListener('change', aplicarFiltrosBoletos);
+  }
+  
+  // Botão limpar filtros
+  if (limparFiltrosBoletos) {
+    limparFiltrosBoletos.addEventListener('click', async () => {
+      console.log('🔄 Limpando filtros');
+      
+      try {
+        // Limpa os selects
+        if (boletosMesAnoFiltro) boletosMesAnoFiltro.value = '';
+        if (boletosUnidadeFiltro) boletosUnidadeFiltro.value = '';
+        if (boletosStatusFiltro) boletosStatusFiltro.value = '';
+        
+        // Carrega todos os boletos
+        await loadBoletos({});
+        await loadBoletosResumo();
+        
+        showToast('✅ Filtros limpos', 'success');
+      } catch (error) {
+        console.error('❌ Erro ao limpar filtros:', error);
+        showToast('Erro ao limpar filtros', 'error');
+      }
+    });
+  }
+
+  // Submit do formulario de boleto
+  if (boletoForm) {
+    boletoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      console.log('🚀 Iniciando salvamento do boleto...');
+      
+      try {
+        // Desabilita o botão para evitar cliques duplos
+        const submitBtn = boletoForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Salvando...';
+        }
+
+        const formData = new FormData(boletoForm);
+        
+        // Debug: mostra todos os campos
+        console.log('📝 Campos do formulário:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`  ${key}:`, value instanceof File ? `[Arquivo: ${value.name}]` : value);
+        }
+        
+        // Se não houver arquivo, remove do FormData
+        if (!boletoAnexoInput?.files[0]) {
+          formData.delete('anexo');
+          console.log('ℹ️ Nenhum anexo selecionado');
+        }
+
+        // Verifica se é recorrente
+        const isRecorrente = formData.get('is_recorrente') === '1';
+        const mesesRecorrencia = parseInt(formData.get('meses_recorrencia')) || 1;
+
+        console.log('🔄 Recorrente:', isRecorrente, 'Meses:', mesesRecorrencia);
+
+        if (isRecorrente && mesesRecorrencia > 1) {
+          // Criar múltiplos boletos
+          showToast(`Criando ${mesesRecorrencia} boletos recorrentes...`, 'info');
+          
+          let sucessos = 0;
+          let erros = 0;
+          
+          for (let i = 0; i < mesesRecorrencia; i++) {
+            try {
+              const formDataCopy = new FormData();
+              
+              // Copia todos os campos exceto recorrência
+              for (let [key, value] of formData.entries()) {
+                if (key !== 'is_recorrente' && key !== 'meses_recorrencia' && key !== 'anexo') {
+                  formDataCopy.append(key, value);
+                }
+              }
+              
+              // Ajusta a data de vencimento para cada mês
+              const dataVencimento = new Date(formData.get('data_vencimento'));
+              dataVencimento.setMonth(dataVencimento.getMonth() + i);
+              formDataCopy.set('data_vencimento', dataVencimento.toISOString().split('T')[0]);
+              
+              // Adiciona anexo apenas no primeiro boleto
+              if (i === 0 && boletoAnexoInput?.files[0]) {
+                formDataCopy.append('anexo', boletoAnexoInput.files[0]);
+              }
+
+              console.log(`📤 Enviando boleto ${i + 1}/${mesesRecorrencia}...`);
+
+              const response = await fetch(`${API_URL}/boletos`, {
+                method: 'POST',
+                headers: {
+                  'X-Usuario-Id': currentUser?.id || ''
+                },
+                body: formDataCopy
+              });
+
+              if (response.ok) {
+                sucessos++;
+                console.log(`✅ Boleto ${i + 1} criado com sucesso`);
+              } else {
+                erros++;
+                const errorText = await response.text();
+                console.error(`❌ Erro no boleto ${i + 1}:`, errorText);
+              }
+            } catch (err) {
+              erros++;
+              console.error(`❌ Erro ao criar boleto ${i + 1}:`, err);
+            }
+          }
+          
+          if (sucessos > 0) {
+            showToast(`✅ ${sucessos} boletos criados com sucesso!`, 'success');
+          }
+          if (erros > 0) {
+            showToast(`⚠️ ${erros} boletos falharam`, 'warning');
+          }
+        } else {
+          // Verifica se é edição ou criação
+          const boletoId = formData.get('id');
+          const isEdicao = boletoId && boletoId !== '';
+          
+          if (isEdicao) {
+            // EDIÇÃO - usa PUT
+            console.log('✏️ Editando boleto:', boletoId);
+            
+            // Converte FormData para JSON (PUT não aceita FormData com arquivo facilmente)
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+              if (key !== 'id' && key !== 'anexo' && key !== 'is_recorrente' && key !== 'meses_recorrencia') {
+                data[key] = value || null;
+              }
+            }
+            
+            const response = await fetch(`${API_URL}/boletos/${boletoId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Usuario-Id': currentUser?.id || ''
+              },
+              body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Erro ao atualizar boleto: ${errorText}`);
+            }
+            
+            const result = await response.json();
+            console.log('✅ Boleto atualizado:', result);
+            showToast('✅ Boleto atualizado com sucesso!', 'success');
+            
+          } else {
+            // CRIAÇÃO - usa POST
+            console.log('📤 Criando novo boleto');
+            
+            const response = await fetch(`${API_URL}/boletos`, {
+              method: 'POST',
+              headers: {
+                'X-Usuario-Id': currentUser?.id || ''
+              },
+              body: formData
+            });
+
+            console.log('📥 Resposta da API:', response.status, response.statusText);
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ Erro da API (texto):', errorText);
+              
+              let errorMessage = 'Erro ao salvar boleto';
+              try {
+                const error = JSON.parse(errorText);
+                console.error('❌ Erro da API (JSON):', error);
+                errorMessage = error.message || errorMessage;
+                if (error.errors) {
+                  console.error('❌ Erros de validação:', error.errors);
+                  errorMessage += ': ' + Object.values(error.errors).flat().join(', ');
+                }
+              } catch {
+                errorMessage += ': ' + errorText;
+              }
+              throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+            console.log('✅ Boleto criado com sucesso:', result);
+            showToast('✅ Boleto salvo com sucesso!', 'success');
+          }
+        }
+
+        // Fecha o modal e reseta o formulário
+        console.log('🔄 Fechando modal e atualizando lista...');
+        boletoModal.classList.remove('active');
+        boletoForm.reset();
+        if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+        if (recorrenteFields) recorrenteFields.style.display = 'none';
+        
+        // Reabilita o botão
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Salvar Boleto';
+        }
+        
+        // Recarregar lista de boletos E resumo
+        console.log('🔄 Recarregando lista e cards...');
+        await loadBoletos({});  // Carrega TODOS os boletos
+        await loadBoletosResumo();  // Atualiza os cards
+        
+        console.log('✅ Processo concluído!');
+      } catch (error) {
+        console.error('❌ ERRO GERAL:', error);
+        showToast('❌ Erro: ' + error.message, 'error');
+        
+        // Reabilita o botão em caso de erro
+        const submitBtn = boletoForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Salvar Boleto';
+        }
+      }
+    });
+  }
+
+  // Adiciona eventos aos botoes de acao na tabela
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('.btn-icon')) {
+      const btn = e.target.closest('.btn-icon');
+      const title = btn.getAttribute('title');
+      const id = btn.getAttribute('data-id');
+      
+      if (title === 'Editar') {
+        await editarBoleto(id);
+      } else if (title === 'Detalhes') {
+        await mostrarDetalhesBoleto(id);
+      } else if (title === 'Pagar') {
+        await abrirModalPagamento(id);
+      }
+    }
+  });
+}
+
+// Função para editar boleto
+async function editarBoleto(id) {
+  console.log('✏️ Editando boleto:', id);
+  
+  try {
+    showToast('Carregando dados do boleto...', 'info');
+    
+    const response = await fetch(`${API_URL}/boletos/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || '1'
+      }
+    });
+    
+    if (!response.ok) throw new Error('Erro ao carregar boleto');
+    
+    const boleto = await response.json();
+    console.log('Boleto carregado:', boleto);
+    
+    // Preenche o formulário
+    const form = document.getElementById('boletoForm');
+    form.querySelector('[name="id"]').value = boleto.id;
+    form.querySelector('[name="fornecedor"]').value = boleto.fornecedor;
+    form.querySelector('[name="unidade_id"]').value = boleto.unidade_id || '';
+    form.querySelector('[name="descricao"]').value = boleto.descricao;
+    form.querySelector('[name="data_vencimento"]').value = boleto.data_vencimento;
+    form.querySelector('[name="valor"]').value = boleto.valor;
+    form.querySelector('[name="categoria"]').value = boleto.categoria || '';
+    form.querySelector('[name="status"]').value = boleto.status;
+    form.querySelector('[name="observacoes"]').value = boleto.observacoes || '';
+    
+    // Se tiver dados de pagamento
+    if (boleto.data_pagamento) {
+      form.querySelector('[name="data_pagamento"]').value = boleto.data_pagamento;
+      form.querySelector('[name="valor_pago"]').value = boleto.valor_pago || '';
+      form.querySelector('[name="juros_multa"]').value = boleto.juros_multa || '';
+      document.getElementById('pagamentoFields').style.display = 'block';
+    }
+    
+    // Atualiza título e abre modal
+    document.getElementById('boletoModalTitle').textContent = '✏️ Editar Boleto';
+    document.getElementById('boletoModal').classList.add('active');
+    
+    showToast('Boleto carregado para edição', 'success');
+    
+  } catch (error) {
+    console.error('Erro ao editar boleto:', error);
+    showToast('Erro ao carregar boleto', 'error');
+  }
+}
+
+// Função para mostrar detalhes do boleto
+async function mostrarDetalhesBoleto(id) {
+  console.log('👁️ Mostrando detalhes do boleto:', id);
+  
+  try {
+    const modal = document.getElementById('boletoDetalhesModal');
+    const content = document.getElementById('boletoDetalhesContent');
+    
+    content.innerHTML = '<p style="text-align: center; color: #999;">⏳ Carregando...</p>';
+    modal.classList.add('active');
+    
+    const response = await fetch(`${API_URL}/boletos/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || '1'
+      }
+    });
+    
+    if (!response.ok) throw new Error('Erro ao carregar boleto');
+    
+    const boleto = await response.json();
+    console.log('Detalhes do boleto:', boleto);
+    
+    // Formata os dados
+    const statusMap = {
+      'PAGO': { label: 'Pago', color: '#4CAF50' },
+      'A_VENCER': { label: 'A vencer', color: '#2196F3' },
+      'VENCIDO': { label: 'Vencido', color: '#f44336' },
+      'CANCELADO': { label: 'Cancelado', color: '#9E9E9E' }
+    };
+    
+    const status = statusMap[boleto.status] || { label: boleto.status, color: '#999' };
+    const valorJuros = parseFloat(boleto.juros_multa || 0);
+    
+    let html = `
+      <div style="display: grid; gap: 1rem;">
+        <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+          <h3 style="margin: 0 0 1rem 0; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 0.5rem;">
+            📋 Informações Gerais
+          </h3>
+          <p style="margin: 0.5rem 0;"><strong>ID:</strong> #${boleto.id}</p>
+          <p style="margin: 0.5rem 0;"><strong>Fornecedor:</strong> ${boleto.fornecedor}</p>
+          <p style="margin: 0.5rem 0;"><strong>Descrição:</strong> ${boleto.descricao || '-'}</p>
+          <p style="margin: 0.5rem 0;"><strong>Categoria:</strong> ${boleto.categoria || '-'}</p>
+          <p style="margin: 0.5rem 0;">
+            <strong>Status:</strong> 
+            <span style="background: ${status.color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
+              ${status.label}
+            </span>
+          </p>
+        </div>
+        
+        <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px;">
+          <h3 style="margin: 0 0 1rem 0; color: #1976d2; border-bottom: 2px solid #90caf9; padding-bottom: 0.5rem;">
+            💰 Valores
+          </h3>
+          <p style="margin: 0.5rem 0;"><strong>Valor:</strong> <span style="font-size: 1.2rem; color: #1976d2;">R$ ${parseFloat(boleto.valor).toFixed(2)}</span></p>
+          <p style="margin: 0.5rem 0;"><strong>Data de Vencimento:</strong> ${formatDate(boleto.data_vencimento)}</p>
+    `;
+    
+    if (boleto.status === 'PAGO') {
+      html += `
+          <p style="margin: 0.5rem 0;"><strong>Data de Pagamento:</strong> ${formatDate(boleto.data_pagamento)}</p>
+          <p style="margin: 0.5rem 0;"><strong>Valor Pago:</strong> R$ ${parseFloat(boleto.valor_pago || 0).toFixed(2)}</p>
+          <p style="margin: 0.5rem 0;"><strong>Juros/Multa:</strong> R$ ${valorJuros.toFixed(2)}</p>
+      `;
+    }
+    
+    html += `</div>`;
+    
+    if (boleto.observacoes) {
+      html += `
+        <div style="background: #fff3e0; padding: 1rem; border-radius: 8px;">
+          <h3 style="margin: 0 0 0.5rem 0; color: #f57c00;">📝 Observações</h3>
+          <p style="margin: 0; white-space: pre-wrap;">${boleto.observacoes}</p>
+        </div>
+      `;
+    }
+    
+    if (boleto.anexo_path) {
+      html += `
+        <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px;">
+          <h3 style="margin: 0 0 0.5rem 0; color: #388e3c;">📎 Anexo</h3>
+          <p style="margin: 0;">
+            <a href="${API_URL}/boletos/${boleto.id}/anexo" target="_blank" style="color: #388e3c; text-decoration: underline;">
+              ${boleto.anexo_nome || 'Download'}
+            </a>
+          </p>
+        </div>
+      `;
+    }
+    
+    if (boleto.is_recorrente) {
+      html += `
+        <div style="background: #f3e5f5; padding: 1rem; border-radius: 8px;">
+          <h3 style="margin: 0 0 0.5rem 0; color: #7b1fa2;">🔄 Recorrência</h3>
+          <p style="margin: 0;">Este boleto é recorrente por ${boleto.meses_recorrencia} meses</p>
+        </div>
+      `;
+    }
+    
+    html += `
+        <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; font-size: 0.85rem; color: #666;">
+          <p style="margin: 0;"><strong>Cadastrado em:</strong> ${formatDate(boleto.created_at)}</p>
+          <p style="margin: 0.5rem 0 0 0;"><strong>Última atualização:</strong> ${formatDate(boleto.updated_at)}</p>
+        </div>
+      </div>
+    `;
+    
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Erro ao mostrar detalhes:', error);
+    content.innerHTML = '<p style="text-align: center; color: #f44336;">❌ Erro ao carregar detalhes</p>';
+  }
+}
+
+// Função para abrir modal de pagamento
+async function abrirModalPagamento(id) {
+  console.log('💳 Abrindo modal de pagamento para boleto:', id);
+  
+  try {
+    showToast('Carregando dados do boleto...', 'info');
+    
+    const response = await fetch(`${API_URL}/boletos/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || '1'
+      }
+    });
+    
+    if (!response.ok) throw new Error('Erro ao carregar boleto');
+    
+    const boleto = await response.json();
+    console.log('Boleto para pagamento:', boleto);
+    
+    // Preenche os dados no modal
+    document.getElementById('pagamentoBoletoId').value = boleto.id;
+    document.getElementById('pagamentoFornecedor').textContent = boleto.fornecedor;
+    document.getElementById('pagamentoDescricao').textContent = boleto.descricao;
+    document.getElementById('pagamentoValorOriginal').textContent = parseFloat(boleto.valor).toFixed(2);
+    
+    // Preenche data de hoje e valor original
+    document.getElementById('pagamentoData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pagamentoValor').value = boleto.valor;
+    document.getElementById('pagamentoJuros').value = '0.00';
+    document.getElementById('pagamentoObs').value = '';
+    
+    // Guarda o valor original para cálculo automático de juros
+    const pagamentoValorInput = document.getElementById('pagamentoValor');
+    const pagamentoJurosInput = document.getElementById('pagamentoJuros');
+    
+    // Remove listener antigo se existir
+    const newPagamentoValorInput = pagamentoValorInput.cloneNode(true);
+    pagamentoValorInput.parentNode.replaceChild(newPagamentoValorInput, pagamentoValorInput);
+    
+    // Adiciona listener para calcular juros automaticamente
+    newPagamentoValorInput.addEventListener('input', function() {
+      const valorPago = parseFloat(this.value) || 0;
+      const valorOriginal = parseFloat(boleto.valor) || 0;
+      const juros = Math.max(0, valorPago - valorOriginal); // Não permite juros negativos
+      
+      const jurosInput = document.getElementById('pagamentoJuros');
+      if (jurosInput) {
+        jurosInput.value = juros.toFixed(2);
+        
+        // Feedback visual
+        if (juros > 0) {
+          console.log(`💸 Juros calculados: R$ ${juros.toFixed(2)} (Valor Pago: R$ ${valorPago.toFixed(2)} - Valor Original: R$ ${valorOriginal.toFixed(2)})`);
+        } else {
+          console.log('✅ Pago sem juros');
+        }
+      }
+    });
+    
+    // Abre modal
+    document.getElementById('boletoPagamentoModal').classList.add('active');
+    
+  } catch (error) {
+    console.error('Erro ao abrir modal de pagamento:', error);
+    showToast('Erro ao carregar boleto', 'error');
+  }
+}
+
+// Event listeners para fechar modais
+document.getElementById('closeBoletoDetalhes')?.addEventListener('click', () => {
+  document.getElementById('boletoDetalhesModal').classList.remove('active');
+});
+
+document.getElementById('fecharDetalhes')?.addEventListener('click', () => {
+  document.getElementById('boletoDetalhesModal').classList.remove('active');
+});
+
+document.getElementById('closeBoletoPagamento')?.addEventListener('click', () => {
+  document.getElementById('boletoPagamentoModal').classList.remove('active');
+});
+
+document.getElementById('cancelPagamento')?.addEventListener('click', () => {
+  document.getElementById('boletoPagamentoModal').classList.remove('active');
+});
+
+// Fechar modal ao clicar fora
+document.getElementById('boletoDetalhesModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'boletoDetalhesModal') {
+    e.target.classList.remove('active');
+  }
+});
+
+document.getElementById('boletoPagamentoModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'boletoPagamentoModal') {
+    e.target.classList.remove('active');
+  }
+});
+
+// Form de pagamento
+document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  console.log('💳 Processando pagamento...');
+  
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  
+  try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processando...';
+    
+    const formData = new FormData(e.target);
+    const id = formData.get('id');
+    
+    // Prepara dados
+    const data = {
+      status: 'PAGO',
+      data_pagamento: formData.get('data_pagamento'),
+      valor_pago: formData.get('valor_pago'),
+      juros_multa: formData.get('juros_multa') || '0',
+      observacoes: formData.get('observacoes') || ''
+    };
+    
+    console.log('Dados do pagamento:', data);
+    
+    const response = await fetch(`${API_URL}/boletos/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || '1'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Erro ao registrar pagamento: ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ Pagamento registrado:', result);
+    
+    showToast('✅ Pagamento registrado com sucesso!', 'success');
+    
+    // Fecha modal
+    document.getElementById('boletoPagamentoModal').classList.remove('active');
+    e.target.reset();
+    
+    // Recarrega boletos
+    await loadBoletos({});
+    await loadBoletosResumo();
+    
+  } catch (error) {
+    console.error('❌ Erro ao registrar pagamento:', error);
+    showToast('Erro ao registrar pagamento: ' + error.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+});
+
+// Atualizar boleto (para edição)
+async function atualizarBoleto(id, data) {
+  try {
+    const response = await fetch(`${API_URL}/boletos/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Usuario-Id': currentUser?.id || '1'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) throw new Error('Erro ao atualizar boleto');
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao atualizar boleto:', error);
+    throw error;
+  }
+}
+
+// Registra ouvintes de formulario e ganchos para sincronizar UI e backend.
+function setupForms() {
+  if (dom.entradaSubmitBtn) {
+    dom.entradaSubmitBtn.classList.remove("primary");
+    dom.entradaSubmitBtn.classList.add("danger");
+    dom.entradaSubmitBtn.textContent = "Registrar entrada";
+  }
+  if (dom.cancelEntradaBtn) {
+    dom.cancelEntradaBtn.classList.remove("primary", "danger");
+    dom.cancelEntradaBtn.classList.add("neutral");
+  }
+
+  dom.entradaUnidadeSelect?.addEventListener("change", handleEntradaUnidadeChange);
+  if (Number(dom.entradaUnidadeSelect?.value)) {
+    handleEntradaUnidadeChange();
+  } else {
+    resetEntradaLocalSelect();
+    ensureLocaisCarregados()
+      .then(() => handleEntradaUnidadeChange())
+      .catch(() => {
+        resetEntradaLocalSelect();
+      });
+  }
+  dom.entradaLocalSelect?.addEventListener("change", (event) => {
+    const option = event.target.selectedOptions ? event.target.selectedOptions[0] : null;
+    const unidadeId = option?.dataset?.unidadeId;
+    if (unidadeId && dom.entradaUnidadeSelect) {
+      dom.entradaUnidadeSelect.value = unidadeId;
+    }
+  });
+
+  attachCurrencyMask(dom.entradaForm?.elements.custo_unitario);
+  attachCurrencyMask(dom.loteForm?.elements.custo_unitario);
+
+  // Setup de formulários com logs
+  console.log('🔧 Configurando event listeners de formulários...');
+  
+  if (dom.produtosForm) {
+    console.log('✅ produtosForm encontrado, registrando evento submit');
+    dom.produtosForm.addEventListener("submit", submitProduto);
+  } else {
+    console.warn('⚠️ produtosForm NÃO encontrado');
+  }
+  
+  dom.unidadeForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeForm));
+  dom.unidadeInlineForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeInlineForm));
+  dom.usuarioForm?.addEventListener("submit", submitUsuario);
+  dom.entradaForm?.addEventListener("submit", submitEntrada);
+  dom.localForm?.addEventListener("submit", submitLocal);
+  dom.loteForm?.addEventListener("submit", submitLote);
+  // Event listener para submit do formulário de saída
+  if (dom.saidaForm) {
+    // Anexa event listener de submit no formulário
+    dom.saidaForm.onsubmit = (e) => {
+      console.log("📝 Evento submit capturado (onsubmit)");
+      e.preventDefault();
+      e.stopPropagation();
+      submitSaida(e).catch(err => {
+        console.error("Erro ao processar submit:", err);
+        showToast(err.message || "Erro ao registrar saída", "error");
+      });
+      return false;
+    };
+    console.log("✅ Handler onsubmit anexado ao formulário de saída");
+    
+    // Anexa também addEventListener como fallback
+    dom.saidaForm.addEventListener("submit", (e) => {
+      console.log("📝 Evento submit capturado (addEventListener)");
+      e.preventDefault();
+      e.stopPropagation();
+      submitSaida(e).catch(err => {
+        console.error("Erro ao processar submit:", err);
+        showToast(err.message || "Erro ao registrar saída", "error");
+      });
+    });
+    
+    // Fallback: também anexa ao botão de submit diretamente
+    const submitBtn = dom.saidaForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      // Usa onclick direto
+      submitBtn.onclick = (e) => {
+        console.log("🔘 Botão clicado (onclick direto)");
+        e.preventDefault();
+        e.stopPropagation();
+        submitSaida(e).catch(err => {
+          console.error("Erro ao processar:", err);
+          showToast(err.message || "Erro ao registrar saída", "error");
+        });
+      };
+      
+      // Também adiciona addEventListener como backup
+      submitBtn.addEventListener("click", (e) => {
+        console.log("🔘 Botão clicado (addEventListener)");
+        e.preventDefault();
+        e.stopPropagation();
+        submitSaida(e).catch(err => {
+          console.error("Erro ao processar:", err);
+          showToast(err.message || "Erro ao registrar saída", "error");
+        });
+      });
+      console.log("✅ Handlers anexados ao botão de submit");
+    } else {
+      console.warn("⚠️ Botão de submit não encontrado no formulário de saída");
+    }
+    
+    // Expõe função globalmente como fallback
+    window.submitSaida = submitSaida;
+    console.log("✅ Função submitSaida exposta globalmente");
+  } else {
+    console.error("❌ Formulário de saída não encontrado na inicialização!");
+  }
+  dom.listaCompraForm?.addEventListener("submit", submitListaCompra);
+  dom.itemCompraForm?.addEventListener("submit", submitItemCompra);
+  dom.estabelecimentoCompraForm?.addEventListener("submit", submitEstabelecimentoCompra);
+  dom.finalizarListaForm?.addEventListener("submit", submitFinalizarLista);
+
+  if (dom.loteForm) {
+    resetLoteProdutoSelect();
+    dom.loteForm.addEventListener("reset", () => resetLoteProdutoSelect());
+    const loteUnidadeSelect = dom.loteForm.elements?.unidade_id;
+    loteUnidadeSelect?.addEventListener("change", () => {
+      handleLoteUnidadeChange();
+    });
+    if (Number(loteUnidadeSelect?.value)) {
+      handleLoteUnidadeChange();
+    }
+  }
+
+  attachCnpjMask(dom.unidadeForm?.elements.cnpj);
+  attachCnpjMask(dom.unidadeInlineForm?.elements.cnpj);
+  updateSaidaDestinoVisibility();
+  resetSaidaProdutoSelect();
+  dom.saidaMotivo?.addEventListener("change", updateSaidaDestinoVisibility);
+  dom.saidaForm?.addEventListener("reset", () => {
+    updateSaidaDestinoVisibility();
+    resetSaidaProdutoSelect();
+  });
+  dom.saidaOrigemSelect?.addEventListener("change", () => {
+    handleSaidaOrigemChange();
+  });
+  if (Number(dom.saidaOrigemSelect?.value)) {
+    handleSaidaOrigemChange();
+  }
+
+  dom.usuarioFotoInput?.addEventListener("change", (event) => {
+    const [file] = event.target.files || [];
+    if (!file) return;
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      showToast("Formato invalido. Use JPG ou PNG.", "error");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Arquivo ultrapassa 2MB.", "error");
+      event.target.value = "";
+      return;
+    }
+    usuarioFotoFile = file;
+    usuarioFotoRemovida = false;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (dom.usuarioAvatarPreview) dom.usuarioAvatarPreview.innerHTML = `<img src="${reader.result}" alt="preview" />`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  dom.usuarioFotoTrocar?.addEventListener("click", () => dom.usuarioFotoInput?.click());
+  dom.usuarioFotoRemover?.addEventListener("click", () => {
+    usuarioFotoFile = null;
+    usuarioFotoRemovida = true;
+    if (dom.usuarioAvatarPreview) dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+  });
+
+  // Configura event listener do select de estoque
+  const estoqueProdutoSelect = document.getElementById("estoqueProdutoSelect");
+  if (estoqueProdutoSelect) {
+    estoqueProdutoSelect.addEventListener("change", (event) => {
+      const produtoId = Number(event.target.value);
+      if (Number.isFinite(produtoId) && produtoId > 0) {
+        loadEstoqueProduto(produtoId);
+      } else {
+        const estoqueInfo = document.getElementById("estoqueInfo");
+        if (estoqueInfo) estoqueInfo.style.display = "none";
+      }
+    });
+  }
+
+}
+
+// Sequencia de inicializacao que amarra todos os componentes e listeners.
+async function init() {
+  // Verifica se está usando file:// e mostra aviso
+  if (window.location.protocol === 'file:') {
+    console.warn('⚠️ Arquivo aberto via file://. Para funcionar corretamente, use um servidor HTTP.');
+    console.warn('Execute: cd frontend && php -S localhost:8000');
+    console.warn('Depois acesse: http://localhost:8000');
+    
+    // Mostra um toast informativo
+    setTimeout(() => {
+      showToast('⚠️ Para funcionar corretamente, use um servidor HTTP. Execute: cd frontend && php -S localhost:8000', 'error', 10000);
+    }, 1000);
+  }
+  
+  applyPermissions();
+  setupModals();
+  setupNavigation();
+  setupResponsiveSidebar();
+  setupTables();
+  setupFilters();
+  setupForms();
+  setupCards();
+  setupPasswordToggles();
+  setupBoletosModule();
+  if (!stopMatrixAnimation) {
+    stopMatrixAnimation = initMatrixBackground();
+  }
+  // Verifica se o formulário existe antes de adicionar listener
+  console.log('🔍 Verificando formulário de login...');
+  console.log('dom.loginForm:', dom.loginForm);
+  if (dom.loginForm) {
+    console.log('✅ Formulário de login encontrado, adicionando listener');
+    dom.loginForm.addEventListener("submit", handleLogin);
+    console.log('✅ Listener adicionado com sucesso');
+  } else {
+    console.error('❌ ERRO: Formulário de login não encontrado! ID: loginForm');
+    // Tenta encontrar novamente após um delay
+    setTimeout(() => {
+      const form = document.getElementById("loginForm");
+      if (form) {
+        console.log('✅ Formulário encontrado no segundo try, adicionando listener');
+        form.addEventListener("submit", handleLogin);
+      } else {
+        console.error('❌ Formulário ainda não encontrado após delay');
+      }
+    }, 500);
+  }
+  dom.logoutBtn?.addEventListener("click", handleLogout);
+  
+  // Função para atualizar referências do DOM quando uma seção é carregada dinamicamente
+  function refreshDOMReferences() {
+    // Atualiza referências dos elementos do dashboard
+    dom.kpiProdutos = document.getElementById("kpiProdutos");
+    dom.kpiVencer = document.getElementById("kpiVencer");
+    dom.kpiLotesAVencer = document.getElementById("kpiLotesAVencer");
+    dom.kpiLotesVencidos = document.getElementById("kpiLotesVencidos");
+    dom.kpiMinimo = document.getElementById("kpiMinimo");
+    dom.kpiPerdas = document.getElementById("kpiPerdas");
+    dom.kpiComprasAtivas = document.getElementById("kpiComprasAtivas");
+    dom.cardMinimo = document.getElementById("cardMinimo");
+    dom.cardMinimoHint = document.getElementById("cardMinimoHint");
+    dom.cardPerdas = document.getElementById("cardPerdas");
+    dom.cardPerdasHint = document.getElementById("cardPerdasHint");
+    dom.cardLotesAVencer = document.getElementById("cardLotesAVencer");
+    dom.cardLotesVencidos = document.getElementById("cardLotesVencidos");
+    dom.cardComprasAndamento = document.getElementById("cardComprasAndamento");
+    dom.cardProdutosAtivos = document.getElementById("cardProdutosAtivos");
+    dom.cardLotes7Dias = document.getElementById("cardLotes7Dias");
+    dom.movTable = document.getElementById("movTable");
+    dom.lotesTable = document.getElementById("lotesTable");
+    dom.produtosDashboardTable = document.getElementById("produtosDashboardTable");
+    dom.loteStatusChart = document.getElementById("loteStatusChart");
+    dom.openEntradaBtn = document.getElementById("openEntrada");
+    dom.openSaidaBtn = document.getElementById("openSaida");
+    
+    // Atualiza outras referências conforme necessário
+    dom.produtosTable = document.getElementById("produtosTable");
+    dom.unidadesTable = document.getElementById("unidadesTable");
+    dom.usuariosTable = document.getElementById("usuariosTable");
+    dom.locaisTable = document.getElementById("locaisTable");
+    dom.lotesManageTable = document.getElementById("lotesManageTable");
+    dom.lotesFilterForm = document.getElementById("lotesFilterForm");
+    dom.lotesFiltroPesquisa = document.getElementById("lotesFiltroPesquisa");
+    dom.lotesFiltroProduto = document.getElementById("lotesFiltroProduto");
+    dom.lotesFiltroUnidade = document.getElementById("lotesFiltroUnidade");
+    dom.lotesFiltroStatus = document.getElementById("lotesFiltroStatus");
+    dom.lotesFiltroValidadeDe = document.getElementById("lotesFiltroValidadeDe");
+    dom.lotesFiltroValidadeAte = document.getElementById("lotesFiltroValidadeAte");
+    dom.aplicarFiltrosLotes = document.getElementById("aplicarFiltrosLotes");
+    dom.limparFiltrosLotes = document.getElementById("limparFiltrosLotes");
+    dom.estoqueSection = document.getElementById("estoqueSection");
+    dom.estoqueProdutoSelect = document.getElementById("estoqueProdutoSelect");
+    dom.estoqueInfo = document.getElementById("estoqueInfo");
+    dom.estoqueProdutoNome = document.getElementById("estoqueProdutoNome");
+    dom.estoqueTotalQtd = document.getElementById("estoqueTotalQtd");
+    dom.estoqueTotalUnitario = document.getElementById("estoqueTotalUnitario");
+    dom.estoqueTotalValor = document.getElementById("estoqueTotalValor");
+    dom.estoqueUnidadeBase = document.getElementById("estoqueUnidadeBase");
+    dom.estoqueTable = document.getElementById("estoqueTable");
+  }
+
+  // Função para configurar event listeners do dashboard
+  function setupDashboardListeners() {
+    // Remove listeners antigos se existirem
+    const oldEntradaBtn = dom.openEntradaBtn;
+    const oldSaidaBtn = dom.openSaidaBtn;
+    const oldCardMinimo = dom.cardMinimo;
+    const oldCardLotesAVencer = dom.cardLotesAVencer;
+    const oldCardComprasAndamento = dom.cardComprasAndamento;
+    const oldCardLotesVencidos = dom.cardLotesVencidos;
+    const oldCardPerdas = dom.cardPerdas;
+    const oldCardProdutosAtivos = dom.cardProdutosAtivos;
+    const oldCardLotes7Dias = dom.cardLotes7Dias;
+    
+    // Atualiza referências
+    refreshDOMReferences();
+    
+    // Configura novos listeners apenas se os botões existirem e forem diferentes
+    if (dom.openEntradaBtn && dom.openEntradaBtn !== oldEntradaBtn) {
+      // Remove listener antigo se existir
+      if (oldEntradaBtn) {
+        const newBtn = dom.openEntradaBtn.cloneNode(true);
+        oldEntradaBtn.parentNode?.replaceChild(newBtn, oldEntradaBtn);
+        dom.openEntradaBtn = document.getElementById("openEntrada");
+      }
+      
+      dom.openEntradaBtn.addEventListener("click", async () => {
+        console.log("Botão Registrar Entrada clicado (dashboard)");
+        
+        // Abre o modal primeiro para resposta imediata (como o botão de saída)
+        dom.entradaForm?.reset();
+        if (dom.entradaUnidadeSelect) dom.entradaUnidadeSelect.value = "";
+        const entradaCustoInput = dom.entradaForm?.elements.custo_unitario;
+        if (entradaCustoInput) {
+          entradaCustoInput.dataset.value = "";
+          entradaCustoInput.value = "";
+        }
+        resetEntradaLocalSelect();
+        toggleModal(dom.entradaModal, true);
+        
+        // Carrega dados em background após abrir o modal (não bloqueia a abertura)
+        Promise.all([
+          // Carrega produtos se ainda não foram carregados
+          (!state.produtos || state.produtos.length === 0) 
+            ? loadProdutos().catch(err => {
+                console.error("Erro ao carregar produtos:", err);
+                showToast("Erro ao carregar produtos.", "error");
+              })
+            : Promise.resolve(),
+          // Carrega unidades, locais e lotes em paralelo
+          loadUnidades(false).catch(() => {}),
+          loadLocais(true).catch(() => {}),
+          loadLotes().catch(() => {}),
+        ]).then(() => {
+          // Atualiza o select de produtos após carregar
+          refreshProdutoSelects();
+          
+          // Verifica se o select foi populado
+          const entradaProdutoSelect = dom.entradaForm?.querySelector('select[name="produto_id"]');
+          if (entradaProdutoSelect) {
+            const optionsCount = entradaProdutoSelect.options.length;
+            console.log("Select de produtos atualizado. Opções disponíveis:", optionsCount);
+            if (optionsCount <= 1) {
+              console.warn("Apenas a opção padrão encontrada. Verificando produtos...");
+              
+              // Se não há produtos, tenta carregar novamente
+              if (state.produtos?.length === 0) {
+                console.log("Tentando carregar produtos novamente...");
+                loadProdutos().then(() => {
+                  refreshProdutoSelects();
+                });
+              }
+            }
+          }
+          
+          // Atualiza locais e lotes após carregar
+          ensureLocaisCarregados()
+            .then(() => handleEntradaUnidadeChange())
+            .catch(() => {
+              resetEntradaLocalSelect();
+            });
+          populateEntradaLoteOptions();
+          handleEntradaUnidadeChange();
+        });
+      });
+    }
+    
+    if (dom.openSaidaBtn && dom.openSaidaBtn !== oldSaidaBtn) {
+      // Remove listener antigo se existir
+      if (oldSaidaBtn) {
+        const newBtn = dom.openSaidaBtn.cloneNode(true);
+        oldSaidaBtn.parentNode?.replaceChild(newBtn, oldSaidaBtn);
+        dom.openSaidaBtn = document.getElementById("openSaida");
+      }
+      
+      dom.openSaidaBtn.addEventListener("click", async () => {
+        // Verifica se BAR ou COZINHA podem usar (garantia extra)
+        const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+        const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
+        const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
+        
+        if (!podeUsar) {
+          showToast("Você não tem permissão para registrar saídas.", "warning");
+          return;
+        }
+        
+        await loadUnidades(false).catch(() => {});
+        dom.saidaForm?.reset();
+        updateSaidaDestinoVisibility();
+        resetSaidaProdutoSelect();
+        toggleModal(dom.saidaModal, true);
+      });
+    }
+
+    // Configura listeners dos cards do dashboard
+    if (dom.cardMinimo && dom.cardMinimo !== oldCardMinimo) {
+      if (oldCardMinimo) {
+        const newCard = dom.cardMinimo.cloneNode(true);
+        oldCardMinimo.parentNode?.replaceChild(newCard, oldCardMinimo);
+        dom.cardMinimo = document.getElementById("cardMinimo");
+        dom.cardMinimoHint = document.getElementById("cardMinimoHint");
+      }
+      
+      dom.cardMinimo.addEventListener("click", async () => {
+        const listaAtual = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : [];
+        if (!listaAtual.length) {
+          showToast("Nenhum produto abaixo do minimo.", "success");
+          return;
+        }
+        navigateTo("produtos");
+        try {
+          await loadProdutos();
+        } catch (err) {
+          showToast(err?.message || "Falha ao carregar produtos.", "error");
+          return;
+        }
+        const lista = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : listaAtual;
+        const nomes = lista
+          .slice(0, 4)
+          .map((item) => escapeHtml(item.produto))
+          .join(", ");
+        const restante = lista.length - 4;
+        const complemento = restante > 0 ? ` e mais ${restante}` : "";
+        showToast(`Produtos abaixo do minimo: ${nomes}${complemento}.`, "warning");
+      });
+    }
+
+    if (dom.cardLotesAVencer && dom.cardLotesAVencer !== oldCardLotesAVencer) {
+      if (oldCardLotesAVencer) {
+        const newCard = dom.cardLotesAVencer.cloneNode(true);
+        oldCardLotesAVencer.parentNode?.replaceChild(newCard, oldCardLotesAVencer);
+        dom.cardLotesAVencer = document.getElementById("cardLotesAVencer");
+      }
+      
+      dom.cardLotesAVencer.addEventListener("click", async () => {
+        navigateTo("lotes");
+        const hoje = new Date();
+        const ate = new Date();
+        ate.setDate(hoje.getDate() + 15);
+        await loadLotes({ validade_de: hoje.toISOString().slice(0, 10), validade_ate: ate.toISOString().slice(0, 10) }).catch(() => {});
+      });
+    }
+
+    if (dom.cardComprasAndamento && dom.cardComprasAndamento !== oldCardComprasAndamento) {
+      if (oldCardComprasAndamento) {
+        const newCard = dom.cardComprasAndamento.cloneNode(true);
+        oldCardComprasAndamento.parentNode?.replaceChild(newCard, oldCardComprasAndamento);
+        dom.cardComprasAndamento = document.getElementById("cardComprasAndamento");
+      }
+      
+      dom.cardComprasAndamento.addEventListener("click", async () => {
+        state.listaComprasFiltroStatus = "ativas";
+        if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = "ativas";
+        navigateTo("compras");
+        await loadListasCompras().catch((err) => showToast(err.message || "Falha ao carregar listas.", "error"));
+      });
+    }
+
+    if (dom.cardLotesVencidos && dom.cardLotesVencidos !== oldCardLotesVencidos) {
+      if (oldCardLotesVencidos) {
+        const newCard = dom.cardLotesVencidos.cloneNode(true);
+        oldCardLotesVencidos.parentNode?.replaceChild(newCard, oldCardLotesVencidos);
+        dom.cardLotesVencidos = document.getElementById("cardLotesVencidos");
+      }
+      
+      dom.cardLotesVencidos.addEventListener("click", async () => {
+        navigateTo("lotes");
+        await loadLotes({ status: "VENCIDO" }).catch(() => {});
+      });
+    }
+
+    if (dom.cardPerdas && dom.cardPerdas !== oldCardPerdas) {
+      if (oldCardPerdas) {
+        const newCard = dom.cardPerdas.cloneNode(true);
+        oldCardPerdas.parentNode?.replaceChild(newCard, oldCardPerdas);
+        dom.cardPerdas = document.getElementById("cardPerdas");
+        dom.cardPerdasHint = document.getElementById("cardPerdasHint");
+      }
+      
+      dom.cardPerdas.addEventListener("click", async () => {
+        const resumo = state.perdasResumo || {};
+        const totalRegistros = Number(resumo.total_registros || 0);
+        if (totalRegistros === 0) {
+          showToast("Nenhuma perda registrada.", "info");
+          return;
+        }
+        navigateTo("movimentacoes");
+        await loadMovimentacoesDetalhadas({ motivo: "PERDA" }, { refreshDashboard: false }).catch((err) => {
+          showToast(err?.message || "Falha ao carregar perdas.", "error");
+        });
+      });
+    }
+
+    // Card de Produtos Ativos
+    if (dom.cardProdutosAtivos && dom.cardProdutosAtivos !== oldCardProdutosAtivos) {
+      if (oldCardProdutosAtivos) {
+        const newCard = dom.cardProdutosAtivos.cloneNode(true);
+        oldCardProdutosAtivos.parentNode?.replaceChild(newCard, oldCardProdutosAtivos);
+        dom.cardProdutosAtivos = document.getElementById("cardProdutosAtivos");
+      }
+      
+      dom.cardProdutosAtivos.addEventListener("click", async () => {
+        navigateTo("produtos");
+        await loadProdutos().catch((err) => {
+          showToast(err?.message || "Falha ao carregar produtos.", "error");
+        });
+      });
+    }
+
+    // Card de Lotes a vencer (7 dias)
+    if (dom.cardLotes7Dias && dom.cardLotes7Dias !== oldCardLotes7Dias) {
+      if (oldCardLotes7Dias) {
+        const newCard = dom.cardLotes7Dias.cloneNode(true);
+        oldCardLotes7Dias.parentNode?.replaceChild(newCard, oldCardLotes7Dias);
+        dom.cardLotes7Dias = document.getElementById("cardLotes7Dias");
+      }
+      
+      dom.cardLotes7Dias.addEventListener("click", async () => {
+        navigateTo("lotes");
+        const hoje = new Date();
+        const ate = new Date();
+        ate.setDate(hoje.getDate() + 7);
+        await loadLotes({ validade_de: hoje.toISOString().slice(0, 10), validade_ate: ate.toISOString().slice(0, 10) }).catch(() => {});
+      });
+    }
+  }
+
+  // Listener para quando o router carrega uma tela
+  window.addEventListener('sectionLoaded', async (event) => {
+    const section = event.detail?.section;
+    if (!section) {
+      console.warn('sectionLoaded sem section');
+      return;
+    }
+    
+    console.log('sectionLoaded disparado para:', section);
+    
+    // Atualiza referências do DOM antes de carregar os dados
+    refreshDOMReferences();
+    
+    try {
+      // Carrega os dados específicos de cada tela
+      if (section === "dashboard") {
+        console.log('Carregando dashboard...');
+        // Configura listeners do dashboard antes de carregar
+        setupDashboardListeners();
+        await loadDashboard();
+      } else if (section === "produtos") await loadProdutos();
+      else if (section === "estoque") {
+        // Aplica permissões de estoque quando a seção é carregada
+        const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+        
+        // Ocultar cards de valores
+        const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
+        const estoqueCardTotal = document.getElementById("estoqueCardTotal");
+        if (estoqueCardUnitario) estoqueCardUnitario.classList.toggle("hidden", isCozinhaOuBar);
+        if (estoqueCardTotal) estoqueCardTotal.classList.toggle("hidden", isCozinhaOuBar);
+        
+        // Ocultar colunas da tabela
+        const estoqueColValorUnitario = document.querySelectorAll(".estoque-col-valor-unitario");
+        const estoqueColValorTotal = document.querySelectorAll(".estoque-col-valor-total");
+        estoqueColValorUnitario.forEach(col => col.classList.toggle("hidden", isCozinhaOuBar));
+        estoqueColValorTotal.forEach(col => col.classList.toggle("hidden", isCozinhaOuBar));
+        
+        await loadEstoqueProdutos();
+      }
+      else if (section === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
+      else if (section === "usuarios") await loadUsuarios();
+      else if (section === "lotes") {
+        document.querySelector(".content .view-section")?.classList.remove("hidden");
+        await loadLotes();
+      }
+      else if (section === "locais") await Promise.all([loadLocais(), loadUnidades()]);
+      else if (section === "movimentacoes") {
+        // ✅ Garante que produtos e unidades estejam carregados para popular os selects
+        await Promise.all([
+          loadProdutos().catch(() => {}),
+          loadUnidades().catch(() => {})
+        ]);
+        // ✅ Popula os selects
+        refreshProdutoSelects();
+        refreshUnidadeSelects();
+        // ✅ Carrega movimentações
+        await loadMovimentacoesDetalhadas({}, { refreshDashboard: true });
+      }
+      else if (section === "relatorios") await loadRelatorio();
+      else if (section === "compras") await loadListasCompras();
+    } catch (err) {
+      console.error('Erro ao carregar dados da seção:', err);
+      showToast(err?.message || 'Erro ao carregar dados', 'error');
+    }
+  });
+  const stored = getUser();
+  if (stored && stored.token) {
+    startAppSession();
+    // Timer de inatividade será iniciado dentro de startAppSession
+  } else {
+    clearUser();
+    dom.loginOverlay.classList.remove("hidden");
+    dom.appShell.classList.add("hidden");
+  }
+}
+
+init();
+
+
+
+
+function attachCurrencyMask(input) {
+  if (!input) return;
+  const normalize = (valor) => Number((valor || "").toString().replace(/[^\d,.-]/g, "").replace(",", "."));
+  input.addEventListener("input", (event) => {
+    const raw = event.target.value;
+    const numero = normalize(raw);
+    if (Number.isFinite(numero)) {
+      event.target.dataset.value = String(numero);
+    }
+  });
+  input.addEventListener("focus", (event) => {
+    const valor = Number(event.target.dataset.value || event.target.value.replace(/[^\d,.-]/g, "").replace(",", "."));
+    if (Number.isFinite(valor) && valor !== 0) {
+      event.target.value = valor.toFixed(2);
+    } else {
+      event.target.value = "";
+    }
+  });
+  input.addEventListener("blur", (event) => {
+    const numero = Number(event.target.value.replace(/[^\d,.-]/g, "").replace(",", "."));
+    if (Number.isFinite(numero)) {
+      event.target.dataset.value = String(numero);
+      event.target.value = formatCurrencyBRL(numero);
+    } else {
+      event.target.dataset.value = "0";
+      event.target.value = "R$ 0,00";
+    }
+  });
+  const initial = Number(input.value || input.dataset.value);
+  if (Number.isFinite(initial) && initial !== 0) {
+    input.dataset.value = String(initial);
+    input.value = formatCurrencyBRL(initial);
+  } else {
+    input.dataset.value = "0";
+    input.value = "";
+  }
+}
+
+function parseCurrencyInput(input) {
+  if (!input) return 0;
+  const datasetValue = input.dataset.value;
+  if (datasetValue !== undefined) {
+    const numero = Number(datasetValue);
+    return Number.isFinite(numero) ? numero : 0;
+  }
+  const raw = (input.value || "").toString().replace(/[^\d,.-]/g, "").replace(",", ".");
+  const numero = Number(raw);
+  return Number.isFinite(numero) ? numero : 0;
+}
+
+// Expor funções de etiqueta no escopo global para uso em onclick (caso necessário)
+if (typeof window !== 'undefined') {
+  window.imprimirEtiquetaLote = imprimirEtiquetaLote;
+  window.baixarEtiquetaLote = baixarEtiquetaLote;
+  
+  // Função de teste para criar lote "água com gás"
+  window.testarCriarLoteAguaGas = async function() {
+    console.log("🚀 Teste: Criando lote 'Água com Gás'...");
+    try {
+      // Buscar produtos
+      const produtos = await fetchJSON('/produtos?todas=1');
+      let produto = produtos.find(p => 
+        p.nome && p.nome.toLowerCase().includes('água') && 
+        (p.nome.toLowerCase().includes('gás') || p.nome.toLowerCase().includes('gas'))
+      );
+      
+      // Se não encontrar, criar produto
+      if (!produto) {
+        const unidades = await fetchJSON('/unidades?todas=1');
+        if (!unidades || unidades.length === 0) {
+          throw new Error("Crie uma unidade primeiro!");
+        }
+        
+        produto = await fetchJSON('/produtos', {
+          method: 'POST',
+          body: JSON.stringify({
+            nome: "Água com Gás",
+            categoria: "BEBIDAS",
+            unidade_base: "UND",
+            unidade_id: unidades[0].id,
+            ativo: 1
+          })
+        });
+        console.log("✅ Produto criado:", produto.nome);
+      }
+      
+      // Buscar unidade
+      const unidades = await fetchJSON('/unidades?todas=1');
+      const unidade = unidades[0];
+      
+      // Calcular data de validade (1 ano a partir de hoje)
+      const dataValidade = new Date();
+      dataValidade.setDate(dataValidade.getDate() + 365);
+      const dataValidadeStr = dataValidade.toISOString().split('T')[0];
+      
+      // Criar lote
+      const lote = await fetchJSON('/lotes', {
+        method: 'POST',
+        body: JSON.stringify({
+          produto_id: produto.id,
+          unidade_id: unidade.id,
+          codigo_lote: `AGUA-GAS-${Date.now()}`,
+          quantidade: 24,
+          custo_unitario: 2.50,
+          data_validade: dataValidadeStr
+        })
+      });
+      
+      console.log("✅ Lote criado com sucesso!", lote);
+      showToast("✅ Lote 'Água com Gás' criado com sucesso!", "success");
+      
+      // Recarregar lotes
+      if (typeof loadLotes === 'function') {
+        await loadLotes();
+      }
+      
+      return lote;
+    } catch (err) {
+      console.error("❌ Erro ao criar lote:", err);
+      showToast("❌ Erro: " + (err.message || "Falha ao criar lote"), "error");
+      throw err;
+    }
+  };
+}

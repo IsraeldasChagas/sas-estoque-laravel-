@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grupo Sabor Paraense</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="imagens/favicon.png" />
+  </head>
+  <body>
+    <!-- Tela exibida antes do usuario se autenticar -->
+    <div id="loginOverlay" class="login-overlay">
+      <canvas id="matrixCanvas" class="matrix-canvas" aria-hidden="true"></canvas>
+      <div class="login-container">
+        <!-- Coluna com a identidade visual da aplicacao -->
+        <section class="login-hero">
+          <div class="login-hero__badge">Gestão inteligente de estoque</div>
+          <img src="imagens/logo.png" alt="SAS Estoque" class="login-hero__logo" />
+          <h1>Bem-vindo ao SAS Estoque</h1>
+          <p>Organize, monitore e tome decisões rápidas com o painel integrado do Grupo Sabor Paraense.</p>
+        </section>
+        <!-- Coluna com o formulario de credenciais -->
+        <section class="login-panel">
+          <header class="login-panel__header">
+            <h2>Acesse sua conta</h2>
+            <p>Use suas credenciais corporativas para continuar.</p>
+          </header>
+          <form id="loginForm" class="login-form">
+            <label class="login-field">
+              <span>Email</span>
+              <input type="email" id="loginEmail" placeholder="exemplo@empresa.com" required />
+            </label>
+            <label class="login-field">
+              <span>Senha</span>
+              <div class="login-field__input-wrapper">
+                <input type="password" id="loginPassword" placeholder="Digite sua senha" required />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-target="loginPassword"
+                  aria-label="Mostrar senha"
+                  aria-pressed="false"
+                >
+                  <svg class="password-toggle__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      class="password-toggle__eye-open"
+                      d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <circle
+                      class="password-toggle__eye-open"
+                      cx="12"
+                      cy="12"
+                      r="3"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <path
+                      class="password-toggle__eye-closed"
+                      d="M4 4l16 16"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </label>
+            <button type="submit" class="btn primary login-submit">
+              Entrar no painel
+            </button>
+          </form>
+          <footer class="login-panel__footer">
+            <span>Precisa de ajuda? Contate o suporte TI.</span>
+            <small>Desenvolvido pelo Grupo Sabor Paraense</small>
+          </footer>
+        </section>
+      </div>
+    </div>
+
+    <!-- Estrutura principal exibida apos o login -->
+    <div class="app-shell hidden" id="appShell">
+      <!-- Barra lateral com navegacao e atalhos -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+          <img src="imagens/logo.png" alt="SAS Estoque" />
+        </div>
+        <nav>
+          <a href="#" class="nav-link active" data-section="dashboard">Dashboard</a>
+          <a href="#" class="nav-link" data-section="unidades">Unidades</a>
+          <a href="#" class="nav-link" data-section="usuarios">Usuarios</a>
+          <a href="#" class="nav-link" data-section="produtos">Produtos</a>
+          <a href="#" class="nav-link" data-section="estoque">Consulta Estoque</a>
+          <a href="#" class="nav-link" data-section="lotes">Lotes</a>
+          <a href="#" class="nav-link" data-section="locais">Locais</a>
+          <a href="#" class="nav-link" data-section="movimentacoes">Movimentacoes</a>
+          <a href="#" class="nav-link" data-section="compras">Lista de Compras</a>
+          <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
+          <div class="nav-submenu">
+            <a href="#" class="nav-link nav-link-parent" id="financeiroMenu">
+              Financeiro
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="boletao">Boletao</a>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+      <!-- Area principal de conteudo para cada modulo -->
+      <main class="main-content">
+        <!-- Barra superior com menu e botao de sair -->
+        <header class="topbar">
+          <div class="topbar__left">
+            <button type="button" id="menuToggle" class="topbar__menu-btn" aria-label="Abrir menu de navegação">
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+            <div class="user-info">
+              <div>
+                <strong id="userName">Visitante</strong>
+                <div id="userRole" class="user-info__meta">Responsavel</div>
+                <div id="userEmail" class="user-info__meta">visitante@empresa.com</div>
+              </div>
+            </div>
+          </div>
+          <button type="button" id="logoutBtn">Sair</button>
+        </header>
+
+        <!-- Container com as secoes funcionais -->
+        <section class="content">
+          <!-- Dashboard com indicadores e dados recentes -->
+          <section id="dashboardSection" class="view-section">
+                          <div class="actions">
+              <button class="btn primary" id="openEntrada">
+                + Registrar Entrada
+              </button>
+              <button class="btn danger" id="openSaida">
+                - Registrar Saida
+              </button>
+            </div>
+
+            <div class="cards">
+              <div class="card">
+                <h3>Produtos ativos</h3>
+                <div class="value" id="kpiProdutos">0</div>
+              </div>
+              <div class="card">
+                <h3>Lotes a vencer (7 dias)</h3>
+                <div class="value" id="kpiVencer">0</div>
+              </div>
+              <div class="card" id="cardLotesAVencer">
+                <h3>Lotes a vencer (15 dias)</h3>
+                <div class="value" id="kpiLotesAVencer">0</div>
+                <small>Visualizar detalhes</small>
+              </div>
+              <div class="card card--clickable" id="cardComprasAndamento">
+                <h3>Compras em andamento</h3>
+                <div class="value" id="kpiComprasAtivas">0</div>
+                <small>Abrir listas de compras</small>
+              </div>
+              <div class="card" id="cardLotesVencidos">
+                <h3>Lotes vencidos</h3>
+                <div class="value danger" id="kpiLotesVencidos">0</div>
+                <small>Visualizar detalhes</small>
+              </div>
+              <div class="card card--clickable" id="cardMinimo">
+                <h3>Abaixo do minimo</h3>
+                <div class="value" id="kpiMinimo">0</div>
+                <small id="cardMinimoHint">Ver produtos abaixo do minimo</small>
+              </div>
+              <div class="card card--clickable" id="cardPerdas">
+                <h3>Perdas</h3>
+                <div class="value" id="kpiPerdas">0</div>
+                <small id="cardPerdasHint">Sem perdas registradas</small>
+              </div>
+            </div>
+
+            <div class="tables">
+              <div class="table-card form-card--wide">
+                <header>Movimentacoes recentes</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Tipo</th>
+                      <th>Produto</th>
+                      <th>Unidade</th>
+                      <th>Qtd</th>
+                      <th>Motivo</th>
+                      <th>Responsavel</th>
+                    </tr>
+                  </thead>
+                  <tbody id="movTable">
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="table-card form-card--wide">
+                <header>Lotes a vencer (7 dias)</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Produto</th>
+                        <th>Lote</th>
+                        <th>Validade</th>
+                        <th>Qtd</th>
+                        <th>Unidade</th>
+                        <th>Status</th>
+                        <th>Resp.</th>
+                      </tr>
+                    </thead>
+                    <tbody id="lotesTable">
+                      <tr>
+                        <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- Lista de compras com itens, estabelecimentos e anexos -->
+          <section id="comprasSection" class="view-section hidden">
+                          <div class="actions">
+              <button class="btn primary" id="openListaCompra">+ Nova lista</button>
+              <button class="btn secondary" id="openSugestoesCompras">💡 Sugestões de Compras</button>
+              <select id="listaCompraFiltroStatus" class="lista-compras__filtro">
+                <option value="ativas">Em andamento</option>
+                <option value="todas">Todas</option>
+                <option value="finalizadas">Finalizadas</option>
+              </select>
+            </div>
+            <div class="compras-grid">
+              <div class="table-card compras-listas-card">
+                <header>Listas de compras</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Lista</th>
+                        <th>Unidade</th>
+                        <th>Status</th>
+                        <th>Planejado</th>
+                        <th>Realizado</th>
+                        <th>Itens</th>
+                      </tr>
+                    </thead>
+                    <tbody id="listasComprasTable">
+                      <tr>
+                        <td colspan="6" style="text-align:center; color:#607d8b">Carregando...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="table-card compras-detalhes-card">
+                <header>
+                  <div>
+                    <h2 id="listaCompraTitulo">Selecione uma lista</h2>
+                    <p id="listaCompraSubtitulo" class="subtle-text"></p>
+                  </div>
+                  <div class="compras-status">
+                    <span id="listaCompraStatus" class="status-pill status-pill--muted">--</span>
+                    <button type="button" class="btn secondary" data-status="RASCUNHO" id="listaCompraStatusRascunho">Rascunho</button>
+                    <button type="button" class="btn secondary" data-status="EM_COMPRAS" id="listaCompraStatusEmCompras">Em compras</button>
+                    <button type="button" class="btn secondary" data-status="PAUSADA" id="listaCompraStatusPausada">Pausar</button>
+                  </div>
+                </header>
+                <div class="compras-detalhes-body">
+                  <div class="compras-detalhes-resumo">
+                    <div>
+                      <strong>Planejado</strong>
+                      <span id="listaCompraTotalPlanejado">R$ 0,00</span>
+                    </div>
+                    <div>
+                      <strong>Realizado</strong>
+                      <span id="listaCompraTotalRealizado">R$ 0,00</span>
+                    </div>
+                    <div>
+                      <strong>Itens Comprados</strong>
+                      <span id="listaCompraItensResumo">0/0</span>
+                    </div>
+                  </div>
+                  <label class="compras-observacoes">
+                    Observacoes gerais
+                    <textarea id="listaCompraObservacoes" rows="3" placeholder="Instrucoes, fornecedores preferenciais, alertas..."></textarea>
+                  </label>
+                  <div class="compras-detalhes-acoes">
+                    <button type="button" class="btn secondary" id="listaCompraAdicionarItem">Adicionar Item</button>
+                    <button type="button" class="btn secondary" id="listaCompraAdicionarEstabelecimento">Adicionar Estabelecimento</button>
+                    <button type="button" class="btn danger" id="listaCompraFinalizar">Finalizar</button>
+                    <button type="button" class="btn primary" id="listaCompraGerarPdf" disabled>Gerar PDF</button>
+                    <button type="button" class="btn neutral" id="listaCompraPdf" disabled>Abrir PDF</button>
+                    <button type="button" class="btn primary" id="listaCompraLancarEstoque" disabled>Lancar no Estoque</button>
+                  </div>
+                  <section>
+                    <h3>Itens da lista</h3>
+                    <div class="table-wrapper">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Produto</th>
+                            <th>Planejado</th>
+                            <th>Comprado</th>
+                            <th>Preco unitario</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Estabelecimento</th>
+                            <th>Observacoes</th>
+                            <th>Acoes</th>
+                          </tr>
+                        </thead>
+                        <tbody id="listaComprasItensTable">
+                          <tr>
+                            <td colspan="9" style="text-align:center; color:#607d8b">Selecione uma lista para visualizar os itens.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <section>
+                    <h3>Estabelecimentos visitados</h3>
+                    <div class="table-wrapper">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Nome</th>
+                            <th>Localizacao</th>
+                            <th>Pagamento</th>
+                            <th>Vinculo</th>
+                            <th>Observacoes</th>
+                            <th>Acoes</th>
+                          </tr>
+                        </thead>
+                        <tbody id="listaComprasEstabelecimentosTable">
+                          <tr>
+                            <td colspan="6" style="text-align:center; color:#607d8b">Nenhum estabelecimento.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                  <section>
+                    <h3>Anexos</h3>
+                    <ul id="listaComprasAnexos" class="anexos-lista">
+                      <li>Nenhum anexo enviado.</li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Gerenciamento de lotes com filtros e tabela -->
+          <section id="lotesSection" class="view-section hidden">
+                          <div class="actions">
+              <button class="btn primary" id="openNovoLote">+ Novo lote</button>
+            </div>
+
+            <form id="lotesFilterForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>
+                  Pesquisa
+                  <input type="text" id="lotesFiltroPesquisa" name="pesquisa" placeholder="Código do lote ou nome do produto" />
+                </label>
+                <label>
+                  Produto
+                  <select id="lotesFiltroProduto" name="produto_id">
+                    <option value="">Todos</option>
+                  </select>
+                </label>
+                <label>
+                  Unidade
+                  <select id="lotesFiltroUnidade" name="unidade_id">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select id="lotesFiltroStatus" name="status">
+                    <option value="">Todos</option>
+                    <option value="ATIVO">Ativo</option>
+                    <option value="INATIVO">Inativo</option>
+                  </select>
+                </label>
+                <label>
+                  Validade at�
+                  <input type="date" id="lotesFiltroValidadeAte" name="validade_ate" />
+                </label>
+                <label>
+                  Validade de
+                  <input type="date" id="lotesFiltroValidadeDe" name="validade_de" />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary" id="aplicarFiltrosLotes">Aplicar filtros</button>
+                <button type="button" class="btn" id="limparFiltrosLotes">Limpar</button>
+              </div>
+            </form>
+
+            <div class="table-card form-card--wide">
+              <header>Lotes cadastrados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Unidade</th>
+                      <th>Codigo</th>
+                      <th>Qtd</th>
+                      <th>Validade</th>
+                      <th>Dias p/ vencer</th>
+                      <th>Status</th>
+                      <th>Valor total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lotesManageTable">
+                    <tr>
+                      <td colspan="8" style="text-align: center; color: #607d8b">Use os filtros para carregar os lotes.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="locaisSection" class="view-section hidden">
+                          <div class="actions">
+              <button class="btn primary" id="openLocalModal">+ Novo local</button>
+            </div>
+
+            <div class="table-card form-card--wide">
+              <header>Locais cadastrados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>Unidade</th>
+                      <th>Tipo</th>
+                      <th>Temperatura media</th>
+                      <th>Nivel de acesso</th>
+                      <th>Observacoes</th>
+                      <th>Cadastro</th>
+                      <th>Status</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="locaisTable">
+                    <tr>
+                      <td colspan="11" style="text-align: center; color: #607d8b">Carregando locais...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="movimentacoesSection" class="view-section hidden">
+            <form id="movFilterForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>
+                  Tipo
+                  <select id="movFiltroTipo" name="tipo">
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saida</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="AJUSTE">Ajuste</option>
+                    <option value="PERDA">Perda</option>
+                  </select>
+                </label>
+                <label>
+                  Produto
+                  <select id="movFiltroProduto" name="produto_id">
+                    <option value="">Todos</option>
+                  </select>
+                </label>
+                <label>
+                  Unidade
+                  <select id="movFiltroUnidade" name="unidade_id">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label>
+                  Data inicial
+                  <input type="date" id="movFiltroDataDe" name="data_ini" />
+                </label>
+                <label>
+                  Data final
+                  <input type="date" id="movFiltroDataAte" name="data_fim" />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Aplicar filtros</button>
+                <button type="button" class="btn" id="movFiltrosLimpar">Limpar</button>
+              </div>
+            </form>
+
+            <div class="table-card form-card--wide">
+              <header>Movimentacoes recentes</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Tipo</th>
+                      <th>Produto</th>
+                      <th>Unidade</th>
+                      <th>Quantidade</th>
+                      <th>Motivo</th>
+                      <th>Responsavel</th>
+                    </tr>
+                  </thead>
+                  <tbody id="movimentacoesTable">
+                    <tr>
+                      <td colspan="7" style="text-align: center; color: #607d8b">Use os filtros para carregar movimentacoes.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Relatorios consolidados e exportacao -->
+          <section id="relatoriosSection" class="view-section hidden">
+            <form id="relatorioFilterForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>
+                  Agrupar por
+                  <select id="relatorioAgrupar" name="agrupar">
+                    <option value="produto">Produto</option>
+                    <option value="unidade">Unidade</option>
+                    <option value="responsavel">Responsavel</option>
+                  </select>
+                </label>
+                <label>
+                  Tipo
+                  <select id="relatorioTipo" name="tipo">
+                    <option value="">Todos</option>
+                    <option value="ENTRADA">Entrada</option>
+                    <option value="SAIDA">Saida</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="AJUSTE">Ajuste</option>
+                    <option value="PERDA">Perda</option>
+                  </select>
+                </label>
+                <label>
+                  Produto
+                  <select id="relatorioProduto" name="produto_id">
+                    <option value="">Todos</option>
+                  </select>
+                </label>
+                <label>
+                  Unidade
+                  <select id="relatorioUnidade" name="unidade_id">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label>
+                  Data inicial
+                  <input type="date" id="relatorioDataDe" name="data_ini" />
+                </label>
+                <label>
+                  Data final
+                  <input type="date" id="relatorioDataAte" name="data_fim" />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Gerar relatorio</button>
+                <button type="button" class="btn" id="relatorioLimpar">Limpar</button>
+              </div>
+            </form>
+
+            <div class="report-actions">
+              <button type="button" class="btn secondary" id="relatorioExportCsv">Exportar CSV</button>
+              <button type="button" class="btn secondary" id="relatorioExportPdf">Exportar PDF</button>
+            </div>
+
+            <div class="relatorios-grid">
+              <div class="table-card form-card--wide">
+                <header>Resumo por agrupador</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th id="relResumoColuna">Agrupador</th>
+                        <th>Entradas (Qtd)</th>
+                        <th>Entradas (Valor)</th>
+                        <th>Saidas (Qtd)</th>
+                        <th>Saidas (Valor)</th>
+                        <th>Saldo (Qtd)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="relatorioResumoTable">
+                      <tr>
+                        <td colspan="6" style="text-align: center; color: #607d8b">Utilize os filtros para gerar o relatorio.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="table-card form-card--wide">
+                <header>Movimentacoes detalhadas</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Produto</th>
+                        <th>Unidade</th>
+                        <th>Quantidade</th>
+                        <th>Motivo</th>
+                        <th>Responsavel</th>
+                      </tr>
+                    </thead>
+                    <tbody id="relatorioDetalhesTable">
+                      <tr>
+                        <td colspan="7" style="text-align: center; color: #607d8b">Utilize os filtros para gerar o relatorio.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Cadastro e listagem de unidades operacionais -->
+          <section id="unidadesSection" class="view-section hidden">
+            <div class="unidades-container">
+              <div class="actions">
+                <button class="btn primary" id="openUnidade">+ Nova Unidade</button>
+              </div>
+              <div class="form-card hidden" id="unidadeInlineCard">
+                <h3>Cadastrar nova unidade</h3>
+                <form id="unidadeInlineForm">
+                  <input type="hidden" name="id" />
+                  <div class="form-card__grid">
+                    <label class="form-card__field full-width">
+                      Nome
+                      <input name="nome" placeholder="Unidade Matriz" required />
+                    </label>
+                    <label class="form-card__field full-width">
+                      Endereco
+                      <input name="endereco" placeholder="Rua, numero, bairro" />
+                    </label>
+                    <div class="form-card__row">
+                      <label class="form-card__field">
+                        CNPJ
+                        <input name="cnpj" placeholder="00.000.000/0000-00" />
+                      </label>
+                      <label class="form-card__field">
+                        Gerente responsavel
+                        <select name="gerente_usuario_id">
+                          <option value="">Selecione um usuario</option>
+                        </select>
+                      </label>
+                    </div>
+                  <div class="form-card__row">
+                    <label class="form-card__field">
+                      Telefone
+                      <input name="telefone" placeholder="(00) 0000-0000" />
+                    </label>
+                    <label class="form-card__field">
+                      Email
+                      <input type="email" name="email" placeholder="contato@empresa.com" />
+                    </label>
+                    <label class="form-card__field">
+                      Status
+                      <select name="ativo">
+                        <option value="1">Ativa</option>
+                        <option value="0">Desativada</option>
+                      </select>
+                    </label>
+                  </div>
+                    <label class="form-card__field full-width">
+                      Observacoes
+                      <textarea name="observacoes" rows="3" placeholder="Observacoes internas, horarios, restricoes..."></textarea>
+                    </label>
+                  </div>
+                  <footer class="form-card__actions">
+                    <button type="button" class="btn neutral" id="cancelInlineUnidade">Limpar</button>
+                    <button type="submit" class="btn primary">Salvar unidade</button>
+                  </footer>
+                </form>
+              </div>
+              <div class="table-card form-card--wide">
+                <header>Unidades cadastradas</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Endereco</th>
+                        <th>CNPJ</th>
+                        <th>Gerente</th>
+                        <th>Telefone</th>
+                        <th>Email</th>
+                        <th>Observacoes</th>
+                        <th>Status</th>
+                        <th>Acoes</th>
+                      </tr>
+                    </thead>
+                    <tbody id="unidadesTable">
+                      <tr>
+                        <td colspan="9" style="text-align: center; color: #607d8b">Carregando...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Inventario de produtos com grades e edicao -->
+          <section id="produtosSection" class="view-section hidden">
+                          <div class="actions">
+              <button class="btn primary" id="openProduto">+ Novo produto</button>
+            </div>
+            <div class="table-card">
+              <header>Produtos cadastrados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Categoria</th>
+                      <th>Unidade base</th>
+                      <th>Codigo interno</th>
+                      <th>Custo medio</th>
+                      <th>Estoque minimo</th>
+                      <th>Unidade</th>
+                      <th>Status</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="produtosTable">
+                    <tr>
+                      <td colspan="9" style="text-align: center; color: #607d8b">Carregando...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Consulta de Estoque por Produto -->
+          <section id="estoqueSection" class="view-section hidden">
+            <div class="actions">
+              <h2>Consulta de Estoque</h2>
+            </div>
+            <div class="table-card">
+              <header>Selecione um produto para consultar o estoque</header>
+              <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                  Produto
+                </label>
+                <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="">Selecione um produto</option>
+                </select>
+              </div>
+              <div id="estoqueInfo" style="display: none;">
+                <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                  <h3 id="estoqueProdutoNome" style="margin: 0 0 1rem 0; color: #1976d2;"></h3>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Quantidade Total</div>
+                      <div id="estoqueTotalQtd" style="font-size: 1.5rem; font-weight: 700; color: #1976d2;">0</div>
+                      <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;" id="estoqueUnidadeBase"></div>
+                    </div>
+                    <div id="estoqueCardUnitario" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Unitário Médio</div>
+                      <div id="estoqueTotalUnitario" style="font-size: 1.5rem; font-weight: 700; color: #ff9800;">R$ 0,00</div>
+                    </div>
+                    <div id="estoqueCardTotal" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Total</div>
+                      <div id="estoqueTotalValor" style="font-size: 1.5rem; font-weight: 700; color: #4caf50;">R$ 0,00</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Unidade</th>
+                        <th>Quantidade</th>
+                        <th class="estoque-col-valor-unitario">Valor Unitário</th>
+                        <th class="estoque-col-valor-total">Valor Total</th>
+                        <th>Nº de Lotes</th>
+                      </tr>
+                    </thead>
+                    <tbody id="estoqueTable">
+                      <tr>
+                        <td colspan="5" style="text-align: center; color: #607d8b;">Carregando...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Administracao de usuarios do sistema -->
+          <section id="usuariosSection" class="view-section hidden">
+                          <div class="actions">
+              <button class="btn primary" id="openUsuario">+ Novo usuario</button>
+            </div>
+            <div class="table-card">
+              <header>Usuarios cadastrados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Foto</th>
+                      <th>Nome</th>
+                      <th>Email</th>
+                      <th>Perfil</th>
+                      <th>Unidade</th>
+                      <th>Status</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usuariosTable">
+                    <tr>
+                      <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Modulo Financeiro - Boletao -->
+          <section id="boletaoSection" class="view-section hidden">
+            <div class="boletos-header">
+              <h2>💰 Controle Financeiro – Boletos</h2>
+              <div class="boletos-actions">
+                <button class="btn primary" id="openNovoBoleto">+ Novo Boleto</button>
+              </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="boletos-filtro" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+              <label style="flex: 1; min-width: 200px;">
+                📅 Mês/Ano:
+                <select id="boletosMesAnoFiltro" class="boletos-mes-select">
+                  <option value="">📋 Todos os boletos</option>
+                  <option value="2026-01" selected>Janeiro 2026</option>
+                  <option value="2025-12">Dezembro 2025</option>
+                  <option value="2025-11">Novembro 2025</option>
+                  <option value="2025-10">Outubro 2025</option>
+                  <option value="2025-09">Setembro 2025</option>
+                  <option value="2025-08">Agosto 2025</option>
+                  <option value="2025-07">Julho 2025</option>
+                  <option value="2025-06">Junho 2025</option>
+                  <option value="2025-05">Maio 2025</option>
+                  <option value="2025-04">Abril 2025</option>
+                  <option value="2025-03">Marco 2025</option>
+                  <option value="2025-02">Fevereiro 2025</option>
+                  <option value="2025-01">Janeiro 2025</option>
+                </select>
+              </label>
+
+              <label style="flex: 1; min-width: 200px;">
+                🏢 Unidade:
+                <select id="boletosUnidadeFiltro" class="boletos-mes-select">
+                  <option value="">Todas as unidades</option>
+                </select>
+              </label>
+
+              <label style="flex: 1; min-width: 200px;">
+                📊 Status:
+                <select id="boletosStatusFiltro" class="boletos-mes-select">
+                  <option value="">Todos os status</option>
+                  <option value="A_VENCER">A vencer</option>
+                  <option value="VENCIDO">Vencido</option>
+                  <option value="PAGO">Pago</option>
+                  <option value="CANCELADO">Cancelado</option>
+                </select>
+              </label>
+
+              <button type="button" id="limparFiltrosBoletos" class="btn neutral" style="height: 42px;">
+                🔄 Limpar Filtros
+              </button>
+            </div>
+
+            <!-- Cards de Resumo Financeiro -->
+            <div class="boletos-resumo">
+              <div class="boleto-card boleto-card--total">
+                <div class="boleto-card__icon">💳</div>
+                <div class="boleto-card__content">
+                  <div class="boleto-card__label">Total de boletos do mês</div>
+                  <div class="boleto-card__value" id="boletosTotalMes">R$ 18.450,00</div>
+                </div>
+              </div>
+
+              <div class="boleto-card boleto-card--pago">
+                <div class="boleto-card__icon">✅</div>
+                <div class="boleto-card__content">
+                  <div class="boleto-card__label">Total pago em dia</div>
+                  <div class="boleto-card__value" id="boletosPagoEmDia">R$ 16.200,00</div>
+                </div>
+              </div>
+
+              <div class="boleto-card boleto-card--juros">
+                <div class="boleto-card__icon">⚠️</div>
+                <div class="boleto-card__content">
+                  <div class="boleto-card__label">Juros/multas pagos</div>
+                  <div class="boleto-card__value" id="boletosJurosPagos">R$ 320,00</div>
+                </div>
+              </div>
+
+              <div class="boleto-card boleto-card--atrasados">
+                <div class="boleto-card__icon">⚠️</div>
+                <div class="boleto-card__content">
+                  <div class="boleto-card__label">Boletos pagos com atraso</div>
+                  <div class="boleto-card__value" id="boletosAtrasados">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabela de Boletos -->
+            <div class="table-card form-card--wide">
+              <header>
+                <div>
+                  <h3>Boletos do Mês</h3>
+                  <p class="subtle-text">Gerencie todos os boletos e pagamentos</p>
+                </div>
+                <button class="btn secondary" id="recarregarTabelaBoletos" style="margin-left: auto;">
+                  🔄 Atualizar
+                </button>
+              </header>
+              <div class="table-wrapper">
+                  <table>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Fornecedor</th>
+                      <th>Descricao</th>
+                      <th>Vencimento</th>
+                      <th>Valor</th>
+                      <th>Data Pagamento</th>
+                      <th>Valor Pago</th>
+                      <th>Juros/Multa</th>
+                      <th>Anexo</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="boletosTable">
+                    <tr>
+                      <td colspan="10" style="text-align: center; color: #607d8b;">Carregando boletos...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="loteModal">
+      <div class="modal">
+        <header>
+          <h2 id="loteModalTitle">Novo lote</h2>
+          <button type="button" class="close-btn" id="closeLote" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="loteForm">
+          <input type="hidden" name="id" />
+          <label>
+            Unidade
+            <select name="unidade_id" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Produto
+            <select name="produto_id" required>
+              <option value="">Selecione o produto</option>
+            </select>
+          </label>
+          <label>
+            Codigo do lote
+            <input name="codigo_lote" placeholder="Informe o codigo" required />
+          </label>
+          <label>
+            Quantidade
+            <input name="quantidade" type="number" step="0.001" min="0.001" required />
+          </label>
+          <label>
+            Custo unitario
+            <input name="custo_unitario" id="loteCustoUnitario" type="text" inputmode="decimal" required />
+          </label>
+          <label>
+            Data de fabricacao
+            <input name="data_fabricacao" type="date" />
+          </label>
+          <label>
+            Data de validade
+            <input name="data_validade" type="date" />
+          </label>
+          <label>
+            Fornecedor
+            <input name="fornecedor" placeholder="Fornecedor" />
+          </label>
+          <label>
+            Nota fiscal
+            <input name="nota_fiscal" placeholder="Numero da nota fiscal" />
+          </label>
+          <label>
+            Localizacao
+            <input name="localizacao" placeholder="Localizacao interna" />
+          </label>
+          <label>
+            Status
+            <select name="status">
+              <option value="ATIVO">Ativo</option>
+              <option value="BLOQUEADO">Bloqueado</option>
+              <option value="VENCIDO">Vencido</option>
+              <option value="ESGOTADO">Esgotado</option>
+            </select>
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="2" placeholder="Observacoes adicionais"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelLote">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar lote</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="entradaModal">
+      <div class="modal">
+        <header>
+          <h2>Registrar entrada</h2>
+          <button type="button" class="close-btn" id="closeEntrada" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="entradaForm">
+          <label>
+            Produto
+            <select name="produto_id" required></select>
+          </label>
+          <label>
+            Numero do lote
+            <input name="numero_lote" id="entradaNumeroLote" list="entradaLoteOptions" required />
+            <datalist id="entradaLoteOptions"></datalist>
+          </label>
+          <label>
+            Quantidade
+            <input name="qtd" type="number" step="0.001" min="0.001" required />
+          </label>
+          <label>
+            Unidade
+            <select name="unidade" required>
+              <option value="">Selecione</option>
+              <option>UND</option>
+              <option>G</option>
+              <option>KG</option>
+              <option>ML</option>
+              <option>L</option>
+              <option>PCT</option>
+              <option>CX</option>
+            </select>
+          </label>
+          <label>
+            Custo unitario
+            <input name="custo_unitario" id="entradaCustoUnitario" type="text" inputmode="decimal" required />
+          </label>
+          <label>
+            Data de validade
+            <input name="data_validade" type="date" />
+          </label>
+          <label>
+            Unidade
+            <select name="unidade_id" id="entradaUnidadeSelect" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Local
+            <select name="local_id" id="entradaLocalSelect" required>
+              <option value="">Selecione o local</option>
+            </select>
+          </label>
+          <label>
+            Motivo (opcional)
+            <textarea name="motivo" rows="2"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelEntrada">Limpar</button>
+            <button type="submit" class="btn danger">Registrar entrada</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="saidaModal">
+      <div class="modal">
+        <header>
+          <h2>Registrar saida</h2>
+          <button type="button" class="close-btn" id="closeSaida" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="saidaForm" novalidate>
+          <label>
+            Unidade origem
+            <select name="de_unidade_id" id="saidaOrigemUnidade" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Produto
+            <select name="produto_id" id="saidaProdutoSelect" required disabled>
+              <option value="">Selecione a unidade de origem</option>
+            </select>
+          </label>
+          <label>
+            Motivo da sa&iacute;da
+            <select name="motivo" id="saidaMotivo" required>
+              <option value="">Selecione um motivo</option>
+              <option value="PRODUCAO">Produ&ccedil;&atilde;o</option>
+              <option value="CONSUMO">Consumo</option>
+              <option value="PERDA">Perda</option>
+              <option value="TRANSFERENCIA">Transfer&ecirc;ncia entre unidades</option>
+            </select>
+          </label>
+          <div id="saidaDestinoWrapper" class="hidden">
+            <label>
+              Unidade destino
+              <select name="para_unidade_id" id="saidaDestinoUnidade">
+                <option value="">Selecione a unidade</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Quantidade
+            <input name="qtd" type="number" step="0.001" min="0.001" required />
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" name="forcar" value="true" />
+            Forcar uso se houver vencidos?
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelSaida">Limpar</button>
+            <button type="submit" class="btn danger">Registrar saida</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="localModal">
+      <div class="modal">
+        <header>
+          <h2>Novo local</h2>
+          <button type="button" class="close-btn" id="closeLocalModal" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="localForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome do local
+            <input name="nome" required />
+          </label>
+          <label>
+            Unidade
+            <select name="unidade_id" id="localUnidadeSelect" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Tipo de local
+            <select name="tipo" id="localTipoSelect" required>
+              <option value="">Selecione</option>
+              <option value="CAMARA_FRIA">Camara Fria</option>
+              <option value="FREEZER">Freezer</option>
+              <option value="GELADEIRA">Geladeira</option>
+              <option value="DEPOSITO">Deposito</option>
+              <option value="PRATELEIRA">Prateleira</option>
+              <option value="ESTOQUE_SECO">Estoque Seco</option>
+              <option value="COZINHA">Cozinha</option>
+              <option value="BAR">Bar</option>
+              <option value="OUTROS">Outros</option>
+            </select>
+          </label>
+          <label>
+            Temperatura media (Celsius)
+            <input name="temperatura_media" type="number" step="0.1" />
+          </label>
+          <label>
+            Localizacao fisica / descricao
+            <input name="descricao" />
+          </label>
+          <label>
+            Nivel de acesso
+            <select name="nivel_acesso" id="localNivelAcesso">
+              <option value="">Selecione</option>
+              <option value="TODOS">Todos</option>
+              <option value="COZINHA">Cozinha</option>
+              <option value="GERENTE">Gerente</option>
+              <option value="ADMINISTRATIVO">Administrativo</option>
+              <option value="RESTRITO">Restrito</option>
+            </select>
+          </label>
+          <label>
+            Data de cadastro
+            <input name="data_cadastro" type="date" />
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelLocal">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar local</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Area para mensagens toast -->
+    <div id="toast" class="toast"></div>
+
+    <div class="modal-backdrop" id="produtoModal">
+      <div class="modal">
+        <header>
+          <h2 id="produtoModalTitle">Cadastrar produto</h2>
+          <button type="button" class="close-btn" id="closeProduto" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="produtoForm">
+          <input type="hidden" name="id" />
+          <div id="produtoFormFeedback" class="form-feedback hidden"></div>
+          <label>
+            Nome
+            <input name="nome" required />
+          </label>
+          <label>
+            Categoria
+            <select name="categoria" required>
+              <option value="">Selecione</option>
+              <option value="CARNES">Carnes</option>
+              <option value="HORTIFRUTI">Hortifruti</option>
+              <option value="SECOS">Secos</option>
+              <option value="BEBIDAS">Bebidas</option>
+              <option value="LIMPEZA">Limpeza</option>
+              <option value="EMBALAGENS">Embalagens</option>
+              <option value="CONGELADOS">Congelados</option>
+            </select>
+          </label>
+          <label>
+            Unidade base
+            <select name="unidade_base" required>
+              <option value="">Selecione</option>
+              <option value="UN">UN</option>
+              <option value="G">G</option>
+              <option value="KG">KG</option>
+              <option value="ML">ML</option>
+              <option value="L">L</option>
+              <option value="PCT">PCT</option>
+              <option value="CX">CX</option>
+            </select>
+          </label>
+          <label>
+            Unidade responsavel
+            <select name="unidade_id">
+              <option value="">Sem unidade</option>
+            </select>
+          </label>
+          <label>
+            Codigo interno
+            <input name="codigo_barras" readonly placeholder="Gerado automaticamente" />
+          </label>
+          <label>
+            Descricao
+            <textarea name="descricao" rows="3"></textarea>
+          </label>
+          <div class="grid-two">
+            <label>
+              Custo medio
+              <input name="custo_medio" type="number" step="0.01" min="0" />
+            </label>
+            <label>
+              Estoque minimo
+              <input name="estoque_minimo" type="number" step="0.001" min="0" />
+            </label>
+          </div>
+          <label>
+            Status
+            <select name="ativo">
+              <option value="1">Ativo</option>
+              <option value="0">Inativo</option>
+            </select>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelProduto">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="unidadeModal">
+      <div class="modal">
+        <header>
+          <h2 id="unidadeModalTitle">Cadastrar unidade</h2>
+          <button type="button" class="close-btn" id="closeUnidade" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="unidadeForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome
+            <input name="nome" required />
+          </label>
+          <label>
+            Endereco
+            <input name="endereco" />
+          </label>
+          <label>
+            CNPJ
+            <input name="cnpj" />
+          </label>
+          <label>
+            Gerente Responsavel
+            <select name="gerente_usuario_id">
+              <option value="">Selecione um usuario</option>
+            </select>
+          </label>
+          <label>
+            Telefone
+            <input name="telefone" />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" />
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelUnidade">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="usuarioModal">
+      <div class="modal">
+        <header>
+          <h2 id="usuarioModalTitle">Cadastrar usuario</h2>
+          <button type="button" class="close-btn" id="closeUsuario" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="usuarioForm">
+          <input type="hidden" name="id" />
+          <div id="usuarioFormFeedback" class="form-feedback hidden"></div>
+          <div class="avatar-upload">
+            <div class="avatar-preview" id="usuarioAvatarPreview">
+              <span class="avatar-placeholder">?</span>
+            </div>
+            <div class="avatar-actions">
+              <label class="btn secondary" for="usuarioFotoInput">Escolher foto</label>
+              <input type="file" id="usuarioFotoInput" name="foto" accept=".png,.jpg,.jpeg" hidden />
+              <button type="button" class="btn secondary" id="usuarioFotoTrocar">Trocar</button>
+              <button type="button" class="btn danger" id="usuarioFotoRemover">Remover</button>
+            </div>
+            <small class="avatar-hint">Formatos: JPG ou PNG ate 2 MB.</small>
+          </div>
+          <label>
+            Nome completo
+            <input name="nome" required />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" required />
+          </label>
+          <div class="grid-two">
+            <label>
+              Senha
+              <input type="password" name="senha" />
+            </label>
+            <label>
+              Confirmar senha
+              <input type="password" name="confirmar_senha" />
+            </label>
+          </div>
+          <label>
+            Perfil
+            <select name="perfil" id="usuarioPerfilSelect" required>
+              <option value="">Selecione</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="ESTOQUISTA">Estoquista</option>
+              <option value="COZINHA">Cozinha</option>
+              <option value="BAR">Bar</option>
+              <option value="FINANCEIRO">Financeiro</option>
+              <option value="ASSISTENTE_ADMINISTRATIVO">Assistente Administrativo</option>
+              <option value="GERENTE">Gerente</option>
+              <option value="VISUALIZADOR">Visualizador</option>
+            </select>
+          </label>
+          <label>
+            Unidade
+            <select name="unidade_id">
+              <option value="">Sem unidade</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select name="ativo">
+              <option value="1">Ativo</option>
+              <option value="0">Inativo</option>
+            </select>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelUsuario">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="listaCompraModal">
+      <div class="modal">
+        <header>
+          <h2 id="listaCompraModalTitle">Nova lista</h2>
+          <button type="button" class="close-btn" id="closeListaCompra" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="listaCompraForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome da lista
+            <input name="nome" required />
+          </label>
+          <label>
+            Unidade destino
+            <select name="unidade_id" required>
+              <option value="">Selecione</option>
+            </select>
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3" placeholder="Instrucoes gerais para a compra."></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelListaCompra">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="itemCompraModal">
+      <div class="modal">
+        <header>
+          <h2 id="itemCompraModalTitle">Adicionar item</h2>
+          <button type="button" class="close-btn" id="closeItemCompra" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="itemCompraForm">
+          <input type="hidden" name="id" />
+          <label>
+            Produto
+            <select name="produto_id" required></select>
+          </label>
+          <div class="grid-two">
+            <label>
+              Unidade
+              <input name="unidade" placeholder="Ex.: KG, UND" required />
+            </label>
+            <label>
+              Quantidade planejada
+              <input type="number" step="0.01" min="0" name="quantidade_planejada" required />
+            </label>
+          </div>
+          <div class="grid-two">
+            <label id="itemCompraLabelQuantidadeComprada">
+              Quantidade comprada
+              <input type="number" step="0.01" min="0" name="quantidade_comprada" />
+            </label>
+            <label id="itemCompraLabelValorUnitario">
+              Valor unitario (R$)
+              <input type="number" step="0.01" min="0" name="valor_unitario" />
+            </label>
+          </div>
+          <label id="itemCompraLabelValorTotal">
+            Valor total (R$)
+            <input type="number" step="0.01" min="0" name="valor_total" />
+          </label>
+          <label>
+            Estabelecimento
+            <select name="estabelecimento_id">
+              <option value="">Sem vinculo</option>
+            </select>
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn primary" id="cancelItemCompra">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="sugestoesComprasModal">
+      <div class="modal" style="max-width: 900px;">
+        <header>
+          <h2>💡 Sugestões de Compras</h2>
+          <button type="button" class="close-btn" id="closeSugestoesCompras" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 1rem;">
+          <div class="filters-panel" style="margin-bottom: 1rem;">
+            <div class="filters-grid">
+              <label>
+                Unidade
+                <select id="sugestoesFiltroUnidade">
+                  <option value="">Todas</option>
+                </select>
+              </label>
+              <label>
+                Dias de análise
+                <input type="number" id="sugestoesDiasAnalise" value="30" min="7" max="365" />
+              </label>
+              <label>
+                Dias de projeção
+                <input type="number" id="sugestoesDiasProjecao" value="15" min="1" max="90" />
+              </label>
+              <label>
+                <button type="button" class="btn primary" id="sugestoesBuscar">Buscar Sugestões</button>
+              </label>
+            </div>
+          </div>
+          <div id="sugestoesComprasLoading" style="text-align: center; padding: 2rem; color: #607d8b; display: none;">
+            Carregando sugestões...
+          </div>
+          <div id="sugestoesComprasContent">
+            <p style="text-align: center; color: #607d8b; padding: 2rem;">
+              Clique em "Buscar Sugestões" para ver recomendações baseadas nas movimentações.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="estabelecimentoCompraModal">
+      <div class="modal">
+        <header>
+          <h2 id="estabelecimentoCompraModalTitle">Registrar estabelecimento</h2>
+          <button type="button" class="close-btn" id="closeEstabelecimentoCompra" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="estabelecimentoCompraForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome do local
+            <input name="nome" required />
+          </label>
+          <label>
+            Localizacao
+            <input name="localizacao" placeholder="Endereco, referencia ou coordenadas" />
+          </label>
+          <div class="grid-two">
+            <label>
+              Forma de pagamento
+              <input name="forma_pagamento" placeholder="Dinheiro, cartao, prazo..." />
+            </label>
+            <label>
+              Ativo
+              <select name="ativo">
+                <option value="1">Sim</option>
+                <option value="0">Nao</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              Latitude
+              <input name="latitude" placeholder="-1.463" />
+            </label>
+            <label>
+              Longitude
+              <input name="longitude" placeholder="-48.489" />
+            </label>
+          </div>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelEstabelecimentoCompra">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="finalizarListaModal">
+      <div class="modal">
+        <header>
+          <h2>Finalizar lista</h2>
+          <button type="button" class="close-btn" id="closeFinalizarLista" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="finalizarListaForm">
+          <label>
+            Observacoes finais
+            <textarea name="observacoes" rows="3" placeholder="Resumo da compra, notas fiscais, destaques..."></textarea>
+          </label>
+          <label>
+            Anexar arquivos (fotos ou PDF)
+            <input type="file" name="anexos" accept=".png,.jpg,.jpeg,.pdf" multiple />
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelFinalizarLista">Limpar</button>
+            <button type="submit" class="btn primary">Finalizar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de Erro de Movimentação -->
+    <div class="modal-backdrop" id="erroMovimentacaoModal" style="display: none;">
+      <div class="modal" style="max-width: 500px;">
+        <header>
+          <h2 style="color: #d32f2f; display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.5rem;">⚠️</span>
+            Movimentação não realizada
+          </h2>
+          <button type="button" class="close-btn" id="closeErroMovimentacao" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 1.5rem;">
+          <div id="erroMovimentacaoTitulo" style="font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; color: #d32f2f; border-bottom: 2px solid #ffebee; padding-bottom: 0.5rem;">
+            <!-- Título do erro será inserido aqui -->
+          </div>
+          <div id="erroMovimentacaoMensagem" style="color: #555; line-height: 1.6; font-size: 0.95rem;">
+            <!-- Mensagem do erro será inserida aqui -->
+          </div>
+          <div id="erroMovimentacaoDetalhes" style="background: #f5f5f5; padding: 1rem; border-radius: 4px; margin-top: 1rem; border-left: 3px solid #1976d2; display: none;">
+            <!-- Detalhes adicionais serão inseridos aqui -->
+          </div>
+        </div>
+        <footer style="padding: 1rem 1.5rem; border-top: 1px solid #e0e0e0;">
+          <button type="button" class="btn primary" id="fecharErroMovimentacao" style="width: 100%;">Entendi</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modal de Novo Boleto -->
+    <div class="modal-backdrop" id="boletoModal">
+      <div class="modal">
+        <header>
+          <h2 id="boletoModalTitle">💰 Novo Boleto</h2>
+          <button type="button" class="close-btn" id="closeBoleto" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="boletoForm">
+          <input type="hidden" name="id" />
+          
+          <div class="grid-two">
+            <label>
+              Fornecedor *
+              <input name="fornecedor" placeholder="Nome do fornecedor" required />
+            </label>
+            <label>
+              Unidade
+              <select name="unidade_id">
+                <option value="">Selecione a unidade (opcional)</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Descrição *
+            <input name="descricao" placeholder="Descricao do boleto" required />
+          </label>
+
+          <div class="grid-two">
+            <label>
+              Data de Vencimento *
+              <input name="data_vencimento" type="date" required />
+            </label>
+            <label>
+              Valor *
+              <input name="valor" type="number" step="0.01" min="0.01" placeholder="0.00" required />
+            </label>
+          </div>
+
+          <div class="grid-two">
+            <label>
+              Categoria
+              <select name="categoria">
+                <option value="">Selecione</option>
+                <option value="FORNECEDOR">Fornecedor</option>
+                <option value="ALUGUEL">Aluguel</option>
+                <option value="ENERGIA">Energia</option>
+                <option value="AGUA">Agua</option>
+                <option value="INTERNET">Internet</option>
+                <option value="TELEFONE">Telefone</option>
+                <option value="IMPOSTOS">Impostos</option>
+                <option value="OUTROS">Outros</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select name="status" required>
+                <option value="A_VENCER" selected>A vencer</option>
+                <option value="VENCIDO">Vencido</option>
+                <option value="PAGO">Pago</option>
+                <option value="CANCELADO">Cancelado</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="pagamentoFields" style="display: none;">
+            <div class="grid-two">
+              <label>
+                Data de Pagamento
+                <input name="data_pagamento" type="date" />
+              </label>
+              <label>
+                Valor Pago
+                <input name="valor_pago" type="number" step="0.01" min="0" placeholder="0.00" />
+              </label>
+            </div>
+            
+            <label>
+              Juros/Multa
+              <input name="juros_multa" type="number" step="0.01" min="0" placeholder="0.00" />
+            </label>
+          </div>
+
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3" placeholder="Informacoes adicionais sobre o boleto"></textarea>
+          </label>
+
+          <div class="boleto-recorrente-section" style="border: 2px solid #e3f2fd; background: #f5f9ff; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
+              <input type="checkbox" name="is_recorrente" id="boletoRecorrente" value="1" style="width: auto; cursor: pointer;" />
+              🔄 Boleto Recorrente
+            </label>
+            
+            <div id="recorrenteFields" style="display: none; margin-top: 1rem; padding-left: 1.5rem;">
+              <label>
+                Quantidade de Meses
+                <input type="number" name="meses_recorrencia" id="mesesRecorrencia" min="1" max="60" placeholder="Ex: 12" style="max-width: 200px;" />
+                <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
+                  Será criado um boleto para cada mês (Ex: 12 meses = 12 boletos)
+                </small>
+              </label>
+            </div>
+          </div>
+
+          <label>
+            📎 Anexar Arquivo (Boleto, Comprovante, etc)
+            <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png" id="boletoAnexoInput" />
+            <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
+              Formatos aceitos: PDF, JPG, PNG (máximo 5MB)
+            </small>
+          </label>
+
+          <div id="boletoAnexoPreview" style="display: none; margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; border-left: 3px solid #4caf50;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.5rem;">📄</span>
+                <div>
+                  <strong id="boletoAnexoNome" style="display: block; color: #263238;"></strong>
+                  <small id="boletoAnexoTamanho" style="color: #607d8b;"></small>
+                </div>
+              </div>
+              <button type="button" id="boletoRemoverAnexo" style="background: none; border: none; cursor: pointer; font-size: 1.5rem; color: #d32f2f;">×</button>
+            </div>
+          </div>
+
+          <footer>
+            <button type="button" class="btn neutral" id="cancelBoleto">Limpar</button>
+            <button type="submit" class="btn primary">Salvar Boleto</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de Detalhes do Boleto -->
+    <div class="modal-backdrop" id="boletoDetalhesModal">
+      <div class="modal">
+        <header>
+          <h2>👁️ Detalhes do Boleto</h2>
+          <button type="button" class="close-btn" id="closeBoletoDetalhes" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 20px;" id="boletoDetalhesContent">
+          <p style="text-align: center; color: #999;">Carregando...</p>
+        </div>
+        <footer>
+          <button type="button" class="btn neutral" id="fecharDetalhes">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modal de Pagamento de Boleto -->
+    <div class="modal-backdrop" id="boletoPagamentoModal">
+      <div class="modal">
+        <header>
+          <h2>💳 Registrar Pagamento</h2>
+          <button type="button" class="close-btn" id="closeBoletoPagamento" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="boletoPagamentoForm">
+          <input type="hidden" name="id" id="pagamentoBoletoId" />
+          
+          <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <p style="margin: 0; color: #1976d2;"><strong>Fornecedor:</strong> <span id="pagamentoFornecedor">-</span></p>
+            <p style="margin: 0.5rem 0 0 0; color: #1976d2;"><strong>Descrição:</strong> <span id="pagamentoDescricao">-</span></p>
+            <p style="margin: 0.5rem 0 0 0; color: #1976d2;"><strong>Valor Original:</strong> R$ <span id="pagamentoValorOriginal">0,00</span></p>
+          </div>
+
+          <div class="grid-two">
+            <label>
+              Data de Pagamento *
+              <input name="data_pagamento" type="date" id="pagamentoData" required />
+            </label>
+            <label>
+              Valor Pago *
+              <input name="valor_pago" type="number" step="0.01" min="0.01" id="pagamentoValor" placeholder="0.00" required />
+            </label>
+          </div>
+
+          <label>
+            Juros/Multa (Calculado automaticamente)
+            <input name="juros_multa" type="number" step="0.01" min="0" id="pagamentoJuros" placeholder="0.00" value="0" />
+            <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
+              💡 Calculado automaticamente: Valor Pago - Valor Original. Pode editar se necessário.
+            </small>
+          </label>
+
+          <label>
+            Observações
+            <textarea name="observacoes" id="pagamentoObs" rows="3" placeholder="Informações sobre o pagamento (opcional)"></textarea>
+          </label>
+
+          <footer>
+            <button type="button" class="btn neutral" id="cancelPagamento">Cancelar</button>
+            <button type="submit" class="btn primary">💳 Confirmar Pagamento</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
+    <script src="config.js"></script>
+    <!-- Script principal da aplicacao -->
+    <script src="app.js"></script>
+     
+  </body>
+</html>
+
+
+
+
+
+
+
+

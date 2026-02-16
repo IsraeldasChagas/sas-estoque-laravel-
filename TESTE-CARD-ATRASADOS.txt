@@ -1,0 +1,140 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║    ⚠️ CARD "BOLETOS PAGOS COM ATRASO" - IMPLEMENTADO! ⚠️    ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+✅ MUDANÇA CONCLUÍDA:
+
+ANTES:
+  💸 Economia por pagar em dia
+     R$ 1.180,00
+
+AGORA:
+  ⚠️ Boletos pagos com atraso
+     5  (número)
+
+
+🎯 O QUE O CARD MOSTRA:
+
+→ QUANTIDADE de boletos que foram pagos com atraso
+→ Boleto é considerado atrasado se:
+   • Tem juros/multa (juros_multa > 0), OU
+   • Data de pagamento > Data de vencimento
+
+
+🚀 COMO TESTAR:
+
+1️⃣ ABRA O SISTEMA:
+   - Acesse: Financeiro > Boletos
+   - Veja os 4 cards de resumo
+   - 4º card agora é "Boletos pagos com atraso"
+
+2️⃣ VERIFIQUE O NÚMERO ATUAL:
+   - Card mostra quantidade (ex: 5)
+   - Esse é o número de boletos pagos com atraso
+
+3️⃣ TESTE CRIANDO BOLETO ATRASADO:
+   a) Crie novo boleto:
+      • Vencimento: 01/01/2026
+      • Valor: R$ 50,00
+      • Salve
+
+   b) Pague com atraso:
+      • Clique em 💳 Pagar
+      • Data Pagamento: 15/01/2026 (depois do vencimento)
+      • Valor Pago: R$ 50,00
+      • Juros/Multa: R$ 5,00
+      • Confirme
+
+   c) RESULTADO:
+      • ✅ Card aumenta em +1
+      • ✅ Mostra novo número
+
+
+📊 EXEMPLOS:
+
+EXEMPLO 1 - Pago com Juros:
+  • Vencimento: 10/01/2026
+  • Pagamento: 12/01/2026
+  • Juros: R$ 5,00
+  → CONTA COMO ATRASADO ✅
+
+EXEMPLO 2 - Pago Após Vencimento (sem juros):
+  • Vencimento: 05/01/2026
+  • Pagamento: 10/01/2026
+  • Juros: R$ 0,00
+  → CONTA COMO ATRASADO ✅
+
+EXEMPLO 3 - Pago em Dia:
+  • Vencimento: 20/01/2026
+  • Pagamento: 18/01/2026
+  • Juros: R$ 0,00
+  → NÃO CONTA ❌
+
+
+🎨 VISUAL DO CARD:
+
+┌───────────────────────────────────────┐
+│ ⚠️  Boletos pagos com atraso         │
+│     5                                 │
+└───────────────────────────────────────┘
+ └─ Vermelho (#f44336)
+
+
+✅ IMPLEMENTADO:
+
+• Backend: BoletoController.php
+  → Método resumo() calcula boletos atrasados
+  → Retorna campo: boletos_pagos_com_atraso
+
+• Frontend: index.html
+  → Card atualizado com novo ícone e label
+  → ID: boletosAtrasados
+
+• CSS: style.css
+  → Cor vermelha para destaque
+  → Classe: boleto-card--atrasados
+
+• JavaScript: app.js
+  → Função loadBoletosResumo() atualizada
+  → Preenche card com número inteiro
+
+
+💡 BENEFÍCIO:
+
+ANTES:
+  ❌ "Economia" era confuso
+  ❌ Valor estimado
+  ❌ Difícil de entender
+
+AGORA:
+  ✅ Informação clara e concreta
+  ✅ Número exato de atrasados
+  ✅ Fácil de acompanhar
+  ✅ Útil para gestão
+
+
+📖 DOCUMENTAÇÃO COMPLETA:
+
+Leia o arquivo:
+👉 BOLETOS-ATRASADOS-CARD.md
+
+Contém:
+• Como funciona o cálculo
+• Exemplos detalhados
+• Lógica de contagem
+• Arquivos modificados
+
+
+═══════════════════════════════════════════════════════════════
+
+TESTE AGORA:
+
+1. Vá em Financeiro > Boletos
+2. Veja o card ⚠️ Boletos pagos com atraso
+3. Pague um boleto com atraso para ver aumentar
+4. ✅ Funciona!
+
+
+🎉 CARD IMPLEMENTADO E FUNCIONANDO! 🎉

@@ -1,0 +1,72 @@
+// ============================================
+// COLE ESTE CÓDIGO NO CONSOLE DO NAVEGADOR (F12)
+// ============================================
+
+(async function() {
+  console.log("🚀 Criando lote 'Água com Gás'...");
+  
+  try {
+    // Buscar produtos
+    const produtos = await fetchJSON('/produtos?todas=1');
+    let produto = produtos.find(p => 
+      p.nome && p.nome.toLowerCase().includes('água') && 
+      (p.nome.toLowerCase().includes('gás') || p.nome.toLowerCase().includes('gas'))
+    );
+    
+    // Se não encontrar, criar produto
+    if (!produto) {
+      const unidades = await fetchJSON('/unidades?todas=1');
+      if (!unidades || unidades.length === 0) {
+        throw new Error("Crie uma unidade primeiro!");
+      }
+      
+      produto = await fetchJSON('/produtos', {
+        method: 'POST',
+        body: JSON.stringify({
+          nome: "Água com Gás",
+          categoria: "BEBIDAS",
+          unidade_base: "UND",
+          unidade_id: unidades[0].id,
+          ativo: 1
+        })
+      });
+      console.log("✅ Produto criado:", produto.nome);
+    }
+    
+    // Buscar unidade
+    const unidades = await fetchJSON('/unidades?todas=1');
+    const unidade = unidades[0];
+    
+    // Calcular data de validade (1 ano a partir de hoje)
+    const dataValidade = new Date();
+    dataValidade.setDate(dataValidade.getDate() + 365);
+    const dataValidadeStr = dataValidade.toISOString().split('T')[0];
+    
+    // Criar lote
+    const lote = await fetchJSON('/lotes', {
+      method: 'POST',
+      body: JSON.stringify({
+        produto_id: produto.id,
+        unidade_id: unidade.id,
+        codigo_lote: `AGUA-GAS-${Date.now()}`,
+        quantidade: 24,
+        custo_unitario: 2.50,
+        data_validade: dataValidadeStr
+      })
+    });
+    
+    console.log("✅ Lote criado!", lote);
+    alert("✅ Lote criado!\n\nProduto: " + lote.produto_nome + "\nCódigo: " + lote.codigo_lote);
+    
+    // Recarregar lotes
+    if (typeof loadLotes === 'function') {
+      await loadLotes();
+    }
+    
+    return lote;
+  } catch (err) {
+    console.error("❌ Erro:", err);
+    alert("❌ Erro: " + err.message);
+    throw err;
+  }
+})();

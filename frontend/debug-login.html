@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Login</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; }
+        input { padding: 8px; width: 300px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Completo do Login</h1>
+    
+    <div>
+        <label>Email:</label><br>
+        <input type="email" id="email" value="israel@gruposaborparaense.com.br">
+    </div>
+    
+    <div>
+        <label>Senha:</label><br>
+        <input type="password" id="senha" value="123456">
+    </div>
+    
+    <button onclick="testarTudo()">Testar Tudo</button>
+    <button onclick="limparLog()">Limpar Log</button>
+    
+    <div id="log" class="log"></div>
+    
+    <script>
+        const API_URL = "http://localhost:5000";
+        
+        function log(msg, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            logDiv.innerHTML += `<div class="${color}">[${time}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+        
+        function limparLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        async function testarTudo() {
+            limparLog();
+            log('=== INÍCIO DO TESTE ===', 'info');
+            
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            
+            // Teste 1: Verificar API_URL
+            log(`API_URL: ${API_URL}`, 'info');
+            
+            // Teste 2: Testar conexão com /api/health
+            try {
+                log('Testando /api/health...', 'info');
+                const healthResponse = await fetch(`${API_URL}/api/health`);
+                const healthText = await healthResponse.text();
+                log(`Health Status: ${healthResponse.status}`, healthResponse.ok ? 'success' : 'error');
+                log(`Health Response: ${healthText}`, healthResponse.ok ? 'success' : 'error');
+            } catch (err) {
+                log(`ERRO ao testar health: ${err.message}`, 'error');
+            }
+            
+            // Teste 3: Testar login
+            try {
+                log('Testando login...', 'info');
+                log(`Email: ${email}`, 'info');
+                log(`Senha: ${senha ? '***' : 'VAZIA'}`, 'info');
+                
+                const response = await fetch(`${API_URL}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, senha })
+                });
+                
+                log(`Status: ${response.status}`, response.ok ? 'success' : 'error');
+                log(`Headers: ${JSON.stringify([...response.headers.entries()])}`, 'info');
+                
+                const data = await response.json();
+                log(`Response: ${JSON.stringify(data, null, 2)}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok && data.id) {
+                    log('✅ LOGIN FUNCIONANDO!', 'success');
+                    log(`ID: ${data.id}`, 'success');
+                    log(`Nome: ${data.nome}`, 'success');
+                    log(`Perfil: ${data.perfil}`, 'success');
+                } else {
+                    log('❌ Login falhou', 'error');
+                    log(`Erro: ${data.error || 'Desconhecido'}`, 'error');
+                }
+            } catch (err) {
+                log(`❌ ERRO: ${err.message}`, 'error');
+                log(`Stack: ${err.stack}`, 'error');
+            }
+            
+            log('=== FIM DO TESTE ===', 'info');
+        }
+        
+        // Testa automaticamente ao carregar
+        window.addEventListener('load', () => {
+            log('Página carregada', 'info');
+            log('API_URL configurada: ' + API_URL, 'info');
+        });
+    </script>
+</body>
+</html>
+
+
+

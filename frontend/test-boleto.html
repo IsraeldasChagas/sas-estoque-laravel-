@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Criar Boleto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        input, select, textarea, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 14px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #resultado {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .sucesso {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .erro {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste - Criar Boleto</h1>
+    
+    <form id="testForm">
+        <label>Fornecedor *</label>
+        <input type="text" name="fornecedor" value="Teste Fornecedor" required>
+        
+        <label>Descrição *</label>
+        <input type="text" name="descricao" value="Boleto de teste" required>
+        
+        <label>Data de Vencimento *</label>
+        <input type="date" name="data_vencimento" value="2026-01-30" required>
+        
+        <label>Valor *</label>
+        <input type="number" step="0.01" name="valor" value="100.00" required>
+        
+        <label>Status *</label>
+        <select name="status" required>
+            <option value="A_VENCER">A Vencer</option>
+            <option value="VENCIDO">Vencido</option>
+            <option value="PAGO">Pago</option>
+            <option value="CANCELADO">Cancelado</option>
+        </select>
+        
+        <label>Categoria</label>
+        <select name="categoria">
+            <option value="">Selecione</option>
+            <option value="FORNECEDOR">Fornecedor</option>
+            <option value="ALUGUEL">Aluguel</option>
+            <option value="ENERGIA">Energia</option>
+        </select>
+        
+        <label>Observações</label>
+        <textarea name="observacoes" rows="3">Teste de boleto via formulário</textarea>
+        
+        <button type="submit">🚀 Criar Boleto Teste</button>
+    </form>
+    
+    <div id="resultado"></div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const form = document.getElementById('testForm');
+        const resultado = document.getElementById('resultado');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            console.log('🚀 Iniciando teste de criação de boleto...');
+            
+            const formData = new FormData(form);
+            
+            // Mostra dados no console
+            console.log('📝 Dados do formulário:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+            
+            try {
+                resultado.style.display = 'none';
+                
+                console.log('📤 Enviando para:', `${API_URL}/boletos`);
+                
+                const response = await fetch(`${API_URL}/boletos`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Usuario-Id': '1' // ID de teste
+                    },
+                    body: formData
+                });
+                
+                console.log('📥 Status da resposta:', response.status);
+                
+                const responseText = await response.text();
+                console.log('📥 Resposta (texto):', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                    console.log('📥 Resposta (JSON):', data);
+                } catch {
+                    throw new Error('Resposta não é JSON válido: ' + responseText);
+                }
+                
+                if (response.ok) {
+                    resultado.className = 'sucesso';
+                    resultado.innerHTML = `
+                        <strong>✅ SUCESSO!</strong><br>
+                        Boleto criado com ID: ${data.boleto?.id || 'N/A'}<br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    form.reset();
+                } else {
+                    throw new Error(data.message || 'Erro desconhecido');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                resultado.className = 'erro';
+                resultado.innerHTML = `
+                    <strong>❌ ERRO!</strong><br>
+                    ${error.message}<br>
+                    <small>Veja o console do navegador para mais detalhes (F12)</small>
+                `;
+            } finally {
+                resultado.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

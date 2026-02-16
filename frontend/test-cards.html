@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Cards de Resumo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .card-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            color: #333;
+        }
+        
+        .card--total .card-value { color: #2196F3; }
+        .card--pago .card-value { color: #4CAF50; }
+        .card--juros .card-value { color: #FF9800; }
+        .card--economia .card-value { color: #9C27B0; }
+        
+        .btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: block;
+            margin: 30px auto;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .log-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-success { color: #4CAF50; }
+        .log-error { color: #f44336; }
+        .log-info { color: #2196F3; }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Teste de Cards de Resumo</h1>
+        
+        <div class="cards-grid">
+            <div class="card card--total">
+                <div class="card-icon">💳</div>
+                <div class="card-label">Total de Boletos do Mês</div>
+                <div class="card-value" id="totalMes">R$ 0,00</div>
+            </div>
+            
+            <div class="card card--pago">
+                <div class="card-icon">✅</div>
+                <div class="card-label">Pago em Dia</div>
+                <div class="card-value" id="pagoEmDia">R$ 0,00</div>
+            </div>
+            
+            <div class="card card--juros">
+                <div class="card-icon">⚠️</div>
+                <div class="card-label">Juros/Multa Pagos</div>
+                <div class="card-value" id="jurosPagos">R$ 0,00</div>
+            </div>
+            
+            <div class="card card--economia">
+                <div class="card-icon">💸</div>
+                <div class="card-label">Economia</div>
+                <div class="card-value" id="economia">R$ 0,00</div>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="carregarResumo()">🔄 Atualizar Dados</button>
+        
+        <div class="log-box">
+            <div class="log-title">📋 Log de Atividades</div>
+            <div id="log"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        
+        function log(msg, tipo = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${tipo}`;
+            entry.textContent = `[${time}] ${msg}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        }
+        
+        async function carregarResumo() {
+            log('🔄 Buscando resumo financeiro...', 'info');
+            
+            try {
+                const url = `${API_URL}/boletos/resumo`;
+                log(`📤 URL: ${url}`, 'info');
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                log(`📥 Status: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`❌ Erro: ${errorText}`, 'error');
+                    throw new Error('Erro ao buscar resumo');
+                }
+                
+                const resumo = await response.json();
+                log('✅ Dados recebidos!', 'success');
+                log(`📊 Total de boletos: ${resumo.total_boletos}`, 'info');
+                log(`💰 Total: R$ ${parseFloat(resumo.total_mes).toFixed(2)}`, 'info');
+                log(`✅ Pago em dia: R$ ${parseFloat(resumo.pago_em_dia).toFixed(2)}`, 'success');
+                log(`⚠️ Juros: R$ ${parseFloat(resumo.juros_pagos).toFixed(2)}`, 'info');
+                log(`💸 Economia: R$ ${parseFloat(resumo.economia).toFixed(2)}`, 'success');
+                
+                // Atualiza os cards
+                document.getElementById('totalMes').textContent = `R$ ${parseFloat(resumo.total_mes).toFixed(2)}`;
+                document.getElementById('pagoEmDia').textContent = `R$ ${parseFloat(resumo.pago_em_dia).toFixed(2)}`;
+                document.getElementById('jurosPagos').textContent = `R$ ${parseFloat(resumo.juros_pagos).toFixed(2)}`;
+                document.getElementById('economia').textContent = `R$ ${parseFloat(resumo.economia).toFixed(2)}`;
+                
+                log('🎨 Cards atualizados com sucesso!', 'success');
+                
+            } catch (error) {
+                log(`❌ ERRO: ${error.message}`, 'error');
+            }
+        }
+        
+        // Carrega automaticamente ao abrir a página
+        window.onload = () => {
+            log('🚀 Página carregada, iniciando teste...', 'info');
+            setTimeout(() => carregarResumo(), 500);
+        };
+    </script>
+</body>
+</html>

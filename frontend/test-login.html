@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        input { padding: 8px; width: 300px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Teste de Login - API</h1>
+    
+    <div>
+        <label>Email:</label><br>
+        <input type="email" id="email" value="israel@gruposaborparaense.com.br">
+    </div>
+    
+    <div>
+        <label>Senha:</label><br>
+        <input type="password" id="senha" value="123456">
+    </div>
+    
+    <button onclick="testarLogin()">Testar Login</button>
+    
+    <div id="resultado"></div>
+    
+    <script>
+        async function testarLogin() {
+            const resultado = document.getElementById('resultado');
+            resultado.innerHTML = '<p>Testando...</p>';
+            
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+            
+            try {
+                console.log('Fazendo requisição para: http://localhost:5000/api/login');
+                console.log('Payload:', { email, senha: '***' });
+                
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, senha })
+                });
+                
+                console.log('Status:', response.status);
+                console.log('Headers:', [...response.headers.entries()]);
+                
+                const data = await response.json();
+                console.log('Resposta:', data);
+                
+                if (response.ok && data.id) {
+                    resultado.className = 'result success';
+                    resultado.innerHTML = `
+                        <h3>✅ Login Funcionando!</h3>
+                        <p><strong>ID:</strong> ${data.id}</p>
+                        <p><strong>Nome:</strong> ${data.nome}</p>
+                        <p><strong>Email:</strong> ${data.email}</p>
+                        <p><strong>Perfil:</strong> ${data.perfil}</p>
+                        <p><strong>Token:</strong> ${data.token.substring(0, 20)}...</p>
+                    `;
+                } else {
+                    resultado.className = 'result error';
+                    resultado.innerHTML = `
+                        <h3>❌ Erro no Login</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Erro:</strong> ${data.error || 'Erro desconhecido'}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erro completo:', error);
+                resultado.className = 'result error';
+                resultado.innerHTML = `
+                    <h3>❌ Erro de Conexão</h3>
+                    <p><strong>Erro:</strong> ${error.message}</p>
+                    <p><strong>Detalhes:</strong> Verifique o console (F12) para mais informações</p>
+                    <p><strong>Possíveis causas:</strong></p>
+                    <ul>
+                        <li>Servidor Laravel não está rodando em http://localhost:5000</li>
+                        <li>Problema de CORS</li>
+                        <li>Erro de rede</li>
+                    </ul>
+                `;
+            }
+        }
+        
+        // Testa automaticamente ao carregar
+        window.addEventListener('load', () => {
+            console.log('Página de teste carregada');
+            console.log('API URL esperada: http://localhost:5000');
+        });
+    </script>
+</body>
+</html>
+
+
+

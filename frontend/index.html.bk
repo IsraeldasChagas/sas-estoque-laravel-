@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grupo Sabor Paraense</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="imagens/favicon.png" />
+  </head>
+  <body>
+    <!-- Tela exibida antes do usuario se autenticar -->
+    <div id="loginOverlay" class="login-overlay">
+      <canvas id="matrixCanvas" class="matrix-canvas" aria-hidden="true"></canvas>
+      <div class="login-container">
+        <!-- Coluna com a identidade visual da aplicacao -->
+        <section class="login-hero">
+          <div class="login-hero__badge">Gestão inteligente de estoque</div>
+          <img src="imagens/logo.png" alt="SAS Estoque" class="login-hero__logo" />
+          <h1>Bem-vindo ao SAS Estoque</h1>
+          <p>Organize, monitore e tome decisões rápidas com o painel integrado do Grupo Sabor Paraense.</p>
+        </section>
+        <!-- Coluna com o formulario de credenciais -->
+        <section class="login-panel">
+          <header class="login-panel__header">
+            <h2>Acesse sua conta</h2>
+            <p>Use suas credenciais corporativas para continuar.</p>
+          </header>
+          <form id="loginForm" class="login-form" onsubmit="console.log('Formulário submetido!'); return true;">
+            <label class="login-field">
+              <span>Email</span>
+              <input type="email" id="loginEmail" placeholder="exemplo@empresa.com" required />
+            </label>
+            <label class="login-field">
+              <span>Senha</span>
+              <div class="login-field__input-wrapper">
+                <input type="password" id="loginPassword" placeholder="Digite sua senha" required />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-target="loginPassword"
+                  aria-label="Mostrar senha"
+                  aria-pressed="false"
+                >
+                  <svg class="password-toggle__icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      class="password-toggle__eye-open"
+                      d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <circle
+                      class="password-toggle__eye-open"
+                      cx="12"
+                      cy="12"
+                      r="3"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                    <path
+                      class="password-toggle__eye-closed"
+                      d="M4 4l16 16"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </label>
+            <button type="submit" class="btn primary login-submit">
+              Entrar no painel
+            </button>
+          </form>
+          <footer class="login-panel__footer">
+            <span>Precisa de ajuda? Contate o suporte TI.</span>
+            <small>Desenvolvido pelo Grupo Sabor Paraense</small>
+          </footer>
+        </section>
+      </div>
+    </div>
+
+    <!-- Estrutura principal exibida apos o login -->
+    <div class="app-shell hidden" id="appShell">
+      <!-- Barra lateral com navegacao e atalhos -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+          <img src="imagens/logo.png" alt="SAS Estoque" />
+        </div>
+        <nav>
+          <a href="#" class="nav-link active" data-section="dashboard">Dashboard</a>
+          <a href="#" class="nav-link" data-section="unidades">Unidades</a>
+          <a href="#" class="nav-link" data-section="usuarios">Usuarios</a>
+          <a href="#" class="nav-link" data-section="produtos">Produtos</a>
+          <a href="#" class="nav-link" data-section="estoque">Consulta Estoque</a>
+          <a href="#" class="nav-link" data-section="lotes">Lotes</a>
+          <a href="#" class="nav-link" data-section="locais">Locais</a>
+          <a href="#" class="nav-link" data-section="movimentacoes">Movimentacoes</a>
+          <a href="#" class="nav-link" data-section="compras">Lista de Compras</a>
+          <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
+        </nav>
+      </aside>
+
+      <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+      <!-- Area principal de conteudo para cada modulo -->
+      <main class="main-content">
+        <!-- Barra superior com menu e botao de sair -->
+        <header class="topbar">
+          <div class="topbar__left">
+            <button type="button" id="menuToggle" class="topbar__menu-btn" aria-label="Abrir menu de navegação">
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+            <div class="user-info">
+              <div>
+                <strong id="userName">Visitante</strong>
+                <div id="userRole" class="user-info__meta">Responsavel</div>
+                <div id="userEmail" class="user-info__meta">visitante@empresa.com</div>
+              </div>
+            </div>
+          </div>
+          <button type="button" id="logoutBtn">Sair</button>
+        </header>
+
+        <!-- Container com as secoes funcionais - carregadas dinamicamente -->
+        <section class="content">
+          <!-- As telas serão carregadas aqui dinamicamente pelo router -->
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="entradaModal">
+      <div class="modal">
+        <header>
+          <h2>Registrar entrada</h2>
+          <button type="button" class="close-btn" id="closeEntrada" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="entradaForm">
+          <label>
+            Produto
+            <select name="produto_id" required></select>
+          </label>
+          <label>
+            Numero do lote
+            <input name="numero_lote" id="entradaNumeroLote" list="entradaLoteOptions" required />
+            <datalist id="entradaLoteOptions"></datalist>
+          </label>
+          <label>
+            Quantidade
+            <input name="qtd" type="number" step="0.001" min="0.001" required />
+          </label>
+          <label>
+            Unidade
+            <select name="unidade" required>
+              <option value="">Selecione</option>
+              <option>UND</option>
+              <option>G</option>
+              <option>KG</option>
+              <option>ML</option>
+              <option>L</option>
+              <option>PCT</option>
+              <option>CX</option>
+            </select>
+          </label>
+          <label>
+            Custo unitario
+            <input name="custo_unitario" id="entradaCustoUnitario" type="text" inputmode="decimal" required />
+          </label>
+          <label>
+            Data de validade
+            <input name="data_validade" type="date" />
+          </label>
+          <label>
+            Unidade
+            <select name="unidade_id" id="entradaUnidadeSelect" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Local
+            <select name="local_id" id="entradaLocalSelect" required>
+              <option value="">Selecione o local</option>
+            </select>
+          </label>
+          <label>
+            Motivo (opcional)
+            <textarea name="motivo" rows="2"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelEntrada">Limpar</button>
+            <button type="submit" class="btn danger">Registrar entrada</button>
+          </footer>
+        </form>
+              </div>
+              </div>
+
+    <div class="modal-backdrop" id="saidaModal">
+      <div class="modal">
+        <header>
+          <h2>Registrar saida</h2>
+          <button type="button" class="close-btn" id="closeSaida" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="saidaForm">
+          <label>
+            Unidade origem
+            <select name="de_unidade_id" id="saidaOrigemUnidade" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Produto
+            <select name="produto_id" id="saidaProdutoSelect" required disabled>
+              <option value="">Selecione a unidade de origem</option>
+            </select>
+          </label>
+          <label>
+            Motivo da sa&iacute;da
+            <select name="motivo" id="saidaMotivo" required>
+              <option value="">Selecione um motivo</option>
+              <option value="PRODUCAO">Produ&ccedil;&atilde;o</option>
+              <option value="CONSUMO">Consumo</option>
+              <option value="PERDA">Perda</option>
+              <option value="TRANSFERENCIA">Transfer&ecirc;ncia entre unidades</option>
+            </select>
+          </label>
+          <div id="saidaDestinoWrapper" class="hidden">
+            <label>
+              Unidade destino
+              <select name="para_unidade_id" id="saidaDestinoUnidade">
+                <option value="">Selecione a unidade</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Quantidade
+            <input name="qtd" type="number" step="0.001" min="0.001" required />
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" name="forcar" value="true" />
+            Forcar uso se houver vencidos?
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelSaida">Limpar</button>
+            <button type="submit" class="btn danger">Registrar saida</button>
+          </footer>
+        </form>
+              </div>
+            </div>
+
+    <div class="modal-backdrop" id="localModal">
+      <div class="modal">
+        <header>
+          <h2>Novo local</h2>
+          <button type="button" class="close-btn" id="closeLocalModal" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="localForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome do local
+            <input name="nome" required />
+          </label>
+          <label>
+            Unidade
+            <select name="unidade_id" id="localUnidadeSelect" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Tipo de local
+            <select name="tipo" id="localTipoSelect" required>
+              <option value="">Selecione</option>
+              <option value="CAMARA_FRIA">Camara Fria</option>
+              <option value="FREEZER">Freezer</option>
+              <option value="GELADEIRA">Geladeira</option>
+              <option value="DEPOSITO">Deposito</option>
+              <option value="PRATELEIRA">Prateleira</option>
+              <option value="ESTOQUE_SECO">Estoque Seco</option>
+              <option value="COZINHA">Cozinha</option>
+              <option value="BAR">Bar</option>
+              <option value="OUTROS">Outros</option>
+            </select>
+          </label>
+          <label>
+            Temperatura media (Celsius)
+            <input name="temperatura_media" type="number" step="0.1" />
+          </label>
+          <label>
+            Localizacao fisica / descricao
+            <input name="descricao" />
+          </label>
+          <label>
+            Nivel de acesso
+            <select name="nivel_acesso" id="localNivelAcesso">
+              <option value="">Selecione</option>
+              <option value="TODOS">Todos</option>
+              <option value="COZINHA">Cozinha</option>
+              <option value="GERENTE">Gerente</option>
+              <option value="ADMINISTRATIVO">Administrativo</option>
+              <option value="RESTRITO">Restrito</option>
+            </select>
+          </label>
+          <label>
+            Data de cadastro
+            <input name="data_cadastro" type="date" />
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelLocal">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar local</button>
+          </footer>
+        </form>
+      </div>
+            </div>
+
+    <div class="modal-backdrop" id="loteModal">
+      <div class="modal">
+        <header>
+          <h2>Novo lote</h2>
+          <button type="button" class="close-btn" id="closeLote" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="loteForm">
+          <label>
+            Unidade
+            <select name="unidade_id" required>
+              <option value="">Selecione a unidade</option>
+            </select>
+          </label>
+          <label>
+            Produto
+            <select name="produto_id" required>
+              <option value="">Selecione o produto</option>
+            </select>
+          </label>
+          <label>
+            Codigo do lote
+            <input name="codigo_lote" placeholder="Informe o codigo" required />
+          </label>
+          <label>
+            Quantidade
+            <input name="quantidade" type="number" step="0.001" min="0.001" required />
+          </label>
+          <label>
+            Custo unitario
+            <input name="custo_unitario" id="loteCustoUnitario" type="text" inputmode="decimal" required />
+          </label>
+          <label>
+            Data de fabricacao
+            <input name="data_fabricacao" type="date" />
+          </label>
+          <label>
+            Data de validade
+            <input name="data_validade" type="date" />
+          </label>
+          <label>
+            Fornecedor
+            <input name="fornecedor" placeholder="Fornecedor" />
+          </label>
+          <label>
+            Nota fiscal
+            <input name="nota_fiscal" placeholder="Numero da nota fiscal" />
+          </label>
+          <label>
+            Localizacao
+            <input name="localizacao" placeholder="Localizacao interna" />
+          </label>
+          <label>
+            Status
+            <select name="status">
+              <option value="ATIVO">Ativo</option>
+              <option value="BLOQUEADO">Bloqueado</option>
+              <option value="VENCIDO">Vencido</option>
+              <option value="ESGOTADO">Esgotado</option>
+            </select>
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="2" placeholder="Observacoes adicionais"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelLote">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar lote</button>
+          </footer>
+        </form>
+                </div>
+              </div>
+
+    <!-- Area para mensagens toast -->
+    <div id="toast" class="toast"></div>
+
+    <div class="modal-backdrop" id="produtoModal">
+      <div class="modal">
+        <header>
+          <h2 id="produtoModalTitle">Cadastrar produto</h2>
+          <button type="button" class="close-btn" id="closeProduto" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="produtoForm">
+          <input type="hidden" name="id" />
+          <div id="produtoFormFeedback" class="form-feedback hidden"></div>
+          <label>
+            Nome
+            <input name="nome" required />
+          </label>
+          <label>
+            Categoria
+            <select name="categoria" required>
+              <option value="">Selecione</option>
+              <option value="CARNES">Carnes</option>
+              <option value="HORTIFRUTI">Hortifruti</option>
+              <option value="SECOS">Secos</option>
+              <option value="BEBIDAS">Bebidas</option>
+              <option value="LIMPEZA">Limpeza</option>
+              <option value="EMBALAGENS">Embalagens</option>
+              <option value="CONGELADOS">Congelados</option>
+              <option value="FRUTOS_DO_MAR">Frutos do mar</option>
+              <option value="PEIXES">Peixes</option>
+            </select>
+          </label>
+          <label>
+            Unidade base
+            <select name="unidade_base" required>
+              <option value="">Selecione</option>
+              <option value="UNN">UND</option>
+              <option value="G">G</option>
+              <option value="KG">KG</option>
+              <option value="ML">ML</option>
+              <option value="L">L</option>
+              <option value="PCT">PCT</option>
+              <option value="CX">CX</option>
+            </select>
+          </label>
+          <label>
+            Unidade responsavel
+            <select name="unidade_id">
+              <option value="">Sem unidade</option>
+            </select>
+          </label>
+          <label>
+            Codigo interno
+            <input name="codigo_barras" readonly value="Gerado automaticamente" />
+          </label>
+          <label>
+            Descricao
+            <textarea name="descricao" rows="3"></textarea>
+          </label>
+          <div class="grid-two">
+            <label>
+              Custo medio
+              <input name="custo_medio" type="number" step="0.01" min="0" />
+            </label>
+            <label>
+              Estoque minimo
+              <input name="estoque_minimo" type="number" step="0.001" min="0" />
+            </label>
+          </div>
+          <label>
+            Status
+            <select name="ativo">
+              <option value="1">Ativo</option>
+              <option value="0">Inativo</option>
+            </select>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelProduto">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+                </div>
+              </div>
+
+    <div class="modal-backdrop" id="unidadeModal">
+      <div class="modal">
+        <header>
+          <h2 id="unidadeModalTitle">Cadastrar unidade</h2>
+          <button type="button" class="close-btn" id="closeUnidade" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="unidadeForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome
+            <input name="nome" required />
+          </label>
+          <label>
+            Endereco
+            <input name="endereco" />
+          </label>
+          <label>
+            CNPJ
+            <input name="cnpj" />
+          </label>
+          <label>
+            Gerente Responsavel
+            <select name="gerente_usuario_id">
+              <option value="">Selecione um usuario</option>
+            </select>
+          </label>
+          <label>
+            Telefone
+            <input name="telefone" />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" />
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelUnidade">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+            </div>
+    </div>
+
+    <div class="modal-backdrop" id="usuarioModal">
+      <div class="modal">
+        <header>
+          <h2 id="usuarioModalTitle">Cadastrar usuario</h2>
+          <button type="button" class="close-btn" id="closeUsuario" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="usuarioForm">
+          <input type="hidden" name="id" />
+          <div id="usuarioFormFeedback" class="form-feedback hidden"></div>
+          <div class="avatar-upload">
+            <div class="avatar-preview" id="usuarioAvatarPreview">
+              <span class="avatar-placeholder">?</span>
+            </div>
+            <div class="avatar-actions">
+              <label class="btn secondary" for="usuarioFotoInput">Escolher foto</label>
+              <input type="file" id="usuarioFotoInput" name="foto" accept=".png,.jpg,.jpeg" hidden />
+              <button type="button" class="btn secondary" id="usuarioFotoTrocar">Trocar</button>
+              <button type="button" class="btn danger" id="usuarioFotoRemover">Remover</button>
+            </div>
+            <small class="avatar-hint">Formatos: JPG ou PNG ate 2 MB.</small>
+          </div>
+          <label>
+            Nome completo
+            <input name="nome" required />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" required />
+          </label>
+          <div class="grid-two">
+            <label>
+              Senha
+              <input type="password" name="senha" />
+            </label>
+            <label>
+              Confirmar senha
+              <input type="password" name="confirmar_senha" />
+            </label>
+          </div>
+          <label>
+            Perfil
+            <select name="perfil" required>
+              <option value="">Selecione</option>
+              <option value="ADMIN">Administrador</option>
+              <option value="ESTOQUISTA">Estoquista</option>
+              <option value="COZINHA">Cozinha</option>
+              <option value="FINANCEIRO">Financeiro</option>
+              <option value="GERENTE">Gerente</option>
+              <option value="VISUALIZADOR">Visualizador</option>
+            </select>
+          </label>
+          <label>
+            Unidade
+            <select name="unidade_id">
+              <option value="">Sem unidade</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select name="ativo">
+              <option value="1">Ativo</option>
+              <option value="0">Inativo</option>
+            </select>
+          </label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelUsuario">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="listaCompraModal">
+      <div class="modal">
+        <header>
+          <h2 id="listaCompraModalTitle">Nova lista</h2>
+          <button type="button" class="close-btn" id="closeListaCompra" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="listaCompraForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome da lista
+            <input name="nome" required />
+          </label>
+          <label>
+            Unidade destino
+            <select name="unidade_id" required>
+              <option value="">Selecione</option>
+            </select>
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3" placeholder="Instrucoes gerais para a compra."></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelListaCompra">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="itemCompraModal">
+      <div class="modal">
+        <header>
+          <h2 id="itemCompraModalTitle">Adicionar item</h2>
+          <button type="button" class="close-btn" id="closeItemCompra" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="itemCompraForm">
+          <input type="hidden" name="id" />
+          <label>
+            Produto
+            <select name="produto_id" required></select>
+          </label>
+          <div class="grid-two">
+            <label>
+              Unidade
+              <input name="unidade" placeholder="Ex.: KG, UN" required />
+            </label>
+            <label>
+              Quantidade planejada
+              <input type="number" step="0.01" min="0" name="quantidade_planejada" required />
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              Quantidade comprada
+              <input type="number" step="0.01" min="0" name="quantidade_comprada" />
+            </label>
+            <label>
+              Valor unitario (R$)
+              <input type="number" step="0.01" min="0" name="valor_unitario" />
+            </label>
+          </div>
+          <label>
+            Valor total (R$)
+            <input type="number" step="0.01" min="0" name="valor_total" />
+          </label>
+          <label>
+            Estabelecimento
+            <select name="estabelecimento_id">
+              <option value="">Sem vinculo</option>
+            </select>
+          </label>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelItemCompra">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="estabelecimentoCompraModal">
+      <div class="modal">
+        <header>
+          <h2 id="estabelecimentoCompraModalTitle">Registrar estabelecimento</h2>
+          <button type="button" class="close-btn" id="closeEstabelecimentoCompra" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="estabelecimentoCompraForm">
+          <input type="hidden" name="id" />
+          <label>
+            Nome do local
+            <input name="nome" required />
+          </label>
+          <label>
+            Localizacao
+            <input name="localizacao" placeholder="Endereco, referencia ou coordenadas" />
+          </label>
+          <div class="grid-two">
+            <label>
+              Forma de pagamento
+              <input name="forma_pagamento" placeholder="Dinheiro, cartao, prazo..." />
+            </label>
+            <label>
+              Ativo
+              <select name="ativo">
+                <option value="1">Sim</option>
+                <option value="0">Nao</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              Latitude
+              <input name="latitude" placeholder="-1.463" />
+            </label>
+            <label>
+              Longitude
+              <input name="longitude" placeholder="-48.489" />
+            </label>
+          </div>
+          <label>
+            Observacoes
+            <textarea name="observacoes" rows="3"></textarea>
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelEstabelecimentoCompra">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="finalizarListaModal">
+      <div class="modal">
+        <header>
+          <h2>Finalizar lista</h2>
+          <button type="button" class="close-btn" id="closeFinalizarLista" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="finalizarListaForm">
+          <label>
+            Observacoes finais
+            <textarea name="observacoes" rows="3" placeholder="Resumo da compra, notas fiscais, destaques..."></textarea>
+          </label>
+          <label>
+            Anexar arquivos (fotos ou PDF)
+            <input type="file" name="anexos" accept=".png,.jpg,.jpeg,.pdf" multiple />
+          </label>
+          <footer>
+            <button type="button" class="btn" id="cancelFinalizarLista">Limpar</button>
+            <button type="submit" class="btn primary">Finalizar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
+    <script src="config.js"></script>
+    <!-- Script principal da aplicacao -->
+    <script src="app.js"></script>
+    <!-- Router para carregar as telas dinamicamente -->
+    <script src="src/routes/router.js"></script>
+     
+  </body>
+</html>

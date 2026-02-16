@@ -1,0 +1,86 @@
+<section id="unidadesSection" class="view-section hidden">
+  <div class="unidades-container">
+    <div class="actions">
+      <button class="btn primary" id="openUnidade">+ Nova Unidade</button>
+    </div>
+    <div class="form-card hidden" id="unidadeInlineCard">
+      <h3>Cadastrar nova unidade</h3>
+      <form id="unidadeInlineForm">
+        <input type="hidden" name="id" />
+        <div class="form-card__grid">
+          <label class="form-card__field full-width">
+            Nome
+            <input name="nome" placeholder="Unidade Matriz" required />
+          </label>
+          <label class="form-card__field full-width">
+            Endereco
+            <input name="endereco" placeholder="Rua, numero, bairro" />
+          </label>
+          <div class="form-card__row">
+            <label class="form-card__field">
+              CNPJ
+              <input name="cnpj" placeholder="00.000.000/0000-00" />
+            </label>
+            <label class="form-card__field">
+              Gerente responsavel
+              <select name="gerente_usuario_id">
+                <option value="">Selecione um usuario</option>
+              </select>
+            </label>
+          </div>
+        <div class="form-card__row">
+          <label class="form-card__field">
+            Telefone
+            <input name="telefone" placeholder="(00) 0000-0000" />
+          </label>
+          <label class="form-card__field">
+            Email
+            <input type="email" name="email" placeholder="contato@empresa.com" />
+          </label>
+          <label class="form-card__field">
+            Status
+            <select name="ativo">
+              <option value="1">Ativa</option>
+              <option value="0">Desativada</option>
+            </select>
+          </label>
+        </div>
+          <label class="form-card__field full-width">
+            Observacoes
+            <textarea name="observacoes" rows="3" placeholder="Observacoes internas, horarios, restricoes..."></textarea>
+          </label>
+        </div>
+        <footer class="form-card__actions">
+          <button type="button" class="btn neutral" id="cancelInlineUnidade">Limpar</button>
+          <button type="submit" class="btn primary">Salvar unidade</button>
+        </footer>
+      </form>
+    </div>
+    <div class="table-card form-card--wide">
+      <header>Unidades cadastradas</header>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Endereco</th>
+              <th>CNPJ</th>
+              <th>Gerente</th>
+              <th>Telefone</th>
+              <th>Email</th>
+              <th>Observacoes</th>
+              <th>Status</th>
+              <th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="unidadesTable">
+            <tr>
+              <td colspan="9" style="text-align: center; color: #607d8b">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+

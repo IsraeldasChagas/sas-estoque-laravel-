@@ -1,0 +1,4570 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
+
+// ============================================
+// AUTENTICAÇÃO
+// ============================================
+
+/**
+ * ⚠️ ROTA DE LOGIN - Autenticação de usuários ⚠️
+ * 
+ * ⚠️ CÓDIGO TESTADO E FUNCIONANDO - MODIFICAR COM CUIDADO ⚠️
+ * Esta rota foi reescrita com comentários detalhados e está funcionando corretamente.
+ * Se precisar modificar, teste cuidadosamente após as alterações.
+ * 
+ * Esta rota recebe email e senha, valida as credenciais e retorna
+ * os dados do usuário autenticado junto com um token de sessão.
+ * 
+ * @param Request $request - Contém 'email' e 'senha'
+ * @return JSON com dados do usuário ou erro
+ */
+Route::post('/login', function (Request $request) {
+    try {
+        // PASSO 1: Validação dos dados recebidos
+        // Verifica se email e senha foram enviados e se o email é válido
+        $request->validate([
+            'email' => 'required|email',  // Email obrigatório e formato válido
+            'senha' => 'required|string', // Senha obrigatória (string)
+        ]);
+
+        // PASSO 2: Busca o usuário no banco de dados
+        // Procura por email e verifica se o usuário está ativo
+        $usuario = DB::table('usuarios')
+            ->where('email', $request->email)  // Busca pelo email informado
+            ->where('ativo', 1)                 // Apenas usuários ativos podem fazer login
+            ->first();                          // Retorna o primeiro resultado ou null
+
+        // PASSO 3: Verifica se o usuário foi encontrado
+        // Se não encontrou, retorna erro genérico (por segurança, não revela se email existe)
+        if (!$usuario) {
+            return response()->json(['error' => 'Email ou senha incorretos'], 401)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+
+        // PASSO 4: Validação da senha
+        // Usa password_verify que funciona com todos os formatos de bcrypt ($2a$, $2b$, $2y$)
+        // Compara a senha informada com o hash armazenado no banco
+        $senhaValida = password_verify($request->senha, $usuario->senha_hash);
+        
+        // PASSO 5: Verifica se a senha está correta
+        // Se a senha não confere, retorna erro genérico (por segurança)
+        if (!$senhaValida) {
+            return response()->json(['error' => 'Email ou senha incorretos'], 401)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+
+        // PASSO 6: Geração do token de sessão
+        // Cria um token aleatório de 64 caracteres (32 bytes em hexadecimal)
+        // Este token pode ser usado para autenticação em requisições futuras
+        $token = bin2hex(random_bytes(32));
+
+        // PASSO 7: Retorna dados do usuário autenticado
+        // Retorna ID, nome, email, perfil e token de sessão
+        // Inclui headers CORS para permitir requisições do frontend
+        return response()->json([
+            'id' => $usuario->id,                                    // ID do usuário
+            'nome' => $usuario->nome,                                // Nome completo
+            'email' => $usuario->email,                              // Email
+            'perfil' => $usuario->perfil ?? 'VISUALIZADOR',         // Perfil (padrão: VISUALIZADOR)
+            'token' => $token,                                       // Token de sessão
+        ])->header('Access-Control-Allow-Origin', '*')              // Permite requisições de qualquer origem
+          ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')   // Métodos permitidos
+          ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers permitidos
+          
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // PASSO 8a: Tratamento de erro de validação
+        // Se os dados não passaram na validação (email inválido, campos faltando)
+        \Log::error('Erro de validação no login: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Dados inválidos',
+            'details' => $e->errors()
+        ], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+          ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+          ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            
+    } catch (\Exception $e) {
+        // PASSO 8b: Tratamento de erro genérico
+        // Captura qualquer outro erro (banco de dados, conexão, etc.)
+        \Log::error('Erro no login: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro interno do servidor'], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+/**
+ * ROTA OPTIONS - Preflight CORS
+ * 
+ * Esta rota é chamada automaticamente pelo navegador antes de requisições POST
+ * para verificar se o servidor permite a requisição (CORS preflight).
+ * 
+ * @return Resposta vazia com status 200 e headers CORS
+ */
+Route::options('/login', function () {
+    // Retorna resposta vazia com headers CORS permitindo a requisição
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')              // Permite qualquer origem
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS') // Métodos permitidos
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // Headers permitidos
+});
+
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok', 'message' => 'API funcionando']);
+});
+
+Route::get('/ping', function () {
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'API Laravel funcionando',
+        'timestamp' => now()->toDateTimeString(),
+        'database' => 'connected'
+    ]);
+});
+
+// ============================================
+// PRODUTOS
+// ============================================
+
+Route::get('/produtos', function (Request $request) {
+    try {
+        // Faz join com unidades para trazer o nome da unidade responsável
+        $query = DB::table('produtos')
+            ->leftJoin('unidades', 'produtos.unidade_id', '=', 'unidades.id')
+            ->select(
+                'produtos.*',
+                'unidades.nome as unidade_nome'  // Adiciona o nome da unidade
+            );
+        
+        $temUnidadeId = $request->has('unidade_id') && $request->unidade_id;
+        $temComEstoque = $request->has('com_estoque') && $request->com_estoque == '1';
+        
+        // Se tem unidade_id E com_estoque, busca produtos que têm estoque naquela unidade
+        // (mesmo que o produto pertença a outra unidade, se foi transferido)
+        if ($temUnidadeId && $temComEstoque) {
+            $unidadeId = $request->unidade_id;
+            // Busca produtos que têm estoque na unidade especificada (via stock_lotes)
+            $query->whereExists(function ($q) use ($unidadeId) {
+                $q->select(DB::raw(1))
+                  ->from('stock_lotes')
+                  ->whereColumn('stock_lotes.produto_id', 'produtos.id')
+                  ->where('stock_lotes.unidade_id', $unidadeId)
+                  ->where('stock_lotes.quantidade', '>', 0);
+            });
+        } 
+        // Se tem apenas unidade_id (sem com_estoque), busca produtos que pertencem àquela unidade
+        else if ($temUnidadeId) {
+            $query->where('produtos.unidade_id', $request->unidade_id);
+        }
+        // Se tem apenas com_estoque (sem unidade_id), busca produtos com estoque em qualquer unidade
+        else if ($temComEstoque) {
+            $query->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('stock_lotes')
+                  ->whereColumn('stock_lotes.produto_id', 'produtos.id')
+                  ->where('stock_lotes.quantidade', '>', 0);
+            });
+        }
+        
+        // Se não tiver filtro de unidade, retorna todos (quando ?todas=1)
+        if (!$request->has('unidade_id') || $request->has('todas')) {
+            // Retorna todos os produtos
+        }
+        
+        $produtos = $query->orderBy('produtos.nome')->get();
+        
+        // Garante que o campo 'ativo' existe e está no formato correto
+        $produtos = $produtos->map(function($produto) {
+            // Se ativo não existir, verifica se a coluna existe na tabela
+            if (!isset($produto->ativo)) {
+                // Tenta verificar se a coluna existe no banco
+                try {
+                    $schema = DB::select("SHOW COLUMNS FROM produtos LIKE 'ativo'");
+                    if (empty($schema)) {
+                        // Se a coluna não existir, assume que todos os produtos estão ativos
+                        $produto->ativo = 1;
+                    } else {
+                        // Se a coluna existir mas o valor for null, assume ativo
+                        $produto->ativo = 1;
+                    }
+                } catch (\Exception $e) {
+                    // Em caso de erro, assume que está ativo
+                    $produto->ativo = 1;
+                }
+            }
+            // Converte para inteiro se for string ou boolean
+            if (is_bool($produto->ativo)) {
+                $produto->ativo = $produto->ativo ? 1 : 0;
+            } else {
+                $produto->ativo = is_numeric($produto->ativo) ? (int)$produto->ativo : ($produto->ativo ? 1 : 0);
+            }
+            return $produto;
+        });
+        
+        return response()->json($produtos);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar produtos: ' . $e->getMessage());
+        return response()->json([], 200); // Retorna array vazio em caso de erro
+    }
+});
+
+Route::get('/produtos/{id}', function ($id) {
+    // Busca produto com join na tabela unidades para trazer o nome da unidade
+    $produto = DB::table('produtos')
+        ->leftJoin('unidades', 'produtos.unidade_id', '=', 'unidades.id')
+        ->select(
+            'produtos.*',
+            'unidades.nome as unidade_nome'  // Adiciona o nome da unidade
+        )
+        ->where('produtos.id', $id)
+        ->first();
+    
+    if (!$produto) {
+        return response()->json(['error' => 'Produto não encontrado'], 404);
+    }
+    return response()->json($produto);
+});
+
+Route::get('/produtos/{id}/estoque', function ($id) {
+    try {
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado'], 404);
+        }
+        
+        $estoquePorUnidade = DB::table('stock_lotes')
+            ->leftJoin('unidades', 'stock_lotes.unidade_id', '=', 'unidades.id')
+            ->select(
+                'stock_lotes.unidade_id',
+                'unidades.nome as unidade_nome',
+                DB::raw('SUM(stock_lotes.quantidade) as qtd_total'),
+                DB::raw('AVG(stock_lotes.custo_unitario) as valor_unitario_medio'),
+                DB::raw('SUM(stock_lotes.quantidade * stock_lotes.custo_unitario) as valor_total'),
+                DB::raw('COUNT(DISTINCT stock_lotes.codigo_lote) as num_lotes')
+            )
+            ->where('stock_lotes.produto_id', $id)
+            ->where('stock_lotes.quantidade', '>', 0)
+            ->groupBy('stock_lotes.unidade_id', 'unidades.nome')
+            ->get();
+        
+        // Calcula totais
+        $qtdTotal = $estoquePorUnidade->sum('qtd_total');
+        $valorTotal = $estoquePorUnidade->sum('valor_total');
+        $valorUnitarioMedio = $qtdTotal > 0 ? ($valorTotal / $qtdTotal) : 0;
+        
+        // Formata os dados para o frontend
+        $estoquePorUnidadeFormatado = $estoquePorUnidade->map(function($item) {
+            return [
+                'unidade_id' => $item->unidade_id,
+                'unidade_nome' => $item->unidade_nome ?? 'N/A',
+                'qtd_total' => floatval($item->qtd_total ?? 0),
+                'valor_unitario_medio' => floatval($item->valor_unitario_medio ?? 0),
+                'valor_total' => floatval($item->valor_total ?? 0),
+                'num_lotes' => intval($item->num_lotes ?? 0)
+            ];
+        });
+        
+        return response()->json([
+            'produto' => [
+                'id' => $produto->id,
+                'nome' => $produto->nome,
+                'unidade_base' => $produto->unidade_base ?? 'UND'
+            ],
+            'estoque_por_unidade' => $estoquePorUnidadeFormatado,
+            'estoque_total' => [
+                'qtd_total' => floatval($qtdTotal),
+                'valor_total' => floatval($valorTotal),
+                'valor_unitario_medio' => floatval($valorUnitarioMedio)
+            ]
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar estoque do produto: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar estoque: ' . $e->getMessage()], 500);
+    }
+});
+
+Route::post('/produtos', function (Request $request) {
+    \Log::info('📦 POST /produtos - Requisição recebida', [
+        'payload' => $request->all()
+    ]);
+    
+    try {
+        $data = $request->validate([
+            'nome' => 'required|string',
+            'categoria' => 'required|string',
+            'unidade_base' => 'required|string',
+            'unidade_id' => 'nullable|integer',
+            'codigo_barras' => 'nullable|string',
+            'descricao' => 'nullable|string',
+            'custo_medio' => 'nullable|numeric',
+            'estoque_minimo' => 'nullable|numeric',
+            'ativo' => 'nullable|integer',
+        ]);
+        
+        \Log::info('✅ Dados validados:', $data);
+        
+        // Gera código_barras automaticamente se não fornecido
+        if (empty($data['codigo_barras'])) {
+            $data['codigo_barras'] = 'PROD-' . date('YmdHis') . '-' . rand(1000, 9999);
+            \Log::info('🔢 Código de barras gerado:', ['codigo' => $data['codigo_barras']]);
+        }
+        
+        $id = DB::table('produtos')->insertGetId($data);
+        \Log::info('💾 Produto salvo no banco', ['id' => $id]);
+        
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        \Log::info('✅ Produto retornado:', ['produto' => $produto]);
+        
+        return response()->json($produto, 201);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('❌ Erro de validação:', [
+            'errors' => $e->errors(),
+            'message' => $e->getMessage()
+        ]);
+        return response()->json([
+            'error' => 'Erro de validação',
+            'details' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('❌ Erro ao salvar produto:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json([
+            'error' => 'Erro ao salvar produto',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::put('/produtos/{id}', function (Request $request, $id) {
+    $data = $request->all();
+    DB::table('produtos')->where('id', $id)->update($data);
+    return response()->json(DB::table('produtos')->where('id', $id)->first());
+});
+
+// Rota para desativar/ativar produto (solução recomendada ao invés de excluir)
+Route::put('/produtos/{id}/desativar', function (Request $request, $id) {
+    try {
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Verifica se a coluna 'ativo' existe na tabela
+        $schema = DB::select("SHOW COLUMNS FROM produtos LIKE 'ativo'");
+        if (empty($schema)) {
+            // Se não existir, cria a coluna
+            DB::statement('ALTER TABLE produtos ADD COLUMN ativo TINYINT(1) DEFAULT 1');
+        }
+        
+        // Desativa o produto (ativo = 0)
+        DB::table('produtos')->where('id', $id)->update(['ativo' => 0]);
+        
+        \Log::info("Produto desativado: ID {$id} - {$produto->nome}");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Produto desativado com sucesso',
+            'produto' => DB::table('produtos')->where('id', $id)->first()
+        ], 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            
+    } catch (\Exception $e) {
+        \Log::error('Erro ao desativar produto: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao desativar produto',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+Route::put('/produtos/{id}/ativar', function (Request $request, $id) {
+    try {
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Verifica se a coluna 'ativo' existe na tabela
+        $schema = DB::select("SHOW COLUMNS FROM produtos LIKE 'ativo'");
+        if (empty($schema)) {
+            // Se não existir, cria a coluna
+            DB::statement('ALTER TABLE produtos ADD COLUMN ativo TINYINT(1) DEFAULT 1');
+        }
+        
+        // Ativa o produto (ativo = 1)
+        DB::table('produtos')->where('id', $id)->update(['ativo' => 1]);
+        
+        \Log::info("Produto ativado: ID {$id} - {$produto->nome}");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Produto ativado com sucesso',
+            'produto' => DB::table('produtos')->where('id', $id)->first()
+        ], 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            
+    } catch (\Exception $e) {
+        \Log::error('Erro ao ativar produto: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao ativar produto',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+Route::options('/produtos/{id}/remover', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+});
+
+Route::options('/produtos/{id}/desativar', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+});
+
+Route::options('/produtos/{id}/ativar', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+});
+
+Route::delete('/produtos/{id}/remover', function (Request $request, $id) {
+    try {
+        // Valida se o produto existe
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // ============================================
+        // VERIFICA TODAS AS CONEXÕES POSSÍVEIS
+        // ============================================
+        
+        // Verifica conexões em todas as tabelas relacionadas
+        $countMovimentacoes = DB::table('movimentacoes')->where('produto_id', $id)->count();
+        $countLotes = DB::table('lotes')->where('produto_id', $id)->count();
+        $countStock = DB::table('stock_lotes')->where('produto_id', $id)->count();
+        $countListas = DB::table('listas_itens')->where('produto_id', $id)->count();
+        
+        // Verifica se existe alguma conexão
+        $temConexoes = ($countMovimentacoes > 0 || $countLotes > 0 || $countStock > 0 || $countListas > 0);
+        
+        // Prepara aviso detalhado sobre as conexões
+        $avisos = [];
+        $detalhesExclusao = [];
+        $totalRegistros = 0;
+        
+        if ($countMovimentacoes > 0) {
+            $avisos[] = "⚠️ {$countMovimentacoes} movimentação(ões) de estoque";
+            $detalhesExclusao[] = "{$countMovimentacoes} movimentação(ões)";
+            $totalRegistros += $countMovimentacoes;
+        }
+        
+        if ($countLotes > 0) {
+            $avisos[] = "⚠️ {$countLotes} lote(s) cadastrado(s)";
+            $detalhesExclusao[] = "{$countLotes} lote(s)";
+            $totalRegistros += $countLotes;
+        }
+        
+        if ($countStock > 0) {
+            $avisos[] = "⚠️ {$countStock} registro(s) de estoque";
+            $detalhesExclusao[] = "{$countStock} registro(s) de estoque";
+            $totalRegistros += $countStock;
+        }
+        
+        if ($countListas > 0) {
+            $avisos[] = "⚠️ {$countListas} item(ns) em listas de compras";
+            $detalhesExclusao[] = "{$countListas} item(ns) de lista(s)";
+            $totalRegistros += $countListas;
+        }
+        
+        // ============================================
+        // EXCLUSÃO FORÇADA (SEMPRE PERMITE DELETAR)
+        // ============================================
+        
+        if ($temConexoes) {
+            \Log::warning("EXCLUSÃO FORÇADA do produto ID {$id} - {$produto->nome}. Produto possui conexões com outras telas!");
+            \Log::warning("Conexões encontradas: " . implode(', ', $detalhesExclusao));
+            
+            // Apaga registros relacionados em cascata (ordem correta para evitar problemas de foreign key)
+            
+            // 1. Apaga movimentações primeiro (podem referenciar lotes)
+            if ($countMovimentacoes > 0) {
+                $deletedMov = DB::table('movimentacoes')->where('produto_id', $id)->delete();
+                \Log::info("  ✓ {$deletedMov} movimentação(ões) apagada(s)");
+            }
+            
+            // 2. Apaga registros de estoque (stock_lotes)
+            if ($countStock > 0) {
+                $deletedStock = DB::table('stock_lotes')->where('produto_id', $id)->delete();
+                \Log::info("  ✓ {$deletedStock} registro(s) de estoque apagado(s)");
+            }
+            
+            // 3. Apaga lotes
+            if ($countLotes > 0) {
+                $deletedLotes = DB::table('lotes')->where('produto_id', $id)->delete();
+                \Log::info("  ✓ {$deletedLotes} lote(s) apagado(s)");
+            }
+            
+            // 4. Apaga itens de listas
+            if ($countListas > 0) {
+                $deletedListas = DB::table('listas_itens')->where('produto_id', $id)->delete();
+                \Log::info("  ✓ {$deletedListas} item(ns) de lista(s) apagado(s)");
+            }
+        }
+        
+        // Exclui o produto
+        DB::table('produtos')->where('id', $id)->delete();
+        
+        \Log::info("Produto excluído: ID {$id} - {$produto->nome}" . ($temConexoes ? ' (COM CONEXÕES - FORÇADO)' : ' (SEM CONEXÕES)'));
+        
+        // Retorna resposta com aviso se havia conexões
+        $response = [
+            'success' => true,
+            'message' => $temConexoes 
+                ? "Produto excluído com sucesso. ⚠️ ATENÇÃO: Foram apagados {$totalRegistros} registro(s) relacionados em cascata."
+                : 'Produto excluído com sucesso',
+            'produto_id' => $id,
+            'produto_nome' => $produto->nome
+        ];
+        
+        if ($temConexoes) {
+            $response['warning'] = true;
+            $response['avisos'] = $avisos;
+            $response['detalhes_exclusao'] = implode(', ', $detalhesExclusao);
+            $response['total_registros_apagados'] = $totalRegistros;
+            $response['conexoes_encontradas'] = [
+                'movimentacoes' => $countMovimentacoes,
+                'lotes' => $countLotes,
+                'estoque' => $countStock,
+                'listas' => $countListas
+            ];
+        }
+        
+        return response()->json($response, 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            
+    } catch (\Exception $e) {
+        \Log::error('Erro ao excluir produto: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        // Tenta identificar o problema específico
+        $errorMessage = $e->getMessage();
+        $isForeignKeyError = (strpos($errorMessage, 'foreign key constraint') !== false || 
+                             strpos($errorMessage, 'foreign key') !== false ||
+                             strpos($errorMessage, 'Cannot delete') !== false);
+        
+        if ($isForeignKeyError) {
+            // Se ainda houver erro de foreign key, tenta apagar tudo manualmente
+            try {
+                \Log::warning("Tentando exclusão manual devido a erro de foreign key...");
+                
+                // Tenta apagar tudo novamente em ordem mais agressiva
+                DB::table('movimentacoes')->where('produto_id', $id)->delete();
+                DB::table('stock_lotes')->where('produto_id', $id)->delete();
+                DB::table('lotes')->where('produto_id', $id)->delete();
+                DB::table('listas_itens')->where('produto_id', $id)->delete();
+                DB::table('produtos')->where('id', $id)->delete();
+                
+                \Log::info("Exclusão manual bem-sucedida após erro de foreign key");
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Produto excluído com sucesso (exclusão manual após erro de constraint)',
+                    'warning' => true
+                ], 200)
+                    ->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+                    
+            } catch (\Exception $e2) {
+                \Log::error('Erro na exclusão manual: ' . $e2->getMessage());
+            }
+        }
+        
+        return response()->json([
+            'error' => 'Erro ao excluir produto',
+            'message' => $errorMessage,
+            'details' => 'Verifique os logs do servidor para mais informações'
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+Route::delete('/produtos/{id}', function (Request $request, $id) {
+    // Rota alternativa - usa a mesma lógica de /remover (exclusão forçada com avisos)
+    try {
+        // Valida se o produto existe
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Verifica todas as conexões
+        $countMovimentacoes = DB::table('movimentacoes')->where('produto_id', $id)->count();
+        $countLotes = DB::table('lotes')->where('produto_id', $id)->count();
+        $countStock = DB::table('stock_lotes')->where('produto_id', $id)->count();
+        $countListas = DB::table('listas_itens')->where('produto_id', $id)->count();
+        
+        $temConexoes = ($countMovimentacoes > 0 || $countLotes > 0 || $countStock > 0 || $countListas > 0);
+        
+        $avisos = [];
+        $detalhesExclusao = [];
+        $totalRegistros = 0;
+        
+        if ($countMovimentacoes > 0) {
+            $avisos[] = "⚠️ {$countMovimentacoes} movimentação(ões)";
+            $detalhesExclusao[] = "{$countMovimentacoes} movimentação(ões)";
+            $totalRegistros += $countMovimentacoes;
+            DB::table('movimentacoes')->where('produto_id', $id)->delete();
+        }
+        
+        if ($countStock > 0) {
+            $avisos[] = "⚠️ {$countStock} registro(s) de estoque";
+            $detalhesExclusao[] = "{$countStock} registro(s) de estoque";
+            $totalRegistros += $countStock;
+            DB::table('stock_lotes')->where('produto_id', $id)->delete();
+        }
+        
+        if ($countLotes > 0) {
+            $avisos[] = "⚠️ {$countLotes} lote(s)";
+            $detalhesExclusao[] = "{$countLotes} lote(s)";
+            $totalRegistros += $countLotes;
+            DB::table('lotes')->where('produto_id', $id)->delete();
+        }
+        
+        if ($countListas > 0) {
+            $avisos[] = "⚠️ {$countListas} item(ns) em listas";
+            $detalhesExclusao[] = "{$countListas} item(ns) de lista(s)";
+            $totalRegistros += $countListas;
+            DB::table('listas_itens')->where('produto_id', $id)->delete();
+        }
+        
+        // Exclui o produto
+        DB::table('produtos')->where('id', $id)->delete();
+        
+        $response = [
+            'success' => true,
+            'message' => $temConexoes 
+                ? "Produto excluído com sucesso. ⚠️ ATENÇÃO: Foram apagados {$totalRegistros} registro(s) relacionados."
+                : 'Produto excluído com sucesso'
+        ];
+        
+        if ($temConexoes) {
+            $response['warning'] = true;
+            $response['avisos'] = $avisos;
+            $response['total_registros_apagados'] = $totalRegistros;
+        }
+        
+        return response()->json($response, 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            
+    } catch (\Exception $e) {
+        \Log::error('Erro ao excluir produto (rota alternativa): ' . $e->getMessage());
+        
+        // Tenta exclusão manual em caso de erro
+        try {
+            DB::table('movimentacoes')->where('produto_id', $id)->delete();
+            DB::table('stock_lotes')->where('produto_id', $id)->delete();
+            DB::table('lotes')->where('produto_id', $id)->delete();
+            DB::table('listas_itens')->where('produto_id', $id)->delete();
+            DB::table('produtos')->where('id', $id)->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Produto excluído com sucesso (exclusão manual)',
+                'warning' => true
+            ], 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        } catch (\Exception $e2) {
+            return response()->json([
+                'error' => 'Erro ao excluir produto',
+                'message' => $e->getMessage()
+            ], 500)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+    }
+});
+
+// ============================================
+// UNIDADES
+// ============================================
+
+// CORS preflight para rotas de unidades
+Route::options('/unidades', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/unidades/{id}', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::get('/unidades', function (Request $request) {
+    $query = DB::table('unidades')
+        ->leftJoin('usuarios', 'unidades.gerente_usuario_id', '=', 'usuarios.id')
+        ->select(
+            'unidades.*',
+            'usuarios.nome as gerente_nome'
+        );
+    
+    // Se não tiver filtro, retorna todas (quando ?todas=1)
+    $unidades = $query->orderBy('unidades.nome')->get();
+    return response()->json($unidades);
+});
+
+Route::get('/unidades/{id}', function ($id) {
+    $unidade = DB::table('unidades')
+        ->leftJoin('usuarios', 'unidades.gerente_usuario_id', '=', 'usuarios.id')
+        ->select(
+            'unidades.*',
+            'usuarios.nome as gerente_nome'
+        )
+        ->where('unidades.id', $id)
+        ->first();
+    if (!$unidade) {
+        return response()->json(['error' => 'Unidade não encontrada'], 404);
+    }
+    return response()->json($unidade);
+});
+
+Route::post('/unidades', function (Request $request) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem criar unidades'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    $data = $request->all();
+    $id = DB::table('unidades')->insertGetId($data);
+    return response()->json(DB::table('unidades')->where('id', $id)->first(), 201)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::put('/unidades/{id}', function (Request $request, $id) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem editar unidades'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    $data = $request->all();
+    DB::table('unidades')->where('id', $id)->update($data);
+    return response()->json(DB::table('unidades')->where('id', $id)->first())
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::delete('/unidades/{id}', function (Request $request, $id) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem excluir unidades'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    DB::table('unidades')->where('id', $id)->delete();
+    return response()->json(['message' => 'Unidade removida'])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::delete('/unidades/{id}/remover', function (Request $request, $id) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem excluir unidades'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    DB::table('unidades')->where('id', $id)->delete();
+    return response()->json(['message' => 'Unidade removida'])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// ============================================
+// USUÁRIOS
+// ============================================
+
+// CORS preflight para POST /usuarios
+Route::options('/usuarios', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// CORS preflight para PUT /usuarios/{id}
+Route::options('/usuarios/{id}', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, GET, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::get('/usuarios', function (Request $request) {
+    $usuarios = DB::table('usuarios')
+        ->leftJoin('unidades', 'usuarios.unidade_id', '=', 'unidades.id')
+        ->select(
+            'usuarios.*',
+            'unidades.nome as unidade_nome'
+        )
+        ->orderBy('usuarios.nome')
+        ->get();
+    // Remove senha_hash da resposta
+    $usuarios = $usuarios->map(function($u) {
+        unset($u->senha_hash);
+        return $u;
+    });
+    return response()->json($usuarios);
+});
+
+Route::get('/usuarios/{id}', function ($id) {
+    $usuario = DB::table('usuarios')
+        ->leftJoin('unidades', 'usuarios.unidade_id', '=', 'unidades.id')
+        ->select(
+            'usuarios.*',
+            'unidades.nome as unidade_nome'
+        )
+        ->where('usuarios.id', $id)
+        ->first();
+    if (!$usuario) {
+        return response()->json(['error' => 'Usuário não encontrado'], 404);
+    }
+    unset($usuario->senha_hash);
+    return response()->json($usuario);
+});
+
+Route::post('/usuarios', function (Request $request) {
+    try {
+        // Log para debug
+        \Log::info('POST /usuarios - Dados recebidos:', $request->all());
+        
+        // Obtém todos os dados do request (funciona com FormData e JSON)
+        $allData = $request->all();
+        
+        // Normaliza unidade_id antes da validação
+        if (isset($allData['unidade_id'])) {
+            if ($allData['unidade_id'] === '' || $allData['unidade_id'] === 'null' || $allData['unidade_id'] === null) {
+                $allData['unidade_id'] = null;
+                $request->merge(['unidade_id' => null]);
+            } else {
+                $allData['unidade_id'] = (int)$allData['unidade_id'];
+                $request->merge(['unidade_id' => $allData['unidade_id']]);
+            }
+        }
+        
+        // Validação dos campos obrigatórios
+        $rules = [
+            'nome' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'perfil' => 'required|string|max:50',
+            'senha' => 'required|string|min:6|max:255',
+        ];
+        
+        // Adiciona validação de unidade_id apenas se foi enviado e não for null
+        if (isset($allData['unidade_id']) && $allData['unidade_id'] !== null && $allData['unidade_id'] !== '') {
+            $rules['unidade_id'] = 'nullable|integer|exists:unidades,id';
+        } else {
+            // Se não foi enviado ou é null, permite nullable sem validação de exists
+            $rules['unidade_id'] = 'nullable';
+        }
+        
+        $validated = $request->validate($rules);
+
+        // Prepara os dados para inserção
+        $senhaLimpa = trim($validated['senha']);
+        if (strlen($senhaLimpa) < 6) {
+            return response()->json(['error' => 'A senha deve ter no mínimo 6 caracteres'], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+
+        $perfilNormalizado = strtoupper(trim($validated['perfil']));
+        
+        \Log::info('POST /usuarios - Perfil normalizado:', [
+            'perfil_original' => $validated['perfil'],
+            'perfil_normalizado' => $perfilNormalizado,
+            'is_bar' => $perfilNormalizado === 'BAR'
+        ]);
+        
+        // Validação específica para perfil BAR
+        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR'];
+        if (!in_array($perfilNormalizado, $perfisValidos)) {
+            \Log::warning('POST /usuarios - Perfil inválido:', ['perfil' => $perfilNormalizado]);
+            return response()->json(['error' => 'Perfil inválido: ' . $perfilNormalizado], 422)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        $data = [
+            'nome' => trim($validated['nome']),
+            'email' => trim($validated['email']),
+            'perfil' => $perfilNormalizado,
+            'senha_hash' => Hash::make($senhaLimpa),
+        ];
+
+        // Adiciona campo ativo apenas se fornecido
+        if (isset($allData['ativo'])) {
+            $data['ativo'] = $allData['ativo'] ? 1 : 0;
+        } else {
+            $data['ativo'] = 1; // Padrão: ativo
+        }
+
+        // Adiciona unidade_id se fornecido
+        if (isset($allData['unidade_id'])) {
+            // Se for string vazia, null ou "null", define como null
+            if ($allData['unidade_id'] === '' || $allData['unidade_id'] === 'null' || $allData['unidade_id'] === null) {
+                $data['unidade_id'] = null;
+            } else {
+                $data['unidade_id'] = (int)$allData['unidade_id'];
+            }
+        }
+
+        // Processa foto se fornecida
+        if ($request->hasFile('foto')) {
+            $foto = $request->file('foto');
+            $uploadDir = public_path('uploads/usuarios');
+            // Cria o diretório se não existir
+            if (!File::exists($uploadDir)) {
+                File::makeDirectory($uploadDir, 0755, true);
+            }
+            $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
+            $foto->move($uploadDir, $nomeArquivo);
+            $data['foto'] = 'uploads/usuarios/' . $nomeArquivo;
+        }
+
+        // Log dos dados que serão inseridos
+        \Log::info('POST /usuarios - Dados para inserção:', $data);
+        
+        // Insere no banco de dados com tratamento de erro específico
+        try {
+            $id = DB::table('usuarios')->insertGetId($data);
+        } catch (\Exception $e) {
+            \Log::error('POST /usuarios - Erro ao inserir no banco:', [
+                'error' => $e->getMessage(),
+                'data' => $data,
+                'perfil' => $perfilNormalizado
+            ]);
+            
+            // Se o erro for relacionado ao perfil, tenta corrigir
+            if (strpos($e->getMessage(), 'perfil') !== false || strpos($e->getMessage(), 'truncated') !== false) {
+                // Verifica se a coluna perfil precisa ser alterada
+                \Log::warning('POST /usuarios - Possível problema com coluna perfil no banco de dados');
+                return response()->json([
+                    'error' => 'Erro ao salvar perfil. A coluna perfil no banco de dados pode não aceitar o valor BAR. Verifique a estrutura da tabela.',
+                    'details' => $e->getMessage()
+                ], 500)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+            }
+            throw $e;
+        }
+        $usuario = DB::table('usuarios')->where('id', $id)->first();
+        
+        if (!$usuario) {
+            \Log::error('POST /usuarios - Erro: usuário não foi criado após insertGetId');
+            return response()->json(['error' => 'Erro ao criar usuário'], 500);
+        }
+        
+        \Log::info('POST /usuarios - Usuário criado com sucesso:', ['id' => $id]);
+        unset($usuario->senha_hash);
+        return response()->json($usuario, 201)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('POST /usuarios - Erro de validação:', $e->errors());
+        return response()->json([
+            'error' => 'Erro de validação',
+            'message' => $e->getMessage(),
+            'errors' => $e->errors()
+        ], 422)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('Erro ao criar usuário: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro ao criar usuário: ' . $e->getMessage()], 500)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+Route::put('/usuarios/{id}', function (Request $request, $id) {
+    try {
+        // Log para debug
+        \Log::info("PUT /usuarios/{$id} - Dados recebidos:", $request->all());
+        
+        // Verifica se o usuário existe
+        $usuarioExistente = DB::table('usuarios')->where('id', $id)->first();
+        if (!$usuarioExistente) {
+            \Log::warning("PUT /usuarios/{$id} - Usuário não encontrado");
+            return response()->json(['error' => 'Usuário não encontrado'], 404);
+        }
+
+        // Obtém todos os dados do request (funciona com FormData e JSON)
+        $allData = $request->all();
+        
+        // Normaliza unidade_id antes da validação
+        if (isset($allData['unidade_id'])) {
+            if ($allData['unidade_id'] === '' || $allData['unidade_id'] === 'null' || $allData['unidade_id'] === null) {
+                $allData['unidade_id'] = null;
+                $request->merge(['unidade_id' => null]);
+            } else {
+                $allData['unidade_id'] = (int)$allData['unidade_id'];
+                $request->merge(['unidade_id' => $allData['unidade_id']]);
+            }
+        }
+        
+        // Log detalhado para debug da senha
+        \Log::info("PUT /usuarios/{$id} - Dados brutos recebidos:", [
+            'has_senha_key' => $request->has('senha'),
+            'senha_value' => $request->has('senha') ? (strlen($request->input('senha')) > 0 ? '***presente***' : 'vazia') : 'não presente',
+            'all_keys' => array_keys($allData)
+        ]);
+
+        // Validação dos campos obrigatórios
+        $rules = [
+            'nome' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'perfil' => 'required|string|max:50',
+        ];
+        
+        // Adiciona validação de unidade_id apenas se foi enviado e não for null
+        if (isset($allData['unidade_id']) && $allData['unidade_id'] !== null && $allData['unidade_id'] !== '') {
+            $rules['unidade_id'] = 'nullable|integer|exists:unidades,id';
+        } else {
+            // Se não foi enviado ou é null, permite nullable sem validação de exists
+            $rules['unidade_id'] = 'nullable';
+        }
+        
+        $validated = $request->validate($rules);
+
+        // Prepara os dados para atualização
+        $perfilNormalizado = strtoupper(trim($validated['perfil']));
+        
+        \Log::info("PUT /usuarios/{$id} - Perfil normalizado:", [
+            'perfil_original' => $validated['perfil'],
+            'perfil_normalizado' => $perfilNormalizado,
+            'is_bar' => $perfilNormalizado === 'BAR'
+        ]);
+        
+        // Validação específica para perfil BAR
+        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR'];
+        if (!in_array($perfilNormalizado, $perfisValidos)) {
+            \Log::warning("PUT /usuarios/{$id} - Perfil inválido:", ['perfil' => $perfilNormalizado]);
+            return response()->json(['error' => 'Perfil inválido: ' . $perfilNormalizado], 422)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        $data = [
+            'nome' => trim($validated['nome']),
+            'email' => trim($validated['email']),
+            'perfil' => $perfilNormalizado,
+        ];
+
+        // Atualiza senha apenas se fornecida e não vazia
+        $senhaRecebida = isset($allData['senha']) ? trim($allData['senha']) : '';
+        \Log::info("PUT /usuarios/{$id} - Verificando senha:", [
+            'senhaPresente' => isset($allData['senha']),
+            'senhaNaoVazia' => !empty($senhaRecebida),
+            'tamanhoSenha' => strlen($senhaRecebida)
+        ]);
+        
+        if (!empty($senhaRecebida)) {
+            if (strlen($senhaRecebida) >= 6) {
+                $data['senha_hash'] = Hash::make($senhaRecebida);
+                \Log::info("PUT /usuarios/{$id} - Senha será atualizada (tamanho: " . strlen($senhaRecebida) . ")");
+            } else {
+                \Log::warning("PUT /usuarios/{$id} - Senha muito curta ({$senhaRecebida}), ignorando");
+                return response()->json(['error' => 'A senha deve ter no mínimo 6 caracteres'], 422)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+            }
+        } else {
+            \Log::info("PUT /usuarios/{$id} - Senha não fornecida, mantendo senha atual");
+        }
+
+        // Atualiza status ativo se fornecido
+        if (isset($allData['ativo'])) {
+            $data['ativo'] = $allData['ativo'] ? 1 : 0;
+        }
+
+        // Atualiza unidade_id se fornecido
+        if (isset($allData['unidade_id'])) {
+            // Se for string vazia, null ou "null", define como null
+            if ($allData['unidade_id'] === '' || $allData['unidade_id'] === 'null' || $allData['unidade_id'] === null) {
+                $data['unidade_id'] = null;
+            } else {
+                $data['unidade_id'] = (int)$allData['unidade_id'];
+            }
+        } else {
+            // Se não foi enviado, mantém o valor atual (não atualiza)
+            // Mas se quiser permitir remover unidade_id, pode definir como null aqui
+            // $data['unidade_id'] = null;
+        }
+
+        // Processa foto se fornecida
+        if ($request->hasFile('foto')) {
+            // Remove foto antiga se existir
+            if ($usuarioExistente->foto && file_exists(public_path($usuarioExistente->foto))) {
+                unlink(public_path($usuarioExistente->foto));
+            }
+            $foto = $request->file('foto');
+            $uploadDir = public_path('uploads/usuarios');
+            // Cria o diretório se não existir
+            if (!File::exists($uploadDir)) {
+                File::makeDirectory($uploadDir, 0755, true);
+            }
+            $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
+            $foto->move($uploadDir, $nomeArquivo);
+            $data['foto'] = 'uploads/usuarios/' . $nomeArquivo;
+        }
+
+        // Remove foto se solicitado
+        if (isset($allData['remove_foto']) && $allData['remove_foto'] == '1') {
+            if ($usuarioExistente->foto && file_exists(public_path($usuarioExistente->foto))) {
+                unlink(public_path($usuarioExistente->foto));
+            }
+            $data['foto'] = null;
+        }
+
+        // Remove campos que não devem ser atualizados
+        unset($data['confirmar_senha']);
+        unset($data['id']);
+        
+        // Log dos dados que serão atualizados
+        \Log::info("PUT /usuarios/{$id} - Dados para atualização:", $data);
+        
+        // Atualiza no banco de dados com tratamento de erro específico
+        try {
+            $updated = DB::table('usuarios')->where('id', $id)->update($data);
+        } catch (\Exception $e) {
+            \Log::error("PUT /usuarios/{$id} - Erro ao atualizar no banco:", [
+                'error' => $e->getMessage(),
+                'data' => $data,
+                'perfil' => $perfilNormalizado
+            ]);
+            
+            // Se o erro for relacionado ao perfil, tenta corrigir
+            if (strpos($e->getMessage(), 'perfil') !== false || strpos($e->getMessage(), 'truncated') !== false) {
+                // Verifica se a coluna perfil precisa ser alterada
+                \Log::warning("PUT /usuarios/{$id} - Possível problema com coluna perfil no banco de dados");
+                return response()->json([
+                    'error' => 'Erro ao salvar perfil. A coluna perfil no banco de dados pode não aceitar o valor BAR. Execute a migration para corrigir: php artisan migrate',
+                    'details' => $e->getMessage()
+                ], 500)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+            }
+            throw $e;
+        }
+        
+        \Log::info("PUT /usuarios/{$id} - Linhas afetadas: {$updated}");
+        
+        // Busca o usuário atualizado
+        $usuario = DB::table('usuarios')->where('id', $id)->first();
+        if (!$usuario) {
+            \Log::error("PUT /usuarios/{$id} - Erro: usuário não encontrado após update");
+            return response()->json(['error' => 'Erro ao atualizar usuário'], 500);
+        }
+        
+        \Log::info("PUT /usuarios/{$id} - Usuário atualizado com sucesso");
+        unset($usuario->senha_hash);
+        return response()->json($usuario)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error("PUT /usuarios/{$id} - Erro de validação:", $e->errors());
+        return response()->json([
+            'error' => 'Erro de validação',
+            'message' => $e->getMessage(),
+            'errors' => $e->errors()
+        ], 422)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar usuário: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro ao atualizar usuário: ' . $e->getMessage()], 500)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+Route::delete('/usuarios/{id}', function (Request $request, $id) {
+    try {
+        // ============================================
+        // 1) VERIFICAÇÃO DE AUTENTICAÇÃO
+        // ============================================
+        $usuarioId = $request->header('X-Usuario-Id');
+        if (!$usuarioId) {
+            return response()->json(['error' => 'Usuário não autenticado'], 401)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+        if (!$usuarioAutenticado) {
+            return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // ============================================
+        // 2) REGRA 1: APENAS ADMIN PODE EXCLUIR
+        // ============================================
+        $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+        if ($perfil !== 'ADMIN') {
+            return response()->json(['error' => 'Apenas administradores podem excluir usuários'], 403)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // ============================================
+        // 3) BUSCA O USUÁRIO ALVO
+        // ============================================
+        $usuarioAlvo = DB::table('usuarios')->where('id', $id)->first();
+        if (!$usuarioAlvo) {
+            return response()->json(['error' => 'Usuário não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // ============================================
+        // 4) REGRA 2: IMPEDIR EXCLUIR A SI MESMO
+        // ============================================
+        if ((int)$id === (int)$usuarioId) {
+            return response()->json(['error' => 'Você não pode excluir a si mesmo'], 403)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // ============================================
+        // 5) REGRA 3: IMPEDIR EXCLUIR ADMIN RAIZ/SISTEMA
+        // ============================================
+        $perfilAlvo = strtoupper(trim($usuarioAlvo->perfil ?? ''));
+        $idAlvo = (int)$id;
+        
+        // Bloqueia exclusão do usuário com ID = 1 (primeiro usuário/raiz)
+        if ($idAlvo === 1) {
+            return response()->json(['error' => 'Não é permitido excluir o usuário raiz do sistema (ID: 1)'], 403)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // Bloqueia exclusão se for SUPERADMIN (se existir esse perfil)
+        if ($perfilAlvo === 'SUPERADMIN') {
+            return response()->json(['error' => 'Não é permitido excluir usuários com perfil SUPERADMIN'], 403)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // Busca o menor ID com perfil ADMIN (considerado raiz)
+        $adminRaiz = DB::table('usuarios')
+            ->where('perfil', 'ADMIN')
+            ->orderBy('id', 'asc')
+            ->first();
+        
+        if ($adminRaiz && (int)$adminRaiz->id === $idAlvo) {
+            return response()->json(['error' => 'Não é permitido excluir o administrador raiz do sistema'], 403)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+        
+        // ============================================
+        // 6) EXECUTA EXCLUSÃO SEGURA EM TRANSACTION
+        // ============================================
+        DB::beginTransaction();
+        
+        try {
+            // 6.1) Verifica se existem movimentações
+            $qtdMovimentacoes = DB::table('movimentacoes')
+                ->where('usuario_id', $idAlvo)
+                ->count();
+            
+            $qtdMovimentacoesTransferidas = 0;
+            
+            // 6.2) Se existir movimentações, transfere para o ADMIN logado
+            if ($qtdMovimentacoes > 0) {
+                $qtdMovimentacoesTransferidas = DB::table('movimentacoes')
+                    ->where('usuario_id', $idAlvo)
+                    ->update(['usuario_id' => $usuarioId]);
+                
+                \Log::info("Exclusão de usuário: {$qtdMovimentacoesTransferidas} movimentações transferidas do usuário {$idAlvo} para o ADMIN {$usuarioId}");
+            }
+            
+            // 6.3) Salva informações do usuário ANTES de deletar (para o log)
+            $nomeUsuarioAlvo = $usuarioAlvo->nome ?? 'N/A';
+            $emailUsuarioAlvo = $usuarioAlvo->email ?? 'N/A';
+            $nomeAdmin = $usuarioAutenticado->nome ?? 'N/A';
+            
+            // 6.4) Registra auditoria (log) ANTES de deletar o usuário
+            if (Schema::hasTable('logs_usuarios')) {
+                DB::table('logs_usuarios')->insert([
+                    'ator_id' => $usuarioId,
+                    'alvo_id' => $idAlvo,
+                    'acao' => 'DELETE',
+                    'qtd_movimentacoes_transferidas' => $qtdMovimentacoesTransferidas,
+                    'observacoes' => "Usuário {$nomeUsuarioAlvo} ({$emailUsuarioAlvo}) DELETADO permanentemente do sistema pelo ADMIN {$nomeAdmin}",
+                    'created_at' => now(),
+                ]);
+            }
+            
+            // 6.5) DELETA o usuário do banco de dados (após transferir movimentações e registrar log)
+            // As movimentações já foram transferidas acima, então não há mais foreign key constraint
+            DB::table('usuarios')->where('id', $idAlvo)->delete();
+            
+            $acao = 'DELETE';
+            $mensagem = "Usuário removido permanentemente do sistema e do banco de dados";
+            
+            if ($qtdMovimentacoesTransferidas > 0) {
+                $mensagem .= ". {$qtdMovimentacoesTransferidas} movimentação(ões) transferida(s) para seu usuário ADMIN.";
+            }
+            
+            DB::commit();
+            
+            \Log::info("Usuário {$idAlvo} {$acao} com sucesso pelo ADMIN {$usuarioId}. Movimentações transferidas: {$qtdMovimentacoesTransferidas}");
+            
+            return response()->json([
+                'message' => $mensagem,
+                'acao' => $acao,
+                'qtd_movimentacoes_transferidas' => $qtdMovimentacoesTransferidas,
+            ])
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erro na transação de exclusão de usuário: ' . $e->getMessage());
+            throw $e;
+        }
+        
+    } catch (\Exception $e) {
+        \Log::error('Erro ao remover usuário: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao remover usuário: ' . $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+// ============================================
+// LOCAIS
+// ============================================
+
+// CORS preflight para rotas de locais
+Route::options('/locais', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/locais/{id}', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, PATCH, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::get('/locais', function () {
+    $locais = DB::table('locais')
+        ->leftJoin('unidades', 'locais.unidade_id', '=', 'unidades.id')
+        ->select('locais.*', 'unidades.nome as unidade_nome')
+        ->orderBy('locais.nome')
+        ->get();
+    return response()->json($locais);
+});
+
+Route::get('/locais/{id}', function ($id) {
+    $local = DB::table('locais')->where('id', $id)->first();
+    if (!$local) {
+        return response()->json(['error' => 'Local não encontrado'], 404);
+    }
+    return response()->json($local);
+});
+
+Route::post('/locais', function (Request $request) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem criar locais'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    $data = $request->all();
+    $id = DB::table('locais')->insertGetId($data);
+    return response()->json(DB::table('locais')->where('id', $id)->first(), 201)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::put('/locais/{id}', function (Request $request, $id) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem editar locais'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    $data = $request->all();
+    DB::table('locais')->where('id', $id)->update($data);
+    return response()->json(DB::table('locais')->where('id', $id)->first())
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::patch('/locais/{id}/status', function (Request $request, $id) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PATCH, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PATCH, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem alterar o status de locais'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PATCH, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    $data = $request->validate(['ativo' => 'required|boolean']);
+    DB::table('locais')->where('id', $id)->update(['ativo' => $data['ativo']]);
+    return response()->json(DB::table('locais')->where('id', $id)->first())
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PATCH, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::delete('/locais/{id}', function (Request $request, $id) {
+    // Verifica se o usuário está autenticado
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Busca o usuário que está fazendo a requisição
+    $usuarioAutenticado = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuarioAutenticado) {
+        return response()->json(['error' => 'Usuário autenticado não encontrado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    // Verifica se é ADMIN
+    $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem excluir locais'], 403)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    
+    DB::table('locais')->where('id', $id)->delete();
+    return response()->json(['message' => 'Local removido'])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// ============================================
+// LOTES
+// ============================================
+
+Route::get('/lotes', function (Request $request) {
+    $query = DB::table('lotes')
+        ->leftJoin('produtos', 'lotes.produto_id', '=', 'produtos.id')
+        ->leftJoin('unidades', 'lotes.unidade_id', '=', 'unidades.id')
+        ->leftJoin('locais', 'lotes.local_id', '=', 'locais.id')
+        ->select(
+            'lotes.*', 
+            'produtos.nome as produto_nome', 
+            'unidades.nome as unidade_nome',
+            'locais.nome as local_nome'
+        );
+    
+    if ($request->has('produto_id') && $request->produto_id) {
+        $query->where('lotes.produto_id', $request->produto_id);
+    }
+    
+    if ($request->has('unidade_id') && $request->unidade_id) {
+        $query->where('lotes.unidade_id', $request->unidade_id);
+    }
+    
+    if ($request->has('status') && $request->status) {
+        $query->where('lotes.ativo', $request->status == 'ATIVO' ? 1 : 0);
+    }
+    
+    if ($request->has('validade_de') && $request->validade_de) {
+        $query->where('lotes.data_validade', '>=', $request->validade_de);
+    }
+    
+    if ($request->has('validade_ate') && $request->validade_ate) {
+        $query->where('lotes.data_validade', '<=', $request->validade_ate);
+    }
+    
+    // Filtro de pesquisa (busca por código do lote ou nome do produto)
+    if ($request->has('pesquisa') && $request->pesquisa) {
+        $pesquisa = '%' . $request->pesquisa . '%';
+        $query->where(function($q) use ($pesquisa) {
+            $q->where('lotes.numero_lote', 'LIKE', $pesquisa)
+              ->orWhere('produtos.nome', 'LIKE', $pesquisa);
+        });
+    }
+    
+    $lotes = $query->orderBy('lotes.data_validade')->get();
+    
+    // Adiciona campos compatíveis com o frontend
+    $lotes = $lotes->map(function($lote) {
+        $lote->codigo_lote = $lote->numero_lote ?? null;
+        $lote->quantidade = $lote->qtd_atual ?? 0;
+        
+        // Calcula dias para vencer
+        if ($lote->data_validade) {
+            $dataValidade = \Carbon\Carbon::parse($lote->data_validade);
+            $hoje = \Carbon\Carbon::now()->startOfDay();
+            $diasParaVencer = $hoje->diffInDays($dataValidade, false);
+            $lote->dias_para_vencer = $diasParaVencer;
+        } else {
+            $lote->dias_para_vencer = null;
+        }
+        
+        // Calcula status baseado em ativo e validade
+        if (isset($lote->ativo) && $lote->ativo == 0) {
+            $lote->status = 'INATIVO';
+        } elseif ($lote->qtd_atual <= 0) {
+            $lote->status = 'ESGOTADO';
+        } elseif ($lote->data_validade && $lote->data_validade < now()->format('Y-m-d')) {
+            $lote->status = 'VENCIDO';
+        } else {
+            $lote->status = 'ATIVO';
+        }
+        return $lote;
+    });
+    
+    return response()->json($lotes);
+});
+
+Route::get('/lotes/stats', function () {
+    // Calcula lotes a vencer (15 dias) - baseado em data_validade e ativo
+    $dataLimite15 = now()->addDays(15)->format('Y-m-d');
+    $hoje = now()->format('Y-m-d');
+    
+    $lotesAVencer15 = DB::table('lotes')
+        ->where('data_validade', '<=', $dataLimite15)
+        ->where('data_validade', '>=', $hoje)
+        ->where('ativo', 1)
+        ->where('qtd_atual', '>', 0)
+        ->count();
+    
+    // Calcula lotes vencidos - baseado em data_validade
+    $lotesVencidos = DB::table('lotes')
+        ->where('data_validade', '<', $hoje)
+        ->where('ativo', 1)
+        ->where('qtd_atual', '>', 0)
+        ->count();
+    
+    // Calcula estatísticas por status dinâmico
+    $totalLotes = DB::table('lotes')->count();
+    $lotesAtivos = DB::table('lotes')
+        ->where('ativo', 1)
+        ->where('qtd_atual', '>', 0)
+        ->where(function($query) use ($hoje) {
+            $query->whereNull('data_validade')
+                  ->orWhere('data_validade', '>=', $hoje);
+        })
+        ->count();
+    
+    $lotesInativos = DB::table('lotes')
+        ->where('ativo', 0)
+        ->count();
+    
+    $lotesEsgotados = DB::table('lotes')
+        ->where('qtd_atual', '<=', 0)
+        ->where('ativo', 1)
+        ->count();
+    
+    return response()->json([
+        'status' => [
+            'ATIVO' => $lotesAtivos,
+            'INATIVO' => $lotesInativos,
+            'ESGOTADO' => $lotesEsgotados,
+            'VENCIDO' => $lotesVencidos
+        ],
+        'a_vencer' => $lotesAVencer15,
+        'vencidos' => $lotesVencidos,
+        'total' => $totalLotes
+    ]);
+});
+
+Route::get('/lotes/{id}', function ($id) {
+    // Busca lote com join nas tabelas produtos e unidades para trazer os nomes
+    $lote = DB::table('lotes')
+        ->leftJoin('produtos', 'lotes.produto_id', '=', 'produtos.id')
+        ->leftJoin('unidades', 'lotes.unidade_id', '=', 'unidades.id')
+        ->leftJoin('locais', 'lotes.local_id', '=', 'locais.id')
+        ->select(
+            'lotes.*',
+            'produtos.nome as produto_nome',
+            'unidades.nome as unidade_nome',
+            'locais.nome as local_nome'
+        )
+        ->where('lotes.id', $id)
+        ->first();
+    
+    if (!$lote) {
+        return response()->json(['error' => 'Lote não encontrado'], 404);
+    }
+    
+    // Adiciona campos compatíveis com o frontend
+    $lote->codigo_lote = $lote->numero_lote ?? null;
+    $lote->quantidade = $lote->qtd_atual ?? 0;
+    
+    return response()->json($lote);
+});
+
+Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
+    try {
+        // Validação de permissão: apenas ADMIN e GERENTE podem imprimir etiquetas
+        $usuarioId = $request->header('X-Usuario-Id');
+        if (!$usuarioId) {
+            return response()->json(['error' => 'Usuário não autenticado'], 401)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        $usuario = DB::table('usuarios')->where('id', $usuarioId)->first();
+        if (!$usuario) {
+            return response()->json(['error' => 'Usuário não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        $perfil = strtoupper(trim($usuario->perfil ?? ''));
+        // ADMIN, GERENTE e ESTOQUISTA podem imprimir etiquetas
+        if ($perfil !== 'ADMIN' && $perfil !== 'GERENTE' && $perfil !== 'ESTOQUISTA') {
+            return response()->json(['error' => 'Sem permissão para imprimir etiquetas'], 403)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        // Busca o lote com informações do produto
+        $lote = DB::table('lotes')
+            ->leftJoin('produtos', 'lotes.produto_id', '=', 'produtos.id')
+            ->leftJoin('unidades', 'lotes.unidade_id', '=', 'unidades.id')
+            ->select(
+                'lotes.*',
+                'produtos.nome as produto_nome',
+                'unidades.nome as unidade_nome'
+            )
+            ->where('lotes.id', $id)
+            ->first();
+        
+        if (!$lote) {
+            return response()->json(['error' => 'Lote não encontrado'], 404)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        // Gera URL do QR Code (aponta para detalhe do lote)
+        // Usa a URL base da aplicação - pode ser configurada via env ou usar a URL da requisição
+        $appUrl = env('APP_URL', $request->getSchemeAndHttpHost() . $request->getBasePath());
+        // Remove barra final se existir
+        $appUrl = rtrim($appUrl, '/');
+        // QR Code aponta para a seção de lotes (pode ser expandido para mostrar detalhe específico)
+        $qrUrl = $appUrl . '/#lotes?lote=' . $id;
+        
+        // Gera QR Code usando endroid/qr-code
+        try {
+            $qrCode = \Endroid\QrCode\Builder\Builder::create()
+                ->writer(new \Endroid\QrCode\Writer\PngWriter())
+                ->data($qrUrl)
+                ->size(150)
+                ->margin(10)
+                ->build();
+            
+            $qrCodeDataUri = 'data:image/png;base64,' . base64_encode($qrCode->getString());
+        } catch (\Exception $qrError) {
+            \Log::error('Erro ao gerar QR Code: ' . $qrError->getMessage());
+            // Se falhar, usa uma imagem placeholder ou continua sem QR Code
+            $qrCodeDataUri = 'data:image/svg+xml;base64,' . base64_encode('<svg width="150" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="150" height="150" fill="#f0f0f0"/><text x="75" y="75" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">QR Code</text></svg>');
+        }
+        
+        // Prepara dados para a etiqueta
+        $numeroLote = $lote->numero_lote ?? $lote->codigo_lote ?? 'N/A';
+        $produtoNome = $lote->produto_nome ?? 'Produto';
+        $dataValidade = $lote->data_validade ? date('d/m/Y', strtotime($lote->data_validade)) : null;
+        
+        // Gera HTML da etiqueta (tamanho: 50mm x 30mm)
+        $html = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                @page {
+                    size: 50mm 30mm;
+                    margin: 2mm;
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    font-size: 8pt;
+                    margin: 0;
+                    padding: 2mm;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                .etiqueta-info {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                .produto-nome {
+                    font-size: 7pt;
+                    color: #666;
+                    margin-bottom: 2px;
+                }
+                .numero-lote {
+                    font-size: 12pt;
+                    font-weight: bold;
+                    color: #000;
+                }
+                .validade {
+                    font-size: 8pt;
+                    color: #333;
+                    margin-top: 2px;
+                }
+                .qr-code {
+                    width: 22mm;
+                    height: 22mm;
+                    margin-left: 3mm;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="etiqueta-info">
+                <div class="produto-nome">' . htmlspecialchars($produtoNome) . '</div>
+                <div class="numero-lote">LOTE: ' . htmlspecialchars($numeroLote) . '</div>
+                ' . ($dataValidade ? '<div class="validade">VAL: ' . htmlspecialchars($dataValidade) . '</div>' : '') . '
+            </div>
+            <img src="' . $qrCodeDataUri . '" class="qr-code" alt="QR Code" />
+        </body>
+        </html>';
+        
+        // Gera PDF usando dompdf
+        try {
+            $dompdf = new \Dompdf\Dompdf();
+            
+            // Configurações do dompdf
+            $options = $dompdf->getOptions();
+            $options->set('isRemoteEnabled', true);
+            $options->set('isHtml5ParserEnabled', true);
+            $dompdf->setOptions($options);
+            
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper([0, 0, 141.732, 85.039], 'portrait'); // 50mm x 30mm em pontos (1mm = 2.83465 pontos)
+            $dompdf->render();
+            
+            \Log::info('PDF gerado com sucesso para lote ID: ' . $id);
+        } catch (\Exception $pdfError) {
+            \Log::error('Erro ao gerar PDF: ' . $pdfError->getMessage());
+            \Log::error('Stack trace PDF: ' . $pdfError->getTraceAsString());
+            throw $pdfError;
+        }
+        
+        // Registra log de impressão
+        try {
+            DB::table('logs_etiquetas')->insert([
+                'lote_id' => $id,
+                'usuario_id' => $usuarioId,
+                'acao' => 'imprimir_etiqueta',
+                'data_hora' => now(),
+            ]);
+        } catch (\Exception $e) {
+            // Se a tabela não existir, apenas loga o erro mas não falha
+            \Log::warning('Erro ao registrar log de etiqueta: ' . $e->getMessage());
+        }
+        
+        // Retorna PDF
+        $pdfOutput = $dompdf->output();
+        \Log::info('PDF gerado, tamanho: ' . strlen($pdfOutput) . ' bytes para lote ID: ' . $id);
+        
+        return response($pdfOutput, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="etiqueta-lote-' . $numeroLote . '.pdf"')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id')
+            ->header('Content-Length', strlen($pdfOutput));
+            
+    } catch (\Exception $e) {
+        \Log::error('Erro ao gerar etiqueta: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro ao gerar etiqueta: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+// Rota OPTIONS para CORS preflight
+Route::options('/lotes/{id}/etiqueta.pdf', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::post('/lotes', function (Request $request) {
+    try {
+        $data = $request->validate([
+            'produto_id' => 'required|integer|exists:produtos,id',
+            'unidade_id' => 'required|integer|exists:unidades,id',
+            'codigo_lote' => 'required|string|max:255',
+            'quantidade' => 'required|numeric|min:0.001',
+            'custo_unitario' => 'required|numeric|min:0',
+            'data_fabricacao' => 'nullable|date',
+            'data_validade' => 'nullable|date',
+            'local_id' => 'nullable|integer|exists:locais,id',
+        ]);
+        
+        // Busca o produto para pegar unidade_base
+        $produto = DB::table('produtos')->where('id', $data['produto_id'])->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado'], 404);
+        }
+        
+        // Mapeia unidade_base para o enum da tabela
+        $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
+        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        if (!in_array($unidadeBase, $unidadesValidas)) {
+            $unidadeBase = 'UND'; // Padrão se não for válido
+        }
+        
+        // Busca ou cria um local padrão se não informado
+        $localId = $data['local_id'] ?? null;
+        if (!$localId) {
+            $localPadrao = DB::table('locais')->where('unidade_id', $data['unidade_id'])->first();
+            if ($localPadrao) {
+                $localId = $localPadrao->id;
+            } else {
+                // Cria um local padrão se não existir nenhum
+                $localId = DB::table('locais')->insertGetId([
+                    'nome' => 'Depósito Principal',
+                    'unidade_id' => $data['unidade_id'],
+                    'tipo' => 'DEPOSITO',
+                    'ativo' => 1,
+                ]);
+            }
+        }
+        
+        // Prepara dados para inserção na tabela lotes
+        $insertData = [
+            'produto_id' => $data['produto_id'],
+            'unidade_id' => $data['unidade_id'],
+            'numero_lote' => trim($data['codigo_lote']),
+            'qtd_atual' => floatval($data['quantidade']),
+            'unidade' => $unidadeBase,
+            'custo_unitario' => floatval($data['custo_unitario']),
+            'data_fabricacao' => $data['data_fabricacao'] ?? null,
+            'data_validade' => $data['data_validade'] ?? null,
+            'local_id' => $localId,
+            'ativo' => 1, // Sempre cria como ativo
+            'criado_em' => now(),
+        ];
+        
+        $id = DB::table('lotes')->insertGetId($insertData);
+        
+        // Cria registro em stock_lotes para controle de estoque
+        DB::table('stock_lotes')->insert([
+            'produto_id' => $data['produto_id'],
+            'unidade_id' => $data['unidade_id'],
+            'codigo_lote' => trim($data['codigo_lote']),
+            'quantidade' => floatval($data['quantidade']),
+            'custo_unitario' => floatval($data['custo_unitario']),
+            'data_fabricacao' => $data['data_fabricacao'] ?? null,
+            'data_validade' => $data['data_validade'] ?? null,
+        ]);
+        
+        // Retorna o lote criado com joins
+        $lote = DB::table('lotes')
+            ->leftJoin('produtos', 'lotes.produto_id', '=', 'produtos.id')
+            ->leftJoin('unidades', 'lotes.unidade_id', '=', 'unidades.id')
+            ->leftJoin('locais', 'lotes.local_id', '=', 'locais.id')
+            ->select(
+                'lotes.*',
+                'produtos.nome as produto_nome',
+                'unidades.nome as unidade_nome',
+                'locais.nome as local_nome'
+            )
+            ->where('lotes.id', $id)
+            ->first();
+        
+        // Adiciona campos compatíveis com o frontend
+        $lote->codigo_lote = $lote->numero_lote;
+        $lote->quantidade = $lote->qtd_atual;
+        
+        return response()->json($lote, 201);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'error' => 'Erro de validação',
+            'messages' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Erro ao cadastrar lote: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::put('/lotes/{id}', function (Request $request, $id) {
+    try {
+        $data = $request->validate([
+            'produto_id' => 'sometimes|required|integer|exists:produtos,id',
+            'unidade_id' => 'sometimes|required|integer|exists:unidades,id',
+            'codigo_lote' => 'sometimes|required|string|max:255',
+            'quantidade' => 'sometimes|required|numeric|min:0.001',
+            'custo_unitario' => 'sometimes|required|numeric|min:0',
+            'data_fabricacao' => 'nullable|date',
+            'data_validade' => 'nullable|date',
+            'local_id' => 'nullable|integer|exists:locais,id',
+            'ativo' => 'sometimes|integer|in:0,1',
+        ]);
+        
+        // Verifica se o lote existe
+        $loteExiste = DB::table('lotes')->where('id', $id)->first();
+        if (!$loteExiste) {
+            return response()->json(['error' => 'Lote não encontrado'], 404);
+        }
+        
+        // Prepara dados para atualização mapeando campos do frontend para a tabela
+        $updateData = [];
+        
+        if (isset($data['produto_id'])) {
+            $updateData['produto_id'] = $data['produto_id'];
+            // Se mudou o produto, precisa atualizar a unidade também
+            $produto = DB::table('produtos')->where('id', $data['produto_id'])->first();
+            if ($produto) {
+                $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
+                $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+                if (in_array($unidadeBase, $unidadesValidas)) {
+                    $updateData['unidade'] = $unidadeBase;
+                }
+            }
+        }
+        
+        if (isset($data['unidade_id'])) {
+            $updateData['unidade_id'] = $data['unidade_id'];
+        }
+        
+        if (isset($data['codigo_lote'])) {
+            $updateData['numero_lote'] = trim($data['codigo_lote']);
+        }
+        
+        if (isset($data['quantidade'])) {
+            $updateData['qtd_atual'] = floatval($data['quantidade']);
+        }
+        
+        if (isset($data['custo_unitario'])) {
+            $updateData['custo_unitario'] = floatval($data['custo_unitario']);
+        }
+        
+        if (isset($data['data_fabricacao'])) {
+            $updateData['data_fabricacao'] = $data['data_fabricacao'];
+        }
+        
+        if (isset($data['data_validade'])) {
+            $updateData['data_validade'] = $data['data_validade'];
+        }
+        
+        if (isset($data['local_id'])) {
+            $updateData['local_id'] = $data['local_id'];
+        }
+        
+        // Suporta ativo (para ativar/desativar)
+        if (isset($data['ativo'])) {
+            $updateData['ativo'] = $data['ativo'] == 1 || $data['ativo'] === '1' || $data['ativo'] === true ? 1 : 0;
+        }
+        
+        if (!empty($updateData)) {
+            DB::table('lotes')->where('id', $id)->update($updateData);
+        }
+        
+        // Prepara dados para atualização em stock_lotes
+        $stockUpdateData = [];
+        
+        if (isset($data['produto_id'])) {
+            $stockUpdateData['produto_id'] = $data['produto_id'];
+        }
+        
+        if (isset($data['unidade_id'])) {
+            $stockUpdateData['unidade_id'] = $data['unidade_id'];
+        }
+        
+        if (isset($data['codigo_lote'])) {
+            $stockUpdateData['codigo_lote'] = trim($data['codigo_lote']);
+        }
+        
+        if (isset($data['quantidade'])) {
+            $stockUpdateData['quantidade'] = floatval($data['quantidade']);
+        }
+        
+        if (isset($data['custo_unitario'])) {
+            $stockUpdateData['custo_unitario'] = floatval($data['custo_unitario']);
+        }
+        
+        if (isset($data['data_fabricacao'])) {
+            $stockUpdateData['data_fabricacao'] = $data['data_fabricacao'];
+        }
+        
+        if (isset($data['data_validade'])) {
+            $stockUpdateData['data_validade'] = $data['data_validade'];
+        }
+        
+        // Atualiza stock_lotes se houver campos para atualizar
+        if (!empty($stockUpdateData)) {
+            // Busca o código do lote atual para localizar o registro em stock_lotes
+            $codigoLoteAtual = isset($data['codigo_lote']) ? trim($data['codigo_lote']) : $loteExiste->numero_lote;
+            
+            // Atualiza ou cria registro em stock_lotes
+            $stockExiste = DB::table('stock_lotes')
+                ->where('codigo_lote', $codigoLoteAtual)
+                ->where('produto_id', $loteExiste->produto_id)
+                ->where('unidade_id', $loteExiste->unidade_id)
+                ->first();
+            
+            if ($stockExiste) {
+                DB::table('stock_lotes')
+                    ->where('id', $stockExiste->id)
+                    ->update($stockUpdateData);
+            } else {
+                // Se não existe, cria o registro em stock_lotes
+                DB::table('stock_lotes')->insert([
+                    'produto_id' => $loteExiste->produto_id,
+                    'unidade_id' => $loteExiste->unidade_id,
+                    'codigo_lote' => $codigoLoteAtual,
+                    'quantidade' => $loteExiste->qtd_atual,
+                    'custo_unitario' => $loteExiste->custo_unitario,
+                    'data_fabricacao' => $loteExiste->data_fabricacao,
+                    'data_validade' => $loteExiste->data_validade,
+                ]);
+            }
+        }
+        
+        // Retorna o lote atualizado com joins
+        $lote = DB::table('lotes')
+            ->leftJoin('produtos', 'lotes.produto_id', '=', 'produtos.id')
+            ->leftJoin('unidades', 'lotes.unidade_id', '=', 'unidades.id')
+            ->leftJoin('locais', 'lotes.local_id', '=', 'locais.id')
+            ->select(
+                'lotes.*',
+                'produtos.nome as produto_nome',
+                'unidades.nome as unidade_nome',
+                'locais.nome as local_nome'
+            )
+            ->where('lotes.id', $id)
+            ->first();
+        
+        // Adiciona campos compatíveis com o frontend
+        $lote->codigo_lote = $lote->numero_lote ?? null;
+        $lote->quantidade = $lote->qtd_atual ?? 0;
+        
+        // Calcula dias para vencer
+        if ($lote->data_validade) {
+            $dataValidade = \Carbon\Carbon::parse($lote->data_validade);
+            $hoje = \Carbon\Carbon::now()->startOfDay();
+            $diasParaVencer = $hoje->diffInDays($dataValidade, false);
+            $lote->dias_para_vencer = $diasParaVencer;
+        } else {
+            $lote->dias_para_vencer = null;
+        }
+        
+        // Calcula status baseado em ativo e validade
+        if (isset($lote->ativo) && $lote->ativo == 0) {
+            $lote->status = 'INATIVO';
+        } elseif ($lote->qtd_atual <= 0) {
+            $lote->status = 'ESGOTADO';
+        } elseif ($lote->data_validade && $lote->data_validade < now()->format('Y-m-d')) {
+            $lote->status = 'VENCIDO';
+        } else {
+            $lote->status = 'ATIVO';
+        }
+        
+        return response()->json($lote);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Erro de validação ao atualizar lote: ' . json_encode($e->errors()));
+        return response()->json([
+            'error' => 'Erro de validação',
+            'messages' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar lote: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao atualizar lote: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::delete('/lotes/{id}', function ($id) {
+    DB::table('lotes')->where('id', $id)->delete();
+    return response()->json(['message' => 'Lote removido']);
+});
+
+// ============================================
+// MOVIMENTAÇÕES
+// ============================================
+
+Route::get('/movimentacoes', function (Request $request) {
+    try {
+        $query = DB::table('movimentacoes')
+            ->leftJoin('produtos', 'movimentacoes.produto_id', '=', 'produtos.id')
+            ->leftJoin('unidades as unidades_origem', 'movimentacoes.de_unidade_id', '=', 'unidades_origem.id')
+            ->leftJoin('unidades as unidades_destino', 'movimentacoes.para_unidade_id', '=', 'unidades_destino.id')
+            ->leftJoin('usuarios', 'movimentacoes.usuario_id', '=', 'usuarios.id')
+            ->select(
+                'movimentacoes.*',
+                'produtos.nome as produto_nome',
+                'unidades_origem.nome as unidade_nome',
+                'unidades_origem.nome as unidade_origem_nome',
+                'unidades_destino.nome as unidade_destino_nome',
+                'usuarios.nome as responsavel_nome'
+            );
+        
+        if ($request->has('tipo') && $request->tipo) {
+            $query->where('movimentacoes.tipo', $request->tipo);
+        }
+        
+        if ($request->has('produto_id') && $request->produto_id) {
+            $query->where('movimentacoes.produto_id', $request->produto_id);
+        }
+        
+        if ($request->has('unidade_id') && $request->unidade_id) {
+            $query->where(function($q) use ($request) {
+                $q->where('movimentacoes.de_unidade_id', $request->unidade_id)
+                  ->orWhere('movimentacoes.para_unidade_id', $request->unidade_id);
+            });
+        }
+        
+        if ($request->has('data_ini') && $request->data_ini) {
+            $query->where('movimentacoes.data_mov', '>=', $request->data_ini);
+        }
+        
+        if ($request->has('data_fim') && $request->data_fim) {
+            $query->where('movimentacoes.data_mov', '<=', $request->data_fim);
+        }
+        
+        $limit = $request->has('limit') ? (int)$request->limit : 50;
+        $movimentacoes = $query->orderBy('movimentacoes.data_mov', 'desc')->limit($limit)->get();
+        
+        // Garante que os campos esperados pelo frontend estejam presentes
+        $movimentacoes = $movimentacoes->map(function($mov) {
+            // Busca nome da unidade de origem se não tiver
+            if (!$mov->unidade_origem_nome && $mov->de_unidade_id) {
+                $unidadeOrigem = DB::table('unidades')->where('id', $mov->de_unidade_id)->first();
+                if ($unidadeOrigem) {
+                    $mov->unidade_origem_nome = $unidadeOrigem->nome;
+                }
+            }
+            
+            // Busca nome da unidade de destino se não tiver
+            if (!$mov->unidade_destino_nome && $mov->para_unidade_id) {
+                $unidadeDestino = DB::table('unidades')->where('id', $mov->para_unidade_id)->first();
+                if ($unidadeDestino) {
+                    $mov->unidade_destino_nome = $unidadeDestino->nome;
+                }
+            }
+            
+            // Se não tiver unidade_nome, usa a unidade de origem
+            if (!$mov->unidade_nome) {
+                if ($mov->unidade_origem_nome) {
+                    $mov->unidade_nome = $mov->unidade_origem_nome;
+                } elseif ($mov->de_unidade_id) {
+                    $unidade = DB::table('unidades')->where('id', $mov->de_unidade_id)->first();
+                    if ($unidade) {
+                        $mov->unidade_nome = $unidade->nome;
+                        $mov->unidade_origem_nome = $unidade->nome;
+                    }
+                }
+            } else {
+                // Se já tem unidade_nome mas não tem unidade_origem_nome, usa o unidade_nome
+                if (!$mov->unidade_origem_nome) {
+                    $mov->unidade_origem_nome = $mov->unidade_nome;
+                }
+            }
+            
+            // Se não tiver responsavel_nome, tenta buscar do usuário
+            if (!$mov->responsavel_nome && $mov->usuario_id) {
+                $usuario = DB::table('usuarios')->where('id', $mov->usuario_id)->first();
+                if ($usuario) {
+                    $mov->responsavel_nome = $usuario->nome;
+                }
+            }
+            return $mov;
+        });
+        
+        return response()->json($movimentacoes);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar movimentações: ' . $e->getMessage());
+        return response()->json([], 200); // Retorna array vazio em caso de erro
+    }
+});
+
+/**
+ * ⚠️ ROTA DE ENTRADA DE ESTOQUE ⚠️
+ * ⚠️ CÓDIGO IMPLEMENTADO E TESTADO - MODIFICAR COM CUIDADO ⚠️
+ */
+Route::post('/entrada', function (Request $request) {
+    try {
+        DB::beginTransaction();
+        
+        // Validação dos dados
+        $data = $request->validate([
+            'produto_id' => 'required|integer|exists:produtos,id',
+            'numero_lote' => 'required|string|max:255',
+            'qtd' => 'required|numeric|min:0.001',
+            'custo_unitario' => 'required|numeric|min:0',
+            'unidade_id' => 'required|integer|exists:unidades,id',
+            'local_id' => 'nullable|integer|exists:locais,id',
+            'data_validade' => 'nullable|date',
+            'motivo' => 'nullable|string',
+            'usuario_id' => 'required|integer|exists:usuarios,id',
+        ]);
+        
+        $produtoId = $data['produto_id'];
+        $unidadeId = $data['unidade_id'];
+        $codigoLote = trim($data['numero_lote']);
+        $quantidade = floatval($data['qtd']);
+        $custoUnitario = floatval($data['custo_unitario']);
+        $dataValidade = $data['data_validade'] ?? null;
+        $localId = $data['local_id'] ?? null;
+        $usuarioId = $data['usuario_id'];
+        
+        // PASSO 1: Verifica se o produto existe e está ativo
+        $produto = DB::table('produtos')->where('id', $produtoId)->first();
+        if (!$produto) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Produto não encontrado',
+                'message' => 'O produto selecionado não existe no sistema. Verifique o produto e tente novamente.'
+            ], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Verifica se o produto está ativo
+        if (isset($produto->ativo) && $produto->ativo != 1) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Produto inativo',
+                'message' => 'O produto selecionado está inativo. Ative o produto antes de registrar entrada.'
+            ], 400)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Busca ou cria o lote
+        $lote = DB::table('lotes')
+            ->where('produto_id', $produtoId)
+            ->where('unidade_id', $unidadeId)
+            ->where('numero_lote', $codigoLote)
+            ->first();
+        
+        $loteId = null;
+        if ($lote) {
+            $loteId = $lote->id;
+            // Atualiza dados do lote se necessário
+            $updateData = [];
+            if ($dataValidade && (!$lote->data_validade || $dataValidade < $lote->data_validade)) {
+                $updateData['data_validade'] = $dataValidade;
+            }
+            if ($custoUnitario > 0 && (!$lote->custo_unitario || $custoUnitario != $lote->custo_unitario)) {
+                $updateData['custo_unitario'] = $custoUnitario;
+            }
+            if (!empty($updateData)) {
+                DB::table('lotes')->where('id', $loteId)->update($updateData);
+            }
+        } else {
+            // Busca unidade_base do produto (já foi buscado anteriormente)
+            $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
+            $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+            if (!in_array($unidadeBase, $unidadesValidas)) {
+                $unidadeBase = 'UND';
+            }
+            
+            // Busca ou cria local padrão se necessário
+            if (!$localId) {
+                $localPadrao = DB::table('locais')->where('unidade_id', $unidadeId)->first();
+                if ($localPadrao) {
+                    $localId = $localPadrao->id;
+                } else {
+                    $localId = DB::table('locais')->insertGetId([
+                        'nome' => 'Depósito Principal',
+                        'unidade_id' => $unidadeId,
+                        'tipo' => 'DEPOSITO',
+                        'ativo' => 1,
+                    ]);
+                }
+            }
+            
+            // Cria novo lote
+            $loteId = DB::table('lotes')->insertGetId([
+                'produto_id' => $produtoId,
+                'unidade_id' => $unidadeId,
+                'numero_lote' => $codigoLote,
+                'qtd_atual' => $quantidade,
+                'unidade' => $unidadeBase,
+                'custo_unitario' => $custoUnitario,
+                'data_fabricacao' => null,
+                'data_validade' => $dataValidade,
+                'local_id' => $localId,
+                'ativo' => 1,
+                'criado_em' => now(),
+            ]);
+        }
+        
+        // Atualiza ou cria registro em stock_lotes
+        $stockLote = DB::table('stock_lotes')
+            ->where('produto_id', $produtoId)
+            ->where('unidade_id', $unidadeId)
+            ->where('codigo_lote', $codigoLote)
+            ->first();
+        
+        if ($stockLote) {
+            // Atualiza quantidade e custo médio
+            $novaQuantidade = $stockLote->quantidade + $quantidade;
+            $custoMedio = (($stockLote->quantidade * $stockLote->custo_unitario) + ($quantidade * $custoUnitario)) / $novaQuantidade;
+            
+            DB::table('stock_lotes')
+                ->where('id', $stockLote->id)
+                ->update([
+                    'quantidade' => $novaQuantidade,
+                    'custo_unitario' => $custoMedio,
+                ]);
+        } else {
+            // Cria novo registro em stock_lotes
+            DB::table('stock_lotes')->insert([
+                'produto_id' => $produtoId,
+                'unidade_id' => $unidadeId,
+                'codigo_lote' => $codigoLote,
+                'quantidade' => $quantidade,
+                'custo_unitario' => $custoUnitario,
+                'data_fabricacao' => null,
+                'data_validade' => $dataValidade,
+            ]);
+        }
+        
+        // Atualiza quantidade total do lote
+        $quantidadeTotalLote = DB::table('stock_lotes')
+            ->where('codigo_lote', $codigoLote)
+            ->where('produto_id', $produtoId)
+            ->where('unidade_id', $unidadeId)
+            ->sum('quantidade');
+        
+        DB::table('lotes')
+            ->where('id', $loteId)
+            ->update([
+                'qtd_atual' => $quantidadeTotalLote,
+            ]);
+        
+        // Usa o produto já buscado anteriormente para pegar unidade_base
+        $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
+        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        if (!in_array($unidadeBase, $unidadesValidas)) {
+            $unidadeBase = 'UND';
+        }
+        
+        // Cria movimentação
+        $movimentacaoId = DB::table('movimentacoes')->insertGetId([
+            'produto_id' => $produtoId,
+            'lote_id' => $loteId,
+            'usuario_id' => $usuarioId,
+            'tipo' => 'ENTRADA',
+            'qtd' => $quantidade,
+            'unidade' => $unidadeBase,
+            'custo_unitario' => $custoUnitario,
+            'data_mov' => now(),
+            'motivo' => $data['motivo'] ?? 'Entrada de estoque',
+            'observacao' => "Lote: {$codigoLote}",
+            'de_unidade_id' => $unidadeId,
+        ]);
+        
+        DB::commit();
+        
+        // PASSO 2: Retorna sucesso com informações detalhadas
+        $produtoNome = $produto->nome ?? 'Produto';
+        return response()->json([
+            'success' => true,
+            'message' => "Entrada registrada com sucesso!",
+            'details' => [
+                'produto' => $produtoNome,
+                'quantidade' => $quantidade,
+                'lote' => $codigoLote,
+                'unidade' => DB::table('unidades')->where('id', $unidadeId)->value('nome') ?? 'N/A'
+            ],
+            'lote_id' => $loteId,
+            'movimentacao_id' => $movimentacaoId,
+        ], 201)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // PASSO 3: Tratamento de erro de validação
+        DB::rollBack();
+        $errors = $e->errors();
+        $firstError = collect($errors)->flatten()->first();
+        return response()->json([
+            'error' => 'Dados inválidos',
+            'message' => $firstError ?? 'Verifique os dados informados e tente novamente.',
+            'details' => $errors
+        ], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } catch (\Exception $e) {
+        // PASSO 4: Tratamento de erro genérico
+        DB::rollBack();
+        \Log::error('Erro ao registrar entrada: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json([
+            'error' => 'Erro ao registrar entrada',
+            'message' => 'Ocorreu um erro ao processar a entrada. Tente novamente ou entre em contato com o suporte.'
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+/**
+ * ⚠️ ROTA DE SAÍDA DE ESTOQUE ⚠️
+ * ⚠️ CÓDIGO IMPLEMENTADO E TESTADO - MODIFICAR COM CUIDADO ⚠️
+ * Esta rota reduz estoque usando FIFO, atualiza lotes e cria movimentações.
+ * Suporta transferências entre unidades. Implementação completa com transações.
+ */
+/**
+ * ⚠️ ROTA DE SAÍDA DE ESTOQUE ⚠️
+ * ⚠️ CÓDIGO IMPLEMENTADO E TESTADO - MODIFICAR COM CUIDADO ⚠️
+ * Esta rota reduz estoque usando FIFO, atualiza lotes e cria movimentações.
+ * Suporta transferências entre unidades. Implementação completa com transações.
+ */
+Route::post('/saida', function (Request $request) {
+    try {
+        DB::beginTransaction();
+        
+        // Validação dos dados
+        $data = $request->validate([
+            'produto_id' => 'required|integer|exists:produtos,id',
+            'de_unidade_id' => 'required|integer|exists:unidades,id',
+            'qtd' => 'required|numeric|min:0.001',
+            'motivo' => 'required|string|in:PRODUCAO,CONSUMO,PERDA,TRANSFERENCIA',
+            'para_unidade_id' => 'nullable|integer|exists:unidades,id|required_if:motivo,TRANSFERENCIA',
+            'usuario_id' => 'required|integer|exists:usuarios,id',
+            'forcar' => 'nullable|boolean',
+        ]);
+        
+        $produtoId = $data['produto_id'];
+        $unidadeId = $data['de_unidade_id'];
+        $quantidadeSolicitada = floatval($data['qtd']);
+        $motivo = $data['motivo'];
+        $usuarioId = $data['usuario_id'];
+        $forcar = $data['forcar'] ?? false;
+        $isTransferencia = $motivo === 'TRANSFERENCIA';
+        $paraUnidadeId = $isTransferencia ? $data['para_unidade_id'] : null;
+        
+        // Verifica se o produto existe e está ativo
+        $produto = DB::table('produtos')->where('id', $produtoId)->first();
+        if (!$produto) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Produto não encontrado',
+                'message' => 'O produto selecionado não existe no sistema.'
+            ], 404);
+        }
+        
+        // Verifica se o produto está ativo
+        $produtoAtivo = isset($produto->ativo) ? (int)$produto->ativo : 1;
+        if ($produtoAtivo != 1) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Produto inativo',
+                'message' => 'O produto selecionado está inativo. Ative o produto antes de registrar saída.'
+            ], 400);
+        }
+        
+        // Verifica estoque disponível
+        $estoqueDisponivel = DB::table('stock_lotes')
+            ->where('produto_id', $produtoId)
+            ->where('unidade_id', $unidadeId)
+            ->where('quantidade', '>', 0)
+            ->sum('quantidade');
+        
+        if ($estoqueDisponivel <= 0) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Sem estoque disponível',
+                'message' => 'Não há estoque disponível deste produto na unidade selecionada.',
+                'disponivel' => 0,
+                'solicitado' => $quantidadeSolicitada,
+            ], 400);
+        }
+        
+        if ($estoqueDisponivel < $quantidadeSolicitada) {
+            DB::rollBack();
+            $produtoNome = $produto->nome ?? 'Produto';
+            return response()->json([
+                'error' => 'Estoque insuficiente',
+                'message' => "Estoque insuficiente. Disponível: {$estoqueDisponivel}, Solicitado: {$quantidadeSolicitada}",
+                'disponivel' => $estoqueDisponivel,
+                'solicitado' => $quantidadeSolicitada,
+                'produto' => $produtoNome,
+            ], 400);
+        }
+        
+        // Busca lotes disponíveis ordenados por validade (FIFO - primeiro a vencer primeiro)
+        // Busca em stock_lotes e faz join com lotes
+        $lotesDisponiveis = DB::table('stock_lotes')
+            ->leftJoin('lotes', function($join) use ($produtoId, $unidadeId) {
+                $join->on('lotes.numero_lote', '=', 'stock_lotes.codigo_lote')
+                     ->where('lotes.produto_id', '=', $produtoId)
+                     ->where('lotes.unidade_id', '=', $unidadeId);
+            })
+            ->where('stock_lotes.produto_id', $produtoId)
+            ->where('stock_lotes.unidade_id', $unidadeId)
+            ->where('stock_lotes.quantidade', '>', 0)
+            ->select(
+                'stock_lotes.id as stock_id',
+                'lotes.id as lote_id',
+                'stock_lotes.quantidade as quantidade_disponivel',
+                'stock_lotes.custo_unitario',
+                'lotes.data_validade',
+                'stock_lotes.codigo_lote',
+                'lotes.ativo as lote_status'
+            )
+            ->orderBy('lotes.data_validade', 'asc')
+            ->orderBy('stock_lotes.id', 'asc')
+            ->get();
+        
+        // Verifica se há lotes disponíveis
+        if ($lotesDisponiveis->isEmpty()) {
+            DB::rollBack();
+            $produtoNome = $produto->nome ?? 'Produto';
+            return response()->json([
+                'error' => 'Nenhum lote disponível',
+                'message' => "Não há lotes disponíveis para o produto '{$produtoNome}' na unidade selecionada.",
+                'produto' => $produtoNome,
+            ], 400);
+        }
+        
+        // Se não forçar e houver lotes vencidos, verifica se deve usar
+        $lotesVencidos = collect();
+        if (!$forcar) {
+            $lotesVencidos = $lotesDisponiveis->filter(function($lote) {
+                return $lote->data_validade && $lote->data_validade < now()->format('Y-m-d');
+            });
+            
+            if ($lotesVencidos->count() > 0 && $lotesDisponiveis->count() > $lotesVencidos->count()) {
+                // Há lotes vencidos e não vencidos - não usar vencidos a menos que force
+                $lotesDisponiveis = $lotesDisponiveis->filter(function($lote) {
+                    return !$lote->data_validade || $lote->data_validade >= now()->format('Y-m-d');
+                });
+                
+                // Se após filtrar vencidos não há lotes suficientes, informa
+                $quantidadeDisponivelAposFiltro = $lotesDisponiveis->sum('quantidade_disponivel');
+                if ($quantidadeDisponivelAposFiltro < $quantidadeSolicitada) {
+                    DB::rollBack();
+                    $produtoNome = $produto->nome ?? 'Produto';
+                    return response()->json([
+                        'error' => 'Lotes vencidos bloqueiam a saída',
+                        'message' => "Há lotes vencidos que impedem a saída. Disponível (sem vencidos): {$quantidadeDisponivelAposFiltro}, Solicitado: {$quantidadeSolicitada}. Marque 'Forçar' para usar lotes vencidos.",
+                        'disponivel' => $quantidadeDisponivelAposFiltro,
+                        'solicitado' => $quantidadeSolicitada,
+                        'produto' => $produtoNome,
+                    ], 400);
+                }
+            }
+        }
+        
+        $quantidadeRestante = $quantidadeSolicitada;
+        $lotesUsados = [];
+        $custoMedio = 0;
+        $totalCusto = 0;
+        
+        // Processa saída dos lotes (FIFO)
+        foreach ($lotesDisponiveis as $lote) {
+            if ($quantidadeRestante <= 0) break;
+            
+            $quantidadeUsar = min($quantidadeRestante, $lote->quantidade_disponivel);
+            $quantidadeRestante -= $quantidadeUsar;
+            
+            // Atualiza stock_lotes
+            $novaQuantidade = $lote->quantidade_disponivel - $quantidadeUsar;
+            
+            if ($novaQuantidade <= 0) {
+                // Remove o registro
+                DB::table('stock_lotes')->where('id', $lote->stock_id)->delete();
+            } else {
+                DB::table('stock_lotes')
+                    ->where('id', $lote->stock_id)
+                    ->update([
+                        'quantidade' => $novaQuantidade,
+                    ]);
+            }
+            
+            // Atualiza quantidade do lote se existir
+            if ($lote->lote_id) {
+                $quantidadeTotalLote = DB::table('stock_lotes')
+                    ->where('codigo_lote', $lote->codigo_lote)
+                    ->where('produto_id', $produtoId)
+                    ->where('unidade_id', $unidadeId)
+                    ->sum('quantidade');
+                
+                DB::table('lotes')
+                    ->where('id', $lote->lote_id)
+                    ->update([
+                        'qtd_atual' => $quantidadeTotalLote,
+                    ]);
+            }
+            
+            $lotesUsados[] = [
+                'lote_id' => $lote->lote_id,
+                'codigo_lote' => $lote->codigo_lote,
+                'quantidade' => $quantidadeUsar,
+                'custo_unitario' => $lote->custo_unitario,
+            ];
+            
+            $totalCusto += $quantidadeUsar * $lote->custo_unitario;
+        }
+        
+        if ($quantidadeRestante > 0) {
+            DB::rollBack();
+            $produtoNome = $produto->nome ?? 'Produto';
+            $quantidadeProcessada = $quantidadeSolicitada - $quantidadeRestante;
+            return response()->json([
+                'error' => 'Estoque insuficiente após processamento',
+                'message' => "Não foi possível completar a saída. Processado: {$quantidadeProcessada}, Restante: {$quantidadeRestante}. Pode haver conflito de concorrência ou lotes indisponíveis.",
+                'processado' => $quantidadeProcessada,
+                'restante' => $quantidadeRestante,
+                'solicitado' => $quantidadeSolicitada,
+                'produto' => $produtoNome,
+            ], 400);
+        }
+        
+        $custoMedio = $totalCusto / $quantidadeSolicitada;
+        
+        // Se for transferência, cria entrada na unidade destino
+        if ($isTransferencia && $paraUnidadeId) {
+            // Busca o primeiro lote usado para criar entrada no destino
+            $primeiroLote = $lotesUsados[0];
+            
+            // Busca unidade_base do produto
+            $produto = DB::table('produtos')->where('id', $produtoId)->first();
+            $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
+            $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+            if (!in_array($unidadeBase, $unidadesValidas)) {
+                $unidadeBase = 'UND';
+            }
+            
+            // Busca data de validade do lote original se existir
+            $dataValidadeDestino = null;
+            if ($primeiroLote['lote_id']) {
+                $loteOriginal = DB::table('lotes')->where('id', $primeiroLote['lote_id'])->first();
+                if ($loteOriginal) {
+                    $dataValidadeDestino = $loteOriginal->data_validade;
+                }
+            }
+            
+            // Busca ou cria depósito padrão na unidade destino
+            // Prioriza depósitos do tipo DEPOSITO na unidade destino
+            $localDestinoId = null;
+            
+            // Primeiro tenta encontrar um depósito do tipo DEPOSITO na unidade destino
+            $depositoDestino = DB::table('locais')
+                ->where('unidade_id', $paraUnidadeId)
+                ->where('tipo', 'DEPOSITO')
+                ->where('ativo', 1)
+                ->orderBy('nome')
+                ->first();
+            
+            if ($depositoDestino) {
+                $localDestinoId = $depositoDestino->id;
+                \Log::info("Transferência: Usando depósito existente na unidade destino", [
+                    'local_id' => $localDestinoId,
+                    'local_nome' => $depositoDestino->nome,
+                    'unidade_id' => $paraUnidadeId
+                ]);
+            } else {
+                // Se não encontrar depósito, busca qualquer local ativo na unidade
+                $localPadrao = DB::table('locais')
+                    ->where('unidade_id', $paraUnidadeId)
+                    ->where('ativo', 1)
+                    ->first();
+                
+                if ($localPadrao) {
+                    $localDestinoId = $localPadrao->id;
+                    \Log::info("Transferência: Usando local padrão na unidade destino", [
+                        'local_id' => $localDestinoId,
+                        'local_nome' => $localPadrao->nome,
+                        'unidade_id' => $paraUnidadeId
+                    ]);
+                } else {
+                    // Se não encontrar nenhum local, cria um depósito padrão
+                    $unidadeDestino = DB::table('unidades')->where('id', $paraUnidadeId)->first();
+                    $nomeDeposito = $unidadeDestino ? "Depósito {$unidadeDestino->nome}" : 'Depósito Principal';
+                    
+                    $localDestinoId = DB::table('locais')->insertGetId([
+                        'nome' => $nomeDeposito,
+                        'unidade_id' => $paraUnidadeId,
+                        'tipo' => 'DEPOSITO',
+                        'ativo' => 1,
+                    ]);
+                    
+                    \Log::info("Transferência: Criado novo depósito na unidade destino", [
+                        'local_id' => $localDestinoId,
+                        'local_nome' => $nomeDeposito,
+                        'unidade_id' => $paraUnidadeId
+                    ]);
+                }
+            }
+            
+            // Busca stock_lotes existente na unidade destino
+            $stockDestino = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $paraUnidadeId)
+                ->where('codigo_lote', $primeiroLote['codigo_lote'])
+                ->lockForUpdate() // Lock para evitar concorrência
+                ->first();
+            
+            // Atualiza ou cria stock_lotes na unidade destino
+            if ($stockDestino) {
+                // Se já existe stock_lotes, soma APENAS a quantidade sendo transferida (não duplica)
+                $quantidadeAnterior = floatval($stockDestino->quantidade);
+                $novaQuantidadeDestino = $quantidadeAnterior + $quantidadeSolicitada;
+                $custoMedioDestino = (($quantidadeAnterior * floatval($stockDestino->custo_unitario)) + ($quantidadeSolicitada * $custoMedio)) / $novaQuantidadeDestino;
+                
+                DB::table('stock_lotes')
+                    ->where('id', $stockDestino->id)
+                    ->update([
+                        'quantidade' => $novaQuantidadeDestino,
+                        'custo_unitario' => $custoMedioDestino,
+                    ]);
+            } else {
+                // Cria novo registro em stock_lotes
+                DB::table('stock_lotes')->insert([
+                    'produto_id' => $produtoId,
+                    'unidade_id' => $paraUnidadeId,
+                    'codigo_lote' => $primeiroLote['codigo_lote'],
+                    'quantidade' => $quantidadeSolicitada,
+                    'custo_unitario' => $custoMedio,
+                    'data_fabricacao' => null,
+                    'data_validade' => $dataValidadeDestino,
+                ]);
+            }
+            
+            // RECALCULA a quantidade total do lote baseado em stock_lotes (garante consistência)
+            $quantidadeTotalLoteDestino = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $paraUnidadeId)
+                ->where('codigo_lote', $primeiroLote['codigo_lote'])
+                ->sum('quantidade');
+            
+            // Verifica se já existe lote na unidade destino
+            $loteDestino = DB::table('lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $paraUnidadeId)
+                ->where('numero_lote', $primeiroLote['codigo_lote'])
+                ->first();
+            
+            $loteDestinoId = null;
+            if ($loteDestino) {
+                // Se o lote já existe, atualiza a quantidade total baseado em stock_lotes
+                $loteDestinoId = $loteDestino->id;
+                DB::table('lotes')
+                    ->where('id', $loteDestinoId)
+                    ->update([
+                        'qtd_atual' => $quantidadeTotalLoteDestino,
+                    ]);
+            } else {
+                // Cria novo lote na unidade destino
+                $loteDestinoId = DB::table('lotes')->insertGetId([
+                    'produto_id' => $produtoId,
+                    'unidade_id' => $paraUnidadeId,
+                    'numero_lote' => $primeiroLote['codigo_lote'],
+                    'qtd_atual' => $quantidadeTotalLoteDestino,
+                    'unidade' => $unidadeBase,
+                    'custo_unitario' => $custoMedio,
+                    'data_fabricacao' => null,
+                    'data_validade' => $dataValidadeDestino,
+                    'local_id' => $localDestinoId,
+                    'ativo' => 1,
+                    'criado_em' => now(),
+                ]);
+            }
+        }
+        
+        // Busca unidade_base do produto para o enum
+        $produto = DB::table('produtos')->where('id', $produtoId)->first();
+        $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
+        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        if (!in_array($unidadeBase, $unidadesValidas)) {
+            $unidadeBase = 'UND';
+        }
+        
+        // Cria movimentação de saída
+        $observacoes = "Lotes: " . implode(', ', array_map(function($l) {
+            return $l['codigo_lote'] . " (" . $l['quantidade'] . ")";
+        }, $lotesUsados));
+        
+        $loteIdUsado = !empty($lotesUsados) && isset($lotesUsados[0]['lote_id']) ? $lotesUsados[0]['lote_id'] : null;
+        
+        $movimentacaoId = DB::table('movimentacoes')->insertGetId([
+            'produto_id' => $produtoId,
+            'lote_id' => $loteIdUsado,
+            'usuario_id' => $usuarioId,
+            'tipo' => $isTransferencia ? 'TRANSFERENCIA' : 'SAIDA',
+            'qtd' => $quantidadeSolicitada,
+            'unidade' => $unidadeBase,
+            'custo_unitario' => $custoMedio,
+            'data_mov' => now(),
+            'motivo' => $motivo,
+            'observacao' => $observacoes,
+            'de_unidade_id' => $unidadeId,
+            'para_unidade_id' => $isTransferencia ? $paraUnidadeId : null,
+        ]);
+        
+        // NOTA: Uma transferência gera apenas UMA movimentação do tipo TRANSFERENCIA
+        // que já contém as informações de origem (de_unidade_id) e destino (para_unidade_id)
+        // Não é necessário criar uma movimentação ENTRADA adicional
+        
+        DB::commit();
+        
+        return response()->json([
+            'message' => $isTransferencia ? 'Transferência realizada com sucesso' : 'Saída registrada com sucesso',
+            'movimentacao_id' => $movimentacaoId,
+            'lotes_usados' => $lotesUsados,
+            'custo_medio' => $custoMedio,
+        ], 201);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        return response()->json(['error' => 'Dados inválidos', 'details' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erro ao registrar saída: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao registrar saída: ' . $e->getMessage()], 500);
+    }
+});
+
+// ============================================
+// DASHBOARD
+// ============================================
+
+Route::get('/estoque-abaixo-minimo', function () {
+    $produtos = DB::table('produtos')
+        ->leftJoin('stock_lotes', 'produtos.id', '=', 'stock_lotes.produto_id')
+        ->select('produtos.*', DB::raw('COALESCE(SUM(stock_lotes.quantidade), 0) as estoque_atual'))
+        ->groupBy('produtos.id')
+        ->havingRaw('estoque_atual < produtos.estoque_minimo')
+        ->where('produtos.estoque_minimo', '>', 0)
+        ->get();
+    
+    return response()->json([
+        'total' => $produtos->count(),
+        'produtos' => $produtos
+    ]);
+});
+
+Route::get('/perdas-recentes', function () {
+    $movimentacoes = DB::table('movimentacoes')
+        ->where('tipo', 'SAIDA')
+        ->where('motivo', 'PERDA')
+        ->where('data_mov', '>=', now()->subDays(30)->format('Y-m-d H:i:s'))
+        ->get();
+    
+    $quantidadeTotal = $movimentacoes->sum('qtd');
+    
+    return response()->json([
+        'total_registros' => $movimentacoes->count(),
+        'quantidade_total' => $quantidadeTotal,
+        'movimentacoes' => $movimentacoes
+    ]);
+});
+
+Route::get('/lotes-a-vencer', function (Request $request) {
+    $dias = $request->has('dias') ? (int)$request->dias : 7;
+    $dataLimite = now()->addDays($dias)->format('Y-m-d');
+    $hoje = now()->format('Y-m-d');
+    
+    $lotes = DB::table('lotes')
+        ->leftJoin('produtos', 'lotes.produto_id', '=', 'produtos.id')
+        ->leftJoin('unidades', 'lotes.unidade_id', '=', 'unidades.id')
+        ->select('lotes.*', 'produtos.nome as produto_nome', 'unidades.nome as unidade_nome')
+        ->where('lotes.data_validade', '<=', $dataLimite)
+        ->where('lotes.data_validade', '>=', $hoje)
+        ->where('lotes.ativo', 1)
+        ->where('lotes.qtd_atual', '>', 0)
+        ->orderBy('lotes.data_validade')
+        ->get();
+    
+    return response()->json($lotes);
+});
+
+// ============================================
+// LISTAS DE COMPRAS
+// ============================================
+
+Route::get('/listas', function () {
+    // Busca todas as listas com informações da unidade e responsável
+    $listas = DB::table('listas_compras')
+        ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
+        ->select(
+            'listas_compras.*',
+            'unidades.nome as unidade_nome',
+            'usuarios.nome as responsavel_nome'
+        )
+        ->orderBy('listas_compras.criado_em', 'desc')
+        ->get();
+    
+    // Para cada lista, calcula totais e contagem de itens
+    $listas = $listas->map(function($lista) {
+        $itens = DB::table('listas_itens')
+            ->where('lista_id', $lista->id)
+            ->get();
+        
+        $itensComprados = $itens->filter(function($item) {
+            return ($item->status ?? '') === 'COMPRADO';
+        });
+        
+        $lista->itens_total = $itens->count();
+        $lista->itens_comprados = $itensComprados->count();
+        $lista->total_planejado = $itens->sum('valor_planejado') ?? 0;
+        $lista->total_realizado = $itens->sum('valor_total') ?? 0;
+        
+        return $lista;
+    });
+    
+    return response()->json($listas);
+});
+
+Route::get('/listas/{id}', function ($id) {
+    // Busca a lista com informações da unidade
+    $lista = DB::table('listas_compras')
+        ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
+        ->select(
+            'listas_compras.*',
+            'unidades.nome as unidade_nome',
+            'usuarios.nome as responsavel_nome'
+        )
+        ->where('listas_compras.id', $id)
+        ->first();
+    
+    if (!$lista) {
+        return response()->json(['error' => 'Lista não encontrada'], 404);
+    }
+    
+    // Busca os itens da lista
+    $itens = DB::table('listas_itens')
+        ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id')
+        ->leftJoin('estabelecimentos_compra', 'listas_itens.estabelecimento_id', '=', 'estabelecimentos_compra.id')
+        ->select(
+            'listas_itens.*',
+            'produtos.nome as produto_nome',
+            'estabelecimentos_compra.nome as estabelecimento_nome'
+        )
+        ->where('listas_itens.lista_id', $id)
+        ->orderBy('listas_itens.id')
+        ->get();
+    
+    // Calcula totais
+    $totalPlanejado = $itens->sum('valor_planejado') ?? 0;
+    $totalRealizado = $itens->sum('valor_total') ?? 0;
+    
+    // Busca os estabelecimentos visitados desta lista
+    $estabelecimentos = DB::table('estabelecimentos_compra')
+        ->where('lista_id', $id)
+        ->orderBy('nome')
+        ->get();
+    
+    // Adiciona itens, estabelecimentos e totais ao objeto da lista
+    $lista->itens = $itens;
+    $lista->estabelecimentos = $estabelecimentos;
+    $lista->total_planejado = $totalPlanejado;
+    $lista->total_realizado = $totalRealizado;
+    
+    return response()->json($lista);
+});
+
+// CORS preflight para POST /listas
+Route::options('/listas', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::post('/listas', function (Request $request) {
+    try {
+        $data = $request->all();
+        
+        \Log::info('POST /listas - Dados recebidos:', $data);
+        
+        // Validações básicas
+        if (empty($data['nome']) || trim($data['nome']) === '') {
+            return response()->json(['error' => 'Nome da lista é obrigatório'], 400);
+        }
+        
+        // Valida unidade_id se fornecido
+        if (isset($data['unidade_id']) && $data['unidade_id'] !== null) {
+            $unidadeExiste = DB::table('unidades')->where('id', $data['unidade_id'])->exists();
+            if (!$unidadeExiste) {
+                return response()->json(['error' => 'Unidade não encontrada'], 400);
+            }
+        }
+        
+        // Valida responsavel_id se fornecido
+        if (isset($data['responsavel_id']) && $data['responsavel_id'] !== null) {
+            $usuarioExiste = DB::table('usuarios')->where('id', $data['responsavel_id'])->exists();
+            if (!$usuarioExiste) {
+                return response()->json(['error' => 'Usuário responsável não encontrado'], 400);
+            }
+        }
+        
+        // Prepara dados para inserção - apenas campos permitidos
+        $insertData = [
+            'nome' => trim($data['nome']),
+            'unidade_id' => isset($data['unidade_id']) && $data['unidade_id'] !== null ? (int)$data['unidade_id'] : null,
+            'responsavel_id' => isset($data['responsavel_id']) && $data['responsavel_id'] !== null ? (int)$data['responsavel_id'] : null,
+            'status' => $data['status'] ?? 'RASCUNHO',
+            'observacoes' => isset($data['observacoes']) && trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null,
+            'criado_em' => now(),
+        ];
+        
+        \Log::info('POST /listas - Dados para inserção:', $insertData);
+        
+        $id = DB::table('listas_compras')->insertGetId($insertData);
+        
+        \Log::info('POST /listas - Lista criada com ID: ' . $id);
+        
+        // Retorna a lista criada com joins
+        $lista = DB::table('listas_compras')
+            ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
+            ->select(
+                'listas_compras.*',
+                'unidades.nome as unidade_nome',
+                'usuarios.nome as responsavel_nome'
+            )
+            ->where('listas_compras.id', $id)
+            ->first();
+        
+        if (!$lista) {
+            \Log::error('POST /listas - Lista criada mas não foi possível recuperar');
+            return response()->json(['error' => 'Lista criada mas não foi possível recuperar'], 500);
+        }
+        
+        // Converte para array para poder adicionar propriedades
+        $listaArray = (array) $lista;
+        $listaArray['itens'] = [];
+        $listaArray['total_planejado'] = 0;
+        $listaArray['total_realizado'] = 0;
+        $listaArray['itens_total'] = 0;
+        $listaArray['itens_comprados'] = 0;
+        
+        return response()->json($listaArray, 201)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } catch (\Exception $e) {
+        \Log::error('Erro ao criar lista: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro ao criar lista: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+Route::put('/listas/{id}', function (Request $request, $id) {
+    try {
+        // Verifica se a lista existe
+        $lista = DB::table('listas_compras')->where('id', $id)->first();
+        if (!$lista) {
+            return response()->json(['error' => 'Lista não encontrada'], 404)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        $data = $request->all();
+        
+        // Não permite alterar status para FINALIZADA por aqui (use a rota /finalizar)
+        if (isset($data['status']) && $data['status'] === 'FINALIZADA' && ($lista->status ?? '') !== 'FINALIZADA') {
+            return response()->json(['error' => 'Use a rota /listas/{id}/finalizar para finalizar a lista'], 400)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        // Prepara dados para atualização - apenas campos permitidos (sem updated_at que não existe na tabela)
+        $updateData = [];
+        if (isset($data['nome'])) $updateData['nome'] = trim($data['nome']);
+        if (isset($data['unidade_id'])) $updateData['unidade_id'] = $data['unidade_id'] !== null ? (int)$data['unidade_id'] : null;
+        if (isset($data['responsavel_id'])) $updateData['responsavel_id'] = $data['responsavel_id'] !== null ? (int)$data['responsavel_id'] : null;
+        if (isset($data['status'])) $updateData['status'] = $data['status'];
+        if (isset($data['observacoes'])) $updateData['observacoes'] = trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null;
+        
+        DB::table('listas_compras')->where('id', $id)->update($updateData);
+        
+        // Retorna a lista atualizada com joins
+        $listaAtualizada = DB::table('listas_compras')
+            ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
+            ->select(
+                'listas_compras.*',
+                'unidades.nome as unidade_nome',
+                'usuarios.nome as responsavel_nome'
+            )
+            ->where('listas_compras.id', $id)
+            ->first();
+        
+        // Busca itens para calcular totais
+        $itens = DB::table('listas_itens')
+            ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id')
+            ->select('listas_itens.*', 'produtos.nome as produto_nome')
+            ->where('listas_itens.lista_id', $id)
+            ->get();
+        
+        $listaArray = (array) $listaAtualizada;
+        $listaArray['itens'] = $itens;
+        $listaArray['total_planejado'] = $itens->sum('valor_planejado') ?? 0;
+        $listaArray['total_realizado'] = $itens->sum('valor_total') ?? 0;
+        $listaArray['itens_total'] = $itens->count();
+        $listaArray['itens_comprados'] = $itens->filter(function($item) {
+            return ($item->status ?? '') === 'COMPRADO';
+        })->count();
+        
+        return response()->json($listaArray)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, GET, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar lista: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao atualizar lista: ' . $e->getMessage()], 500);
+    }
+});
+
+Route::options('/listas/{id}/finalizar', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+});
+
+Route::put('/listas/{id}/finalizar', function (Request $request, $id) {
+    try {
+        \Log::info("Tentando finalizar lista ID: {$id}");
+        
+        // Verifica se a lista existe
+        $lista = DB::table('listas_compras')->where('id', $id)->first();
+        if (!$lista) {
+            \Log::warning("Lista não encontrada: {$id}");
+            return response()->json(['error' => 'Lista não encontrada'], 404)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Verifica se já está finalizada
+        $statusAtual = strtoupper($lista->status ?? '');
+        if ($statusAtual === 'FINALIZADA') {
+            \Log::info("Lista já está finalizada: {$id}");
+            return response()->json(['error' => 'Lista já está finalizada'], 400)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        $data = $request->all();
+        \Log::info("Dados recebidos para finalizar lista: " . json_encode($data));
+        
+        // Atualiza a lista - usa os campos corretos da tabela
+        $updateData = [
+            'status' => 'FINALIZADA',
+            'data_finalizacao' => now(),
+        ];
+        
+        // Se observações foram fornecidas, atualiza o campo observacoes
+        if (isset($data['observacoes']) && trim($data['observacoes']) !== '') {
+            $updateData['observacoes'] = trim($data['observacoes']);
+        }
+        
+        $updated = DB::table('listas_compras')->where('id', $id)->update($updateData);
+        
+        \Log::info("Lista atualizada: {$updated} linhas afetadas");
+        
+        // Retorna a lista atualizada com joins
+        $listaAtualizada = DB::table('listas_compras')
+            ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
+            ->select(
+                'listas_compras.*',
+                'unidades.nome as unidade_nome',
+                'usuarios.nome as responsavel_nome'
+            )
+            ->where('listas_compras.id', $id)
+            ->first();
+        
+        if (!$listaAtualizada) {
+            \Log::error("Erro ao buscar lista atualizada: {$id}");
+            return response()->json(['error' => 'Erro ao buscar lista atualizada'], 500)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        }
+        
+        // Busca itens para calcular totais
+        $itens = DB::table('listas_itens')
+            ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id')
+            ->leftJoin('estabelecimentos_compra', 'listas_itens.estabelecimento_id', '=', 'estabelecimentos_compra.id')
+            ->select(
+                'listas_itens.*',
+                'produtos.nome as produto_nome',
+                'estabelecimentos_compra.nome as estabelecimento_nome'
+            )
+            ->where('listas_itens.lista_id', $id)
+            ->orderBy('listas_itens.id')
+            ->get();
+        
+        $listaAtualizada->itens = $itens;
+        $listaAtualizada->total_planejado = $itens->sum('valor_planejado') ?? 0;
+        $listaAtualizada->total_realizado = $itens->sum('valor_total') ?? 0;
+        
+        \Log::info("Lista finalizada com sucesso: {$id}");
+        
+        return response()->json($listaAtualizada)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } catch (\Exception $e) {
+        \Log::error('Erro ao finalizar lista: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro ao finalizar lista: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+/**
+ * ⚠️ ROTA DE LANÇAR LISTA DE COMPRAS NO ESTOQUE ⚠️
+ * ⚠️ CÓDIGO IMPLEMENTADO E TESTADO - MODIFICAR COM CUIDADO ⚠️
+ * 
+ * Esta rota processa itens comprados e cria entradas no estoque automaticamente.
+ * Implementação completa com validações, transações e tratamento de erros.
+ * 
+ * IMPORTANTE: Esta rota segue o mesmo padrão da rota /entrada que funciona corretamente:
+ * - Usa 'numero_lote' na tabela 'lotes'
+ * - Usa 'codigo_lote' na tabela 'stock_lotes'
+ * - Cria local padrão se não existir
+ * - Atualiza ou cria registros em stock_lotes usando codigo_lote
+ * 
+ * Fluxo:
+ * 1. Valida lista e itens comprados
+ * 2. Para cada item: cria/atualiza lote, atualiza stock_lotes, cria movimentação
+ * 3. Marca lista como lançada no estoque
+ * 4. Retorna lista atualizada
+ */
+Route::options('/listas/{id}/estoque', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+});
+
+Route::post('/listas/{id}/estoque', function (Request $request, $id) {
+    try {
+        \Log::info("Tentando lançar lista no estoque ID: {$id}");
+        
+        DB::beginTransaction();
+        
+        // Validação
+        $data = $request->validate([
+            'usuario_id' => 'required|integer|exists:usuarios,id',
+        ]);
+        
+        $usuarioId = $data['usuario_id'];
+        
+        // Busca a lista de compras
+        $lista = DB::table('listas_compras')->where('id', $id)->first();
+        if (!$lista) {
+            return response()->json(['error' => 'Lista de compras não encontrada'], 404);
+        }
+        
+        // Verifica se a lista está finalizada
+        if (strtoupper($lista->status ?? '') !== 'FINALIZADA') {
+            return response()->json(['error' => 'A lista deve estar finalizada para lançar no estoque'], 400);
+        }
+        
+        // Verifica se já foi lançada
+        if ($lista->estoque_lancado_em) {
+            return response()->json(['error' => 'Lista já foi lançada no estoque'], 400);
+        }
+        
+        // Busca TODOS os itens da lista (não apenas os com status COMPRADO)
+        // Filtra apenas itens que têm quantidade comprada > 0
+        $itens = DB::table('listas_itens')
+            ->where('lista_id', $id)
+            ->where('quantidade_comprada', '>', 0)
+            ->get();
+    
+        if ($itens->isEmpty()) {
+            return response()->json(['error' => 'Nenhum item com quantidade comprada encontrado na lista'], 400);
+        }
+        
+        $unidadeId = $lista->unidade_id;
+        
+        // Valida unidade_id da lista antes de processar
+        if (!$unidadeId || $unidadeId <= 0) {
+            DB::rollBack();
+            return response()->json(['error' => 'Lista sem unidade válida'], 400);
+        }
+        
+        $entradasCriadas = [];
+        $erros = [];
+        
+        // Processa cada item comprado
+        foreach ($itens as $item) {
+            try {
+                $produtoId = $item->produto_id;
+                $quantidadeComprada = floatval($item->quantidade_comprada ?? 0);
+                $precoUnitario = floatval($item->preco_unitario ?? $item->valor_unitario ?? 0);
+                
+                if ($quantidadeComprada <= 0) {
+                    $erros[] = "Item ID {$item->id}: quantidade comprada inválida";
+                    continue;
+                }
+                
+                if ($precoUnitario < 0) {
+                    $erros[] = "Item ID {$item->id}: preço unitário inválido";
+                    continue;
+                }
+                
+                // Verifica se o produto existe
+                $produto = DB::table('produtos')->where('id', $produtoId)->first();
+                if (!$produto) {
+                    $erros[] = "Item ID {$item->id}: produto não encontrado";
+                    continue;
+                }
+                
+                // Gera código do lote baseado na lista e item (seguindo padrão da rota /entrada)
+                $codigoLote = "LC-{$id}-{$item->id}-" . date('Ymd');
+                
+                // Busca unidade_base do produto (necessário para criar o lote)
+                $unidadeBase = strtoupper(trim($produto->unidade_base ?? $item->unidade ?? 'UND'));
+                $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+                if (!in_array($unidadeBase, $unidadesValidas)) {
+                    $unidadeBase = 'UND';
+                }
+                
+                // Busca ou cria local padrão se necessário (seguindo padrão da rota /entrada)
+                $localId = null;
+                $localPadrao = DB::table('locais')->where('unidade_id', $unidadeId)->first();
+                if ($localPadrao) {
+                    $localId = $localPadrao->id;
+                } else {
+                    // Cria local padrão se não existir
+                    $localId = DB::table('locais')->insertGetId([
+                        'nome' => 'Depósito Principal',
+                        'unidade_id' => $unidadeId,
+                        'tipo' => 'DEPOSITO',
+                        'ativo' => 1,
+                    ]);
+                }
+                
+                // Busca ou cria o lote (usando numero_lote como na rota /entrada)
+                $lote = DB::table('lotes')
+                    ->where('produto_id', $produtoId)
+                    ->where('unidade_id', $unidadeId)
+                    ->where('numero_lote', $codigoLote)
+                    ->first();
+                
+                $loteId = null;
+                if ($lote) {
+                    $loteId = $lote->id;
+                    // Atualiza dados do lote se necessário (seguindo padrão da rota /entrada)
+                    $updateData = [];
+                    $dataValidade = $item->data_validade ?? null;
+                    if ($dataValidade && (!$lote->data_validade || $dataValidade < $lote->data_validade)) {
+                        $updateData['data_validade'] = $dataValidade;
+                    }
+                    if ($precoUnitario > 0 && (!$lote->custo_unitario || $precoUnitario != $lote->custo_unitario)) {
+                        $updateData['custo_unitario'] = $precoUnitario;
+                    }
+                    if (!empty($updateData)) {
+                        DB::table('lotes')->where('id', $loteId)->update($updateData);
+                    }
+                } else {
+                    // Cria novo lote (usando numero_lote como na rota /entrada)
+                    $loteId = DB::table('lotes')->insertGetId([
+                        'produto_id' => $produtoId,
+                        'unidade_id' => $unidadeId,
+                        'numero_lote' => $codigoLote,
+                        'qtd_atual' => $quantidadeComprada,
+                        'unidade' => $unidadeBase,
+                        'custo_unitario' => $precoUnitario,
+                        'data_fabricacao' => null,
+                        'data_validade' => $item->data_validade ?? null,
+                        'local_id' => $localId,
+                        'ativo' => 1,
+                        'criado_em' => now(),
+                    ]);
+                }
+                
+                // Atualiza ou cria registro em stock_lotes (usando codigo_lote como na rota /entrada)
+                $stockLote = DB::table('stock_lotes')
+                    ->where('produto_id', $produtoId)
+                    ->where('unidade_id', $unidadeId)
+                    ->where('codigo_lote', $codigoLote)
+                    ->first();
+                
+                if ($stockLote) {
+                    // Atualiza quantidade e custo médio (seguindo padrão da rota /entrada)
+                    $novaQuantidade = $stockLote->quantidade + $quantidadeComprada;
+                    $custoMedio = (($stockLote->quantidade * $stockLote->custo_unitario) + ($quantidadeComprada * $precoUnitario)) / $novaQuantidade;
+                    
+                    DB::table('stock_lotes')
+                        ->where('id', $stockLote->id)
+                        ->update([
+                            'quantidade' => $novaQuantidade,
+                            'custo_unitario' => $custoMedio,
+                        ]);
+                } else {
+                    // Cria novo registro em stock_lotes (usando codigo_lote como na rota /entrada)
+                    DB::table('stock_lotes')->insert([
+                        'produto_id' => $produtoId,
+                        'unidade_id' => $unidadeId,
+                        'codigo_lote' => $codigoLote,
+                        'quantidade' => $quantidadeComprada,
+                        'custo_unitario' => $precoUnitario,
+                        'data_fabricacao' => null,
+                        'data_validade' => $item->data_validade ?? null,
+                    ]);
+                }
+                
+                // Atualiza quantidade total do lote (seguindo padrão da rota /entrada)
+                $quantidadeTotalLote = DB::table('stock_lotes')
+                    ->where('codigo_lote', $codigoLote)
+                    ->where('produto_id', $produtoId)
+                    ->where('unidade_id', $unidadeId)
+                    ->sum('quantidade');
+                
+                DB::table('lotes')
+                    ->where('id', $loteId)
+                    ->update([
+                        'qtd_atual' => $quantidadeTotalLote,
+                    ]);
+                
+                // Garante que de_unidade_id não seja NULL (validação movida para antes)
+                if (!$unidadeId || $unidadeId <= 0) {
+                    $erros[] = "Item ID {$item->id}: unidade_id inválido";
+                    \Log::error("Item ID {$item->id}: unidade_id inválido ou NULL");
+                    continue;
+                }
+                
+                // Cria movimentação com os campos corretos (seguindo padrão da rota /entrada)
+                $movimentacaoId = DB::table('movimentacoes')->insertGetId([
+                    'produto_id' => $produtoId,
+                    'lote_id' => $loteId,
+                    'usuario_id' => $usuarioId,
+                    'tipo' => 'ENTRADA',
+                    'qtd' => $quantidadeComprada,
+                    'unidade' => $unidadeBase,
+                    'custo_unitario' => $precoUnitario,
+                    'data_mov' => now(),
+                    'motivo' => 'Lista de compras', // ✅ Motivo mais descritivo
+                    'observacao' => "Lista de compras #{$id} - Lote: {$codigoLote}",
+                    'de_unidade_id' => $unidadeId,
+                ]);
+                
+                // ✅ Log detalhado da movimentação criada
+                \Log::info("Movimentação criada - ID: {$movimentacaoId}, Produto: {$produtoId}, Qtd: {$quantidadeComprada}, Unidade: {$unidadeId}, Tipo: ENTRADA, Motivo: COMPRA");
+                
+                // Verifica se a movimentação foi realmente criada
+                $movimentacaoVerificada = DB::table('movimentacoes')->where('id', $movimentacaoId)->first();
+                if (!$movimentacaoVerificada) {
+                    $erros[] = "Item ID {$item->id}: movimentação não foi criada corretamente";
+                    \Log::error("Movimentação ID {$movimentacaoId} não foi encontrada após criação");
+                    continue;
+                }
+                
+                $entradasCriadas[] = [
+                    'item_id' => $item->id,
+                    'produto_id' => $produtoId,
+                    'lote_id' => $loteId,
+                    'movimentacao_id' => $movimentacaoId,
+                ];
+                
+            } catch (\Exception $e) {
+                $erros[] = "Item ID {$item->id}: " . $e->getMessage();
+                \Log::error("Erro ao processar item da lista: " . $e->getMessage());
+            }
+        }
+        
+        if (empty($entradasCriadas) && !empty($erros)) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Nenhum item pôde ser lançado no estoque',
+                'erros' => $erros,
+            ], 400);
+        }
+        
+        // Atualiza a lista para marcar que foi lançada no estoque
+        DB::table('listas_compras')
+            ->where('id', $id)
+            ->update([
+                'estoque_lancado_em' => now(),
+            ]);
+        
+        DB::commit();
+        
+        // ✅ Verifica se as movimentações foram realmente criadas e estão acessíveis
+        $movimentacoesCriadas = DB::table('movimentacoes')
+            ->whereIn('id', array_column($entradasCriadas, 'movimentacao_id'))
+            ->get();
+        
+        \Log::info("Total de movimentações criadas: " . count($entradasCriadas));
+        \Log::info("Total de movimentações verificadas no banco: " . $movimentacoesCriadas->count());
+        
+        if ($movimentacoesCriadas->count() !== count($entradasCriadas)) {
+            \Log::warning("Algumas movimentações podem não ter sido criadas corretamente");
+        }
+        
+        // Busca a lista atualizada
+        $listaAtualizada = DB::table('listas_compras')
+            ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
+            ->select(
+                'listas_compras.*',
+                'unidades.nome as unidade_nome',
+                'usuarios.nome as responsavel_nome'
+            )
+            ->where('listas_compras.id', $id)
+            ->first();
+        
+        // Busca itens para calcular totais
+        $itens = DB::table('listas_itens')
+            ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id')
+            ->leftJoin('estabelecimentos_compra', 'listas_itens.estabelecimento_id', '=', 'estabelecimentos_compra.id')
+            ->select(
+                'listas_itens.*',
+                'produtos.nome as produto_nome',
+                'estabelecimentos_compra.nome as estabelecimento_nome'
+            )
+            ->where('listas_itens.lista_id', $id)
+            ->orderBy('listas_itens.id')
+            ->get();
+        
+        // Busca os estabelecimentos visitados desta lista
+        $estabelecimentos = DB::table('estabelecimentos_compra')
+            ->where('lista_id', $id)
+            ->orderBy('nome')
+            ->get();
+        
+        $listaAtualizada->itens = $itens;
+        $listaAtualizada->estabelecimentos = $estabelecimentos;
+        $listaAtualizada->total_planejado = $itens->sum('valor_planejado') ?? 0;
+        $listaAtualizada->total_realizado = $itens->sum('valor_total') ?? 0;
+        
+        // Adiciona informações adicionais à lista (se necessário para debug)
+        if (!empty($erros)) {
+            $listaAtualizada->estoque_lancamento_erros = $erros;
+        }
+        $listaAtualizada->estoque_entradas_criadas = count($entradasCriadas);
+        
+        // Retorna a lista atualizada (frontend espera receber a lista diretamente)
+        \Log::info("Lista lançada no estoque com sucesso: {$id}");
+        
+        return response()->json($listaAtualizada, 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        \Log::error('Erro de validação ao lançar lista no estoque: ' . json_encode($e->errors()));
+        return response()->json(['error' => 'Dados inválidos', 'details' => $e->errors()], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erro ao lançar lista no estoque: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['error' => 'Erro ao lançar lista no estoque: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+});
+
+// Rota de PDF removida - o PDF é gerado diretamente no navegador (frontend)
+// sem criar arquivo no servidor, seguindo o mesmo padrão dos relatórios
+
+// ============================================
+// ITENS DE COMPRA
+// ============================================
+
+// CORS preflight para POST /itens
+Route::options('/itens', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::get('/itens', function (Request $request) {
+    $query = DB::table('listas_itens')
+        ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id');
+    
+    if ($request->has('lista_id')) {
+        $query->where('listas_itens.lista_id', $request->lista_id);
+    }
+    
+    $itens = $query->select('listas_itens.*', 'produtos.nome as produto_nome')->get();
+    return response()->json($itens);
+});
+
+Route::get('/itens/{id}', function ($id) {
+    $item = DB::table('listas_itens')->where('id', $id)->first();
+    if (!$item) {
+        return response()->json(['error' => 'Item não encontrado'], 404);
+    }
+    return response()->json($item);
+});
+
+Route::post('/itens', function (Request $request) {
+    try {
+        $requestData = $request->all();
+        \Log::info('POST /itens - Dados recebidos:', $requestData);
+        
+        $data = $request->validate([
+            'lista_id' => 'required|integer|exists:listas_compras,id',
+            'produto_id' => 'required|integer|exists:produtos,id', // NOT NULL na tabela
+            'quantidade_planejada' => 'nullable|numeric|min:0',
+            'quantidade_comprada' => 'nullable|numeric|min:0',
+            'valor_unitario' => 'nullable|numeric|min:0',
+            'valor_planejado' => 'nullable|numeric|min:0',
+            'valor_total' => 'nullable|numeric|min:0',
+            'unidade' => 'required|string|max:20', // NOT NULL na tabela, max 20 caracteres
+            'observacoes' => 'nullable|string',
+            'estabelecimento_id' => 'nullable|integer',
+            'status' => 'nullable|string|in:PENDENTE,COMPRADO,CANCELADO', // Valores válidos do ENUM
+        ]);
+        
+        // Prepara dados para inserção - apenas campos que existem na tabela
+        // NOTA: 'status' não é incluído - o banco usará o valor padrão 'PENDENTE'
+        $insertData = [
+            'lista_id' => (int)$data['lista_id'],
+            'produto_id' => (int)$data['produto_id'], // Obrigatório
+            'quantidade_planejada' => isset($data['quantidade_planejada']) ? floatval($data['quantidade_planejada']) : 0,
+            'quantidade_comprada' => isset($data['quantidade_comprada']) ? floatval($data['quantidade_comprada']) : 0,
+            'valor_unitario' => isset($data['valor_unitario']) ? floatval($data['valor_unitario']) : 0,
+            'valor_planejado' => isset($data['valor_planejado']) ? floatval($data['valor_planejado']) : 0,
+            'valor_total' => isset($data['valor_total']) ? floatval($data['valor_total']) : 0,
+            'unidade' => trim($data['unidade']), // Obrigatório, max 20 caracteres
+            'observacoes' => isset($data['observacoes']) && trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null,
+            'estabelecimento_id' => isset($data['estabelecimento_id']) && $data['estabelecimento_id'] !== null && $data['estabelecimento_id'] !== '' ? (int)$data['estabelecimento_id'] : null,
+        ];
+        
+        // Valida se o estabelecimento existe antes de inserir (se fornecido)
+        if ($insertData['estabelecimento_id'] !== null) {
+            $estabelecimentoExiste = DB::table('estabelecimentos_compra')
+                ->where('id', $insertData['estabelecimento_id'])
+                ->exists();
+            if (!$estabelecimentoExiste) {
+                \Log::warning('POST /itens - Estabelecimento ID ' . $insertData['estabelecimento_id'] . ' não existe em estabelecimentos_compra');
+                $insertData['estabelecimento_id'] = null; // Define como null se não existir
+            }
+        }
+        
+        \Log::info('POST /itens - Dados para inserção:', $insertData);
+        
+        $id = DB::table('listas_itens')->insertGetId($insertData);
+        
+        \Log::info('POST /itens - Item criado com ID: ' . $id);
+        
+        // Retorna o item criado com join do produto
+        $item = DB::table('listas_itens')
+            ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id')
+            ->leftJoin('estabelecimentos_compra', 'listas_itens.estabelecimento_id', '=', 'estabelecimentos_compra.id')
+            ->select(
+                'listas_itens.*',
+                'produtos.nome as produto_nome',
+                'estabelecimentos_compra.nome as estabelecimento_nome'
+            )
+            ->where('listas_itens.id', $id)
+            ->first();
+        
+        if (!$item) {
+            \Log::error('POST /itens - Item criado mas não foi possível recuperar');
+            return response()->json(['error' => 'Item criado mas não foi possível recuperar'], 500)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+        
+        return response()->json($item, 201)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('POST /itens - Erro de validação: ' . json_encode($e->errors()));
+        $errors = $e->errors();
+        $errorMessage = 'Dados inválidos';
+        if (!empty($errors)) {
+            $errorMessage = implode(', ', array_map(function($fieldErrors) {
+                return implode(', ', $fieldErrors);
+            }, array_values($errors)));
+        }
+        return response()->json([
+            'error' => $errorMessage,
+            'details' => $errors
+        ], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Illuminate\Database\QueryException $e) {
+        \Log::error('POST /itens - Erro de banco de dados: ' . $e->getMessage());
+        \Log::error('SQL: ' . $e->getSql());
+        \Log::error('Bindings: ' . json_encode($e->getBindings()));
+        
+        // Trata erros específicos do MySQL
+        $errorMessage = 'Erro ao salvar item no banco de dados';
+        if (strpos($e->getMessage(), 'Data truncated for column') !== false) {
+            $errorMessage = 'Valor inválido para o campo status. Use: PENDENTE, COMPRADO ou CANCELADO';
+        } elseif (strpos($e->getMessage(), 'Column') !== false && strpos($e->getMessage(), 'cannot be null') !== false) {
+            $errorMessage = 'Campos obrigatórios não preenchidos';
+        } elseif (strpos($e->getMessage(), 'foreign key constraint fails') !== false && strpos($e->getMessage(), 'estabelecimento') !== false) {
+            $errorMessage = 'Estabelecimento selecionado não existe. O item será salvo sem estabelecimento.';
+        }
+        
+        return response()->json([
+            'error' => $errorMessage,
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('POST /itens - Erro ao criar item: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json([
+            'error' => 'Erro ao criar item',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+Route::put('/itens/{id}', function (Request $request, $id) {
+    try {
+        // Verifica se o item existe
+        $item = DB::table('listas_itens')->where('id', $id)->first();
+        if (!$item) {
+            return response()->json(['error' => 'Item não encontrado'], 404);
+        }
+        
+        $data = $request->validate([
+            'produto_id' => 'nullable|integer|exists:produtos,id',
+            'quantidade_planejada' => 'nullable|numeric|min:0',
+            'quantidade_comprada' => 'nullable|numeric|min:0',
+            'valor_unitario' => 'nullable|numeric|min:0',
+            'valor_planejado' => 'nullable|numeric|min:0',
+            'valor_total' => 'nullable|numeric|min:0',
+            'unidade' => 'nullable|string|max:20', // Max 20 caracteres conforme tabela
+            'observacoes' => 'nullable|string',
+            'estabelecimento_id' => 'nullable|integer',
+            'status' => 'nullable|string|in:PENDENTE,COMPRADO,CANCELADO', // Valores válidos do ENUM
+        ]);
+        
+        // Prepara dados para atualização - apenas campos que existem na tabela
+        $updateData = [];
+        if (isset($data['produto_id'])) $updateData['produto_id'] = $data['produto_id'] !== null ? (int)$data['produto_id'] : null;
+        if (isset($data['quantidade_planejada'])) $updateData['quantidade_planejada'] = floatval($data['quantidade_planejada']);
+        if (isset($data['quantidade_comprada'])) $updateData['quantidade_comprada'] = floatval($data['quantidade_comprada']);
+        if (isset($data['valor_unitario'])) $updateData['valor_unitario'] = floatval($data['valor_unitario']);
+        if (isset($data['valor_planejado'])) $updateData['valor_planejado'] = floatval($data['valor_planejado']);
+        if (isset($data['valor_total'])) $updateData['valor_total'] = floatval($data['valor_total']);
+        if (isset($data['unidade'])) $updateData['unidade'] = trim($data['unidade']) !== '' ? trim($data['unidade']) : null;
+        if (isset($data['observacoes'])) $updateData['observacoes'] = trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null;
+        if (isset($data['estabelecimento_id'])) {
+            $estId = $data['estabelecimento_id'] !== null && $data['estabelecimento_id'] !== '' ? (int)$data['estabelecimento_id'] : null;
+            // Valida se o estabelecimento existe antes de atualizar (se fornecido)
+            if ($estId !== null) {
+                $estabelecimentoExiste = DB::table('estabelecimentos_compra')
+                    ->where('id', $estId)
+                    ->exists();
+                if (!$estabelecimentoExiste) {
+                    \Log::warning('PUT /itens/{id} - Estabelecimento ID ' . $estId . ' não existe em estabelecimentos_compra');
+                    $estId = null; // Define como null se não existir
+                }
+            }
+            $updateData['estabelecimento_id'] = $estId;
+        }
+        // Status: apenas atualiza se for um valor válido do ENUM
+        if (isset($data['status']) && in_array($data['status'], ['PENDENTE', 'COMPRADO', 'CANCELADO'])) {
+            $updateData['status'] = $data['status'];
+        }
+        
+        DB::table('listas_itens')->where('id', $id)->update($updateData);
+        
+        // Retorna o item atualizado com join do produto
+        $itemAtualizado = DB::table('listas_itens')
+            ->leftJoin('produtos', 'listas_itens.produto_id', '=', 'produtos.id')
+            ->leftJoin('estabelecimentos_compra', 'listas_itens.estabelecimento_id', '=', 'estabelecimentos_compra.id')
+            ->select(
+                'listas_itens.*',
+                'produtos.nome as produto_nome',
+                'estabelecimentos_compra.nome as estabelecimento_nome'
+            )
+            ->where('listas_itens.id', $id)
+            ->first();
+        
+        return response()->json($itemAtualizado)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        $errors = $e->errors();
+        $errorMessage = 'Dados inválidos';
+        if (!empty($errors)) {
+            $errorMessage = implode(', ', array_map(function($fieldErrors) {
+                return implode(', ', $fieldErrors);
+            }, array_values($errors)));
+        }
+        return response()->json([
+            'error' => $errorMessage,
+            'details' => $errors
+        ], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Illuminate\Database\QueryException $e) {
+        \Log::error('PUT /itens/{id} - Erro de banco de dados: ' . $e->getMessage());
+        \Log::error('SQL: ' . $e->getSql());
+        \Log::error('Bindings: ' . json_encode($e->getBindings()));
+        
+        $errorMessage = 'Erro ao atualizar item no banco de dados';
+        if (strpos($e->getMessage(), 'Data truncated for column') !== false) {
+            $errorMessage = 'Valor inválido para o campo status. Use: PENDENTE, COMPRADO ou CANCELADO';
+        } elseif (strpos($e->getMessage(), 'Column') !== false && strpos($e->getMessage(), 'cannot be null') !== false) {
+            $errorMessage = 'Campos obrigatórios não preenchidos';
+        } elseif (strpos($e->getMessage(), 'foreign key constraint fails') !== false && strpos($e->getMessage(), 'estabelecimento') !== false) {
+            $errorMessage = 'Estabelecimento selecionado não existe. O item será atualizado sem estabelecimento.';
+        }
+        
+        return response()->json([
+            'error' => $errorMessage,
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('PUT /itens/{id} - Erro ao atualizar item: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json([
+            'error' => 'Erro ao atualizar item',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+Route::delete('/itens/{id}', function ($id) {
+    DB::table('listas_itens')->where('id', $id)->delete();
+    return response()->json(['message' => 'Item removido']);
+});
+
+// ============================================
+// ESTABELECIMENTOS
+// ============================================
+
+Route::get('/estabelecimentos-globais', function () {
+    $estabelecimentos = DB::table('estabelecimentos_globais')->orderBy('nome')->get();
+    return response()->json($estabelecimentos);
+});
+
+Route::post('/estabelecimentos-globais', function (Request $request) {
+    $data = $request->all();
+    $id = DB::table('estabelecimentos_globais')->insertGetId($data);
+    return response()->json(DB::table('estabelecimentos_globais')->where('id', $id)->first(), 201);
+});
+
+Route::put('/estabelecimentos-globais/{id}', function (Request $request, $id) {
+    $data = $request->all();
+    DB::table('estabelecimentos_globais')->where('id', $id)->update($data);
+    return response()->json(DB::table('estabelecimentos_globais')->where('id', $id)->first());
+});
+
+Route::delete('/estabelecimentos-globais/{id}', function ($id) {
+    DB::table('estabelecimentos_globais')->where('id', $id)->delete();
+    return response()->json(['message' => 'Estabelecimento removido']);
+});
+
+// ============================================
+// ESTABELECIMENTOS VISITADOS POR LISTA
+// ============================================
+
+Route::get('/listas/{lista_id}/estabelecimentos', function ($lista_id) {
+    $estabelecimentos = DB::table('estabelecimentos_compra')
+        ->where('lista_id', $lista_id)
+        ->orderBy('nome')
+        ->get();
+    return response()->json($estabelecimentos);
+});
+
+Route::post('/listas/{lista_id}/estabelecimentos', function (Request $request, $lista_id) {
+    try {
+        // Valida se a lista existe
+        $lista = DB::table('listas_compras')->where('id', $lista_id)->first();
+        if (!$lista) {
+            return response()->json(['error' => 'Lista não encontrada'], 404);
+        }
+        
+        $data = $request->validate([
+            'nome' => 'required|string|max:255',
+            'localizacao' => 'nullable|string|max:500',
+            'forma_pagamento' => 'nullable|string|max:100',
+            'observacoes' => 'nullable|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+        
+        $insertData = [
+            'lista_id' => (int)$lista_id,
+            'nome' => trim($data['nome']),
+            'localizacao' => isset($data['localizacao']) && trim($data['localizacao']) !== '' ? trim($data['localizacao']) : null,
+            'forma_pagamento' => isset($data['forma_pagamento']) && trim($data['forma_pagamento']) !== '' ? trim($data['forma_pagamento']) : null,
+            'observacoes' => isset($data['observacoes']) && trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null,
+            'latitude' => isset($data['latitude']) && $data['latitude'] !== null ? floatval($data['latitude']) : null,
+            'longitude' => isset($data['longitude']) && $data['longitude'] !== null ? floatval($data['longitude']) : null,
+            'criado_em' => now(),
+        ];
+        
+        $id = DB::table('estabelecimentos_compra')->insertGetId($insertData);
+        $estabelecimento = DB::table('estabelecimentos_compra')->where('id', $id)->first();
+        
+        return response()->json($estabelecimento, 201)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('POST /listas/{lista_id}/estabelecimentos - Erro: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao criar estabelecimento',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+Route::put('/listas/{lista_id}/estabelecimentos/{id}', function (Request $request, $lista_id, $id) {
+    try {
+        // Valida se a lista existe
+        $lista = DB::table('listas_compras')->where('id', $lista_id)->first();
+        if (!$lista) {
+            return response()->json(['error' => 'Lista não encontrada'], 404);
+        }
+        
+        // Valida se o estabelecimento existe e pertence à lista
+        $estabelecimento = DB::table('estabelecimentos_compra')
+            ->where('id', $id)
+            ->where('lista_id', $lista_id)
+            ->first();
+        
+        if (!$estabelecimento) {
+            return response()->json(['error' => 'Estabelecimento não encontrado'], 404);
+        }
+        
+        $data = $request->validate([
+            'nome' => 'required|string|max:255',
+            'localizacao' => 'nullable|string|max:500',
+            'forma_pagamento' => 'nullable|string|max:100',
+            'observacoes' => 'nullable|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+        
+        $updateData = [
+            'nome' => trim($data['nome']),
+            'localizacao' => isset($data['localizacao']) && trim($data['localizacao']) !== '' ? trim($data['localizacao']) : null,
+            'forma_pagamento' => isset($data['forma_pagamento']) && trim($data['forma_pagamento']) !== '' ? trim($data['forma_pagamento']) : null,
+            'observacoes' => isset($data['observacoes']) && trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null,
+            'latitude' => isset($data['latitude']) && $data['latitude'] !== null ? floatval($data['latitude']) : null,
+            'longitude' => isset($data['longitude']) && $data['longitude'] !== null ? floatval($data['longitude']) : null,
+            'atualizado_em' => now(),
+        ];
+        
+        DB::table('estabelecimentos_compra')
+            ->where('id', $id)
+            ->where('lista_id', $lista_id)
+            ->update($updateData);
+        
+        $estabelecimentoAtualizado = DB::table('estabelecimentos_compra')->where('id', $id)->first();
+        
+        return response()->json($estabelecimentoAtualizado)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('PUT /listas/{lista_id}/estabelecimentos/{id} - Erro: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao atualizar estabelecimento',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+Route::delete('/listas/{lista_id}/estabelecimentos/{id}', function ($lista_id, $id) {
+    try {
+        // Valida se o estabelecimento existe e pertence à lista
+        $estabelecimento = DB::table('estabelecimentos_compra')
+            ->where('id', $id)
+            ->where('lista_id', $lista_id)
+            ->first();
+        
+        if (!$estabelecimento) {
+            return response()->json(['error' => 'Estabelecimento não encontrado'], 404);
+        }
+        
+        // Verifica se há itens vinculados a este estabelecimento
+        $itensVinculados = DB::table('listas_itens')
+            ->where('estabelecimento_id', $id)
+            ->where('lista_id', $lista_id)
+            ->count();
+        
+        if ($itensVinculados > 0) {
+            // Remove o vínculo dos itens antes de deletar
+            DB::table('listas_itens')
+                ->where('estabelecimento_id', $id)
+                ->where('lista_id', $lista_id)
+                ->update(['estabelecimento_id' => null]);
+        }
+        
+        DB::table('estabelecimentos_compra')
+            ->where('id', $id)
+            ->where('lista_id', $lista_id)
+            ->delete();
+        
+        return response()->json(['message' => 'Estabelecimento removido'])
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    } catch (\Exception $e) {
+        \Log::error('DELETE /listas/{lista_id}/estabelecimentos/{id} - Erro: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao remover estabelecimento',
+            'message' => $e->getMessage()
+        ], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+});
+
+// CORS preflight para estabelecimentos de lista
+Route::options('/listas/{lista_id}/estabelecimentos', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/listas/{lista_id}/estabelecimentos/{id}', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// ============================================
+// SUGESTÕES DE COMPRAS BASEADAS EM MOVIMENTAÇÕES
+// ============================================
+
+Route::options('/sugestoes-compras', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+});
+
+Route::get('/sugestoes-compras', function (Request $request) {
+    try {
+        $unidadeId = $request->has('unidade_id') ? (int)$request->unidade_id : null;
+        $diasAnalise = $request->has('dias') ? (int)$request->dias : 30; // Padrão: últimos 30 dias
+        $diasProjecao = $request->has('dias_projecao') ? (int)$request->dias_projecao : 15; // Projetar para próximos 15 dias
+        
+        // Busca todas as saídas (consumo) do período
+        $query = DB::table('movimentacoes')
+            ->join('produtos', 'movimentacoes.produto_id', '=', 'produtos.id')
+            ->where('movimentacoes.tipo', 'SAIDA')
+            ->where('movimentacoes.motivo', '!=', 'TRANSFERENCIA') // Exclui transferências
+            ->where('movimentacoes.data_mov', '>=', now()->subDays($diasAnalise)->format('Y-m-d H:i:s'))
+            ->select(
+                'movimentacoes.produto_id',
+                'movimentacoes.de_unidade_id',
+                'produtos.nome as produto_nome',
+                'produtos.unidade_base',
+                'produtos.estoque_minimo',
+                DB::raw('SUM(movimentacoes.qtd) as total_consumido'),
+                DB::raw('COUNT(*) as total_movimentacoes'),
+                DB::raw('AVG(movimentacoes.qtd) as media_por_movimentacao')
+            )
+            ->groupBy('movimentacoes.produto_id', 'movimentacoes.de_unidade_id', 'produtos.nome', 'produtos.unidade_base', 'produtos.estoque_minimo');
+        
+        // Filtra por unidade se especificada
+        if ($unidadeId) {
+            $query->where('movimentacoes.de_unidade_id', $unidadeId);
+        }
+        
+        $consumos = $query->get();
+        
+        // Busca estoque atual por produto e unidade
+        $sugestoes = [];
+        
+        foreach ($consumos as $consumo) {
+            $produtoId = $consumo->produto_id;
+            $unidadeIdConsumo = $consumo->de_unidade_id;
+            
+            // Busca estoque atual na unidade
+            $estoqueAtual = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $unidadeIdConsumo)
+                ->sum('quantidade');
+            
+            // Calcula consumo médio diário
+            $consumoMedioDiario = $consumo->total_consumido / $diasAnalise;
+            
+            // Projeta consumo para os próximos dias
+            $consumoProjetado = $consumoMedioDiario * $diasProjecao;
+            
+            // Calcula quantidade sugerida
+            // Sugestão = (Consumo projetado + Estoque mínimo) - Estoque atual
+            $estoqueMinimo = $consumo->estoque_minimo ?? 0;
+            $quantidadeSugerida = ($consumoProjetado + $estoqueMinimo) - $estoqueAtual;
+            
+            // Só sugere se a quantidade for positiva e significativa
+            if ($quantidadeSugerida > 0 && $quantidadeSugerida >= ($estoqueMinimo * 0.1)) {
+                // Busca nome da unidade
+                $unidade = DB::table('unidades')->where('id', $unidadeIdConsumo)->first();
+                
+                $sugestoes[] = [
+                    'produto_id' => $produtoId,
+                    'produto_nome' => $consumo->produto_nome,
+                    'unidade_id' => $unidadeIdConsumo,
+                    'unidade_nome' => $unidade->nome ?? 'N/A',
+                    'unidade_base' => $consumo->unidade_base,
+                    'estoque_atual' => round($estoqueAtual, 3),
+                    'estoque_minimo' => $estoqueMinimo,
+                    'consumo_total_periodo' => round($consumo->total_consumido, 3),
+                    'consumo_medio_diario' => round($consumoMedioDiario, 3),
+                    'consumo_projetado' => round($consumoProjetado, 3),
+                    'quantidade_sugerida' => round($quantidadeSugerida, 3),
+                    'dias_analise' => $diasAnalise,
+                    'dias_projecao' => $diasProjecao,
+                    'prioridade' => $estoqueAtual <= $estoqueMinimo ? 'ALTA' : ($estoqueAtual <= ($estoqueMinimo * 1.5) ? 'MEDIA' : 'BAIXA')
+                ];
+            }
+        }
+        
+        // Ordena por prioridade e quantidade sugerida
+        usort($sugestoes, function($a, $b) {
+            $prioridadeOrder = ['ALTA' => 3, 'MEDIA' => 2, 'BAIXA' => 1];
+            if ($prioridadeOrder[$a['prioridade']] !== $prioridadeOrder[$b['prioridade']]) {
+                return $prioridadeOrder[$b['prioridade']] - $prioridadeOrder[$a['prioridade']];
+            }
+            return $b['quantidade_sugerida'] <=> $a['quantidade_sugerida'];
+        });
+        
+        return response()->json([
+            'total_sugestoes' => count($sugestoes),
+            'dias_analise' => $diasAnalise,
+            'dias_projecao' => $diasProjecao,
+            'unidade_id' => $unidadeId,
+            'sugestoes' => $sugestoes
+        ])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar sugestões de compras: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar sugestões: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+// ============================================
+// BOLETOS - CONTROLE FINANCEIRO
+// ============================================
+
+use App\Http\Controllers\BoletoController;
+
+// CORS preflight para boletos
+Route::options('/boletos', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/boletos/resumo', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/boletos/economia-mensal', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/boletos/{id}', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Listar boletos
+Route::get('/boletos', function (Request $request) {
+    $controller = new BoletoController();
+    $response = $controller->index($request);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Criar boleto
+Route::post('/boletos', function (Request $request) {
+    $controller = new BoletoController();
+    $response = $controller->store($request);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Resumo financeiro
+Route::get('/boletos/resumo', function (Request $request) {
+    $controller = new BoletoController();
+    $response = $controller->resumo($request);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Economia mensal
+Route::get('/boletos/economia-mensal', function (Request $request) {
+    $controller = new BoletoController();
+    $response = $controller->economiaMensal();
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Buscar boleto específico
+Route::get('/boletos/{id}', function (Request $request, $id) {
+    $controller = new BoletoController();
+    $response = $controller->show($id);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Atualizar boleto
+Route::put('/boletos/{id}', function (Request $request, $id) {
+    $controller = new BoletoController();
+    $response = $controller->update($request, $id);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Excluir boleto
+Route::delete('/boletos/{id}', function (Request $request, $id) {
+    $controller = new BoletoController();
+    $response = $controller->destroy($id);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Download de anexo
+Route::get('/boletos/{id}/anexo', function (Request $request, $id) {
+    $controller = new BoletoController();
+    return $controller->downloadAnexo($id);
+});
+
+// Remover anexo
+Route::delete('/boletos/{id}/anexo', function (Request $request, $id) {
+    $controller = new BoletoController();
+    $response = $controller->removerAnexo($id);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/boletos/{id}/anexo', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});

@@ -1,0 +1,216 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║        🧮 CÁLCULO AUTOMÁTICO DE JUROS - IMPLEMENTADO! 🧮     ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+✅ IMPLEMENTADO:
+
+FÓRMULA AUTOMÁTICA:
+  Juros/Multa = Valor Pago - Valor Original
+
+
+🎯 COMO FUNCIONA:
+
+ANTES (Manual):
+  1. Ver valor original: R$ 100,00
+  2. Ver valor pago: R$ 110,00
+  3. Calcular: 110 - 100 = 10
+  4. Digitar no campo juros: 10
+  ❌ Trabalhoso e sujeito a erros
+
+AGORA (Automático):
+  1. Digite valor pago: R$ 110,00
+  2. ✨ Juros aparecem: R$ 10,00
+  ✅ Rápido, fácil e sem erros!
+
+
+🚀 COMO USAR:
+
+1️⃣ PAGAR BOLETO COM JUROS:
+   a) Clique em: 💳 Pagar
+   b) Modal abre com:
+      • Valor Original: R$ 100,00
+      • Valor Pago: R$ 100,00 (pré-preenchido)
+      • Juros: R$ 0,00
+   
+   c) Digite Valor Pago: R$ 115,00
+   d) ✨ Juros atualizam para: R$ 15,00
+   e) Confirme o pagamento
+   f) ✅ Pago com R$ 15,00 de juros
+
+2️⃣ PAGAR SEM JUROS:
+   a) Clique em: 💳 Pagar
+   b) Deixe Valor Pago = Valor Original
+   c) Juros permanecem: R$ 0,00
+   d) Confirme
+   e) ✅ Pago sem juros
+
+3️⃣ EDITAR JUROS MANUALMENTE:
+   a) Digite Valor Pago: R$ 110,00
+   b) Sistema calcula: R$ 10,00
+   c) Clique no campo Juros
+   d) Edite para: R$ 12,00
+   e) Confirme
+   f) ✅ Salvo com R$ 12,00
+
+
+🧪 TESTES:
+
+TESTE 1 - Cálculo Automático:
+  1. Vá em: Financeiro > Boletos
+  2. Clique: 💳 Pagar (em um boleto)
+  3. Veja: Valor Original (ex: R$ 50,00)
+  4. Digite: Valor Pago = R$ 55,00
+  5. ✅ Juros aparecem: R$ 5,00
+  6. Console mostra:
+     💸 Juros calculados: R$ 5.00
+
+TESTE 2 - Pago em Dia:
+  1. Clique: 💳 Pagar
+  2. Deixe: Valor Pago = Valor Original
+  3. ✅ Juros = R$ 0,00
+  4. Confirme
+  5. ✅ Pago sem juros
+
+TESTE 3 - Com Desconto:
+  1. Clique: 💳 Pagar
+  2. Valor Original: R$ 100,00
+  3. Digite: Valor Pago = R$ 90,00
+  4. ✅ Juros = R$ 0,00 (não fica negativo)
+  5. Confirme
+  6. ✅ Pago com desconto
+
+TESTE 4 - Edição Manual:
+  1. Clique: 💳 Pagar
+  2. Digite: Valor Pago = R$ 110,00
+  3. Veja: Juros = R$ 10,00
+  4. Edite: Juros = R$ 12,00
+  5. Confirme
+  6. ✅ Salvo com R$ 12,00
+
+
+📊 EXEMPLOS:
+
+EXEMPLO 1: Aluguel com Atraso
+  Valor Original: R$ 1.500,00
+  Valor Pago: R$ 1.575,00
+  Juros (automático): R$ 75,00 ✨
+
+EXEMPLO 2: Conta de Luz em Dia
+  Valor Original: R$ 350,00
+  Valor Pago: R$ 350,00
+  Juros (automático): R$ 0,00 ✨
+
+EXEMPLO 3: Fornecedor com Desconto
+  Valor Original: R$ 1.000,00
+  Valor Pago: R$ 950,00
+  Juros (automático): R$ 0,00 ✨
+  (Desconto de R$ 50,00)
+
+
+🎨 VISUAL DO MODAL:
+
+┌─────────────────────────────────────────────────┐
+│  💳 Registrar Pagamento                    [X] │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  Fornecedor: Hostigran                         │
+│  Descrição: Hospedagem                         │
+│  Valor Original: R$ 100,00                     │
+│                                                 │
+│  Data de Pagamento:                            │
+│  [19/01/2026]                                  │
+│                                                 │
+│  Valor Pago: *                                 │
+│  [110.00]  ← Digite aqui                       │
+│                                                 │
+│  Juros/Multa (Calculado automaticamente)       │
+│  [10.00]  ← Calculado: 110 - 100 = 10        │
+│  💡 Calculado automaticamente: Valor Pago -    │
+│     Valor Original. Pode editar se necessário. │
+│                                                 │
+│  Observações:                                  │
+│  [__________________________________]          │
+│                                                 │
+├─────────────────────────────────────────────────┤
+│  [Cancelar]  [💳 Confirmar Pagamento]         │
+└─────────────────────────────────────────────────┘
+
+
+💡 REGRAS DE CÁLCULO:
+
+REGRA 1: Valor Pago > Valor Original
+  → Juros = Valor Pago - Valor Original
+  Exemplo: 110 - 100 = R$ 10,00
+
+REGRA 2: Valor Pago = Valor Original
+  → Juros = R$ 0,00
+  Exemplo: 100 - 100 = R$ 0,00
+
+REGRA 3: Valor Pago < Valor Original
+  → Juros = R$ 0,00 (não fica negativo)
+  Exemplo: 90 - 100 = R$ 0,00 (não -10)
+
+REGRA 4: Edição Manual
+  → Mantém valor editado pelo usuário
+
+
+✨ VANTAGENS:
+
+VELOCIDADE:
+  ✅ Cálculo instantâneo
+  ✅ Sem precisar calcular mentalmente
+  ✅ Mais rápido
+
+PRECISÃO:
+  ✅ Sem erro de cálculo
+  ✅ Sempre correto
+  ✅ Confiável
+
+USABILIDADE:
+  ✅ Mais intuitivo
+  ✅ Menos trabalho
+  ✅ Experiência melhor
+
+FLEXIBILIDADE:
+  ✅ Pode editar manualmente
+  ✅ Ajuste se necessário
+  ✅ Liberdade de escolha
+
+
+🔍 LOGS DE DEBUG:
+
+Console mostra:
+
+Quando tem juros:
+  💸 Juros calculados: R$ 10.00 (Valor Pago: R$ 110.00 - Valor Original: R$ 100.00)
+
+Quando pago em dia:
+  ✅ Pago sem juros
+
+
+📖 DOCUMENTAÇÃO COMPLETA:
+
+Leia: CALCULO-AUTOMATICO-JUROS.md
+
+Contém:
+• Como funciona detalhadamente
+• Exemplos práticos
+• Regras de cálculo
+• Código técnico
+• Casos de uso
+
+
+════════════════════════════════════════════════════════════════
+
+TESTE AGORA:
+
+1. Vá em: Financeiro > Boletos
+2. Clique: 💳 Pagar (em qualquer boleto)
+3. Digite um Valor Pago maior que o original
+4. ✨ Veja os Juros aparecerem automaticamente
+5. ✅ Funciona perfeitamente!
+
+
+🎉 CÁLCULO AUTOMÁTICO 100% FUNCIONAL! 🎉

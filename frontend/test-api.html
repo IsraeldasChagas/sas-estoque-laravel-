@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Comunicação com API Laravel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.test-all {
+            background: #2196F3;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        button.test-all:hover {
+            background: #0b7dda;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.ok { background: #4CAF50; color: white; }
+        .status.error { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste de Comunicação com API Laravel</h1>
+        
+        <div class="test-section">
+            <h2>Configuração</h2>
+            <p><strong>API URL:</strong> <span id="apiUrl"></span></p>
+            <p><strong>Backend esperado:</strong> http://localhost:5000</p>
+            <p><strong>Frontend atual:</strong> <span id="currentUrl"></span></p>
+        </div>
+
+        <div class="test-section">
+            <h2>Testes Disponíveis</h2>
+            <button onclick="testPing()">1. Testar /api/ping</button>
+            <button onclick="testHealth()">2. Testar /api/health</button>
+            <button onclick="testLogin()">3. Testar /api/login</button>
+            <button onclick="testCORS()">4. Testar CORS</button>
+            <br><br>
+            <button class="test-all" onclick="testAll()">▶ Executar Todos os Testes</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Resultados</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const API_URL = window.APP_CONFIG?.API_URL || "http://localhost:5000/api";
+        
+        document.getElementById('apiUrl').textContent = API_URL;
+        document.getElementById('currentUrl').textContent = window.location.origin;
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+            console.log(message);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testPing() {
+            clearResults();
+            log('🔍 Testando /api/ping...', 'info');
+            try {
+                const response = await fetch(`${API_URL}/ping`);
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ SUCESSO!\nStatus: ${response.status}\nResposta: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    log(`❌ ERRO!\nStatus: ${response.status}\nResposta: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ ERRO DE REDE: ${error.message}`, 'error');
+            }
+        }
+
+        async function testHealth() {
+            clearResults();
+            log('🔍 Testando /api/health...', 'info');
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                if (response.ok) {
+                    log(`✅ SUCESSO!\nStatus: ${response.status}\nResposta: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    log(`❌ ERRO!\nStatus: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ ERRO DE REDE: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            clearResults();
+            log('🔍 Testando /api/login...', 'info');
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'israel@gruposaborparaense.com.br',
+                        senha: '123456'
+                    })
+                });
+                const data = await response.json();
+                if (response.ok && data.id) {
+                    log(`✅ LOGIN FUNCIONANDO!\nStatus: ${response.status}\nUsuário: ${data.nome}\nEmail: ${data.email}\nPerfil: ${data.perfil}`, 'success');
+                } else {
+                    log(`❌ LOGIN FALHOU!\nStatus: ${response.status}\nErro: ${data.error || 'Desconhecido'}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ ERRO DE REDE: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCORS() {
+            clearResults();
+            log('🔍 Testando CORS...', 'info');
+            try {
+                const response = await fetch(`${API_URL}/ping`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'GET',
+                    }
+                });
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                };
+                log(`✅ CORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}`, 'success');
+            } catch (error) {
+                log(`❌ ERRO: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAll() {
+            clearResults();
+            log('🚀 Executando todos os testes...\n', 'info');
+            
+            await testPing();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testHealth();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testCORS();
+            await new Promise(r => setTimeout(r, 500));
+            
+            await testLogin();
+            
+            log('\n✅ Todos os testes concluídos!', 'success');
+        }
+    </script>
+</body>
+</html>
+
+
+

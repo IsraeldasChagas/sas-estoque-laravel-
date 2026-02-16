@@ -1,0 +1,66 @@
+<section id="movimentacoesSection" class="view-section hidden">
+  <form id="movFilterForm" class="filters-panel">
+    <div class="filters-grid">
+      <label>
+        Tipo
+        <select id="movFiltroTipo" name="tipo">
+          <option value="">Todos</option>
+          <option value="ENTRADA">Entrada</option>
+          <option value="SAIDA">Saida</option>
+          <option value="TRANSFERENCIA">Transferencia</option>
+          <option value="AJUSTE">Ajuste</option>
+          <option value="PERDA">Perda</option>
+        </select>
+      </label>
+      <label>
+        Produto
+        <select id="movFiltroProduto" name="produto_id">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <label>
+        Unidade
+        <select id="movFiltroUnidade" name="unidade_id">
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>
+        Data inicial
+        <input type="date" id="movFiltroDataDe" name="data_ini" />
+      </label>
+      <label>
+        Data final
+        <input type="date" id="movFiltroDataAte" name="data_fim" />
+      </label>
+    </div>
+    <div class="filters-actions">
+      <button type="submit" class="btn primary">Aplicar filtros</button>
+      <button type="button" class="btn" id="movFiltrosLimpar">Limpar</button>
+    </div>
+  </form>
+
+  <div class="table-card form-card--wide">
+    <header>Movimentacoes recentes</header>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Produto</th>
+            <th>Unidade</th>
+            <th>Quantidade</th>
+            <th>Motivo</th>
+            <th>Responsavel</th>
+          </tr>
+        </thead>
+        <tbody id="movimentacoesTable">
+          <tr>
+            <td colspan="7" style="text-align: center; color: #607d8b">Use os filtros para carregar movimentacoes.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+

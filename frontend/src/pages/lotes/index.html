@@ -1,0 +1,66 @@
+<section id="lotesSection" class="view-section hidden">
+  <div class="actions">
+    <button class="btn primary" id="openNovoLote">+ Novo lote</button>
+  </div>
+
+  <form id="lotesFilterForm" class="filters-panel">
+    <div class="filters-grid">
+      <label>
+        Produto
+        <select id="lotesFiltroProduto" name="produto_id">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <label>
+        Unidade
+        <select id="lotesFiltroUnidade" name="unidade_id">
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>
+        Status
+        <select id="lotesFiltroStatus" name="status">
+          <option value="">Todos</option>
+          <option value="ATIVO">Ativo</option>
+          <option value="BLOQUEADO">Bloqueado</option>
+          <option value="VENCIDO">Vencido</option>
+          <option value="ESGOTADO">Esgotado</option>
+        </select>
+      </label>
+      <label>
+        Validade até
+        <input type="date" id="lotesFiltroValidadeAte" name="validade_ate" />
+      </label>
+    </div>
+    <div class="filters-actions">
+      <button type="submit" class="btn primary" id="aplicarFiltrosLotes">Aplicar filtros</button>
+      <button type="button" class="btn" id="limparFiltrosLotes">Limpar</button>
+    </div>
+  </form>
+
+  <div class="table-card form-card--wide">
+    <header>Lotes cadastrados</header>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Produto</th>
+            <th>Unidade</th>
+            <th>Codigo</th>
+            <th>Qtd</th>
+            <th>Validade</th>
+            <th>Dias p/ vencer</th>
+            <th>Status</th>
+            <th>Valor total</th>
+          </tr>
+        </thead>
+        <tbody id="lotesManageTable">
+          <tr>
+            <td colspan="8" style="text-align: center; color: #607d8b">Use os filtros para carregar os lotes.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+

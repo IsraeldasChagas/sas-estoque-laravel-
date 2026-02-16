@@ -1,0 +1,105 @@
+<section id="dashboardSection" class="view-section">
+  <div class="actions">
+    <button class="btn primary" id="openEntrada">
+      + Registrar Entrada
+    </button>
+    <button class="btn danger" id="openSaida">
+      - Registrar Saida
+    </button>
+  </div>
+
+  <div class="cards">
+    <div class="card card--clickable" id="cardProdutosAtivos">
+      <h3>Produtos ativos</h3>
+      <div class="value" id="kpiProdutos">0</div>
+      <small>Ver todos os produtos</small>
+    </div>
+    <div class="card card--clickable" id="cardLotes7Dias">
+      <h3>Lotes a vencer (7 dias)</h3>
+      <div class="value" id="kpiVencer">0</div>
+      <small>Visualizar detalhes</small>
+    </div>
+    <div class="card card--clickable" id="cardLotesAVencer">
+      <h3>Lotes a vencer (15 dias)</h3>
+      <div class="value" id="kpiLotesAVencer">0</div>
+      <small>Visualizar detalhes</small>
+    </div>
+    <div class="card card--clickable" id="cardComprasAndamento">
+      <h3>Compras em andamento</h3>
+      <div class="value" id="kpiComprasAtivas">0</div>
+      <small>Abrir listas de compras</small>
+    </div>
+    <div class="card card--clickable" id="cardLotesVencidos">
+      <h3>Lotes vencidos</h3>
+      <div class="value danger" id="kpiLotesVencidos">0</div>
+      <small>Visualizar detalhes</small>
+    </div>
+    <div class="card card--clickable" id="cardMinimo">
+      <h3>Abaixo do minimo</h3>
+      <div class="value" id="kpiMinimo">0</div>
+      <small id="cardMinimoHint">Ver produtos abaixo do minimo</small>
+    </div>
+    <div class="card card--clickable" id="cardPerdas">
+      <h3>Perdas</h3>
+      <div class="value" id="kpiPerdas">0</div>
+      <small id="cardPerdasHint">Sem perdas registradas</small>
+    </div>
+  </div>
+
+  <div class="table-card form-card--wide">
+    <header>Lotes por status</header>
+    <div class="lote-status-chart" id="loteStatusChart"></div>
+  </div>
+
+  <div class="tables">
+    <div class="table-card form-card--wide">
+      <header>Movimentacoes recentes</header>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Produto</th>
+            <th>Unidade</th>
+            <th>Qtd</th>
+            <th>Motivo</th>
+            <th>Responsavel</th>
+          </tr>
+        </thead>
+        <tbody id="movTable">
+          <tr>
+              <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-card form-card--wide">
+      <header>Lotes a vencer (7 dias)</header>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Lote</th>
+              <th>Validade</th>
+              <th>Qtd</th>
+              <th>Unidade</th>
+              <th>Status</th>
+              <th>Resp.</th>
+            </tr>
+          </thead>
+          <tbody id="lotesTable">
+            <tr>
+              <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+

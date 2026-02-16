@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste API - Boletos</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            color: #4ec9b0;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+        .result {
+            background: #252526;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .success {
+            color: #4ec9b0;
+        }
+        .error {
+            color: #f48771;
+        }
+        .warning {
+            color: #dcdcaa;
+        }
+        .info {
+            color: #9cdcfe;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de API - Boletos</h1>
+    
+    <div>
+        <button onclick="testarListarTodos()">📋 Listar TODOS os boletos</button>
+        <button onclick="testarListarMesAtual()">📅 Listar boletos do mês atual</button>
+        <button onclick="testarCriarBoleto()">➕ Criar boleto teste</button>
+        <button onclick="testarResumo()">💰 Buscar resumo</button>
+        <button onclick="limpar()">🗑️ Limpar</button>
+    </div>
+    
+    <div id="resultado" class="result">
+        <span class="info">Clique em um botão para testar a API...</span>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const resultado = document.getElementById('resultado');
+        
+        function log(msg, tipo = 'info') {
+            const span = document.createElement('span');
+            span.className = tipo;
+            span.textContent = msg + '\n';
+            resultado.appendChild(span);
+        }
+        
+        function limpar() {
+            resultado.innerHTML = '<span class="info">Console limpo...</span>\n';
+        }
+        
+        async function testarListarTodos() {
+            limpar();
+            log('🚀 Testando: GET /boletos (sem filtro)', 'warning');
+            
+            try {
+                const response = await fetch(`${API_URL}/boletos`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                log(`📥 Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log(`✅ Total de boletos: ${data.length}`, 'success');
+                log('📋 Dados:', 'info');
+                log(JSON.stringify(data, null, 2), 'info');
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testarListarMesAtual() {
+            limpar();
+            const mesAno = new Date().toISOString().slice(0, 7);
+            log(`🚀 Testando: GET /boletos?mes_ano=${mesAno}`, 'warning');
+            
+            try {
+                const response = await fetch(`${API_URL}/boletos?mes_ano=${mesAno}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                log(`📥 Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log(`✅ Total de boletos no mês ${mesAno}: ${data.length}`, 'success');
+                log('📋 Dados:', 'info');
+                log(JSON.stringify(data, null, 2), 'info');
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testarCriarBoleto() {
+            limpar();
+            log('🚀 Testando: POST /boletos', 'warning');
+            
+            const formData = new FormData();
+            formData.append('fornecedor', 'Teste API');
+            formData.append('descricao', 'Boleto criado via teste');
+            formData.append('data_vencimento', '2026-01-25');
+            formData.append('valor', '150.00');
+            formData.append('status', 'A_VENCER');
+            formData.append('categoria', 'FORNECEDOR');
+            formData.append('observacoes', 'Criado em ' + new Date().toLocaleString());
+            
+            try {
+                const response = await fetch(`${API_URL}/boletos`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Usuario-Id': '1'
+                    },
+                    body: formData
+                });
+                
+                log(`📥 Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log('📋 Resposta:', 'info');
+                log(JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    log(`✅ Boleto criado com ID: ${data.boleto?.id}`, 'success');
+                }
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testarResumo() {
+            limpar();
+            const mesAno = new Date().toISOString().slice(0, 7);
+            log(`🚀 Testando: GET /boletos/resumo?mes_ano=${mesAno}`, 'warning');
+            
+            try {
+                const response = await fetch(`${API_URL}/boletos/resumo?mes_ano=${mesAno}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Usuario-Id': '1'
+                    }
+                });
+                
+                log(`📥 Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log('📋 Resumo:', 'info');
+                log(JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
