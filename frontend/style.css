@@ -147,14 +147,19 @@ body.sidebar-open {
   overflow-y: auto;
 }
 
-/* Barra superior com usuario e botoes rapidos */
+/* Barra superior com usuario e botoes rapidos - fixa ao rolar a pagina */
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 18px 28px;
   background: #fff;
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .topbar .user-info {
