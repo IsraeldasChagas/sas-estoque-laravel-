@@ -897,11 +897,11 @@ function todayInputValue() {
 
 function generateLoteCodigo() {
   const agora = new Date();
-  const ano = String(agora.getFullYear()).slice(-2);
-  const mes = String(agora.getMonth() + 1).padStart(2, "0");
   const dia = String(agora.getDate()).padStart(2, "0");
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const ano = String(agora.getFullYear());
   const sufixo = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `L${ano}${mes}${dia}-${sufixo}`;
+  return `L${dia}${mes}${ano}-${sufixo}`;
 }
 
 async function ensureLocaisCarregados(force = false) {
@@ -1383,6 +1383,7 @@ async function imprimirEtiquetaLote(loteId) {
     const numeroLote = lote.numero_lote || lote.codigo_lote || 'N/A';
     const produtoNome = lote.produto_nome || 'Produto';
     const dataValidade = lote.data_validade ? formatDate(lote.data_validade).split(' ')[0] : null; // Remove hora, mantém apenas data
+    const dataGeracao = (lote.criado_em || lote.created_at) ? formatDate(lote.criado_em || lote.created_at).split(' ')[0] : null;
     
     // Gera URL do QR Code (aponta para a seção de lotes)
     const qrUrl = window.location.origin + window.location.pathname + '#lotes?lote=' + loteId;
@@ -1433,6 +1434,11 @@ async function imprimirEtiquetaLote(loteId) {
           color: #333;
           margin-top: 2px;
         }
+        .data-geracao {
+          font-size: 8pt;
+          color: #1976d2;
+          margin-top: 1px;
+        }
         .qr-code {
           width: 22mm;
           height: 22mm;
@@ -1455,6 +1461,7 @@ async function imprimirEtiquetaLote(loteId) {
           <div class="etiqueta-info">
             <div class="produto-nome">${escapeHtml(produtoNome)}</div>
             <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
+            ${dataGeracao ? `<div class="data-geracao">GER: ${escapeHtml(dataGeracao)}</div>` : ''}
             ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
           </div>
           <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
@@ -1574,6 +1581,7 @@ async function baixarEtiquetaLote(loteId) {
     const numeroLote = lote.numero_lote || lote.codigo_lote || 'N/A';
     const produtoNome = lote.produto_nome || 'Produto';
     const dataValidade = lote.data_validade ? formatDate(lote.data_validade).split(' ')[0] : null; // Remove hora, mantém apenas data
+    const dataGeracao = (lote.criado_em || lote.created_at) ? formatDate(lote.criado_em || lote.created_at).split(' ')[0] : null;
     
     // Gera URL do QR Code (aponta para a seção de lotes)
     const qrUrl = window.location.origin + window.location.pathname + '#lotes?lote=' + loteId;
@@ -1624,6 +1632,11 @@ async function baixarEtiquetaLote(loteId) {
           color: #333;
           margin-top: 2px;
         }
+        .data-geracao {
+          font-size: 8pt;
+          color: #1976d2;
+          margin-top: 1px;
+        }
         .qr-code {
           width: 22mm;
           height: 22mm;
@@ -1646,6 +1659,7 @@ async function baixarEtiquetaLote(loteId) {
           <div class="etiqueta-info">
             <div class="produto-nome">${escapeHtml(produtoNome)}</div>
             <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
+            ${dataGeracao ? `<div class="data-geracao">GER: ${escapeHtml(dataGeracao)}</div>` : ''}
             ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
           </div>
           <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
@@ -5529,7 +5543,7 @@ async function loadEstoqueProduto(produtoId) {
             })}</td>
             ${valorUnitarioCell}
             ${valorTotalCell}
-            <td data-label="Nº de Lotes">${item.num_lotes || 0}</td>
+            <td data-label="Lotes (código)">${item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—")}</td>
           </tr>
         `;
         })

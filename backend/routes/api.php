@@ -244,6 +244,11 @@ Route::get('/produtos/{id}/estoque', function ($id) {
             return response()->json(['error' => 'Produto não encontrado'], 404);
         }
         
+        $driver = DB::connection()->getDriverName();
+        $concatLotes = $driver === 'pgsql'
+            ? "STRING_AGG(DISTINCT stock_lotes.codigo_lote, ', ' ORDER BY stock_lotes.codigo_lote)"
+            : "GROUP_CONCAT(DISTINCT stock_lotes.codigo_lote ORDER BY stock_lotes.codigo_lote SEPARATOR ', ')";
+
         $estoquePorUnidade = DB::table('stock_lotes')
             ->leftJoin('unidades', 'stock_lotes.unidade_id', '=', 'unidades.id')
             ->select(
@@ -252,27 +257,30 @@ Route::get('/produtos/{id}/estoque', function ($id) {
                 DB::raw('SUM(stock_lotes.quantidade) as qtd_total'),
                 DB::raw('AVG(stock_lotes.custo_unitario) as valor_unitario_medio'),
                 DB::raw('SUM(stock_lotes.quantidade * stock_lotes.custo_unitario) as valor_total'),
-                DB::raw('COUNT(DISTINCT stock_lotes.codigo_lote) as num_lotes')
+                DB::raw('COUNT(DISTINCT stock_lotes.codigo_lote) as num_lotes'),
+                DB::raw($concatLotes . ' as codigos_lote')
             )
             ->where('stock_lotes.produto_id', $id)
             ->where('stock_lotes.quantidade', '>', 0)
             ->groupBy('stock_lotes.unidade_id', 'unidades.nome')
             ->get();
-        
+
         // Calcula totais
         $qtdTotal = $estoquePorUnidade->sum('qtd_total');
         $valorTotal = $estoquePorUnidade->sum('valor_total');
         $valorUnitarioMedio = $qtdTotal > 0 ? ($valorTotal / $qtdTotal) : 0;
-        
+
         // Formata os dados para o frontend
         $estoquePorUnidadeFormatado = $estoquePorUnidade->map(function($item) {
+            $codigosLote = trim($item->codigos_lote ?? '');
             return [
                 'unidade_id' => $item->unidade_id,
                 'unidade_nome' => $item->unidade_nome ?? 'N/A',
                 'qtd_total' => floatval($item->qtd_total ?? 0),
                 'valor_unitario_medio' => floatval($item->valor_unitario_medio ?? 0),
                 'valor_total' => floatval($item->valor_total ?? 0),
-                'num_lotes' => intval($item->num_lotes ?? 0)
+                'num_lotes' => intval($item->num_lotes ?? 0),
+                'codigos_lote' => $codigosLote ?: null
             ];
         });
         
@@ -1920,6 +1928,11 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
         $numeroLote = $lote->numero_lote ?? $lote->codigo_lote ?? 'N/A';
         $produtoNome = $lote->produto_nome ?? 'Produto';
         $dataValidade = $lote->data_validade ? date('d/m/Y', strtotime($lote->data_validade)) : null;
+        $dataGeracao = null;
+        $criadoEm = $lote->criado_em ?? $lote->created_at ?? null;
+        if ($criadoEm) {
+            $dataGeracao = date('d/m/Y', strtotime($criadoEm));
+        }
         
         // Gera HTML da etiqueta (tamanho: 50mm x 30mm)
         $html = '
@@ -1958,6 +1971,11 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
                     font-weight: bold;
                     color: #000;
                 }
+                .data-geracao {
+                    font-size: 8pt;
+                    color: #1976d2;
+                    margin-top: 1px;
+                }
                 .validade {
                     font-size: 8pt;
                     color: #333;
@@ -1974,6 +1992,7 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
             <div class="etiqueta-info">
                 <div class="produto-nome">' . htmlspecialchars($produtoNome) . '</div>
                 <div class="numero-lote">LOTE: ' . htmlspecialchars($numeroLote) . '</div>
+                ' . ($dataGeracao ? '<div class="data-geracao">GER: ' . htmlspecialchars($dataGeracao) . '</div>' : '') . '
                 ' . ($dataValidade ? '<div class="validade">VAL: ' . htmlspecialchars($dataValidade) . '</div>' : '') . '
             </div>
             <img src="' . $qrCodeDataUri . '" class="qr-code" alt="QR Code" />
