@@ -1631,6 +1631,49 @@ textarea {
     font-size: 0.85rem;
   }
 
+  #boletaoSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #boletaoSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #boletaoSection .table-wrapper thead {
+    display: none;
+  }
+
+  #boletaoSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #boletaoSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #boletaoSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #boletaoSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   #produtosSection .table-wrapper {
     overflow: visible;
   }
@@ -2240,6 +2283,20 @@ textarea {
     font-size: 0.85rem;
   }
 
+  #boletaoSection .table-wrapper tr {
+    padding: 16px;
+  }
+
+  #boletaoSection .table-wrapper td {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  #boletaoSection .table-wrapper td::before {
+    font-size: 0.85rem;
+  }
+
   #unidadesSection .table-wrapper tr {
     padding: 16px;
   }
@@ -2356,6 +2413,10 @@ textarea {
   }
 
   #dashboardSection .table-wrapper table {
+    min-width: 0;
+  }
+
+  #boletaoSection .table-wrapper table {
     min-width: 0;
   }
 

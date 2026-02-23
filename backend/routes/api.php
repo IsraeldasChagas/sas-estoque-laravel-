@@ -324,10 +324,15 @@ Route::post('/produtos', function (Request $request) {
         \Log::info('✅ Dados validados:', $data);
         
         // Gera código_barras automaticamente se não fornecido
-        if (empty($data['codigo_barras'])) {
+        if (empty(trim((string)($data['codigo_barras'] ?? '')))) {
             $data['codigo_barras'] = 'PROD-' . date('YmdHis') . '-' . rand(1000, 9999);
             \Log::info('🔢 Código de barras gerado:', ['codigo' => $data['codigo_barras']]);
         }
+        
+        // Garante que campos NOT NULL tenham valor padrão (MySQL não aceita null)
+        $data['custo_medio'] = $data['custo_medio'] ?? 0;
+        $data['estoque_minimo'] = $data['estoque_minimo'] ?? 0;
+        $data['ativo'] = $data['ativo'] ?? 1;
         
         $id = DB::table('produtos')->insertGetId($data);
         \Log::info('💾 Produto salvo no banco', ['id' => $id]);

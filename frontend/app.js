@@ -6048,11 +6048,15 @@ function handleLogout() {
   }
 }
 
+let submittingProduto = false;
+
 async function submitProduto(event) {
   event.preventDefault();
+  if (submittingProduto) return;
+  submittingProduto = true;
   console.log('🚀 === SUBMIT PRODUTO INICIADO ===');
   
-  const form = dom.produtosForm;
+  const form = dom.produtosForm || document.getElementById('produtoForm');
   
   if (!form) {
     console.error('❌ Formulário não encontrado!');
@@ -6068,16 +6072,18 @@ async function submitProduto(event) {
     ? codigoBarrasValue 
     : null;
   
+  const custoVal = Number(form.elements.custo_medio?.value || 0);
+  const estoqueVal = Number(form.elements.estoque_minimo?.value || 0);
   const payload = {
     nome: form.elements.nome.value.trim(),
     categoria: form.elements.categoria.value,
     unidade_base: form.elements.unidade_base.value,
     codigo_barras: codigoBarras,
     descricao: form.elements.descricao.value.trim() || null,
-    custo_medio: Number(form.elements.custo_medio.value || 0),
-    estoque_minimo: Number(form.elements.estoque_minimo.value || 0),
-    unidade_id: form.elements.unidade_id.value || null,
-    ativo: Number(form.elements.ativo.value || 1),
+    custo_medio: isNaN(custoVal) ? 0 : custoVal,
+    estoque_minimo: isNaN(estoqueVal) ? 0 : estoqueVal,
+    unidade_id: form.elements.unidade_id?.value || null,
+    ativo: Number(form.elements.ativo?.value || 1) || 1,
   };
   
   console.log('📊 Payload preparado:', payload);
@@ -6124,6 +6130,7 @@ async function submitProduto(event) {
     console.error('❌ Stack:', err.stack);
     showToast(err.message || "Falha ao salvar produto.", "error");
   } finally {
+    submittingProduto = false;
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;
@@ -8698,16 +8705,16 @@ function renderBoletos(boletos) {
       const fmtData = (v) => (formatDate(v) || '').split(' ')[0] || '-';
       return `
         <tr>
-          <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
-          <td>${boleto.fornecedor || '-'}</td>
-          <td>${fmtData(boleto.data_vencimento)}</td>
-          <td>${diasRestante}</td>
-          <td>R$ ${parseFloat(boleto.valor || 0).toFixed(2)}</td>
-          <td>${boleto.data_pagamento ? fmtData(boleto.data_pagamento) : '-'}</td>
-          <td>${boleto.valor_pago ? 'R$ ' + parseFloat(boleto.valor_pago).toFixed(2) : '-'}</td>
-          <td>${valorJuros > 0 ? 'R$ ' + valorJuros.toFixed(2) : 'R$ 0,00'}</td>
-          <td style="text-align: center;">${anexoIcon}</td>
-          <td>
+          <td data-label="Status"><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+          <td data-label="Fornecedor">${boleto.fornecedor || '-'}</td>
+          <td data-label="Vencimento">${fmtData(boleto.data_vencimento)}</td>
+          <td data-label="Dias Restante">${diasRestante}</td>
+          <td data-label="Valor">R$ ${parseFloat(boleto.valor || 0).toFixed(2)}</td>
+          <td data-label="Data Pagamento">${boleto.data_pagamento ? fmtData(boleto.data_pagamento) : '-'}</td>
+          <td data-label="Valor Pago">${boleto.valor_pago ? 'R$ ' + parseFloat(boleto.valor_pago).toFixed(2) : '-'}</td>
+          <td data-label="Juros/Multa">${valorJuros > 0 ? 'R$ ' + valorJuros.toFixed(2) : 'R$ 0,00'}</td>
+          <td data-label="Anexo" style="text-align: center;">${anexoIcon}</td>
+          <td data-label="Ações">
             <button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>
             <button class="btn-icon" title="Detalhes" data-id="${boleto.id}">👁️</button>
             ${boleto.status !== 'PAGO' ? `<button class="btn-icon btn-icon--primary" title="Pagar" data-id="${boleto.id}">💳</button>` : ''}
@@ -9671,10 +9678,31 @@ function setupForms() {
   console.log('🔧 Configurando event listeners de formulários...');
   
   if (dom.produtosForm) {
-    console.log('✅ produtosForm encontrado, registrando evento submit');
-    dom.produtosForm.addEventListener("submit", submitProduto);
-  } else {
-    console.warn('⚠️ produtosForm NÃO encontrado');
+    dom.produtosForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitProduto(e).catch(err => {
+        console.error("Erro ao salvar produto:", err);
+        showToast(err.message || "Falha ao salvar produto.", "error");
+      });
+      return false;
+    });
+    const produtoSalvarBtn = dom.produtosForm.querySelector('button[type="submit"]');
+    if (produtoSalvarBtn) {
+      produtoSalvarBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dom.produtosForm.checkValidity()) {
+          submitProduto(e).catch(err => {
+            console.error("Erro ao salvar produto:", err);
+            showToast(err.message || "Falha ao salvar produto.", "error");
+          });
+        } else {
+          dom.produtosForm.reportValidity();
+        }
+        return false;
+      });
+    }
   }
   
   dom.unidadeForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeForm));
