@@ -867,19 +867,6 @@
                 📅 Mês/Ano:
                 <select id="boletosMesAnoFiltro" class="boletos-mes-select">
                   <option value="">📋 Todos os boletos</option>
-                  <option value="2026-01" selected>Janeiro 2026</option>
-                  <option value="2025-12">Dezembro 2025</option>
-                  <option value="2025-11">Novembro 2025</option>
-                  <option value="2025-10">Outubro 2025</option>
-                  <option value="2025-09">Setembro 2025</option>
-                  <option value="2025-08">Agosto 2025</option>
-                  <option value="2025-07">Julho 2025</option>
-                  <option value="2025-06">Junho 2025</option>
-                  <option value="2025-05">Maio 2025</option>
-                  <option value="2025-04">Abril 2025</option>
-                  <option value="2025-03">Marco 2025</option>
-                  <option value="2025-02">Fevereiro 2025</option>
-                  <option value="2025-01">Janeiro 2025</option>
                 </select>
               </label>
 
@@ -895,7 +882,7 @@
                 <select id="boletosStatusFiltro" class="boletos-mes-select">
                   <option value="">Todos os status</option>
                   <option value="A_VENCER">A vencer</option>
-                  <option value="VENCIDO">Vencido</option>
+                  <option value="VENCIDO">Atrasado</option>
                   <option value="PAGO">Pago</option>
                   <option value="CANCELADO">Cancelado</option>
                 </select>
@@ -958,8 +945,8 @@
                     <tr>
                       <th>Status</th>
                       <th>Fornecedor</th>
-                      <th>Descricao</th>
                       <th>Vencimento</th>
+                      <th>Dias Restante</th>
                       <th>Valor</th>
                       <th>Data Pagamento</th>
                       <th>Valor Pago</th>
@@ -1038,7 +1025,7 @@
             <select name="status">
               <option value="ATIVO">Ativo</option>
               <option value="BLOQUEADO">Bloqueado</option>
-              <option value="VENCIDO">Vencido</option>
+              <option value="VENCIDO">Atrasado</option>
               <option value="ESGOTADO">Esgotado</option>
             </select>
           </label>
@@ -1264,6 +1251,7 @@
               <option value="HORTIFRUTI">Hortifruti</option>
               <option value="SECOS">Secos</option>
               <option value="BEBIDAS">Bebidas</option>
+              <option value="FRUTOS_DO_MAR">Frutos do mar</option>
               <option value="LIMPEZA">Limpeza</option>
               <option value="EMBALAGENS">Embalagens</option>
               <option value="CONGELADOS">Congelados</option>
@@ -1273,7 +1261,7 @@
             Unidade base
             <select name="unidade_base" required>
               <option value="">Selecione</option>
-              <option value="UN">UN</option>
+              <option value="UND">UND</option>
               <option value="G">G</option>
               <option value="KG">KG</option>
               <option value="ML">ML</option>
@@ -1724,7 +1712,7 @@
               Status
               <select name="status" required>
                 <option value="A_VENCER" selected>A vencer</option>
-                <option value="VENCIDO">Vencido</option>
+                <option value="VENCIDO">Atrasado</option>
                 <option value="PAGO">Pago</option>
                 <option value="CANCELADO">Cancelado</option>
               </select>

@@ -1588,6 +1588,49 @@ textarea {
     padding: 28px 16px 40px;
   }
 
+  #dashboardSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #dashboardSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #dashboardSection .table-wrapper thead {
+    display: none;
+  }
+
+  #dashboardSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #dashboardSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #dashboardSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #dashboardSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   #produtosSection .table-wrapper {
     overflow: visible;
   }
@@ -2183,6 +2226,20 @@ textarea {
     gap: 8px;
   }
 
+  #dashboardSection .table-wrapper tr {
+    padding: 16px;
+  }
+
+  #dashboardSection .table-wrapper td {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  #dashboardSection .table-wrapper td::before {
+    font-size: 0.85rem;
+  }
+
   #unidadesSection .table-wrapper tr {
     padding: 16px;
   }
@@ -2296,6 +2353,10 @@ textarea {
 @media (max-width: 480px) {
   .table-wrapper table {
     min-width: 460px;
+  }
+
+  #dashboardSection .table-wrapper table {
+    min-width: 0;
   }
 
   .topbar__menu-btn {

@@ -8494,6 +8494,35 @@ function setupPasswordToggles() {
 // ===== Funcoes do Modulo de Boletos =====
 
 // Popula o select de unidades no modal de boleto
+// Popula o filtro Mês/Ano: ano atual completo + ano seguinte inteiro (gerado dinamicamente)
+function populateBoletosMesAnoFiltro() {
+  const select = document.getElementById('boletosMesAnoFiltro');
+  if (!select) return;
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth();
+  const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const valorAtual = select.value;
+  select.innerHTML = '<option value="">📋 Todos os boletos</option>';
+  // 6 meses atrás até fim do ano seguinte (cobre histórico + ano vigente + ano seguinte inteiro)
+  const mesInicio = new Date(anoAtual, mesAtual - 6, 1);
+  const anoInicio = mesInicio.getFullYear();
+  const mesIdxInicio = mesInicio.getMonth();
+  for (let ano = anoInicio; ano <= anoAtual + 1; ano++) {
+    const inicio = (ano === anoInicio) ? mesIdxInicio : 0;
+    const fim = (ano === anoAtual + 1) ? 11 : 11;
+    for (let m = inicio; m <= fim; m++) {
+      const valor = `${ano}-${String(m + 1).padStart(2, '0')}`;
+      const opt = document.createElement('option');
+      opt.value = valor;
+      opt.textContent = `${nomesMeses[m]} ${ano}`;
+      select.appendChild(opt);
+    }
+  }
+  if (valorAtual) select.value = valorAtual;
+}
+
 async function populateBoletosUnidades() {
   const select = document.querySelector('#boletoForm select[name="unidade_id"]');
   if (!select) return;
@@ -8601,20 +8630,41 @@ function renderBoletos(boletos) {
 
   console.log('✅ Renderizando', boletos.length, 'boletos');
 
-  const statusMap = {
-    'PAGO': { label: 'Pago', class: 'status-pill--success' },
-    'A_VENCER': { label: 'A vencer', class: 'status-pill--info' },
-    'VENCIDO': { label: 'Vencido', class: 'status-pill--danger' },
-    'CANCELADO': { label: 'Cancelado', class: 'status-pill--muted' }
-  };
-
   try {
-    const html = boletos.map(boleto => {
-      const status = statusMap[boleto.status] || { label: boleto.status, class: 'status-pill--muted' };
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    // Ordena por dias restante (menor primeiro): vencidos mais atrasados, depois a vencer mais urgentes, por último pagos/cancelados
+    const getSortKey = (b) => {
+      if (b.status === 'PAGO' || b.status === 'CANCELADO') return 99999;
+      const venc = new Date(b.data_vencimento);
+      venc.setHours(0, 0, 0, 0);
+      const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+      return diff;
+    };
+    const ordenados = [...boletos].sort((a, b) => getSortKey(a) - getSortKey(b));
+
+    const html = ordenados.map(boleto => {
       const valorJuros = parseFloat(boleto.juros_multa || 0);
-      const isComAtraso = boleto.status === 'PAGO' && valorJuros > 0;
-      const statusClass = isComAtraso ? 'status-pill--warning' : status.class;
-      const statusLabel = isComAtraso ? 'Pago com atraso' : status.label;
+      let statusClass, statusLabel;
+      if (boleto.status === 'PAGO') {
+        statusClass = valorJuros > 0 ? 'status-pill--warning' : 'status-pill--success';
+        statusLabel = valorJuros > 0 ? 'Pago com atraso' : 'Pago';
+      } else if (boleto.status === 'CANCELADO') {
+        statusClass = 'status-pill--muted';
+        statusLabel = 'Cancelado';
+      } else {
+        // Calcula estado real pela data de vencimento (A vencer ou Atrasado)
+        const venc = new Date(boleto.data_vencimento);
+        venc.setHours(0, 0, 0, 0);
+        const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+        if (diff < 0) {
+          statusClass = 'status-pill--danger';
+          statusLabel = 'Atrasado';
+        } else {
+          statusClass = 'status-pill--info';
+          statusLabel = 'A vencer';
+        }
+      }
       
       // Determina o ícone do anexo baseado no tipo
       let anexoIcon = '';
@@ -8629,20 +8679,31 @@ function renderBoletos(boletos) {
         anexoIcon = '<span style="color: #ccc;">-</span>';
       }
       
-      // Adiciona descrição com indicador de recorrência se aplicável
-      let descricaoCompleta = boleto.descricao || '-';
-      if (boleto.is_recorrente && boleto.meses_recorrencia) {
-        descricaoCompleta += ` <span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">🔄 ${boleto.meses_recorrencia}x</span>`;
+      // Calcula dias restante (para A_VENCER ou Atrasado)
+      let diasRestante = '-';
+      if (boleto.status !== 'PAGO' && boleto.status !== 'CANCELADO') {
+        const vencimento = new Date(boleto.data_vencimento);
+        vencimento.setHours(0, 0, 0, 0);
+        const diffTime = vencimento - hoje;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) {
+          diasRestante = `${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
+        } else if (diffDays < 0) {
+          diasRestante = `${Math.abs(diffDays)} dia${Math.abs(diffDays) !== 1 ? 's' : ''} atrasado`;
+        } else {
+          diasRestante = 'Hoje';
+        }
       }
       
+      const fmtData = (v) => (formatDate(v) || '').split(' ')[0] || '-';
       return `
         <tr>
           <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
           <td>${boleto.fornecedor || '-'}</td>
-          <td>${descricaoCompleta}</td>
-          <td>${formatDate(boleto.data_vencimento)}</td>
+          <td>${fmtData(boleto.data_vencimento)}</td>
+          <td>${diasRestante}</td>
           <td>R$ ${parseFloat(boleto.valor || 0).toFixed(2)}</td>
-          <td>${boleto.data_pagamento ? formatDate(boleto.data_pagamento) : '-'}</td>
+          <td>${boleto.data_pagamento ? fmtData(boleto.data_pagamento) : '-'}</td>
           <td>${boleto.valor_pago ? 'R$ ' + parseFloat(boleto.valor_pago).toFixed(2) : '-'}</td>
           <td>${valorJuros > 0 ? 'R$ ' + valorJuros.toFixed(2) : 'R$ 0,00'}</td>
           <td style="text-align: center;">${anexoIcon}</td>
@@ -8765,6 +8826,9 @@ function setupBoletosModule() {
   const boletoRemoverAnexo = document.getElementById('boletoRemoverAnexo');
   const boletoRecorrente = document.getElementById('boletoRecorrente');
   const recorrenteFields = document.getElementById('recorrenteFields');
+  
+  // Popula filtro Mês/Ano (ano atual + ano seguinte completo)
+  populateBoletosMesAnoFiltro();
   
   // Popula select de unidades no filtro
   async function carregarUnidadesFiltro() {
@@ -9283,16 +9347,28 @@ async function mostrarDetalhesBoleto(id) {
     const boleto = await response.json();
     console.log('Detalhes do boleto:', boleto);
     
-    // Formata os dados
-    const statusMap = {
-      'PAGO': { label: 'Pago', color: '#4CAF50' },
-      'A_VENCER': { label: 'A vencer', color: '#2196F3' },
-      'VENCIDO': { label: 'Vencido', color: '#f44336' },
-      'CANCELADO': { label: 'Cancelado', color: '#9E9E9E' }
-    };
-    
-    const status = statusMap[boleto.status] || { label: boleto.status, color: '#999' };
     const valorJuros = parseFloat(boleto.juros_multa || 0);
+    let statusLabel, statusColor;
+    if (boleto.status === 'PAGO') {
+      statusLabel = valorJuros > 0 ? 'Pago com atraso' : 'Pago';
+      statusColor = valorJuros > 0 ? '#ff9800' : '#4CAF50';
+    } else if (boleto.status === 'CANCELADO') {
+      statusLabel = 'Cancelado';
+      statusColor = '#9E9E9E';
+    } else {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const venc = new Date(boleto.data_vencimento);
+      venc.setHours(0, 0, 0, 0);
+      const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+      if (diff < 0) {
+        statusLabel = 'Atrasado';
+        statusColor = '#f44336';
+      } else {
+        statusLabel = 'A vencer';
+        statusColor = '#2196F3';
+      }
+    }
     
     let html = `
       <div style="display: grid; gap: 1rem;">
@@ -9306,8 +9382,8 @@ async function mostrarDetalhesBoleto(id) {
           <p style="margin: 0.5rem 0;"><strong>Categoria:</strong> ${boleto.categoria || '-'}</p>
           <p style="margin: 0.5rem 0;">
             <strong>Status:</strong> 
-            <span style="background: ${status.color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
-              ${status.label}
+            <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
+              ${statusLabel}
             </span>
           </p>
         </div>
