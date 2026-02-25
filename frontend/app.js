@@ -11,6 +11,16 @@ const API_URL = (() => {
   return fallback;
 })();
 
+// URL base para arquivos estáticos (fotos, uploads) - sem /api
+const BASE_URL = API_URL.replace(/\/api\/?$/, "") || "http://localhost:5000";
+
+/** Monta URL completa da foto do usuário (backend salva em public/uploads/usuarios/) */
+function getUsuarioFotoUrl(path) {
+  if (!path || typeof path !== "string") return null;
+  const p = path.replace(/^\//, "");
+  return p ? `${BASE_URL}/${p}` : null;
+}
+
 const storageKey = "sas-estoque-user";
 const currentSectionKey = "sas-estoque-current-section";
 
@@ -1141,6 +1151,47 @@ async function fetchJSON(path, options = {}) {
   }
 }
 
+/**
+ * Registra entrada de estoque via API centralizada (gera lote automaticamente se numero_lote não informado).
+ * Usado pelo dashboard (entrada manual) e pela lista de compras.
+ * @param {Object} dadosEntrada - { produto_id, unidade_id, quantidade, custo_unitario, usuario_id, numero_lote?, data_fabricacao?, data_validade?, local_id?, motivo?, observacao?, origem?: 'DASHBOARD'|'LISTA_COMPRAS' }
+ * @returns {Promise<Object>} Resposta da API
+ */
+async function registrarEntradaEstoque(dadosEntrada) {
+  const url = `${API_URL}/estoque/entradas`;
+  const body = {
+    produto_id: dadosEntrada.produto_id,
+    unidade_id: dadosEntrada.unidade_id,
+    quantidade: dadosEntrada.quantidade ?? dadosEntrada.qtd,
+    custo_unitario: dadosEntrada.custo_unitario,
+    usuario_id: dadosEntrada.usuario_id,
+    numero_lote: dadosEntrada.numero_lote && String(dadosEntrada.numero_lote).trim() ? dadosEntrada.numero_lote : undefined,
+    data_fabricacao: dadosEntrada.data_fabricacao || undefined,
+    data_validade: dadosEntrada.data_validade || undefined,
+    local_id: dadosEntrada.local_id || undefined,
+    motivo: dadosEntrada.motivo || undefined,
+    observacao: dadosEntrada.observacao || undefined,
+    origem: dadosEntrada.origem || "DASHBOARD",
+  };
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+      ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(payload.message || payload.error || `Erro ${res.status}`);
+    err.responseData = payload;
+    err.status = res.status;
+    throw err;
+  }
+  return payload;
+}
+
 async function fetchForm(path, method, body) {
   const tokenHeaders = currentUser && currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {};
   const userHeaders =
@@ -1986,7 +2037,8 @@ function applyPermissions() {
   const podeGerenciarUsuarios = regras.canManageUsuarios || canManageUsuariosBar();
   if (dom.openUsuarioBtn) dom.openUsuarioBtn.classList.toggle("hidden", !podeGerenciarUsuarios);
   updateUnidadeInlineUI(regras.canManageUnidades);
-  if (dom.openNovoLoteBtn) dom.openNovoLoteBtn.classList.toggle("hidden", !regras.canManageProdutos);
+  // Botão "Novo lote" oculto – lotes são criados automaticamente em entradas de estoque
+  if (dom.openNovoLoteBtn) dom.openNovoLoteBtn.classList.add("hidden");
   // COZINHA e BAR não podem registrar entrada - oculta o botão
   if (dom.openEntradaBtn) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -2654,8 +2706,10 @@ function renderUsuarios(lista) {
   
   const rows = (lista || []).map((usuario) => {
     const ativo = Number(usuario.ativo) === 1;
-    const foto = usuario.foto_path
-      ? `<img src="${API_URL}/${usuario.foto_path}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto" />`
+    const fotoPath = usuario.foto || usuario.foto_path;
+    const fotoUrl = getUsuarioFotoUrl(fotoPath);
+    const foto = fotoUrl
+      ? `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto" loading="lazy" />`
       : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
     
     // ADMIN pode gerenciar TODOS os usuários, incluindo outros ADMINs - SEM EXCEÇÕES
@@ -2726,14 +2780,15 @@ function renderUsuarios(lista) {
 
 function renderRelatorioResumo(lista, label) {
   if (dom.relResumoColuna) dom.relResumoColuna.textContent = label;
+  const colLabel = label || "Agrupador";
   const rows = (lista || []).map((item) => (
     `<tr>
-      <td>${escapeHtml(item.nome)}</td>
-      <td>${formatNumber(item.entradasQtd, 3)}</td>
-      <td>R$ ${formatNumber(item.entradasVal, 2)}</td>
-      <td>${formatNumber(item.saidasQtd, 3)}</td>
-      <td>R$ ${formatNumber(item.saidasVal, 2)}</td>
-      <td>${formatNumber(item.saldoQtd, 3)}</td>
+      <td data-label="${colLabel}">${escapeHtml(item.nome)}</td>
+      <td data-label="Entradas (Qtd)">${formatNumber(item.entradasQtd, 3)}</td>
+      <td data-label="Entradas (Valor)">R$ ${formatNumber(item.entradasVal, 2)}</td>
+      <td data-label="Saídas (Qtd)">${formatNumber(item.saidasQtd, 3)}</td>
+      <td data-label="Saídas (Valor)">R$ ${formatNumber(item.saidasVal, 2)}</td>
+      <td data-label="Saldo (Qtd)">${formatNumber(item.saldoQtd, 3)}</td>
     </tr>`
   )).join("");
   renderTable(dom.relatorioResumoTable, rows, "Sem dados no periodo.", 6);
@@ -6541,17 +6596,22 @@ async function submitEntrada(event) {
       return;
     }
     
-    if (!data.numero_lote || !data.numero_lote.trim()) {
-      showToast("❌ Informe o número do lote.", "error");
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = submitLabel || "Registrar entrada";
-      }
-      return;
-    }
-    
-    console.log("Enviando dados de entrada:", { ...data, senha: '***' });
-    const resposta = await fetchJSON("/entrada", { method: "POST", body: JSON.stringify(data) });
+    // numero_lote é opcional: se vazio, o backend gera automaticamente
+    const dadosEntrada = {
+      produto_id: Number(data.produto_id),
+      unidade_id: Number(data.unidade_id),
+      quantidade: data.qtd,
+      qtd: data.qtd,
+      custo_unitario: data.custo_unitario,
+      usuario_id: data.usuario_id,
+      numero_lote: data.numero_lote?.trim() || undefined,
+      data_validade: data.data_validade || undefined,
+      local_id: data.local_id ? Number(data.local_id) : undefined,
+      motivo: data.motivo || undefined,
+      origem: "DASHBOARD",
+    };
+    console.log("Enviando dados de entrada:", { ...dadosEntrada });
+    const resposta = await registrarEntradaEstoque(dadosEntrada);
     console.log("Resposta da API de entrada:", resposta);
     
     // Mensagem de sucesso detalhada
@@ -7514,8 +7574,10 @@ function setupTables() {
       usuarioFotoFile = null;
       usuarioFotoRemovida = false;
       if (dom.usuarioAvatarPreview) {
-        if (usuario.foto_path) {
-          dom.usuarioAvatarPreview.innerHTML = `<img src="${API_URL}/${usuario.foto_path}" alt="${escapeHtml(usuario.nome)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
+        const fotoPath = usuario.foto || usuario.foto_path;
+        const fotoUrl = getUsuarioFotoUrl(fotoPath);
+        if (fotoUrl) {
+          dom.usuarioAvatarPreview.innerHTML = `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
         } else {
           dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
         }

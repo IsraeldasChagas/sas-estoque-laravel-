@@ -1772,8 +1772,103 @@ textarea {
     color: var(--muted);
   }
 
+  /* Em desktop pequeno esconde colunas extras; em mobile card mostra todas via data-label */
   #comprasSection .compras-listas-card .table-wrapper tr td:nth-of-type(n + 4) {
     display: none;
+  }
+
+  /* Itens da lista e Estabelecimentos - layout pergunta em cima, resposta em baixo */
+  #comprasSection .compras-detalhes-card .table-wrapper {
+    overflow: visible;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper thead {
+    display: none;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper td.compras-table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 12px;
+  }
+
+  #comprasSection .compras-detalhes-card .table-wrapper td.compras-table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #comprasSection .compras-detalhes-resumo {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #comprasSection .compras-detalhes-resumo > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  #comprasSection .compras-observacoes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #comprasSection .compras-detalhes-acoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+
+  #comprasSection .compras-detalhes-acoes .btn {
+    margin: 0;
+  }
+
+  #comprasSection .compras-detalhes-card header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  #comprasSection .compras-status {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   #comprasSection .compras-card {
@@ -1849,6 +1944,137 @@ textarea {
 
   #unidadesSection .table-wrapper td .status-pill {
     margin-left: auto;
+  }
+
+  /* Consulta Estoque - layout pergunta em cima, resposta em baixo */
+  #estoqueSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #estoqueSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #estoqueSection .table-wrapper thead {
+    display: none;
+  }
+
+  #estoqueSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #estoqueSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #estoqueSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #estoqueSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  /* Select Produto em estoque - label em cima */
+  #estoqueSection label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 1rem;
+  }
+
+  #estoqueSection .table-card > div:first-of-type {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Actions - botões em linha distribuídos em telas menores */
+  #estoqueSection .actions,
+  #locaisSection .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  #estoqueSection .actions .btn,
+  #locaisSection .actions .btn {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  /* Locais - layout pergunta em cima, resposta em baixo */
+  #locaisSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #locaisSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #locaisSection .table-wrapper thead {
+    display: none;
+  }
+
+  #locaisSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #locaisSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #locaisSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #locaisSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #locaisSection .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  #locaisSection .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #locaisSection .table-wrapper td.table-actions .table-action {
+    width: 100%;
   }
 
   #usuariosSection .table-wrapper {
@@ -2020,6 +2246,76 @@ textarea {
 
   #movimentacoesSection .table-wrapper td .status-pill {
     margin-left: auto;
+  }
+
+  /* Filtros - pergunta em cima, resposta em baixo (movimentacoes e relatorios) */
+  #movimentacoesSection .filters-panel label,
+  #relatoriosSection .filters-panel label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0.5rem;
+  }
+
+  #movimentacoesSection .filters-grid,
+  #relatoriosSection .filters-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #relatoriosSection .report-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    width: 100%;
+  }
+
+  #relatoriosSection .report-actions .btn {
+    width: 100%;
+    margin: 0;
+  }
+
+  #relatoriosSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #relatoriosSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #relatoriosSection .table-wrapper thead {
+    display: none;
+  }
+
+  #relatoriosSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #relatoriosSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #relatoriosSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #relatoriosSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
   }
 
   .sidebar {
@@ -2267,6 +2563,11 @@ textarea {
 
   #produtosSection .table-wrapper td.table-actions {
     gap: 8px;
+  }
+
+  /* Listas de compras - mostrar todas as colunas no card (não esconder 4+) */
+  #comprasSection .compras-listas-card .table-wrapper tr td:nth-of-type(n + 4) {
+    display: flex;
   }
 
   #dashboardSection .table-wrapper tr {
@@ -2544,9 +2845,12 @@ textarea {
   gap: 20px;
 }
 
-#relatoriosSection .table-card table th:nth-of-type(n + 4),
-#relatoriosSection .table-card table td:nth-of-type(n + 4) {
-  display: none;
+/* Esconder colunas extras apenas em desktop (mobile usa card layout com data-label) */
+@media (min-width: 1025px) {
+  #relatoriosSection .table-card table th:nth-of-type(n + 4),
+  #relatoriosSection .table-card table td:nth-of-type(n + 4) {
+    display: none;
+  }
 }
 
 .card--alert {

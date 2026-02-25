@@ -373,7 +373,7 @@
           <!-- Gerenciamento de lotes com filtros e tabela -->
           <section id="lotesSection" class="view-section hidden">
                           <div class="actions">
-              <button class="btn primary" id="openNovoLote">+ Novo lote</button>
+              <button class="btn primary hidden" id="openNovoLote" title="Criação manual desabilitada – lotes são gerados automaticamente em entradas de estoque">+ Novo lote</button>
             </div>
 
             <form id="lotesFilterForm" class="filters-panel">
@@ -1053,8 +1053,8 @@
             <select name="produto_id" required></select>
           </label>
           <label>
-            Numero do lote
-            <input name="numero_lote" id="entradaNumeroLote" list="entradaLoteOptions" required />
+            Numero do lote (opcional – gerado automaticamente se vazio)
+            <input name="numero_lote" id="entradaNumeroLote" list="entradaLoteOptions" placeholder="Deixe vazio para gerar automaticamente" />
             <datalist id="entradaLoteOptions"></datalist>
           </label>
           <label>
