@@ -209,6 +209,10 @@ const dom = {
   saidaOrigemSelect: document.getElementById("saidaOrigemUnidade"),
   saidaMotivo: document.getElementById("saidaMotivo"),
   saidaDestinoWrapper: document.getElementById("saidaDestinoWrapper"),
+  saidaLoteWrapper: document.getElementById("saidaLoteWrapper"),
+  saidaLoteSelect: document.getElementById("saidaLoteSelect"),
+  saidaLoteManualWrapper: document.getElementById("saidaLoteManualWrapper"),
+  saidaLoteManualInput: document.getElementById("saidaLoteManualInput"),
   saidaDestinoSelect: document.getElementById("saidaDestinoUnidade"),
   openSaidaBtn: document.getElementById("openSaida"),
   closeSaidaBtn: document.getElementById("closeSaida"),
@@ -307,7 +311,7 @@ const PERMISSOES = {
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
-    canManageCompras: false,
+    canManageCompras: true,
     canRegistrarMovimentacoes: true,
   },
   VISUALIZADOR: {
@@ -1940,8 +1944,8 @@ function canCreateLista() {
     return true;
   }
   
-  // ESTOQUISTA, COZINHA e BAR podem criar listas
-  if (perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR") {
+  // ESTOQUISTA, COZINHA, BAR e ASSISTENTE_ADMINISTRATIVO podem criar listas
+  if (perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR" || perfil === "ASSISTENTE_ADMINISTRATIVO") {
     return true;
   }
   
@@ -2026,6 +2030,13 @@ function applyPermissions() {
     link.classList.toggle("hidden", !allowed);
   });
 
+  // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
+  const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
+  if (financeiroNavSubmenu) {
+    const temAcessoFinanceiro = regras.sections.includes("boletao");
+    financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
+  }
+
   dom.sections.forEach((section) => {
     const key = section.id.replace("Section", "");
     const allowed = regras.sections.includes(key);
@@ -2055,6 +2066,11 @@ function applyPermissions() {
     dom.openSaidaBtn.disabled = !podeRegistrarSaida;
   }
   updateNovaListaButton();
+  // Sugestões de Compras: apenas ADMIN e GERENTE
+  if (dom.openSugestoesComprasBtn) {
+    const podeVerSugestoes = perfil === "ADMIN" || perfil === "GERENTE";
+    dom.openSugestoesComprasBtn.classList.toggle("hidden", !podeVerSugestoes);
+  }
   if (dom.listaCompraAdicionarItem) dom.listaCompraAdicionarItem.classList.toggle("hidden", !regras.canManageCompras);
   // Estoquista e Cozinha não podem gerenciar estabelecimentos
   if (dom.listaCompraAdicionarEstabelecimento) {
@@ -5248,6 +5264,54 @@ async function handleSaidaOrigemChange() {
   }
 }
 
+async function handleSaidaProdutoChange() {
+  const loteWrapper = dom.saidaLoteWrapper;
+  const loteSelect = dom.saidaLoteSelect;
+  if (!loteWrapper || !loteSelect) return;
+
+  const produtoId = Number(dom.saidaProdutoSelect?.value);
+  const unidadeId = Number(dom.saidaOrigemSelect?.value);
+
+  // Esconde wrapper se produto não selecionado
+  if (!produtoId || !unidadeId) {
+    loteWrapper.classList.add("hidden");
+    loteSelect.innerHTML = '<option value="">Selecionar lote disponível…</option><option value="__manual__">✏️ Digitar código manualmente</option>';
+    if (dom.saidaLoteManualWrapper) dom.saidaLoteManualWrapper.classList.add("hidden");
+    if (dom.saidaLoteManualInput) dom.saidaLoteManualInput.value = "";
+    return;
+  }
+
+  loteWrapper.classList.remove("hidden");
+  loteSelect.disabled = true;
+  loteSelect.innerHTML = '<option value="">Carregando lotes…</option>';
+
+  try {
+    const lotes = await fetchJSON(`/lotes?produto_id=${encodeURIComponent(produtoId)}&unidade_id=${encodeURIComponent(unidadeId)}&status=ATIVO`);
+    const lista = Array.isArray(lotes) ? lotes : (lotes?.data ?? []);
+
+    const options = lista
+      .filter((l) => Number(l.qtd_atual ?? l.quantidade_atual ?? 0) > 0)
+      .map((l) => {
+        const codigo = l.numero_lote || l.codigo_lote || `Lote #${l.id}`;
+        const qtd = Number(l.qtd_atual ?? l.quantidade_atual ?? 0);
+        const val = l.data_validade ? ` | val: ${l.data_validade}` : "";
+        return `<option value="${escapeHtml(codigo)}">${escapeHtml(codigo)} (qtd: ${qtd}${val})</option>`;
+      })
+      .join("");
+
+    loteSelect.innerHTML =
+      `<option value="">— Automático (FIFO) —</option>` +
+      options +
+      `<option value="__manual__">✏️ Digitar código manualmente</option>`;
+    loteSelect.disabled = false;
+  } catch (err) {
+    loteSelect.innerHTML =
+      `<option value="">— Automático (FIFO) —</option>` +
+      `<option value="__manual__">✏️ Digitar código manualmente</option>`;
+    loteSelect.disabled = false;
+  }
+}
+
 async function handleEntradaUnidadeChange() {
   const select = dom.entradaLocalSelect || dom.entradaForm?.querySelector('select[name="local_id"]');
   if (!select) return;
@@ -7046,6 +7110,15 @@ async function submitSaida(event) {
     data.para_unidade_id = destinoSelect.value || data.para_unidade_id || "";
   }
   
+  // Coleta o lote selecionado (opcional)
+  const loteSelectVal = dom.saidaLoteSelect?.value ?? "";
+  if (loteSelectVal === "__manual__") {
+    const manual = (dom.saidaLoteManualInput?.value ?? "").trim();
+    if (manual) data.codigo_lote = manual;
+  } else if (loteSelectVal) {
+    data.codigo_lote = loteSelectVal;
+  }
+
   console.log("📤 Dados coletados do formulário de saída:", data);
   
   data.motivo = (data.motivo || "").toString().trim().toUpperCase();
@@ -8227,6 +8300,10 @@ function setupModals() {
     dom.saidaOrigemSelect = document.getElementById("saidaOrigemUnidade");
     dom.saidaMotivo = document.getElementById("saidaMotivo");
     dom.saidaDestinoSelect = document.getElementById("saidaDestinoUnidade");
+    dom.saidaLoteWrapper = document.getElementById("saidaLoteWrapper");
+    dom.saidaLoteSelect = document.getElementById("saidaLoteSelect");
+    dom.saidaLoteManualWrapper = document.getElementById("saidaLoteManualWrapper");
+    dom.saidaLoteManualInput = document.getElementById("saidaLoteManualInput");
     
     if (dom.saidaForm) {
       dom.saidaForm.reset();
@@ -9859,13 +9936,36 @@ function setupForms() {
   dom.saidaForm?.addEventListener("reset", () => {
     updateSaidaDestinoVisibility();
     resetSaidaProdutoSelect();
+    if (dom.saidaLoteWrapper) dom.saidaLoteWrapper.classList.add("hidden");
+    if (dom.saidaLoteManualWrapper) dom.saidaLoteManualWrapper.classList.add("hidden");
+    if (dom.saidaLoteManualInput) dom.saidaLoteManualInput.value = "";
   });
   dom.saidaOrigemSelect?.addEventListener("change", () => {
     handleSaidaOrigemChange();
+    // Resetar lote ao trocar unidade
+    if (dom.saidaLoteWrapper) dom.saidaLoteWrapper.classList.add("hidden");
+    if (dom.saidaLoteManualWrapper) dom.saidaLoteManualWrapper.classList.add("hidden");
+    if (dom.saidaLoteManualInput) dom.saidaLoteManualInput.value = "";
   });
   if (Number(dom.saidaOrigemSelect?.value)) {
     handleSaidaOrigemChange();
   }
+
+  // Ao trocar produto, carrega lotes disponíveis
+  dom.saidaProdutoSelect?.addEventListener("change", () => {
+    handleSaidaProdutoChange();
+  });
+
+  // Ao trocar opção no select de lote, mostra/esconde input manual
+  dom.saidaLoteSelect?.addEventListener("change", () => {
+    const isManual = dom.saidaLoteSelect.value === "__manual__";
+    if (dom.saidaLoteManualWrapper) {
+      dom.saidaLoteManualWrapper.classList.toggle("hidden", !isManual);
+    }
+    if (!isManual && dom.saidaLoteManualInput) {
+      dom.saidaLoteManualInput.value = "";
+    }
+  });
 
   dom.usuarioFotoInput?.addEventListener("change", (event) => {
     const [file] = event.target.files || [];

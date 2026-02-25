@@ -1125,6 +1125,19 @@
               <option value="">Selecione a unidade de origem</option>
             </select>
           </label>
+          <div id="saidaLoteWrapper" class="hidden">
+            <label>
+              Lote (opcional – deixe em branco para FIFO automático)
+              <select id="saidaLoteSelect">
+                <option value="">Selecionar lote disponível…</option>
+                <option value="__manual__">✏️ Digitar código manualmente</option>
+              </select>
+            </label>
+            <label id="saidaLoteManualWrapper" class="hidden">
+              Código do lote (manual)
+              <input type="text" id="saidaLoteManualInput" name="codigo_lote" placeholder="Ex.: ENT-17-28-20260225153808" autocomplete="off" />
+            </label>
+          </div>
           <label>
             Motivo da sa&iacute;da
             <select name="motivo" id="saidaMotivo" required>

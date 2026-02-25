@@ -2567,6 +2567,7 @@ Route::post('/saida', function (Request $request) {
             'para_unidade_id' => 'nullable|integer|exists:unidades,id|required_if:motivo,TRANSFERENCIA',
             'usuario_id' => 'required|integer|exists:usuarios,id',
             'forcar' => 'nullable|boolean',
+            'codigo_lote' => 'nullable|string|max:255',
         ]);
         
         $produtoId = $data['produto_id'];
@@ -2577,6 +2578,7 @@ Route::post('/saida', function (Request $request) {
         $forcar = $data['forcar'] ?? false;
         $isTransferencia = $motivo === 'TRANSFERENCIA';
         $paraUnidadeId = $isTransferencia ? $data['para_unidade_id'] : null;
+        $codigoLoteFiltro = isset($data['codigo_lote']) ? trim($data['codigo_lote']) : null;
         
         // Verifica se o produto existe e está ativo
         $produto = DB::table('produtos')->where('id', $produtoId)->first();
@@ -2598,18 +2600,22 @@ Route::post('/saida', function (Request $request) {
             ], 400);
         }
         
-        // Verifica estoque disponível
-        $estoqueDisponivel = DB::table('stock_lotes')
+        // Verifica estoque disponível (filtra por lote específico se informado)
+        $queryEstoque = DB::table('stock_lotes')
             ->where('produto_id', $produtoId)
             ->where('unidade_id', $unidadeId)
-            ->where('quantidade', '>', 0)
-            ->sum('quantidade');
+            ->where('quantidade', '>', 0);
+        if ($codigoLoteFiltro) {
+            $queryEstoque->where('codigo_lote', $codigoLoteFiltro);
+        }
+        $estoqueDisponivel = $queryEstoque->sum('quantidade');
         
         if ($estoqueDisponivel <= 0) {
             DB::rollBack();
+            $msgLote = $codigoLoteFiltro ? " no lote '{$codigoLoteFiltro}'" : '';
             return response()->json([
                 'error' => 'Sem estoque disponível',
-                'message' => 'Não há estoque disponível deste produto na unidade selecionada.',
+                'message' => "Não há estoque disponível deste produto na unidade selecionada{$msgLote}.",
                 'disponivel' => 0,
                 'solicitado' => $quantidadeSolicitada,
             ], 400);
@@ -2618,9 +2624,10 @@ Route::post('/saida', function (Request $request) {
         if ($estoqueDisponivel < $quantidadeSolicitada) {
             DB::rollBack();
             $produtoNome = $produto->nome ?? 'Produto';
+            $msgLote = $codigoLoteFiltro ? " (lote: {$codigoLoteFiltro})" : '';
             return response()->json([
                 'error' => 'Estoque insuficiente',
-                'message' => "Estoque insuficiente. Disponível: {$estoqueDisponivel}, Solicitado: {$quantidadeSolicitada}",
+                'message' => "Estoque insuficiente{$msgLote}. Disponível: {$estoqueDisponivel}, Solicitado: {$quantidadeSolicitada}",
                 'disponivel' => $estoqueDisponivel,
                 'solicitado' => $quantidadeSolicitada,
                 'produto' => $produtoNome,
@@ -2629,7 +2636,7 @@ Route::post('/saida', function (Request $request) {
         
         // Busca lotes disponíveis ordenados por validade (FIFO - primeiro a vencer primeiro)
         // Busca em stock_lotes e faz join com lotes
-        $lotesDisponiveis = DB::table('stock_lotes')
+        $queryLotes = DB::table('stock_lotes')
             ->leftJoin('lotes', function($join) use ($produtoId, $unidadeId) {
                 $join->on('lotes.numero_lote', '=', 'stock_lotes.codigo_lote')
                      ->where('lotes.produto_id', '=', $produtoId)
@@ -2648,8 +2655,14 @@ Route::post('/saida', function (Request $request) {
                 'lotes.ativo as lote_status'
             )
             ->orderBy('lotes.data_validade', 'asc')
-            ->orderBy('stock_lotes.id', 'asc')
-            ->get();
+            ->orderBy('stock_lotes.id', 'asc');
+
+        // Se um lote específico foi solicitado, filtra apenas ele
+        if ($codigoLoteFiltro) {
+            $queryLotes->where('stock_lotes.codigo_lote', $codigoLoteFiltro);
+        }
+
+        $lotesDisponiveis = $queryLotes->get();
         
         // Verifica se há lotes disponíveis
         if ($lotesDisponiveis->isEmpty()) {
