@@ -2,9 +2,9 @@
 
 // ⚠️ CONFIGURAÇÃO CRÍTICA - MODIFICAR COM CUIDADO ⚠️
 // Resolve a URL base para chamadas ao backend permitindo sobrescrever via configuracao externa.
-// Fallback deve ser http://localhost:5000/api (porta do backend Laravel)
+// Fallback deve ser https://api.gruposaborparaense.com.br/api (porta do backend Laravel)
 const API_URL = (() => {
-  const fallback = "http://localhost:5000/api";
+  const fallback = "https://api.gruposaborparaense.com.br/api";
   if (window.APP_CONFIG && window.APP_CONFIG.API_URL) {
     return window.APP_CONFIG.API_URL;
   }
@@ -12,7 +12,7 @@ const API_URL = (() => {
 })();
 
 // URL base para arquivos estáticos (fotos, uploads) - sem /api
-const BASE_URL = API_URL.replace(/\/api\/?$/, "") || "http://localhost:5000";
+const BASE_URL = API_URL.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
 
 /** Monta URL completa da foto do usuário (backend salva em public/uploads/usuarios/) */
 function getUsuarioFotoUrl(path) {
@@ -6135,7 +6135,7 @@ async function handleLogin(event) {
     
     // Mensagens de erro mais amigáveis
     if (errorMessage.includes("não foi possível conectar") || errorMessage.includes("fetch") || errorMessage.includes("Failed to fetch")) {
-      errorMessage = "Servidor não está acessível. Verifique se o servidor Laravel está rodando em http://localhost:5000";
+      errorMessage = "Servidor não está acessível. Verifique se o servidor Laravel está rodando em https://api.gruposaborparaense.com.br";
     } else if (errorMessage.includes("401") || errorMessage.includes("Credenciais") || errorMessage.includes("incorretos")) {
       errorMessage = "Email ou senha incorretos. Verifique suas credenciais.";
     } else if (errorMessage.includes("500")) {
