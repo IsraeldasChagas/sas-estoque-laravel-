@@ -275,7 +275,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   ESTOQUISTA: {
-    sections: ["dashboard", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios"],
+    sections: ["dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2048,6 +2048,15 @@ function applyPermissions() {
   const podeGerenciarUsuarios = regras.canManageUsuarios || canManageUsuariosBar();
   if (dom.openUsuarioBtn) dom.openUsuarioBtn.classList.toggle("hidden", !podeGerenciarUsuarios);
   updateUnidadeInlineUI(regras.canManageUnidades);
+
+  // Oculta coluna Acoes e botão Novo nas tabelas de Unidades e Locais para quem não é ADMIN
+  const unidadesAcoesHeader = document.getElementById("unidadesAcoesHeader");
+  const locaisAcoesHeader = document.getElementById("locaisAcoesHeader");
+  const mostrarAcoes = perfil === "ADMIN";
+  if (unidadesAcoesHeader) unidadesAcoesHeader.style.display = mostrarAcoes ? "" : "none";
+  if (locaisAcoesHeader) locaisAcoesHeader.style.display = mostrarAcoes ? "" : "none";
+  if (dom.openLocalModalBtn) dom.openLocalModalBtn.classList.toggle("hidden", !mostrarAcoes);
+
   // Botão "Novo lote" oculto – lotes são criados automaticamente em entradas de estoque
   if (dom.openNovoLoteBtn) dom.openNovoLoteBtn.classList.add("hidden");
   // COZINHA e BAR não podem registrar entrada - oculta o botão
@@ -2642,6 +2651,9 @@ function renderProdutosDashboard(lista) {
 }
 
 function renderLocais(lista) {
+  const podeEditar = isAdmin();
+  const header = document.getElementById("locaisAcoesHeader");
+  if (header) header.style.display = podeEditar ? "" : "none";
   const rows = (lista || []).map((local) => {
     const ativo = Number(local.ativo ?? 1) === 1;
     const temperatura = local.temperatura_media !== null && local.temperatura_media !== undefined
@@ -2652,13 +2664,13 @@ function renderLocais(lista) {
     const tipoLabel = LOCAL_TIPOS_LABELS[local.tipo] || local.tipo || "--";
     const observacoes = local.observacoes || local.descricao || "--";
     const statusPill = buildStatusPill(ativo ? "Ativo" : "Inativo");
-    const acoes = [
+    const acoesCell = podeEditar ? `<td data-label="Acoes" class="table-actions">${[
       '<button class="table-action" data-action="edit">Editar</button>',
       ativo
         ? '<button class="table-action danger" data-action="disable">Desativar</button>'
         : '<button class="table-action" data-action="enable">Ativar</button>',
       '<button class="table-action danger" data-action="delete">Excluir</button>',
-    ].join("");
+    ].join("")}</td>` : "";
     return `<tr data-id="${escapeHtml(String(local.id))}">
       <td data-label="ID">${escapeHtml(String(local.id))}</td>
       <td data-label="Nome">${escapeHtml(local.nome || "--")}</td>
@@ -2669,21 +2681,24 @@ function renderLocais(lista) {
       <td data-label="Observacoes">${escapeHtml(observacoes)}</td>
       <td data-label="Cadastro">${cadastro}</td>
       <td data-label="Status">${statusPill}</td>
-      <td data-label="Acoes" class="table-actions">${acoes}</td>
+      ${acoesCell}
     </tr>`;
   }).join("");
-  renderTable(dom.locaisTable, rows, "Nenhum local cadastrado.", 10);
+  renderTable(dom.locaisTable, rows, "Nenhum local cadastrado.", podeEditar ? 10 : 9);
 }
 
 function renderUnidades(lista) {
+  const podeEditar = isAdmin();
+  const header = document.getElementById("unidadesAcoesHeader");
+  if (header) header.style.display = podeEditar ? "" : "none";
   const rows = (lista || []).map((unidade) => {
     const ativo = Number(unidade.ativo) === 1;
     const statusLabel = ativo ? "Ativa" : "Desativada";
-    const acoes = [
+    const acoesCell = podeEditar ? `<td data-label="Acoes" class="table-actions">${[
       '<button class="table-action" data-action="edit">Editar</button>',
       ...(ativo ? ['<button class="table-action danger" data-action="disable">Desativar</button>'] : []),
       '<button class="table-action danger" data-action="delete">Excluir</button>',
-    ].join("");
+    ].join("")}</td>` : "";
     return `<tr data-id="${unidade.id}">
       <td data-label="Nome">${escapeHtml(unidade.nome)}</td>
       <td data-label="Endereco">${escapeHtml(unidade.endereco || "--")}</td>
@@ -2693,10 +2708,10 @@ function renderUnidades(lista) {
       <td data-label="Email">${escapeHtml(unidade.email || "--")}</td>
       <td data-label="Observacoes">${escapeHtml(unidade.observacoes || "--")}</td>
       <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${statusLabel}</span></td>
-      <td data-label="Acoes" class="table-actions">${acoes}</td>
+      ${acoesCell}
     </tr>`;
   }).join("");
-  renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", 9);
+  renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", podeEditar ? 9 : 8);
 }
 
 function renderUsuarios(lista) {
@@ -5629,7 +5644,7 @@ async function loadEstoqueProduto(produtoId) {
     
     // Renderiza tabela de estoque por unidade
     if (!dados.estoque_por_unidade || dados.estoque_por_unidade.length === 0) {
-      const colspan = isCozinhaOuBar ? "3" : "5";
+      const colspan = isCozinhaOuBar ? "4" : "6";
       estoqueTable.innerHTML = `
         <tr>
           <td colspan="${colspan}" style="text-align: center; color: #607d8b;">
@@ -5656,6 +5671,7 @@ async function loadEstoqueProduto(produtoId) {
           return `
           <tr>
             <td data-label="Unidade">${escapeHtml(item.unidade_nome || "N/A")}</td>
+            <td data-label="Local">${item.locais ? escapeHtml(item.locais) : "—"}</td>
             <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", {
               minimumFractionDigits: 0,
               maximumFractionDigits: 3,

@@ -250,9 +250,18 @@ Route::get('/produtos/{id}/estoque', function ($id) {
         $concatLotes = $driver === 'pgsql'
             ? "STRING_AGG(DISTINCT stock_lotes.codigo_lote, ', ' ORDER BY stock_lotes.codigo_lote)"
             : "GROUP_CONCAT(DISTINCT stock_lotes.codigo_lote ORDER BY stock_lotes.codigo_lote SEPARATOR ', ')";
+        $concatLocais = $driver === 'pgsql'
+            ? "STRING_AGG(DISTINCT locais.nome, ', ' ORDER BY locais.nome)"
+            : "GROUP_CONCAT(DISTINCT locais.nome ORDER BY locais.nome SEPARATOR ', ')";
 
         $estoquePorUnidade = DB::table('stock_lotes')
             ->leftJoin('unidades', 'stock_lotes.unidade_id', '=', 'unidades.id')
+            ->leftJoin('lotes', function($join) {
+                $join->on('lotes.numero_lote', '=', 'stock_lotes.codigo_lote')
+                     ->on('lotes.produto_id', '=', 'stock_lotes.produto_id')
+                     ->on('lotes.unidade_id', '=', 'stock_lotes.unidade_id');
+            })
+            ->leftJoin('locais', 'lotes.local_id', '=', 'locais.id')
             ->select(
                 'stock_lotes.unidade_id',
                 'unidades.nome as unidade_nome',
@@ -260,7 +269,8 @@ Route::get('/produtos/{id}/estoque', function ($id) {
                 DB::raw('AVG(stock_lotes.custo_unitario) as valor_unitario_medio'),
                 DB::raw('SUM(stock_lotes.quantidade * stock_lotes.custo_unitario) as valor_total'),
                 DB::raw('COUNT(DISTINCT stock_lotes.codigo_lote) as num_lotes'),
-                DB::raw($concatLotes . ' as codigos_lote')
+                DB::raw($concatLotes . ' as codigos_lote'),
+                DB::raw($concatLocais . ' as nomes_locais')
             )
             ->where('stock_lotes.produto_id', $id)
             ->where('stock_lotes.quantidade', '>', 0)
@@ -275,9 +285,11 @@ Route::get('/produtos/{id}/estoque', function ($id) {
         // Formata os dados para o frontend
         $estoquePorUnidadeFormatado = $estoquePorUnidade->map(function($item) {
             $codigosLote = trim($item->codigos_lote ?? '');
+            $locais = trim($item->nomes_locais ?? '');
             return [
                 'unidade_id' => $item->unidade_id,
                 'unidade_nome' => $item->unidade_nome ?? 'N/A',
+                'locais' => $locais ?: null,
                 'qtd_total' => floatval($item->qtd_total ?? 0),
                 'valor_unitario_medio' => floatval($item->valor_unitario_medio ?? 0),
                 'valor_total' => floatval($item->valor_total ?? 0),
