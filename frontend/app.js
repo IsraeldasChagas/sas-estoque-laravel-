@@ -6981,35 +6981,41 @@ async function submitLote(event) {
 
 async function submitLocal(event) {
   event.preventDefault();
+  event.stopPropagation();
   if (!isAdmin()) {
     showToast("Apenas administradores podem criar ou editar locais.", "warning");
     return;
   }
   if (!dom.localForm) return;
   const form = dom.localForm;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const submitLabel = submitBtn?.textContent || "Salvar local";
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Salvando...";
+  }
   const formData = new FormData(form);
   const payload = Object.fromEntries(formData.entries());
   const localId = Number(payload.id || 0) || null;
   payload.nome = (payload.nome || "").toString().trim();
   if (!payload.nome) {
     showToast("Informe o nome do local.", "error");
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitLabel; }
     return;
   }
   payload.unidade_id = Number(payload.unidade_id);
   if (!Number.isFinite(payload.unidade_id) || payload.unidade_id <= 0) {
     showToast("Selecione a unidade do local.", "error");
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitLabel; }
     return;
   }
   payload.tipo = (payload.tipo || "").toString().trim().toUpperCase();
   if (!payload.tipo) {
     showToast("Selecione o tipo do local.", "error");
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitLabel; }
     return;
   }
   payload.temperatura_media = payload.temperatura_media ? Number(payload.temperatura_media) : null;
-  if (payload.temperatura_media !== null && !Number.isFinite(payload.temperatura_media)) {
-    showToast("Temperatura media invalida.", "error");
-    return;
-  }
   payload.descricao = (payload.descricao || "").toString().trim() || null;
   payload.responsavel = (payload.responsavel || "").toString().trim() || null;
   payload.nivel_acesso = (payload.nivel_acesso || "").toString().trim() || null;
@@ -7036,6 +7042,11 @@ async function submitLocal(event) {
   } catch (err) {
     showToast(err?.message || "Falha ao salvar local.", "error");
     return null;
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitLabel;
+    }
   }
 }
 
@@ -7512,8 +7523,15 @@ function setupTables() {
     const row = button.closest("tr");
     const id = row?.dataset.id;
     if (!id) return;
-    const local = (state.locais || []).find((item) => String(item.id) === String(id));
-    if (!local) return;
+    let local = (state.locais || []).find((item) => String(item.id) === String(id));
+    if (!local) {
+      try {
+        local = await fetchJSON(`/locais/${id}`);
+      } catch (err) {
+        showToast("Local não encontrado.", "error");
+        return;
+      }
+    }
     const action = button.dataset.action;
     if (action === "edit") {
       try {
@@ -8556,7 +8574,7 @@ function setupNavigation() {
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
       else if (target === "lotes") await loadLotes();
-      else if (target === "locais") await Promise.all([loadLocais(), loadUnidades()]);
+      else if (target === "locais") await Promise.all([loadLocais(true), loadUnidades(false)]);
       else if (target === "movimentacoes") {
         // ✅ Garante que produtos e unidades estejam carregados para popular os selects
         await Promise.all([
@@ -9848,7 +9866,21 @@ function setupForms() {
   dom.unidadeInlineForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeInlineForm));
   dom.usuarioForm?.addEventListener("submit", submitUsuario);
   dom.entradaForm?.addEventListener("submit", submitEntrada);
-  dom.localForm?.addEventListener("submit", submitLocal);
+  if (dom.localForm) {
+    dom.localForm.onsubmit = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitLocal(e).catch(err => {
+        showToast(err?.message || "Falha ao salvar local.", "error");
+      });
+      return false;
+    };
+    dom.localForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
+  }
   dom.loteForm?.addEventListener("submit", submitLote);
   // Event listener para submit do formulário de saída
   if (dom.saidaForm) {
@@ -10406,7 +10438,7 @@ async function init() {
         document.querySelector(".content .view-section")?.classList.remove("hidden");
         await loadLotes();
       }
-      else if (section === "locais") await Promise.all([loadLocais(), loadUnidades()]);
+      else if (section === "locais") await Promise.all([loadLocais(true), loadUnidades(false)]);
       else if (section === "movimentacoes") {
         // ✅ Garante que produtos e unidades estejam carregados para popular os selects
         await Promise.all([

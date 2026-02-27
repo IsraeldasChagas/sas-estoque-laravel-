@@ -1597,9 +1597,25 @@ Route::post('/locais', function (Request $request) {
             ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
     }
     
-    $data = $request->all();
+    $data = $request->only(['nome', 'tipo', 'unidade_id', 'ativo', 'temperatura_media', 'descricao', 'nivel_acesso', 'data_cadastro', 'observacoes', 'responsavel']);
+    $data['nome'] = trim($data['nome'] ?? '');
+    $data['tipo'] = strtoupper(trim($data['tipo'] ?? ''));
+    $data['unidade_id'] = (int) ($data['unidade_id'] ?? 0);
+    $data['ativo'] = isset($data['ativo']) ? (int) $data['ativo'] : 1;
+    $data['temperatura_media'] = isset($data['temperatura_media']) && $data['temperatura_media'] !== '' ? (float) $data['temperatura_media'] : null;
+    $data['descricao'] = isset($data['descricao']) && $data['descricao'] !== '' ? trim($data['descricao']) : null;
+    $data['nivel_acesso'] = isset($data['nivel_acesso']) && $data['nivel_acesso'] !== '' ? trim($data['nivel_acesso']) : null;
+    $data['data_cadastro'] = isset($data['data_cadastro']) && $data['data_cadastro'] !== '' ? $data['data_cadastro'] : null;
+    $data['observacoes'] = isset($data['observacoes']) && $data['observacoes'] !== '' ? trim($data['observacoes']) : null;
+    $data['responsavel'] = isset($data['responsavel']) && $data['responsavel'] !== '' ? trim($data['responsavel']) : null;
+    if (!$data['nome'] || !$data['tipo'] || !$data['unidade_id']) {
+        return response()->json(['error' => 'Nome, tipo e unidade são obrigatórios'], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
     $id = DB::table('locais')->insertGetId($data);
-    return response()->json(DB::table('locais')->where('id', $id)->first(), 201)
+    return response()->json(DB::table('locais')->leftJoin('unidades', 'locais.unidade_id', '=', 'unidades.id')->select('locais.*', 'unidades.nome as unidade_nome')->where('locais.id', $id)->first(), 201)
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
@@ -1633,9 +1649,19 @@ Route::put('/locais/{id}', function (Request $request, $id) {
             ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
     }
     
-    $data = $request->all();
+    $data = $request->only(['nome', 'tipo', 'unidade_id', 'ativo', 'temperatura_media', 'descricao', 'nivel_acesso', 'data_cadastro', 'observacoes', 'responsavel']);
+    if (isset($data['nome'])) $data['nome'] = trim($data['nome']);
+    if (isset($data['tipo'])) $data['tipo'] = strtoupper(trim($data['tipo']));
+    if (isset($data['unidade_id'])) $data['unidade_id'] = (int) $data['unidade_id'];
+    if (isset($data['ativo'])) $data['ativo'] = (int) $data['ativo'];
+    $data['temperatura_media'] = isset($data['temperatura_media']) && $data['temperatura_media'] !== '' ? (float) $data['temperatura_media'] : null;
+    $data['descricao'] = isset($data['descricao']) && $data['descricao'] !== '' ? trim($data['descricao']) : null;
+    $data['nivel_acesso'] = isset($data['nivel_acesso']) && $data['nivel_acesso'] !== '' ? trim($data['nivel_acesso']) : null;
+    $data['data_cadastro'] = isset($data['data_cadastro']) && $data['data_cadastro'] !== '' ? $data['data_cadastro'] : null;
+    $data['observacoes'] = isset($data['observacoes']) && $data['observacoes'] !== '' ? trim($data['observacoes']) : null;
+    $data['responsavel'] = isset($data['responsavel']) && $data['responsavel'] !== '' ? trim($data['responsavel']) : null;
     DB::table('locais')->where('id', $id)->update($data);
-    return response()->json(DB::table('locais')->where('id', $id)->first())
+    return response()->json(DB::table('locais')->leftJoin('unidades', 'locais.unidade_id', '=', 'unidades.id')->select('locais.*', 'unidades.nome as unidade_nome')->where('locais.id', $id)->first())
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
