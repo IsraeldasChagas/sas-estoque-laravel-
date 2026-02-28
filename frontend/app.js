@@ -267,7 +267,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["dashboard", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "boletao"],
+    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "boletao"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
