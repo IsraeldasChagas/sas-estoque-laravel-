@@ -307,7 +307,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["dashboard", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "boletao"],
+    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "boletao"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -1441,7 +1441,7 @@ async function imprimirEtiquetaLote(loteId) {
     const dataGeracao = (lote.criado_em || lote.created_at) ? formatDate(lote.criado_em || lote.created_at).split(' ')[0] : null;
     
     // Gera URL do QR Code (aponta para a seção de lotes)
-    const qrUrl = window.location.origin + window.location.pathname + '#lotes?lote=' + loteId;
+    const qrUrl = window.location.origin + window.location.pathname + '#estoque?lote=' + loteId;
     
     // Gera QR Code usando API externa (mais simples que gerar no backend)
     // Usando API pública do QR Code: https://api.qrserver.com
@@ -1639,7 +1639,7 @@ async function baixarEtiquetaLote(loteId) {
     const dataGeracao = (lote.criado_em || lote.created_at) ? formatDate(lote.criado_em || lote.created_at).split(' ')[0] : null;
     
     // Gera URL do QR Code (aponta para a seção de lotes)
-    const qrUrl = window.location.origin + window.location.pathname + '#lotes?lote=' + loteId;
+    const qrUrl = window.location.origin + window.location.pathname + '#estoque?lote=' + loteId;
     
     // Gera QR Code usando API externa (mais simples que gerar no backend)
     // Usando API pública do QR Code: https://api.qrserver.com
@@ -3883,6 +3883,9 @@ async function submitListaCompra(event) {
 // SUGESTÕES DE COMPRAS
 // ============================================
 
+// Controla quais itens já foram adicionados na sessão atual do modal (chave: "produtoId_unidadeId")
+let sugestoesAdicionadas = new Set();
+
 // Carrega sugestões de compras baseadas em movimentações
 async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProjecao = 15) {
   try {
@@ -3890,10 +3893,7 @@ async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProj
     if (unidadeId) params.append('unidade_id', unidadeId);
     params.append('dias', diasAnalise);
     params.append('dias_projecao', diasProjecao);
-    
-    const url = `/sugestoes-compras?${params.toString()}`;
-    const dados = await fetchJSON(url);
-    
+    const dados = await fetchJSON(`/sugestoes-compras?${params.toString()}`);
     return dados;
   } catch (error) {
     console.error('Erro ao carregar sugestões:', error);
@@ -3905,50 +3905,136 @@ async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProj
 // Abre modal de sugestões
 async function abrirSugestoesComprasModal() {
   if (!dom.sugestoesComprasModal) return;
-  
-  // Carrega unidades se necessário
+
   try {
     await loadUnidades(false);
   } catch (error) {
     console.error("Erro ao carregar unidades:", error);
   }
-  
-  // Preenche select de unidades
+
   if (dom.sugestoesFiltroUnidade && state.unidades && state.unidades.length > 0) {
-    const options = state.unidades.map((unidade) => 
-      `<option value="${unidade.id}">${escapeHtml(unidade.nome)}</option>`
+    const options = state.unidades.map((u) =>
+      `<option value="${u.id}">${escapeHtml(u.nome)}</option>`
     ).join("");
     dom.sugestoesFiltroUnidade.innerHTML = `<option value="">Todas</option>${options}`;
-    
-    // Preenche com unidade do usuário se existir
     if (currentUser?.unidade_id) {
       dom.sugestoesFiltroUnidade.value = currentUser.unidade_id;
     }
   }
-  
-  // Limpa conteúdo anterior
+
+  // Reseta controle de adicionados ao abrir o modal
+  sugestoesAdicionadas = new Set();
+
   dom.sugestoesComprasContent.innerHTML = '<p style="text-align: center; color: #607d8b; padding: 2rem;">Clique em "Buscar Sugestões" para ver recomendações baseadas nas movimentações.</p>';
-  
+
   toggleModal(dom.sugestoesComprasModal, true);
 }
 
-// Busca e exibe sugestões
+// Renderiza a tabela de sugestões filtrando os já adicionados
+function renderSugestoesTabela(dados) {
+  const pendentes = (dados.sugestoes || []).filter(
+    (s) => !sugestoesAdicionadas.has(`${s.produto_id}_${s.unidade_id}`)
+  );
+
+  if (pendentes.length === 0) {
+    toggleModal(dom.sugestoesComprasModal, false);
+    showToast('Todos os itens foram adicionados à lista!', 'success');
+    selecionarListaCompra(state.listaCompraAtual?.id, true);
+    return;
+  }
+
+  // Monta o container
+  const container = document.createElement('div');
+
+  const resumo = document.createElement('div');
+  resumo.style.cssText = 'margin-bottom:1rem;padding:1rem;background:#f5f5f5;border-radius:4px;';
+  resumo.innerHTML = `<strong>Pendentes:</strong> ${pendentes.length} de ${dados.total_sugestoes} | <strong>Análise:</strong> últimos ${dados.dias_analise} dias | <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias`;
+  container.appendChild(resumo);
+
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-wrapper';
+
+  const table = document.createElement('table');
+  table.id = 'sugestoesTabela';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Prioridade</th>
+        <th>Produto</th>
+        <th>Unidade</th>
+        <th>Estoque Atual</th>
+        <th>Estoque Mín.</th>
+        <th>Consumo Médio/Dia</th>
+        <th>Qtd. Sugerida</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+  `;
+
+  const tbody = document.createElement('tbody');
+
+  pendentes.forEach((sugestao) => {
+    const unidadeBase = normalizarUnidadeBase(sugestao.unidade_base);
+    const prioridadeClass = sugestao.prioridade === 'ALTA' ? 'status-pill--danger' :
+                            sugestao.prioridade === 'MEDIA' ? 'status-pill--warning' :
+                            'status-pill--muted';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
+      <td>${escapeHtml(sugestao.produto_nome)}</td>
+      <td>${escapeHtml(sugestao.unidade_nome)}</td>
+      <td>${sugestao.estoque_atual} ${unidadeBase}</td>
+      <td>${sugestao.estoque_minimo} ${unidadeBase}</td>
+      <td>${sugestao.consumo_medio_diario.toFixed(3)} ${unidadeBase}</td>
+      <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${unidadeBase}</strong></td>
+      <td><button type="button" class="btn secondary btn-sm">Adicionar à Lista</button></td>
+    `;
+
+    // Listener direto no botão desta linha — sem ambiguidade
+    const btn = tr.querySelector('button');
+    const produtoId = Number(sugestao.produto_id);
+    const quantidade = parseFloat(sugestao.quantidade_sugerida);
+    const unidadeId = Number(sugestao.unidade_id);
+    const unidadeNome = sugestao.unidade_nome || '';
+    btn.addEventListener('click', () => {
+      adicionarSugestaoALista(produtoId, quantidade, unidadeBase, unidadeId, btn, unidadeNome);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  tableWrapper.appendChild(table);
+  container.appendChild(tableWrapper);
+
+  const dica = document.createElement('div');
+  dica.style.cssText = 'margin-top:1rem;padding:1rem;background:#e3f2fd;border-radius:4px;';
+  dica.innerHTML = '<strong>💡 Dica:</strong> As sugestões são baseadas no consumo histórico. Itens já adicionados são removidos automaticamente da lista.';
+  container.appendChild(dica);
+
+  dom.sugestoesComprasContent.innerHTML = '';
+  dom.sugestoesComprasContent.appendChild(container);
+}
+
+// Busca e exibe sugestões — nova busca reseta o controle de adicionados
 async function buscarSugestoesCompras() {
   if (!dom.sugestoesComprasContent) return;
-  
+
   const unidadeId = dom.sugestoesFiltroUnidade?.value || null;
   const diasAnalise = parseInt(dom.sugestoesDiasAnalise?.value || 30);
   const diasProjecao = parseInt(dom.sugestoesDiasProjecao?.value || 15);
-  
-  // Mostra loading
+
+  // Nova busca reseta os adicionados para mostrar tudo de novo
+  sugestoesAdicionadas = new Set();
+
   dom.sugestoesComprasLoading.style.display = 'block';
   dom.sugestoesComprasContent.innerHTML = '';
-  
+
   try {
     const dados = await loadSugestoesCompras(unidadeId, diasAnalise, diasProjecao);
-    
     dom.sugestoesComprasLoading.style.display = 'none';
-    
+
     if (!dados.sugestoes || dados.sugestoes.length === 0) {
       dom.sugestoesComprasContent.innerHTML = `
         <div style="text-align: center; padding: 2rem; color: #607d8b;">
@@ -3958,66 +4044,11 @@ async function buscarSugestoesCompras() {
       `;
       return;
     }
-    
-    // Renderiza sugestões
-    let html = `
-      <div style="margin-bottom: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
-        <strong>Total de sugestões:</strong> ${dados.total_sugestoes} | 
-        <strong>Análise:</strong> últimos ${dados.dias_analise} dias | 
-        <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Prioridade</th>
-              <th>Produto</th>
-              <th>Unidade</th>
-              <th>Estoque Atual</th>
-              <th>Estoque Mín.</th>
-              <th>Consumo Médio/Dia</th>
-              <th>Qtd. Sugerida</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-    
-    dados.sugestoes.forEach((sugestao) => {
-      const prioridadeClass = sugestao.prioridade === 'ALTA' ? 'status-pill--danger' : 
-                              sugestao.prioridade === 'MEDIA' ? 'status-pill--warning' : 
-                              'status-pill--muted';
-      
-      html += `
-        <tr>
-          <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
-          <td>${escapeHtml(sugestao.produto_nome)}</td>
-          <td>${escapeHtml(sugestao.unidade_nome)}</td>
-          <td>${sugestao.estoque_atual} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
-          <td>${sugestao.estoque_minimo} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
-          <td>${sugestao.consumo_medio_diario.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
-          <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</strong></td>
-          <td>
-            <button type="button" class="btn secondary btn-sm" onclick="adicionarSugestaoALista(${sugestao.produto_id}, ${sugestao.quantidade_sugerida}, '${escapeHtml(normalizarUnidadeBase(sugestao.unidade_base))}', ${sugestao.unidade_id})">
-              Adicionar à Lista
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-    
-    html += `
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 4px;">
-        <strong>💡 Dica:</strong> As sugestões são baseadas no consumo histórico. 
-        Ajuste as quantidades conforme necessário antes de adicionar à lista.
-      </div>
-    `;
-    
-    dom.sugestoesComprasContent.innerHTML = html;
-    
+
+    // Guarda os dados da última busca para re-renderizar ao adicionar itens
+    window._sugestoesComprasDados = dados;
+    renderSugestoesTabela(dados);
+
   } catch (error) {
     dom.sugestoesComprasLoading.style.display = 'none';
     dom.sugestoesComprasContent.innerHTML = `
@@ -4029,20 +4060,41 @@ async function buscarSugestoesCompras() {
   }
 }
 
-// Adiciona sugestão à lista atual
-async function adicionarSugestaoALista(produtoId, quantidade, unidade, unidadeId) {
-  if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
-    showToast('Selecione uma lista de compras primeiro.', 'warning');
-    return;
-  }
-  
-  // Verifica se a lista é da mesma unidade
-  if (state.listaCompraAtual.unidade_id && Number(state.listaCompraAtual.unidade_id) !== Number(unidadeId)) {
-    showToast(`Esta sugestão é para a unidade diferente da lista selecionada.`, 'warning');
-    return;
-  }
-  
+// Adiciona sugestão à lista atual (cria lista "Sugestão de Compras" automaticamente se não houver nenhuma selecionada)
+async function adicionarSugestaoALista(produtoId, quantidade, unidade, unidadeId, btn = null, unidadeNome = '') {
+  // Desabilita o botão da linha para evitar duplo clique
+  if (btn) { btn.disabled = true; btn.textContent = 'Adicionando...'; }
+
   try {
+    // Se não há lista selecionada, cria automaticamente uma lista "Sugestão de Compras"
+    if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
+      if (!currentUser || !currentUser.id) {
+        showToast('Usuário não identificado. Faça login novamente.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Adicionar à Lista'; }
+        return;
+      }
+      const novaLista = await fetchJSON('/listas', {
+        method: 'POST',
+        body: JSON.stringify({
+          nome: 'Sugestão de Compras',
+          unidade_id: Number(unidadeId),
+          responsavel_id: Number(currentUser.id),
+        })
+      });
+      if (!novaLista || !novaLista.id) {
+        showToast('Erro ao criar lista de compras automática.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Adicionar à Lista'; }
+        return;
+      }
+      state.listaCompraAtual = novaLista;
+      // Atualiza a lista lateral sem trocar a lista selecionada
+      const todasListas = await fetchJSON('/listas');
+      const listas = Array.isArray(todasListas) ? todasListas : [];
+      state.listasCompras = listas.filter((l) => (l.status || '').toUpperCase() !== 'FINALIZADA');
+      renderListasCompras(state.listasCompras);
+      showToast('Lista "Sugestão de Compras" criada automaticamente.', 'info');
+    }
+
     await fetchJSON('/itens', {
       method: 'POST',
       body: JSON.stringify({
@@ -4050,207 +4102,25 @@ async function adicionarSugestaoALista(produtoId, quantidade, unidade, unidadeId
         produto_id: produtoId,
         quantidade_planejada: quantidade,
         unidade: unidade,
-        observacoes: `Sugestão automática baseada em movimentações`
+        observacoes: `Sugestão automática baseada em movimentações${unidadeNome ? ' - Unidade: ' + unidadeNome : ''}`
       })
     });
-    
-    showToast('Item adicionado à lista com sucesso!', 'success');
-    
-    // Recarrega a lista
-    await loadListaCompraDetalhes(state.listaCompraAtual.id);
-    
+
+    showToast('Item adicionado à lista!', 'success');
+
+    // Marca como adicionado (chave composta produto+unidade) e atualiza a tabela
+    sugestoesAdicionadas.add(`${produtoId}_${unidadeId}`);
+    if (window._sugestoesComprasDados) {
+      renderSugestoesTabela(window._sugestoesComprasDados);
+    }
+
+    // Atualiza os detalhes da lista em background sem bloquear o modal
+    selecionarListaCompra(state.listaCompraAtual.id, true);
+
   } catch (error) {
     console.error('Erro ao adicionar sugestão:', error);
     showToast(error.message || 'Erro ao adicionar item à lista.', 'error');
-  }
-}
-
-// Adiciona função global para uso no onclick
-window.adicionarSugestaoALista = adicionarSugestaoALista;
-
-// ============================================
-// SUGESTÕES DE COMPRAS
-// ============================================
-
-// Carrega sugestões de compras baseadas em movimentações
-async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProjecao = 15) {
-  try {
-    const params = new URLSearchParams();
-    if (unidadeId) params.append('unidade_id', unidadeId);
-    params.append('dias', diasAnalise);
-    params.append('dias_projecao', diasProjecao);
-    
-    const url = `/sugestoes-compras?${params.toString()}`;
-    const dados = await fetchJSON(url);
-    
-    return dados;
-  } catch (error) {
-    console.error('Erro ao carregar sugestões:', error);
-    showToast('Erro ao carregar sugestões de compras.', 'error');
-    return { sugestoes: [], total_sugestoes: 0 };
-  }
-}
-
-// Abre modal de sugestões
-async function abrirSugestoesComprasModal() {
-  if (!dom.sugestoesComprasModal) return;
-  
-  // Carrega unidades se necessário
-  try {
-    await loadUnidades(false);
-  } catch (error) {
-    console.error("Erro ao carregar unidades:", error);
-  }
-  
-  // Preenche select de unidades
-  if (dom.sugestoesFiltroUnidade && state.unidades && state.unidades.length > 0) {
-    const options = state.unidades.map((unidade) => 
-      `<option value="${unidade.id}">${escapeHtml(unidade.nome)}</option>`
-    ).join("");
-    dom.sugestoesFiltroUnidade.innerHTML = `<option value="">Todas</option>${options}`;
-    
-    // Preenche com unidade do usuário se existir
-    if (currentUser?.unidade_id) {
-      dom.sugestoesFiltroUnidade.value = currentUser.unidade_id;
-    }
-  }
-  
-  // Limpa conteúdo anterior
-  dom.sugestoesComprasContent.innerHTML = '<p style="text-align: center; color: #607d8b; padding: 2rem;">Clique em "Buscar Sugestões" para ver recomendações baseadas nas movimentações.</p>';
-  
-  toggleModal(dom.sugestoesComprasModal, true);
-}
-
-// Busca e exibe sugestões
-async function buscarSugestoesCompras() {
-  if (!dom.sugestoesComprasContent) return;
-  
-  const unidadeId = dom.sugestoesFiltroUnidade?.value || null;
-  const diasAnalise = parseInt(dom.sugestoesDiasAnalise?.value || 30);
-  const diasProjecao = parseInt(dom.sugestoesDiasProjecao?.value || 15);
-  
-  // Mostra loading
-  dom.sugestoesComprasLoading.style.display = 'block';
-  dom.sugestoesComprasContent.innerHTML = '';
-  
-  try {
-    const dados = await loadSugestoesCompras(unidadeId, diasAnalise, diasProjecao);
-    
-    dom.sugestoesComprasLoading.style.display = 'none';
-    
-    if (!dados.sugestoes || dados.sugestoes.length === 0) {
-      dom.sugestoesComprasContent.innerHTML = `
-        <div style="text-align: center; padding: 2rem; color: #607d8b;">
-          <p>Nenhuma sugestão encontrada para os parâmetros selecionados.</p>
-          <p style="font-size: 0.9em; margin-top: 0.5rem;">Tente ajustar os filtros ou verifique se há movimentações no período.</p>
-        </div>
-      `;
-      return;
-    }
-    
-    // Renderiza sugestões
-    let html = `
-      <div style="margin-bottom: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
-        <strong>Total de sugestões:</strong> ${dados.total_sugestoes} | 
-        <strong>Análise:</strong> últimos ${dados.dias_analise} dias | 
-        <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Prioridade</th>
-              <th>Produto</th>
-              <th>Unidade</th>
-              <th>Estoque Atual</th>
-              <th>Estoque Mín.</th>
-              <th>Consumo Médio/Dia</th>
-              <th>Qtd. Sugerida</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-    
-    dados.sugestoes.forEach((sugestao) => {
-      const prioridadeClass = sugestao.prioridade === 'ALTA' ? 'status-pill--danger' : 
-                              sugestao.prioridade === 'MEDIA' ? 'status-pill--warning' : 
-                              'status-pill--muted';
-      
-      html += `
-        <tr>
-          <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
-          <td>${escapeHtml(sugestao.produto_nome)}</td>
-          <td>${escapeHtml(sugestao.unidade_nome)}</td>
-          <td>${sugestao.estoque_atual} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
-          <td>${sugestao.estoque_minimo} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
-          <td>${sugestao.consumo_medio_diario.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</td>
-          <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${normalizarUnidadeBase(sugestao.unidade_base)}</strong></td>
-          <td>
-            <button type="button" class="btn secondary btn-sm" onclick="adicionarSugestaoALista(${sugestao.produto_id}, ${sugestao.quantidade_sugerida}, '${escapeHtml(normalizarUnidadeBase(sugestao.unidade_base))}', ${sugestao.unidade_id})">
-              Adicionar à Lista
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-    
-    html += `
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 4px;">
-        <strong>💡 Dica:</strong> As sugestões são baseadas no consumo histórico. 
-        Ajuste as quantidades conforme necessário antes de adicionar à lista.
-      </div>
-    `;
-    
-    dom.sugestoesComprasContent.innerHTML = html;
-    
-  } catch (error) {
-    dom.sugestoesComprasLoading.style.display = 'none';
-    dom.sugestoesComprasContent.innerHTML = `
-      <div style="text-align: center; padding: 2rem; color: #f44336;">
-        <p>Erro ao carregar sugestões.</p>
-        <p style="font-size: 0.9em; margin-top: 0.5rem;">${error.message || 'Tente novamente mais tarde.'}</p>
-      </div>
-    `;
-  }
-}
-
-// Adiciona sugestão à lista atual
-async function adicionarSugestaoALista(produtoId, quantidade, unidade, unidadeId) {
-  if (!state.listaCompraAtual || !state.listaCompraAtual.id) {
-    showToast('Selecione uma lista de compras primeiro.', 'warning');
-    return;
-  }
-  
-  // Verifica se a lista é da mesma unidade
-  if (state.listaCompraAtual.unidade_id && Number(state.listaCompraAtual.unidade_id) !== Number(unidadeId)) {
-    showToast(`Esta sugestão é para a unidade diferente da lista selecionada.`, 'warning');
-    return;
-  }
-  
-  try {
-    await fetchJSON('/itens', {
-      method: 'POST',
-      body: JSON.stringify({
-        lista_id: state.listaCompraAtual.id,
-        produto_id: produtoId,
-        quantidade_planejada: quantidade,
-        unidade: unidade,
-        observacoes: `Sugestão automática baseada em movimentações`
-      })
-    });
-    
-    showToast('Item adicionado à lista com sucesso!', 'success');
-    
-    // Recarrega a lista
-    await loadListaCompraDetalhes(state.listaCompraAtual.id);
-    
-  } catch (error) {
-    console.error('Erro ao adicionar sugestão:', error);
-    showToast(error.message || 'Erro ao adicionar item à lista.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Adicionar à Lista'; }
   }
 }
 
@@ -5949,21 +5819,43 @@ async function startAppSession(user) {
       }
     }
     
+    // Verifica se a URL tem hash #estoque?lote=ID (QR code da etiqueta)
+    const hashMatch = window.location.hash.match(/^#estoque\?lote=(\d+)$/);
+    if (hashMatch) {
+      sectionToNavigate = 'estoque';
+    }
+
     // Usa requestAnimationFrame para garantir que o DOM está pronto, mas sem delay visível
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
       // Verifica se já estamos na seção correta para evitar navegação desnecessária
       if (typeof router !== 'undefined' && router) {
-        if (router.currentSection === sectionToNavigate) {
-          console.log('Já estamos na seção correta:', sectionToNavigate, '- pulando navegação');
-          return;
+        if (router.currentSection !== sectionToNavigate) {
+          router.navigate(sectionToNavigate);
         }
-        console.log('Navegando para:', sectionToNavigate, 'usando router');
-        router.navigate(sectionToNavigate);
       } else if (typeof navigateTo === 'function') {
-        console.log('Router não disponível, usando navigateTo para:', sectionToNavigate);
         navigateTo(sectionToNavigate);
-      } else {
-        console.warn('Nem router nem navigateTo disponíveis');
+      }
+
+      // Se veio do QR code da etiqueta, carrega o produto do lote na consulta de estoque
+      if (hashMatch) {
+        const loteIdQr = Number(hashMatch[1]);
+        try {
+          // Garante que os produtos estão carregados
+          await loadEstoqueProdutos();
+          // Busca o lote para obter o produto_id
+          const lote = await fetchJSON(`/lotes/${loteIdQr}`);
+          if (lote && lote.produto_id) {
+            const select = document.getElementById('estoqueProdutoSelect');
+            if (select) {
+              select.value = lote.produto_id;
+              select.dispatchEvent(new Event('change'));
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao carregar estoque pelo QR code:', err);
+        }
+        // Limpa o hash da URL sem recarregar a página
+        history.replaceState(null, '', window.location.pathname);
       }
     });
   })();
