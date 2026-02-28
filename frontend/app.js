@@ -6088,8 +6088,6 @@ async function startAppSession(user) {
   if (btnZerar) btnZerar.style.display = isAdminUser ? 'block' : 'none';
   const btnBackup = document.getElementById('btnAbrirBackup');
   if (btnBackup) btnBackup.style.display = isAdminUser ? 'block' : 'none';
-  const btnRestaurar = document.getElementById('btnAbrirRestaurar');
-  if (btnRestaurar) btnRestaurar.style.display = isAdminUser ? 'block' : 'none';
 
   setSidebarOpen(false);
   
