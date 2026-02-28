@@ -110,7 +110,13 @@
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boletao</a>
             </div>
           </div>
-          <button type="button" id="btnZerarHistoricos" onclick="zerarHistoricos()" style="display:none;margin:1rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#b71c1c;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+          <button type="button" id="btnAbrirBackup" onclick="gerarBackupDireto()" style="display:none;margin:1rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#1565c0;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            📦 Fazer Backup
+          </button>
+          <button type="button" id="btnAbrirRestaurar" onclick="abrirBackupModal()" style="display:none;margin:0.5rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#4527a0;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            🔄 Restaurar Backup
+          </button>
+          <button type="button" id="btnZerarHistoricos" onclick="zerarHistoricos()" style="display:none;margin:0.5rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#b71c1c;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
             ⚠ Zerar Históricos
           </button>
         </nav>
@@ -838,6 +844,25 @@
             </div>
           </div>
 
+          <!-- Modal de Backup e Restauração -->
+          <div class="modal-backdrop" id="backupModal" style="display:none;">
+            <div class="modal" style="max-width:680px;">
+              <header>
+                <h2>🗄 Backup &amp; Restauração</h2>
+                <button type="button" class="close-btn" id="closeBackupModal" aria-label="Fechar">x</button>
+              </header>
+              <div style="padding:1rem 0;">
+                <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem;">
+                  <button type="button" id="btnGerarBackup" class="btn primary" style="flex:1;">📦 Gerar Backup Agora</button>
+                </div>
+                <h3 style="font-size:0.95rem;color:#555;margin-bottom:0.75rem;">Backups disponíveis</h3>
+                <div id="backupListaContent">
+                  <p style="text-align:center;color:#607d8b;padding:1rem;">Carregando...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Administracao de usuarios do sistema -->
           <section id="usuariosSection" class="view-section hidden">
                           <div class="actions">
@@ -915,7 +940,7 @@
                 <div class="boleto-card__icon">💳</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Total de boletos do mês</div>
-                  <div class="boleto-card__value" id="boletosTotalMes">R$ 18.450,00</div>
+                  <div class="boleto-card__value" id="boletosTotalMes">R$ 0,00</div>
                 </div>
               </div>
 
@@ -923,7 +948,7 @@
                 <div class="boleto-card__icon">✅</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Total pago em dia</div>
-                  <div class="boleto-card__value" id="boletosPagoEmDia">R$ 16.200,00</div>
+                  <div class="boleto-card__value" id="boletosPagoEmDia">R$ 0,00</div>
                 </div>
               </div>
 
@@ -931,7 +956,7 @@
                 <div class="boleto-card__icon">⚠️</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Juros/multas pagos</div>
-                  <div class="boleto-card__value" id="boletosJurosPagos">R$ 320,00</div>
+                  <div class="boleto-card__value" id="boletosJurosPagos">R$ 0,00</div>
                 </div>
               </div>
 
@@ -1885,7 +1910,7 @@
     <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
     <script src="config.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=202602286"></script>
+    <script src="app.js?v=20260228B"></script>
      
   </body>
 </html>

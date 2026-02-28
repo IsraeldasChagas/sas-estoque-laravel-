@@ -324,17 +324,22 @@ Route::get('/produtos/{id}/estoque', function ($id) {
             ];
         });
         
+        $estoqueMinimo = floatval($produto->estoque_minimo ?? 0);
+        $abaixoDoMinimo = $estoqueMinimo > 0 && $qtdTotal < $estoqueMinimo;
+
         return response()->json([
             'produto' => [
                 'id' => $produto->id,
                 'nome' => $produto->nome,
-                'unidade_base' => $produto->unidade_base ?? 'UND'
+                'unidade_base' => $produto->unidade_base ?? 'UND',
+                'estoque_minimo' => $estoqueMinimo,
             ],
             'estoque_por_unidade' => $estoquePorUnidadeFormatado,
             'estoque_total' => [
                 'qtd_total' => floatval($qtdTotal),
                 'valor_total' => floatval($valorTotal),
-                'valor_unitario_medio' => floatval($valorUnitarioMedio)
+                'valor_unitario_medio' => floatval($valorUnitarioMedio),
+                'abaixo_do_minimo' => $abaixoDoMinimo,
             ]
         ]);
     } catch (\Exception $e) {
@@ -3043,8 +3048,17 @@ Route::post('/saida', function (Request $request) {
 // ============================================
 
 Route::get('/estoque-abaixo-minimo', function () {
+    // Produtos que já tiveram ao menos uma movimentação de ENTRADA (já foram abastecidos)
+    $produtosComEntrada = DB::table('movimentacoes')
+        ->where('tipo', 'ENTRADA')
+        ->distinct()
+        ->pluck('produto_id');
+
     $produtos = DB::table('produtos')
-        ->leftJoin('stock_lotes', 'produtos.id', '=', 'stock_lotes.produto_id')
+        ->leftJoin('stock_lotes', function($join) {
+            $join->on('produtos.id', '=', 'stock_lotes.produto_id')
+                 ->where('stock_lotes.quantidade', '>', 0);
+        })
         ->select(
             'produtos.id',
             'produtos.nome',
@@ -3053,6 +3067,9 @@ Route::get('/estoque-abaixo-minimo', function () {
             'produtos.ativo',
             DB::raw('COALESCE(SUM(stock_lotes.quantidade), 0) as estoque_atual')
         )
+        ->where('produtos.ativo', 1)
+        ->where('produtos.estoque_minimo', '>', 0)
+        ->whereIn('produtos.id', $produtosComEntrada)
         ->groupBy(
             'produtos.id',
             'produtos.nome',
@@ -3061,7 +3078,6 @@ Route::get('/estoque-abaixo-minimo', function () {
             'produtos.ativo'
         )
         ->havingRaw('COALESCE(SUM(stock_lotes.quantidade), 0) < produtos.estoque_minimo')
-        ->where('produtos.estoque_minimo', '>', 0)
         ->get();
     
     return response()->json([
@@ -4514,4 +4530,171 @@ Route::post('/admin/zerar-historicos', function (Request $request) {
             'usuarios'  => DB::table('usuarios')->count(),
         ],
     ]);
+});
+
+// ============================================
+// ROTAS DE BACKUP E RESTAURAÇÃO
+// ============================================
+
+// Gerar backup completo
+Route::post('/admin/backup', function (Request $request) {
+    $chave = $request->input('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403);
+    }
+
+    try {
+        $snapshot = [
+            'versao'     => '1.0',
+            'gerado_em'  => now()->toIso8601String(),
+            'tabelas'    => [
+                'produtos'              => DB::table('produtos')->get()->toArray(),
+                'unidades'              => DB::table('unidades')->get()->toArray(),
+                'locais'                => DB::table('locais')->get()->toArray(),
+                'usuarios'              => DB::table('usuarios')->get()->toArray(),
+                'lotes'                 => DB::table('lotes')->get()->toArray(),
+                'stock_lotes'           => DB::table('stock_lotes')->get()->toArray(),
+                'movimentacoes'         => DB::table('movimentacoes')->get()->toArray(),
+                'listas_compras'        => DB::table('listas_compras')->get()->toArray(),
+                'listas_itens'          => DB::table('listas_itens')->get()->toArray(),
+                'boletos'               => DB::table('boletos')->get()->toArray(),
+                'estabelecimentos_compra' => DB::table('estabelecimentos_compra')->get()->toArray(),
+            ],
+        ];
+
+        $dir = storage_path('app/backups');
+        if (!is_dir($dir)) mkdir($dir, 0755, true);
+
+        $nomeArquivo = 'backup_' . now()->format('Y-m-d_H-i-s') . '.json';
+        $caminho = $dir . '/' . $nomeArquivo;
+        file_put_contents($caminho, json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        // Mantém apenas os 10 backups mais recentes
+        $arquivos = glob($dir . '/backup_*.json');
+        usort($arquivos, fn($a, $b) => filemtime($b) - filemtime($a));
+        foreach (array_slice($arquivos, 10) as $antigo) {
+            unlink($antigo);
+        }
+
+        return response()->json([
+            'sucesso'      => true,
+            'arquivo'      => $nomeArquivo,
+            'gerado_em'    => $snapshot['gerado_em'],
+            'tamanho_kb'   => round(filesize($caminho) / 1024, 1),
+            'totais'       => array_map(fn($t) => count((array)$t), $snapshot['tabelas']),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Erro ao gerar backup: ' . $e->getMessage()], 500);
+    }
+});
+
+// Listar backups disponíveis
+Route::get('/admin/backups', function (Request $request) {
+    $chave = $request->query('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403);
+    }
+
+    $dir = storage_path('app/backups');
+    if (!is_dir($dir)) return response()->json([]);
+
+    $arquivos = glob($dir . '/backup_*.json');
+    usort($arquivos, fn($a, $b) => filemtime($b) - filemtime($a));
+
+    $lista = array_map(function($caminho) {
+        $nome = basename($caminho);
+        $conteudo = json_decode(file_get_contents($caminho), true);
+        $totais = [];
+        if (isset($conteudo['tabelas'])) {
+            foreach ($conteudo['tabelas'] as $tabela => $dados) {
+                $totais[$tabela] = count($dados);
+            }
+        }
+        return [
+            'arquivo'    => $nome,
+            'gerado_em'  => $conteudo['gerado_em'] ?? null,
+            'tamanho_kb' => round(filesize($caminho) / 1024, 1),
+            'totais'     => $totais,
+        ];
+    }, $arquivos);
+
+    return response()->json($lista);
+});
+
+// Download de um backup
+Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) {
+    $chave = $request->query('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403);
+    }
+
+    // Segurança: só permite nomes no formato backup_YYYY-MM-DD_HH-II-SS.json
+    if (!preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/', $arquivo)) {
+        return response()->json(['error' => 'Arquivo inválido.'], 400);
+    }
+
+    $caminho = storage_path('app/backups/' . $arquivo);
+    if (!file_exists($caminho)) {
+        return response()->json(['error' => 'Backup não encontrado.'], 404);
+    }
+
+    return response()->download($caminho, $arquivo, ['Content-Type' => 'application/json']);
+});
+
+// Restaurar a partir de um backup
+Route::post('/admin/restaurar', function (Request $request) {
+    $chave = $request->input('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403);
+    }
+
+    $arquivo = $request->input('arquivo');
+    if (!preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/', $arquivo)) {
+        return response()->json(['error' => 'Arquivo inválido.'], 400);
+    }
+
+    $caminho = storage_path('app/backups/' . $arquivo);
+    if (!file_exists($caminho)) {
+        return response()->json(['error' => 'Backup não encontrado.'], 404);
+    }
+
+    try {
+        $snapshot = json_decode(file_get_contents($caminho), true);
+        if (!isset($snapshot['tabelas'])) {
+            return response()->json(['error' => 'Arquivo de backup corrompido.'], 400);
+        }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+
+        // Ordem respeitando dependências
+        $ordem = [
+            'unidades', 'locais', 'usuarios', 'produtos',
+            'lotes', 'stock_lotes', 'movimentacoes',
+            'listas_compras', 'listas_itens',
+            'boletos', 'estabelecimentos_compra',
+        ];
+
+        $restaurados = [];
+        foreach ($ordem as $tabela) {
+            if (!isset($snapshot['tabelas'][$tabela])) continue;
+            DB::table($tabela)->truncate();
+            $registros = array_map(fn($r) => (array)$r, $snapshot['tabelas'][$tabela]);
+            foreach (array_chunk($registros, 200) as $lote) {
+                DB::table($tabela)->insert($lote);
+            }
+            $restaurados[$tabela] = count($registros);
+        }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+
+        return response()->json([
+            'sucesso'     => true,
+            'mensagem'    => 'Backup restaurado com sucesso.',
+            'arquivo'     => $arquivo,
+            'restaurados' => $restaurados,
+        ]);
+    } catch (\Exception $e) {
+        DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+        return response()->json(['error' => 'Erro ao restaurar: ' . $e->getMessage()], 500);
+    }
 });

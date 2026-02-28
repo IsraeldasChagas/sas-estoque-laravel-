@@ -1294,6 +1294,162 @@ function isAdmin() {
   return perfil === "ADMIN";
 }
 
+// ============================================
+// BACKUP E RESTAURAÇÃO — apenas ADMIN
+// ============================================
+function abrirBackupModal() {
+  const modal = document.getElementById('backupModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  carregarListaBackups();
+
+  const btnGerar = document.getElementById('btnGerarBackup');
+  if (btnGerar && !btnGerar._listenerAdded) {
+    btnGerar._listenerAdded = true;
+    btnGerar.addEventListener('click', gerarBackup);
+  }
+  const btnFechar = document.getElementById('closeBackupModal');
+  if (btnFechar && !btnFechar._listenerAdded) {
+    btnFechar._listenerAdded = true;
+    btnFechar.addEventListener('click', () => { modal.style.display = 'none'; });
+  }
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+}
+
+async function gerarBackupDireto() {
+  const btn = document.getElementById('btnAbrirBackup');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+  try {
+    const res = await fetch(API_URL + '/admin/backup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026' }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.sucesso) {
+      // Baixa automaticamente o arquivo gerado
+      const link = document.createElement('a');
+      link.href = `${API_URL}/admin/backup/${encodeURIComponent(data.arquivo)}?chave=BACKUP-SABORPARAENSE-2026`;
+      link.download = data.arquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      alert('✅ Backup gerado e download iniciado!\nArquivo: ' + data.arquivo + '\nTamanho: ' + data.tamanho_kb + ' KB');
+    } else {
+      alert('❌ Erro ao gerar backup (HTTP ' + res.status + '):\n' + (data?.error || data?.message || JSON.stringify(data)));
+    }
+  } catch (e) {
+    alert('❌ Falha na conexão: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📦 Fazer Backup'; }
+  }
+}
+
+async function gerarBackup() {
+  const btn = document.getElementById('btnGerarBackup');
+  if (btn) { btn.disabled = true; btn.textContent = 'Gerando...'; }
+  try {
+    const res = await fetch(API_URL + '/admin/backup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026' }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.sucesso) {
+      alert('✅ Backup gerado com sucesso!\nArquivo: ' + data.arquivo + '\nTamanho: ' + data.tamanho_kb + ' KB');
+      carregarListaBackups();
+    } else {
+      alert('❌ Erro ao gerar backup (HTTP ' + res.status + '):\n' + (data?.error || data?.message || JSON.stringify(data)));
+    }
+  } catch (e) {
+    alert('❌ Falha na conexão: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📦 Gerar Backup Agora'; }
+  }
+}
+
+async function carregarListaBackups() {
+  const content = document.getElementById('backupListaContent');
+  if (!content) return;
+  content.innerHTML = '<p style="text-align:center;color:#607d8b;padding:1rem;">Carregando...</p>';
+  try {
+    const res = await fetch(`${API_URL}/admin/backups?chave=BACKUP-SABORPARAENSE-2026`, {
+      headers: {
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+    });
+    const lista = await res.json().catch(() => []);
+    if (!Array.isArray(lista) || lista.length === 0) {
+      content.innerHTML = '<p style="text-align:center;color:#607d8b;padding:1rem;">Nenhum backup encontrado. Clique em "Gerar Backup Agora".</p>';
+      return;
+    }
+    let html = '<div style="display:flex;flex-direction:column;gap:0.6rem;">';
+    lista.forEach(b => {
+      const data = b.gerado_em ? new Date(b.gerado_em).toLocaleString('pt-BR') : b.arquivo;
+      const totais = b.totais ? Object.entries(b.totais).map(([t, n]) => `${t}: ${n}`).join(' · ') : '';
+      html += `
+        <div style="border:1px solid #e0e0e0;border-radius:8px;padding:0.75rem 1rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:0.9rem;">📅 ${data}</div>
+            <div style="font-size:0.78rem;color:#888;margin-top:0.2rem;">${b.tamanho_kb} KB · ${totais}</div>
+          </div>
+          <a href="${API_URL}/admin/backup/${encodeURIComponent(b.arquivo)}?chave=BACKUP-SABORPARAENSE-2026" download="${b.arquivo}"
+             style="padding:0.4rem 0.8rem;background:#1565c0;color:#fff;border-radius:5px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">
+            ⬇ Baixar
+          </a>
+          <button onclick="restaurarBackup('${escapeHtml(b.arquivo)}')"
+            style="padding:0.4rem 0.8rem;background:#e65100;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
+            🔄 Restaurar
+          </button>
+        </div>
+      `;
+    });
+    html += '</div>';
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = `<p style="text-align:center;color:red;padding:1rem;">Erro ao carregar backups: ${e.message}</p>`;
+  }
+}
+
+async function restaurarBackup(arquivo) {
+  const confirmado = window.confirm(
+    `⚠ ATENÇÃO!\n\nVocê vai restaurar o backup:\n${arquivo}\n\n` +
+    'TODOS os dados atuais serão substituídos pelos dados deste backup.\n\n' +
+    'Esta ação NÃO pode ser desfeita. Tem certeza?'
+  );
+  if (!confirmado) return;
+
+  try {
+    const res = await fetch(API_URL + '/admin/restaurar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026', arquivo }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.sucesso) {
+      alert('✅ Backup restaurado com sucesso!\nA página será recarregada.');
+      window.location.reload();
+    } else {
+      alert('❌ Erro ao restaurar: ' + (data?.error || res.status));
+    }
+  } catch (e) {
+    alert('❌ Falha na conexão: ' + e.message);
+  }
+}
+
 // Botão Zerar Históricos — visível e funcional apenas para ADMIN
 async function zerarHistoricos() {
   const btn = document.getElementById('btnZerarHistoricos');
@@ -5544,6 +5700,24 @@ async function loadEstoqueProduto(produtoId) {
     
     // Atualiza informações do produto
     estoqueProdutoNome.textContent = dados.produto.nome || "Produto";
+
+    // Alerta de abaixo do mínimo
+    const abaixoDoMinimo = dados.estoque_total?.abaixo_do_minimo;
+    const estoqueMinimo = dados.produto?.estoque_minimo || 0;
+    let alertaMinimo = document.getElementById('estoqueAlertaMinimo');
+    if (!alertaMinimo) {
+      alertaMinimo = document.createElement('div');
+      alertaMinimo.id = 'estoqueAlertaMinimo';
+      estoqueProdutoNome.parentNode.insertBefore(alertaMinimo, estoqueProdutoNome.nextSibling);
+    }
+    if (abaixoDoMinimo) {
+      alertaMinimo.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.4rem;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.85rem;font-weight:600;margin-top:0.4rem;">⚠ Estoque abaixo do mínimo — Mínimo: ${estoqueMinimo.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ${normalizarUnidadeBase(dados.produto.unidade_base)}</span>`;
+    } else {
+      alertaMinimo.innerHTML = estoqueMinimo > 0
+        ? `<span style="display:inline-flex;align-items:center;gap:0.4rem;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.85rem;font-weight:600;margin-top:0.4rem;">✔ Estoque OK — Mínimo: ${estoqueMinimo.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} ${normalizarUnidadeBase(dados.produto.unidade_base)}</span>`
+        : '';
+    }
+
     estoqueTotalQtd.textContent = (dados.estoque_total.qtd_total || 0).toLocaleString("pt-BR", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 3,
@@ -5656,7 +5830,20 @@ async function abrirEstoqueLotesModal(item, produto) {
     return;
   }
 
-  let html = `
+  // Alerta de estoque mínimo no modal
+  const estoqueMinimo = parseFloat(produto?.estoque_minimo || 0);
+  const qtdTotalUnidade = lotes.reduce((s, l) => s + Number(l.quantidade || 0), 0);
+  const unidadeBase = normalizarUnidadeBase(produto?.unidade_base || '');
+  let alertaHtml = '';
+  if (estoqueMinimo > 0) {
+    if (qtdTotalUnidade < estoqueMinimo) {
+      alertaHtml = `<div style="display:flex;align-items:center;gap:0.5rem;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.75rem;font-size:0.85rem;font-weight:600;">⚠ Estoque abaixo do mínimo — Atual: ${qtdTotalUnidade.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} / Mínimo: ${estoqueMinimo.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${unidadeBase}</div>`;
+    } else {
+      alertaHtml = `<div style="display:flex;align-items:center;gap:0.5rem;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.75rem;font-size:0.85rem;font-weight:600;">✔ Estoque OK — Atual: ${qtdTotalUnidade.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} / Mínimo: ${estoqueMinimo.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} ${unidadeBase}</div>`;
+    }
+  }
+
+  let html = alertaHtml + `
     <div class="table-wrapper">
       <table>
         <thead>
@@ -5894,12 +6081,15 @@ async function startAppSession(user) {
     console.error('appShell não encontrado!');
   }
 
-  // Mostra botão Zerar Históricos apenas para ADMIN (após appShell visível)
+  // Mostra botões de ADMIN (Backup e Zerar Históricos) apenas para ADMIN
+  const perfil = (currentUser?.perfil || '').toString().trim().toUpperCase();
+  const isAdminUser = perfil === 'ADMIN';
   const btnZerar = document.getElementById('btnZerarHistoricos');
-  if (btnZerar) {
-    const perfil = (currentUser?.perfil || '').toString().trim().toUpperCase();
-    btnZerar.style.display = perfil === 'ADMIN' ? 'block' : 'none';
-  }
+  if (btnZerar) btnZerar.style.display = isAdminUser ? 'block' : 'none';
+  const btnBackup = document.getElementById('btnAbrirBackup');
+  if (btnBackup) btnBackup.style.display = isAdminUser ? 'block' : 'none';
+  const btnRestaurar = document.getElementById('btnAbrirRestaurar');
+  if (btnRestaurar) btnRestaurar.style.display = isAdminUser ? 'block' : 'none';
 
   setSidebarOpen(false);
   
@@ -8917,12 +9107,37 @@ function renderBoletos(boletos) {
             <button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>
             <button class="btn-icon" title="Detalhes" data-id="${boleto.id}">👁️</button>
             ${boleto.status !== 'PAGO' ? `<button class="btn-icon btn-icon--primary" title="Pagar" data-id="${boleto.id}">💳</button>` : ''}
+            <button class="btn-icon btn-icon--danger btn-deletar-boleto" title="Excluir" data-id="${boleto.id}" style="color:#c62828;">🗑️</button>
           </td>
         </tr>
       `;
     }).join('');
     
     tbody.innerHTML = html;
+
+    // Listener para botões de deletar
+    tbody.querySelectorAll('.btn-deletar-boleto').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (!confirm('Tem certeza que deseja excluir este boleto? Esta ação não pode ser desfeita.')) return;
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          await fetchJSON(`/boletos/${id}`, { method: 'DELETE' });
+          showToast('Boleto excluído com sucesso.', 'success');
+          const mesAno = dom.boletosMesAnoFiltro?.value || '';
+          const unidadeId = dom.boletosUnidadeFiltro?.value || '';
+          const status = dom.boletosStatusFiltro?.value || '';
+          await loadBoletos({ mes_ano: mesAno, unidade_id: unidadeId, status });
+          await loadBoletosResumo(mesAno);
+        } catch (e) {
+          showToast('Erro ao excluir: ' + (e.message || 'Falha na operação.'), 'error');
+          btn.disabled = false;
+          btn.textContent = '🗑️';
+        }
+      });
+    });
+
     console.log('✅ Boletos renderizados com sucesso!');
   } catch (error) {
     console.error('❌ Erro ao renderizar boletos:', error);
