@@ -1294,6 +1294,56 @@ function isAdmin() {
   return perfil === "ADMIN";
 }
 
+// Botão Zerar Históricos — visível e funcional apenas para ADMIN
+async function zerarHistoricos() {
+  const btn = document.getElementById('btnZerarHistoricos');
+
+  const perfil = (currentUser?.perfil || '').toString().trim().toUpperCase();
+  if (perfil !== 'ADMIN') {
+    alert('Apenas administradores podem executar esta ação.');
+    return;
+  }
+
+  const confirmado = window.confirm(
+    '⚠ ATENÇÃO!\n\nEsta ação vai apagar PERMANENTEMENTE:\n' +
+    '• Todas as movimentações\n' +
+    '• Todo o estoque (stock_lotes)\n' +
+    '• Todos os lotes\n' +
+    '• Todas as listas de compras\n' +
+    '• Logs de etiquetas e usuários\n\n' +
+    'Cadastros (produtos, unidades, locais, usuários) serão preservados.\n\n' +
+    'Tem certeza absoluta?'
+  );
+  if (!confirmado) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Zerando...'; }
+
+  try {
+    const res = await fetch(API_URL + '/admin/zerar-historicos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+      body: JSON.stringify({ chave: 'ZERAR-SABORPARAENSE-2026' }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (res.ok && data && data.sucesso) {
+      alert('✅ Históricos zerados com sucesso!\nSistema pronto para os testes.');
+    } else {
+      const msg = data?.error || data?.message || ('Erro HTTP ' + res.status);
+      alert('❌ Erro ao zerar: ' + msg);
+    }
+  } catch (e) {
+    alert('❌ Falha na conexão: ' + (e.message || 'Erro desconhecido'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚠ Zerar Históricos'; }
+  }
+}
+
 // Verifica se pode imprimir etiquetas (ADMIN, GERENTE ou ESTOQUISTA)
 function podeImprimirEtiqueta() {
   if (!currentUser) return false;
@@ -5512,9 +5562,12 @@ async function loadEstoqueProduto(produtoId) {
       })}`;
     }
     
+    // Guarda dados para uso no modal de detalhes
+    window._estoqueDadosAtual = dados;
+
     // Renderiza tabela de estoque por unidade
     if (!dados.estoque_por_unidade || dados.estoque_por_unidade.length === 0) {
-      const colspan = isCozinhaOuBar ? "4" : "6";
+      const colspan = isCozinhaOuBar ? "5" : "7";
       estoqueTable.innerHTML = `
         <tr>
           <td colspan="${colspan}" style="text-align: center; color: #607d8b;">
@@ -5523,37 +5576,30 @@ async function loadEstoqueProduto(produtoId) {
         </tr>
       `;
     } else {
-      const rows = dados.estoque_por_unidade
-        .map((item) => {
-          const valorUnitarioCell = isCozinhaOuBar ? '' : `
-            <td data-label="Valor Unitário" class="estoque-col-valor-unitario">R$ ${(item.valor_unitario_medio || 0).toLocaleString("pt-BR", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}</td>
-          `;
-          const valorTotalCell = isCozinhaOuBar ? '' : `
-            <td data-label="Valor Total" class="estoque-col-valor-total">R$ ${(item.valor_total || 0).toLocaleString("pt-BR", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}</td>
-          `;
-          
-          return `
-          <tr>
-            <td data-label="Unidade">${escapeHtml(item.unidade_nome || "N/A")}</td>
-            <td data-label="Local">${item.locais ? escapeHtml(item.locais) : "—"}</td>
-            <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 3,
-            })}</td>
-            ${valorUnitarioCell}
-            ${valorTotalCell}
-            <td data-label="Lotes (código)">${item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—")}</td>
-          </tr>
+      const tbody = document.getElementById('estoqueTable');
+      tbody.innerHTML = '';
+
+      dados.estoque_por_unidade.forEach((item) => {
+        const tr = document.createElement('tr');
+
+        const valorTotalCell = isCozinhaOuBar ? '' : `
+          <td data-label="Valor Total" class="estoque-col-valor-total">R$ ${(item.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         `;
-        })
-        .join("");
-      estoqueTable.innerHTML = rows;
+
+        tr.innerHTML = `
+          <td data-label="Unidade">${escapeHtml(item.unidade_nome || "N/A")}</td>
+          <td data-label="Local">${item.locais ? escapeHtml(item.locais) : "—"}</td>
+          <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+          ${valorTotalCell}
+          <td data-label="Lotes (código)">${item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—")}</td>
+          <td data-label="Detalhes"><button type="button" class="btn secondary btn-sm btn-estoque-detalhe">Detalhes</button></td>
+        `;
+
+        // Listener direto no botão
+        tr.querySelector('.btn-estoque-detalhe').addEventListener('click', () => abrirEstoqueLotesModal(item, dados.produto));
+
+        tbody.appendChild(tr);
+      });
     }
     
     estoqueInfo.style.display = "block";
@@ -5563,6 +5609,86 @@ async function loadEstoqueProduto(produtoId) {
     const estoqueInfo = document.getElementById("estoqueInfo");
     if (estoqueInfo) estoqueInfo.style.display = "none";
   }
+}
+
+async function abrirEstoqueLotesModal(item, produto) {
+  const modal = document.getElementById('estoqueLotesModal');
+  const titulo = document.getElementById('estoqueLotesModalTitulo');
+  const content = document.getElementById('estoqueLotesModalContent');
+  if (!modal || !titulo || !content) return;
+
+  titulo.textContent = `Detalhes — ${escapeHtml(produto?.nome || 'Produto')} · ${escapeHtml(item.unidade_nome || '')}`;
+  content.innerHTML = '<p style="text-align:center;color:#607d8b;padding:1.5rem;">Carregando...</p>';
+  toggleModal(modal, true);
+
+  const perfilAtual = currentUser?.perfil?.toString().trim().toUpperCase() || '';
+  const isCozinhaOuBar = perfilAtual === 'COZINHA' || perfilAtual === 'BAR';
+
+  // Usa lotes_detalhados se o servidor já retornar, senão busca via /lotes
+  let lotes = item.lotes_detalhados || [];
+
+  if (lotes.length === 0) {
+    try {
+      const produtoId = produto?.id || item.produto_id;
+      const unidadeId = item.unidade_id;
+      const params = new URLSearchParams();
+      if (produtoId) params.append('produto_id', produtoId);
+      if (unidadeId) params.append('unidade_id', unidadeId);
+      const resposta = await fetchJSON(`/lotes?${params.toString()}`);
+      const lotesRaw = Array.isArray(resposta) ? resposta : [];
+      // Filtra apenas lotes com quantidade > 0 e monta no mesmo formato de lotes_detalhados
+      lotes = lotesRaw
+        .filter(l => parseFloat(l.qtd_atual ?? l.quantidade ?? 0) > 0)
+        .map(l => ({
+          codigo_lote:    l.numero_lote || l.codigo_lote || '—',
+          quantidade:     parseFloat(l.qtd_atual ?? l.quantidade ?? 0),
+          custo_unitario: parseFloat(l.custo_unitario ?? 0),
+          valor_total:    parseFloat(l.qtd_atual ?? l.quantidade ?? 0) * parseFloat(l.custo_unitario ?? 0),
+          data_validade:  l.data_validade || null,
+        }));
+    } catch (e) {
+      console.error('Erro ao buscar lotes para modal:', e);
+    }
+  }
+
+  if (lotes.length === 0) {
+    content.innerHTML = '<p style="text-align:center;color:#607d8b;padding:1.5rem;">Nenhum lote encontrado.</p>';
+    return;
+  }
+
+  let html = `
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Lote (código)</th>
+            <th>Quantidade</th>
+            ${!isCozinhaOuBar ? '<th>Valor Unitário</th><th>Valor Total</th>' : ''}
+            <th>Validade</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  lotes.forEach((lote) => {
+    const validade = lote.data_validade
+      ? new Date(lote.data_validade + 'T00:00:00').toLocaleDateString('pt-BR')
+      : '—';
+    html += `
+      <tr>
+        <td>${escapeHtml(String(lote.codigo_lote || '—'))}</td>
+        <td>${Number(lote.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+        ${!isCozinhaOuBar ? `
+          <td>R$ ${Number(lote.custo_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>R$ ${Number(lote.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        ` : ''}
+        <td>${validade}</td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table></div>';
+  content.innerHTML = html;
 }
 
 async function loadUnidades(refresh = true) {
@@ -5745,6 +5871,7 @@ async function startAppSession(user) {
   }
   
   applyPermissions();
+
   if (typeof stopMatrixAnimation === "function") {
     stopMatrixAnimation();
     stopMatrixAnimation = null;
@@ -5766,7 +5893,14 @@ async function startAppSession(user) {
   } else {
     console.error('appShell não encontrado!');
   }
-  
+
+  // Mostra botão Zerar Históricos apenas para ADMIN (após appShell visível)
+  const btnZerar = document.getElementById('btnZerarHistoricos');
+  if (btnZerar) {
+    const perfil = (currentUser?.perfil || '').toString().trim().toUpperCase();
+    btnZerar.style.display = perfil === 'ADMIN' ? 'block' : 'none';
+  }
+
   setSidebarOpen(false);
   
   // Carrega dados iniciais em background (não bloqueia o login)
@@ -9949,6 +10083,11 @@ function setupForms() {
       }
     });
   }
+
+  // Fechar modal de detalhes de lotes
+  document.getElementById('closeEstoqueLotesModal')?.addEventListener('click', () => {
+    toggleModal(document.getElementById('estoqueLotesModal'), false);
+  });
 
 }
 

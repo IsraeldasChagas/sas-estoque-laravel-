@@ -110,6 +110,9 @@
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boletao</a>
             </div>
           </div>
+          <button type="button" id="btnZerarHistoricos" onclick="zerarHistoricos()" style="display:none;margin:1rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#b71c1c;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+            ⚠ Zerar Históricos
+          </button>
         </nav>
         </div>
       </aside>
@@ -790,9 +793,8 @@
                       <div id="estoqueTotalQtd" style="font-size: 1.5rem; font-weight: 700; color: #1976d2;">0</div>
                       <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;" id="estoqueUnidadeBase"></div>
                     </div>
-                    <div id="estoqueCardUnitario" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Unitário Médio</div>
-                      <div id="estoqueTotalUnitario" style="font-size: 1.5rem; font-weight: 700; color: #ff9800;">R$ 0,00</div>
+                    <div id="estoqueCardUnitario" style="display:none;">
+                      <div id="estoqueTotalUnitario"></div>
                     </div>
                     <div id="estoqueCardTotal" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                       <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Total</div>
@@ -807,14 +809,14 @@
                         <th>Unidade</th>
                         <th>Local</th>
                         <th>Quantidade</th>
-                        <th class="estoque-col-valor-unitario">Valor Unitário</th>
                         <th class="estoque-col-valor-total">Valor Total</th>
                         <th>Lotes (código)</th>
+                        <th>Detalhes</th>
                       </tr>
                     </thead>
                     <tbody id="estoqueTable">
                       <tr>
-                        <td colspan="5" style="text-align: center; color: #607d8b;">Carregando...</td>
+                        <td colspan="7" style="text-align: center; color: #607d8b;">Carregando...</td>
                       </tr>
                     </tbody>
                   </table>
@@ -822,6 +824,19 @@
               </div>
             </div>
           </section>
+
+          <!-- Modal detalhes lotes estoque -->
+          <div class="modal-backdrop" id="estoqueLotesModal">
+            <div class="modal" style="max-width: 700px;">
+              <header>
+                <h2 id="estoqueLotesModalTitulo">Detalhes dos Lotes</h2>
+                <button type="button" class="close-btn" id="closeEstoqueLotesModal" aria-label="Fechar">x</button>
+              </header>
+              <div style="padding: 0.5rem 0;">
+                <div id="estoqueLotesModalContent"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- Administracao de usuarios do sistema -->
           <section id="usuariosSection" class="view-section hidden">
@@ -1870,7 +1885,7 @@
     <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
     <script src="config.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260228"></script>
+    <script src="app.js?v=202602286"></script>
      
   </body>
 </html>

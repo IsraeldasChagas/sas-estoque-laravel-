@@ -135,6 +135,7 @@ class EntradaEstoqueService
             }
 
             // 6. Atualizar ou criar stock_lotes
+            // Busca por produto+unidade+codigo (chave lógica completa)
             $stockLote = DB::table('stock_lotes')
                 ->where('produto_id', $produtoId)
                 ->where('unidade_id', $unidadeId)
@@ -142,25 +143,40 @@ class EntradaEstoqueService
                 ->first();
 
             if ($stockLote) {
+                // Lote já existe — soma quantidade e recalcula custo médio
                 $novaQuantidade = $stockLote->quantidade + $quantidade;
-                $custoMedio = (($stockLote->quantidade * $stockLote->custo_unitario) + ($quantidade * $custoUnitario)) / $novaQuantidade;
+                $custoMedio = $novaQuantidade > 0
+                    ? (($stockLote->quantidade * $stockLote->custo_unitario) + ($quantidade * $custoUnitario)) / $novaQuantidade
+                    : $custoUnitario;
                 DB::table('stock_lotes')
                     ->where('id', $stockLote->id)
                     ->update([
-                        'quantidade' => $novaQuantidade,
-                        'custo_unitario' => $custoMedio,
-                        'data_validade' => $dataValidade ?? $stockLote->data_validade,
+                        'quantidade'      => $novaQuantidade,
+                        'custo_unitario'  => $custoMedio,
+                        'data_validade'   => $dataValidade ?? $stockLote->data_validade,
                         'data_fabricacao' => $dataFabricacao ?? $stockLote->data_fabricacao,
                     ]);
             } else {
+                // Verifica se existe outro registro com o mesmo codigo_lote (constraint única global)
+                $codigoJaExiste = DB::table('stock_lotes')
+                    ->where('codigo_lote', $numeroLote)
+                    ->exists();
+
+                if ($codigoJaExiste) {
+                    // Código duplicado globalmente — gera um sufixo único para evitar conflito
+                    $numeroLote = $numeroLote . '-' . $produtoId . '-' . $unidadeId . '-' . now()->format('His');
+                    // Atualiza também o lote pai
+                    DB::table('lotes')->where('id', $loteId)->update(['numero_lote' => $numeroLote]);
+                }
+
                 DB::table('stock_lotes')->insert([
-                    'produto_id' => $produtoId,
-                    'unidade_id' => $unidadeId,
-                    'codigo_lote' => $numeroLote,
-                    'quantidade' => $quantidade,
-                    'custo_unitario' => $custoUnitario,
+                    'produto_id'      => $produtoId,
+                    'unidade_id'      => $unidadeId,
+                    'codigo_lote'     => $numeroLote,
+                    'quantidade'      => $quantidade,
+                    'custo_unitario'  => $custoUnitario,
                     'data_fabricacao' => $dataFabricacao,
-                    'data_validade' => $dataValidade,
+                    'data_validade'   => $dataValidade,
                 ]);
             }
 

@@ -283,18 +283,44 @@ Route::get('/produtos/{id}/estoque', function ($id) {
         $valorUnitarioMedio = $qtdTotal > 0 ? ($valorTotal / $qtdTotal) : 0;
 
         // Formata os dados para o frontend
-        $estoquePorUnidadeFormatado = $estoquePorUnidade->map(function($item) {
+        $estoquePorUnidadeFormatado = $estoquePorUnidade->map(function($item) use ($id) {
             $codigosLote = trim($item->codigos_lote ?? '');
             $locais = trim($item->nomes_locais ?? '');
+
+            // Busca lotes detalhados desta unidade para o modal de detalhes
+            $lotesDetalhados = DB::table('stock_lotes')
+                ->where('stock_lotes.produto_id', $id)
+                ->where('stock_lotes.unidade_id', $item->unidade_id)
+                ->where('stock_lotes.quantidade', '>', 0)
+                ->select(
+                    'stock_lotes.codigo_lote',
+                    'stock_lotes.quantidade',
+                    'stock_lotes.custo_unitario',
+                    'stock_lotes.data_validade',
+                    DB::raw('stock_lotes.quantidade * stock_lotes.custo_unitario as valor_total')
+                )
+                ->orderByDesc('stock_lotes.id')
+                ->get()
+                ->map(function($lote) {
+                    return [
+                        'codigo_lote'    => $lote->codigo_lote,
+                        'quantidade'     => floatval($lote->quantidade),
+                        'custo_unitario' => floatval($lote->custo_unitario),
+                        'valor_total'    => floatval($lote->valor_total),
+                        'data_validade'  => $lote->data_validade,
+                    ];
+                });
+
             return [
-                'unidade_id' => $item->unidade_id,
-                'unidade_nome' => $item->unidade_nome ?? 'N/A',
-                'locais' => $locais ?: null,
-                'qtd_total' => floatval($item->qtd_total ?? 0),
+                'unidade_id'           => $item->unidade_id,
+                'unidade_nome'         => $item->unidade_nome ?? 'N/A',
+                'locais'               => $locais ?: null,
+                'qtd_total'            => floatval($item->qtd_total ?? 0),
                 'valor_unitario_medio' => floatval($item->valor_unitario_medio ?? 0),
-                'valor_total' => floatval($item->valor_total ?? 0),
-                'num_lotes' => intval($item->num_lotes ?? 0),
-                'codigos_lote' => $codigosLote ?: null
+                'valor_total'          => floatval($item->valor_total ?? 0),
+                'num_lotes'            => intval($item->num_lotes ?? 0),
+                'codigos_lote'         => $codigosLote ?: null,
+                'lotes_detalhados'     => $lotesDetalhados,
             ];
         });
         
@@ -3019,9 +3045,22 @@ Route::post('/saida', function (Request $request) {
 Route::get('/estoque-abaixo-minimo', function () {
     $produtos = DB::table('produtos')
         ->leftJoin('stock_lotes', 'produtos.id', '=', 'stock_lotes.produto_id')
-        ->select('produtos.*', DB::raw('COALESCE(SUM(stock_lotes.quantidade), 0) as estoque_atual'))
-        ->groupBy('produtos.id')
-        ->havingRaw('estoque_atual < produtos.estoque_minimo')
+        ->select(
+            'produtos.id',
+            'produtos.nome',
+            'produtos.unidade_base',
+            'produtos.estoque_minimo',
+            'produtos.ativo',
+            DB::raw('COALESCE(SUM(stock_lotes.quantidade), 0) as estoque_atual')
+        )
+        ->groupBy(
+            'produtos.id',
+            'produtos.nome',
+            'produtos.unidade_base',
+            'produtos.estoque_minimo',
+            'produtos.ativo'
+        )
+        ->havingRaw('COALESCE(SUM(stock_lotes.quantidade), 0) < produtos.estoque_minimo')
         ->where('produtos.estoque_minimo', '>', 0)
         ->get();
     
@@ -3486,14 +3525,13 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
         
         $entradasCriadas = [];
         $erros = [];
-        $service = app(EntradaEstoqueService::class);
-        
-        // Processa cada item comprado via EntradaEstoqueService (useTransaction=false pois já estamos em transação)
+
+        // Processa cada item: soma direto no stock_lotes existente, sem criar lote novo
         foreach ($itens as $item) {
             try {
                 $quantidadeComprada = floatval($item->quantidade_comprada ?? 0);
-                $precoUnitario = floatval($item->preco_unitario ?? $item->valor_unitario ?? 0);
-                
+                $precoUnitario      = floatval($item->preco_unitario ?? $item->valor_unitario ?? 0);
+
                 if ($quantidadeComprada <= 0) {
                     $erros[] = "Item ID {$item->id}: quantidade comprada inválida";
                     continue;
@@ -3502,33 +3540,105 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
                     $erros[] = "Item ID {$item->id}: preço unitário inválido";
                     continue;
                 }
-                if (!DB::table('produtos')->where('id', $item->produto_id)->first()) {
+
+                $produto = DB::table('produtos')->where('id', $item->produto_id)->first();
+                if (!$produto) {
                     $erros[] = "Item ID {$item->id}: produto não encontrado";
                     continue;
                 }
-                
-                $codigoLote = "LC-{$id}-{$item->id}-" . date('Ymd');
-                $dados = [
-                    'produto_id' => $item->produto_id,
-                    'unidade_id' => $unidadeId,
-                    'quantidade' => $quantidadeComprada,
-                    'custo_unitario' => $precoUnitario,
-                    'usuario_id' => $usuarioId,
-                    'numero_lote' => $codigoLote,
-                    'data_validade' => $item->data_validade ?? null,
-                    'motivo' => 'Lista de compras',
-                    'observacao' => "Lista de compras #{$id} - Lote: {$codigoLote}",
-                    'origem' => 'LISTA_COMPRAS',
-                ];
-                
-                $resultado = $service->registrarEntrada($dados, false);
+
+                // Busca o stock_lotes existente para produto+unidade (qualquer lote ativo)
+                $stockLote = DB::table('stock_lotes')
+                    ->where('produto_id', $item->produto_id)
+                    ->where('unidade_id', $unidadeId)
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($stockLote) {
+                    // Soma a quantidade no registro existente e recalcula custo médio
+                    $novaQtd    = $stockLote->quantidade + $quantidadeComprada;
+                    $custoMedio = (($stockLote->quantidade * $stockLote->custo_unitario) + ($quantidadeComprada * $precoUnitario)) / $novaQtd;
+
+                    DB::table('stock_lotes')
+                        ->where('id', $stockLote->id)
+                        ->update([
+                            'quantidade'     => $novaQtd,
+                            'custo_unitario' => $custoMedio,
+                        ]);
+
+                    $codigoLote = $stockLote->codigo_lote;
+                    $loteId     = DB::table('lotes')
+                        ->where('produto_id', $item->produto_id)
+                        ->where('unidade_id', $unidadeId)
+                        ->where('numero_lote', $codigoLote)
+                        ->value('id');
+
+                    // Atualiza qtd_atual do lote pai se existir
+                    if ($loteId) {
+                        DB::table('lotes')->where('id', $loteId)->update(['qtd_atual' => $novaQtd]);
+                    }
+                } else {
+                    // Não existe stock ainda — cria um registro novo com código único
+                    $codigoLote = 'ENT-' . $item->produto_id . '-' . $unidadeId . '-' . now()->format('YmdHis');
+
+                    // Garante que o local existe
+                    $localId = DB::table('locais')->where('unidade_id', $unidadeId)->value('id');
+                    if (!$localId) {
+                        $localId = DB::table('locais')->insertGetId([
+                            'nome'      => 'Depósito Principal',
+                            'unidade_id'=> $unidadeId,
+                            'tipo'      => 'DEPOSITO',
+                            'ativo'     => 1,
+                        ]);
+                    }
+
+                    $loteId = DB::table('lotes')->insertGetId([
+                        'produto_id'     => $item->produto_id,
+                        'unidade_id'     => $unidadeId,
+                        'numero_lote'    => $codigoLote,
+                        'qtd_atual'      => $quantidadeComprada,
+                        'unidade'        => strtoupper(trim($produto->unidade_base ?? 'UND')),
+                        'custo_unitario' => $precoUnitario,
+                        'data_validade'  => $item->data_validade ?? null,
+                        'local_id'       => $localId,
+                        'ativo'          => 1,
+                        'criado_em'      => now(),
+                    ]);
+
+                    DB::table('stock_lotes')->insert([
+                        'produto_id'     => $item->produto_id,
+                        'unidade_id'     => $unidadeId,
+                        'codigo_lote'    => $codigoLote,
+                        'quantidade'     => $quantidadeComprada,
+                        'custo_unitario' => $precoUnitario,
+                        'data_validade'  => $item->data_validade ?? null,
+                        'data_fabricacao'=> null,
+                    ]);
+                }
+
+                // Registra a movimentação de ENTRADA
+                $movimentacaoId = DB::table('movimentacoes')->insertGetId([
+                    'produto_id'    => $item->produto_id,
+                    'lote_id'       => $loteId ?? null,
+                    'usuario_id'    => $usuarioId,
+                    'tipo'          => 'ENTRADA',
+                    'qtd'           => $quantidadeComprada,
+                    'unidade'       => strtoupper(trim($produto->unidade_base ?? 'UND')),
+                    'custo_unitario'=> $precoUnitario,
+                    'data_mov'      => now(),
+                    'motivo'        => 'Lista de compras',
+                    'observacao'    => "Lista de compras #{$id}",
+                    'de_unidade_id' => $unidadeId,
+                ]);
+
                 $entradasCriadas[] = [
-                    'item_id' => $item->id,
-                    'produto_id' => $item->produto_id,
-                    'lote_id' => $resultado['lote_id'],
-                    'movimentacao_id' => $resultado['movimentacao_id'],
+                    'item_id'        => $item->id,
+                    'produto_id'     => $item->produto_id,
+                    'lote_id'        => $loteId ?? null,
+                    'movimentacao_id'=> $movimentacaoId,
                 ];
-                \Log::info("Movimentação criada - ID: {$resultado['movimentacao_id']}, Produto: {$item->produto_id}, Qtd: {$quantidadeComprada}, Unidade: {$unidadeId}");
+                \Log::info("Entrada lista #{$id} - Produto: {$item->produto_id}, Qtd: {$quantidadeComprada}, Unidade: {$unidadeId}");
+
             } catch (\Exception $e) {
                 $erros[] = "Item ID {$item->id}: " . $e->getMessage();
                 \Log::error("Erro ao processar item da lista: " . $e->getMessage());
@@ -4363,4 +4473,45 @@ Route::options('/boletos/{id}/anexo', function () {
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// ============================================
+// ROTA TEMPORÁRIA — ZERAR HISTÓRICOS DE TESTE
+// Remover após uso
+// ============================================
+Route::post('/admin/zerar-historicos', function (Request $request) {
+    $chave = $request->input('chave');
+    if ($chave !== 'ZERAR-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403);
+    }
+
+    DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+    DB::table('movimentacoes')->truncate();
+    DB::table('stock_lotes')->truncate();
+    DB::table('lotes')->truncate();
+    DB::table('listas_itens')->truncate();
+    DB::table('listas_compras')->truncate();
+    DB::table('logs_etiquetas')->truncate();
+    DB::table('logs_usuarios')->truncate();
+    DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+
+    return response()->json([
+        'sucesso' => true,
+        'mensagem' => 'Históricos zerados com sucesso.',
+        'tabelas_zeradas' => [
+            'movimentacoes'  => DB::table('movimentacoes')->count(),
+            'stock_lotes'    => DB::table('stock_lotes')->count(),
+            'lotes'          => DB::table('lotes')->count(),
+            'listas_itens'   => DB::table('listas_itens')->count(),
+            'listas_compras' => DB::table('listas_compras')->count(),
+            'logs_etiquetas' => DB::table('logs_etiquetas')->count(),
+            'logs_usuarios'  => DB::table('logs_usuarios')->count(),
+        ],
+        'preservados' => [
+            'produtos'  => DB::table('produtos')->count(),
+            'unidades'  => DB::table('unidades')->count(),
+            'locais'    => DB::table('locais')->count(),
+            'usuarios'  => DB::table('usuarios')->count(),
+        ],
+    ]);
 });
