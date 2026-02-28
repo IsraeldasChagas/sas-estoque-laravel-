@@ -2263,6 +2263,11 @@ function applyPermissions() {
   if (locaisAcoesHeader) locaisAcoesHeader.style.display = mostrarAcoes ? "" : "none";
   if (dom.openLocalModalBtn) dom.openLocalModalBtn.classList.toggle("hidden", !mostrarAcoes);
 
+  // Oculta coluna Acoes da tabela de Usuários para GERENTE (só ADMIN pode editar/excluir)
+  const usuariosAcoesHeader = document.getElementById("usuariosAcoesHeader");
+  const mostrarAcoesUsuarios = perfil === "ADMIN";
+  if (usuariosAcoesHeader) usuariosAcoesHeader.style.display = mostrarAcoesUsuarios ? "" : "none";
+
   // Botão "Novo lote" oculto – lotes são criados automaticamente em entradas de estoque
   if (dom.openNovoLoteBtn) dom.openNovoLoteBtn.classList.add("hidden");
   // COZINHA e BAR não podem registrar entrada - oculta o botão
@@ -2925,21 +2930,14 @@ function renderUsuarios(lista) {
   const isAdminUser = isAdmin();
   const podeGerenciarBar = canManageUsuariosBar(); // BAR
   
-  // Verifica se o usuário logado é BAR ou COZINHA (não devem ver coluna de Ações)
+  // Verifica se o usuário logado não é ADMIN (não deve ver coluna de Ações)
   const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const isBarOuCozinha = perfilAtual === "BAR" || perfilAtual === "COZINHA";
-  
-  // Ocultar coluna de Ações no cabeçalho se for BAR ou COZINHA
-  const usuariosTable = dom.usuariosTable;
-  if (usuariosTable) {
-    const thead = usuariosTable.closest('table')?.querySelector('thead');
-    if (thead) {
-      const thAcoes = thead.querySelector('th:last-child');
-      if (thAcoes && thAcoes.textContent.trim() === 'Acoes') {
-        thAcoes.style.display = isBarOuCozinha ? 'none' : '';
-      }
-    }
-  }
+  const ocultarAcoesUsuarios = !isAdminUser; // Só ADMIN vê ações na tabela de usuários
+
+  // Ocultar coluna de Ações no cabeçalho para não-ADMIN
+  const usuariosAcoesHeaderEl = document.getElementById("usuariosAcoesHeader");
+  if (usuariosAcoesHeaderEl) usuariosAcoesHeaderEl.style.display = isAdminUser ? "" : "none";
   
   const rows = (lista || []).map((usuario) => {
     const ativo = Number(usuario.ativo) === 1;
@@ -2963,42 +2961,6 @@ function renderUsuarios(lista) {
     // ADMIN pode excluir QUALQUER usuário, incluindo outros ADMINs - SEM NENHUMA RESTRIÇÃO
     const podeExcluir = isAdminUser;
     
-    // ADMIN sempre pode ver ações para qualquer usuário
-    // Outros perfis veem ações apenas se puderem gerenciar
-    const podeVerAcoes = !isBarOuCozinha && (isAdminUser || podeGerenciar);
-    
-    // BAR e COZINHA não veem ações
-    let acoes = "--";
-    if (podeVerAcoes) {
-      const botoes = [];
-      
-        // ADMIN sempre vê TODOS os botões para TODOS os usuários, incluindo outros ADMINs
-      // Outros perfis veem apenas se puderem gerenciar
-      if (isAdminUser) {
-        // ADMIN pode editar/ativar/desativar/excluir qualquer usuário
-        botoes.push('<button class="table-action" data-action="edit">Editar</button>');
-        if (ativo) {
-          botoes.push('<button class="table-action danger" data-action="disable">Desativar</button>');
-        } else {
-          botoes.push('<button class="table-action" data-action="enable">Ativar</button>');
-        }
-        botoes.push('<button class="table-action danger" data-action="delete">Excluir</button>');
-      } else if (podeGerenciar) {
-        // Outros perfis veem botões apenas se puderem gerenciar
-        botoes.push('<button class="table-action" data-action="edit">Editar</button>');
-        if (ativo) {
-          botoes.push('<button class="table-action danger" data-action="disable">Desativar</button>');
-        } else {
-          botoes.push('<button class="table-action" data-action="enable">Ativar</button>');
-        }
-      }
-      
-      acoes = botoes.length > 0 ? botoes.join("") : "--";
-    }
-    
-    // Se for BAR ou COZINHA, não renderiza a coluna de Ações
-    const colunaAcoes = isBarOuCozinha ? '' : `<td data-label="Acoes" class="table-actions">${acoes}</td>`;
-    
     return `<tr data-id="${usuario.id}">
       <td data-label="Foto">${foto}</td>
       <td data-label="Nome">${escapeHtml(usuario.nome)}</td>
@@ -3006,13 +2968,10 @@ function renderUsuarios(lista) {
       <td data-label="Perfil">${escapeHtml(PERFIL_LABELS[(usuario.perfil || "").toString().trim().toUpperCase()] || (usuario.perfil || "--"))}</td>
       <td data-label="Unidade">${escapeHtml(usuario.unidade_nome || "--")}</td>
       <td data-label="Status">${buildStatusPill(ativo ? "Ativo" : "Inativo")}</td>
-      ${colunaAcoes}
     </tr>`;
   }).join("");
-  
-  // Ajusta o número de colunas baseado se BAR/COZINHA veem ações ou não
-  const numColunas = isBarOuCozinha ? 6 : 7;
-  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", numColunas);
+
+  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", 6);
 }
 
 function renderRelatorioResumo(lista, label) {
