@@ -346,6 +346,20 @@ const LOCAL_TIPOS_LABELS = {
   OUTROS: "Outros",
 };
 
+const LOCAL_NIVEL_ACESSO_LABELS = {
+  TODOS: "Todos",
+  COZINHA: "Cozinha",
+  GERENTE: "Gerente",
+  ADMINISTRATIVO: "Administrativo",
+  ESTOQUISTA: "Estoquista",
+  ATENDENTE: "Atendente",
+  BAR: "Bar",
+  CAIXA: "Caixa",
+  SERVICOS_GERAIS: "Serviços Gerais",
+  RESTRITO: "Restrito",
+  OUTROS: "Outros",
+};
+
 // Estrutura central de estado com colecoes e flags compartilhadas.
 const state = {
   produtos: [],
@@ -2881,7 +2895,7 @@ function renderLocais(lista) {
     const temperatura = local.temperatura_media !== null && local.temperatura_media !== undefined
       ? `${formatNumber(Number(local.temperatura_media), 1)} C`
       : "--";
-    const acesso = local.nivel_acesso ? escapeHtml(local.nivel_acesso) : "--";
+    const acesso = local.nivel_acesso ? escapeHtml(LOCAL_NIVEL_ACESSO_LABELS[local.nivel_acesso] || local.nivel_acesso) : "--";
     const cadastro = local.data_cadastro ? formatDate(local.data_cadastro) : "--";
     const tipoLabel = LOCAL_TIPOS_LABELS[local.tipo] || local.tipo || "--";
     const observacoes = local.observacoes || local.descricao || "--";
