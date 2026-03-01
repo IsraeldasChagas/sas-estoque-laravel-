@@ -1271,7 +1271,8 @@ function updateUserHeader() {
     return;
   }
   if (dom.userName) dom.userName.textContent = currentUser.nome || currentUser.email;
-  if (dom.userRole) dom.userRole.textContent = currentUser.perfil || "";
+  const perfilKey = (currentUser.perfil || "").toString().trim().toUpperCase();
+  if (dom.userRole) dom.userRole.textContent = PERFIL_LABELS[perfilKey] || currentUser.perfil || "";
   if (dom.userEmail) dom.userEmail.textContent = currentUser.email || "";
 }
 
