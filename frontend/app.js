@@ -80,6 +80,7 @@ const dom = {
   lotesFilterForm: document.getElementById("lotesFilterForm"),
   lotesFiltroPesquisa: document.getElementById("lotesFiltroPesquisa"),
   lotesFiltroProduto: document.getElementById("lotesFiltroProduto"),
+  lotesFiltroProdutoBusca: document.getElementById("lotesFiltroProdutoBusca"),
   lotesFiltroUnidade: document.getElementById("lotesFiltroUnidade"),
   lotesFiltroStatus: document.getElementById("lotesFiltroStatus"),
   lotesFiltroValidadeDe: document.getElementById("lotesFiltroValidadeDe"),
@@ -5178,6 +5179,79 @@ function populateSelect(select, options, emptyLabel) {
   console.log(`populateSelect: ${select.name || 'select'} atualizado com ${select.options.length} opções`);
 }
 
+// Vincula um input de busca a um select: digitar filtra as opções visíveis
+function bindBuscaSelect(inputId, selectId) {
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  if (!input || !select || input._buscaBound) return;
+  input._buscaBound = true;
+
+  // Guarda todas as opções originais (exceto a vazia) para poder restaurar
+  function capturarOpcoes() {
+    input._todasOpcoes = Array.from(select.options)
+      .filter((o) => o.value)
+      .map((o) => ({ value: o.value, text: o.text }));
+  }
+
+  // Captura assim que o select for populado (pode ser chamado depois)
+  const observer = new MutationObserver(() => {
+    if (select.options.length > 1 && !input._todasOpcoes?.length) {
+      capturarOpcoes();
+      observer.disconnect();
+    }
+  });
+  observer.observe(select, { childList: true });
+
+  // Captura imediata se já estiver populado
+  if (select.options.length > 1) {
+    capturarOpcoes();
+    observer.disconnect();
+  }
+
+  input.addEventListener("input", () => {
+    const termo = input.value.trim().toLowerCase();
+    const valorAtual = select.value;
+    const opcaoVazia = select.options[0]; // "Todos" ou "Selecione..."
+
+    // Reconstrói as opções do select filtrando pelo termo
+    const todas = input._todasOpcoes || [];
+    const filtradas = termo ? todas.filter((o) => o.text.toLowerCase().includes(termo)) : todas;
+
+    select.innerHTML = "";
+    select.appendChild(opcaoVazia.cloneNode ? opcaoVazia.cloneNode(true) : new Option(opcaoVazia.text, ""));
+    filtradas.forEach((o) => {
+      select.appendChild(new Option(o.text, o.value));
+    });
+
+    // Mantém o valor selecionado se ainda estiver na lista filtrada
+    if (filtradas.some((o) => o.value === valorAtual)) {
+      select.value = valorAtual;
+    } else {
+      select.value = "";
+    }
+
+    // Abre o select automaticamente se houver resultados
+    if (filtradas.length > 0 && termo) {
+      select.size = Math.min(filtradas.length + 1, 8);
+    } else {
+      select.size = 1;
+    }
+  });
+
+  // Ao selecionar, fecha o select (volta para size 1) e limpa o input de busca
+  select.addEventListener("change", () => {
+    select.size = 1;
+    input.value = "";
+  });
+
+  // Se clicar fora, fecha o select expandido
+  document.addEventListener("click", (e) => {
+    if (e.target !== input && e.target !== select) {
+      select.size = 1;
+    }
+  });
+}
+
 function refreshProdutoSelects() {
   if (!state.produtos || !Array.isArray(state.produtos) || state.produtos.length === 0) {
     console.warn("refreshProdutoSelects: Nenhum produto disponível no state");
@@ -5188,7 +5262,11 @@ function refreshProdutoSelects() {
   console.log("refreshProdutoSelects: Atualizando selects com", ativos.length, "produtos ativos");
   
   const options = ativos.map((produto) => `<option value="${produto.id}">${escapeHtml(produto.nome)}</option>`).join("");
+
+  // Filtro por digitação nos selects de produto
   populateSelect(dom.lotesFiltroProduto, options, "Todos");
+  bindBuscaSelect("lotesFiltroProdutoBusca", "lotesFiltroProduto");
+
   populateSelect(dom.movFiltroProduto, options, "Todos");
   populateSelect(dom.relatorioProduto, options, "Todos");
   
@@ -5196,12 +5274,16 @@ function refreshProdutoSelects() {
   const entradaProdutoSelect = dom.entradaForm?.querySelector('select[name="produto_id"]');
   if (entradaProdutoSelect) {
     populateSelect(entradaProdutoSelect, options, "Selecione");
+    bindBuscaSelect("entradaProdutoBusca", "entradaProdutoSelect");
     console.log("Select de produtos do formulário de entrada atualizado");
   } else {
     console.warn("Select de produtos do formulário de entrada não encontrado");
   }
-  if (dom.itemCompraForm?.elements.produto_id) populateSelect(dom.itemCompraForm.elements.produto_id, options, "Selecione");
-  if (dom.estoqueProdutoSelect) populateSelect(dom.estoqueProdutoSelect, options, "Selecione um produto");
+  if (dom.itemCompraForm?.elements.produto_id) {
+    populateSelect(dom.itemCompraForm.elements.produto_id, options, "Selecione");
+    bindBuscaSelect("itemCompraProdutoBusca", "itemCompraProdutoSelect");
+  }
+  // estoqueProdutoSelect agora é um hidden input — autocomplete gerenciado por initEstoqueProdutoAutocomplete
   if (dom.loteForm?.elements.produto_id) {
     resetLoteProdutoSelect();
     const unidadeAtual = Number(dom.loteForm.elements.unidade_id?.value);
@@ -5271,6 +5353,13 @@ function resetSaidaProdutoSelect(message = "Selecione a unidade de origem") {
   select.innerHTML = `<option value="">${escapeHtml(message)}</option>`;
   select.value = "";
   select.disabled = true;
+  const buscaInput = document.getElementById("saidaProdutoBusca");
+  if (buscaInput) {
+    buscaInput.disabled = true;
+    buscaInput.value = "";
+    buscaInput._buscaBound = false;
+    buscaInput._todasOpcoes = [];
+  }
 }
 
 function resetEntradaLocalSelect(message = "Selecione a unidade") {
@@ -5307,6 +5396,12 @@ async function handleSaidaOrigemChange() {
       .join("");
     populateSelect(select, options, "Selecione");
     select.disabled = false;
+    const buscaInput = document.getElementById("saidaProdutoBusca");
+    if (buscaInput) {
+      buscaInput.disabled = false;
+      buscaInput.value = "";
+    }
+    bindBuscaSelect("saidaProdutoBusca", "saidaProdutoSelect");
   } catch (err) {
     if (saidaProdutosRequestId !== requestId) return;
     resetSaidaProdutoSelect("Falha ao carregar produtos");
@@ -5610,14 +5705,12 @@ async function loadEstoqueProdutos() {
       state.produtos = await fetchJSON("/produtos?todas=1");
     }
     
-    const estoqueProdutoSelect = document.getElementById("estoqueProdutoSelect");
-    if (estoqueProdutoSelect) {
-      const ativos = (state.produtos || []).filter((p) => Number(p.ativo ?? 1) === 1);
-      const options = ativos
-        .map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`)
-        .join("");
-      estoqueProdutoSelect.innerHTML = `<option value="">Selecione um produto</option>${options}`;
+    const ativos = (state.produtos || []).filter((p) => Number(p.ativo ?? 1) === 1);
+    const options = ativos.map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`).join("");
+    if (dom.estoqueProdutoSelect) {
+      populateSelect(dom.estoqueProdutoSelect, options, "Selecione um produto");
     }
+    bindBuscaSelect("estoqueProdutoBusca", "estoqueProdutoSelect");
   } catch (err) {
     console.error("Erro ao carregar produtos para estoque:", err);
     showToast("Falha ao carregar lista de produtos.", "error");
@@ -6126,10 +6219,10 @@ async function startAppSession(user) {
           // Busca o lote para obter o produto_id
           const lote = await fetchJSON(`/lotes/${loteIdQr}`);
           if (lote && lote.produto_id) {
-            const select = document.getElementById('estoqueProdutoSelect');
+            const select = document.getElementById("estoqueProdutoSelect");
             if (select) {
               select.value = lote.produto_id;
-              select.dispatchEvent(new Event('change'));
+              select.dispatchEvent(new Event("change"));
             }
           }
         } catch (err) {
@@ -8135,6 +8228,8 @@ function setupFilters() {
 
   dom.limparFiltrosLotes?.addEventListener("click", () => {
     dom.lotesFilterForm?.reset();
+    if (dom.lotesFiltroProdutoBusca) dom.lotesFiltroProdutoBusca.value = "";
+    if (dom.lotesFiltroProduto) dom.lotesFiltroProduto.value = "";
     loadLotes().catch(() => {});
   });
 
@@ -10347,6 +10442,7 @@ async function init() {
     dom.lotesFilterForm = document.getElementById("lotesFilterForm");
     dom.lotesFiltroPesquisa = document.getElementById("lotesFiltroPesquisa");
     dom.lotesFiltroProduto = document.getElementById("lotesFiltroProduto");
+    dom.lotesFiltroProdutoBusca = document.getElementById("lotesFiltroProdutoBusca");
     dom.lotesFiltroUnidade = document.getElementById("lotesFiltroUnidade");
     dom.lotesFiltroStatus = document.getElementById("lotesFiltroStatus");
     dom.lotesFiltroValidadeDe = document.getElementById("lotesFiltroValidadeDe");

@@ -23,7 +23,7 @@
         <section class="login-panel">
           <header class="login-panel__header">
             <h2>Acesse sua conta</h2>
-            <p>Use suas credenciais corporativas para continuar.</p>
+            <p>Use suas credenciais corporativas.</p>
           </header>
           <form id="loginForm" class="login-form">
             <label class="login-field">
@@ -71,7 +71,7 @@
               </div>
             </label>
             <button type="submit" class="btn primary login-submit">
-              Entrar no painel
+              ENTRAR
             </button>
           </form>
           <footer class="login-panel__footer">
@@ -390,7 +390,8 @@
                 </label>
                 <label>
                   Produto
-                  <select id="lotesFiltroProduto" name="produto_id">
+                  <input type="text" id="lotesFiltroProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
+                  <select id="lotesFiltroProduto" name="produto_id" style="border-radius: 0 0 8px 8px; border-top: none; margin-top: 0;">
                     <option value="">Todos</option>
                   </select>
                 </label>
@@ -409,7 +410,7 @@
                   </select>
                 </label>
                 <label>
-                  Validade at�
+                  Validade ate 
                   <input type="date" id="lotesFiltroValidadeAte" name="validade_ate" />
                 </label>
                 <label>
@@ -782,10 +783,11 @@
               <div style="margin-bottom: 1.5rem;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                   Produto
+                  <input type="text" id="estoqueProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" style="width: 100%; padding: 0.6rem 0.75rem; font-size: 0.95rem; border: 1px solid #ddd; border-radius: 4px 4px 0 0; box-sizing: border-box; margin-top: 0.4rem; border-bottom: none;" />
+                  <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 0 0 4px 4px; box-sizing: border-box; border-top: none;">
+                    <option value="">Selecione um produto</option>
+                  </select>
                 </label>
-                <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 4px;">
-                  <option value="">Selecione um produto</option>
-                </select>
               </div>
               <div id="estoqueInfo" style="display: none;">
                 <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
@@ -1088,7 +1090,8 @@
         <form id="entradaForm">
           <label>
             Produto
-            <select name="produto_id" required></select>
+            <input type="text" id="entradaProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
+            <select name="produto_id" id="entradaProdutoSelect" required style="border-radius: 0 0 8px 8px; border-top: none; margin-top: 0;"></select>
           </label>
           <label>
             Numero do lote (opcional – gerado automaticamente se vazio)
@@ -1159,7 +1162,8 @@
           </label>
           <label>
             Produto
-            <select name="produto_id" id="saidaProdutoSelect" required disabled>
+            <input type="text" id="saidaProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" disabled style="border-radius: 8px 8px 0 0; border-bottom: none;" />
+            <select name="produto_id" id="saidaProdutoSelect" required disabled style="border-radius: 0 0 8px 8px; border-top: none; margin-top: 0;">
               <option value="">Selecione a unidade de origem</option>
             </select>
           </label>
@@ -1521,7 +1525,8 @@
           <input type="hidden" name="id" />
           <label>
             Produto
-            <select name="produto_id" required></select>
+            <input type="text" id="itemCompraProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
+            <select name="produto_id" id="itemCompraProdutoSelect" required style="border-radius: 0 0 8px 8px; border-top: none; margin-top: 0;"></select>
           </label>
           <div class="grid-two">
             <label>

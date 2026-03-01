@@ -2802,6 +2802,7 @@ textarea {
   flex-direction: column;
   font-size: 0.9rem;
   color: var(--muted);
+  position: relative;
 }
 
 .filters-grid select,
@@ -2817,6 +2818,50 @@ textarea {
   margin-top: 16px;
   display: flex;
   gap: 12px;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 9999;
+}
+
+.autocomplete-dropdown .ac-item {
+  padding: 8px 12px;
+  font-size: 0.93rem;
+  cursor: pointer;
+  color: #333;
+}
+
+.autocomplete-dropdown .ac-item:hover,
+.autocomplete-dropdown .ac-item.ac-active {
+  background: #e8f4fd;
+  color: var(--primary, #1565c0);
+}
+
+.autocomplete-dropdown .ac-empty {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: #999;
+  font-style: italic;
+}
+
+/* Select expandido pelo filtro de busca */
+select[size]:not([size="1"]) {
+  border-radius: 0 0 8px 8px !important;
+  border-top: none !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  position: relative;
 }
 
 .filters-actions .btn {
