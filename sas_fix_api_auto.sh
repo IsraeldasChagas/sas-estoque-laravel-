@@ -17,6 +17,16 @@ echo "==============================================="
 echo
 
 ##############################
+# 0) Atualizar código do GitHub
+##############################
+echo "➡ Atualizando código do GitHub: $PROJ_DIR"
+cd "$PROJ_DIR"
+git pull origin main
+echo
+echo "✅ Código atualizado do GitHub."
+echo
+
+##############################
 # 1) Ajustar FRONTEND
 ##############################
 echo "➡ Ajustando URLs no FRONTEND: $FRONTEND"
