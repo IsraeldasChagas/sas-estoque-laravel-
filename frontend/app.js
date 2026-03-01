@@ -255,6 +255,7 @@ const PERFIL_LABELS = {
   ASSISTENTE_ADMINISTRATIVO: "Assistente Administrativo",
   VISUALIZADOR: "Visualizador",
   GERENTE: "Gerente",
+  ATENDENTE: "Atendente",
 };
 
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
@@ -317,6 +318,14 @@ const PERMISSOES = {
   },
   VISUALIZADOR: {
     sections: ["dashboard", "relatorios"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+  ATENDENTE: {
+    sections: ["estoque"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -1278,7 +1287,7 @@ function canOnlyCreateAndAddItems() {
   const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
   // ADMIN e GERENTE podem fazer tudo, não têm restrições
   if (perfil === "ADMIN" || perfil === "GERENTE") return false;
-  return perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR";
+  return perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
 }
 
 // Verifica se é ADMIN ou GERENTE (permissões totais)
@@ -2029,7 +2038,7 @@ function listaPermiteLancarEstoque(lista = state.listaCompraAtual) {
   }
   
   // COZINHA e BAR NÃO podem lançar
-  if (perfil === "COZINHA" || perfil === "BAR") {
+  if (perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE") {
     return false;
   }
   
@@ -2274,14 +2283,14 @@ function applyPermissions() {
   // COZINHA e BAR não podem registrar entrada - oculta o botão
   if (dom.openEntradaBtn) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     const podeRegistrarEntrada = regras.canRegistrarMovimentacoes && !isCozinhaOuBar;
     dom.openEntradaBtn.classList.toggle("hidden", !podeRegistrarEntrada);
   }
   // COZINHA e BAR podem registrar saída - habilita o botão
   if (dom.openSaidaBtn) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     // Garante que BAR e COZINHA sempre possam usar o botão (têm canRegistrarMovimentacoes: true)
     const podeRegistrarSaida = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
     dom.openSaidaBtn.disabled = !podeRegistrarSaida;
@@ -2316,14 +2325,14 @@ function applyPermissions() {
   // COZINHA e BAR não podem lançar no estoque - oculta o botão
   if (dom.listaCompraLancarEstoque) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     const podeLancar = regras.canManageCompras && !isCozinhaOuBar;
     dom.listaCompraLancarEstoque.classList.toggle("hidden", !podeLancar);
   }
   
   // COZINHA e BAR não podem ver valores em dinheiro na tela de estoque
   const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
   
   // Ocultar cards de valores
   const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
@@ -2785,7 +2794,7 @@ function renderProdutos(lista) {
   
   // Verifica se é COZINHA ou BAR (não podem gerenciar produtos)
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR";
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
   const podeGerenciar = canManageProdutos();
   
   // Ocultar coluna de Ações no cabeçalho se for BAR ou COZINHA
@@ -2927,19 +2936,13 @@ function renderUnidades(lista) {
 }
 
 function renderUsuarios(lista) {
-  // Verifica se é ADMIN - ADMIN tem acesso total
   const isAdminUser = isAdmin();
-  const podeGerenciarBar = canManageUsuariosBar(); // BAR
-  
-  // Verifica se o usuário logado não é ADMIN (não deve ver coluna de Ações)
-  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isBarOuCozinha = perfilAtual === "BAR" || perfilAtual === "COZINHA";
-  const ocultarAcoesUsuarios = !isAdminUser; // Só ADMIN vê ações na tabela de usuários
+  const podeGerenciarBar = canManageUsuariosBar();
 
   // Ocultar coluna de Ações no cabeçalho para não-ADMIN
   const usuariosAcoesHeaderEl = document.getElementById("usuariosAcoesHeader");
   if (usuariosAcoesHeaderEl) usuariosAcoesHeaderEl.style.display = isAdminUser ? "" : "none";
-  
+
   const rows = (lista || []).map((usuario) => {
     const ativo = Number(usuario.ativo) === 1;
     const fotoPath = usuario.foto || usuario.foto_path;
@@ -2947,21 +2950,21 @@ function renderUsuarios(lista) {
     const foto = fotoUrl
       ? `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto" loading="lazy" />`
       : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
-    
-    // ADMIN pode gerenciar TODOS os usuários, incluindo outros ADMINs - SEM EXCEÇÕES
-    // Para outros perfis, verifica as permissões normalmente
-    let podeGerenciar = false;
-    if (isAdminUser) {
-      // ADMIN sempre pode gerenciar qualquer usuário
-      podeGerenciar = true;
-    } else {
-      // Outros perfis seguem regras normais
-      podeGerenciar = canManageUsuario(usuario) || (podeGerenciarBar && (usuario.perfil || "").toString().trim().toUpperCase() === "BAR");
-    }
-    
-    // ADMIN pode excluir QUALQUER usuário, incluindo outros ADMINs - SEM NENHUMA RESTRIÇÃO
-    const podeExcluir = isAdminUser;
-    
+
+    const podeGerenciar = isAdminUser
+      ? true
+      : canManageUsuario(usuario) || (podeGerenciarBar && (usuario.perfil || "").toString().trim().toUpperCase() === "BAR");
+
+    const acoes = podeGerenciar ? [
+      '<button class="table-action" data-action="edit">Editar</button>',
+      ativo
+        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
+        : '<button class="table-action" data-action="enable">Ativar</button>',
+      isAdminUser ? '<button class="table-action danger" data-action="delete">Excluir</button>' : '',
+    ].join("") : "--";
+
+    const colunaAcoes = isAdminUser ? `<td data-label="Acoes" class="table-actions">${acoes}</td>` : "";
+
     return `<tr data-id="${usuario.id}">
       <td data-label="Foto">${foto}</td>
       <td data-label="Nome">${escapeHtml(usuario.nome)}</td>
@@ -2969,10 +2972,11 @@ function renderUsuarios(lista) {
       <td data-label="Perfil">${escapeHtml(PERFIL_LABELS[(usuario.perfil || "").toString().trim().toUpperCase()] || (usuario.perfil || "--"))}</td>
       <td data-label="Unidade">${escapeHtml(usuario.unidade_nome || "--")}</td>
       <td data-label="Status">${buildStatusPill(ativo ? "Ativo" : "Inativo")}</td>
+      ${colunaAcoes}
     </tr>`;
   }).join("");
 
-  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", 6);
+  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", isAdminUser ? 7 : 6);
 }
 
 function renderRelatorioResumo(lista, label) {
@@ -3365,7 +3369,7 @@ function updateListaPdfButton(lista) {
   
   // Verifica se é perfil COZINHA ou BAR - podem gerar PDF mesmo sem lista finalizada
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
   
   // COZINHA e BAR podem gerar PDF se a lista existir, outros perfis precisam que esteja finalizada e tenham permissão
   const podeGerar = isCozinhaOuBar ? true : (status === "FINALIZADA" && canManageCompras());
@@ -3420,7 +3424,7 @@ function renderListaCompraDetalhes(lista) {
     if (dom.listaCompraLancarEstoque) {
       // COZINHA e BAR não podem lançar - oculta o botão
       const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-      const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+      const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
       if (isCozinhaOuBar) {
         dom.listaCompraLancarEstoque.classList.add("hidden");
       } else {
@@ -3454,7 +3458,7 @@ function renderListaCompraDetalhes(lista) {
   if (dom.listaCompraLancarEstoque) {
     // COZINHA e BAR não podem lançar - oculta o botão
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     
     if (isCozinhaOuBar) {
       dom.listaCompraLancarEstoque.classList.add("hidden");
@@ -3854,7 +3858,7 @@ async function abrirListaCompraModal(lista = null) {
   
   const unidadeSelect = dom.listaCompraForm.elements.unidade_id;
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR";
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
   
   if (lista) {
     dom.listaCompraForm.elements.id.value = lista.id;
@@ -4340,7 +4344,7 @@ async function abrirItemCompraModal(item = null) {
   
   // COZINHA e BAR não podem ver campos de valores ao adicionar itens
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
   
   const quantidadeCompradaLabel = document.getElementById("itemCompraLabelQuantidadeComprada");
   const valorUnitarioLabel = document.getElementById("itemCompraLabelValorUnitario");
@@ -4405,7 +4409,7 @@ function updateItemModalTotals() {
   
   // Verifica se é perfil COZINHA ou BAR - não atualiza totais para esses perfis
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
   
   if (isCozinhaOuBar) {
     const campoTotal = dom.itemCompraForm.elements.valor_total;
@@ -4462,7 +4466,7 @@ async function submitItemCompra(event) {
   
   // Verifica se é perfil COZINHA ou BAR
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
   
   // Calcula os totais
   const totais = computeItemModalTotals();
@@ -4747,7 +4751,7 @@ async function lancarListaNoEstoque() {
   // Verifica permissão para lançar no estoque
   if (!listaPermiteLancarEstoque()) {
     const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    if (perfil === "COZINHA" || perfil === "BAR") {
+    if (perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE") {
       showToast("Você não tem permissão para lançar no estoque.", "warning");
     } else {
       showToast("Sem permissão para lançar no estoque.", "warning");
@@ -4961,7 +4965,7 @@ async function gerarPdfLista() {
   
   // Verifica se é perfil COZINHA ou BAR - podem gerar PDF mesmo sem lista finalizada
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
   
   // COZINHA e BAR podem gerar PDF em qualquer status, outros perfis precisam que esteja finalizada
   if (status !== "FINALIZADA" && !isCozinhaOuBar) {
@@ -5495,7 +5499,7 @@ function refreshUnidadeSelects() {
   
   // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR";
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
   const listaCompraSelect = dom.listaCompraForm?.elements.unidade_id;
   const isModalOpen = dom.listaCompraModal && !dom.listaCompraModal.classList.contains("hidden");
   const isNovaLista = !dom.listaCompraForm?.elements.id?.value;
@@ -5748,7 +5752,7 @@ async function loadEstoqueProduto(produtoId) {
     
     // Verifica se é perfil COZINHA ou BAR para ocultar valores
     const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     
     // Atualiza informações do produto
     estoqueProdutoNome.textContent = dados.produto.nome || "Produto";
@@ -5848,7 +5852,7 @@ async function abrirEstoqueLotesModal(item, produto) {
   toggleModal(modal, true);
 
   const perfilAtual = currentUser?.perfil?.toString().trim().toUpperCase() || '';
-  const isCozinhaOuBar = perfilAtual === 'COZINHA' || perfilAtual === 'BAR';
+  const isCozinhaOuBar = perfilAtual === 'COZINHA' || perfilAtual === 'BAR' || perfilAtual === 'ATENDENTE';
 
   // Usa lotes_detalhados se o servidor já retornar, senão busca via /lotes
   let lotes = item.lotes_detalhados || [];
@@ -6164,13 +6168,14 @@ async function startAppSession(user) {
   (() => {
     let sectionToNavigate = 'dashboard'; // padrão
     
-    // Se foi um login novo (user foi passado), sempre vai para dashboard
+    // Se foi um login novo (user foi passado), vai para a seção inicial do perfil
     if (user) {
-      console.log('Login novo detectado, navegando para dashboard');
-      sectionToNavigate = 'dashboard';
-      // Salva dashboard como seção atual
+      const perfilLogin = (user.perfil || "").toString().trim().toUpperCase();
+      const regrasLogin = PERMISSOES[perfilLogin] || PERMISSOES.VISUALIZADOR;
+      sectionToNavigate = regrasLogin.sections[0] || 'dashboard';
+      console.log('Login novo detectado, navegando para', sectionToNavigate);
       try {
-        localStorage.setItem(currentSectionKey, 'dashboard');
+        localStorage.setItem(currentSectionKey, sectionToNavigate);
       } catch (err) {
         console.warn('Erro ao salvar seção:', err);
       }
@@ -6593,305 +6598,97 @@ async function submitUnidade(event, formOverride = null) {
   }
 }
 
+let submittingUsuario = false;
+
 async function submitUsuario(event) {
   event.preventDefault();
-  const submitButton = dom.usuarioForm?.querySelector('button[type="submit"]');
-  const submitLabel = submitButton?.textContent || "";
+  if (submittingUsuario) return;
+  submittingUsuario = true;
+
   const form = dom.usuarioForm;
   if (!form) {
+    submittingUsuario = false;
     showToast("Formulario nao encontrado.", "error");
     return;
   }
-  
-  // Pega os valores do formulário diretamente dos elementos (mesmo padrão das outras telas)
-  const id = form.elements.id?.value || "";
-  const nome = (form.elements.nome?.value || "").trim();
-  const email = (form.elements.email?.value || "").trim();
-  const perfilRaw = (form.elements.perfil?.value || "").trim();
-  const perfil = perfilRaw.toUpperCase(); // Garante maiúsculas
-  const senha = (form.elements.senha?.value || "").trim();
-  const confirmar = (form.elements.confirmar_senha?.value || "").trim();
-  const unidade_id = form.elements.unidade_id?.value || null;
-  const ativo = form.elements.ativo?.value ? Number(form.elements.ativo.value) : 1;
-  
-  // Desabilita o botão e muda o texto
-  if (submitButton) {
-    submitButton.disabled = true;
-    submitButton.textContent = "Salvando...";
-  }
-  
+
+  const id = form.elements.id.value;
+  const nome = form.elements.nome.value.trim();
+  const email = form.elements.email.value.trim();
+  const perfil = form.elements.perfil.value.trim().toUpperCase();
+  const senha = form.elements.senha.value.trim();
+  const confirmar = form.elements.confirmar_senha.value.trim();
+  const unidade_id = form.elements.unidade_id.value || null;
+  const ativo = Number(form.elements.ativo.value);
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn?.textContent || "Salvar";
+
   try {
-    // Validação dos campos obrigatórios
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Salvando...";
+    }
+
     if (!nome || !email || !perfil) {
       showToast("Preencha os campos obrigatorios.", "error");
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = submitLabel || "Salvar";
-      }
       return;
     }
-    
-    // BAR só pode criar/editar usuários BAR
-    const isBarUser = canManageUsuariosBar();
-    const currentUserPerfil = currentUser?.perfil ? (currentUser.perfil.toString().trim().toUpperCase()) : "";
-    
-    console.log("🔍 Validação de permissões:", {
-      isBarUser,
-      currentUserPerfil,
-      perfilSendoCriado: perfil,
-      id: id || "novo"
-    });
-    
-    if (isBarUser) {
-      // Usuário BAR logado só pode criar/editar usuários BAR
-      if (perfil !== "BAR") {
-        console.warn("❌ BAR tentando criar usuário com perfil diferente de BAR:", perfil);
-        showToast("Você só pode criar e gerenciar usuários do tipo BAR.", "error");
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = submitLabel || "Salvar";
-        }
-        return;
-      }
-      
-      // Se estiver editando, verifica se o usuário é BAR
-      if (id) {
-        const usuarioExistente = state.usuarios.find(u => String(u.id) === String(id));
-        if (!usuarioExistente) {
-          console.warn("❌ Usuário não encontrado para edição:", id);
-          showToast("Usuário não encontrado.", "error");
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = submitLabel || "Salvar";
-          }
-          return;
-        }
-        const perfilExistente = (usuarioExistente.perfil || "").toString().trim().toUpperCase();
-        console.log("🔍 Verificando perfil existente:", {
-          perfilExistente,
-          perfilSendoEditado: perfil
-        });
-        if (perfilExistente !== "BAR") {
-          console.warn("❌ BAR tentando editar usuário que não é BAR:", perfilExistente);
-          showToast("Você só pode editar usuários do tipo BAR.", "error");
-          if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = submitLabel || "Salvar";
-          }
-          return;
-        }
-      }
-      
-      console.log("✅ Validação BAR passou, continuando com salvamento");
-    } else {
-      console.log("✅ Usuário não é BAR, validação de BAR não se aplica");
-    }
-    
-    // Para novo usuário, senha é obrigatória
     if (!id && !senha) {
       showToast("Informe uma senha para o novo usuario.", "error");
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = submitLabel || "Salvar";
-      }
       return;
     }
-    
-    // Se senha foi preenchida, valida confirmação
     if (senha) {
-      if (!confirmar) {
-        showToast("Confirme a senha.", "error");
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = submitLabel || "Salvar";
-        }
-        return;
-      }
       if (senha !== confirmar) {
         showToast("As senhas nao conferem.", "error");
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = submitLabel || "Salvar";
-        }
         return;
       }
       if (senha.length < 6) {
         showToast("A senha deve ter no minimo 6 caracteres.", "error");
-        if (submitButton) {
-          submitButton.disabled = false;
-          submitButton.textContent = submitLabel || "Salvar";
-        }
         return;
       }
     }
-    
-    // Verificação específica para perfil BAR
-    console.log("🔍 Verificação específica BAR:", {
-      perfilNormalizado: perfil,
-      perfilOriginal: perfilRaw,
-      isBar: perfil === "BAR"
-    });
-    
-    // Prepara o payload (mesmo padrão das outras telas que funcionam)
-    const payload = {
-      nome,
-      email,
-      perfil: perfil, // Já está em maiúsculas
-      ativo,
-    };
-    
-    console.log("📦 Preparando payload:", {
-      nome,
-      email,
-      perfil: perfil,
-      ativo,
-      temSenha: !!senha,
-      unidade_id: unidade_id || null,
-      isBar: perfil === "BAR"
-    });
-    
-    // Adiciona senha apenas se foi preenchida
-    if (senha) {
-      payload.senha = senha;
-    }
-    
-    // Adiciona unidade_id apenas se fornecido e válido
-    if (unidade_id && unidade_id !== "" && unidade_id !== "null") {
-      payload.unidade_id = Number(unidade_id);
-      console.log("✅ unidade_id adicionado ao payload:", payload.unidade_id);
-    } else {
-      console.log("ℹ️ unidade_id não adicionado (null/vazio)");
-    }
-    // Se for null/vazio, não adiciona o campo ao payload (backend trata como null)
-    
-    // Se há foto para remover
-    if (usuarioFotoRemovida) {
-      payload.remove_foto = "1";
-    }
-    
-    // Se há foto, usa FormData (como estava antes)
+
+    const payload = { nome, email, perfil, ativo };
+    if (senha) payload.senha = senha;
+    if (unidade_id && unidade_id !== "null") payload.unidade_id = Number(unidade_id);
+
     const temFoto = !!usuarioFotoFile;
     const temRemoverFoto = !!usuarioFotoRemovida;
-    
-    // Prepara o payload para logs (sem senha)
-    const payloadLog = {
-      id: id || "novo",
-      nome,
-      email,
-      perfil: perfil,
-      unidade_id: unidade_id || null,
-      ativo,
-      temSenha: !!senha,
-      senhaLength: senha ? senha.length : 0,
-      temFoto: temFoto,
-      removeFoto: temRemoverFoto,
-      sendingMethod: temFoto || temRemoverFoto ? "fetchForm" : "fetchJSON",
-      isBar: perfil === "BAR"
-    };
-    
-    console.log("📋 Dados do formulário (submitUsuario):", payloadLog);
-    
     let resultado;
-    
+
     if (temFoto || temRemoverFoto) {
-      // Se tem foto ou remover foto, usa FormData
       const formData = new FormData();
       formData.append("nome", nome);
       formData.append("email", email);
       formData.append("perfil", perfil);
       formData.append("ativo", ativo.toString());
       if (senha) formData.append("senha", senha);
-      // Adiciona unidade_id apenas se fornecido e válido
-      if (unidade_id && unidade_id !== "" && unidade_id !== "null") {
-        formData.append("unidade_id", unidade_id);
-      }
-      // Se for null/vazio, não adiciona o campo (backend trata como null)
+      if (unidade_id && unidade_id !== "null") formData.append("unidade_id", unidade_id);
       if (usuarioFotoRemovida) formData.append("remove_foto", "1");
       if (usuarioFotoFile) formData.append("foto", usuarioFotoFile);
-      
-      console.log("📤 Enviando via FormData");
-      resultado = await fetchForm(
-        id ? `/usuarios/${id}` : "/usuarios",
-        id ? "PUT" : "POST",
-        formData
-      );
+      resultado = await fetchForm(id ? `/usuarios/${id}` : "/usuarios", id ? "PUT" : "POST", formData);
     } else {
-      // Se não tem foto, usa JSON (mesmo padrão das outras telas)
-      console.log("📤 Enviando via JSON:", payload);
-      resultado = await fetchJSON(
-        id ? `/usuarios/${id}` : "/usuarios",
-        {
-          method: id ? "PUT" : "POST",
-          body: JSON.stringify(payload)
-        }
-      );
-    }
-    
-    console.log("✅ Resposta do servidor:", resultado);
-    console.log("🔍 Verificação da resposta para perfil BAR:", {
-      perfilEnviado: perfil,
-      perfilRetornado: resultado?.perfil,
-      idRetornado: resultado?.id,
-      isBar: perfil === "BAR"
-    });
-    
-    // Verifica se a resposta é válida
-    if (!resultado) {
-      console.error("❌ Resposta vazia do servidor");
-      throw new Error("Resposta inválida do servidor. O usuário não foi criado/atualizado.");
-    }
-    
-    // Para criação, verifica se tem ID na resposta
-    if (!id && !resultado.id) {
-      console.error("❌ Usuário criado mas sem ID na resposta");
-      throw new Error("Resposta inválida do servidor. O usuário não foi criado.");
-    }
-    
-    // Para edição, verifica se a resposta tem dados
-    if (id && !resultado.id && !resultado.nome) {
-      console.error("❌ Usuário editado mas sem dados na resposta");
-      throw new Error("Resposta inválida do servidor. O usuário não foi atualizado.");
-    }
-    
-    // Verifica se o perfil foi salvo corretamente
-    if (resultado.perfil && resultado.perfil.toUpperCase() !== perfil) {
-      console.warn("⚠️ Perfil retornado diferente do enviado:", {
-        enviado: perfil,
-        retornado: resultado.perfil
+      resultado = await fetchJSON(id ? `/usuarios/${id}` : "/usuarios", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(payload),
       });
     }
-    
+
     showToast("Usuario salvo com sucesso!", "success");
     toggleModal(dom.usuarioModal, false);
-    
-    // Limpa variáveis de foto
+    form.reset();
     usuarioFotoFile = null;
     usuarioFotoRemovida = false;
-    
-    await loadUsuarios();
+    await loadUsuarios(true);
+
   } catch (err) {
-    console.error("❌ Erro ao salvar usuário:", err);
-    console.error("❌ Stack trace:", err.stack);
-    console.error("❌ ID:", id);
-    console.error("❌ Perfil:", perfil);
-    console.error("❌ Nome:", nome);
-    console.error("❌ Email:", email);
-    
-    // Melhora a mensagem de erro
-    let errorMessage = "Falha ao salvar usuario.";
-    if (err.message) {
-      errorMessage = err.message;
-    } else if (err.error) {
-      errorMessage = err.error;
-    } else if (typeof err === 'string') {
-      errorMessage = err;
-    }
-    
-    showToast(errorMessage, "error");
+    showToast(err.message || "Falha ao salvar usuario.", "error");
   } finally {
-    if (submitButton) {
-      submitButton.disabled = false;
-      submitButton.textContent = submitLabel || "Salvar";
+    submittingUsuario = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
     }
   }
 }
@@ -7575,6 +7372,63 @@ async function submitSaida(event) {
   }
 }
 
+async function handleUsuarioTableClick(event) {
+  try {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const row = button.closest("tr");
+    const id = row?.dataset.id;
+    if (!id) return;
+    const usuario = state.usuarios.find((item) => String(item.id) === String(id));
+    if (!usuario) return;
+    const action = button.dataset.action;
+    if (action === "edit") {
+      const form = dom.usuarioForm;
+      const modal = dom.usuarioModal;
+      const title = dom.usuarioModalTitle;
+      if (!form || !modal) { showToast("Modal não encontrado.", "error"); return; }
+      if (title) title.textContent = "Editar usuario";
+      form.elements.id.value = usuario.id;
+      form.elements.nome.value = usuario.nome || "";
+      form.elements.email.value = usuario.email || "";
+      const sel = form.elements.perfil;
+      if (sel) { sel.disabled = false; sel.value = (usuario.perfil || "").toUpperCase(); }
+      if (form.elements.unidade_id) form.elements.unidade_id.value = usuario.unidade_id || "";
+      if (form.elements.ativo) form.elements.ativo.value = Number(usuario.ativo) === 1 ? "1" : "0";
+      if (form.elements.senha) form.elements.senha.value = "";
+      if (form.elements.confirmar_senha) form.elements.confirmar_senha.value = "";
+      usuarioFotoFile = null;
+      usuarioFotoRemovida = false;
+      if (dom.usuarioAvatarPreview) {
+        const fotoUrl = getUsuarioFotoUrl(usuario.foto || usuario.foto_path);
+        dom.usuarioAvatarPreview.innerHTML = fotoUrl
+          ? `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
+          : '<span class="avatar-placeholder">?</span>';
+      }
+      toggleModal(modal, true);
+    } else if (action === "disable" || action === "enable") {
+      try {
+        await fetchJSON(`/usuarios/${usuario.id}`, { method: "PUT", body: JSON.stringify({ ativo: action === "enable" ? 1 : 0 }) });
+        showToast("Status do usuario atualizado.", "success");
+        await loadUsuarios(true);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    } else if (action === "delete") {
+      if (!confirm("Remover permanentemente este usuario?")) return;
+      try {
+        await fetchJSON(`/usuarios/${usuario.id}`, { method: "DELETE" });
+        showToast("Usuario removido.", "success");
+        await loadUsuarios(true);
+      } catch (err) {
+        showToast(err.message || "Falha ao remover usuario.", "error");
+      }
+    }
+  } catch (err) {
+    showToast(err.message || "Erro ao processar acao.", "error");
+  }
+}
+
 // Liga as interacoes nas tabelas para permitir edicao e acoes inline.
 function setupTables() {
   dom.produtosTable?.addEventListener("click", async (event) => {
@@ -7867,163 +7721,7 @@ function setupTables() {
     }
   });
 
-  dom.usuariosTable?.addEventListener("click", async (event) => {
-    const button = event.target.closest("button[data-action]");
-    if (!button) return;
-    const row = button.closest("tr");
-    const id = row?.dataset.id;
-    const usuario = state.usuarios.find((item) => String(item.id) === String(id));
-    if (!usuario) return;
-    const action = button.dataset.action;
-    if (action === "edit") {
-      // ADMIN pode editar QUALQUER usuário, incluindo outros ADMINs
-      // Para outros perfis, verifica permissões normalmente
-      if (!isAdmin() && !canManageUsuario(usuario)) {
-        showToast("Você não tem permissão para editar este usuário.", "warning");
-        return;
-      }
-      
-      // Verifica se o formulário existe
-      if (!dom.usuarioForm) {
-        showToast("Formulário de usuário não encontrado.", "error");
-        console.error("dom.usuarioForm não está disponível");
-        return;
-      }
-      
-      // Carrega unidades e usuários se necessário
-      try {
-        if (!state.unidades || state.unidades.length === 0) {
-          await loadUnidades(false);
-        }
-        refreshUnidadeSelects();
-      } catch (err) {
-        console.error("Erro ao carregar unidades:", err);
-      }
-      
-      // Preenche o formulário com os dados do usuário
-      if (dom.usuarioModalTitle) dom.usuarioModalTitle.textContent = "Editar usuario";
-      if (dom.usuarioForm.elements.id) dom.usuarioForm.elements.id.value = usuario.id || "";
-      if (dom.usuarioForm.elements.nome) dom.usuarioForm.elements.nome.value = usuario.nome || "";
-      if (dom.usuarioForm.elements.email) dom.usuarioForm.elements.email.value = usuario.email || "";
-      
-      // Configura select de perfil baseado nas permissões
-      const perfilSelect = dom.usuarioForm.elements.perfil;
-      if (perfilSelect) {
-        const perfilValue = (usuario.perfil || "").toString().trim().toUpperCase();
-        
-        // BAR só pode editar perfil de usuários BAR
-        if (canManageUsuariosBar()) {
-          // Remove todas as opções exceto BAR
-          perfilSelect.innerHTML = '<option value="">Selecione</option><option value="BAR">Bar</option>';
-          perfilSelect.value = perfilValue;
-          perfilSelect.disabled = true; // BAR não pode alterar o perfil
-        } else {
-          // Outros perfis veem todas as opções
-          perfilSelect.innerHTML = `
-            <option value="">Selecione</option>
-            <option value="ADMIN">Administrador</option>
-            <option value="ESTOQUISTA">Estoquista</option>
-            <option value="COZINHA">Cozinha</option>
-            <option value="BAR">Bar</option>
-            <option value="FINANCEIRO">Financeiro</option>
-            <option value="ASSISTENTE_ADMINISTRATIVO">Assistente Administrativo</option>
-            <option value="GERENTE">Gerente</option>
-            <option value="VISUALIZADOR">Visualizador</option>
-          `;
-          perfilSelect.value = perfilValue;
-          perfilSelect.disabled = false;
-        }
-      }
-      if (dom.usuarioForm.elements.unidade_id) {
-        dom.usuarioForm.elements.unidade_id.value = usuario.unidade_id || "";
-      }
-      if (dom.usuarioForm.elements.ativo) {
-        dom.usuarioForm.elements.ativo.value = Number(usuario.ativo) === 1 ? "1" : "0";
-      }
-      if (dom.usuarioForm.elements.senha) dom.usuarioForm.elements.senha.value = "";
-      if (dom.usuarioForm.elements.confirmar_senha) dom.usuarioForm.elements.confirmar_senha.value = "";
-      
-      // Limpa foto se necessário
-      usuarioFotoFile = null;
-      usuarioFotoRemovida = false;
-      if (dom.usuarioAvatarPreview) {
-        const fotoPath = usuario.foto || usuario.foto_path;
-        const fotoUrl = getUsuarioFotoUrl(fotoPath);
-        if (fotoUrl) {
-          dom.usuarioAvatarPreview.innerHTML = `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />`;
-        } else {
-          dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
-        }
-      }
-      
-      toggleModal(dom.usuarioModal, true);
-    } else if (action === "disable" || action === "enable") {
-      // ADMIN pode ativar/desativar QUALQUER usuário, incluindo outros ADMINs
-      // Para outros perfis, verifica permissões normalmente
-      if (!isAdmin() && !canManageUsuario(usuario)) {
-        showToast("Você não tem permissão para alterar o status deste usuário.", "warning");
-        return;
-      }
-      
-      const ativo = action === "enable" ? 1 : 0;
-      const mensagem = ativo ? "Ativar este usuário?" : "Desativar este usuário?";
-      if (!confirm(mensagem)) return;
-      try {
-        await fetchJSON(`/usuarios/${usuario.id}`, { 
-          method: "PUT", 
-          body: JSON.stringify({ ativo }) 
-        });
-        showToast(ativo ? "Usuário ativado." : "Usuário desativado.", "success");
-        await loadUsuarios();
-      } catch (err) {
-        showToast(err?.message || "Falha ao atualizar status do usuário.", "error");
-      }
-    } else if (action === "delete") {
-      // APENAS ADMIN pode excluir usuários
-      // ADMIN pode excluir QUALQUER perfil, incluindo outros ADMINs
-      // NÃO há verificação de perfil do usuário sendo excluído - ADMIN pode excluir qualquer um
-      if (!isAdmin()) {
-        showToast("Apenas administradores podem excluir usuários.", "warning");
-        return;
-      }
-      
-      // Se chegou aqui, é ADMIN - pode excluir qualquer usuário, sem exceções
-      const perfilUsuario = (usuario.perfil || "").toString().trim().toUpperCase();
-      let mensagem = "";
-      
-      if (perfilUsuario === "ADMIN") {
-        mensagem = `Tem certeza que deseja desativar/remover o ADMINISTRADOR "${escapeHtml(usuario.nome || "")}"?\n\n`;
-      } else {
-        mensagem = `Tem certeza que deseja desativar/remover o usuário "${escapeHtml(usuario.nome || "")}"?\n\n`;
-      }
-      
-      mensagem += "⚠️ ATENÇÃO:\n";
-      mensagem += "• Se houver movimentações associadas a este usuário, elas serão automaticamente transferidas para o seu usuário ADMIN.\n";
-      mensagem += "• O usuário será REMOVIDO PERMANENTEMENTE do sistema e do banco de dados.\n";
-      mensagem += "• Esta ação NÃO PODE SER DESFEITA.\n\n";
-      mensagem += "Deseja continuar?";
-      
-      if (!confirm(mensagem)) return;
-      
-      try {
-        // Chama a API - o backend faz todas as validações e transferências
-        const resposta = await fetchJSON(`/usuarios/${usuario.id}`, { method: "DELETE" });
-        
-        // Monta mensagem de sucesso com informações sobre movimentações
-        let mensagemSucesso = resposta.message || "Usuário desativado com sucesso.";
-        
-        if (resposta.qtd_movimentacoes_transferidas && resposta.qtd_movimentacoes_transferidas > 0) {
-          mensagemSucesso += ` ${resposta.qtd_movimentacoes_transferidas} movimentação(ões) transferida(s) para seu usuário ADMIN.`;
-        }
-        
-        showToast(mensagemSucesso, "success");
-        await loadUsuarios();
-      } catch (err) {
-        console.error("Erro ao remover usuário:", err);
-        showToast(err?.message || "Falha ao remover usuário.", "error");
-      }
-    }
-  });
+  dom.usuariosTable?.addEventListener("click", handleUsuarioTableClick);
 
   dom.listasComprasTable?.addEventListener("click", async (event) => {
     const row = event.target.closest("tr[data-id]");
@@ -8381,6 +8079,7 @@ function setupModals() {
           <option value="ASSISTENTE_ADMINISTRATIVO">Assistente Administrativo</option>
           <option value="GERENTE">Gerente</option>
           <option value="VISUALIZADOR">Visualizador</option>
+          <option value="ATENDENTE">Atendente</option>
         `;
         perfilSelect.value = "";
         perfilSelect.disabled = false;
@@ -8580,7 +8279,7 @@ function setupModals() {
     
     // Verifica se BAR ou COZINHA podem usar (garantia extra)
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
     const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
     
@@ -10173,7 +9872,34 @@ function setupForms() {
   
   dom.unidadeForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeForm));
   dom.unidadeInlineForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeInlineForm));
-  dom.usuarioForm?.addEventListener("submit", submitUsuario);
+
+  if (dom.usuarioForm) {
+    dom.usuarioForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitUsuario(e).catch(err => {
+        console.error("Erro ao salvar usuário:", err);
+        showToast(err.message || "Falha ao salvar usuário.", "error");
+      });
+      return false;
+    });
+    const usuarioSalvarBtn = dom.usuarioForm.querySelector('button[type="submit"]');
+    if (usuarioSalvarBtn) {
+      usuarioSalvarBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (dom.usuarioForm.checkValidity()) {
+          submitUsuario(e).catch(err => {
+            console.error("Erro ao salvar usuário:", err);
+            showToast(err.message || "Falha ao salvar usuário.", "error");
+          });
+        } else {
+          dom.usuarioForm.reportValidity();
+        }
+        return false;
+      });
+    }
+  }
   dom.entradaForm?.addEventListener("submit", submitEntrada);
   if (dom.localForm) {
     dom.localForm.onsubmit = (e) => {
@@ -10557,7 +10283,7 @@ async function init() {
       dom.openSaidaBtn.addEventListener("click", async () => {
         // Verifica se BAR ou COZINHA podem usar (garantia extra)
         const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
         const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
         const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
         
@@ -10731,7 +10457,7 @@ async function init() {
       else if (section === "estoque") {
         // Aplica permissões de estoque quando a seção é carregada
         const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR";
+        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
         
         // Ocultar cards de valores
         const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");

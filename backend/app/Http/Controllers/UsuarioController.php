@@ -145,7 +145,14 @@ class UsuarioController extends Controller
             
             $usuario = Usuario::findOrFail($id);
             
-            // Validação
+            // Se for atualização parcial (só ativo), processa direto
+            if ($request->has('ativo') && !$request->has('nome') && !$request->has('email') && !$request->has('perfil')) {
+                $usuario->update(['ativo' => $request->ativo]);
+                Log::info('✅ Status do usuário atualizado', ['id' => $usuario->id, 'ativo' => $request->ativo]);
+                return response()->json($usuario);
+            }
+
+            // Validação completa para edição de dados
             $validator = Validator::make($request->all(), [
                 'nome' => 'required|string|max:120',
                 'email' => 'required|email|max:150|unique:usuarios,email,' . $id,

@@ -1093,7 +1093,7 @@ Route::post('/usuarios', function (Request $request) {
         ]);
         
         // Validação específica para perfil BAR
-        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR'];
+        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR', 'ATENDENTE'];
         if (!in_array($perfilNormalizado, $perfisValidos)) {
             \Log::warning('POST /usuarios - Perfil inválido:', ['perfil' => $perfilNormalizado]);
             return response()->json(['error' => 'Perfil inválido: ' . $perfilNormalizado], 422)
@@ -1232,6 +1232,18 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
             'all_keys' => array_keys($allData)
         ]);
 
+        // Se for atualização parcial só do status (ativo), processa direto
+        if ($request->has('ativo') && !$request->has('nome') && !$request->has('email') && !$request->has('perfil')) {
+            DB::table('usuarios')->where('id', $id)->update(['ativo' => (int)$request->input('ativo')]);
+            $usuarioAtualizado = DB::table('usuarios')->where('id', $id)->first();
+            unset($usuarioAtualizado->senha_hash);
+            \Log::info("PUT /usuarios/{$id} - Status atualizado:", ['ativo' => $request->input('ativo')]);
+            return response()->json($usuarioAtualizado)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+        }
+
         // Validação dos campos obrigatórios
         $rules = [
             'nome' => 'required|string|max:255',
@@ -1259,7 +1271,7 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
         ]);
         
         // Validação específica para perfil BAR
-        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR'];
+        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR', 'ATENDENTE'];
         if (!in_array($perfilNormalizado, $perfisValidos)) {
             \Log::warning("PUT /usuarios/{$id} - Perfil inválido:", ['perfil' => $perfilNormalizado]);
             return response()->json(['error' => 'Perfil inválido: ' . $perfilNormalizado], 422)
