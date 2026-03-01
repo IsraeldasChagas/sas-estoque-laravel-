@@ -2914,6 +2914,14 @@ select[size]:not([size="1"]) {
   background: rgba(244, 67, 54, 0.12);
 }
 
+.usuario-inativo {
+  opacity: 0.55;
+}
+
+.usuario-inativo:hover {
+  opacity: 0.75;
+}
+
 .table-flag {
   display: inline-block;
   margin-top: 4px;

@@ -2965,13 +2965,13 @@ function renderUsuarios(lista) {
 
     const colunaAcoes = isAdminUser ? `<td data-label="Acoes" class="table-actions">${acoes}</td>` : "";
 
-    return `<tr data-id="${usuario.id}">
+    return `<tr data-id="${usuario.id}"${!ativo ? ' class="usuario-inativo"' : ''}>
       <td data-label="Foto">${foto}</td>
       <td data-label="Nome">${escapeHtml(usuario.nome)}</td>
       <td data-label="Email">${escapeHtml(usuario.email)}</td>
       <td data-label="Perfil">${escapeHtml(PERFIL_LABELS[(usuario.perfil || "").toString().trim().toUpperCase()] || (usuario.perfil || "--"))}</td>
       <td data-label="Unidade">${escapeHtml(usuario.unidade_nome || "--")}</td>
-      <td data-label="Status">${buildStatusPill(ativo ? "Ativo" : "Inativo")}</td>
+      <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${ativo ? "Ativo" : "Inativo"}</span></td>
       ${colunaAcoes}
     </tr>`;
   }).join("");
