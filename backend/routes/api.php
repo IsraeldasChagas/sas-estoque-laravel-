@@ -4710,3 +4710,25 @@ Route::post('/admin/restaurar', function (Request $request) {
         return response()->json(['error' => 'Erro ao restaurar: ' . $e->getMessage()], 500);
     }
 });
+
+// ============================================
+// DEPLOY - Atualiza o servidor via git pull
+// ============================================
+Route::get('/deploy', function (Request $request) {
+    $key = $request->query('key', '');
+    if ($key !== 'sas2026deploy') {
+        return response()->json(['error' => 'Acesso negado'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $projDir = base_path('../');
+    $output = [];
+
+    exec("cd " . escapeshellarg($projDir) . " && git pull origin main 2>&1", $output, $returnCode);
+
+    return response()->json([
+        'sucesso' => $returnCode === 0,
+        'output'  => implode("\n", $output),
+        'dir'     => $projDir,
+    ])->header('Access-Control-Allow-Origin', '*');
+});
