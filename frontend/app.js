@@ -6213,6 +6213,18 @@ async function startAppSession(user) {
         }
       } else if (typeof navigateTo === 'function') {
         navigateTo(sectionToNavigate);
+        // Carrega dados da seção inicial quando o router não está disponível
+        try {
+          if (sectionToNavigate === 'estoque') {
+            await loadEstoqueProdutos();
+          } else if (sectionToNavigate === 'produtos') {
+            await loadProdutos();
+          } else if (sectionToNavigate === 'dashboard') {
+            await loadDashboard();
+          }
+        } catch (err) {
+          console.error('Erro ao carregar seção inicial:', err);
+        }
       }
 
       // Se veio do QR code da etiqueta, carrega o produto do lote na consulta de estoque
