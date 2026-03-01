@@ -252,7 +252,7 @@ const PERFIL_LABELS = {
   COZINHA: "Cozinha",
   BAR: "Bar",
   FINANCEIRO: "Financeiro",
-  ASSISTENTE_ADMINISTRATIVO: "Assistente Administrativo",
+  ASSISTENTE_ADMINISTRATIVO: "Auxiliar Administrativo",
   VISUALIZADOR: "Visualizador",
   GERENTE: "Gerente",
   ATENDENTE: "Atendente",
@@ -8088,7 +8088,7 @@ function setupModals() {
           <option value="COZINHA">Cozinha</option>
           <option value="BAR">Bar</option>
           <option value="FINANCEIRO">Financeiro</option>
-          <option value="ASSISTENTE_ADMINISTRATIVO">Assistente Administrativo</option>
+          <option value="ASSISTENTE_ADMINISTRATIVO">Auxiliar Administrativo</option>
           <option value="GERENTE">Gerente</option>
           <option value="VISUALIZADOR">Visualizador</option>
           <option value="ATENDENTE">Atendente</option>
