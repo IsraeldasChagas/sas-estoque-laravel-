@@ -992,6 +992,24 @@ table tbody tr:hover {
   position: relative;
 }
 
+.modal-sugestoes {
+  width: min(1100px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-sugestoes .modal-sugestoes-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.modal-sugestoes header {
+  flex-shrink: 0;
+}
+
 .modal header {
   display: flex;
   justify-content: space-between;
@@ -2512,6 +2530,16 @@ textarea {
     padding: 24px 20px;
   }
 
+  #sugestoesComprasModal .modal {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    margin: 12px;
+  }
+
+  #sugestoesComprasModal .modal-sugestoes-body {
+    padding: 12px !important;
+  }
+
   /* Sugestões de compras: pergunta em cima, resposta em baixo (tablet) */
   #sugestoesComprasModal .sugestoes-compras-table {
     overflow: visible;
@@ -2673,6 +2701,50 @@ textarea {
     content: attr(data-label);
     font-weight: 600;
     color: var(--muted);
+  }
+
+  /* Sugestões modal: cabe na tela do celular */
+  #sugestoesComprasModal {
+    align-items: flex-start;
+    padding: 12px 0;
+    overflow-y: auto;
+  }
+
+  #sugestoesComprasModal .modal {
+    width: calc(100vw - 24px) !important;
+    max-width: none;
+    max-height: calc(100vh - 24px);
+    margin: 0 12px 24px;
+    padding: 12px 14px;
+  }
+
+  #sugestoesComprasModal .modal-sugestoes-body {
+    padding: 8px 0 !important;
+  }
+
+  #sugestoesComprasModal .sugestoes-compras-table tr {
+    padding: 12px;
+  }
+
+  #sugestoesComprasModal .sugestoes-compras-table td {
+    padding: 6px 0;
+  }
+
+  #sugestoesComprasModal .filters-panel {
+    padding: 10px 0;
+    margin-bottom: 0.75rem;
+  }
+
+  #sugestoesComprasModal .filters-grid {
+    gap: 10px;
+  }
+
+  #sugestoesComprasModal .modal header {
+    margin-bottom: 12px;
+  }
+
+  #sugestoesComprasModal .modal header h2 {
+    font-size: 1.1rem;
   }
 
   /* Sugestões de compras: pergunta em cima, resposta em baixo (celular/tablet) */
