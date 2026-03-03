@@ -180,10 +180,15 @@
                 <div class="value danger" id="kpiLotesVencidos">0</div>
                 <small>Visualizar detalhes</small>
               </div>
-              <div class="card card--clickable" id="cardMinimo">
+              <div class="card" id="cardMinimo">
                 <h3>Abaixo do minimo</h3>
                 <div class="value" id="kpiMinimo">0</div>
-                <small id="cardMinimoHint">Ver produtos abaixo do minimo</small>
+                <div id="cardMinimoArea">
+                  <small id="cardMinimoHint">Ver produtos abaixo do minimo</small>
+                  <select id="cardMinimoSelect" class="card-minimo-select" style="display:none;">
+                    <option value="">Selecione um produto</option>
+                  </select>
+                </div>
               </div>
               <div class="card card--clickable" id="cardPerdas">
                 <h3>Perdas</h3>
@@ -1920,7 +1925,7 @@
     <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
     <script src="config.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260301N"></script>
+    <script src="app.js?v=20260301P"></script>
      
   </body>
 </html>

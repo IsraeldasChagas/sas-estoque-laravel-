@@ -1730,6 +1730,107 @@ textarea {
     width: 100%;
   }
 
+  #estoqueSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #estoqueSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #estoqueSection .table-wrapper thead {
+    display: none;
+  }
+
+  #estoqueSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #estoqueSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #estoqueSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #estoqueSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #estoqueSection .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  #estoqueSection .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #estoqueSection .table-wrapper td.table-actions .table-action {
+    width: 100%;
+  }
+
+  #estoqueLotesModal .table-wrapper {
+    overflow: visible;
+  }
+
+  #estoqueLotesModal .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #estoqueLotesModal .table-wrapper thead {
+    display: none;
+  }
+
+  #estoqueLotesModal .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #estoqueLotesModal .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #estoqueLotesModal .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #estoqueLotesModal .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   #comprasSection .compras-listas-card .table-wrapper {
     overflow: visible;
   }
@@ -2942,6 +3043,22 @@ select[size]:not([size="1"]) {
 
 .card--alert #cardMinimoHint {
   color: #b71c1c;
+}
+
+.card-minimo-select {
+  margin-top: 0.35rem;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.card--alert .card-minimo-select {
+  border-color: rgba(244, 67, 54, 0.35);
 }
 
 /* ===== Estilos para o Modulo de Boletos ===== */

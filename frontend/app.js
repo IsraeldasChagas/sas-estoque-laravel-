@@ -2208,9 +2208,18 @@ function updateComprasDashboardCard() {
 
 function updateMinimoDashboardCard() {
   const quantidade = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo.length : 0;
+  const lista = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : [];
   if (dom.kpiMinimo) dom.kpiMinimo.textContent = quantidade;
-  if (dom.cardMinimoHint) {
-    dom.cardMinimoHint.textContent = quantidade ? "Ver produtos abaixo do minimo" : "Tudo em dia";
+  const hintMinimo = document.getElementById("cardMinimoHint");
+  const selectMinimo = document.getElementById("cardMinimoSelect");
+  if (hintMinimo) {
+    hintMinimo.style.display = quantidade > 0 ? "none" : "";
+    hintMinimo.textContent = quantidade > 0 ? "" : "Tudo em dia";
+  }
+  if (selectMinimo) {
+    selectMinimo.style.display = quantidade > 0 ? "block" : "none";
+    selectMinimo.innerHTML = '<option value="">Selecione um produto</option>' +
+      lista.map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`).join("");
   }
   if (dom.cardMinimo) dom.cardMinimo.classList.toggle("card--alert", quantidade > 0);
   if (Array.isArray(state.produtos) && state.produtos.length) {
@@ -5592,9 +5601,19 @@ function atualizarCardsDashboard(dados) {
   setCardValue("kpiPerdas", Math.round(perdasQtd));
   setCardValue("kpiComprasAtivas", comprasAtivas);
   
-  // Atualiza hints
+  // Atualiza card minimo: select ou hint
   const hintMinimo = document.getElementById("cardMinimoHint");
-  if (hintMinimo) hintMinimo.textContent = produtosAbaixoMinimo > 0 ? "Ver produtos abaixo do minimo" : "Tudo em dia";
+  const selectMinimo = document.getElementById("cardMinimoSelect");
+  const listaProdutosMinimo = Array.isArray(minimos?.produtos) ? minimos.produtos : [];
+  if (hintMinimo) {
+    hintMinimo.style.display = produtosAbaixoMinimo > 0 ? "none" : "";
+    hintMinimo.textContent = produtosAbaixoMinimo > 0 ? "" : "Tudo em dia";
+  }
+  if (selectMinimo) {
+    selectMinimo.style.display = produtosAbaixoMinimo > 0 ? "block" : "none";
+    selectMinimo.innerHTML = '<option value="">Selecione um produto</option>' +
+      listaProdutosMinimo.map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`).join("");
+  }
   
   const hintPerdas = document.getElementById("cardPerdasHint");
   if (hintPerdas) hintPerdas.textContent = perdasRegistros > 0 ? `${perdasRegistros} movimentacoes recentes` : "Sem perdas registradas";
@@ -5837,7 +5856,7 @@ async function loadEstoqueProduto(produtoId) {
           <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
           ${valorTotalCell}
           <td data-label="Lotes (código)">${item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—")}</td>
-          <td data-label="Detalhes"><button type="button" class="btn secondary btn-sm btn-estoque-detalhe">Detalhes</button></td>
+          <td data-label="Detalhes" class="table-actions"><button type="button" class="btn secondary btn-sm btn-estoque-detalhe">Detalhes</button></td>
         `;
 
         // Listener direto no botão
@@ -5934,13 +5953,13 @@ async function abrirEstoqueLotesModal(item, produto) {
       : '—';
     html += `
       <tr>
-        <td>${escapeHtml(String(lote.codigo_lote || '—'))}</td>
-        <td>${Number(lote.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
+        <td data-label="Lote (código)">${escapeHtml(String(lote.codigo_lote || '—'))}</td>
+        <td data-label="Quantidade">${Number(lote.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
         ${!isCozinhaOuBar ? `
-          <td>R$ ${Number(lote.custo_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-          <td>R$ ${Number(lote.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td data-label="Valor Unitário">R$ ${Number(lote.custo_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td data-label="Valor Total">R$ ${Number(lote.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         ` : ''}
-        <td>${validade}</td>
+        <td data-label="Validade">${validade}</td>
       </tr>
     `;
   });
@@ -8520,27 +8539,23 @@ function setupModals() {
 
 // Habilita interacoes principais nos cards do dashboard para navegacao rapida.
 function setupCards() {
-  dom.cardMinimo?.addEventListener("click", async () => {
-    const listaAtual = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : [];
-    if (!listaAtual.length) {
-      showToast("Nenhum produto abaixo do minimo.", "success");
-      return;
-    }
-    navigateTo("produtos");
+  document.getElementById("cardMinimoSelect")?.addEventListener("change", async (event) => {
+    const produtoId = Number(event.target.value);
+    if (!Number.isFinite(produtoId) || produtoId <= 0) return;
+    navigateTo("estoque");
     try {
-      await loadProdutos();
+      await loadEstoqueProdutos();
+      const selectEstoque = document.getElementById("estoqueProdutoSelect");
+      if (selectEstoque) {
+        selectEstoque.value = String(produtoId);
+        selectEstoque.dispatchEvent(new Event("change"));
+      } else {
+        await loadEstoqueProduto(produtoId);
+      }
     } catch (err) {
-      showToast(err?.message || "Falha ao carregar produtos.", "error");
-      return;
+      showToast(err?.message || "Falha ao carregar estoque.", "error");
     }
-    const lista = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : listaAtual;
-    const nomes = lista
-      .slice(0, 4)
-      .map((item) => escapeHtml(item.produto))
-      .join(", ");
-    const restante = lista.length - 4;
-    const complemento = restante > 0 ? ` e mais ${restante}` : "";
-    showToast(`Produtos abaixo do minimo: ${nomes}${complemento}.`, "warning");
+    event.target.value = "";
   });
 
   dom.cardLotesAVencer?.addEventListener("click", async () => {
@@ -10335,28 +10350,24 @@ async function init() {
         dom.cardMinimo = document.getElementById("cardMinimo");
         dom.cardMinimoHint = document.getElementById("cardMinimoHint");
       }
-      
-      dom.cardMinimo.addEventListener("click", async () => {
-        const listaAtual = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : [];
-        if (!listaAtual.length) {
-          showToast("Nenhum produto abaixo do minimo.", "success");
-          return;
-        }
-        navigateTo("produtos");
+
+      document.getElementById("cardMinimoSelect")?.addEventListener("change", async (event) => {
+        const produtoId = Number(event.target.value);
+        if (!Number.isFinite(produtoId) || produtoId <= 0) return;
+        navigateTo("estoque");
         try {
-          await loadProdutos();
+          await loadEstoqueProdutos();
+          const selectEstoque = document.getElementById("estoqueProdutoSelect");
+          if (selectEstoque) {
+            selectEstoque.value = String(produtoId);
+            selectEstoque.dispatchEvent(new Event("change"));
+          } else {
+            await loadEstoqueProduto(produtoId);
+          }
         } catch (err) {
-          showToast(err?.message || "Falha ao carregar produtos.", "error");
-          return;
+          showToast(err?.message || "Falha ao carregar estoque.", "error");
         }
-        const lista = Array.isArray(state.produtosAbaixoMinimo) ? state.produtosAbaixoMinimo : listaAtual;
-        const nomes = lista
-          .slice(0, 4)
-          .map((item) => escapeHtml(item.produto))
-          .join(", ");
-        const restante = lista.length - 4;
-        const complemento = restante > 0 ? ` e mais ${restante}` : "";
-        showToast(`Produtos abaixo do minimo: ${nomes}${complemento}.`, "warning");
+        event.target.value = "";
       });
     }
 
