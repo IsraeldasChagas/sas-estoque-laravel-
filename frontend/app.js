@@ -4086,7 +4086,7 @@ async function loadSugestoesCompras(unidadeId = null, diasAnalise = 30, diasProj
     const params = new URLSearchParams();
     if (unidadeId) params.append('unidade_id', unidadeId);
     params.append('dias', diasAnalise);
-    params.append('dias_projecao', diasProjecao);
+    if (diasProjecao > 0) params.append('dias_projecao', diasProjecao);
     const dados = await fetchJSON(`/sugestoes-compras?${params.toString()}`);
     return dados;
   } catch (error) {
@@ -4140,32 +4140,23 @@ function renderSugestoesTabela(dados) {
   // Monta o container
   const container = document.createElement('div');
 
+  const diasProj = dados.dias_projecao || 0;
+  const temProjecao = diasProj > 0;
   const resumo = document.createElement('div');
   resumo.style.cssText = 'margin-bottom:1rem;padding:1rem;background:#f5f5f5;border-radius:4px;';
-  resumo.innerHTML = `<strong>Pendentes:</strong> ${pendentes.length} de ${dados.total_sugestoes} | <strong>Análise:</strong> últimos ${dados.dias_analise} dias | <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias (consume projetado para o período)`;
+  resumo.innerHTML = `<strong>Pendentes:</strong> ${pendentes.length} de ${dados.total_sugestoes} | <strong>Análise:</strong> últimos ${dados.dias_analise} dias` + (temProjecao ? ` | <strong>Projeção:</strong> próximos ${diasProj} dias` : '');
   container.appendChild(resumo);
 
   const tableWrapper = document.createElement('div');
-  tableWrapper.className = 'table-wrapper';
+  tableWrapper.className = 'table-wrapper sugestoes-compras-table';
+
+  const theadCols = ['Prioridade', 'Produto', 'Unidade', 'Estoque Atual', 'Estoque Mín.', 'Qtd. p/ Completar', 'Consumo Médio/Dia'];
+  if (temProjecao) theadCols.push(`Projeção (${diasProj} dias)`);
+  theadCols.push('Qtd. Sugerida', 'Ações');
 
   const table = document.createElement('table');
   table.id = 'sugestoesTabela';
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Prioridade</th>
-        <th>Produto</th>
-        <th>Unidade</th>
-        <th>Estoque Atual</th>
-        <th>Estoque Mín.</th>
-        <th>Qtd. p/ Completar</th>
-        <th>Consumo Médio/Dia</th>
-        <th>Projeção (${dados.dias_projecao} dias)</th>
-        <th>Qtd. Sugerida</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-  `;
+  table.innerHTML = '<thead><tr>' + theadCols.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
 
   const tbody = document.createElement('tbody');
 
@@ -4178,19 +4169,23 @@ function renderSugestoesTabela(dados) {
     const qtdParaCompletar = sugestao.quantidade_para_completar ?? 0;
     const consumoProjetado = sugestao.consumo_projetado ?? 0;
 
+    let tds = [
+      { label: 'Prioridade', html: `<span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span>` },
+      { label: 'Produto', html: escapeHtml(sugestao.produto_nome) },
+      { label: 'Unidade', html: escapeHtml(sugestao.unidade_nome) },
+      { label: 'Estoque Atual', html: `${sugestao.estoque_atual} ${unidadeBase}` },
+      { label: 'Estoque Mín.', html: `${sugestao.estoque_minimo} ${unidadeBase}` },
+      { label: 'Qtd. p/ Completar', html: `<strong>${qtdParaCompletar.toFixed(3)}</strong> ${unidadeBase}` },
+      { label: 'Consumo Médio/Dia', html: `${sugestao.consumo_medio_diario.toFixed(3)} ${unidadeBase}` }
+    ];
+    if (temProjecao) tds.push({ label: `Projeção (${diasProj} dias)`, html: `${consumoProjetado.toFixed(3)} ${unidadeBase}` });
+    tds.push(
+      { label: 'Qtd. Sugerida', html: `<strong>${sugestao.quantidade_sugerida.toFixed(3)} ${unidadeBase}</strong>` },
+      { label: 'Ações', html: '<button type="button" class="btn secondary btn-sm">Adicionar à Lista</button>', cls: 'sugestoes-acoes' }
+    );
+
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
-      <td>${escapeHtml(sugestao.produto_nome)}</td>
-      <td>${escapeHtml(sugestao.unidade_nome)}</td>
-      <td>${sugestao.estoque_atual} ${unidadeBase}</td>
-      <td>${sugestao.estoque_minimo} ${unidadeBase}</td>
-      <td><strong>${qtdParaCompletar.toFixed(3)}</strong> ${unidadeBase}</td>
-      <td>${sugestao.consumo_medio_diario.toFixed(3)} ${unidadeBase}</td>
-      <td>${consumoProjetado.toFixed(3)} ${unidadeBase}</td>
-      <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${unidadeBase}</strong></td>
-      <td><button type="button" class="btn secondary btn-sm">Adicionar à Lista</button></td>
-    `;
+    tr.innerHTML = tds.map(t => `<td data-label="${escapeHtml(t.label)}"${t.cls ? ' class="' + t.cls + '"' : ''}>${t.html}</td>`).join('');
 
     // Listener direto no botão desta linha — sem ambiguidade
     const btn = tr.querySelector('button');
@@ -4211,7 +4206,7 @@ function renderSugestoesTabela(dados) {
 
   const dica = document.createElement('div');
   dica.style.cssText = 'margin-top:1rem;padding:1rem;background:#e3f2fd;border-radius:4px;';
-  dica.innerHTML = '<strong>💡 Dica:</strong> <strong>Qtd. p/ Completar</strong> = quanto comprar para atingir o estoque mínimo. <strong>Qtd. Sugerida</strong> inclui consumo projetado nos próximos ' + dados.dias_projecao + ' dias. Produtos abaixo do mínimo aparecem mesmo sem consumo recente.';
+  dica.innerHTML = '<strong>💡 Dica:</strong> <strong>Qtd. p/ Completar</strong> = quanto comprar para atingir o estoque mínimo. ' + (temProjecao ? '<strong>Qtd. Sugerida</strong> inclui consumo projetado nos próximos ' + diasProj + ' dias. ' : '<strong>Qtd. Sugerida</strong> = Qtd. p/ Completar (sem projeção). ') + 'Produtos abaixo do mínimo aparecem mesmo sem consumo recente.';
   container.appendChild(dica);
 
   dom.sugestoesComprasContent.innerHTML = '';
@@ -4224,7 +4219,8 @@ async function buscarSugestoesCompras() {
 
   const unidadeId = dom.sugestoesFiltroUnidade?.value || null;
   const diasAnalise = parseInt(dom.sugestoesDiasAnalise?.value || 30);
-  const diasProjecao = parseInt(dom.sugestoesDiasProjecao?.value || 15);
+  const diasProjecaoRaw = dom.sugestoesDiasProjecao?.value?.trim();
+  const diasProjecao = diasProjecaoRaw ? parseInt(diasProjecaoRaw) : 0;
 
   // Nova busca reseta os adicionados para mostrar tudo de novo
   sugestoesAdicionadas = new Set();

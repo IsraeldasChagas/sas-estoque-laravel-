@@ -4273,7 +4273,7 @@ Route::get('/sugestoes-compras', function (Request $request) {
     try {
         $unidadeId = $request->has('unidade_id') ? (int)$request->unidade_id : null;
         $diasAnalise = $request->has('dias') ? (int)$request->dias : 30; // Padrão: últimos 30 dias
-        $diasProjecao = $request->has('dias_projecao') ? (int)$request->dias_projecao : 15; // Projetar para próximos X dias
+        $diasProjecao = ($request->has('dias_projecao') && (int)$request->dias_projecao > 0) ? (int)$request->dias_projecao : 0; // Só usa projeção se usuário informar
         
         // Busca todas as saídas (consumo) do período
         $query = DB::table('movimentacoes')
@@ -4314,15 +4314,17 @@ Route::get('/sugestoes-compras', function (Request $request) {
                 ->where('unidade_id', $unidadeIdConsumo)
                 ->sum('quantidade');
             
-            // Calcula consumo médio diário e projeção
+            // Calcula consumo médio diário e projeção (só se dias_projecao > 0)
             $consumoMedioDiario = $consumo->total_consumido / $diasAnalise;
-            $consumoProjetado = $consumoMedioDiario * $diasProjecao;
+            $consumoProjetado = $diasProjecao > 0 ? ($consumoMedioDiario * $diasProjecao) : 0;
             
             $estoqueMinimo = $consumo->estoque_minimo ?? 0;
             // Quantidade para completar o mínimo (produtos abaixo do mínimo)
             $quantidadeParaCompletar = max(0, $estoqueMinimo - $estoqueAtual);
-            // Sugestão total: completar mínimo + consumo projetado nos dias de projeção
-            $quantidadeSugerida = ($consumoProjetado + $estoqueMinimo) - $estoqueAtual;
+            // Sugestão total: completar mínimo + consumo projetado (só se usuário informou dias)
+            $quantidadeSugerida = $diasProjecao > 0
+                ? (($consumoProjetado + $estoqueMinimo) - $estoqueAtual)
+                : $quantidadeParaCompletar;
             
             // Só sugere se a quantidade for positiva e significativa
             if ($quantidadeSugerida > 0 && $quantidadeSugerida >= ($estoqueMinimo * 0.1)) {
