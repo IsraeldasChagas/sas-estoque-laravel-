@@ -737,6 +737,18 @@ table {
   padding: 6px 10px;
 }
 
+/* Botão Adicionar à Lista na tabela de sugestões */
+#sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes .btn {
+  width: auto;
+  max-width: 140px;
+  white-space: nowrap;
+  margin: 0 auto;
+}
+
+#sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
+  align-items: center;
+}
+
 /* Estilos para vínculos de estabelecimentos */
 .vinculo-cell {
   max-width: 200px;
@@ -2541,7 +2553,7 @@ textarea {
 
   #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: 8px;
     padding-top: 12px;
   }
@@ -2676,7 +2688,7 @@ textarea {
 
   #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: 8px;
     padding-top: 12px;
   }

@@ -908,6 +908,11 @@ function formatFileSize(bytes) {
 }
 
 // Normaliza unidade base: substitui "un" por "UND"
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return "0";
+  return parseFloat(Number(n).toFixed(3)).toString();
+}
+
 function normalizarUnidadeBase(value) {
   if (!value) return "UND";
   const unidade = String(value).trim().toLowerCase();
@@ -4173,14 +4178,14 @@ function renderSugestoesTabela(dados) {
       { label: 'Prioridade', html: `<span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span>` },
       { label: 'Produto', html: escapeHtml(sugestao.produto_nome) },
       { label: 'Unidade', html: escapeHtml(sugestao.unidade_nome) },
-      { label: 'Estoque Atual', html: `${sugestao.estoque_atual} ${unidadeBase}` },
-      { label: 'Estoque Mín.', html: `${sugestao.estoque_minimo} ${unidadeBase}` },
-      { label: 'Qtd. p/ Completar', html: `<strong>${qtdParaCompletar.toFixed(3)}</strong> ${unidadeBase}` },
-      { label: 'Consumo Médio/Dia', html: `${sugestao.consumo_medio_diario.toFixed(3)} ${unidadeBase}` }
+      { label: 'Estoque Atual', html: `${fmtNum(sugestao.estoque_atual)} ${unidadeBase}` },
+      { label: 'Estoque Mín.', html: `${fmtNum(sugestao.estoque_minimo)} ${unidadeBase}` },
+      { label: 'Qtd. p/ Completar', html: `<strong>${fmtNum(qtdParaCompletar)}</strong> ${unidadeBase}` },
+      { label: 'Consumo Médio/Dia', html: `${fmtNum(sugestao.consumo_medio_diario)} ${unidadeBase}` }
     ];
-    if (temProjecao) tds.push({ label: `Projeção (${diasProj} dias)`, html: `${consumoProjetado.toFixed(3)} ${unidadeBase}` });
+    if (temProjecao) tds.push({ label: `Projeção (${diasProj} dias)`, html: `${fmtNum(consumoProjetado)} ${unidadeBase}` });
     tds.push(
-      { label: 'Qtd. Sugerida', html: `<strong>${sugestao.quantidade_sugerida.toFixed(3)} ${unidadeBase}</strong>` },
+      { label: 'Qtd. Sugerida', html: `<strong>${fmtNum(sugestao.quantidade_sugerida)}</strong> ${unidadeBase}` },
       { label: 'Ações', html: '<button type="button" class="btn secondary btn-sm">Adicionar à Lista</button>', cls: 'sugestoes-acoes' }
     );
 
