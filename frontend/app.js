@@ -4142,7 +4142,7 @@ function renderSugestoesTabela(dados) {
 
   const resumo = document.createElement('div');
   resumo.style.cssText = 'margin-bottom:1rem;padding:1rem;background:#f5f5f5;border-radius:4px;';
-  resumo.innerHTML = `<strong>Pendentes:</strong> ${pendentes.length} de ${dados.total_sugestoes} | <strong>Análise:</strong> últimos ${dados.dias_analise} dias | <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias`;
+  resumo.innerHTML = `<strong>Pendentes:</strong> ${pendentes.length} de ${dados.total_sugestoes} | <strong>Análise:</strong> últimos ${dados.dias_analise} dias | <strong>Projeção:</strong> próximos ${dados.dias_projecao} dias (consume projetado para o período)`;
   container.appendChild(resumo);
 
   const tableWrapper = document.createElement('div');
@@ -4158,7 +4158,9 @@ function renderSugestoesTabela(dados) {
         <th>Unidade</th>
         <th>Estoque Atual</th>
         <th>Estoque Mín.</th>
+        <th>Qtd. p/ Completar</th>
         <th>Consumo Médio/Dia</th>
+        <th>Projeção (${dados.dias_projecao} dias)</th>
         <th>Qtd. Sugerida</th>
         <th>Ações</th>
       </tr>
@@ -4173,6 +4175,9 @@ function renderSugestoesTabela(dados) {
                             sugestao.prioridade === 'MEDIA' ? 'status-pill--warning' :
                             'status-pill--muted';
 
+    const qtdParaCompletar = sugestao.quantidade_para_completar ?? 0;
+    const consumoProjetado = sugestao.consumo_projetado ?? 0;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="status-pill ${prioridadeClass}">${sugestao.prioridade}</span></td>
@@ -4180,7 +4185,9 @@ function renderSugestoesTabela(dados) {
       <td>${escapeHtml(sugestao.unidade_nome)}</td>
       <td>${sugestao.estoque_atual} ${unidadeBase}</td>
       <td>${sugestao.estoque_minimo} ${unidadeBase}</td>
+      <td><strong>${qtdParaCompletar.toFixed(3)}</strong> ${unidadeBase}</td>
       <td>${sugestao.consumo_medio_diario.toFixed(3)} ${unidadeBase}</td>
+      <td>${consumoProjetado.toFixed(3)} ${unidadeBase}</td>
       <td><strong>${sugestao.quantidade_sugerida.toFixed(3)} ${unidadeBase}</strong></td>
       <td><button type="button" class="btn secondary btn-sm">Adicionar à Lista</button></td>
     `;
@@ -4204,7 +4211,7 @@ function renderSugestoesTabela(dados) {
 
   const dica = document.createElement('div');
   dica.style.cssText = 'margin-top:1rem;padding:1rem;background:#e3f2fd;border-radius:4px;';
-  dica.innerHTML = '<strong>💡 Dica:</strong> As sugestões são baseadas no consumo histórico. Itens já adicionados são removidos automaticamente da lista.';
+  dica.innerHTML = '<strong>💡 Dica:</strong> <strong>Qtd. p/ Completar</strong> = quanto comprar para atingir o estoque mínimo. <strong>Qtd. Sugerida</strong> inclui consumo projetado nos próximos ' + dados.dias_projecao + ' dias. Produtos abaixo do mínimo aparecem mesmo sem consumo recente.';
   container.appendChild(dica);
 
   dom.sugestoesComprasContent.innerHTML = '';

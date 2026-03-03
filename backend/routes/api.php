@@ -4273,7 +4273,7 @@ Route::get('/sugestoes-compras', function (Request $request) {
     try {
         $unidadeId = $request->has('unidade_id') ? (int)$request->unidade_id : null;
         $diasAnalise = $request->has('dias') ? (int)$request->dias : 30; // Padrão: últimos 30 dias
-        $diasProjecao = $request->has('dias_projecao') ? (int)$request->dias_projecao : 15; // Projetar para próximos 15 dias
+        $diasProjecao = $request->has('dias_projecao') ? (int)$request->dias_projecao : 15; // Projetar para próximos X dias
         
         // Busca todas as saídas (consumo) do período
         $query = DB::table('movimentacoes')
@@ -4300,7 +4300,8 @@ Route::get('/sugestoes-compras', function (Request $request) {
         
         $consumos = $query->get();
         
-        // Busca estoque atual por produto e unidade
+        // Chave para evitar duplicatas: "produto_id_unidade_id"
+        $chavesUsadas = [];
         $sugestoes = [];
         
         foreach ($consumos as $consumo) {
@@ -4313,21 +4314,21 @@ Route::get('/sugestoes-compras', function (Request $request) {
                 ->where('unidade_id', $unidadeIdConsumo)
                 ->sum('quantidade');
             
-            // Calcula consumo médio diário
+            // Calcula consumo médio diário e projeção
             $consumoMedioDiario = $consumo->total_consumido / $diasAnalise;
-            
-            // Projeta consumo para os próximos dias
             $consumoProjetado = $consumoMedioDiario * $diasProjecao;
             
-            // Calcula quantidade sugerida
-            // Sugestão = (Consumo projetado + Estoque mínimo) - Estoque atual
             $estoqueMinimo = $consumo->estoque_minimo ?? 0;
+            // Quantidade para completar o mínimo (produtos abaixo do mínimo)
+            $quantidadeParaCompletar = max(0, $estoqueMinimo - $estoqueAtual);
+            // Sugestão total: completar mínimo + consumo projetado nos dias de projeção
             $quantidadeSugerida = ($consumoProjetado + $estoqueMinimo) - $estoqueAtual;
             
             // Só sugere se a quantidade for positiva e significativa
             if ($quantidadeSugerida > 0 && $quantidadeSugerida >= ($estoqueMinimo * 0.1)) {
-                // Busca nome da unidade
                 $unidade = DB::table('unidades')->where('id', $unidadeIdConsumo)->first();
+                $chave = "{$produtoId}_{$unidadeIdConsumo}";
+                $chavesUsadas[$chave] = true;
                 
                 $sugestoes[] = [
                     'produto_id' => $produtoId,
@@ -4337,6 +4338,7 @@ Route::get('/sugestoes-compras', function (Request $request) {
                     'unidade_base' => $consumo->unidade_base,
                     'estoque_atual' => round($estoqueAtual, 3),
                     'estoque_minimo' => $estoqueMinimo,
+                    'quantidade_para_completar' => round($quantidadeParaCompletar, 3),
                     'consumo_total_periodo' => round($consumo->total_consumido, 3),
                     'consumo_medio_diario' => round($consumoMedioDiario, 3),
                     'consumo_projetado' => round($consumoProjetado, 3),
@@ -4346,6 +4348,57 @@ Route::get('/sugestoes-compras', function (Request $request) {
                     'prioridade' => $estoqueAtual <= $estoqueMinimo ? 'ALTA' : ($estoqueAtual <= ($estoqueMinimo * 1.5) ? 'MEDIA' : 'BAIXA')
                 ];
             }
+        }
+        
+        // Inclui produtos abaixo do mínimo que NÃO tiveram consumo no período
+        $queryAbaixoMin = DB::table('stock_lotes')
+            ->join('produtos', 'stock_lotes.produto_id', '=', 'produtos.id')
+            ->where('produtos.estoque_minimo', '>', 0)
+            ->where('produtos.ativo', 1)
+            ->select(
+                'produtos.id as produto_id',
+                'produtos.nome as produto_nome',
+                'produtos.unidade_base',
+                'produtos.estoque_minimo',
+                DB::raw('stock_lotes.unidade_id as unidade_id'),
+                DB::raw('SUM(stock_lotes.quantidade) as estoque_atual')
+            )
+            ->groupBy('produtos.id', 'produtos.nome', 'produtos.unidade_base', 'produtos.estoque_minimo', 'stock_lotes.unidade_id')
+            ->havingRaw('SUM(stock_lotes.quantidade) < produtos.estoque_minimo');
+        
+        if ($unidadeId) {
+            $queryAbaixoMin->where('stock_lotes.unidade_id', $unidadeId);
+        }
+        
+        $abaixoMinimo = $queryAbaixoMin->get();
+        
+        foreach ($abaixoMinimo as $item) {
+            $chave = "{$item->produto_id}_{$item->unidade_id}";
+            if (isset($chavesUsadas[$chave])) continue;
+            
+            $estoqueMinimo = (float) $item->estoque_minimo;
+            $estoqueAtual = (float) $item->estoque_atual;
+            $quantidadeParaCompletar = $estoqueMinimo - $estoqueAtual;
+            
+            $unidade = DB::table('unidades')->where('id', $item->unidade_id)->first();
+            
+            $sugestoes[] = [
+                'produto_id' => $item->produto_id,
+                'produto_nome' => $item->produto_nome,
+                'unidade_id' => $item->unidade_id,
+                'unidade_nome' => $unidade->nome ?? 'N/A',
+                'unidade_base' => $item->unidade_base ?? 'UND',
+                'estoque_atual' => round($estoqueAtual, 3),
+                'estoque_minimo' => $estoqueMinimo,
+                'quantidade_para_completar' => round($quantidadeParaCompletar, 3),
+                'consumo_total_periodo' => 0,
+                'consumo_medio_diario' => 0,
+                'consumo_projetado' => 0,
+                'quantidade_sugerida' => round($quantidadeParaCompletar, 3),
+                'dias_analise' => $diasAnalise,
+                'dias_projecao' => $diasProjecao,
+                'prioridade' => 'ALTA'
+            ];
         }
         
         // Ordena por prioridade e quantidade sugerida
