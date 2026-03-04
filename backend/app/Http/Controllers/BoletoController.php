@@ -76,6 +76,15 @@ class BoletoController extends Controller
         \Log::info('🚀 BoletoController::store - Iniciando criação de boleto');
         \Log::info('📥 Dados recebidos:', $request->all());
         
+        // Normaliza campos vazios ANTES da validação (evita falha em exists)
+        $input = $request->all();
+        if (isset($input['unidade_id']) && $input['unidade_id'] === '') {
+            $request->merge(['unidade_id' => null]);
+        }
+        if (isset($input['data_pagamento']) && $input['data_pagamento'] === '') {
+            $request->merge(['data_pagamento' => null]);
+        }
+        
         $validator = Validator::make($request->all(), [
             'fornecedor' => 'required|string|max:255',
             'descricao' => 'required|string|max:255',
@@ -134,6 +143,9 @@ class BoletoController extends Controller
                 
                 \Log::info('✅ Anexo salvo: ' . $path);
             }
+
+            // Remove anexo (arquivo) - já processado acima em anexo_path/nome/tipo
+            unset($data['anexo']);
 
             \Log::info('💾 Criando boleto no banco...');
             $boleto = Boleto::create($data);

@@ -9330,10 +9330,15 @@ function setupBoletosModule() {
                 }
               }
               
-              // Ajusta a data de vencimento para cada mês
-              const dataVencimento = new Date(formData.get('data_vencimento'));
+              // Ajusta a data de vencimento para cada mês (parse local para evitar bug de timezone)
+              const dataStr = formData.get('data_vencimento');
+              const [ano, mes, dia] = dataStr.split('-').map(Number);
+              const dataVencimento = new Date(ano, mes - 1, dia);
               dataVencimento.setMonth(dataVencimento.getMonth() + i);
-              formDataCopy.set('data_vencimento', dataVencimento.toISOString().split('T')[0]);
+              const novaDataStr = dataVencimento.getFullYear() + '-' +
+                String(dataVencimento.getMonth() + 1).padStart(2, '0') + '-' +
+                String(dataVencimento.getDate()).padStart(2, '0');
+              formDataCopy.set('data_vencimento', novaDataStr);
               
               // Adiciona anexo apenas no primeiro boleto
               if (i === 0 && boletoAnexoInput?.files[0]) {
