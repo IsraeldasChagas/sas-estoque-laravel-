@@ -252,6 +252,11 @@ class BoletoController extends Controller
                 'message' => 'Boleto atualizado com sucesso',
                 'boleto' => $boleto
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Boleto não encontrado (pode ter sido excluído)',
+                'error' => 'Boleto não encontrado'
+            ], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erro ao atualizar boleto',

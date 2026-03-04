@@ -879,13 +879,10 @@ function formatQuantityDisplay(value) {
 
 function formatDate(value) {
   if (!value) return "--";
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
-  }
-  // Tenta parsear como datetime também
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}\s/.test(value)) {
-    const datePart = value.split(" ")[0];
+  // Datas ISO (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss...) - usa apenas a parte da data
+  // Evita bug de timezone: new Date("2026-04-01") em UTC = 31/03 no Brasil
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const datePart = value.slice(0, 10);
     const [year, month, day] = datePart.split("-");
     return `${day}/${month}/${year}`;
   }
@@ -8894,10 +8891,10 @@ function renderBoletos(boletos) {
           <td data-label="Fornecedor">${boleto.fornecedor || '-'}</td>
           <td data-label="Vencimento">${fmtData(boleto.data_vencimento)}</td>
           <td data-label="Dias Restante">${diasRestante}</td>
-          <td data-label="Valor">R$ ${parseFloat(boleto.valor || 0).toFixed(2)}</td>
+          <td data-label="Valor">${formatCurrencyBRL(boleto.valor || 0)}</td>
           <td data-label="Data Pagamento">${boleto.data_pagamento ? fmtData(boleto.data_pagamento) : '-'}</td>
-          <td data-label="Valor Pago">${boleto.valor_pago ? 'R$ ' + parseFloat(boleto.valor_pago).toFixed(2) : '-'}</td>
-          <td data-label="Juros/Multa">${valorJuros > 0 ? 'R$ ' + valorJuros.toFixed(2) : 'R$ 0,00'}</td>
+          <td data-label="Valor Pago">${boleto.valor_pago ? formatCurrencyBRL(boleto.valor_pago) : '-'}</td>
+          <td data-label="Juros/Multa">${formatCurrencyBRL(valorJuros)}</td>
           <td data-label="Anexo" style="text-align: center;">${anexoIcon}</td>
           <td data-label="Ações">
             <button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>
@@ -8998,25 +8995,22 @@ async function loadBoletosResumo(mesAno) {
     
     // Atualiza cards
     if (totalMesEl) {
-      const valorFormatado = `R$ ${parseFloat(resumo.total_mes || 0).toFixed(2)}`;
-      totalMesEl.textContent = valorFormatado;
-      console.log('💳 Total do mês atualizado:', valorFormatado);
+      totalMesEl.textContent = formatCurrencyBRL(resumo.total_mes || 0);
+      console.log('💳 Total do mês atualizado:', totalMesEl.textContent);
     } else {
       console.warn('⚠️ Elemento boletosTotalMes não encontrado, não foi possível atualizar');
     }
     
     if (pagoEmDiaEl) {
-      const valorFormatado = `R$ ${parseFloat(resumo.pago_em_dia || 0).toFixed(2)}`;
-      pagoEmDiaEl.textContent = valorFormatado;
-      console.log('✅ Pago em dia atualizado:', valorFormatado);
+      pagoEmDiaEl.textContent = formatCurrencyBRL(resumo.pago_em_dia || 0);
+      console.log('✅ Pago em dia atualizado:', pagoEmDiaEl.textContent);
     } else {
       console.warn('⚠️ Elemento boletosPagoEmDia não encontrado, não foi possível atualizar');
     }
     
     if (jurosPagosEl) {
-      const valorFormatado = `R$ ${parseFloat(resumo.juros_pagos || 0).toFixed(2)}`;
-      jurosPagosEl.textContent = valorFormatado;
-      console.log('⚠️ Juros pagos atualizado:', valorFormatado);
+      jurosPagosEl.textContent = formatCurrencyBRL(resumo.juros_pagos || 0);
+      console.log('⚠️ Juros pagos atualizado:', jurosPagosEl.textContent);
     } else {
       console.warn('⚠️ Elemento boletosJurosPagos não encontrado, não foi possível atualizar');
     }
@@ -9306,14 +9300,15 @@ function setupBoletosModule() {
         showToast('Preencha a data de vencimento.', 'error');
         return;
       }
-      valorStr = (valorStr || '').replace(',', '.');
-      const valor = parseFloat(valorStr);
-      if (isNaN(valor) || valor <= 0) {
-        showToast('Informe um valor válido (use ponto ou vírgula como decimal).', 'error');
+      const valorInput = boletoForm.querySelector('[name="valor"]');
+      const valor = parseCurrencyInput(valorInput);
+      if (valor <= 0) {
+        showToast('Informe um valor válido.', 'error');
         return;
       }
-      
-      boletoForm.querySelector('[name="valor"]').value = valor.toFixed(2);
+
+      const valorPagoInput = boletoForm.querySelector('[name="valor_pago"]');
+      const valorPago = parseCurrencyInput(valorPagoInput);
       
       if (!currentUser?.id) {
         showToast('Sessão expirada. Faça login novamente.', 'error');
@@ -9329,7 +9324,9 @@ function setupBoletosModule() {
         }
 
         const formData = new FormData(boletoForm);
-        
+        formData.set('valor', valor.toFixed(2));
+        formData.set('valor_pago', valorPago.toFixed(2));
+
         // Debug: mostra todos os campos
         console.log('📝 Campos do formulário:');
         for (let [key, value] of formData.entries()) {
@@ -9412,26 +9409,36 @@ function setupBoletosModule() {
             showToast(`⚠️ ${erros} boletos falharam`, 'warning');
           }
         } else {
-          // Verifica se é edição ou criação
-          const boletoId = formData.get('id');
-          const isEdicao = boletoId && boletoId !== '';
+          // Verifica se é edição ou criação (ID lido direto do input para garantir)
+          const idInput = boletoForm.querySelector('input[name="id"]');
+          const boletoId = (idInput && idInput.value) ? String(idInput.value).trim() : (formData.get('id') || '').toString().trim();
+          const isEdicao = boletoId !== '';
           
           if (isEdicao) {
             // EDIÇÃO - usa PUT
-            console.log('✏️ Editando boleto:', boletoId);
+            console.log('✏️ Editando boleto ID:', boletoId);
             
-            // Converte FormData para JSON (PUT não aceita FormData com arquivo facilmente)
-            const data = {};
-            for (let [key, value] of formData.entries()) {
-              if (key !== 'id' && key !== 'anexo' && key !== 'is_recorrente' && key !== 'meses_recorrencia') {
-                data[key] = value || null;
-              }
-            }
+            const unidadeVal = boletoForm.querySelector('[name="unidade_id"]')?.value;
+            const jurosVal = parseFloat(boletoForm.querySelector('[name="juros_multa"]')?.value) || 0;
+            const data = {
+              fornecedor,
+              descricao,
+              data_vencimento: dataVenc,
+              valor: valor.toFixed(2),
+              unidade_id: unidadeVal && unidadeVal !== '' ? unidadeVal : null,
+              categoria: boletoForm.querySelector('[name="categoria"]')?.value || null,
+              status: boletoForm.querySelector('[name="status"]')?.value || 'A_VENCER',
+              data_pagamento: boletoForm.querySelector('[name="data_pagamento"]')?.value || null,
+              valor_pago: valorPago > 0 ? valorPago.toFixed(2) : null,
+              juros_multa: jurosVal,
+              observacoes: boletoForm.querySelector('[name="observacoes"]')?.value?.trim() || null
+            };
             
             const response = await fetch(`${API_URL}/boletos/${boletoId}`, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-Usuario-Id': currentUser?.id || ''
               },
               body: JSON.stringify(data)
@@ -9439,7 +9446,21 @@ function setupBoletosModule() {
             
             if (!response.ok) {
               const errorText = await response.text();
-              throw new Error(`Erro ao atualizar boleto: ${errorText}`);
+              if (response.status === 404) {
+                boletoModal.classList.remove('active');
+                boletoForm.reset();
+                showToast('Boleto não encontrado (pode ter sido excluído). Lista atualizada.', 'warning');
+                await loadBoletos({});
+                await loadBoletosResumo();
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Salvar Boleto'; }
+                return;
+              }
+              let errMsg = errorText;
+              try {
+                const errJson = JSON.parse(errorText);
+                errMsg = errJson.message || errJson.error || (errJson.errors ? Object.values(errJson.errors).flat().join(', ') : errorText);
+              } catch (_) {}
+              throw new Error(errMsg || `Erro ao atualizar boleto (${response.status})`);
             }
             
             const result = await response.json();
@@ -9585,20 +9606,25 @@ async function editarBoleto(id) {
     form.querySelector('[name="unidade_id"]').value = boleto.unidade_id || '';
     form.querySelector('[name="descricao"]').value = boleto.descricao || '';
     form.querySelector('[name="data_vencimento"]').value = formatDateForInput(boleto.data_vencimento);
-    form.querySelector('[name="valor"]').value = boleto.valor;
+    const valorInput = form.querySelector('[name="valor"]');
+    valorInput.dataset.value = String(boleto.valor || 0);
+    valorInput.value = boleto.valor ? formatCurrencyBRL(parseFloat(boleto.valor)) : '';
     form.querySelector('[name="categoria"]').value = boleto.categoria || '';
     form.querySelector('[name="status"]').value = boleto.status;
     form.querySelector('[name="observacoes"]').value = boleto.observacoes || '';
     
     // Se tiver dados de pagamento
+    const valorPagoInput = form.querySelector('[name="valor_pago"]');
     if (boleto.data_pagamento) {
       form.querySelector('[name="data_pagamento"]').value = formatDateForInput(boleto.data_pagamento);
-      form.querySelector('[name="valor_pago"]').value = boleto.valor_pago || '';
+      valorPagoInput.dataset.value = String(boleto.valor_pago || 0);
+      valorPagoInput.value = boleto.valor_pago ? formatCurrencyBRL(parseFloat(boleto.valor_pago)) : '';
       form.querySelector('[name="juros_multa"]').value = boleto.juros_multa || '';
       document.getElementById('pagamentoFields').style.display = 'block';
     } else {
       form.querySelector('[name="data_pagamento"]').value = '';
-      form.querySelector('[name="valor_pago"]').value = '';
+      valorPagoInput.dataset.value = '0';
+      valorPagoInput.value = '';
       form.querySelector('[name="juros_multa"]').value = '';
       document.getElementById('pagamentoFields').style.display = 'none';
     }
@@ -9962,6 +9988,11 @@ function setupForms() {
 
   attachCurrencyMask(dom.entradaForm?.elements.custo_unitario);
   attachCurrencyMask(dom.loteForm?.elements.custo_unitario);
+  const boletoFormEl = document.getElementById('boletoForm');
+  if (boletoFormEl) {
+    attachCurrencyMask(boletoFormEl.querySelector('[name="valor"]'));
+    attachCurrencyMask(boletoFormEl.querySelector('[name="valor_pago"]'));
+  }
 
   // Setup de formulários com logs
   console.log('🔧 Configurando event listeners de formulários...');
