@@ -8822,11 +8822,20 @@ function renderBoletos(boletos) {
   try {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    // Ordena por dias restante (menor primeiro): vencidos mais atrasados, depois a vencer mais urgentes, por último pagos/cancelados
+    // Converte data ISO para Data local (evita bug: "2026-03-05" UTC = 04/03 21h no Brasil)
+    const parseDataLocal = (str) => {
+      if (!str) return null;
+      const s = String(str).trim();
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+      const d = new Date(str);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    };
     const getSortKey = (b) => {
       if (b.status === 'PAGO' || b.status === 'CANCELADO') return 99999;
-      const venc = new Date(b.data_vencimento);
-      venc.setHours(0, 0, 0, 0);
+      const venc = parseDataLocal(b.data_vencimento);
+      if (!venc) return 99999;
       const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
       return diff;
     };
@@ -8843,9 +8852,8 @@ function renderBoletos(boletos) {
         statusLabel = 'Cancelado';
       } else {
         // Calcula estado real pela data de vencimento (A vencer ou Atrasado)
-        const venc = new Date(boleto.data_vencimento);
-        venc.setHours(0, 0, 0, 0);
-        const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+        const venc = parseDataLocal(boleto.data_vencimento);
+        const diff = venc ? Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24)) : 0;
         if (diff < 0) {
           statusClass = 'status-pill--danger';
           statusLabel = 'Atrasado';
@@ -8871,9 +8879,8 @@ function renderBoletos(boletos) {
       // Calcula dias restante (para A_VENCER ou Atrasado)
       let diasRestante = '-';
       if (boleto.status !== 'PAGO' && boleto.status !== 'CANCELADO') {
-        const vencimento = new Date(boleto.data_vencimento);
-        vencimento.setHours(0, 0, 0, 0);
-        const diffTime = vencimento - hoje;
+        const vencimento = parseDataLocal(boleto.data_vencimento);
+        const diffTime = vencimento ? vencimento - hoje : 0;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays > 0) {
           diasRestante = `${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
