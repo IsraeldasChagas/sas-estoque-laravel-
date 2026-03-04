@@ -8697,19 +8697,14 @@ function populateBoletosMesAnoFiltro() {
   if (!select) return;
   const hoje = new Date();
   const anoAtual = hoje.getFullYear();
-  const mesAtual = hoje.getMonth();
   const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const valorAtual = select.value;
   select.innerHTML = '<option value="">📋 Todos os boletos</option>';
-  // 6 meses atrás até fim do ano seguinte (cobre histórico + ano vigente + ano seguinte inteiro)
-  const mesInicio = new Date(anoAtual, mesAtual - 6, 1);
-  const anoInicio = mesInicio.getFullYear();
-  const mesIdxInicio = mesInicio.getMonth();
-  for (let ano = anoInicio; ano <= anoAtual + 1; ano++) {
-    const inicio = (ano === anoInicio) ? mesIdxInicio : 0;
-    const fim = (ano === anoAtual + 1) ? 11 : 11;
-    for (let m = inicio; m <= fim; m++) {
+  const anoInicio = Math.max(2026, anoAtual - 1);
+  const anoFim = Math.max(anoAtual + 1, 2027);
+  for (let ano = anoInicio; ano <= anoFim; ano++) {
+    for (let m = 0; m <= 11; m++) {
       const valor = `${ano}-${String(m + 1).padStart(2, '0')}`;
       const opt = document.createElement('option');
       opt.value = valor;
@@ -8915,6 +8910,16 @@ function renderBoletos(boletos) {
     }).join('');
     
     tbody.innerHTML = html;
+
+    // Listener direto para Editar (evita falha no clique)
+    tbody.querySelectorAll('.btn-icon[title="Editar"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        if (id) editarBoleto(id);
+      });
+    });
 
     // Listener para botões de deletar
     tbody.querySelectorAll('.btn-deletar-boleto').forEach(btn => {
@@ -9284,6 +9289,37 @@ function setupBoletosModule() {
       
       console.log('🚀 Iniciando salvamento do boleto...');
       
+      const fornecedor = boletoForm.querySelector('[name="fornecedor"]')?.value?.trim();
+      const descricao = boletoForm.querySelector('[name="descricao"]')?.value?.trim();
+      const dataVenc = boletoForm.querySelector('[name="data_vencimento"]')?.value;
+      let valorStr = boletoForm.querySelector('[name="valor"]')?.value;
+      
+      if (!fornecedor) {
+        showToast('Preencha o fornecedor.', 'error');
+        return;
+      }
+      if (!descricao) {
+        showToast('Preencha a descrição.', 'error');
+        return;
+      }
+      if (!dataVenc) {
+        showToast('Preencha a data de vencimento.', 'error');
+        return;
+      }
+      valorStr = (valorStr || '').replace(',', '.');
+      const valor = parseFloat(valorStr);
+      if (isNaN(valor) || valor <= 0) {
+        showToast('Informe um valor válido (use ponto ou vírgula como decimal).', 'error');
+        return;
+      }
+      
+      boletoForm.querySelector('[name="valor"]').value = valor.toFixed(2);
+      
+      if (!currentUser?.id) {
+        showToast('Sessão expirada. Faça login novamente.', 'error');
+        return;
+      }
+      
       try {
         // Desabilita o botão para evitar cliques duplos
         const submitBtn = boletoForm.querySelector('button[type="submit"]');
@@ -9469,10 +9505,13 @@ function setupBoletosModule() {
         
         console.log('✅ Processo concluído!');
       } catch (error) {
-        console.error('❌ ERRO GERAL:', error);
-        showToast('❌ Erro: ' + error.message, 'error');
+        console.error('❌ ERRO ao salvar boleto:', error);
+        const msg = error.message || 'Erro ao salvar. Verifique a conexão e tente novamente.';
+        const dica = msg.includes('fetch') || msg.includes('Failed') || msg.includes('Network')
+          ? ' (Verifique se a API está online e CORS está configurado)'
+          : '';
+        showToast('❌ ' + msg + dica, 'error');
         
-        // Reabilita o botão em caso de erro
         const submitBtn = boletoForm.querySelector('button[type="submit"]');
         if (submitBtn) {
           submitBtn.disabled = false;
