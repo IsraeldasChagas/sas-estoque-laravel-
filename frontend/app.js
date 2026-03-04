@@ -9500,12 +9500,32 @@ function setupBoletosModule() {
   });
 }
 
+// Formata data para input type="date" (YYYY-MM-DD)
+function formatDateForInput(dateStr) {
+  if (!dateStr) return '';
+  const s = String(dateStr).trim();
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return match[1] + '-' + match[2] + '-' + match[3];
+  try {
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return '';
+  }
+}
+
 // Função para editar boleto
 async function editarBoleto(id) {
   console.log('✏️ Editando boleto:', id);
   
   try {
     showToast('Carregando dados do boleto...', 'info');
+    
+    await populateBoletosUnidades();
     
     const response = await fetch(`${API_URL}/boletos/${id}`, {
       headers: {
@@ -9522,10 +9542,10 @@ async function editarBoleto(id) {
     // Preenche o formulário
     const form = document.getElementById('boletoForm');
     form.querySelector('[name="id"]').value = boleto.id;
-    form.querySelector('[name="fornecedor"]').value = boleto.fornecedor;
+    form.querySelector('[name="fornecedor"]').value = boleto.fornecedor || '';
     form.querySelector('[name="unidade_id"]').value = boleto.unidade_id || '';
-    form.querySelector('[name="descricao"]').value = boleto.descricao;
-    form.querySelector('[name="data_vencimento"]').value = boleto.data_vencimento;
+    form.querySelector('[name="descricao"]').value = boleto.descricao || '';
+    form.querySelector('[name="data_vencimento"]').value = formatDateForInput(boleto.data_vencimento);
     form.querySelector('[name="valor"]').value = boleto.valor;
     form.querySelector('[name="categoria"]').value = boleto.categoria || '';
     form.querySelector('[name="status"]').value = boleto.status;
@@ -9533,11 +9553,21 @@ async function editarBoleto(id) {
     
     // Se tiver dados de pagamento
     if (boleto.data_pagamento) {
-      form.querySelector('[name="data_pagamento"]').value = boleto.data_pagamento;
+      form.querySelector('[name="data_pagamento"]').value = formatDateForInput(boleto.data_pagamento);
       form.querySelector('[name="valor_pago"]').value = boleto.valor_pago || '';
       form.querySelector('[name="juros_multa"]').value = boleto.juros_multa || '';
       document.getElementById('pagamentoFields').style.display = 'block';
+    } else {
+      form.querySelector('[name="data_pagamento"]').value = '';
+      form.querySelector('[name="valor_pago"]').value = '';
+      form.querySelector('[name="juros_multa"]').value = '';
+      document.getElementById('pagamentoFields').style.display = 'none';
     }
+    
+    const recorrenteFields = document.getElementById('recorrenteFields');
+    const boletoRecorrente = document.getElementById('boletoRecorrente');
+    if (recorrenteFields) recorrenteFields.style.display = 'none';
+    if (boletoRecorrente) boletoRecorrente.checked = false;
     
     // Atualiza título e abre modal
     document.getElementById('boletoModalTitle').textContent = '✏️ Editar Boleto';

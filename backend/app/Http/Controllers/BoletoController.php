@@ -189,6 +189,15 @@ class BoletoController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Normaliza campos vazios antes da validação (mesmo que store)
+        $input = $request->all();
+        if (isset($input['unidade_id']) && $input['unidade_id'] === '') {
+            $request->merge(['unidade_id' => null]);
+        }
+        if (isset($input['data_pagamento']) && $input['data_pagamento'] === '') {
+            $request->merge(['data_pagamento' => null]);
+        }
+
         $validator = Validator::make($request->all(), [
             'fornecedor' => 'sometimes|required|string|max:255',
             'descricao' => 'sometimes|required|string|max:255',
@@ -214,6 +223,9 @@ class BoletoController extends Controller
         try {
             $boleto = Boleto::findOrFail($id);
             $data = $request->all();
+
+            // Remove anexo (arquivo) - será processado separadamente se houver
+            unset($data['anexo']);
 
             // Processa upload do anexo se houver
             if ($request->hasFile('anexo')) {
