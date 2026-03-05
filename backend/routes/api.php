@@ -239,6 +239,28 @@ Route::get('/produtos/{id}', function ($id) {
     return response()->json($produto);
 });
 
+Route::get('/estoque/resumo', function (Request $request) {
+    try {
+        $query = DB::table('stock_lotes')
+            ->where('stock_lotes.quantidade', '>', 0)
+            ->select(
+                DB::raw('SUM(stock_lotes.quantidade * stock_lotes.custo_unitario) as valor_total'),
+                DB::raw('SUM(stock_lotes.quantidade) as qtd_total')
+            );
+        if ($request->has('unidade_id') && $request->unidade_id) {
+            $query->where('stock_lotes.unidade_id', $request->unidade_id);
+        }
+        $resumo = $query->first();
+        return response()->json([
+            'valor_total' => floatval($resumo->valor_total ?? 0),
+            'qtd_total' => floatval($resumo->qtd_total ?? 0),
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar resumo estoque: ' . $e->getMessage());
+        return response()->json(['valor_total' => 0, 'qtd_total' => 0]);
+    }
+});
+
 Route::get('/produtos/{id}/estoque', function ($id) {
     try {
         $produto = DB::table('produtos')->where('id', $id)->first();

@@ -2371,8 +2371,10 @@ function applyPermissions() {
   // Ocultar cards de valores
   const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
   const estoqueCardTotal = document.getElementById("estoqueCardTotal");
+  const estoqueResumoCard = document.querySelector(".estoque-resumo-card");
   if (estoqueCardUnitario) estoqueCardUnitario.classList.toggle("hidden", isCozinhaOuBar);
   if (estoqueCardTotal) estoqueCardTotal.classList.toggle("hidden", isCozinhaOuBar);
+  if (estoqueResumoCard) estoqueResumoCard.classList.toggle("hidden", isCozinhaOuBar);
   
   // Ocultar colunas da tabela
   const estoqueColValorUnitario = document.querySelectorAll(".estoque-col-valor-unitario");
@@ -5757,6 +5759,27 @@ async function loadProdutos() {
   }
 }
 
+async function loadEstoqueResumo() {
+  const valorEl = document.getElementById("estoqueResumoValor");
+  const unidadeSelect = document.getElementById("estoqueResumoUnidade");
+  if (!valorEl || !unidadeSelect) return;
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  try {
+    const unidadeId = unidadeSelect.value || "";
+    const params = unidadeId ? `?unidade_id=${encodeURIComponent(unidadeId)}` : "";
+    const resumo = await fetchJSON(`/estoque/resumo${params}`);
+    const valorTotal = Number(resumo.valor_total || 0);
+    if (isCozinhaOuBar) {
+      valorEl.textContent = "---";
+    } else {
+      valorEl.textContent = formatCurrencyBRL(valorTotal);
+    }
+  } catch (err) {
+    valorEl.textContent = "R$ 0,00";
+  }
+}
+
 async function loadEstoqueProdutos() {
   try {
     if (!state.produtos || state.produtos.length === 0) {
@@ -5769,6 +5792,16 @@ async function loadEstoqueProdutos() {
       populateSelect(dom.estoqueProdutoSelect, options, "Selecione um produto");
     }
     bindBuscaSelect("estoqueProdutoBusca", "estoqueProdutoSelect");
+
+    // Popula select de unidades no resumo e carrega valor total
+    const unidades = state.unidades && state.unidades.length > 0 ? state.unidades : await fetchJSON("/unidades?todas=1");
+    state.unidades = unidades;
+    const selectResumoUnidade = document.getElementById("estoqueResumoUnidade");
+    if (selectResumoUnidade) {
+      const optHtml = (unidades || []).map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`).join("");
+      selectResumoUnidade.innerHTML = '<option value="">Todas as unidades</option>' + optHtml;
+    }
+    await loadEstoqueResumo();
   } catch (err) {
     console.error("Erro ao carregar produtos para estoque:", err);
     showToast("Falha ao carregar lista de produtos.", "error");
@@ -10279,6 +10312,12 @@ function setupForms() {
     });
   }
 
+  // Select de unidade no resumo de estoque
+  const estoqueResumoUnidadeEl = document.getElementById("estoqueResumoUnidade");
+  if (estoqueResumoUnidadeEl) {
+    estoqueResumoUnidadeEl.addEventListener("change", () => loadEstoqueResumo());
+  }
+
   // Fechar modal de detalhes de lotes
   document.getElementById('closeEstoqueLotesModal')?.addEventListener('click', () => {
     toggleModal(document.getElementById('estoqueLotesModal'), false);
@@ -10660,8 +10699,10 @@ async function init() {
         // Ocultar cards de valores
         const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
         const estoqueCardTotal = document.getElementById("estoqueCardTotal");
+        const estoqueResumoCard = document.querySelector(".estoque-resumo-card");
         if (estoqueCardUnitario) estoqueCardUnitario.classList.toggle("hidden", isCozinhaOuBar);
         if (estoqueCardTotal) estoqueCardTotal.classList.toggle("hidden", isCozinhaOuBar);
+        if (estoqueResumoCard) estoqueResumoCard.classList.toggle("hidden", isCozinhaOuBar);
         
         // Ocultar colunas da tabela
         const estoqueColValorUnitario = document.querySelectorAll(".estoque-col-valor-unitario");

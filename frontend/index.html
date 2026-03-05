@@ -786,6 +786,18 @@
             <div class="actions">
               <h2>Consulta de Estoque</h2>
             </div>
+            <div class="estoque-resumo-card" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; padding: 1rem; background: #f5f9ff; border-radius: 8px; border: 1px solid #e3f2fd;">
+              <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Total do estoque em valor</label>
+                <div id="estoqueResumoValor" style="font-size: 1.75rem; font-weight: 700; color: #1976d2;">R$ 0,00</div>
+              </div>
+              <div style="min-width: 200px;">
+                <label style="display: block; font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Filtrar por unidade</label>
+                <select id="estoqueResumoUnidade" style="width: 100%; padding: 0.6rem 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 6px;">
+                  <option value="">Todas as unidades</option>
+                </select>
+              </div>
+            </div>
             <div class="table-card">
               <header>Selecione um produto para consultar o estoque</header>
               <div style="margin-bottom: 1.5rem;">
