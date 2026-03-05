@@ -454,6 +454,12 @@ body.sidebar-open {
   overflow-x: auto;
 }
 
+/* Dashboard: Movimentações recentes - mostra 5 linhas, demais com scroll */
+#dashboardSection .table-wrapper.dashboard-mov-recentes {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .table-wrapper /* Tabelas padrao */
 table {
   min-width: 640px;

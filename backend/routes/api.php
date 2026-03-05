@@ -2545,6 +2545,170 @@ Route::get('/movimentacoes', function (Request $request) {
     }
 });
 
+/**
+ * Excluir movimentação (apenas ADMIN) - reverte o impacto no estoque
+ * Permite corrigir erros de digitação em entrada/saída do dashboard
+ */
+Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    $usuario = DB::table('usuarios')->where('id', $usuarioId)->first();
+    if (!$usuario) {
+        return response()->json(['error' => 'Usuário não encontrado'], 401);
+    }
+    $perfil = strtoupper(trim($usuario->perfil ?? ''));
+    if ($perfil !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem excluir movimentações'], 403);
+    }
+
+    $mov = DB::table('movimentacoes')->where('id', $id)->first();
+    if (!$mov) {
+        return response()->json(['error' => 'Movimentação não encontrada'], 404);
+    }
+
+    $tipo = strtoupper(trim($mov->tipo ?? ''));
+    $qtd = (float) ($mov->qtd ?? 0);
+    $produtoId = (int) $mov->produto_id;
+    $deUnidadeId = (int) ($mov->de_unidade_id ?? 0);
+    $paraUnidadeId = (int) ($mov->para_unidade_id ?? 0);
+
+    if ($qtd <= 0) {
+        return response()->json(['error' => 'Quantidade inválida'], 400);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        if ($tipo === 'ENTRADA') {
+            $loteId = $mov->lote_id ?? null;
+            if (!$loteId) {
+                DB::rollBack();
+                return response()->json(['error' => 'Movimentação de entrada sem lote associado'], 400);
+            }
+            $lote = DB::table('lotes')->where('id', $loteId)->first();
+            if (!$lote) {
+                DB::rollBack();
+                return response()->json(['error' => 'Lote não encontrado'], 400);
+            }
+            $codigoLote = $lote->numero_lote ?? '';
+            if (!$codigoLote) {
+                DB::rollBack();
+                return response()->json(['error' => 'Lote sem código'], 400);
+            }
+            $unidadeId = (int) ($lote->unidade_id ?? $deUnidadeId);
+            $stock = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $unidadeId)
+                ->where('codigo_lote', $codigoLote)
+                ->first();
+            if (!$stock) {
+                DB::rollBack();
+                return response()->json(['error' => 'Estoque do lote não encontrado'], 400);
+            }
+            $novaQtd = (float) $stock->quantidade - $qtd;
+            if ($novaQtd <= 0) {
+                DB::table('stock_lotes')->where('id', $stock->id)->delete();
+            } else {
+                DB::table('stock_lotes')->where('id', $stock->id)->update(['quantidade' => $novaQtd]);
+            }
+            $totalLote = DB::table('stock_lotes')
+                ->where('codigo_lote', $codigoLote)
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $unidadeId)
+                ->sum('quantidade');
+            DB::table('lotes')->where('id', $loteId)->update(['qtd_atual' => $totalLote]);
+        } elseif ($tipo === 'SAIDA') {
+            $loteId = $mov->lote_id ?? null;
+            $custoUnitario = (float) ($mov->custo_unitario ?? 0);
+            $unidadeId = $deUnidadeId;
+            $codigoLote = null;
+            if ($loteId) {
+                $lote = DB::table('lotes')->where('id', $loteId)->first();
+                if ($lote) {
+                    $codigoLote = $lote->numero_lote ?? null;
+                }
+            }
+            if (!$codigoLote) {
+                $codigoLote = 'REV-' . $produtoId . '-' . $unidadeId . '-' . now()->format('YmdHis');
+                $localPadrao = DB::table('locais')->where('unidade_id', $unidadeId)->first();
+                $localId = $localPadrao ? $localPadrao->id : null;
+                $loteId = DB::table('lotes')->insertGetId([
+                    'produto_id' => $produtoId,
+                    'unidade_id' => $unidadeId,
+                    'numero_lote' => $codigoLote,
+                    'local_id' => $localId,
+                    'qtd_atual' => $qtd,
+                    'custo_unitario' => $custoUnitario,
+                    'data_fabricacao' => null,
+                    'data_validade' => null,
+                    'ativo' => 1,
+                    'criado_em' => now(),
+                ]);
+                DB::table('stock_lotes')->insert([
+                    'produto_id' => $produtoId,
+                    'unidade_id' => $unidadeId,
+                    'codigo_lote' => $codigoLote,
+                    'quantidade' => $qtd,
+                    'custo_unitario' => $custoUnitario,
+                    'data_fabricacao' => null,
+                    'data_validade' => null,
+                ]);
+            } else {
+                $stock = DB::table('stock_lotes')
+                    ->where('produto_id', $produtoId)
+                    ->where('unidade_id', $unidadeId)
+                    ->where('codigo_lote', $codigoLote)
+                    ->first();
+                if ($stock) {
+                    $novaQtd = (float) $stock->quantidade + $qtd;
+                    DB::table('stock_lotes')->where('id', $stock->id)->update(['quantidade' => $novaQtd]);
+                } else {
+                    DB::table('stock_lotes')->insert([
+                        'produto_id' => $produtoId,
+                        'unidade_id' => $unidadeId,
+                        'codigo_lote' => $codigoLote,
+                        'quantidade' => $qtd,
+                        'custo_unitario' => $custoUnitario,
+                        'data_fabricacao' => null,
+                        'data_validade' => null,
+                    ]);
+                }
+                $totalLote = DB::table('stock_lotes')
+                    ->where('codigo_lote', $codigoLote)
+                    ->where('produto_id', $produtoId)
+                    ->where('unidade_id', $unidadeId)
+                    ->sum('quantidade');
+                if ($loteId) {
+                    DB::table('lotes')->where('id', $loteId)->update(['qtd_atual' => $totalLote]);
+                }
+            }
+        } elseif ($tipo === 'TRANSFERENCIA') {
+            DB::rollBack();
+            return response()->json(['error' => 'Não é possível excluir transferências. Exclua as movimentações de origem e destino separadamente se necessário.'], 400);
+        } else {
+            DB::rollBack();
+            return response()->json(['error' => 'Tipo de movimentação não suportado para exclusão'], 400);
+        }
+
+        DB::table('movimentacoes')->where('id', $id)->delete();
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Movimentação excluída e estoque revertido com sucesso',
+            'movimentacao_id' => (int) $id,
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erro ao excluir movimentação: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao excluir movimentação',
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+});
+
 // ============================================
 // ENTRADA DE ESTOQUE (centralizada via Service)
 // ============================================

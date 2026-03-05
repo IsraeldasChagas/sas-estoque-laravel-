@@ -2304,6 +2304,14 @@ function applyPermissions() {
   const mostrarAcoesUsuarios = perfil === "ADMIN";
   if (usuariosAcoesHeader) usuariosAcoesHeader.style.display = mostrarAcoesUsuarios ? "" : "none";
 
+  // Oculta coluna Acoes das tabelas de Movimentações para quem não é ADMIN (excluir entrada/saída)
+  const movTableAcoesHeader = document.getElementById("movTableAcoesHeader");
+  const movimentacoesAcoesHeader = document.getElementById("movimentacoesAcoesHeader");
+  const relatorioDetalhesAcoesHeader = document.getElementById("relatorioDetalhesAcoesHeader");
+  if (movTableAcoesHeader) movTableAcoesHeader.style.display = mostrarAcoes ? "" : "none";
+  if (movimentacoesAcoesHeader) movimentacoesAcoesHeader.style.display = mostrarAcoes ? "" : "none";
+  if (relatorioDetalhesAcoesHeader) relatorioDetalhesAcoesHeader.style.display = mostrarAcoes ? "" : "none";
+
   // Botão "Novo lote" oculto – lotes são criados automaticamente em entradas de estoque
   if (dom.openNovoLoteBtn) dom.openNovoLoteBtn.classList.add("hidden");
   // COZINHA e BAR não podem registrar entrada - oculta o botão
@@ -2418,9 +2426,12 @@ function renderMovimentacoes(lista, target, emptyMessage) {
   
   if (!Array.isArray(lista) || lista.length === 0) {
     console.log("Lista vazia, renderizando mensagem vazia");
-    renderTable(target, "", emptyMessage, 7);
+    renderTable(target, "", emptyMessage, 8);
     return;
   }
+
+  const user = getUser();
+  const isAdmin = user && (user.perfil || "").toString().toUpperCase() === "ADMIN";
   
   const dadosOrdenados = sortMovimentacoes(lista);
   console.log("Dados ordenados para renderização:", dadosOrdenados.length);
@@ -2460,6 +2471,9 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       unidadeDisplay = destinoNome;
     }
     
+    const acoesCell = isAdmin && (tipo === "ENTRADA" || tipo === "SAIDA")
+      ? `<td data-label="Acoes"><button type="button" class="btn-icon btn-icon--danger btn-excluir-movimentacao" title="Excluir (reverte estoque)" data-id="${item.id}">🗑️</button></td>`
+      : `<td data-label="Acoes"></td>`;
     return `<tr data-id="${item.id ?? ""}">
       <td data-label="Data">${formatDate(item.data_mov)}</td>
       <td data-label="Tipo">${buildStatusPill(tipo || "--")}</td>
@@ -2468,11 +2482,12 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       <td data-label="Qtd">${quantidade}</td>
       <td data-label="Motivo">${motivo}</td>
       <td data-label="Responsavel">${escapeHtml(item.responsavel_nome || "--")}</td>
+      ${acoesCell}
     </tr>`;
   }).join("");
-  
+
   console.log("Renderizando", rows.split("</tr>").length - 1, "linhas na tabela");
-  renderTable(target, rows, emptyMessage, 7);
+  renderTable(target, rows, emptyMessage, 8);
   console.log("Tabela renderizada com sucesso");
 }
 
@@ -8075,6 +8090,31 @@ function setupFilters() {
     loadMovimentacoesDetalhadas({}, { refreshDashboard: true }).catch((err) => {
       showToast(err?.message || "Erro ao carregar movimentações.", "error");
     });
+  });
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".btn-excluir-movimentacao");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = btn.dataset.id;
+    if (!id) return;
+    const user = getUser();
+    if (!user || (user.perfil || "").toString().toUpperCase() !== "ADMIN") {
+      showToast("Apenas administradores podem excluir movimentações.", "warning");
+      return;
+    }
+    if (!confirm("Excluir esta movimentação? O estoque será revertido automaticamente.")) return;
+    btn.disabled = true;
+    try {
+      await fetchJSON(`/movimentacoes/${id}`, { method: "DELETE" });
+      showToast("Movimentação excluída e estoque revertido.", "success");
+      const filtros = typeof collectMovimentacoesFiltros === "function" ? collectMovimentacoesFiltros() : {};
+      await loadMovimentacoesDetalhadas(filtros, { refreshDashboard: true });
+    } catch (err) {
+      showToast(err?.message || "Erro ao excluir movimentação.", "error");
+      btn.disabled = false;
+    }
   });
 
   dom.relatorioFilterForm?.addEventListener("submit", async (event) => {
