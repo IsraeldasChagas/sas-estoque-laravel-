@@ -2512,7 +2512,7 @@ Route::get('/movimentacoes', function (Request $request) {
         }
         
         $limit = $request->has('limit') ? (int)$request->limit : 50;
-        $movimentacoes = $query->orderBy('movimentacoes.data_mov', 'desc')->limit($limit)->get();
+        $movimentacoes = $query->orderBy('movimentacoes.id', 'desc')->orderBy('movimentacoes.data_mov', 'desc')->limit($limit)->get();
         
         // Garante que os campos esperados pelo frontend estejam presentes
         $movimentacoes = $movimentacoes->map(function($mov) {

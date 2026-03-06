@@ -1090,23 +1090,21 @@ function collectRelatorioFiltros() {
 
 function sortMovimentacoes(lista) {
   const itens = Array.isArray(lista) ? [...lista] : [];
-  const parseData = (mov) => {
-    const campos = [mov.data_mov, mov.data, mov.created_at, mov.criado_em];
-    for (const valor of campos) {
-      if (!valor) continue;
-      const time = new Date(valor).getTime();
-      if (!Number.isNaN(time)) return time;
-    }
-    return 0;
-  };
-  // Ordena mais recente no topo (desc por data, depois por id)
+  // Ordena mais recente no topo: id maior = registrado por último
   return itens.sort((a, b) => {
-    const dataA = parseData(a);
-    const dataB = parseData(b);
-    if (dataA !== dataB) return dataB - dataA;
     const idA = Number(a.id) || 0;
     const idB = Number(b.id) || 0;
-    return idB - idA;
+    if (idB !== idA) return idB - idA;
+    const parseData = (mov) => {
+      const campos = [mov.data_mov, mov.data, mov.created_at, mov.criado_em];
+      for (const valor of campos) {
+        if (!valor) continue;
+        const time = new Date(valor).getTime();
+        if (!Number.isNaN(time)) return time;
+      }
+      return 0;
+    };
+    return parseData(b) - parseData(a);
   });
 }
 
