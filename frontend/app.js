@@ -10754,36 +10754,46 @@ init();
 
 
 
+// Converte string em valor numérico aceitando formato BR (1.000,50) e US (1,000.50)
+function parseCurrencyFromString(str) {
+  const s = (str || "").toString().replace(/[^\d,.-]/g, "").trim();
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  let normalized;
+  if (lastComma > lastDot) {
+    normalized = s.replace(/\./g, "").replace(",", ".");
+  } else if (lastDot > lastComma) {
+    normalized = s.replace(/,/g, "");
+  } else {
+    normalized = s.replace(",", ".");
+  }
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : 0;
+}
+
 function attachCurrencyMask(input) {
   if (!input) return;
-  const normalize = (valor) => Number((valor || "").toString().replace(/[^\d,.-]/g, "").replace(",", "."));
   input.addEventListener("input", (event) => {
     const raw = event.target.value;
-    const numero = normalize(raw);
-    if (Number.isFinite(numero)) {
-      event.target.dataset.value = String(numero);
-    }
+    const numero = parseCurrencyFromString(raw);
+    event.target.dataset.value = String(numero);
   });
   input.addEventListener("focus", (event) => {
-    const valor = Number(event.target.dataset.value || event.target.value.replace(/[^\d,.-]/g, "").replace(",", "."));
-    if (Number.isFinite(valor) && valor !== 0) {
-      event.target.value = valor.toFixed(2);
+    const valor = parseCurrencyFromString(event.target.dataset.value || event.target.value);
+    if (valor !== 0) {
+      event.target.value = valor.toFixed(2).replace(".", ",");
     } else {
       event.target.value = "";
     }
   });
   input.addEventListener("blur", (event) => {
-    const numero = Number(event.target.value.replace(/[^\d,.-]/g, "").replace(",", "."));
-    if (Number.isFinite(numero)) {
-      event.target.dataset.value = String(numero);
-      event.target.value = formatCurrencyBRL(numero);
-    } else {
-      event.target.dataset.value = "0";
-      event.target.value = "R$ 0,00";
-    }
+    const numero = parseCurrencyFromString(event.target.value);
+    event.target.dataset.value = String(numero);
+    event.target.value = numero > 0 ? formatCurrencyBRL(numero) : "";
   });
-  const initial = Number(input.value || input.dataset.value);
-  if (Number.isFinite(initial) && initial !== 0) {
+  const initial = parseCurrencyFromString(input.value || input.dataset.value);
+  if (initial > 0) {
     input.dataset.value = String(initial);
     input.value = formatCurrencyBRL(initial);
   } else {
@@ -10795,13 +10805,11 @@ function attachCurrencyMask(input) {
 function parseCurrencyInput(input) {
   if (!input) return 0;
   const datasetValue = input.dataset.value;
-  if (datasetValue !== undefined) {
+  if (datasetValue !== undefined && datasetValue !== "") {
     const numero = Number(datasetValue);
-    return Number.isFinite(numero) ? numero : 0;
+    if (Number.isFinite(numero)) return numero;
   }
-  const raw = (input.value || "").toString().replace(/[^\d,.-]/g, "").replace(",", ".");
-  const numero = Number(raw);
-  return Number.isFinite(numero) ? numero : 0;
+  return parseCurrencyFromString(input.value);
 }
 
 // Expor funções de etiqueta no escopo global para uso em onclick (caso necessário)
