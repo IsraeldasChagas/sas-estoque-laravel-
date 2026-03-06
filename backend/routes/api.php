@@ -2557,6 +2557,15 @@ Route::get('/movimentacoes', function (Request $request) {
                     $mov->responsavel_nome = $usuario->nome;
                 }
             }
+            // data_mov em ISO 8601 com timezone para o frontend converter para horário local
+            if (!empty($mov->data_mov)) {
+                try {
+                    $mov->data_mov = \Carbon\Carbon::parse($mov->data_mov, config('app.timezone', 'America/Sao_Paulo'))
+                        ->format('Y-m-d\TH:i:sP');
+                } catch (\Exception $e) {
+                    // mantém o valor original em caso de erro
+                }
+            }
             return $mov;
         });
         
@@ -2707,12 +2716,131 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
                 }
             }
         } elseif ($tipo === 'TRANSFERENCIA') {
-            DB::rollBack();
-            return response()->json(['error' => 'Não é possível excluir transferências. Exclua as movimentações de origem e destino separadamente se necessário.'], 400);
+            if (!$paraUnidadeId || !$deUnidadeId) {
+                DB::rollBack();
+                return response()->json(['error' => 'Transferência sem unidade origem ou destino'], 400);
+            }
+            $codigoLote = null;
+            $loteOrigem = null;
+            if ($mov->lote_id) {
+                $loteOrigem = DB::table('lotes')->where('id', $mov->lote_id)->first();
+                if ($loteOrigem) {
+                    $codigoLote = $loteOrigem->numero_lote ?? null;
+                }
+            }
+            if (!$codigoLote) {
+                DB::rollBack();
+                return response()->json(['error' => 'Transferência sem lote associado para reverter'], 400);
+            }
+            $custoUnitario = (float) ($mov->custo_unitario ?? 0);
+
+            // Reverter destino: remover qtd do stock na unidade destino
+            $stockDestino = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $paraUnidadeId)
+                ->where('codigo_lote', $codigoLote)
+                ->first();
+            if (!$stockDestino) {
+                DB::rollBack();
+                return response()->json(['error' => 'Estoque do destino da transferência não encontrado'], 400);
+            }
+            $novaQtdDestino = (float) $stockDestino->quantidade - $qtd;
+            if ($novaQtdDestino <= 0) {
+                DB::table('stock_lotes')->where('id', $stockDestino->id)->delete();
+            } else {
+                DB::table('stock_lotes')->where('id', $stockDestino->id)->update(['quantidade' => $novaQtdDestino]);
+            }
+            $totalLoteDestino = DB::table('stock_lotes')
+                ->where('codigo_lote', $codigoLote)
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $paraUnidadeId)
+                ->sum('quantidade');
+            $loteDestino = DB::table('lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $paraUnidadeId)
+                ->where('numero_lote', $codigoLote)
+                ->first();
+            if ($loteDestino) {
+                DB::table('lotes')->where('id', $loteDestino->id)->update(['qtd_atual' => $totalLoteDestino]);
+            }
+
+            // Reverter origem: devolver qtd ao stock na unidade origem
+            $stockOrigem = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $deUnidadeId)
+                ->where('codigo_lote', $codigoLote)
+                ->first();
+            if ($stockOrigem) {
+                $novaQtdOrigem = (float) $stockOrigem->quantidade + $qtd;
+                DB::table('stock_lotes')->where('id', $stockOrigem->id)->update(['quantidade' => $novaQtdOrigem]);
+            } else {
+                $localPadrao = DB::table('locais')->where('unidade_id', $deUnidadeId)->first();
+                $localId = $localPadrao ? $localPadrao->id : null;
+                DB::table('stock_lotes')->insert([
+                    'produto_id' => $produtoId,
+                    'unidade_id' => $deUnidadeId,
+                    'codigo_lote' => $codigoLote,
+                    'quantidade' => $qtd,
+                    'custo_unitario' => $custoUnitario,
+                    'data_fabricacao' => null,
+                    'data_validade' => $loteOrigem ? $loteOrigem->data_validade : null,
+                ]);
+            }
+            $totalLoteOrigem = DB::table('stock_lotes')
+                ->where('codigo_lote', $codigoLote)
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $deUnidadeId)
+                ->sum('quantidade');
+            $loteOrigemRow = DB::table('lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $deUnidadeId)
+                ->where('numero_lote', $codigoLote)
+                ->first();
+            if ($loteOrigemRow) {
+                DB::table('lotes')->where('id', $loteOrigemRow->id)->update(['qtd_atual' => $totalLoteOrigem]);
+            } elseif ($mov->lote_id) {
+                DB::table('lotes')->where('id', $mov->lote_id)->update(['qtd_atual' => $totalLoteOrigem]);
+            }
         } else {
             DB::rollBack();
             return response()->json(['error' => 'Tipo de movimentação não suportado para exclusão'], 400);
         }
+
+        // Registra a reversão no histórico de movimentações (antes de deletar a original)
+        $produto = DB::table('produtos')->where('id', $produtoId)->first();
+        $unidadeBase = $produto ? strtoupper(trim($produto->unidade_base ?? 'UND')) : 'UND';
+        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        if (!in_array($unidadeBase, $unidadesValidas)) {
+            $unidadeBase = 'UND';
+        }
+        $revDe = $deUnidadeId;
+        $revPara = null;
+        $descTipo = $tipo;
+        if ($tipo === 'TRANSFERENCIA') {
+            $revDe = $paraUnidadeId;
+            $revPara = $deUnidadeId;
+            $descTipo = 'transferência';
+        } elseif ($tipo === 'ENTRADA') {
+            $loteRev = $mov->lote_id ? DB::table('lotes')->where('id', $mov->lote_id)->first() : null;
+            $revDe = $loteRev ? (int) ($loteRev->unidade_id ?? $deUnidadeId) : $deUnidadeId;
+            $descTipo = 'entrada';
+        } else {
+            $descTipo = 'saída';
+        }
+        DB::table('movimentacoes')->insert([
+            'produto_id' => $produtoId,
+            'lote_id' => $mov->lote_id,
+            'usuario_id' => $usuarioId,
+            'tipo' => 'REVERSAO',
+            'qtd' => $qtd,
+            'unidade' => $unidadeBase,
+            'custo_unitario' => (float) ($mov->custo_unitario ?? 0),
+            'data_mov' => now(),
+            'motivo' => 'REVERSAO',
+            'observacao' => "Reversão da {$descTipo} #{$id}",
+            'de_unidade_id' => $revDe ?: null,
+            'para_unidade_id' => $revPara,
+        ]);
 
         DB::table('movimentacoes')->where('id', $id)->delete();
         DB::commit();
@@ -3289,6 +3417,7 @@ Route::get('/perdas-recentes', function () {
         ->where('tipo', 'SAIDA')
         ->where('motivo', 'PERDA')
         ->where('data_mov', '>=', now()->subDays(30)->format('Y-m-d H:i:s'))
+        ->orderBy('data_mov', 'desc')
         ->get();
     
     $quantidadeTotal = $movimentacoes->sum('qtd');

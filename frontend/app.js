@@ -595,6 +595,7 @@ function buildStatusPill(status) {
   else if (["a vencer", "avencer", "pendente", "ajuste"].includes(normalized)) modifier = "warning";
   else if (["esgotado", "inativo"].includes(normalized)) modifier = "muted";
   else if (["transferencia"].includes(normalized)) modifier = "info";
+  else if (["reversao"].includes(normalized)) modifier = "warning";
   return `<span class="status-pill status-pill--${modifier}">${label}</span>`;
 }
 
@@ -1093,11 +1094,12 @@ function sortMovimentacoes(lista) {
     const campos = [mov.data_mov, mov.data, mov.created_at, mov.criado_em];
     for (const valor of campos) {
       if (!valor) continue;
-      const time = Date.parse(valor);
+      const time = new Date(valor).getTime();
       if (!Number.isNaN(time)) return time;
     }
     return 0;
   };
+  // Ordena mais recente no topo (desc por data, depois por id)
   return itens.sort((a, b) => {
     const dataA = parseData(a);
     const dataB = parseData(b);
@@ -2485,15 +2487,28 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       if (destinoNome !== "N/A") {
         unidadeDisplay = `${origemNome} → ${destinoNome}`;
       }
-    } 
+    }
+    // Se for reversão com destino, mostra origem → destino (ex: reversão de transferência)
+    else if (tipo === "REVERSAO" && item.para_unidade_id) {
+      const origemNome = item.unidade_origem_nome || item.unidade_nome || "N/A";
+      const destinoNome = item.unidade_destino_nome || "N/A";
+      if (destinoNome !== "N/A") {
+        unidadeDisplay = `↩ ${origemNome} → ${destinoNome}`;
+      }
+    }
     // Se for entrada de transferência, mostra unidade que recebeu
     else if (tipo === "ENTRADA" && item.motivo === "TRANSFERENCIA" && item.para_unidade_id) {
       const destinoNome = item.unidade_destino_nome || item.unidade_nome || "N/A";
       unidadeDisplay = destinoNome;
     }
     
-    const acoesCell = isAdmin && (tipo === "ENTRADA" || tipo === "SAIDA")
-      ? `<td data-label="Acoes"><button type="button" class="btn-icon btn-icon--danger btn-excluir-movimentacao" title="Excluir (reverte estoque)" data-id="${item.id}">🗑️</button></td>`
+    const isTransferencia = tipo === "TRANSFERENCIA";
+    const isReversao = tipo === "REVERSAO";
+    const btnAcao = isTransferencia
+      ? { title: "Reverter transferência (retorna produto ao local de origem)", icon: "↩️" }
+      : { title: "Excluir (reverte estoque)", icon: "🗑️" };
+    const acoesCell = isAdmin && !isReversao
+      ? `<td data-label="Acoes"><button type="button" class="btn-icon btn-icon--danger btn-excluir-movimentacao" title="${btnAcao.title}" data-id="${item.id}" data-tipo="${tipo}">${btnAcao.icon}</button></td>`
       : `<td data-label="Acoes"></td>`;
     return `<tr data-id="${item.id ?? ""}">
       <td data-label="Data">${formatDate(item.data_mov)}</td>
