@@ -185,6 +185,12 @@ Route::get('/produtos', function (Request $request) {
             // Retorna todos os produtos
         }
         
+        // Filtro de pesquisa por nome
+        if ($request->has('search') && trim((string)$request->search) !== '') {
+            $termo = '%' . trim((string)$request->search) . '%';
+            $query->where('produtos.nome', 'like', $termo);
+        }
+        
         $produtos = $query->orderBy('produtos.nome')->get();
         
         // Garante que o campo 'ativo' existe e está no formato correto
@@ -390,6 +396,18 @@ Route::post('/produtos', function (Request $request) {
         
         \Log::info('✅ Dados validados:', $data);
         
+        // Verifica duplicata por nome (ignorando maiúsculas/minúsculas e espaços)
+        $nomeNorm = strtolower(trim($data['nome']));
+        $existe = DB::table('produtos')
+            ->whereRaw('LOWER(TRIM(nome)) = ?', [$nomeNorm])
+            ->exists();
+        if ($existe) {
+            return response()->json([
+                'error' => 'Já existe um produto com este nome.',
+                'message' => 'Já existe um produto com este nome.',
+            ], 422);
+        }
+        
         // Gera código_barras automaticamente se não fornecido
         if (empty(trim((string)($data['codigo_barras'] ?? '')))) {
             $data['codigo_barras'] = 'PROD-' . date('YmdHis') . '-' . rand(1000, 9999);
@@ -432,6 +450,19 @@ Route::post('/produtos', function (Request $request) {
 
 Route::put('/produtos/{id}', function (Request $request, $id) {
     $data = $request->all();
+    if (!empty($data['nome'])) {
+        $nomeNorm = strtolower(trim($data['nome']));
+        $existe = DB::table('produtos')
+            ->whereRaw('LOWER(TRIM(nome)) = ?', [$nomeNorm])
+            ->where('id', '!=', $id)
+            ->exists();
+        if ($existe) {
+            return response()->json([
+                'error' => 'Já existe um produto com este nome.',
+                'message' => 'Já existe um produto com este nome.',
+            ], 422);
+        }
+    }
     DB::table('produtos')->where('id', $id)->update($data);
     return response()->json(DB::table('produtos')->where('id', $id)->first());
 });

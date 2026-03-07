@@ -5883,10 +5883,15 @@ async function loadDashboard() {
   }
 }
 
-async function loadProdutos() {
-  console.log("loadProdutos: Carregando produtos da API...");
+async function loadProdutos(search) {
+  const searchEl = document.getElementById('produtoSearch');
+  const termo = search !== undefined ? String(search || '').trim() : (searchEl ? (searchEl.value || '').trim() : '');
+  console.log("loadProdutos: Carregando produtos da API...", termo ? `(search: ${termo})` : '');
   try {
-    const produtos = await fetchJSON("/produtos?todas=1");
+    const params = new URLSearchParams();
+    params.set('todas', '1');
+    if (termo) params.set('search', termo);
+    const produtos = await fetchJSON(`/produtos?${params}`);
     console.log("loadProdutos: Produtos recebidos da API:", produtos?.length || 0);
     
     if (!Array.isArray(produtos)) {
@@ -8317,6 +8322,15 @@ function setupFilters() {
 
 // Organiza abertura, fechamento e estados default das modais do sistema.
 function setupModals() {
+  const produtoSearchEl = document.getElementById("produtoSearch");
+  if (produtoSearchEl) {
+    let produtoSearchTimeout;
+    produtoSearchEl.addEventListener("input", () => {
+      clearTimeout(produtoSearchTimeout);
+      produtoSearchTimeout = setTimeout(() => loadProdutos(produtoSearchEl.value.trim()).catch(() => {}), 300);
+    });
+  }
+
   dom.openProdutoBtn?.addEventListener("click", async () => {
     dom.produtoModalTitle.textContent = "Cadastrar produto";
     dom.produtosForm?.reset();
