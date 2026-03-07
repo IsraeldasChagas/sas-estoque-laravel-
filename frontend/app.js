@@ -2516,7 +2516,9 @@ function navigateTo(section) {
   
   // Seções embutidas (sem rota no router): boletao, fornecedores, fornecedoresBackup
   const secoesEmbutidas = ['boletao', 'fornecedores', 'fornecedoresBackup'];
-  const useFallback = !router || !router.routes?.[section] || secoesEmbutidas.includes(section);
+  const hasRouter = typeof router !== 'undefined' && router && router.routes;
+  const hasRoute = hasRouter && router.routes[section];
+  const useFallback = !hasRoute || secoesEmbutidas.includes(section);
 
   if (useFallback) {
     dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
@@ -2525,9 +2527,7 @@ function navigateTo(section) {
     else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
     return;
   }
-  if (typeof router !== 'undefined' && router) {
-    router.navigate(section);
-  }
+  router.navigate(section);
 }
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.
