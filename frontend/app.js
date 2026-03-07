@@ -1055,6 +1055,100 @@ function updateSaidaDestinoVisibility() {
   }
 }
 
+/** Abre o modal de Registro de Saída pré-preenchido com dados do lote (QR code da etiqueta).
+ *  Unidade origem, produto e lote ficam bloqueados; usuário só informa motivo e quantidade. */
+async function abrirModalSaidaComLote(loteId) {
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
+  const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
+  if (!podeUsar) {
+    showToast("Você não tem permissão para registrar saídas.", "warning");
+    return;
+  }
+  if (!loteId) {
+    showToast("Lote não informado.", "error");
+    return;
+  }
+  try {
+    const lote = await fetchJSON(`/lotes/${loteId}`);
+    if (!lote || !lote.id) {
+      showToast("Lote não encontrado.", "error");
+      return;
+    }
+    await loadUnidades(false).catch(() => {});
+    dom.saidaForm = document.getElementById("saidaForm");
+    dom.saidaProdutoSelect = document.getElementById("saidaProdutoSelect");
+    dom.saidaOrigemSelect = document.getElementById("saidaOrigemUnidade");
+    dom.saidaMotivo = document.getElementById("saidaMotivo");
+    dom.saidaDestinoSelect = document.getElementById("saidaDestinoUnidade");
+    dom.saidaLoteWrapper = document.getElementById("saidaLoteWrapper");
+    dom.saidaLoteSelect = document.getElementById("saidaLoteSelect");
+    dom.saidaLoteManualWrapper = document.getElementById("saidaLoteManualWrapper");
+    dom.saidaLoteManualInput = document.getElementById("saidaLoteManualInput");
+    if (!dom.saidaForm || !dom.saidaOrigemSelect || !dom.saidaProdutoSelect) {
+      showToast("Erro ao abrir formulário de saída.", "error");
+      return;
+    }
+    dom.saidaForm.reset();
+    updateSaidaDestinoVisibility();
+    resetSaidaProdutoSelect();
+    dom.saidaOrigemSelect.value = String(lote.unidade_id || "");
+    dom.saidaOrigemSelect.disabled = true;
+    await handleSaidaOrigemChange();
+    dom.saidaProdutoSelect.value = String(lote.produto_id || "");
+    dom.saidaProdutoSelect.disabled = true;
+    const buscaInput = document.getElementById("saidaProdutoBusca");
+    if (buscaInput) {
+      buscaInput.value = lote.produto_nome || "";
+      buscaInput.disabled = true;
+    }
+    await handleSaidaProdutoChange();
+    const codigoLote = lote.numero_lote || lote.codigo_lote || `Lote #${lote.id}`;
+    if (dom.saidaLoteWrapper) dom.saidaLoteWrapper.classList.remove("hidden");
+    if (dom.saidaLoteSelect) {
+      const opt = Array.from(dom.saidaLoteSelect.options).find((o) => o.value === codigoLote);
+      if (opt) {
+        dom.saidaLoteSelect.value = codigoLote;
+      } else {
+        dom.saidaLoteSelect.innerHTML =
+          `<option value="${escapeHtml(codigoLote)}" selected>${escapeHtml(codigoLote)}</option>` +
+          dom.saidaLoteSelect.innerHTML;
+        dom.saidaLoteSelect.value = codigoLote;
+      }
+      dom.saidaLoteSelect.disabled = true;
+    }
+    dom.saidaForm.dataset.fromQr = "1";
+    const submitBtn = dom.saidaForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.onclick = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        submitSaida(e).catch((err) => {
+          console.error("Erro ao processar:", err);
+          showToast(err.message || "Erro ao registrar saída", "error");
+        });
+      };
+    }
+    toggleModal(dom.saidaModal, true);
+    showToast("Escaneio detectado. Informe motivo e quantidade.", "success");
+  } catch (err) {
+    console.error("Erro ao abrir saída pelo QR:", err);
+    showToast(err?.message || "Erro ao carregar dados do lote.", "error");
+  }
+}
+
+/** Remove o modo QR do formulário de saída (reabilita campos bloqueados). */
+function resetSaidaFromQR() {
+  if (!dom.saidaForm || dom.saidaForm.dataset.fromQr !== "1") return;
+  delete dom.saidaForm.dataset.fromQr;
+  dom.saidaOrigemSelect.disabled = false;
+  dom.saidaProdutoSelect.disabled = false;
+  const buscaInput = document.getElementById("saidaProdutoBusca");
+  if (buscaInput) buscaInput.disabled = false;
+  if (dom.saidaLoteSelect) dom.saidaLoteSelect.disabled = false;
+}
+
 function collectLotesFiltros() {
   return {
     pesquisa: dom.lotesFiltroPesquisa?.value || "",
@@ -1692,8 +1786,8 @@ async function imprimirEtiquetaLote(loteId) {
     const dataValidade = lote.data_validade ? formatDate(lote.data_validade).split(' ')[0] : null; // Remove hora, mantém apenas data
     const dataGeracao = (lote.criado_em || lote.created_at) ? formatDate(lote.criado_em || lote.created_at).split(' ')[0] : null;
     
-    // Gera URL do QR Code (aponta para a seção de lotes)
-    const qrUrl = window.location.origin + window.location.pathname + '#estoque?lote=' + loteId;
+    // Gera URL do QR Code: ao escanear, leva ao dashboard > Registro de Saída com lote pré-preenchido
+    const qrUrl = window.location.origin + window.location.pathname + '#dashboard?saida=1&lote=' + loteId;
     
     // Gera QR Code usando API externa (mais simples que gerar no backend)
     // Usando API pública do QR Code: https://api.qrserver.com
@@ -1890,8 +1984,8 @@ async function baixarEtiquetaLote(loteId) {
     const dataValidade = lote.data_validade ? formatDate(lote.data_validade).split(' ')[0] : null; // Remove hora, mantém apenas data
     const dataGeracao = (lote.criado_em || lote.created_at) ? formatDate(lote.criado_em || lote.created_at).split(' ')[0] : null;
     
-    // Gera URL do QR Code (aponta para a seção de lotes)
-    const qrUrl = window.location.origin + window.location.pathname + '#estoque?lote=' + loteId;
+    // Gera URL do QR Code: ao escanear, leva ao dashboard > Registro de Saída com lote pré-preenchido
+    const qrUrl = window.location.origin + window.location.pathname + '#dashboard?saida=1&lote=' + loteId;
     
     // Gera QR Code usando API externa (mais simples que gerar no backend)
     // Usando API pública do QR Code: https://api.qrserver.com
@@ -6317,10 +6411,12 @@ async function startAppSession(user) {
       }
     }
     
-    // Verifica se a URL tem hash #estoque?lote=ID (QR code da etiqueta)
-    const hashMatch = window.location.hash.match(/^#estoque\?lote=(\d+)$/);
-    if (hashMatch) {
-      sectionToNavigate = 'estoque';
+    // Verifica se a URL tem hash #dashboard?saida=1&lote=ID (QR code da etiqueta)
+    const hash = window.location.hash || '';
+    const m = hash.match(/[?&]lote=(\d+)/);
+    const hashSaidaMatch = m && (hash.includes('saida=1') || hash.includes('saida=true')) ? m : null;
+    if (hashSaidaMatch) {
+      sectionToNavigate = 'dashboard';
     }
 
     // Usa requestAnimationFrame para garantir que o DOM está pronto, mas sem delay visível
@@ -6346,26 +6442,16 @@ async function startAppSession(user) {
         }
       }
 
-      // Se veio do QR code da etiqueta, carrega o produto do lote na consulta de estoque
-      if (hashMatch) {
-        const loteIdQr = Number(hashMatch[1]);
+      // Se veio do QR code da etiqueta: abre modal Registrar Saída com lote pré-preenchido
+      if (hashSaidaMatch) {
+        const loteIdQr = Number(hashSaidaMatch[1]);
         try {
-          // Garante que os produtos estão carregados
-          await loadEstoqueProdutos();
-          // Busca o lote para obter o produto_id
-          const lote = await fetchJSON(`/lotes/${loteIdQr}`);
-          if (lote && lote.produto_id) {
-            const select = document.getElementById("estoqueProdutoSelect");
-            if (select) {
-              select.value = lote.produto_id;
-              select.dispatchEvent(new Event("change"));
-            }
-          }
+          await abrirModalSaidaComLote(loteIdQr);
         } catch (err) {
-          console.error('Erro ao carregar estoque pelo QR code:', err);
+          console.error('Erro ao abrir saída pelo QR code:', err);
+          showToast('Erro ao carregar dados do lote.', 'error');
         }
-        // Limpa o hash da URL sem recarregar a página
-        history.replaceState(null, '', window.location.pathname);
+        history.replaceState(null, '', window.location.pathname + '#dashboard');
       }
     });
   })();
@@ -7420,6 +7506,7 @@ async function submitSaida(event) {
     showToast("Feito com sucesso!", "success");
     
     const possuiFiltros = Object.values(movFiltrosAtuais || {}).some((valor) => Boolean(valor));
+    resetSaidaFromQR();
     dom.saidaForm?.reset();
     resetSaidaProdutoSelect();
     toggleModal(dom.saidaModal, false);
@@ -8493,6 +8580,7 @@ function setupModals() {
     console.log("✅ Modal de saída aberto");
   });
   dom.closeSaidaBtn?.addEventListener("click", () => {
+    resetSaidaFromQR();
     dom.saidaForm?.reset();
     resetSaidaProdutoSelect();
     updateSaidaDestinoVisibility();
@@ -8501,6 +8589,7 @@ function setupModals() {
   dom.cancelSaidaBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
+    resetSaidaFromQR();
     if (dom.saidaForm) {
       dom.saidaForm.reset();
       resetSaidaProdutoSelect();

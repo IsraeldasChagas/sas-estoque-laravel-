@@ -2015,8 +2015,8 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
         $appUrl = env('APP_URL', $request->getSchemeAndHttpHost() . $request->getBasePath());
         // Remove barra final se existir
         $appUrl = rtrim($appUrl, '/');
-        // QR Code aponta para a seção de lotes (pode ser expandido para mostrar detalhe específico)
-        $qrUrl = $appUrl . '/#lotes?lote=' . $id;
+        // QR Code aponta para dashboard > Registro de Saída com lote pré-preenchido
+        $qrUrl = $appUrl . '/#dashboard?saida=1&lote=' . $id;
         
         // Gera QR Code usando endroid/qr-code
         try {
