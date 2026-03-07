@@ -9294,11 +9294,11 @@ async function loadFornecedores() {
     const rows = (data || []).map(f => {
       const cnpjCpf = formatCnpjCpfDisplay(f.cnpj || f.cpf || '');
       const acoes = [];
-      acoes.push(`<button type="button" class="btn small" data-action="editar" data-id="${f.id}">Editar</button>`);
+      acoes.push(`<button type="button" class="btn small primary" data-action="editar" data-id="${f.id}">Editar</button>`);
       if (f.ativo) {
-        acoes.push(`<button type="button" class="btn small" data-action="desativar" data-id="${f.id}">Inativar</button>`);
+        acoes.push(`<button type="button" class="btn small secondary" data-action="desativar" data-id="${f.id}">Inativar</button>`);
       } else {
-        acoes.push(`<button type="button" class="btn small" data-action="ativar" data-id="${f.id}">Ativar</button>`);
+        acoes.push(`<button type="button" class="btn small primary" data-action="ativar" data-id="${f.id}">Ativar</button>`);
       }
       if (isAdmin) {
         acoes.push(`<button type="button" class="btn small danger" data-action="excluir" data-id="${f.id}">Excluir</button>`);
