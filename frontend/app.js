@@ -1040,10 +1040,22 @@ function attachCnpjMask(input) {
     const formatted = formatCnpjMask(input.value);
     input.value = formatted;
   });
-  // Normaliza caso o valor venha preenchido por scripts/outros fluxos.
-  if (input.value) {
-    input.value = formatCnpjMask(input.value);
-  }
+  if (input.value) input.value = formatCnpjMask(input.value);
+}
+
+function formatCpfMask(rawValue) {
+  const digits = (rawValue || "").replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function attachCpfMask(input) {
+  if (!input) return;
+  input.addEventListener("input", () => {
+    input.value = formatCpfMask(input.value);
+  });
+  if (input.value) input.value = formatCpfMask(input.value);
 }
 
 function updateSaidaDestinoVisibility() {
@@ -9313,8 +9325,10 @@ function openFornecedorModal(id) {
     fetchJSON(`/fornecedores/${id}`).then(res => {
       const f = res.fornecedor || res;
       form.querySelector('[name="nome"]').value = f.nome || '';
-      form.querySelector('[name="cnpj"]').value = f.cnpj || '';
-      form.querySelector('[name="cpf"]').value = f.cpf || '';
+      const cnpjEl = form.querySelector('[name="cnpj"]');
+      const cpfEl = form.querySelector('[name="cpf"]');
+      if (cnpjEl) cnpjEl.value = formatCnpjMask(f.cnpj || '');
+      if (cpfEl) cpfEl.value = formatCpfMask(f.cpf || '');
       form.querySelector('[name="email"]').value = f.email || '';
       form.querySelector('[name="telefone"]').value = f.telefone || '';
       form.querySelector('[name="endereco"]').value = f.endereco || '';
@@ -9504,6 +9518,11 @@ async function excluirBackupFornecedor(id) {
 }
 
 function setupFornecedoresModule() {
+  const cnpjInput = document.querySelector('#fornecedorForm [name="cnpj"]');
+  const cpfInput = document.querySelector('#fornecedorForm [name="cpf"]');
+  if (cnpjInput) attachCnpjMask(cnpjInput);
+  if (cpfInput) attachCpfMask(cpfInput);
+
   document.getElementById('openFornecedor')?.addEventListener('click', () => openFornecedorModal());
   document.getElementById('closeFornecedor')?.addEventListener('click', closeFornecedorModal);
   document.getElementById('cancelFornecedor')?.addEventListener('click', closeFornecedorModal);

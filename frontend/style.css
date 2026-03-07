@@ -1092,6 +1092,23 @@ textarea {
   gap: 12px;
 }
 
+/* Modal Fornecedor: pergunta em cima, resposta embaixo */
+.form-fornecedor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.form-fornecedor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+.form-fornecedor__field span {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
 .table-action {
   background: transparent;
   border: 1px solid var(--primary);

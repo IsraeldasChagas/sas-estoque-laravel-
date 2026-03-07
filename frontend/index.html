@@ -2009,21 +2009,19 @@
           <h2 id="fornecedorModalTitle">Novo Fornecedor</h2>
           <button type="button" class="close-btn" id="closeFornecedor" aria-label="Fechar">x</button>
         </header>
-        <form id="fornecedorForm">
+        <form id="fornecedorForm" class="form-fornecedor">
           <input type="hidden" name="id" />
-          <label>Nome *<input name="nome" required placeholder="Razao social ou nome" /></label>
-          <div class="grid-two">
-            <label>CNPJ<input name="cnpj" placeholder="00.000.000/0001-00" /></label>
-            <label>CPF<input name="cpf" placeholder="000.000.000-00" /></label>
-          </div>
-          <label>Email<input type="email" name="email" placeholder="contato@fornecedor.com" /></label>
-          <label>Telefone<input name="telefone" placeholder="(00) 00000-0000" /></label>
-          <label>Endereco<input name="endereco" placeholder="Rua, numero, bairro" /></label>
-          <label>Observacoes<textarea name="observacoes" rows="2" placeholder="Observacoes"></textarea></label>
-          <label>Status<select name="ativo"><option value="1">Ativo</option><option value="0">Inativo</option></select></label>
+          <label class="form-fornecedor__field"><span>Nome *</span><input name="nome" required placeholder="Razao social ou nome" /></label>
+          <label class="form-fornecedor__field"><span>CNPJ</span><input name="cnpj" placeholder="00.000.000/0001-00" maxlength="18" /></label>
+          <label class="form-fornecedor__field"><span>CPF</span><input name="cpf" placeholder="000.000.000-00" maxlength="14" /></label>
+          <label class="form-fornecedor__field"><span>Email</span><input type="email" name="email" placeholder="contato@fornecedor.com" /></label>
+          <label class="form-fornecedor__field"><span>Telefone</span><input name="telefone" placeholder="(00) 00000-0000" /></label>
+          <label class="form-fornecedor__field"><span>Endereco</span><input name="endereco" placeholder="Rua, numero, bairro" /></label>
+          <label class="form-fornecedor__field"><span>Observacoes</span><textarea name="observacoes" rows="2" placeholder="Observacoes"></textarea></label>
+          <label class="form-fornecedor__field"><span>Status</span><select name="ativo"><option value="1">Ativo</option><option value="0">Inativo</option></select></label>
           <footer>
             <button type="button" class="btn neutral" id="cancelFornecedor">Cancelar</button>
-            <button type="submit" class="btn primary">Salvar</button>
+            <button type="submit" class="btn neutral">Salvar</button>
           </footer>
         </form>
       </div>
@@ -2036,7 +2034,7 @@
         <div style="padding:1.5rem;"><p id="fornecedorExcluirMsg">Deseja realmente excluir este fornecedor?</p></div>
         <footer>
           <button type="button" class="btn neutral" id="cancelFornecedorExcluir">Cancelar</button>
-          <button type="button" class="btn danger" id="confirmFornecedorExcluir">Excluir</button>
+          <button type="button" class="btn neutral" id="confirmFornecedorExcluir">Excluir</button>
         </footer>
       </div>
     </div>
@@ -2051,7 +2049,7 @@
         </div>
         <footer>
           <button type="button" class="btn neutral" id="cancelFornecedorExcluirBackup">Cancelar</button>
-          <button type="button" class="btn danger" id="confirmFornecedorExcluirBackup">Fazer backup e excluir</button>
+          <button type="button" class="btn neutral" id="confirmFornecedorExcluirBackup">Fazer backup e excluir</button>
         </footer>
       </div>
     </div>
