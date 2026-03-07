@@ -1050,6 +1050,15 @@ function formatCpfMask(rawValue) {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+/** Formata CNPJ ou CPF para exibição (lista, detalhes) */
+function formatCnpjCpfDisplay(val) {
+  if (!val || typeof val !== 'string') return '-';
+  const digits = val.replace(/\D/g, '');
+  if (digits.length === 14) return formatCnpjMask(val);
+  if (digits.length === 11) return formatCpfMask(val);
+  return val;
+}
+
 function attachCpfMask(input) {
   if (!input) return;
   input.addEventListener("input", () => {
@@ -9283,7 +9292,7 @@ async function loadFornecedores() {
     const data = await fetchJSON(`/fornecedores${params.toString() ? '?' + params : ''}`);
     const isAdmin = (getUser()?.perfil || '').toString().toUpperCase() === 'ADMIN';
     const rows = (data || []).map(f => {
-      const cnpjCpf = (f.cnpj || f.cpf || '-').toString();
+      const cnpjCpf = formatCnpjCpfDisplay(f.cnpj || f.cpf || '');
       const acoes = [];
       acoes.push(`<button type="button" class="btn small" data-action="editar" data-id="${f.id}">Editar</button>`);
       if (f.ativo) {
@@ -9294,7 +9303,7 @@ async function loadFornecedores() {
       if (isAdmin) {
         acoes.push(`<button type="button" class="btn small danger" data-action="excluir" data-id="${f.id}">Excluir</button>`);
       }
-      return `<tr><td>${escapeHtml(f.nome || '-')}</td><td>${escapeHtml(cnpjCpf)}</td><td>${escapeHtml(f.email || '-')}</td><td>${escapeHtml(f.telefone || '-')}</td><td>${f.ativo ? 'Ativo' : 'Inativo'}</td><td>${acoes.join(' ')}</td></tr>`;
+      return `<tr><td data-label="Nome">${escapeHtml(f.nome || '-')}</td><td data-label="CNPJ / CPF">${escapeHtml(cnpjCpf)}</td><td data-label="Email">${escapeHtml(f.email || '-')}</td><td data-label="Telefone">${escapeHtml(f.telefone || '-')}</td><td data-label="Status">${f.ativo ? 'Ativo' : 'Inativo'}</td><td data-label="Acoes" class="table-actions">${acoes.join(' ')}</td></tr>`;
     });
     tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" style="text-align:center;color:#607d8b;">Nenhum fornecedor cadastrado.</td></tr>';
     tbody.querySelectorAll('[data-action]').forEach(btn => {
@@ -9444,12 +9453,12 @@ async function loadFornecedoresBackup() {
     const data = await fetchJSON('/fornecedores-backup');
     const rows = (data || []).map(b => `
       <tr>
-        <td>${b.id}</td>
-        <td>${escapeHtml(b.nome_fornecedor || '-')}</td>
-        <td>${escapeHtml(b.cnpj_cpf || '-')}</td>
-        <td>${escapeHtml(b.data_exclusao || '-')}</td>
-        <td>${escapeHtml(b.usuario_exclusao_nome || '-')}</td>
-        <td>
+        <td data-label="ID">${b.id}</td>
+        <td data-label="Nome">${escapeHtml(b.nome_fornecedor || '-')}</td>
+        <td data-label="CNPJ / CPF">${escapeHtml(formatCnpjCpfDisplay(b.cnpj_cpf || ''))}</td>
+        <td data-label="Data exclusao">${escapeHtml(b.data_exclusao || '-')}</td>
+        <td data-label="Usuario">${escapeHtml(b.usuario_exclusao_nome || '-')}</td>
+        <td data-label="Acoes" class="table-actions">
           <button type="button" class="btn small" data-action="detalhes" data-id="${b.id}">Ver detalhes</button>
           <button type="button" class="btn small" data-action="restaurar" data-id="${b.id}">Restaurar</button>
           <button type="button" class="btn small danger" data-action="excluir" data-id="${b.id}">Excluir backup</button>
@@ -9482,8 +9491,8 @@ async function verDetalhesBackup(id) {
     const d = b.dados_fornecedor || {};
     content.innerHTML = `
       <p><strong>Nome:</strong> ${escapeHtml(d.nome || '-')}</p>
-      <p><strong>CNPJ:</strong> ${escapeHtml(d.cnpj || '-')}</p>
-      <p><strong>CPF:</strong> ${escapeHtml(d.cpf || '-')}</p>
+      <p><strong>CNPJ:</strong> ${escapeHtml(formatCnpjCpfDisplay(d.cnpj || ''))}</p>
+      <p><strong>CPF:</strong> ${escapeHtml(formatCnpjCpfDisplay(d.cpf || ''))}</p>
       <p><strong>Email:</strong> ${escapeHtml(d.email || '-')}</p>
       <p><strong>Telefone:</strong> ${escapeHtml(d.telefone || '-')}</p>
       <p><strong>Data exclusao:</strong> ${escapeHtml(b.data_backup || '-')}</p>

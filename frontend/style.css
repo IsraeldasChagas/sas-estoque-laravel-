@@ -2126,6 +2126,98 @@ textarea {
     margin-left: auto;
   }
 
+  /* Fornecedores - layout pergunta em cima, resposta em baixo (mobile) */
+  #fornecedoresSection .table-wrapper,
+  #fornecedoresBackupSection .table-wrapper {
+    overflow: visible;
+  }
+  #fornecedoresSection .table-wrapper table,
+  #fornecedoresBackupSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+  #fornecedoresSection .table-wrapper thead,
+  #fornecedoresBackupSection .table-wrapper thead {
+    display: none;
+  }
+  #fornecedoresSection .table-wrapper tbody,
+  #fornecedoresBackupSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+  #fornecedoresSection .table-wrapper tr,
+  #fornecedoresBackupSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  #fornecedoresSection .table-wrapper td,
+  #fornecedoresBackupSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+  #fornecedoresSection .table-wrapper td::before,
+  #fornecedoresBackupSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  #fornecedoresSection .table-wrapper td.table-actions,
+  #fornecedoresBackupSection .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 12px;
+  }
+  #fornecedoresSection .table-wrapper td.table-actions::before,
+  #fornecedoresBackupSection .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+  #fornecedoresSection .actions,
+  #fornecedoresBackupSection .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  #fornecedoresSection .actions .btn,
+  #fornecedoresSection .actions input {
+    width: 100%;
+  }
+
+  /* Modal Fornecedor - mobile: pergunta em cima, resposta embaixo */
+  #fornecedorModal .form-fornecedor__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  #fornecedorModal .form-fornecedor__field span {
+    display: block;
+    font-weight: 600;
+  }
+  #fornecedorModal .form-fornecedor__field input,
+  #fornecedorModal .form-fornecedor__field select,
+  #fornecedorModal .form-fornecedor__field textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  #fornecedorModal .form-fornecedor footer {
+    flex-direction: column;
+  }
+  #fornecedorModal .form-fornecedor footer .btn {
+    width: 100%;
+  }
+
   /* Consulta Estoque - layout pergunta em cima, resposta em baixo */
   #estoqueSection .table-wrapper {
     overflow: visible;
