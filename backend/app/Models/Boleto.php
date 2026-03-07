@@ -10,7 +10,10 @@ class Boleto extends Model
 
     protected $fillable = [
         'unidade_id',
+        'fornecedor_id',
         'fornecedor',
+        'nome_fornecedor',
+        'cnpj_fornecedor',
         'descricao',
         'data_vencimento',
         'valor',

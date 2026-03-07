@@ -4746,6 +4746,32 @@ Route::get('/sugestoes-compras', function (Request $request) {
 });
 
 // ============================================
+// FORNECEDORES - CRUD + BACKUP/RESTAURAÇÃO
+// ============================================
+
+use App\Http\Controllers\FornecedorController;
+use App\Http\Controllers\FornecedorBackupController;
+
+Route::options('/fornecedores', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/fornecedores/{id}', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/fornecedores-backup', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/fornecedores-backup/{id}', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/fornecedores', fn (Request $request) => (new FornecedorController())->index($request)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::get('/fornecedores/{id}/check-historico', fn ($id) => (new FornecedorController())->checkHistorico($id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::get('/fornecedores/{id}', fn (Request $request, $id) => (new FornecedorController())->show($id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::post('/fornecedores', fn (Request $request) => (new FornecedorController())->store($request)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::put('/fornecedores/{id}', fn (Request $request, $id) => (new FornecedorController())->update($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::put('/fornecedores/{id}/desativar', fn (Request $request, $id) => (new FornecedorController())->desativar($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::put('/fornecedores/{id}/ativar', fn (Request $request, $id) => (new FornecedorController())->ativar($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::delete('/fornecedores/{id}', fn (Request $request, $id) => (new FornecedorController())->destroy($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/fornecedores-backup', fn (Request $request) => (new FornecedorBackupController())->index($request)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::get('/fornecedores-backup/{id}', fn (Request $request, $id) => (new FornecedorBackupController())->show($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::post('/fornecedores-backup/{id}/restaurar', fn (Request $request, $id) => (new FornecedorBackupController())->restaurar($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::delete('/fornecedores-backup/{id}', fn (Request $request, $id) => (new FornecedorBackupController())->destroy($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+// ============================================
 // BOLETOS - CONTROLE FINANCEIRO
 // ============================================
 

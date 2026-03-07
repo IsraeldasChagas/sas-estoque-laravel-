@@ -261,7 +261,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "boletao"],
+    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -269,7 +269,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "boletao"],
+    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -277,7 +277,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   ESTOQUISTA: {
-    sections: ["dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios"],
+    sections: ["dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -301,7 +301,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["dashboard", "relatorios", "boletao"],
+    sections: ["dashboard", "relatorios", "fornecedores", "boletao"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -309,7 +309,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "boletao"],
+    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2391,6 +2391,12 @@ function applyPermissions() {
     const temAcessoFinanceiro = regras.sections.includes("boletao");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
+  // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (Backup de Fornecedores = apenas ADMIN)
+  const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
+  if (configuracoesNavSubmenu) {
+    const temAcessoConfig = regras.sections.includes("fornecedoresBackup");
+    configuracoesNavSubmenu.classList.toggle("hidden", !temAcessoConfig);
+  }
 
   dom.sections.forEach((section) => {
     const key = section.id.replace("Section", "");
@@ -2508,13 +2514,19 @@ function navigateTo(section) {
     }
   }
   
-  // Usa o router global se disponível, caso contrário usa o método antigo
-  if (typeof router !== 'undefined' && router) {
-    router.navigate(section);
-  } else {
-    // Fallback para o método antigo - atualiza de forma atômica para evitar flash
+  // Seções embutidas (sem rota no router): boletao, fornecedores, fornecedoresBackup
+  const secoesEmbutidas = ['boletao', 'fornecedores', 'fornecedoresBackup'];
+  const useFallback = !router || !router.routes?.[section] || secoesEmbutidas.includes(section);
+
+  if (useFallback) {
     dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
     dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+    if (section === 'fornecedores') loadFornecedores();
+    else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
+    return;
+  }
+  if (typeof router !== 'undefined' && router) {
+    router.navigate(section);
   }
 }
 
@@ -8813,6 +8825,8 @@ function setupNavigation() {
       }
       else if (target === "relatorios") await loadRelatorio();
       else if (target === "compras") await loadListasCompras();
+      else if (target === "fornecedores") await loadFornecedores();
+      else if (target === "fornecedoresBackup") await loadFornecedoresBackup();
       else if (target === "boletao") {
         console.log('🏦 ========================================');
         console.log('🏦 SEÇÃO BOLETAO ABERTA');
@@ -8853,6 +8867,18 @@ function setupNavigation() {
       event.preventDefault();
       event.stopPropagation();
       const parent = financeiroMenu.closest('.nav-submenu');
+      if (parent) {
+        parent.classList.toggle('open');
+      }
+    });
+  }
+  // Setup submenu toggle for Configuracoes
+  const configuracoesMenu = document.getElementById('configuracoesMenu');
+  if (configuracoesMenu) {
+    configuracoesMenu.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = configuracoesMenu.closest('.nav-submenu');
       if (parent) {
         parent.classList.toggle('open');
       }
@@ -9230,6 +9256,272 @@ async function loadBoletosResumo(mesAno) {
     console.error('❌ Erro ao carregar resumo:', error);
     console.error('Stack trace:', error.stack);
   }
+}
+
+// ===== Modulo Fornecedores =====
+let fornecedorParaExcluir = null;
+
+async function loadFornecedores() {
+  const tbody = document.getElementById('fornecedoresTable');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+  const search = document.getElementById('fornecedorSearch')?.value?.trim() || '';
+  try {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    const data = await fetchJSON(`/fornecedores${params.toString() ? '?' + params : ''}`);
+    const isAdmin = (getUser()?.perfil || '').toString().toUpperCase() === 'ADMIN';
+    const rows = (data || []).map(f => {
+      const cnpjCpf = (f.cnpj || f.cpf || '-').toString();
+      const acoes = [];
+      acoes.push(`<button type="button" class="btn small" data-action="editar" data-id="${f.id}">Editar</button>`);
+      if (f.ativo) {
+        acoes.push(`<button type="button" class="btn small" data-action="desativar" data-id="${f.id}">Inativar</button>`);
+      } else {
+        acoes.push(`<button type="button" class="btn small" data-action="ativar" data-id="${f.id}">Ativar</button>`);
+      }
+      if (isAdmin) {
+        acoes.push(`<button type="button" class="btn small danger" data-action="excluir" data-id="${f.id}">Excluir</button>`);
+      }
+      return `<tr><td>${escapeHtml(f.nome || '-')}</td><td>${escapeHtml(cnpjCpf)}</td><td>${escapeHtml(f.email || '-')}</td><td>${escapeHtml(f.telefone || '-')}</td><td>${f.ativo ? 'Ativo' : 'Inativo'}</td><td>${acoes.join(' ')}</td></tr>`;
+    });
+    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" style="text-align:center;color:#607d8b;">Nenhum fornecedor cadastrado.</td></tr>';
+    tbody.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const id = parseInt(btn.dataset.id, 10);
+        if (action === 'editar') openFornecedorModal(id);
+        else if (action === 'desativar') desativarFornecedor(id);
+        else if (action === 'ativar') ativarFornecedor(id);
+        else if (action === 'excluir') solicitarExclusaoFornecedor(id);
+      });
+    });
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#d32f2f;">Erro ao carregar.</td></tr>';
+    showToast('Erro ao carregar fornecedores', 'error');
+  }
+}
+
+function openFornecedorModal(id) {
+  const modal = document.getElementById('fornecedorModal');
+  const form = document.getElementById('fornecedorForm');
+  const title = document.getElementById('fornecedorModalTitle');
+  if (!modal || !form) return;
+  form.reset();
+  form.querySelector('[name="id"]').value = id || '';
+  title.textContent = id ? 'Editar Fornecedor' : 'Novo Fornecedor';
+  if (id) {
+    fetchJSON(`/fornecedores/${id}`).then(res => {
+      const f = res.fornecedor || res;
+      form.querySelector('[name="nome"]').value = f.nome || '';
+      form.querySelector('[name="cnpj"]').value = f.cnpj || '';
+      form.querySelector('[name="cpf"]').value = f.cpf || '';
+      form.querySelector('[name="email"]').value = f.email || '';
+      form.querySelector('[name="telefone"]').value = f.telefone || '';
+      form.querySelector('[name="endereco"]').value = f.endereco || '';
+      form.querySelector('[name="observacoes"]').value = f.observacoes || '';
+      form.querySelector('[name="ativo"]').value = f.ativo ? '1' : '0';
+    }).catch(() => showToast('Erro ao carregar fornecedor', 'error'));
+  }
+  modal.style.display = 'flex';
+}
+
+function closeFornecedorModal() {
+  const modal = document.getElementById('fornecedorModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveFornecedor(e) {
+  e.preventDefault();
+  const form = e.target;
+  const id = form.querySelector('[name="id"]').value;
+  const payload = {
+    nome: form.querySelector('[name="nome"]').value.trim(),
+    cnpj: form.querySelector('[name="cnpj"]').value.trim() || null,
+    cpf: form.querySelector('[name="cpf"]').value.trim() || null,
+    email: form.querySelector('[name="email"]').value.trim() || null,
+    telefone: form.querySelector('[name="telefone"]').value.trim() || null,
+    endereco: form.querySelector('[name="endereco"]').value.trim() || null,
+    observacoes: form.querySelector('[name="observacoes"]').value.trim() || null,
+    ativo: form.querySelector('[name="ativo"]').value === '1',
+  };
+  if (!payload.nome) {
+    showToast('Preencha o nome.', 'error');
+    return;
+  }
+  try {
+    const url = id ? `/fornecedores/${id}` : '/fornecedores';
+    await fetchJSON(url, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    closeFornecedorModal();
+    showToast('Fornecedor salvo com sucesso.');
+    loadFornecedores();
+  } catch (err) {
+    showToast(err?.message || 'Erro ao salvar.', 'error');
+  }
+}
+
+async function desativarFornecedor(id) {
+  try {
+    await fetchJSON(`/fornecedores/${id}/desativar`, { method: 'PUT' });
+    showToast('Fornecedor inativado.');
+    loadFornecedores();
+  } catch (e) {
+    showToast('Erro ao inativar.', 'error');
+  }
+}
+
+async function ativarFornecedor(id) {
+  try {
+    await fetchJSON(`/fornecedores/${id}/ativar`, { method: 'PUT' });
+    showToast('Fornecedor ativado.');
+    loadFornecedores();
+  } catch (e) {
+    showToast('Erro ao ativar.', 'error');
+  }
+}
+
+async function solicitarExclusaoFornecedor(id) {
+  fornecedorParaExcluir = id;
+  try {
+    const res = await fetchJSON(`/fornecedores/${id}/check-historico`);
+    const comHistorico = res.possui_historico === true;
+    const modalSimples = document.getElementById('fornecedorExcluirModal');
+    const modalBackup = document.getElementById('fornecedorExcluirBackupModal');
+    if (comHistorico) {
+      modalSimples.style.display = 'none';
+      if (modalBackup) modalBackup.style.display = 'flex';
+    } else {
+      if (modalBackup) modalBackup.style.display = 'none';
+      const msg = document.getElementById('fornecedorExcluirMsg');
+      if (msg) msg.textContent = 'Deseja realmente excluir este fornecedor?';
+      if (modalSimples) modalSimples.style.display = 'flex';
+    }
+  } catch (e) {
+    showToast('Erro ao verificar historico.', 'error');
+    fornecedorParaExcluir = null;
+  }
+}
+
+async function confirmarExclusaoFornecedor(comBackup) {
+  const id = fornecedorParaExcluir;
+  if (!id) return;
+  try {
+    const params = comBackup ? '?com_backup=1' : '';
+    await fetchJSON(`/fornecedores/${id}${params}`, { method: 'DELETE' });
+    document.getElementById('fornecedorExcluirModal').style.display = 'none';
+    document.getElementById('fornecedorExcluirBackupModal').style.display = 'none';
+    fornecedorParaExcluir = null;
+    showToast('Fornecedor excluido.');
+    loadFornecedores();
+  } catch (err) {
+    const msg = err?.message || (err?.error || 'Erro ao excluir.');
+    showToast(typeof msg === 'string' ? msg : 'Erro ao excluir.', 'error');
+  }
+}
+
+async function loadFornecedoresBackup() {
+  const tbody = document.getElementById('fornecedoresBackupTable');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+  try {
+    const data = await fetchJSON('/fornecedores-backup');
+    const rows = (data || []).map(b => `
+      <tr>
+        <td>${b.id}</td>
+        <td>${escapeHtml(b.nome_fornecedor || '-')}</td>
+        <td>${escapeHtml(b.cnpj_cpf || '-')}</td>
+        <td>${escapeHtml(b.data_exclusao || '-')}</td>
+        <td>${escapeHtml(b.usuario_exclusao_nome || '-')}</td>
+        <td>
+          <button type="button" class="btn small" data-action="detalhes" data-id="${b.id}">Ver detalhes</button>
+          <button type="button" class="btn small" data-action="restaurar" data-id="${b.id}">Restaurar</button>
+          <button type="button" class="btn small danger" data-action="excluir" data-id="${b.id}">Excluir backup</button>
+        </td>
+      </tr>
+    `);
+    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" style="text-align:center;color:#607d8b;">Nenhum backup de fornecedor.</td></tr>';
+    tbody.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        const id = parseInt(btn.dataset.id, 10);
+        if (action === 'detalhes') verDetalhesBackup(id);
+        else if (action === 'restaurar') restaurarFornecedor(id);
+        else if (action === 'excluir') excluirBackupFornecedor(id);
+      });
+    });
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#d32f2f;">Erro ao carregar (apenas ADMIN).</td></tr>';
+  }
+}
+
+async function verDetalhesBackup(id) {
+  const content = document.getElementById('fornecedorBackupDetalhesContent');
+  const modal = document.getElementById('fornecedorBackupDetalhesModal');
+  if (!content || !modal) return;
+  content.innerHTML = 'Carregando...';
+  modal.style.display = 'flex';
+  try {
+    const b = await fetchJSON(`/fornecedores-backup/${id}`);
+    const d = b.dados_fornecedor || {};
+    content.innerHTML = `
+      <p><strong>Nome:</strong> ${escapeHtml(d.nome || '-')}</p>
+      <p><strong>CNPJ:</strong> ${escapeHtml(d.cnpj || '-')}</p>
+      <p><strong>CPF:</strong> ${escapeHtml(d.cpf || '-')}</p>
+      <p><strong>Email:</strong> ${escapeHtml(d.email || '-')}</p>
+      <p><strong>Telefone:</strong> ${escapeHtml(d.telefone || '-')}</p>
+      <p><strong>Data exclusao:</strong> ${escapeHtml(b.data_backup || '-')}</p>
+      <p><strong>Usuario:</strong> ${escapeHtml(b.usuario_exclusao_nome || '-')}</p>
+    `;
+  } catch (e) {
+    content.innerHTML = '<p style="color:#d32f2f;">Erro ao carregar detalhes.</p>';
+  }
+}
+
+async function restaurarFornecedor(id) {
+  if (!confirm('Restaurar este fornecedor?')) return;
+  try {
+    await fetchJSON(`/fornecedores-backup/${id}/restaurar`, { method: 'POST' });
+    document.getElementById('fornecedorBackupDetalhesModal').style.display = 'none';
+    showToast('Fornecedor restaurado com sucesso.');
+    loadFornecedoresBackup();
+  } catch (e) {
+    showToast(e?.message || 'Erro ao restaurar.', 'error');
+  }
+}
+
+async function excluirBackupFornecedor(id) {
+  if (!confirm('Excluir este backup definitivamente?')) return;
+  try {
+    await fetchJSON(`/fornecedores-backup/${id}`, { method: 'DELETE' });
+    showToast('Backup excluido.');
+    loadFornecedoresBackup();
+  } catch (e) {
+    showToast('Erro ao excluir backup.', 'error');
+  }
+}
+
+function setupFornecedoresModule() {
+  document.getElementById('openFornecedor')?.addEventListener('click', () => openFornecedorModal());
+  document.getElementById('closeFornecedor')?.addEventListener('click', closeFornecedorModal);
+  document.getElementById('cancelFornecedor')?.addEventListener('click', closeFornecedorModal);
+  document.getElementById('fornecedorForm')?.addEventListener('submit', saveFornecedor);
+  document.getElementById('fornecedorSearch')?.addEventListener('input', () => loadFornecedores());
+  document.getElementById('fornecedorSearch')?.addEventListener('keyup', (e) => { if (e.key === 'Enter') loadFornecedores(); });
+
+  document.getElementById('cancelFornecedorExcluir')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirModal').style.display = 'none'; fornecedorParaExcluir = null; });
+  document.getElementById('closeFornecedorExcluir')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirModal').style.display = 'none'; fornecedorParaExcluir = null; });
+  document.getElementById('confirmFornecedorExcluir')?.addEventListener('click', () => confirmarExclusaoFornecedor(false));
+
+  document.getElementById('cancelFornecedorExcluirBackup')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirBackupModal').style.display = 'none'; fornecedorParaExcluir = null; });
+  document.getElementById('closeFornecedorExcluirBackup')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirBackupModal').style.display = 'none'; fornecedorParaExcluir = null; });
+  document.getElementById('confirmFornecedorExcluirBackup')?.addEventListener('click', () => confirmarExclusaoFornecedor(true));
+
+  document.getElementById('closeFornecedorBackupDetalhes')?.addEventListener('click', () => { document.getElementById('fornecedorBackupDetalhesModal').style.display = 'none'; });
+  document.getElementById('fecharFornecedorBackupDetalhes')?.addEventListener('click', () => { document.getElementById('fornecedorBackupDetalhesModal').style.display = 'none'; });
 }
 
 function setupBoletosModule() {
@@ -10469,6 +10761,7 @@ async function init() {
   setupForms();
   setupCards();
   setupPasswordToggles();
+  setupFornecedoresModule();
   setupBoletosModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();

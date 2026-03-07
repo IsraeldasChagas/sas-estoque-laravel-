@@ -101,6 +101,7 @@
           <a href="#" class="nav-link" data-section="movimentacoes">Movimentacoes</a>
           <a href="#" class="nav-link" data-section="compras">Lista de Compras</a>
           <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
+          <a href="#" class="nav-link" data-section="fornecedores">Fornecedores</a>
           <div class="nav-submenu">
             <a href="#" class="nav-link nav-link-parent" id="financeiroMenu">
               Financeiro
@@ -108,6 +109,15 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boletao</a>
+            </div>
+          </div>
+          <div class="nav-submenu">
+            <a href="#" class="nav-link nav-link-parent" id="configuracoesMenu">
+              Configuracoes
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="fornecedoresBackup">Backup de Fornecedores</a>
             </div>
           </div>
           <button type="button" id="btnAbrirBackup" onclick="abrirBackupModal()" style="display:none;margin:1rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#1565c0;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
@@ -658,6 +668,61 @@
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Fornecedores - CRUD -->
+          <section id="fornecedoresSection" class="view-section hidden">
+            <div class="fornecedores-container">
+              <div class="actions">
+                <button class="btn primary" id="openFornecedor">+ Novo Fornecedor</button>
+                <input type="text" id="fornecedorSearch" placeholder="Buscar por nome, CNPJ, email..." style="max-width: 280px; margin-left: 1rem;" />
+              </div>
+              <div class="table-card form-card--wide">
+                <header>Fornecedores cadastrados</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>CNPJ / CPF</th>
+                        <th>Email</th>
+                        <th>Telefone</th>
+                        <th>Status</th>
+                        <th id="fornecedoresAcoesHeader">Acoes</th>
+                      </tr>
+                    </thead>
+                    <tbody id="fornecedoresTable">
+                      <tr><td colspan="6" style="text-align: center; color: #607d8b;">Carregando...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Backup de Fornecedores (Admin) -->
+          <section id="fornecedoresBackupSection" class="view-section hidden">
+            <div class="form-card form-card--wide">
+              <header>Backup de Fornecedores</header>
+              <p style="padding: 1rem; color: #607d8b;">Fornecedores excluidos com historico sao salvos aqui. E possivel restaurar ou excluir o backup definitivamente.</p>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>CNPJ / CPF</th>
+                      <th>Data exclusao</th>
+                      <th>Usuario</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fornecedoresBackupTable">
+                    <tr><td colspan="6" style="text-align: center; color: #607d8b;">Carregando...</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
@@ -1934,6 +1999,69 @@
             <button type="submit" class="btn primary">💳 Confirmar Pagamento</button>
           </footer>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal Fornecedor -->
+    <div class="modal-backdrop" id="fornecedorModal" style="display:none;">
+      <div class="modal">
+        <header>
+          <h2 id="fornecedorModalTitle">Novo Fornecedor</h2>
+          <button type="button" class="close-btn" id="closeFornecedor" aria-label="Fechar">x</button>
+        </header>
+        <form id="fornecedorForm">
+          <input type="hidden" name="id" />
+          <label>Nome *<input name="nome" required placeholder="Razao social ou nome" /></label>
+          <div class="grid-two">
+            <label>CNPJ<input name="cnpj" placeholder="00.000.000/0001-00" /></label>
+            <label>CPF<input name="cpf" placeholder="000.000.000-00" /></label>
+          </div>
+          <label>Email<input type="email" name="email" placeholder="contato@fornecedor.com" /></label>
+          <label>Telefone<input name="telefone" placeholder="(00) 00000-0000" /></label>
+          <label>Endereco<input name="endereco" placeholder="Rua, numero, bairro" /></label>
+          <label>Observacoes<textarea name="observacoes" rows="2" placeholder="Observacoes"></textarea></label>
+          <label>Status<select name="ativo"><option value="1">Ativo</option><option value="0">Inativo</option></select></label>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelFornecedor">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Exclusao Fornecedor (simples) -->
+    <div class="modal-backdrop" id="fornecedorExcluirModal" style="display:none;">
+      <div class="modal" style="max-width: 420px;">
+        <header><h2>Excluir fornecedor</h2><button type="button" class="close-btn" id="closeFornecedorExcluir" aria-label="Fechar">x</button></header>
+        <div style="padding:1.5rem;"><p id="fornecedorExcluirMsg">Deseja realmente excluir este fornecedor?</p></div>
+        <footer>
+          <button type="button" class="btn neutral" id="cancelFornecedorExcluir">Cancelar</button>
+          <button type="button" class="btn danger" id="confirmFornecedorExcluir">Excluir</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modal Exclusao Fornecedor com Backup -->
+    <div class="modal-backdrop" id="fornecedorExcluirBackupModal" style="display:none;">
+      <div class="modal" style="max-width: 500px;">
+        <header><h2>Excluir fornecedor com historico</h2><button type="button" class="close-btn" id="closeFornecedorExcluirBackup" aria-label="Fechar">x</button></header>
+        <div style="padding:1.5rem;">
+          <p>Este fornecedor possui historico no sistema (boletos, lotes ou movimentacoes).</p>
+          <p>Para excluir definitivamente sera criado um backup completo que permitira restaurar o fornecedor no futuro. Deseja continuar?</p>
+        </div>
+        <footer>
+          <button type="button" class="btn neutral" id="cancelFornecedorExcluirBackup">Cancelar</button>
+          <button type="button" class="btn danger" id="confirmFornecedorExcluirBackup">Fazer backup e excluir</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modal Detalhes Backup Fornecedor -->
+    <div class="modal-backdrop" id="fornecedorBackupDetalhesModal" style="display:none;">
+      <div class="modal" style="max-width: 560px;">
+        <header><h2>Detalhes do backup</h2><button type="button" class="close-btn" id="closeFornecedorBackupDetalhes" aria-label="Fechar">x</button></header>
+        <div id="fornecedorBackupDetalhesContent" style="padding:1.5rem;">Carregando...</div>
+        <footer><button type="button" class="btn neutral" id="fecharFornecedorBackupDetalhes">Fechar</button></footer>
       </div>
     </div>
 

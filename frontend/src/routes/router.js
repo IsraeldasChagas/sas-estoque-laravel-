@@ -38,7 +38,7 @@ class Router {
       
       const savedSection = localStorage.getItem('sas-estoque-current-section');
       if (savedSection) {
-        const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras'];
+        const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao'];
         hasSavedSection = validSections.includes(savedSection);
       }
     } catch (err) {
