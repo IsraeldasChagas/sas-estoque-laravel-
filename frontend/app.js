@@ -2514,20 +2514,11 @@ function navigateTo(section) {
     }
   }
   
-  // Seções embutidas (sem rota no router): boletao, fornecedores, fornecedoresBackup
-  const secoesEmbutidas = ['boletao', 'fornecedores', 'fornecedoresBackup'];
-  const hasRouter = typeof router !== 'undefined' && router && router.routes;
-  const hasRoute = hasRouter && router.routes[section];
-  const useFallback = !hasRoute || secoesEmbutidas.includes(section);
-
-  if (useFallback) {
-    dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
-    dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
-    if (section === 'fornecedores') loadFornecedores();
-    else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
-    return;
-  }
-  router.navigate(section);
+  // Usa alternância de seções (conteúdo no index.html) - evita fetch que pode falhar em produção
+  dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
+  dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+  if (section === 'fornecedores') loadFornecedores();
+  else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
 }
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.
@@ -6431,27 +6422,35 @@ async function startAppSession(user) {
       sectionToNavigate = 'dashboard';
     }
 
-    // Usa requestAnimationFrame para garantir que o DOM está pronto, mas sem delay visível
+    // Usa requestAnimationFrame para garantir que o DOM está pronto
     requestAnimationFrame(async () => {
-      // Verifica se já estamos na seção correta para evitar navegação desnecessária
-      if (typeof router !== 'undefined' && router) {
-        if (router.currentSection !== sectionToNavigate) {
-          router.navigate(sectionToNavigate);
-        }
-      } else if (typeof navigateTo === 'function') {
-        navigateTo(sectionToNavigate);
-        // Carrega dados da seção inicial quando o router não está disponível
-        try {
-          if (sectionToNavigate === 'estoque') {
-            await loadEstoqueProdutos();
-          } else if (sectionToNavigate === 'produtos') {
-            await loadProdutos();
-          } else if (sectionToNavigate === 'dashboard') {
-            await loadDashboard();
+      navigateTo(sectionToNavigate);
+      try {
+        if (sectionToNavigate === 'dashboard') await loadDashboard();
+        else if (sectionToNavigate === 'produtos') await loadProdutos();
+        else if (sectionToNavigate === 'estoque') await loadEstoqueProdutos();
+        else if (sectionToNavigate === 'unidades') await Promise.all([loadUnidades(), loadUsuarios()]);
+        else if (sectionToNavigate === 'usuarios') await loadUsuarios();
+        else if (sectionToNavigate === 'lotes') await loadLotes();
+        else if (sectionToNavigate === 'locais') await Promise.all([loadLocais(true), loadUnidades(false)]);
+        else if (sectionToNavigate === 'movimentacoes') {
+          await Promise.all([loadProdutos().catch(() => {}), loadUnidades().catch(() => {})]);
+          refreshProdutoSelects();
+          refreshUnidadeSelects();
+          await loadMovimentacoesDetalhadas({}, { refreshDashboard: true });
+        } else if (sectionToNavigate === 'relatorios') await loadRelatorio();
+        else if (sectionToNavigate === 'compras') await loadListasCompras();
+        else if (sectionToNavigate === 'fornecedores') await loadFornecedores();
+        else if (sectionToNavigate === 'fornecedoresBackup') await loadFornecedoresBackup();
+        else if (sectionToNavigate === 'boletao') {
+          const tbody = document.getElementById('boletosTable');
+          if (tbody) {
+            await loadBoletos({}).catch(() => {});
+            await loadBoletosResumo().catch(() => {});
           }
-        } catch (err) {
-          console.error('Erro ao carregar seção inicial:', err);
         }
+      } catch (err) {
+        console.error('Erro ao carregar seção inicial:', err);
       }
 
       // Se veio do QR code da etiqueta: abre modal Registrar Saída com lote pré-preenchido
