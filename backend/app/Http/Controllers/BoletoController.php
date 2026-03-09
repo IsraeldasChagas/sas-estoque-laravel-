@@ -97,6 +97,9 @@ class BoletoController extends Controller
             'valor_pago' => 'nullable|numeric|min:0',
             'juros_multa' => 'nullable|numeric|min:0',
             'observacoes' => 'nullable|string',
+            'numero_boleto' => 'nullable|string|max:255',
+            'nome_pagador' => 'nullable|string|max:255',
+            'whatsapp_pagador' => 'nullable|string|max:20',
             'anexo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB
             'is_recorrente' => 'nullable|boolean',
             'meses_recorrencia' => 'nullable|integer|min:1|max:60',
@@ -210,6 +213,9 @@ class BoletoController extends Controller
             'valor_pago' => 'nullable|numeric|min:0',
             'juros_multa' => 'nullable|numeric|min:0',
             'observacoes' => 'nullable|string',
+            'numero_boleto' => 'nullable|string|max:255',
+            'nome_pagador' => 'nullable|string|max:255',
+            'whatsapp_pagador' => 'nullable|string|max:20',
             'anexo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120' // 5MB
         ]);
 
