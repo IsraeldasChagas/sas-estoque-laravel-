@@ -10352,9 +10352,8 @@ async function mostrarDetalhesBoleto(id) {
     textZap += `*Vencimento:* ${formatDate(boleto.data_vencimento)}\n`;
     textZap += `*Valor:* R$ ${parseFloat(boleto.valor).toFixed(2)}\n\n`;
     if (boleto.anexo_path) {
-      // Usa o dominio base sem os caminhos adicionais
-      const baseUrl = window.location.origin;
-      textZap += `*Baixar PDF do Boleto:*\n${baseUrl}/sas-estoque/backend/api/boletos/${boleto.id}/anexo\n\n`;
+      const dominioBase = window.location.host.includes('localhost') ? 'localhost:5000' : 'www.gruposaborparaense.com.br';
+      textZap += `*Baixar PDF do Boleto:*\nhttps://${dominioBase}/sas-estoque/backend/api/boletos/${boleto.id}/anexo\n\n`;
     }
     
     textZap += `Após o pagamento, por favor, nos envie o comprovante por aqui para que possamos dar baixa no sistema. Obrigado! 🤝`;
