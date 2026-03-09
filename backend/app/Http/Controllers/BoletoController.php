@@ -100,6 +100,9 @@ class BoletoController extends Controller
             'numero_boleto' => 'nullable|string|max:255',
             'nome_pagador' => 'nullable|string|max:255',
             'whatsapp_pagador' => 'nullable|string|max:20',
+            'numero_boleto' => 'nullable|string|max:255',
+            'nome_pagador' => 'nullable|string|max:255',
+            'whatsapp_pagador' => 'nullable|string|max:20',
             'anexo' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', // 5MB
             'is_recorrente' => 'nullable|boolean',
             'meses_recorrencia' => 'nullable|integer|min:1|max:60',
