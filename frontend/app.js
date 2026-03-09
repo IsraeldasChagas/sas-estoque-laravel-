@@ -9812,6 +9812,26 @@ function setupBoletosModule() {
 
   // Submit do formulario de boleto
   if (boletoForm) {
+    // Máscara para WhatsApp
+    const whatsappInput = document.getElementById('whatsapp_pagador');
+    if (whatsappInput) {
+      whatsappInput.addEventListener('input', function (e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é número
+        
+        // Aplica a máscara: (99) 99999-9999
+        if (value.length > 11) value = value.slice(0, 11);
+        
+        if (value.length > 2) {
+          value = '(' + value.substring(0, 2) + ') ' + value.substring(2);
+        }
+        if (value.length > 10) {
+          value = value.substring(0, 10) + '-' + value.substring(10);
+        }
+        
+        e.target.value = value;
+      });
+    }
+
     boletoForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -9961,6 +9981,9 @@ function setupBoletosModule() {
               valor: valor.toFixed(2),
               unidade_id: unidadeVal && unidadeVal !== '' ? unidadeVal : null,
               categoria: boletoForm.querySelector('[name="categoria"]')?.value || null,
+              numero_boleto: boletoForm.querySelector('[name="numero_boleto"]')?.value || null,
+              nome_pagador: boletoForm.querySelector('[name="nome_pagador"]')?.value || null,
+              whatsapp_pagador: boletoForm.querySelector('[name="whatsapp_pagador"]')?.value || null,
               status: boletoForm.querySelector('[name="status"]')?.value || 'A_VENCER',
               data_pagamento: boletoForm.querySelector('[name="data_pagamento"]')?.value || null,
               valor_pago: valorPago > 0 ? valorPago.toFixed(2) : null,
@@ -10144,6 +10167,9 @@ async function editarBoleto(id) {
     valorInput.dataset.value = String(boleto.valor || 0);
     valorInput.value = boleto.valor ? formatCurrencyBRL(parseFloat(boleto.valor)) : '';
     form.querySelector('[name="categoria"]').value = boleto.categoria || '';
+    form.querySelector('[name="numero_boleto"]').value = boleto.numero_boleto || '';
+    form.querySelector('[name="nome_pagador"]').value = boleto.nome_pagador || '';
+    form.querySelector('[name="whatsapp_pagador"]').value = boleto.whatsapp_pagador || '';
     form.querySelector('[name="status"]').value = boleto.status;
     form.querySelector('[name="observacoes"]').value = boleto.observacoes || '';
     
@@ -10236,6 +10262,9 @@ async function mostrarDetalhesBoleto(id) {
           <p style="margin: 0.5rem 0;"><strong>Fornecedor:</strong> ${boleto.fornecedor}</p>
           <p style="margin: 0.5rem 0;"><strong>Descrição:</strong> ${boleto.descricao || '-'}</p>
           <p style="margin: 0.5rem 0;"><strong>Categoria:</strong> ${boleto.categoria || '-'}</p>
+          <p style="margin: 0.5rem 0;"><strong>Número do Boleto:</strong> ${boleto.numero_boleto || '-'}</p>
+          <p style="margin: 0.5rem 0;"><strong>Nome do Pagador:</strong> ${boleto.nome_pagador || '-'}</p>
+          <p style="margin: 0.5rem 0;"><strong>WhatsApp:</strong> ${boleto.whatsapp_pagador || '-'}</p>
           <p style="margin: 0.5rem 0;">
             <strong>Status:</strong> 
             <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
@@ -10292,6 +10321,36 @@ async function mostrarDetalhesBoleto(id) {
         </div>
       `;
     }
+    
+    let textZap = `Olá`;
+    if (boleto.nome_pagador) textZap += ` ${boleto.nome_pagador}`;
+    textZap += `! Segue as informações do seu boleto.\n\n`;
+    if (boleto.numero_boleto) textZap += `*Número do Boleto (Linha Digitável):*\n${boleto.numero_boleto}\n\n`;
+    textZap += `*Vencimento:* ${formatDate(boleto.data_vencimento)}\n`;
+    textZap += `*Valor:* R$ ${parseFloat(boleto.valor).toFixed(2)}\n\n`;
+    if (boleto.anexo_path) {
+      // Cria a URL base dinamicamente pegando do navegador se API_URL for relativa ou usa a original
+      const baseUrl = API_URL.startsWith('http') ? API_URL : window.location.origin + API_URL;
+      textZap += `*Baixar PDF do Boleto:*\n${baseUrl}/boletos/${boleto.id}/anexo\n`;
+    }
+    
+    let zapLink = `https://wa.me/`;
+    if (boleto.whatsapp_pagador) {
+        let numeroLimpo = boleto.whatsapp_pagador.replace(/\D/g, '');
+        if (numeroLimpo.length === 10 || numeroLimpo.length === 11) {
+            numeroLimpo = '55' + numeroLimpo;
+        }
+        zapLink += `${numeroLimpo}`;
+    }
+    zapLink += `?text=${encodeURIComponent(textZap)}`;
+
+    html += `
+        <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px; text-align: center;">
+          <a href="${zapLink}" target="_blank" style="display: inline-block; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; width: 100%; box-sizing: border-box;">
+            📱 Enviar para o WhatsApp
+          </a>
+        </div>
+    `;
     
     html += `
         <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; font-size: 0.85rem; color: #666;">
