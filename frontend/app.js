@@ -9076,22 +9076,25 @@ function renderBoletos(boletos) {
 
   try {
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    // Converte data ISO para Data local (evita bug: "2026-03-05" UTC = 04/03 21h no Brasil)
+    const hojeY = hoje.getFullYear(), hojeM = hoje.getMonth(), hojeD = hoje.getDate();
+    // Extrai ano/mes/dia da data de vencimento (sem usar new Date para evitar fuso)
     const parseDataLocal = (str) => {
       if (!str) return null;
-      const s = String(str).trim();
-      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const m = String(str).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
-      const d = new Date(str);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      return null;
+    };
+    const diasEntre = (venc) => {
+      if (!venc) return 0;
+      const v = parseDataLocal(venc);
+      if (!v) return 0;
+      const d1 = new Date(hojeY, hojeM, hojeD);
+      const d2 = new Date(v.getFullYear(), v.getMonth(), v.getDate());
+      return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
     };
     const getSortKey = (b) => {
       if (b.status === 'PAGO' || b.status === 'CANCELADO') return 99999;
-      const venc = parseDataLocal(b.data_vencimento);
-      if (!venc) return 99999;
-      const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+      const diff = diasEntre(b.data_vencimento);
       return diff;
     };
     const ordenados = [...boletos].sort((a, b) => getSortKey(a) - getSortKey(b));
@@ -9107,8 +9110,7 @@ function renderBoletos(boletos) {
         statusLabel = 'Cancelado';
       } else {
         // Calcula estado real pela data de vencimento (A vencer ou Atrasado)
-        const venc = parseDataLocal(boleto.data_vencimento);
-        const diff = venc ? Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24)) : 0;
+        const diff = diasEntre(boleto.data_vencimento);
         if (diff < 0) {
           statusClass = 'status-pill--danger';
           statusLabel = 'Atrasado';
@@ -9134,9 +9136,7 @@ function renderBoletos(boletos) {
       // Calcula dias restante (para A_VENCER ou Atrasado)
       let diasRestante = '-';
       if (boleto.status !== 'PAGO' && boleto.status !== 'CANCELADO') {
-        const vencimento = parseDataLocal(boleto.data_vencimento);
-        const diffTime = vencimento ? vencimento - hoje : 0;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffDays = diasEntre(boleto.data_vencimento);
         if (diffDays > 0) {
           diasRestante = `${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
         } else if (diffDays < 0) {
