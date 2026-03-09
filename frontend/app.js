@@ -878,8 +878,31 @@ function formatQuantityDisplay(value) {
   return texto.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
 }
 
+// Formata data ISO ou string mantendo o dia exato (evita erro de fuso horário voltando 1 dia)
+function fmtData(dataStr) {
+  if (!dataStr) return '--';
+  try {
+    const s = String(dataStr).trim();
+    const match = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return '--';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${d.getFullYear()}`;
+  } catch {
+    return '--';
+  }
+}
+
 function formatDate(value) {
   if (!value) return "--";
+  // Usa o fmtData para evitar bug de fuso horário em datas sem hora (vencimento, pagamento)
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return fmtData(value);
+  }
   // Datas ISO com Z (UTC): converte para hora local antes de formatar
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}.*[Zz+-]/.test(value)) {
     const date = new Date(value);
