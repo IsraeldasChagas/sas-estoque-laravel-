@@ -1893,6 +1893,22 @@
             <textarea name="observacoes" rows="3" placeholder="Informacoes adicionais sobre o boleto"></textarea>
           </label>
 
+          <label>
+            Número do Boleto
+            <input name="numero_boleto" placeholder="Número do código de barras ou identificação" />
+          </label>
+
+          <div class="grid-two">
+            <label>
+              Nome do Pagador
+              <input name="nome_pagador" placeholder="Nome de quem fará o pagamento" />
+            </label>
+            <label>
+              WhatsApp
+              <input name="whatsapp_pagador" placeholder="(00) 00000-0000" type="tel" />
+            </label>
+          </div>
+
           <div class="boleto-recorrente-section" style="border: 2px solid #e3f2fd; background: #f5f9ff; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
               <input type="checkbox" name="is_recorrente" id="boletoRecorrente" value="1" style="width: auto; cursor: pointer;" />
