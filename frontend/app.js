@@ -899,38 +899,16 @@ function fmtData(dataStr) {
 
 function formatDate(value) {
   if (!value) return "--";
-  // Usa o fmtData para evitar bug de fuso horário em datas sem hora (vencimento, pagamento)
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
-    return fmtData(value);
-  }
-  // Datas ISO com Z (UTC): converte para hora local antes de formatar
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}.*[Zz+-]/.test(value)) {
-    const date = new Date(value);
-    if (!Number.isNaN(date.getTime())) {
-      const dia = String(date.getDate()).padStart(2, "0");
-      const mes = String(date.getMonth() + 1).padStart(2, "0");
-      const ano = String(date.getFullYear());
-      const hora = String(date.getHours()).padStart(2, "0");
-      const minuto = String(date.getMinutes()).padStart(2, "0");
-      return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+  // Qualquer string com YYYY-MM-DD: extrai só a data e formata, sem usar new Date().
+  // Evita bug de fuso horário (ex: 2026-03-15T00:00:00Z em UTC vira 14/03 no Brasil).
+  if (typeof value === "string") {
+    const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
     }
-  }
-  // Datas sem timezone (YYYY-MM-DD ou YYYY-MM-DD HH:mm:ss)
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-    const datePart = value.slice(0, 10);
-    const [year, month, day] = datePart.split("-");
-    const hasTime = value.length > 10 && /^\d{4}-\d{2}-\d{2}[T ]\d/.test(value);
-    if (!hasTime) return `${day}/${month}/${year}`;
-    const date = new Date(value.replace(" ", "T"));
-    if (!Number.isNaN(date.getTime())) {
-      const hora = String(date.getHours()).padStart(2, "0");
-      const minuto = String(date.getMinutes()).padStart(2, "0");
-      return `${day}/${month}/${year} ${hora}:${minuto}`;
-    }
-    return `${day}/${month}/${year}`;
   }
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return "--";
   const dia = String(date.getDate()).padStart(2, "0");
   const mes = String(date.getMonth() + 1).padStart(2, "0");
   const ano = String(date.getFullYear());
