@@ -9159,7 +9159,7 @@ function renderBoletos(boletos) {
           <td data-label="Juros/Multa">${formatCurrencyBRL(valorJuros)}</td>
           <td data-label="Anexo" style="text-align: center;">${anexoIcon}</td>
           <td data-label="Ações">
-            <button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>
+            ${boleto.status !== 'PAGO' ? `<button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>` : ''}
             <button class="btn-icon" title="Detalhes" data-id="${boleto.id}">👁️</button>
             ${boleto.status !== 'PAGO' ? `<button class="btn-icon btn-icon--primary" title="Pagar" data-id="${boleto.id}">💳</button>` : ''}
             <button class="btn-icon btn-icon--danger btn-deletar-boleto" title="Excluir" data-id="${boleto.id}" style="color:#c62828;">🗑️</button>
