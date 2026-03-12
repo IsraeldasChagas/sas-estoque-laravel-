@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::dropIfExists('funcionarios');
         Schema::create('funcionarios', function (Blueprint $table) {
             $table->id();
             $table->string('nome_completo');
+            $table->string('foto', 255)->nullable();
             $table->string('cpf', 14)->unique();
             $table->date('data_nascimento')->nullable();
             $table->string('sexo', 20)->nullable();

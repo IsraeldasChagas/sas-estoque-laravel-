@@ -3436,6 +3436,15 @@ select[size]:not([size="1"]) {
 #funcionariosSection .table-wrapper .usuarios-foto,
 #funcionariosSection .table-wrapper .usuarios-foto--placeholder { width: 48px; height: 48px; }
 
+/* Modal de visualização - pergunta em cima, resposta embaixo */
+.view-field { margin-bottom: 0.75rem; }
+.view-field-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.2rem; font-weight: 500; }
+.view-field-value { font-size: 1rem; color: var(--text); }
+.view-funcionario-header { display: flex; align-items: flex-start; gap: 1.25rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.view-foto-wrap .usuarios-foto, .view-foto-wrap .usuarios-foto--placeholder { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; }
+.view-foto-placeholder { background: var(--border); display: flex; align-items: center; justify-content: center; }
+.view-fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 1.5rem; }
+
 /* Filtro de Mes/Ano */
 .boletos-filtro {
   background: var(--card-bg);

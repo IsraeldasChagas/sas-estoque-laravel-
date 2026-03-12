@@ -5231,8 +5231,9 @@ Route::post('/funcionarios', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $userId = $request->header('X-Usuario-Id');
-    if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
-        return response()->json(['error' => 'Não autorizado'], 401)
+    $usuarioLogado = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (!$usuarioLogado) {
+        return response()->json(['error' => 'Faça login novamente. Sessão expirada ou usuário não identificado.'], 401)
             ->header('Access-Control-Allow-Origin', '*');
     }
 
@@ -5313,8 +5314,12 @@ Route::post('/funcionarios', function (Request $request) {
     $funcionario = DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first();
     return response()->json($funcionario, 201)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
-        \Log::error('POST /funcionarios: ' . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+        \Log::error('POST /funcionarios: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+        $msg = $e->getMessage();
+        if (strpos($msg, 'Base table') !== false || strpos($msg, 'doesn\'t exist') !== false) {
+            $msg = 'Tabela de funcionários não encontrada. Execute no servidor: php artisan migrate --force';
+        }
+        return response()->json(['error' => $msg], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 

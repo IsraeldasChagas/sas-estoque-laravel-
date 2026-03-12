@@ -262,6 +262,7 @@ const dom = {
   funcionarioViewContent: document.getElementById("funcionarioViewContent"),
   closeFuncionarioViewBtn: document.getElementById("closeFuncionarioView"),
   funcionarioViewEditar: document.getElementById("funcionarioViewEditar"),
+  funcionarioViewInativar: document.getElementById("funcionarioViewInativar"),
   closeFuncionarioView: document.getElementById("closeFuncionarioView"),
 };
 
@@ -8580,25 +8581,54 @@ function setupModals() {
   }
   function viewFuncionario(id) {
     fetchJSON(`/funcionarios/${id}`).then(f => {
-      const escape = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
+      const esc = s => (s == null || s === "" ? "-" : String(s).replace(/</g, "&lt;"));
       const statusLabel = (f.status || "ativo") === "ativo" ? "Ativo" : "Inativo";
       const acessoLabel = f.possui_acesso ? "Sim" : "Não";
       const viewFotoUrl = f.foto ? getUsuarioFotoUrl(f.foto) : null;
       const viewFotoHtml = viewFotoUrl
-        ? `<img src="${viewFotoUrl}" alt="${escape(f.nome_completo)}" class="usuarios-foto" style="max-width:96px;border-radius:8px;" />`
-        : '<div class="usuarios-foto usuarios-foto--placeholder" style="width:96px;height:96px;"></div>';
+        ? `<img src="${viewFotoUrl}" alt="${esc(f.nome_completo)}" class="usuarios-foto view-foto" />`
+        : '<div class="usuarios-foto usuarios-foto--placeholder view-foto-placeholder"></div>';
+      const field = (label, val) => `<div class="view-field"><div class="view-field-label">${label}</div><div class="view-field-value">${esc(val)}</div></div>`;
       dom.funcionarioViewContent.innerHTML = `
-        <div class="form-section" style="display:flex;align-items:flex-start;gap:1rem;">
-          <div>${viewFotoHtml}</div>
-          <div>
-        <h3>Dados pessoais</h3><p><strong>Nome:</strong> ${escape(f.nome_completo)}</p><p><strong>CPF:</strong> ${escape(f.cpf)}</p><p><strong>Data nasc.:</strong> ${escape(f.data_nascimento)}</p><p><strong>Sexo:</strong> ${escape(f.sexo)}</p><p><strong>Estado civil:</strong> ${escape(f.estado_civil)}</p>
+        <div class="view-funcionario-header">
+          <div class="view-foto-wrap">${viewFotoHtml}</div>
+          <div class="view-fields-grid">
+            ${field("Nome completo", f.nome_completo)}
+            ${field("CPF", f.cpf)}
+            ${field("Data de nascimento", f.data_nascimento)}
+            ${field("Sexo", f.sexo)}
+            ${field("Estado civil", f.estado_civil)}
           </div>
         </div>
-        <div class="form-section"><h3>Dados profissionais</h3><p><strong>Cargo:</strong> ${escape(f.cargo)}</p><p><strong>Unidade:</strong> ${escape(f.unidade_nome)}</p><p><strong>Data admissão:</strong> ${escape(f.data_admissao)}</p><p><strong>Status:</strong> ${statusLabel}</p></div>
-        <div class="form-section"><h3>Contato</h3><p><strong>WhatsApp:</strong> ${escape(f.whatsapp)}</p><p><strong>E-mail:</strong> ${escape(f.email)}</p></div>
-        <div class="form-section"><p><strong>Possui acesso ao sistema:</strong> ${acessoLabel}</p><p><strong>Cadastrado em:</strong> ${escape(f.created_at)}</p></div>
+        <div class="form-section">
+          <h3>Dados profissionais</h3>
+          <div class="view-fields-grid">
+            ${field("Cargo", f.cargo)}
+            ${field("Unidade", f.unidade_nome)}
+            ${field("Data de admissão", f.data_admissao)}
+            ${field("Status", statusLabel)}
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Contato</h3>
+          <div class="view-fields-grid">
+            ${field("WhatsApp", f.whatsapp)}
+            ${field("E-mail", f.email)}
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="view-fields-grid">
+            ${field("Possui acesso ao sistema", acessoLabel)}
+            ${f.usuario_email ? field("Login (e-mail)", f.usuario_email) : ""}
+            ${f.perfil_usuario ? field("Perfil no sistema", PERFIL_LABELS[f.perfil_usuario] || f.perfil_usuario) : ""}
+            ${field("Cadastrado em", f.created_at)}
+            ${field("Observações", f.observacoes)}
+          </div>
+        </div>
       `;
       dom.funcionarioViewEditar.dataset.id = id;
+      dom.funcionarioViewInativar.dataset.id = id;
+      dom.funcionarioViewInativar.style.display = (f.status || "ativo") === "ativo" ? "" : "none";
       toggleModal(dom.funcionarioViewModal, true);
     }).catch(() => showToast("Erro ao carregar funcionário.", "error"));
   }
@@ -8656,6 +8686,10 @@ function setupModals() {
   });
   dom.funcionarioForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!currentUser?.id) {
+      showToast("Faça login novamente. Sessão expirada.", "error");
+      return;
+    }
     const form = dom.funcionarioForm;
     const id = form.elements.id?.value;
     const nome = (form.elements.nome_completo?.value || "").trim();
@@ -8736,6 +8770,7 @@ function setupModals() {
   dom.closeFuncionarioView?.addEventListener("click", () => toggleModal(dom.funcionarioViewModal, false));
   dom.closeFuncionarioViewBtn?.addEventListener("click", () => toggleModal(dom.funcionarioViewModal, false));
   dom.funcionarioViewEditar?.addEventListener("click", () => { const id = dom.funcionarioViewEditar.dataset.id; if (id) editFuncionario(id); });
+  dom.funcionarioViewInativar?.addEventListener("click", () => { const id = dom.funcionarioViewInativar.dataset.id; if (id) { toggleModal(dom.funcionarioViewModal, false); inativarFuncionario(id); } });
 
   dom.openUnidadeBtn?.addEventListener("click", async () => {
     if (!canManageUnidades()) {
