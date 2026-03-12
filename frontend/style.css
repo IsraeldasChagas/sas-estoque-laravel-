@@ -3733,6 +3733,8 @@ select[size]:not([size="1"]) {
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.875rem;
+  font-weight: 700;
+  text-align: left;
 }
 
 .reservas-select, .reservas-input {
@@ -3758,6 +3760,7 @@ select[size]:not([size="1"]) {
   align-items: center;
   gap: 1rem;
   border-left: 4px solid transparent;
+  text-align: left;
 }
 
 .reserva-card--livre { border-left-color: #4caf50; }
@@ -3766,8 +3769,8 @@ select[size]:not([size="1"]) {
 .reserva-card--total { border-left-color: #2196f3; }
 
 .reserva-card__icon { font-size: 1.75rem; }
-.reserva-card__label { font-size: 0.8rem; color: var(--muted); }
-.reserva-card__value { font-size: 1.5rem; font-weight: 700; }
+.reserva-card__label { font-size: 0.8rem; color: var(--muted); font-weight: 700; text-align: left; }
+.reserva-card__value { font-size: 1.5rem; font-weight: 600; text-align: left; }
 
 .reservas-mesas-grid {
   display: grid;
@@ -3775,22 +3778,90 @@ select[size]:not([size="1"]) {
   gap: 1.5rem;
 }
 
+/* Tablet: pergunta em cima, resposta em baixo + scroll */
 @media (max-width: 900px) {
   .reservas-mesas-grid {
     grid-template-columns: 1fr;
   }
+  .reservas-mesas-filtro {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .reservas-mesas-filtro label {
+    display: block;
+    min-width: 100%;
+    font-weight: 700;
+    text-align: left;
+  }
+  .reservas-mesas-filtro .reservas-select,
+  .reservas-mesas-filtro .reservas-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .reserva-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .reserva-card__label { order: 1; }
+  .reserva-card__value { order: 2; font-size: 1.3rem; }
+  .reserva-card__icon { order: 0; }
+  .reservas-mesas-cards {
+    max-height: 50vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mesa-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .mesa-card__numero { order: 1; }
+  .mesa-card__info { order: 2; }
+  .mesa-card__cliente { order: 3; }
 }
 
 @media (max-width: 600px) {
   .reservas-mesas-container { padding: 0 0.5rem; }
   .reservas-mesas-filtro { flex-direction: column; align-items: stretch; }
-  .reservas-mesas-filtro label { min-width: 100%; }
+  .reservas-mesas-filtro label {
+    display: block;
+    min-width: 100%;
+  }
+  .reservas-mesas-filtro .reservas-select,
+  .reservas-mesas-filtro .reservas-input {
+    width: 100%;
+    min-width: 0;
+  }
   .reservas-mesas-resumo { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .reserva-card { padding: 0.75rem 1rem; }
-  .reserva-card__value { font-size: 1.2rem; }
-  .reservas-mesas-cards { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .mesa-card { padding: 0.75rem; font-size: 0.9rem; }
-  .mesa-card__numero { font-size: 1rem; }
+  .reserva-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+  }
+  .reserva-card__label { order: 1; }
+  .reserva-card__value { order: 2; font-size: 1.2rem; }
+  .reserva-card__icon { order: 0; }
+  .reservas-mesas-cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    max-height: 45vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mesa-card {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .mesa-card__numero { font-size: 1rem; order: 1; }
+  .mesa-card__info { order: 2; }
+  .mesa-card__cliente { order: 3; }
+  .mesa-card__del { order: 0; align-self: flex-end; }
   .reservas-table { font-size: 0.8rem; }
   .reservas-table th, .reservas-table td { padding: 0.4rem 0.25rem; }
   .reservas-mesas-header { flex-direction: column; align-items: stretch; }
@@ -3798,7 +3869,6 @@ select[size]:not([size="1"]) {
   .btn-icon { padding: 0.35rem; font-size: 1rem; }
   .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .reservas-mesas-mesas h3, .reservas-mesas-lista h3 { font-size: 1rem; }
-  .mesa-card { min-height: 44px; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .btn-icon { min-width: 44px; min-height: 44px; }
   .reserva-card { -webkit-tap-highlight-color: transparent; }
 }
@@ -3811,18 +3881,19 @@ select[size]:not([size="1"]) {
 
 .reservas-mesas-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.5rem;
 }
 
 .mesa-card {
   position: relative;
   background: var(--card-bg);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: left;
 }
 
 .mesa-card:hover {
@@ -3836,7 +3907,7 @@ select[size]:not([size="1"]) {
 .mesa-card--bloqueada { border-color: #9e9e9e; background: rgba(158,158,158,0.08); opacity: 0.7; }
 
 .mesa-card__numero {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 0.25rem;
 }
@@ -3844,6 +3915,7 @@ select[size]:not([size="1"]) {
 .mesa-card__info {
   font-size: 0.75rem;
   color: var(--muted);
+  font-weight: 700;
 }
 
 .mesa-card__del {
