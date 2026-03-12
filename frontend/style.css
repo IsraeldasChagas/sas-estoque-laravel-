@@ -3703,6 +3703,9 @@ select[size]:not([size="1"]) {
 /* ========== RESERVAS DE MESAS ========== */
 .reservas-mesas-container {
   padding: 0 1rem;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .reservas-mesas-header {
@@ -3741,19 +3744,23 @@ select[size]:not([size="1"]) {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  min-width: 140px;
+  min-width: 120px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .reservas-mesas-resumo {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
+  min-width: 0;
 }
 
 .reserva-card {
   background: var(--card-bg);
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1rem;
+  min-width: 0;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   display: flex;
@@ -3776,6 +3783,7 @@ select[size]:not([size="1"]) {
   display: grid;
   grid-template-columns: 1fr 1.5fr;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 /* Tablet: pergunta em cima, resposta em baixo + scroll */
@@ -3822,7 +3830,8 @@ select[size]:not([size="1"]) {
 }
 
 @media (max-width: 600px) {
-  .reservas-mesas-container { padding: 0 0.5rem; }
+  #reservaMesaSection { overflow-x: hidden; max-width: 100%; }
+  .reservas-mesas-container { padding: 0 0.4rem; max-width: 100%; }
   .reservas-mesas-filtro { flex-direction: column; align-items: stretch; }
   .reservas-mesas-filtro label {
     display: block;
@@ -3833,32 +3842,32 @@ select[size]:not([size="1"]) {
     width: 100%;
     min-width: 0;
   }
-  .reservas-mesas-resumo { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .reservas-mesas-resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
   .reserva-card {
     flex-direction: column;
     align-items: flex-start;
     padding: 0.75rem 1rem;
   }
   .reserva-card__label { order: 1; }
-  .reserva-card__value { order: 2; font-size: 1.2rem; }
+  .reserva-card__value { order: 2; font-size: 1.1rem; }
   .reserva-card__icon { order: 0; }
   .reservas-mesas-cards {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.4rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
     max-height: 45vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
   .mesa-card {
-    padding: 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.8rem;
     flex-direction: column;
     align-items: flex-start;
     min-height: 44px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
-  .mesa-card__numero { font-size: 1rem; order: 1; }
+  .mesa-card__numero { font-size: 0.95rem; order: 1; }
   .mesa-card__info { order: 2; }
   .mesa-card__cliente { order: 3; }
   .mesa-card__del { order: 0; align-self: flex-end; }
@@ -3881,15 +3890,17 @@ select[size]:not([size="1"]) {
 
 .reservas-mesas-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .mesa-card {
   position: relative;
   background: var(--card-bg);
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  min-width: 0;
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -3954,14 +3965,17 @@ select[size]:not([size="1"]) {
 
 /* Mobile/Tablet: Reservas do dia - card layout para não estourar */
 @media (max-width: 900px) {
+  .reservas-mesas-mesas, .reservas-mesas-lista { min-width: 0; }
   .reservas-mesas-lista .table-wrapper {
     overflow: visible;
+    max-width: 100%;
   }
   .reservas-table thead { display: none; }
   .reservas-table tr.reserva-row {
     display: block;
     margin-bottom: 1rem;
-    padding: 1rem;
+    padding: 0.75rem;
+    min-width: 0;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--card-bg);
@@ -3980,7 +3994,8 @@ select[size]:not([size="1"]) {
     content: attr(data-label);
     font-weight: 700;
     flex-shrink: 0;
-    min-width: 90px;
+    min-width: 70px;
+    font-size: 0.75rem;
   }
   .reservas-table tr.reserva-row td.reserva-row-acoes {
     flex-wrap: wrap;
