@@ -9982,6 +9982,10 @@ async function abrirEditarReserva(id) {
   form.querySelector('[name="qtd_pessoas"]').value = r.qtd_pessoas || 2;
   form.querySelector('[name="status"]').value = r.status || 'pendente';
   form.querySelector('[name="observacao"]').value = r.observacao || '';
+  var localEl = form.querySelector('[name="local"]');
+  if (localEl) localEl.value = r.local || '';
+  var ocasiaoEl = form.querySelector('[name="ocasiao"]');
+  if (ocasiaoEl) ocasiaoEl.value = r.ocasiao || '';
   document.getElementById('reservaMesaModalTitle').textContent = '✏️ Editar Reserva';
   await popularMesasReserva(r.unidade_id);
   document.getElementById('reservaMesaModal').classList.add('active');
@@ -10106,7 +10110,9 @@ function setupReservasMesasModule() {
       hora_reserva: form.querySelector('[name="hora_reserva"]').value,
       qtd_pessoas: parseInt(form.querySelector('[name="qtd_pessoas"]').value, 10),
       status: form.querySelector('[name="status"]').value,
-      observacao: form.querySelector('[name="observacao"]').value
+      observacao: form.querySelector('[name="observacao"]').value,
+      local: form.querySelector('[name="local"]') && form.querySelector('[name="local"]').value,
+      ocasiao: form.querySelector('[name="ocasiao"]') && form.querySelector('[name="ocasiao"]').value
     };
     if (!data.unidade_id || !data.mesa_id) { showToast('Selecione unidade e mesa.', 'error'); return; }
     try {

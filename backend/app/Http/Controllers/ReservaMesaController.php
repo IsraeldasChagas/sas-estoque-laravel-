@@ -109,6 +109,8 @@ class ReservaMesaController extends Controller
             'qtd_pessoas' => 'required|integer|min:1|max:99',
             'status' => 'nullable|in:pendente,confirmada,cancelada,cliente_chegou,no_show,finalizada',
             'observacao' => 'nullable|string|max:500',
+            'local' => 'nullable|string|max:100',
+            'ocasiao' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -147,7 +149,7 @@ class ReservaMesaController extends Controller
 
         $data = $request->only([
             'unidade_id', 'mesa_id', 'nome_cliente', 'telefone_cliente',
-            'data_reserva', 'hora_reserva', 'qtd_pessoas', 'status', 'observacao'
+            'data_reserva', 'hora_reserva', 'qtd_pessoas', 'status', 'observacao', 'local', 'ocasiao'
         ]);
         $data['usuario_id'] = $usuarioId;
         $data['status'] = $data['status'] ?? ReservaMesa::STATUS_PENDENTE;
@@ -192,6 +194,8 @@ class ReservaMesaController extends Controller
             'qtd_pessoas' => 'sometimes|required|integer|min:1|max:99',
             'status' => 'nullable|in:pendente,confirmada,cancelada,cliente_chegou,no_show,finalizada',
             'observacao' => 'nullable|string|max:500',
+            'local' => 'nullable|string|max:100',
+            'ocasiao' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -248,7 +252,7 @@ class ReservaMesaController extends Controller
 
         $reserva->update($request->only([
             'mesa_id', 'nome_cliente', 'telefone_cliente', 'data_reserva',
-            'hora_reserva', 'qtd_pessoas', 'status', 'observacao'
+            'hora_reserva', 'qtd_pessoas', 'status', 'observacao', 'local', 'ocasiao'
         ]));
 
         $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade', 'usuario:id,nome']);

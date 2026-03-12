@@ -19,6 +19,8 @@ class ReservaMesa extends Model
         'qtd_pessoas',
         'status',
         'observacao',
+        'local',
+        'ocasiao',
     ];
 
     protected $casts = [

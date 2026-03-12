@@ -4060,10 +4060,19 @@ select[size]:not([size="1"]) {
   .reservas-table tr.reserva-row-empty td::before {
     display: none;
   }
+  .reservas-table td.reservas-empty {
+    text-align: left !important;
+    padding: 1rem;
+    display: block;
+  }
 }
 
 @media (max-width: 600px) {
   .reservas-table tr.reserva-row td::before { min-width: 80px; font-size: 0.8rem; }
+  .reservas-table td.reservas-empty {
+    text-align: left !important;
+    padding-left: 1rem;
+  }
 }
 
 .reservas-table th { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
@@ -4071,12 +4080,16 @@ select[size]:not([size="1"]) {
 .reservas-empty {
   color: var(--muted);
   padding: 1rem 1.5rem;
-  text-align: left;
+  text-align: left !important;
   white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
   display: block;
   visibility: visible;
+}
+
+.reservas-table td.reservas-empty {
+  text-align: left !important;
 }
 
 .status-reserva { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }

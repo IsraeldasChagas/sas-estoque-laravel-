@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260312k" />
+    <link rel="stylesheet" href="style.css?v=20260317" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -883,6 +883,20 @@
                   <label>
                     Quantidade de pessoas *
                     <input type="number" name="qtd_pessoas" min="1" max="99" value="2" required />
+                  </label>
+                  <label>
+                    Local
+                    <select name="local">
+                      <option value="">Selecione o local</option>
+                      <option value="Area externa">Área externa</option>
+                      <option value="Salão Principal">Salão Principal</option>
+                      <option value="Climatizado Térreo">Climatizado Térreo</option>
+                      <option value="Climatizado 1º piso">Climatizado 1º piso</option>
+                    </select>
+                  </label>
+                  <label>
+                    Ocasião (motivo)
+                    <input type="text" name="ocasiao" placeholder="Ex: aniversário, reunião de trabalho" />
                   </label>
                   <label>
                     Status
