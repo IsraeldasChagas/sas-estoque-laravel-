@@ -9736,7 +9736,7 @@ async function loadReservasMesas() {
         '<button class="btn-icon" title="Detalhes" data-id="' + r.id + '">👁️</button> ' +
         (podeEditar ? '<button class="btn-icon" title="Editar" data-id="' + r.id + '">✏️</button> <button class="btn-icon" title="Confirmar chegada" data-action="cliente_chegou" data-id="' + r.id + '">✅</button> <button class="btn-icon" title="Cancelar" data-action="cancelar" data-id="' + r.id + '">❌</button>' : '') +
         '</td></tr>';
-    }).join('') || '<tr><td colspan="8" class="reservas-empty">Nenhuma reserva para esta data.</td></tr>';
+    }).join('') || '<tr class="reserva-row reserva-row-empty"><td colspan="8" class="reservas-empty" data-label="">Nenhuma reserva para esta data.</td></tr>';
 
     document.getElementById('reservasMesasLivres').textContent = resumo.mesas_livres ?? 0;
     document.getElementById('reservasMesasReservadas').textContent = resumo.mesas_reservadas ?? 0;
