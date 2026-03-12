@@ -261,7 +261,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao"],
+    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "reservaMesa"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -269,7 +269,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao"],
+    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -293,7 +293,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
+    sections: ["dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -309,7 +309,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao"],
+    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -6428,7 +6428,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras'];
+          const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
