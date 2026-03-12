@@ -6413,11 +6413,6 @@ function renderProventos(lista) {
     </tr>`;
   });
   target.innerHTML = rows.join("");
-  document.getElementById("proventosSection")?.querySelectorAll(".btn-view-provento").forEach(b => b.addEventListener("click", () => viewProvento(b.dataset.id)));
-  document.getElementById("proventosSection")?.querySelectorAll(".btn-edit-provento").forEach(b => b.addEventListener("click", () => editProvento(b.dataset.id)));
-  document.getElementById("proventosSection")?.querySelectorAll(".btn-autorizar-provento").forEach(b => b.addEventListener("click", () => autorizarProvento(b.dataset.id)));
-  document.getElementById("proventosSection")?.querySelectorAll(".btn-finalizar-provento").forEach(b => b.addEventListener("click", () => finalizarProvento(b.dataset.id)));
-  document.getElementById("proventosSection")?.querySelectorAll(".btn-cancelar-provento").forEach(b => b.addEventListener("click", () => cancelarProvento(b.dataset.id)));
 }
 
 async function loadLotes(filtros = {}) {
@@ -8987,6 +8982,18 @@ function setupModals() {
   document.getElementById("closeProventoView")?.addEventListener("click", () => toggleModal(document.getElementById("proventoViewModal"), false));
   document.getElementById("closeProventoViewBtn")?.addEventListener("click", () => toggleModal(document.getElementById("proventoViewModal"), false));
   document.getElementById("proventoViewEditar")?.addEventListener("click", () => { const id = document.getElementById("proventoViewEditar")?.dataset?.id; if (id) editProvento(id); });
+  document.getElementById("proventosSection")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-view-provento, .btn-edit-provento, .btn-autorizar-provento, .btn-finalizar-provento, .btn-cancelar-provento");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (!id) return;
+    e.preventDefault();
+    if (btn.classList.contains("btn-view-provento")) viewProvento(id);
+    else if (btn.classList.contains("btn-edit-provento")) editProvento(id);
+    else if (btn.classList.contains("btn-autorizar-provento")) autorizarProvento(id);
+    else if (btn.classList.contains("btn-finalizar-provento")) finalizarProvento(id);
+    else if (btn.classList.contains("btn-cancelar-provento")) cancelarProvento(id);
+  });
   document.getElementById("proventosFilterForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await loadProventos(getProventosFiltros()); });
   document.getElementById("proventosLimparFiltros")?.addEventListener("click", () => {
     ["proventosFiltroFuncionario","proventosFiltroCpf","proventosFiltroTipo","proventosFiltroVerba","proventosFiltroUnidade","proventosFiltroStatus","proventosFiltroDataInicio","proventosFiltroDataFim"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
