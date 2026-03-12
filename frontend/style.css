@@ -3435,6 +3435,7 @@ select[size]:not([size="1"]) {
 #funcionariosSection .table-wrapper td[data-label="Foto"] { width: 64px; }
 #funcionariosSection .table-wrapper .usuarios-foto,
 #funcionariosSection .table-wrapper .usuarios-foto--placeholder { width: 48px; height: 48px; }
+#funcionariosSection .table-action { cursor: pointer; }
 
 /* Modal de visualização - pergunta em cima, resposta embaixo */
 .view-field { margin-bottom: 0.75rem; }

@@ -6338,9 +6338,6 @@ function renderFuncionarios(lista) {
     </tr>`;
   });
   target.innerHTML = rows.join("");
-  target.querySelectorAll(".btn-view-funcionario").forEach(btn => btn.addEventListener("click", () => viewFuncionario(btn.dataset.id)));
-  target.querySelectorAll(".btn-edit-funcionario").forEach(btn => btn.addEventListener("click", () => editFuncionario(btn.dataset.id)));
-  target.querySelectorAll(".btn-inativar-funcionario").forEach(btn => btn.addEventListener("click", () => inativarFuncionario(btn.dataset.id)));
 }
 
 async function loadLotes(filtros = {}) {
@@ -8656,7 +8653,27 @@ function setupModals() {
   }
   dom.openFuncionarioBtn?.addEventListener("click", () => openFuncionarioModal());
   dom.closeFuncionarioBtn?.addEventListener("click", () => toggleModal(dom.funcionarioModal, false));
-  dom.cancelFuncionarioBtn?.addEventListener("click", () => toggleModal(dom.funcionarioModal, false));
+  dom.cancelFuncionarioBtn?.addEventListener("click", () => {
+    dom.funcionarioForm?.reset();
+    funcionarioFotoFile = null;
+    funcionarioFotoRemovida = false;
+    if (dom.funcionarioForm?.elements.id) dom.funcionarioForm.elements.id.value = "";
+    if (dom.funcionarioFormFeedback) { dom.funcionarioFormFeedback.classList.add("hidden"); dom.funcionarioFormFeedback.textContent = ""; }
+    if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
+    if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.add("hidden");
+    if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+    dom.funcionarioModalTitle.textContent = "Novo Funcionário";
+  });
+  document.getElementById("funcionariosSection")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-view-funcionario, .btn-edit-funcionario, .btn-inativar-funcionario");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (!id) return;
+    e.preventDefault();
+    if (btn.classList.contains("btn-view-funcionario")) viewFuncionario(id);
+    else if (btn.classList.contains("btn-edit-funcionario")) editFuncionario(id);
+    else if (btn.classList.contains("btn-inativar-funcionario")) inativarFuncionario(id);
+  });
   dom.funcionarioFotoInput?.addEventListener("change", (ev) => {
     const file = ev.target.files?.[0];
     if (file && (file.type === "image/jpeg" || file.type === "image/png") && file.size <= 2 * 1024 * 1024) {
@@ -8696,10 +8713,10 @@ function setupModals() {
     const cpf = (form.elements.cpf?.value || "").replace(/\D/g, "");
     const cargo = (form.elements.cargo?.value || "").trim();
     const feedback = dom.funcionarioFormFeedback;
-    if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
-    if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
-    if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
-    if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
+    if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
+    if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
+    if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
+    if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; feedback.className = "form-feedback hidden"; }
     const payload = {
       nome_completo: form.elements.nome_completo?.value,
       cpf: (form.elements.cpf?.value || "").replace(/\D/g, ""),
@@ -8766,7 +8783,7 @@ function setupModals() {
         if (parts.length) msg = parts.join(' ');
       }
       const safeMsg = msg.length > 500 || msg.trim().startsWith("<") ? "Erro no servidor. Tente novamente ou contate o suporte." : msg;
-      if (feedback) { feedback.textContent = safeMsg; feedback.classList.remove("hidden"); }
+      if (feedback) { feedback.textContent = safeMsg; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); }
       else showToast(safeMsg, "error");
     }
   });
