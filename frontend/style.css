@@ -4018,7 +4018,7 @@ select[size]:not([size="1"]) {
 .reservas-empty {
   color: var(--muted);
   padding: 1.5rem;
-  text-align: center;
+  text-align: left;
 }
 
 .status-reserva { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
