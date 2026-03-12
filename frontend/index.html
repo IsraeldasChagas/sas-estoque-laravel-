@@ -2,7 +2,8 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
@@ -933,8 +934,14 @@
                     <div class="form-card__grid">
                       <label class="form-card__field">Número da mesa * <input name="numero_mesa" placeholder="Ex: 01, 02, Mesa 1" required /></label>
                       <label class="form-card__field">Nome (opcional) <input name="nome_mesa" placeholder="Ex: Varanda 1, Salão principal" /></label>
-                      <label class="form-card__field">Capacidade * <input type="number" name="capacidade" min="1" value="4" required /></label>
+                      <label class="form-card__field">Pessoas (capacidade) * <input type="number" name="capacidade" min="1" value="4" required /></label>
                       <label class="form-card__field">Localização <input name="localizacao" placeholder="Ex: salão, varanda" /></label>
+                      <label class="form-card__field" style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="checkbox" name="pode_juntar" value="1" /> Pode juntar com outras
+                      </label>
+                      <label class="form-card__field" style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="checkbox" name="pode_separar" value="1" /> Pode separar
+                      </label>
                     </div>
                     <div style="margin-top: 1rem;">
                       <button type="button" class="btn neutral" id="cancelMesaForm">Cancelar</button>

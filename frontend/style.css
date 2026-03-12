@@ -3781,6 +3781,28 @@ select[size]:not([size="1"]) {
   }
 }
 
+@media (max-width: 600px) {
+  .reservas-mesas-container { padding: 0 0.5rem; }
+  .reservas-mesas-filtro { flex-direction: column; align-items: stretch; }
+  .reservas-mesas-filtro label { min-width: 100%; }
+  .reservas-mesas-resumo { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .reserva-card { padding: 0.75rem 1rem; }
+  .reserva-card__value { font-size: 1.2rem; }
+  .reservas-mesas-cards { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .mesa-card { padding: 0.75rem; font-size: 0.9rem; }
+  .mesa-card__numero { font-size: 1rem; }
+  .reservas-table { font-size: 0.8rem; }
+  .reservas-table th, .reservas-table td { padding: 0.4rem 0.25rem; }
+  .reservas-mesas-header { flex-direction: column; align-items: stretch; }
+  .reservas-mesas-actions { display: flex; gap: 0.5rem; }
+  .btn-icon { padding: 0.35rem; font-size: 1rem; }
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .reservas-mesas-mesas h3, .reservas-mesas-lista h3 { font-size: 1rem; }
+  .mesa-card { min-height: 44px; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .btn-icon { min-width: 44px; min-height: 44px; }
+  .reserva-card { -webkit-tap-highlight-color: transparent; }
+}
+
 .reservas-mesas-mesas h3,
 .reservas-mesas-lista h3 {
   margin: 0 0 1rem 0;

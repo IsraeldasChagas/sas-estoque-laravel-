@@ -48,6 +48,8 @@ class MesaController extends Controller
             'nome_mesa' => 'nullable|string|max:255',
             'capacidade' => 'required|integer|min:1|max:99',
             'localizacao' => 'nullable|string|max:100',
+            'pode_juntar' => 'nullable|boolean',
+            'pode_separar' => 'nullable|boolean',
             'status' => 'nullable|in:livre,reservada,aguardando_cliente,ocupada,bloqueada',
             'observacao' => 'nullable|string|max:500',
         ]);
@@ -69,7 +71,7 @@ class MesaController extends Controller
 
         $mesa = Mesa::create($request->only([
             'unidade_id', 'numero_mesa', 'nome_mesa', 'capacidade',
-            'localizacao', 'status', 'observacao'
+            'localizacao', 'pode_juntar', 'pode_separar', 'status', 'observacao'
         ]));
 
         return response()->json(['message' => 'Mesa criada com sucesso', 'mesa' => $mesa], 201);
@@ -90,6 +92,8 @@ class MesaController extends Controller
             'nome_mesa' => 'nullable|string|max:255',
             'capacidade' => 'sometimes|required|integer|min:1|max:99',
             'localizacao' => 'nullable|string|max:100',
+            'pode_juntar' => 'nullable|boolean',
+            'pode_separar' => 'nullable|boolean',
             'status' => 'nullable|in:livre,reservada,aguardando_cliente,ocupada,bloqueada',
             'observacao' => 'nullable|string|max:500',
             'ativo' => 'nullable|boolean',
@@ -114,7 +118,7 @@ class MesaController extends Controller
 
         $mesa->update($request->only([
             'numero_mesa', 'nome_mesa', 'capacidade', 'localizacao',
-            'status', 'observacao', 'ativo'
+            'pode_juntar', 'pode_separar', 'status', 'observacao', 'ativo'
         ]));
 
         return response()->json(['message' => 'Mesa atualizada', 'mesa' => $mesa]);
@@ -123,9 +127,17 @@ class MesaController extends Controller
     public function destroy($id)
     {
         $mesa = Mesa::findOrFail($id);
+        $temReservaAtiva = ReservaMesa::where('mesa_id', $id)
+            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+            ->exists();
+        $estaLivre = ($mesa->status ?? '') === Mesa::STATUS_LIVRE;
+        if ($estaLivre && !$temReservaAtiva) {
+            $mesa->delete();
+            return response()->json(['message' => 'Mesa excluída com sucesso']);
+        }
         $mesa->ativo = false;
         $mesa->save();
-        return response()->json(['message' => 'Mesa inativada com sucesso']);
+        return response()->json(['message' => 'Mesa inativada (tinha reservas ou não estava livre)']);
     }
 
     public function inativar($id)

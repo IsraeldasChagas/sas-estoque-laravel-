@@ -14,6 +14,8 @@ class Mesa extends Model
         'nome_mesa',
         'capacidade',
         'localizacao',
+        'pode_juntar',
+        'pode_separar',
         'status',
         'observacao',
         'ativo',
@@ -22,6 +24,8 @@ class Mesa extends Model
     protected $casts = [
         'capacidade' => 'integer',
         'ativo' => 'boolean',
+        'pode_juntar' => 'boolean',
+        'pode_separar' => 'boolean',
     ];
 
     public const STATUS_LIVRE = 'livre';

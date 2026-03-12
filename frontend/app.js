@@ -9811,13 +9811,16 @@ function setupReservasMesasModule() {
     var numero = prompt('Número da mesa:', '1');
     if (!numero || !numero.trim()) return;
     numero = numero.trim();
+    var capStr = prompt('Quantidade de pessoas (capacidade):', '4');
+    var capacidade = 4;
+    if (capStr && !isNaN(parseInt(capStr, 10))) capacidade = Math.max(1, parseInt(capStr, 10));
     try {
       var resp = await fetchJSON('/mesas', {
         method: 'POST',
         body: JSON.stringify({
           unidade_id: unidadeId,
           numero_mesa: numero,
-          capacidade: 4
+          capacidade: capacidade
         })
       });
       var mesaNova = resp.mesa || resp;
@@ -9949,18 +9952,22 @@ function setupReservasMesasModule() {
     var tbody = document.getElementById('mesasModalTableBody');
     if (!tbody) return;
     tbody.innerHTML = (mesas || []).map(function(m) {
+      var estaLivre = (m.status || 'livre') === 'livre';
+      var btnDelTitle = estaLivre ? 'Excluir mesa (livre)' : 'Inativar mesa';
       return '<tr><td>' + m.numero_mesa + '</td><td>' + escapeHtml(m.nome_mesa || '-') + '</td><td>' + m.capacidade + '</td><td>' + escapeHtml(m.localizacao || '-') + '</td><td>' + (m.status || 'livre').replace(/_/g, ' ') + '</td><td>' +
         '<button class="btn-icon" title="Editar mesa" data-mesa-id="' + m.id + '">✏️</button> ' +
-        '<button class="btn-icon" title="Inativar" data-mesa-id="' + m.id + '" data-action="inativar">🗑️</button></td></tr>';
+        '<button class="btn-icon" title="' + btnDelTitle + '" data-mesa-id="' + m.id + '" data-action="excluir">🗑️</button></td></tr>';
     }).join('') || '<tr><td colspan="6">Nenhuma mesa.</td></tr>';
 
     tbody.querySelectorAll('[data-mesa-id]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var mid = btn.getAttribute('data-mesa-id');
-        if (btn.getAttribute('data-action') === 'inativar') {
-          if (!confirm('Inativar esta mesa?')) return;
-          await fetchJSON('/mesas/' + mid, { method: 'DELETE' });
-          showToast('Mesa inativada.', 'success');
+        if (btn.getAttribute('data-action') === 'excluir') {
+          var m = mesas.find(function(x) { return x.id == mid; });
+          var msg = (m && (m.status || 'livre') === 'livre') ? 'Excluir esta mesa?' : 'Inativar esta mesa?';
+          if (!confirm(msg)) return;
+          var resp = await fetchJSON('/mesas/' + mid, { method: 'DELETE' });
+          showToast((resp && resp.message) || 'Mesa removida.', 'success');
           await carregarMesasModal();
           await loadReservasMesas();
         } else {
@@ -9973,6 +9980,10 @@ function setupReservasMesasModule() {
             document.getElementById('mesaForm').querySelector('[name="nome_mesa"]').value = m.nome_mesa || '';
             document.getElementById('mesaForm').querySelector('[name="capacidade"]').value = m.capacidade || 4;
             document.getElementById('mesaForm').querySelector('[name="localizacao"]').value = m.localizacao || '';
+            var pj = document.getElementById('mesaForm').querySelector('[name="pode_juntar"]');
+            var ps = document.getElementById('mesaForm').querySelector('[name="pode_separar"]');
+            if (pj) pj.checked = !!m.pode_juntar;
+            if (ps) ps.checked = !!m.pode_separar;
             document.getElementById('mesaFormCard').style.display = 'block';
           }
         }
@@ -10002,7 +10013,9 @@ function setupReservasMesasModule() {
       numero_mesa: form.querySelector('[name="numero_mesa"]').value,
       nome_mesa: form.querySelector('[name="nome_mesa"]').value || null,
       capacidade: parseInt(form.querySelector('[name="capacidade"]').value, 10),
-      localizacao: form.querySelector('[name="localizacao"]').value || null
+      localizacao: form.querySelector('[name="localizacao"]').value || null,
+      pode_juntar: !!form.querySelector('[name="pode_juntar"]') && form.querySelector('[name="pode_juntar"]').checked,
+      pode_separar: !!form.querySelector('[name="pode_separar"]') && form.querySelector('[name="pode_separar"]').checked
     };
     try {
       if (id) {
