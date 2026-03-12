@@ -1769,6 +1769,87 @@ textarea {
     font-size: 0.85rem;
   }
 
+  /* Funcionários - card layout: pergunta em cima, resposta embaixo */
+  #funcionariosSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #funcionariosSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #funcionariosSection .table-wrapper thead {
+    display: none;
+  }
+
+  #funcionariosSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #funcionariosSection .table-wrapper tr {
+    display: grid;
+    grid-template-columns: 1fr;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #funcionariosSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #funcionariosSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  #funcionariosSection .table-wrapper td[data-label="Foto"] {
+    align-items: center;
+  }
+
+  #funcionariosSection .table-wrapper td[data-label="Foto"] .usuarios-foto,
+  #funcionariosSection .table-wrapper td[data-label="Foto"] .usuarios-foto--placeholder {
+    width: 72px;
+    height: 72px;
+  }
+
+  #funcionariosSection .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  #funcionariosSection .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #funcionariosSection .table-wrapper td.table-actions .table-action {
+    width: 100%;
+  }
+
+  /* Modal de visualização de funcionário - responsivo */
+  #funcionarioViewModal .view-funcionario-header {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #funcionarioViewModal .view-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
   #produtosSection .table-wrapper {
     overflow: visible;
   }
