@@ -8618,6 +8618,8 @@ function setupModals() {
     const idEl = dom.funcionarioForm?.elements.id;
     if (idEl) idEl.value = editId || "";
     dom.funcionarioModalTitle.textContent = editId ? "Editar funcionário" : "Novo funcionário";
+    const submitBtn = document.getElementById("funcionarioFormSubmit");
+    if (submitBtn) submitBtn.textContent = editId ? "Salvar alterações" : "Salvar";
     if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
     funcionarioFotoFile = null;
@@ -8751,6 +8753,8 @@ function setupModals() {
     if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
     if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
     dom.funcionarioModalTitle.textContent = "Novo Funcionário";
+    const submitBtn = document.getElementById("funcionarioFormSubmit");
+    if (submitBtn) submitBtn.textContent = "Salvar";
   });
   document.getElementById("funcionariosSection")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-view-funcionario, .btn-edit-funcionario, .btn-inativar-funcionario");
@@ -8921,7 +8925,8 @@ function setupModals() {
     if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
     if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
     if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
-    if (payload.possui_acesso && !id) {
+    const possuiAcesso = dom.funcionarioPossuiAcesso?.checked || false;
+    if (possuiAcesso && !id) {
       const usuarioId = document.getElementById("funcionarioUsuarioId")?.value;
       const login = (form.elements.login_usuario?.value || "").trim();
       const senha = form.elements.senha_usuario?.value || "";
