@@ -131,17 +131,23 @@ class MesaController extends Controller
     public function destroy($id)
     {
         $mesa = Mesa::findOrFail($id);
-        $temReservaAtiva = ReservaMesa::where('mesa_id', $id)
-            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
-            ->exists();
-        $estaLivre = ($mesa->status ?? '') === Mesa::STATUS_LIVRE;
-        if ($estaLivre && !$temReservaAtiva) {
-            $mesa->delete();
-            return response()->json(['message' => 'Mesa excluída com sucesso']);
+        $estaOcupada = ($mesa->status ?? '') === Mesa::STATUS_OCUPADA;
+
+        if ($estaOcupada) {
+            $mesa->ativo = false;
+            $mesa->save();
+            return response()->json([
+                'message' => 'Mesa ocupada. Apenas inativada. Exclua depois que estiver livre.',
+            ]);
         }
-        $mesa->ativo = false;
-        $mesa->save();
-        return response()->json(['message' => 'Mesa inativada (tinha reservas ou não estava livre)']);
+
+        // Mesa não ocupada: cancela reservas ativas vinculadas e exclui
+        ReservaMesa::where('mesa_id', $id)
+            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+            ->update(['status' => 'cancelada']);
+
+        $mesa->delete();
+        return response()->json(['message' => 'Mesa excluída com sucesso']);
     }
 
     public function inativar($id)

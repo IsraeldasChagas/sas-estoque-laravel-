@@ -9970,8 +9970,8 @@ function setupReservasMesasModule() {
     var tbody = document.getElementById('mesasModalTableBody');
     if (!tbody) return;
     tbody.innerHTML = (mesas || []).map(function(m) {
-      var estaLivre = (m.status || 'livre') === 'livre';
-      var btnDelTitle = estaLivre ? 'Excluir mesa (livre)' : 'Inativar mesa';
+      var estaOcupada = (m.status || 'livre') === 'ocupada';
+      var btnDelTitle = estaOcupada ? 'Inativar mesa (ocupada)' : 'Excluir mesa';
       return '<tr><td>' + m.numero_mesa + '</td><td>' + escapeHtml(m.nome_mesa || '-') + '</td><td>' + m.capacidade + '</td><td>' + escapeHtml(m.localizacao || '-') + '</td><td>' + (m.status || 'livre').replace(/_/g, ' ') + '</td><td>' +
         '<button class="btn-icon" title="Editar mesa" data-mesa-id="' + m.id + '">✏️</button> ' +
         '<button class="btn-icon" title="' + btnDelTitle + '" data-mesa-id="' + m.id + '" data-action="excluir">🗑️</button></td></tr>';
@@ -9982,7 +9982,7 @@ function setupReservasMesasModule() {
         var mid = btn.getAttribute('data-mesa-id');
         if (btn.getAttribute('data-action') === 'excluir') {
           var m = mesas.find(function(x) { return x.id == mid; });
-          var msg = (m && (m.status || 'livre') === 'livre') ? 'Excluir esta mesa?' : 'Inativar esta mesa?';
+          var msg = (m && (m.status || 'livre') === 'ocupada') ? 'Mesa ocupada. Será apenas inativada. Continuar?' : 'Excluir esta mesa permanentemente?';
           if (!confirm(msg)) return;
           var resp = await fetchJSON('/mesas/' + mid, { method: 'DELETE' });
           showToast((resp && resp.message) || 'Mesa removida.', 'success');
