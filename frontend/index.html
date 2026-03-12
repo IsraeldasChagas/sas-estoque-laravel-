@@ -728,15 +728,235 @@
             </div>
           </section>
 
-          <!-- Reserva de Mesa (em construcao) -->
+          <!-- Reserva de Mesas -->
           <section id="reservaMesaSection" class="view-section hidden">
-            <div class="form-card form-card--wide" style="text-align: center; padding: 4rem 2rem;">
-              <div style="font-size: 4rem; margin-bottom: 1rem;">🔧</div>
-              <h2 style="color: #37474f; margin-bottom: 0.5rem;">Reserva de Mesa</h2>
-              <p style="color: #607d8b; font-size: 1.1rem;">Página em construção</p>
-              <p style="color: #90a4ae; margin-top: 1rem;">Em breve você poderá gerenciar reservas de mesas aqui.</p>
+            <div class="reservas-mesas-container">
+              <div class="reservas-mesas-header">
+                <h2>🍽 Reservas de Mesas</h2>
+                <div class="reservas-mesas-actions">
+                  <button type="button" class="btn primary" id="openNovaReservaMesa">+ Nova Reserva</button>
+                  <button type="button" class="btn secondary" id="openGerenciarMesas" style="display:none;">⚙️ Gerenciar Mesas</button>
+                </div>
+              </div>
+
+              <div class="reservas-mesas-filtro">
+                <label>
+                  🏢 Unidade:
+                  <select id="reservasUnidadeFiltro" class="reservas-select">
+                    <option value="">Selecione a unidade</option>
+                  </select>
+                </label>
+                <label>
+                  📅 Data:
+                  <input type="date" id="reservasDataFiltro" class="reservas-input" />
+                </label>
+                <label>
+                  🌙 Turno:
+                  <select id="reservasTurnoFiltro" class="reservas-select">
+                    <option value="">Todos</option>
+                    <option value="11">Almoço (11h+)</option>
+                    <option value="17">Jantar (17h+)</option>
+                  </select>
+                </label>
+                <label>
+                  📊 Status:
+                  <select id="reservasStatusFiltro" class="reservas-select">
+                    <option value="">Todos</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="confirmada">Confirmada</option>
+                    <option value="cliente_chegou">Cliente chegou</option>
+                    <option value="cancelada">Cancelada</option>
+                    <option value="no_show">No-show</option>
+                    <option value="finalizada">Finalizada</option>
+                  </select>
+                </label>
+                <button type="button" id="reservasAtualizar" class="btn neutral">🔄 Atualizar</button>
+              </div>
+
+              <div class="reservas-mesas-resumo">
+                <div class="reserva-card reserva-card--livre">
+                  <div class="reserva-card__icon">✅</div>
+                  <div class="reserva-card__content">
+                    <div class="reserva-card__label">Mesas livres</div>
+                    <div class="reserva-card__value" id="reservasMesasLivres">0</div>
+                  </div>
+                </div>
+                <div class="reserva-card reserva-card--reservada">
+                  <div class="reserva-card__icon">📋</div>
+                  <div class="reserva-card__content">
+                    <div class="reserva-card__label">Reservadas</div>
+                    <div class="reserva-card__value" id="reservasMesasReservadas">0</div>
+                  </div>
+                </div>
+                <div class="reserva-card reserva-card--ocupada">
+                  <div class="reserva-card__icon">🪑</div>
+                  <div class="reserva-card__content">
+                    <div class="reserva-card__label">Ocupadas / Aguardando</div>
+                    <div class="reserva-card__value" id="reservasMesasOcupadas">0</div>
+                  </div>
+                </div>
+                <div class="reserva-card reserva-card--total">
+                  <div class="reserva-card__icon">📅</div>
+                  <div class="reserva-card__content">
+                    <div class="reserva-card__label">Reservas do dia</div>
+                    <div class="reserva-card__value" id="reservasTotalDia">0</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="reservas-mesas-grid">
+                <div class="reservas-mesas-mesas">
+                  <h3>Mesas da unidade</h3>
+                  <div id="reservasMesasCards" class="reservas-mesas-cards">
+                    <p class="reservas-empty">Selecione uma unidade e data.</p>
+                  </div>
+                </div>
+                <div class="reservas-mesas-lista">
+                  <h3>Reservas do dia</h3>
+                  <div class="table-wrapper">
+                    <table class="reservas-table">
+                      <thead>
+                        <tr>
+                          <th>Horário</th>
+                          <th>Mesa</th>
+                          <th>Cliente</th>
+                          <th>Telefone</th>
+                          <th>Pessoas</th>
+                          <th>Status</th>
+                          <th>Criado por</th>
+                          <th>Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody id="reservasTableBody">
+                        <tr><td colspan="8" class="reservas-empty">Carregando...</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
+
+          <!-- Modal Nova/Editar Reserva -->
+          <div class="modal-backdrop" id="reservaMesaModal">
+            <div class="modal">
+              <header>
+                <h2 id="reservaMesaModalTitle">🍽 Nova Reserva</h2>
+                <button type="button" class="close-btn" id="closeReservaMesa" aria-label="Fechar">×</button>
+              </header>
+              <form id="reservaMesaForm">
+                <input type="hidden" name="id" />
+                <div class="modal-body">
+                  <label id="reservaUnidadeLabel" style="display:none;">
+                    Unidade
+                    <select name="unidade_id" id="reservaUnidadeSelect">
+                      <option value="">Selecione</option>
+                    </select>
+                  </label>
+                  <label>
+                    Mesa *
+                    <select name="mesa_id" id="reservaMesaSelect" required>
+                      <option value="">Selecione a mesa</option>
+                    </select>
+                  </label>
+                  <label>
+                    Nome do cliente *
+                    <input type="text" name="nome_cliente" placeholder="Nome completo" required />
+                  </label>
+                  <label>
+                    Telefone
+                    <input type="text" name="telefone_cliente" placeholder="(00) 00000-0000" />
+                  </label>
+                  <label>
+                    Data *
+                    <input type="date" name="data_reserva" required />
+                  </label>
+                  <label>
+                    Horário *
+                    <input type="time" name="hora_reserva" required />
+                  </label>
+                  <label>
+                    Quantidade de pessoas *
+                    <input type="number" name="qtd_pessoas" min="1" max="99" value="2" required />
+                  </label>
+                  <label>
+                    Status
+                    <select name="status">
+                      <option value="pendente">Pendente</option>
+                      <option value="confirmada">Confirmada</option>
+                    </select>
+                  </label>
+                  <label>
+                    Observação
+                    <textarea name="observacao" rows="2" placeholder="Informações adicionais"></textarea>
+                  </label>
+                </div>
+                <footer>
+                  <button type="button" class="btn neutral" id="cancelReservaMesa">Cancelar</button>
+                  <button type="submit" class="btn primary">Salvar Reserva</button>
+                </footer>
+              </form>
+            </div>
+          </div>
+
+          <!-- Modal Detalhes Reserva -->
+          <div class="modal-backdrop" id="reservaDetalhesModal">
+            <div class="modal">
+              <header>
+                <h2>👁️ Detalhes da Reserva</h2>
+                <button type="button" class="close-btn" id="closeReservaDetalhes" aria-label="Fechar">×</button>
+              </header>
+              <div id="reservaDetalhesContent" style="padding: 1.5rem;"></div>
+            </div>
+          </div>
+
+          <!-- Modal Gerenciar Mesas -->
+          <div class="modal-backdrop" id="mesasModal">
+            <div class="modal modal--wide">
+              <header>
+                <h2>⚙️ Gerenciar Mesas</h2>
+                <button type="button" class="close-btn" id="closeMesasModal" aria-label="Fechar">×</button>
+              </header>
+              <div style="padding: 1rem;">
+                <div class="mesas-modal-actions">
+                  <label>Unidade: <select id="mesasModalUnidade"></select></label>
+                  <button type="button" class="btn primary" id="addMesaBtn">+ Adicionar Mesa</button>
+                </div>
+                <div id="mesaFormCard" class="form-card" style="display:none; margin-top: 1rem;">
+                  <h3 id="mesaFormTitle">Nova Mesa</h3>
+                  <form id="mesaForm">
+                    <input type="hidden" name="id" />
+                    <input type="hidden" name="unidade_id" id="mesaFormUnidadeId" />
+                    <div class="form-card__grid">
+                      <label class="form-card__field">Número * <input name="numero_mesa" required /></label>
+                      <label class="form-card__field">Nome <input name="nome_mesa" placeholder="Ex: Varanda 1" /></label>
+                      <label class="form-card__field">Capacidade * <input type="number" name="capacidade" min="1" value="4" required /></label>
+                      <label class="form-card__field">Localização <input name="localizacao" placeholder="Ex: salão, varanda" /></label>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                      <button type="button" class="btn neutral" id="cancelMesaForm">Cancelar</button>
+                      <button type="submit" class="btn primary">Salvar Mesa</button>
+                    </div>
+                  </form>
+                </div>
+                <div class="table-wrapper" style="margin-top: 1rem;">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nº</th>
+                        <th>Nome</th>
+                        <th>Capacidade</th>
+                        <th>Localização</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="mesasModalTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- Cadastro e listagem de unidades operacionais -->
           <section id="unidadesSection" class="view-section hidden">

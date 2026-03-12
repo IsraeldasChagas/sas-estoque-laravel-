@@ -78,6 +78,7 @@ Route::post('/login', function (Request $request) {
             'nome' => $usuario->nome,                                // Nome completo
             'email' => $usuario->email,                              // Email
             'perfil' => $usuario->perfil ?? 'VISUALIZADOR',         // Perfil (padrão: VISUALIZADOR)
+            'unidade_id' => $usuario->unidade_id ?? null,            // Unidade do usuário
             'token' => $token,                                       // Token de sessão
         ])->header('Access-Control-Allow-Origin', '*')              // Permite requisições de qualquer origem
           ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')   // Métodos permitidos
@@ -4929,6 +4930,29 @@ Route::options('/boletos/{id}/anexo', function () {
         ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
+
+// ============================================
+// RESERVAS DE MESAS
+// ============================================
+
+use App\Http\Controllers\MesaController;
+use App\Http\Controllers\ReservaMesaController;
+
+$cors = ['Access-Control-Allow-Origin' => '*', 'Access-Control-Allow-Methods' => 'GET, POST, PUT, PATCH, DELETE, OPTIONS', 'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Usuario-Id'];
+
+Route::get('/mesas', fn (Request $r) => (new MesaController())->index($r)->withHeaders($cors));
+Route::post('/mesas', fn (Request $r) => (new MesaController())->store($r)->withHeaders($cors));
+Route::get('/mesas/{id}', fn (Request $r, $id) => (new MesaController())->show($id)->withHeaders($cors));
+Route::put('/mesas/{id}', fn (Request $r, $id) => (new MesaController())->update($r, $id)->withHeaders($cors));
+Route::delete('/mesas/{id}', fn (Request $r, $id) => (new MesaController())->destroy($id)->withHeaders($cors));
+
+Route::get('/reservas-mesas', fn (Request $r) => (new ReservaMesaController())->index($r)->withHeaders($cors));
+Route::get('/reservas-mesas/resumo', fn (Request $r) => (new ReservaMesaController())->resumo($r)->withHeaders($cors));
+Route::post('/reservas-mesas', fn (Request $r) => (new ReservaMesaController())->store($r)->withHeaders($cors));
+Route::get('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->show($id)->withHeaders($cors));
+Route::put('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->update($r, $id)->withHeaders($cors));
+Route::post('/reservas-mesas/{id}/cancelar', fn (Request $r, $id) => (new ReservaMesaController())->cancelar($id)->withHeaders($cors));
+Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new ReservaMesaController())->alterarStatus($r, $id)->withHeaders($cors));
 
 // ============================================
 // ROTA TEMPORÁRIA — ZERAR HISTÓRICOS DE TESTE
