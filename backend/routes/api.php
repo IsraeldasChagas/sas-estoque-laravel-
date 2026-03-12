@@ -5167,7 +5167,8 @@ Route::post('/admin/restaurar', function (Request $request) {
 // ============================================
 
 Route::options('/funcionarios', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/{id}/atualizar', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 Route::get('/funcionarios', function (Request $request) {
     try {
@@ -5251,7 +5252,7 @@ Route::post('/funcionarios', function (Request $request) {
     $possuiAcesso = !empty($data['possui_acesso']) && !in_array($data['possui_acesso'], [false, 'false', '0', 0, ''], true);
     $rules = [
         'nome_completo' => 'required|string|max:255',
-        'cargo' => 'required|string|max:100',
+        'cargo' => 'required|string|max:255',
         'status' => 'required|in:ativo,inativo',
     ];
     if ($possuiAcesso) {
@@ -5323,6 +5324,63 @@ Route::post('/funcionarios', function (Request $request) {
     }
 });
 
+Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) {
+    $userId = $request->header('X-Usuario-Id');
+    if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $existente = DB::table('funcionarios')->where('id', $id)->first();
+    if (!$existente) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $data = $request->all();
+    $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:255', 'status' => 'required|in:ativo,inativo'];
+    $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
+    if ($validator->fails()) {
+        $erros = $validator->errors()->all();
+        $msg = count($erros) > 0 ? implode(' ', $erros) : 'Validação falhou';
+        return response()->json(['error' => $msg, 'details' => $validator->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $update = [
+        'nome_completo' => trim($data['nome_completo']),
+        'data_nascimento' => !empty($data['data_nascimento']) ? $data['data_nascimento'] : null,
+        'sexo' => $data['sexo'] ?? null,
+        'estado_civil' => $data['estado_civil'] ?? null,
+        'cargo' => trim($data['cargo']),
+        'unidade_id' => isset($data['unidade_id']) && $data['unidade_id'] !== '' ? (int)$data['unidade_id'] : null,
+        'whatsapp' => $data['whatsapp'] ?? null,
+        'email' => $data['email'] ?? null,
+        'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
+        'status' => $data['status'] ?? 'ativo',
+        'observacoes' => $data['observacoes'] ?? null,
+    ];
+    if ($request->hasFile('foto')) {
+        if ($existente->foto && file_exists(public_path($existente->foto))) {
+            @unlink(public_path($existente->foto));
+        }
+        $foto = $request->file('foto');
+        $uploadDir = public_path('uploads/funcionarios');
+        if (!File::exists($uploadDir)) {
+            File::makeDirectory($uploadDir, 0755, true);
+        }
+        $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
+        $foto->move($uploadDir, $nomeArquivo);
+        $update['foto'] = 'uploads/funcionarios/' . $nomeArquivo;
+    }
+    if (isset($data['remove_foto']) && $data['remove_foto'] == '1') {
+        if ($existente->foto && file_exists(public_path($existente->foto))) {
+            @unlink(public_path($existente->foto));
+        }
+        $update['foto'] = null;
+    }
+    DB::table('funcionarios')->where('id', $id)->update($update);
+    return response()->json(DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first())
+        ->header('Access-Control-Allow-Origin', '*');
+});
+
 Route::put('/funcionarios/{id}', function (Request $request, $id) {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
@@ -5335,7 +5393,7 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) {
     }
 
     $data = $request->all();
-    $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:100', 'status' => 'required|in:ativo,inativo'];
+    $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:255', 'status' => 'required|in:ativo,inativo'];
     $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
     if ($validator->fails()) {
         $erros = $validator->errors()->all();

@@ -8723,23 +8723,35 @@ function setupModals() {
     const temFoto = !!funcionarioFotoFile;
     const temRemoverFoto = !!funcionarioFotoRemovida;
     try {
-      if (temFoto || temRemoverFoto) {
-        const fd = new FormData();
-        Object.entries(payload).forEach(([k, v]) => {
-          if (k === "possui_acesso") fd.append(k, v ? "1" : "0");
-          else if (v != null && v !== "") fd.append(k, v);
-        });
-        if (funcionarioFotoRemovida) fd.append("remove_foto", "1");
-        if (funcionarioFotoFile) fd.append("foto", funcionarioFotoFile);
-        await fetchForm(id ? `/funcionarios/${id}` : "/funcionarios", id ? "PUT" : "POST", fd);
+      const fd = new FormData();
+      if (id) {
+        const putPayload = { nome_completo: payload.nome_completo, data_nascimento: payload.data_nascimento, sexo: payload.sexo, estado_civil: payload.estado_civil, cargo: payload.cargo, unidade_id: payload.unidade_id ?? "", whatsapp: payload.whatsapp, email: payload.email, data_admissao: payload.data_admissao, status: payload.status, observacoes: payload.observacoes };
+        Object.entries(putPayload).forEach(([k, v]) => { fd.append(k, v != null ? String(v) : ""); });
+        if (temRemoverFoto) fd.append("remove_foto", "1");
+        if (temFoto) fd.append("foto", funcionarioFotoFile);
+        await fetchForm(`/funcionarios/${id}/atualizar`, "POST", fd);
       } else {
-        if (id) {
-          delete payload.cpf; delete payload.login_usuario; delete payload.senha_usuario; delete payload.perfil_usuario; delete payload.possui_acesso;
-          await fetchJSON(`/funcionarios/${id}`, { method: "PUT", body: JSON.stringify(payload) });
-        } else {
-          payload.cpf = (payload.cpf || "").replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-          await fetchJSON("/funcionarios", { method: "POST", body: JSON.stringify(payload) });
+        fd.append("nome_completo", payload.nome_completo);
+        fd.append("cpf", (payload.cpf || "").replace(/\D/g, ""));
+        fd.append("cargo", payload.cargo);
+        fd.append("status", payload.status || "ativo");
+        fd.append("possui_acesso", payload.possui_acesso ? "1" : "0");
+        if (payload.data_nascimento) fd.append("data_nascimento", payload.data_nascimento);
+        if (payload.sexo) fd.append("sexo", payload.sexo);
+        if (payload.estado_civil) fd.append("estado_civil", payload.estado_civil);
+        if (payload.unidade_id) fd.append("unidade_id", payload.unidade_id);
+        if (payload.whatsapp) fd.append("whatsapp", payload.whatsapp);
+        if (payload.email) fd.append("email", payload.email);
+        if (payload.data_admissao) fd.append("data_admissao", payload.data_admissao);
+        if (payload.observacoes) fd.append("observacoes", payload.observacoes);
+        if (payload.possui_acesso) {
+          fd.append("login_usuario", payload.login_usuario || "");
+          fd.append("senha_usuario", payload.senha_usuario || "");
+          fd.append("perfil_usuario", payload.perfil_usuario || "FUNCIONARIO");
         }
+        if (temRemoverFoto) fd.append("remove_foto", "1");
+        if (temFoto) fd.append("foto", funcionarioFotoFile);
+        await fetchForm("/funcionarios", "POST", fd);
       }
       showToast(id ? "Funcionário atualizado." : "Funcionário cadastrado.", "success");
       toggleModal(dom.funcionarioModal, false);
