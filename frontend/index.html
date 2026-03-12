@@ -1330,8 +1330,8 @@
           <section id="proventosSection" class="view-section hidden">
             <div class="funcionarios-header" style="margin-bottom: 1.5rem;">
               <div>
-                <h2>Proventos</h2>
-                <p class="subtle-text">Controle de proventos e lançamentos relacionados aos funcionários</p>
+                <h2 id="proventosSectionTitle">Proventos</h2>
+                <p class="subtle-text" id="proventosSectionSubtitle">Controle de proventos e lançamentos relacionados aos funcionários</p>
               </div>
               <button type="button" class="btn primary" id="openProvento">+ Novo Provento</button>
             </div>
@@ -2208,9 +2208,39 @@
         </header>
         <div id="proventoViewContent"></div>
         <footer>
+          <button type="button" class="btn primary" id="proventoViewAssinar" style="display:none">Aceitar / Assinar</button>
           <button type="button" class="btn primary" id="proventoViewEditar">Editar</button>
           <button type="button" class="btn neutral" id="closeProventoViewBtn">Fechar</button>
         </footer>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="proventoAssinaturaModal">
+      <div class="modal">
+        <header>
+          <h2>Aceitar provento</h2>
+          <button type="button" class="close-btn" id="closeProventoAssinaturaModal" aria-label="Fechar">x</button>
+        </header>
+        <div id="proventoAssinaturaContent">
+          <p class="form-hint">Enviaremos um código de 6 dígitos para você confirmar o aceite do provento.</p>
+          <div id="proventoAssinaturaEtapa1">
+            <label>Receber código por:</label>
+            <div style="display:flex;gap:1rem;margin:0.5rem 0 1rem;">
+              <label class="radio-label"><input type="radio" name="assinaturaCanal" value="email" checked /> E-mail</label>
+              <label class="radio-label"><input type="radio" name="assinaturaCanal" value="whatsapp" /> WhatsApp</label>
+            </div>
+            <button type="button" class="btn primary" id="proventoAssinaturaSolicitar">Solicitar código</button>
+          </div>
+          <div id="proventoAssinaturaEtapa2" class="hidden" style="margin-top:1rem;">
+            <label>Digite o código recebido:</label>
+            <input type="text" id="proventoAssinaturaCodigo" placeholder="000000" maxlength="6" pattern="[0-9]*" inputmode="numeric" style="width:120px;font-size:1.2rem;letter-spacing:0.3em;text-align:center;margin:0.5rem 0;" />
+            <div id="proventoAssinaturaFeedback" class="form-feedback hidden"></div>
+            <div style="margin-top:1rem;">
+              <button type="button" class="btn primary" id="proventoAssinaturaConfirmar">Confirmar aceite</button>
+              <button type="button" class="btn neutral" id="proventoAssinaturaNovoCodigo">Solicitar novo código</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

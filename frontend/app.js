@@ -6387,6 +6387,7 @@ function renderProventos(lista) {
   const esc = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+  const isFuncionario = perfil === "FUNCIONARIO";
   const rows = lista.map(p => {
     const st = PROVENTO_STATUS_LABELS[p.status] || p.status;
     const stCls = p.status === "finalizado" ? "status-pill--success" : p.status === "cancelado" || p.status === "rejeitado" ? "status-pill--muted" : "status-pill";
@@ -6394,6 +6395,9 @@ function renderProventos(lista) {
     const valorF = "R$ " + (Number(p.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     const dataF = p.data_provento ? new Date(p.data_provento + "T12:00:00").toLocaleDateString("pt-BR") : "-";
     let acoes = `<button type="button" class="table-action btn-view-provento" data-id="${p.id}">Visualizar</button>`;
+    if (isFuncionario && p.status === "autorizado") {
+      acoes += `<button type="button" class="table-action btn-primary btn-assinar-provento" data-id="${p.id}">Aceitar / Assinar</button>`;
+    }
     if (podeCriar) {
       if (["rascunho","aguardando_autorizacao"].includes(p.status)) acoes += `<button type="button" class="table-action btn-edit-provento" data-id="${p.id}">Editar</button>`;
       if (p.status === "aguardando_autorizacao") acoes += `<button type="button" class="table-action btn-autorizar-provento" data-id="${p.id}">Autorizar</button>`;
@@ -9092,8 +9096,15 @@ function setupModals() {
         </div>
       `;
       document.getElementById("proventoViewEditar").dataset.id = id;
-      const podeEditar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes((currentUser?.perfil||"").toString().trim().toUpperCase()) && ["rascunho","aguardando_autorizacao"].includes(p.status);
+      const perfil = (currentUser?.perfil||"").toString().trim().toUpperCase();
+      const podeEditar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil) && ["rascunho","aguardando_autorizacao"].includes(p.status);
+      const podeAssinar = perfil === "FUNCIONARIO" && p.status === "autorizado";
       document.getElementById("proventoViewEditar").style.display = podeEditar ? "" : "none";
+      const btnAssinar = document.getElementById("proventoViewAssinar");
+      if (btnAssinar) {
+        btnAssinar.dataset.id = id;
+        btnAssinar.style.display = podeAssinar ? "" : "none";
+      }
       toggleModal(document.getElementById("proventoViewModal"), true);
     }).catch(() => showToast("Erro ao carregar provento.", "error"));
   }
@@ -9124,14 +9135,66 @@ function setupModals() {
       await loadProventos(getProventosFiltros());
     } catch (e) { showToast(e?.message || "Erro ao cancelar.", "error"); }
   }
+  function assinarProvento(id) {
+    const modal = document.getElementById("proventoAssinaturaModal");
+    const etapa1 = document.getElementById("proventoAssinaturaEtapa1");
+    const etapa2 = document.getElementById("proventoAssinaturaEtapa2");
+    const codigoInput = document.getElementById("proventoAssinaturaCodigo");
+    const feedback = document.getElementById("proventoAssinaturaFeedback");
+    modal.dataset.proventoId = id;
+    if (etapa1) etapa1.classList.remove("hidden");
+    if (etapa2) etapa2.classList.add("hidden");
+    if (codigoInput) codigoInput.value = "";
+    if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
+    toggleModal(modal, true);
+  }
+  document.getElementById("closeProventoAssinaturaModal")?.addEventListener("click", () => toggleModal(document.getElementById("proventoAssinaturaModal"), false));
+  document.getElementById("proventoAssinaturaSolicitar")?.addEventListener("click", async () => {
+    const id = document.getElementById("proventoAssinaturaModal")?.dataset?.proventoId;
+    const canal = document.querySelector('input[name="assinaturaCanal"]:checked')?.value || "email";
+    if (!id) return;
+    try {
+      await fetchJSON(`/proventos/${id}/enviar-codigo`, { method: "POST", body: JSON.stringify({ canal }) });
+      showToast("Código enviado! Verifique seu " + (canal === "email" ? "e-mail" : "WhatsApp") + ".", "success");
+      document.getElementById("proventoAssinaturaEtapa1").classList.add("hidden");
+      document.getElementById("proventoAssinaturaEtapa2").classList.remove("hidden");
+      document.getElementById("proventoAssinaturaCodigo").focus();
+    } catch (e) { showToast(e?.message || "Erro ao enviar código.", "error"); }
+  });
+  document.getElementById("proventoAssinaturaNovoCodigo")?.addEventListener("click", () => {
+    document.getElementById("proventoAssinaturaEtapa2").classList.add("hidden");
+    document.getElementById("proventoAssinaturaEtapa1").classList.remove("hidden");
+    document.getElementById("proventoAssinaturaCodigo").value = "";
+  });
+  document.getElementById("proventoAssinaturaConfirmar")?.addEventListener("click", async () => {
+    const id = document.getElementById("proventoAssinaturaModal")?.dataset?.proventoId;
+    const codigo = (document.getElementById("proventoAssinaturaCodigo")?.value || "").replace(/\D/g, "");
+    const feedback = document.getElementById("proventoAssinaturaFeedback");
+    if (!id) return;
+    if (codigo.length !== 6) {
+      if (feedback) { feedback.textContent = "Informe o código de 6 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); }
+      return;
+    }
+    try {
+      await fetchJSON(`/proventos/${id}/confirmar-assinatura`, { method: "POST", body: JSON.stringify({ codigo }) });
+      showToast("Provento aceito com sucesso!", "success");
+      toggleModal(document.getElementById("proventoAssinaturaModal"), false);
+      await loadProventos(getProventosFiltros());
+    } catch (e) {
+      const msg = e?.message || "Erro ao confirmar.";
+      if (feedback) { feedback.textContent = msg; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); }
+      else showToast(msg, "error");
+    }
+  });
   document.getElementById("openProvento")?.addEventListener("click", () => openProventoModal());
   document.getElementById("closeProvento")?.addEventListener("click", () => toggleModal(document.getElementById("proventoModal"), false));
   document.getElementById("cancelProvento")?.addEventListener("click", () => { document.getElementById("proventoForm")?.reset(); toggleModal(document.getElementById("proventoModal"), false); });
   document.getElementById("closeProventoView")?.addEventListener("click", () => toggleModal(document.getElementById("proventoViewModal"), false));
   document.getElementById("closeProventoViewBtn")?.addEventListener("click", () => toggleModal(document.getElementById("proventoViewModal"), false));
   document.getElementById("proventoViewEditar")?.addEventListener("click", () => { const id = document.getElementById("proventoViewEditar")?.dataset?.id; if (id) editProvento(id); });
+  document.getElementById("proventoViewAssinar")?.addEventListener("click", () => { const id = document.getElementById("proventoViewAssinar")?.dataset?.id; if (id) { toggleModal(document.getElementById("proventoViewModal"), false); assinarProvento(id); } });
   document.getElementById("proventosSection")?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-view-provento, .btn-edit-provento, .btn-autorizar-provento, .btn-finalizar-provento, .btn-cancelar-provento");
+    const btn = e.target.closest(".btn-view-provento, .btn-edit-provento, .btn-autorizar-provento, .btn-finalizar-provento, .btn-cancelar-provento, .btn-assinar-provento");
     if (!btn) return;
     const id = btn.dataset.id;
     if (!id) return;
@@ -9141,6 +9204,7 @@ function setupModals() {
     else if (btn.classList.contains("btn-autorizar-provento")) autorizarProvento(id);
     else if (btn.classList.contains("btn-finalizar-provento")) finalizarProvento(id);
     else if (btn.classList.contains("btn-cancelar-provento")) cancelarProvento(id);
+    else if (btn.classList.contains("btn-assinar-provento")) assinarProvento(id);
   });
   document.getElementById("proventosFilterForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await loadProventos(getProventosFiltros()); });
   document.getElementById("proventosLimparFiltros")?.addEventListener("click", () => {
@@ -9640,13 +9704,25 @@ function setupNavigation() {
       else if (target === "funcionarios") await loadFuncionarios();
       else if (target === "proventos") {
         try {
-          await loadUnidades(false).catch(() => {});
-          await loadFuncionarios().catch(() => {});
-          const selUn = document.getElementById("proventosFiltroUnidade");
-          if (selUn && state.unidades?.length) {
-            selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
+          const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+          const isFuncionario = perfil === "FUNCIONARIO";
+          const titleEl = document.getElementById("proventosSectionTitle");
+          const subtitleEl = document.getElementById("proventosSectionSubtitle");
+          const filterForm = document.getElementById("proventosFilterForm");
+          if (titleEl) titleEl.textContent = isFuncionario ? "Meus Proventos" : "Proventos";
+          if (subtitleEl) subtitleEl.textContent = isFuncionario ? "Proventos que precisam da sua aceite ou já foram processados" : "Controle de proventos e lançamentos relacionados aos funcionários";
+          if (filterForm) filterForm.style.display = isFuncionario ? "none" : "";
+          if (!isFuncionario) {
+            await loadUnidades(false).catch(() => {});
+            await loadFuncionarios().catch(() => {});
+            const selUn = document.getElementById("proventosFiltroUnidade");
+            if (selUn && state.unidades?.length) {
+              selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
+            }
+            await loadProventos(getProventosFiltros());
+          } else {
+            await loadProventos();
           }
-          await loadProventos(getProventosFiltros());
         } catch (e) {
           showToast(e?.message || "Erro ao carregar proventos", "error");
         }
