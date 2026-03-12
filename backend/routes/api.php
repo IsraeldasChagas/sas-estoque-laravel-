@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Mail;
 
 // ============================================
 // AUTENTICAÇÃO
@@ -5447,6 +5448,397 @@ Route::put('/funcionarios/{id}/inativar', function (Request $request, $id) {
     if (!$f) return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
     DB::table('funcionarios')->where('id', $id)->update(['status' => 'inativo']);
     return response()->json(['message' => 'Funcionário inativado com sucesso'])->header('Access-Control-Allow-Origin', '*');
+});
+
+// ============================================
+// PROVENTOS (Módulo Financeiro)
+// ============================================
+
+$proventosCors = fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+Route::options('/proventos', $proventosCors);
+Route::options('/proventos/meus', $proventosCors);
+Route::options('/proventos/{id}', $proventosCors);
+Route::options('/proventos/{id}/autorizar', $proventosCors);
+Route::options('/proventos/{id}/enviar-codigo', $proventosCors);
+Route::options('/proventos/{id}/confirmar-assinatura', $proventosCors);
+Route::options('/proventos/{id}/finalizar', $proventosCors);
+Route::options('/proventos/{id}/cancelar', $proventosCors);
+Route::options('/proventos/{id}/logs', $proventosCors);
+
+$proventosAuth = function (Request $req) {
+    $uid = $req->header('X-Usuario-Id');
+    $u = $uid ? DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first() : null;
+    return $u;
+};
+$proventosLog = function ($proventoId, $usuarioId, $funcionarioId, $acao, $statusAnt, $statusNovo, $desc = null, $ip = null, $ua = null, $extras = null) {
+    if (!Schema::hasTable('proventos_logs')) return;
+    DB::table('proventos_logs')->insert([
+        'provento_id' => $proventoId,
+        'usuario_id' => $usuarioId,
+        'funcionario_id' => $funcionarioId,
+        'acao' => $acao,
+        'status_anterior' => $statusAnt,
+        'status_novo' => $statusNovo,
+        'descricao' => $desc,
+        'ip' => $ip,
+        'user_agent' => $ua,
+        'dados_extras' => $extras ? json_encode($extras) : null,
+        'created_at' => now(),
+    ]);
+};
+
+$podeCriarProvento = function ($perfil) {
+    $p = strtoupper(trim($perfil ?? ''));
+    return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO']);
+};
+$podeAutorizarOuFinalizar = function ($perfil) {
+    $p = strtoupper(trim($perfil ?? ''));
+    return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO']);
+};
+
+Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeCriarProvento) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if ($perfil === 'FUNCIONARIO') return response()->json(['error' => 'Acesse Meus Proventos'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $q = DB::table('proventos')
+            ->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
+            ->leftJoin('usuarios as autorizador', 'proventos.autorizado_por', '=', 'autorizador.id')
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf',
+                'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome');
+
+        if ($nome = trim($request->query('nome', ''))) $q->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
+        if ($cpf = preg_replace('/\D/', '', trim($request->query('cpf', '')))) $q->whereRaw('REPLACE(REPLACE(REPLACE(funcionarios.cpf, ".", ""), "-", ""), " ", "") LIKE ?', ['%' . $cpf . '%']);
+        if ($tipo = trim($request->query('tipo', ''))) $q->where('proventos.tipo', $tipo);
+        if ($verba = trim($request->query('verba', ''))) $q->where('proventos.verba', 'like', '%' . $verba . '%');
+        if ($unidadeId = $request->query('unidade_id')) $q->where('proventos.unidade_id', $unidadeId);
+        if ($status = trim($request->query('status', ''))) $q->where('proventos.status', $status);
+        if ($criadoPor = $request->query('criado_por')) $q->where('proventos.criado_por', $criadoPor);
+        if ($autorizadoPor = $request->query('autorizado_por')) $q->where('proventos.autorizado_por', $autorizadoPor);
+        if ($dataInicio = $request->query('data_inicio')) $q->whereDate('proventos.data_provento', '>=', $dataInicio);
+        if ($dataFim = $request->query('data_fim')) $q->whereDate('proventos.data_provento', '<=', $dataFim);
+
+        $lista = $q->orderByDesc('proventos.id')->get();
+        return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /proventos: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao listar proventos'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/proventos/meus', function (Request $request) use ($proventosAuth) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        if (!$funcId) return response()->json([])->header('Access-Control-Allow-Origin', '*');
+
+        $lista = DB::table('proventos')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.funcionario_id', $funcId)
+            ->select('proventos.*', 'unidades.nome as unidade_nome')
+            ->orderByDesc('proventos.id')->get();
+        return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /proventos/meus: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao listar proventos'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAuth) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 404)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')
+            ->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
+            ->leftJoin('usuarios as autorizador', 'proventos.autorizado_por', '=', 'autorizador.id')
+            ->leftJoin('usuarios as finalizador', 'proventos.finalizado_por', '=', 'finalizador.id')
+            ->where('proventos.id', $id)
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.whatsapp', 'funcionarios.email',
+                'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
+            ->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if ($perfil === 'FUNCIONARIO' && (int)$p->funcionario_id !== (int)$funcId) {
+            return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        return response()->json($p)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /proventos/{id}: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar provento'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/proventos', function (Request $request) use ($proventosAuth, $proventosLog, $podeCriarProvento) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeCriarProvento($u->perfil)) return response()->json(['error' => 'Sem permissão para criar proventos'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $d = $request->all();
+        $rules = [
+            'funcionario_id' => 'required|integer|exists:funcionarios,id',
+            'unidade_id' => 'required|integer',
+            'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
+            'verba' => 'required|string|max:255',
+            'valor' => 'required|numeric|min:0.01',
+            'data_provento' => 'required|date',
+            'motivo' => 'required|string|max:2000',
+        ];
+        $v = \Illuminate\Support\Facades\Validator::make($d, $rules);
+        if ($v->fails()) return response()->json(['error' => implode(' ', $v->errors()->all()), 'details' => $v->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $insert = [
+            'funcionario_id' => (int)$d['funcionario_id'],
+            'unidade_id' => !empty($d['unidade_id']) ? (int)$d['unidade_id'] : null,
+            'tipo' => $d['tipo'],
+            'verba' => trim($d['verba']),
+            'valor' => (float)$d['valor'],
+            'data_provento' => $d['data_provento'],
+            'competencia' => $d['competencia'] ?? null,
+            'motivo' => trim($d['motivo']),
+            'observacao_interna' => $d['observacao_interna'] ?? null,
+            'status' => 'aguardando_autorizacao',
+            'criado_por' => $u->id,
+        ];
+        $id = DB::table('proventos')->insertGetId($insert);
+        $provento = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+        $proventosLog($id, $u->id, $insert['funcionario_id'], 'criacao', null, 'aguardando_autorizacao', 'Provento criado', $request->ip(), $request->userAgent());
+        return response()->json($provento, 201)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /proventos: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeCriarProvento) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeCriarProvento($u->perfil)) return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if (!in_array($p->status, ['rascunho', 'aguardando_autorizacao'])) return response()->json(['error' => 'Provento não pode mais ser editado'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $d = $request->all();
+        $rules = [
+            'unidade_id' => 'nullable|integer',
+            'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
+            'verba' => 'required|string|max:255',
+            'valor' => 'required|numeric|min:0.01',
+            'data_provento' => 'required|date',
+            'motivo' => 'required|string|max:2000',
+        ];
+        $v = \Illuminate\Support\Facades\Validator::make($d, $rules);
+        if ($v->fails()) return response()->json(['error' => implode(' ', $v->errors()->all()), 'details' => $v->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $up = [
+            'unidade_id' => isset($d['unidade_id']) && $d['unidade_id'] !== '' ? (int)$d['unidade_id'] : null,
+            'tipo' => $d['tipo'], 'verba' => trim($d['verba']), 'valor' => (float)$d['valor'],
+            'data_provento' => $d['data_provento'], 'competencia' => $d['competencia'] ?? null,
+            'motivo' => trim($d['motivo']), 'observacao_interna' => $d['observacao_interna'] ?? null,
+        ];
+        DB::table('proventos')->where('id', $id)->update($up);
+        $proventosLog($id, $u->id, $p->funcionario_id, 'edicao', $p->status, $p->status, 'Provento editado', $request->ip(), $request->userAgent());
+        $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+        return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('PUT /proventos: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeAutorizarOuFinalizar($u->perfil)) return response()->json(['error' => 'Sem permissão para autorizar'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'aguardando_autorizacao') return response()->json(['error' => 'Provento não está aguardando autorização'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        DB::table('proventos')->where('id', $id)->update(['status' => 'autorizado', 'autorizado_por' => $u->id, 'data_autorizacao' => now()]);
+        $proventosLog($id, $u->id, $p->funcionario_id, 'autorizacao', 'aguardando_autorizacao', 'autorizado', 'Provento autorizado', $request->ip(), $request->userAgent());
+        $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+        return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /proventos/autorizar: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) use ($proventosAuth, $proventosLog) {
+    try {
+        if (!Schema::hasTable('proventos') || !Schema::hasTable('proventos_assinaturas')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'autorizado') return response()->json(['error' => 'Provento deve estar autorizado para assinatura'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        if ((int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Apenas o funcionário do provento pode assinar'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $canal = $request->input('canal');
+        if (!in_array($canal, ['whatsapp', 'email'])) return response()->json(['error' => 'Canal inválido. Use whatsapp ou email'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $func = DB::table('funcionarios')->where('id', $p->funcionario_id)->first();
+        $destino = $canal === 'whatsapp' ? ($func->whatsapp ?? '') : ($func->email ?? '');
+        if (empty($destino)) return response()->json(['error' => 'Canal não disponível para este funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $codigo = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $hash = Hash::make($codigo);
+        $expira = now()->addMinutes(5);
+
+        DB::table('proventos_assinaturas')->insert([
+            'provento_id' => $id, 'funcionario_id' => $p->funcionario_id, 'canal_envio' => $canal,
+            'codigo_hash' => $hash, 'codigo_expira_em' => $expira, 'tentativas' => 0, 'status_envio' => 'enviado',
+        ]);
+
+        $msg = "Seu código de aceite eletrônico para o provento #{$id} é: {$codigo}. Válido por 5 minutos.";
+        if ($canal === 'email') {
+            try { Mail::raw($msg, fn($m) => $m->to($destino)->subject('Código de aceite - Provento #' . $id)); } catch (\Exception $e) { \Log::warning('Email OTP falhou: ' . $e->getMessage()); }
+        }
+        $proventosLog($id, $u->id, $p->funcionario_id, 'otp_enviado', null, null, "Código enviado por {$canal}", $request->ip(), $request->userAgent(), ['canal' => $canal]);
+        return response()->json(['message' => 'Código enviado com sucesso'])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /proventos/enviar-codigo: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+    try {
+        if (!Schema::hasTable('proventos') || !Schema::hasTable('proventos_assinaturas')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'autorizado') return response()->json(['error' => 'Provento deve estar autorizado'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        if ((int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Apenas o funcionário pode assinar'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $codigo = $request->input('codigo');
+        if (empty($codigo)) return response()->json(['error' => 'Código obrigatório'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $reg = DB::table('proventos_assinaturas')->where('provento_id', $id)->where('funcionario_id', $funcId)->where('status_envio', 'enviado')->orderByDesc('id')->first();
+        if (!$reg) return response()->json(['error' => 'Nenhum código pendente. Solicite novo código.'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($reg->codigo_expira_em < now()) {
+            DB::table('proventos_assinaturas')->where('id', $reg->id)->update(['status_envio' => 'expirado']);
+            return response()->json(['error' => 'Código expirado. Solicite novo código.'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($reg->tentativas >= 5) return response()->json(['error' => 'Muitas tentativas. Solicite novo código.'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        DB::table('proventos_assinaturas')->where('id', $reg->id)->increment('tentativas');
+        if (!Hash::check($codigo, $reg->codigo_hash)) return response()->json(['error' => 'Código inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        DB::table('proventos_assinaturas')->where('id', $reg->id)->update(['status_envio' => 'validado', 'validado_em' => now(), 'ip' => $request->ip(), 'user_agent' => $request->userAgent()]);
+        DB::table('proventos')->where('id', $id)->update(['status' => 'assinado', 'data_assinatura' => now()]);
+        $proventosLog($id, null, $funcId, 'assinatura', 'autorizado', 'assinado', 'Aceite eletrônico confirmado', $request->ip(), $request->userAgent(), ['otp_validado' => true]);
+        $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+        return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /proventos/confirmar-assinatura: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeAutorizarOuFinalizar($u->perfil)) return response()->json(['error' => 'Sem permissão para finalizar'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'assinado') return response()->json(['error' => 'Provento precisa estar assinado para finalizar'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        DB::table('proventos')->where('id', $id)->update(['status' => 'finalizado', 'finalizado_por' => $u->id, 'data_finalizacao' => now()]);
+        $proventosLog($id, $u->id, $p->funcionario_id, 'finalizacao', 'assinado', 'finalizado', 'Provento finalizado', $request->ip(), $request->userAgent());
+        $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+        return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /proventos/finalizar: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+    try {
+        if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeAutorizarOuFinalizar($u->perfil)) return response()->json(['error' => 'Sem permissão para cancelar'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if (in_array($p->status, ['finalizado', 'cancelado'])) return response()->json(['error' => 'Provento não pode ser cancelado'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $just = trim($request->input('justificativa', ''));
+        if (empty($just)) return response()->json(['error' => 'Justificativa obrigatória para cancelamento'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $ant = $p->status;
+        DB::table('proventos')->where('id', $id)->update(['status' => 'cancelado', 'cancelado_por' => $u->id, 'data_cancelamento' => now(), 'justificativa_cancelamento' => $just]);
+        $proventosLog($id, $u->id, $p->funcionario_id, 'cancelamento', $ant, 'cancelado', $just, $request->ip(), $request->userAgent());
+        $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+        return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /proventos/cancelar: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $podeAutorizarOuFinalizar) {
+    try {
+        if (!Schema::hasTable('proventos_logs')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+
+        $p = DB::table('proventos')->where('id', $id)->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if ($perfil === 'FUNCIONARIO' && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
+
+        $logs = DB::table('proventos_logs')->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
+            ->where('proventos_logs.provento_id', $id)
+            ->select('proventos_logs.*', 'usuarios.nome as usuario_nome')
+            ->orderByDesc('proventos_logs.created_at')->get();
+        return response()->json($logs)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /proventos/logs: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar logs'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
 });
 
 // ============================================
