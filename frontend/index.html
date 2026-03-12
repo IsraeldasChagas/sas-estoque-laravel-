@@ -1326,6 +1326,79 @@
             </div>
           </section>
 
+          <!-- Modulo Financeiro - Proventos -->
+          <section id="proventosSection" class="view-section hidden">
+            <div class="funcionarios-header" style="margin-bottom: 1.5rem;">
+              <div>
+                <h2>Proventos</h2>
+                <p class="subtle-text">Controle de proventos e lançamentos relacionados aos funcionários</p>
+              </div>
+              <button type="button" class="btn primary" id="openProvento">+ Novo Provento</button>
+            </div>
+            <form id="proventosFilterForm" class="filters-panel">
+              <div class="filters-grid">
+                <label><input type="text" id="proventosFiltroFuncionario" placeholder="Buscar por funcionário" /></label>
+                <label><input type="text" id="proventosFiltroCpf" placeholder="Buscar por CPF" /></label>
+                <label>
+                  <select id="proventosFiltroTipo">
+                    <option value="">Todos os tipos</option>
+                    <option value="vale">Vale</option>
+                    <option value="adiantamento">Adiantamento</option>
+                    <option value="consumo_interno">Consumo interno</option>
+                    <option value="ajuda_custo">Ajuda de custo</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </label>
+                <label><input type="text" id="proventosFiltroVerba" placeholder="Filtrar por verba" /></label>
+                <label><select id="proventosFiltroUnidade"><option value="">Todas as unidades</option></select></label>
+                <label>
+                  <select id="proventosFiltroStatus">
+                    <option value="">Todos os status</option>
+                    <option value="rascunho">Rascunho</option>
+                    <option value="aguardando_autorizacao">Aguardando autorização</option>
+                    <option value="autorizado">Autorizado</option>
+                    <option value="aguardando_assinatura">Aguardando assinatura</option>
+                    <option value="assinado">Assinado</option>
+                    <option value="finalizado">Finalizado</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="rejeitado">Rejeitado</option>
+                  </select>
+                </label>
+                <label><input type="date" id="proventosFiltroDataInicio" placeholder="Data início" /></label>
+                <label><input type="date" id="proventosFiltroDataFim" placeholder="Data fim" /></label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Filtrar</button>
+                <button type="button" class="btn" id="proventosLimparFiltros">Limpar</button>
+              </div>
+            </form>
+            <div class="table-card form-card--wide">
+              <header>Proventos cadastrados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Funcionário</th>
+                      <th>CPF</th>
+                      <th>Tipo</th>
+                      <th>Verba</th>
+                      <th>Valor</th>
+                      <th>Unidade</th>
+                      <th>Criado por</th>
+                      <th>Data</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="proventosTable">
+                    <tr><td colspan="11" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
           <!-- Modulo Financeiro - Boletao -->
           <section id="boletaoSection" class="view-section hidden">
             <div class="boletos-header">
@@ -2046,6 +2119,60 @@
           <button type="button" class="btn primary" id="funcionarioViewEditar">Editar</button>
           <button type="button" class="btn danger" id="funcionarioViewInativar" style="display:none">Inativar</button>
           <button type="button" class="btn neutral" id="closeFuncionarioViewBtn">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="proventoModal">
+      <div class="modal modal--wide">
+        <header>
+          <h2 id="proventoModalTitle">Novo Provento</h2>
+          <button type="button" class="close-btn" id="closeProvento" aria-label="Fechar">x</button>
+        </header>
+        <form id="proventoForm">
+          <input type="hidden" name="id" />
+          <div id="proventoFormFeedback" class="form-feedback hidden"></div>
+          <section class="form-section">
+            <h3>Identificação</h3>
+            <label>Funcionário <select name="funcionario_id" required><option value="">Selecione</option></select></label>
+            <label>CPF <input name="cpf" readonly placeholder="Preenchido automaticamente" /></label>
+            <label>Unidade <select name="unidade_id" required><option value="">Selecione</option></select></label>
+            <label>Tipo de provento <select name="tipo" required>
+              <option value="">Selecione</option>
+              <option value="vale">Vale</option>
+              <option value="adiantamento">Adiantamento</option>
+              <option value="consumo_interno">Consumo interno</option>
+              <option value="ajuda_custo">Ajuda de custo</option>
+              <option value="outro">Outro</option>
+            </select></label>
+            <label>Verba <input name="verba" required placeholder="Ex: Vale semanal, Adiantamento salarial" /></label>
+          </section>
+          <section class="form-section">
+            <h3>Dados financeiros</h3>
+            <label>Valor (R$) <input type="number" name="valor" step="0.01" min="0" required /></label>
+            <label>Data do provento <input type="date" name="data_provento" required /></label>
+            <label>Competência <input name="competencia" placeholder="Ex: 03/2026" /></label>
+            <label>Motivo / descrição <textarea name="motivo" rows="3" required></textarea></label>
+            <label>Observação interna <textarea name="observacao_interna" rows="2"></textarea></label>
+          </section>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelProvento">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="proventoViewModal">
+      <div class="modal">
+        <header>
+          <h2>Provento</h2>
+          <button type="button" class="close-btn" id="closeProventoView" aria-label="Fechar">x</button>
+        </header>
+        <div id="proventoViewContent"></div>
+        <footer>
+          <button type="button" class="btn primary" id="proventoViewEditar">Editar</button>
+          <button type="button" class="btn neutral" id="closeProventoViewBtn">Fechar</button>
         </footer>
       </div>
     </div>

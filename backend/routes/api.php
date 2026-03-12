@@ -5540,9 +5540,11 @@ Route::get('/proventos/meus', function (Request $request) use ($proventosAuth) {
         if (!$funcId) return response()->json([])->header('Access-Control-Allow-Origin', '*');
 
         $lista = DB::table('proventos')
+            ->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
             ->where('proventos.funcionario_id', $funcId)
-            ->select('proventos.*', 'unidades.nome as unidade_nome')
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome')
             ->orderByDesc('proventos.id')->get();
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {

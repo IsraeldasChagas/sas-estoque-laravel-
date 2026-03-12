@@ -286,7 +286,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "reservaMesa", "funcionarios"],
+    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -294,7 +294,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "reservaMesa", "funcionarios"],
+    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -326,7 +326,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["dashboard", "relatorios", "fornecedores", "boletao", "reservaMesa"],
+    sections: ["dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -334,7 +334,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "reservaMesa", "funcionarios"],
+    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -366,7 +366,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["dashboard"],
+    sections: ["dashboard", "proventos"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -410,6 +410,7 @@ const state = {
   locais: [],
   usuarios: [],
   funcionarios: [],
+  proventos: [],
   listasCompras: [],
   listaCompraAtual: null,
   listaComprasFiltroStatus: "ativas",
@@ -2474,7 +2475,7 @@ function applyPermissions() {
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
-    const temAcessoFinanceiro = regras.sections.includes("boletao");
+    const temAcessoFinanceiro = regras.sections.includes("boletao") || regras.sections.includes("proventos");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
   // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (Backup de Fornecedores = apenas ADMIN)
@@ -2525,6 +2526,11 @@ function applyPermissions() {
     const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
     const podeRegistrarEntrada = regras.canRegistrarMovimentacoes && !isCozinhaOuBar;
     dom.openEntradaBtn.classList.toggle("hidden", !podeRegistrarEntrada);
+  }
+  const openProventoBtn = document.getElementById("openProvento");
+  if (openProventoBtn) {
+    const podeCriarProvento = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+    openProventoBtn.classList.toggle("hidden", !podeCriarProvento);
   }
   // COZINHA e BAR podem registrar saída - habilita o botão
   if (dom.openSaidaBtn) {
@@ -5757,6 +5763,8 @@ function refreshUnidadeSelects() {
   if (dom.usuarioForm) populateSelect(dom.usuarioForm.querySelector('select[name="unidade_id"]'), options, "Sem unidade");
   if (dom.entradaForm) populateSelect(dom.entradaForm.querySelector('select[name="unidade_id"]'), options, "Selecione");
   if (dom.localUnidadeSelect) populateSelect(dom.localUnidadeSelect, options, "Selecione a unidade");
+  const proventoFormUnidade = document.getElementById("proventoForm")?.elements?.unidade_id;
+  if (proventoFormUnidade) populateSelect(proventoFormUnidade, options, "Selecione");
   
   // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -6338,6 +6346,78 @@ function renderFuncionarios(lista) {
     </tr>`;
   });
   target.innerHTML = rows.join("");
+}
+
+const PROVENTO_STATUS_LABELS = { rascunho: "Rascunho", aguardando_autorizacao: "Aguard. autorização", autorizado: "Autorizado", aguardando_assinatura: "Aguard. assinatura", assinado: "Assinado", finalizado: "Finalizado", cancelado: "Cancelado", rejeitado: "Rejeitado" };
+const PROVENTO_TIPO_LABELS = { vale: "Vale", adiantamento: "Adiantamento", consumo_interno: "Consumo interno", ajuda_custo: "Ajuda de custo", outro: "Outro" };
+
+async function loadProventos(filtros = {}) {
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const url = perfil === "FUNCIONARIO" ? "/proventos/meus" : "/proventos";
+  try {
+    const params = new URLSearchParams();
+    if (perfil !== "FUNCIONARIO") {
+      ["nome", "cpf", "tipo", "verba", "unidade_id", "status", "data_inicio", "data_fim"].forEach(k => {
+        if (filtros[k]) params.append(k, filtros[k]);
+      });
+    }
+    const fullUrl = params.toString() ? `${url}?${params}` : url;
+    const dados = await fetchJSON(fullUrl);
+    state.proventos = Array.isArray(dados) ? dados : [];
+    renderProventos(state.proventos);
+    return state.proventos;
+  } catch (e) {
+    state.proventos = [];
+    const tbl = document.getElementById("proventosTable");
+    if (tbl) tbl.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c62828">Erro ao carregar. Verifique se as migrations foram executadas.</td></tr>';
+    throw e;
+  }
+}
+
+function renderProventos(lista) {
+  const target = document.getElementById("proventosTable");
+  if (!target) return;
+  if (!Array.isArray(lista) || lista.length === 0) {
+    target.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#607d8b">Nenhum provento encontrado.</td></tr>';
+    return;
+  }
+  const esc = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+  const rows = lista.map(p => {
+    const st = PROVENTO_STATUS_LABELS[p.status] || p.status;
+    const stCls = p.status === "finalizado" ? "status-pill--success" : p.status === "cancelado" || p.status === "rejeitado" ? "status-pill--muted" : "status-pill";
+    const tipoL = PROVENTO_TIPO_LABELS[p.tipo] || p.tipo;
+    const valorF = "R$ " + (Number(p.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+    const dataF = p.data_provento ? new Date(p.data_provento + "T12:00:00").toLocaleDateString("pt-BR") : "-";
+    let acoes = `<button type="button" class="table-action btn-view-provento" data-id="${p.id}">Visualizar</button>`;
+    if (podeCriar) {
+      if (["rascunho","aguardando_autorizacao"].includes(p.status)) acoes += `<button type="button" class="table-action btn-edit-provento" data-id="${p.id}">Editar</button>`;
+      if (p.status === "aguardando_autorizacao") acoes += `<button type="button" class="table-action btn-autorizar-provento" data-id="${p.id}">Autorizar</button>`;
+      if (["autorizado","aguardando_assinatura","assinado"].includes(p.status) && p.status !== "assinado") acoes += ``;
+      if (p.status === "assinado") acoes += `<button type="button" class="table-action btn-finalizar-provento" data-id="${p.id}">Finalizar</button>`;
+      if (!["finalizado","cancelado","rejeitado"].includes(p.status)) acoes += `<button type="button" class="table-action btn-danger btn-cancelar-provento" data-id="${p.id}">Cancelar</button>`;
+    }
+    return `<tr>
+      <td data-label="ID">${esc(p.id)}</td>
+      <td data-label="Funcionário">${esc(p.funcionario_nome)}</td>
+      <td data-label="CPF">${esc(p.funcionario_cpf)}</td>
+      <td data-label="Tipo">${esc(tipoL)}</td>
+      <td data-label="Verba">${esc(p.verba)}</td>
+      <td data-label="Valor">${valorF}</td>
+      <td data-label="Unidade">${esc(p.unidade_nome)}</td>
+      <td data-label="Criado por">${esc(p.criado_por_nome)}</td>
+      <td data-label="Data">${dataF}</td>
+      <td data-label="Status"><span class="status-pill ${stCls}">${st}</span></td>
+      <td data-label="Ações" class="table-actions">${acoes}</td>
+    </tr>`;
+  });
+  target.innerHTML = rows.join("");
+  document.getElementById("proventosSection")?.querySelectorAll(".btn-view-provento").forEach(b => b.addEventListener("click", () => viewProvento(b.dataset.id)));
+  document.getElementById("proventosSection")?.querySelectorAll(".btn-edit-provento").forEach(b => b.addEventListener("click", () => editProvento(b.dataset.id)));
+  document.getElementById("proventosSection")?.querySelectorAll(".btn-autorizar-provento").forEach(b => b.addEventListener("click", () => autorizarProvento(b.dataset.id)));
+  document.getElementById("proventosSection")?.querySelectorAll(".btn-finalizar-provento").forEach(b => b.addEventListener("click", () => finalizarProvento(b.dataset.id)));
+  document.getElementById("proventosSection")?.querySelectorAll(".btn-cancelar-provento").forEach(b => b.addEventListener("click", () => cancelarProvento(b.dataset.id)));
 }
 
 async function loadLotes(filtros = {}) {
@@ -8801,6 +8881,146 @@ function setupModals() {
   dom.funcionarioViewEditar?.addEventListener("click", () => { const id = dom.funcionarioViewEditar.dataset.id; if (id) editFuncionario(id); });
   dom.funcionarioViewInativar?.addEventListener("click", () => { const id = dom.funcionarioViewInativar.dataset.id; if (id) { toggleModal(dom.funcionarioViewModal, false); inativarFuncionario(id); } });
 
+  function getProventosFiltros() {
+    return {
+      nome: document.getElementById("proventosFiltroFuncionario")?.value?.trim(),
+      cpf: document.getElementById("proventosFiltroCpf")?.value?.trim(),
+      tipo: document.getElementById("proventosFiltroTipo")?.value,
+      verba: document.getElementById("proventosFiltroVerba")?.value?.trim(),
+      unidade_id: document.getElementById("proventosFiltroUnidade")?.value,
+      status: document.getElementById("proventosFiltroStatus")?.value,
+      data_inicio: document.getElementById("proventosFiltroDataInicio")?.value,
+      data_fim: document.getElementById("proventosFiltroDataFim")?.value
+    };
+  }
+  async function openProventoModal(editId = null) {
+    const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    if (!["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil)) return showToast("Sem permissão.", "warning");
+    try {
+      await loadUnidades(false).catch(() => {});
+      await loadFuncionarios().catch(() => {});
+      const form = document.getElementById("proventoForm");
+      if (!form) return;
+      form.reset();
+      form.elements.id.value = editId || "";
+      document.getElementById("proventoModalTitle").textContent = editId ? "Editar Provento" : "Novo Provento";
+      const selFunc = form.elements.funcionario_id;
+      selFunc.innerHTML = '<option value="">Selecione</option>' + (state.funcionarios || []).filter(f => (f.status||"ativo")==="ativo").map(f => `<option value="${f.id}">${(f.nome_completo||"").replace(/</g,"&lt;")}</option>`).join("");
+      const selUn = form.elements.unidade_id;
+      selUn.innerHTML = '<option value="">Selecione</option>' + (state.unidades || []).map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
+      if (editId) {
+        const p = await fetchJSON(`/proventos/${editId}`);
+        form.elements.funcionario_id.value = p.funcionario_id;
+        form.elements.cpf.value = p.funcionario_cpf || "";
+        form.elements.unidade_id.value = p.unidade_id || "";
+        form.elements.tipo.value = p.tipo || "";
+        form.elements.verba.value = p.verba || "";
+        form.elements.valor.value = p.valor || "";
+        form.elements.data_provento.value = (p.data_provento || "").slice(0,10);
+        form.elements.competencia.value = p.competencia || "";
+        form.elements.motivo.value = p.motivo || "";
+        form.elements.observacao_interna.value = p.observacao_interna || "";
+      }
+      selFunc.addEventListener("change", function() {
+        const f = (state.funcionarios||[]).find(x => String(x.id)===String(this.value));
+        form.elements.cpf.value = f?.cpf || "";
+      });
+      toggleModal(document.getElementById("proventoModal"), true);
+    } catch (e) {
+      showToast(e?.message || "Erro ao abrir formulário", "error");
+    }
+  }
+  function viewProvento(id) {
+    fetchJSON(`/proventos/${id}`).then(p => {
+      const esc = s => (s == null ? "-" : String(s).replace(/</g,"&lt;"));
+      const st = PROVENTO_STATUS_LABELS[p.status] || p.status;
+      const tipoL = PROVENTO_TIPO_LABELS[p.tipo] || p.tipo;
+      const valorF = "R$ " + (Number(p.valor)||0).toLocaleString("pt-BR",{minimumFractionDigits:2});
+      document.getElementById("proventoViewContent").innerHTML = `
+        <div class="view-fields-grid" style="display:grid;gap:0.5rem;margin-bottom:1rem;">
+          <div class="view-field"><div class="view-field-label">Funcionário</div><div class="view-field-value">${esc(p.funcionario_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">CPF</div><div class="view-field-value">${esc(p.funcionario_cpf)}</div></div>
+          <div class="view-field"><div class="view-field-label">Tipo</div><div class="view-field-value">${esc(tipoL)}</div></div>
+          <div class="view-field"><div class="view-field-label">Verba</div><div class="view-field-value">${esc(p.verba)}</div></div>
+          <div class="view-field"><div class="view-field-label">Valor</div><div class="view-field-value">${valorF}</div></div>
+          <div class="view-field"><div class="view-field-label">Unidade</div><div class="view-field-value">${esc(p.unidade_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">Motivo</div><div class="view-field-value">${esc(p.motivo)}</div></div>
+          <div class="view-field"><div class="view-field-label">Status</div><div class="view-field-value">${st}</div></div>
+        </div>
+      `;
+      document.getElementById("proventoViewEditar").dataset.id = id;
+      const podeEditar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes((currentUser?.perfil||"").toString().trim().toUpperCase()) && ["rascunho","aguardando_autorizacao"].includes(p.status);
+      document.getElementById("proventoViewEditar").style.display = podeEditar ? "" : "none";
+      toggleModal(document.getElementById("proventoViewModal"), true);
+    }).catch(() => showToast("Erro ao carregar provento.", "error"));
+  }
+  async function editProvento(id) {
+    toggleModal(document.getElementById("proventoViewModal"), false);
+    await openProventoModal(id);
+  }
+  async function autorizarProvento(id) {
+    try {
+      await fetchJSON(`/proventos/${id}/autorizar`, { method: "POST" });
+      showToast("Provento autorizado.", "success");
+      await loadProventos(getProventosFiltros());
+    } catch (e) { showToast(e?.message || "Erro ao autorizar.", "error"); }
+  }
+  async function finalizarProvento(id) {
+    try {
+      await fetchJSON(`/proventos/${id}/finalizar`, { method: "POST" });
+      showToast("Provento finalizado.", "success");
+      await loadProventos(getProventosFiltros());
+    } catch (e) { showToast(e?.message || "Erro ao finalizar.", "error"); }
+  }
+  async function cancelarProvento(id) {
+    const just = prompt("Justificativa do cancelamento (obrigatório):");
+    if (!just || !just.trim()) return;
+    try {
+      await fetchJSON(`/proventos/${id}/cancelar`, { method: "POST", body: JSON.stringify({ justificativa: just.trim() }) });
+      showToast("Provento cancelado.", "success");
+      await loadProventos(getProventosFiltros());
+    } catch (e) { showToast(e?.message || "Erro ao cancelar.", "error"); }
+  }
+  document.getElementById("openProvento")?.addEventListener("click", () => openProventoModal());
+  document.getElementById("closeProvento")?.addEventListener("click", () => toggleModal(document.getElementById("proventoModal"), false));
+  document.getElementById("cancelProvento")?.addEventListener("click", () => { document.getElementById("proventoForm")?.reset(); toggleModal(document.getElementById("proventoModal"), false); });
+  document.getElementById("closeProventoView")?.addEventListener("click", () => toggleModal(document.getElementById("proventoViewModal"), false));
+  document.getElementById("closeProventoViewBtn")?.addEventListener("click", () => toggleModal(document.getElementById("proventoViewModal"), false));
+  document.getElementById("proventoViewEditar")?.addEventListener("click", () => { const id = document.getElementById("proventoViewEditar")?.dataset?.id; if (id) editProvento(id); });
+  document.getElementById("proventosFilterForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await loadProventos(getProventosFiltros()); });
+  document.getElementById("proventosLimparFiltros")?.addEventListener("click", () => {
+    ["proventosFiltroFuncionario","proventosFiltroCpf","proventosFiltroTipo","proventosFiltroVerba","proventosFiltroUnidade","proventosFiltroStatus","proventosFiltroDataInicio","proventosFiltroDataFim"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    loadProventos();
+  });
+  document.getElementById("proventoForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = document.getElementById("proventoForm");
+    const id = form.elements.id?.value;
+    const payload = { funcionario_id: form.elements.funcionario_id?.value, unidade_id: form.elements.unidade_id?.value || null, tipo: form.elements.tipo?.value, verba: (form.elements.verba?.value||"").trim(), valor: form.elements.valor?.value, data_provento: form.elements.data_provento?.value, competencia: form.elements.competencia?.value || null, motivo: (form.elements.motivo?.value||"").trim(), observacao_interna: form.elements.observacao_interna?.value || null };
+    if (!payload.funcionario_id || !payload.unidade_id || !payload.tipo || !payload.verba || !payload.valor || !payload.data_provento || !payload.motivo) {
+      const fb = document.getElementById("proventoFormFeedback");
+      if (fb) { fb.textContent = "Preencha todos os campos obrigatórios (funcionário, unidade, tipo, verba, valor, data e motivo)."; fb.className = "form-feedback error"; fb.classList.remove("hidden"); }
+      return;
+    }
+    if (Number(payload.valor) <= 0) { showToast("Valor deve ser maior que zero.", "error"); return; }
+    const feedback = document.getElementById("proventoFormFeedback");
+    if (feedback) { feedback.classList.add("hidden"); }
+    try {
+      if (id) {
+        await fetchJSON(`/proventos/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+        showToast("Provento atualizado.", "success");
+      } else {
+        await fetchJSON("/proventos", { method: "POST", body: JSON.stringify(payload) });
+        showToast("Provento cadastrado.", "success");
+      }
+      toggleModal(document.getElementById("proventoModal"), false);
+      await loadProventos(getProventosFiltros());
+    } catch (err) {
+      const msg = String(err?.message || err?.error || "Erro ao salvar.");
+      if (feedback) { feedback.textContent = msg; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); }
+      else showToast(msg, "error");
+    }
+  });
   dom.openUnidadeBtn?.addEventListener("click", async () => {
     if (!canManageUnidades()) {
       showToast("Sem permissao para gerenciar unidades.", "warning");
@@ -9263,6 +9483,19 @@ function setupNavigation() {
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
       else if (target === "funcionarios") await loadFuncionarios();
+      else if (target === "proventos") {
+        try {
+          await loadUnidades(false).catch(() => {});
+          await loadFuncionarios().catch(() => {});
+          const selUn = document.getElementById("proventosFiltroUnidade");
+          if (selUn && state.unidades?.length) {
+            selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
+          }
+          await loadProventos(getProventosFiltros());
+        } catch (e) {
+          showToast(e?.message || "Erro ao carregar proventos", "error");
+        }
+      }
       else if (target === "lotes") await loadLotes();
       else if (target === "locais") await Promise.all([loadLocais(true), loadUnidades(false)]);
       else if (target === "movimentacoes") {
