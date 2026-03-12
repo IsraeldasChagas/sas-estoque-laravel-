@@ -5170,6 +5170,10 @@ Route::options('/funcionarios', fn() => response()->json([])->header('Access-Con
 Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 Route::get('/funcionarios', function (Request $request) {
+    try {
+        if (!Schema::hasTable('funcionarios')) {
+            return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        }
     $query = DB::table('funcionarios')
         ->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
         ->leftJoin('usuarios', 'funcionarios.usuario_id', '=', 'usuarios.id')
@@ -5199,6 +5203,11 @@ Route::get('/funcionarios', function (Request $request) {
     $funcionarios = $query->orderBy('funcionarios.nome_completo')->get();
     return response()->json($funcionarios)
         ->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /funcionarios: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao listar funcionários'], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
 });
 
 Route::get('/funcionarios/{id}', function ($id) {

@@ -29,8 +29,8 @@ return new class extends Migration
             $table->text('observacoes')->nullable();
             $table->timestamps();
 
-            $table->foreign('unidade_id')->references('id')->on('unidades')->nullOnDelete();
-            $table->foreign('usuario_id')->references('id')->on('usuarios')->nullOnDelete();
+            $table->index('unidade_id');
+            $table->index('usuario_id');
         });
     }
 
