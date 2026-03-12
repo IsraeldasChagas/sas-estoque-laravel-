@@ -5163,6 +5163,178 @@ Route::post('/admin/restaurar', function (Request $request) {
 });
 
 // ============================================
+// FUNCIONÁRIOS (Módulo RH)
+// ============================================
+
+Route::options('/funcionarios', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/funcionarios', function (Request $request) {
+    $query = DB::table('funcionarios')
+        ->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios', 'funcionarios.usuario_id', '=', 'usuarios.id')
+        ->select(
+            'funcionarios.*',
+            'unidades.nome as unidade_nome',
+            'usuarios.nome as usuario_nome',
+            'usuarios.email as usuario_email'
+        );
+
+    if ($nome = trim($request->query('nome', ''))) {
+        $query->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
+    }
+    if ($cpf = preg_replace('/\D/', '', trim($request->query('cpf', '')))) {
+        $query->whereRaw('REPLACE(REPLACE(REPLACE(funcionarios.cpf, ".", ""), "-", ""), " ", "") LIKE ?', ['%' . $cpf . '%']);
+    }
+    if ($cargo = trim($request->query('cargo', ''))) {
+        $query->where('funcionarios.cargo', $cargo);
+    }
+    if ($unidadeId = $request->query('unidade_id')) {
+        $query->where('funcionarios.unidade_id', $unidadeId);
+    }
+    if (in_array($request->query('status'), ['ativo', 'inativo'])) {
+        $query->where('funcionarios.status', $request->query('status'));
+    }
+
+    $funcionarios = $query->orderBy('funcionarios.nome_completo')->get();
+    return response()->json($funcionarios)
+        ->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::get('/funcionarios/{id}', function ($id) {
+    $f = DB::table('funcionarios')
+        ->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios', 'funcionarios.usuario_id', '=', 'usuarios.id')
+        ->select('funcionarios.*', 'unidades.nome as unidade_nome', 'usuarios.nome as usuario_nome', 'usuarios.email as usuario_email', 'usuarios.perfil as perfil_usuario')
+        ->where('funcionarios.id', $id)
+        ->first();
+    if (!$f) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    return response()->json($f)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::post('/funcionarios', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $data = $request->all();
+    $cpfLimpo = preg_replace('/\D/', '', $data['cpf'] ?? '');
+    if (strlen($cpfLimpo) !== 11) {
+        return response()->json(['error' => 'CPF inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+    $cpfFormatado = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $cpfLimpo);
+
+    if (DB::table('funcionarios')->where('cpf', $cpfFormatado)->exists()) {
+        return response()->json(['error' => 'CPF já cadastrado'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $rules = [
+        'nome_completo' => 'required|string|max:255',
+        'cargo' => 'required|string|max:100',
+        'status' => 'required|in:ativo,inativo',
+    ];
+    if (!empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1)) {
+        $rules['login_usuario'] = 'required|string|max:255';
+        $rules['senha_usuario'] = 'required|string|min:6';
+        $rules['perfil_usuario'] = 'required|string|in:ADMIN,GERENTE,FINANCEIRO,ASSISTENTE_ADMINISTRATIVO,ATENDENTE_CAIXA,FUNCIONARIO';
+    }
+
+    $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
+    if ($validator->fails()) {
+        return response()->json(['error' => 'Validação falhou', 'details' => $validator->errors()], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $usuarioId = null;
+    if (!empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1)) {
+        $login = trim($data['login_usuario'] ?? '');
+        if (DB::table('usuarios')->where('email', $login)->exists()) {
+            return response()->json(['error' => 'E-mail/login já cadastrado para outro usuário'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $usuarioId = DB::table('usuarios')->insertGetId([
+            'nome' => trim($data['nome_completo']),
+            'email' => $login,
+            'perfil' => $data['perfil_usuario'] ?? 'FUNCIONARIO',
+            'senha_hash' => Hash::make($data['senha_usuario']),
+            'ativo' => 1,
+            'unidade_id' => !empty($data['unidade_id']) ? (int)$data['unidade_id'] : null,
+        ]);
+    }
+
+    $insert = [
+        'nome_completo' => trim($data['nome_completo']),
+        'cpf' => $cpfFormatado,
+        'data_nascimento' => !empty($data['data_nascimento']) ? $data['data_nascimento'] : null,
+        'sexo' => $data['sexo'] ?? null,
+        'estado_civil' => $data['estado_civil'] ?? null,
+        'cargo' => trim($data['cargo']),
+        'unidade_id' => !empty($data['unidade_id']) ? (int)$data['unidade_id'] : null,
+        'whatsapp' => $data['whatsapp'] ?? null,
+        'email' => $data['email'] ?? null,
+        'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
+        'status' => $data['status'] ?? 'ativo',
+        'possui_acesso' => !empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1) ? 1 : 0,
+        'usuario_id' => $usuarioId,
+        'observacoes' => $data['observacoes'] ?? null,
+    ];
+    $id = DB::table('funcionarios')->insertGetId($insert);
+    $funcionario = DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first();
+    return response()->json($funcionario, 201)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::put('/funcionarios/{id}', function (Request $request, $id) {
+    $userId = $request->header('X-Usuario-Id');
+    if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $existente = DB::table('funcionarios')->where('id', $id)->first();
+    if (!$existente) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $data = $request->all();
+    $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:100', 'status' => 'required|in:ativo,inativo'];
+    $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
+    if ($validator->fails()) {
+        return response()->json(['error' => 'Validação falhou', 'details' => $validator->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $update = [
+        'nome_completo' => trim($data['nome_completo']),
+        'data_nascimento' => !empty($data['data_nascimento']) ? $data['data_nascimento'] : null,
+        'sexo' => $data['sexo'] ?? null,
+        'estado_civil' => $data['estado_civil'] ?? null,
+        'cargo' => trim($data['cargo']),
+        'unidade_id' => isset($data['unidade_id']) && $data['unidade_id'] !== '' ? (int)$data['unidade_id'] : null,
+        'whatsapp' => $data['whatsapp'] ?? null,
+        'email' => $data['email'] ?? null,
+        'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
+        'status' => $data['status'] ?? 'ativo',
+        'observacoes' => $data['observacoes'] ?? null,
+    ];
+    DB::table('funcionarios')->where('id', $id)->update($update);
+    return response()->json(DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first())
+        ->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::put('/funcionarios/{id}/inativar', function (Request $request, $id) {
+    $userId = $request->header('X-Usuario-Id');
+    if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    $f = DB::table('funcionarios')->where('id', $id)->first();
+    if (!$f) return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    DB::table('funcionarios')->where('id', $id)->update(['status' => 'inativo']);
+    return response()->json(['message' => 'Funcionário inativado com sucesso'])->header('Access-Control-Allow-Origin', '*');
+});
+
+// ============================================
 // DEPLOY - Atualiza o servidor via git pull
 // ============================================
 Route::get('/deploy', function (Request $request) {

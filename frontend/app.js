@@ -241,6 +241,24 @@ const dom = {
   relResumoColuna: document.getElementById("relResumoColuna"),
   relatorioExportCsv: document.getElementById("relatorioExportCsv"),
   relatorioExportPdf: document.getElementById("relatorioExportPdf"),
+  funcionariosTable: document.getElementById("funcionariosTable"),
+  funcionarioModal: document.getElementById("funcionarioModal"),
+  funcionarioForm: document.getElementById("funcionarioForm"),
+  funcionarioModalTitle: document.getElementById("funcionarioModalTitle"),
+  funcionarioFormFeedback: document.getElementById("funcionarioFormFeedback"),
+  openFuncionarioBtn: document.getElementById("openFuncionario"),
+  closeFuncionarioBtn: document.getElementById("closeFuncionario"),
+  cancelFuncionarioBtn: document.getElementById("cancelFuncionario"),
+  funcionarioPossuiAcesso: document.getElementById("funcionarioPossuiAcesso"),
+  funcionarioAcessoCampos: document.getElementById("funcionarioAcessoCampos"),
+  funcionariosFilterForm: document.getElementById("funcionariosFilterForm"),
+  funcionariosLimparFiltros: document.getElementById("funcionariosLimparFiltros"),
+  funcionariosFiltroUnidade: document.getElementById("funcionariosFiltroUnidade"),
+  funcionarioViewModal: document.getElementById("funcionarioViewModal"),
+  funcionarioViewContent: document.getElementById("funcionarioViewContent"),
+  closeFuncionarioViewBtn: document.getElementById("closeFuncionarioView"),
+  funcionarioViewEditar: document.getElementById("funcionarioViewEditar"),
+  closeFuncionarioView: document.getElementById("closeFuncionarioView"),
 };
 
 let stopMatrixAnimation = null;
@@ -257,12 +275,13 @@ const PERFIL_LABELS = {
   GERENTE: "Gerente",
   ATENDENTE: "Atendente",
   ATENDENTE_CAIXA: "Atendente Caixa",
+  FUNCIONARIO: "Funcionário",
 };
 
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "reservaMesa"],
+    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "reservaMesa", "funcionarios"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -270,7 +289,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "reservaMesa"],
+    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -310,7 +329,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "reservaMesa"],
+    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -335,6 +354,14 @@ const PERMISSOES = {
   },
   ATENDENTE_CAIXA: {
     sections: ["reservaMesa"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+  FUNCIONARIO: {
+    sections: ["dashboard"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -377,6 +404,7 @@ const state = {
   unidades: [],
   locais: [],
   usuarios: [],
+  funcionarios: [],
   listasCompras: [],
   listaCompraAtual: null,
   listaComprasFiltroStatus: "ativas",
@@ -2416,6 +2444,12 @@ function applyPermissions() {
     link.classList.toggle("hidden", !allowed);
   });
 
+  // Oculta o menu pai "RH" quando nenhum filho está permitido
+  const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
+  if (rhNavSubmenu) {
+    const temAcessoRH = regras.sections.includes("funcionarios");
+    rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
+  }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
@@ -6234,6 +6268,55 @@ async function loadUsuarios(force = false) {
   }
 }
 
+async function loadFuncionarios(filtros = {}) {
+  const params = new URLSearchParams();
+  ["nome", "cpf", "cargo", "unidade_id", "status"].forEach(k => {
+    if (filtros[k]) params.append(k, filtros[k]);
+  });
+  const url = params.toString() ? `/funcionarios?${params}` : "/funcionarios";
+  const dados = await fetchJSON(url);
+  state.funcionarios = Array.isArray(dados) ? dados : [];
+  renderFuncionarios(state.funcionarios);
+  return state.funcionarios;
+}
+
+function renderFuncionarios(lista) {
+  const target = dom.funcionariosTable;
+  if (!target) return;
+  if (!Array.isArray(lista) || lista.length === 0) {
+    target.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#607d8b">Nenhum funcionário encontrado.</td></tr>';
+    return;
+  }
+  const escape = (s) => (s == null || s === undefined ? "" : String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const rows = lista.map(f => {
+    const statusCls = (f.status || "ativo") === "ativo" ? "status-pill status-pill--success" : "status-pill status-pill--muted";
+    const statusLabel = (f.status || "ativo") === "ativo" ? "Ativo" : "Inativo";
+    const acessoLabel = f.possui_acesso ? "Sim" : "Não";
+    const isAtivo = (f.status || "ativo") === "ativo";
+    const btnInativar = isAtivo ? `<button type="button" class="table-action btn-inativar-funcionario" data-id="${f.id}" title="Inativar">Inativar</button>` : "";
+    return `<tr data-id="${f.id}">
+      <td data-label="ID">${escape(f.id)}</td>
+      <td data-label="Nome">${escape(f.nome_completo)}</td>
+      <td data-label="CPF">${escape(f.cpf)}</td>
+      <td data-label="Cargo">${escape(f.cargo)}</td>
+      <td data-label="Unidade">${escape(f.unidade_nome || "-")}</td>
+      <td data-label="WhatsApp">${escape(f.whatsapp || "-")}</td>
+      <td data-label="E-mail">${escape(f.email || "-")}</td>
+      <td data-label="Status"><span class="${statusCls}">${statusLabel}</span></td>
+      <td data-label="Acesso">${acessoLabel}</td>
+      <td data-label="Ações" class="table-actions">
+        <button type="button" class="table-action btn-view-funcionario" data-id="${f.id}" title="Visualizar">Visualizar</button>
+        <button type="button" class="table-action btn-edit-funcionario" data-id="${f.id}" title="Editar">Editar</button>
+        ${btnInativar}
+      </td>
+    </tr>`;
+  });
+  target.innerHTML = rows.join("");
+  target.querySelectorAll(".btn-view-funcionario").forEach(btn => btn.addEventListener("click", () => viewFuncionario(btn.dataset.id)));
+  target.querySelectorAll(".btn-edit-funcionario").forEach(btn => btn.addEventListener("click", () => editFuncionario(btn.dataset.id)));
+  target.querySelectorAll(".btn-inativar-funcionario").forEach(btn => btn.addEventListener("click", () => inativarFuncionario(btn.dataset.id)));
+}
+
 async function loadLotes(filtros = {}) {
   const params = new URLSearchParams();
   Object.entries(filtros).forEach(([key, value]) => { if (value) params.append(key, value); });
@@ -8411,6 +8494,150 @@ function setupModals() {
   dom.closeUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
 
+  // === Funcionários (RH) ===
+  function populateFuncionarioUnidades(selectForm, selectFilter) {
+    const opts = (state.unidades || []).map(u => `<option value="${u.id}">${(u.nome || "").replace(/</g, "&lt;")}</option>`).join("");
+    if (selectForm) {
+      const el = dom.funcionarioForm?.querySelector("[name=unidade_id]");
+      if (el) el.innerHTML = '<option value="">Sem unidade</option>' + opts;
+    }
+    if (selectFilter && dom.funcionariosFiltroUnidade) {
+      dom.funcionariosFiltroUnidade.innerHTML = '<option value="">Todas</option>' + opts;
+    }
+  }
+  async function openFuncionarioModal(editId = null) {
+    if (!state.unidades?.length) await loadUnidades(false);
+    populateFuncionarioUnidades("unidade_id", true);
+    dom.funcionarioForm?.reset();
+    const idEl = dom.funcionarioForm?.elements.id;
+    if (idEl) idEl.value = editId || "";
+    dom.funcionarioModalTitle.textContent = editId ? "Editar funcionário" : "Novo funcionário";
+    if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.add("hidden");
+    if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
+    if (editId) {
+      const f = await fetchJSON(`/funcionarios/${editId}`);
+      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","cargo","unidade_id","whatsapp","email","data_admissao","status","observacoes"].forEach(k => {
+        const el = dom.funcionarioForm?.elements[k];
+        if (el && f[k] != null) el.value = f[k] || "";
+      });
+      if (f.possui_acesso) {
+        dom.funcionarioPossuiAcesso.checked = true;
+        if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.remove("hidden");
+        const loginEl = dom.funcionarioForm?.elements.login_usuario;
+        if (loginEl && f.usuario_email) loginEl.value = f.usuario_email;
+        const perfilEl = dom.funcionarioForm?.elements.perfil_usuario;
+        if (perfilEl) perfilEl.value = f.perfil_usuario || "FUNCIONARIO";
+      }
+      if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = true;
+    } else {
+      if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = false;
+    }
+    toggleModal(dom.funcionarioModal, true);
+  }
+  function viewFuncionario(id) {
+    fetchJSON(`/funcionarios/${id}`).then(f => {
+      const escape = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
+      const statusLabel = (f.status || "ativo") === "ativo" ? "Ativo" : "Inativo";
+      const acessoLabel = f.possui_acesso ? "Sim" : "Não";
+      dom.funcionarioViewContent.innerHTML = `
+        <div class="form-section"><h3>Dados pessoais</h3><p><strong>Nome:</strong> ${escape(f.nome_completo)}</p><p><strong>CPF:</strong> ${escape(f.cpf)}</p><p><strong>Data nasc.:</strong> ${escape(f.data_nascimento)}</p><p><strong>Sexo:</strong> ${escape(f.sexo)}</p><p><strong>Estado civil:</strong> ${escape(f.estado_civil)}</p></div>
+        <div class="form-section"><h3>Dados profissionais</h3><p><strong>Cargo:</strong> ${escape(f.cargo)}</p><p><strong>Unidade:</strong> ${escape(f.unidade_nome)}</p><p><strong>Data admissão:</strong> ${escape(f.data_admissao)}</p><p><strong>Status:</strong> ${statusLabel}</p></div>
+        <div class="form-section"><h3>Contato</h3><p><strong>WhatsApp:</strong> ${escape(f.whatsapp)}</p><p><strong>E-mail:</strong> ${escape(f.email)}</p></div>
+        <div class="form-section"><p><strong>Possui acesso ao sistema:</strong> ${acessoLabel}</p><p><strong>Cadastrado em:</strong> ${escape(f.created_at)}</p></div>
+      `;
+      dom.funcionarioViewEditar.dataset.id = id;
+      toggleModal(dom.funcionarioViewModal, true);
+    }).catch(() => showToast("Erro ao carregar funcionário.", "error"));
+  }
+  async function editFuncionario(id) {
+    toggleModal(dom.funcionarioViewModal, false);
+    await openFuncionarioModal(id);
+  }
+  async function inativarFuncionario(id) {
+    if (!confirm("Deseja inativar este funcionário?")) return;
+    try {
+      await fetchJSON(`/funcionarios/${id}/inativar`, { method: "PUT" });
+      showToast("Funcionário inativado.", "success");
+      await loadFuncionarios(getFuncionariosFiltros());
+    } catch (e) {
+      showToast(e?.message || "Erro ao inativar.", "error");
+    }
+  }
+  function getFuncionariosFiltros() {
+    const nome = document.getElementById("funcionariosFiltroNome")?.value?.trim();
+    const cpf = document.getElementById("funcionariosFiltroCpf")?.value?.trim();
+    const cargo = document.getElementById("funcionariosFiltroCargo")?.value;
+    const unidadeId = document.getElementById("funcionariosFiltroUnidade")?.value;
+    const status = document.getElementById("funcionariosFiltroStatus")?.value;
+    return { nome: nome || undefined, cpf: cpf || undefined, cargo: cargo || undefined, unidade_id: unidadeId || undefined, status: status || undefined };
+  }
+  dom.openFuncionarioBtn?.addEventListener("click", () => openFuncionarioModal());
+  dom.closeFuncionarioBtn?.addEventListener("click", () => toggleModal(dom.funcionarioModal, false));
+  dom.cancelFuncionarioBtn?.addEventListener("click", () => toggleModal(dom.funcionarioModal, false));
+  dom.funcionarioPossuiAcesso?.addEventListener("change", function() {
+    if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.toggle("hidden", !this.checked);
+    ["login_usuario","senha_usuario","perfil_usuario"].forEach(k => {
+      const el = dom.funcionarioForm?.elements[k];
+      if (el) el.required = this.checked;
+    });
+  });
+  dom.funcionarioForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = dom.funcionarioForm;
+    const id = form.elements.id?.value;
+    const payload = {
+      nome_completo: form.elements.nome_completo?.value,
+      cpf: (form.elements.cpf?.value || "").replace(/\D/g, ""),
+      data_nascimento: form.elements.data_nascimento?.value || null,
+      sexo: form.elements.sexo?.value || null,
+      estado_civil: form.elements.estado_civil?.value || null,
+      cargo: form.elements.cargo?.value,
+      unidade_id: form.elements.unidade_id?.value || null,
+      whatsapp: form.elements.whatsapp?.value || null,
+      email: form.elements.email?.value || null,
+      data_admissao: form.elements.data_admissao?.value || null,
+      status: form.elements.status?.value || "ativo",
+      observacoes: form.elements.observacoes?.value || null,
+      possui_acesso: dom.funcionarioPossuiAcesso?.checked || false,
+    };
+    if (payload.possui_acesso) {
+      payload.login_usuario = form.elements.login_usuario?.value;
+      payload.senha_usuario = form.elements.senha_usuario?.value;
+      payload.perfil_usuario = form.elements.perfil_usuario?.value || "FUNCIONARIO";
+    }
+    const feedback = dom.funcionarioFormFeedback;
+    if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
+    try {
+      if (id) {
+        delete payload.cpf; delete payload.login_usuario; delete payload.senha_usuario; delete payload.perfil_usuario; delete payload.possui_acesso;
+        await fetchJSON(`/funcionarios/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+        showToast("Funcionário atualizado.", "success");
+      } else {
+        payload.cpf = (payload.cpf || "").replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        await fetchJSON("/funcionarios", { method: "POST", body: JSON.stringify(payload) });
+        showToast("Funcionário cadastrado.", "success");
+      }
+      toggleModal(dom.funcionarioModal, false);
+      await loadFuncionarios(getFuncionariosFiltros());
+    } catch (err) {
+      const msg = err?.message || err?.error || "Erro ao salvar.";
+      if (feedback) { feedback.textContent = msg; feedback.classList.remove("hidden"); }
+      else showToast(msg, "error");
+    }
+  });
+  dom.funcionariosFilterForm?.addEventListener("submit", async (e) => { e.preventDefault(); await loadFuncionarios(getFuncionariosFiltros()); });
+  dom.funcionariosLimparFiltros?.addEventListener("click", () => {
+    document.getElementById("funcionariosFiltroNome").value = "";
+    document.getElementById("funcionariosFiltroCpf").value = "";
+    document.getElementById("funcionariosFiltroCargo").value = "";
+    if (dom.funcionariosFiltroUnidade) dom.funcionariosFiltroUnidade.value = "";
+    document.getElementById("funcionariosFiltroStatus").value = "";
+    loadFuncionarios();
+  });
+  dom.closeFuncionarioView?.addEventListener("click", () => toggleModal(dom.funcionarioViewModal, false));
+  dom.closeFuncionarioViewBtn?.addEventListener("click", () => toggleModal(dom.funcionarioViewModal, false));
+  dom.funcionarioViewEditar?.addEventListener("click", () => { const id = dom.funcionarioViewEditar.dataset.id; if (id) editFuncionario(id); });
+
   dom.openUnidadeBtn?.addEventListener("click", async () => {
     if (!canManageUnidades()) {
       showToast("Sem permissao para gerenciar unidades.", "warning");
@@ -8872,6 +9099,7 @@ function setupNavigation() {
       else if (target === "estoque") await loadEstoqueProdutos();
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
+      else if (target === "funcionarios") await loadFuncionarios();
       else if (target === "lotes") await loadLotes();
       else if (target === "locais") await Promise.all([loadLocais(true), loadUnidades(false)]);
       else if (target === "movimentacoes") {
@@ -8951,6 +9179,16 @@ function setupNavigation() {
       if (parent) {
         parent.classList.toggle('open');
       }
+    });
+  }
+  // Setup submenu toggle for RH
+  const rhMenu = document.getElementById('rhMenu');
+  if (rhMenu) {
+    rhMenu.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = rhMenu.closest('.nav-submenu');
+      if (parent) parent.classList.toggle('open');
     });
   }
   // Setup submenu toggle for Configuracoes

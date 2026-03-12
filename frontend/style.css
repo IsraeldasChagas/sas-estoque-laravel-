@@ -3410,6 +3410,29 @@ select[size]:not([size="1"]) {
   gap: 12px;
 }
 
+/* Modulo RH - Funcionarios */
+.funcionarios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+.funcionarios-header h2 { margin: 0; color: var(--primary); font-size: 1.5rem; }
+.form-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.form-section:last-of-type { border-bottom: none; }
+.form-section h3 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--primary); }
+.modal--wide { max-width: 560px; }
+.checkbox-label { display: flex; align-items: center; gap: 0.5rem; }
+.checkbox-label input { width: auto; }
+
 /* Filtro de Mes/Ano */
 .boletos-filtro {
   background: var(--card-bg);

@@ -105,6 +105,15 @@
           <a href="#" class="nav-link" data-section="fornecedores">Fornecedores</a>
           <a href="#" class="nav-link" data-section="reservaMesa">Reserva de Mesa</a>
           <div class="nav-submenu">
+            <a href="#" class="nav-link nav-link-parent" id="rhMenu">
+              RH
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="funcionarios">Funcionários</a>
+            </div>
+          </div>
+          <div class="nav-submenu">
             <a href="#" class="nav-link nav-link-parent" id="financeiroMenu">
               Financeiro
               <span class="nav-arrow">▼</span>
@@ -1235,6 +1244,86 @@
             </div>
           </section>
 
+          <!-- Modulo RH - Funcionarios -->
+          <section id="funcionariosSection" class="view-section hidden">
+            <div class="funcionarios-header">
+              <div>
+                <h2>Funcionários</h2>
+                <p class="subtle-text">Cadastro e controle básico de funcionários</p>
+              </div>
+              <button type="button" class="btn primary" id="openFuncionario">+ Novo Funcionário</button>
+            </div>
+            <form id="funcionariosFilterForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>
+                  Nome
+                  <input type="text" id="funcionariosFiltroNome" name="nome" placeholder="Buscar por nome" />
+                </label>
+                <label>
+                  CPF
+                  <input type="text" id="funcionariosFiltroCpf" name="cpf" placeholder="Buscar por CPF" />
+                </label>
+                <label>
+                  Cargo
+                  <select id="funcionariosFiltroCargo" name="cargo">
+                    <option value="">Todos</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="atendente">Atendente</option>
+                    <option value="atendente bar">Atendente Bar</option>
+                    <option value="atendente caixa">Atendente Caixa</option>
+                    <option value="auxiliar administrativo">Auxiliar Administrativo</option>
+                    <option value="serviços gerais">Serviços Gerais</option>
+                    <option value="cozinheiro(a)">Cozinheiro(a)</option>
+                    <option value="auxiliar de cozinha">Auxiliar de Cozinha</option>
+                    <option value="estoquista">Estoquista</option>
+                  </select>
+                </label>
+                <label>
+                  Unidade
+                  <select id="funcionariosFiltroUnidade" name="unidade_id">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select id="funcionariosFiltroStatus" name="status">
+                    <option value="">Todos</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                  </select>
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Filtrar</button>
+                <button type="button" class="btn" id="funcionariosLimparFiltros">Limpar</button>
+              </div>
+            </form>
+            <div class="table-card form-card--wide">
+              <header>Funcionários cadastrados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>CPF</th>
+                      <th>Cargo</th>
+                      <th>Unidade</th>
+                      <th>WhatsApp</th>
+                      <th>E-mail</th>
+                      <th>Status</th>
+                      <th>Acesso sistema</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="funcionariosTable">
+                    <tr><td colspan="10" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
           <!-- Modulo Financeiro - Boletao -->
           <section id="boletaoSection" class="view-section hidden">
             <div class="boletos-header">
@@ -1833,6 +1922,116 @@
             <button type="submit" class="btn primary">Salvar</button>
           </footer>
         </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="funcionarioModal">
+      <div class="modal modal--wide">
+        <header>
+          <h2 id="funcionarioModalTitle">Novo Funcionário</h2>
+          <button type="button" class="close-btn" id="closeFuncionario" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="funcionarioForm">
+          <input type="hidden" name="id" />
+          <div id="funcionarioFormFeedback" class="form-feedback hidden"></div>
+          <section class="form-section">
+            <h3>Dados pessoais</h3>
+            <label>Nome completo <input name="nome_completo" required /></label>
+            <label>CPF <input name="cpf" placeholder="000.000.000-00" required /></label>
+            <div class="grid-two">
+              <label>Data de nascimento <input name="data_nascimento" type="date" /></label>
+              <label>Sexo
+                <select name="sexo">
+                  <option value="">Selecione</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </label>
+            </div>
+            <label>Estado civil
+              <select name="estado_civil">
+                <option value="">Selecione</option>
+                <option value="Solteiro(a)">Solteiro(a)</option>
+                <option value="Casado(a)">Casado(a)</option>
+                <option value="Divorciado(a)">Divorciado(a)</option>
+                <option value="Viúvo(a)">Viúvo(a)</option>
+                <option value="União estável">União estável</option>
+              </select>
+            </label>
+          </section>
+          <section class="form-section">
+            <h3>Dados profissionais</h3>
+            <label>Cargo
+              <select name="cargo" required>
+                <option value="">Selecione</option>
+                <option value="gerente">Gerente</option>
+                <option value="atendente">Atendente</option>
+                <option value="atendente bar">Atendente Bar</option>
+                <option value="atendente caixa">Atendente Caixa</option>
+                <option value="auxiliar administrativo">Auxiliar Administrativo</option>
+                <option value="serviços gerais">Serviços Gerais</option>
+                <option value="cozinheiro(a)">Cozinheiro(a)</option>
+                <option value="auxiliar de cozinha">Auxiliar de Cozinha</option>
+                <option value="estoquista">Estoquista</option>
+              </select>
+            </label>
+            <label>Unidade <select name="unidade_id"><option value="">Sem unidade</option></select></label>
+            <div class="grid-two">
+              <label>Data de admissão <input name="data_admissao" type="date" /></label>
+              <label>Status <select name="status" required><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></label>
+            </div>
+          </section>
+          <section class="form-section">
+            <h3>Contato</h3>
+            <div class="grid-two">
+              <label>WhatsApp <input name="whatsapp" placeholder="(00) 00000-0000" /></label>
+              <label>E-mail <input type="email" name="email" /></label>
+            </div>
+          </section>
+          <section class="form-section" id="funcionarioAcessoSecao">
+            <h3>Acesso ao sistema</h3>
+            <label class="checkbox-label">
+              <input type="checkbox" name="possui_acesso" id="funcionarioPossuiAcesso" />
+              Este funcionário terá acesso ao sistema
+            </label>
+            <div id="funcionarioAcessoCampos" class="hidden">
+              <label>E-mail ou login <input name="login_usuario" placeholder="usuario@empresa.com" /></label>
+              <label>Senha inicial <input type="password" name="senha_usuario" /></label>
+              <label>Perfil de acesso
+                <select name="perfil_usuario">
+                  <option value="ADMIN">Administrador</option>
+                  <option value="GERENTE">Gerente</option>
+                  <option value="FINANCEIRO">Financeiro</option>
+                  <option value="ASSISTENTE_ADMINISTRATIVO">Auxiliar Administrativo</option>
+                  <option value="ATENDENTE_CAIXA">Caixa</option>
+                  <option value="FUNCIONARIO">Funcionário</option>
+                </select>
+              </label>
+            </div>
+          </section>
+          <section class="form-section">
+            <label>Observações <textarea name="observacoes" rows="3"></textarea></label>
+          </section>
+          <footer>
+            <button type="button" class="btn neutral" id="cancelFuncionario">Limpar</button>
+            <button type="submit" class="btn primary">Salvar</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="funcionarioViewModal">
+      <div class="modal">
+        <header>
+          <h2>Funcionário</h2>
+          <button type="button" class="close-btn" id="closeFuncionarioView" aria-label="Fechar">x</button>
+        </header>
+        <div id="funcionarioViewContent"></div>
+        <footer>
+          <button type="button" class="btn primary" id="funcionarioViewEditar">Editar</button>
+          <button type="button" class="btn neutral" id="closeFuncionarioViewBtn">Fechar</button>
+        </footer>
       </div>
     </div>
 
