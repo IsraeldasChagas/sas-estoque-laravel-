@@ -5514,7 +5514,7 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
         $u = $proventosAuth($request);
         if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if ($perfil === 'FUNCIONARIO') return response()->json(['error' => 'Acesse Meus Proventos'], 403)->header('Access-Control-Allow-Origin', '*');
+        if (in_array($perfil, ['FUNCIONARIO', 'ATENDENTE_CAIXA'])) return response()->json(['error' => 'Acesse Meus Proventos'], 403)->header('Access-Control-Allow-Origin', '*');
 
         $q = DB::table('proventos')
             ->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')

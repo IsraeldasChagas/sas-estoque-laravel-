@@ -361,7 +361,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["reservaMesa"],
+    sections: ["dashboard", "proventos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -6356,10 +6356,11 @@ const PROVENTO_TIPO_LABELS = { vale: "Vale", adiantamento: "Adiantamento", consu
 
 async function loadProventos(filtros = {}) {
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const url = perfil === "FUNCIONARIO" ? "/proventos/meus" : "/proventos";
+  const usaMeusProventos = perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA";
+  const url = usaMeusProventos ? "/proventos/meus" : "/proventos";
   try {
     const params = new URLSearchParams();
-    if (perfil !== "FUNCIONARIO") {
+    if (!usaMeusProventos) {
       ["nome", "cpf", "tipo", "verba", "unidade_id", "status", "data_inicio", "data_fim"].forEach(k => {
         if (filtros[k]) params.append(k, filtros[k]);
       });
@@ -6387,7 +6388,7 @@ function renderProventos(lista) {
   const esc = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
-  const isFuncionario = perfil === "FUNCIONARIO";
+  const podeAssinarProvento = perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA";
   const rows = lista.map(p => {
     const st = PROVENTO_STATUS_LABELS[p.status] || p.status;
     const stCls = p.status === "finalizado" ? "status-pill--success" : p.status === "cancelado" || p.status === "rejeitado" ? "status-pill--muted" : "status-pill";
@@ -6395,7 +6396,7 @@ function renderProventos(lista) {
     const valorF = "R$ " + (Number(p.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     const dataF = p.data_provento ? new Date(p.data_provento + "T12:00:00").toLocaleDateString("pt-BR") : "-";
     let acoes = `<button type="button" class="table-action btn-view-provento" data-id="${p.id}">Visualizar</button>`;
-    if (isFuncionario && p.status === "autorizado") {
+    if (podeAssinarProvento && p.status === "autorizado") {
       acoes += `<button type="button" class="table-action btn-primary btn-assinar-provento" data-id="${p.id}">Aceitar / Assinar</button>`;
     }
     if (podeCriar) {
@@ -9098,7 +9099,7 @@ function setupModals() {
       document.getElementById("proventoViewEditar").dataset.id = id;
       const perfil = (currentUser?.perfil||"").toString().trim().toUpperCase();
       const podeEditar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil) && ["rascunho","aguardando_autorizacao"].includes(p.status);
-      const podeAssinar = perfil === "FUNCIONARIO" && p.status === "autorizado";
+      const podeAssinar = (perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA") && p.status === "autorizado";
       document.getElementById("proventoViewEditar").style.display = podeEditar ? "" : "none";
       const btnAssinar = document.getElementById("proventoViewAssinar");
       if (btnAssinar) {
@@ -9705,7 +9706,7 @@ function setupNavigation() {
       else if (target === "proventos") {
         try {
           const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-          const isFuncionario = perfil === "FUNCIONARIO";
+          const isFuncionario = perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA";
           const titleEl = document.getElementById("proventosSectionTitle");
           const subtitleEl = document.getElementById("proventosSectionSubtitle");
           const filterForm = document.getElementById("proventosFilterForm");
