@@ -855,9 +855,12 @@
                   </label>
                   <label>
                     Mesa *
-                    <select name="mesa_id" id="reservaMesaSelect" required>
-                      <option value="">Selecione a mesa</option>
-                    </select>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                      <select name="mesa_id" id="reservaMesaSelect" required style="flex: 1;">
+                        <option value="">Selecione a mesa</option>
+                      </select>
+                      <button type="button" class="btn neutral" id="btnNovaMesaReserva" title="Criar nova mesa">+ Nova mesa</button>
+                    </div>
                   </label>
                   <label>
                     Nome do cliente *

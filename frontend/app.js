@@ -9803,6 +9803,33 @@ function setupReservasMesasModule() {
     popularMesasReserva(this.value);
   });
 
+  document.getElementById('btnNovaMesaReserva') && document.getElementById('btnNovaMesaReserva').addEventListener('click', async function() {
+    var unidadeId = (document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').value) ||
+      (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value) ||
+      (document.getElementById('reservaMesaForm') && document.getElementById('reservaMesaForm').querySelector('[name="unidade_id"]') && document.getElementById('reservaMesaForm').querySelector('[name="unidade_id"]').value);
+    if (!unidadeId) { showToast('Selecione uma unidade primeiro.', 'warning'); return; }
+    var numero = prompt('Número da mesa:', '1');
+    if (!numero || !numero.trim()) return;
+    numero = numero.trim();
+    try {
+      var resp = await fetchJSON('/mesas', {
+        method: 'POST',
+        body: JSON.stringify({
+          unidade_id: unidadeId,
+          numero_mesa: numero,
+          capacidade: 4
+        })
+      });
+      var mesaNova = resp.mesa || resp;
+      showToast('Mesa criada.', 'success');
+      await popularMesasReserva(unidadeId);
+      var select = document.getElementById('reservaMesaSelect');
+      if (select && mesaNova && mesaNova.id) select.value = String(mesaNova.id);
+    } catch (err) {
+      showToast(err.message || 'Erro ao criar mesa', 'error');
+    }
+  });
+
   async function popularMesasReserva(unidadeId) {
     var u = unidadeId || (document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').value) || (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value);
     if (!u) return;
