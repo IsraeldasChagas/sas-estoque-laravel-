@@ -250,7 +250,10 @@ const dom = {
   closeFuncionarioBtn: document.getElementById("closeFuncionario"),
   cancelFuncionarioBtn: document.getElementById("cancelFuncionario"),
   funcionarioPossuiAcesso: document.getElementById("funcionarioPossuiAcesso"),
-  funcionarioAcessoCampos: document.getElementById("funcionarioAcessoCampos"),
+  funcionarioAcessoArea: document.getElementById("funcionarioAcessoArea"),
+  funcionarioUsuarioModal: document.getElementById("funcionarioUsuarioModal"),
+  funcionarioConfigurarUsuario: document.getElementById("funcionarioConfigurarUsuario"),
+  funcionarioUsuarioResumo: document.getElementById("funcionarioUsuarioResumo"),
   funcionarioFotoInput: document.getElementById("funcionarioFotoInput"),
   funcionarioAvatarPreview: document.getElementById("funcionarioAvatarPreview"),
   funcionarioFotoTrocar: document.getElementById("funcionarioFotoTrocar"),
@@ -8615,7 +8618,7 @@ function setupModals() {
     const idEl = dom.funcionarioForm?.elements.id;
     if (idEl) idEl.value = editId || "";
     dom.funcionarioModalTitle.textContent = editId ? "Editar funcionário" : "Novo funcionário";
-    if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.add("hidden");
+    if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
     funcionarioFotoFile = null;
     funcionarioFotoRemovida = false;
@@ -8627,11 +8630,16 @@ function setupModals() {
       });
       if (f.possui_acesso) {
         dom.funcionarioPossuiAcesso.checked = true;
-        if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.remove("hidden");
-        const loginEl = dom.funcionarioForm?.elements.login_usuario;
+        if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.remove("hidden");
+        const loginEl = document.getElementById("funcionarioLoginUsuario");
         if (loginEl && f.usuario_email) loginEl.value = f.usuario_email;
-        const perfilEl = dom.funcionarioForm?.elements.perfil_usuario;
+        const perfilEl = document.getElementById("funcionarioPerfilUsuario");
         if (perfilEl) perfilEl.value = f.perfil_usuario || "FUNCIONARIO";
+        if (f.usuario_id) {
+          const uidEl = document.getElementById("funcionarioUsuarioId");
+          if (uidEl) uidEl.value = f.usuario_id;
+        }
+        atualizarFuncionarioUsuarioResumo();
       }
       if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = true;
       if (dom.funcionarioAvatarPreview) {
@@ -8735,7 +8743,12 @@ function setupModals() {
     if (dom.funcionarioForm?.elements.id) dom.funcionarioForm.elements.id.value = "";
     if (dom.funcionarioFormFeedback) { dom.funcionarioFormFeedback.classList.add("hidden"); dom.funcionarioFormFeedback.textContent = ""; }
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
-    if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.add("hidden");
+    if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
+    ["funcionarioLoginUsuario","funcionarioSenhaUsuario","funcionarioPerfilUsuario","funcionarioUsuarioId"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = id === "funcionarioPerfilUsuario" ? "FUNCIONARIO" : "";
+    });
+    if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
     if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
     dom.funcionarioModalTitle.textContent = "Novo Funcionário";
   });
@@ -8770,12 +8783,129 @@ function setupModals() {
     if (dom.funcionarioFotoInput) dom.funcionarioFotoInput.value = "";
   });
   dom.funcionarioPossuiAcesso?.addEventListener("change", function() {
-    if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.toggle("hidden", !this.checked);
-    ["login_usuario","senha_usuario","perfil_usuario"].forEach(k => {
-      const el = dom.funcionarioForm?.elements[k];
-      if (el) el.required = this.checked;
+    if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.toggle("hidden", !this.checked);
+    if (!this.checked) {
+      const loginEl = document.getElementById("funcionarioLoginUsuario");
+      const senhaEl = document.getElementById("funcionarioSenhaUsuario");
+      const perfilEl = document.getElementById("funcionarioPerfilUsuario");
+      const uidEl = document.getElementById("funcionarioUsuarioId");
+      if (loginEl) loginEl.value = "";
+      if (senhaEl) senhaEl.value = "";
+      if (perfilEl) perfilEl.value = "FUNCIONARIO";
+      if (uidEl) uidEl.value = "";
+      if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
+    }
+  });
+
+  function atualizarFuncionarioUsuarioResumo() {
+    const login = document.getElementById("funcionarioLoginUsuario")?.value?.trim();
+    const usuarioId = document.getElementById("funcionarioUsuarioId")?.value;
+    const resumo = dom.funcionarioUsuarioResumo;
+    if (!resumo) return;
+    if (usuarioId) {
+      const sel = document.getElementById("funcUsuarioExistente");
+      const opt = sel?.options[sel?.selectedIndex];
+      resumo.textContent = opt ? `Vinculado: ${opt.textContent}` : "Usuário vinculado";
+      resumo.style.display = "";
+    } else if (login) {
+      const perfil = document.getElementById("funcionarioPerfilUsuario")?.value || "FUNCIONARIO";
+      resumo.textContent = `Usuário configurado: ${login} (${PERFIL_LABELS[perfil] || perfil})`;
+      resumo.style.display = "";
+    } else {
+      resumo.textContent = "";
+      resumo.style.display = "none";
+    }
+  }
+
+  dom.funcionarioConfigurarUsuario?.addEventListener("click", async () => {
+    const loginEl = document.getElementById("funcUsuarioEmail");
+    const perfilEl = document.getElementById("funcUsuarioPerfil");
+    const modoNovo = document.querySelector('input[name="funcionarioUsuarioModo"][value="novo"]');
+    const modoExistente = document.querySelector('input[name="funcionarioUsuarioModo"][value="existente"]');
+    const divNovo = document.getElementById("funcionarioUsuarioModoNovo");
+    const divExistente = document.getElementById("funcionarioUsuarioModoExistente");
+    if (loginEl) loginEl.value = document.getElementById("funcionarioLoginUsuario")?.value || "";
+    if (perfilEl) perfilEl.value = document.getElementById("funcionarioPerfilUsuario")?.value || "FUNCIONARIO";
+    const senhaEl = document.getElementById("funcUsuarioSenha");
+    if (senhaEl) senhaEl.value = "";
+    const uid = document.getElementById("funcionarioUsuarioId")?.value;
+    if (uid) {
+      if (modoExistente) modoExistente.checked = true;
+      if (modoNovo) modoNovo.checked = false;
+      if (divNovo) divNovo.classList.add("hidden");
+      if (divExistente) divExistente.classList.remove("hidden");
+      try {
+        const usuarios = await fetchJSON("/usuarios");
+        const sel = document.getElementById("funcUsuarioExistente");
+        if (sel && Array.isArray(usuarios)) {
+          sel.innerHTML = '<option value="">Selecione</option>' + usuarios.filter(u => u.ativo !== 0).map(u => `<option value="${u.id}" ${String(u.id) === String(uid) ? "selected" : ""}>${(u.nome || u.email || "").replace(/</g,"&lt;")} (${u.email || "-"})</option>`).join("");
+        }
+      } catch (e) { showToast("Erro ao carregar usuários.", "error"); }
+    } else {
+      if (modoNovo) modoNovo.checked = true;
+      if (modoExistente) modoExistente.checked = false;
+      if (divNovo) divNovo.classList.remove("hidden");
+      if (divExistente) divExistente.classList.add("hidden");
+    }
+    toggleModal(dom.funcionarioUsuarioModal, true);
+  });
+
+  document.querySelectorAll('input[name="funcionarioUsuarioModo"]').forEach(r => {
+    r.addEventListener("change", function() {
+      const divNovo = document.getElementById("funcionarioUsuarioModoNovo");
+      const divExistente = document.getElementById("funcionarioUsuarioModoExistente");
+      if (this.value === "novo") {
+        if (divNovo) divNovo.classList.remove("hidden");
+        if (divExistente) divExistente.classList.add("hidden");
+      } else {
+        if (divNovo) divNovo.classList.add("hidden");
+        if (divExistente) divExistente.classList.remove("hidden");
+        (async () => {
+          try {
+            const usuarios = await fetchJSON("/usuarios");
+            const sel = document.getElementById("funcUsuarioExistente");
+            if (sel && Array.isArray(usuarios)) {
+              const jaVinculados = new Set((state.funcionarios || []).filter(f => f.usuario_id).map(f => String(f.usuario_id)));
+              sel.innerHTML = '<option value="">Selecione</option>' + usuarios.filter(u => u.ativo !== 0 && !jaVinculados.has(String(u.id))).map(u => `<option value="${u.id}">${(u.nome || u.email || "").replace(/</g,"&lt;")} (${u.email || "-"})</option>`).join("");
+            }
+          } catch (e) { showToast("Erro ao carregar usuários.", "error"); }
+        })();
+      }
     });
   });
+
+  document.getElementById("closeFuncionarioUsuarioModal")?.addEventListener("click", () => toggleModal(dom.funcionarioUsuarioModal, false));
+  document.getElementById("funcionarioUsuarioModalCancelar")?.addEventListener("click", () => toggleModal(dom.funcionarioUsuarioModal, false));
+  document.getElementById("funcionarioUsuarioModalAplicar")?.addEventListener("click", () => {
+    const modo = document.querySelector('input[name="funcionarioUsuarioModo"]:checked')?.value;
+    const loginEl = document.getElementById("funcUsuarioEmail");
+    const senhaEl = document.getElementById("funcUsuarioSenha");
+    const perfilEl = document.getElementById("funcUsuarioPerfil");
+    const selExistente = document.getElementById("funcUsuarioExistente");
+    if (modo === "existente") {
+      const uid = selExistente?.value;
+      if (!uid) { showToast("Selecione um usuário.", "warning"); return; }
+      document.getElementById("funcionarioUsuarioId").value = uid;
+      document.getElementById("funcionarioLoginUsuario").value = "";
+      document.getElementById("funcionarioSenhaUsuario").value = "";
+      document.getElementById("funcionarioPerfilUsuario").value = "";
+      atualizarFuncionarioUsuarioResumo();
+      toggleModal(dom.funcionarioUsuarioModal, false);
+      return;
+    }
+    const login = (loginEl?.value || "").trim();
+    const senha = senhaEl?.value || "";
+    const perfil = perfilEl?.value || "FUNCIONARIO";
+    if (!login) { showToast("Informe o e-mail ou login do usuário.", "warning"); return; }
+    if (senha.length < 6) { showToast("A senha deve ter no mínimo 6 caracteres.", "warning"); return; }
+    document.getElementById("funcionarioUsuarioId").value = "";
+    document.getElementById("funcionarioLoginUsuario").value = login;
+    document.getElementById("funcionarioSenhaUsuario").value = senha;
+    document.getElementById("funcionarioPerfilUsuario").value = perfil;
+    atualizarFuncionarioUsuarioResumo();
+    toggleModal(dom.funcionarioUsuarioModal, false);
+  });
+
   dom.funcionarioForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!currentUser?.id) {
@@ -8791,6 +8921,15 @@ function setupModals() {
     if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
     if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
     if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
+    if (payload.possui_acesso && !id) {
+      const usuarioId = document.getElementById("funcionarioUsuarioId")?.value;
+      const login = (form.elements.login_usuario?.value || "").trim();
+      const senha = form.elements.senha_usuario?.value || "";
+      if (!usuarioId && (!login || senha.length < 6)) {
+        if (feedback) { feedback.textContent = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Configure o usuário antes de salvar.", "error");
+        return;
+      }
+    }
     if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; feedback.className = "form-feedback hidden"; }
     const payload = {
       nome_completo: form.elements.nome_completo?.value,
@@ -8808,6 +8947,7 @@ function setupModals() {
       possui_acesso: dom.funcionarioPossuiAcesso?.checked || false,
     };
     if (payload.possui_acesso) {
+      payload.usuario_id = document.getElementById("funcionarioUsuarioId")?.value || null;
       payload.login_usuario = form.elements.login_usuario?.value;
       payload.senha_usuario = form.elements.senha_usuario?.value;
       payload.perfil_usuario = form.elements.perfil_usuario?.value || "FUNCIONARIO";
@@ -8837,9 +8977,12 @@ function setupModals() {
         if (payload.data_admissao) fd.append("data_admissao", payload.data_admissao);
         if (payload.observacoes) fd.append("observacoes", payload.observacoes);
         if (payload.possui_acesso) {
-          fd.append("login_usuario", payload.login_usuario || "");
-          fd.append("senha_usuario", payload.senha_usuario || "");
-          fd.append("perfil_usuario", payload.perfil_usuario || "FUNCIONARIO");
+          if (payload.usuario_id) fd.append("usuario_id", payload.usuario_id);
+          else {
+            fd.append("login_usuario", payload.login_usuario || "");
+            fd.append("senha_usuario", payload.senha_usuario || "");
+            fd.append("perfil_usuario", payload.perfil_usuario || "FUNCIONARIO");
+          }
         }
         if (temRemoverFoto) fd.append("remove_foto", "1");
         if (temFoto) fd.append("foto", funcionarioFotoFile);

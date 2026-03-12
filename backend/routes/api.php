@@ -5251,12 +5251,13 @@ Route::post('/funcionarios', function (Request $request) {
     }
 
     $possuiAcesso = !empty($data['possui_acesso']) && !in_array($data['possui_acesso'], [false, 'false', '0', 0, ''], true);
+    $usuarioIdFornecido = !empty($data['usuario_id']) ? (int)$data['usuario_id'] : null;
     $rules = [
         'nome_completo' => 'required|string|max:255',
         'cargo' => 'required|string|max:255',
         'status' => 'required|in:ativo,inativo',
     ];
-    if ($possuiAcesso) {
+    if ($possuiAcesso && !$usuarioIdFornecido) {
         $rules['login_usuario'] = 'required|string|max:255';
         $rules['senha_usuario'] = 'required|string|min:6';
         $rules['perfil_usuario'] = 'required|string|in:ADMIN,GERENTE,FINANCEIRO,ASSISTENTE_ADMINISTRATIVO,ATENDENTE_CAIXA,FUNCIONARIO';
@@ -5272,18 +5273,29 @@ Route::post('/funcionarios', function (Request $request) {
 
     $usuarioId = null;
     if ($possuiAcesso) {
-        $login = trim($data['login_usuario'] ?? '');
-        if (DB::table('usuarios')->where('email', $login)->exists()) {
-            return response()->json(['error' => 'E-mail/login já cadastrado para outro usuário'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($usuarioIdFornecido) {
+            $usuario = DB::table('usuarios')->where('id', $usuarioIdFornecido)->where('ativo', 1)->first();
+            if (!$usuario) {
+                return response()->json(['error' => 'Usuário selecionado não encontrado ou inativo'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+            if (DB::table('funcionarios')->where('usuario_id', $usuarioIdFornecido)->exists()) {
+                return response()->json(['error' => 'Esse usuário já está vinculado a outro funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+            $usuarioId = $usuarioIdFornecido;
+        } else {
+            $login = trim($data['login_usuario'] ?? '');
+            if (DB::table('usuarios')->where('email', $login)->exists()) {
+                return response()->json(['error' => 'E-mail/login já cadastrado para outro usuário'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+            $usuarioId = DB::table('usuarios')->insertGetId([
+                'nome' => trim($data['nome_completo']),
+                'email' => $login,
+                'perfil' => $data['perfil_usuario'] ?? 'FUNCIONARIO',
+                'senha_hash' => Hash::make($data['senha_usuario']),
+                'ativo' => 1,
+                'unidade_id' => !empty($data['unidade_id']) ? (int)$data['unidade_id'] : null,
+            ]);
         }
-        $usuarioId = DB::table('usuarios')->insertGetId([
-            'nome' => trim($data['nome_completo']),
-            'email' => $login,
-            'perfil' => $data['perfil_usuario'] ?? 'FUNCIONARIO',
-            'senha_hash' => Hash::make($data['senha_usuario']),
-            'ativo' => 1,
-            'unidade_id' => !empty($data['unidade_id']) ? (int)$data['unidade_id'] : null,
-        ]);
     }
 
     $insert = [
