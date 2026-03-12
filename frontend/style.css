@@ -3952,7 +3952,53 @@ select[size]:not([size="1"]) {
   border-bottom: 1px solid var(--border);
 }
 
-.reservas-table th { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+/* Mobile/Tablet: Reservas do dia - card layout para não estourar */
+@media (max-width: 900px) {
+  .reservas-mesas-lista .table-wrapper {
+    overflow: visible;
+  }
+  .reservas-table thead { display: none; }
+  .reservas-table tr.reserva-row {
+    display: block;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+  }
+  .reservas-table tr.reserva-row td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: none;
+    text-align: left;
+  }
+  .reservas-table tr.reserva-row td:last-child { border-bottom: none; }
+  .reservas-table tr.reserva-row td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+  .reservas-table tr.reserva-row td.reserva-row-acoes {
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .reservas-table tr.reserva-row td.reserva-row-acoes::before {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .reservas-table tr.reserva-row td::before { min-width: 80px; font-size: 0.8rem; }
+}
+
+.reservas-table th { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
 
 .reservas-empty {
   color: var(--muted);

@@ -9723,9 +9723,15 @@ async function loadReservasMesas() {
       var criadoPor = (r.usuario && r.usuario.nome) || '-';
       var podeEditar = ['cancelada', 'no_show', 'finalizada'].indexOf(r.status) === -1;
       var btnWhatsApp = (r.telefone_cliente ? '<button class="btn-icon" title="Enviar WhatsApp" data-action="whatsapp" data-id="' + r.id + '">📱</button> ' : '');
-      return '<tr><td>' + formatHora(r.hora_reserva) + '</td><td>' + escapeHtml(mesaNome) + '</td><td>' + escapeHtml(r.nome_cliente) + '</td><td>' + escapeHtml(r.telefone_cliente || '-') + '</td><td>' + (r.qtd_pessoas || '-') + '</td>' +
-        '<td><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || 'pendente').replace(/_/g, ' ') + '</span></td>' +
-        '<td>' + escapeHtml(criadoPor) + '</td><td>' +
+      return '<tr class="reserva-row">' +
+        '<td data-label="Horário">' + formatHora(r.hora_reserva) + '</td>' +
+        '<td data-label="Mesa">' + escapeHtml(mesaNome) + '</td>' +
+        '<td data-label="Cliente">' + escapeHtml(r.nome_cliente) + '</td>' +
+        '<td data-label="Telefone">' + escapeHtml(r.telefone_cliente || '-') + '</td>' +
+        '<td data-label="Pessoas">' + (r.qtd_pessoas || '-') + '</td>' +
+        '<td data-label="Status"><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || 'pendente').replace(/_/g, ' ') + '</span></td>' +
+        '<td data-label="Criado por">' + escapeHtml(criadoPor) + '</td>' +
+        '<td data-label="Ações" class="reserva-row-acoes">' +
         btnWhatsApp +
         '<button class="btn-icon" title="Detalhes" data-id="' + r.id + '">👁️</button> ' +
         (podeEditar ? '<button class="btn-icon" title="Editar" data-id="' + r.id + '">✏️</button> <button class="btn-icon" title="Confirmar chegada" data-action="cliente_chegou" data-id="' + r.id + '">✅</button> <button class="btn-icon" title="Cancelar" data-action="cancelar" data-id="' + r.id + '">❌</button>' : '') +
