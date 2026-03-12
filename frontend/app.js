@@ -1331,9 +1331,13 @@ async function fetchJSON(path, options = {}) {
           // Erros de validação do Laravel
           const errors = Object.values(payload.messages).flat();
           message = errors.length > 0 ? errors.join(', ') : message;
-        } else if (typeof payload === 'string') {
+        } else if (typeof payload === 'string' && !payload.trim().startsWith('<')) {
           message = payload;
         }
+      }
+      // Nunca usar HTML como mensagem (ex: página 500)
+      if (typeof message === 'string' && (message.length > 500 || message.trim().startsWith('<'))) {
+        message = res.status >= 500 ? 'Erro no servidor. Tente novamente.' : `Erro ${res.status}`;
       }
       
       console.error("Erro na resposta do servidor:", {
@@ -1430,7 +1434,10 @@ async function fetchForm(path, method, body) {
   console.log("📥 fetchForm resposta:", { status: res.status, payload });
   
   if (!res.ok) {
-    const errorMsg = payload.error || payload.message || `Erro ${res.status}: ${res.statusText}`;
+    let errorMsg = payload.error || payload.message || `Erro ${res.status}: ${res.statusText}`;
+    if (typeof errorMsg === 'string' && (errorMsg.length > 500 || errorMsg.trim().startsWith('<'))) {
+      errorMsg = res.status >= 500 ? 'Erro no servidor. Tente novamente.' : `Erro ${res.status}`;
+    }
     throw new Error(errorMsg);
   }
   return payload;
@@ -8517,7 +8524,12 @@ function setupModals() {
     }
   }
   async function openFuncionarioModal(editId = null) {
-    if (!state.unidades?.length) await loadUnidades(false);
+    try {
+      if (!state.unidades?.length) {
+        try { await loadUnidades(false); } catch (e) {
+          showToast("Não foi possível carregar unidades. Tente novamente.", "warning");
+        }
+      }
     populateFuncionarioUnidades("unidade_id", true);
     dom.funcionarioForm?.reset();
     const idEl = dom.funcionarioForm?.elements.id;
@@ -8553,6 +8565,11 @@ function setupModals() {
       if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
     }
     toggleModal(dom.funcionarioModal, true);
+    } catch (err) {
+      const msg = String(err?.message || "Erro ao abrir formulário.");
+      const safeMsg = msg.length > 200 || msg.trim().startsWith("<") ? "Erro no servidor. Verifique a conexão." : msg;
+      showToast(safeMsg, "error");
+    }
   }
   function viewFuncionario(id) {
     fetchJSON(`/funcionarios/${id}`).then(f => {
@@ -8680,9 +8697,10 @@ function setupModals() {
       funcionarioFotoRemovida = false;
       await loadFuncionarios(getFuncionariosFiltros());
     } catch (err) {
-      const msg = err?.message || err?.error || "Erro ao salvar.";
-      if (feedback) { feedback.textContent = msg; feedback.classList.remove("hidden"); }
-      else showToast(msg, "error");
+      const msg = String(err?.message || err?.error || "Erro ao salvar.");
+      const safeMsg = msg.length > 500 || msg.trim().startsWith("<") ? "Erro no servidor. Tente novamente ou contate o suporte." : msg;
+      if (feedback) { feedback.textContent = safeMsg; feedback.classList.remove("hidden"); }
+      else showToast(safeMsg, "error");
     }
   });
   dom.funcionariosFilterForm?.addEventListener("submit", async (e) => { e.preventDefault(); await loadFuncionarios(getFuncionariosFiltros()); });

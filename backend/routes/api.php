@@ -5225,6 +5225,11 @@ Route::get('/funcionarios/{id}', function ($id) {
 });
 
 Route::post('/funcionarios', function (Request $request) {
+    try {
+    if (!Schema::hasTable('funcionarios')) {
+        return response()->json(['error' => 'Módulo RH não configurado. Execute: php artisan migrate'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)
@@ -5304,6 +5309,10 @@ Route::post('/funcionarios', function (Request $request) {
     $id = DB::table('funcionarios')->insertGetId($insert);
     $funcionario = DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first();
     return response()->json($funcionario, 201)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /funcionarios: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
+    }
 });
 
 Route::put('/funcionarios/{id}', function (Request $request, $id) {
