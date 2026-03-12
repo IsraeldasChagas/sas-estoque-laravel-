@@ -9575,10 +9575,8 @@ function formatTelefoneParaWhatsApp(telefone) {
   if (!telefone || typeof telefone !== 'string') return null;
   var dig = telefone.replace(/\D/g, '');
   if (dig.length < 10) return null;
-  if (dig.length === 10) return '55' + dig; // Brasil: 55 + DDD + 8 dígitos
-  if (dig.length === 11 && dig.charAt(0) === '9') return '55' + dig; // 9 dígitos celular
-  if (dig.length >= 11 && dig.substring(0, 2) !== '55') return '55' + dig.substring(dig.length - 11);
-  if (dig.substring(0, 2) === '55') return dig;
+  if (dig.substring(0, 2) === '55' && dig.length >= 12) return dig;
+  if (dig.length === 10 || dig.length === 11) return '55' + dig;
   return '55' + dig;
 }
 
@@ -9595,13 +9593,21 @@ function getMensagemReservaWhatsApp(r) {
 }
 
 function abrirWhatsAppReserva(r) {
+  if (!r) { showToast('Dados da reserva não encontrados.', 'warning'); return; }
   var tel = formatTelefoneParaWhatsApp(r.telefone_cliente);
   if (!tel) {
-    showToast('Telefone inválido para WhatsApp.', 'warning');
+    showToast('Telefone inválido ou não informado. Cadastre o telefone do cliente.', 'warning');
     return;
   }
   var msg = encodeURIComponent(getMensagemReservaWhatsApp(r));
-  window.open('https://wa.me/' + tel + '?text=' + msg, '_blank', 'noopener,noreferrer');
+  var url = 'https://wa.me/' + tel + '?text=' + msg;
+  var a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 function formatHora(str) {
@@ -9870,10 +9876,8 @@ function setupReservasMesasModule() {
         var resp = await fetchJSON('/reservas-mesas', { method: 'POST', body: JSON.stringify(data) });
         showToast('Reserva criada.', 'success');
         var reservaCriada = resp.reserva || resp;
-        if (reservaCriada && reservaCriada.telefone_cliente) {
-          if (confirm('Reserva criada! Deseja enviar confirmação por WhatsApp para o cliente?')) {
-            abrirWhatsAppReserva(reservaCriada);
-          }
+        if (reservaCriada && reservaCriada.telefone_cliente && confirm('Reserva criada! Deseja enviar confirmação por WhatsApp para o cliente?')) {
+          abrirWhatsAppReserva(reservaCriada);
         }
       }
       document.getElementById('reservaMesaModal').classList.remove('active');
