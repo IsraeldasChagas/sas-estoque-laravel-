@@ -1147,7 +1147,7 @@ Route::post('/usuarios', function (Request $request) {
         ]);
         
         // Validação específica para perfil BAR
-        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR', 'ATENDENTE'];
+        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR', 'ATENDENTE', 'ATENDENTE_CAIXA'];
         if (!in_array($perfilNormalizado, $perfisValidos)) {
             \Log::warning('POST /usuarios - Perfil inválido:', ['perfil' => $perfilNormalizado]);
             return response()->json(['error' => 'Perfil inválido: ' . $perfilNormalizado], 422)
@@ -1325,7 +1325,7 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
         ]);
         
         // Validação específica para perfil BAR
-        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR', 'ATENDENTE'];
+        $perfisValidos = ['ADMIN', 'GERENTE', 'ESTOQUISTA', 'COZINHA', 'BAR', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'VISUALIZADOR', 'ATENDENTE', 'ATENDENTE_CAIXA'];
         if (!in_array($perfilNormalizado, $perfisValidos)) {
             \Log::warning("PUT /usuarios/{$id} - Perfil inválido:", ['perfil' => $perfilNormalizado]);
             return response()->json(['error' => 'Perfil inválido: ' . $perfilNormalizado], 422)

@@ -256,6 +256,7 @@ const PERFIL_LABELS = {
   VISUALIZADOR: "Visualizador",
   GERENTE: "Gerente",
   ATENDENTE: "Atendente",
+  ATENDENTE_CAIXA: "Atendente Caixa",
 };
 
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
@@ -325,6 +326,14 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
+    sections: ["estoque", "reservaMesa"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+  ATENDENTE_CAIXA: {
     sections: ["estoque", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
@@ -1081,7 +1090,7 @@ function updateSaidaDestinoVisibility() {
  *  Unidade origem, produto e lote ficam bloqueados; usuário só informa motivo e quantidade. */
 async function abrirModalSaidaComLote(loteId) {
   const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
   const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
   if (!podeUsar) {
@@ -1439,7 +1448,7 @@ function canOnlyCreateAndAddItems() {
   const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
   // ADMIN e GERENTE podem fazer tudo, não têm restrições
   if (perfil === "ADMIN" || perfil === "GERENTE") return false;
-  return perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
+  return perfil === "ESTOQUISTA" || perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE" || perfil === "ATENDENTE_CAIXA";
 }
 
 // Verifica se é ADMIN ou GERENTE (permissões totais)
@@ -2190,7 +2199,7 @@ function listaPermiteLancarEstoque(lista = state.listaCompraAtual) {
   }
   
   // COZINHA e BAR NÃO podem lançar
-  if (perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE") {
+  if (perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE" || perfil === "ATENDENTE_CAIXA") {
     return false;
   }
   
@@ -2458,14 +2467,14 @@ function applyPermissions() {
   // COZINHA e BAR não podem registrar entrada - oculta o botão
   if (dom.openEntradaBtn) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
     const podeRegistrarEntrada = regras.canRegistrarMovimentacoes && !isCozinhaOuBar;
     dom.openEntradaBtn.classList.toggle("hidden", !podeRegistrarEntrada);
   }
   // COZINHA e BAR podem registrar saída - habilita o botão
   if (dom.openSaidaBtn) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
     // Garante que BAR e COZINHA sempre possam usar o botão (têm canRegistrarMovimentacoes: true)
     const podeRegistrarSaida = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
     dom.openSaidaBtn.disabled = !podeRegistrarSaida;
@@ -2500,14 +2509,14 @@ function applyPermissions() {
   // COZINHA e BAR não podem lançar no estoque - oculta o botão
   if (dom.listaCompraLancarEstoque) {
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
     const podeLancar = regras.canManageCompras && !isCozinhaOuBar;
     dom.listaCompraLancarEstoque.classList.toggle("hidden", !podeLancar);
   }
   
   // COZINHA e BAR não podem ver valores em dinheiro na tela de estoque
   const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   
   // Ocultar cards de valores
   const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
@@ -2988,7 +2997,7 @@ function renderProdutos(lista) {
   
   // Verifica se é COZINHA ou BAR (não podem gerenciar produtos)
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE" || perfil === "ATENDENTE_CAIXA";
   const podeGerenciar = canManageProdutos();
   
   // Ocultar coluna de Ações no cabeçalho se for BAR ou COZINHA
@@ -3563,7 +3572,7 @@ function updateListaPdfButton(lista) {
   
   // Verifica se é perfil COZINHA ou BAR - podem gerar PDF mesmo sem lista finalizada
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   
   // COZINHA e BAR podem gerar PDF se a lista existir, outros perfis precisam que esteja finalizada e tenham permissão
   const podeGerar = isCozinhaOuBar ? true : (status === "FINALIZADA" && canManageCompras());
@@ -3618,7 +3627,7 @@ function renderListaCompraDetalhes(lista) {
     if (dom.listaCompraLancarEstoque) {
       // COZINHA e BAR não podem lançar - oculta o botão
       const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-      const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+      const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
       if (isCozinhaOuBar) {
         dom.listaCompraLancarEstoque.classList.add("hidden");
       } else {
@@ -3652,7 +3661,7 @@ function renderListaCompraDetalhes(lista) {
   if (dom.listaCompraLancarEstoque) {
     // COZINHA e BAR não podem lançar - oculta o botão
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
     
     if (isCozinhaOuBar) {
       dom.listaCompraLancarEstoque.classList.add("hidden");
@@ -4052,7 +4061,7 @@ async function abrirListaCompraModal(lista = null) {
   
   const unidadeSelect = dom.listaCompraForm.elements.unidade_id;
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE" || perfil === "ATENDENTE_CAIXA";
   
   if (lista) {
     dom.listaCompraForm.elements.id.value = lista.id;
@@ -4541,7 +4550,7 @@ async function abrirItemCompraModal(item = null) {
   
   // COZINHA e BAR não podem ver campos de valores ao adicionar itens
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   
   const quantidadeCompradaLabel = document.getElementById("itemCompraLabelQuantidadeComprada");
   const valorUnitarioLabel = document.getElementById("itemCompraLabelValorUnitario");
@@ -4606,7 +4615,7 @@ function updateItemModalTotals() {
   
   // Verifica se é perfil COZINHA ou BAR - não atualiza totais para esses perfis
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   
   if (isCozinhaOuBar) {
     const campoTotal = dom.itemCompraForm.elements.valor_total;
@@ -4663,7 +4672,7 @@ async function submitItemCompra(event) {
   
   // Verifica se é perfil COZINHA ou BAR
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   
   // Calcula os totais
   const totais = computeItemModalTotals();
@@ -4948,7 +4957,7 @@ async function lancarListaNoEstoque() {
   // Verifica permissão para lançar no estoque
   if (!listaPermiteLancarEstoque()) {
     const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    if (perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE") {
+    if (perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE" || perfil === "ATENDENTE_CAIXA") {
       showToast("Você não tem permissão para lançar no estoque.", "warning");
     } else {
       showToast("Sem permissão para lançar no estoque.", "warning");
@@ -5162,7 +5171,7 @@ async function gerarPdfLista() {
   
   // Verifica se é perfil COZINHA ou BAR - podem gerar PDF mesmo sem lista finalizada
   const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   
   // COZINHA e BAR podem gerar PDF em qualquer status, outros perfis precisam que esteja finalizada
   if (status !== "FINALIZADA" && !isCozinhaOuBar) {
@@ -5696,7 +5705,7 @@ function refreshUnidadeSelects() {
   
   // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE" || perfil === "ATENDENTE_CAIXA";
   const listaCompraSelect = dom.listaCompraForm?.elements.unidade_id;
   const isModalOpen = dom.listaCompraModal && !dom.listaCompraModal.classList.contains("hidden");
   const isNovaLista = !dom.listaCompraForm?.elements.id?.value;
@@ -5920,7 +5929,7 @@ async function loadEstoqueResumo() {
   const unidadeSelect = document.getElementById("estoqueResumoUnidade");
   if (!valorEl || !unidadeSelect) return;
   const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+  const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
   try {
     const unidadeId = unidadeSelect.value || "";
     const params = unidadeId ? `?unidade_id=${encodeURIComponent(unidadeId)}` : "";
@@ -5995,7 +6004,7 @@ async function loadEstoqueProduto(produtoId) {
     
     // Verifica se é perfil COZINHA ou BAR para ocultar valores
     const perfilAtual = currentUser && currentUser.perfil ? currentUser.perfil.toString().trim().toUpperCase() : "";
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
     
     // Atualiza informações do produto
     estoqueProdutoNome.textContent = dados.produto.nome || "Produto";
@@ -6095,7 +6104,7 @@ async function abrirEstoqueLotesModal(item, produto) {
   toggleModal(modal, true);
 
   const perfilAtual = currentUser?.perfil?.toString().trim().toUpperCase() || '';
-  const isCozinhaOuBar = perfilAtual === 'COZINHA' || perfilAtual === 'BAR' || perfilAtual === 'ATENDENTE';
+  const isCozinhaOuBar = perfilAtual === 'COZINHA' || perfilAtual === 'BAR' || perfilAtual === 'ATENDENTE' || perfilAtual === 'ATENDENTE_CAIXA';
 
   // Usa lotes_detalhados se o servidor já retornar, senão busca via /lotes
   let lotes = item.lotes_detalhados || [];
@@ -8388,6 +8397,7 @@ function setupModals() {
           <option value="GERENTE">Gerente</option>
           <option value="VISUALIZADOR">Visualizador</option>
           <option value="ATENDENTE">Atendente</option>
+          <option value="ATENDENTE_CAIXA">Atendente Caixa</option>
         `;
         perfilSelect.value = "";
         perfilSelect.disabled = false;
@@ -8587,7 +8597,7 @@ function setupModals() {
     
     // Verifica se BAR ou COZINHA podem usar (garantia extra)
     const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+    const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
     const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
     const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
     
@@ -11764,7 +11774,7 @@ async function init() {
       dom.openSaidaBtn.addEventListener("click", async () => {
         // Verifica se BAR ou COZINHA podem usar (garantia extra)
         const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
         const regras = PERMISSOES[perfilAtual] || PERMISSOES.VISUALIZADOR;
         const podeUsar = regras.canRegistrarMovimentacoes || isCozinhaOuBar;
         
@@ -11934,7 +11944,7 @@ async function init() {
       else if (section === "estoque") {
         // Aplica permissões de estoque quando a seção é carregada
         const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE";
+        const isCozinhaOuBar = perfilAtual === "COZINHA" || perfilAtual === "BAR" || perfilAtual === "ATENDENTE" || perfilAtual === "ATENDENTE_CAIXA";
         
         // Ocultar cards de valores
         const estoqueCardUnitario = document.getElementById("estoqueCardUnitario");
