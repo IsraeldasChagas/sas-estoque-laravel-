@@ -9702,7 +9702,9 @@ async function loadReservasMesas() {
       var cliente = res ? (res.nome_cliente || '-') : '';
       var horario = res ? formatHora(res.hora_reserva) : '';
       var qtd = res ? (res.qtd_pessoas || '-') : '';
+      var btnDeletar = (statusClass === 'livre') ? '<button type="button" class="mesa-card__del" title="Excluir mesa" data-mesa-del="' + m.id + '" aria-label="Excluir mesa">🗑️</button>' : '';
       return '<div class="mesa-card mesa-card--' + statusClass + '" data-mesa-id="' + m.id + '" data-reserva-id="' + (res ? res.id : '') + '">' +
+        btnDeletar +
         '<div class="mesa-card__numero">' + (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + '</div>' +
         '<div class="mesa-card__info">Capacidade: ' + m.capacidade + (m.localizacao ? ' • ' + m.localizacao : '') + '</div>' +
         (cliente ? '<div class="mesa-card__cliente">' + cliente + (horario ? ' • ' + horario : '') + (qtd ? ' (' + qtd + ' p.)' : '') + '</div>' : '') +
@@ -10132,6 +10134,20 @@ function setupReservasMesasModule() {
   var cardsContainer = document.getElementById('reservasMesasCards');
   if (cardsContainer) {
     cardsContainer.addEventListener('click', function(e) {
+      var btnDel = e.target.closest('.mesa-card__del');
+      if (btnDel) {
+        e.stopPropagation();
+        var mid = btnDel.getAttribute('data-mesa-del');
+        if (!mid) return;
+        if (!confirm('Excluir esta mesa?')) return;
+        fetchJSON('/mesas/' + mid, { method: 'DELETE' }).then(function() {
+          showToast('Mesa excluída.', 'success');
+          loadReservasMesas();
+        }).catch(function(err) {
+          showToast(err.message || 'Erro ao excluir mesa.', 'error');
+        });
+        return;
+      }
       var card = e.target.closest('.mesa-card');
       if (!card) return;
       var rid = card.getAttribute('data-reserva-id');

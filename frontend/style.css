@@ -3816,6 +3816,7 @@ select[size]:not([size="1"]) {
 }
 
 .mesa-card {
+  position: relative;
   background: var(--card-bg);
   border-radius: 8px;
   padding: 1rem;
@@ -3843,6 +3844,22 @@ select[size]:not([size="1"]) {
 .mesa-card__info {
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+.mesa-card__del {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  opacity: 0.8;
+  line-height: 1;
+}
+.mesa-card__del:hover {
+  opacity: 1;
 }
 
 .mesa-card__cliente {
