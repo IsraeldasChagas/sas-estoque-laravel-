@@ -9571,6 +9571,39 @@ function setupFornecedoresModule() {
 }
 
 // ========== RESERVAS DE MESAS ==========
+function formatTelefoneParaWhatsApp(telefone) {
+  if (!telefone || typeof telefone !== 'string') return null;
+  var dig = telefone.replace(/\D/g, '');
+  if (dig.length < 10) return null;
+  if (dig.length === 10) return '55' + dig; // Brasil: 55 + DDD + 8 dígitos
+  if (dig.length === 11 && dig.charAt(0) === '9') return '55' + dig; // 9 dígitos celular
+  if (dig.length >= 11 && dig.substring(0, 2) !== '55') return '55' + dig.substring(dig.length - 11);
+  if (dig.substring(0, 2) === '55') return dig;
+  return '55' + dig;
+}
+
+function getMensagemReservaWhatsApp(r) {
+  var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + (r.mesa_id || '');
+  var dataStr = (r.data_reserva || '').toString().slice(0, 10);
+  var horaStr = formatHora(r.hora_reserva);
+  return 'Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:\n\n' +
+    '📅 Data: ' + dataStr + '\n' +
+    '🕐 Horário: ' + horaStr + '\n' +
+    '🪑 Mesa: ' + mesaNome + '\n' +
+    '👥 Pessoas: ' + (r.qtd_pessoas || '-') + '\n\n' +
+    'Aguardamos você!';
+}
+
+function abrirWhatsAppReserva(r) {
+  var tel = formatTelefoneParaWhatsApp(r.telefone_cliente);
+  if (!tel) {
+    showToast('Telefone inválido para WhatsApp.', 'warning');
+    return;
+  }
+  var msg = encodeURIComponent(getMensagemReservaWhatsApp(r));
+  window.open('https://wa.me/' + tel + '?text=' + msg, '_blank', 'noopener,noreferrer');
+}
+
 function formatHora(str) {
   if (!str) return '-';
   const s = String(str);
@@ -9636,9 +9669,11 @@ async function loadReservasMesas() {
       var statusClass = (r.status || 'pendente').replace(/_/g, '-');
       var criadoPor = (r.usuario && r.usuario.nome) || '-';
       var podeEditar = ['cancelada', 'no_show', 'finalizada'].indexOf(r.status) === -1;
+      var btnWhatsApp = (r.telefone_cliente ? '<button class="btn-icon" title="Enviar WhatsApp" data-action="whatsapp" data-id="' + r.id + '">📱</button> ' : '');
       return '<tr><td>' + formatHora(r.hora_reserva) + '</td><td>' + escapeHtml(mesaNome) + '</td><td>' + escapeHtml(r.nome_cliente) + '</td><td>' + escapeHtml(r.telefone_cliente || '-') + '</td><td>' + (r.qtd_pessoas || '-') + '</td>' +
         '<td><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || 'pendente').replace(/_/g, ' ') + '</span></td>' +
         '<td>' + escapeHtml(criadoPor) + '</td><td>' +
+        btnWhatsApp +
         '<button class="btn-icon" title="Detalhes" data-id="' + r.id + '">👁️</button> ' +
         (podeEditar ? '<button class="btn-icon" title="Editar" data-id="' + r.id + '">✏️</button> <button class="btn-icon" title="Confirmar chegada" data-action="cliente_chegou" data-id="' + r.id + '">✅</button> <button class="btn-icon" title="Cancelar" data-action="cancelar" data-id="' + r.id + '">❌</button>' : '') +
         '</td></tr>';
@@ -9667,6 +9702,9 @@ async function loadReservasMesas() {
           await fetchJSON('/reservas-mesas/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: 'cliente_chegou' }) });
           showToast('Cliente marcado como chegou.', 'success');
           await loadReservasMesas();
+        } else if (action === 'whatsapp') {
+          var r = await fetchJSON('/reservas-mesas/' + id);
+          abrirWhatsAppReserva(r);
         } else if (btn.getAttribute('title') === 'Editar') {
           await abrirEditarReserva(id);
         } else if (btn.getAttribute('title') === 'Detalhes') {
@@ -9689,6 +9727,7 @@ async function abrirDetalhesReserva(id) {
   try {
     var r = await fetchJSON('/reservas-mesas/' + id);
     var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + r.mesa_id;
+    var btnWhatsApp = r.telefone_cliente ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp</button></p>' : '';
     content.innerHTML = '<div style="display:grid; gap:0.75rem;">' +
       '<p><strong>Mesa:</strong> ' + escapeHtml(mesaNome) + '</p>' +
       '<p><strong>Cliente:</strong> ' + escapeHtml(r.nome_cliente) + '</p>' +
@@ -9698,7 +9737,9 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Status:</strong> ' + (r.status || '').replace(/_/g, ' ') + '</p>' +
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
       (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(r.observacao) + '</p>' : '') +
+      btnWhatsApp +
       '</div>';
+    document.getElementById('btnWhatsAppDetalhes') && document.getElementById('btnWhatsAppDetalhes').addEventListener('click', function() { abrirWhatsAppReserva(r); });
   } catch (e) {
     content.innerHTML = '<p>Erro ao carregar detalhes.</p>';
   }
@@ -9826,8 +9867,14 @@ function setupReservasMesasModule() {
         await fetchJSON('/reservas-mesas/' + id, { method: 'PUT', body: JSON.stringify(data) });
         showToast('Reserva atualizada.', 'success');
       } else {
-        await fetchJSON('/reservas-mesas', { method: 'POST', body: JSON.stringify(data) });
+        var resp = await fetchJSON('/reservas-mesas', { method: 'POST', body: JSON.stringify(data) });
         showToast('Reserva criada.', 'success');
+        var reservaCriada = resp.reserva || resp;
+        if (reservaCriada && reservaCriada.telefone_cliente) {
+          if (confirm('Reserva criada! Deseja enviar confirmação por WhatsApp para o cliente?')) {
+            abrirWhatsAppReserva(reservaCriada);
+          }
+        }
       }
       document.getElementById('reservaMesaModal').classList.remove('active');
       await loadReservasMesas();
