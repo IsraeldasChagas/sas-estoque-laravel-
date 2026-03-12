@@ -5247,12 +5247,13 @@ Route::post('/funcionarios', function (Request $request) {
         return response()->json(['error' => 'CPF já cadastrado'], 422)->header('Access-Control-Allow-Origin', '*');
     }
 
+    $possuiAcesso = !empty($data['possui_acesso']) && !in_array($data['possui_acesso'], [false, 'false', '0', 0, ''], true);
     $rules = [
         'nome_completo' => 'required|string|max:255',
         'cargo' => 'required|string|max:100',
         'status' => 'required|in:ativo,inativo',
     ];
-    if (!empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1)) {
+    if ($possuiAcesso) {
         $rules['login_usuario'] = 'required|string|max:255';
         $rules['senha_usuario'] = 'required|string|min:6';
         $rules['perfil_usuario'] = 'required|string|in:ADMIN,GERENTE,FINANCEIRO,ASSISTENTE_ADMINISTRATIVO,ATENDENTE_CAIXA,FUNCIONARIO';
@@ -5260,12 +5261,14 @@ Route::post('/funcionarios', function (Request $request) {
 
     $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
     if ($validator->fails()) {
-        return response()->json(['error' => 'Validação falhou', 'details' => $validator->errors()], 422)
+        $erros = $validator->errors()->all();
+        $msg = count($erros) > 0 ? implode(' ', $erros) : 'Validação falhou';
+        return response()->json(['error' => $msg, 'details' => $validator->errors()], 422)
             ->header('Access-Control-Allow-Origin', '*');
     }
 
     $usuarioId = null;
-    if (!empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1)) {
+    if ($possuiAcesso) {
         $login = trim($data['login_usuario'] ?? '');
         if (DB::table('usuarios')->where('email', $login)->exists()) {
             return response()->json(['error' => 'E-mail/login já cadastrado para outro usuário'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -5292,7 +5295,7 @@ Route::post('/funcionarios', function (Request $request) {
         'email' => $data['email'] ?? null,
         'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
         'status' => $data['status'] ?? 'ativo',
-        'possui_acesso' => !empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1 || $data['possui_acesso'] === 'on') ? 1 : 0,
+        'possui_acesso' => $possuiAcesso ? 1 : 0,
         'usuario_id' => $usuarioId,
         'observacoes' => $data['observacoes'] ?? null,
     ];
@@ -5330,7 +5333,9 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) {
     $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:100', 'status' => 'required|in:ativo,inativo'];
     $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
     if ($validator->fails()) {
-        return response()->json(['error' => 'Validação falhou', 'details' => $validator->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+        $erros = $validator->errors()->all();
+        $msg = count($erros) > 0 ? implode(' ', $erros) : 'Validação falhou';
+        return response()->json(['error' => $msg, 'details' => $validator->errors()], 422)->header('Access-Control-Allow-Origin', '*');
     }
 
     $update = [

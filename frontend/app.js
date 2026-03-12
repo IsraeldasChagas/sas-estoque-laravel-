@@ -1435,10 +1435,17 @@ async function fetchForm(path, method, body) {
   
   if (!res.ok) {
     let errorMsg = payload.error || payload.message || `Erro ${res.status}: ${res.statusText}`;
+    if (payload.details && typeof payload.details === 'object') {
+      const parts = Object.values(payload.details).flat().filter(Boolean);
+      if (parts.length) errorMsg = Array.isArray(parts[0]) ? parts.flat().join(' ') : parts.join(' ');
+    }
     if (typeof errorMsg === 'string' && (errorMsg.length > 500 || errorMsg.trim().startsWith('<'))) {
       errorMsg = res.status >= 500 ? 'Erro no servidor. Tente novamente.' : `Erro ${res.status}`;
     }
-    throw new Error(errorMsg);
+    const err = new Error(errorMsg);
+    err.responseData = payload;
+    err.status = res.status;
+    throw err;
   }
   return payload;
 }
@@ -8651,6 +8658,14 @@ function setupModals() {
     e.preventDefault();
     const form = dom.funcionarioForm;
     const id = form.elements.id?.value;
+    const nome = (form.elements.nome_completo?.value || "").trim();
+    const cpf = (form.elements.cpf?.value || "").replace(/\D/g, "");
+    const cargo = (form.elements.cargo?.value || "").trim();
+    const feedback = dom.funcionarioFormFeedback;
+    if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
+    if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
+    if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
+    if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
     const payload = {
       nome_completo: form.elements.nome_completo?.value,
       cpf: (form.elements.cpf?.value || "").replace(/\D/g, ""),
@@ -8673,12 +8688,13 @@ function setupModals() {
     }
     const temFoto = !!funcionarioFotoFile;
     const temRemoverFoto = !!funcionarioFotoRemovida;
-    const feedback = dom.funcionarioFormFeedback;
-    if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
     try {
       if (temFoto || temRemoverFoto) {
         const fd = new FormData();
-        Object.entries(payload).forEach(([k, v]) => { if (v != null && v !== "") fd.append(k, v); });
+        Object.entries(payload).forEach(([k, v]) => {
+          if (k === "possui_acesso") fd.append(k, v ? "1" : "0");
+          else if (v != null && v !== "") fd.append(k, v);
+        });
         if (funcionarioFotoRemovida) fd.append("remove_foto", "1");
         if (funcionarioFotoFile) fd.append("foto", funcionarioFotoFile);
         await fetchForm(id ? `/funcionarios/${id}` : "/funcionarios", id ? "PUT" : "POST", fd);
@@ -8697,7 +8713,12 @@ function setupModals() {
       funcionarioFotoRemovida = false;
       await loadFuncionarios(getFuncionariosFiltros());
     } catch (err) {
-      const msg = String(err?.message || err?.error || "Erro ao salvar.");
+      let msg = String(err?.message || err?.error || "Erro ao salvar.");
+      const details = err?.responseData?.details;
+      if (details && typeof details === 'object') {
+        const parts = Object.entries(details).map(([k, v]) => Array.isArray(v) ? v.join(', ') : v).filter(Boolean);
+        if (parts.length) msg = parts.join(' ');
+      }
       const safeMsg = msg.length > 500 || msg.trim().startsWith("<") ? "Erro no servidor. Tente novamente ou contate o suporte." : msg;
       if (feedback) { feedback.textContent = safeMsg; feedback.classList.remove("hidden"); }
       else showToast(safeMsg, "error");
