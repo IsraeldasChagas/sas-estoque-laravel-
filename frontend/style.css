@@ -3432,6 +3432,9 @@ select[size]:not([size="1"]) {
 .modal--wide { max-width: 560px; }
 .checkbox-label { display: flex; align-items: center; gap: 0.5rem; }
 .checkbox-label input { width: auto; }
+#funcionariosSection .table-wrapper td[data-label="Foto"] { width: 64px; }
+#funcionariosSection .table-wrapper .usuarios-foto,
+#funcionariosSection .table-wrapper .usuarios-foto--placeholder { width: 48px; height: 48px; }
 
 /* Filtro de Mes/Ano */
 .boletos-filtro {

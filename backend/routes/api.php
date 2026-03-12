@@ -5278,10 +5278,20 @@ Route::post('/funcionarios', function (Request $request) {
         'email' => $data['email'] ?? null,
         'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
         'status' => $data['status'] ?? 'ativo',
-        'possui_acesso' => !empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1) ? 1 : 0,
+        'possui_acesso' => !empty($data['possui_acesso']) && ($data['possui_acesso'] === true || $data['possui_acesso'] === 'true' || $data['possui_acesso'] === '1' || $data['possui_acesso'] === 1 || $data['possui_acesso'] === 'on') ? 1 : 0,
         'usuario_id' => $usuarioId,
         'observacoes' => $data['observacoes'] ?? null,
     ];
+    if ($request->hasFile('foto')) {
+        $foto = $request->file('foto');
+        $uploadDir = public_path('uploads/funcionarios');
+        if (!File::exists($uploadDir)) {
+            File::makeDirectory($uploadDir, 0755, true);
+        }
+        $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
+        $foto->move($uploadDir, $nomeArquivo);
+        $insert['foto'] = 'uploads/funcionarios/' . $nomeArquivo;
+    }
     $id = DB::table('funcionarios')->insertGetId($insert);
     $funcionario = DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first();
     return response()->json($funcionario, 201)->header('Access-Control-Allow-Origin', '*');
@@ -5318,6 +5328,25 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) {
         'status' => $data['status'] ?? 'ativo',
         'observacoes' => $data['observacoes'] ?? null,
     ];
+    if ($request->hasFile('foto')) {
+        if ($existente->foto && file_exists(public_path($existente->foto))) {
+            unlink(public_path($existente->foto));
+        }
+        $foto = $request->file('foto');
+        $uploadDir = public_path('uploads/funcionarios');
+        if (!File::exists($uploadDir)) {
+            File::makeDirectory($uploadDir, 0755, true);
+        }
+        $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
+        $foto->move($uploadDir, $nomeArquivo);
+        $update['foto'] = 'uploads/funcionarios/' . $nomeArquivo;
+    }
+    if (isset($data['remove_foto']) && $data['remove_foto'] == '1') {
+        if ($existente->foto && file_exists(public_path($existente->foto))) {
+            unlink(public_path($existente->foto));
+        }
+        $update['foto'] = null;
+    }
     DB::table('funcionarios')->where('id', $id)->update($update);
     return response()->json(DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first())
         ->header('Access-Control-Allow-Origin', '*');

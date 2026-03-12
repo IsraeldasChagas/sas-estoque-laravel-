@@ -1304,6 +1304,7 @@
                 <table>
                   <thead>
                     <tr>
+                      <th>Foto</th>
                       <th>ID</th>
                       <th>Nome</th>
                       <th>CPF</th>
@@ -1317,7 +1318,7 @@
                     </tr>
                   </thead>
                   <tbody id="funcionariosTable">
-                    <tr><td colspan="10" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                    <tr><td colspan="11" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1934,6 +1935,18 @@
         <form id="funcionarioForm">
           <input type="hidden" name="id" />
           <div id="funcionarioFormFeedback" class="form-feedback hidden"></div>
+          <div class="avatar-upload">
+            <div class="avatar-preview" id="funcionarioAvatarPreview">
+              <span class="avatar-placeholder">?</span>
+            </div>
+            <div class="avatar-actions">
+              <label class="btn secondary" for="funcionarioFotoInput">Escolher foto</label>
+              <input type="file" id="funcionarioFotoInput" name="foto" accept=".png,.jpg,.jpeg" hidden />
+              <button type="button" class="btn secondary" id="funcionarioFotoTrocar">Trocar</button>
+              <button type="button" class="btn danger" id="funcionarioFotoRemover">Remover</button>
+            </div>
+            <small class="avatar-hint">Formatos: JPG ou PNG até 2 MB.</small>
+          </div>
           <section class="form-section">
             <h3>Dados pessoais</h3>
             <label>Nome completo <input name="nome_completo" required /></label>

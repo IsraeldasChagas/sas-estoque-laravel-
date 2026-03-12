@@ -251,6 +251,10 @@ const dom = {
   cancelFuncionarioBtn: document.getElementById("cancelFuncionario"),
   funcionarioPossuiAcesso: document.getElementById("funcionarioPossuiAcesso"),
   funcionarioAcessoCampos: document.getElementById("funcionarioAcessoCampos"),
+  funcionarioFotoInput: document.getElementById("funcionarioFotoInput"),
+  funcionarioAvatarPreview: document.getElementById("funcionarioAvatarPreview"),
+  funcionarioFotoTrocar: document.getElementById("funcionarioFotoTrocar"),
+  funcionarioFotoRemover: document.getElementById("funcionarioFotoRemover"),
   funcionariosFilterForm: document.getElementById("funcionariosFilterForm"),
   funcionariosLimparFiltros: document.getElementById("funcionariosLimparFiltros"),
   funcionariosFiltroUnidade: document.getElementById("funcionariosFiltroUnidade"),
@@ -422,6 +426,8 @@ const state = {
 let currentUser = null;
 let usuarioFotoFile = null;
 let usuarioFotoRemovida = false;
+let funcionarioFotoFile = null;
+let funcionarioFotoRemovida = false;
 let logoDataUrl = null;
 const MOBILE_BREAKPOINT = 1024;
 const LISTA_STATUS_LABEL = {
@@ -6284,7 +6290,7 @@ function renderFuncionarios(lista) {
   const target = dom.funcionariosTable;
   if (!target) return;
   if (!Array.isArray(lista) || lista.length === 0) {
-    target.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#607d8b">Nenhum funcionário encontrado.</td></tr>';
+    target.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#607d8b">Nenhum funcionário encontrado.</td></tr>';
     return;
   }
   const escape = (s) => (s == null || s === undefined ? "" : String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
@@ -6294,7 +6300,12 @@ function renderFuncionarios(lista) {
     const acessoLabel = f.possui_acesso ? "Sim" : "Não";
     const isAtivo = (f.status || "ativo") === "ativo";
     const btnInativar = isAtivo ? `<button type="button" class="table-action btn-inativar-funcionario" data-id="${f.id}" title="Inativar">Inativar</button>` : "";
+    const fotoUrl = f.foto ? getUsuarioFotoUrl(f.foto) : null;
+    const fotoCell = fotoUrl
+      ? `<img src="${fotoUrl}" alt="${escape(f.nome_completo)}" class="usuarios-foto" loading="lazy" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
     return `<tr data-id="${f.id}">
+      <td data-label="Foto">${fotoCell}</td>
       <td data-label="ID">${escape(f.id)}</td>
       <td data-label="Nome">${escape(f.nome_completo)}</td>
       <td data-label="CPF">${escape(f.cpf)}</td>
@@ -8514,6 +8525,8 @@ function setupModals() {
     dom.funcionarioModalTitle.textContent = editId ? "Editar funcionário" : "Novo funcionário";
     if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.add("hidden");
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
+    funcionarioFotoFile = null;
+    funcionarioFotoRemovida = false;
     if (editId) {
       const f = await fetchJSON(`/funcionarios/${editId}`);
       ["nome_completo","cpf","data_nascimento","sexo","estado_civil","cargo","unidade_id","whatsapp","email","data_admissao","status","observacoes"].forEach(k => {
@@ -8529,8 +8542,15 @@ function setupModals() {
         if (perfilEl) perfilEl.value = f.perfil_usuario || "FUNCIONARIO";
       }
       if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = true;
+      if (dom.funcionarioAvatarPreview) {
+        const url = f.foto ? getUsuarioFotoUrl(f.foto) : null;
+        dom.funcionarioAvatarPreview.innerHTML = url
+          ? `<img src="${url}" alt="Foto" class="usuarios-foto" style="max-width:96px;border-radius:8px;" />`
+          : '<span class="avatar-placeholder">?</span>';
+      }
     } else {
       if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = false;
+      if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
     }
     toggleModal(dom.funcionarioModal, true);
   }
@@ -8539,8 +8559,17 @@ function setupModals() {
       const escape = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
       const statusLabel = (f.status || "ativo") === "ativo" ? "Ativo" : "Inativo";
       const acessoLabel = f.possui_acesso ? "Sim" : "Não";
+      const viewFotoUrl = f.foto ? getUsuarioFotoUrl(f.foto) : null;
+      const viewFotoHtml = viewFotoUrl
+        ? `<img src="${viewFotoUrl}" alt="${escape(f.nome_completo)}" class="usuarios-foto" style="max-width:96px;border-radius:8px;" />`
+        : '<div class="usuarios-foto usuarios-foto--placeholder" style="width:96px;height:96px;"></div>';
       dom.funcionarioViewContent.innerHTML = `
-        <div class="form-section"><h3>Dados pessoais</h3><p><strong>Nome:</strong> ${escape(f.nome_completo)}</p><p><strong>CPF:</strong> ${escape(f.cpf)}</p><p><strong>Data nasc.:</strong> ${escape(f.data_nascimento)}</p><p><strong>Sexo:</strong> ${escape(f.sexo)}</p><p><strong>Estado civil:</strong> ${escape(f.estado_civil)}</p></div>
+        <div class="form-section" style="display:flex;align-items:flex-start;gap:1rem;">
+          <div>${viewFotoHtml}</div>
+          <div>
+        <h3>Dados pessoais</h3><p><strong>Nome:</strong> ${escape(f.nome_completo)}</p><p><strong>CPF:</strong> ${escape(f.cpf)}</p><p><strong>Data nasc.:</strong> ${escape(f.data_nascimento)}</p><p><strong>Sexo:</strong> ${escape(f.sexo)}</p><p><strong>Estado civil:</strong> ${escape(f.estado_civil)}</p>
+          </div>
+        </div>
         <div class="form-section"><h3>Dados profissionais</h3><p><strong>Cargo:</strong> ${escape(f.cargo)}</p><p><strong>Unidade:</strong> ${escape(f.unidade_nome)}</p><p><strong>Data admissão:</strong> ${escape(f.data_admissao)}</p><p><strong>Status:</strong> ${statusLabel}</p></div>
         <div class="form-section"><h3>Contato</h3><p><strong>WhatsApp:</strong> ${escape(f.whatsapp)}</p><p><strong>E-mail:</strong> ${escape(f.email)}</p></div>
         <div class="form-section"><p><strong>Possui acesso ao sistema:</strong> ${acessoLabel}</p><p><strong>Cadastrado em:</strong> ${escape(f.created_at)}</p></div>
@@ -8574,6 +8603,26 @@ function setupModals() {
   dom.openFuncionarioBtn?.addEventListener("click", () => openFuncionarioModal());
   dom.closeFuncionarioBtn?.addEventListener("click", () => toggleModal(dom.funcionarioModal, false));
   dom.cancelFuncionarioBtn?.addEventListener("click", () => toggleModal(dom.funcionarioModal, false));
+  dom.funcionarioFotoInput?.addEventListener("change", (ev) => {
+    const file = ev.target.files?.[0];
+    if (file && (file.type === "image/jpeg" || file.type === "image/png") && file.size <= 2 * 1024 * 1024) {
+      funcionarioFotoFile = file;
+      funcionarioFotoRemovida = false;
+      const url = URL.createObjectURL(file);
+      if (dom.funcionarioAvatarPreview) {
+        dom.funcionarioAvatarPreview.innerHTML = `<img src="${url}" alt="Foto" class="usuarios-foto" style="max-width:96px;border-radius:8px;" />`;
+      }
+    } else if (file) {
+      showToast("Use JPG ou PNG até 2 MB.", "warning");
+    }
+  });
+  dom.funcionarioFotoTrocar?.addEventListener("click", () => dom.funcionarioFotoInput?.click());
+  dom.funcionarioFotoRemover?.addEventListener("click", () => {
+    funcionarioFotoFile = null;
+    funcionarioFotoRemovida = true;
+    if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+    if (dom.funcionarioFotoInput) dom.funcionarioFotoInput.value = "";
+  });
   dom.funcionarioPossuiAcesso?.addEventListener("change", function() {
     if (dom.funcionarioAcessoCampos) dom.funcionarioAcessoCampos.classList.toggle("hidden", !this.checked);
     ["login_usuario","senha_usuario","perfil_usuario"].forEach(k => {
@@ -8605,19 +8654,30 @@ function setupModals() {
       payload.senha_usuario = form.elements.senha_usuario?.value;
       payload.perfil_usuario = form.elements.perfil_usuario?.value || "FUNCIONARIO";
     }
+    const temFoto = !!funcionarioFotoFile;
+    const temRemoverFoto = !!funcionarioFotoRemovida;
     const feedback = dom.funcionarioFormFeedback;
     if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
     try {
-      if (id) {
-        delete payload.cpf; delete payload.login_usuario; delete payload.senha_usuario; delete payload.perfil_usuario; delete payload.possui_acesso;
-        await fetchJSON(`/funcionarios/${id}`, { method: "PUT", body: JSON.stringify(payload) });
-        showToast("Funcionário atualizado.", "success");
+      if (temFoto || temRemoverFoto) {
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => { if (v != null && v !== "") fd.append(k, v); });
+        if (funcionarioFotoRemovida) fd.append("remove_foto", "1");
+        if (funcionarioFotoFile) fd.append("foto", funcionarioFotoFile);
+        await fetchForm(id ? `/funcionarios/${id}` : "/funcionarios", id ? "PUT" : "POST", fd);
       } else {
-        payload.cpf = (payload.cpf || "").replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-        await fetchJSON("/funcionarios", { method: "POST", body: JSON.stringify(payload) });
-        showToast("Funcionário cadastrado.", "success");
+        if (id) {
+          delete payload.cpf; delete payload.login_usuario; delete payload.senha_usuario; delete payload.perfil_usuario; delete payload.possui_acesso;
+          await fetchJSON(`/funcionarios/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+        } else {
+          payload.cpf = (payload.cpf || "").replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+          await fetchJSON("/funcionarios", { method: "POST", body: JSON.stringify(payload) });
+        }
       }
+      showToast(id ? "Funcionário atualizado." : "Funcionário cadastrado.", "success");
       toggleModal(dom.funcionarioModal, false);
+      funcionarioFotoFile = null;
+      funcionarioFotoRemovida = false;
       await loadFuncionarios(getFuncionariosFiltros());
     } catch (err) {
       const msg = err?.message || err?.error || "Erro ao salvar.";
