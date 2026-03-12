@@ -17,13 +17,16 @@ class MesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
-        $query = Mesa::with('unidade:id,nome')->where('ativo', true);
+        $query = Mesa::query()->where('ativo', true);
 
         if ($perfil === 'ADMIN') {
             if ($request->filled('unidade_id')) {
                 $query->where('unidade_id', $request->unidade_id);
             }
         } else {
+            if (!$unidadeIdUsuario) {
+                return response()->json([]);
+            }
             $query->where('unidade_id', $unidadeIdUsuario);
         }
 
@@ -60,6 +63,7 @@ class MesaController extends Controller
 
         $existe = Mesa::where('unidade_id', $request->unidade_id)
             ->where('numero_mesa', $request->numero_mesa)
+            ->where('ativo', true)
             ->exists();
 
         if ($existe) {

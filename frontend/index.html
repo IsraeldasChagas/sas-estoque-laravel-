@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=20260312" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -847,10 +847,11 @@
               </header>
               <form id="reservaMesaForm">
                 <input type="hidden" name="id" />
+                <input type="hidden" name="unidade_id" id="reservaFormUnidadeId" />
                 <div class="modal-body">
                   <label id="reservaUnidadeLabel" style="display:none;">
                     Unidade
-                    <select name="unidade_id" id="reservaUnidadeSelect">
+                    <select id="reservaUnidadeSelect">
                       <option value="">Selecione</option>
                     </select>
                   </label>
@@ -2326,7 +2327,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260301P"></script>
+    <script src="app.js?v=20260312"></script>
      
   </body>
 </html>
