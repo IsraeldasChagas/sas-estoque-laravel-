@@ -9142,11 +9142,13 @@ function setupModals() {
     const etapa2 = document.getElementById("proventoAssinaturaEtapa2");
     const codigoInput = document.getElementById("proventoAssinaturaCodigo");
     const feedback = document.getElementById("proventoAssinaturaFeedback");
+    const whatsappWrap = document.getElementById("proventoAssinaturaWhatsappBtnWrap");
     modal.dataset.proventoId = id;
     if (etapa1) etapa1.classList.remove("hidden");
     if (etapa2) etapa2.classList.add("hidden");
     if (codigoInput) codigoInput.value = "";
     if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
+    if (whatsappWrap) whatsappWrap.classList.add("hidden");
     toggleModal(modal, true);
   }
   document.getElementById("closeProventoAssinaturaModal")?.addEventListener("click", () => toggleModal(document.getElementById("proventoAssinaturaModal"), false));
@@ -9155,17 +9157,42 @@ function setupModals() {
     const canal = document.querySelector('input[name="assinaturaCanal"]:checked')?.value || "email";
     if (!id) return;
     try {
-      await fetchJSON(`/proventos/${id}/enviar-codigo`, { method: "POST", body: JSON.stringify({ canal }) });
-      showToast("Código enviado! Verifique seu " + (canal === "email" ? "e-mail" : "WhatsApp") + ".", "success");
+      const resp = await fetchJSON(`/proventos/${id}/enviar-codigo`, { method: "POST", body: JSON.stringify({ canal }) });
       document.getElementById("proventoAssinaturaEtapa1").classList.add("hidden");
       document.getElementById("proventoAssinaturaEtapa2").classList.remove("hidden");
-      document.getElementById("proventoAssinaturaCodigo").focus();
+      const codigoInput = document.getElementById("proventoAssinaturaCodigo");
+      const feedback = document.getElementById("proventoAssinaturaFeedback");
+      const whatsappWrap = document.getElementById("proventoAssinaturaWhatsappBtnWrap");
+      const whatsappLink = document.getElementById("proventoAssinaturaWhatsappLink");
+      if (whatsappWrap) whatsappWrap.classList.add("hidden");
+      if (resp && resp.codigo) {
+        codigoInput.value = resp.codigo;
+        if (resp.whatsapp_link && whatsappLink) {
+          whatsappLink.href = resp.whatsapp_link;
+          if (whatsappWrap) whatsappWrap.classList.remove("hidden");
+        }
+        if (feedback) {
+          feedback.textContent = resp._aviso || "Código preenchido. Clique em 'Confirmar aceite' para concluir.";
+          feedback.className = "form-feedback";
+          feedback.classList.remove("hidden");
+        }
+        showToast("Código gerado! Clique em 'Confirmar aceite'.", "success");
+      } else {
+        codigoInput.value = "";
+        if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; }
+        showToast("Código enviado! Verifique seu " + (canal === "email" ? "e-mail" : "WhatsApp") + ".", "success");
+      }
+      codigoInput.focus();
     } catch (e) { showToast(e?.message || "Erro ao enviar código.", "error"); }
   });
   document.getElementById("proventoAssinaturaNovoCodigo")?.addEventListener("click", () => {
     document.getElementById("proventoAssinaturaEtapa2").classList.add("hidden");
     document.getElementById("proventoAssinaturaEtapa1").classList.remove("hidden");
     document.getElementById("proventoAssinaturaCodigo").value = "";
+    const w = document.getElementById("proventoAssinaturaWhatsappBtnWrap");
+    if (w) w.classList.add("hidden");
+    const f = document.getElementById("proventoAssinaturaFeedback");
+    if (f) { f.classList.add("hidden"); f.textContent = ""; }
   });
   document.getElementById("proventoAssinaturaConfirmar")?.addEventListener("click", async () => {
     const id = document.getElementById("proventoAssinaturaModal")?.dataset?.proventoId;

@@ -5721,8 +5721,13 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
         if (!in_array($canal, ['whatsapp', 'email'])) return response()->json(['error' => 'Canal inválido. Use whatsapp ou email'], 422)->header('Access-Control-Allow-Origin', '*');
 
         $func = DB::table('funcionarios')->where('id', $p->funcionario_id)->first();
-        $destino = $canal === 'whatsapp' ? ($func->whatsapp ?? '') : ($func->email ?? '');
-        if (empty($destino)) return response()->json(['error' => 'Canal não disponível para este funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
+        $destino = $canal === 'whatsapp' ? ($func->whatsapp ?? '') : ($func->email ?? $u->email ?? '');
+        if ($canal === 'whatsapp' && empty($destino)) {
+            return response()->json(['error' => 'WhatsApp não cadastrado no funcionário. Cadastre o WhatsApp no cadastro do funcionário ou escolha E-mail.'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($canal === 'email' && empty($destino)) {
+            return response()->json(['error' => 'E-mail não cadastrado. Cadastre o e-mail no funcionário ou use o e-mail do usuário de login.'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
 
         $codigo = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $hash = Hash::make($codigo);
@@ -5734,11 +5739,33 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
         ]);
 
         $msg = "Seu código de aceite eletrônico para o provento #{$id} é: {$codigo}. Válido por 5 minutos.";
+        $emailEnviado = false;
+        $whatsappLink = null;
         if ($canal === 'email') {
-            try { Mail::raw($msg, fn($m) => $m->to($destino)->subject('Código de aceite - Provento #' . $id)); } catch (\Exception $e) { \Log::warning('Email OTP falhou: ' . $e->getMessage()); }
+            try {
+                Mail::raw($msg, fn($m) => $m->to($destino)->subject('Código de aceite - Provento #' . $id));
+                $emailEnviado = true;
+            } catch (\Exception $e) {
+                \Log::warning('Email OTP falhou: ' . $e->getMessage());
+            }
+        }
+        if ($canal === 'whatsapp') {
+            $num = preg_replace('/\D/', '', $destino);
+            if (strlen($num) <= 10) $num = '55' . $num;
+            if (strlen($num) >= 12) {
+                $whatsappLink = "https://wa.me/{$num}?text=" . rawurlencode($msg);
+            }
         }
         $proventosLog($id, $u->id, $p->funcionario_id, 'otp_enviado', null, null, "Código enviado por {$canal}", $request->ip(), $request->userAgent(), ['canal' => $canal]);
-        return response()->json(['message' => 'Código enviado com sucesso'])->header('Access-Control-Allow-Origin', '*');
+        $resp = ['message' => 'Código enviado com sucesso', 'codigo' => $codigo];
+        if ($canal === 'email' && !$emailEnviado) {
+            $resp['_aviso'] = 'E-mail pode não ter sido enviado. Use o código exibido abaixo.';
+        }
+        if ($canal === 'whatsapp' && !empty($whatsappLink)) {
+            $resp['whatsapp_link'] = $whatsappLink;
+            $resp['_aviso'] = 'Clique no botão abaixo para abrir o WhatsApp e enviar o código para você mesmo.';
+        }
+        return response()->json($resp)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /proventos/enviar-codigo: ' . $e->getMessage());
         return response()->json(['error' => $e->getMessage()], 500)->header('Access-Control-Allow-Origin', '*');
