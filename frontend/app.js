@@ -9183,7 +9183,10 @@ function setupModals() {
         showToast("Código enviado! Verifique seu " + (canal === "email" ? "e-mail" : "WhatsApp") + ".", "success");
       }
       codigoInput.focus();
-    } catch (e) { showToast(e?.message || "Erro ao enviar código.", "error"); }
+    } catch (e) {
+        const msg = (e?.responseData?.error || e?.message || "Erro ao enviar código.").toString();
+        showToast(msg.length > 80 ? msg.substring(0, 77) + "..." : msg, "error");
+      }
   });
   document.getElementById("proventoAssinaturaNovoCodigo")?.addEventListener("click", () => {
     document.getElementById("proventoAssinaturaEtapa2").classList.add("hidden");

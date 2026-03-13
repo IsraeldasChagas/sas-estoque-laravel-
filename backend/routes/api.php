@@ -5722,9 +5722,6 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
 
         $func = DB::table('funcionarios')->where('id', $p->funcionario_id)->first();
         $destino = $canal === 'whatsapp' ? ($func->whatsapp ?? '') : ($func->email ?? $u->email ?? '');
-        if ($canal === 'whatsapp' && empty($destino)) {
-            return response()->json(['error' => 'WhatsApp não cadastrado no funcionário. Cadastre o WhatsApp no cadastro do funcionário ou escolha E-mail.'], 422)->header('Access-Control-Allow-Origin', '*');
-        }
         if ($canal === 'email' && empty($destino)) {
             return response()->json(['error' => 'E-mail não cadastrado. Cadastre o e-mail no funcionário ou use o e-mail do usuário de login.'], 422)->header('Access-Control-Allow-Origin', '*');
         }
@@ -5761,9 +5758,13 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
         if ($canal === 'email' && !$emailEnviado) {
             $resp['_aviso'] = 'E-mail pode não ter sido enviado. Use o código exibido abaixo.';
         }
-        if ($canal === 'whatsapp' && !empty($whatsappLink)) {
-            $resp['whatsapp_link'] = $whatsappLink;
-            $resp['_aviso'] = 'Clique no botão abaixo para abrir o WhatsApp e enviar o código para você mesmo.';
+        if ($canal === 'whatsapp') {
+            if (!empty($whatsappLink)) {
+                $resp['whatsapp_link'] = $whatsappLink;
+                $resp['_aviso'] = 'Clique no botão abaixo para abrir o WhatsApp e enviar o código para você mesmo.';
+            } else {
+                $resp['_aviso'] = 'WhatsApp não cadastrado no funcionário. Use o código exibido abaixo e cadastre o WhatsApp no próximo provento.';
+            }
         }
         return response()->json($resp)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
