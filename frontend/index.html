@@ -92,7 +92,8 @@
         </div>
         <div class="sidebar-nav-scroll">
         <nav>
-          <a href="#" class="nav-link active" data-section="dashboard">Dashboard</a>
+          <a href="#" class="nav-link active" data-section="boasVindas">Boas-vindas</a>
+          <a href="#" class="nav-link" data-section="dashboard">Dashboard</a>
           <a href="#" class="nav-link" data-section="unidades">Unidades</a>
           <a href="#" class="nav-link" data-section="usuarios">Usuarios</a>
           <a href="#" class="nav-link" data-section="produtos">Produtos</a>
@@ -167,8 +168,20 @@
 
         <!-- Container com as secoes funcionais -->
         <section class="content">
+          <!-- Pagina de boas-vindas (abre ao entrar no sistema) -->
+          <section id="boasVindasSection" class="view-section">
+            <div class="boas-vindas-card">
+              <h1 class="boas-vindas-titulo">Bem-vindo, <span id="boasVindasNome">usuário</span>!</h1>
+              <p class="boas-vindas-subtitulo">Que seu dia seja abençoado.</p>
+              <blockquote class="boas-vindas-versiculo">
+                <p>“Cada um fala falsidade com o seu próximo; falam com lábios lisonjeiros e coração dobre.”</p>
+                <cite>— Salmos 12:2</cite>
+              </blockquote>
+            </div>
+          </section>
+
           <!-- Dashboard com indicadores e dados recentes -->
-          <section id="dashboardSection" class="view-section">
+          <section id="dashboardSection" class="view-section hidden">
                           <div class="actions">
               <button class="btn primary" id="openEntrada">
                 + Registrar Entrada
@@ -1989,6 +2002,7 @@
             <h3>Acesso a módulos do menu</h3>
             <p class="form-hint" style="margin-bottom:0.5rem;">Marque os módulos que este usuário poderá acessar. Se nenhum for marcado, usam-se as permissões padrão do perfil.</p>
             <button type="button" class="btn secondary" id="usuarioPermissoesPadrao" style="margin-bottom:0.75rem;">Usar permissões padrão do perfil</button>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boasVindas" /> Boas-vindas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="dashboard" /> Dashboard</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="unidades" /> Unidades</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="usuarios" /> Usuários</label>

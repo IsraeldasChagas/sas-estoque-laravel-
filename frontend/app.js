@@ -289,7 +289,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -297,7 +297,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -305,7 +305,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   ESTOQUISTA: {
-    sections: ["dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
+    sections: ["boasVindas", "dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -313,7 +313,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   COZINHA: {
-    sections: ["dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
+    sections: ["boasVindas", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -321,7 +321,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa"],
+    sections: ["boasVindas", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -329,7 +329,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa"],
+    sections: ["boasVindas", "dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -337,7 +337,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -345,7 +345,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   VISUALIZADOR: {
-    sections: ["dashboard", "relatorios"],
+    sections: ["boasVindas", "dashboard", "relatorios"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -353,7 +353,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
-    sections: ["estoque", "reservaMesa"],
+    sections: ["boasVindas", "estoque", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -361,7 +361,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["dashboard", "proventos", "reservaMesa"],
+    sections: ["boasVindas", "dashboard", "proventos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -369,7 +369,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["dashboard", "proventos"],
+    sections: ["boasVindas", "dashboard", "proventos"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2617,6 +2617,10 @@ function navigateTo(section) {
   // Usa alternância de seções (conteúdo no index.html) - evita fetch que pode falhar em produção
   dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
   dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+  if (section === 'boasVindas') {
+    const el = document.getElementById('boasVindasNome');
+    if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
+  }
   if (section === 'fornecedores') loadFornecedores();
   else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
 }
@@ -6631,7 +6635,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa'];
+          const validSections = ['boasVindas', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'funcionarios', 'proventos'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
