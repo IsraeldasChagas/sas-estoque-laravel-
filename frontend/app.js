@@ -2459,9 +2459,14 @@ function updateUnidadeInlineUI(canManage) {
 }
 
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
+// Se o usuário tem permissoes_menu personalizadas (array não vazio), usa-as. Caso contrário, usa o padrão do perfil.
 function applyPermissions() {
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
-  const regras = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  const permPersonalizadas = currentUser && Array.isArray(currentUser.permissoes_menu) && currentUser.permissoes_menu.length > 0;
+  const regras = permPersonalizadas
+    ? { ...regrasBase, sections: currentUser.permissoes_menu }
+    : regrasBase;
   updateUserHeader();
 
   dom.navLinks.forEach((link) => {
@@ -6878,6 +6883,7 @@ async function handleLogin(event) {
       nome: payload.nome, 
       email: payload.email, 
       perfil: payload.perfil, 
+      permissoes_menu: payload.permissoes_menu || null,
       token: payload.token 
     });
     
@@ -7120,9 +7126,11 @@ async function submitUsuario(event) {
       }
     }
 
+    const permModules = Array.from(document.querySelectorAll('input[name="perm_module"]:checked')).map(cb => cb.value);
     const payload = { nome, email, perfil, ativo };
     if (senha) payload.senha = senha;
     if (unidade_id && unidade_id !== "null") payload.unidade_id = Number(unidade_id);
+    payload.permissoes_menu = permModules;
 
     const temFoto = !!usuarioFotoFile;
     const temRemoverFoto = !!usuarioFotoRemovida;
@@ -7138,6 +7146,7 @@ async function submitUsuario(event) {
       if (unidade_id && unidade_id !== "null") formData.append("unidade_id", unidade_id);
       if (usuarioFotoRemovida) formData.append("remove_foto", "1");
       if (usuarioFotoFile) formData.append("foto", usuarioFotoFile);
+      formData.append("permissoes_menu", JSON.stringify(permModules));
       resultado = await fetchForm(id ? `/usuarios/${id}` : "/usuarios", id ? "PUT" : "POST", formData);
     } else {
       resultado = await fetchJSON(id ? `/usuarios/${id}` : "/usuarios", {
@@ -7866,6 +7875,11 @@ async function handleUsuarioTableClick(event) {
       const sel = form.elements.perfil;
       if (sel) { sel.disabled = false; sel.value = (usuario.perfil || "").toUpperCase(); }
       if (form.elements.unidade_id) form.elements.unidade_id.value = usuario.unidade_id || "";
+      // Permissões de menu
+      const pm = Array.isArray(usuario.permissoes_menu) ? usuario.permissoes_menu : (typeof usuario.permissoes_menu === 'string' ? (() => { try { const a = JSON.parse(usuario.permissoes_menu); return Array.isArray(a) ? a : []; } catch (e) { return []; } })() : []);
+      document.querySelectorAll('input[name="perm_module"]').forEach(cb => {
+        cb.checked = pm.includes(cb.value);
+      });
       if (form.elements.ativo) form.elements.ativo.value = Number(usuario.ativo) === 1 ? "1" : "0";
       if (form.elements.senha) form.elements.senha.value = "";
       if (form.elements.confirmar_senha) form.elements.confirmar_senha.value = "";
@@ -8599,6 +8613,14 @@ function setupModals() {
   });
   dom.closeUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
+  document.getElementById("usuarioPermissoesPadrao")?.addEventListener("click", () => {
+    const perfil = dom.usuarioForm?.elements?.perfil?.value?.toUpperCase();
+    const sections = (perfil && PERMISSOES[perfil]) ? PERMISSOES[perfil].sections : [];
+    document.querySelectorAll('input[name="perm_module"]').forEach(cb => {
+      cb.checked = sections.includes(cb.value);
+    });
+    showToast("Permissões preenchidas com o padrão do perfil.", "info");
+  });
 
   // === Funcionários (RH) ===
   function populateFuncionarioUnidades(selectForm, selectFilter) {

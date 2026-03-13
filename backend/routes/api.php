@@ -74,12 +74,18 @@ Route::post('/login', function (Request $request) {
         // PASSO 7: Retorna dados do usuário autenticado
         // Retorna ID, nome, email, perfil e token de sessão
         // Inclui headers CORS para permitir requisições do frontend
+        $permissoesMenu = $usuario->permissoes_menu ?? null;
+        if (is_string($permissoesMenu)) {
+            $decoded = json_decode($permissoesMenu, true);
+            $permissoesMenu = is_array($decoded) ? $decoded : null;
+        }
         return response()->json([
             'id' => $usuario->id,                                    // ID do usuário
             'nome' => $usuario->nome,                                // Nome completo
             'email' => $usuario->email,                              // Email
             'perfil' => $usuario->perfil ?? 'VISUALIZADOR',         // Perfil (padrão: VISUALIZADOR)
             'unidade_id' => $usuario->unidade_id ?? null,            // Unidade do usuário
+            'permissoes_menu' => $permissoesMenu,                    // Módulos permitidos (null = usa padrão do perfil)
             'token' => $token,                                       // Token de sessão
         ])->header('Access-Control-Allow-Origin', '*')              // Permite requisições de qualquer origem
           ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')   // Métodos permitidos
@@ -1181,6 +1187,19 @@ Route::post('/usuarios', function (Request $request) {
             }
         }
 
+        // Permissões de menu (array de sections)
+        if (isset($allData['permissoes_menu'])) {
+            $pm = $allData['permissoes_menu'];
+            if (is_array($pm)) {
+                $data['permissoes_menu'] = json_encode(array_values(array_filter($pm)));
+            } elseif (is_string($pm)) {
+                $decoded = json_decode($pm, true);
+                $data['permissoes_menu'] = is_array($decoded) ? json_encode($decoded) : null;
+            } else {
+                $data['permissoes_menu'] = null;
+            }
+        }
+
         // Processa foto se fornecida
         if ($request->hasFile('foto')) {
             $foto = $request->file('foto');
@@ -1379,8 +1398,19 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
             }
         } else {
             // Se não foi enviado, mantém o valor atual (não atualiza)
-            // Mas se quiser permitir remover unidade_id, pode definir como null aqui
-            // $data['unidade_id'] = null;
+        }
+
+        // Permissões de menu (array de sections)
+        if (array_key_exists('permissoes_menu', $allData)) {
+            $pm = $allData['permissoes_menu'];
+            if (is_array($pm)) {
+                $data['permissoes_menu'] = json_encode(array_values(array_filter($pm)));
+            } elseif (is_string($pm)) {
+                $decoded = json_decode($pm, true);
+                $data['permissoes_menu'] = is_array($decoded) ? json_encode($decoded) : null;
+            } else {
+                $data['permissoes_menu'] = null;
+            }
         }
 
         // Processa foto se fornecida
