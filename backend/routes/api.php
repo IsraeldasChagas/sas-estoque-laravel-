@@ -5746,11 +5746,14 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
                 \Log::warning('Email OTP falhou: ' . $e->getMessage());
             }
         }
-        if ($canal === 'whatsapp') {
-            $num = preg_replace('/\D/', '', $destino);
-            if (strlen($num) <= 10) $num = '55' . $num;
-            if (strlen($num) >= 12) {
-                $whatsappLink = "https://wa.me/{$num}?text=" . rawurlencode($msg);
+        // Mesma lógica da Reserva de Mesa: formatTelefoneParaWhatsApp
+        if ($canal === 'whatsapp' && !empty($destino)) {
+            $dig = preg_replace('/\D/', '', $destino);
+            if (strlen($dig) >= 10) {
+                $numFinal = (substr($dig, 0, 2) === '55' && strlen($dig) >= 12) ? $dig : ('55' . $dig);
+                if (strlen($numFinal) >= 12) {
+                    $whatsappLink = 'https://wa.me/' . $numFinal . '?text=' . rawurlencode($msg);
+                }
             }
         }
         $proventosLog($id, $u->id, $p->funcionario_id, 'otp_enviado', null, null, "Código enviado por {$canal}", $request->ip(), $request->userAgent(), ['canal' => $canal]);
