@@ -5313,6 +5313,11 @@ Route::post('/funcionarios', function (Request $request) {
         'possui_acesso' => $possuiAcesso ? 1 : 0,
         'usuario_id' => $usuarioId,
         'observacoes' => $data['observacoes'] ?? null,
+        'banco' => $data['banco'] ?? null,
+        'agencia' => $data['agencia'] ?? null,
+        'conta' => $data['conta'] ?? null,
+        'conta_digito' => $data['conta_digito'] ?? null,
+        'pix' => $data['pix'] ?? null,
     ];
     if ($request->hasFile('foto')) {
         $foto = $request->file('foto');
@@ -5369,6 +5374,11 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) {
         'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
         'status' => $data['status'] ?? 'ativo',
         'observacoes' => $data['observacoes'] ?? null,
+        'banco' => $data['banco'] ?? null,
+        'agencia' => $data['agencia'] ?? null,
+        'conta' => $data['conta'] ?? null,
+        'conta_digito' => $data['conta_digito'] ?? null,
+        'pix' => $data['pix'] ?? null,
     ];
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {
@@ -5426,6 +5436,11 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) {
         'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
         'status' => $data['status'] ?? 'ativo',
         'observacoes' => $data['observacoes'] ?? null,
+        'banco' => $data['banco'] ?? null,
+        'agencia' => $data['agencia'] ?? null,
+        'conta' => $data['conta'] ?? null,
+        'conta_digito' => $data['conta_digito'] ?? null,
+        'pix' => $data['pix'] ?? null,
     ];
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {
@@ -5521,7 +5536,7 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
             ->leftJoin('usuarios as autorizador', 'proventos.autorizado_por', '=', 'autorizador.id')
-            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf',
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.pix as funcionario_pix',
                 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome');
 
         if ($nome = trim($request->query('nome', ''))) $q->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
@@ -5556,7 +5571,7 @@ Route::get('/proventos/meus', function (Request $request) use ($proventosAuth) {
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
             ->where('proventos.funcionario_id', $funcId)
-            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome')
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.pix as funcionario_pix', 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome')
             ->orderByDesc('proventos.id')->get();
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -5578,7 +5593,7 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
             ->leftJoin('usuarios as autorizador', 'proventos.autorizado_por', '=', 'autorizador.id')
             ->leftJoin('usuarios as finalizador', 'proventos.finalizado_por', '=', 'finalizador.id')
             ->where('proventos.id', $id)
-            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.whatsapp', 'funcionarios.email',
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.whatsapp', 'funcionarios.email', 'funcionarios.pix as funcionario_pix',
                 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
             ->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');

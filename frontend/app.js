@@ -8631,7 +8631,7 @@ function setupModals() {
     funcionarioFotoRemovida = false;
     if (editId) {
       const f = await fetchJSON(`/funcionarios/${editId}`);
-      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","cargo","unidade_id","whatsapp","email","data_admissao","status","observacoes"].forEach(k => {
+      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","cargo","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix"].forEach(k => {
         const el = dom.funcionarioForm?.elements[k];
         if (el && f[k] != null) el.value = f[k] || "";
       });
@@ -8701,6 +8701,16 @@ function setupModals() {
           <div class="view-fields-grid">
             ${field("WhatsApp", f.whatsapp)}
             ${field("E-mail", f.email)}
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Dados bancários</h3>
+          <div class="view-fields-grid">
+            ${field("Banco", f.banco)}
+            ${field("Agência", f.agencia)}
+            ${field("Conta", f.conta)}
+            ${field("Dígito", f.conta_digito)}
+            ${field("PIX", f.pix)}
           </div>
         </div>
         <div class="form-section">
@@ -8954,6 +8964,11 @@ function setupModals() {
       data_admissao: form.elements.data_admissao?.value || null,
       status: form.elements.status?.value || "ativo",
       observacoes: form.elements.observacoes?.value || null,
+      banco: form.elements.banco?.value || null,
+      agencia: form.elements.agencia?.value || null,
+      conta: form.elements.conta?.value || null,
+      conta_digito: form.elements.conta_digito?.value || null,
+      pix: form.elements.pix?.value || null,
       possui_acesso: dom.funcionarioPossuiAcesso?.checked || false,
     };
     if (payload.possui_acesso) {
@@ -8967,7 +8982,7 @@ function setupModals() {
     try {
       const fd = new FormData();
       if (id) {
-        const putPayload = { nome_completo: payload.nome_completo, data_nascimento: payload.data_nascimento, sexo: payload.sexo, estado_civil: payload.estado_civil, cargo: payload.cargo, unidade_id: payload.unidade_id ?? "", whatsapp: payload.whatsapp, email: payload.email, data_admissao: payload.data_admissao, status: payload.status, observacoes: payload.observacoes };
+        const putPayload = { nome_completo: payload.nome_completo, data_nascimento: payload.data_nascimento, sexo: payload.sexo, estado_civil: payload.estado_civil, cargo: payload.cargo, unidade_id: payload.unidade_id ?? "", whatsapp: payload.whatsapp, email: payload.email, data_admissao: payload.data_admissao, status: payload.status, observacoes: payload.observacoes, banco: payload.banco, agencia: payload.agencia, conta: payload.conta, conta_digito: payload.conta_digito, pix: payload.pix };
         Object.entries(putPayload).forEach(([k, v]) => { fd.append(k, v != null ? String(v) : ""); });
         if (temRemoverFoto) fd.append("remove_foto", "1");
         if (temFoto) fd.append("foto", funcionarioFotoFile);
@@ -8986,6 +9001,11 @@ function setupModals() {
         if (payload.email) fd.append("email", payload.email);
         if (payload.data_admissao) fd.append("data_admissao", payload.data_admissao);
         if (payload.observacoes) fd.append("observacoes", payload.observacoes);
+        if (payload.banco) fd.append("banco", payload.banco);
+        if (payload.agencia) fd.append("agencia", payload.agencia);
+        if (payload.conta) fd.append("conta", payload.conta);
+        if (payload.conta_digito) fd.append("conta_digito", payload.conta_digito);
+        if (payload.pix) fd.append("pix", payload.pix);
         if (payload.possui_acesso) {
           if (payload.usuario_id) fd.append("usuario_id", payload.usuario_id);
           else {
@@ -9088,6 +9108,7 @@ function setupModals() {
         <div class="view-fields-grid" style="display:grid;gap:0.5rem;margin-bottom:1rem;">
           <div class="view-field"><div class="view-field-label">Funcionário</div><div class="view-field-value">${esc(p.funcionario_nome)}</div></div>
           <div class="view-field"><div class="view-field-label">CPF</div><div class="view-field-value">${esc(p.funcionario_cpf)}</div></div>
+          ${p.funcionario_pix ? `<div class="view-field"><div class="view-field-label">PIX</div><div class="view-field-value">${esc(p.funcionario_pix)}</div></div>` : ''}
           <div class="view-field"><div class="view-field-label">Tipo</div><div class="view-field-value">${esc(tipoL)}</div></div>
           <div class="view-field"><div class="view-field-label">Verba</div><div class="view-field-value">${esc(p.verba)}</div></div>
           <div class="view-field"><div class="view-field-label">Valor</div><div class="view-field-value">${valorF}</div></div>
@@ -9170,6 +9191,14 @@ function setupModals() {
         if (resp.whatsapp_link && whatsappLink) {
           whatsappLink.href = resp.whatsapp_link;
           if (whatsappWrap) whatsappWrap.classList.remove("hidden");
+          // Mesma lógica da Reserva de Mesa: abrir link programaticamente para garantir envio
+          var a = document.createElement('a');
+          a.href = resp.whatsapp_link;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         }
         if (feedback) {
           feedback.textContent = resp._aviso || "Código preenchido. Clique em 'Confirmar aceite' para concluir.";
