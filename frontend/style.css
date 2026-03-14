@@ -128,6 +128,115 @@ body.sidebar-open {
   transform: translateX(0);
 }
 
+/* Botao recolher/expandir sidebar - apenas em desktop */
+.sidebar-collapse-btn {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: #070403;
+  color: #fff;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.sidebar-collapse-btn:hover {
+  background: #de4309;
+  border-color: #fff;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.sidebar-collapse-btn:focus-visible {
+  outline: 2px solid #de4309;
+  outline-offset: 2px;
+}
+
+.sidebar-collapse-icon {
+  display: block;
+  font-weight: 700;
+  user-select: none;
+}
+
+.sidebar-collapse-icon::before {
+  content: "‹";
+}
+
+/* Desktop: botao visivel e sidebar recolhivel */
+@media (min-width: 1025px) {
+  .sidebar {
+    position: relative;
+    flex-shrink: 0;
+    transition: width 0.25s ease, padding 0.25s ease;
+  }
+
+  .sidebar-collapse-btn {
+    display: flex;
+  }
+
+  .sidebar.is-collapsed {
+    width: 56px;
+    min-width: 56px;
+    padding: 16px 10px;
+  }
+
+  .sidebar.is-collapsed .sidebar-logo {
+    margin-bottom: 20px;
+  }
+
+  .sidebar.is-collapsed .sidebar-logo img {
+    max-width: 36px;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll {
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    max-height: 0;
+    min-height: 0;
+  }
+
+  .sidebar.is-collapsed .sidebar-collapse-icon::before {
+    content: "›";
+  }
+
+  .sidebar:not(.is-collapsed) .sidebar-collapse-icon::before {
+    content: "‹";
+  }
+}
+
+/* Mobile/tablet: esconder botao de recolher */
+@media (max-width: 1024px) {
+  .sidebar-collapse-btn {
+    display: none !important;
+  }
+
+  .sidebar.is-collapsed {
+    width: min(320px, 82vw) !important;
+    min-width: 0 !important;
+    padding: 28px 22px !important;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll {
+    overflow-y: auto !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+  }
+}
+
 /* Backdrop exibido ao abrir sidebar em telas pequenas */
 .sidebar-backdrop {
   position: fixed;
