@@ -1273,6 +1273,52 @@ Route::post('/usuarios', function (Request $request) {
     }
 });
 
+// Troca de senha do próprio usuário logado (Minha conta)
+Route::put('/usuarios/me/senha', function (Request $request) {
+    $usuarioId = $request->header('X-Usuario-Id');
+    if (!$usuarioId) {
+        return response()->json(['error' => 'Usuário não identificado. Faça login novamente.'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    $usuario = DB::table('usuarios')->where('id', $usuarioId)->where('ativo', 1)->first();
+    if (!$usuario) {
+        return response()->json(['error' => 'Usuário não encontrado.'], 404)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    $request->validate([
+        'senha_atual' => 'required|string',
+        'nova_senha' => 'required|string|min:6|max:255',
+        'confirmar_senha' => 'required|string|same:nova_senha',
+    ], [
+        'nova_senha.min' => 'A nova senha deve ter no mínimo 6 caracteres.',
+        'confirmar_senha.same' => 'A confirmação da senha não confere.',
+    ]);
+    if (!password_verify($request->senha_atual, $usuario->senha_hash)) {
+        return response()->json(['error' => 'Senha atual incorreta.'], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    DB::table('usuarios')->where('id', $usuarioId)->update([
+        'senha_hash' => Hash::make($request->nova_senha),
+    ]);
+    return response()->json(['success' => true, 'message' => 'Senha alterada com sucesso.'])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/usuarios/me/senha', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
 Route::put('/usuarios/{id}', function (Request $request, $id) {
     try {
         // Log para debug

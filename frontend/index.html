@@ -93,6 +93,7 @@
         <div class="sidebar-nav-scroll">
         <nav>
           <a href="#" class="nav-link active" data-section="boasVindas">Boas-vindas</a>
+          <a href="#" class="nav-link" data-section="minhaConta">Minha conta</a>
           <a href="#" class="nav-link" data-section="dashboard">Dashboard</a>
           <a href="#" class="nav-link" data-section="unidades">Unidades</a>
           <a href="#" class="nav-link" data-section="usuarios">Usuarios</a>
@@ -176,6 +177,32 @@
                 <p>“Ao Senhor declaro: "Tu és o meu Senhor; não tenho bem nenhum além de ti."”</p>
                 <cite>— Salmos 12:2</cite>
               </blockquote>
+            </div>
+          </section>
+
+          <!-- Minha conta - trocar senha -->
+          <section id="minhaContaSection" class="view-section hidden">
+            <div class="form-card" style="max-width: 420px;">
+              <h2>Minha conta</h2>
+              <p class="form-hint" style="margin-bottom: 1rem;">Altere sua senha de acesso ao sistema.</p>
+              <form id="minhaContaForm">
+                <label class="form-card__field">
+                  Senha atual
+                  <input type="password" name="senha_atual" placeholder="Digite sua senha atual" required />
+                </label>
+                <label class="form-card__field">
+                  Nova senha
+                  <input type="password" name="nova_senha" placeholder="Mínimo 6 caracteres" required minlength="6" />
+                </label>
+                <label class="form-card__field">
+                  Confirmar nova senha
+                  <input type="password" name="confirmar_senha" placeholder="Repita a nova senha" required />
+                </label>
+                <button type="submit" class="btn primary">Alterar senha</button>
+              </form>
+              <p class="form-hint" style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">
+                Não lembra sua senha? Entre em contato com o suporte TI para redefinir.
+              </p>
             </div>
           </section>
 
@@ -2002,6 +2029,7 @@
             <p class="form-hint" style="margin-bottom:0.5rem;">Marque os módulos que este usuário poderá acessar. Se nenhum for marcado, usam-se as permissões padrão do perfil.</p>
             <button type="button" class="btn secondary" id="usuarioPermissoesPadrao" style="margin-bottom:0.75rem;">Usar permissões padrão do perfil</button>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boasVindas" /> Boas-vindas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="minhaConta" /> Minha conta</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="dashboard" /> Dashboard</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="unidades" /> Unidades</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="usuarios" /> Usuários</label>

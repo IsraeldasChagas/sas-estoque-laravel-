@@ -289,7 +289,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -297,7 +297,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -305,7 +305,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   ESTOQUISTA: {
-    sections: ["boasVindas", "dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -313,7 +313,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   COZINHA: {
-    sections: ["boasVindas", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -321,7 +321,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["boasVindas", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -329,7 +329,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -337,7 +337,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -345,7 +345,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   VISUALIZADOR: {
-    sections: ["boasVindas", "dashboard", "relatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -353,7 +353,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
-    sections: ["boasVindas", "estoque", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "estoque", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -361,7 +361,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "dashboard", "proventos", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -369,7 +369,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["boasVindas", "dashboard", "proventos"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -6635,7 +6635,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['boasVindas', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'funcionarios', 'proventos'];
+          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'funcionarios', 'proventos'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
@@ -12306,6 +12306,28 @@ function setupForms() {
   
   dom.unidadeForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeForm));
   dom.unidadeInlineForm?.addEventListener("submit", (event) => submitUnidade(event, dom.unidadeInlineForm));
+
+  document.getElementById("minhaContaForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const senhaAtual = form.elements.senha_atual?.value?.trim();
+    const novaSenha = form.elements.nova_senha?.value?.trim();
+    const confirmarSenha = form.elements.confirmar_senha?.value?.trim();
+    if (!senhaAtual) { showToast("Digite sua senha atual.", "error"); return; }
+    if (!novaSenha || novaSenha.length < 6) { showToast("A nova senha deve ter no mínimo 6 caracteres.", "error"); return; }
+    if (novaSenha !== confirmarSenha) { showToast("A confirmação da senha não confere.", "error"); return; }
+    try {
+      await fetchJSON("/usuarios/me/senha", {
+        method: "PUT",
+        body: JSON.stringify({ senha_atual: senhaAtual, nova_senha: novaSenha, confirmar_senha: confirmarSenha }),
+      });
+      showToast("Senha alterada com sucesso!", "success");
+      form.reset();
+    } catch (err) {
+      showToast(err.message || "Falha ao alterar senha.", "error");
+    }
+    return false;
+  });
 
   if (dom.usuarioForm) {
     dom.usuarioForm.addEventListener("submit", (e) => {
