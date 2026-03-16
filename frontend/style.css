@@ -1991,6 +1991,68 @@ textarea {
     width: 100%;
   }
 
+  /* Proventos - cards responsivos: pergunta em cima, resposta embaixo */
+  #proventosSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #proventosSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #proventosSection .table-wrapper thead {
+    display: none;
+  }
+
+  #proventosSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #proventosSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #proventosSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  #proventosSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #proventosSection .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  #proventosSection .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #proventosSection .table-wrapper td.table-actions .table-action {
+    width: 100%;
+  }
+
   /* Modal de visualização de funcionário - responsivo */
   #funcionarioViewModal .view-funcionario-header {
     flex-direction: column;
