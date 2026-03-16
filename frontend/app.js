@@ -6412,7 +6412,16 @@ function renderFuncionarios(lista) {
   target.innerHTML = rows.join("");
 }
 
-const PROVENTO_STATUS_LABELS = { rascunho: "Rascunho", aguardando_autorizacao: "Aguard. autorização", autorizado: "Autorizado", aguardando_assinatura: "Aguard. assinatura", assinado: "Assinado", finalizado: "Finalizado", cancelado: "Cancelado", rejeitado: "Rejeitado" };
+const PROVENTO_STATUS_LABELS = {
+  rascunho: "Rascunho",
+  aguardando_autorizacao: "Aguard. assinatura",
+  autorizado: "Autorizado",
+  aguardando_assinatura: "Aguard. assinatura",
+  assinado: "Assinado",
+  finalizado: "Finalizado",
+  cancelado: "Cancelado",
+  rejeitado: "Rejeitado",
+};
 const PROVENTO_TIPO_LABELS = { vale: "Vale", adiantamento: "Adiantamento", consumo_interno: "Consumo interno", ajuda_custo: "Ajuda de custo", outro: "Outro" };
 
 async function loadProventos(filtros = {}) {
@@ -6457,15 +6466,26 @@ function renderProventos(lista) {
     const valorF = "R$ " + (Number(p.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     const dataF = p.data_provento ? new Date(p.data_provento + "T12:00:00").toLocaleDateString("pt-BR") : "-";
     let acoes = `<button type="button" class="table-action btn-view-provento" data-id="${p.id}">Visualizar</button>`;
-    if (podeAssinarProvento && p.status === "autorizado") {
+
+    // Funcionário/atendente: assinar quando o provento está aguardando assinatura
+    if (podeAssinarProvento && (p.status === "aguardando_autorizacao" || p.status === "aguardando_assinatura")) {
       acoes += `<button type="button" class="table-action btn-primary btn-assinar-provento" data-id="${p.id}">Aceitar / Assinar</button>`;
     }
+
     if (podeCriar) {
-      if (["rascunho","aguardando_autorizacao"].includes(p.status)) acoes += `<button type="button" class="table-action btn-edit-provento" data-id="${p.id}">Editar</button>`;
-      if (p.status === "assinado") acoes += `<button type="button" class="table-action btn-autorizar-provento" data-id="${p.id}">Autorizar</button>`;
-      if (["autorizado","aguardando_assinatura","assinado"].includes(p.status) && p.status !== "assinado") acoes += ``;
-      if (p.status === "assinado") acoes += `<button type="button" class="table-action btn-finalizar-provento" data-id="${p.id}">Finalizar</button>`;
-      if (!["finalizado","cancelado","rejeitado"].includes(p.status)) acoes += `<button type="button" class="table-action btn-danger btn-cancelar-provento" data-id="${p.id}">Cancelar</button>`;
+      if (["rascunho","aguardando_autorizacao"].includes(p.status)) {
+        acoes += `<button type="button" class="table-action btn-edit-provento" data-id="${p.id}">Editar</button>`;
+      }
+      // Gestão: autorizar depois que o funcionário já assinou (status "autorizado")
+      if (p.status === "autorizado") {
+        acoes += `<button type="button" class="table-action btn-autorizar-provento" data-id="${p.id}">Autorizar</button>`;
+      }
+      if (p.status === "assinado") {
+        acoes += `<button type="button" class="table-action btn-finalizar-provento" data-id="${p.id}">Finalizar</button>`;
+      }
+      if (!["finalizado","cancelado","rejeitado"].includes(p.status)) {
+        acoes += `<button type="button" class="table-action btn-danger btn-cancelar-provento" data-id="${p.id}">Cancelar</button>`;
+      }
     }
     return `<tr>
       <td data-label="ID">${esc(p.id)}</td>
@@ -9198,7 +9218,7 @@ function setupModals() {
       document.getElementById("proventoViewEditar").dataset.id = id;
       const perfil = (currentUser?.perfil||"").toString().trim().toUpperCase();
       const podeEditar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil) && ["rascunho","aguardando_autorizacao"].includes(p.status);
-      const podeAssinar = (perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA") && p.status === "autorizado";
+      const podeAssinar = (perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA") && (p.status === "aguardando_autorizacao" || p.status === "aguardando_assinatura");
       document.getElementById("proventoViewEditar").style.display = podeEditar ? "" : "none";
       const btnAssinar = document.getElementById("proventoViewAssinar");
       if (btnAssinar) {
