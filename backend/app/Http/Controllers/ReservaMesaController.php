@@ -18,13 +18,19 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
-        // Cada unidade é isolada: listar só reservas da unidade escolhida (ou da unidade do usuário se não for ADMIN)
-        $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+        // Cada unidade é isolada: listar só reservas da unidade escolhida.
+        // Regra:
+        // - Se vier unidade_id no request, usamos essa (independente de perfil).
+        // - Se não vier unidade_id, para usuário com unidade fixa usamos a do usuário.
+        // - Se mesmo assim não tiver unidade, não retornamos nada.
+        $unidadeId = null;
+        if ($request->filled('unidade_id')) {
+            $unidadeId = (int) $request->unidade_id;
+        } elseif ($unidadeIdUsuario) {
+            $unidadeId = (int) $unidadeIdUsuario;
+        }
         if ($unidadeId <= 0) {
             $unidadeId = null;
-        }
-        if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $unidadeId = (int) $unidadeIdUsuario;
         }
 
         // Sem unidade definida = não devolver reservas de outras unidades
@@ -66,12 +72,14 @@ class ReservaMesaController extends Controller
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
         // Resumo por unidade: mesma regra do index
-        $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+        $unidadeId = null;
+        if ($request->filled('unidade_id')) {
+            $unidadeId = (int) $request->unidade_id;
+        } elseif ($unidadeIdUsuario) {
+            $unidadeId = (int) $unidadeIdUsuario;
+        }
         if ($unidadeId <= 0) {
             $unidadeId = null;
-        }
-        if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $unidadeId = (int) $unidadeIdUsuario;
         }
         if (!$unidadeId) {
             return response()->json([
@@ -117,12 +125,15 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) $usuario->unidade_id : null;
 
-        // Só não-ADMIN tem unidade fixa; ADMIN usa sempre a unidade enviada no corpo (uma reserva = uma unidade)
-        if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $request->merge(['unidade_id' => $unidadeIdUsuario]);
+        // Definição da unidade da reserva:
+        // - Se vier unidade_id no request, usamos essa.
+        // - Senão, se o usuário tiver unidade fixa, usamos a dele.
+        $unidadeId = null;
+        if ($request->filled('unidade_id')) {
+            $unidadeId = (int) $request->unidade_id;
+        } elseif ($unidadeIdUsuario) {
+            $unidadeId = (int) $unidadeIdUsuario;
         }
-
-        $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
         if ($unidadeId <= 0 || !\DB::table('unidades')->where('id', $unidadeId)->exists()) {
             return response()->json(['message' => 'Unidade inválida ou não informada.'], 422);
         }
