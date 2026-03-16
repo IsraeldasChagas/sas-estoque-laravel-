@@ -10650,11 +10650,12 @@ function getMensagemReservaWhatsApp(r) {
   var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + (r.mesa_id || '');
   var dataStr = (r.data_reserva || '').toString().slice(0, 10);
   var horaStr = formatHora(r.hora_reserva);
+  var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
   return 'Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:\n\n' +
     '📅 Data: ' + dataStr + '\n' +
     '🕐 Horário: ' + horaStr + '\n' +
     '🪑 Mesa: ' + mesaNome + '\n' +
-    '👥 Pessoas: ' + (r.qtd_pessoas || '-') + '\n\n' +
+    '👥 Pessoas: ' + (r.qtd_pessoas || '-') + (criadoPor ? '\n👤 Atendimento: ' + criadoPor : '') + '\n\n' +
     'Aguardamos você!';
 }
 
