@@ -5781,10 +5781,10 @@ Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($
 
         $p = DB::table('proventos')->where('id', $id)->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
-        if ($p->status !== 'aguardando_autorizacao') return response()->json(['error' => 'Provento não está aguardando autorização'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'assinado') return response()->json(['error' => 'Provento precisa estar assinado para autorizar'], 422)->header('Access-Control-Allow-Origin', '*');
 
         DB::table('proventos')->where('id', $id)->update(['status' => 'autorizado', 'autorizado_por' => $u->id, 'data_autorizacao' => now()]);
-        $proventosLog($id, $u->id, $p->funcionario_id, 'autorizacao', 'aguardando_autorizacao', 'autorizado', 'Provento autorizado', $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $p->funcionario_id, 'autorizacao', 'assinado', 'autorizado', 'Provento autorizado', $request->ip(), $request->userAgent());
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
@@ -5803,7 +5803,7 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
 
         $p = DB::table('proventos')->where('id', $id)->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
-        if ($p->status !== 'autorizado') return response()->json(['error' => 'Provento deve estar autorizado para assinatura'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'aguardando_autorizacao') return response()->json(['error' => 'Provento deve estar aguardando assinatura'], 422)->header('Access-Control-Allow-Origin', '*');
 
         $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
         if ((int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Apenas o funcionário do provento pode assinar'], 403)->header('Access-Control-Allow-Origin', '*');
@@ -5875,7 +5875,7 @@ Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, 
 
         $p = DB::table('proventos')->where('id', $id)->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
-        if ($p->status !== 'autorizado') return response()->json(['error' => 'Provento deve estar autorizado'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'aguardando_autorizacao') return response()->json(['error' => 'Provento deve estar aguardando assinatura'], 422)->header('Access-Control-Allow-Origin', '*');
 
         $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
         if ((int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Apenas o funcionário pode assinar'], 403)->header('Access-Control-Allow-Origin', '*');
@@ -5896,7 +5896,7 @@ Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, 
 
         DB::table('proventos_assinaturas')->where('id', $reg->id)->update(['status_envio' => 'validado', 'validado_em' => now(), 'ip' => $request->ip(), 'user_agent' => $request->userAgent()]);
         DB::table('proventos')->where('id', $id)->update(['status' => 'assinado', 'data_assinatura' => now()]);
-        $proventosLog($id, null, $funcId, 'assinatura', 'autorizado', 'assinado', 'Aceite eletrônico confirmado', $request->ip(), $request->userAgent(), ['otp_validado' => true]);
+        $proventosLog($id, null, $funcId, 'assinatura', 'aguardando_autorizacao', 'assinado', 'Aceite eletrônico confirmado', $request->ip(), $request->userAgent(), ['otp_validado' => true]);
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
@@ -5915,10 +5915,10 @@ Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($
 
         $p = DB::table('proventos')->where('id', $id)->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
-        if ($p->status !== 'assinado') return response()->json(['error' => 'Provento precisa estar assinado para finalizar'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($p->status !== 'autorizado') return response()->json(['error' => 'Provento precisa estar autorizado para finalizar'], 422)->header('Access-Control-Allow-Origin', '*');
 
         DB::table('proventos')->where('id', $id)->update(['status' => 'finalizado', 'finalizado_por' => $u->id, 'data_finalizacao' => now()]);
-        $proventosLog($id, $u->id, $p->funcionario_id, 'finalizacao', 'assinado', 'finalizado', 'Provento finalizado', $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $p->funcionario_id, 'finalizacao', 'autorizado', 'finalizado', 'Provento finalizado', $request->ip(), $request->userAgent());
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
