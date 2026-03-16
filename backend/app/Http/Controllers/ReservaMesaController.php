@@ -18,17 +18,19 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
-        // Garante que a unidade usada é consistente com o perfil, igual ao resumo
-        $unidadeId = $request->get('unidade_id');
+        // Cada unidade é isolada: listar só reservas da unidade escolhida (ou da unidade do usuário se não for ADMIN)
+        $unidadeId = $request->filled('unidade_id') ? $request->unidade_id : null;
         if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
             $unidadeId = $unidadeIdUsuario;
         }
 
-        $query = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,unidade_id', 'usuario:id,nome']);
-
-        if ($unidadeId) {
-            $query->where('unidade_id', $unidadeId);
+        // Sem unidade definida = não devolver reservas de todas as unidades
+        if (!$unidadeId) {
+            return response()->json([]);
         }
+
+        $query = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,unidade_id', 'usuario:id,nome'])
+            ->where('unidade_id', $unidadeId);
 
         if ($request->filled('data_reserva')) {
             $query->where('data_reserva', $request->data_reserva);
@@ -60,27 +62,30 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
-        // Sempre que o usuário não for ADMIN, usamos SEMPRE a unidade dele,
-        // ignorando o filtro enviado no request, para manter consistência
-        // com a listagem de mesas e com o que o frontend consegue operar.
-        $unidadeId = $request->get('unidade_id');
+        // Resumo por unidade: mesma regra do index (ADMIN = unidade do filtro; demais = unidade do usuário)
+        $unidadeId = $request->filled('unidade_id') ? $request->unidade_id : null;
         if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
             $unidadeId = $unidadeIdUsuario;
+        }
+        if (!$unidadeId) {
+            return response()->json([
+                'total_mesas' => 0,
+                'mesas_livres' => 0,
+                'mesas_reservadas' => 0,
+                'mesas_ocupadas' => 0,
+                'mesas_aguardando_cliente' => 0,
+                'total_reservas_dia' => 0,
+            ]);
         }
 
         $dataReserva = $request->get('data_reserva', date('Y-m-d'));
 
-        $queryMesas = Mesa::where('ativo', true);
-        if ($unidadeId) {
-            $queryMesas->where('unidade_id', $unidadeId);
-        }
+        $queryMesas = Mesa::where('ativo', true)->where('unidade_id', $unidadeId);
         $totalMesas = $queryMesas->count();
 
-        $queryReservas = ReservaMesa::where('data_reserva', $dataReserva)
+        $queryReservas = ReservaMesa::where('unidade_id', $unidadeId)
+            ->where('data_reserva', $dataReserva)
             ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
-        if ($unidadeId) {
-            $queryReservas->where('unidade_id', $unidadeId);
-        }
         $reservasAtivas = $queryReservas->get();
 
         $mesasIdsComReserva = $reservasAtivas->pluck('mesa_id')->unique();
