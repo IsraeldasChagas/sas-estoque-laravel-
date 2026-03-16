@@ -10828,12 +10828,12 @@ async function popularMesasReserva(unidadeId) {
 async function abrirMesaLivre(mesaId, mesas, unidadeId) {
   var m = (mesas || []).find(function(x) { return x.id == mesaId; });
   if (!m || !unidadeId) { showToast('Selecione uma unidade e clique em uma mesa.', 'warning'); return; }
-  var hid = document.getElementById('reservaFormUnidadeId');
-  if (hid) hid.value = unidadeId;
   document.getElementById('reservaMesaModalTitle').textContent = 'Nova Reserva';
   var form = document.getElementById('reservaMesaForm');
   form.reset();
   form.querySelector('[name="id"]').value = '';
+  var hid = document.getElementById('reservaFormUnidadeId');
+  if (hid) hid.value = String(unidadeId);
   form.querySelector('[name="mesa_id"]').value = mesaId;
   form.querySelector('[name="data_reserva"]').value = document.getElementById('reservasDataFiltro')?.value || new Date().toISOString().slice(0, 10);
   form.querySelector('[name="qtd_pessoas"]').value = m.capacidade || 4;
@@ -11151,9 +11151,12 @@ function setupReservasMesasModule() {
     e.preventDefault();
     var form = e.target;
     var id = form.querySelector('[name="id"]').value;
-    var unidadeVal = (document.getElementById('reservaFormUnidadeId') && document.getElementById('reservaFormUnidadeId').value) || (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value);
+    var hid = document.getElementById('reservaFormUnidadeId');
+    var filtroUnidade = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
+    var unidadeVal = (hid && hid.value) || filtroUnidade;
+    if (!unidadeVal) { showToast('Unidade não definida. Selecione a unidade no filtro e abra o formulário novamente.', 'error'); return; }
     var data = {
-      unidade_id: unidadeVal,
+      unidade_id: String(unidadeVal).trim(),
       mesa_id: form.querySelector('[name="mesa_id"]').value,
       nome_cliente: form.querySelector('[name="nome_cliente"]').value,
       telefone_cliente: form.querySelector('[name="telefone_cliente"]').value,

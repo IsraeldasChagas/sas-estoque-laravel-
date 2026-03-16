@@ -19,18 +19,21 @@ class ReservaMesaController extends Controller
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
         // Cada unidade é isolada: listar só reservas da unidade escolhida (ou da unidade do usuário se não for ADMIN)
-        $unidadeId = $request->filled('unidade_id') ? $request->unidade_id : null;
+        $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+        if ($unidadeId <= 0) {
+            $unidadeId = null;
+        }
         if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $unidadeId = $unidadeIdUsuario;
+            $unidadeId = (int) $unidadeIdUsuario;
         }
 
-        // Sem unidade definida = não devolver reservas de todas as unidades
+        // Sem unidade definida = não devolver reservas de outras unidades
         if (!$unidadeId) {
             return response()->json([]);
         }
 
         $query = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,unidade_id', 'usuario:id,nome'])
-            ->where('unidade_id', $unidadeId);
+            ->where('unidade_id', '=', $unidadeId);
 
         if ($request->filled('data_reserva')) {
             $query->where('data_reserva', $request->data_reserva);
@@ -62,10 +65,13 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
-        // Resumo por unidade: mesma regra do index (ADMIN = unidade do filtro; demais = unidade do usuário)
-        $unidadeId = $request->filled('unidade_id') ? $request->unidade_id : null;
+        // Resumo por unidade: mesma regra do index
+        $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+        if ($unidadeId <= 0) {
+            $unidadeId = null;
+        }
         if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $unidadeId = $unidadeIdUsuario;
+            $unidadeId = (int) $unidadeIdUsuario;
         }
         if (!$unidadeId) {
             return response()->json([
@@ -109,11 +115,18 @@ class ReservaMesaController extends Controller
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
-        $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
+        $unidadeIdUsuario = $usuario ? (int) $usuario->unidade_id : null;
 
+        // Só não-ADMIN tem unidade fixa; ADMIN usa sempre a unidade enviada no corpo (uma reserva = uma unidade)
         if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
             $request->merge(['unidade_id' => $unidadeIdUsuario]);
         }
+
+        $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+        if ($unidadeId <= 0 || !\DB::table('unidades')->where('id', $unidadeId)->exists()) {
+            return response()->json(['message' => 'Unidade inválida ou não informada.'], 422);
+        }
+        $request->merge(['unidade_id' => $unidadeId]);
 
         $validator = Validator::make($request->all(), [
             'unidade_id' => 'required|exists:unidades,id',
