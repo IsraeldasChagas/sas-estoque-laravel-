@@ -19,16 +19,20 @@ class MesaController extends Controller
 
         $query = Mesa::query()->where('ativo', true);
 
-        if ($perfil === 'ADMIN') {
-            if ($request->filled('unidade_id')) {
-                $query->where('unidade_id', $request->unidade_id);
-            }
-        } else {
-            if (!$unidadeIdUsuario) {
-                return response()->json([]);
-            }
-            $query->where('unidade_id', $unidadeIdUsuario);
+        // Isolar mesas por unidade, mesma regra das reservas:
+        // - se vier unidade_id no request, usamos essa (para qualquer perfil);
+        // - senão, se o usuário tiver unidade fixa, usamos a dele;
+        // - se mesmo assim não tiver unidade, não retornamos mesas.
+        $unidadeId = null;
+        if ($request->filled('unidade_id')) {
+            $unidadeId = (int) $request->unidade_id;
+        } elseif ($unidadeIdUsuario) {
+            $unidadeId = (int) $unidadeIdUsuario;
         }
+        if ($unidadeId <= 0) {
+            return response()->json([]);
+        }
+        $query->where('unidade_id', $unidadeId);
 
         $mesas = $query->orderBy('numero_mesa')->get();
         return response()->json($mesas);
@@ -41,9 +45,20 @@ class MesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
-        if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $request->merge(['unidade_id' => $unidadeIdUsuario]);
+        // Definição da unidade da mesa:
+        // - Se vier unidade_id no request, usamos essa;
+        // - Senão, se o usuário tiver unidade fixa, usamos a dele;
+        // - Se não houver unidade válida, não permitimos criar.
+        $unidadeId = null;
+        if ($request->filled('unidade_id')) {
+            $unidadeId = (int) $request->unidade_id;
+        } elseif ($unidadeIdUsuario) {
+            $unidadeId = (int) $unidadeIdUsuario;
         }
+        if ($unidadeId <= 0 || !DB::table('unidades')->where('id', $unidadeId)->exists()) {
+            return response()->json(['message' => 'Unidade inválida ou não informada.'], 422);
+        }
+        $request->merge(['unidade_id' => $unidadeId]);
 
         $validator = Validator::make($request->all(), [
             'unidade_id' => 'required|exists:unidades,id',
