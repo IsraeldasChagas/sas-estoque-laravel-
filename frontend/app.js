@@ -6462,7 +6462,7 @@ function renderProventos(lista) {
     }
     if (podeCriar) {
       if (["rascunho","aguardando_autorizacao"].includes(p.status)) acoes += `<button type="button" class="table-action btn-edit-provento" data-id="${p.id}">Editar</button>`;
-      if (p.status === "aguardando_autorizacao") acoes += `<button type="button" class="table-action btn-autorizar-provento" data-id="${p.id}">Autorizar</button>`;
+      if (p.status === "assinado") acoes += `<button type="button" class="table-action btn-autorizar-provento" data-id="${p.id}">Autorizar</button>`;
       if (["autorizado","aguardando_assinatura","assinado"].includes(p.status) && p.status !== "assinado") acoes += ``;
       if (p.status === "assinado") acoes += `<button type="button" class="table-action btn-finalizar-provento" data-id="${p.id}">Finalizar</button>`;
       if (!["finalizado","cancelado","rejeitado"].includes(p.status)) acoes += `<button type="button" class="table-action btn-danger btn-cancelar-provento" data-id="${p.id}">Cancelar</button>`;
