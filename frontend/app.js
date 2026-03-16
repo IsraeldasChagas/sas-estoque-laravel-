@@ -10862,6 +10862,7 @@ async function abrirDetalhesReserva(id) {
         '<button type="button" class="btn primary" data-action="menos-pessoa" data-id="' + r.id + '">➖ Menos pessoa</button>' +
         '<button type="button" class="btn neutral" data-action="juntar-mesa" data-id="' + r.id + '">🔗 Juntar mesa</button>' +
         '<button type="button" class="btn neutral" data-action="separar-mesa" data-id="' + r.id + '">✂️ Separar mesa</button>' +
+        '<button type="button" class="btn danger" data-action="liberar-mesa" data-id="' + r.id + '">✅ Liberar mesa</button>' +
         '</div>';
     }
     var btnWhatsApp = r.telefone_cliente ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp</button></p>' : '';
@@ -10887,6 +10888,7 @@ async function abrirDetalhesReserva(id) {
         else if (action === 'menos-pessoa') acaoMenosPessoa(resid, data);
         else if (action === 'juntar-mesa') acaoJuntarMesa(resid, data);
         else if (action === 'separar-mesa') acaoSepararMesa(resid, data);
+        else if (action === 'liberar-mesa') acaoLiberarMesa(resid, data);
       });
     });
   } catch (e) {
@@ -10999,6 +11001,21 @@ async function acaoSepararMesa(reservId, data) {
     await loadReservasMesas();
   } catch (e) {
     showToast(e.message || 'Erro ao separar.', 'error');
+  }
+}
+
+async function acaoLiberarMesa(reservId, data) {
+  if (!confirm('Liberar esta mesa e finalizar a reserva?')) return;
+  try {
+    await fetchJSON('/reservas-mesas/' + reservId + '/status', {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'finalizada' })
+    });
+    showToast('Mesa liberada e reserva finalizada.', 'success');
+    document.getElementById('reservaDetalhesModal')?.classList.remove('active');
+    await loadReservasMesas();
+  } catch (e) {
+    showToast(e.message || 'Erro ao liberar mesa.', 'error');
   }
 }
 

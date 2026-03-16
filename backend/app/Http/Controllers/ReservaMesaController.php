@@ -52,14 +52,19 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
+        // Sempre que o usuário não for ADMIN, usamos SEMPRE a unidade dele,
+        // ignorando o filtro enviado no request, para manter consistência
+        // com a listagem de mesas e com o que o frontend consegue operar.
         $unidadeId = $request->get('unidade_id');
+        if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
+            $unidadeId = $unidadeIdUsuario;
+        }
+
         $dataReserva = $request->get('data_reserva', date('Y-m-d'));
 
         $queryMesas = Mesa::where('ativo', true);
         if ($unidadeId) {
             $queryMesas->where('unidade_id', $unidadeId);
-        } elseif ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $queryMesas->where('unidade_id', $unidadeIdUsuario);
         }
         $totalMesas = $queryMesas->count();
 
@@ -67,8 +72,6 @@ class ReservaMesaController extends Controller
             ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
         if ($unidadeId) {
             $queryReservas->where('unidade_id', $unidadeId);
-        } elseif ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $queryReservas->where('unidade_id', $unidadeIdUsuario);
         }
         $reservasAtivas = $queryReservas->get();
 
