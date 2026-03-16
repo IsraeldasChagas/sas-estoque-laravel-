@@ -18,12 +18,16 @@ class ReservaMesaController extends Controller
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
 
+        // Garante que a unidade usada é consistente com o perfil, igual ao resumo
+        $unidadeId = $request->get('unidade_id');
+        if ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
+            $unidadeId = $unidadeIdUsuario;
+        }
+
         $query = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,unidade_id', 'usuario:id,nome']);
 
-        if ($request->filled('unidade_id')) {
-            $query->where('unidade_id', $request->unidade_id);
-        } elseif ($perfil !== 'ADMIN' && $unidadeIdUsuario) {
-            $query->where('unidade_id', $unidadeIdUsuario);
+        if ($unidadeId) {
+            $query->where('unidade_id', $unidadeId);
         }
 
         if ($request->filled('data_reserva')) {
@@ -32,6 +36,10 @@ class ReservaMesaController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        } else {
+            // Quando não há filtro de status, mostramos apenas reservas ativas,
+            // igual ao resumo e à contagem de mesas (evita divergência por canceladas).
+            $query->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
         }
 
         if ($request->filled('turno')) {
