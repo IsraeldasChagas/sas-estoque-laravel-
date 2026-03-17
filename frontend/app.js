@@ -11081,7 +11081,8 @@ function setupReservasMesasModule() {
     popularMesasReserva(this.value);
   });
 
-  document.getElementById('btnNovaMesaReserva') && document.getElementById('btnNovaMesaReserva').addEventListener('click', async function() {
+  function handleNovaMesaClick() {
+    return (async function() {
     var unidadeId = (document.getElementById('reservaFormUnidadeId') && document.getElementById('reservaFormUnidadeId').value) ||
       (document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').value) ||
       (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value);
@@ -11109,7 +11110,11 @@ function setupReservasMesasModule() {
     } catch (err) {
       showToast(err.message || 'Erro ao criar mesa', 'error');
     }
-  });
+  })();
+  }
+
+  document.getElementById('btnNovaMesaReserva') && document.getElementById('btnNovaMesaReserva').addEventListener('click', handleNovaMesaClick);
+  document.getElementById('btnNovaMesaReservaInline') && document.getElementById('btnNovaMesaReservaInline').addEventListener('click', handleNovaMesaClick);
 
   popularUnidades();
 
