@@ -11081,12 +11081,11 @@ function setupReservasMesasModule() {
     popularMesasReserva(this.value);
   });
 
-  function handleNovaMesaClick() {
-    return (async function() {
-    var unidadeId = (document.getElementById('reservaFormUnidadeId') && document.getElementById('reservaFormUnidadeId').value) ||
-      (document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').value) ||
-      (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value);
-    if (!unidadeId) { showToast('Selecione uma unidade primeiro.', 'warning'); return; }
+  document.getElementById('btnNovaMesaReserva') && document.getElementById('btnNovaMesaReserva').addEventListener('click', async function() {
+    var filtro = document.getElementById('reservasUnidadeFiltro');
+    var unidadeId = (filtro && filtro.value) || (document.getElementById('reservaFormUnidadeId') && document.getElementById('reservaFormUnidadeId').value) || (document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').value);
+    if (!unidadeId) { showToast('Selecione uma unidade no filtro acima primeiro.', 'warning'); return; }
+    unidadeId = String(unidadeId).trim();
     var numero = prompt('Número da mesa:', '1');
     if (!numero || !numero.trim()) return;
     numero = numero.trim();
@@ -11104,17 +11103,14 @@ function setupReservasMesasModule() {
       });
       var mesaNova = resp.mesa || resp;
       showToast('Mesa criada.', 'success');
+      await loadReservasMesas();
       await popularMesasReserva(unidadeId);
       var select = document.getElementById('reservaMesaSelect');
       if (select && mesaNova && mesaNova.id) select.value = String(mesaNova.id);
     } catch (err) {
       showToast(err.message || 'Erro ao criar mesa', 'error');
     }
-  })();
-  }
-
-  document.getElementById('btnNovaMesaReserva') && document.getElementById('btnNovaMesaReserva').addEventListener('click', handleNovaMesaClick);
-  document.getElementById('btnNovaMesaReservaInline') && document.getElementById('btnNovaMesaReservaInline').addEventListener('click', handleNovaMesaClick);
+  });
 
   popularUnidades();
 
