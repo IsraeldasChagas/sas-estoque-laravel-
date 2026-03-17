@@ -788,6 +788,7 @@
                 <h2>🍽 Reservas de Mesas</h2>
                 <div class="reservas-mesas-actions">
                   <button type="button" class="btn primary" id="openNovaReservaMesa">+ Nova Reserva</button>
+                  <button type="button" class="btn neutral" id="btnNovaMesaReserva" title="Criar nova mesa">+ Nova mesa</button>
                   <button type="button" class="btn secondary" id="openGerenciarMesas" style="display:none;">⚙️ Gerenciar Mesas</button>
                 </div>
               </div>
@@ -909,12 +910,9 @@
                   </label>
                   <label>
                     Mesa *
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                      <select name="mesa_id" id="reservaMesaSelect" required style="flex: 1;">
-                        <option value="">Selecione a mesa</option>
-                      </select>
-                      <button type="button" class="btn neutral" id="btnNovaMesaReserva" title="Criar nova mesa">+ Nova mesa</button>
-                    </div>
+                    <select name="mesa_id" id="reservaMesaSelect" required>
+                      <option value="">Selecione a mesa</option>
+                    </select>
                   </label>
                   <label>
                     Nome do cliente *
