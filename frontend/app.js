@@ -9069,8 +9069,10 @@ function setupModals() {
     if (!resumo) return;
     if (usuarioId) {
       const sel = document.getElementById("funcUsuarioExistente");
-      const opt = sel?.options[sel?.selectedIndex];
-      resumo.textContent = opt ? `Vinculado: ${opt.textContent}` : "Usuário vinculado";
+      const opt = sel?.options?.[sel?.selectedIndex];
+      if (opt?.textContent) resumo.textContent = `Vinculado: ${opt.textContent}`;
+      else if (login) resumo.textContent = `Vinculado: ${login}`;
+      else resumo.textContent = "Usuário vinculado";
       resumo.style.display = "";
     } else if (login) {
       const perfil = document.getElementById("funcionarioPerfilUsuario")?.value || "FUNCIONARIO";
@@ -9228,7 +9230,30 @@ function setupModals() {
     try {
       const fd = new FormData();
       if (id) {
-        const putPayload = { nome_completo: payload.nome_completo, data_nascimento: payload.data_nascimento, sexo: payload.sexo, estado_civil: payload.estado_civil, cargo: payload.cargo, unidade_id: payload.unidade_id ?? "", whatsapp: payload.whatsapp, email: payload.email, data_admissao: payload.data_admissao, status: payload.status, observacoes: payload.observacoes, banco: payload.banco, agencia: payload.agencia, conta: payload.conta, conta_digito: payload.conta_digito, pix: payload.pix };
+        const putPayload = {
+          nome_completo: payload.nome_completo,
+          data_nascimento: payload.data_nascimento,
+          sexo: payload.sexo,
+          estado_civil: payload.estado_civil,
+          cargo: payload.cargo,
+          unidade_id: payload.unidade_id ?? "",
+          whatsapp: payload.whatsapp,
+          email: payload.email,
+          data_admissao: payload.data_admissao,
+          status: payload.status,
+          observacoes: payload.observacoes,
+          banco: payload.banco,
+          agencia: payload.agencia,
+          conta: payload.conta,
+          conta_digito: payload.conta_digito,
+          pix: payload.pix,
+          // RH (Acesso ao sistema)
+          possui_acesso: payload.possui_acesso ? "1" : "0",
+          usuario_id: payload.usuario_id ?? null,
+          login_usuario: payload.login_usuario ?? null,
+          senha_usuario: payload.senha_usuario ?? null,
+          perfil_usuario: payload.perfil_usuario ?? null,
+        };
         Object.entries(putPayload).forEach(([k, v]) => { fd.append(k, v != null ? String(v) : ""); });
         if (temRemoverFoto) fd.append("remove_foto", "1");
         if (temFoto) fd.append("foto", funcionarioFotoFile);
