@@ -2157,14 +2157,13 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
         if ($copies < 1) $copies = 1;
         if ($copies > 200) $copies = 200;
 
-        // Layout fixo para grid no A4 (para evitar “uma só etiqueta” e evitar cortes no meio)
+        // Layout fixo em grid no A4 (posicionamento absoluto para evitar sobreposição na impressão)
         $cols = 4;
         $rows = 9;
         $perPage = $cols * $rows; // 36 etiquetas por página
         $pageCount = (int) ceil($copies / $perPage);
         
-        $labelBlock = '
-            <div class="etiqueta">
+        $labelInner = '
                 <div class="etiqueta-info">
                     <div class="produto-nome">' . htmlspecialchars($produtoNome) . '</div>
                     <div class="numero-lote">LOTE: ' . htmlspecialchars($numeroLote) . '</div>
@@ -2172,7 +2171,6 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
                     ' . ($dataValidade ? '<div class="validade">VAL: ' . htmlspecialchars($dataValidade) . '</div>' : '') . '
                 </div>
                 <img src="' . $qrCodeDataUri . '" class="qr-code" alt="QR Code" />
-            </div>
         ';
 
         $pagesHtml = '';
@@ -2181,11 +2179,16 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
             $end = min($copies, $start + $perPage);
             $qtyOnPage = $end - $start;
             $pageClass = ($p === $pageCount - 1) ? 'page last-page' : 'page';
-            $pagesHtml .= '
-                <div class="' . $pageClass . '">
-                    <div class="grid">' . str_repeat($labelBlock, $qtyOnPage) . '</div>
-                </div>
-            ';
+            $pagesHtml .= '<div class="' . $pageClass . '">';
+            for ($i = 0; $i < $qtyOnPage; $i++) {
+                $idx = $i; // índice dentro da página
+                $row = intdiv($idx, $cols);
+                $col = $idx % $cols;
+                $leftMm = $col * 50;
+                $topMm = $row * 30;
+                $pagesHtml .= '<div class="etiqueta" style="left: ' . $leftMm . 'mm; top: ' . $topMm . 'mm;">' . $labelInner . '</div>';
+            }
+            $pagesHtml .= '</div>';
         }
 
         // Gera HTML das páginas no A4 (grid com várias etiquetas)
@@ -2209,18 +2212,12 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
                 .page {
                     width: 210mm;
                     height: 297mm;
+                    position: relative;
+                    overflow: hidden;
                     page-break-after: always;
                 }
                 .page.last-page {
                     page-break-after: avoid;
-                }
-
-                .grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 50mm);
-                    grid-auto-rows: 30mm;
-                    align-content: start;
-                    justify-content: start;
                 }
 
                 .etiqueta {
@@ -2228,6 +2225,7 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
                     width: 50mm;
                     height: 30mm;
                     padding: 2mm;
+                    position: absolute;
                     display: flex;
                     flex-direction: row;
                     align-items: center;

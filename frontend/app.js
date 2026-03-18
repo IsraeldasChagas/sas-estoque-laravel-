@@ -1970,23 +1970,19 @@ async function imprimirEtiquetaLote(loteId, copies = 1) {
         .page {
           width: 210mm;
           height: 297mm;
+          position: relative; /* usado para posicionamento absoluto */
+          overflow: hidden; /* evita “vazar” para fora da página */
           page-break-after: always;
         }
         .page.last-page {
           page-break-after: avoid;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(4, 50mm);
-          grid-auto-rows: 30mm;
-          align-content: start;
-          justify-content: start;
         }
         .etiqueta {
           box-sizing: border-box;
           width: 50mm;
           height: 30mm;
           padding: 2mm;
+          position: absolute; /* evita sobreposição na impressão */
           display: flex;
           flex-direction: row;
           align-items: center;
@@ -2034,8 +2030,8 @@ async function imprimirEtiquetaLote(loteId, copies = 1) {
     const rows = 9;
     const perPage = cols * rows; // 36 etiquetas por A4
 
-    const labelHtml = `
-      <div class="etiqueta">
+    const labelHtml = (leftMm, topMm) => `
+      <div class="etiqueta" style="left: ${leftMm}mm; top: ${topMm}mm;">
         <div class="etiqueta-info">
           <div class="produto-nome">${escapeHtml(produtoNome)}</div>
           <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
@@ -2050,14 +2046,14 @@ async function imprimirEtiquetaLote(loteId, copies = 1) {
     for (let start = 0; start < safeCopies; start += perPage) {
       const end = Math.min(safeCopies, start + perPage);
       const isLast = end >= safeCopies;
-      const labels = Array.from({ length: end - start }, () => labelHtml).join("");
-      pagesHtml.push(`
-        <div class="page${isLast ? " last-page" : ""}">
-          <div class="grid">
-            ${labels}
-          </div>
-        </div>
-      `);
+      let labels = "";
+      for (let i = start; i < end; i++) {
+        const idx = i - start; // índice dentro da página
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        labels += labelHtml(col * 50, row * 30);
+      }
+      pagesHtml.push(`<div class="page${isLast ? " last-page" : ""}">${labels}</div>`);
     }
 
     // HTML das páginas (várias etiquetas em A4)
@@ -2216,23 +2212,19 @@ async function baixarEtiquetaLote(loteId, copies = 1) {
         .page {
           width: 210mm;
           height: 297mm;
+          position: relative; /* usado para posicionamento absoluto */
+          overflow: hidden; /* evita “vazar” para fora da página */
           page-break-after: always;
         }
         .page.last-page {
           page-break-after: avoid;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(4, 50mm);
-          grid-auto-rows: 30mm;
-          align-content: start;
-          justify-content: start;
         }
         .etiqueta {
           box-sizing: border-box;
           width: 50mm;
           height: 30mm;
           padding: 2mm;
+          position: absolute; /* evita sobreposição na impressão */
           display: flex;
           flex-direction: row;
           align-items: center;
@@ -2280,8 +2272,8 @@ async function baixarEtiquetaLote(loteId, copies = 1) {
     const rows = 9;
     const perPage = cols * rows; // 36 etiquetas por A4
 
-    const labelHtml = `
-      <div class="etiqueta">
+    const labelHtml = (leftMm, topMm) => `
+      <div class="etiqueta" style="left: ${leftMm}mm; top: ${topMm}mm;">
         <div class="etiqueta-info">
           <div class="produto-nome">${escapeHtml(produtoNome)}</div>
           <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
@@ -2296,14 +2288,14 @@ async function baixarEtiquetaLote(loteId, copies = 1) {
     for (let start = 0; start < safeCopies; start += perPage) {
       const end = Math.min(safeCopies, start + perPage);
       const isLast = end >= safeCopies;
-      const labels = Array.from({ length: end - start }, () => labelHtml).join("");
-      pagesHtml.push(`
-        <div class="page${isLast ? " last-page" : ""}">
-          <div class="grid">
-            ${labels}
-          </div>
-        </div>
-      `);
+      let labels = "";
+      for (let i = start; i < end; i++) {
+        const idx = i - start; // índice dentro da página
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        labels += labelHtml(col * 50, row * 30);
+      }
+      pagesHtml.push(`<div class="page${isLast ? " last-page" : ""}">${labels}</div>`);
     }
 
     // HTML das páginas (várias etiquetas em A4)
