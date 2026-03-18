@@ -8957,7 +8957,7 @@ function setupModals() {
           <h3>Contato</h3>
           <div class="view-fields-grid">
             ${field("WhatsApp", f.whatsapp)}
-            ${field("E-mail", f.email)}
+            ${field("E-mail", f.usuario_email || f.email)}
           </div>
         </div>
         <div class="form-section">
@@ -8973,7 +8973,7 @@ function setupModals() {
         <div class="form-section">
           <div class="view-fields-grid">
             ${field("Possui acesso ao sistema", acessoLabel)}
-            ${f.usuario_email ? field("Login (e-mail)", f.usuario_email) : ""}
+            ${field("Login (e-mail)", f.usuario_email || "-")}
             ${f.perfil_usuario ? field("Perfil no sistema", PERFIL_LABELS[f.perfil_usuario] || f.perfil_usuario) : ""}
             ${field("Cadastrado em", f.created_at)}
             ${field("Observações", f.observacoes)}
