@@ -1970,19 +1970,30 @@ async function imprimirEtiquetaLote(loteId, copies = 1) {
         .page {
           width: 210mm;
           height: 297mm;
-          position: relative; /* usado para posicionamento absoluto */
-          overflow: hidden; /* evita “vazar” para fora da página */
           page-break-after: always;
         }
         .page.last-page {
           page-break-after: avoid;
         }
-        .etiqueta {
-          box-sizing: border-box;
+        .pageTable {
+          border-collapse: collapse;
+          border-spacing: 0;
+          table-layout: fixed;
+          width: 210mm;
+        }
+        .pageTable td {
           width: 50mm;
           height: 30mm;
+          padding: 0;
+          margin: 0;
+          vertical-align: top;
+          overflow: hidden;
+        }
+        .etiqueta {
+          box-sizing: border-box;
+          width: 100%;
+          height: 100%;
           padding: 2mm;
-          position: absolute; /* evita sobreposição na impressão */
           display: flex;
           flex-direction: row;
           align-items: center;
@@ -2026,12 +2037,12 @@ async function imprimirEtiquetaLote(loteId, copies = 1) {
       </style>
     `;
     
-    const cols = 4;
+    const cols = 3;
     const rows = 9;
     const perPage = cols * rows; // 36 etiquetas por A4
 
-    const labelHtml = (leftMm, topMm) => `
-      <div class="etiqueta" style="left: ${leftMm}mm; top: ${topMm}mm;">
+    const labelHtml = `
+      <div class="etiqueta">
         <div class="etiqueta-info">
           <div class="produto-nome">${escapeHtml(produtoNome)}</div>
           <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
@@ -2046,14 +2057,22 @@ async function imprimirEtiquetaLote(loteId, copies = 1) {
     for (let start = 0; start < safeCopies; start += perPage) {
       const end = Math.min(safeCopies, start + perPage);
       const isLast = end >= safeCopies;
-      let labels = "";
-      for (let i = start; i < end; i++) {
-        const idx = i - start; // índice dentro da página
-        const row = Math.floor(idx / cols);
-        const col = idx % cols;
-        labels += labelHtml(col * 50, row * 30);
+      const maxIndexInPage = end - start;
+      const trs = [];
+      for (let r = 0; r < rows; r++) {
+        const tds = [];
+        for (let c = 0; c < cols; c++) {
+          const idxInPage = r * cols + c;
+          if (idxInPage < maxIndexInPage) {
+            tds.push(`<td>${labelHtml}</td>`);
+          } else {
+            tds.push(`<td></td>`);
+          }
+        }
+        trs.push(`<tr>${tds.join("")}</tr>`);
       }
-      pagesHtml.push(`<div class="page${isLast ? " last-page" : ""}">${labels}</div>`);
+      const tableHtml = `<table class="pageTable"><tbody>${trs.join("")}</tbody></table>`;
+      pagesHtml.push(`<div class="page${isLast ? " last-page" : ""}">${tableHtml}</div>`);
     }
 
     // HTML das páginas (várias etiquetas em A4)
@@ -2212,19 +2231,30 @@ async function baixarEtiquetaLote(loteId, copies = 1) {
         .page {
           width: 210mm;
           height: 297mm;
-          position: relative; /* usado para posicionamento absoluto */
-          overflow: hidden; /* evita “vazar” para fora da página */
           page-break-after: always;
         }
         .page.last-page {
           page-break-after: avoid;
         }
-        .etiqueta {
-          box-sizing: border-box;
+        .pageTable {
+          border-collapse: collapse;
+          border-spacing: 0;
+          table-layout: fixed;
+          width: 210mm;
+        }
+        .pageTable td {
           width: 50mm;
           height: 30mm;
+          padding: 0;
+          margin: 0;
+          vertical-align: top;
+          overflow: hidden;
+        }
+        .etiqueta {
+          box-sizing: border-box;
+          width: 100%;
+          height: 100%;
           padding: 2mm;
-          position: absolute; /* evita sobreposição na impressão */
           display: flex;
           flex-direction: row;
           align-items: center;
@@ -2268,12 +2298,12 @@ async function baixarEtiquetaLote(loteId, copies = 1) {
       </style>
     `;
     
-    const cols = 4;
+    const cols = 3;
     const rows = 9;
     const perPage = cols * rows; // 36 etiquetas por A4
 
-    const labelHtml = (leftMm, topMm) => `
-      <div class="etiqueta" style="left: ${leftMm}mm; top: ${topMm}mm;">
+    const labelHtml = `
+      <div class="etiqueta">
         <div class="etiqueta-info">
           <div class="produto-nome">${escapeHtml(produtoNome)}</div>
           <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
@@ -2288,14 +2318,22 @@ async function baixarEtiquetaLote(loteId, copies = 1) {
     for (let start = 0; start < safeCopies; start += perPage) {
       const end = Math.min(safeCopies, start + perPage);
       const isLast = end >= safeCopies;
-      let labels = "";
-      for (let i = start; i < end; i++) {
-        const idx = i - start; // índice dentro da página
-        const row = Math.floor(idx / cols);
-        const col = idx % cols;
-        labels += labelHtml(col * 50, row * 30);
+      const maxIndexInPage = end - start;
+      const trs = [];
+      for (let r = 0; r < rows; r++) {
+        const tds = [];
+        for (let c = 0; c < cols; c++) {
+          const idxInPage = r * cols + c;
+          if (idxInPage < maxIndexInPage) {
+            tds.push(`<td>${labelHtml}</td>`);
+          } else {
+            tds.push(`<td></td>`);
+          }
+        }
+        trs.push(`<tr>${tds.join("")}</tr>`);
       }
-      pagesHtml.push(`<div class="page${isLast ? " last-page" : ""}">${labels}</div>`);
+      const tableHtml = `<table class="pageTable"><tbody>${trs.join("")}</tbody></table>`;
+      pagesHtml.push(`<div class="page${isLast ? " last-page" : ""}">${tableHtml}</div>`);
     }
 
     // HTML das páginas (várias etiquetas em A4)
