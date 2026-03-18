@@ -9189,13 +9189,23 @@ function setupModals() {
     if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
     if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
     const possuiAcesso = dom.funcionarioPossuiAcesso?.checked || false;
-    if (possuiAcesso && !id) {
+    if (possuiAcesso) {
       const usuarioId = document.getElementById("funcionarioUsuarioId")?.value;
       const login = (form.elements.login_usuario?.value || "").trim();
       const senha = form.elements.senha_usuario?.value || "";
-      if (!usuarioId && (!login || senha.length < 6)) {
-        if (feedback) { feedback.textContent = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Configure o usuário antes de salvar.", "error");
-        return;
+      // Se não houver vínculo por usuário existente (`usuario_id`), precisa criar novo:
+      // nesse caso, exigimos login + senha válida para evitar dados "sobrando" do funcionário anterior.
+      if (!usuarioId) {
+        if (!login || senha.length < 6) {
+          if (feedback) {
+            feedback.textContent = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente.";
+            feedback.className = "form-feedback error";
+            feedback.classList.remove("hidden");
+          } else {
+            showToast("Configure o usuário antes de salvar.", "error");
+          }
+          return;
+        }
       }
     }
     if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; feedback.className = "form-feedback hidden"; }
