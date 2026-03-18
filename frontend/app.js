@@ -1796,6 +1796,19 @@ function mostrarOpcoesEtiqueta(loteId) {
       </header>
       <div style="padding: 1.5rem;">
         <p style="margin-bottom: 1.5rem;">Lote salvo com sucesso! Deseja imprimir a etiqueta?</p>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+            <span style="color: #555;">Quantidade de etiquetas</span>
+            <input
+              type="number"
+              min="1"
+              max="200"
+              value="1"
+              data-action="copies-input"
+              style="width: 110px; border-radius: 8px; padding: 0.5rem; border: 1px solid #d0d0d0;"
+            />
+          </label>
+        </div>
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
           <button type="button" class="btn secondary" data-action="cancel">Cancelar</button>
           <button type="button" class="btn secondary" data-action="download" data-lote-id="${loteId}">Baixar PDF</button>
@@ -1852,10 +1865,14 @@ function mostrarOpcoesEtiqueta(loteId) {
         e.preventDefault();
         e.stopPropagation();
         const id = downloadBtn.dataset.loteId ? Number(downloadBtn.dataset.loteId) : loteId;
+        const copiesInput = modal.querySelector('[data-action="copies-input"]');
+        let copies = Number(copiesInput?.value ?? 1);
+        if (!Number.isFinite(copies) || copies < 1) copies = 1;
+        if (copies > 200) copies = 200;
         console.log("📥 Botão download clicado, loteId:", id);
         closeModal();
         setTimeout(() => {
-          baixarEtiquetaLote(id);
+          baixarEtiquetaLote(id, copies);
         }, 150);
       });
     }
@@ -1865,10 +1882,14 @@ function mostrarOpcoesEtiqueta(loteId) {
         e.preventDefault();
         e.stopPropagation();
         const id = printBtn.dataset.loteId ? Number(printBtn.dataset.loteId) : loteId;
+        const copiesInput = modal.querySelector('[data-action="copies-input"]');
+        let copies = Number(copiesInput?.value ?? 1);
+        if (!Number.isFinite(copies) || copies < 1) copies = 1;
+        if (copies > 200) copies = 200;
         console.log("🖨️ Botão imprimir clicado, loteId:", id);
         closeModal();
         setTimeout(() => {
-          imprimirEtiquetaLote(id);
+          imprimirEtiquetaLote(id, copies);
         }, 150);
       });
     }
@@ -1893,7 +1914,7 @@ function mostrarOpcoesEtiqueta(loteId) {
 }
 
 // Imprime etiqueta do lote (usando a mesma lógica da lista de compras)
-async function imprimirEtiquetaLote(loteId) {
+async function imprimirEtiquetaLote(loteId, copies = 1) {
   console.log("🖨️ imprimirEtiquetaLote chamada com loteId:", loteId);
   
   if (!podeImprimirEtiqueta()) {
@@ -1905,6 +1926,10 @@ async function imprimirEtiquetaLote(loteId) {
     showToast("ID do lote não informado.", "error");
     return;
   }
+
+  let safeCopies = Number(copies);
+  if (!Number.isFinite(safeCopies) || safeCopies < 1) safeCopies = 1;
+  if (safeCopies > 200) safeCopies = 200;
   
   try {
     // Busca os dados do lote via API
@@ -1929,24 +1954,43 @@ async function imprimirEtiquetaLote(loteId) {
     // Usando API pública do QR Code: https://api.qrserver.com
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
     
-    // Estilo da etiqueta (tamanho: 50mm x 30mm)
+    // Estilo da impressão em A4 com grid (tamanho: 50mm x 30mm)
     const estilo = `
       <style>
         @page {
-          size: 50mm 30mm;
-          margin: 2mm;
+          size: A4 portrait;
+          margin: 0mm;
         }
         body {
           font-family: Arial, sans-serif;
           font-size: 8pt;
           margin: 0;
+          padding: 0;
+        }
+        .page {
+          width: 210mm;
+          height: 297mm;
+          page-break-after: always;
+        }
+        .page.last-page {
+          page-break-after: avoid;
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(4, 50mm);
+          grid-auto-rows: 30mm;
+          align-content: start;
+          justify-content: start;
+        }
+        .etiqueta {
+          box-sizing: border-box;
+          width: 50mm;
+          height: 30mm;
           padding: 2mm;
           display: flex;
           flex-direction: row;
           align-items: center;
           justify-content: space-between;
-          width: 46mm;
-          height: 26mm;
         }
         .etiqueta-info {
           flex: 1;
@@ -1981,11 +2025,42 @@ async function imprimirEtiquetaLote(loteId) {
           height: 22mm;
           margin-left: 3mm;
           flex-shrink: 0;
+          image-rendering: -webkit-optimize-contrast;
         }
       </style>
     `;
     
-    // HTML da etiqueta
+    const cols = 4;
+    const rows = 9;
+    const perPage = cols * rows; // 36 etiquetas por A4
+
+    const labelHtml = `
+      <div class="etiqueta">
+        <div class="etiqueta-info">
+          <div class="produto-nome">${escapeHtml(produtoNome)}</div>
+          <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
+          ${dataGeracao ? `<div class="data-geracao">GER: ${escapeHtml(dataGeracao)}</div>` : ''}
+          ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
+        </div>
+        <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
+      </div>
+    `;
+
+    const pagesHtml = [];
+    for (let start = 0; start < safeCopies; start += perPage) {
+      const end = Math.min(safeCopies, start + perPage);
+      const isLast = end >= safeCopies;
+      const labels = Array.from({ length: end - start }, () => labelHtml).join("");
+      pagesHtml.push(`
+        <div class="page${isLast ? " last-page" : ""}">
+          <div class="grid">
+            ${labels}
+          </div>
+        </div>
+      `);
+    }
+
+    // HTML das páginas (várias etiquetas em A4)
     const conteudo = `
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -1995,13 +2070,7 @@ async function imprimirEtiquetaLote(loteId) {
           ${estilo}
         </head>
         <body>
-          <div class="etiqueta-info">
-            <div class="produto-nome">${escapeHtml(produtoNome)}</div>
-            <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
-            ${dataGeracao ? `<div class="data-geracao">GER: ${escapeHtml(dataGeracao)}</div>` : ''}
-            ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
-          </div>
-          <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
+          ${pagesHtml.join("")}
         </body>
       </html>
     `;
@@ -2088,7 +2157,7 @@ async function imprimirEtiquetaLote(loteId) {
 }
 
 // Baixa PDF da etiqueta do lote
-async function baixarEtiquetaLote(loteId) {
+async function baixarEtiquetaLote(loteId, copies = 1) {
   console.log("📥 baixarEtiquetaLote chamada com loteId:", loteId);
   console.log("📥 currentUser:", currentUser);
   console.log("📥 podeImprimirEtiqueta():", podeImprimirEtiqueta());
@@ -2103,6 +2172,10 @@ async function baixarEtiquetaLote(loteId) {
     showToast("ID do lote não informado.", "error");
     return;
   }
+
+  let safeCopies = Number(copies);
+  if (!Number.isFinite(safeCopies) || safeCopies < 1) safeCopies = 1;
+  if (safeCopies > 200) safeCopies = 200;
   
   try {
     // Busca os dados do lote via API
@@ -2127,24 +2200,43 @@ async function baixarEtiquetaLote(loteId) {
     // Usando API pública do QR Code: https://api.qrserver.com
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
     
-    // Estilo da etiqueta (tamanho: 50mm x 30mm)
+    // Estilo da impressão em A4 com grid (tamanho: 50mm x 30mm)
     const estilo = `
       <style>
         @page {
-          size: 50mm 30mm;
-          margin: 2mm;
+          size: A4 portrait;
+          margin: 0mm;
         }
         body {
           font-family: Arial, sans-serif;
           font-size: 8pt;
           margin: 0;
+          padding: 0;
+        }
+        .page {
+          width: 210mm;
+          height: 297mm;
+          page-break-after: always;
+        }
+        .page.last-page {
+          page-break-after: avoid;
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(4, 50mm);
+          grid-auto-rows: 30mm;
+          align-content: start;
+          justify-content: start;
+        }
+        .etiqueta {
+          box-sizing: border-box;
+          width: 50mm;
+          height: 30mm;
           padding: 2mm;
           display: flex;
           flex-direction: row;
           align-items: center;
           justify-content: space-between;
-          width: 46mm;
-          height: 26mm;
         }
         .etiqueta-info {
           flex: 1;
@@ -2179,11 +2271,42 @@ async function baixarEtiquetaLote(loteId) {
           height: 22mm;
           margin-left: 3mm;
           flex-shrink: 0;
+          image-rendering: -webkit-optimize-contrast;
         }
       </style>
     `;
     
-    // HTML da etiqueta
+    const cols = 4;
+    const rows = 9;
+    const perPage = cols * rows; // 36 etiquetas por A4
+
+    const labelHtml = `
+      <div class="etiqueta">
+        <div class="etiqueta-info">
+          <div class="produto-nome">${escapeHtml(produtoNome)}</div>
+          <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
+          ${dataGeracao ? `<div class="data-geracao">GER: ${escapeHtml(dataGeracao)}</div>` : ''}
+          ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
+        </div>
+        <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
+      </div>
+    `;
+
+    const pagesHtml = [];
+    for (let start = 0; start < safeCopies; start += perPage) {
+      const end = Math.min(safeCopies, start + perPage);
+      const isLast = end >= safeCopies;
+      const labels = Array.from({ length: end - start }, () => labelHtml).join("");
+      pagesHtml.push(`
+        <div class="page${isLast ? " last-page" : ""}">
+          <div class="grid">
+            ${labels}
+          </div>
+        </div>
+      `);
+    }
+
+    // HTML das páginas (várias etiquetas em A4)
     const conteudo = `
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -2193,13 +2316,7 @@ async function baixarEtiquetaLote(loteId) {
           ${estilo}
         </head>
         <body>
-          <div class="etiqueta-info">
-            <div class="produto-nome">${escapeHtml(produtoNome)}</div>
-            <div class="numero-lote">LOTE: ${escapeHtml(numeroLote)}</div>
-            ${dataGeracao ? `<div class="data-geracao">GER: ${escapeHtml(dataGeracao)}</div>` : ''}
-            ${dataValidade ? `<div class="validade">VAL: ${escapeHtml(dataValidade)}</div>` : ''}
-          </div>
-          <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" />
+          ${pagesHtml.join("")}
         </body>
       </html>
     `;

@@ -2152,8 +2152,43 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
         if ($criadoEm) {
             $dataGeracao = date('d/m/Y', strtotime($criadoEm));
         }
+
+        $copies = (int) $request->query('copies', 1);
+        if ($copies < 1) $copies = 1;
+        if ($copies > 200) $copies = 200;
+
+        // Layout fixo para grid no A4 (para evitar “uma só etiqueta” e evitar cortes no meio)
+        $cols = 4;
+        $rows = 9;
+        $perPage = $cols * $rows; // 36 etiquetas por página
+        $pageCount = (int) ceil($copies / $perPage);
         
-        // Gera HTML da etiqueta (tamanho: 50mm x 30mm)
+        $labelBlock = '
+            <div class="etiqueta">
+                <div class="etiqueta-info">
+                    <div class="produto-nome">' . htmlspecialchars($produtoNome) . '</div>
+                    <div class="numero-lote">LOTE: ' . htmlspecialchars($numeroLote) . '</div>
+                    ' . ($dataGeracao ? '<div class="data-geracao">GER: ' . htmlspecialchars($dataGeracao) . '</div>' : '') . '
+                    ' . ($dataValidade ? '<div class="validade">VAL: ' . htmlspecialchars($dataValidade) . '</div>' : '') . '
+                </div>
+                <img src="' . $qrCodeDataUri . '" class="qr-code" alt="QR Code" />
+            </div>
+        ';
+
+        $pagesHtml = '';
+        for ($p = 0; $p < $pageCount; $p++) {
+            $start = $p * $perPage;
+            $end = min($copies, $start + $perPage);
+            $qtyOnPage = $end - $start;
+            $pageClass = ($p === $pageCount - 1) ? 'page last-page' : 'page';
+            $pagesHtml .= '
+                <div class="' . $pageClass . '">
+                    <div class="grid">' . str_repeat($labelBlock, $qtyOnPage) . '</div>
+                </div>
+            ';
+        }
+
+        // Gera HTML das páginas no A4 (grid com várias etiquetas)
         $html = '
         <!DOCTYPE html>
         <html>
@@ -2161,19 +2196,44 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
             <meta charset="UTF-8">
             <style>
                 @page {
-                    size: 50mm 30mm;
-                    margin: 2mm;
+                    size: A4 portrait;
+                    margin: 0mm;
                 }
                 body {
                     font-family: Arial, sans-serif;
                     font-size: 8pt;
                     margin: 0;
+                    padding: 0;
+                }
+
+                .page {
+                    width: 210mm;
+                    height: 297mm;
+                    page-break-after: always;
+                }
+                .page.last-page {
+                    page-break-after: avoid;
+                }
+
+                .grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 50mm);
+                    grid-auto-rows: 30mm;
+                    align-content: start;
+                    justify-content: start;
+                }
+
+                .etiqueta {
+                    box-sizing: border-box;
+                    width: 50mm;
+                    height: 30mm;
                     padding: 2mm;
                     display: flex;
                     flex-direction: row;
                     align-items: center;
                     justify-content: space-between;
                 }
+
                 .etiqueta-info {
                     flex: 1;
                     display: flex;
@@ -2204,18 +2264,11 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
                     width: 22mm;
                     height: 22mm;
                     margin-left: 3mm;
+                    flex-shrink: 0;
                 }
             </style>
         </head>
-        <body>
-            <div class="etiqueta-info">
-                <div class="produto-nome">' . htmlspecialchars($produtoNome) . '</div>
-                <div class="numero-lote">LOTE: ' . htmlspecialchars($numeroLote) . '</div>
-                ' . ($dataGeracao ? '<div class="data-geracao">GER: ' . htmlspecialchars($dataGeracao) . '</div>' : '') . '
-                ' . ($dataValidade ? '<div class="validade">VAL: ' . htmlspecialchars($dataValidade) . '</div>' : '') . '
-            </div>
-            <img src="' . $qrCodeDataUri . '" class="qr-code" alt="QR Code" />
-        </body>
+        <body>' . $pagesHtml . '</body>
         </html>';
         
         // Gera PDF usando dompdf
@@ -2229,7 +2282,7 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
             $dompdf->setOptions($options);
             
             $dompdf->loadHtml($html);
-            $dompdf->setPaper([0, 0, 141.732, 85.039], 'portrait'); // 50mm x 30mm em pontos (1mm = 2.83465 pontos)
+            $dompdf->setPaper('a4', 'portrait');
             $dompdf->render();
             
             \Log::info('PDF gerado com sucesso para lote ID: ' . $id);
