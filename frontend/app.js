@@ -8873,6 +8873,18 @@ function setupModals() {
     if (submitBtn) submitBtn.textContent = editId ? "Salvar alterações" : "Salvar";
     if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
+
+    // RH: garantir que não fique valor "sobrando" no vínculo do usuário
+    const uidEl = document.getElementById("funcionarioUsuarioId");
+    const loginEl = document.getElementById("funcionarioLoginUsuario");
+    const senhaEl = document.getElementById("funcionarioSenhaUsuario");
+    const perfilEl = document.getElementById("funcionarioPerfilUsuario");
+    if (uidEl) uidEl.value = "";
+    if (loginEl) loginEl.value = "";
+    if (senhaEl) senhaEl.value = "";
+    if (perfilEl) perfilEl.value = "FUNCIONARIO";
+    if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
+
     funcionarioFotoFile = null;
     funcionarioFotoRemovida = false;
     if (editId) {
@@ -8884,15 +8896,14 @@ function setupModals() {
       if (f.possui_acesso) {
         dom.funcionarioPossuiAcesso.checked = true;
         if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.remove("hidden");
-        const loginEl = document.getElementById("funcionarioLoginUsuario");
-        if (loginEl && f.usuario_email) loginEl.value = f.usuario_email;
-        const perfilEl = document.getElementById("funcionarioPerfilUsuario");
+        if (loginEl) loginEl.value = f.usuario_email || "";
         if (perfilEl) perfilEl.value = f.perfil_usuario || "FUNCIONARIO";
-        if (f.usuario_id) {
-          const uidEl = document.getElementById("funcionarioUsuarioId");
-          if (uidEl) uidEl.value = f.usuario_id;
-        }
+        if (uidEl) uidEl.value = f.usuario_id ? String(f.usuario_id) : "";
         atualizarFuncionarioUsuarioResumo();
+      } else {
+        // Se não possui acesso, deixa os campos de usuário zerados
+        if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
+        if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
       }
       if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = true;
       if (dom.funcionarioAvatarPreview) {
