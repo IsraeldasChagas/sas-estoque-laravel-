@@ -8957,7 +8957,7 @@ function setupModals() {
           <h3>Contato</h3>
           <div class="view-fields-grid">
             ${field("WhatsApp", f.whatsapp)}
-            ${field("E-mail", f.usuario_email || f.email)}
+            ${field("E-mail", f.email)}
           </div>
         </div>
         <div class="form-section">
