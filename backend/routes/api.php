@@ -5834,7 +5834,7 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
     }
 });
 
-Route::post('/proventos', function (Request $request) use ($proventosAuth, $proventosLog, $podeCriarProvento) {
+Route::post('/proventos', function (Request $request) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeCriarProvento) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -5879,7 +5879,7 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
     }
 });
 
-Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeCriarProvento) {
+Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeCriarProvento) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -5920,7 +5920,7 @@ Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAu
     }
 });
 
-Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -5943,7 +5943,7 @@ Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($
     }
 });
 
-Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) use ($proventosAuth, $proventosLog) {
+Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras) {
     try {
         if (!Schema::hasTable('proventos') || !Schema::hasTable('proventos_assinaturas')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6015,7 +6015,7 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
     }
 });
 
-Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
     try {
         if (!Schema::hasTable('proventos') || !Schema::hasTable('proventos_assinaturas')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6054,7 +6054,7 @@ Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, 
     }
 });
 
-Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6076,7 +6076,7 @@ Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($
     }
 });
 
-Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
