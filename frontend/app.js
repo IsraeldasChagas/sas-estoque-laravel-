@@ -10858,6 +10858,48 @@ async function excluirBackupFornecedor(id) {
 // ========== LOGS E AUDITORIA ==========
 let stateLogsProventoId = null;
 
+/** Converte user_agent em texto legível: "Celular Samsung S23", "Computador Windows", etc. */
+function parseUserAgentLegivel(ua, comEmoji = false) {
+  if (!ua || typeof ua !== "string") return "-";
+  const s = ua;
+  const isMobile = /\bMobile\b/i.test(s) && !/iPad/i.test(s);
+  const isTablet = /iPad|Tablet|PlayBook|Silk/i.test(s);
+  if (/iPhone/i.test(s)) return comEmoji ? "📱 Celular iPhone" : "Celular iPhone";
+  if (/iPad/i.test(s)) return comEmoji ? "📱 Tablet iPad" : "Tablet iPad";
+  if (/iPod/i.test(s)) return comEmoji ? "📱 Celular iPod" : "Celular iPod";
+  if (/SamsungBrowser|SM-[A-Z0-9-]+/i.test(s) || /Android.*Samsung/i.test(s)) {
+    const m = s.match(/SM-([A-Z])(\d+)[A-Z]?/i);
+    let modelo = "Samsung";
+    if (m) {
+      const ser = (m[1] || "").toUpperCase();
+      const num = parseInt((m[2] || "").replace(/\D/g, "").slice(0, 3), 10) || 0;
+      if (ser === "S" && num >= 920) modelo = "Samsung Galaxy S24";
+      else if (ser === "S" && num >= 910) modelo = "Samsung Galaxy S23";
+      else if (ser === "S" && num >= 900) modelo = "Samsung Galaxy S22";
+      else if (ser === "S" && num >= 890) modelo = "Samsung Galaxy S21";
+      else if (ser === "A" && num) modelo = `Samsung Galaxy A${String(num).slice(0, 2)}`;
+      else if (ser === "M" && num) modelo = `Samsung Galaxy M${String(num).slice(0, 2)}`;
+      else if (ser === "G" && num >= 990) modelo = "Samsung Galaxy S21";
+    }
+    const txt = isMobile ? `Celular ${modelo}` : `Tablet ${modelo}`;
+    return comEmoji ? `📱 ${txt}` : txt;
+  }
+  if (/Android/i.test(s)) return comEmoji ? "📱 Celular Android" : (isMobile ? "Celular Android" : "Tablet Android");
+  if (/Windows Phone|IEMobile/i.test(s)) return comEmoji ? "📱 Celular Windows" : "Celular Windows";
+  if (/BlackBerry|BB10/i.test(s)) return comEmoji ? "📱 Celular BlackBerry" : "Celular BlackBerry";
+  if (isTablet) return comEmoji ? "📱 Tablet" : "Tablet";
+  if (isMobile) return comEmoji ? "📱 Celular" : "Celular";
+  if (/Windows NT 10/i.test(s)) return comEmoji ? "💻 Computador Windows" : "Computador Windows";
+  if (/Windows NT 11|Windows 11/i.test(s)) return comEmoji ? "💻 Computador Windows 11" : "Computador Windows 11";
+  if (/Windows/i.test(s)) return comEmoji ? "💻 Computador Windows" : "Computador Windows";
+  if (/Macintosh|Mac OS X/i.test(s)) return comEmoji ? "💻 Computador Mac" : "Computador Mac";
+  if (/Linux/i.test(s) && !/Android/i.test(s)) return comEmoji ? "💻 Computador Linux" : "Computador Linux";
+  if (/CrOS/i.test(s)) return comEmoji ? "💻 Computador Chrome OS" : "Computador Chrome OS";
+  const browser = /Edg\//i.test(s) ? "Edge" : /Chrome\//i.test(s) ? "Chrome" : /Firefox\//i.test(s) ? "Firefox" : /Safari\//i.test(s) ? "Safari" : "";
+  const txt = browser ? `Computador (${browser})` : "Computador";
+  return comEmoji ? `💻 ${txt}` : txt;
+}
+
 async function loadLogs() {
   const tabGeral = document.getElementById("logsTabGeral");
   const tabProventos = document.getElementById("logsTabProventos");
@@ -10898,7 +10940,7 @@ async function loadLogsGeral() {
         <td data-label="Recurso">${esc(l.recurso)}</td>
         <td data-label="Descrição">${esc(l.descricao)}</td>
         <td data-label="IP">${esc(l.ip)}</td>
-        <td data-label="Dispositivo">${esc((l.user_agent || "").substring(0, 80))}${(l.user_agent && l.user_agent.length > 80 ? "…" : "")}</td>
+        <td data-label="Dispositivo" title="${esc((l.user_agent || "").substring(0, 200))}">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
       </tr>`;
     });
     tbody.innerHTML = rows.join("");
@@ -10950,7 +10992,7 @@ async function loadLogsProvento(id) {
         <td data-label="Status">${status}</td>
         <td data-label="Descrição">${esc(l.descricao)}</td>
         <td data-label="IP">${esc(l.ip)}</td>
-        <td data-label="Dispositivo">${esc((l.user_agent || "").substring(0, 60))}${(l.user_agent && l.user_agent.length > 60 ? "…" : "")}</td>
+        <td data-label="Dispositivo" title="${esc((l.user_agent || "").substring(0, 200))}">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
       </tr>`;
     });
     tbody.innerHTML = rows.join("");
