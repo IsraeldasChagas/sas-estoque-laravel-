@@ -2663,9 +2663,12 @@ function applyPermissions() {
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
   const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
   const permPersonalizadas = currentUser && Array.isArray(currentUser.permissoes_menu) && currentUser.permissoes_menu.length > 0;
-  const regras = permPersonalizadas
-    ? { ...regrasBase, sections: currentUser.permissoes_menu }
-    : regrasBase;
+  let sections = permPersonalizadas ? [...currentUser.permissoes_menu] : (regrasBase.sections || []);
+  // ADMIN e GERENTE sempre têm acesso a Logs (mesmo com permissões personalizadas)
+  if (["ADMIN", "GERENTE"].includes(perfil) && !sections.includes("logs")) {
+    sections = [...sections, "logs"];
+  }
+  const regras = { ...regrasBase, sections };
   updateUserHeader();
 
   dom.navLinks.forEach((link) => {
@@ -2688,7 +2691,7 @@ function applyPermissions() {
   // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (Backup de Fornecedores = apenas ADMIN)
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
-    const temAcessoConfig = regras.sections.includes("fornecedoresBackup") || regras.sections.includes("logs");
+    const temAcessoConfig = regras.sections.includes("fornecedoresBackup");
     configuracoesNavSubmenu.classList.toggle("hidden", !temAcessoConfig);
   }
 
