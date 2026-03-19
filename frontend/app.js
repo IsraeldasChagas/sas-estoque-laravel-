@@ -10860,6 +10860,21 @@ let stateLogsProventoId = null;
 let stateLogsProventosLista = [];
 let stateLogsGeralLista = [];
 
+/** Extrai modelo do dispositivo do user_agent (ex: Android "SM-S911B" ou "moto g stylus") */
+function extrairModeloDispositivoUA(ua) {
+  if (!ua || typeof ua !== "string") return "";
+  const s = ua;
+  const androidModel = s.match(/Android\s+[\d.]+;\s*([^);]+)\)/);
+  if (androidModel) {
+    const raw = androidModel[1].trim();
+    if (raw === "K" || raw.length <= 2) return ""; // Chrome reduced UA
+    return raw;
+  }
+  const iphoneModel = s.match(/iPhone[,\s]+([^;)]+)/);
+  if (iphoneModel) return "iPhone " + iphoneModel[1].trim();
+  return "";
+}
+
 /** Converte user_agent em texto legível: "Celular Samsung S23", "Computador Windows", etc. */
 function parseUserAgentLegivel(ua, comEmoji = false) {
   if (!ua || typeof ua !== "string") return "-";
@@ -10886,7 +10901,18 @@ function parseUserAgentLegivel(ua, comEmoji = false) {
     const txt = isMobile ? `Celular ${modelo}` : `Tablet ${modelo}`;
     return comEmoji ? `📱 ${txt}` : txt;
   }
-  if (/Android/i.test(s)) return comEmoji ? "📱 Celular Android" : (isMobile ? "Celular Android" : "Tablet Android");
+  if (/Android/i.test(s)) {
+    const modeloExtraido = extrairModeloDispositivoUA(ua);
+    let modelo = "Celular Android";
+    if (modeloExtraido) {
+      if (/moto|motorola/i.test(modeloExtraido)) modelo = `Celular Motorola ${modeloExtraido.replace(/moto\s*/i, "").trim()}`;
+      else if (/Pixel/i.test(modeloExtraido)) modelo = `Celular ${modeloExtraido}`;
+      else if (/Redmi|Mi\s|Xiaomi|POCO/i.test(modeloExtraido)) modelo = `Celular Xiaomi ${modeloExtraido}`;
+      else if (/OP\d|OnePlus/i.test(modeloExtraido)) modelo = `Celular OnePlus ${modeloExtraido}`;
+      else if (modeloExtraido.length <= 25) modelo = `Celular ${modeloExtraido}`;
+    }
+    return comEmoji ? `📱 ${modelo}` : modelo;
+  }
   if (/Windows Phone|IEMobile/i.test(s)) return comEmoji ? "📱 Celular Windows" : "Celular Windows";
   if (/BlackBerry|BB10/i.test(s)) return comEmoji ? "📱 Celular BlackBerry" : "Celular BlackBerry";
   if (isTablet) return comEmoji ? "📱 Tablet" : "Tablet";
@@ -10943,9 +10969,13 @@ function parseUserAgentDetalhado(ua) {
   else if (/CrOS/.test(s)) { sistemaOperacional = "Chrome OS"; }
   else if (linuxM) { sistemaOperacional = "Linux"; }
 
-  // Modelo do dispositivo (ex: SM-S911B)
+  // Modelo do dispositivo: priorizar extração legível (ex: moto g stylus 5G, SM-S911B)
   const modeloM = s.match(/SM-[A-Z0-9-]+/i) || s.match(/iPhone\d+,\d+/i);
   if (modeloM) dispositivoModelo = modeloM[0];
+  else {
+    const extraido = extrairModeloDispositivoUA(ua);
+    if (extraido) dispositivoModelo = extraido;
+  }
 
   return {
     dispositivo,
@@ -11124,19 +11154,23 @@ function setupLogsModule() {
     const det = parseUserAgentDetalhado(log.user_agent);
     const esc = s => (s == null || s === undefined ? "-" : String(s).replace(/</g, "&lt;"));
     const dt = log.created_at ? new Date(log.created_at + "Z").toLocaleString("pt-BR") : "-";
+    const usuarioOuFunc = log.usuario_nome || log.usuario_email || log.funcionario_nome || "-";
+    const telefone = log.funcionario_whatsapp || "";
+    const operadora = "Não disponível (não enviada pelo navegador)";
     const content = document.getElementById("dispositivoDetalhesContent");
     if (content) {
       content.innerHTML = `
         <div style="display:grid;gap:0.75rem;">
           <div><strong>Data/Hora:</strong> ${esc(dt)}</div>
-          <div><strong>Usuário:</strong> ${esc(log.usuario_nome || log.usuario_email || "-")}</div>
+          <div><strong>Usuário:</strong> ${esc(usuarioOuFunc)}</div>
           <div><strong>IP:</strong> ${esc(log.ip)}</div>
           <div><strong>Ação:</strong> ${esc(log.acao)}</div>
           <hr style="border:none;border-top:1px solid #ddd;margin:0.5rem 0;" />
-          <div><strong>Dispositivo:</strong> ${esc(det.dispositivo)}</div>
+          <div><strong>Dispositivo / Modelo:</strong> ${esc(det.dispositivo)}${det.dispositivoModelo && det.dispositivoModelo !== "-" ? " (" + esc(det.dispositivoModelo) + ")" : ""}</div>
           <div><strong>Navegador:</strong> ${esc(det.navegador)}</div>
           <div><strong>Sistema operacional:</strong> ${esc(det.sistemaOperacional)}</div>
-          <div><strong>Modelo (código):</strong> ${esc(det.dispositivoModelo)}</div>
+          <div><strong>Telefone (WhatsApp):</strong> ${telefone ? esc(telefone) : "-"}</div>
+          <div><strong>Operadora:</strong> ${operadora}</div>
           <hr style="border:none;border-top:1px solid #ddd;margin:0.5rem 0;" />
           <div><strong>User-Agent completo:</strong></div>
           <pre style="background:#f5f5f5;padding:0.75rem;font-size:0.8rem;overflow-x:auto;max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;">${esc(det.userAgentCompleto)}</pre>

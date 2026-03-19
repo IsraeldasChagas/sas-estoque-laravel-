@@ -6107,9 +6107,11 @@ Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proven
         $perfil = strtoupper(trim($u->perfil ?? ''));
         if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
 
-        $logs = DB::table('proventos_logs')->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
+        $logs = DB::table('proventos_logs')
+            ->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
+            ->leftJoin('funcionarios', 'proventos_logs.funcionario_id', '=', 'funcionarios.id')
             ->where('proventos_logs.provento_id', $id)
-            ->select('proventos_logs.*', 'usuarios.nome as usuario_nome')
+            ->select('proventos_logs.*', 'usuarios.nome as usuario_nome', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.whatsapp as funcionario_whatsapp')
             ->orderByDesc('proventos_logs.created_at')->get();
         return response()->json($logs)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -6200,9 +6202,11 @@ Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) us
         if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
         $logs = [];
         if (Schema::hasTable('proventos_logs')) {
-            $logs = DB::table('proventos_logs')->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
+            $logs = DB::table('proventos_logs')
+                ->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
+                ->leftJoin('funcionarios', 'proventos_logs.funcionario_id', '=', 'funcionarios.id')
                 ->where('proventos_logs.provento_id', $id)
-                ->select('proventos_logs.*', 'usuarios.nome as usuario_nome')
+                ->select('proventos_logs.*', 'usuarios.nome as usuario_nome', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.whatsapp as funcionario_whatsapp')
                 ->orderBy('proventos_logs.created_at')->get();
         }
         $assinaturas = [];
