@@ -6573,7 +6573,8 @@ const PROVENTO_TIPO_LABELS = { vale: "Vale", adiantamento: "Adiantamento", consu
 
 async function loadProventos(filtros = {}) {
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const usaMeusProventos = perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA";
+  const podeCriarProvento = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+  const usaMeusProventos = !podeCriarProvento; // Sem permissão para lançar: vê apenas os próprios proventos
   const url = usaMeusProventos ? "/proventos/meus" : "/proventos";
   try {
     const params = new URLSearchParams();
@@ -10057,7 +10058,8 @@ function setupNavigation() {
       else if (target === "proventos") {
         try {
           const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-          const isFuncionario = perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA";
+          const podeCriarProvento = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+          const isFuncionario = !podeCriarProvento; // Sem permissão: vê só os próprios proventos
           const titleEl = document.getElementById("proventosSectionTitle");
           const subtitleEl = document.getElementById("proventosSectionSubtitle");
           const filterForm = document.getElementById("proventosFilterForm");

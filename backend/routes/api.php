@@ -5723,7 +5723,6 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
         $u = $proventosAuth($request);
         if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (in_array($perfil, ['FUNCIONARIO', 'ATENDENTE_CAIXA'])) return response()->json(['error' => 'Acesse Meus Proventos'], 403)->header('Access-Control-Allow-Origin', '*');
 
         $q = DB::table('proventos')
             ->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
@@ -5743,6 +5742,16 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
         if ($autorizadoPor = $request->query('autorizado_por')) $q->where('proventos.autorizado_por', $autorizadoPor);
         if ($dataInicio = $request->query('data_inicio')) $q->whereDate('proventos.data_provento', '>=', $dataInicio);
         if ($dataFim = $request->query('data_fim')) $q->whereDate('proventos.data_provento', '<=', $dataFim);
+
+        // Sem permissão para lançar: vê apenas os próprios proventos
+        if (!$podeCriarProvento($perfil)) {
+            $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if ($funcId) {
+                $q->where('proventos.funcionario_id', $funcId);
+            } else {
+                return response()->json([])->header('Access-Control-Allow-Origin', '*');
+            }
+        }
 
         $lista = $q->orderByDesc('proventos.id')->get();
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
@@ -5774,7 +5783,7 @@ Route::get('/proventos/meus', function (Request $request) use ($proventosAuth) {
     }
 });
 
-Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAuth) {
+Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 404)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -5794,7 +5803,8 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
 
         $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if ($perfil === 'FUNCIONARIO' && (int)$p->funcionario_id !== (int)$funcId) {
+        // Sem permissão para lançar: só pode ver proventos próprios
+        if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) {
             return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         return response()->json($p)->header('Access-Control-Allow-Origin', '*');
