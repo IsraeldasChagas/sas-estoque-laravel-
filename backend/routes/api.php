@@ -5688,7 +5688,7 @@ Route::put('/funcionarios/{id}/inativar', function (Request $request, $id) {
 // PROVENTOS (Módulo Financeiro)
 // ============================================
 
-$proventosCors = fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+$proventosCors = fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
 Route::options('/proventos', $proventosCors);
 Route::options('/proventos/meus', $proventosCors);
 Route::options('/proventos/{id}', $proventosCors);
@@ -5703,6 +5703,13 @@ $proventosAuth = function (Request $req) {
     $uid = $req->header('X-Usuario-Id');
     $u = $uid ? DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first() : null;
     return $u;
+};
+$mergeDeviceExtras = function (Request $req, $extras) {
+    $base = is_array($extras) ? $extras : (is_string($extras) ? (json_decode($extras, true) ?: []) : []);
+    if (!is_array($base)) $base = [];
+    if ($m = $req->header('X-Device-Model')) $base['device_model'] = $m;
+    if ($p = $req->header('X-Device-Platform')) $base['device_platform'] = $p;
+    return array_filter($base) ?: null;
 };
 $proventosLog = function ($proventoId, $usuarioId, $funcionarioId, $acao, $statusAnt, $statusNovo, $desc = null, $ip = null, $ua = null, $extras = null) {
     if (!Schema::hasTable('proventos_logs')) return;
@@ -5864,7 +5871,7 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
         $provento = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
-        $proventosLog($id, $u->id, $insert['funcionario_id'], 'criacao', null, 'aguardando_autorizacao', 'Provento criado', $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $insert['funcionario_id'], 'criacao', null, 'aguardando_autorizacao', 'Provento criado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         return response()->json($provento, 201)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /proventos: ' . $e->getMessage());
@@ -5902,7 +5909,7 @@ Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAu
             'motivo' => trim($d['motivo']), 'observacao_interna' => $d['observacao_interna'] ?? null,
         ];
         DB::table('proventos')->where('id', $id)->update($up);
-        $proventosLog($id, $u->id, $p->funcionario_id, 'edicao', $p->status, $p->status, 'Provento editado', $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $p->funcionario_id, 'edicao', $p->status, $p->status, 'Provento editado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
@@ -5925,7 +5932,7 @@ Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($
         if ($p->status !== 'assinado') return response()->json(['error' => 'Provento precisa estar assinado para autorizar'], 422)->header('Access-Control-Allow-Origin', '*');
 
         DB::table('proventos')->where('id', $id)->update(['status' => 'autorizado', 'autorizado_por' => $u->id, 'data_autorizacao' => now()]);
-        $proventosLog($id, $u->id, $p->funcionario_id, 'autorizacao', 'assinado', 'autorizado', 'Provento autorizado', $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $p->funcionario_id, 'autorizacao', 'assinado', 'autorizado', 'Provento autorizado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
@@ -5988,7 +5995,7 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
                 }
             }
         }
-        $proventosLog($id, $u->id, $p->funcionario_id, 'otp_enviado', null, null, "Código enviado por {$canal}", $request->ip(), $request->userAgent(), ['canal' => $canal]);
+        $proventosLog($id, $u->id, $p->funcionario_id, 'otp_enviado', null, null, "Código enviado por {$canal}", $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, ['canal' => $canal]));
         $resp = ['message' => 'Código enviado com sucesso', 'codigo' => $codigo];
         if ($canal === 'email' && !$emailEnviado) {
             $resp['_aviso'] = 'E-mail pode não ter sido enviado. Use o código exibido abaixo.';
@@ -6037,7 +6044,7 @@ Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, 
 
         DB::table('proventos_assinaturas')->where('id', $reg->id)->update(['status_envio' => 'validado', 'validado_em' => now(), 'ip' => $request->ip(), 'user_agent' => $request->userAgent()]);
         DB::table('proventos')->where('id', $id)->update(['status' => 'assinado', 'data_assinatura' => now()]);
-        $proventosLog($id, null, $funcId, 'assinatura', 'aguardando_autorizacao', 'assinado', 'Aceite eletrônico confirmado', $request->ip(), $request->userAgent(), ['otp_validado' => true]);
+        $proventosLog($id, null, $funcId, 'assinatura', 'aguardando_autorizacao', 'assinado', 'Aceite eletrônico confirmado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, ['otp_validado' => true]));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
@@ -6059,7 +6066,7 @@ Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($
         if ($p->status !== 'autorizado') return response()->json(['error' => 'Provento precisa estar autorizado para finalizar'], 422)->header('Access-Control-Allow-Origin', '*');
 
         DB::table('proventos')->where('id', $id)->update(['status' => 'finalizado', 'finalizado_por' => $u->id, 'data_finalizacao' => now()]);
-        $proventosLog($id, $u->id, $p->funcionario_id, 'finalizacao', 'autorizado', 'finalizado', 'Provento finalizado', $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $p->funcionario_id, 'finalizacao', 'autorizado', 'finalizado', 'Provento finalizado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
@@ -6085,7 +6092,7 @@ Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($p
 
         $ant = $p->status;
         DB::table('proventos')->where('id', $id)->update(['status' => 'cancelado', 'cancelado_por' => $u->id, 'data_cancelamento' => now(), 'justificativa_cancelamento' => $just]);
-        $proventosLog($id, $u->id, $p->funcionario_id, 'cancelamento', $ant, 'cancelado', $just, $request->ip(), $request->userAgent());
+        $proventosLog($id, $u->id, $p->funcionario_id, 'cancelamento', $ant, 'cancelado', $just, $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
@@ -6123,7 +6130,7 @@ Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proven
 // ============================================
 // AUDIT LOGS - Log geral e exportação para perícia
 // ============================================
-$auditCors = fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+$auditCors = fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
 Route::options('/audit-logs', $auditCors);
 Route::options('/audit-logs/registrar', $auditCors);
 Route::options('/proventos/{id}/export-pericia', $auditCors);
@@ -6144,7 +6151,10 @@ Route::post('/audit-logs/registrar', function (Request $request) use ($auditAuth
         $descricao = trim($request->input('descricao', ''));
         if (empty($acao)) return response()->json(['error' => 'Ação obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
         $extras = $request->input('dados_extras');
-        if (is_array($extras) || is_object($extras)) $extras = json_encode($extras);
+        if (is_array($extras) || is_object($extras)) $extras = (array) $extras; else $extras = [];
+        if ($m = $request->header('X-Device-Model')) $extras['device_model'] = $m;
+        if ($p = $request->header('X-Device-Platform')) $extras['device_platform'] = $p;
+        $extras = !empty($extras) ? json_encode($extras) : null;
         DB::table('audit_logs')->insert([
             'usuario_id' => $u->id,
             'acao' => $acao,

@@ -24,6 +24,30 @@ function getUsuarioFotoUrl(path) {
 const storageKey = "sas-estoque-user";
 const currentSectionKey = "sas-estoque-current-section";
 
+// Cache para marca/modelo do dispositivo (User-Agent Client Hints - Chrome/Edge)
+let cachedDeviceInfo = null;
+let deviceInfoPromise = null;
+function ensureDeviceInfo() {
+  if (cachedDeviceInfo !== null) return;
+  if (deviceInfoPromise) return;
+  if (typeof navigator !== "undefined" && navigator.userAgentData?.getHighEntropyValues) {
+    deviceInfoPromise = navigator.userAgentData.getHighEntropyValues(["model", "platform"])
+      .then(v => { cachedDeviceInfo = { model: (v.model || "").trim(), platform: (v.platform || "").trim() }; })
+      .catch(() => { cachedDeviceInfo = {}; });
+  } else {
+    cachedDeviceInfo = {};
+  }
+}
+ensureDeviceInfo();
+
+function getDeviceHeaders() {
+  if (!cachedDeviceInfo) return {};
+  const h = {};
+  if (cachedDeviceInfo.model) h["X-Device-Model"] = cachedDeviceInfo.model;
+  if (cachedDeviceInfo.platform) h["X-Device-Platform"] = cachedDeviceInfo.platform;
+  return h;
+}
+
 // Colecao das principais referencias de interface usadas pelos modulos.
 const dom = {
   toast: document.getElementById("toast"),
@@ -1335,6 +1359,7 @@ async function fetchJSON(path, options = {}) {
     "Content-Type": "application/json",
     ...tokenHeaders,
     ...userHeaders,
+    ...getDeviceHeaders(),
     ...(headers || {}),
   };
   
@@ -7180,7 +7205,7 @@ function handleLogout() {
   if (currentUser && currentUser.id) {
     fetch(`${API_URL}/audit-logs/registrar`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser.id) },
+      headers: { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser.id), ...getDeviceHeaders() },
       body: JSON.stringify({ acao: "logout", recurso: "auth", descricao: "Logout realizado" }),
     }).catch(() => {});
   }
@@ -10143,7 +10168,7 @@ function setupNavigation() {
       else if (target === "logs") {
         fetch(`${API_URL}/audit-logs/registrar`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || "") },
+          headers: { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() },
           body: JSON.stringify({ acao: "acessar_secao", recurso: "logs", descricao: "Acesso à página de Logs e Auditoria" }),
         }).catch(() => {});
         await loadLogs();
@@ -10860,6 +10885,39 @@ let stateLogsProventoId = null;
 let stateLogsProventosLista = [];
 let stateLogsGeralLista = [];
 
+/** Infere marca legível a partir do modelo (ex: "Pixel 6" -> "Google Pixel 6", "SM-S911B" -> "Samsung Galaxy S23") */
+function inferirMarcaDoModelo(model) {
+  if (!model || typeof model !== "string") return "";
+  const m = model.trim();
+  if (!m) return "";
+  if (/^SM-|Samsung|Galaxy/i.test(m)) {
+    const sm = m.match(/SM-([A-Z])(\d+)[A-Z]?/i);
+    if (sm) {
+      const ser = (sm[1] || "").toUpperCase();
+      const num = parseInt((sm[2] || "").replace(/\D/g, "").slice(0, 3), 10) || 0;
+      if (ser === "S" && num >= 920) return "Samsung Galaxy S24";
+      if (ser === "S" && num >= 910) return "Samsung Galaxy S23";
+      if (ser === "S" && num >= 900) return "Samsung Galaxy S22";
+      if (ser === "S" && num >= 890) return "Samsung Galaxy S21";
+      if (ser === "A" && num) return `Samsung Galaxy A${String(num).slice(0, 2)}`;
+      if (ser === "M" && num) return `Samsung Galaxy M${String(num).slice(0, 2)}`;
+    }
+    return "Samsung " + m;
+  }
+  if (/Pixel/i.test(m)) return "Google " + m;
+  if (/moto|motorola/i.test(m)) return "Motorola " + m;
+  if (/Redmi|Mi\s|Xiaomi|POCO|Note\s*\d/i.test(m)) return "Xiaomi " + m;
+  if (/OP\d|OnePlus/i.test(m)) return "OnePlus " + m;
+  if (/iPhone|iPad|iPod/i.test(m)) return "Apple " + m;
+  if (/ASUS|Zenfone|Z00|ROG/i.test(m)) return "Asus " + m;
+  if (/LG-|V\d{2}|G\d|K\d/i.test(m)) return "LG " + m;
+  if (/Nokia|X-/i.test(m)) return "Nokia " + m;
+  if (/Realme|RMX/i.test(m)) return "Realme " + m;
+  if (/Oppo|CPH|Reno|Find/i.test(m)) return "Oppo " + m;
+  if (/Vivo|V\d{4}|Y\d{2}/i.test(m)) return "Vivo " + m;
+  return m;
+}
+
 /** Extrai modelo do dispositivo do user_agent (ex: Android "SM-S911B" ou "moto g stylus") */
 function extrairModeloDispositivoUA(ua) {
   if (!ua || typeof ua !== "string") return "";
@@ -10876,7 +10934,16 @@ function extrairModeloDispositivoUA(ua) {
 }
 
 /** Converte user_agent em texto legível: "Celular Samsung S23", "Computador Windows", etc. */
-function parseUserAgentLegivel(ua, comEmoji = false) {
+function parseUserAgentLegivel(ua, comEmoji = false, dadosExtras = null) {
+  const extras = typeof dadosExtras === "string" ? (() => { try { return JSON.parse(dadosExtras); } catch { return null; } })() : dadosExtras;
+  const deviceModel = extras?.device_model;
+  if (deviceModel && typeof deviceModel === "string" && deviceModel.trim()) {
+    const marcaModelo = inferirMarcaDoModelo(deviceModel);
+    if (marcaModelo) {
+      const txt = "Celular " + marcaModelo;
+      return comEmoji ? "📱 " + txt : txt;
+    }
+  }
   if (!ua || typeof ua !== "string") return "-";
   const s = ua;
   const isMobile = /\bMobile\b/i.test(s) && !/iPad/i.test(s);
@@ -10929,15 +10996,25 @@ function parseUserAgentLegivel(ua, comEmoji = false) {
 }
 
 /** Extrai dados detalhados do user_agent para auditoria/perícia */
-function parseUserAgentDetalhado(ua) {
-  if (!ua || typeof ua !== "string") return { dispositivo: "-", navegador: "-", sistemaOperacional: "-", userAgentCompleto: "-" };
-  const s = ua;
-  let dispositivo = parseUserAgentLegivel(ua, false);
+function parseUserAgentDetalhado(ua, dadosExtras = null) {
+  const extras = typeof dadosExtras === "string" ? (() => { try { return JSON.parse(dadosExtras); } catch { return null; } })() : dadosExtras;
+  const deviceModel = extras?.device_model;
+  let dispositivo = "-";
+  let dispositivoModelo = "";
+  if (deviceModel && typeof deviceModel === "string" && deviceModel.trim()) {
+    const marcaModelo = inferirMarcaDoModelo(deviceModel);
+    if (marcaModelo) {
+      dispositivo = "Celular " + marcaModelo;
+      dispositivoModelo = deviceModel;
+    }
+  }
+  if (dispositivo === "-" && (!ua || typeof ua !== "string")) return { dispositivo: "-", navegador: "-", sistemaOperacional: "-", dispositivoModelo: "-", userAgentCompleto: "-" };
+  if (dispositivo === "-") dispositivo = parseUserAgentLegivel(ua, false);
+  const s = ua || "";
   let navegador = "-";
   let versaoNavegador = "";
   let sistemaOperacional = "-";
   let versaoOS = "";
-  let dispositivoModelo = "";
 
   // Navegador e versão
   const edgeM = s.match(/Edg\/([\d.]+)/i);
@@ -10969,12 +11046,14 @@ function parseUserAgentDetalhado(ua) {
   else if (/CrOS/.test(s)) { sistemaOperacional = "Chrome OS"; }
   else if (linuxM) { sistemaOperacional = "Linux"; }
 
-  // Modelo do dispositivo: priorizar extração legível (ex: moto g stylus 5G, SM-S911B)
-  const modeloM = s.match(/SM-[A-Z0-9-]+/i) || s.match(/iPhone\d+,\d+/i);
-  if (modeloM) dispositivoModelo = modeloM[0];
-  else {
-    const extraido = extrairModeloDispositivoUA(ua);
-    if (extraido) dispositivoModelo = extraido;
+  // Modelo do dispositivo: só extrair do UA se não veio de dados_extras (Client Hints)
+  if (!dispositivoModelo && s) {
+    const modeloM = s.match(/SM-[A-Z0-9-]+/i) || s.match(/iPhone\d+,\d+/i);
+    if (modeloM) dispositivoModelo = modeloM[0];
+    else {
+      const extraido = extrairModeloDispositivoUA(ua);
+      if (extraido) dispositivoModelo = extraido;
+    }
   }
 
   return {
@@ -11027,7 +11106,7 @@ async function loadLogsGeral() {
         <td data-label="Recurso">${esc(l.recurso)}</td>
         <td data-label="Descrição">${esc(l.descricao)}</td>
         <td data-label="IP">${esc(l.ip)}</td>
-        <td data-label="Dispositivo" class="log-dispositivo-clicavel" data-log-index="${i}" data-log-origin="geral" title="Clique para ver detalhes da auditoria">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
+        <td data-label="Dispositivo" class="log-dispositivo-clicavel" data-log-index="${i}" data-log-origin="geral" title="Clique para ver detalhes da auditoria">${esc(parseUserAgentLegivel(l.user_agent, true, l.dados_extras))}</td>
       </tr>`;
     });
     tbody.innerHTML = rows.join("");
@@ -11080,7 +11159,7 @@ async function loadLogsProvento(id) {
         <td data-label="Status">${status}</td>
         <td data-label="Descrição">${esc(l.descricao)}</td>
         <td data-label="IP">${esc(l.ip)}</td>
-        <td data-label="Dispositivo" class="log-dispositivo-clicavel" data-log-index="${i}" data-log-origin="proventos" title="Clique para ver detalhes da auditoria">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
+        <td data-label="Dispositivo" class="log-dispositivo-clicavel" data-log-index="${i}" data-log-origin="proventos" title="Clique para ver detalhes da auditoria">${esc(parseUserAgentLegivel(l.user_agent, true, l.dados_extras))}</td>
       </tr>`;
     });
     tbody.innerHTML = rows.join("");
@@ -11151,7 +11230,7 @@ function setupLogsModule() {
     const lista = origin === "proventos" ? stateLogsProventosLista : stateLogsGeralLista;
     const log = Array.isArray(lista) && lista[idx] ? lista[idx] : null;
     if (!log) return;
-    const det = parseUserAgentDetalhado(log.user_agent);
+    const det = parseUserAgentDetalhado(log.user_agent, log.dados_extras);
     const esc = s => (s == null || s === undefined ? "-" : String(s).replace(/</g, "&lt;"));
     const dt = log.created_at ? new Date(log.created_at + "Z").toLocaleString("pt-BR") : "-";
     const usuarioOuFunc = log.usuario_nome || log.usuario_email || log.funcionario_nome || "-";
