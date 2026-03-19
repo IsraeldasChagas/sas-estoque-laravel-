@@ -6606,7 +6606,7 @@ function renderProventos(lista) {
   const esc = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
-  const podeAssinarProvento = perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA";
+  const podeAssinarProvento = !podeCriar; // Quem vê só os próprios proventos pode assinar (como Ing e Kel)
   const rows = lista.map(p => {
     const st = PROVENTO_STATUS_LABELS[p.status] || p.status;
     const stCls = p.status === "finalizado" ? "status-pill--success" : p.status === "cancelado" || p.status === "rejeitado" ? "status-pill--muted" : "status-pill";
@@ -9437,8 +9437,9 @@ function setupModals() {
       `;
       document.getElementById("proventoViewEditar").dataset.id = id;
       const perfil = (currentUser?.perfil||"").toString().trim().toUpperCase();
-      const podeEditar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil) && ["rascunho","aguardando_autorizacao"].includes(p.status);
-      const podeAssinar = (perfil === "FUNCIONARIO" || perfil === "ATENDENTE_CAIXA") && p.status === "aguardando_autorizacao";
+      const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+      const podeEditar = podeCriar && ["rascunho","aguardando_autorizacao"].includes(p.status);
+      const podeAssinar = !podeCriar && p.status === "aguardando_autorizacao"; // Quem vê só os próprios (Ing, Kel) pode assinar
       document.getElementById("proventoViewEditar").style.display = podeEditar ? "" : "none";
       const btnAssinar = document.getElementById("proventoViewAssinar");
       if (btnAssinar) {
