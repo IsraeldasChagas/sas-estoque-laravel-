@@ -5737,6 +5737,17 @@ $podeAutorizarOuFinalizar = function ($perfil) {
     return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO']);
 };
 
+/** Converte created_at (horário Brasil) para UTC ISO 8601 para exibição correta no frontend */
+$formatLogCreatedAt = function ($items) {
+    $tz = config('app.timezone', 'America/Sao_Paulo');
+    foreach ($items as $item) {
+        if (!empty($item->created_at)) {
+            $item->created_at = \Carbon\Carbon::parse($item->created_at, $tz)->utc()->format('Y-m-d\TH:i:s.000\Z');
+        }
+    }
+    return $items;
+};
+
 Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeCriarProvento) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -6102,7 +6113,7 @@ Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($p
     }
 });
 
-Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento) {
+Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $formatLogCreatedAt) {
     try {
         if (!Schema::hasTable('proventos_logs')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6120,6 +6131,7 @@ Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proven
             ->where('proventos_logs.provento_id', $id)
             ->select('proventos_logs.*', 'usuarios.nome as usuario_nome', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.whatsapp as funcionario_whatsapp')
             ->orderByDesc('proventos_logs.created_at')->get();
+        $formatLogCreatedAt($logs);
         return response()->json($logs)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('GET /proventos/logs: ' . $e->getMessage());
@@ -6173,7 +6185,7 @@ Route::post('/audit-logs/registrar', function (Request $request) use ($auditAuth
     }
 });
 
-Route::get('/audit-logs', function (Request $request) use ($auditAuth) {
+Route::get('/audit-logs', function (Request $request) use ($auditAuth, $formatLogCreatedAt) {
     try {
         if (!Schema::hasTable('audit_logs')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
         $u = $auditAuth($request);
@@ -6188,6 +6200,7 @@ Route::get('/audit-logs', function (Request $request) use ($auditAuth) {
         if ($dataInicio = $request->query('data_inicio')) $q->whereDate('audit_logs.created_at', '>=', $dataInicio);
         if ($dataFim = $request->query('data_fim')) $q->whereDate('audit_logs.created_at', '<=', $dataFim);
         $lista = $q->orderByDesc('audit_logs.created_at')->limit(500)->get();
+        $formatLogCreatedAt($lista);
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('GET /audit-logs: ' . $e->getMessage());
@@ -6195,7 +6208,7 @@ Route::get('/audit-logs', function (Request $request) use ($auditAuth) {
     }
 });
 
-Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento) {
+Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $formatLogCreatedAt) {
     try {
         $u = $proventosAuth($request);
         if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -6218,6 +6231,7 @@ Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) us
                 ->where('proventos_logs.provento_id', $id)
                 ->select('proventos_logs.*', 'usuarios.nome as usuario_nome', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.whatsapp as funcionario_whatsapp')
                 ->orderBy('proventos_logs.created_at')->get();
+            $formatLogCreatedAt($logs);
         }
         $assinaturas = [];
         if (Schema::hasTable('proventos_assinaturas')) {

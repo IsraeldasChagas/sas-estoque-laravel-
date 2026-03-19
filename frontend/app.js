@@ -11098,7 +11098,7 @@ async function loadLogsGeral() {
     }
     stateLogsGeralLista = lista;
     const rows = lista.map((l, i) => {
-      const dt = l.created_at ? new Date(l.created_at + "Z").toLocaleString("pt-BR") : "-";
+      const dt = l.created_at ? new Date(l.created_at).toLocaleString("pt-BR") : "-";
       return `<tr>
         <td data-label="Data/Hora">${esc(dt)}</td>
         <td data-label="Usuário">${esc(l.usuario_nome || l.usuario_email || "-")}</td>
@@ -11150,7 +11150,7 @@ async function loadLogsProvento(id) {
     }
     stateLogsProventosLista = lista;
     const rows = lista.map((l, i) => {
-      const dt = l.created_at ? new Date(l.created_at + "Z").toLocaleString("pt-BR") : "-";
+      const dt = l.created_at ? new Date(l.created_at).toLocaleString("pt-BR") : "-";
       const status = l.status_anterior && l.status_novo ? `${esc(l.status_anterior)} → ${esc(l.status_novo)}` : "-";
       return `<tr>
         <td data-label="Data/Hora">${esc(dt)}</td>
@@ -11232,7 +11232,7 @@ function setupLogsModule() {
     if (!log) return;
     const det = parseUserAgentDetalhado(log.user_agent, log.dados_extras);
     const esc = s => (s == null || s === undefined ? "-" : String(s).replace(/</g, "&lt;"));
-    const dt = log.created_at ? new Date(log.created_at + "Z").toLocaleString("pt-BR") : "-";
+    const dt = log.created_at ? new Date(log.created_at).toLocaleString("pt-BR") : "-";
     const usuarioOuFunc = log.usuario_nome || log.usuario_email || log.funcionario_nome || "-";
     const telefone = log.funcionario_whatsapp || "";
     const operadora = "Não disponível (não enviada pelo navegador)";
