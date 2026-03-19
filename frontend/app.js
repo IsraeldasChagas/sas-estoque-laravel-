@@ -10857,6 +10857,8 @@ async function excluirBackupFornecedor(id) {
 
 // ========== LOGS E AUDITORIA ==========
 let stateLogsProventoId = null;
+let stateLogsProventosLista = [];
+let stateLogsGeralLista = [];
 
 /** Converte user_agent em texto legível: "Celular Samsung S23", "Computador Windows", etc. */
 function parseUserAgentLegivel(ua, comEmoji = false) {
@@ -10900,6 +10902,60 @@ function parseUserAgentLegivel(ua, comEmoji = false) {
   return comEmoji ? `💻 ${txt}` : txt;
 }
 
+/** Extrai dados detalhados do user_agent para auditoria/perícia */
+function parseUserAgentDetalhado(ua) {
+  if (!ua || typeof ua !== "string") return { dispositivo: "-", navegador: "-", sistemaOperacional: "-", userAgentCompleto: "-" };
+  const s = ua;
+  let dispositivo = parseUserAgentLegivel(ua, false);
+  let navegador = "-";
+  let versaoNavegador = "";
+  let sistemaOperacional = "-";
+  let versaoOS = "";
+  let dispositivoModelo = "";
+
+  // Navegador e versão
+  const edgeM = s.match(/Edg\/([\d.]+)/i);
+  const chromeM = s.match(/Chrome\/([\d.]+)/i);
+  const firefoxM = s.match(/Firefox\/([\d.]+)/i);
+  const safariM = s.match(/Version\/([\d.]+).*Safari/i) || s.match(/Safari\/([\d.]+)/i);
+  const operaM = s.match(/OPR\/([\d.]+)/i);
+  const samsungBrowserM = s.match(/SamsungBrowser\/([\d.]+)/i);
+  if (edgeM) { navegador = "Microsoft Edge"; versaoNavegador = edgeM[1]; }
+  else if (operaM) { navegador = "Opera"; versaoNavegador = operaM[1]; }
+  else if (samsungBrowserM) { navegador = "Samsung Internet"; versaoNavegador = samsungBrowserM[1]; }
+  else if (chromeM) { navegador = "Chrome"; versaoNavegador = chromeM[1]; }
+  else if (firefoxM) { navegador = "Firefox"; versaoNavegador = firefoxM[1]; }
+  else if (safariM) { navegador = "Safari"; versaoNavegador = safariM[1] || ""; }
+
+  // Sistema operacional
+  const win11 = s.match(/Windows NT 10\.0; Win64; x64/) && /Chrome|Edge/.test(s);
+  const winM = s.match(/Windows NT ([\d.]+)/);
+  const macM = s.match(/Mac OS X ([\d_]+)/);
+  const androidM = s.match(/Android ([\d.]+)/);
+  const iphoneOSM = s.match(/CPU iPhone OS ([\d_]+) like/);
+  const linuxM = /Linux/.test(s) && !/Android/.test(s);
+  if (win11 || /Windows 11/i.test(s)) { sistemaOperacional = "Windows 11"; }
+  else if (winM) { sistemaOperacional = "Windows"; versaoOS = (winM[1] || "").replace(/_/g, "."); }
+  else if (macM) { sistemaOperacional = "macOS"; versaoOS = (macM[1] || "").replace(/_/g, "."); }
+  else if (androidM) { sistemaOperacional = "Android"; versaoOS = androidM[1] || ""; }
+  else if (iphoneOSM) { sistemaOperacional = "iOS"; versaoOS = (iphoneOSM[1] || "").replace(/_/g, "."); }
+  else if (/iPad/.test(s)) { sistemaOperacional = "iPadOS"; }
+  else if (/CrOS/.test(s)) { sistemaOperacional = "Chrome OS"; }
+  else if (linuxM) { sistemaOperacional = "Linux"; }
+
+  // Modelo do dispositivo (ex: SM-S911B)
+  const modeloM = s.match(/SM-[A-Z0-9-]+/i) || s.match(/iPhone\d+,\d+/i);
+  if (modeloM) dispositivoModelo = modeloM[0];
+
+  return {
+    dispositivo,
+    navegador: versaoNavegador ? `${navegador} ${versaoNavegador}` : navegador,
+    sistemaOperacional: versaoOS ? `${sistemaOperacional} ${versaoOS}` : sistemaOperacional,
+    dispositivoModelo: dispositivoModelo || "-",
+    userAgentCompleto: s
+  };
+}
+
 async function loadLogs() {
   const tabGeral = document.getElementById("logsTabGeral");
   const tabProventos = document.getElementById("logsTabProventos");
@@ -10931,7 +10987,8 @@ async function loadLogsGeral() {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;">Nenhum registro.</td></tr>';
       return;
     }
-    const rows = lista.map(l => {
+    stateLogsGeralLista = lista;
+    const rows = lista.map((l, i) => {
       const dt = l.created_at ? new Date(l.created_at + "Z").toLocaleString("pt-BR") : "-";
       return `<tr>
         <td data-label="Data/Hora">${esc(dt)}</td>
@@ -10940,7 +10997,7 @@ async function loadLogsGeral() {
         <td data-label="Recurso">${esc(l.recurso)}</td>
         <td data-label="Descrição">${esc(l.descricao)}</td>
         <td data-label="IP">${esc(l.ip)}</td>
-        <td data-label="Dispositivo" title="${esc((l.user_agent || "").substring(0, 200))}">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
+        <td data-label="Dispositivo" class="log-dispositivo-clicavel" data-log-index="${i}" data-log-origin="geral" title="Clique para ver detalhes da auditoria">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
       </tr>`;
     });
     tbody.innerHTML = rows.join("");
@@ -10982,7 +11039,8 @@ async function loadLogsProvento(id) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;">Nenhum log para este provento.</td></tr>';
       return;
     }
-    const rows = lista.map(l => {
+    stateLogsProventosLista = lista;
+    const rows = lista.map((l, i) => {
       const dt = l.created_at ? new Date(l.created_at + "Z").toLocaleString("pt-BR") : "-";
       const status = l.status_anterior && l.status_novo ? `${esc(l.status_anterior)} → ${esc(l.status_novo)}` : "-";
       return `<tr>
@@ -10992,7 +11050,7 @@ async function loadLogsProvento(id) {
         <td data-label="Status">${status}</td>
         <td data-label="Descrição">${esc(l.descricao)}</td>
         <td data-label="IP">${esc(l.ip)}</td>
-        <td data-label="Dispositivo" title="${esc((l.user_agent || "").substring(0, 200))}">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
+        <td data-label="Dispositivo" class="log-dispositivo-clicavel" data-log-index="${i}" data-log-origin="proventos" title="Clique para ver detalhes da auditoria">${esc(parseUserAgentLegivel(l.user_agent, true))}</td>
       </tr>`;
     });
     tbody.innerHTML = rows.join("");
@@ -11049,6 +11107,42 @@ function setupLogsModule() {
   document.getElementById("logsExportarPericia")?.addEventListener("click", () => {
     const id = stateLogsProventoId || document.getElementById("logsProventoSelect")?.value;
     exportarLogsPericia(id ? parseInt(id, 10) : null);
+  });
+
+  document.getElementById("closeDispositivoDetalhes")?.addEventListener("click", () => toggleModal(document.getElementById("dispositivoDetalhesModal"), false));
+  document.getElementById("closeDispositivoDetalhesBtn")?.addEventListener("click", () => toggleModal(document.getElementById("dispositivoDetalhesModal"), false));
+
+  document.getElementById("logsSection")?.addEventListener("click", (e) => {
+    const cell = e.target.closest(".log-dispositivo-clicavel");
+    if (!cell) return;
+    e.preventDefault();
+    const idx = parseInt(cell.dataset.logIndex, 10);
+    const origin = cell.dataset.logOrigin;
+    const lista = origin === "proventos" ? stateLogsProventosLista : stateLogsGeralLista;
+    const log = Array.isArray(lista) && lista[idx] ? lista[idx] : null;
+    if (!log) return;
+    const det = parseUserAgentDetalhado(log.user_agent);
+    const esc = s => (s == null || s === undefined ? "-" : String(s).replace(/</g, "&lt;"));
+    const dt = log.created_at ? new Date(log.created_at + "Z").toLocaleString("pt-BR") : "-";
+    const content = document.getElementById("dispositivoDetalhesContent");
+    if (content) {
+      content.innerHTML = `
+        <div style="display:grid;gap:0.75rem;">
+          <div><strong>Data/Hora:</strong> ${esc(dt)}</div>
+          <div><strong>Usuário:</strong> ${esc(log.usuario_nome || log.usuario_email || "-")}</div>
+          <div><strong>IP:</strong> ${esc(log.ip)}</div>
+          <div><strong>Ação:</strong> ${esc(log.acao)}</div>
+          <hr style="border:none;border-top:1px solid #ddd;margin:0.5rem 0;" />
+          <div><strong>Dispositivo:</strong> ${esc(det.dispositivo)}</div>
+          <div><strong>Navegador:</strong> ${esc(det.navegador)}</div>
+          <div><strong>Sistema operacional:</strong> ${esc(det.sistemaOperacional)}</div>
+          <div><strong>Modelo (código):</strong> ${esc(det.dispositivoModelo)}</div>
+          <hr style="border:none;border-top:1px solid #ddd;margin:0.5rem 0;" />
+          <div><strong>User-Agent completo:</strong></div>
+          <pre style="background:#f5f5f5;padding:0.75rem;font-size:0.8rem;overflow-x:auto;max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;">${esc(det.userAgentCompleto)}</pre>
+        </div>`;
+      toggleModal(document.getElementById("dispositivoDetalhesModal"), true);
+    }
   });
 }
 

@@ -2053,6 +2053,17 @@ textarea {
     width: 100%;
   }
 
+  /* Célula dispositivo clicável nos logs (auditoria) */
+  .log-dispositivo-clicavel {
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    color: var(--primary, #1565c0);
+  }
+  .log-dispositivo-clicavel:hover {
+    opacity: 0.85;
+  }
+
   /* Modal de visualização de funcionário - responsivo */
   #funcionarioViewModal .view-funcionario-header {
     flex-direction: column;
