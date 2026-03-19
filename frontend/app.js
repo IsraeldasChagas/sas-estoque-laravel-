@@ -6922,6 +6922,31 @@ async function startAppSession(user) {
             await loadBoletosResumo().catch(() => {});
           }
         }
+        else if (sectionToNavigate === 'proventos') {
+          const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+          const podeCriarProvento = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+          const isFuncionario = !podeCriarProvento;
+          const titleEl = document.getElementById("proventosSectionTitle");
+          const subtitleEl = document.getElementById("proventosSectionSubtitle");
+          const filterForm = document.getElementById("proventosFilterForm");
+          const openProventoBtn = document.getElementById("openProvento");
+          if (titleEl) titleEl.textContent = isFuncionario ? "Meus Proventos" : "Proventos";
+          if (subtitleEl) subtitleEl.textContent = isFuncionario ? "Proventos que precisam da sua aceite ou já foram processados" : "Controle de proventos e lançamentos relacionados aos funcionários";
+          if (filterForm) filterForm.style.display = isFuncionario ? "none" : "";
+          if (openProventoBtn) openProventoBtn.classList.toggle("hidden", !podeCriarProvento);
+          if (!isFuncionario) {
+            await loadUnidades(false).catch(() => {});
+            await loadFuncionarios().catch(() => {});
+            const selUn = document.getElementById("proventosFiltroUnidade");
+            if (selUn && state.unidades?.length) {
+              selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
+            }
+            await loadProventos({}).catch(() => {});
+          } else {
+            await loadProventos().catch(() => {});
+          }
+        }
+        else if (sectionToNavigate === 'funcionarios') await loadFuncionarios();
       } catch (err) {
         console.error('Erro ao carregar seção inicial:', err);
       }
@@ -10059,13 +10084,15 @@ function setupNavigation() {
         try {
           const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
           const podeCriarProvento = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
-          const isFuncionario = !podeCriarProvento; // Sem permissão: vê só os próprios proventos
+          const isFuncionario = !podeCriarProvento; // Sem permissão para lançar: padrão Ing (Meus Proventos, sem filtros, sem botão Novo)
           const titleEl = document.getElementById("proventosSectionTitle");
           const subtitleEl = document.getElementById("proventosSectionSubtitle");
           const filterForm = document.getElementById("proventosFilterForm");
+          const openProventoBtn = document.getElementById("openProvento");
           if (titleEl) titleEl.textContent = isFuncionario ? "Meus Proventos" : "Proventos";
           if (subtitleEl) subtitleEl.textContent = isFuncionario ? "Proventos que precisam da sua aceite ou já foram processados" : "Controle de proventos e lançamentos relacionados aos funcionários";
           if (filterForm) filterForm.style.display = isFuncionario ? "none" : "";
+          if (openProventoBtn) openProventoBtn.classList.toggle("hidden", !podeCriarProvento);
           if (!isFuncionario) {
             await loadUnidades(false).catch(() => {});
             await loadFuncionarios().catch(() => {});
