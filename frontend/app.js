@@ -290,7 +290,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -298,7 +298,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2688,7 +2688,7 @@ function applyPermissions() {
   // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (Backup de Fornecedores = apenas ADMIN)
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
-    const temAcessoConfig = regras.sections.includes("fornecedoresBackup");
+    const temAcessoConfig = regras.sections.includes("fornecedoresBackup") || regras.sections.includes("logs");
     configuracoesNavSubmenu.classList.toggle("hidden", !temAcessoConfig);
   }
 
@@ -2822,6 +2822,7 @@ function navigateTo(section) {
   }
   if (section === 'fornecedores') loadFornecedores();
   else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
+  else if (section === 'logs') loadLogs();
 }
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.
@@ -6856,7 +6857,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'funcionarios', 'proventos'];
+          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'funcionarios', 'proventos', 'logs'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
@@ -6897,6 +6898,7 @@ async function startAppSession(user) {
         else if (sectionToNavigate === 'compras') await loadListasCompras();
         else if (sectionToNavigate === 'fornecedores') await loadFornecedores();
         else if (sectionToNavigate === 'fornecedoresBackup') await loadFornecedoresBackup();
+        else if (sectionToNavigate === 'logs') await loadLogs();
         else if (sectionToNavigate === 'reservaMesa') {
           var uSelect = document.getElementById('reservasUnidadeFiltro');
           if (uSelect && uSelect.options.length <= 1) {
@@ -7171,6 +7173,14 @@ async function handleLogin(event) {
 
 function handleLogout() {
   stopInactivityTimer();
+  // Registra logout no audit (antes de limpar usuário)
+  if (currentUser && currentUser.id) {
+    fetch(`${API_URL}/audit-logs/registrar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser.id) },
+      body: JSON.stringify({ acao: "logout", recurso: "auth", descricao: "Logout realizado" }),
+    }).catch(() => {});
+  }
   clearUser();
   resetForms();
   dom.appShell.classList.add("hidden");
@@ -10127,6 +10137,14 @@ function setupNavigation() {
       else if (target === "compras") await loadListasCompras();
       else if (target === "fornecedores") await loadFornecedores();
       else if (target === "fornecedoresBackup") await loadFornecedoresBackup();
+      else if (target === "logs") {
+        fetch(`${API_URL}/audit-logs/registrar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || "") },
+          body: JSON.stringify({ acao: "acessar_secao", recurso: "logs", descricao: "Acesso à página de Logs e Auditoria" }),
+        }).catch(() => {});
+        await loadLogs();
+      }
       else if (target === "reservaMesa") {
         var uSelect = document.getElementById('reservasUnidadeFiltro');
         if (uSelect && uSelect.options.length <= 1) {
@@ -10832,6 +10850,161 @@ async function excluirBackupFornecedor(id) {
   } catch (e) {
     showToast('Erro ao excluir backup.', 'error');
   }
+}
+
+// ========== LOGS E AUDITORIA ==========
+let stateLogsProventoId = null;
+
+async function loadLogs() {
+  const tabGeral = document.getElementById("logsTabGeral");
+  const tabProventos = document.getElementById("logsTabProventos");
+  const painelGeral = document.getElementById("logsPainelGeral");
+  const painelProventos = document.getElementById("logsPainelProventos");
+  if (tabGeral?.classList.contains("primary")) {
+    await loadLogsGeral();
+  } else {
+    await loadLogsProventosSelect();
+  }
+}
+
+async function loadLogsGeral() {
+  const tbody = document.getElementById("logsGeralTable");
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+  try {
+    const params = new URLSearchParams();
+    const di = document.getElementById("logsFiltroDataInicio")?.value;
+    const df = document.getElementById("logsFiltroDataFim")?.value;
+    const acao = document.getElementById("logsFiltroAcao")?.value;
+    if (di) params.append("data_inicio", di);
+    if (df) params.append("data_fim", df);
+    if (acao) params.append("acao", acao);
+    const url = params.toString() ? `/audit-logs?${params}` : "/audit-logs";
+    const lista = await fetchJSON(url);
+    const esc = s => (s == null || s === undefined ? "-" : String(s).replace(/</g, "&lt;"));
+    if (!Array.isArray(lista) || lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;">Nenhum registro.</td></tr>';
+      return;
+    }
+    const rows = lista.map(l => {
+      const dt = l.created_at ? new Date(l.created_at + "Z").toLocaleString("pt-BR") : "-";
+      return `<tr>
+        <td data-label="Data/Hora">${esc(dt)}</td>
+        <td data-label="Usuário">${esc(l.usuario_nome || l.usuario_email || "-")}</td>
+        <td data-label="Ação">${esc(l.acao)}</td>
+        <td data-label="Recurso">${esc(l.recurso)}</td>
+        <td data-label="Descrição">${esc(l.descricao)}</td>
+        <td data-label="IP">${esc(l.ip)}</td>
+        <td data-label="Dispositivo">${esc((l.user_agent || "").substring(0, 80))}${(l.user_agent && l.user_agent.length > 80 ? "…" : "")}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = rows.join("");
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#d32f2f;">Erro ao carregar (apenas ADMIN/GERENTE).</td></tr>';
+  }
+}
+
+async function loadLogsProventosSelect() {
+  const sel = document.getElementById("logsProventoSelect");
+  if (!sel) return;
+  try {
+    const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+    const url = podeCriar ? "/proventos" : "/proventos/meus";
+    const proventos = await fetchJSON(url);
+    sel.innerHTML = '<option value="">Selecione um provento</option>' +
+      (Array.isArray(proventos) ? proventos : []).map(p =>
+        `<option value="${p.id}">#${p.id} - ${(p.funcionario_nome || "").replace(/</g,"&lt;")} - R$ ${(Number(p.valor)||0).toLocaleString("pt-BR",{minimumFractionDigits:2})}</option>`
+      ).join("");
+    stateLogsProventoId = null;
+  } catch (e) {
+    sel.innerHTML = '<option value="">Erro ao carregar proventos</option>';
+  }
+}
+
+async function loadLogsProvento(id) {
+  const tbody = document.getElementById("logsProventosTable");
+  if (!tbody) return;
+  if (!id) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;">Selecione um provento.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+  try {
+    const lista = await fetchJSON(`/proventos/${id}/logs`);
+    const esc = s => (s == null || s === undefined ? "-" : String(s).replace(/</g, "&lt;"));
+    if (!Array.isArray(lista) || lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;">Nenhum log para este provento.</td></tr>';
+      return;
+    }
+    const rows = lista.map(l => {
+      const dt = l.created_at ? new Date(l.created_at + "Z").toLocaleString("pt-BR") : "-";
+      const status = l.status_anterior && l.status_novo ? `${esc(l.status_anterior)} → ${esc(l.status_novo)}` : "-";
+      return `<tr>
+        <td data-label="Data/Hora">${esc(dt)}</td>
+        <td data-label="Usuário">${esc(l.usuario_nome || "-")}</td>
+        <td data-label="Ação">${esc(l.acao)}</td>
+        <td data-label="Status">${status}</td>
+        <td data-label="Descrição">${esc(l.descricao)}</td>
+        <td data-label="IP">${esc(l.ip)}</td>
+        <td data-label="Dispositivo">${esc((l.user_agent || "").substring(0, 60))}${(l.user_agent && l.user_agent.length > 60 ? "…" : "")}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = rows.join("");
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#d32f2f;">Erro ao carregar logs.</td></tr>';
+  }
+}
+
+async function exportarLogsPericia(id) {
+  if (!id) {
+    showToast("Selecione um provento primeiro.", "warning");
+    return;
+  }
+  try {
+    const d = await fetchJSON(`/proventos/${id}/export-pericia`);
+    if (d && d.error) throw new Error(d.error);
+    const blob = new Blob([JSON.stringify(d || {}, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `provento-${id}-pericia-${new Date().toISOString().slice(0,19).replace(/[-:T]/g,"")}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("Backup exportado para perícia.");
+  } catch (e) {
+    showToast(e?.message || "Erro ao exportar.", "error");
+  }
+}
+
+function setupLogsModule() {
+  const tabGeral = document.getElementById("logsTabGeral");
+  const tabProventos = document.getElementById("logsTabProventos");
+  const painelGeral = document.getElementById("logsPainelGeral");
+  const painelProventos = document.getElementById("logsPainelProventos");
+  tabGeral?.addEventListener("click", () => {
+    tabGeral.classList.add("primary");
+    tabProventos?.classList.remove("primary");
+    painelGeral?.style.removeProperty("display");
+    painelProventos?.style.setProperty("display", "none");
+    loadLogsGeral();
+  });
+  tabProventos?.addEventListener("click", () => {
+    tabProventos.classList.add("primary");
+    tabGeral?.classList.remove("primary");
+    painelProventos?.style.removeProperty("display");
+    painelGeral?.style.setProperty("display", "none");
+    loadLogsProventosSelect();
+  });
+  document.getElementById("logsFiltrarGeral")?.addEventListener("click", () => loadLogsGeral());
+  document.getElementById("logsCarregarProvento")?.addEventListener("click", async () => {
+    const id = document.getElementById("logsProventoSelect")?.value;
+    stateLogsProventoId = id ? parseInt(id, 10) : null;
+    await loadLogsProvento(stateLogsProventoId);
+  });
+  document.getElementById("logsExportarPericia")?.addEventListener("click", () => {
+    const id = stateLogsProventoId || document.getElementById("logsProventoSelect")?.value;
+    exportarLogsPericia(id ? parseInt(id, 10) : null);
+  });
 }
 
 function setupFornecedoresModule() {
@@ -12888,6 +13061,7 @@ async function init() {
   setupCards();
   setupPasswordToggles();
   setupFornecedoresModule();
+  setupLogsModule();
   setupReservasMesasModule();
   setupBoletosModule();
   if (!stopMatrixAnimation) {

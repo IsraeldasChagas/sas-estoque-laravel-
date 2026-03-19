@@ -71,6 +71,19 @@ Route::post('/login', function (Request $request) {
         // Este token pode ser usado para autenticação em requisições futuras
         $token = bin2hex(random_bytes(32));
 
+        // Registra login no audit_logs (rastreabilidade para comprovação)
+        if (Schema::hasTable('audit_logs')) {
+            DB::table('audit_logs')->insert([
+                'usuario_id' => $usuario->id,
+                'acao' => 'login',
+                'recurso' => 'auth',
+                'descricao' => 'Login realizado com sucesso',
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'created_at' => now(),
+            ]);
+        }
+
         // PASSO 7: Retorna dados do usuário autenticado
         // Retorna ID, nome, email, perfil e token de sessão
         // Inclui headers CORS para permitir requisições do frontend
@@ -6082,7 +6095,7 @@ Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($p
     }
 });
 
-Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $podeAutorizarOuFinalizar) {
+Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento) {
     try {
         if (!Schema::hasTable('proventos_logs')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6092,7 +6105,7 @@ Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proven
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if ($perfil === 'FUNCIONARIO' && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
 
         $logs = DB::table('proventos_logs')->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
             ->where('proventos_logs.provento_id', $id)
@@ -6102,6 +6115,110 @@ Route::get('/proventos/{id}/logs', function (Request $request, $id) use ($proven
     } catch (\Exception $e) {
         \Log::error('GET /proventos/logs: ' . $e->getMessage());
         return response()->json(['error' => 'Erro ao buscar logs'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+// ============================================
+// AUDIT LOGS - Log geral e exportação para perícia
+// ============================================
+$auditCors = fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+Route::options('/audit-logs', $auditCors);
+Route::options('/audit-logs/registrar', $auditCors);
+Route::options('/proventos/{id}/export-pericia', $auditCors);
+
+$auditAuth = function (Request $req) {
+    $uid = $req->header('X-Usuario-Id');
+    return $uid ? DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first() : null;
+};
+
+Route::post('/audit-logs/registrar', function (Request $request) use ($auditAuth) {
+    try {
+        if (!Schema::hasTable('audit_logs')) return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
+        $u = $auditAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $acao = trim($request->input('acao', ''));
+        $recurso = trim($request->input('recurso', ''));
+        $recursoId = $request->input('recurso_id');
+        $descricao = trim($request->input('descricao', ''));
+        if (empty($acao)) return response()->json(['error' => 'Ação obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
+        $extras = $request->input('dados_extras');
+        if (is_array($extras) || is_object($extras)) $extras = json_encode($extras);
+        DB::table('audit_logs')->insert([
+            'usuario_id' => $u->id,
+            'acao' => $acao,
+            'recurso' => $recurso ?: null,
+            'recurso_id' => $recursoId,
+            'descricao' => $descricao ?: null,
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'dados_extras' => $extras,
+            'created_at' => now(),
+        ]);
+        return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /audit-logs/registrar: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao registrar'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/audit-logs', function (Request $request) use ($auditAuth) {
+    try {
+        if (!Schema::hasTable('audit_logs')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        $u = $auditAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!in_array($perfil, ['ADMIN', 'GERENTE'])) return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+        $q = DB::table('audit_logs')->leftJoin('usuarios', 'audit_logs.usuario_id', '=', 'usuarios.id')
+            ->select('audit_logs.*', 'usuarios.nome as usuario_nome', 'usuarios.email as usuario_email');
+        if ($usuarioId = $request->query('usuario_id')) $q->where('audit_logs.usuario_id', $usuarioId);
+        if ($acao = trim($request->query('acao', ''))) $q->where('audit_logs.acao', $acao);
+        if ($recurso = trim($request->query('recurso', ''))) $q->where('audit_logs.recurso', $recurso);
+        if ($dataInicio = $request->query('data_inicio')) $q->whereDate('audit_logs.created_at', '>=', $dataInicio);
+        if ($dataFim = $request->query('data_fim')) $q->whereDate('audit_logs.created_at', '<=', $dataFim);
+        $lista = $q->orderByDesc('audit_logs.created_at')->limit(500)->get();
+        return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /audit-logs: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao listar'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento) {
+    try {
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!in_array($perfil, ['ADMIN', 'GERENTE', 'FINANCEIRO'])) return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        if (!$podeCriarProvento($perfil) && !$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
+        $p = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->where('proventos.id', $id)
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf', 'funcionarios.whatsapp', 'funcionarios.email as funcionario_email', 'unidades.nome as unidade_nome')
+            ->first();
+        if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
+        $logs = [];
+        if (Schema::hasTable('proventos_logs')) {
+            $logs = DB::table('proventos_logs')->leftJoin('usuarios', 'proventos_logs.usuario_id', '=', 'usuarios.id')
+                ->where('proventos_logs.provento_id', $id)
+                ->select('proventos_logs.*', 'usuarios.nome as usuario_nome')
+                ->orderBy('proventos_logs.created_at')->get();
+        }
+        $assinaturas = [];
+        if (Schema::hasTable('proventos_assinaturas')) {
+            $assinaturas = DB::table('proventos_assinaturas')->where('provento_id', $id)->orderBy('id')->get();
+        }
+        $backup = [
+            'gerado_em' => now()->toIso8601String(),
+            'provento' => $p,
+            'logs' => $logs,
+            'assinaturas' => $assinaturas,
+        ];
+        return response()->json($backup)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /proventos/export-pericia: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao exportar'], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 

@@ -132,6 +132,7 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="fornecedoresBackup">Backup de Fornecedores</a>
+              <a href="#" class="nav-link nav-link-child" data-section="logs">Logs e Auditoria</a>
             </div>
           </div>
           <button type="button" id="btnAbrirBackup" onclick="abrirBackupModal()" style="display:none;margin:1rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#1565c0;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
@@ -1435,6 +1436,87 @@
                     <tr><td colspan="11" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Modulo Logs e Auditoria -->
+          <section id="logsSection" class="view-section hidden">
+            <div class="funcionarios-header" style="margin-bottom: 1.5rem;">
+              <h2>📋 Logs e Auditoria</h2>
+              <p class="subtle-text">Rastreabilidade de ações e evidências para comprovação (perícia)</p>
+            </div>
+            <div class="logs-tabs" style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+              <button type="button" class="btn primary" id="logsTabGeral">Log geral (usuários)</button>
+              <button type="button" class="btn" id="logsTabProventos">Log proventos</button>
+            </div>
+
+            <!-- Painel Log Geral -->
+            <div id="logsPainelGeral" class="logs-painel">
+              <div class="filters-panel" style="margin-bottom:1rem;">
+                <label><input type="date" id="logsFiltroDataInicio" placeholder="Data início" /></label>
+                <label><input type="date" id="logsFiltroDataFim" placeholder="Data fim" /></label>
+                <label>
+                  <select id="logsFiltroAcao">
+                    <option value="">Todas as ações</option>
+                    <option value="login">Login</option>
+                    <option value="logout">Logout</option>
+                    <option value="acessar_secao">Acessar seção</option>
+                  </select>
+                </label>
+                <button type="button" class="btn primary" id="logsFiltrarGeral">Filtrar</button>
+              </div>
+              <div class="table-card form-card--wide">
+                <header>Registro de ações dos usuários</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Recurso</th>
+                        <th>Descrição</th>
+                        <th>IP</th>
+                        <th>Dispositivo</th>
+                      </tr>
+                    </thead>
+                    <tbody id="logsGeralTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Painel Log Proventos -->
+            <div id="logsPainelProventos" class="logs-painel" style="display:none;">
+              <div class="filters-panel" style="margin-bottom:1rem;">
+                <label>
+                  Provento:
+                  <select id="logsProventoSelect">
+                    <option value="">Selecione um provento</option>
+                  </select>
+                </label>
+                <button type="button" class="btn primary" id="logsCarregarProvento">Carregar logs</button>
+                <button type="button" class="btn" id="logsExportarPericia" title="Exportar backup para perícia">📥 Exportar para perícia</button>
+              </div>
+              <div class="table-card form-card--wide">
+                <header>Log do provento selecionado</header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Status anterior → novo</th>
+                        <th>Descrição</th>
+                        <th>IP</th>
+                        <th>Dispositivo</th>
+                      </tr>
+                    </thead>
+                    <tbody id="logsProventosTable"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </section>
