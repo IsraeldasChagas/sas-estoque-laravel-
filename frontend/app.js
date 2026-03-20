@@ -12752,6 +12752,9 @@ async function mostrarDetalhesBoleto(id) {
     let textZap = `Olá`;
     if (boleto.nome_pagador) textZap += ` ${boleto.nome_pagador}`;
     textZap += `! Segue as informações do seu boleto.\n\n`;
+    if (boleto.fornecedor) textZap += `🏢 *Fornecedor:* ${boleto.fornecedor}\n`;
+    if (boleto.categoria) textZap += `📂 *Categoria:* ${boleto.categoria}\n`;
+    if (boleto.fornecedor || boleto.categoria) textZap += `\n`;
     if (boleto.numero_boleto) textZap += `🔢 *Número do Boleto:*\n${boleto.numero_boleto}\n\n`;
     textZap += `📅 *Vencimento:* ${formatDate(boleto.data_vencimento)}\n`;
     textZap += `💰 *Valor:* R$ ${parseFloat(boleto.valor).toFixed(2)}\n\n`;
