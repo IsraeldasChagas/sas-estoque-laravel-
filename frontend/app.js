@@ -11308,19 +11308,23 @@ function getMensagemReservaWhatsApp(r) {
   var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
   var unidadeNome = (r.unidade && r.unidade.nome) ? r.unidade.nome : '';
   var unidadeEndereco = (r.unidade && r.unidade.endereco) ? r.unidade.endereco.trim() : '';
-  var localLinha = '';
+  var pad = function(lbl) { return (lbl + ':').padEnd(13, ' '); };
+  var linhas = [];
+  linhas.push('Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:');
+  linhas.push('');
   if (unidadeNome) {
-    localLinha = '📍 Local: ' + unidadeNome;
-    if (unidadeEndereco) localLinha += '\n   ' + unidadeEndereco;
-    localLinha += '\n\n';
+    linhas.push('📍 ' + pad('Local') + unidadeNome);
+    if (unidadeEndereco) linhas.push('   ' + unidadeEndereco);
+    linhas.push('');
   }
-  return 'Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:\n\n' +
-    localLinha +
-    '📅 Data: ' + dataStr + '\n' +
-    '🕐 Horário: ' + horaStr + '\n' +
-    '🪑 Mesa: ' + mesaNome + '\n' +
-    '👥 Pessoas: ' + (r.qtd_pessoas || '-') + (criadoPor ? '\n👤 Atendimento: ' + criadoPor : '') + '\n\n' +
-    'Aguardamos você!';
+  linhas.push('📅 ' + pad('Data') + dataStr);
+  linhas.push('🕐 ' + pad('Horário') + horaStr);
+  linhas.push('🪑 ' + pad('Mesa') + mesaNome);
+  linhas.push('👥 ' + pad('Pessoas') + String(r.qtd_pessoas || '-'));
+  if (criadoPor) linhas.push('👤 ' + pad('Atendimento') + criadoPor);
+  linhas.push('');
+  linhas.push('Aguardamos você!');
+  return linhas.join('\n');
 }
 
 function abrirWhatsAppReserva(r) {
