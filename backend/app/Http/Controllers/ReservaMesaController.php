@@ -105,8 +105,8 @@ class ReservaMesaController extends Controller
         $mesasIdsComReserva = $reservasAtivas->pluck('mesa_id')->unique();
         $livres = $totalMesas - $mesasIdsComReserva->count();
         $reservadas = $reservasAtivas->whereIn('status', ['pendente', 'confirmada'])->count();
-        $ocupadas = $reservasAtivas->whereIn('status', ['cliente_chegou'])->count();
-        $aguardando = $reservasAtivas->where('status', 'cliente_chegou')->count();
+        $ocupadas = $reservasAtivas->where('status', 'cliente_chegou')->count();
+        $aguardando = $reservasAtivas->whereIn('status', ['pendente', 'confirmada'])->count();
 
         return response()->json([
             'total_mesas' => $totalMesas,
