@@ -378,4 +378,75 @@ class ReservaMesaController extends Controller
     {
         return $this->cancelar($id);
     }
+
+    /**
+     * Histórico de reservas com contagem por cliente.
+     * Filtros: unidade_id, data_inicio, data_fim, status.
+     */
+    public function historico(Request $request)
+    {
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
+        $unidadeIdUsuario = $usuario ? $usuario->unidade_id : null;
+
+        $unidadeId = null;
+        if ($request->filled('unidade_id')) {
+            $unidadeId = (int) $request->unidade_id;
+        } elseif ($unidadeIdUsuario) {
+            $unidadeId = (int) $unidadeIdUsuario;
+        }
+        if ($unidadeId <= 0) {
+            $unidadeId = null;
+        }
+
+        if (!$unidadeId) {
+            return response()->json([]);
+        }
+
+        $query = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa', 'unidade:id,nome'])
+            ->where('unidade_id', $unidadeId);
+
+        if ($request->filled('data_inicio')) {
+            $query->where('data_reserva', '>=', $request->data_inicio);
+        }
+        if ($request->filled('data_fim')) {
+            $query->where('data_reserva', '<=', $request->data_fim);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $reservas = $query->orderBy('data_reserva', 'desc')
+            ->orderBy('hora_reserva', 'desc')
+            ->get();
+
+        $chaveCliente = function ($r) {
+            $tel = preg_replace('/\D/', '', $r->telefone_cliente ?? '');
+            return $tel ? $tel : ($r->nome_cliente ?? '');
+        };
+
+        $contagemPorCliente = [];
+        foreach ($reservas as $r) {
+            $key = $chaveCliente($r);
+            $contagemPorCliente[$key] = ($contagemPorCliente[$key] ?? 0) + 1;
+        }
+
+        $result = $reservas->map(function ($r) use ($chaveCliente, $contagemPorCliente) {
+            $key = $chaveCliente($r);
+            return [
+                'id' => $r->id,
+                'nome_cliente' => $r->nome_cliente,
+                'telefone_cliente' => $r->telefone_cliente,
+                'qtd_pessoas' => $r->qtd_pessoas,
+                'data_reserva' => $r->data_reserva,
+                'hora_reserva' => $r->hora_reserva,
+                'status' => $r->status,
+                'mesa' => $r->mesa,
+                'unidade' => $r->unidade,
+                'total_reservas_cliente' => $contagemPorCliente[$key] ?? 1,
+            ];
+        });
+
+        return response()->json($result->values()->all());
+    }
 }

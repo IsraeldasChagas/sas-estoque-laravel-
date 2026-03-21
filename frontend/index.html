@@ -107,6 +107,7 @@
           <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
           <a href="#" class="nav-link" data-section="fornecedores">Fornecedores</a>
           <a href="#" class="nav-link" data-section="reservaMesa">Reserva de Mesa</a>
+          <a href="#" class="nav-link" data-section="historicoReservas">Histórico de Reservas</a>
           <div class="nav-submenu">
             <a href="#" class="nav-link nav-link-parent" id="rhMenu">
               RH
@@ -790,6 +791,7 @@
                 <div class="reservas-mesas-actions">
                   <button type="button" class="btn primary" id="openNovaReservaMesa">+ Nova Reserva</button>
                   <button type="button" class="btn neutral" id="btnNovaMesaReserva" title="Criar nova mesa">+ Nova mesa</button>
+                  <button type="button" class="btn secondary" id="btnHistoricoReservas" title="Ver histórico de reservas">📋 Histórico</button>
                   <button type="button" class="btn secondary" id="openGerenciarMesas" style="display:none;">⚙️ Gerenciar Mesas</button>
                 </div>
               </div>
@@ -888,6 +890,66 @@
                     </table>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Histórico de Reservas -->
+          <section id="historicoReservasSection" class="view-section hidden">
+            <div class="reservas-mesas-container">
+              <div class="reservas-mesas-header">
+                <h2>📋 Histórico de Reservas</h2>
+                <div class="reservas-mesas-actions">
+                  <button type="button" class="btn neutral" id="btnVoltarReservas">← Voltar</button>
+                </div>
+              </div>
+              <div class="reservas-mesas-filtro">
+                <label>
+                  🏢 Unidade:
+                  <select id="historicoUnidadeFiltro" class="reservas-select">
+                    <option value="">Selecione a unidade</option>
+                  </select>
+                </label>
+                <label>
+                  📅 Data início:
+                  <input type="date" id="historicoDataInicio" class="reservas-input" />
+                </label>
+                <label>
+                  📅 Data fim:
+                  <input type="date" id="historicoDataFim" class="reservas-input" />
+                </label>
+                <label>
+                  📊 Status:
+                  <select id="historicoStatusFiltro" class="reservas-select">
+                    <option value="">Todos</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="confirmada">Confirmada</option>
+                    <option value="cliente_chegou">Cliente chegou</option>
+                    <option value="cancelada">Cancelada</option>
+                    <option value="no_show">No-show</option>
+                    <option value="finalizada">Finalizada</option>
+                  </select>
+                </label>
+                <button type="button" id="historicoAtualizar" class="btn neutral">🔄 Atualizar</button>
+              </div>
+              <div class="table-wrapper" style="margin-top:1rem;">
+                <table class="reservas-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Horário</th>
+                      <th>Cliente</th>
+                      <th>WhatsApp</th>
+                      <th>Pessoas</th>
+                      <th>Mesa</th>
+                      <th>Status</th>
+                      <th>Total reservas (cliente)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historicoReservasTableBody">
+                    <tr><td colspan="8" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>

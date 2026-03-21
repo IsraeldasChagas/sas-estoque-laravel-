@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -346,7 +346,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -354,7 +354,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "historicoReservas", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -378,7 +378,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
-    sections: ["boasVindas", "minhaConta", "estoque", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "estoque", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -386,7 +386,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -6885,7 +6885,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'funcionarios', 'proventos', 'logs'];
+          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'historicoReservas', 'funcionarios', 'proventos', 'logs'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
@@ -6944,6 +6944,29 @@ async function startAppSession(user) {
             }
           }
           await loadReservasMesas();
+        }
+        else if (sectionToNavigate === 'historicoReservas') {
+          var uSelect = document.getElementById('historicoUnidadeFiltro');
+          if (uSelect && uSelect.options.length <= 1) {
+            var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
+            state.unidades = unidades;
+            uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
+            (unidades || []).forEach(function(u) {
+              var opt = document.createElement('option');
+              opt.value = u.id;
+              opt.textContent = u.nome || 'Unidade ' + u.id;
+              uSelect.appendChild(opt);
+            });
+            if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
+              uSelect.value = currentUser.unidade_id;
+              uSelect.disabled = true;
+            }
+          }
+          var dInicio = document.getElementById('historicoDataInicio');
+          var dFim = document.getElementById('historicoDataFim');
+          if (dInicio && !dInicio.value) dInicio.value = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+          if (dFim && !dFim.value) dFim.value = new Date().toISOString().slice(0, 10);
+          await loadHistoricoReservas();
         }
         else if (sectionToNavigate === 'boletao') {
           const tbody = document.getElementById('boletosTable');
@@ -10191,6 +10214,29 @@ function setupNavigation() {
         }
         await loadReservasMesas();
       }
+      else if (target === "historicoReservas") {
+        var uSelect = document.getElementById('historicoUnidadeFiltro');
+        if (uSelect && uSelect.options.length <= 1) {
+          var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
+          state.unidades = unidades;
+          uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
+          (unidades || []).forEach(function(u) {
+            var opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.nome || 'Unidade ' + u.id;
+            uSelect.appendChild(opt);
+          });
+          if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
+            uSelect.value = currentUser.unidade_id;
+            uSelect.disabled = true;
+          }
+        }
+        var dInicio = document.getElementById('historicoDataInicio');
+        var dFim = document.getElementById('historicoDataFim');
+        if (dInicio && !dInicio.value) dInicio.value = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        if (dFim && !dFim.value) dFim.value = new Date().toISOString().slice(0, 10);
+        await loadHistoricoReservas();
+      }
       else if (target === "boletao") {
         console.log('🏦 ========================================');
         console.log('🏦 SEÇÃO BOLETAO ABERTA');
@@ -11372,6 +11418,69 @@ function formatDataReserva(val) {
 
 var _reservasMesasCache = { mesas: [], reservas: [], unidadeId: '' };
 
+async function loadHistoricoReservas() {
+  var selUnidade = document.getElementById('historicoUnidadeFiltro');
+  var unidadeId = (selUnidade && selUnidade.value) || '';
+  var dataInicio = document.getElementById('historicoDataInicio') && document.getElementById('historicoDataInicio').value;
+  var dataFim = document.getElementById('historicoDataFim') && document.getElementById('historicoDataFim').value;
+  var status = document.getElementById('historicoStatusFiltro') && document.getElementById('historicoStatusFiltro').value;
+  var tbody = document.getElementById('historicoReservasTableBody');
+  if (!tbody) return;
+  if (!unidadeId) {
+    tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>';
+    return;
+  }
+  var params = 'unidade_id=' + unidadeId;
+  if (dataInicio) params += '&data_inicio=' + dataInicio;
+  if (dataFim) params += '&data_fim=' + dataFim;
+  if (status) params += '&status=' + encodeURIComponent(status);
+  try {
+    var lista = await fetchJSON('/reservas-mesas/historico?' + params);
+    if (!lista || lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Nenhuma reserva encontrada no período.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(function(r) {
+      var dataStr = formatDataBrasil(r.data_reserva);
+      var horaStr = formatHora(r.hora_reserva);
+      var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || '-';
+      var statusClass = (r.status || '').replace(/_/g, '-');
+      var btnWhatsApp = r.telefone_cliente ? '<button class="btn-icon" title="WhatsApp" data-id="' + r.id + '" data-action="whatsapp-historico">📱</button> ' : '';
+      return '<tr>' +
+        '<td data-label="Data">' + escapeHtml(dataStr) + '</td>' +
+        '<td data-label="Horário">' + escapeHtml(horaStr) + '</td>' +
+        '<td data-label="Cliente">' + escapeHtml(r.nome_cliente || '-') + '</td>' +
+        '<td data-label="WhatsApp">' + escapeHtml(r.telefone_cliente || '-') + (btnWhatsApp ? ' ' + btnWhatsApp : '') + '</td>' +
+        '<td data-label="Pessoas">' + (r.qtd_pessoas || '-') + '</td>' +
+        '<td data-label="Mesa">' + escapeHtml(mesaNome) + '</td>' +
+        '<td data-label="Status"><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || '').replace(/_/g, ' ') + '</span></td>' +
+        '<td data-label="Total">' + (r.total_reservas_cliente || 1) + '</td></tr>';
+    }).join('');
+    tbody.querySelectorAll('[data-action="whatsapp-historico"]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = btn.getAttribute('data-id');
+        var r = await fetchJSON('/reservas-mesas/' + id);
+        abrirWhatsAppReserva(r);
+      });
+    });
+  } catch (err) {
+    showToast(err.message || 'Erro ao carregar histórico.', 'error');
+    tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Erro ao carregar.</td></tr>';
+  }
+}
+
+function setupHistoricoReservas() {
+  document.getElementById('btnVoltarReservas') && document.getElementById('btnVoltarReservas').addEventListener('click', function() {
+    navigateTo('reservaMesa');
+  });
+  document.getElementById('historicoAtualizar') && document.getElementById('historicoAtualizar').addEventListener('click', function() {
+    loadHistoricoReservas();
+  });
+  document.getElementById('historicoUnidadeFiltro') && document.getElementById('historicoUnidadeFiltro').addEventListener('change', function() {
+    loadHistoricoReservas();
+  });
+}
+
 async function loadReservasMesas() {
   var unitSelect = document.getElementById('reservasUnidadeFiltro');
   var unidadeId = (unitSelect && unitSelect.value) || '';
@@ -11883,6 +11992,33 @@ function setupReservasMesasModule() {
   document.getElementById('reservasTurnoFiltro') && document.getElementById('reservasTurnoFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasStatusFiltro') && document.getElementById('reservasStatusFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasAtualizar') && document.getElementById('reservasAtualizar').addEventListener('click', function() { loadReservasMesas(); });
+
+  document.getElementById('btnHistoricoReservas') && document.getElementById('btnHistoricoReservas').addEventListener('click', async function() {
+    var unidadeAtual = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
+    navigateTo('historicoReservas');
+    var uSelect = document.getElementById('historicoUnidadeFiltro');
+    if (uSelect && uSelect.options.length <= 1) {
+      var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
+      state.unidades = unidades;
+      uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
+      (unidades || []).forEach(function(u) {
+        var opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.nome || 'Unidade ' + u.id;
+        uSelect.appendChild(opt);
+      });
+      if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
+        uSelect.value = currentUser.unidade_id;
+        uSelect.disabled = true;
+      }
+    }
+    if (unidadeAtual && uSelect) uSelect.value = unidadeAtual;
+    var dInicio = document.getElementById('historicoDataInicio');
+    var dFim = document.getElementById('historicoDataFim');
+    if (dInicio && !dInicio.value) dInicio.value = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (dFim && !dFim.value) dFim.value = new Date().toISOString().slice(0, 10);
+    await loadHistoricoReservas();
+  });
 
   var cardsContainer = document.getElementById('reservasMesasCards');
   if (cardsContainer) {
@@ -13355,6 +13491,7 @@ async function init() {
   setupFornecedoresModule();
   setupLogsModule();
   setupReservasMesasModule();
+  setupHistoricoReservas();
   setupBoletosModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
