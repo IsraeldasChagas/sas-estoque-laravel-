@@ -123,19 +123,32 @@ class ReservaMesaController extends Controller
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
         $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
-        $unidadeIdUsuario = $usuario ? (int) $usuario->unidade_id : null;
+        $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : null;
 
-        // Definição da unidade da reserva:
-        // - Se vier unidade_id no request, usamos essa.
-        // - Senão, se o usuário tiver unidade fixa, usamos a dele.
+        // Carregar mesa antecipadamente para fallback de unidade (funciona em todas as unidades)
+        $mesa = $request->filled('mesa_id') ? Mesa::find($request->mesa_id) : null;
+        if (!$mesa) {
+            return response()->json(['message' => 'Mesa é obrigatória e deve existir.'], 422);
+        }
+
+        // Definição da unidade da reserva (mesma regra para unidade 1, 2, etc.):
+        // 1. Se vier unidade_id no request, usamos essa.
+        // 2. Senão, se o usuário tiver unidade fixa, usamos a dele.
+        // 3. Fallback: usar unidade da mesa (garante funcionar em qualquer unidade)
         $unidadeId = null;
         if ($request->filled('unidade_id')) {
             $unidadeId = (int) $request->unidade_id;
-        } elseif ($unidadeIdUsuario) {
-            $unidadeId = (int) $unidadeIdUsuario;
+        } elseif ($unidadeIdUsuario > 0) {
+            $unidadeId = $unidadeIdUsuario;
         }
-        if ($unidadeId <= 0 || !\DB::table('unidades')->where('id', $unidadeId)->exists()) {
+        if ($unidadeId <= 0) {
+            $unidadeId = (int) $mesa->unidade_id;
+        }
+        if ($unidadeId <= 0 || !DB::table('unidades')->where('id', $unidadeId)->exists()) {
             return response()->json(['message' => 'Unidade inválida ou não informada.'], 422);
+        }
+        if ((int) $mesa->unidade_id !== $unidadeId) {
+            return response()->json(['message' => 'Mesa não pertence à unidade selecionada.'], 422);
         }
         $request->merge(['unidade_id' => $unidadeId]);
 
@@ -157,10 +170,6 @@ class ReservaMesaController extends Controller
             return response()->json(['message' => 'Dados inválidos', 'errors' => $validator->errors()], 422);
         }
 
-        $mesa = Mesa::findOrFail($request->mesa_id);
-        if ($mesa->unidade_id != $request->unidade_id) {
-            return response()->json(['message' => 'Mesa não pertence à unidade selecionada.'], 422);
-        }
         if (!$mesa->ativo) {
             return response()->json(['message' => 'Mesa está inativa ou bloqueada.'], 422);
         }

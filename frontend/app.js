@@ -11294,9 +11294,16 @@ function formatTelefoneParaWhatsApp(telefone) {
   return '55' + dig;
 }
 
+function formatDataBrasil(val) {
+  if (!val) return '';
+  var s = (val.date ? val.date : val).toString().slice(0, 10);
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : s;
+}
+
 function getMensagemReservaWhatsApp(r) {
   var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + (r.mesa_id || '');
-  var dataStr = (r.data_reserva || '').toString().slice(0, 10);
+  var dataStr = formatDataBrasil(r.data_reserva);
   var horaStr = formatHora(r.hora_reserva);
   var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
   return 'Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:\n\n' +
@@ -11470,6 +11477,7 @@ async function popularMesasReserva(unidadeId) {
     var opt = document.createElement('option');
     opt.value = m.id;
     opt.textContent = (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + ' (cap. ' + m.capacidade + ')';
+    if (m.unidade_id) opt.setAttribute('data-unidade-id', String(m.unidade_id));
     select.appendChild(opt);
   });
 }
@@ -11519,7 +11527,7 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Mesa:</strong> ' + escapeHtml(mesaNome) + '</p>' +
       '<p><strong>Cliente:</strong> ' + escapeHtml(r.nome_cliente) + '</p>' +
       '<p><strong>Telefone:</strong> ' + escapeHtml(r.telefone_cliente || '-') + '</p>' +
-      '<p><strong>Data:</strong> ' + (r.data_reserva || '').toString().slice(0, 10) + ' | <strong>Horário:</strong> ' + formatHora(r.hora_reserva) + '</p>' +
+      '<p><strong>Data:</strong> ' + formatDataBrasil(r.data_reserva) + ' | <strong>Horário:</strong> ' + formatHora(r.hora_reserva) + '</p>' +
       '<p><strong>Pessoas:</strong> <span id="detQtdPessoas">' + qtd + '</span> / ' + cap + '</p>' +
       '<p><strong>Status:</strong> ' + (r.status || '').replace(/_/g, ' ') + '</p>' +
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
@@ -11803,10 +11811,15 @@ function setupReservasMesasModule() {
     var id = form.querySelector('[name="id"]').value;
     var hid = document.getElementById('reservaFormUnidadeId');
     var filtroUnidade = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
-    var unidadeVal = (hid && hid.value) || filtroUnidade;
-    if (!unidadeVal) { showToast('Unidade não definida. Selecione a unidade no filtro e abra o formulário novamente.', 'error'); return; }
+    var unidadeVal = String((hid && hid.value) || filtroUnidade || '').trim();
+    var mesaOpt = form.querySelector('[name="mesa_id"]');
+    if (!unidadeVal && mesaOpt && mesaOpt.selectedOptions && mesaOpt.selectedOptions[0]) {
+      var optUnidade = mesaOpt.selectedOptions[0].getAttribute('data-unidade-id');
+      if (optUnidade) unidadeVal = String(optUnidade).trim();
+    }
+    if (!unidadeVal) { showToast('Selecione a unidade no filtro acima primeiro.', 'error'); return; }
     var data = {
-      unidade_id: String(unidadeVal).trim(),
+      unidade_id: parseInt(unidadeVal, 10) || unidadeVal,
       mesa_id: form.querySelector('[name="mesa_id"]').value,
       nome_cliente: form.querySelector('[name="nome_cliente"]').value,
       telefone_cliente: form.querySelector('[name="telefone_cliente"]').value,
