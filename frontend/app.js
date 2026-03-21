@@ -11306,7 +11306,16 @@ function getMensagemReservaWhatsApp(r) {
   var dataStr = formatDataBrasil(r.data_reserva);
   var horaStr = formatHora(r.hora_reserva);
   var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
+  var unidadeNome = (r.unidade && r.unidade.nome) ? r.unidade.nome : '';
+  var unidadeEndereco = (r.unidade && r.unidade.endereco) ? r.unidade.endereco.trim() : '';
+  var localLinha = '';
+  if (unidadeNome) {
+    localLinha = '📍 Local: ' + unidadeNome;
+    if (unidadeEndereco) localLinha += '\n   ' + unidadeEndereco;
+    localLinha += '\n\n';
+  }
   return 'Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:\n\n' +
+    localLinha +
     '📅 Data: ' + dataStr + '\n' +
     '🕐 Horário: ' + horaStr + '\n' +
     '🪑 Mesa: ' + mesaNome + '\n' +
@@ -11321,15 +11330,26 @@ function abrirWhatsAppReserva(r) {
     showToast('Telefone inválido ou não informado. Cadastre o telefone do cliente.', 'warning');
     return;
   }
-  var msg = encodeURIComponent(getMensagemReservaWhatsApp(r));
-  var url = 'https://wa.me/' + tel + '?text=' + msg;
-  var a = document.createElement('a');
-  a.href = url;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  function abrirWhatsAppUrl(tel, msgEnc) {
+    var url = 'https://wa.me/' + tel + '?text=' + msgEnc;
+    var a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  if (!r.unidade && r.unidade_id) {
+    fetchJSON('/unidades/' + r.unidade_id).then(function(u) {
+      r.unidade = u;
+      abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
+    }).catch(function() {
+      abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
+    });
+    return;
+  }
+  abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
 }
 
 function formatHora(str) {
