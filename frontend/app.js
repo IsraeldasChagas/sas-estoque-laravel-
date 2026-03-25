@@ -10469,13 +10469,16 @@ function renderBoletos(boletos) {
       if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
       return null;
     };
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
     const diasEntre = (venc) => {
+      // Compara apenas datas (sem horas) usando UTC para evitar off-by-one
+      // quando o ambiente estiver em fuso/DST diferente.
       if (!venc) return 0;
       const v = parseDataLocal(venc);
       if (!v) return 0;
-      const d1 = new Date(hojeY, hojeM, hojeD);
-      const d2 = new Date(v.getFullYear(), v.getMonth(), v.getDate());
-      return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      const hojeUTC = Date.UTC(hojeY, hojeM, hojeD);
+      const vencUTC = Date.UTC(v.getFullYear(), v.getMonth(), v.getDate());
+      return Math.round((vencUTC - hojeUTC) / MS_PER_DAY);
     };
     const getSortKey = (b) => {
       if (b.status === 'PAGO' || b.status === 'CANCELADO') return 99999;
@@ -12517,14 +12520,19 @@ function setupBoletosModule() {
                 }
               }
               
-              // Ajusta a data de vencimento para cada mês (parse local para evitar bug de timezone)
+              // Ajusta a data de vencimento para cada mês.
+              // Clamp do dia para evitar rolar para o mês seguinte (ex: 30/31 -> vira "2" no mês seguinte).
               const dataStr = formData.get('data_vencimento');
               const [ano, mes, dia] = dataStr.split('-').map(Number);
-              const dataVencimento = new Date(ano, mes - 1, dia);
-              dataVencimento.setMonth(dataVencimento.getMonth() + i);
-              const novaDataStr = dataVencimento.getFullYear() + '-' +
-                String(dataVencimento.getMonth() + 1).padStart(2, '0') + '-' +
-                String(dataVencimento.getDate()).padStart(2, '0');
+              const baseMonthIndex = (mes - 1) + i; // meses desde janeiro
+              const alvoAno = Math.floor(baseMonthIndex / 12);
+              const alvoMes = ((baseMonthIndex % 12) + 12) % 12; // 0..11
+              const ultimoDiaDoMes = new Date(Date.UTC(alvoAno, alvoMes + 1, 0)).getUTCDate();
+              const diaClamped = Math.min(dia, ultimoDiaDoMes);
+              const novaDataStr =
+                alvoAno + '-' +
+                String(alvoMes + 1).padStart(2, '0') + '-' +
+                String(diaClamped).padStart(2, '0');
               formDataCopy.set('data_vencimento', novaDataStr);
               
               // Adiciona anexo apenas no primeiro boleto
@@ -12839,11 +12847,20 @@ async function mostrarDetalhesBoleto(id) {
       statusColor = '#9E9E9E';
     } else {
       const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      const venc = new Date(boleto.data_vencimento);
-      venc.setHours(0, 0, 0, 0);
-      const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
-      if (diff < 0) {
+      const hojeUTC = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+      const MS_PER_DAY = 1000 * 60 * 60 * 24;
+      const parseDataUTC = (str) => {
+        if (!str) return null;
+        const m = String(str).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return null;
+        return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      };
+      const vencUTC = parseDataUTC(boleto.data_vencimento);
+      const diffDias = vencUTC === null
+        ? 0
+        : Math.round((vencUTC - hojeUTC) / MS_PER_DAY);
+
+      if (diffDias < 0) {
         statusLabel = 'Atrasado';
         statusColor = '#f44336';
       } else {
@@ -13493,6 +13510,29 @@ async function init() {
   setupReservasMesasModule();
   setupHistoricoReservas();
   setupBoletosModule();
+  // Se o usuário deixar a tela aberta e voltar no dia seguinte, recarrega boletos.
+  // Isso evita casos em que algum boleto criado "ontem" não aparece por falta de refresh.
+  let lastBoletosRefreshDay = new Date().toDateString();
+  const maybeRefreshBoletos = async () => {
+    try {
+      const boletaoSection = document.getElementById('boletaoSection');
+      if (!boletaoSection) return;
+      if (boletaoSection.classList.contains('hidden')) return;
+
+      const today = new Date().toDateString();
+      if (today === lastBoletosRefreshDay) return;
+      lastBoletosRefreshDay = today;
+
+      await loadBoletos({}).catch(() => {});
+      await loadBoletosResumo().catch(() => {});
+    } catch (_) {
+      // Não interrompe a UI se algo der errado no refresh automático.
+    }
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) maybeRefreshBoletos();
+  });
+  window.addEventListener('focus', () => maybeRefreshBoletos());
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
