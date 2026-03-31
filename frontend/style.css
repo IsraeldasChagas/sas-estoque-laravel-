@@ -3742,6 +3742,29 @@ select[size]:not([size="1"]) {
 #funcionariosSection .table-wrapper .usuarios-foto--placeholder { width: 48px; height: 48px; }
 #funcionariosSection .table-action { cursor: pointer; }
 
+@media (min-width: 901px) {
+  #funcionariosSection .table-wrapper {
+    overflow-x: auto;
+  }
+
+  #funcionariosSection .table-wrapper table {
+    min-width: 1240px;
+  }
+
+  /* Mantem "Ações" sempre visivel no lado direito */
+  #funcionariosSection .table-wrapper th:last-child,
+  #funcionariosSection .table-wrapper td.table-actions {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--card-bg);
+  }
+
+  #funcionariosSection .table-wrapper th:last-child {
+    z-index: 3;
+  }
+}
+
 /* Modal de visualização - pergunta em cima, resposta embaixo */
 .view-field { margin-bottom: 0.75rem; }
 .view-field-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.2rem; font-weight: 500; }
