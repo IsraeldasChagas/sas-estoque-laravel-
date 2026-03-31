@@ -56,13 +56,39 @@ foreach ($ids as $id) {
 
     $cpf = sprintf('000.000.%03d-%02d', $id % 1000, $id % 100);
 
+    // Tenta descobrir o usuario real mais provavel pelo historico de envios OTP.
+    $usuarioIdProvavel = DB::table('proventos_logs')
+        ->where('funcionario_id', $id)
+        ->where('acao', 'otp_enviado')
+        ->whereNotNull('usuario_id')
+        ->select('usuario_id', DB::raw('COUNT(*) as total'))
+        ->groupBy('usuario_id')
+        ->orderByDesc('total')
+        ->value('usuario_id');
+
+    $usuario = null;
+    if ($usuarioIdProvavel) {
+        $usuario = DB::table('usuarios')
+            ->where('id', $usuarioIdProvavel)
+            ->first(['id', 'nome', 'email', 'unidade_id', 'perfil']);
+    }
+
+    $nome = $usuario?->nome ?: "RECUPERAR FUNCIONARIO ID {$id}";
+    $email = $usuario?->email;
+    $unidadeId = $usuario?->unidade_id;
+    $usuarioId = $usuario?->id;
+    $cargo = $usuario?->perfil ? strtolower(str_replace('_', ' ', (string) $usuario->perfil)) : 'A DEFINIR';
+
     DB::table('funcionarios')->insert([
         'id' => $id,
-        'nome_completo' => "RECUPERAR FUNCIONARIO ID {$id}",
+        'nome_completo' => $nome,
         'cpf' => $cpf,
-        'cargo' => 'A DEFINIR',
+        'cargo' => $cargo,
+        'email' => $email,
+        'unidade_id' => $unidadeId,
+        'usuario_id' => $usuarioId,
+        'possui_acesso' => $usuarioId ? 1 : 0,
         'status' => 'ativo',
-        'possui_acesso' => 0,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
