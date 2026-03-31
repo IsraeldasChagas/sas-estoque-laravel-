@@ -107,6 +107,7 @@
           <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
           <a href="#" class="nav-link" data-section="fornecedores">Fornecedores</a>
           <a href="#" class="nav-link" data-section="reservaMesa">Reserva de Mesa</a>
+          <a href="#" class="nav-link" data-section="historicoReservas">Histórico de Reservas</a>
           <div class="nav-submenu">
             <a href="#" class="nav-link nav-link-parent" id="rhMenu">
               RH
@@ -1360,7 +1361,10 @@
               <div class="filters-grid">
                 <label>
                   Nome
-                  <input type="text" id="funcionariosFiltroNome" name="nome" placeholder="Buscar por nome" />
+                  <input type="text" id="funcionariosFiltroNomeBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
+                  <select id="funcionariosFiltroNome" name="nome">
+                    <option value="">Todos</option>
+                  </select>
                 </label>
                 <label>
                   CPF

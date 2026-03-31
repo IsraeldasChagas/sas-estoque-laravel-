@@ -6545,8 +6545,39 @@ async function loadFuncionarios(filtros = {}) {
   const url = params.toString() ? `/funcionarios?${params}` : "/funcionarios";
   const dados = await fetchJSON(url);
   state.funcionarios = Array.isArray(dados) ? dados : [];
+  populateFuncionariosFiltroNome(state.funcionarios);
   renderFuncionarios(state.funcionarios);
   return state.funcionarios;
+}
+
+function populateFuncionariosFiltroNome(lista) {
+  const select = document.getElementById("funcionariosFiltroNome");
+  const buscaInput = document.getElementById("funcionariosFiltroNomeBusca");
+  if (!select) return;
+
+  const selecionado = select.value;
+  const nomes = [...new Set((Array.isArray(lista) ? lista : [])
+    .map((f) => (f?.nome_completo || "").toString().trim())
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  select.innerHTML = '<option value="">Todos</option>' +
+    nomes.map((nome) => `<option value="${escapeHtml(nome)}">${escapeHtml(nome)}</option>`).join("");
+
+  if (selecionado && nomes.includes(selecionado)) {
+    select.value = selecionado;
+  } else {
+    select.value = "";
+  }
+
+  if (buscaInput) {
+    buscaInput._todasOpcoes = nomes.map((nome) => ({ value: nome, text: nome }));
+  }
+
+  if (select.dataset.buscaBound !== "true") {
+    bindBuscaSelect("funcionariosFiltroNomeBusca", "funcionariosFiltroNome");
+    select.dataset.buscaBound = "true";
+  }
 }
 
 function renderFuncionarios(lista) {
@@ -6971,9 +7002,8 @@ async function startAppSession(user) {
         else if (sectionToNavigate === 'boletao') {
           const tbody = document.getElementById('boletosTable');
           if (tbody) {
-            const fb = collectBoletosListFiltersFromDOM();
-            await loadBoletos(fb).catch(() => {});
-            await loadBoletosResumo(fb.mes_ano).catch(() => {});
+            await loadBoletos({}).catch(() => {});
+            await loadBoletosResumo().catch(() => {});
           }
         }
         else if (sectionToNavigate === 'proventos') {
@@ -9089,7 +9119,7 @@ function setupModals() {
     }
   }
   function getFuncionariosFiltros() {
-    const nome = document.getElementById("funcionariosFiltroNome")?.value?.trim();
+    const nome = document.getElementById("funcionariosFiltroNome")?.value;
     const cpf = document.getElementById("funcionariosFiltroCpf")?.value?.trim();
     const cargo = document.getElementById("funcionariosFiltroCargo")?.value;
     const unidadeId = document.getElementById("funcionariosFiltroUnidade")?.value;
@@ -9418,6 +9448,7 @@ function setupModals() {
   dom.funcionariosFilterForm?.addEventListener("submit", async (e) => { e.preventDefault(); await loadFuncionarios(getFuncionariosFiltros()); });
   dom.funcionariosLimparFiltros?.addEventListener("click", () => {
     document.getElementById("funcionariosFiltroNome").value = "";
+    document.getElementById("funcionariosFiltroNomeBusca").value = "";
     document.getElementById("funcionariosFiltroCpf").value = "";
     document.getElementById("funcionariosFiltroCargo").value = "";
     if (dom.funcionariosFiltroUnidade) dom.funcionariosFiltroUnidade.value = "";
@@ -10257,9 +10288,8 @@ function setupNavigation() {
           console.log('📊 Carregando boletos...');
           
           try {
-            const f0 = collectBoletosListFiltersFromDOM();
-            await loadBoletos(f0);
-            await loadBoletosResumo(f0.mes_ano);
+            await loadBoletos({});
+            await loadBoletosResumo();
             console.log('✅ Carregamento concluído');
           } catch (error) {
             console.error('❌ Erro:', error);
@@ -10383,18 +10413,6 @@ async function populateBoletosUnidades() {
   }
 }
 
-/** Lê mês/ano, unidade e status dos selects da tela de boletos (fonte única para recarregar a lista). */
-function collectBoletosListFiltersFromDOM() {
-  const filtros = {};
-  const mesAno = (document.getElementById('boletosMesAnoFiltro')?.value || '').trim();
-  const unidadeId = (document.getElementById('boletosUnidadeFiltro')?.value || '').trim();
-  const status = (document.getElementById('boletosStatusFiltro')?.value || '').trim();
-  if (mesAno) filtros.mes_ano = mesAno;
-  if (unidadeId) filtros.unidade_id = unidadeId;
-  if (status) filtros.status = status;
-  return filtros;
-}
-
 // Carrega boletos do backend
 async function loadBoletos(filtros = {}) {
   console.log('📊 === LOAD BOLETOS INICIADO ===');
@@ -10483,16 +10501,13 @@ function renderBoletos(boletos) {
       if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
       return null;
     };
-    const MS_PER_DAY = 1000 * 60 * 60 * 24;
     const diasEntre = (venc) => {
-      // Compara apenas datas (sem horas) usando UTC para evitar off-by-one
-      // quando o ambiente estiver em fuso/DST diferente.
       if (!venc) return 0;
       const v = parseDataLocal(venc);
       if (!v) return 0;
-      const hojeUTC = Date.UTC(hojeY, hojeM, hojeD);
-      const vencUTC = Date.UTC(v.getFullYear(), v.getMonth(), v.getDate());
-      return Math.round((vencUTC - hojeUTC) / MS_PER_DAY);
+      const d1 = new Date(hojeY, hojeM, hojeD);
+      const d2 = new Date(v.getFullYear(), v.getMonth(), v.getDate());
+      return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
     };
     const getSortKey = (b) => {
       if (b.status === 'PAGO' || b.status === 'CANCELADO') return 99999;
@@ -12235,10 +12250,17 @@ function setupBoletosModule() {
         recarregarTabelaBoletos.disabled = true;
         recarregarTabelaBoletos.textContent = '⏳ Atualizando...';
         
-        const filtros = collectBoletosListFiltersFromDOM();
-        console.log('🔄 Recarregando boletos com filtros ativos:', filtros);
-        await loadBoletos(filtros);
-        await loadBoletosResumo(filtros.mes_ano);
+        const mesAno = boletosMesAnoFiltro?.value;
+        
+        if (mesAno && mesAno !== '') {
+          console.log('📅 Recarregando boletos do mês:', mesAno);
+          await loadBoletos({ mes_ano: mesAno });
+          await loadBoletosResumo(mesAno);
+        } else {
+          console.log('📋 Recarregando TODOS os boletos');
+          await loadBoletos({});
+          await loadBoletosResumo();
+        }
         
         showToast('✅ Boletos atualizados!', 'success');
         console.log('✅ Atualização concluída!');
@@ -12349,9 +12371,23 @@ function setupBoletosModule() {
     });
   }
 
-  // Função para coletar filtros ativos (mesma lógica que collectBoletosListFiltersFromDOM)
+  // Função para coletar filtros ativos
   function getBoletosFilters() {
-    return collectBoletosListFiltersFromDOM();
+    const filtros = {};
+    
+    if (boletosMesAnoFiltro?.value) {
+      filtros.mes_ano = boletosMesAnoFiltro.value;
+    }
+    
+    if (boletosUnidadeFiltro?.value) {
+      filtros.unidade_id = boletosUnidadeFiltro.value;
+    }
+    
+    if (boletosStatusFiltro?.value) {
+      filtros.status = boletosStatusFiltro.value;
+    }
+    
+    return filtros;
   }
   
   // Função para aplicar filtros
@@ -12513,19 +12549,14 @@ function setupBoletosModule() {
                 }
               }
               
-              // Ajusta a data de vencimento para cada mês.
-              // Clamp do dia para evitar rolar para o mês seguinte (ex: 30/31 -> vira "2" no mês seguinte).
+              // Ajusta a data de vencimento para cada mês (parse local para evitar bug de timezone)
               const dataStr = formData.get('data_vencimento');
               const [ano, mes, dia] = dataStr.split('-').map(Number);
-              const baseMonthIndex = (mes - 1) + i; // meses desde janeiro
-              const alvoAno = Math.floor(baseMonthIndex / 12);
-              const alvoMes = ((baseMonthIndex % 12) + 12) % 12; // 0..11
-              const ultimoDiaDoMes = new Date(Date.UTC(alvoAno, alvoMes + 1, 0)).getUTCDate();
-              const diaClamped = Math.min(dia, ultimoDiaDoMes);
-              const novaDataStr =
-                alvoAno + '-' +
-                String(alvoMes + 1).padStart(2, '0') + '-' +
-                String(diaClamped).padStart(2, '0');
+              const dataVencimento = new Date(ano, mes - 1, dia);
+              dataVencimento.setMonth(dataVencimento.getMonth() + i);
+              const novaDataStr = dataVencimento.getFullYear() + '-' +
+                String(dataVencimento.getMonth() + 1).padStart(2, '0') + '-' +
+                String(dataVencimento.getDate()).padStart(2, '0');
               formDataCopy.set('data_vencimento', novaDataStr);
               
               // Adiciona anexo apenas no primeiro boleto
@@ -12608,9 +12639,8 @@ function setupBoletosModule() {
                 boletoModal.classList.remove('active');
                 boletoForm.reset();
                 showToast('Boleto não encontrado (pode ter sido excluído). Lista atualizada.', 'warning');
-                const f = collectBoletosListFiltersFromDOM();
-                await loadBoletos(f);
-                await loadBoletosResumo(f.mes_ano);
+                await loadBoletos({});
+                await loadBoletosResumo();
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Salvar Boleto'; }
                 return;
               }
@@ -12678,11 +12708,10 @@ function setupBoletosModule() {
           submitBtn.textContent = 'Salvar Boleto';
         }
         
-        // Recarregar lista e resumo respeitando filtros (mês, unidade, status)
+        // Recarregar lista de boletos E resumo
         console.log('🔄 Recarregando lista e cards...');
-        const filtrosAposSalvar = collectBoletosListFiltersFromDOM();
-        await loadBoletos(filtrosAposSalvar);
-        await loadBoletosResumo(filtrosAposSalvar.mes_ano);
+        await loadBoletos({});  // Carrega TODOS os boletos
+        await loadBoletosResumo();  // Atualiza os cards
         
         console.log('✅ Processo concluído!');
       } catch (error) {
@@ -12842,20 +12871,11 @@ async function mostrarDetalhesBoleto(id) {
       statusColor = '#9E9E9E';
     } else {
       const hoje = new Date();
-      const hojeUTC = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-      const MS_PER_DAY = 1000 * 60 * 60 * 24;
-      const parseDataUTC = (str) => {
-        if (!str) return null;
-        const m = String(str).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (!m) return null;
-        return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      };
-      const vencUTC = parseDataUTC(boleto.data_vencimento);
-      const diffDias = vencUTC === null
-        ? 0
-        : Math.round((vencUTC - hojeUTC) / MS_PER_DAY);
-
-      if (diffDias < 0) {
+      hoje.setHours(0, 0, 0, 0);
+      const venc = new Date(boleto.data_vencimento);
+      venc.setHours(0, 0, 0, 0);
+      const diff = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+      if (diff < 0) {
         statusLabel = 'Atrasado';
         statusColor = '#f44336';
       } else {
@@ -13131,9 +13151,9 @@ document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async
     document.getElementById('boletoPagamentoModal').classList.remove('active');
     e.target.reset();
     
-    const filtrosPagamento = collectBoletosListFiltersFromDOM();
-    await loadBoletos(filtrosPagamento);
-    await loadBoletosResumo(filtrosPagamento.mes_ano);
+    // Recarrega boletos
+    await loadBoletos({});
+    await loadBoletosResumo();
     
   } catch (error) {
     console.error('❌ Erro ao registrar pagamento:', error);
@@ -13505,30 +13525,6 @@ async function init() {
   setupReservasMesasModule();
   setupHistoricoReservas();
   setupBoletosModule();
-  // Se o usuário deixar a tela aberta e voltar no dia seguinte, recarrega boletos.
-  // Isso evita casos em que algum boleto criado "ontem" não aparece por falta de refresh.
-  let lastBoletosRefreshDay = new Date().toDateString();
-  const maybeRefreshBoletos = async () => {
-    try {
-      const boletaoSection = document.getElementById('boletaoSection');
-      if (!boletaoSection) return;
-      if (boletaoSection.classList.contains('hidden')) return;
-
-      const today = new Date().toDateString();
-      if (today === lastBoletosRefreshDay) return;
-      lastBoletosRefreshDay = today;
-
-      const fr = collectBoletosListFiltersFromDOM();
-      await loadBoletos(fr).catch(() => {});
-      await loadBoletosResumo(fr.mes_ano).catch(() => {});
-    } catch (_) {
-      // Não interrompe a UI se algo der errado no refresh automático.
-    }
-  };
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) maybeRefreshBoletos();
-  });
-  window.addEventListener('focus', () => maybeRefreshBoletos());
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
