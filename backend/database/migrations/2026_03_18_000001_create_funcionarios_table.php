@@ -11,7 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::dropIfExists('funcionarios');
+        // Proteção contra perda de dados:
+        // esta migration não deve recriar a tabela se ela já existir.
+        if (Schema::hasTable('funcionarios')) {
+            return;
+        }
+
         Schema::create('funcionarios', function (Blueprint $table) {
             $table->id();
             $table->string('nome_completo');
