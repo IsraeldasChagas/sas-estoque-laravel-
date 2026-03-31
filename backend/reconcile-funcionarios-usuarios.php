@@ -4,6 +4,9 @@
  * Garante cadastro de funcionario para usuarios operacionais ativos
  * que ainda nao possuem vinculo em funcionarios.usuario_id.
  *
+ * Importante: usuario e funcionario sao entidades distintas.
+ * Este script NAO cria vinculo de acesso automaticamente.
+ *
  * Uso:
  *   php reconcile-funcionarios-usuarios.php
  */
@@ -62,8 +65,8 @@ foreach ($usuariosSemFuncionario as $u) {
         'unidade_id' => $u->unidade_id,
         'email' => $u->email,
         'status' => 'ativo',
-        'possui_acesso' => 1,
-        'usuario_id' => $u->id,
+        'possui_acesso' => 0,
+        'usuario_id' => null,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
