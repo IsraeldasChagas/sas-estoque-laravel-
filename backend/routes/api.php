@@ -5094,6 +5094,55 @@ Route::options('/boletos/{id}/anexo', function () {
 });
 
 // ============================================
+// ALVARÁS - CONTROLE FINANCEIRO
+// ============================================
+
+use App\Http\Controllers\AlvaraController;
+
+Route::options('/alvaras', fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::options('/alvaras/{id}', fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/alvaras', fn (Request $request) => (new AlvaraController())->index($request)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::post('/alvaras', fn (Request $request) => (new AlvaraController())->store($request)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/alvaras/{id}', fn (Request $request, $id) => (new AlvaraController())->show($id)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::put('/alvaras/{id}', fn (Request $request, $id) => (new AlvaraController())->update($request, $id)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::delete('/alvaras/{id}', fn (Request $request, $id) => (new AlvaraController())->destroy($id)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->downloadAnexo($id)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::delete('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->removerAnexo($id)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::options('/alvaras/{id}/anexo', fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+// ============================================
 // RESERVAS DE MESAS
 // ============================================
 

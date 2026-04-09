@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -354,7 +354,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "proventos", "reservaMesa", "historicoReservas", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2710,7 +2710,7 @@ function applyPermissions() {
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
-    const temAcessoFinanceiro = regras.sections.includes("boletao") || regras.sections.includes("proventos");
+    const temAcessoFinanceiro = regras.sections.includes("boletao") || regras.sections.includes("alvara") || regras.sections.includes("proventos");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
   // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (Backup de Fornecedores = apenas ADMIN)
@@ -6916,7 +6916,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'reservaMesa', 'historicoReservas', 'funcionarios', 'proventos', 'logs'];
+          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'alvara', 'reservaMesa', 'historicoReservas', 'funcionarios', 'proventos', 'logs'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
@@ -10246,6 +10246,10 @@ function setupNavigation() {
         }
         await loadReservasMesas();
       }
+      else if (target === "alvara") {
+        await populateAlvarasUnidades().catch(() => {});
+        await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
+      }
       else if (target === "historicoReservas") {
         var uSelect = document.getElementById('historicoUnidadeFiltro');
         if (uSelect && uSelect.options.length <= 1) {
@@ -10370,6 +10374,29 @@ function populateBoletosMesAnoFiltro() {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const valorAtual = select.value;
   select.innerHTML = '<option value="">📋 Todos os boletos</option>';
+  const anoInicio = Math.max(2026, anoAtual - 1);
+  const anoFim = Math.max(anoAtual + 1, 2027);
+  for (let ano = anoInicio; ano <= anoFim; ano++) {
+    for (let m = 0; m <= 11; m++) {
+      const valor = `${ano}-${String(m + 1).padStart(2, '0')}`;
+      const opt = document.createElement('option');
+      opt.value = valor;
+      opt.textContent = `${nomesMeses[m]} ${ano}`;
+      select.appendChild(opt);
+    }
+  }
+  if (valorAtual) select.value = valorAtual;
+}
+
+function populateAlvarasMesAnoFiltro() {
+  const select = document.getElementById('alvarasMesAnoFiltro');
+  if (!select) return;
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const valorAtual = select.value;
+  select.innerHTML = '<option value="">📋 Todos os alvarás</option>';
   const anoInicio = Math.max(2026, anoAtual - 1);
   const anoFim = Math.max(anoAtual + 1, 2027);
   for (let ano = anoInicio; ano <= anoFim; ano++) {
@@ -12778,6 +12805,289 @@ function setupBoletosModule() {
   });
 }
 
+// ===== Módulo de Alvarás =====
+async function populateAlvarasUnidades() {
+  const selectModal = document.querySelector('#alvaraForm select[name="unidade_id"]');
+  const selectFiltro = document.getElementById('alvarasUnidadeFiltro');
+  try {
+    const unidades = await fetchJSON('/unidades');
+    if (selectModal) {
+      selectModal.innerHTML = '<option value="">Selecione a unidade (opcional)</option>' +
+        (unidades || []).map(u => `<option value="${u.id}">${escapeHtml(u.nome || ('Unidade ' + u.id))}</option>`).join('');
+    }
+    if (selectFiltro) {
+      selectFiltro.innerHTML = '<option value="">Todas as unidades</option>' +
+        (unidades || []).map(u => `<option value="${u.id}">${escapeHtml(u.nome || ('Unidade ' + u.id))}</option>`).join('');
+    }
+  } catch (_) {
+    // silencioso
+  }
+}
+
+function collectAlvarasListFiltersFromDOM() {
+  const filtros = {};
+  const mesAno = (document.getElementById('alvarasMesAnoFiltro')?.value || '').trim();
+  const unidadeId = (document.getElementById('alvarasUnidadeFiltro')?.value || '').trim();
+  if (mesAno) filtros.mes_ano = mesAno;
+  if (unidadeId) filtros.unidade_id = unidadeId;
+  return filtros;
+}
+
+async function loadAlvaras(filtros = {}) {
+  const tbody = document.getElementById('alvarasTable');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#2196F3;padding:30px;">⏳ Carregando alvarás...</td></tr>';
+  try {
+    const params = new URLSearchParams();
+    if (filtros.mes_ano) params.append('mes_ano', filtros.mes_ano);
+    if (filtros.unidade_id) params.append('unidade_id', filtros.unidade_id);
+    const url = `${API_URL}/alvaras?${params.toString()}`;
+    const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'X-Usuario-Id': currentUser?.id || '' } });
+    if (!res.ok) throw new Error('Erro ao carregar alvarás');
+    const alvaras = await res.json();
+    renderAlvaras(Array.isArray(alvaras) ? alvaras : []);
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#d32f2f;padding:30px;">❌ Erro ao carregar alvarás</td></tr>';
+  }
+}
+
+function renderAlvaras(alvaras) {
+  const tbody = document.getElementById('alvarasTable');
+  if (!tbody) return;
+  if (!alvaras.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;padding:20px;">Nenhum alvará encontrado.</td></tr>';
+    return;
+  }
+  const fmtData = (v) => (formatDate(v) || '').split(' ')[0] || '-';
+  const rows = alvaras.map(a => {
+    const anexo = a.anexo_path
+      ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank" title="Baixar ${escapeHtml(a.anexo_nome || 'anexo')}" style="text-decoration:none;font-size:1.2rem;">📎</a>`
+      : '<span style="color:#ccc;">-</span>';
+    return `
+      <tr>
+        <td data-label="Tipo">${escapeHtml(a.tipo || '-')}</td>
+        <td data-label="Unidade">${escapeHtml(String(a.unidade_id || '-'))}</td>
+        <td data-label="Início">${fmtData(a.data_inicio)}</td>
+        <td data-label="Vencimento">${fmtData(a.data_vencimento)}</td>
+        <td data-label="Valor pago">${formatCurrencyBRL(a.valor_pago || 0)}</td>
+        <td data-label="Anexo" style="text-align:center;">${anexo}</td>
+        <td data-label="Ações">
+          <button class="btn-icon" title="Editar" data-id="${a.id}">✏️</button>
+          <button class="btn-icon" title="Visualizar" data-id="${a.id}">👁️</button>
+          <button class="btn-icon btn-icon--danger btn-deletar-alvara" title="Excluir" data-id="${a.id}" style="color:#c62828;">🗑️</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  tbody.innerHTML = rows;
+
+  tbody.querySelectorAll('.btn-deletar-alvara').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!confirm('Tem certeza que deseja excluir este alvará?')) return;
+      btn.disabled = true;
+      try {
+        await fetchJSON(`/alvaras/${id}`, { method: 'DELETE' });
+        showToast('Alvará excluído com sucesso.', 'success');
+        const f = collectAlvarasListFiltersFromDOM();
+        await loadAlvaras(f);
+      } catch (e) {
+        showToast('Erro ao excluir: ' + (e.message || 'Falha na operação.'), 'error');
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+async function mostrarDetalhesAlvara(id) {
+  const modal = document.getElementById('alvaraDetalhesModal');
+  const content = document.getElementById('alvaraDetalhesContent');
+  if (!modal || !content) return;
+  content.innerHTML = '<p style="text-align:center;color:#999;">⏳ Carregando...</p>';
+  modal.classList.add('active');
+  try {
+    const a = await fetchJSON(`/alvaras/${id}`);
+    const anexoHtml = a.anexo_path
+      ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank">Baixar: ${escapeHtml(a.anexo_nome || 'anexo')}</a>`
+      : 'Sem anexo';
+    content.innerHTML = `
+      <div style="display:grid;gap:0.75rem;">
+        <div style="background:#f5f5f5;padding:1rem;border-radius:8px;">
+          <p style="margin:0.25rem 0;"><strong>ID:</strong> #${a.id}</p>
+          <p style="margin:0.25rem 0;"><strong>Tipo:</strong> ${escapeHtml(a.tipo || '-')}</p>
+          <p style="margin:0.25rem 0;"><strong>Unidade:</strong> ${escapeHtml(String(a.unidade_id || '-'))}</p>
+          <p style="margin:0.25rem 0;"><strong>Início:</strong> ${formatDate(a.data_inicio)}</p>
+          <p style="margin:0.25rem 0;"><strong>Vencimento:</strong> ${formatDate(a.data_vencimento)}</p>
+          <p style="margin:0.25rem 0;"><strong>Valor pago:</strong> ${formatCurrencyBRL(a.valor_pago || 0)}</p>
+          <p style="margin:0.25rem 0;"><strong>Anexo:</strong> ${anexoHtml}</p>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    content.innerHTML = '<p style="text-align:center;color:#d32f2f;">❌ Erro ao carregar detalhes</p>';
+  }
+}
+
+async function editarAlvara(id) {
+  const modal = document.getElementById('alvaraModal');
+  const form = document.getElementById('alvaraForm');
+  if (!modal || !form) return;
+  try {
+    await populateAlvarasUnidades();
+    const a = await fetchJSON(`/alvaras/${id}`);
+    form.dataset.mode = 'edit';
+    form.querySelector('[name="id"]').value = a.id;
+    form.querySelector('[name="unidade_id"]').value = a.unidade_id || '';
+    form.querySelector('[name="tipo"]').value = a.tipo || '';
+    form.querySelector('[name="data_inicio"]').value = formatDateForInput(a.data_inicio);
+    form.querySelector('[name="data_vencimento"]').value = formatDateForInput(a.data_vencimento);
+    const vInput = form.querySelector('[name="valor_pago"]');
+    if (vInput) {
+      vInput.dataset.value = String(a.valor_pago || 0);
+      vInput.value = a.valor_pago ? formatCurrencyBRL(parseFloat(a.valor_pago)) : '';
+    }
+    document.getElementById('alvaraModalTitle').textContent = '✏️ Editar Alvará';
+    modal.classList.add('active');
+  } catch (e) {
+    showToast('Erro ao carregar alvará para edição', 'error');
+  }
+}
+
+function setupAlvarasModule() {
+  const openBtn = document.getElementById('openNovoAlvara');
+  const modal = document.getElementById('alvaraModal');
+  const closeBtn = document.getElementById('closeAlvara');
+  const cancelBtn = document.getElementById('cancelAlvara');
+  const form = document.getElementById('alvaraForm');
+  const anexoInput = document.getElementById('alvaraAnexoInput');
+  const anexoPreview = document.getElementById('alvaraAnexoPreview');
+  const removerAnexoBtn = document.getElementById('alvaraRemoverAnexo');
+  const limparFiltrosBtn = document.getElementById('limparFiltrosAlvaras');
+  const recarregarBtn = document.getElementById('recarregarTabelaAlvaras');
+
+  populateAlvarasMesAnoFiltro();
+  populateAlvarasUnidades();
+
+  const resetToCreate = () => {
+    if (!form) return;
+    form.dataset.mode = 'create';
+    const idEl = form.querySelector('input[name="id"]');
+    if (idEl) idEl.value = '';
+    if (anexoPreview) anexoPreview.style.display = 'none';
+    if (anexoInput) anexoInput.value = '';
+    const title = document.getElementById('alvaraModalTitle');
+    if (title) title.textContent = '🧾 Novo Alvará';
+  };
+
+  if (anexoInput) {
+    anexoInput.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Arquivo muito grande! Máximo 5MB', 'error');
+        anexoInput.value = '';
+        return;
+      }
+      const nomeEl = document.getElementById('alvaraAnexoNome');
+      const tamanhoEl = document.getElementById('alvaraAnexoTamanho');
+      if (nomeEl) nomeEl.textContent = file.name;
+      if (tamanhoEl) tamanhoEl.textContent = formatFileSize(file.size);
+      if (anexoPreview) anexoPreview.style.display = 'block';
+    });
+  }
+  if (removerAnexoBtn) {
+    removerAnexoBtn.addEventListener('click', () => {
+      if (anexoInput) anexoInput.value = '';
+      if (anexoPreview) anexoPreview.style.display = 'none';
+    });
+  }
+
+  if (openBtn) {
+    openBtn.addEventListener('click', async () => {
+      await populateAlvarasUnidades();
+      if (modal) modal.classList.add('active');
+      if (form) form.reset();
+      resetToCreate();
+    });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => { if (modal) modal.classList.remove('active'); resetToCreate(); });
+  if (cancelBtn) cancelBtn.addEventListener('click', () => { if (form) form.reset(); resetToCreate(); });
+  if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('active'); resetToCreate(); } });
+
+  if (limparFiltrosBtn) {
+    limparFiltrosBtn.addEventListener('click', async () => {
+      const s1 = document.getElementById('alvarasMesAnoFiltro');
+      const s2 = document.getElementById('alvarasUnidadeFiltro');
+      if (s1) s1.value = '';
+      if (s2) s2.value = '';
+      await loadAlvaras({});
+      showToast('✅ Filtros limpos', 'success');
+    });
+  }
+  if (recarregarBtn) recarregarBtn.addEventListener('click', async () => loadAlvaras(collectAlvarasListFiltersFromDOM()));
+  document.getElementById('alvarasMesAnoFiltro')?.addEventListener('change', async () => loadAlvaras(collectAlvarasListFiltersFromDOM()));
+  document.getElementById('alvarasUnidadeFiltro')?.addEventListener('change', async () => loadAlvaras(collectAlvarasListFiltersFromDOM()));
+
+  if (form) {
+    attachCurrencyMask(form.querySelector('[name="valor_pago"]'));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tipo = form.querySelector('[name="tipo"]')?.value?.trim();
+      const dataInicio = form.querySelector('[name="data_inicio"]')?.value;
+      const dataVenc = form.querySelector('[name="data_vencimento"]')?.value;
+      if (!tipo) return showToast('Preencha o tipo de alvará.', 'error');
+      if (!dataInicio) return showToast('Preencha a data de início.', 'error');
+      if (!dataVenc) return showToast('Preencha a data de vencimento.', 'error');
+
+      const valorPago = parseCurrencyInput(form.querySelector('[name="valor_pago"]'));
+      const fd = new FormData(form);
+      fd.set('valor_pago', valorPago > 0 ? valorPago.toFixed(2) : '');
+
+      const mode = (form.dataset.mode || 'create').toLowerCase();
+      const id = (form.querySelector('[name="id"]')?.value || '').trim();
+      if (mode !== 'edit') {
+        fd.delete('id');
+      }
+
+      try {
+        let res;
+        if (mode === 'edit' && id) {
+          res = await fetch(`${API_URL}/alvaras/${id}`, { method: 'POST', headers: { 'X-HTTP-Method-Override': 'PUT', 'X-Usuario-Id': currentUser?.id || '' }, body: fd });
+          // fallback: alguns ambientes não aceitam PUT multipart; usa method override
+        } else {
+          res = await fetch(`${API_URL}/alvaras`, { method: 'POST', headers: { 'X-Usuario-Id': currentUser?.id || '' }, body: fd });
+        }
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(t || 'Erro ao salvar alvará');
+        }
+        showToast('✅ Alvará salvo com sucesso!', 'success');
+        if (modal) modal.classList.remove('active');
+        form.reset();
+        resetToCreate();
+        await loadAlvaras(collectAlvarasListFiltersFromDOM());
+      } catch (err) {
+        showToast('❌ ' + (err.message || 'Erro ao salvar'), 'error');
+      }
+    });
+  }
+
+  // Delegação de cliques nas ações
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-icon');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    const title = btn.getAttribute('title');
+    if (!id) return;
+    if (title === 'Editar') await editarAlvara(id);
+    if (title === 'Visualizar') await mostrarDetalhesAlvara(id);
+  });
+
+  document.getElementById('closeAlvaraDetalhes')?.addEventListener('click', () => document.getElementById('alvaraDetalhesModal')?.classList.remove('active'));
+  document.getElementById('fecharAlvaraDetalhes')?.addEventListener('click', () => document.getElementById('alvaraDetalhesModal')?.classList.remove('active'));
+  document.getElementById('alvaraDetalhesModal')?.addEventListener('click', (e) => { if (e.target.id === 'alvaraDetalhesModal') e.target.classList.remove('active'); });
+}
+
 // Formata data para input type="date" (YYYY-MM-DD)
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
@@ -13555,6 +13865,7 @@ async function init() {
   setupReservasMesasModule();
   setupHistoricoReservas();
   setupBoletosModule();
+  setupAlvarasModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
