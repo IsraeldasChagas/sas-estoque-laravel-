@@ -12916,9 +12916,10 @@ async function mostrarDetalhesAlvara(id) {
     const a = await fetchJSON(`/alvaras/${id}`);
     const unidadeObj = (state.unidades || []).find(u => String(u.id) === String(a.unidade_id));
     const unidadeLabel = unidadeObj ? (unidadeObj.nome || `Unidade ${unidadeObj.id}`) : (a.unidade_id ? `Unidade ${a.unidade_id}` : '-');
-    const anexoHtml = a.anexo_path
-      ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank">Baixar: ${escapeHtml(a.anexo_nome || 'anexo')}</a>`
-      : 'Sem anexo';
+    const temAnexo = !!a.anexo_path;
+    const anexoHtml = temAnexo
+      ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank" rel="noopener noreferrer">${escapeHtml(a.anexo_nome || 'Anexo')}</a>`
+      : '<span style="color:#607d8b;">Sem anexo</span>';
 
     // Botão "Ver anexo" (abre um modal na frente, sem sair da página)
     if (verAnexoBtn) {
@@ -12931,16 +12932,40 @@ async function mostrarDetalhesAlvara(id) {
       }
     }
 
+    const v = (val) => (val === null || val === undefined || val === '' ? '-' : val);
     content.innerHTML = `
-      <div style="display:grid;gap:0.75rem;">
+      <div class="alvara-kv">
         <div style="background:#f5f5f5;padding:1rem;border-radius:8px;">
-          <p style="margin:0.25rem 0;"><strong>ID:</strong> #${a.id}</p>
-          <p style="margin:0.25rem 0;"><strong>Tipo:</strong> ${escapeHtml(a.tipo || '-')}</p>
-          <p style="margin:0.25rem 0;"><strong>Unidade:</strong> ${escapeHtml(unidadeLabel)}</p>
-          <p style="margin:0.25rem 0;"><strong>Início:</strong> ${formatDate(a.data_inicio)}</p>
-          <p style="margin:0.25rem 0;"><strong>Vencimento:</strong> ${formatDate(a.data_vencimento)}</p>
-          <p style="margin:0.25rem 0;"><strong>Valor pago:</strong> ${formatCurrencyBRL(a.valor_pago || 0)}</p>
-          <p style="margin:0.25rem 0;"><strong>Anexo:</strong> ${anexoHtml}</p>
+          <div class="alvara-kv">
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">ID</div>
+              <div class="alvara-kv__value">#${a.id}</div>
+            </div>
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">Tipo</div>
+              <div class="alvara-kv__value">${escapeHtml(v(a.tipo))}</div>
+            </div>
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">Unidade</div>
+              <div class="alvara-kv__value">${escapeHtml(v(unidadeLabel))}</div>
+            </div>
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">Início</div>
+              <div class="alvara-kv__value">${escapeHtml(v(formatDate(a.data_inicio)))}</div>
+            </div>
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">Vencimento</div>
+              <div class="alvara-kv__value">${escapeHtml(v(formatDate(a.data_vencimento)))}</div>
+            </div>
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">Valor pago</div>
+              <div class="alvara-kv__value">${escapeHtml(formatCurrencyBRL(a.valor_pago || 0))}</div>
+            </div>
+            <div class="alvara-kv__row">
+              <div class="alvara-kv__label">Anexo</div>
+              <div class="alvara-kv__value">${anexoHtml}</div>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -12958,7 +12983,8 @@ async function mostrarDetalhesAlvara(id) {
  * - Mantém o usuário no contexto de onde ele estava.
  * - Permite fechar e também baixar o arquivo.
  */
-function abrirModalAnexoAlvara(alvara) {
+let alvaraAnexoObjectUrl = null;
+async function abrirModalAnexoAlvara(alvara) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
   const title = document.getElementById('alvaraAnexoTitle');
@@ -12971,14 +12997,29 @@ function abrirModalAnexoAlvara(alvara) {
   const viewUrl = `${API_URL}/alvaras/${alvara.id}/anexo`;
   const downloadUrl = `${API_URL}/alvaras/${alvara.id}/anexo?download=1`;
 
-  frame.src = viewUrl;
+  // Limpa URL anterior para evitar vazamento de memória
+  if (alvaraAnexoObjectUrl) {
+    try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
+    alvaraAnexoObjectUrl = null;
+  }
+
+  // Carrega o anexo como Blob e exibe via blob: URL (evita bloqueio de iframe cross-domain no mobile)
+  frame.src = 'about:blank';
+  modal.classList.add('active');
+  try {
+    const res = await fetch(viewUrl, { method: 'GET' });
+    if (!res.ok) throw new Error('Falha ao carregar anexo');
+    const blob = await res.blob();
+    alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+    frame.src = alvaraAnexoObjectUrl;
+  } catch (e) {
+    showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
+  }
 
   if (baixarLink) {
     baixarLink.style.display = '';
     baixarLink.href = downloadUrl;
   }
-
-  modal.classList.add('active');
 }
 
 async function editarAlvara(id) {
@@ -13163,6 +13204,10 @@ function setupAlvarasModule() {
     const f = document.getElementById('alvaraAnexoFrame');
     if (m) m.classList.remove('active');
     if (f) f.src = 'about:blank';
+    if (alvaraAnexoObjectUrl) {
+      try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
+      alvaraAnexoObjectUrl = null;
+    }
   };
   document.getElementById('closeAlvaraAnexo')?.addEventListener('click', closeAnexo);
   document.getElementById('fecharAlvaraAnexo')?.addEventListener('click', closeAnexo);

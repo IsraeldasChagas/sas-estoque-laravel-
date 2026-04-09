@@ -1267,23 +1267,42 @@ textarea {
   min-width: 0;
 }
 
-/* Detalhes do Alvará: em telas menores, pergunta em cima e valor embaixo */
-#alvaraDetalhesContent p {
-  margin: 0.35rem 0;
-  line-height: 1.45;
-  word-break: break-word;
+/* Detalhes do Alvará: layout robusto (campo em cima, valor embaixo no mobile) */
+#alvaraDetalhesContent {
+  overflow-x: hidden;
 }
 
-/* Evita scroll lateral por links/nomes longos no mobile */
-#alvaraDetalhesContent a {
+.alvara-kv {
+  display: grid;
+  gap: 10px;
+}
+
+.alvara-kv__row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.alvara-kv__label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.alvara-kv__value {
+  color: var(--text);
   overflow-wrap: anywhere;
   word-break: break-word;
+  min-width: 0;
 }
 
 @media (max-width: 1024px) {
-  #alvaraDetalhesContent p strong {
+  .alvara-kv__row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .alvara-kv__label {
     display: block;
-    margin-bottom: 2px;
   }
 }
 
