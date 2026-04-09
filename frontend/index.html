@@ -3010,6 +3010,23 @@
       </div>
     </div>
 
+    <!-- Modal de Visualização do Anexo do Alvará (sem sair da página) -->
+    <div class="modal-backdrop" id="alvaraAnexoModal">
+      <div class="modal" style="width: min(920px, 96vw);">
+        <header>
+          <h2 id="alvaraAnexoTitle">📎 Anexo do Alvará</h2>
+          <button type="button" class="close-btn" id="closeAlvaraAnexo" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
+          <iframe id="alvaraAnexoFrame" title="Anexo do Alvará" style="width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
+        </div>
+        <footer style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
+          <a class="btn secondary" id="baixarAlvaraAnexo" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:none;">⬇️ Baixar</a>
+          <button type="button" class="btn neutral" id="fecharAlvaraAnexo">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
     <!-- Modal de Detalhes do Boleto -->
     <div class="modal-backdrop" id="boletoDetalhesModal">
       <div class="modal">

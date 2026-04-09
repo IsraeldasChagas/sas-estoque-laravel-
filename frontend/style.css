@@ -1267,6 +1267,21 @@ textarea {
   min-width: 0;
 }
 
+/* Detalhes do Alvará: em telas menores, pergunta em cima e valor embaixo */
+#alvaraDetalhesContent p {
+  margin: 0.35rem 0;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+@media (max-width: 1024px) {
+  #alvaraDetalhesContent p strong {
+    display: block;
+    margin-bottom: 2px;
+  }
+}
+
+
 
 /* Modal Fornecedor: pergunta em cima, resposta embaixo */
 .form-fornecedor {

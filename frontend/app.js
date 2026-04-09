@@ -12920,11 +12920,11 @@ async function mostrarDetalhesAlvara(id) {
       ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank">Baixar: ${escapeHtml(a.anexo_nome || 'anexo')}</a>`
       : 'Sem anexo';
 
-    // Botão "Ver anexo" (aparece só quando existir anexo)
+    // Botão "Ver anexo" (abre um modal na frente, sem sair da página)
     if (verAnexoBtn) {
       if (a.anexo_path) {
         verAnexoBtn.style.display = '';
-        verAnexoBtn.onclick = () => window.open(`${API_URL}/alvaras/${a.id}/anexo`, '_blank');
+        verAnexoBtn.onclick = () => abrirModalAnexoAlvara(a);
       } else {
         verAnexoBtn.style.display = 'none';
         verAnexoBtn.onclick = null;
@@ -12951,6 +12951,34 @@ async function mostrarDetalhesAlvara(id) {
     }
     content.innerHTML = '<p style="text-align:center;color:#d32f2f;">❌ Erro ao carregar detalhes</p>';
   }
+}
+
+/**
+ * Abre o anexo do alvará em um modal (iframe) por cima da página atual.
+ * - Mantém o usuário no contexto de onde ele estava.
+ * - Permite fechar e também baixar o arquivo.
+ */
+function abrirModalAnexoAlvara(alvara) {
+  const modal = document.getElementById('alvaraAnexoModal');
+  const frame = document.getElementById('alvaraAnexoFrame');
+  const title = document.getElementById('alvaraAnexoTitle');
+  const baixarLink = document.getElementById('baixarAlvaraAnexo');
+  if (!modal || !frame) return;
+
+  const nome = (alvara?.anexo_nome || 'Anexo').toString();
+  if (title) title.textContent = `📎 ${nome}`;
+
+  const viewUrl = `${API_URL}/alvaras/${alvara.id}/anexo`;
+  const downloadUrl = `${API_URL}/alvaras/${alvara.id}/anexo?download=1`;
+
+  frame.src = viewUrl;
+
+  if (baixarLink) {
+    baixarLink.style.display = '';
+    baixarLink.href = downloadUrl;
+  }
+
+  modal.classList.add('active');
 }
 
 async function editarAlvara(id) {
@@ -13128,6 +13156,19 @@ function setupAlvarasModule() {
   document.getElementById('closeAlvaraDetalhes')?.addEventListener('click', () => document.getElementById('alvaraDetalhesModal')?.classList.remove('active'));
   document.getElementById('fecharAlvaraDetalhes')?.addEventListener('click', () => document.getElementById('alvaraDetalhesModal')?.classList.remove('active'));
   document.getElementById('alvaraDetalhesModal')?.addEventListener('click', (e) => { if (e.target.id === 'alvaraDetalhesModal') e.target.classList.remove('active'); });
+
+  // Modal de anexo do alvará
+  const closeAnexo = () => {
+    const m = document.getElementById('alvaraAnexoModal');
+    const f = document.getElementById('alvaraAnexoFrame');
+    if (m) m.classList.remove('active');
+    if (f) f.src = 'about:blank';
+  };
+  document.getElementById('closeAlvaraAnexo')?.addEventListener('click', closeAnexo);
+  document.getElementById('fecharAlvaraAnexo')?.addEventListener('click', closeAnexo);
+  document.getElementById('alvaraAnexoModal')?.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'alvaraAnexoModal') closeAnexo();
+  });
 }
 
 // Formata data para input type="date" (YYYY-MM-DD)
