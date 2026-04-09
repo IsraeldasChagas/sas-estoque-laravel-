@@ -13040,6 +13040,11 @@ function setupAlvarasModule() {
     attachCurrencyMask(form.querySelector('[name="valor_pago"]'));
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      /**
+       * Proteção contra dados inválidos:
+       * - Evita enviar unidade_id que não existe (isso causa confusão e "IDs fantasmas").
+       * - Evita regressões futuras se o select ficar desatualizado ou DOM for alterado.
+       */
       const tipo = form.querySelector('[name="tipo"]')?.value?.trim();
       const dataInicio = form.querySelector('[name="data_inicio"]')?.value;
       const dataVenc = form.querySelector('[name="data_vencimento"]')?.value;
@@ -13052,8 +13057,16 @@ function setupAlvarasModule() {
       fd.set('valor_pago', valorPago > 0 ? valorPago.toFixed(2) : '');
       // Normaliza unidade_id: se vazio, não envia (backend grava null).
       const unidadeVal = (form.querySelector('[name="unidade_id"]')?.value || '').trim();
-      if (!unidadeVal) fd.delete('unidade_id');
-      else fd.set('unidade_id', unidadeVal);
+      if (!unidadeVal) {
+        fd.delete('unidade_id');
+      } else {
+        const unidadeExiste = Array.isArray(state.unidades) && state.unidades.some(u => String(u.id) === String(unidadeVal));
+        if (!unidadeExiste) {
+          showToast('Unidade inválida. Recarregue a lista de unidades e tente novamente.', 'error');
+          return;
+        }
+        fd.set('unidade_id', unidadeVal);
+      }
 
       const mode = (form.dataset.mode || 'create').toLowerCase();
       const id = (form.querySelector('[name="id"]')?.value || '').trim();

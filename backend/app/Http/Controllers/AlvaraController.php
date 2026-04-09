@@ -203,6 +203,11 @@ class AlvaraController extends Controller
             if (!file_exists($path)) {
                 return response()->json(['message' => 'Arquivo não encontrado'], 404);
             }
+            /**
+             * Importante:
+             * - Usamos response()->download igual ao Boleto, pois no ambiente atual isso já funciona.
+             * - Mantemos a validação de existência do arquivo para evitar 500 caso o registro tenha caminho inválido.
+             */
             return response()->download($path, $alvara->anexo_nome ?: 'anexo');
         } catch (\Exception $e) {
             return response()->json([

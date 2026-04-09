@@ -5129,9 +5129,8 @@ Route::delete('/alvaras/{id}', fn (Request $request, $id) => (new AlvaraControll
     ->header('Access-Control-Allow-Origin', '*')
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
-Route::get('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->downloadAnexo($id)
-    ->header('Access-Control-Allow-Origin', '*')
-    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+// Download de anexo (mantido simples, igual ao Boletos, para evitar incompatibilidade com response()->download)
+Route::get('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->downloadAnexo($id));
 
 Route::delete('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->removerAnexo($id)
     ->header('Access-Control-Allow-Origin', '*')

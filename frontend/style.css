@@ -1251,6 +1251,23 @@ textarea {
   gap: 12px;
 }
 
+/* Alvarás: mantém "Unidade" e "Tipo" lado a lado e evita sobreposição */
+#alvaraModal #alvaraForm .grid-two {
+  align-items: end;
+}
+#alvaraModal #alvaraForm .grid-two label {
+  min-width: 0; /* permite encolher dentro do grid */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#alvaraModal #alvaraForm .grid-two label select,
+#alvaraModal #alvaraForm .grid-two label input {
+  width: 100%;
+  min-width: 0;
+}
+
+
 /* Modal Fornecedor: pergunta em cima, resposta embaixo */
 .form-fornecedor {
   display: flex;
