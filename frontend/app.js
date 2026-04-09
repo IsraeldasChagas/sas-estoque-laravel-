@@ -12987,10 +12987,10 @@ let alvaraAnexoObjectUrl = null;
 async function abrirModalAnexoAlvara(alvara) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
-  const obj = document.getElementById('alvaraAnexoObject');
+  const img = document.getElementById('alvaraAnexoImg');
   const title = document.getElementById('alvaraAnexoTitle');
   const baixarLink = document.getElementById('baixarAlvaraAnexo');
-  if (!modal || !frame) return;
+  if (!modal || !frame || !img) return;
 
   const nome = (alvara?.anexo_nome || 'Anexo').toString();
   if (title) title.textContent = `📎 ${nome}`;
@@ -13010,8 +13010,10 @@ async function abrirModalAnexoAlvara(alvara) {
    * - Então, para PDF, usamos o viewer do Google (gview) embutido no iframe.
    * - Para imagens (JPG/PNG), mantemos blob (fica leve e não sai da página).
    */
+  frame.style.display = 'none';
+  img.style.display = 'none';
   frame.src = 'about:blank';
-  if (obj) obj.data = '';
+  img.src = '';
   modal.classList.add('active');
 
   const nomeLower = String(nome).toLowerCase();
@@ -13019,7 +13021,9 @@ async function abrirModalAnexoAlvara(alvara) {
 
   if (possivelPdf) {
     // PDF: viewer embutido (sem baixar / sem sair da página)
-    if (obj) obj.data = '';
+    img.style.display = 'none';
+    img.src = '';
+    frame.style.display = 'block';
     frame.src = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(viewUrl)}`;
   } else {
     // Imagens: blob (renderiza bem no mobile)
@@ -13030,12 +13034,10 @@ async function abrirModalAnexoAlvara(alvara) {
       const buffer = await res.arrayBuffer();
       const blob = new Blob([buffer], { type: ct || 'application/octet-stream' });
       alvaraAnexoObjectUrl = URL.createObjectURL(blob);
-      if (obj) {
-        obj.type = ct || 'application/octet-stream';
-        obj.data = alvaraAnexoObjectUrl;
-      } else {
-        frame.src = alvaraAnexoObjectUrl;
-      }
+      frame.style.display = 'none';
+      frame.src = 'about:blank';
+      img.style.display = 'block';
+      img.src = alvaraAnexoObjectUrl;
     } catch (e) {
       showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
     }
@@ -13227,10 +13229,14 @@ function setupAlvarasModule() {
   const closeAnexo = () => {
     const m = document.getElementById('alvaraAnexoModal');
     const f = document.getElementById('alvaraAnexoFrame');
-    const o = document.getElementById('alvaraAnexoObject');
+    const i = document.getElementById('alvaraAnexoImg');
     if (m) m.classList.remove('active');
     if (f) f.src = 'about:blank';
-    if (o) o.data = '';
+    if (f) f.style.display = 'none';
+    if (i) {
+      i.src = '';
+      i.style.display = 'none';
+    }
     if (alvaraAnexoObjectUrl) {
       try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
       alvaraAnexoObjectUrl = null;
