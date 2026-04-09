@@ -12979,11 +12979,26 @@ async function mostrarDetalhesAlvara(id) {
 }
 
 /**
- * Abre o anexo do alvará em um modal (iframe) por cima da página atual.
- * - Mantém o usuário no contexto de onde ele estava.
- * - Permite fechar e também baixar o arquivo.
+ * Abre o anexo do alvará em um modal por cima da página atual.
+ *
+ * IMPORTANTE (não usar Google Docs Viewer aqui):
+ * - A URL do anexo exige os mesmos cabeçalhos do restante do sistema (ex.: Authorization, X-Usuario-Id).
+ * - O viewer do Google busca o arquivo a partir dos servidores do Google, sem esses cabeçalhos → falha
+ *   (ícone de arquivo quebrado no iframe), no computador e no celular.
+ * - Solução: fetch autenticado → Blob → object URL no <iframe> (PDF) ou <img> (imagem).
  */
 let alvaraAnexoObjectUrl = null;
+
+/** Cabeçalhos para GET binário (sem forçar Content-Type: application/json). */
+function headersParaAnexoAlvara() {
+  const h = {
+    ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+    ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+    ...getDeviceHeaders(),
+  };
+  return h;
+}
+
 async function abrirModalAnexoAlvara(alvara) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
@@ -13004,12 +13019,6 @@ async function abrirModalAnexoAlvara(alvara) {
     alvaraAnexoObjectUrl = null;
   }
 
-  /**
-   * Observação (Android/Chrome):
-   * - PDFs dentro de iframe/object via blob costumam ficar em branco.
-   * - Então, para PDF, usamos o viewer do Google (gview) embutido no iframe.
-   * - Para imagens (JPG/PNG), mantemos blob (fica leve e não sai da página).
-   */
   frame.style.display = 'none';
   img.style.display = 'none';
   frame.src = 'about:blank';
@@ -13017,35 +13026,80 @@ async function abrirModalAnexoAlvara(alvara) {
   modal.classList.add('active');
 
   const nomeLower = String(nome).toLowerCase();
-  const possivelPdf = nomeLower.endsWith('.pdf') || String(alvara?.anexo_tipo || '').toLowerCase() === 'pdf';
+  const tipoExt = String(alvara?.anexo_tipo || '').toLowerCase();
+  const possivelPdf = nomeLower.endsWith('.pdf') || tipoExt === 'pdf';
+  const possivelImagem =
+    /\.(jpe?g|png|gif|webp)$/i.test(nomeLower) || /^(jpe?g|jpeg|png|gif|webp)$/i.test(tipoExt);
 
-  if (possivelPdf) {
-    // PDF: viewer embutido (sem baixar / sem sair da página)
-    img.style.display = 'none';
-    img.src = '';
-    frame.style.display = 'block';
-    frame.src = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(viewUrl)}`;
-  } else {
-    // Imagens: blob (renderiza bem no mobile)
-    try {
-      const res = await fetch(viewUrl, { method: 'GET' });
-      if (!res.ok) throw new Error('Falha ao carregar anexo');
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      const buffer = await res.arrayBuffer();
-      const blob = new Blob([buffer], { type: ct || 'application/octet-stream' });
-      alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+  const mimeFromResponse = (res) => {
+    const raw = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (raw && raw !== 'application/octet-stream') return raw;
+    if (possivelPdf) return 'application/pdf';
+    if (possivelImagem) {
+      if (tipoExt === 'png' || nomeLower.endsWith('.png')) return 'image/png';
+      if (tipoExt === 'gif' || nomeLower.endsWith('.gif')) return 'image/gif';
+      if (tipoExt === 'webp' || nomeLower.endsWith('.webp')) return 'image/webp';
+      return 'image/jpeg';
+    }
+    return 'application/octet-stream';
+  };
+
+  try {
+    const res = await fetch(viewUrl, { method: 'GET', cache: 'no-store', headers: headersParaAnexoAlvara() });
+    if (!res.ok) {
+      let msg = 'Falha ao carregar anexo';
+      try {
+        const t = await res.text();
+        const j = JSON.parse(t);
+        if (j.message) msg = j.message;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    const mime = mimeFromResponse(res);
+    const buffer = await res.arrayBuffer();
+    const blob = new Blob([buffer], { type: mime });
+    alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+
+    const isPdf = mime === 'application/pdf' || possivelPdf;
+    if (isPdf) {
+      img.style.display = 'none';
+      img.src = '';
+      frame.style.display = 'block';
+      frame.src = alvaraAnexoObjectUrl;
+    } else {
       frame.style.display = 'none';
       frame.src = 'about:blank';
       img.style.display = 'block';
       img.src = alvaraAnexoObjectUrl;
-    } catch (e) {
-      showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
     }
+  } catch (e) {
+    showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
   }
 
   if (baixarLink) {
     baixarLink.style.display = '';
-    baixarLink.href = downloadUrl;
+    baixarLink.href = '#';
+    baixarLink.onclick = async (ev) => {
+      ev.preventDefault();
+      try {
+        const res = await fetch(downloadUrl, { method: 'GET', cache: 'no-store', headers: headersParaAnexoAlvara() });
+        if (!res.ok) throw new Error('Falha ao baixar');
+        const b = await res.blob();
+        const url = URL.createObjectURL(b);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nome;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+        }, 60_000);
+      } catch (err) {
+        showToast('Erro ao baixar: ' + (err.message || 'Falha'), 'error');
+      }
+    };
   }
 }
 

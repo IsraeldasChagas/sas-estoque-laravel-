@@ -5129,8 +5129,13 @@ Route::delete('/alvaras/{id}', fn (Request $request, $id) => (new AlvaraControll
     ->header('Access-Control-Allow-Origin', '*')
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
-// Download de anexo (mantido simples, igual ao Boletos, para evitar incompatibilidade com response()->download)
-Route::get('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->downloadAnexo($request, $id));
+// Download/visualização do anexo — headers CORS explícitos para fetch(blob) a partir do frontend (domínio diferente da API).
+Route::get('/alvaras/{id}/anexo', function (Request $request, $id) {
+    $response = (new AlvaraController())->downloadAnexo($request, $id);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+});
 
 Route::delete('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->removerAnexo($id)
     ->header('Access-Control-Allow-Origin', '*')
@@ -5139,7 +5144,7 @@ Route::delete('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraCo
 Route::options('/alvaras/{id}/anexo', fn () => response()->json([])
     ->header('Access-Control-Allow-Origin', '*')
     ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
-    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform'));
 
 // ============================================
 // RESERVAS DE MESAS
