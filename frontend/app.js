@@ -12811,6 +12811,9 @@ async function populateAlvarasUnidades() {
   const selectFiltro = document.getElementById('alvarasUnidadeFiltro');
   try {
     const unidades = await fetchJSON('/unidades');
+    if (Array.isArray(unidades)) {
+      state.unidades = unidades;
+    }
     if (selectModal) {
       selectModal.innerHTML = '<option value="">Selecione a unidade (opcional)</option>' +
         (unidades || []).map(u => `<option value="${u.id}">${escapeHtml(u.nome || ('Unidade ' + u.id))}</option>`).join('');
@@ -12858,15 +12861,18 @@ function renderAlvaras(alvaras) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;padding:20px;">Nenhum alvará encontrado.</td></tr>';
     return;
   }
+  const unidadesPorId = new Map((state.unidades || []).map(u => [String(u.id), u]));
   const fmtData = (v) => (formatDate(v) || '').split(' ')[0] || '-';
   const rows = alvaras.map(a => {
     const anexo = a.anexo_path
       ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank" title="Baixar ${escapeHtml(a.anexo_nome || 'anexo')}" style="text-decoration:none;font-size:1.2rem;">📎</a>`
       : '<span style="color:#ccc;">-</span>';
+    const unidadeObj = unidadesPorId.get(String(a.unidade_id || '')) || null;
+    const unidadeLabel = unidadeObj ? (unidadeObj.nome || `Unidade ${unidadeObj.id}`) : (a.unidade_id ? `Unidade ${a.unidade_id}` : '-');
     return `
       <tr>
         <td data-label="Tipo">${escapeHtml(a.tipo || '-')}</td>
-        <td data-label="Unidade">${escapeHtml(String(a.unidade_id || '-'))}</td>
+        <td data-label="Unidade">${escapeHtml(unidadeLabel)}</td>
         <td data-label="Início">${fmtData(a.data_inicio)}</td>
         <td data-label="Vencimento">${fmtData(a.data_vencimento)}</td>
         <td data-label="Valor pago">${formatCurrencyBRL(a.valor_pago || 0)}</td>
@@ -12907,6 +12913,8 @@ async function mostrarDetalhesAlvara(id) {
   modal.classList.add('active');
   try {
     const a = await fetchJSON(`/alvaras/${id}`);
+    const unidadeObj = (state.unidades || []).find(u => String(u.id) === String(a.unidade_id));
+    const unidadeLabel = unidadeObj ? (unidadeObj.nome || `Unidade ${unidadeObj.id}`) : (a.unidade_id ? `Unidade ${a.unidade_id}` : '-');
     const anexoHtml = a.anexo_path
       ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank">Baixar: ${escapeHtml(a.anexo_nome || 'anexo')}</a>`
       : 'Sem anexo';
@@ -12915,7 +12923,7 @@ async function mostrarDetalhesAlvara(id) {
         <div style="background:#f5f5f5;padding:1rem;border-radius:8px;">
           <p style="margin:0.25rem 0;"><strong>ID:</strong> #${a.id}</p>
           <p style="margin:0.25rem 0;"><strong>Tipo:</strong> ${escapeHtml(a.tipo || '-')}</p>
-          <p style="margin:0.25rem 0;"><strong>Unidade:</strong> ${escapeHtml(String(a.unidade_id || '-'))}</p>
+          <p style="margin:0.25rem 0;"><strong>Unidade:</strong> ${escapeHtml(unidadeLabel)}</p>
           <p style="margin:0.25rem 0;"><strong>Início:</strong> ${formatDate(a.data_inicio)}</p>
           <p style="margin:0.25rem 0;"><strong>Vencimento:</strong> ${formatDate(a.data_vencimento)}</p>
           <p style="margin:0.25rem 0;"><strong>Valor pago:</strong> ${formatCurrencyBRL(a.valor_pago || 0)}</p>
@@ -13042,6 +13050,10 @@ function setupAlvarasModule() {
       const valorPago = parseCurrencyInput(form.querySelector('[name="valor_pago"]'));
       const fd = new FormData(form);
       fd.set('valor_pago', valorPago > 0 ? valorPago.toFixed(2) : '');
+      // Normaliza unidade_id: se vazio, não envia (backend grava null).
+      const unidadeVal = (form.querySelector('[name="unidade_id"]')?.value || '').trim();
+      if (!unidadeVal) fd.delete('unidade_id');
+      else fd.set('unidade_id', unidadeVal);
 
       const mode = (form.dataset.mode || 'create').toLowerCase();
       const id = (form.querySelector('[name="id"]')?.value || '').trim();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Alvara;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class AlvaraController extends Controller
@@ -140,8 +141,8 @@ class AlvaraController extends Controller
             unset($data['anexo']);
 
             if ($request->hasFile('anexo')) {
-                if ($alvara->anexo_path && \Storage::disk('public')->exists($alvara->anexo_path)) {
-                    \Storage::disk('public')->delete($alvara->anexo_path);
+                if ($alvara->anexo_path && Storage::disk('public')->exists($alvara->anexo_path)) {
+                    Storage::disk('public')->delete($alvara->anexo_path);
                 }
                 $file = $request->file('anexo');
                 $nomeOriginal = $file->getClientOriginalName();
@@ -176,8 +177,8 @@ class AlvaraController extends Controller
     {
         try {
             $alvara = Alvara::findOrFail($id);
-            if ($alvara->anexo_path && \Storage::disk('public')->exists($alvara->anexo_path)) {
-                \Storage::disk('public')->delete($alvara->anexo_path);
+            if ($alvara->anexo_path && Storage::disk('public')->exists($alvara->anexo_path)) {
+                Storage::disk('public')->delete($alvara->anexo_path);
             }
             $alvara->delete();
 
@@ -197,10 +198,10 @@ class AlvaraController extends Controller
             if (!$alvara->anexo_path) {
                 return response()->json(['message' => 'Este alvará não possui anexo'], 404);
             }
-            $path = storage_path('app/public/' . $alvara->anexo_path);
-            if (!file_exists($path)) {
+            if (!Storage::disk('public')->exists($alvara->anexo_path)) {
                 return response()->json(['message' => 'Arquivo não encontrado'], 404);
             }
+            $path = Storage::disk('public')->path($alvara->anexo_path);
             return response()->download($path, $alvara->anexo_nome ?: 'anexo');
         } catch (\Exception $e) {
             return response()->json([
@@ -214,8 +215,8 @@ class AlvaraController extends Controller
     {
         try {
             $alvara = Alvara::findOrFail($id);
-            if ($alvara->anexo_path && \Storage::disk('public')->exists($alvara->anexo_path)) {
-                \Storage::disk('public')->delete($alvara->anexo_path);
+            if ($alvara->anexo_path && Storage::disk('public')->exists($alvara->anexo_path)) {
+                Storage::disk('public')->delete($alvara->anexo_path);
             }
             $alvara->update([
                 'anexo_path' => null,
