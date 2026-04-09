@@ -7,9 +7,30 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class AlvaraController extends Controller
 {
+    /**
+     * CORS do GET /alvaras/{id}/anexo (frontend em outro domínio + fetch com Authorization / X-Usuario-Id).
+     *
+     * REGRESSÃO COMUM → HTTP 500:
+     * - response()->file() e response()->download() devolvem Symfony BinaryFileResponse.
+     * - BinaryFileResponse NÃO tem o método fluent header() do Laravel (só Illuminate\Http\Response / JsonResponse usam ResponseTrait).
+     * - Nunca faça: return $r->header('Access-Control-Allow-Origin', '*') em cima desse retorno.
+     * - Sempre use $response->headers->set(...) ou este método após montar a resposta.
+     */
+    private function aplicarCorsRespostaAnexo(SymfonyResponse $response): SymfonyResponse
+    {
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform'
+        );
+
+        return $response;
+    }
+
     public function index(Request $request)
     {
         try {
@@ -197,12 +218,12 @@ class AlvaraController extends Controller
         try {
             $alvara = Alvara::findOrFail($id);
             if (!$alvara->anexo_path) {
-                return response()->json(['message' => 'Este alvará não possui anexo'], 404);
+                return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Este alvará não possui anexo'], 404));
             }
             // Mesma lógica do BoletoController (storage/app/public + response()->download)
             $path = storage_path('app/public/' . $alvara->anexo_path);
             if (!file_exists($path)) {
-                return response()->json(['message' => 'Arquivo não encontrado'], 404);
+                return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Arquivo não encontrado'], 404));
             }
             /**
              * Importante:
@@ -221,10 +242,10 @@ class AlvaraController extends Controller
             // Por padrão: abre no navegador (inline). Para forçar download: ?download=1
             $forcarDownload = $request->boolean('download', false);
             if ($forcarDownload) {
-                return response()->download($path, $nome);
+                return $this->aplicarCorsRespostaAnexo(response()->download($path, $nome));
             }
 
-            return response()->file($path, [
+            return $this->aplicarCorsRespostaAnexo(response()->file($path, [
                 'Content-Type' => $mime,
                 'Content-Disposition' => 'inline; filename="' . addslashes($nome) . '"',
                 /**
@@ -235,14 +256,14 @@ class AlvaraController extends Controller
                 'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
                 // Alguns ambientes respeitam este header; não é padrão, mas ajuda a evitar bloqueio legado.
                 'X-Frame-Options' => 'ALLOWALL',
-            ]);
+            ]));
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Alvará não encontrado'], 404);
+            return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Alvará não encontrado'], 404));
         } catch (\Exception $e) {
-            return response()->json([
+            return $this->aplicarCorsRespostaAnexo(response()->json([
                 'message' => 'Erro ao baixar anexo',
                 'error' => $e->getMessage()
-            ], 500);
+            ], 500));
         }
     }
 

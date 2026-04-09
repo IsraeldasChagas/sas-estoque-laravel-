@@ -12981,9 +12981,13 @@ async function mostrarDetalhesAlvara(id) {
 /**
  * Visualização de anexo do Alvará (PDF + imagem) no mesmo modal em PC e mobile.
  *
- * - Não usar Google Docs Viewer: a API exige cabeçalhos de auth; o Google não os envia.
- * - PDF em <iframe> com blob costuma ficar em branco no Chrome Android → usamos PDF.js (canvas).
- * - Imagens continuam em <img> com blob URL após fetch autenticado.
+ * CONTRATO (não alterar sem revisar tudo abaixo — evita regressão):
+ * 1) Todo GET /alvaras/{id}/anexo DEVE usar os mesmos cabeçalhos de sessão que o resto do app
+ *    (Authorization + X-Usuario-Id). Sem isso a API responde erro e o modal fica vazio.
+ * 2) Não usar URL do anexo dentro do Google Docs Viewer: o Google não envia esses cabeçalhos.
+ * 3) PDF: PDF.js em canvas (mobile); iframe+blob só como fallback se PDF.js falhar.
+ * 4) Backend: arquivo binário vem como Symfony BinaryFileResponse — na rota Laravel não use
+ *    ->header() em cadeia sobre esse retorno (causa HTTP 500). CORS fica no controller.
  */
 const ALVARA_PDFJS_VER = '3.11.174';
 const ALVARA_PDFJS_BASE = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ALVARA_PDFJS_VER}`;

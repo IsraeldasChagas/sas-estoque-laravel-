@@ -5129,18 +5129,9 @@ Route::delete('/alvaras/{id}', fn (Request $request, $id) => (new AlvaraControll
     ->header('Access-Control-Allow-Origin', '*')
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
-// Download/visualização do anexo — CORS para fetch(blob) no frontend (API em outro domínio).
-// Não usar ->header() em cadeia: response()->file() retorna BinaryFileResponse (Symfony), sem método header() do Laravel → 500.
-Route::get('/alvaras/{id}/anexo', function (Request $request, $id) {
-    $response = (new AlvaraController())->downloadAnexo($request, $id);
-    $response->headers->set('Access-Control-Allow-Origin', '*');
-    $response->headers->set(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform'
-    );
-
-    return $response;
-});
+// Anexo: CORS aplicado dentro de AlvaraController::downloadAnexo (aplicarCorsRespostaAnexo).
+// Não re-adicionar ->header() aqui em cima de BinaryFileResponse — ver docblock no controller.
+Route::get('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->downloadAnexo($request, $id));
 
 Route::delete('/alvaras/{id}/anexo', fn (Request $request, $id) => (new AlvaraController())->removerAnexo($id)
     ->header('Access-Control-Allow-Origin', '*')
