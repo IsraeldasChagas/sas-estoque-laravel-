@@ -2938,14 +2938,14 @@
         <form id="alvaraForm" novalidate>
           <input type="hidden" name="id" />
 
-          <div class="grid-two" style="gap: 1.25rem; align-items: end;">
-            <label>
+          <div class="grid-two" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: end;">
+            <label style="min-width: 0;">
               Unidade
               <select name="unidade_id" id="alvaraUnidadeSelect">
                 <option value="">Selecione a unidade (opcional)</option>
               </select>
             </label>
-            <label>
+            <label style="min-width: 0;">
               Tipo de Alvará *
               <input name="tipo" placeholder="Ex: Vigilância Sanitária, Bombeiros..." required />
             </label>

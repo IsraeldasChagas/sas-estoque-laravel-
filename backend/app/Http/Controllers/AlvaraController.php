@@ -198,10 +198,11 @@ class AlvaraController extends Controller
             if (!$alvara->anexo_path) {
                 return response()->json(['message' => 'Este alvará não possui anexo'], 404);
             }
-            if (!Storage::disk('public')->exists($alvara->anexo_path)) {
+            // Mesma lógica do BoletoController (storage/app/public + response()->download)
+            $path = storage_path('app/public/' . $alvara->anexo_path);
+            if (!file_exists($path)) {
                 return response()->json(['message' => 'Arquivo não encontrado'], 404);
             }
-            $path = Storage::disk('public')->path($alvara->anexo_path);
             return response()->download($path, $alvara->anexo_nome ?: 'anexo');
         } catch (\Exception $e) {
             return response()->json([
