@@ -1987,6 +1987,53 @@ textarea {
     font-size: 0.85rem;
   }
 
+  /* Alvarás - card layout no mobile: pergunta em cima, resposta embaixo */
+  #alvaraSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #alvaraSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #alvaraSection .table-wrapper thead {
+    display: none;
+  }
+
+  #alvaraSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #alvaraSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #alvaraSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  #alvaraSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   /* Funcionários - card layout: pergunta em cima, resposta embaixo */
   #funcionariosSection .table-wrapper {
     overflow: visible;

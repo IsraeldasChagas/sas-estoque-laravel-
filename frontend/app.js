@@ -12987,6 +12987,7 @@ let alvaraAnexoObjectUrl = null;
 async function abrirModalAnexoAlvara(alvara) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
+  const obj = document.getElementById('alvaraAnexoObject');
   const title = document.getElementById('alvaraAnexoTitle');
   const baixarLink = document.getElementById('baixarAlvaraAnexo');
   if (!modal || !frame) return;
@@ -13005,13 +13006,23 @@ async function abrirModalAnexoAlvara(alvara) {
 
   // Carrega o anexo como Blob e exibe via blob: URL (evita bloqueio de iframe cross-domain no mobile)
   frame.src = 'about:blank';
+  if (obj) obj.data = '';
   modal.classList.add('active');
   try {
     const res = await fetch(viewUrl, { method: 'GET' });
     if (!res.ok) throw new Error('Falha ao carregar anexo');
-    const blob = await res.blob();
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    const buffer = await res.arrayBuffer();
+    const blob = new Blob([buffer], { type: ct || 'application/octet-stream' });
     alvaraAnexoObjectUrl = URL.createObjectURL(blob);
-    frame.src = alvaraAnexoObjectUrl;
+
+    // Preferência: <object> (melhor para PDF no Android). Fallback: iframe.
+    if (obj) {
+      obj.type = ct.includes('pdf') ? 'application/pdf' : (ct || 'application/octet-stream');
+      obj.data = alvaraAnexoObjectUrl;
+    } else {
+      frame.src = alvaraAnexoObjectUrl;
+    }
   } catch (e) {
     showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
   }
@@ -13202,8 +13213,10 @@ function setupAlvarasModule() {
   const closeAnexo = () => {
     const m = document.getElementById('alvaraAnexoModal');
     const f = document.getElementById('alvaraAnexoFrame');
+    const o = document.getElementById('alvaraAnexoObject');
     if (m) m.classList.remove('active');
     if (f) f.src = 'about:blank';
+    if (o) o.data = '';
     if (alvaraAnexoObjectUrl) {
       try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
       alvaraAnexoObjectUrl = null;
