@@ -226,6 +226,14 @@ class AlvaraController extends Controller
             return response()->file($path, [
                 'Content-Type' => $mime,
                 'Content-Disposition' => 'inline; filename="' . addslashes($nome) . '"',
+                /**
+                 * Permite visualizar o anexo dentro de um <iframe> no frontend.
+                 * Necessário quando frontend e API estão em subdomínios diferentes (ex.: app vs api),
+                 * evitando bloqueio por política de frame (X-Frame-Options / CSP).
+                 */
+                'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
+                // Alguns ambientes respeitam este header; não é padrão, mas ajuda a evitar bloqueio legado.
+                'X-Frame-Options' => 'ALLOWALL',
             ]);
         } catch (\Exception $e) {
             return response()->json([

@@ -1274,10 +1274,26 @@ textarea {
   word-break: break-word;
 }
 
+/* Evita scroll lateral por links/nomes longos no mobile */
+#alvaraDetalhesContent a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 @media (max-width: 1024px) {
   #alvaraDetalhesContent p strong {
     display: block;
     margin-bottom: 2px;
+  }
+}
+
+/* Modal do anexo: ocupa melhor a tela no celular e não cria scroll lateral */
+@media (max-width: 1024px) {
+  #alvaraAnexoModal .modal {
+    width: min(720px, 96vw) !important;
+  }
+  #alvaraAnexoFrame {
+    height: 70vh !important;
   }
 }
 
