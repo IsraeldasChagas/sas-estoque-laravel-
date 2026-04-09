@@ -13004,27 +13004,41 @@ async function abrirModalAnexoAlvara(alvara) {
     alvaraAnexoObjectUrl = null;
   }
 
-  // Carrega o anexo como Blob e exibe via blob: URL (evita bloqueio de iframe cross-domain no mobile)
+  /**
+   * Observação (Android/Chrome):
+   * - PDFs dentro de iframe/object via blob costumam ficar em branco.
+   * - Então, para PDF, usamos o viewer do Google (gview) embutido no iframe.
+   * - Para imagens (JPG/PNG), mantemos blob (fica leve e não sai da página).
+   */
   frame.src = 'about:blank';
   if (obj) obj.data = '';
   modal.classList.add('active');
-  try {
-    const res = await fetch(viewUrl, { method: 'GET' });
-    if (!res.ok) throw new Error('Falha ao carregar anexo');
-    const ct = (res.headers.get('content-type') || '').toLowerCase();
-    const buffer = await res.arrayBuffer();
-    const blob = new Blob([buffer], { type: ct || 'application/octet-stream' });
-    alvaraAnexoObjectUrl = URL.createObjectURL(blob);
 
-    // Preferência: <object> (melhor para PDF no Android). Fallback: iframe.
-    if (obj) {
-      obj.type = ct.includes('pdf') ? 'application/pdf' : (ct || 'application/octet-stream');
-      obj.data = alvaraAnexoObjectUrl;
-    } else {
-      frame.src = alvaraAnexoObjectUrl;
+  const nomeLower = String(nome).toLowerCase();
+  const possivelPdf = nomeLower.endsWith('.pdf') || String(alvara?.anexo_tipo || '').toLowerCase() === 'pdf';
+
+  if (possivelPdf) {
+    // PDF: viewer embutido (sem baixar / sem sair da página)
+    if (obj) obj.data = '';
+    frame.src = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(viewUrl)}`;
+  } else {
+    // Imagens: blob (renderiza bem no mobile)
+    try {
+      const res = await fetch(viewUrl, { method: 'GET' });
+      if (!res.ok) throw new Error('Falha ao carregar anexo');
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      const buffer = await res.arrayBuffer();
+      const blob = new Blob([buffer], { type: ct || 'application/octet-stream' });
+      alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+      if (obj) {
+        obj.type = ct || 'application/octet-stream';
+        obj.data = alvaraAnexoObjectUrl;
+      } else {
+        frame.src = alvaraAnexoObjectUrl;
+      }
+    } catch (e) {
+      showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
     }
-  } catch (e) {
-    showToast('Erro ao abrir anexo: ' + (e.message || 'Falha'), 'error');
   }
 
   if (baixarLink) {
