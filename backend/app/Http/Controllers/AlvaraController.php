@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Alvara;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -235,6 +236,8 @@ class AlvaraController extends Controller
                 // Alguns ambientes respeitam este header; não é padrão, mas ajuda a evitar bloqueio legado.
                 'X-Frame-Options' => 'ALLOWALL',
             ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'Alvará não encontrado'], 404);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erro ao baixar anexo',
