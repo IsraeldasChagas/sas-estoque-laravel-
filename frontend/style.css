@@ -1306,12 +1306,38 @@ textarea {
   }
 }
 
+/* Visualizador PDF (PDF.js): rolagem vertical, toque no mobile */
+.alvara-anexo-pdf-host {
+  width: 100%;
+  max-height: min(70vh, 720px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #525659;
+  box-sizing: border-box;
+  padding: 8px 6px 12px;
+}
+.alvara-anexo-pdf-host canvas {
+  display: block;
+  margin: 0 auto 12px;
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 /* Modal do anexo: ocupa melhor a tela no celular e não cria scroll lateral */
 @media (max-width: 1024px) {
   #alvaraAnexoModal .modal {
     width: min(720px, 96vw) !important;
   }
   #alvaraAnexoFrame {
+    height: 70vh !important;
+  }
+  .alvara-anexo-pdf-host {
+    max-height: 70vh;
+  }
+  #alvaraAnexoImg {
     height: 70vh !important;
   }
 }

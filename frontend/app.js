@@ -12979,15 +12979,22 @@ async function mostrarDetalhesAlvara(id) {
 }
 
 /**
- * Abre o anexo do alvará em um modal por cima da página atual.
+ * Visualização de anexo do Alvará (PDF + imagem) no mesmo modal em PC e mobile.
  *
- * IMPORTANTE (não usar Google Docs Viewer aqui):
- * - A URL do anexo exige os mesmos cabeçalhos do restante do sistema (ex.: Authorization, X-Usuario-Id).
- * - O viewer do Google busca o arquivo a partir dos servidores do Google, sem esses cabeçalhos → falha
- *   (ícone de arquivo quebrado no iframe), no computador e no celular.
- * - Solução: fetch autenticado → Blob → object URL no <iframe> (PDF) ou <img> (imagem).
+ * - Não usar Google Docs Viewer: a API exige cabeçalhos de auth; o Google não os envia.
+ * - PDF em <iframe> com blob costuma ficar em branco no Chrome Android → usamos PDF.js (canvas).
+ * - Imagens continuam em <img> com blob URL após fetch autenticado.
  */
+const ALVARA_PDFJS_VER = '3.11.174';
+const ALVARA_PDFJS_BASE = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${ALVARA_PDFJS_VER}`;
+
 let alvaraAnexoObjectUrl = null;
+/** Instância PDF.js após carregar o documento (precisa de destroy() ao fechar o modal). */
+let alvaraPdfDocumentProxy = null;
+/** Task de carregamento em andamento (cancelável). */
+let alvaraPdfLoadingTask = null;
+/** Promise única para não carregar pdf.min.js várias vezes. */
+let alvaraPdfJsLoadPromise = null;
 
 /** Cabeçalhos para GET binário (sem forçar Content-Type: application/json). */
 function headersParaAnexoAlvara() {
@@ -12999,10 +13006,131 @@ function headersParaAnexoAlvara() {
   return h;
 }
 
+/** Libera canvas PDF.js, tasks e esconde o host (chamar ao fechar modal ou antes de novo preview). */
+function limparVisualizacaoPdfAlvara() {
+  if (alvaraPdfDocumentProxy) {
+    try {
+      alvaraPdfDocumentProxy.destroy();
+    } catch (_) {}
+    alvaraPdfDocumentProxy = null;
+  }
+  if (alvaraPdfLoadingTask) {
+    try {
+      alvaraPdfLoadingTask.destroy();
+    } catch (_) {}
+    alvaraPdfLoadingTask = null;
+  }
+  const host = document.getElementById('alvaraAnexoPdfHost');
+  if (host) {
+    host.innerHTML = '';
+    host.style.display = 'none';
+  }
+}
+
+/**
+ * Garante pdfjsLib no window (carrega script uma vez). Worker obrigatório no PDF.js 3.x.
+ */
+function ensurePdfJsParaAlvara() {
+  if (typeof window.pdfjsLib !== 'undefined' && window.pdfjsLib.getDocument) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${ALVARA_PDFJS_BASE}/pdf.worker.min.js`;
+    return Promise.resolve(window.pdfjsLib);
+  }
+  if (!alvaraPdfJsLoadPromise) {
+    alvaraPdfJsLoadPromise = new Promise((resolve, reject) => {
+      const id = 'alvaraPdfJsScript';
+      if (document.getElementById(id)) {
+        let tentativas = 0;
+        const wait = () => {
+          if (window.pdfjsLib && window.pdfjsLib.getDocument) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${ALVARA_PDFJS_BASE}/pdf.worker.min.js`;
+            resolve(window.pdfjsLib);
+          } else if (tentativas++ > 200) {
+            reject(new Error('Tempo esgotado ao carregar PDF.js'));
+          } else {
+            setTimeout(wait, 30);
+          }
+        };
+        wait();
+        return;
+      }
+      const s = document.createElement('script');
+      s.id = id;
+      s.async = true;
+      s.src = `${ALVARA_PDFJS_BASE}/pdf.min.js`;
+      s.onload = () => {
+        if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
+          reject(new Error('PDF.js carregou mas pdfjsLib não está disponível'));
+          return;
+        }
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${ALVARA_PDFJS_BASE}/pdf.worker.min.js`;
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = () => reject(new Error('Não foi possível carregar PDF.js (verifique a internet / CDN)'));
+      document.head.appendChild(s);
+    }).catch((err) => {
+      alvaraPdfJsLoadPromise = null;
+      throw err;
+    });
+  }
+  return alvaraPdfJsLoadPromise;
+}
+
+/**
+ * Desenha todas as páginas do PDF em #alvaraAnexoPdfHost (rolagem vertical, boa no mobile).
+ */
+async function renderizarPdfAlvaraComPdfJs(arrayBuffer) {
+  const host = document.getElementById('alvaraAnexoPdfHost');
+  const frame = document.getElementById('alvaraAnexoFrame');
+  if (!host) throw new Error('Container de PDF ausente');
+
+  limparVisualizacaoPdfAlvara();
+  host.style.display = 'block';
+  host.innerHTML =
+    '<p style="text-align:center;color:#e0e0e0;padding:1.25rem;margin:0;">Carregando documento…</p>';
+
+  const pdfjsLib = await ensurePdfJsParaAlvara();
+  const data = arrayBuffer.slice(0);
+  alvaraPdfLoadingTask = pdfjsLib.getDocument({ data });
+  let pdf;
+  try {
+    pdf = await alvaraPdfLoadingTask.promise;
+  } finally {
+    alvaraPdfLoadingTask = null;
+  }
+  alvaraPdfDocumentProxy = pdf;
+
+  host.innerHTML = '';
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const hostW = Math.max(280, host.getBoundingClientRect().width || window.innerWidth - 48);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const baseVp = page.getViewport({ scale: 1 });
+    const scale = Math.min(2.5, hostW / baseVp.width);
+    const viewport = page.getViewport({ scale: scale * dpr });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width = `${viewport.width / dpr}px`;
+    canvas.style.maxWidth = '100%';
+    canvas.style.height = 'auto';
+    host.appendChild(canvas);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  }
+
+  if (frame) {
+    frame.style.display = 'none';
+    frame.src = 'about:blank';
+  }
+}
+
 async function abrirModalAnexoAlvara(alvara) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
   const img = document.getElementById('alvaraAnexoImg');
+  const pdfHost = document.getElementById('alvaraAnexoPdfHost');
   const title = document.getElementById('alvaraAnexoTitle');
   const baixarLink = document.getElementById('baixarAlvaraAnexo');
   if (!modal || !frame || !img) return;
@@ -13013,16 +13141,19 @@ async function abrirModalAnexoAlvara(alvara) {
   const viewUrl = `${API_URL}/alvaras/${alvara.id}/anexo`;
   const downloadUrl = `${API_URL}/alvaras/${alvara.id}/anexo?download=1`;
 
-  // Limpa URL anterior para evitar vazamento de memória
   if (alvaraAnexoObjectUrl) {
-    try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
+    try {
+      URL.revokeObjectURL(alvaraAnexoObjectUrl);
+    } catch (_) {}
     alvaraAnexoObjectUrl = null;
   }
+  limparVisualizacaoPdfAlvara();
 
   frame.style.display = 'none';
   img.style.display = 'none';
   frame.src = 'about:blank';
   img.src = '';
+  if (pdfHost) pdfHost.style.display = 'none';
   modal.classList.add('active');
 
   const nomeLower = String(nome).toLowerCase();
@@ -13057,16 +13188,24 @@ async function abrirModalAnexoAlvara(alvara) {
     }
     const mime = mimeFromResponse(res);
     const buffer = await res.arrayBuffer();
-    const blob = new Blob([buffer], { type: mime });
-    alvaraAnexoObjectUrl = URL.createObjectURL(blob);
-
     const isPdf = mime === 'application/pdf' || possivelPdf;
+
     if (isPdf) {
       img.style.display = 'none';
       img.src = '';
-      frame.style.display = 'block';
-      frame.src = alvaraAnexoObjectUrl;
+      try {
+        await renderizarPdfAlvaraComPdfJs(buffer);
+      } catch (pdfErr) {
+        limparVisualizacaoPdfAlvara();
+        const blob = new Blob([buffer], { type: 'application/pdf' });
+        alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+        frame.style.display = 'block';
+        frame.src = alvaraAnexoObjectUrl;
+        showToast('Visualização alternativa (PDF). Se estiver em branco no celular, use Baixar.', 'info');
+      }
     } else {
+      const blob = new Blob([buffer], { type: mime });
+      alvaraAnexoObjectUrl = URL.createObjectURL(blob);
       frame.style.display = 'none';
       frame.src = 'about:blank';
       img.style.display = 'block';
@@ -13094,7 +13233,9 @@ async function abrirModalAnexoAlvara(alvara) {
         a.click();
         a.remove();
         setTimeout(() => {
-          try { URL.revokeObjectURL(url); } catch (_) {}
+          try {
+            URL.revokeObjectURL(url);
+          } catch (_) {}
         }, 60_000);
       } catch (err) {
         showToast('Erro ao baixar: ' + (err.message || 'Falha'), 'error');
@@ -13285,6 +13426,7 @@ function setupAlvarasModule() {
     const f = document.getElementById('alvaraAnexoFrame');
     const i = document.getElementById('alvaraAnexoImg');
     if (m) m.classList.remove('active');
+    limparVisualizacaoPdfAlvara();
     if (f) f.src = 'about:blank';
     if (f) f.style.display = 'none';
     if (i) {

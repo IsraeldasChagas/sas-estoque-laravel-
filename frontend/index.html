@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260409d" />
+    <link rel="stylesheet" href="style.css?v=20260409e" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -3018,6 +3018,14 @@
           <button type="button" class="close-btn" id="closeAlvaraAnexo" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
+          <!-- PDF: renderizado com PDF.js (canvas) — iframe+blob falha em muitos celulares -->
+          <div
+            id="alvaraAnexoPdfHost"
+            class="alvara-anexo-pdf-host"
+            aria-live="polite"
+            style="display: none"
+          ></div>
+          <!-- Fallback desktop (se PDF.js não carregar) -->
           <iframe id="alvaraAnexoFrame" title="Anexo do Alvará" style="display:none;width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
           <img id="alvaraAnexoImg" alt="Anexo do Alvará" style="display:none;width:100%; height: min(70vh, 720px); object-fit: contain; background:#fff;" />
         </div>
@@ -3158,7 +3166,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260409d"></script>
+    <script src="app.js?v=20260409e"></script>
      
   </body>
 </html>
