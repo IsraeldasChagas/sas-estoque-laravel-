@@ -12320,6 +12320,23 @@ function setupBoletosModule() {
     });
   }
 
+  // Segurança: garante que "Novo Boleto" nunca herda ID/modo de edição
+  const resetBoletoFormToCreateMode = () => {
+    if (!boletoForm) return;
+    boletoForm.dataset.mode = 'create';
+    const idEl = boletoForm.querySelector('input[name="id"]');
+    if (idEl) idEl.value = '';
+    const pagamentoFields = document.getElementById('pagamentoFields');
+    if (pagamentoFields) pagamentoFields.style.display = 'none';
+    if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+    const recorrenteFields = document.getElementById('recorrenteFields');
+    if (recorrenteFields) recorrenteFields.style.display = 'none';
+    const boletoRecorrente = document.getElementById('boletoRecorrente');
+    if (boletoRecorrente) boletoRecorrente.checked = false;
+    const mesesRec = document.getElementById('mesesRecorrencia');
+    if (mesesRec) mesesRec.value = '';
+  };
+
   // Abre modal de novo boleto
   if (openNovoBoletoBtn) {
     openNovoBoletoBtn.addEventListener('click', async () => {
@@ -12328,8 +12345,7 @@ function setupBoletosModule() {
         boletoModal.classList.add('active');
         document.getElementById('boletoModalTitle').textContent = '💰 Novo Boleto';
         if (boletoForm) boletoForm.reset();
-        document.getElementById('pagamentoFields').style.display = 'none';
-        if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+        resetBoletoFormToCreateMode();
       }
     });
   }
@@ -12338,6 +12354,7 @@ function setupBoletosModule() {
   if (closeBoletoBtn) {
     closeBoletoBtn.addEventListener('click', () => {
       if (boletoModal) boletoModal.classList.remove('active');
+      resetBoletoFormToCreateMode();
     });
   }
 
@@ -12345,6 +12362,7 @@ function setupBoletosModule() {
   if (cancelBoletoBtn) {
     cancelBoletoBtn.addEventListener('click', () => {
       if (boletoForm) boletoForm.reset();
+      resetBoletoFormToCreateMode();
     });
   }
 
@@ -12353,6 +12371,7 @@ function setupBoletosModule() {
     boletoModal.addEventListener('click', (e) => {
       if (e.target === boletoModal) {
         boletoModal.classList.remove('active');
+        resetBoletoFormToCreateMode();
       }
     });
   }
@@ -12595,10 +12614,17 @@ function setupBoletosModule() {
             showToast(`⚠️ ${erros} boletos falharam`, 'warning');
           }
         } else {
-          // Verifica se é edição ou criação (ID lido direto do input para garantir)
+          // Verifica se é edição ou criação com "modo" explícito (protege contra sobrescrita acidental).
           const idInput = boletoForm.querySelector('input[name="id"]');
           const boletoId = (idInput && idInput.value) ? String(idInput.value).trim() : (formData.get('id') || '').toString().trim();
-          const isEdicao = boletoId !== '';
+          const mode = (boletoForm?.dataset?.mode || 'create').toLowerCase();
+          const isEdicao = mode === 'edit' && boletoId !== '';
+
+          // Segurança extra: se estiver em modo criação, nunca envia ID.
+          if (!isEdicao) {
+            if (idInput) idInput.value = '';
+            formData.delete('id');
+          }
           
           if (isEdicao) {
             // EDIÇÃO - usa PUT
@@ -12699,6 +12725,9 @@ function setupBoletosModule() {
         console.log('🔄 Fechando modal e atualizando lista...');
         boletoModal.classList.remove('active');
         boletoForm.reset();
+        boletoForm.dataset.mode = 'create';
+        const idReset = boletoForm.querySelector('input[name="id"]');
+        if (idReset) idReset.value = '';
         if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
         if (recorrenteFields) recorrenteFields.style.display = 'none';
         
@@ -12790,6 +12819,7 @@ async function editarBoleto(id) {
     
     // Preenche o formulário
     const form = document.getElementById('boletoForm');
+    if (form) form.dataset.mode = 'edit';
     form.querySelector('[name="id"]').value = boleto.id;
     form.querySelector('[name="fornecedor"]').value = boleto.fornecedor || '';
     form.querySelector('[name="unidade_id"]').value = boleto.unidade_id || '';
