@@ -12908,6 +12908,7 @@ function renderAlvaras(alvaras) {
 async function mostrarDetalhesAlvara(id) {
   const modal = document.getElementById('alvaraDetalhesModal');
   const content = document.getElementById('alvaraDetalhesContent');
+  const verAnexoBtn = document.getElementById('verAlvaraAnexo');
   if (!modal || !content) return;
   content.innerHTML = '<p style="text-align:center;color:#999;">⏳ Carregando...</p>';
   modal.classList.add('active');
@@ -12918,6 +12919,18 @@ async function mostrarDetalhesAlvara(id) {
     const anexoHtml = a.anexo_path
       ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank">Baixar: ${escapeHtml(a.anexo_nome || 'anexo')}</a>`
       : 'Sem anexo';
+
+    // Botão "Ver anexo" (aparece só quando existir anexo)
+    if (verAnexoBtn) {
+      if (a.anexo_path) {
+        verAnexoBtn.style.display = '';
+        verAnexoBtn.onclick = () => window.open(`${API_URL}/alvaras/${a.id}/anexo`, '_blank');
+      } else {
+        verAnexoBtn.style.display = 'none';
+        verAnexoBtn.onclick = null;
+      }
+    }
+
     content.innerHTML = `
       <div style="display:grid;gap:0.75rem;">
         <div style="background:#f5f5f5;padding:1rem;border-radius:8px;">
@@ -12932,6 +12945,10 @@ async function mostrarDetalhesAlvara(id) {
       </div>
     `;
   } catch (e) {
+    if (verAnexoBtn) {
+      verAnexoBtn.style.display = 'none';
+      verAnexoBtn.onclick = null;
+    }
     content.innerHTML = '<p style="text-align:center;color:#d32f2f;">❌ Erro ao carregar detalhes</p>';
   }
 }
