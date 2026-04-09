@@ -191,7 +191,7 @@ class AlvaraController extends Controller
         }
     }
 
-    public function downloadAnexo($id)
+    public function downloadAnexo(Request $request, $id)
     {
         try {
             $alvara = Alvara::findOrFail($id);
@@ -208,7 +208,25 @@ class AlvaraController extends Controller
              * - Usamos response()->download igual ao Boleto, pois no ambiente atual isso já funciona.
              * - Mantemos a validação de existência do arquivo para evitar 500 caso o registro tenha caminho inválido.
              */
-            return response()->download($path, $alvara->anexo_nome ?: 'anexo');
+            $nome = $alvara->anexo_nome ?: 'anexo';
+            $ext = strtolower((string) ($alvara->anexo_tipo ?: pathinfo($nome, PATHINFO_EXTENSION)));
+            $mime = match ($ext) {
+                'pdf' => 'application/pdf',
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                default => 'application/octet-stream',
+            };
+
+            // Por padrão: abre no navegador (inline). Para forçar download: ?download=1
+            $forcarDownload = $request->boolean('download', false);
+            if ($forcarDownload) {
+                return response()->download($path, $nome);
+            }
+
+            return response()->file($path, [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="' . addslashes($nome) . '"',
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erro ao baixar anexo',
