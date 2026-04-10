@@ -1614,7 +1614,8 @@ textarea {
   margin-top: 0.25rem;
 }
 .ficha-tecnica-rich-toolbar-wrap {
-  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 .ficha-tecnica-rich-toolbar {
   display: flex;
@@ -1704,23 +1705,18 @@ textarea {
   color: #90a4ae;
   pointer-events: none;
 }
-.ficha-tecnica-emoji-panel {
-  position: absolute;
-  z-index: 20;
-  left: 0;
-  top: 100%;
-  margin-top: 4px;
+/* Painel no fluxo (entre toolbar e editor). :not([hidden]) evita display:grid sobrescrever o atributo hidden. */
+.ficha-tecnica-emoji-panel:not([hidden]) {
+  box-sizing: border-box;
+  margin: 0;
   padding: 0.5rem;
-  background: #fff;
+  background: #fafbfc;
   border: 1px solid var(--border, #cfd8dc);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-top: none;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 0.25rem;
-  max-width: min(100%, 320px);
-  /* Painel flutua sobre o editor: sem isso, cliques “no texto” ficam no painel e ele nunca fecha. */
-  pointer-events: none;
+  width: 100%;
 }
 .ficha-tecnica-emoji-item {
   font-size: 1.35rem;
@@ -1730,24 +1726,6 @@ textarea {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  pointer-events: auto;
-}
-.ficha-tecnica-emoji-fechar {
-  grid-column: 1 / -1;
-  justify-self: end;
-  margin: -0.15rem 0 0.15rem;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #546e7a;
-  border: 1px solid #cfd8dc;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  pointer-events: auto;
-}
-.ficha-tecnica-emoji-fechar:hover {
-  background: #eceff1;
 }
 .ficha-tecnica-emoji-item:hover {
   background: #e3f2fd;
@@ -1775,13 +1753,6 @@ textarea {
 .ficha-tecnica-lista-header span {
   font-weight: 600;
   color: var(--text);
-}
-.ficha-tecnica-lista-acoes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: flex-end;
 }
 .ficha-tecnica-lista-empty {
   padding: 1rem 1.25rem;

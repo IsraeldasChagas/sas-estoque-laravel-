@@ -14355,7 +14355,6 @@ function setupFichaTecnicaForm() {
   const listaTbody = document.getElementById('fichaTecnicaListaTbody');
   const listaEmpty = document.getElementById('fichaTecnicaListaEmpty');
   const btnNova = document.getElementById('fichaTecnicaBtnNova');
-  const btnRestaurarBackup = document.getElementById('fichaTecnicaRestaurarBackupBtn');
   const btnVoltar = document.getElementById('fichaTecnicaVoltarLista');
   const editIdEl = document.getElementById('fichaTecnicaEditId');
   const formTitulo = document.getElementById('fichaTecnicaFormTitulo');
@@ -14423,22 +14422,6 @@ function setupFichaTecnicaForm() {
       showToast('Não foi possível salvar no armazenamento local (espaço cheio?).', 'error');
       return false;
     }
-  };
-
-  const mesclarBackupFichaTecnicaNaListaAtual = (atual, bak) => {
-    const porId = new Map(atual.map((p) => [String(p.id), p]));
-    const saida = [...atual];
-    let added = 0;
-    for (const p of bak) {
-      if (!p || p.id == null) continue;
-      const sid = String(p.id);
-      if (!porId.has(sid)) {
-        saida.push(p);
-        porId.set(sid, p);
-        added++;
-      }
-    }
-    return { list: saida, added };
   };
 
   const syncFichaTecnicaVisaoPrecos = () => {
@@ -14526,22 +14509,18 @@ function setupFichaTecnicaForm() {
     modoEmojiBtn?.setAttribute('aria-expanded', 'false');
   };
 
-  if (modoEmojiPanel && modoEmojiPanel.dataset.emojiUi !== '2') {
-    modoEmojiPanel.dataset.emojiUi = '2';
+  if (modoEmojiPanel && modoEmojiPanel.dataset.emojiUi !== '3') {
+    modoEmojiPanel.dataset.emojiUi = '3';
     const emojis = [
       '🍳', '🔥', '⏱️', '🌡️', '🥘', '🍖', '🧂', '💧', '❄️', '✅', '⭐', '📋', '👨‍🍳', '🫕', '🔪', '🥄',
       '🍋', '🌿', '♨️', '⚠️', '🧄', '🧅', '🥕', '🍅', '🐟', '🍗', '🥩', '🍚', '🧈', '🥛', '☕', '🍽️',
     ];
-    const fecharBtn =
-      '<button type="button" class="ficha-tecnica-emoji-fechar" data-ficha-emoji-fechar="1" aria-label="Fechar painel de emojis">Fechar</button>';
-    modoEmojiPanel.innerHTML =
-      fecharBtn +
-      emojis
-        .map(
-          (ch) =>
-            `<button type="button" class="ficha-tecnica-emoji-item" data-emoji="${ch}" aria-label="Inserir ${ch}">${ch}</button>`
-        )
-        .join('');
+    modoEmojiPanel.innerHTML = emojis
+      .map(
+        (ch) =>
+          `<button type="button" class="ficha-tecnica-emoji-item" data-emoji="${ch}" aria-label="Inserir ${ch}">${ch}</button>`
+      )
+      .join('');
   }
 
   modoToolbar?.addEventListener('click', (e) => {
@@ -14587,14 +14566,11 @@ function setupFichaTecnicaForm() {
     modoEmojiPanel.hidden = !open;
     modoEmojiBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
+  modoEmojiBtn?.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
 
   modoEmojiPanel?.addEventListener('click', (e) => {
-    if (e.target.closest('[data-ficha-emoji-fechar]')) {
-      e.preventDefault();
-      e.stopPropagation();
-      fecharPainelEmojiModoPreparoSomente();
-      return;
-    }
     const item = e.target.closest('[data-emoji]');
     if (!item) return;
     e.preventDefault();
@@ -14616,7 +14592,7 @@ function setupFichaTecnicaForm() {
     if (modoEmojiBtn?.contains(ev.target) || modoEmojiPanel.contains(ev.target)) return;
     fecharPainelEmojiModoPreparoSomente();
   };
-  document.addEventListener('click', fecharPainelEmojiModoPreparo);
+  document.addEventListener('click', fecharPainelEmojiModoPreparo, true);
 
   document.addEventListener(
     'keydown',
@@ -14957,50 +14933,6 @@ function setupFichaTecnicaForm() {
   onNavigateFichaTecnicaCallback = () => {
     mostrarVistaLista();
   };
-
-  const restaurarFichasTecnicasDoBackup = () => {
-    carregarFichasDoArmazenamento();
-    const raw = localStorage.getItem(FICHA_TECNICA_STORAGE_BAK_KEY);
-    if (!raw || !String(raw).trim()) {
-      showToast(
-        'Não há cópia anterior neste navegador (ela é guardada automaticamente ao salvar fichas).',
-        'warning'
-      );
-      return;
-    }
-    const bak = parseFichaTecnicaListaJson(raw);
-    if (!bak || bak.length === 0) {
-      showToast('A cópia anterior está vazia.', 'warning');
-      return;
-    }
-    const atual = Array.isArray(state.fichaTecnicaPratos) ? [...state.fichaTecnicaPratos] : [];
-    const { list: mesclada, added } = mesclarBackupFichaTecnicaNaListaAtual(atual, bak);
-    if (added > 0) {
-      if (
-        !confirm(
-          `Na cópia anterior há ${added} ficha(s) que não estão na lista atual (por exemplo sumiram por engano). Deseja adicioná-las de volta?`
-        )
-      )
-        return;
-      state.fichaTecnicaPratos = mesclada;
-    } else {
-      if (
-        !confirm(
-          `A cópia tem as mesmas fichas (mesmos ids) que a lista atual (${atual.length} na tela). Deseja substituir a lista inteira pela cópia anterior (${bak.length} ficha(s))? Isso desfaz alterações feitas só na lista atual.`
-        )
-      )
-        return;
-      state.fichaTecnicaPratos = bak.slice();
-    }
-    if (!persistirFichas()) return;
-    renderListaTabela();
-    showToast(
-      added > 0 ? `${added} ficha(s) recuperada(s) da cópia anterior.` : 'Lista substituída pela cópia anterior.',
-      'success'
-    );
-  };
-
-  btnRestaurarBackup?.addEventListener('click', () => restaurarFichasTecnicasDoBackup());
 
   btnNova?.addEventListener('click', () => {
     limparFormulario();
