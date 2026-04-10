@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -330,7 +330,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   ESTOQUISTA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "compras", "produtos", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -338,7 +338,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   COZINHA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "fechaTecnica", "estoque", "movimentacoes", "relatorios"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -346,7 +346,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "estoque", "movimentacoes", "relatorios", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "fechaTecnica", "estoque", "movimentacoes", "relatorios", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -354,7 +354,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -370,7 +370,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   VISUALIZADOR: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fechaTecnica"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -378,7 +378,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
-    sections: ["boasVindas", "minhaConta", "estoque", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "estoque", "fechaTecnica", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -386,7 +386,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechaTecnica", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -394,7 +394,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechaTecnica"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2692,6 +2692,13 @@ function applyPermissions() {
   // ADMIN e GERENTE sempre têm acesso a Logs (mesmo com permissões personalizadas)
   if (["ADMIN", "GERENTE"].includes(perfil) && !sections.includes("logs")) {
     sections = [...sections, "logs"];
+  }
+  /**
+   * Fecha Tecnica (placeholder): permissoes_menu salvo no servidor é uma lista fixa e não ganha
+   * seções novas automaticamente — sem isto o item some para quase todos os usuários reais.
+   */
+  if (currentUser && !sections.includes("fechaTecnica")) {
+    sections = [...sections, "fechaTecnica"];
   }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
@@ -6916,7 +6923,7 @@ async function startAppSession(user) {
         const savedSection = localStorage.getItem(currentSectionKey);
         if (savedSection) {
           // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'alvara', 'reservaMesa', 'historicoReservas', 'funcionarios', 'proventos', 'logs'];
+          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'fechaTecnica', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'alvara', 'reservaMesa', 'historicoReservas', 'funcionarios', 'proventos', 'logs'];
           if (validSections.includes(savedSection)) {
             sectionToNavigate = savedSection;
             console.log('Restaurando seção salva após refresh:', sectionToNavigate);
