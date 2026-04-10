@@ -1365,6 +1365,18 @@ textarea {
 .ficha-tecnica-form__section-title:first-of-type {
   margin-top: 0;
 }
+.ficha-tecnica-form__section-title--top {
+  margin-top: 0;
+}
+.ficha-tecnica-ingredientes-dentro-ficha {
+  margin-top: 0.25rem;
+}
+.ficha-tecnica-ingredientes-dentro-ficha .ficha-tecnica-ingredientes-toolbar {
+  padding: 0 0 0.75rem;
+}
+.ficha-tecnica-ingredientes-dentro-ficha .ficha-tecnica-ingredientes-lista {
+  padding: 0 0 0.25rem;
+}
 .ficha-tecnica-form__section-desc {
   margin: -0.35rem 0 0.5rem;
   font-size: 0.85rem;

@@ -14239,6 +14239,16 @@ function setupFichaTecnicaForm() {
   document.getElementById('fichaTecnicaSugestaoVenda')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
   syncFichaTecnicaVisaoPrecos();
 
+  /** Enter nos campos do painel de ingrediente não envia o formulário principal. */
+  form.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const t = e.target;
+    if (t.tagName === 'TEXTAREA') return;
+    if (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') return;
+    const ingRoot = document.getElementById('fichaTecnicaIngredienteForm');
+    if (ingRoot && ingRoot.contains(t)) e.preventDefault();
+  });
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!form.checkValidity()) {
@@ -14272,7 +14282,10 @@ function setupFichaTecnicaForm() {
   const ingWrap = document.getElementById('fichaTecnicaIngredienteFormWrap');
   const ingAbrirBtn = document.getElementById('fichaTecnicaAbrirIngrediente');
   const ingCancelarBtn = document.getElementById('fichaTecnicaCancelarIngrediente');
+  const ingAdicionarBtn = document.getElementById('fichaTecnicaIngredienteAdicionarBtn');
+  const ingNome = document.getElementById('fichaTecnicaIngredienteNome');
   const ingQ = document.getElementById('fichaTecnicaIngredienteQuantidade');
+  const ingUn = document.getElementById('fichaTecnicaIngredienteUnidade');
   const ingCu = document.getElementById('fichaTecnicaIngredienteCustoUnitario');
   const ingTot = document.getElementById('fichaTecnicaIngredienteCustoTotal');
   const ingEmpty = document.getElementById('fichaTecnicaIngredientesEmpty');
@@ -14333,13 +14346,20 @@ function setupFichaTecnicaForm() {
       .join('');
   };
 
+  const limparCamposIngrediente = () => {
+    if (ingNome) ingNome.value = '';
+    if (ingQ) ingQ.value = '';
+    if (ingUn) ingUn.value = '';
+    if (ingCu) ingCu.value = '';
+    if (ingTot) ingTot.value = '';
+    recalcIngredienteCustoTotal();
+  };
+
   ingAbrirBtn?.addEventListener('click', () => {
     if (!ingWrap) return;
     const abrir = ingWrap.hidden;
     ingWrap.hidden = !abrir;
-    if (abrir && ingForm) {
-      ingForm.querySelector('[name="nome"]')?.focus();
-    }
+    if (abrir) ingNome?.focus();
   });
   ingCancelarBtn?.addEventListener('click', () => {
     fecharFormularioIngrediente();
@@ -14355,17 +14375,32 @@ function setupFichaTecnicaForm() {
 
   renderListaIngredientesFichaTecnica();
 
-  ingForm?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!ingForm.checkValidity()) {
-      ingForm.reportValidity();
+  ingAdicionarBtn?.addEventListener('click', () => {
+    if (!ingForm) return;
+    if (!(ingNome?.value || '').trim()) {
+      showToast('Informe o nome do ingrediente.', 'error');
+      ingNome?.focus();
+      return;
+    }
+    if (String(ingQ?.value ?? '').trim() === '') {
+      showToast('Informe a quantidade.', 'error');
+      ingQ?.focus();
+      return;
+    }
+    if (!(ingUn?.value || '').trim()) {
+      showToast('Selecione a unidade de medida.', 'error');
+      ingUn?.focus();
+      return;
+    }
+    if (String(ingCu?.value ?? '').trim() === '') {
+      showToast('Informe o custo unitário.', 'error');
+      ingCu?.focus();
       return;
     }
     recalcIngredienteCustoTotal();
-    const nome = (ingForm.querySelector('[name="nome"]')?.value || '').trim();
+    const nome = (ingNome?.value || '').trim();
     const quantidade = parseNumIng(ingQ?.value);
-    const sel = ingForm.querySelector('[name="unidade_medida"]');
-    const unidade_medida = sel?.value || '';
+    const unidade_medida = (ingUn?.value || '').trim();
     const custo_unitario = parseNumIng(ingCu?.value);
     const custo_total = Math.round(quantidade * custo_unitario * 100) / 100;
     state.fichaTecnicaIngredientes.push({
@@ -14376,8 +14411,7 @@ function setupFichaTecnicaForm() {
       custo_unitario,
       custo_total,
     });
-    ingForm.reset();
-    recalcIngredienteCustoTotal();
+    limparCamposIngrediente();
     renderListaIngredientesFichaTecnica();
     fecharFormularioIngrediente();
     showToast('Ingrediente adicionado à lista.', 'success');

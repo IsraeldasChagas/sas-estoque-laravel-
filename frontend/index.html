@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260409l" />
+    <link rel="stylesheet" href="style.css?v=20260409m" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1226,6 +1226,16 @@
             <div class="table-card ficha-tecnica-card">
               <header>Ficha técnica do prato</header>
               <form id="fichaTecnicaForm" class="ficha-tecnica-form" novalidate>
+                <h3 class="ficha-tecnica-form__section-title ficha-tecnica-form__section-title--top">Foto do prato</h3>
+                <div class="ficha-tecnica-form__field">
+                  <span>Imagem do prato (opcional)</span>
+                  <input type="file" id="fichaTecnicaFoto" name="foto_prato" accept="image/jpeg,image/png,image/webp,image/gif" />
+                  <small class="ficha-tecnica-form__hint">JPEG, PNG, WebP ou GIF.</small>
+                  <div id="fichaTecnicaFotoPreviewWrap" class="ficha-tecnica-form__preview-wrap" hidden>
+                    <img id="fichaTecnicaFotoPreview" alt="Pré-visualização da foto do prato" width="320" height="240" />
+                  </div>
+                </div>
+
                 <h3 class="ficha-tecnica-form__section-title">Dados do prato</h3>
                 <label class="ficha-tecnica-form__field">
                   <span>Nome do prato *</span>
@@ -1239,14 +1249,6 @@
                   <span>Responsável técnico *</span>
                   <input type="text" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
                 </label>
-                <div class="ficha-tecnica-form__field">
-                  <span>Foto do prato</span>
-                  <input type="file" id="fichaTecnicaFoto" name="foto_prato" accept="image/jpeg,image/png,image/webp,image/gif" />
-                  <small class="ficha-tecnica-form__hint">JPEG, PNG, WebP ou GIF (opcional).</small>
-                  <div id="fichaTecnicaFotoPreviewWrap" class="ficha-tecnica-form__preview-wrap" hidden>
-                    <img id="fichaTecnicaFotoPreview" alt="Pré-visualização da foto do prato" width="320" height="240" />
-                  </div>
-                </div>
 
                 <h3 class="ficha-tecnica-form__section-title">Visualização do prato — preços</h3>
                 <p class="ficha-tecnica-form__section-desc">Os valores abaixo aparecem na pré-visualização à medida que você preenche.</p>
@@ -1279,6 +1281,74 @@
                   </div>
                 </div>
 
+                <div class="ficha-tecnica-ingredientes-dentro-ficha">
+                  <h3 class="ficha-tecnica-form__section-title">Ingredientes</h3>
+                  <div class="ficha-tecnica-ingredientes-toolbar">
+                    <button type="button" class="btn primary" id="fichaTecnicaAbrirIngrediente">+ Cadastrar ingrediente</button>
+                  </div>
+                  <div id="fichaTecnicaIngredienteFormWrap" class="ficha-tecnica-ingrediente-form-wrap" hidden>
+                    <div id="fichaTecnicaIngredienteForm" class="ficha-tecnica-form ficha-tecnica-form--compact" role="group" aria-label="Cadastro de ingrediente">
+                      <label class="ficha-tecnica-form__field">
+                        <span>Nome *</span>
+                        <input type="text" id="fichaTecnicaIngredienteNome" name="ingrediente_nome" maxlength="255" placeholder="Ex.: Filé mignon" autocomplete="off" />
+                      </label>
+                      <div class="ficha-tecnica-form__grid-two">
+                        <label class="ficha-tecnica-form__field">
+                          <span>Quantidade *</span>
+                          <input type="number" id="fichaTecnicaIngredienteQuantidade" name="ingrediente_quantidade" min="0" step="any" placeholder="0" />
+                        </label>
+                        <label class="ficha-tecnica-form__field">
+                          <span>Unidade de medida *</span>
+                          <select id="fichaTecnicaIngredienteUnidade" name="ingrediente_unidade_medida">
+                            <option value="">Selecione</option>
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="L">L</option>
+                            <option value="ml">ml</option>
+                            <option value="un">un</option>
+                            <option value="dz">dz (duzia)</option>
+                            <option value="pct">pct (pacote)</option>
+                            <option value="cx">cx (caixa)</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div class="ficha-tecnica-form__grid-two">
+                        <label class="ficha-tecnica-form__field">
+                          <span>Custo unitário (R$) *</span>
+                          <input type="number" id="fichaTecnicaIngredienteCustoUnitario" name="ingrediente_custo_unitario" min="0" step="0.01" placeholder="0,00" />
+                        </label>
+                        <label class="ficha-tecnica-form__field">
+                          <span>Custo total (R$)</span>
+                          <input type="text" id="fichaTecnicaIngredienteCustoTotal" name="ingrediente_custo_total" readonly inputmode="decimal" />
+                          <small class="ficha-tecnica-form__hint">Quantidade × custo unitário</small>
+                        </label>
+                      </div>
+                      <footer class="ficha-tecnica-form__footer ficha-tecnica-form__footer--row">
+                        <button type="button" class="btn neutral" id="fichaTecnicaCancelarIngrediente">Cancelar</button>
+                        <button type="button" class="btn primary" id="fichaTecnicaIngredienteAdicionarBtn">Adicionar à lista</button>
+                      </footer>
+                    </div>
+                  </div>
+                  <div class="ficha-tecnica-ingredientes-lista">
+                    <p id="fichaTecnicaIngredientesEmpty" class="ficha-tecnica-ingredientes-empty">Nenhum ingrediente cadastrado.</p>
+                    <div id="fichaTecnicaIngredientesTableWrap" class="table-wrapper ficha-tecnica-ingredientes-table-wrap" hidden>
+                      <table class="ficha-tecnica-ingredientes-table">
+                        <thead>
+                          <tr>
+                            <th>Ingrediente</th>
+                            <th>Qtd</th>
+                            <th>Un.</th>
+                            <th>Custo un.</th>
+                            <th>Custo tot.</th>
+                            <th aria-label="Remover"></th>
+                          </tr>
+                        </thead>
+                        <tbody id="fichaTecnicaIngredientesTbody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
                 <h3 class="ficha-tecnica-form__section-title">Modo de preparo</h3>
                 <label class="ficha-tecnica-form__field">
                   <span>Passo a passo, temperaturas e observações</span>
@@ -1289,74 +1359,6 @@
                   <button type="submit" class="btn primary">Salvar ficha técnica</button>
                 </footer>
               </form>
-            </div>
-
-            <div class="table-card ficha-tecnica-card ficha-tecnica-ingredientes-card">
-              <header>Ingredientes</header>
-              <div class="ficha-tecnica-ingredientes-toolbar">
-                <button type="button" class="btn primary" id="fichaTecnicaAbrirIngrediente">+ Cadastrar ingrediente</button>
-              </div>
-              <div id="fichaTecnicaIngredienteFormWrap" class="ficha-tecnica-ingrediente-form-wrap" hidden>
-                <form id="fichaTecnicaIngredienteForm" class="ficha-tecnica-form ficha-tecnica-form--compact" novalidate>
-                  <label class="ficha-tecnica-form__field">
-                    <span>Nome *</span>
-                    <input type="text" name="nome" required maxlength="255" placeholder="Ex.: Filé mignon" autocomplete="off" />
-                  </label>
-                  <div class="ficha-tecnica-form__grid-two">
-                    <label class="ficha-tecnica-form__field">
-                      <span>Quantidade *</span>
-                      <input type="number" id="fichaTecnicaIngredienteQuantidade" name="quantidade" required min="0" step="any" placeholder="0" />
-                    </label>
-                    <label class="ficha-tecnica-form__field">
-                      <span>Unidade de medida *</span>
-                      <select name="unidade_medida" required>
-                        <option value="">Selecione</option>
-                        <option value="kg">kg</option>
-                        <option value="g">g</option>
-                        <option value="L">L</option>
-                        <option value="ml">ml</option>
-                        <option value="un">un</option>
-                        <option value="dz">dz (duzia)</option>
-                        <option value="pct">pct (pacote)</option>
-                        <option value="cx">cx (caixa)</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="ficha-tecnica-form__grid-two">
-                    <label class="ficha-tecnica-form__field">
-                      <span>Custo unitário (R$) *</span>
-                      <input type="number" id="fichaTecnicaIngredienteCustoUnitario" name="custo_unitario" required min="0" step="0.01" placeholder="0,00" />
-                    </label>
-                    <label class="ficha-tecnica-form__field">
-                      <span>Custo total (R$)</span>
-                      <input type="text" id="fichaTecnicaIngredienteCustoTotal" name="custo_total" readonly inputmode="decimal" />
-                      <small class="ficha-tecnica-form__hint">Quantidade × custo unitário</small>
-                    </label>
-                  </div>
-                  <footer class="ficha-tecnica-form__footer ficha-tecnica-form__footer--row">
-                    <button type="button" class="btn neutral" id="fichaTecnicaCancelarIngrediente">Cancelar</button>
-                    <button type="submit" class="btn primary">Adicionar à lista</button>
-                  </footer>
-                </form>
-              </div>
-              <div class="ficha-tecnica-ingredientes-lista">
-                <p id="fichaTecnicaIngredientesEmpty" class="ficha-tecnica-ingredientes-empty">Nenhum ingrediente cadastrado.</p>
-                <div id="fichaTecnicaIngredientesTableWrap" class="table-wrapper ficha-tecnica-ingredientes-table-wrap" hidden>
-                  <table class="ficha-tecnica-ingredientes-table">
-                    <thead>
-                      <tr>
-                        <th>Ingrediente</th>
-                        <th>Qtd</th>
-                        <th>Un.</th>
-                        <th>Custo un.</th>
-                        <th>Custo tot.</th>
-                        <th aria-label="Remover"></th>
-                      </tr>
-                    </thead>
-                    <tbody id="fichaTecnicaIngredientesTbody"></tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           </section>
 
@@ -3309,7 +3311,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260409l"></script>
+    <script src="app.js?v=20260409m"></script>
      
   </body>
 </html>
