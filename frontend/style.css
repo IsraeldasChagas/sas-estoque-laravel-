@@ -1699,7 +1699,7 @@ textarea {
   border-color: #1976d2;
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.18);
 }
-.ficha-tecnica-rich-editor:empty:before {
+.ficha-tecnica-rich-editor.ficha-tecnica-rich-editor--empty:before {
   content: attr(data-placeholder);
   color: #90a4ae;
   pointer-events: none;

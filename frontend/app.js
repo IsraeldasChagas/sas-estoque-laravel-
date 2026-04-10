@@ -466,6 +466,7 @@ let logoDataUrl = null;
 /** Ao abrir a seção Ficha técnica no menu: recarrega lista do armazenamento local. */
 let onNavigateFichaTecnicaCallback = () => {};
 const FICHA_TECNICA_STORAGE_KEY = 'sas-estoque-fichas-tecnicas-v1';
+const FICHA_TECNICA_STORAGE_BAK_KEY = 'sas-estoque-fichas-tecnicas-v1.bak';
 const FICHA_TECNICA_FOTO_MAX_BYTES = Math.floor(1.8 * 1024 * 1024);
 const MOBILE_BREAKPOINT = 1024;
 const LISTA_STATUS_LABEL = {
@@ -14276,8 +14277,26 @@ function sanitizeFichaTecnicaModoPreparoHtml(html) {
   if (!s) return '';
   if (typeof window.DOMPurify !== 'undefined') {
     return window.DOMPurify.sanitize(s, {
-      ALLOWED_TAGS: ['p', 'div', 'br', 'strong', 'b', 'em', 'i', 'u', 'span', 'ul', 'ol', 'li', 'font', 'h3', 'h4'],
-      ALLOWED_ATTR: ['style', 'color', 'size', 'class'],
+      ALLOWED_TAGS: [
+        'p',
+        'div',
+        'br',
+        'strong',
+        'b',
+        'em',
+        'i',
+        'u',
+        'span',
+        'ul',
+        'ol',
+        'li',
+        'font',
+        'h3',
+        'h4',
+        'blockquote',
+        'mark',
+      ],
+      ALLOWED_ATTR: ['style', 'color', 'size', 'class', 'face'],
       ALLOW_DATA_ATTR: false,
     });
   }
@@ -14286,13 +14305,33 @@ function sanitizeFichaTecnicaModoPreparoHtml(html) {
   return el.innerHTML;
 }
 
+/** Texto visível no editor (ignora só <br> / blocos vazios do navegador). */
+function fichaTecnicaModoPreparoTextoVisivel(htmlOrEl) {
+  if (htmlOrEl && typeof htmlOrEl === 'object' && htmlOrEl.nodeType === Node.ELEMENT_NODE) {
+    const t = (htmlOrEl.innerText || htmlOrEl.textContent || '').replace(/\u200b/g, '');
+    return t.trim().length > 0;
+  }
+  const div = document.createElement('div');
+  div.innerHTML = String(htmlOrEl ?? '');
+  const t = (div.innerText || div.textContent || '').replace(/\u200b/g, '');
+  return t.trim().length > 0;
+}
+
 /** Texto antigo (sem tags) ou HTML já salvo → conteúdo seguro para o editor. */
 function modoPreparoHtmlParaEditor(stored) {
   if (stored == null) return '';
   const s = String(stored).trim();
   if (!s) return '';
   const looksHtml = /^[\s]*</.test(s) && /<[a-z][\s\S]*>/i.test(s);
-  if (looksHtml) return sanitizeFichaTecnicaModoPreparoHtml(s);
+  if (looksHtml) {
+    const clean = sanitizeFichaTecnicaModoPreparoHtml(s);
+    if (clean && fichaTecnicaModoPreparoTextoVisivel(clean)) return clean;
+    const div = document.createElement('div');
+    div.innerHTML = s;
+    const fallbackText = (div.textContent || div.innerText || '').trim();
+    if (fallbackText) return `<p>${escapeHtml(fallbackText).replace(/\n/g, '<br>')}</p>`;
+    return clean || '';
+  }
   return `<p>${escapeHtml(s).replace(/\n/g, '<br>')}</p>`;
 }
 
@@ -14301,14 +14340,8 @@ function modoPreparoHtmlParaTextoPlano(html) {
   const clean = sanitizeFichaTecnicaModoPreparoHtml(String(html ?? ''));
   const div = document.createElement('div');
   div.innerHTML = clean;
-  const t = (div.textContent || div.innerText || '').trim();
+  const t = (div.textContent || div.innerText || '').replace(/\u200b/g, '').trim();
   return t || '—';
-}
-
-function isFichaTecnicaModoPreparoRichVazio(html) {
-  const div = document.createElement('div');
-  div.innerHTML = String(html ?? '');
-  return (div.textContent || '').trim() === '';
 }
 
 /** Formulário e lista da ficha técnica (persistência em localStorage). */
@@ -14346,18 +14379,42 @@ function setupFichaTecnicaForm() {
     });
 
   const carregarFichasDoArmazenamento = () => {
-    let parsed;
-    try {
-      parsed = JSON.parse(localStorage.getItem(FICHA_TECNICA_STORAGE_KEY) || '[]');
-    } catch (_) {
-      parsed = [];
+    const tryParseLista = (str) => {
+      try {
+        const p = JSON.parse(str || '[]');
+        return Array.isArray(p) ? p : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    const principal = localStorage.getItem(FICHA_TECNICA_STORAGE_KEY);
+    let list = tryParseLista(principal);
+    if (!list) {
+      const bak = localStorage.getItem(FICHA_TECNICA_STORAGE_BAK_KEY);
+      list = tryParseLista(bak);
+      if (list && list.length) {
+        console.warn('Ficha técnica: lista principal corrompida; restaurada do backup automático.');
+        showToast('Lista de fichas recuperada do backup automático.', 'warning');
+        try {
+          localStorage.setItem(FICHA_TECNICA_STORAGE_KEY, JSON.stringify(list));
+        } catch (_) {}
+      } else {
+        list = [];
+      }
     }
-    state.fichaTecnicaPratos = Array.isArray(parsed) ? parsed : [];
+    state.fichaTecnicaPratos = list;
   };
 
   const persistirFichas = () => {
     try {
-      localStorage.setItem(FICHA_TECNICA_STORAGE_KEY, JSON.stringify(state.fichaTecnicaPratos));
+      const json = JSON.stringify(state.fichaTecnicaPratos);
+      const anterior = localStorage.getItem(FICHA_TECNICA_STORAGE_KEY);
+      if (anterior) {
+        try {
+          localStorage.setItem(FICHA_TECNICA_STORAGE_BAK_KEY, anterior);
+        } catch (_) {}
+      }
+      localStorage.setItem(FICHA_TECNICA_STORAGE_KEY, json);
       return true;
     } catch (err) {
       console.error(err);
@@ -14429,14 +14486,20 @@ function setupFichaTecnicaForm() {
   const modoEmojiBtn = document.getElementById('fichaTecnicaModoEmojiBtn');
   const modoEmojiPanel = document.getElementById('fichaTecnicaModoEmojiPanel');
 
+  const atualizarClassePlaceholderModoPreparo = () => {
+    if (!modoEditor) return;
+    modoEditor.classList.toggle('ficha-tecnica-rich-editor--empty', !fichaTecnicaModoPreparoTextoVisivel(modoEditor));
+  };
+
   const sincronizarModoPreparoOculto = () => {
     if (!modoEditor || !modoHidden) return;
-    const raw = modoEditor.innerHTML;
-    if (isFichaTecnicaModoPreparoRichVazio(raw)) {
+    if (!fichaTecnicaModoPreparoTextoVisivel(modoEditor)) {
       modoHidden.value = '';
+      atualizarClassePlaceholderModoPreparo();
       return;
     }
-    modoHidden.value = sanitizeFichaTecnicaModoPreparoHtml(raw);
+    modoHidden.value = sanitizeFichaTecnicaModoPreparoHtml(modoEditor.innerHTML);
+    atualizarClassePlaceholderModoPreparo();
   };
 
   if (modoEmojiPanel && !modoEmojiPanel.dataset.built) {
@@ -14486,6 +14549,7 @@ function setupFichaTecnicaForm() {
 
   modoEditor?.addEventListener('input', sincronizarModoPreparoOculto);
   modoEditor?.addEventListener('blur', sincronizarModoPreparoOculto);
+  atualizarClassePlaceholderModoPreparo();
 
   modoEmojiBtn?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -14509,12 +14573,13 @@ function setupFichaTecnicaForm() {
     sincronizarModoPreparoOculto();
   });
 
-  document.addEventListener('click', (ev) => {
+  const fecharPainelEmojiModoPreparo = (ev) => {
     if (!modoEmojiPanel || modoEmojiPanel.hidden) return;
     if (modoEmojiBtn?.contains(ev.target) || modoEmojiPanel.contains(ev.target)) return;
     modoEmojiPanel.hidden = true;
     modoEmojiBtn?.setAttribute('aria-expanded', 'false');
-  });
+  };
+  document.addEventListener('click', fecharPainelEmojiModoPreparo);
 
   /** Enter nos campos do painel de ingrediente não envia o formulário principal. */
   form.addEventListener('keydown', (e) => {
@@ -14627,6 +14692,7 @@ function setupFichaTecnicaForm() {
     sincronizarTempoPreparoOculto();
     if (modoEditor) modoEditor.innerHTML = '';
     if (modoHidden) modoHidden.value = '';
+    atualizarClassePlaceholderModoPreparo();
     if (modoEmojiPanel) modoEmojiPanel.hidden = true;
     modoEmojiBtn?.setAttribute('aria-expanded', 'false');
     state.fichaTecnicaIngredientes = [];
@@ -14941,7 +15007,10 @@ function setupFichaTecnicaForm() {
       const nome_prato = document.getElementById('fichaTecnicaNomePrato')?.value.trim() ?? '';
       const tempo_preparo = document.getElementById('fichaTecnicaTempoPreparo')?.value.trim() ?? '';
       const responsavel_tecnico = document.getElementById('fichaTecnicaResponsavel')?.value.trim() ?? '';
-      const modo_preparo = document.getElementById('fichaTecnicaModoPreparo')?.value ?? '';
+      const modo_preparo =
+        modoEditor && fichaTecnicaModoPreparoTextoVisivel(modoEditor)
+          ? sanitizeFichaTecnicaModoPreparoHtml(modoEditor.innerHTML)
+          : '';
       const preco_prato = parseMoedaInput(document.getElementById('fichaTecnicaPrecoPrato'));
       const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
       const updatedAt = new Date().toISOString();
