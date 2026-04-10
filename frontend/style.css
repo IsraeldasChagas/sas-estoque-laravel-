@@ -1400,6 +1400,33 @@ textarea {
   margin-top: 0.5rem;
   padding-top: 0.25rem;
 }
+.ficha-tecnica-form__field select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #ddd);
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: #fff;
+}
+.ficha-tecnica-form__field input[readonly] {
+  background: #f0f4f8;
+  color: var(--text);
+  cursor: default;
+}
+.ficha-tecnica-form__grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+@media (max-width: 600px) {
+  .ficha-tecnica-form__grid-two {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Modal Fornecedor: pergunta em cima, resposta embaixo */
 .form-fornecedor {

@@ -14241,6 +14241,42 @@ function setupFichaTecnicaForm() {
     preview.src = url;
     previewWrap.hidden = false;
   });
+
+  const ingForm = document.getElementById('fichaTecnicaIngredienteForm');
+  const ingQ = document.getElementById('fichaTecnicaIngredienteQuantidade');
+  const ingCu = document.getElementById('fichaTecnicaIngredienteCustoUnitario');
+  const ingTot = document.getElementById('fichaTecnicaIngredienteCustoTotal');
+  const parseNumIng = (v) => {
+    if (v == null || v === '') return 0;
+    const n = parseFloat(String(v).replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const recalcIngredienteCustoTotal = () => {
+    if (!ingTot) return;
+    const qs = String(ingQ?.value ?? '').trim();
+    const cus = String(ingCu?.value ?? '').trim();
+    if (qs === '' && cus === '') {
+      ingTot.value = '';
+      return;
+    }
+    const q = parseNumIng(qs);
+    const cu = parseNumIng(cus);
+    const t = Math.round(q * cu * 100) / 100;
+    ingTot.value = t.toFixed(2).replace('.', ',');
+  };
+  ingQ?.addEventListener('input', recalcIngredienteCustoTotal);
+  ingCu?.addEventListener('input', recalcIngredienteCustoTotal);
+  recalcIngredienteCustoTotal();
+
+  ingForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!ingForm.checkValidity()) {
+      ingForm.reportValidity();
+      return;
+    }
+    recalcIngredienteCustoTotal();
+    showToast('Ingrediente registrado localmente. O salvamento no servidor será adicionado em breve.', 'info');
+  });
 }
 
 // Sequencia de inicializacao que amarra todos os componentes e listeners.

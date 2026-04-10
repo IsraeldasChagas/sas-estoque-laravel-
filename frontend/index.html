@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260409i" />
+    <link rel="stylesheet" href="style.css?v=20260409j" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1248,6 +1248,50 @@
                 </div>
                 <footer class="ficha-tecnica-form__footer">
                   <button type="submit" class="btn primary">Salvar ficha técnica</button>
+                </footer>
+              </form>
+            </div>
+
+            <div class="table-card ficha-tecnica-card">
+              <header>Cadastro de ingrediente</header>
+              <form id="fichaTecnicaIngredienteForm" class="ficha-tecnica-form" novalidate>
+                <label class="ficha-tecnica-form__field">
+                  <span>Nome *</span>
+                  <input type="text" name="nome" required maxlength="255" placeholder="Ex.: Filé mignon" autocomplete="off" />
+                </label>
+                <div class="ficha-tecnica-form__grid-two">
+                  <label class="ficha-tecnica-form__field">
+                    <span>Quantidade *</span>
+                    <input type="number" id="fichaTecnicaIngredienteQuantidade" name="quantidade" required min="0" step="any" placeholder="0" />
+                  </label>
+                  <label class="ficha-tecnica-form__field">
+                    <span>Unidade de medida *</span>
+                    <select name="unidade_medida" required>
+                      <option value="">Selecione</option>
+                      <option value="kg">kg</option>
+                      <option value="g">g</option>
+                      <option value="L">L</option>
+                      <option value="ml">ml</option>
+                      <option value="un">un</option>
+                      <option value="dz">dz (duzia)</option>
+                      <option value="pct">pct (pacote)</option>
+                      <option value="cx">cx (caixa)</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="ficha-tecnica-form__grid-two">
+                  <label class="ficha-tecnica-form__field">
+                    <span>Custo unitário (R$) *</span>
+                    <input type="number" id="fichaTecnicaIngredienteCustoUnitario" name="custo_unitario" required min="0" step="0.01" placeholder="0,00" />
+                  </label>
+                  <label class="ficha-tecnica-form__field">
+                    <span>Custo total (R$)</span>
+                    <input type="text" id="fichaTecnicaIngredienteCustoTotal" name="custo_total" readonly inputmode="decimal" />
+                    <small class="ficha-tecnica-form__hint">Calculado: quantidade × custo unitário</small>
+                  </label>
+                </div>
+                <footer class="ficha-tecnica-form__footer">
+                  <button type="submit" class="btn primary">Cadastrar ingrediente</button>
                 </footer>
               </form>
             </div>
@@ -3202,7 +3246,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260409i"></script>
+    <script src="app.js?v=20260409j"></script>
      
   </body>
 </html>
