@@ -1478,6 +1478,66 @@ textarea {
   margin-top: 0.5rem;
   padding-top: 0.25rem;
 }
+.ficha-tecnica-form__footer--row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+.ficha-tecnica-ingredientes-toolbar {
+  padding: 0 1.5rem 0.75rem;
+}
+.ficha-tecnica-ingrediente-form-wrap {
+  border-top: 1px solid var(--border, #e8e8e8);
+  background: #fafafa;
+}
+.ficha-tecnica-form--compact {
+  padding-top: 1rem;
+}
+.ficha-tecnica-ingredientes-lista {
+  padding: 0 1.5rem 1.25rem;
+}
+.ficha-tecnica-ingredientes-empty {
+  margin: 0;
+  padding: 0.75rem 0;
+  font-size: 0.9rem;
+  color: #78909c;
+  text-align: center;
+}
+.ficha-tecnica-ingredientes-table-wrap {
+  margin-top: 0.25rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.ficha-tecnica-ingredientes-table {
+  width: 100%;
+  font-size: 0.88rem;
+}
+.ficha-tecnica-ingredientes-table th,
+.ficha-tecnica-ingredientes-table td {
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #eee);
+}
+.ficha-tecnica-ingredientes-table th:last-child,
+.ficha-tecnica-ingredientes-table td:last-child {
+  width: 2.5rem;
+  text-align: center;
+  padding-inline: 0.25rem;
+}
+.ficha-tecnica-ingredientes-table .btn-icon {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.ficha-tecnica-ingredientes-table .btn-icon.danger {
+  color: #c62828;
+  opacity: 1;
+}
+.ficha-tecnica-ingredientes-table .btn-icon.danger:hover {
+  color: #b71c1c;
+}
 .ficha-tecnica-form__field select {
   width: 100%;
   max-width: 100%;

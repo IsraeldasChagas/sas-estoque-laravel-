@@ -450,6 +450,8 @@ const state = {
   movimentacoesRecentes: [],
   relatorioResumo: [],
   relatorioDetalhes: [],
+  /** Ingredientes da ficha técnica (sessão local até existir API). */
+  fichaTecnicaIngredientes: [],
 };
 
 // Variáveis auxiliares para session e rastreamento de efeitos.
@@ -14267,9 +14269,16 @@ function setupFichaTecnicaForm() {
   });
 
   const ingForm = document.getElementById('fichaTecnicaIngredienteForm');
+  const ingWrap = document.getElementById('fichaTecnicaIngredienteFormWrap');
+  const ingAbrirBtn = document.getElementById('fichaTecnicaAbrirIngrediente');
+  const ingCancelarBtn = document.getElementById('fichaTecnicaCancelarIngrediente');
   const ingQ = document.getElementById('fichaTecnicaIngredienteQuantidade');
   const ingCu = document.getElementById('fichaTecnicaIngredienteCustoUnitario');
   const ingTot = document.getElementById('fichaTecnicaIngredienteCustoTotal');
+  const ingEmpty = document.getElementById('fichaTecnicaIngredientesEmpty');
+  const ingTableWrap = document.getElementById('fichaTecnicaIngredientesTableWrap');
+  const ingTbody = document.getElementById('fichaTecnicaIngredientesTbody');
+
   const parseNumIng = (v) => {
     if (v == null || v === '') return 0;
     const n = parseFloat(String(v).replace(',', '.'));
@@ -14292,6 +14301,60 @@ function setupFichaTecnicaForm() {
   ingCu?.addEventListener('input', recalcIngredienteCustoTotal);
   recalcIngredienteCustoTotal();
 
+  const fecharFormularioIngrediente = () => {
+    if (ingWrap) ingWrap.hidden = true;
+  };
+
+  const renderListaIngredientesFichaTecnica = () => {
+    const list = state.fichaTecnicaIngredientes;
+    if (!ingEmpty || !ingTableWrap || !ingTbody) return;
+    if (!list.length) {
+      ingEmpty.hidden = false;
+      ingTableWrap.hidden = true;
+      ingTbody.innerHTML = '';
+      return;
+    }
+    ingEmpty.hidden = true;
+    ingTableWrap.hidden = false;
+    ingTbody.innerHTML = list
+      .map(
+        (it) => `
+      <tr>
+        <td>${escapeHtml(it.nome)}</td>
+        <td>${escapeHtml(formatQuantityDisplay(it.quantidade))}</td>
+        <td>${escapeHtml(it.unidade_medida)}</td>
+        <td>${escapeHtml(formatCurrencyBRL(it.custo_unitario))}</td>
+        <td>${escapeHtml(formatCurrencyBRL(it.custo_total))}</td>
+        <td>
+          <button type="button" class="btn-icon danger" title="Remover" data-remover-ingrediente-id="${it.id}" aria-label="Remover ingrediente">✕</button>
+        </td>
+      </tr>`
+      )
+      .join('');
+  };
+
+  ingAbrirBtn?.addEventListener('click', () => {
+    if (!ingWrap) return;
+    const abrir = ingWrap.hidden;
+    ingWrap.hidden = !abrir;
+    if (abrir && ingForm) {
+      ingForm.querySelector('[name="nome"]')?.focus();
+    }
+  });
+  ingCancelarBtn?.addEventListener('click', () => {
+    fecharFormularioIngrediente();
+  });
+
+  ingTbody?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remover-ingrediente-id]');
+    if (!btn) return;
+    const id = Number(btn.getAttribute('data-remover-ingrediente-id'));
+    state.fichaTecnicaIngredientes = state.fichaTecnicaIngredientes.filter((x) => x.id !== id);
+    renderListaIngredientesFichaTecnica();
+  });
+
+  renderListaIngredientesFichaTecnica();
+
   ingForm?.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!ingForm.checkValidity()) {
@@ -14299,7 +14362,25 @@ function setupFichaTecnicaForm() {
       return;
     }
     recalcIngredienteCustoTotal();
-    showToast('Ingrediente registrado localmente. O salvamento no servidor será adicionado em breve.', 'info');
+    const nome = (ingForm.querySelector('[name="nome"]')?.value || '').trim();
+    const quantidade = parseNumIng(ingQ?.value);
+    const sel = ingForm.querySelector('[name="unidade_medida"]');
+    const unidade_medida = sel?.value || '';
+    const custo_unitario = parseNumIng(ingCu?.value);
+    const custo_total = Math.round(quantidade * custo_unitario * 100) / 100;
+    state.fichaTecnicaIngredientes.push({
+      id: Date.now(),
+      nome,
+      quantidade,
+      unidade_medida,
+      custo_unitario,
+      custo_total,
+    });
+    ingForm.reset();
+    recalcIngredienteCustoTotal();
+    renderListaIngredientesFichaTecnica();
+    fecharFormularioIngrediente();
+    showToast('Ingrediente adicionado à lista.', 'success');
   });
 }
 
