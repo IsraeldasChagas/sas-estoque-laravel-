@@ -1354,6 +1354,84 @@ textarea {
   padding: 1.25rem 1.5rem 1.5rem;
   box-sizing: border-box;
 }
+.ficha-tecnica-form__section-title {
+  margin: 1.25rem 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 1px solid var(--border, #e0e0e0);
+  padding-bottom: 0.35rem;
+}
+.ficha-tecnica-form__section-title:first-of-type {
+  margin-top: 0;
+}
+.ficha-tecnica-form__section-desc {
+  margin: -0.35rem 0 0.5rem;
+  font-size: 0.85rem;
+  color: #607d8b;
+  line-height: 1.4;
+}
+.ficha-tecnica-form__field textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 180px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #ddd);
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
+}
+.ficha-tecnica-visao {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ficha-tecnica-visao__painel {
+  background: linear-gradient(135deg, #f5f9ff 0%, #e8f4fc 100%);
+  border: 1px solid #c5e1f5;
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+}
+.ficha-tecnica-visao__linha {
+  margin-bottom: 0.85rem;
+}
+.ficha-tecnica-visao__rotulo {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #546e7a;
+  margin-bottom: 0.2rem;
+}
+.ficha-tecnica-visao__destaque {
+  font-size: 1.15rem;
+  color: #0d47a1;
+  word-break: break-word;
+}
+.ficha-tecnica-visao__grid-precos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 520px) {
+  .ficha-tecnica-visao__grid-precos {
+    grid-template-columns: 1fr;
+  }
+}
+.ficha-tecnica-visao__preco-item strong {
+  display: block;
+  font-size: 1.1rem;
+  color: #1565c0;
+  margin-top: 0.15rem;
+}
+.ficha-tecnica-visao__inputs {
+  margin-top: 0.25rem;
+}
 .ficha-tecnica-form__field {
   display: flex;
   flex-direction: column;

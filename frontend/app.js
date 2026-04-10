@@ -14213,6 +14213,30 @@ function setupFichaTecnicaForm() {
   const previewWrap = document.getElementById('fichaTecnicaFotoPreviewWrap');
   if (!form) return;
 
+  const syncFichaTecnicaVisaoPrecos = () => {
+    const nomeEl = document.getElementById('fichaTecnicaNomePrato');
+    const precoEl = document.getElementById('fichaTecnicaPrecoPrato');
+    const sugEl = document.getElementById('fichaTecnicaSugestaoVenda');
+    const vn = document.getElementById('fichaTecnicaVisaoNome');
+    const vp = document.getElementById('fichaTecnicaVisaoPreco');
+    const vs = document.getElementById('fichaTecnicaVisaoSugestao');
+    if (vn) vn.textContent = (nomeEl && nomeEl.value.trim()) ? nomeEl.value.trim() : '—';
+    const parseMoedaInput = (el) => {
+      const s = String(el && el.value != null ? el.value : '').trim();
+      if (s === '') return null;
+      const n = parseFloat(s.replace(',', '.'));
+      return Number.isFinite(n) ? n : null;
+    };
+    const p = parseMoedaInput(precoEl);
+    const sv = parseMoedaInput(sugEl);
+    if (vp) vp.textContent = p != null ? formatCurrencyBRL(p) : '—';
+    if (vs) vs.textContent = sv != null ? formatCurrencyBRL(sv) : '—';
+  };
+  document.getElementById('fichaTecnicaNomePrato')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
+  document.getElementById('fichaTecnicaPrecoPrato')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
+  document.getElementById('fichaTecnicaSugestaoVenda')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
+  syncFichaTecnicaVisaoPrecos();
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!form.checkValidity()) {

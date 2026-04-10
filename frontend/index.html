@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260409j" />
+    <link rel="stylesheet" href="style.css?v=20260409k" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1224,11 +1224,12 @@
               <h2>Ficha técnica</h2>
             </div>
             <div class="table-card ficha-tecnica-card">
-              <header>Dados do prato</header>
+              <header>Ficha técnica do prato</header>
               <form id="fichaTecnicaForm" class="ficha-tecnica-form" novalidate>
+                <h3 class="ficha-tecnica-form__section-title">Dados do prato</h3>
                 <label class="ficha-tecnica-form__field">
                   <span>Nome do prato *</span>
-                  <input type="text" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
+                  <input type="text" id="fichaTecnicaNomePrato" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
                 </label>
                 <label class="ficha-tecnica-form__field">
                   <span>Tempo de preparo *</span>
@@ -1246,6 +1247,44 @@
                     <img id="fichaTecnicaFotoPreview" alt="Pré-visualização da foto do prato" width="320" height="240" />
                   </div>
                 </div>
+
+                <h3 class="ficha-tecnica-form__section-title">Visualização do prato — preços</h3>
+                <p class="ficha-tecnica-form__section-desc">Os valores abaixo aparecem na pré-visualização à medida que você preenche.</p>
+                <div class="ficha-tecnica-visao">
+                  <div class="ficha-tecnica-visao__painel" aria-live="polite">
+                    <div class="ficha-tecnica-visao__linha">
+                      <span class="ficha-tecnica-visao__rotulo">Prato</span>
+                      <strong id="fichaTecnicaVisaoNome" class="ficha-tecnica-visao__destaque">—</strong>
+                    </div>
+                    <div class="ficha-tecnica-visao__grid-precos">
+                      <div class="ficha-tecnica-visao__preco-item">
+                        <span class="ficha-tecnica-visao__rotulo">Preço por prato</span>
+                        <strong id="fichaTecnicaVisaoPreco">—</strong>
+                      </div>
+                      <div class="ficha-tecnica-visao__preco-item">
+                        <span class="ficha-tecnica-visao__rotulo">Sugestão de venda</span>
+                        <strong id="fichaTecnicaVisaoSugestao">—</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="ficha-tecnica-visao__inputs ficha-tecnica-form__grid-two">
+                    <label class="ficha-tecnica-form__field">
+                      <span>Preço por prato (R$)</span>
+                      <input type="number" id="fichaTecnicaPrecoPrato" name="preco_prato" min="0" step="0.01" placeholder="0,00" />
+                    </label>
+                    <label class="ficha-tecnica-form__field">
+                      <span>Sugestão de venda (R$)</span>
+                      <input type="number" id="fichaTecnicaSugestaoVenda" name="sugestao_venda" min="0" step="0.01" placeholder="0,00" />
+                    </label>
+                  </div>
+                </div>
+
+                <h3 class="ficha-tecnica-form__section-title">Modo de preparo</h3>
+                <label class="ficha-tecnica-form__field">
+                  <span>Passo a passo, temperaturas e observações</span>
+                  <textarea name="modo_preparo" id="fichaTecnicaModoPreparo" rows="10" maxlength="8000" placeholder="Descreva o modo de preparo: ordem dos ingredientes, cortes, fogo, tempo em cada etapa, finalização, etc."></textarea>
+                </label>
+
                 <footer class="ficha-tecnica-form__footer">
                   <button type="submit" class="btn primary">Salvar ficha técnica</button>
                 </footer>
@@ -3246,7 +3285,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260409j"></script>
+    <script src="app.js?v=20260409k"></script>
      
   </body>
 </html>
