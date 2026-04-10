@@ -1342,10 +1342,12 @@ textarea {
   }
 }
 
-/* Ficha técnica — formulário do prato */
+/* Ficha técnica — card largo para lista, formulário e tabela de ações */
 .ficha-tecnica-card {
-  max-width: 640px;
+  width: 100%;
+  max-width: min(1180px, 100%);
   margin: 0 auto 2rem;
+  box-sizing: border-box;
 }
 .ficha-tecnica-form {
   display: flex;
@@ -1616,7 +1618,7 @@ textarea {
   font-size: 0.78rem;
 }
 .ficha-tecnica-ver-modal {
-  width: min(640px, 92vw);
+  width: min(900px, 96vw);
 }
 .ficha-tecnica-ver-modal__body {
   margin: 0.5rem 0 1rem;

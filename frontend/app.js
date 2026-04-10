@@ -944,7 +944,7 @@ function initMatrixBackground() {
 }
 
 function escapeHtml(value) {
-  return (value ?? "").replace(/&/g, "&amp;")
+  return String(value ?? "").replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
@@ -7046,6 +7046,12 @@ async function startAppSession(user) {
           }
         }
         else if (sectionToNavigate === 'funcionarios') await loadFuncionarios();
+        else if (sectionToNavigate === 'fechaTecnica') {
+          onNavigateFichaTecnicaCallback();
+        } else if (sectionToNavigate === 'alvara') {
+          await populateAlvarasUnidades().catch(() => {});
+          await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
+        }
       } catch (err) {
         console.error('Erro ao carregar seção inicial:', err);
       }
@@ -14562,6 +14568,7 @@ function setupFichaTecnicaForm() {
   };
 
   const mostrarVistaLista = () => {
+    carregarFichasDoArmazenamento();
     if (listaView) listaView.classList.remove('hidden');
     if (formView) formView.classList.add('hidden');
     renderListaTabela();
@@ -14610,7 +14617,6 @@ function setupFichaTecnicaForm() {
   };
 
   onNavigateFichaTecnicaCallback = () => {
-    carregarFichasDoArmazenamento();
     mostrarVistaLista();
   };
 
