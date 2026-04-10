@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260410b" />
+    <link rel="stylesheet" href="style.css?v=20260410e" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1272,10 +1272,21 @@
                   <span>Nome do prato *</span>
                   <input type="text" id="fichaTecnicaNomePrato" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
                 </label>
-                <label class="ficha-tecnica-form__field">
+                <div class="ficha-tecnica-form__field ficha-tecnica-tempo-field">
                   <span>Tempo de preparo *</span>
-                  <input type="text" id="fichaTecnicaTempoPreparo" name="tempo_preparo" required maxlength="120" placeholder="Ex.: 45 minutos ou 1h 30min" autocomplete="off" />
-                </label>
+                  <div class="ficha-tecnica-tempo-inputs">
+                    <label class="ficha-tecnica-tempo-part">
+                      <span class="ficha-tecnica-tempo-part__lbl">Horas</span>
+                      <input type="number" id="fichaTecnicaTempoHoras" min="0" max="999" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                    </label>
+                    <label class="ficha-tecnica-tempo-part">
+                      <span class="ficha-tecnica-tempo-part__lbl">Minutos</span>
+                      <input type="number" id="fichaTecnicaTempoMinutos" min="0" max="59" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                    </label>
+                  </div>
+                  <small class="ficha-tecnica-form__hint">Informe em horas e minutos (ex.: 1 hora e 30 minutos ou só 45 minutos).</small>
+                  <input type="hidden" id="fichaTecnicaTempoPreparo" name="tempo_preparo" value="" required />
+                </div>
                 <label class="ficha-tecnica-form__field">
                   <span>Responsável técnico *</span>
                   <input type="text" id="fichaTecnicaResponsavel" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
@@ -1381,10 +1392,43 @@
                 </div>
 
                 <h3 class="ficha-tecnica-form__section-title">Modo de preparo</h3>
-                <label class="ficha-tecnica-form__field">
+                <div class="ficha-tecnica-form__field ficha-tecnica-rich-field">
                   <span>Passo a passo, temperaturas e observações</span>
-                  <textarea name="modo_preparo" id="fichaTecnicaModoPreparo" rows="10" maxlength="8000" placeholder="Descreva o modo de preparo: ordem dos ingredientes, cortes, fogo, tempo em cada etapa, finalização, etc."></textarea>
-                </label>
+                  <div class="ficha-tecnica-rich-toolbar-wrap">
+                    <div class="ficha-tecnica-rich-toolbar" id="fichaTecnicaModoToolbar" role="toolbar" aria-label="Formatação do modo de preparo">
+                      <button type="button" class="ficha-tecnica-rich-btn" data-rich-cmd="bold" title="Negrito"><b>B</b></button>
+                      <button type="button" class="ficha-tecnica-rich-btn" data-rich-cmd="italic" title="Itálico"><i>I</i></button>
+                      <button type="button" class="ficha-tecnica-rich-btn" data-rich-cmd="underline" title="Sublinhado"><u>S</u></button>
+                      <span class="ficha-tecnica-rich-sep" aria-hidden="true"></span>
+                      <label class="ficha-tecnica-rich-label" title="Tamanho da fonte">
+                        <span class="ficha-tecnica-rich-label-txt">Tamanho</span>
+                        <select id="fichaTecnicaModoFontSize" class="ficha-tecnica-rich-select">
+                          <option value="">Padrão</option>
+                          <option value="2">Pequeno</option>
+                          <option value="3">Normal</option>
+                          <option value="4">Grande</option>
+                          <option value="5">Muito grande</option>
+                        </select>
+                      </label>
+                      <label class="ficha-tecnica-rich-color" title="Cor do texto">
+                        <span class="ficha-tecnica-rich-color-lbl">Cor</span>
+                        <input type="color" id="fichaTecnicaModoCor" value="#1565c0" />
+                      </label>
+                      <span class="ficha-tecnica-rich-sep" aria-hidden="true"></span>
+                      <button type="button" class="ficha-tecnica-rich-btn ficha-tecnica-rich-btn--emoji" id="fichaTecnicaModoEmojiBtn" title="Inserir emoji" aria-expanded="false" aria-haspopup="true">😊</button>
+                    </div>
+                    <div class="ficha-tecnica-emoji-panel" id="fichaTecnicaModoEmojiPanel" hidden role="listbox" aria-label="Emojis"></div>
+                  </div>
+                  <div
+                    id="fichaTecnicaModoPreparoEditor"
+                    class="ficha-tecnica-rich-editor"
+                    contenteditable="true"
+                    role="textbox"
+                    aria-multiline="true"
+                    data-placeholder="Descreva o modo de preparo: ordem dos ingredientes, cortes, fogo, tempo em cada etapa, finalização, etc."
+                  ></div>
+                  <input type="hidden" id="fichaTecnicaModoPreparo" name="modo_preparo" value="" />
+                </div>
 
                 <footer class="ficha-tecnica-form__footer">
                   <button type="submit" class="btn primary" id="fichaTecnicaSalvarBtn">Salvar ficha técnica</button>
@@ -3356,8 +3400,10 @@
     <script src="config.js"></script>
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
+    <!-- Sanitização HTML do modo de preparo (ficha técnica) -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260410a"></script>
+    <script src="app.js?v=20260410e"></script>
      
   </body>
 </html>

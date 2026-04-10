@@ -14221,6 +14221,96 @@ function setupForms() {
 
 }
 
+/** Normaliza minutos ≥ 60 para horas (ficha técnica — tempo de preparo). */
+function normalizarFichaTecnicaHorasMinutos(horas, minutos) {
+  let h = Math.max(0, Math.floor(Number(horas) || 0));
+  let m = Math.max(0, Math.floor(Number(minutos) || 0));
+  h += Math.floor(m / 60);
+  m = m % 60;
+  return { h, m };
+}
+
+/** Texto legível em horas/minutos para armazenar e exibir nas listas. */
+function formatarFichaTecnicaTempoPreparo(horas, minutos) {
+  const { h, m } = normalizarFichaTecnicaHorasMinutos(horas, minutos);
+  if (h === 0 && m === 0) return '';
+  if (h === 0) return m === 1 ? '1 minuto' : `${m} minutos`;
+  if (m === 0) return h === 1 ? '1 hora' : `${h} horas`;
+  return `${h} h ${m} min`;
+}
+
+/** Interpreta texto antigo ou novo (ex.: "1h 30min", "1 hora", "45 minutos", "2:15"). */
+function parseFichaTecnicaTempoPreparo(str) {
+  if (str == null || !String(str).trim()) return { h: 0, m: 0 };
+  const s = String(str).trim();
+  const hMatch = s.match(/(\d+)\s*(?:h\b|hora(?:s)?\b)/i);
+  const mMatch = s.match(/(\d+)\s*m(?:in(?:uto)?s?)?\b/i);
+  let h = 0;
+  let m = 0;
+  if (hMatch) h = parseInt(hMatch[1], 10) || 0;
+  if (mMatch) m = parseInt(mMatch[1], 10) || 0;
+  if (!hMatch && !mMatch) {
+    const colon = s.match(/^(\d{1,3})\s*:\s*(\d{1,2})$/);
+    if (colon) {
+      h = parseInt(colon[1], 10) || 0;
+      m = parseInt(colon[2], 10) || 0;
+      return normalizarFichaTecnicaHorasMinutos(h, m);
+    }
+    const only = s.match(/^(\d+)$/);
+    if (only) {
+      const n = parseInt(only[1], 10);
+      if (n >= 60) {
+        h = Math.floor(n / 60);
+        m = n % 60;
+      } else {
+        m = n;
+      }
+    }
+  }
+  return normalizarFichaTecnicaHorasMinutos(h, m);
+}
+
+/** Sanitiza HTML do modo de preparo (ficha técnica). */
+function sanitizeFichaTecnicaModoPreparoHtml(html) {
+  const s = String(html ?? '').trim();
+  if (!s) return '';
+  if (typeof window.DOMPurify !== 'undefined') {
+    return window.DOMPurify.sanitize(s, {
+      ALLOWED_TAGS: ['p', 'div', 'br', 'strong', 'b', 'em', 'i', 'u', 'span', 'ul', 'ol', 'li', 'font', 'h3', 'h4'],
+      ALLOWED_ATTR: ['style', 'color', 'size', 'class'],
+      ALLOW_DATA_ATTR: false,
+    });
+  }
+  const el = document.createElement('div');
+  el.textContent = s.replace(/<[^>]*>/g, '');
+  return el.innerHTML;
+}
+
+/** Texto antigo (sem tags) ou HTML já salvo → conteúdo seguro para o editor. */
+function modoPreparoHtmlParaEditor(stored) {
+  if (stored == null) return '';
+  const s = String(stored).trim();
+  if (!s) return '';
+  const looksHtml = /^[\s]*</.test(s) && /<[a-z][\s\S]*>/i.test(s);
+  if (looksHtml) return sanitizeFichaTecnicaModoPreparoHtml(s);
+  return `<p>${escapeHtml(s).replace(/\n/g, '<br>')}</p>`;
+}
+
+/** HTML → texto puro (WhatsApp, etc.). */
+function modoPreparoHtmlParaTextoPlano(html) {
+  const clean = sanitizeFichaTecnicaModoPreparoHtml(String(html ?? ''));
+  const div = document.createElement('div');
+  div.innerHTML = clean;
+  const t = (div.textContent || div.innerText || '').trim();
+  return t || '—';
+}
+
+function isFichaTecnicaModoPreparoRichVazio(html) {
+  const div = document.createElement('div');
+  div.innerHTML = String(html ?? '');
+  return (div.textContent || '').trim() === '';
+}
+
 /** Formulário e lista da ficha técnica (persistência em localStorage). */
 function setupFichaTecnicaForm() {
   const form = document.getElementById('fichaTecnicaForm');
@@ -14301,10 +14391,136 @@ function setupFichaTecnicaForm() {
   document.getElementById('fichaTecnicaSugestaoVenda')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
   syncFichaTecnicaVisaoPrecos();
 
+  const tempoHoras = document.getElementById('fichaTecnicaTempoHoras');
+  const tempoMinutos = document.getElementById('fichaTecnicaTempoMinutos');
+  const tempoHidden = document.getElementById('fichaTecnicaTempoPreparo');
+
+  const sincronizarTempoPreparoOculto = () => {
+    const h =
+      tempoHoras?.value === '' || tempoHoras?.value == null ? 0 : parseInt(tempoHoras.value, 10) || 0;
+    const m =
+      tempoMinutos?.value === '' || tempoMinutos?.value == null ? 0 : parseInt(tempoMinutos.value, 10) || 0;
+    const { h: H, m: M } = normalizarFichaTecnicaHorasMinutos(h, m);
+    if (tempoHidden) tempoHidden.value = formatarFichaTecnicaTempoPreparo(H, M);
+  };
+
+  const normalizarCamposTempoAoSair = () => {
+    const h =
+      tempoHoras?.value === '' || tempoHoras?.value == null ? 0 : parseInt(tempoHoras.value, 10) || 0;
+    const m =
+      tempoMinutos?.value === '' || tempoMinutos?.value == null ? 0 : parseInt(tempoMinutos.value, 10) || 0;
+    const { h: H, m: M } = normalizarFichaTecnicaHorasMinutos(h, m);
+    if (tempoHoras) tempoHoras.value = H > 0 ? String(H) : '';
+    if (tempoMinutos) tempoMinutos.value = M > 0 ? String(M) : '';
+    sincronizarTempoPreparoOculto();
+  };
+
+  tempoHoras?.addEventListener('input', sincronizarTempoPreparoOculto);
+  tempoMinutos?.addEventListener('input', sincronizarTempoPreparoOculto);
+  tempoHoras?.addEventListener('blur', normalizarCamposTempoAoSair);
+  tempoMinutos?.addEventListener('blur', normalizarCamposTempoAoSair);
+  sincronizarTempoPreparoOculto();
+
+  const modoEditor = document.getElementById('fichaTecnicaModoPreparoEditor');
+  const modoHidden = document.getElementById('fichaTecnicaModoPreparo');
+  const modoToolbar = document.getElementById('fichaTecnicaModoToolbar');
+  const modoFontSize = document.getElementById('fichaTecnicaModoFontSize');
+  const modoCor = document.getElementById('fichaTecnicaModoCor');
+  const modoEmojiBtn = document.getElementById('fichaTecnicaModoEmojiBtn');
+  const modoEmojiPanel = document.getElementById('fichaTecnicaModoEmojiPanel');
+
+  const sincronizarModoPreparoOculto = () => {
+    if (!modoEditor || !modoHidden) return;
+    const raw = modoEditor.innerHTML;
+    if (isFichaTecnicaModoPreparoRichVazio(raw)) {
+      modoHidden.value = '';
+      return;
+    }
+    modoHidden.value = sanitizeFichaTecnicaModoPreparoHtml(raw);
+  };
+
+  if (modoEmojiPanel && !modoEmojiPanel.dataset.built) {
+    modoEmojiPanel.dataset.built = '1';
+    const emojis = [
+      '🍳', '🔥', '⏱️', '🌡️', '🥘', '🍖', '🧂', '💧', '❄️', '✅', '⭐', '📋', '👨‍🍳', '🫕', '🔪', '🥄',
+      '🍋', '🌿', '♨️', '⚠️', '🧄', '🧅', '🥕', '🍅', '🐟', '🍗', '🥩', '🍚', '🧈', '🥛', '☕', '🍽️',
+    ];
+    modoEmojiPanel.innerHTML = emojis
+      .map(
+        (ch) =>
+          `<button type="button" class="ficha-tecnica-emoji-item" data-emoji="${ch}" aria-label="Inserir ${ch}">${ch}</button>`
+      )
+      .join('');
+  }
+
+  modoToolbar?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-rich-cmd]');
+    if (!btn) return;
+    e.preventDefault();
+    modoEditor?.focus();
+    try {
+      document.execCommand(btn.getAttribute('data-rich-cmd'), false, null);
+    } catch (_) {}
+    sincronizarModoPreparoOculto();
+  });
+
+  modoFontSize?.addEventListener('change', () => {
+    const v = modoFontSize.value;
+    if (!v || !modoEditor) return;
+    modoEditor.focus();
+    try {
+      document.execCommand('fontSize', false, v);
+    } catch (_) {}
+    modoFontSize.value = '';
+    sincronizarModoPreparoOculto();
+  });
+
+  modoCor?.addEventListener('input', () => {
+    if (!modoEditor || !modoCor) return;
+    modoEditor.focus();
+    try {
+      document.execCommand('foreColor', false, modoCor.value);
+    } catch (_) {}
+    sincronizarModoPreparoOculto();
+  });
+
+  modoEditor?.addEventListener('input', sincronizarModoPreparoOculto);
+  modoEditor?.addEventListener('blur', sincronizarModoPreparoOculto);
+
+  modoEmojiBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const open = modoEmojiPanel.hidden;
+    modoEmojiPanel.hidden = !open;
+    modoEmojiBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  modoEmojiPanel?.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-emoji]');
+    if (!item) return;
+    e.preventDefault();
+    const ch = item.getAttribute('data-emoji') || '';
+    modoEditor?.focus();
+    try {
+      document.execCommand('insertText', false, ch);
+    } catch (_) {}
+    modoEmojiPanel.hidden = true;
+    modoEmojiBtn?.setAttribute('aria-expanded', 'false');
+    sincronizarModoPreparoOculto();
+  });
+
+  document.addEventListener('click', (ev) => {
+    if (!modoEmojiPanel || modoEmojiPanel.hidden) return;
+    if (modoEmojiBtn?.contains(ev.target) || modoEmojiPanel.contains(ev.target)) return;
+    modoEmojiPanel.hidden = true;
+    modoEmojiBtn?.setAttribute('aria-expanded', 'false');
+  });
+
   /** Enter nos campos do painel de ingrediente não envia o formulário principal. */
   form.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     const t = e.target;
+    if (t.isContentEditable) return;
     if (t.tagName === 'TEXTAREA') return;
     if (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') return;
     const ingRoot = document.getElementById('fichaTecnicaIngredienteForm');
@@ -14408,13 +14624,16 @@ function setupFichaTecnicaForm() {
     if (editIdEl) editIdEl.value = '';
     if (formTitulo) formTitulo.textContent = 'Nova ficha técnica';
     form.reset();
+    sincronizarTempoPreparoOculto();
+    if (modoEditor) modoEditor.innerHTML = '';
+    if (modoHidden) modoHidden.value = '';
+    if (modoEmojiPanel) modoEmojiPanel.hidden = true;
+    modoEmojiBtn?.setAttribute('aria-expanded', 'false');
     state.fichaTecnicaIngredientes = [];
     renderListaIngredientesFichaTecnica();
     syncFichaTecnicaVisaoPrecos();
     fecharFormularioIngrediente();
   };
-
-  const fichaTecnicaNl2br = (s) => escapeHtml(s || '').replace(/\n/g, '<br>');
 
   const montarTextoWhatsapp = (p) => {
     const linhas = [
@@ -14437,7 +14656,7 @@ function setupFichaTecnicaForm() {
       linhas.push('');
     }
     linhas.push('Modo de preparo:');
-    linhas.push(p.modo_preparo || '—');
+    linhas.push(modoPreparoHtmlParaTextoPlano(p.modo_preparo));
     return linhas.join('\n');
   };
 
@@ -14468,7 +14687,7 @@ function setupFichaTecnicaForm() {
           : '<p class="ficha-tecnica-ver-vazio">Nenhum ingrediente cadastrado.</p>'
       }
       <h4 class="ficha-tecnica-ver-subtitulo">Modo de preparo</h4>
-      <div class="ficha-tecnica-ver-modo">${fichaTecnicaNl2br(p.modo_preparo || '')}</div>
+      <div class="ficha-tecnica-ver-modo ficha-tecnica-ver-modo--html">${sanitizeFichaTecnicaModoPreparoHtml(p.modo_preparo || '') || '<span class="ficha-tecnica-ver-vazio">—</span>'}</div>
     `;
   };
 
@@ -14482,6 +14701,7 @@ function setupFichaTecnicaForm() {
         th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
         th{background:#eceff1;}
         .modo{white-space:pre-wrap;margin-top:0.5rem;}
+        .modo-html{white-space:normal;line-height:1.55;}
       </style></head><body>
       <h1>${escapeHtml(p.nome_prato || 'Ficha técnica')}</h1>
       ${p.foto_base64 ? `<p><img src="${p.foto_base64}" alt=""/></p>` : ''}
@@ -14501,7 +14721,7 @@ function setupFichaTecnicaForm() {
           : '<p>—</p>'
       }
       <h2 style="font-size:1rem;margin-top:1rem;">Modo de preparo</h2>
-      <div class="modo">${fichaTecnicaNl2br(p.modo_preparo || '')}</div>
+      <div class="modo modo-html">${sanitizeFichaTecnicaModoPreparoHtml(p.modo_preparo || '') || '—'}</div>
       </body></html>`;
     const w = window.open('', '_blank');
     if (!w) {
@@ -14585,17 +14805,21 @@ function setupFichaTecnicaForm() {
     limparFormulario();
     if (editIdEl) editIdEl.value = String(p.id);
     const nome = document.getElementById('fichaTecnicaNomePrato');
-    const tempo = document.getElementById('fichaTecnicaTempoPreparo');
+    const th = document.getElementById('fichaTecnicaTempoHoras');
+    const tm = document.getElementById('fichaTecnicaTempoMinutos');
     const resp = document.getElementById('fichaTecnicaResponsavel');
     const preco = document.getElementById('fichaTecnicaPrecoPrato');
     const sug = document.getElementById('fichaTecnicaSugestaoVenda');
-    const modo = document.getElementById('fichaTecnicaModoPreparo');
     if (nome) nome.value = p.nome_prato || '';
-    if (tempo) tempo.value = p.tempo_preparo || '';
+    const tp = parseFichaTecnicaTempoPreparo(p.tempo_preparo);
+    if (th) th.value = tp.h > 0 ? String(tp.h) : '';
+    if (tm) tm.value = tp.m > 0 ? String(tp.m) : '';
+    sincronizarTempoPreparoOculto();
     if (resp) resp.value = p.responsavel_tecnico || '';
     if (preco) preco.value = p.preco_prato != null && p.preco_prato !== '' ? String(p.preco_prato) : '';
     if (sug) sug.value = p.sugestao_venda != null && p.sugestao_venda !== '' ? String(p.sugestao_venda) : '';
-    if (modo) modo.value = p.modo_preparo || '';
+    if (modoEditor) modoEditor.innerHTML = modoPreparoHtmlParaEditor(p.modo_preparo);
+    sincronizarModoPreparoOculto();
     state.fichaTecnicaIngredientes = Array.isArray(p.ingredientes)
       ? p.ingredientes.map((it) => ({
           id: it.id != null ? it.id : Date.now() + Math.random(),
@@ -14672,6 +14896,8 @@ function setupFichaTecnicaForm() {
 
   const salvarFichaTecnica = async () => {
     if (salvandoFichaTecnica) return;
+    normalizarCamposTempoAoSair();
+    sincronizarModoPreparoOculto();
     if (!form.checkValidity()) {
       form.reportValidity();
       showToast('Preencha os campos obrigatórios da ficha técnica.', 'warning');
