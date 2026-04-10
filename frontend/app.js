@@ -2694,7 +2694,7 @@ function applyPermissions() {
     sections = [...sections, "logs"];
   }
   /**
-   * Fecha Tecnica (placeholder): permissoes_menu salvo no servidor é uma lista fixa e não ganha
+   * Ficha técnica: permissoes_menu salvo no servidor é uma lista fixa e não ganha
    * seções novas automaticamente — sem isto o item some para quase todos os usuários reais.
    */
   if (currentUser && !sections.includes("fechaTecnica")) {
@@ -14205,6 +14205,44 @@ function setupForms() {
 
 }
 
+/** Formulário da ficha técnica (UI local; salvamento no backend virá depois). */
+function setupFichaTecnicaForm() {
+  const form = document.getElementById('fichaTecnicaForm');
+  const fotoInput = document.getElementById('fichaTecnicaFoto');
+  const preview = document.getElementById('fichaTecnicaFotoPreview');
+  const previewWrap = document.getElementById('fichaTecnicaFotoPreviewWrap');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    showToast('Ficha técnica registrada localmente. O salvamento no servidor será adicionado em breve.', 'info');
+  });
+
+  if (!fotoInput || !preview || !previewWrap) return;
+  fotoInput.addEventListener('change', () => {
+    const file = fotoInput.files && fotoInput.files[0];
+    if (preview.dataset.objectUrl) {
+      try {
+        URL.revokeObjectURL(preview.dataset.objectUrl);
+      } catch (_) {}
+      delete preview.dataset.objectUrl;
+    }
+    if (!file || !file.type.startsWith('image/')) {
+      preview.removeAttribute('src');
+      previewWrap.hidden = true;
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    preview.dataset.objectUrl = url;
+    preview.src = url;
+    previewWrap.hidden = false;
+  });
+}
+
 // Sequencia de inicializacao que amarra todos os componentes e listeners.
 async function init() {
   // Verifica se está usando file:// e mostra aviso
@@ -14234,6 +14272,7 @@ async function init() {
   setupHistoricoReservas();
   setupBoletosModule();
   setupAlvarasModule();
+  setupFichaTecnicaForm();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }

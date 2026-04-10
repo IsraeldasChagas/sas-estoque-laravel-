@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260409e" />
+    <link rel="stylesheet" href="style.css?v=20260409i" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -98,7 +98,7 @@
           <a href="#" class="nav-link" data-section="unidades">Unidades</a>
           <a href="#" class="nav-link" data-section="usuarios">Usuarios</a>
           <a href="#" class="nav-link" data-section="produtos">Produtos</a>
-          <a href="#" class="nav-link" data-section="fechaTecnica">Fecha Tecnica</a>
+          <a href="#" class="nav-link" data-section="fechaTecnica">Ficha técnica</a>
           <a href="#" class="nav-link" data-section="estoque">Consulta Estoque</a>
           <a href="#" class="nav-link" data-section="lotes">Lotes</a>
           <a href="#" class="nav-link" data-section="locais">Locais</a>
@@ -1218,14 +1218,38 @@
             </div>
           </section>
 
-          <!-- Fecha Tecnica (placeholder — módulo em desenvolvimento) -->
+          <!-- Ficha técnica do prato (formulário — persistência em versão futura) -->
           <section id="fechaTecnicaSection" class="view-section hidden">
-            <div class="table-card" style="max-width: 520px; margin: 2rem auto; text-align: center">
-              <header>Fecha Tecnica</header>
-              <div style="padding: 2rem 1.25rem">
-                <p style="font-size: 1.15rem; font-weight: 600; color: var(--text); margin: 0 0 0.5rem">Em desenvolvimento</p>
-                <p style="color: #607d8b; margin: 0; line-height: 1.5">Esta área ainda está em construção e será liberada em uma versão futura.</p>
-              </div>
+            <div class="actions">
+              <h2>Ficha técnica</h2>
+            </div>
+            <div class="table-card ficha-tecnica-card">
+              <header>Dados do prato</header>
+              <form id="fichaTecnicaForm" class="ficha-tecnica-form" novalidate>
+                <label class="ficha-tecnica-form__field">
+                  <span>Nome do prato *</span>
+                  <input type="text" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
+                </label>
+                <label class="ficha-tecnica-form__field">
+                  <span>Tempo de preparo *</span>
+                  <input type="text" name="tempo_preparo" required maxlength="120" placeholder="Ex.: 45 minutos ou 1h 30min" autocomplete="off" />
+                </label>
+                <label class="ficha-tecnica-form__field">
+                  <span>Responsável técnico *</span>
+                  <input type="text" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
+                </label>
+                <div class="ficha-tecnica-form__field">
+                  <span>Foto do prato</span>
+                  <input type="file" id="fichaTecnicaFoto" name="foto_prato" accept="image/jpeg,image/png,image/webp,image/gif" />
+                  <small class="ficha-tecnica-form__hint">JPEG, PNG, WebP ou GIF (opcional).</small>
+                  <div id="fichaTecnicaFotoPreviewWrap" class="ficha-tecnica-form__preview-wrap" hidden>
+                    <img id="fichaTecnicaFotoPreview" alt="Pré-visualização da foto do prato" width="320" height="240" />
+                  </div>
+                </div>
+                <footer class="ficha-tecnica-form__footer">
+                  <button type="submit" class="btn primary">Salvar ficha técnica</button>
+                </footer>
+              </form>
             </div>
           </section>
 
@@ -3178,7 +3202,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260409h"></script>
+    <script src="app.js?v=20260409i"></script>
      
   </body>
 </html>
