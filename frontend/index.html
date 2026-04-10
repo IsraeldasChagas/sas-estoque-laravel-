@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260410f" />
+    <link rel="stylesheet" href="style.css?v=20260410g" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1228,7 +1228,17 @@
               <div class="table-card ficha-tecnica-card">
                 <header class="ficha-tecnica-lista-header">
                   <span>Pratos cadastrados</span>
-                  <button type="button" class="btn primary" id="fichaTecnicaBtnNova">+ Nova ficha técnica</button>
+                  <div class="ficha-tecnica-lista-acoes">
+                    <button
+                      type="button"
+                      class="btn neutral"
+                      id="fichaTecnicaRestaurarBackupBtn"
+                      title="Recupera fichas da cópia salva antes do último salvamento (mesmo navegador)"
+                    >
+                      Recuperar cópia anterior
+                    </button>
+                    <button type="button" class="btn primary" id="fichaTecnicaBtnNova">+ Nova ficha técnica</button>
+                  </div>
                 </header>
                 <div class="table-wrapper">
                   <table class="ficha-tecnica-lista-table">
@@ -3403,7 +3413,7 @@
     <!-- Sanitização HTML do modo de preparo (ficha técnica) -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260410f"></script>
+    <script src="app.js?v=20260410g"></script>
      
   </body>
 </html>
