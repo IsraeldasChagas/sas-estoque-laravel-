@@ -14239,6 +14239,7 @@ function setupFichaTecnicaForm() {
   if (!form) return;
 
   let pratoModalAtual = null;
+  let salvandoFichaTecnica = false;
 
   const readFileAsDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -14261,9 +14262,11 @@ function setupFichaTecnicaForm() {
   const persistirFichas = () => {
     try {
       localStorage.setItem(FICHA_TECNICA_STORAGE_KEY, JSON.stringify(state.fichaTecnicaPratos));
+      return true;
     } catch (err) {
       console.error(err);
       showToast('Não foi possível salvar no armazenamento local (espaço cheio?).', 'error');
+      return false;
     }
   };
 
@@ -14661,76 +14664,107 @@ function setupFichaTecnicaForm() {
     if (pratoModalAtual) enviarWhatsapp(pratoModalAtual);
   });
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  const salvarFichaTecnica = async () => {
+    if (salvandoFichaTecnica) return;
     if (!form.checkValidity()) {
       form.reportValidity();
+      showToast('Preencha os campos obrigatórios da ficha técnica.', 'warning');
       return;
     }
-    const file = fotoInput?.files?.[0];
-    let fotoBase64 = null;
-    if (file && file.type.startsWith('image/')) {
-      if (file.size > FICHA_TECNICA_FOTO_MAX_BYTES) {
-        showToast('A imagem é muito grande. Use outra com menos de ~1,8 MB.', 'error');
-        return;
+    salvandoFichaTecnica = true;
+    try {
+      const file = fotoInput?.files?.[0];
+      let fotoBase64 = null;
+      if (file && file.type.startsWith('image/')) {
+        if (file.size > FICHA_TECNICA_FOTO_MAX_BYTES) {
+          showToast('A imagem é muito grande. Use outra com menos de ~1,8 MB.', 'error');
+          return;
+        }
+        try {
+          fotoBase64 = await readFileAsDataUrl(file);
+        } catch {
+          showToast('Não foi possível ler a foto.', 'error');
+          return;
+        }
+      } else if (preview?.dataset.persistedBase64) {
+        fotoBase64 = preview.dataset.persistedBase64;
       }
+
+      const parseMoedaInput = (el) => {
+        const s = String(el && el.value != null ? el.value : '').trim();
+        if (s === '') return null;
+        const n = parseFloat(s.replace(',', '.'));
+        return Number.isFinite(n) ? n : null;
+      };
+
+      let ingredientes;
       try {
-        fotoBase64 = await readFileAsDataUrl(file);
-      } catch {
-        showToast('Não foi possível ler a foto.', 'error');
+        ingredientes = JSON.parse(JSON.stringify(state.fichaTecnicaIngredientes));
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao montar a lista de ingredientes. Recarregue a página e tente de novo.', 'error');
         return;
       }
-    } else if (preview?.dataset.persistedBase64) {
-      fotoBase64 = preview.dataset.persistedBase64;
-    }
 
-    const parseMoedaInput = (el) => {
-      const s = String(el && el.value != null ? el.value : '').trim();
-      if (s === '') return null;
-      const n = parseFloat(s.replace(',', '.'));
-      return Number.isFinite(n) ? n : null;
-    };
+      const nome_prato = document.getElementById('fichaTecnicaNomePrato')?.value.trim() ?? '';
+      const tempo_preparo = document.getElementById('fichaTecnicaTempoPreparo')?.value.trim() ?? '';
+      const responsavel_tecnico = document.getElementById('fichaTecnicaResponsavel')?.value.trim() ?? '';
+      const modo_preparo = document.getElementById('fichaTecnicaModoPreparo')?.value ?? '';
+      const preco_prato = parseMoedaInput(document.getElementById('fichaTecnicaPrecoPrato'));
+      const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
+      const updatedAt = new Date().toISOString();
+      const editId = (editIdEl?.value || '').trim();
 
-    const nome_prato = document.getElementById('fichaTecnicaNomePrato')?.value.trim() ?? '';
-    const tempo_preparo = document.getElementById('fichaTecnicaTempoPreparo')?.value.trim() ?? '';
-    const responsavel_tecnico = document.getElementById('fichaTecnicaResponsavel')?.value.trim() ?? '';
-    const modo_preparo = document.getElementById('fichaTecnicaModoPreparo')?.value ?? '';
-    const preco_prato = parseMoedaInput(document.getElementById('fichaTecnicaPrecoPrato'));
-    const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
-    const ingredientes = JSON.parse(JSON.stringify(state.fichaTecnicaIngredientes));
-    const updatedAt = new Date().toISOString();
-    const editId = (editIdEl?.value || '').trim();
+      const payload = {
+        nome_prato,
+        tempo_preparo,
+        responsavel_tecnico,
+        foto_base64: fotoBase64,
+        preco_prato,
+        sugestao_venda,
+        modo_preparo,
+        ingredientes,
+        updatedAt,
+      };
 
-    const payload = {
-      nome_prato,
-      tempo_preparo,
-      responsavel_tecnico,
-      foto_base64: fotoBase64,
-      preco_prato,
-      sugestao_venda,
-      modo_preparo,
-      ingredientes,
-      updatedAt,
-    };
-
-    if (editId) {
-      const ix = state.fichaTecnicaPratos.findIndex((x) => String(x.id) === editId);
-      if (ix >= 0) {
-        payload.id = state.fichaTecnicaPratos[ix].id;
-        state.fichaTecnicaPratos[ix] = payload;
+      if (editId) {
+        const ix = state.fichaTecnicaPratos.findIndex((x) => String(x.id) === editId);
+        if (ix >= 0) {
+          payload.id = state.fichaTecnicaPratos[ix].id;
+          state.fichaTecnicaPratos[ix] = payload;
+        } else {
+          payload.id = Date.now();
+          state.fichaTecnicaPratos.push(payload);
+        }
       } else {
         payload.id = Date.now();
         state.fichaTecnicaPratos.push(payload);
       }
-    } else {
-      payload.id = Date.now();
-      state.fichaTecnicaPratos.push(payload);
-    }
 
-    persistirFichas();
-    showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
-    limparFormulario();
-    mostrarVistaLista();
+      if (!persistirFichas()) return;
+
+      showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
+      limparFormulario();
+      mostrarVistaLista();
+    } finally {
+      salvandoFichaTecnica = false;
+    }
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    salvarFichaTecnica().catch((err) => {
+      console.error('Ficha técnica — salvar:', err);
+      showToast('Não foi possível salvar a ficha técnica.', 'error');
+    });
+  });
+
+  document.getElementById('fichaTecnicaSalvarBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    salvarFichaTecnica().catch((err) => {
+      console.error('Ficha técnica — salvar:', err);
+      showToast('Não foi possível salvar a ficha técnica.', 'error');
+    });
   });
 
   if (fotoInput && preview && previewWrap) {
