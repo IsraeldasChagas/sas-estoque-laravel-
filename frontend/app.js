@@ -452,6 +452,8 @@ const state = {
   relatorioDetalhes: [],
   /** Ingredientes da ficha técnica (sessão local até existir API). */
   fichaTecnicaIngredientes: [],
+  /** Fichas salvas no navegador (localStorage). */
+  fichaTecnicaPratos: [],
 };
 
 // Variáveis auxiliares para session e rastreamento de efeitos.
@@ -461,6 +463,10 @@ let usuarioFotoRemovida = false;
 let funcionarioFotoFile = null;
 let funcionarioFotoRemovida = false;
 let logoDataUrl = null;
+/** Ao abrir a seção Ficha técnica no menu: recarrega lista do armazenamento local. */
+let onNavigateFichaTecnicaCallback = () => {};
+const FICHA_TECNICA_STORAGE_KEY = 'sas-estoque-fichas-tecnicas-v1';
+const FICHA_TECNICA_FOTO_MAX_BYTES = Math.floor(1.8 * 1024 * 1024);
 const MOBILE_BREAKPOINT = 1024;
 const LISTA_STATUS_LABEL = {
   RASCUNHO: "Rascunho",
@@ -10258,6 +10264,8 @@ function setupNavigation() {
       else if (target === "alvara") {
         await populateAlvarasUnidades().catch(() => {});
         await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
+      } else if (target === "fechaTecnica") {
+        onNavigateFichaTecnicaCallback();
       }
       else if (target === "historicoReservas") {
         var uSelect = document.getElementById('historicoUnidadeFiltro');
@@ -14207,13 +14215,57 @@ function setupForms() {
 
 }
 
-/** Formulário da ficha técnica (UI local; salvamento no backend virá depois). */
+/** Formulário e lista da ficha técnica (persistência em localStorage). */
 function setupFichaTecnicaForm() {
   const form = document.getElementById('fichaTecnicaForm');
   const fotoInput = document.getElementById('fichaTecnicaFoto');
   const preview = document.getElementById('fichaTecnicaFotoPreview');
   const previewWrap = document.getElementById('fichaTecnicaFotoPreviewWrap');
+  const listaView = document.getElementById('fichaTecnicaListaView');
+  const formView = document.getElementById('fichaTecnicaFormView');
+  const listaTbody = document.getElementById('fichaTecnicaListaTbody');
+  const listaEmpty = document.getElementById('fichaTecnicaListaEmpty');
+  const btnNova = document.getElementById('fichaTecnicaBtnNova');
+  const btnVoltar = document.getElementById('fichaTecnicaVoltarLista');
+  const editIdEl = document.getElementById('fichaTecnicaEditId');
+  const formTitulo = document.getElementById('fichaTecnicaFormTitulo');
+  const verModal = document.getElementById('fichaTecnicaVerModal');
+  const verModalBody = document.getElementById('fichaTecnicaVerModalBody');
+  const verModalTitulo = document.getElementById('fichaTecnicaVerModalTitulo');
+  const verModalFechar = document.getElementById('fichaTecnicaVerModalFechar');
+  const verModalImprimir = document.getElementById('fichaTecnicaVerModalImprimir');
+  const verModalWhatsapp = document.getElementById('fichaTecnicaVerModalWhatsapp');
+
   if (!form) return;
+
+  let pratoModalAtual = null;
+
+  const readFileAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ''));
+      r.onerror = () => reject(new Error('read'));
+      r.readAsDataURL(file);
+    });
+
+  const carregarFichasDoArmazenamento = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(localStorage.getItem(FICHA_TECNICA_STORAGE_KEY) || '[]');
+    } catch (_) {
+      parsed = [];
+    }
+    state.fichaTecnicaPratos = Array.isArray(parsed) ? parsed : [];
+  };
+
+  const persistirFichas = () => {
+    try {
+      localStorage.setItem(FICHA_TECNICA_STORAGE_KEY, JSON.stringify(state.fichaTecnicaPratos));
+    } catch (err) {
+      console.error(err);
+      showToast('Não foi possível salvar no armazenamento local (espaço cheio?).', 'error');
+    }
+  };
 
   const syncFichaTecnicaVisaoPrecos = () => {
     const nomeEl = document.getElementById('fichaTecnicaNomePrato');
@@ -14222,7 +14274,7 @@ function setupFichaTecnicaForm() {
     const vn = document.getElementById('fichaTecnicaVisaoNome');
     const vp = document.getElementById('fichaTecnicaVisaoPreco');
     const vs = document.getElementById('fichaTecnicaVisaoSugestao');
-    if (vn) vn.textContent = (nomeEl && nomeEl.value.trim()) ? nomeEl.value.trim() : '—';
+    if (vn) vn.textContent = nomeEl && nomeEl.value.trim() ? nomeEl.value.trim() : '—';
     const parseMoedaInput = (el) => {
       const s = String(el && el.value != null ? el.value : '').trim();
       if (s === '') return null;
@@ -14234,6 +14286,7 @@ function setupFichaTecnicaForm() {
     if (vp) vp.textContent = p != null ? formatCurrencyBRL(p) : '—';
     if (vs) vs.textContent = sv != null ? formatCurrencyBRL(sv) : '—';
   };
+
   document.getElementById('fichaTecnicaNomePrato')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
   document.getElementById('fichaTecnicaPrecoPrato')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
   document.getElementById('fichaTecnicaSugestaoVenda')?.addEventListener('input', syncFichaTecnicaVisaoPrecos);
@@ -14247,35 +14300,6 @@ function setupFichaTecnicaForm() {
     if (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') return;
     const ingRoot = document.getElementById('fichaTecnicaIngredienteForm');
     if (ingRoot && ingRoot.contains(t)) e.preventDefault();
-  });
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!form.checkValidity()) {
-      form.reportValidity();
-      return;
-    }
-    showToast('Ficha técnica registrada localmente. O salvamento no servidor será adicionado em breve.', 'info');
-  });
-
-  if (!fotoInput || !preview || !previewWrap) return;
-  fotoInput.addEventListener('change', () => {
-    const file = fotoInput.files && fotoInput.files[0];
-    if (preview.dataset.objectUrl) {
-      try {
-        URL.revokeObjectURL(preview.dataset.objectUrl);
-      } catch (_) {}
-      delete preview.dataset.objectUrl;
-    }
-    if (!file || !file.type.startsWith('image/')) {
-      preview.removeAttribute('src');
-      previewWrap.hidden = true;
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    preview.dataset.objectUrl = url;
-    preview.src = url;
-    previewWrap.hidden = false;
   });
 
   const ingForm = document.getElementById('fichaTecnicaIngredienteForm');
@@ -14354,6 +14378,377 @@ function setupFichaTecnicaForm() {
     if (ingTot) ingTot.value = '';
     recalcIngredienteCustoTotal();
   };
+
+  const revogarPreviewUrl = () => {
+    if (preview && preview.dataset.objectUrl) {
+      try {
+        URL.revokeObjectURL(preview.dataset.objectUrl);
+      } catch (_) {}
+      delete preview.dataset.objectUrl;
+    }
+  };
+
+  const limparFormulario = () => {
+    revogarPreviewUrl();
+    if (preview) {
+      preview.removeAttribute('src');
+      delete preview.dataset.persistedBase64;
+    }
+    if (previewWrap) previewWrap.hidden = true;
+    if (fotoInput) fotoInput.value = '';
+    if (editIdEl) editIdEl.value = '';
+    if (formTitulo) formTitulo.textContent = 'Nova ficha técnica';
+    form.reset();
+    state.fichaTecnicaIngredientes = [];
+    renderListaIngredientesFichaTecnica();
+    syncFichaTecnicaVisaoPrecos();
+    fecharFormularioIngrediente();
+  };
+
+  const fichaTecnicaNl2br = (s) => escapeHtml(s || '').replace(/\n/g, '<br>');
+
+  const montarTextoWhatsapp = (p) => {
+    const linhas = [
+      `*Ficha técnica — ${p.nome_prato || 'Prato'}*`,
+      '',
+      `Tempo de preparo: ${p.tempo_preparo || '—'}`,
+      `Responsável: ${p.responsavel_tecnico || '—'}`,
+      `Preço por prato: ${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}`,
+      `Sugestão de venda: ${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}`,
+      '',
+    ];
+    const ings = Array.isArray(p.ingredientes) ? p.ingredientes : [];
+    if (ings.length) {
+      linhas.push('Ingredientes:');
+      ings.forEach((it) => {
+        linhas.push(
+          `• ${it.nome} — ${formatQuantityDisplay(it.quantidade)} ${it.unidade_medida} (un. ${formatCurrencyBRL(it.custo_unitario)} / tot. ${formatCurrencyBRL(it.custo_total)})`
+        );
+      });
+      linhas.push('');
+    }
+    linhas.push('Modo de preparo:');
+    linhas.push(p.modo_preparo || '—');
+    return linhas.join('\n');
+  };
+
+  const montarHtmlDetalhe = (p) => {
+    const ings = Array.isArray(p.ingredientes) ? p.ingredientes : [];
+    const ingRows = ings
+      .map(
+        (it) =>
+          `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(formatQuantityDisplay(it.quantidade))}</td><td>${escapeHtml(it.unidade_medida)}</td><td>${formatCurrencyBRL(it.custo_unitario)}</td><td>${formatCurrencyBRL(it.custo_total)}</td></tr>`
+      )
+      .join('');
+    const fotoBlock =
+      p.foto_base64 && String(p.foto_base64).trim()
+        ? `<div class="ficha-tecnica-ver-foto"><img src="${p.foto_base64}" alt="" /></div>`
+        : '';
+    return `
+      ${fotoBlock}
+      <dl class="ficha-tecnica-ver-dl">
+        <dt>Tempo de preparo</dt><dd>${escapeHtml(p.tempo_preparo || '—')}</dd>
+        <dt>Responsável técnico</dt><dd>${escapeHtml(p.responsavel_tecnico || '—')}</dd>
+        <dt>Preço por prato</dt><dd>${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}</dd>
+        <dt>Sugestão de venda</dt><dd>${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}</dd>
+      </dl>
+      <h4 class="ficha-tecnica-ver-subtitulo">Ingredientes</h4>
+      ${
+        ings.length
+          ? `<table class="ficha-tecnica-ver-ing-table"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${ingRows}</tbody></table>`
+          : '<p class="ficha-tecnica-ver-vazio">Nenhum ingrediente cadastrado.</p>'
+      }
+      <h4 class="ficha-tecnica-ver-subtitulo">Modo de preparo</h4>
+      <div class="ficha-tecnica-ver-modo">${fichaTecnicaNl2br(p.modo_preparo || '')}</div>
+    `;
+  };
+
+  const abrirJanelaImpressao = (p) => {
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${escapeHtml(p.nome_prato || 'Ficha técnica')}</title>
+      <style>
+        body{font-family:system-ui,sans-serif;padding:1.2rem;color:#263238;max-width:720px;margin:0 auto;}
+        h1{font-size:1.25rem;margin:0 0 1rem;}
+        img{max-width:100%;max-height:220px;object-fit:contain;}
+        table{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
+        th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
+        th{background:#eceff1;}
+        .modo{white-space:pre-wrap;margin-top:0.5rem;}
+      </style></head><body>
+      <h1>${escapeHtml(p.nome_prato || 'Ficha técnica')}</h1>
+      ${p.foto_base64 ? `<p><img src="${p.foto_base64}" alt=""/></p>` : ''}
+      <p><strong>Tempo:</strong> ${escapeHtml(p.tempo_preparo || '—')}</p>
+      <p><strong>Responsável:</strong> ${escapeHtml(p.responsavel_tecnico || '—')}</p>
+      <p><strong>Preço por prato:</strong> ${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}</p>
+      <p><strong>Sugestão de venda:</strong> ${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}</p>
+      <h2 style="font-size:1rem;margin-top:1rem;">Ingredientes</h2>
+      ${
+        (p.ingredientes || []).length
+          ? `<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${(p.ingredientes || [])
+              .map(
+                (it) =>
+                  `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(formatQuantityDisplay(it.quantidade))}</td><td>${escapeHtml(it.unidade_medida)}</td><td>${formatCurrencyBRL(it.custo_unitario)}</td><td>${formatCurrencyBRL(it.custo_total)}</td></tr>`
+              )
+              .join('')}</tbody></table>`
+          : '<p>—</p>'
+      }
+      <h2 style="font-size:1rem;margin-top:1rem;">Modo de preparo</h2>
+      <div class="modo">${fichaTecnicaNl2br(p.modo_preparo || '')}</div>
+      </body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) {
+      showToast('Permita pop-ups para imprimir.', 'warning');
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    try {
+      w.print();
+    } catch (_) {}
+  };
+
+  const enviarWhatsapp = (p) => {
+    const url = `https://wa.me/?text=${encodeURIComponent(montarTextoWhatsapp(p))}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const abrirModalVer = (p) => {
+    pratoModalAtual = p;
+    if (verModalTitulo) verModalTitulo.textContent = p.nome_prato || 'Ficha técnica';
+    if (verModalBody) verModalBody.innerHTML = montarHtmlDetalhe(p);
+    toggleModal(verModal, true);
+  };
+
+  const renderListaTabela = () => {
+    const list = [...state.fichaTecnicaPratos].sort((a, b) => {
+      const ta = new Date(a.updatedAt || 0).getTime();
+      const tb = new Date(b.updatedAt || 0).getTime();
+      return tb - ta;
+    });
+    const wrap = listaTbody?.closest('.table-wrapper');
+    if (!listaTbody) return;
+    if (!list.length) {
+      listaTbody.innerHTML = '';
+      if (listaEmpty) listaEmpty.hidden = false;
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
+    if (listaEmpty) listaEmpty.hidden = true;
+    if (wrap) wrap.style.display = '';
+    listaTbody.innerHTML = list
+      .map((p) => {
+        const idAttr = escapeHtml(String(p.id));
+        const prec = p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—';
+        const sug = p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—';
+        return `<tr>
+        <td>${escapeHtml(p.nome_prato || '')}</td>
+        <td>${escapeHtml(p.tempo_preparo || '')}</td>
+        <td>${escapeHtml(p.responsavel_tecnico || '')}</td>
+        <td>${prec}</td>
+        <td>${sug}</td>
+        <td class="ficha-tecnica-acoes">
+          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="ver" data-ficha-id="${idAttr}">Ver</button>
+          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="editar" data-ficha-id="${idAttr}">Editar</button>
+          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="excluir" data-ficha-id="${idAttr}">Excluir</button>
+          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="imprimir" data-ficha-id="${idAttr}">Imprimir</button>
+          <button type="button" class="btn primary ficha-tecnica-acao-btn" data-ficha-acao="whatsapp" data-ficha-id="${idAttr}">WhatsApp</button>
+        </td>
+      </tr>`;
+      })
+      .join('');
+  };
+
+  const mostrarVistaLista = () => {
+    if (listaView) listaView.classList.remove('hidden');
+    if (formView) formView.classList.add('hidden');
+    renderListaTabela();
+  };
+
+  const mostrarVistaForm = () => {
+    if (listaView) listaView.classList.add('hidden');
+    if (formView) formView.classList.remove('hidden');
+  };
+
+  const obterPratoPorId = (id) => state.fichaTecnicaPratos.find((x) => String(x.id) === String(id));
+
+  const preencherFormulario = (p) => {
+    limparFormulario();
+    if (editIdEl) editIdEl.value = String(p.id);
+    const nome = document.getElementById('fichaTecnicaNomePrato');
+    const tempo = document.getElementById('fichaTecnicaTempoPreparo');
+    const resp = document.getElementById('fichaTecnicaResponsavel');
+    const preco = document.getElementById('fichaTecnicaPrecoPrato');
+    const sug = document.getElementById('fichaTecnicaSugestaoVenda');
+    const modo = document.getElementById('fichaTecnicaModoPreparo');
+    if (nome) nome.value = p.nome_prato || '';
+    if (tempo) tempo.value = p.tempo_preparo || '';
+    if (resp) resp.value = p.responsavel_tecnico || '';
+    if (preco) preco.value = p.preco_prato != null && p.preco_prato !== '' ? String(p.preco_prato) : '';
+    if (sug) sug.value = p.sugestao_venda != null && p.sugestao_venda !== '' ? String(p.sugestao_venda) : '';
+    if (modo) modo.value = p.modo_preparo || '';
+    state.fichaTecnicaIngredientes = Array.isArray(p.ingredientes)
+      ? p.ingredientes.map((it) => ({
+          id: it.id != null ? it.id : Date.now() + Math.random(),
+          nome: it.nome,
+          quantidade: it.quantidade,
+          unidade_medida: it.unidade_medida,
+          custo_unitario: it.custo_unitario,
+          custo_total: it.custo_total,
+        }))
+      : [];
+    renderListaIngredientesFichaTecnica();
+    if (p.foto_base64 && String(p.foto_base64).trim() && preview && previewWrap) {
+      preview.dataset.persistedBase64 = p.foto_base64;
+      preview.src = p.foto_base64;
+      previewWrap.hidden = false;
+    }
+    if (formTitulo) formTitulo.textContent = 'Editar ficha técnica';
+    syncFichaTecnicaVisaoPrecos();
+  };
+
+  onNavigateFichaTecnicaCallback = () => {
+    carregarFichasDoArmazenamento();
+    mostrarVistaLista();
+  };
+
+  btnNova?.addEventListener('click', () => {
+    limparFormulario();
+    mostrarVistaForm();
+    document.getElementById('fichaTecnicaNomePrato')?.focus();
+  });
+
+  btnVoltar?.addEventListener('click', () => {
+    mostrarVistaLista();
+  });
+
+  listaTbody?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-ficha-acao][data-ficha-id]');
+    if (!btn) return;
+    const acao = btn.getAttribute('data-ficha-acao');
+    const id = btn.getAttribute('data-ficha-id');
+    const p = obterPratoPorId(id);
+    if (!p) {
+      showToast('Registro não encontrado.', 'error');
+      carregarFichasDoArmazenamento();
+      renderListaTabela();
+      return;
+    }
+    if (acao === 'ver') abrirModalVer(p);
+    else if (acao === 'editar') {
+      carregarFichasDoArmazenamento();
+      const fresh = obterPratoPorId(id);
+      if (!fresh) return;
+      preencherFormulario(fresh);
+      mostrarVistaForm();
+    } else if (acao === 'excluir') {
+      if (!confirm('Excluir esta ficha técnica?')) return;
+      state.fichaTecnicaPratos = state.fichaTecnicaPratos.filter((x) => String(x.id) !== String(id));
+      persistirFichas();
+      renderListaTabela();
+      showToast('Ficha excluída.', 'success');
+    } else if (acao === 'imprimir') abrirJanelaImpressao(p);
+    else if (acao === 'whatsapp') enviarWhatsapp(p);
+  });
+
+  verModalFechar?.addEventListener('click', () => toggleModal(verModal, false));
+  verModal?.addEventListener('click', (e) => {
+    if (e.target === verModal) toggleModal(verModal, false);
+  });
+  verModalImprimir?.addEventListener('click', () => {
+    if (pratoModalAtual) abrirJanelaImpressao(pratoModalAtual);
+  });
+  verModalWhatsapp?.addEventListener('click', () => {
+    if (pratoModalAtual) enviarWhatsapp(pratoModalAtual);
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    const file = fotoInput?.files?.[0];
+    let fotoBase64 = null;
+    if (file && file.type.startsWith('image/')) {
+      if (file.size > FICHA_TECNICA_FOTO_MAX_BYTES) {
+        showToast('A imagem é muito grande. Use outra com menos de ~1,8 MB.', 'error');
+        return;
+      }
+      try {
+        fotoBase64 = await readFileAsDataUrl(file);
+      } catch {
+        showToast('Não foi possível ler a foto.', 'error');
+        return;
+      }
+    } else if (preview?.dataset.persistedBase64) {
+      fotoBase64 = preview.dataset.persistedBase64;
+    }
+
+    const parseMoedaInput = (el) => {
+      const s = String(el && el.value != null ? el.value : '').trim();
+      if (s === '') return null;
+      const n = parseFloat(s.replace(',', '.'));
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const nome_prato = document.getElementById('fichaTecnicaNomePrato')?.value.trim() ?? '';
+    const tempo_preparo = document.getElementById('fichaTecnicaTempoPreparo')?.value.trim() ?? '';
+    const responsavel_tecnico = document.getElementById('fichaTecnicaResponsavel')?.value.trim() ?? '';
+    const modo_preparo = document.getElementById('fichaTecnicaModoPreparo')?.value ?? '';
+    const preco_prato = parseMoedaInput(document.getElementById('fichaTecnicaPrecoPrato'));
+    const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
+    const ingredientes = JSON.parse(JSON.stringify(state.fichaTecnicaIngredientes));
+    const updatedAt = new Date().toISOString();
+    const editId = (editIdEl?.value || '').trim();
+
+    const payload = {
+      nome_prato,
+      tempo_preparo,
+      responsavel_tecnico,
+      foto_base64: fotoBase64,
+      preco_prato,
+      sugestao_venda,
+      modo_preparo,
+      ingredientes,
+      updatedAt,
+    };
+
+    if (editId) {
+      const ix = state.fichaTecnicaPratos.findIndex((x) => String(x.id) === editId);
+      if (ix >= 0) {
+        payload.id = state.fichaTecnicaPratos[ix].id;
+        state.fichaTecnicaPratos[ix] = payload;
+      } else {
+        payload.id = Date.now();
+        state.fichaTecnicaPratos.push(payload);
+      }
+    } else {
+      payload.id = Date.now();
+      state.fichaTecnicaPratos.push(payload);
+    }
+
+    persistirFichas();
+    showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
+    limparFormulario();
+    mostrarVistaLista();
+  });
+
+  if (fotoInput && preview && previewWrap) {
+    fotoInput.addEventListener('change', () => {
+      const file = fotoInput.files && fotoInput.files[0];
+      delete preview.dataset.persistedBase64;
+      revogarPreviewUrl();
+      if (!file || !file.type.startsWith('image/')) {
+        preview.removeAttribute('src');
+        previewWrap.hidden = true;
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      preview.dataset.objectUrl = url;
+      preview.src = url;
+      previewWrap.hidden = false;
+    });
+  }
 
   ingAbrirBtn?.addEventListener('click', () => {
     if (!ingWrap) return;

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260409m" />
+    <link rel="stylesheet" href="style.css?v=20260409n" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1218,14 +1218,45 @@
             </div>
           </section>
 
-          <!-- Ficha técnica do prato (formulário — persistência em versão futura) -->
+          <!-- Ficha técnica — lista + formulário (localStorage) -->
           <section id="fechaTecnicaSection" class="view-section hidden">
-            <div class="actions">
+            <div class="actions ficha-tecnica-barra-titulo">
               <h2>Ficha técnica</h2>
             </div>
-            <div class="table-card ficha-tecnica-card">
-              <header>Ficha técnica do prato</header>
-              <form id="fichaTecnicaForm" class="ficha-tecnica-form" novalidate>
+
+            <div id="fichaTecnicaListaView" class="ficha-tecnica-lista-view">
+              <div class="table-card ficha-tecnica-card">
+                <header class="ficha-tecnica-lista-header">
+                  <span>Pratos cadastrados</span>
+                  <button type="button" class="btn primary" id="fichaTecnicaBtnNova">+ Nova ficha técnica</button>
+                </header>
+                <div class="table-wrapper">
+                  <table class="ficha-tecnica-lista-table">
+                    <thead>
+                      <tr>
+                        <th>Prato</th>
+                        <th>Tempo prep.</th>
+                        <th>Responsável</th>
+                        <th>Preço</th>
+                        <th>Sug. venda</th>
+                        <th class="ficha-tecnica-col-acoes">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="fichaTecnicaListaTbody"></tbody>
+                  </table>
+                </div>
+                <p id="fichaTecnicaListaEmpty" class="ficha-tecnica-lista-empty" hidden>Nenhuma ficha cadastrada. Clique em “Nova ficha técnica”.</p>
+              </div>
+            </div>
+
+            <div id="fichaTecnicaFormView" class="ficha-tecnica-form-view hidden">
+              <div class="ficha-tecnica-form-toolbar">
+                <button type="button" class="btn neutral" id="fichaTecnicaVoltarLista">← Voltar à lista</button>
+              </div>
+              <div class="table-card ficha-tecnica-card">
+                <header id="fichaTecnicaFormTitulo">Nova ficha técnica</header>
+                <form id="fichaTecnicaForm" class="ficha-tecnica-form" novalidate>
+                <input type="hidden" id="fichaTecnicaEditId" value="" />
                 <h3 class="ficha-tecnica-form__section-title ficha-tecnica-form__section-title--top">Foto do prato</h3>
                 <div class="ficha-tecnica-form__field">
                   <span>Imagem do prato (opcional)</span>
@@ -1243,11 +1274,11 @@
                 </label>
                 <label class="ficha-tecnica-form__field">
                   <span>Tempo de preparo *</span>
-                  <input type="text" name="tempo_preparo" required maxlength="120" placeholder="Ex.: 45 minutos ou 1h 30min" autocomplete="off" />
+                  <input type="text" id="fichaTecnicaTempoPreparo" name="tempo_preparo" required maxlength="120" placeholder="Ex.: 45 minutos ou 1h 30min" autocomplete="off" />
                 </label>
                 <label class="ficha-tecnica-form__field">
                   <span>Responsável técnico *</span>
-                  <input type="text" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
+                  <input type="text" id="fichaTecnicaResponsavel" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
                 </label>
 
                 <h3 class="ficha-tecnica-form__section-title">Visualização do prato — preços</h3>
@@ -1359,8 +1390,23 @@
                   <button type="submit" class="btn primary">Salvar ficha técnica</button>
                 </footer>
               </form>
+              </div>
             </div>
           </section>
+
+          <div class="modal-backdrop" id="fichaTecnicaVerModal">
+            <div class="modal ficha-tecnica-ver-modal" role="dialog" aria-modal="true" aria-labelledby="fichaTecnicaVerModalTitulo">
+              <header>
+                <h3 id="fichaTecnicaVerModalTitulo">Ficha técnica</h3>
+                <button type="button" class="close-btn" id="fichaTecnicaVerModalFechar" aria-label="Fechar">×</button>
+              </header>
+              <div class="ficha-tecnica-ver-modal__body" id="fichaTecnicaVerModalBody"></div>
+              <footer class="ficha-tecnica-ver-modal__footer">
+                <button type="button" class="btn neutral" id="fichaTecnicaVerModalImprimir">Imprimir</button>
+                <button type="button" class="btn primary" id="fichaTecnicaVerModalWhatsapp">Enviar por WhatsApp</button>
+              </footer>
+            </div>
+          </div>
 
           <!-- Consulta de Estoque por Produto -->
           <section id="estoqueSection" class="view-section hidden">
@@ -3311,7 +3357,7 @@
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
     <script src="src/routes/router.js"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260409m"></script>
+    <script src="app.js?v=20260409n"></script>
      
   </body>
 </html>
