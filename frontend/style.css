@@ -1473,6 +1473,11 @@ textarea {
   color: #607d8b;
   font-size: 0.82rem;
 }
+.ficha-tecnica-form__hint-inline {
+  font-weight: 500;
+  color: #78909c;
+  font-size: 0.82em;
+}
 .ficha-tecnica-form__preview-wrap {
   margin-top: 0.75rem;
   border-radius: 10px;
