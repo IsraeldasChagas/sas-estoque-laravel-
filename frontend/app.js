@@ -14924,8 +14924,6 @@ function setupFichaTecnicaForm() {
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="ver" data-ficha-id="${idAttr}">Ver</button>
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="editar" data-ficha-id="${idAttr}">Editar</button>
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="excluir" data-ficha-id="${idAttr}">Excluir</button>
-          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="imprimir" data-ficha-id="${idAttr}">Imprimir</button>
-          <button type="button" class="btn primary ficha-tecnica-acao-btn" data-ficha-acao="whatsapp" data-ficha-id="${idAttr}">WhatsApp</button>
         </td>
       </tr>`;
       })
@@ -15040,8 +15038,7 @@ function setupFichaTecnicaForm() {
           showToast(err.message || 'Não foi possível excluir no servidor.', 'error');
         }
       })();
-    } else if (acao === 'imprimir') abrirJanelaImpressao(p);
-    else if (acao === 'whatsapp') enviarWhatsapp(p);
+    }
   });
 
   verModalFechar?.addEventListener('click', () => toggleModal(verModal, false));
