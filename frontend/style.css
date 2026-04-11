@@ -1360,7 +1360,7 @@ textarea {
   margin: 1.25rem 0 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text);
+  color: #000;
   border-bottom: 1px solid var(--border, #e0e0e0);
   padding-bottom: 0.35rem;
 }
@@ -1416,10 +1416,10 @@ textarea {
 .ficha-tecnica-visao__rotulo {
   display: block;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #546e7a;
+  color: #000;
   margin-bottom: 0.2rem;
 }
 .ficha-tecnica-visao__destaque {
@@ -1450,12 +1450,14 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
   min-width: 0;
 }
 .ficha-tecnica-form__field > span {
   font-size: 0.92rem;
+  font-weight: 700;
+  color: #000;
 }
 .ficha-tecnica-form__field input[type="text"],
 .ficha-tecnica-form__field input[type="file"] {
@@ -1532,6 +1534,14 @@ textarea {
 .ficha-tecnica-ingredientes-table {
   width: 100%;
   font-size: 0.88rem;
+}
+.ficha-tecnica-ingredientes-table thead th {
+  font-weight: 700;
+  color: #000;
+}
+.ficha-tecnica-lista-table thead th {
+  font-weight: 700;
+  color: #000;
 }
 .ficha-tecnica-ingredientes-table th,
 .ficha-tecnica-ingredientes-table td {
@@ -1616,8 +1626,8 @@ textarea {
 }
 .ficha-tecnica-tempo-part__lbl {
   font-size: 0.82rem;
-  font-weight: 600;
-  color: #546e7a;
+  font-weight: 700;
+  color: #000;
 }
 .ficha-tecnica-tempo-part input[type="number"] {
   width: 100%;
@@ -1772,8 +1782,8 @@ textarea {
   gap: 0.75rem;
 }
 .ficha-tecnica-lista-header span {
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 700;
+  color: #000;
 }
 .ficha-tecnica-lista-empty {
   padding: 1rem 1.25rem;
@@ -1798,6 +1808,16 @@ textarea {
   padding: 0.28rem 0.55rem;
   font-size: 0.78rem;
 }
+#fechaTecnicaSection .table-card header {
+  font-weight: 700;
+  color: #000;
+}
+
+.ficha-tecnica-ver-modal header h3 {
+  font-weight: 700;
+  color: #000;
+}
+
 .ficha-tecnica-ver-modal {
   width: min(900px, 96vw);
 }
@@ -1833,8 +1853,8 @@ textarea {
 }
 .ficha-tecnica-ver-dl dt {
   margin: 0;
-  color: #607d8b;
-  font-weight: 600;
+  color: #000;
+  font-weight: 700;
 }
 .ficha-tecnica-ver-dl dd {
   margin: 0;
@@ -1842,7 +1862,8 @@ textarea {
 .ficha-tecnica-ver-subtitulo {
   font-size: 0.95rem;
   margin: 0.75rem 0 0.35rem;
-  color: #37474f;
+  font-weight: 700;
+  color: #000;
 }
 .ficha-tecnica-ver-ing-table {
   width: 100%;
@@ -1858,6 +1879,8 @@ textarea {
 }
 .ficha-tecnica-ver-ing-table th {
   background: #eceff1;
+  font-weight: 700;
+  color: #000;
 }
 .ficha-tecnica-ver-vazio {
   color: #78909c;
@@ -1963,11 +1986,11 @@ textarea {
   #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td::before {
     content: attr(data-label);
     display: block;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #607d8b;
+    color: #000;
     margin-bottom: 0.3rem;
   }
 
@@ -2060,7 +2083,8 @@ textarea {
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #607d8b;
+    font-weight: 700;
+    color: #000;
   }
 
   .ficha-tecnica-ver-modal .ficha-tecnica-ver-dl dt:first-child {
@@ -2104,11 +2128,11 @@ textarea {
   .ficha-tecnica-ver-modal .ficha-tecnica-ver-ing-table td::before {
     content: attr(data-label);
     display: block;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #607d8b;
+    color: #000;
     margin-bottom: 0.15rem;
   }
 
