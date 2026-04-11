@@ -14335,15 +14335,6 @@ function modoPreparoHtmlParaEditor(stored) {
   return `<p>${escapeHtml(s).replace(/\n/g, '<br>')}</p>`;
 }
 
-/** HTML → texto puro (WhatsApp, etc.). */
-function modoPreparoHtmlParaTextoPlano(html) {
-  const clean = sanitizeFichaTecnicaModoPreparoHtml(String(html ?? ''));
-  const div = document.createElement('div');
-  div.innerHTML = clean;
-  const t = (div.textContent || div.innerText || '').replace(/\u200b/g, '').trim();
-  return t || '—';
-}
-
 /** Formulário e lista da ficha técnica (persistência na API + cache local). */
 function setupFichaTecnicaForm() {
   const form = document.getElementById('fichaTecnicaForm');
@@ -14363,7 +14354,7 @@ function setupFichaTecnicaForm() {
   const verModalTitulo = document.getElementById('fichaTecnicaVerModalTitulo');
   const verModalFechar = document.getElementById('fichaTecnicaVerModalFechar');
   const verModalImprimir = document.getElementById('fichaTecnicaVerModalImprimir');
-  const verModalWhatsapp = document.getElementById('fichaTecnicaVerModalWhatsapp');
+  const verModalPdf = document.getElementById('fichaTecnicaVerModalPdf');
 
   if (!form) return;
 
@@ -14780,29 +14771,41 @@ function setupFichaTecnicaForm() {
     fecharFormularioIngrediente();
   };
 
-  const montarTextoWhatsapp = (p) => {
-    const linhas = [
-      `*Ficha técnica — ${p.nome_prato || 'Prato'}*`,
-      '',
-      `Tempo de preparo: ${p.tempo_preparo || '—'}`,
-      `Responsável: ${p.responsavel_tecnico || '—'}`,
-      `Preço por prato: ${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}`,
-      `Sugestão de venda: ${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}`,
-      '',
-    ];
-    const ings = Array.isArray(p.ingredientes) ? p.ingredientes : [];
-    if (ings.length) {
-      linhas.push('Ingredientes:');
-      ings.forEach((it) => {
-        linhas.push(
-          `• ${it.nome} — ${fmtIngQtdCell(it.quantidade)} ${it.unidade_medida} (un. ${fmtIngBRLCell(it.custo_unitario)} / tot. ${fmtIngBRLCell(it.custo_total)})`
-        );
-      });
-      linhas.push('');
-    }
-    linhas.push('Modo de preparo:');
-    linhas.push(modoPreparoHtmlParaTextoPlano(p.modo_preparo));
-    return linhas.join('\n');
+  /** HTML completo da ficha para impressão / PDF (mesmo conteúdo em ambos os fluxos). */
+  const montarHtmlDocumentoFichaTecnica = (p) => {
+    const titulo = escapeHtml(p.nome_prato || 'Ficha técnica');
+    const ingBody =
+      (p.ingredientes || []).length > 0
+        ? `<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${(p.ingredientes || [])
+            .map(
+              (it) =>
+                `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td>${escapeHtml(it.unidade_medida)}</td><td>${fmtIngBRLCell(it.custo_unitario)}</td><td>${fmtIngBRLCell(it.custo_total)}</td></tr>`
+            )
+            .join('')}</tbody></table>`
+        : '<p>—</p>';
+    const modoHtml = sanitizeFichaTecnicaModoPreparoHtml(p.modo_preparo || '') || '—';
+    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${titulo}</title>
+      <style>
+        body{font-family:system-ui,Arial,sans-serif;padding:1.2rem;color:#111;max-width:720px;margin:0 auto;}
+        h1{font-size:1.25rem;margin:0 0 1rem;}
+        img{max-width:100%;max-height:220px;object-fit:contain;}
+        table{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
+        th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
+        th{background:#eceff1;font-weight:700;}
+        h2{font-size:1rem;margin-top:1rem;margin-bottom:0.35rem;}
+        .modo-html{white-space:normal;line-height:1.55;}
+      </style></head><body>
+      <h1>${titulo}</h1>
+      ${p.foto_base64 ? `<p><img src="${p.foto_base64}" alt=""/></p>` : ''}
+      <p><strong>Tempo:</strong> ${escapeHtml(p.tempo_preparo || '—')}</p>
+      <p><strong>Responsável:</strong> ${escapeHtml(p.responsavel_tecnico || '—')}</p>
+      <p><strong>Preço por prato:</strong> ${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}</p>
+      <p><strong>Sugestão de venda:</strong> ${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}</p>
+      <h2>Ingredientes</h2>
+      ${ingBody}
+      <h2>Modo de preparo</h2>
+      <div class="modo-html">${modoHtml}</div>
+      </body></html>`;
   };
 
   const montarHtmlDetalhe = (p) => {
@@ -14837,37 +14840,7 @@ function setupFichaTecnicaForm() {
   };
 
   const abrirJanelaImpressao = (p) => {
-    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${escapeHtml(p.nome_prato || 'Ficha técnica')}</title>
-      <style>
-        body{font-family:system-ui,sans-serif;padding:1.2rem;color:#263238;max-width:720px;margin:0 auto;}
-        h1{font-size:1.25rem;margin:0 0 1rem;}
-        img{max-width:100%;max-height:220px;object-fit:contain;}
-        table{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
-        th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
-        th{background:#eceff1;}
-        .modo{white-space:pre-wrap;margin-top:0.5rem;}
-        .modo-html{white-space:normal;line-height:1.55;}
-      </style></head><body>
-      <h1>${escapeHtml(p.nome_prato || 'Ficha técnica')}</h1>
-      ${p.foto_base64 ? `<p><img src="${p.foto_base64}" alt=""/></p>` : ''}
-      <p><strong>Tempo:</strong> ${escapeHtml(p.tempo_preparo || '—')}</p>
-      <p><strong>Responsável:</strong> ${escapeHtml(p.responsavel_tecnico || '—')}</p>
-      <p><strong>Preço por prato:</strong> ${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}</p>
-      <p><strong>Sugestão de venda:</strong> ${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}</p>
-      <h2 style="font-size:1rem;margin-top:1rem;">Ingredientes</h2>
-      ${
-        (p.ingredientes || []).length
-          ? `<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${(p.ingredientes || [])
-              .map(
-                (it) =>
-                  `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td>${escapeHtml(it.unidade_medida)}</td><td>${fmtIngBRLCell(it.custo_unitario)}</td><td>${fmtIngBRLCell(it.custo_total)}</td></tr>`
-              )
-              .join('')}</tbody></table>`
-          : '<p>—</p>'
-      }
-      <h2 style="font-size:1rem;margin-top:1rem;">Modo de preparo</h2>
-      <div class="modo modo-html">${sanitizeFichaTecnicaModoPreparoHtml(p.modo_preparo || '') || '—'}</div>
-      </body></html>`;
+    const html = montarHtmlDocumentoFichaTecnica(p);
     const w = window.open('', '_blank');
     if (!w) {
       showToast('Permita pop-ups para imprimir.', 'warning');
@@ -14881,9 +14854,64 @@ function setupFichaTecnicaForm() {
     } catch (_) {}
   };
 
-  const enviarWhatsapp = (p) => {
-    const url = `https://wa.me/?text=${encodeURIComponent(montarTextoWhatsapp(p))}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  /** PDF via diálogo de impressão do navegador (Destino: Salvar como PDF), igual à lista de compras. */
+  const gerarPdfFichaTecnica = (p) => {
+    if (!p) return;
+    const conteudo = montarHtmlDocumentoFichaTecnica(p);
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText =
+      'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(iframe);
+    let timeoutId = null;
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      try {
+        if (iframe.contentWindow) iframe.contentWindow.onafterprint = null;
+      } catch (_) {}
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    };
+    iframe.onload = () => {
+      const win = iframe.contentWindow;
+      if (!win) {
+        cleanup();
+        showToast('Não foi possível preparar o PDF.', 'error');
+        return;
+      }
+      win.onafterprint = cleanup;
+      win.focus();
+      try {
+        if (typeof win.print === 'function') win.print();
+        else {
+          cleanup();
+          showToast('Seu navegador não suportou a impressão.', 'error');
+        }
+      } catch (_) {
+        cleanup();
+        showToast('Falha ao acionar a impressão.', 'error');
+      }
+    };
+    iframe.onerror = () => {
+      cleanup();
+      showToast('Não foi possível gerar o PDF.', 'error');
+    };
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      cleanup();
+      showToast('Não foi possível gerar o PDF.', 'error');
+      return;
+    }
+    doc.open();
+    doc.write(conteudo);
+    doc.close();
+    timeoutId = setTimeout(() => {
+      if (!document.body.contains(iframe)) return;
+      cleanup();
+      showToast('Falha ao gerar PDF. Verifique o navegador.', 'error');
+    }, 60000);
+    showToast('Abra “Salvar como PDF” na janela de impressão.', 'success');
   };
 
   const abrirModalVer = (p) => {
@@ -15048,8 +15076,8 @@ function setupFichaTecnicaForm() {
   verModalImprimir?.addEventListener('click', () => {
     if (pratoModalAtual) abrirJanelaImpressao(pratoModalAtual);
   });
-  verModalWhatsapp?.addEventListener('click', () => {
-    if (pratoModalAtual) enviarWhatsapp(pratoModalAtual);
+  verModalPdf?.addEventListener('click', () => {
+    if (pratoModalAtual) gerarPdfFichaTecnica(pratoModalAtual);
   });
 
   const salvarFichaTecnica = async () => {
