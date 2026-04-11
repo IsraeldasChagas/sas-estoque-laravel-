@@ -14353,7 +14353,6 @@ function setupFichaTecnicaForm() {
   const verModalBody = document.getElementById('fichaTecnicaVerModalBody');
   const verModalTitulo = document.getElementById('fichaTecnicaVerModalTitulo');
   const verModalFechar = document.getElementById('fichaTecnicaVerModalFechar');
-  const verModalImprimir = document.getElementById('fichaTecnicaVerModalImprimir');
   const verModalPdf = document.getElementById('fichaTecnicaVerModalPdf');
 
   if (!form) return;
@@ -14839,22 +14838,7 @@ function setupFichaTecnicaForm() {
     `;
   };
 
-  const abrirJanelaImpressao = (p) => {
-    const html = montarHtmlDocumentoFichaTecnica(p);
-    const w = window.open('', '_blank');
-    if (!w) {
-      showToast('Permita pop-ups para imprimir.', 'warning');
-      return;
-    }
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    try {
-      w.print();
-    } catch (_) {}
-  };
-
-  /** PDF via diálogo de impressão do navegador (Destino: Salvar como PDF), igual à lista de compras. */
+  /** PDF via diálogo de impressão do navegador (Destino: Salvar como PDF ou impressora), igual à lista de compras. */
   const gerarPdfFichaTecnica = (p) => {
     if (!p) return;
     const conteudo = montarHtmlDocumentoFichaTecnica(p);
@@ -15072,9 +15056,6 @@ function setupFichaTecnicaForm() {
   verModalFechar?.addEventListener('click', () => toggleModal(verModal, false));
   verModal?.addEventListener('click', (e) => {
     if (e.target === verModal) toggleModal(verModal, false);
-  });
-  verModalImprimir?.addEventListener('click', () => {
-    if (pratoModalAtual) abrirJanelaImpressao(pratoModalAtual);
   });
   verModalPdf?.addEventListener('click', () => {
     if (pratoModalAtual) gerarPdfFichaTecnica(pratoModalAtual);
