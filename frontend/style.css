@@ -1902,7 +1902,7 @@ textarea {
     flex-direction: column;
     align-items: stretch;
     padding: 0 1rem 0.75rem;
-    gap: 0.65rem;
+    gap: 0.85rem;
   }
 
   #fechaTecnicaSection .ficha-tecnica-lista-header .btn {
@@ -1975,7 +1975,9 @@ textarea {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: flex-start;
-    gap: 0.4rem;
+    align-content: flex-start;
+    row-gap: 0.65rem;
+    column-gap: 0.55rem;
     width: 100%;
   }
 
@@ -2092,12 +2094,46 @@ textarea {
   .ficha-tecnica-ver-modal__footer {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.35rem;
   }
 
   .ficha-tecnica-ver-modal__footer .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-form__footer--row {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 0.75rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-ingredientes-table .ficha-tecnica-ingredientes-acoes-btns {
+    gap: 0.5rem;
+  }
+}
+
+/* Ficha técnica — celular: ações em coluna com espaço confortável entre botões */
+@media (max-width: 600px) {
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acoes {
+    flex-direction: column;
+    align-items: stretch;
+    row-gap: 0;
+    column-gap: 0;
+    gap: 0.65rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acao-btn {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ficha-tecnica-ver-modal__footer {
+    gap: 0.85rem;
   }
 }
 
