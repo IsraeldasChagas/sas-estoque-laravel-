@@ -1971,20 +1971,41 @@ textarea {
     margin-bottom: 0.3rem;
   }
 
-  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acoes {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-content: flex-start;
-    row-gap: 0.65rem;
-    column-gap: 0.55rem;
-    width: 100%;
+  /* Célula "Ações": display:flex obrigatório — senão td{display:block} quebra o gap entre botões */
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td.ficha-tecnica-acoes {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td.ficha-tecnica-acoes::before {
+    margin-bottom: 0;
   }
 
   #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acao-btn {
-    flex: 1 1 auto;
-    min-width: min(100%, 5.5rem);
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
     justify-content: center;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td.ficha-tecnica-ingredientes-td-acoes {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td.ficha-tecnica-ingredientes-td-acoes::before {
+    margin-bottom: 0;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td.ficha-tecnica-ingredientes-td-acoes .ficha-tecnica-ingredientes-acoes-btns {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.55rem;
   }
 
   #fechaTecnicaSection .ficha-tecnica-ingredientes-toolbar {
@@ -2111,25 +2132,12 @@ textarea {
     gap: 0.75rem;
   }
 
-  #fechaTecnicaSection .ficha-tecnica-ingredientes-table .ficha-tecnica-ingredientes-acoes-btns {
-    gap: 0.5rem;
-  }
 }
 
-/* Ficha técnica — celular: ações em coluna com espaço confortável entre botões */
+/* Ficha técnica — celular: um pouco mais de ar entre botões */
 @media (max-width: 600px) {
-  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acoes {
-    flex-direction: column;
-    align-items: stretch;
-    row-gap: 0;
-    column-gap: 0;
-    gap: 0.65rem;
-  }
-
-  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acao-btn {
-    flex: none;
-    width: 100%;
-    min-width: 0;
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td.ficha-tecnica-acoes {
+    gap: 0.8rem;
   }
 
   .ficha-tecnica-ver-modal__footer {
