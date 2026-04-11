@@ -14653,6 +14653,20 @@ function setupFichaTecnicaForm() {
   const ingTableWrap = document.getElementById('fichaTecnicaIngredientesTableWrap');
   const ingTbody = document.getElementById('fichaTecnicaIngredientesTbody');
 
+  /** null = novo ingrediente; caso contrário, id do item em edição. */
+  let fichaTecnicaIngredienteEditId = null;
+
+  const atualizarRotuloBotaoIngrediente = () => {
+    if (!ingAdicionarBtn) return;
+    ingAdicionarBtn.textContent =
+      fichaTecnicaIngredienteEditId != null ? 'Salvar alterações' : 'Adicionar à lista';
+  };
+
+  const resetModoEdicaoIngrediente = () => {
+    fichaTecnicaIngredienteEditId = null;
+    atualizarRotuloBotaoIngrediente();
+  };
+
   const parseNumIng = (v) => {
     if (v == null || v === '') return 0;
     const n = parseFloat(String(v).replace(',', '.'));
@@ -14690,6 +14704,8 @@ function setupFichaTecnicaForm() {
 
   const fecharFormularioIngrediente = () => {
     if (ingWrap) ingWrap.hidden = true;
+    resetModoEdicaoIngrediente();
+    limparCamposIngrediente();
   };
 
   const renderListaIngredientesFichaTecnica = () => {
@@ -14712,8 +14728,11 @@ function setupFichaTecnicaForm() {
         <td>${escapeHtml(it.unidade_medida)}</td>
         <td>${escapeHtml(fmtIngBRLCell(it.custo_unitario))}</td>
         <td>${escapeHtml(fmtIngBRLCell(it.custo_total))}</td>
-        <td>
-          <button type="button" class="btn-icon danger" title="Remover" data-remover-ingrediente-id="${it.id}" aria-label="Remover ingrediente">✕</button>
+        <td class="ficha-tecnica-ingredientes-td-acoes">
+          <span class="ficha-tecnica-ingredientes-acoes-btns">
+            <button type="button" class="btn-icon ficha-tecnica-ingrediente-editar" title="Editar" data-editar-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Editar ingrediente">✎</button>
+            <button type="button" class="btn-icon danger" title="Remover" data-remover-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Remover ingrediente">✕</button>
+          </span>
         </td>
       </tr>`
       )
@@ -15166,6 +15185,8 @@ function setupFichaTecnicaForm() {
     if (!ingWrap) return;
     const abrir = ingWrap.hidden;
     ingWrap.hidden = !abrir;
+    resetModoEdicaoIngrediente();
+    limparCamposIngrediente();
     if (abrir) ingNome?.focus();
   });
   ingCancelarBtn?.addEventListener('click', () => {
@@ -15173,10 +15194,32 @@ function setupFichaTecnicaForm() {
   });
 
   ingTbody?.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('[data-editar-ingrediente-id]');
+    if (editBtn) {
+      const idRaw = editBtn.getAttribute('data-editar-ingrediente-id');
+      const it = state.fichaTecnicaIngredientes.find((x) => String(x.id) === String(idRaw));
+      if (!it) return;
+      fichaTecnicaIngredienteEditId = it.id;
+      if (ingWrap) ingWrap.hidden = false;
+      if (ingNome) ingNome.value = it.nome || '';
+      if (ingQ) ingQ.value = it.quantidade != null && it.quantidade !== '' ? String(it.quantidade) : '';
+      if (ingUn) ingUn.value = it.unidade_medida || '';
+      if (ingCu) ingCu.value = it.custo_unitario != null && it.custo_unitario !== '' ? String(it.custo_unitario) : '';
+      recalcIngredienteCustoTotal();
+      atualizarRotuloBotaoIngrediente();
+      ingNome?.focus();
+      return;
+    }
     const btn = e.target.closest('[data-remover-ingrediente-id]');
     if (!btn) return;
-    const id = Number(btn.getAttribute('data-remover-ingrediente-id'));
-    state.fichaTecnicaIngredientes = state.fichaTecnicaIngredientes.filter((x) => x.id !== id);
+    const idRaw = btn.getAttribute('data-remover-ingrediente-id');
+    state.fichaTecnicaIngredientes = state.fichaTecnicaIngredientes.filter(
+      (x) => String(x.id) !== String(idRaw)
+    );
+    if (String(fichaTecnicaIngredienteEditId) === String(idRaw)) {
+      resetModoEdicaoIngrediente();
+      limparCamposIngrediente();
+    }
     renderListaIngredientesFichaTecnica();
   });
 
@@ -15203,18 +15246,37 @@ function setupFichaTecnicaForm() {
       quantidade != null && custo_unitario != null
         ? Math.round(quantidade * custo_unitario * 100) / 100
         : null;
-    state.fichaTecnicaIngredientes.push({
-      id: Date.now(),
-      nome,
-      quantidade,
-      unidade_medida,
-      custo_unitario,
-      custo_total,
-    });
-    limparCamposIngrediente();
-    renderListaIngredientesFichaTecnica();
-    fecharFormularioIngrediente();
-    showToast('Ingrediente adicionado à lista.', 'success');
+    if (fichaTecnicaIngredienteEditId != null) {
+      const ix = state.fichaTecnicaIngredientes.findIndex(
+        (x) => String(x.id) === String(fichaTecnicaIngredienteEditId)
+      );
+      if (ix >= 0) {
+        const prevId = state.fichaTecnicaIngredientes[ix].id;
+        state.fichaTecnicaIngredientes[ix] = {
+          id: prevId,
+          nome,
+          quantidade,
+          unidade_medida,
+          custo_unitario,
+          custo_total,
+        };
+      }
+      renderListaIngredientesFichaTecnica();
+      fecharFormularioIngrediente();
+      showToast('Ingrediente atualizado.', 'success');
+    } else {
+      state.fichaTecnicaIngredientes.push({
+        id: Date.now(),
+        nome,
+        quantidade,
+        unidade_medida,
+        custo_unitario,
+        custo_total,
+      });
+      renderListaIngredientesFichaTecnica();
+      fecharFormularioIngrediente();
+      showToast('Ingrediente adicionado à lista.', 'success');
+    }
   });
 }
 

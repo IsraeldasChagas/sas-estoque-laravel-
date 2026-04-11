@@ -1539,11 +1539,20 @@ textarea {
   text-align: left;
   border-bottom: 1px solid var(--border, #eee);
 }
-.ficha-tecnica-ingredientes-table th:last-child,
-.ficha-tecnica-ingredientes-table td:last-child {
-  width: 2.5rem;
+.ficha-tecnica-ingredientes-table th.ficha-tecnica-ingredientes-th-acoes,
+.ficha-tecnica-ingredientes-table td.ficha-tecnica-ingredientes-td-acoes {
+  width: auto;
+  min-width: 5.5rem;
   text-align: center;
-  padding-inline: 0.25rem;
+  padding-inline: 0.35rem;
+  vertical-align: middle;
+}
+.ficha-tecnica-ingredientes-table .ficha-tecnica-ingredientes-acoes-btns {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
 }
 .ficha-tecnica-ingredientes-table .btn-icon {
   padding: 0.25rem 0.4rem;
@@ -1556,6 +1565,13 @@ textarea {
 }
 .ficha-tecnica-ingredientes-table .btn-icon.danger:hover {
   color: #b71c1c;
+}
+.ficha-tecnica-ingredientes-table .btn-icon.ficha-tecnica-ingrediente-editar {
+  color: var(--primary, #1565c0);
+  opacity: 1;
+}
+.ficha-tecnica-ingredientes-table .btn-icon.ficha-tecnica-ingrediente-editar:hover {
+  opacity: 0.85;
 }
 .ficha-tecnica-form__field select {
   width: 100%;
