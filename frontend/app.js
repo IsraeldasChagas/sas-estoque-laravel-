@@ -450,9 +450,9 @@ const state = {
   movimentacoesRecentes: [],
   relatorioResumo: [],
   relatorioDetalhes: [],
-  /** Ingredientes da ficha técnica (sessão local até existir API). */
+  /** Ingredientes da ficha técnica (em edição). */
   fichaTecnicaIngredientes: [],
-  /** Fichas salvas no navegador (localStorage). */
+  /** Fichas técnicas (servidor; localStorage só como cache / fallback). */
   fichaTecnicaPratos: [],
 };
 
@@ -14344,7 +14344,7 @@ function modoPreparoHtmlParaTextoPlano(html) {
   return t || '—';
 }
 
-/** Formulário e lista da ficha técnica (persistência em localStorage). */
+/** Formulário e lista da ficha técnica (persistência na API + cache local). */
 function setupFichaTecnicaForm() {
   const form = document.getElementById('fichaTecnicaForm');
   const fotoInput = document.getElementById('fichaTecnicaFoto');
@@ -14387,7 +14387,7 @@ function setupFichaTecnicaForm() {
     }
   };
 
-  const carregarFichasDoArmazenamento = () => {
+  const carregarFichasSomenteLocal = () => {
     const principal = localStorage.getItem(FICHA_TECNICA_STORAGE_KEY);
     let list = parseFichaTecnicaListaJson(principal);
     if (!list) {
@@ -14404,6 +14404,29 @@ function setupFichaTecnicaForm() {
       }
     }
     state.fichaTecnicaPratos = list;
+  };
+
+  const carregarFichasDoArmazenamento = async () => {
+    try {
+      const remote = await fetchJSON('/fichas-tecnicas');
+      const list = Array.isArray(remote) ? remote : [];
+      state.fichaTecnicaPratos = list;
+      try {
+        const json = JSON.stringify(list);
+        const anterior = localStorage.getItem(FICHA_TECNICA_STORAGE_KEY);
+        if (anterior) {
+          try {
+            localStorage.setItem(FICHA_TECNICA_STORAGE_BAK_KEY, anterior);
+          } catch (_) {}
+        }
+        localStorage.setItem(FICHA_TECNICA_STORAGE_KEY, json);
+      } catch (_) {}
+      return true;
+    } catch (err) {
+      console.warn('Ficha técnica: não foi possível carregar do servidor; usando cache local.', err);
+      carregarFichasSomenteLocal();
+      return false;
+    }
   };
 
   const persistirFichas = () => {
@@ -14890,8 +14913,8 @@ function setupFichaTecnicaForm() {
       .join('');
   };
 
-  const mostrarVistaLista = () => {
-    carregarFichasDoArmazenamento();
+  const mostrarVistaLista = async () => {
+    await carregarFichasDoArmazenamento();
     if (listaView) listaView.classList.remove('hidden');
     if (formView) formView.classList.add('hidden');
     renderListaTabela();
@@ -14944,7 +14967,7 @@ function setupFichaTecnicaForm() {
   };
 
   onNavigateFichaTecnicaCallback = () => {
-    mostrarVistaLista();
+    void mostrarVistaLista();
   };
 
   btnNova?.addEventListener('click', () => {
@@ -14954,7 +14977,7 @@ function setupFichaTecnicaForm() {
   });
 
   btnVoltar?.addEventListener('click', () => {
-    mostrarVistaLista();
+    void mostrarVistaLista();
   });
 
   listaTbody?.addEventListener('click', (e) => {
@@ -14965,23 +14988,39 @@ function setupFichaTecnicaForm() {
     const p = obterPratoPorId(id);
     if (!p) {
       showToast('Registro não encontrado.', 'error');
-      carregarFichasDoArmazenamento();
-      renderListaTabela();
+      void (async () => {
+        await carregarFichasDoArmazenamento();
+        renderListaTabela();
+      })();
       return;
     }
     if (acao === 'ver') abrirModalVer(p);
     else if (acao === 'editar') {
-      carregarFichasDoArmazenamento();
-      const fresh = obterPratoPorId(id);
-      if (!fresh) return;
-      preencherFormulario(fresh);
-      mostrarVistaForm();
+      void (async () => {
+        await carregarFichasDoArmazenamento();
+        const fresh = obterPratoPorId(id);
+        if (!fresh) {
+          showToast('Registro não encontrado.', 'error');
+          renderListaTabela();
+          return;
+        }
+        preencherFormulario(fresh);
+        mostrarVistaForm();
+      })();
     } else if (acao === 'excluir') {
       if (!confirm('Excluir esta ficha técnica?')) return;
-      state.fichaTecnicaPratos = state.fichaTecnicaPratos.filter((x) => String(x.id) !== String(id));
-      persistirFichas();
-      renderListaTabela();
-      showToast('Ficha excluída.', 'success');
+      void (async () => {
+        try {
+          await fetchJSON(`/fichas-tecnicas/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          state.fichaTecnicaPratos = state.fichaTecnicaPratos.filter((x) => String(x.id) !== String(id));
+          persistirFichas();
+          renderListaTabela();
+          showToast('Ficha excluída.', 'success');
+        } catch (err) {
+          console.error('Ficha técnica — excluir:', err);
+          showToast(err.message || 'Não foi possível excluir no servidor.', 'error');
+        }
+      })();
     } else if (acao === 'imprimir') abrirJanelaImpressao(p);
     else if (acao === 'whatsapp') enviarWhatsapp(p);
   });
@@ -15050,10 +15089,9 @@ function setupFichaTecnicaForm() {
           : '';
       const preco_prato = parseMoedaInput(document.getElementById('fichaTecnicaPrecoPrato'));
       const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
-      const updatedAt = new Date().toISOString();
       const editId = (editIdEl?.value || '').trim();
 
-      const payload = {
+      const apiPayload = {
         nome_prato,
         tempo_preparo,
         responsavel_tecnico,
@@ -15062,28 +15100,30 @@ function setupFichaTecnicaForm() {
         sugestao_venda,
         modo_preparo,
         ingredientes,
-        updatedAt,
       };
 
+      let saved;
       if (editId) {
-        const ix = state.fichaTecnicaPratos.findIndex((x) => String(x.id) === editId);
-        if (ix >= 0) {
-          payload.id = state.fichaTecnicaPratos[ix].id;
-          state.fichaTecnicaPratos[ix] = payload;
-        } else {
-          payload.id = Date.now();
-          state.fichaTecnicaPratos.push(payload);
-        }
+        saved = await fetchJSON(`/fichas-tecnicas/${encodeURIComponent(editId)}`, {
+          method: 'PUT',
+          body: JSON.stringify(apiPayload),
+        });
+        const ix = state.fichaTecnicaPratos.findIndex((x) => String(x.id) === String(editId));
+        if (ix >= 0) state.fichaTecnicaPratos[ix] = saved;
+        else state.fichaTecnicaPratos.push(saved);
       } else {
-        payload.id = Date.now();
-        state.fichaTecnicaPratos.push(payload);
+        saved = await fetchJSON('/fichas-tecnicas', {
+          method: 'POST',
+          body: JSON.stringify(apiPayload),
+        });
+        state.fichaTecnicaPratos.push(saved);
       }
 
       if (!persistirFichas()) return;
 
       showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
       limparFormulario();
-      mostrarVistaLista();
+      await mostrarVistaLista();
     } finally {
       salvandoFichaTecnica = false;
     }

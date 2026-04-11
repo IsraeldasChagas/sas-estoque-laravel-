@@ -871,6 +871,152 @@ Route::delete('/produtos/{id}', function (Request $request, $id) {
 });
 
 // ============================================
+// FICHAS TÉCNICAS (pratos — persistência no banco)
+// ============================================
+
+$mapFichaTecnicaRow = static function ($row) {
+    $ing = [];
+    if (!empty($row->ingredientes_json)) {
+        $decoded = json_decode($row->ingredientes_json, true);
+        $ing = is_array($decoded) ? $decoded : [];
+    }
+    return [
+        'id' => (int) $row->id,
+        'nome_prato' => $row->nome_prato,
+        'tempo_preparo' => $row->tempo_preparo,
+        'responsavel_tecnico' => $row->responsavel_tecnico,
+        'foto_base64' => $row->foto_base64,
+        'preco_prato' => $row->preco_prato !== null ? (float) $row->preco_prato : null,
+        'sugestao_venda' => $row->sugestao_venda !== null ? (float) $row->sugestao_venda : null,
+        'modo_preparo' => $row->modo_preparo,
+        'ingredientes' => $ing,
+        'updatedAt' => $row->updated_at ? \Illuminate\Support\Carbon::parse($row->updated_at)->toIso8601String() : null,
+    ];
+};
+
+Route::get('/fichas-tecnicas', function () use ($mapFichaTecnicaRow) {
+    if (!Schema::hasTable('fichas_tecnicas')) {
+        return response()->json([]);
+    }
+    try {
+        $rows = DB::table('fichas_tecnicas')->orderByDesc('updated_at')->orderByDesc('id')->get();
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = $mapFichaTecnicaRow($row);
+        }
+        return response()->json($out);
+    } catch (\Exception $e) {
+        \Log::error('GET /fichas-tecnicas: ' . $e->getMessage());
+        return response()->json([]);
+    }
+});
+
+Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnicaRow) {
+    if (!Schema::hasTable('fichas_tecnicas')) {
+        return response()->json([
+            'error' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
+            'message' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
+        ], 503);
+    }
+    try {
+        $data = $request->validate([
+            'nome_prato' => 'required|string|max:500',
+            'tempo_preparo' => 'nullable|string|max:255',
+            'responsavel_tecnico' => 'nullable|string|max:500',
+            'foto_base64' => 'nullable|string',
+            'modo_preparo' => 'nullable|string',
+            'preco_prato' => 'nullable|numeric',
+            'sugestao_venda' => 'nullable|numeric',
+            'ingredientes' => 'nullable|array',
+        ]);
+        $ingredientes = $data['ingredientes'] ?? [];
+        $ingJson = json_encode($ingredientes, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $now = now();
+        $id = DB::table('fichas_tecnicas')->insertGetId([
+            'nome_prato' => $data['nome_prato'],
+            'tempo_preparo' => $data['tempo_preparo'] ?? null,
+            'responsavel_tecnico' => $data['responsavel_tecnico'] ?? null,
+            'foto_base64' => $data['foto_base64'] ?? null,
+            'preco_prato' => isset($data['preco_prato']) ? $data['preco_prato'] : null,
+            'sugestao_venda' => isset($data['sugestao_venda']) ? $data['sugestao_venda'] : null,
+            'modo_preparo' => $data['modo_preparo'] ?? null,
+            'ingredientes_json' => $ingJson,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
+        return response()->json($mapFichaTecnicaRow($row), 201);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['error' => 'Dados inválidos', 'message' => 'Dados inválidos', 'details' => $e->errors()], 422);
+    } catch (\JsonException $e) {
+        return response()->json(['error' => 'Ingredientes inválidos', 'message' => 'Ingredientes inválidos'], 422);
+    } catch (\Exception $e) {
+        \Log::error('POST /fichas-tecnicas: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao salvar ficha técnica', 'message' => $e->getMessage()], 500);
+    }
+});
+
+Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFichaTecnicaRow) {
+    if (!Schema::hasTable('fichas_tecnicas')) {
+        return response()->json([
+            'error' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
+            'message' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
+        ], 503);
+    }
+    $id = (int) $id;
+    $existing = DB::table('fichas_tecnicas')->where('id', $id)->first();
+    if (!$existing) {
+        return response()->json(['error' => 'Ficha não encontrada', 'message' => 'Ficha não encontrada'], 404);
+    }
+    try {
+        $data = $request->validate([
+            'nome_prato' => 'required|string|max:500',
+            'tempo_preparo' => 'nullable|string|max:255',
+            'responsavel_tecnico' => 'nullable|string|max:500',
+            'foto_base64' => 'nullable|string',
+            'modo_preparo' => 'nullable|string',
+            'preco_prato' => 'nullable|numeric',
+            'sugestao_venda' => 'nullable|numeric',
+            'ingredientes' => 'nullable|array',
+        ]);
+        $ingredientes = $data['ingredientes'] ?? [];
+        $ingJson = json_encode($ingredientes, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        DB::table('fichas_tecnicas')->where('id', $id)->update([
+            'nome_prato' => $data['nome_prato'],
+            'tempo_preparo' => $data['tempo_preparo'] ?? null,
+            'responsavel_tecnico' => $data['responsavel_tecnico'] ?? null,
+            'foto_base64' => array_key_exists('foto_base64', $data) ? $data['foto_base64'] : $existing->foto_base64,
+            'preco_prato' => array_key_exists('preco_prato', $data) ? $data['preco_prato'] : $existing->preco_prato,
+            'sugestao_venda' => array_key_exists('sugestao_venda', $data) ? $data['sugestao_venda'] : $existing->sugestao_venda,
+            'modo_preparo' => $data['modo_preparo'] ?? null,
+            'ingredientes_json' => $ingJson,
+            'updated_at' => now(),
+        ]);
+        $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
+        return response()->json($mapFichaTecnicaRow($row));
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['error' => 'Dados inválidos', 'message' => 'Dados inválidos', 'details' => $e->errors()], 422);
+    } catch (\JsonException $e) {
+        return response()->json(['error' => 'Ingredientes inválidos', 'message' => 'Ingredientes inválidos'], 422);
+    } catch (\Exception $e) {
+        \Log::error('PUT /fichas-tecnicas/{id}: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao atualizar ficha técnica', 'message' => $e->getMessage()], 500);
+    }
+});
+
+Route::delete('/fichas-tecnicas/{id}', function ($id) {
+    if (!Schema::hasTable('fichas_tecnicas')) {
+        return response()->json(['error' => 'Tabela fichas_tecnicas não existe.', 'message' => 'Tabela fichas_tecnicas não existe.'], 503);
+    }
+    $id = (int) $id;
+    $deleted = DB::table('fichas_tecnicas')->where('id', $id)->delete();
+    if (!$deleted) {
+        return response()->json(['error' => 'Ficha não encontrada', 'message' => 'Ficha não encontrada'], 404);
+    }
+    return response()->json(['success' => true, 'message' => 'Ficha excluída.']);
+});
+
+// ============================================
 // UNIDADES
 // ============================================
 
