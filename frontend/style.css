@@ -1432,7 +1432,7 @@ textarea {
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
-@media (max-width: 520px) {
+@media (max-width: 1024px) {
   .ficha-tecnica-visao__grid-precos {
     grid-template-columns: 1fr;
   }
@@ -1868,6 +1868,237 @@ textarea {
   font-size: 0.9rem;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+/* Ficha técnica — celular e tablet: rótulo acima, valor abaixo; sem scroll horizontal */
+@media (max-width: 1024px) {
+  #fechaTecnicaSection {
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-card {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-form {
+    padding: 1rem 1rem 1.25rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-form-toolbar {
+    padding: 0 0.25rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-form-toolbar .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-lista-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 1rem 0.75rem;
+    gap: 0.65rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-lista-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper {
+    overflow-x: visible;
+    -webkit-overflow-scrolling: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper thead {
+    display: none;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper tr {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow, 0 1px 3px rgba(0, 0, 0, 0.06));
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: none;
+    padding: 0.5rem 0;
+    text-align: left;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #607d8b;
+    margin-bottom: 0.3rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acoes {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    width: 100%;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-table-stack.table-wrapper .ficha-tecnica-acao-btn {
+    flex: 1 1 auto;
+    min-width: min(100%, 5.5rem);
+    justify-content: center;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-ingredientes-toolbar {
+    padding: 0 1rem 0.75rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-ingredientes-toolbar .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-ingredientes-lista {
+    padding: 0 1rem 1rem;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-ingredientes-table-wrap {
+    max-height: none;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-tempo-part input[type="number"] {
+    max-width: 100%;
+  }
+
+  #fechaTecnicaSection .ficha-tecnica-rich-editor {
+    max-width: 100%;
+    overflow-x: hidden;
+    word-break: break-word;
+  }
+
+  .ficha-tecnica-ver-modal {
+    width: calc(100vw - 24px);
+    max-width: 100%;
+    margin: 0 12px;
+    box-sizing: border-box;
+  }
+
+  .ficha-tecnica-ver-modal__body {
+    max-height: min(65vh, 520px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    word-break: break-word;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-dl {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-dl dt {
+    margin-top: 0.75rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #607d8b;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-dl dt:first-child {
+    margin-top: 0;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-dl dd {
+    margin: 0.2rem 0 0.35rem;
+    font-size: 0.95rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-ing-table thead {
+    display: none;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-ing-table tbody {
+    display: block;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-ing-table tr {
+    display: block;
+    border: 1px solid #cfd8dc;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-ing-table td {
+    display: block;
+    width: 100%;
+    border: none;
+    padding: 0.35rem 0;
+    text-align: left;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .ficha-tecnica-ver-modal .ficha-tecnica-ver-ing-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #607d8b;
+    margin-bottom: 0.15rem;
+  }
+
+  .ficha-tecnica-ver-modal__footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .ficha-tecnica-ver-modal__footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Modal Fornecedor: pergunta em cima, resposta embaixo */

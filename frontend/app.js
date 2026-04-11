@@ -14723,12 +14723,12 @@ function setupFichaTecnicaForm() {
       .map(
         (it) => `
       <tr>
-        <td>${escapeHtml(it.nome)}</td>
-        <td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td>
-        <td>${escapeHtml(it.unidade_medida)}</td>
-        <td>${escapeHtml(fmtIngBRLCell(it.custo_unitario))}</td>
-        <td>${escapeHtml(fmtIngBRLCell(it.custo_total))}</td>
-        <td class="ficha-tecnica-ingredientes-td-acoes">
+        <td data-label="Ingrediente">${escapeHtml(it.nome)}</td>
+        <td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td>
+        <td data-label="Un.">${escapeHtml(it.unidade_medida)}</td>
+        <td data-label="Custo unitário">${escapeHtml(fmtIngBRLCell(it.custo_unitario))}</td>
+        <td data-label="Custo total">${escapeHtml(fmtIngBRLCell(it.custo_total))}</td>
+        <td class="ficha-tecnica-ingredientes-td-acoes" data-label="Ações">
           <span class="ficha-tecnica-ingredientes-acoes-btns">
             <button type="button" class="btn-icon ficha-tecnica-ingrediente-editar" title="Editar" data-editar-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Editar ingrediente">✎</button>
             <button type="button" class="btn-icon danger" title="Remover" data-remover-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Remover ingrediente">✕</button>
@@ -14810,7 +14810,7 @@ function setupFichaTecnicaForm() {
     const ingRows = ings
       .map(
         (it) =>
-          `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td>${escapeHtml(it.unidade_medida)}</td><td>${fmtIngBRLCell(it.custo_unitario)}</td><td>${fmtIngBRLCell(it.custo_total)}</td></tr>`
+          `<tr><td data-label="Ingrediente">${escapeHtml(it.nome)}</td><td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td data-label="Un.">${escapeHtml(it.unidade_medida)}</td><td data-label="Custo unitário">${fmtIngBRLCell(it.custo_unitario)}</td><td data-label="Custo total">${fmtIngBRLCell(it.custo_total)}</td></tr>`
       )
       .join('');
     const fotoBlock =
@@ -14915,12 +14915,12 @@ function setupFichaTecnicaForm() {
         const prec = p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—';
         const sug = p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—';
         return `<tr>
-        <td>${escapeHtml(p.nome_prato || '')}</td>
-        <td>${escapeHtml(p.tempo_preparo || '')}</td>
-        <td>${escapeHtml(p.responsavel_tecnico || '')}</td>
-        <td>${prec}</td>
-        <td>${sug}</td>
-        <td class="ficha-tecnica-acoes">
+        <td data-label="Prato">${escapeHtml(p.nome_prato || '')}</td>
+        <td data-label="Tempo de preparo">${escapeHtml(p.tempo_preparo || '')}</td>
+        <td data-label="Responsável">${escapeHtml(p.responsavel_tecnico || '')}</td>
+        <td data-label="Preço">${prec}</td>
+        <td data-label="Sugestão de venda">${sug}</td>
+        <td class="ficha-tecnica-acoes" data-label="Ações">
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="ver" data-ficha-id="${idAttr}">Ver</button>
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="editar" data-ficha-id="${idAttr}">Editar</button>
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="excluir" data-ficha-id="${idAttr}">Excluir</button>
