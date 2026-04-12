@@ -88,7 +88,7 @@
       <!-- Barra lateral com navegacao e atalhos -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-          <img src="imagens/logosemfundo.png" alt="SAS Estoque" onerror="this.onerror=null;this.src='imagens/logo.png';" />
+          <img src="imagens/logo.png" alt="SAS Estoque" onerror="this.onerror=null;this.src='imagens/logosemfundo.png';" />
         </div>
         <div class="sidebar-nav-scroll">
         <nav>
@@ -1709,8 +1709,18 @@
                     <option value="rejeitado">Rejeitado</option>
                   </select>
                 </label>
-                <label><input type="date" id="proventosFiltroDataInicio" placeholder="Data início" /></label>
-                <label><input type="date" id="proventosFiltroDataFim" placeholder="Data fim" /></label>
+                <label class="proventos-filter-dates">
+                  <span class="proventos-filter-dates__row">
+                    <span class="proventos-filter-dates__field">
+                      <span class="proventos-filter-dates__lbl">Data início</span>
+                      <input type="date" id="proventosFiltroDataInicio" title="Data início" />
+                    </span>
+                    <span class="proventos-filter-dates__field">
+                      <span class="proventos-filter-dates__lbl">Data fim</span>
+                      <input type="date" id="proventosFiltroDataFim" title="Data fim" />
+                    </span>
+                  </span>
+                </label>
               </div>
               <div class="filters-actions">
                 <button type="submit" class="btn primary">Filtrar</button>
