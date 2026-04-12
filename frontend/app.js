@@ -6655,6 +6655,40 @@ const PROVENTO_STATUS_LABELS = {
 };
 const PROVENTO_TIPO_LABELS = { vale: "Vale", adiantamento: "Adiantamento", consumo_interno: "Consumo interno", ajuda_custo: "Ajuda de custo", outro: "Outro" };
 
+function getProventosFiltroFuncionariosFonte() {
+  return (state.funcionarios || []).filter((f) => (f.status || "ativo") === "ativo");
+}
+
+/** Lista suspensa filtrada pelo campo de busca; opções com id + nome (e CPF na legenda). */
+function renderProventosFiltroFuncionarioOptions(textOverride) {
+  const sel = document.getElementById("proventosFiltroFuncionario");
+  const busca = document.getElementById("proventosFiltroFuncionarioBusca");
+  if (!sel) return;
+  const q = String(textOverride !== undefined ? textOverride : busca?.value || "")
+    .trim()
+    .toLowerCase();
+  const digits = q.replace(/\D/g, "");
+  const prev = sel.value;
+  const lista = getProventosFiltroFuncionariosFonte();
+  const filtrados = !q
+    ? lista
+    : lista.filter((f) => {
+        const nome = (f.nome_completo || "").toLowerCase();
+        const cpfDigits = (f.cpf || "").replace(/\D/g, "");
+        return nome.includes(q) || (digits.length >= 3 && cpfDigits.includes(digits));
+      });
+  sel.innerHTML = '<option value="">Todos os funcionários</option>';
+  filtrados.forEach((f) => {
+    const o = document.createElement("option");
+    o.value = String(f.id);
+    const cpfLbl = f.cpf ? ` — ${f.cpf}` : "";
+    o.textContent = `${f.nome_completo || "Funcionário " + f.id}${cpfLbl}`;
+    sel.appendChild(o);
+  });
+  if (prev && [...sel.options].some((opt) => opt.value === prev)) sel.value = prev;
+  else sel.value = "";
+}
+
 async function loadProventos(filtros = {}) {
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const podeCriarProvento = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
@@ -6663,7 +6697,7 @@ async function loadProventos(filtros = {}) {
   try {
     const params = new URLSearchParams();
     if (!usaMeusProventos) {
-      ["nome", "cpf", "tipo", "verba", "unidade_id", "status", "data_inicio", "data_fim"].forEach(k => {
+      ["funcionario_id", "tipo", "unidade_id", "status", "data_inicio", "data_fim"].forEach((k) => {
         if (filtros[k]) params.append(k, filtros[k]);
       });
     }
@@ -7043,6 +7077,7 @@ async function startAppSession(user) {
             if (selUn && state.unidades?.length) {
               selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
             }
+            renderProventosFiltroFuncionarioOptions("");
             await loadProventos({}).catch(() => {});
           } else {
             await loadProventos().catch(() => {});
@@ -9486,10 +9521,8 @@ function setupModals() {
 
   function getProventosFiltros() {
     return {
-      nome: document.getElementById("proventosFiltroFuncionario")?.value?.trim(),
-      cpf: document.getElementById("proventosFiltroCpf")?.value?.trim(),
+      funcionario_id: document.getElementById("proventosFiltroFuncionario")?.value,
       tipo: document.getElementById("proventosFiltroTipo")?.value,
-      verba: document.getElementById("proventosFiltroVerba")?.value?.trim(),
       unidade_id: document.getElementById("proventosFiltroUnidade")?.value,
       status: document.getElementById("proventosFiltroStatus")?.value,
       data_inicio: document.getElementById("proventosFiltroDataInicio")?.value,
@@ -9724,9 +9757,22 @@ function setupModals() {
     else if (btn.classList.contains("btn-cancelar-provento")) cancelarProvento(id);
     else if (btn.classList.contains("btn-assinar-provento")) assinarProvento(id);
   });
+  document.getElementById("proventosFiltroFuncionarioBusca")?.addEventListener("input", () => renderProventosFiltroFuncionarioOptions());
+  document.getElementById("proventosFiltroFuncionario")?.addEventListener("change", () => {
+    const sel = document.getElementById("proventosFiltroFuncionario");
+    const busca = document.getElementById("proventosFiltroFuncionarioBusca");
+    const opt = sel?.selectedOptions?.[0];
+    if (busca && opt) busca.value = opt.value ? opt.textContent.trim() : "";
+  });
   document.getElementById("proventosFilterForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await loadProventos(getProventosFiltros()); });
   document.getElementById("proventosLimparFiltros")?.addEventListener("click", () => {
-    ["proventosFiltroFuncionario","proventosFiltroCpf","proventosFiltroTipo","proventosFiltroVerba","proventosFiltroUnidade","proventosFiltroStatus","proventosFiltroDataInicio","proventosFiltroDataFim"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    const b = document.getElementById("proventosFiltroFuncionarioBusca");
+    if (b) b.value = "";
+    renderProventosFiltroFuncionarioOptions("");
+    ["proventosFiltroTipo", "proventosFiltroUnidade", "proventosFiltroStatus", "proventosFiltroDataInicio", "proventosFiltroDataFim"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
     loadProventos();
   });
   document.getElementById("proventoForm")?.addEventListener("submit", async (e) => {
@@ -10249,6 +10295,7 @@ function setupNavigation() {
             if (selUn && state.unidades?.length) {
               selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
             }
+            renderProventosFiltroFuncionarioOptions("");
             await loadProventos(getProventosFiltros());
           } else {
             await loadProventos();

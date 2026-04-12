@@ -5969,6 +5969,9 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
         if ($nome = trim($request->query('nome', ''))) {
             $q->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
         }
+        if ($funcionarioFiltroId = $request->query('funcionario_id')) {
+            $q->where('proventos.funcionario_id', (int) $funcionarioFiltroId);
+        }
         if ($cpf = preg_replace('/\D/', '', trim($request->query('cpf', '')))) $q->whereRaw('REPLACE(REPLACE(REPLACE(funcionarios.cpf, ".", ""), "-", ""), " ", "") LIKE ?', ['%' . $cpf . '%']);
         if ($tipo = trim($request->query('tipo', ''))) $q->where('proventos.tipo', $tipo);
         if ($verba = trim($request->query('verba', ''))) $q->where('proventos.verba', 'like', '%' . $verba . '%');

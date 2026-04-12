@@ -1678,8 +1678,13 @@
             </div>
             <form id="proventosFilterForm" class="filters-panel">
               <div class="filters-grid">
-                <label><input type="text" id="proventosFiltroFuncionario" placeholder="Buscar por funcionário" /></label>
-                <label><input type="text" id="proventosFiltroCpf" placeholder="Buscar por CPF" /></label>
+                <label class="proventos-filtro-funcionario-wrap">
+                  Funcionário
+                  <input type="search" id="proventosFiltroFuncionarioBusca" placeholder="Digite para filtrar a lista abaixo" autocomplete="off" />
+                  <select id="proventosFiltroFuncionario" size="6" class="proventos-filtro-funcionario-list" aria-label="Selecione o funcionário">
+                    <option value="">Todos os funcionários</option>
+                  </select>
+                </label>
                 <label>
                   <select id="proventosFiltroTipo">
                     <option value="">Todos os tipos</option>
@@ -1690,7 +1695,6 @@
                     <option value="outro">Outro</option>
                   </select>
                 </label>
-                <label><input type="text" id="proventosFiltroVerba" placeholder="Filtrar por verba" /></label>
                 <label><select id="proventosFiltroUnidade"><option value="">Todas as unidades</option></select></label>
                 <label>
                   <select id="proventosFiltroStatus">

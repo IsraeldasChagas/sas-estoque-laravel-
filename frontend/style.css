@@ -4511,6 +4511,19 @@ textarea {
   font-size: 0.95rem;
 }
 
+#proventosSection .proventos-filtro-funcionario-wrap .proventos-filtro-funcionario-list {
+  margin-top: 6px;
+  width: 100%;
+  min-height: 7.5rem;
+  max-height: 11rem;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.95rem;
+  background: #fff;
+}
+
 .filters-actions {
   margin-top: 16px;
   display: flex;
