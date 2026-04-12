@@ -6645,10 +6645,10 @@ function renderFuncionarios(lista) {
 
 const PROVENTO_STATUS_LABELS = {
   rascunho: "Rascunho",
-  aguardando_autorizacao: "Aguard. assinatura",
-  autorizado: "Autorizado",
+  aguardando_autorizacao: "Pendente aceite (funcionário)",
+  autorizado: "Autorizado (gestão)",
   aguardando_assinatura: "Aguard. assinatura",
-  assinado: "Assinado",
+  assinado: "Aceito / assinado",
   finalizado: "Finalizado",
   cancelado: "Cancelado",
   rejeitado: "Rejeitado",
@@ -6683,8 +6683,13 @@ async function loadProventos(filtros = {}) {
 function renderProventos(lista) {
   const target = document.getElementById("proventosTable");
   if (!target) return;
+  const perfilNav = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const podeCriarNav = ["ADMIN", "GERENTE", "FINANCEIRO", "ASSISTENTE_ADMINISTRATIVO"].includes(perfilNav);
   if (!Array.isArray(lista) || lista.length === 0) {
-    target.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#607d8b">Nenhum provento encontrado.</td></tr>';
+    const msg = podeCriarNav
+      ? "Nenhum provento encontrado com os filtros atuais."
+      : "Nenhum provento para você no momento. Quando o financeiro lançar um provento vinculado ao seu cadastro de funcionário, ele aparecerá aqui para aceite.";
+    target.innerHTML = `<tr><td colspan="11" style="text-align:center;color:#607d8b">${msg}</td></tr>`;
     return;
   }
   const esc = s => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
@@ -9509,37 +9514,52 @@ function setupModals() {
         form.elements.motivo.value = p.motivo || "";
         form.elements.observacao_interna.value = p.observacao_interna || "";
       }
-      selFunc.addEventListener("change", function() {
-        const f = (state.funcionarios||[]).find(x => String(x.id)===String(this.value));
-        form.elements.cpf.value = f?.cpf || "";
-      });
       toggleModal(document.getElementById("proventoModal"), true);
     } catch (e) {
       showToast(e?.message || "Erro ao abrir formulário", "error");
     }
   }
+  const escProventoView = (s) => (s == null ? "-" : String(s).replace(/</g, "&lt;"));
+  function formatProventoDataHora(v) {
+    if (v == null || v === "") return "-";
+    const d = new Date(String(v).includes("T") ? v : String(v).replace(" ", "T"));
+    if (Number.isNaN(d.getTime())) return escProventoView(String(v));
+    return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  }
   function viewProvento(id) {
     fetchJSON(`/proventos/${id}`).then(p => {
-      const esc = s => (s == null ? "-" : String(s).replace(/</g,"&lt;"));
+      const esc = escProventoView;
       const st = PROVENTO_STATUS_LABELS[p.status] || p.status;
       const tipoL = PROVENTO_TIPO_LABELS[p.tipo] || p.tipo;
       const valorF = "R$ " + (Number(p.valor)||0).toLocaleString("pt-BR",{minimumFractionDigits:2});
+      const dataProv = p.data_provento ? new Date(p.data_provento + "T12:00:00").toLocaleDateString("pt-BR") : "-";
+      const perfilV = (currentUser?.perfil || "").toString().trim().toUpperCase();
+      const podeVerObsInterna = ["ADMIN", "GERENTE", "FINANCEIRO", "ASSISTENTE_ADMINISTRATIVO"].includes(perfilV);
       document.getElementById("proventoViewContent").innerHTML = `
         <div class="view-fields-grid" style="display:grid;gap:0.5rem;margin-bottom:1rem;">
           <div class="view-field"><div class="view-field-label">Funcionário</div><div class="view-field-value">${esc(p.funcionario_nome)}</div></div>
           <div class="view-field"><div class="view-field-label">CPF</div><div class="view-field-value">${esc(p.funcionario_cpf)}</div></div>
-          ${p.funcionario_pix ? `<div class="view-field"><div class="view-field-label">PIX</div><div class="view-field-value">${esc(p.funcionario_pix)}</div></div>` : ''}
+          ${p.funcionario_pix ? `<div class="view-field"><div class="view-field-label">PIX</div><div class="view-field-value">${esc(p.funcionario_pix)}</div></div>` : ""}
           <div class="view-field"><div class="view-field-label">Tipo</div><div class="view-field-value">${esc(tipoL)}</div></div>
           <div class="view-field"><div class="view-field-label">Verba</div><div class="view-field-value">${esc(p.verba)}</div></div>
           <div class="view-field"><div class="view-field-label">Valor</div><div class="view-field-value">${valorF}</div></div>
           <div class="view-field"><div class="view-field-label">Unidade</div><div class="view-field-value">${esc(p.unidade_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">Data do provento</div><div class="view-field-value">${esc(dataProv)}</div></div>
+          <div class="view-field"><div class="view-field-label">Competência</div><div class="view-field-value">${esc(p.competencia)}</div></div>
           <div class="view-field"><div class="view-field-label">Motivo</div><div class="view-field-value">${esc(p.motivo)}</div></div>
-          <div class="view-field"><div class="view-field-label">Status</div><div class="view-field-value">${st}</div></div>
+          ${podeVerObsInterna ? `<div class="view-field"><div class="view-field-label">Obs. interna</div><div class="view-field-value">${esc(p.observacao_interna)}</div></div>` : ""}
+          <div class="view-field"><div class="view-field-label">Criado por</div><div class="view-field-value">${esc(p.criado_por_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">Autorizado por</div><div class="view-field-value">${esc(p.autorizado_por_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">Finalizado por</div><div class="view-field-value">${esc(p.finalizado_por_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">Data aceite</div><div class="view-field-value">${formatProventoDataHora(p.data_assinatura)}</div></div>
+          <div class="view-field"><div class="view-field-label">Data autorização</div><div class="view-field-value">${formatProventoDataHora(p.data_autorizacao)}</div></div>
+          <div class="view-field"><div class="view-field-label">Data finalização</div><div class="view-field-value">${formatProventoDataHora(p.data_finalizacao)}</div></div>
+          <div class="view-field"><div class="view-field-label">Status</div><div class="view-field-value">${esc(st)}</div></div>
+          ${p.justificativa_cancelamento ? `<div class="view-field" style="grid-column:1/-1;"><div class="view-field-label">Justificativa cancelamento</div><div class="view-field-value">${esc(p.justificativa_cancelamento)}</div></div>` : ""}
         </div>
       `;
       document.getElementById("proventoViewEditar").dataset.id = id;
-      const perfil = (currentUser?.perfil||"").toString().trim().toUpperCase();
-      const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+      const podeCriar = ["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfilV);
       const podeEditar = podeCriar && ["rascunho","aguardando_autorizacao"].includes(p.status);
       const podeAssinar = !podeCriar && p.status === "aguardando_autorizacao"; // Quem vê só os próprios (Ing, Kel) pode assinar
       document.getElementById("proventoViewEditar").style.display = podeEditar ? "" : "none";
@@ -9667,6 +9687,13 @@ function setupModals() {
       else showToast(msg, "error");
     }
   });
+  document.getElementById("proventoForm")?.addEventListener("change", (e) => {
+    if (e.target?.name !== "funcionario_id") return;
+    const form = document.getElementById("proventoForm");
+    if (!form?.elements?.cpf) return;
+    const f = (state.funcionarios || []).find((x) => String(x.id) === String(e.target.value));
+    form.elements.cpf.value = f?.cpf || "";
+  });
   document.getElementById("openProvento")?.addEventListener("click", () => openProventoModal());
   document.getElementById("closeProvento")?.addEventListener("click", () => toggleModal(document.getElementById("proventoModal"), false));
   document.getElementById("cancelProvento")?.addEventListener("click", () => { document.getElementById("proventoForm")?.reset(); toggleModal(document.getElementById("proventoModal"), false); });
@@ -9697,7 +9724,16 @@ function setupModals() {
     const form = document.getElementById("proventoForm");
     const id = form.elements.id?.value;
     const payload = { funcionario_id: form.elements.funcionario_id?.value, unidade_id: form.elements.unidade_id?.value || null, tipo: form.elements.tipo?.value, verba: (form.elements.verba?.value||"").trim(), valor: form.elements.valor?.value, data_provento: form.elements.data_provento?.value, competencia: form.elements.competencia?.value || null, motivo: (form.elements.motivo?.value||"").trim(), observacao_interna: form.elements.observacao_interna?.value || null };
-    if (!payload.funcionario_id || !payload.unidade_id || !payload.tipo || !payload.verba || !payload.valor || !payload.data_provento || !payload.motivo) {
+    if (id) delete payload.funcionario_id;
+    const obrigatoriosFaltando =
+      !payload.unidade_id ||
+      !payload.tipo ||
+      !payload.verba ||
+      !payload.valor ||
+      !payload.data_provento ||
+      !payload.motivo ||
+      (!id && !form.elements.funcionario_id?.value);
+    if (obrigatoriosFaltando) {
       const fb = document.getElementById("proventoFormFeedback");
       if (fb) { fb.textContent = "Preencha todos os campos obrigatórios (funcionário, unidade, tipo, verba, valor, data e motivo)."; fb.className = "form-feedback error"; fb.classList.remove("hidden"); }
       return;

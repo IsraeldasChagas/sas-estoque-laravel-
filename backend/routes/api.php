@@ -5930,7 +5930,7 @@ $podeCriarProvento = function ($perfil) {
 };
 $podeAutorizarOuFinalizar = function ($perfil) {
     $p = strtoupper(trim($perfil ?? ''));
-    return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO']);
+    return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO']);
 };
 
 /** Converte created_at (horário Brasil) para UTC ISO 8601 para exibição correta no frontend */
@@ -5981,6 +5981,11 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
         }
 
         $lista = $q->orderByDesc('proventos.id')->get();
+        if (!$podeCriarProvento($perfil)) {
+            foreach ($lista as $row) {
+                $row->observacao_interna = null;
+            }
+        }
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('GET /proventos: ' . $e->getMessage());
@@ -6003,6 +6008,9 @@ Route::get('/proventos/meus', function (Request $request) use ($proventosAuth) {
             ->where('proventos.funcionario_id', $funcId)
             ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.pix as funcionario_pix', 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome')
             ->orderByDesc('proventos.id')->get();
+        foreach ($lista as $row) {
+            $row->observacao_interna = null;
+        }
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('GET /proventos/meus: ' . $e->getMessage());
@@ -6034,6 +6042,9 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
         if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) {
             return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
+        if (!$podeCriarProvento($perfil)) {
+            $p->observacao_interna = null;
+        }
         return response()->json($p)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('GET /proventos/{id}: ' . $e->getMessage());
@@ -6051,7 +6062,7 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
         $d = $request->all();
         $rules = [
             'funcionario_id' => 'required|integer|exists:funcionarios,id',
-            'unidade_id' => 'required|integer',
+            'unidade_id' => 'required|integer|exists:unidades,id',
             'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
             'verba' => 'required|string|max:255',
             'valor' => 'required|numeric|min:0.01',
@@ -6099,7 +6110,7 @@ Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAu
 
         $d = $request->all();
         $rules = [
-            'unidade_id' => 'nullable|integer',
+            'unidade_id' => 'nullable|integer|exists:unidades,id',
             'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
             'verba' => 'required|string|max:255',
             'valor' => 'required|numeric|min:0.01',
@@ -6167,6 +6178,9 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
         if (!in_array($canal, ['whatsapp', 'email'])) return response()->json(['error' => 'Canal inválido. Use whatsapp ou email'], 422)->header('Access-Control-Allow-Origin', '*');
 
         $func = DB::table('funcionarios')->where('id', $p->funcionario_id)->first();
+        if ($canal === 'whatsapp' && empty(trim($func->whatsapp ?? ''))) {
+            return response()->json(['error' => 'WhatsApp não cadastrado para este funcionário. Cadastre em RH ou use o envio por e-mail.'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
         $destino = $canal === 'whatsapp' ? ($func->whatsapp ?? '') : ($func->email ?? $u->email ?? '');
         if ($canal === 'email' && empty($destino)) {
             return response()->json(['error' => 'E-mail não cadastrado. Cadastre o e-mail no funcionário ou use o e-mail do usuário de login.'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -6175,6 +6189,11 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
         $codigo = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $hash = Hash::make($codigo);
         $expira = now()->addMinutes(5);
+
+        DB::table('proventos_assinaturas')
+            ->where('provento_id', $id)
+            ->where('status_envio', 'enviado')
+            ->update(['status_envio' => 'invalidado']);
 
         DB::table('proventos_assinaturas')->insert([
             'provento_id' => $id, 'funcionario_id' => $p->funcionario_id, 'canal_envio' => $canal,
