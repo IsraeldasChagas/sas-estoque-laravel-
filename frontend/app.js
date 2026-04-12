@@ -9090,6 +9090,14 @@ function setupModals() {
     { key: "graduacao", titulo: "Graduação" },
     { key: "pos_graduacao", titulo: "Pós-graduação" },
   ];
+  function getFuncionarioFormRecordId(form) {
+    const el = document.getElementById("funcionarioRecordId") || form?.querySelector('input[name="id"]');
+    return (el?.value || "").trim();
+  }
+  function setFuncionarioFormRecordId(form, value) {
+    const el = document.getElementById("funcionarioRecordId") || form?.querySelector('input[name="id"]');
+    if (el) el.value = value != null ? String(value) : "";
+  }
   function formacaoItemsFromData(data, key) {
     if (!data || typeof data !== "object") return [];
     const raw = data[key];
@@ -9296,8 +9304,7 @@ function setupModals() {
       }
     populateFuncionarioUnidades("unidade_id", true);
     dom.funcionarioForm?.reset();
-    const idEl = dom.funcionarioForm?.elements.id;
-    if (idEl) idEl.value = editId || "";
+    setFuncionarioFormRecordId(dom.funcionarioForm, editId || "");
     dom.funcionarioModalTitle.textContent = editId ? "Editar funcionário" : "Novo funcionário";
     const submitBtn = document.getElementById("funcionarioFormSubmit");
     if (submitBtn) submitBtn.textContent = editId ? "Salvar alterações" : "Salvar";
@@ -9319,10 +9326,21 @@ function setupModals() {
     funcionarioFotoRemovida = false;
     if (editId) {
       const f = await fetchJSON(`/funcionarios/${editId}`);
-      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","cargo","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix"].forEach(k => {
+      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix"].forEach(k => {
         const el = dom.funcionarioForm?.elements[k];
         if (el && f[k] != null) el.value = f[k] || "";
       });
+      const cargoSel = dom.funcionarioForm?.querySelector('[name="cargo"]');
+      if (cargoSel && f.cargo != null && String(f.cargo).trim() !== "") {
+        const c = String(f.cargo).trim();
+        if (![...cargoSel.options].some((o) => o.value === c)) {
+          const o = document.createElement("option");
+          o.value = c;
+          o.textContent = c;
+          cargoSel.appendChild(o);
+        }
+        cargoSel.value = c;
+      }
       fillFuncionarioFormacaoFields(dom.funcionarioForm, f.escolaridade, f.formacao_json);
       if (f.possui_acesso) {
         dom.funcionarioPossuiAcesso.checked = true;
@@ -9447,7 +9465,7 @@ function setupModals() {
     dom.funcionarioForm?.reset();
     funcionarioFotoFile = null;
     funcionarioFotoRemovida = false;
-    if (dom.funcionarioForm?.elements.id) dom.funcionarioForm.elements.id.value = "";
+    setFuncionarioFormRecordId(dom.funcionarioForm, "");
     if (dom.funcionarioFormFeedback) { dom.funcionarioFormFeedback.classList.add("hidden"); dom.funcionarioFormFeedback.textContent = ""; }
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
     if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
@@ -9676,7 +9694,7 @@ function setupModals() {
       return;
     }
     const form = dom.funcionarioForm;
-    const id = form.elements.id?.value;
+    const id = getFuncionarioFormRecordId(form);
     const nome = (form.elements.nome_completo?.value || "").trim();
     const cpf = (form.elements.cpf?.value || "").replace(/\D/g, "");
     const cargo = (form.elements.cargo?.value || "").trim();
