@@ -1727,7 +1727,7 @@
                       <th>Funcionário</th>
                       <th>CPF</th>
                       <th>Tipo</th>
-                      <th>Verba</th>
+                      <th>CNPJ (unidade)</th>
                       <th>Valor</th>
                       <th>Unidade</th>
                       <th>Criado por</th>
@@ -2714,6 +2714,7 @@
             <label>Funcionário <select name="funcionario_id" required><option value="">Selecione</option></select></label>
             <label>CPF <input name="cpf" readonly placeholder="Preenchido automaticamente" /></label>
             <label>Unidade <select name="unidade_id" required><option value="">Selecione</option></select></label>
+            <label>CNPJ da unidade <input type="text" id="proventoUnidadeCnpj" readonly placeholder="Preenchido ao escolher a unidade" /></label>
             <label>Tipo de provento <select name="tipo" required>
               <option value="">Selecione</option>
               <option value="vale">Vale</option>
@@ -2722,14 +2723,12 @@
               <option value="ajuda_custo">Ajuda de custo</option>
               <option value="outro">Outro</option>
             </select></label>
-            <label>Verba <input name="verba" required placeholder="Ex: Vale semanal, Adiantamento salarial" /></label>
           </section>
           <section class="form-section">
             <h3>Dados financeiros</h3>
             <label>Valor (R$) <input type="number" name="valor" step="0.01" min="0" required /></label>
             <label>Data do provento <input type="date" name="data_provento" required /></label>
             <label>Competência <input name="competencia" placeholder="Ex: 03/2026" /></label>
-            <label>Motivo / descrição <textarea name="motivo" rows="3" required></textarea></label>
             <label>Observação interna <textarea name="observacao_interna" rows="2"></textarea></label>
           </section>
           <footer>

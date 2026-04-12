@@ -6816,7 +6816,7 @@ function renderProventos(lista) {
       <td data-label="Funcionário">${esc(p.funcionario_nome)}</td>
       <td data-label="CPF">${esc(p.funcionario_cpf)}</td>
       <td data-label="Tipo">${esc(tipoL)}</td>
-      <td data-label="Verba">${esc(p.verba)}</td>
+      <td data-label="CNPJ (unidade)">${esc(formatCnpjCpfDisplay(p.unidade_cnpj || ""))}</td>
       <td data-label="Valor">${valorF}</td>
       <td data-label="Unidade">${esc(p.unidade_nome)}</td>
       <td data-label="Criado por">${esc(p.criado_por_nome)}</td>
@@ -9570,6 +9570,15 @@ function setupModals() {
       data_fim: document.getElementById("proventosFiltroDataFim")?.value
     };
   }
+  function syncProventoUnidadeCnpj(form) {
+    if (!form) return;
+    const el = document.getElementById("proventoUnidadeCnpj");
+    if (!el) return;
+    const uid = form.elements.unidade_id?.value;
+    const u = (state.unidades || []).find((x) => String(x.id) === String(uid));
+    const raw = u?.cnpj;
+    el.value = raw != null && String(raw).trim() !== "" ? formatCnpjCpfDisplay(String(raw)) : "";
+  }
   async function openProventoModal(editId = null) {
     const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
     if (!["ADMIN","GERENTE","FINANCEIRO","ASSISTENTE_ADMINISTRATIVO"].includes(perfil)) return showToast("Sem permissão.", "warning");
@@ -9585,18 +9594,23 @@ function setupModals() {
       selFunc.innerHTML = '<option value="">Selecione</option>' + (state.funcionarios || []).filter(f => (f.status||"ativo")==="ativo").map(f => `<option value="${f.id}">${(f.nome_completo||"").replace(/</g,"&lt;")}</option>`).join("");
       const selUn = form.elements.unidade_id;
       selUn.innerHTML = '<option value="">Selecione</option>' + (state.unidades || []).map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
+      let proventoCarregado = null;
       if (editId) {
         const p = await fetchJSON(`/proventos/${editId}`);
+        proventoCarregado = p;
         form.elements.funcionario_id.value = p.funcionario_id;
         form.elements.cpf.value = p.funcionario_cpf || "";
         form.elements.unidade_id.value = p.unidade_id || "";
         form.elements.tipo.value = p.tipo || "";
-        form.elements.verba.value = p.verba || "";
         form.elements.valor.value = p.valor || "";
         form.elements.data_provento.value = (p.data_provento || "").slice(0,10);
         form.elements.competencia.value = p.competencia || "";
-        form.elements.motivo.value = p.motivo || "";
         form.elements.observacao_interna.value = p.observacao_interna || "";
+      }
+      syncProventoUnidadeCnpj(form);
+      const cnpjEl = document.getElementById("proventoUnidadeCnpj");
+      if (cnpjEl && !cnpjEl.value && proventoCarregado?.unidade_cnpj) {
+        cnpjEl.value = formatCnpjCpfDisplay(String(proventoCarregado.unidade_cnpj));
       }
       toggleModal(document.getElementById("proventoModal"), true);
     } catch (e) {
@@ -9625,12 +9639,11 @@ function setupModals() {
           <div class="view-field"><div class="view-field-label">CPF</div><div class="view-field-value">${esc(p.funcionario_cpf)}</div></div>
           ${p.funcionario_pix ? `<div class="view-field"><div class="view-field-label">PIX</div><div class="view-field-value">${esc(p.funcionario_pix)}</div></div>` : ""}
           <div class="view-field"><div class="view-field-label">Tipo</div><div class="view-field-value">${esc(tipoL)}</div></div>
-          <div class="view-field"><div class="view-field-label">Verba</div><div class="view-field-value">${esc(p.verba)}</div></div>
           <div class="view-field"><div class="view-field-label">Valor</div><div class="view-field-value">${valorF}</div></div>
           <div class="view-field"><div class="view-field-label">Unidade</div><div class="view-field-value">${esc(p.unidade_nome)}</div></div>
+          <div class="view-field"><div class="view-field-label">CNPJ (unidade)</div><div class="view-field-value">${esc(formatCnpjCpfDisplay(p.unidade_cnpj || ""))}</div></div>
           <div class="view-field"><div class="view-field-label">Data do provento</div><div class="view-field-value">${esc(dataProv)}</div></div>
           <div class="view-field"><div class="view-field-label">Competência</div><div class="view-field-value">${esc(p.competencia)}</div></div>
-          <div class="view-field"><div class="view-field-label">Motivo</div><div class="view-field-value">${esc(p.motivo)}</div></div>
           ${podeVerObsInterna ? `<div class="view-field"><div class="view-field-label">Obs. interna</div><div class="view-field-value">${esc(p.observacao_interna)}</div></div>` : ""}
           <div class="view-field"><div class="view-field-label">Criado por</div><div class="view-field-value">${esc(p.criado_por_nome)}</div></div>
           <div class="view-field"><div class="view-field-label">Autorizado por</div><div class="view-field-value">${esc(p.autorizado_por_nome)}</div></div>
@@ -9777,11 +9790,13 @@ function setupModals() {
     }
   });
   document.getElementById("proventoForm")?.addEventListener("change", (e) => {
-    if (e.target?.name !== "funcionario_id") return;
     const form = document.getElementById("proventoForm");
-    if (!form?.elements?.cpf) return;
-    const f = (state.funcionarios || []).find((x) => String(x.id) === String(e.target.value));
-    form.elements.cpf.value = f?.cpf || "";
+    if (!form) return;
+    if (e.target?.name === "funcionario_id" && form.elements?.cpf) {
+      const f = (state.funcionarios || []).find((x) => String(x.id) === String(e.target.value));
+      form.elements.cpf.value = f?.cpf || "";
+    }
+    if (e.target?.name === "unidade_id") syncProventoUnidadeCnpj(form);
   });
   document.getElementById("openProvento")?.addEventListener("click", () => openProventoModal());
   document.getElementById("closeProvento")?.addEventListener("click", () => toggleModal(document.getElementById("proventoModal"), false));
@@ -9825,19 +9840,17 @@ function setupModals() {
     e.preventDefault();
     const form = document.getElementById("proventoForm");
     const id = form.elements.id?.value;
-    const payload = { funcionario_id: form.elements.funcionario_id?.value, unidade_id: form.elements.unidade_id?.value || null, tipo: form.elements.tipo?.value, verba: (form.elements.verba?.value||"").trim(), valor: form.elements.valor?.value, data_provento: form.elements.data_provento?.value, competencia: form.elements.competencia?.value || null, motivo: (form.elements.motivo?.value||"").trim(), observacao_interna: form.elements.observacao_interna?.value || null };
+    const payload = { funcionario_id: form.elements.funcionario_id?.value, unidade_id: form.elements.unidade_id?.value || null, tipo: form.elements.tipo?.value, valor: form.elements.valor?.value, data_provento: form.elements.data_provento?.value, competencia: form.elements.competencia?.value || null, observacao_interna: form.elements.observacao_interna?.value || null };
     if (id) delete payload.funcionario_id;
     const obrigatoriosFaltando =
       !payload.unidade_id ||
       !payload.tipo ||
-      !payload.verba ||
       !payload.valor ||
       !payload.data_provento ||
-      !payload.motivo ||
       (!id && !form.elements.funcionario_id?.value);
     if (obrigatoriosFaltando) {
       const fb = document.getElementById("proventoFormFeedback");
-      if (fb) { fb.textContent = "Preencha todos os campos obrigatórios (funcionário, unidade, tipo, verba, valor, data e motivo)."; fb.className = "form-feedback error"; fb.classList.remove("hidden"); }
+      if (fb) { fb.textContent = "Preencha todos os campos obrigatórios (funcionário, unidade, tipo, valor e data do provento)."; fb.className = "form-feedback error"; fb.classList.remove("hidden"); }
       return;
     }
     if (Number(payload.valor) <= 0) { showToast("Valor deve ser maior que zero.", "error"); return; }

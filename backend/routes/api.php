@@ -5915,6 +5915,12 @@ $proventoSelectFuncionarioPix = function () {
     }
     return DB::raw('NULL as funcionario_pix');
 };
+$proventoSelectUnidadeCnpj = function () {
+    if (Schema::hasTable('unidades') && Schema::hasColumn('unidades', 'cnpj')) {
+        return 'unidades.cnpj as unidade_cnpj';
+    }
+    return DB::raw('NULL as unidade_cnpj');
+};
 $proventosLog = function ($proventoId, $usuarioId, $funcionarioId, $acao, $statusAnt, $statusNovo, $desc = null, $ip = null, $ua = null, $extras = null) {
     if (!Schema::hasTable('proventos_logs')) return;
     DB::table('proventos_logs')->insert([
@@ -5952,7 +5958,7 @@ $formatLogCreatedAt = function ($items) {
     return $items;
 };
 
-Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix) {
+Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -5965,7 +5971,7 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
             ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
             ->leftJoin('usuarios as autorizador', 'proventos.autorizado_por', '=', 'autorizador.id')
             ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', $proventoSelectFuncionarioPix(),
-                'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome');
+                'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj(), 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome');
 
         if ($nome = trim($request->query('nome', ''))) {
             $q->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
@@ -6006,7 +6012,7 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
     }
 });
 
-Route::get('/proventos/meus', function (Request $request) use ($proventosAuth, $proventoSelectFuncionarioPix) {
+Route::get('/proventos/meus', function (Request $request) use ($proventosAuth, $proventoSelectFuncionarioPix, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6019,7 +6025,7 @@ Route::get('/proventos/meus', function (Request $request) use ($proventosAuth, $
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
             ->where('proventos.funcionario_id', $funcId)
-            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', $proventoSelectFuncionarioPix(), 'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome')
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', $proventoSelectFuncionarioPix(), 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj(), 'criador.nome as criado_por_nome')
             ->orderByDesc('proventos.id')->get();
         foreach ($lista as $row) {
             $row->observacao_interna = null;
@@ -6031,7 +6037,7 @@ Route::get('/proventos/meus', function (Request $request) use ($proventosAuth, $
     }
 });
 
-Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix) {
+Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 404)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6045,7 +6051,7 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
             ->leftJoin('usuarios as finalizador', 'proventos.finalizado_por', '=', 'finalizador.id')
             ->where('proventos.id', $id)
             ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.whatsapp', 'funcionarios.email', $proventoSelectFuncionarioPix(),
-                'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
+                'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj(), 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
             ->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
 
@@ -6065,7 +6071,7 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
     }
 });
 
-Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix) {
+Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix, $proventoSelectUnidadeCnpj) {
     $h = static fn ($s) => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     try {
         if (!Schema::hasTable('proventos')) {
@@ -6084,7 +6090,7 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
             ->leftJoin('usuarios as finalizador', 'proventos.finalizado_por', '=', 'finalizador.id')
             ->where('proventos.id', $id)
             ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.whatsapp', 'funcionarios.email', $proventoSelectFuncionarioPix(),
-                'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
+                'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj(), 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
             ->first();
         if (!$p) {
             return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
@@ -6123,37 +6129,16 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
         };
         $dataProv = $p->data_provento ? \Carbon\Carbon::parse($p->data_provento)->format('d/m/Y') : '—';
         $comp = $p->competencia ? $h($p->competencia) : '—';
-        $motivoEsc = nl2br($h($p->motivo));
-
-        // Logo sem fundo: frontend/imagens/logosemfundo.png
-        $logoDataUri = '';
-        $frontendImagens = dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR;
-        $logoCandidates = [
-            $frontendImagens . 'logosemfundo.png',
-            $frontendImagens . 'logo.png',
-            $frontendImagens . 'logo.pdf.png',
-            public_path('imagens/logosemfundo.png'),
-            public_path('imagens/logo.png'),
-        ];
-        foreach ($logoCandidates as $logoPath) {
-            if (! is_readable($logoPath)) {
-                continue;
-            }
-            $logoBytes = @file_get_contents($logoPath);
-            if ($logoBytes === false || $logoBytes === '') {
-                continue;
-            }
-            $logoDataUri = 'data:image/png;base64,' . base64_encode($logoBytes);
-            break;
+        $cnpjDigits = preg_replace('/\D/', '', (string) ($p->unidade_cnpj ?? ''));
+        $cnpjFmt = '—';
+        if (strlen($cnpjDigits) === 14) {
+            $cnpjFmt = $h(preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $cnpjDigits));
+        } elseif ($cnpjDigits !== '') {
+            $cnpjFmt = $h($p->unidade_cnpj);
         }
-        $logoHtml = $logoDataUri !== ''
-            ? '<div class="cabecalho-logo"><img src="' . $logoDataUri . '" alt="" class="logo-img" /></div>'
-            : '';
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
             body { font-family: DejaVu Sans, sans-serif; font-size: 11pt; color: #222; margin: 24px; }
-            .cabecalho-logo { text-align: center; margin: 0 0 12px; background: transparent; padding: 0; border: none; }
-            .logo-img { max-height: 72px; max-width: 260px; height: auto; width: auto; background: transparent; border: none; vertical-align: middle; }
             h1 { font-size: 16pt; text-align: center; margin: 0 0 8px; color: #1565c0; }
             .sub { text-align: center; font-size: 9pt; color: #666; margin-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; margin: 12px 0; }
@@ -6163,7 +6148,6 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
             .decl { margin-top: 20px; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; font-size: 10pt; line-height: 1.5; }
             .rod { margin-top: 24px; font-size: 9pt; color: #555; border-top: 1px solid #ddd; padding-top: 10px; }
         </style></head><body>
-        ' . $logoHtml . '
         <h1>Recibo de provento</h1>
         <div class="sub">Documento gerado em ' . $h(\Carbon\Carbon::now($tz)->format('d/m/Y H:i')) . '</div>
         <table>
@@ -6171,17 +6155,16 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
             <tr><th>Funcionário</th><td>' . $h($p->funcionario_nome) . '</td></tr>
             <tr><th>CPF</th><td>' . $h($p->funcionario_cpf) . '</td></tr>
             <tr><th>Unidade</th><td>' . $h($p->unidade_nome) . '</td></tr>
+            <tr><th>CNPJ (unidade)</th><td>' . $cnpjFmt . '</td></tr>
             <tr><th>Tipo</th><td>' . $h($tipoL) . '</td></tr>
-            <tr><th>Verba / descrição</th><td>' . $h($p->verba) . '</td></tr>
             <tr><th>Valor</th><td class="valor">' . $h($valorFmt) . '</td></tr>
             <tr><th>Data do provento</th><td>' . $h($dataProv) . '</td></tr>
             <tr><th>Competência</th><td>' . $comp . '</td></tr>
-            <tr><th>Motivo</th><td>' . $motivoEsc . '</td></tr>
         </table>
         <div class="decl">
             Declaro para os devidos fins que recebi da empresa a importância acima especificada,
             referente ao provento discriminado neste recibo, e que não há nada a reclamar quanto ao pagamento,
-            estando quitada a referida verba nesta data.
+            estando quitado o valor discriminado nesta data.
         </div>
         <div class="rod">
             <strong>Aceite eletrônico do funcionário:</strong> ' . $h($fmtDt($p->data_assinatura)) . '<br/>
@@ -6216,7 +6199,7 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
     }
 });
 
-Route::post('/proventos', function (Request $request) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeCriarProvento) {
+Route::post('/proventos', function (Request $request) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeCriarProvento, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6228,23 +6211,41 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
             'funcionario_id' => 'required|integer|exists:funcionarios,id',
             'unidade_id' => 'required|integer|exists:unidades,id',
             'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
-            'verba' => 'required|string|max:255',
+            'verba' => 'nullable|string|max:255',
             'valor' => 'required|numeric|min:0.01',
             'data_provento' => 'required|date',
-            'motivo' => 'required|string|max:2000',
+            'motivo' => 'nullable|string|max:2000',
         ];
         $v = \Illuminate\Support\Facades\Validator::make($d, $rules);
         if ($v->fails()) return response()->json(['error' => implode(' ', $v->errors()->all()), 'details' => $v->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $tipoLabels = [
+            'vale' => 'Vale',
+            'adiantamento' => 'Adiantamento',
+            'consumo_interno' => 'Consumo interno',
+            'ajuda_custo' => 'Ajuda de custo',
+            'outro' => 'Outro',
+        ];
+        $funcNome = (string) (DB::table('funcionarios')->where('id', (int) $d['funcionario_id'])->value('nome_completo') ?? '');
+        $tipoLeg = $tipoLabels[$d['tipo']] ?? $d['tipo'];
+        $verba = trim((string) ($d['verba'] ?? ''));
+        if ($verba === '') {
+            $verba = $tipoLeg;
+        }
+        $motivo = trim((string) ($d['motivo'] ?? ''));
+        if ($motivo === '') {
+            $motivo = 'Provento: ' . $tipoLeg . ' — ' . $funcNome;
+        }
 
         $insert = [
             'funcionario_id' => (int)$d['funcionario_id'],
             'unidade_id' => !empty($d['unidade_id']) ? (int)$d['unidade_id'] : null,
             'tipo' => $d['tipo'],
-            'verba' => trim($d['verba']),
+            'verba' => $verba,
             'valor' => (float)$d['valor'],
             'data_provento' => $d['data_provento'],
             'competencia' => $d['competencia'] ?? null,
-            'motivo' => trim($d['motivo']),
+            'motivo' => $motivo,
             'observacao_interna' => $d['observacao_interna'] ?? null,
             'status' => 'aguardando_autorizacao',
             'criado_por' => $u->id,
@@ -6252,7 +6253,7 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
         $id = DB::table('proventos')->insertGetId($insert);
         $provento = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
-            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())->first();
         $proventosLog($id, $u->id, $insert['funcionario_id'], 'criacao', null, 'aguardando_autorizacao', 'Provento criado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         return response()->json($provento, 201)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -6261,7 +6262,7 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
     }
 });
 
-Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeCriarProvento) {
+Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeCriarProvento, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6276,25 +6277,43 @@ Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAu
         $rules = [
             'unidade_id' => 'nullable|integer|exists:unidades,id',
             'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
-            'verba' => 'required|string|max:255',
+            'verba' => 'nullable|string|max:255',
             'valor' => 'required|numeric|min:0.01',
             'data_provento' => 'required|date',
-            'motivo' => 'required|string|max:2000',
+            'motivo' => 'nullable|string|max:2000',
         ];
         $v = \Illuminate\Support\Facades\Validator::make($d, $rules);
         if ($v->fails()) return response()->json(['error' => implode(' ', $v->errors()->all()), 'details' => $v->errors()], 422)->header('Access-Control-Allow-Origin', '*');
 
+        $tipoLabels = [
+            'vale' => 'Vale',
+            'adiantamento' => 'Adiantamento',
+            'consumo_interno' => 'Consumo interno',
+            'ajuda_custo' => 'Ajuda de custo',
+            'outro' => 'Outro',
+        ];
+        $funcNome = (string) (DB::table('funcionarios')->where('id', $p->funcionario_id)->value('nome_completo') ?? '');
+        $tipoLeg = $tipoLabels[$d['tipo']] ?? $d['tipo'];
+        $verba = trim((string) ($d['verba'] ?? ''));
+        if ($verba === '') {
+            $verba = $tipoLeg;
+        }
+        $motivo = trim((string) ($d['motivo'] ?? ''));
+        if ($motivo === '') {
+            $motivo = 'Provento: ' . $tipoLeg . ' — ' . $funcNome;
+        }
+
         $up = [
             'unidade_id' => isset($d['unidade_id']) && $d['unidade_id'] !== '' ? (int)$d['unidade_id'] : null,
-            'tipo' => $d['tipo'], 'verba' => trim($d['verba']), 'valor' => (float)$d['valor'],
+            'tipo' => $d['tipo'], 'verba' => $verba, 'valor' => (float)$d['valor'],
             'data_provento' => $d['data_provento'], 'competencia' => $d['competencia'] ?? null,
-            'motivo' => trim($d['motivo']), 'observacao_interna' => $d['observacao_interna'] ?? null,
+            'motivo' => $motivo, 'observacao_interna' => $d['observacao_interna'] ?? null,
         ];
         DB::table('proventos')->where('id', $id)->update($up);
         $proventosLog($id, $u->id, $p->funcionario_id, 'edicao', $p->status, $p->status, 'Provento editado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
-            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('PUT /proventos: ' . $e->getMessage());
@@ -6302,7 +6321,7 @@ Route::put('/proventos/{id}', function (Request $request, $id) use ($proventosAu
     }
 });
 
-Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6317,7 +6336,7 @@ Route::post('/proventos/{id}/autorizar', function (Request $request, $id) use ($
         $proventosLog($id, $u->id, $p->funcionario_id, 'autorizacao', 'assinado', 'autorizado', 'Provento autorizado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
-            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /proventos/autorizar: ' . $e->getMessage());
@@ -6405,7 +6424,7 @@ Route::post('/proventos/{id}/enviar-codigo', function (Request $request, $id) us
     }
 });
 
-Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos') || !Schema::hasTable('proventos_assinaturas')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6436,7 +6455,7 @@ Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, 
         DB::table('proventos')->where('id', $id)->update(['status' => 'assinado', 'data_assinatura' => now()]);
         $proventosLog($id, null, $funcId, 'assinatura', 'aguardando_autorizacao', 'assinado', 'Aceite eletrônico confirmado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, ['otp_validado' => true]));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
-            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /proventos/confirmar-assinatura: ' . $e->getMessage());
@@ -6444,7 +6463,7 @@ Route::post('/proventos/{id}/confirmar-assinatura', function (Request $request, 
     }
 });
 
-Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6458,7 +6477,7 @@ Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($
         DB::table('proventos')->where('id', $id)->update(['status' => 'finalizado', 'finalizado_por' => $u->id, 'data_finalizacao' => now()]);
         $proventosLog($id, $u->id, $p->funcionario_id, 'finalizacao', 'autorizado', 'finalizado', 'Provento finalizado', $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
-            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /proventos/finalizar: ' . $e->getMessage());
@@ -6466,7 +6485,7 @@ Route::post('/proventos/{id}/finalizar', function (Request $request, $id) use ($
     }
 });
 
-Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar) {
+Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($proventosAuth, $proventosLog, $mergeDeviceExtras, $podeAutorizarOuFinalizar, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6484,7 +6503,7 @@ Route::post('/proventos/{id}/cancelar', function (Request $request, $id) use ($p
         DB::table('proventos')->where('id', $id)->update(['status' => 'cancelado', 'cancelado_por' => $u->id, 'data_cancelamento' => now(), 'justificativa_cancelamento' => $just]);
         $proventosLog($id, $u->id, $p->funcionario_id, 'cancelamento', $ant, 'cancelado', $just, $request->ip(), $request->userAgent(), $mergeDeviceExtras($request, null));
         $novo = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
-            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome')->first();
+            ->where('proventos.id', $id)->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())->first();
         return response()->json($novo)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /proventos/cancelar: ' . $e->getMessage());
@@ -6587,7 +6606,7 @@ Route::get('/audit-logs', function (Request $request) use ($auditAuth, $formatLo
     }
 });
 
-Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $formatLogCreatedAt) {
+Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $formatLogCreatedAt, $proventoSelectUnidadeCnpj) {
     try {
         $u = $proventosAuth($request);
         if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -6598,7 +6617,7 @@ Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) us
         $p = DB::table('proventos')->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
             ->where('proventos.id', $id)
-            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf', 'funcionarios.whatsapp', 'funcionarios.email as funcionario_email', 'unidades.nome as unidade_nome')
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf', 'funcionarios.whatsapp', 'funcionarios.email as funcionario_email', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())
             ->first();
         if (!$p) return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         if (!$podeCriarProvento($perfil) && (int)$p->funcionario_id !== (int)$funcId) return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
