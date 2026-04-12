@@ -2709,6 +2709,12 @@ function applyPermissions() {
   if (currentUser && !sections.includes("fechaTecnica")) {
     sections = [...sections, "fechaTecnica"];
   }
+  // Boas-vindas e Minha conta: sempre acessíveis (permissoes_menu antigas podem omitir)
+  if (currentUser) {
+    const sempre = ["boasVindas", "minhaConta"];
+    const faltando = sempre.filter((s) => !sections.includes(s));
+    if (faltando.length) sections = [...faltando, ...sections];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2860,6 +2866,8 @@ function navigateTo(section) {
   // Usa alternância de seções (conteúdo no index.html) - evita fetch que pode falhar em produção
   dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
   dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+  const mainScroll = document.querySelector(".main-content");
+  if (mainScroll) mainScroll.scrollTop = 0;
   if (section === 'boasVindas') {
     const el = document.getElementById('boasVindasNome');
     if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
@@ -6909,53 +6917,32 @@ async function startAppSession(user) {
     console.log('Dados iniciais carregados');
   });
   
-  // Navega para a seção apropriada
-  // Se foi um login novo (user passado), sempre vai para dashboard
-  // Se foi apenas um refresh (sem user), restaura a seção salva
+  // Navega para Boas-vindas em todo login ou reabertura com sessão (qualquer perfil).
+  // Exceção: hash QR de saída continua indo ao dashboard e abre o modal de lote.
   (() => {
-    let sectionToNavigate = 'dashboard'; // padrão
-    
-    // Se foi um login novo (user foi passado), vai para a seção inicial do perfil
-    if (user) {
-      const perfilLogin = (user.perfil || "").toString().trim().toUpperCase();
-      const regrasLogin = PERMISSOES[perfilLogin] || PERMISSOES.VISUALIZADOR;
-      sectionToNavigate = regrasLogin.sections[0] || 'dashboard';
-      console.log('Login novo detectado, navegando para', sectionToNavigate);
+    let sectionToNavigate = "boasVindas";
+
+    try {
+      localStorage.setItem(currentSectionKey, sectionToNavigate);
+    } catch (err) {
+      console.warn("Erro ao salvar seção:", err);
+    }
+
+    const hash = window.location.hash || "";
+    const m = hash.match(/[?&]lote=(\d+)/);
+    const hashSaidaMatch = m && (hash.includes("saida=1") || hash.includes("saida=true")) ? m : null;
+    if (hashSaidaMatch) {
+      sectionToNavigate = "dashboard";
       try {
         localStorage.setItem(currentSectionKey, sectionToNavigate);
       } catch (err) {
-        console.warn('Erro ao salvar seção:', err);
+        console.warn("Erro ao salvar seção:", err);
       }
-    } else {
-      // Se foi apenas um refresh, tenta restaurar a seção salva
-      try {
-        const savedSection = localStorage.getItem(currentSectionKey);
-        if (savedSection) {
-          // Valida se a seção salva é válida (lista de seções válidas)
-          const validSections = ['boasVindas', 'minhaConta', 'dashboard', 'produtos', 'fechaTecnica', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'alvara', 'reservaMesa', 'historicoReservas', 'funcionarios', 'proventos', 'logs'];
-          if (validSections.includes(savedSection)) {
-            sectionToNavigate = savedSection;
-            console.log('Restaurando seção salva após refresh:', sectionToNavigate);
-          } else {
-            console.log('Seção salva inválida, usando dashboard');
-          }
-        }
-      } catch (err) {
-        console.warn('Erro ao restaurar seção salva:', err);
-      }
-    }
-    
-    // Verifica se a URL tem hash #dashboard?saida=1&lote=ID (QR code da etiqueta)
-    const hash = window.location.hash || '';
-    const m = hash.match(/[?&]lote=(\d+)/);
-    const hashSaidaMatch = m && (hash.includes('saida=1') || hash.includes('saida=true')) ? m : null;
-    if (hashSaidaMatch) {
-      sectionToNavigate = 'dashboard';
     }
 
-    // Usa requestAnimationFrame para garantir que o DOM está pronto
+    navigateTo(sectionToNavigate);
+
     requestAnimationFrame(async () => {
-      navigateTo(sectionToNavigate);
       try {
         if (sectionToNavigate === 'dashboard') await loadDashboard();
         else if (sectionToNavigate === 'produtos') await loadProdutos();
@@ -10298,31 +10285,13 @@ function setupNavigation() {
         await loadHistoricoReservas();
       }
       else if (target === "boletao") {
-        console.log('🏦 ========================================');
-        console.log('🏦 SEÇÃO BOLETAO ABERTA');
-        console.log('🏦 ========================================');
-        
-        // Aguarda um pouco para garantir que os elementos foram carregados
-        setTimeout(async () => {
-          const tbody = document.getElementById('boletosTable');
-          
-          if (!tbody) {
-            console.error('❌ CRÍTICO: boletosTable não existe!');
-            showToast('Erro: Tabela não encontrada. Recarregue a página.', 'error');
-            return;
-          }
-          
-          console.log('✅ Elemento boletosTable encontrado');
-          console.log('📊 Carregando boletos...');
-          
-          try {
-            await loadBoletos({});
-            await loadBoletosResumo();
-            console.log('✅ Carregamento concluído');
-          } catch (error) {
-            console.error('❌ Erro:', error);
-          }
-        }, 100);
+        const tbody = document.getElementById("boletosTable");
+        if (!tbody) {
+          showToast("Erro: Tabela não encontrada. Recarregue a página.", "error");
+        } else {
+          await loadBoletos({}).catch(() => {});
+          await loadBoletosResumo().catch(() => {});
+        }
       }
     } catch (err) {
       showToast(err.message, "error");
