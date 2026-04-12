@@ -6570,6 +6570,7 @@ async function loadFuncionarios(filtros = {}) {
   const dados = await fetchJSON(url);
   state.funcionarios = Array.isArray(dados) ? dados : [];
   populateFuncionariosFiltroNome(state.funcionarios);
+  populateProventosFiltroFuncionario(state.funcionarios);
   renderFuncionarios(state.funcionarios);
   return state.funcionarios;
 }
@@ -6600,6 +6601,44 @@ function populateFuncionariosFiltroNome(lista) {
 
   if (select.dataset.buscaBound !== "true") {
     bindBuscaSelect("funcionariosFiltroNomeBusca", "funcionariosFiltroNome");
+    select.dataset.buscaBound = "true";
+  }
+}
+
+/** Mesmo padrão do filtro "Nome" em RH → Funcionários: busca + select com bindBuscaSelect; value = id para API proventos. */
+function populateProventosFiltroFuncionario(lista) {
+  const select = document.getElementById("proventosFiltroFuncionario");
+  const buscaInput = document.getElementById("proventosFiltroFuncionarioBusca");
+  if (!select) return;
+
+  const selecionado = select.value;
+  const ativos = (Array.isArray(lista) ? lista : []).filter((f) => (f.status || "ativo") === "ativo");
+  ativos.sort((a, b) => (a.nome_completo || "").toString().localeCompare((b.nome_completo || "").toString(), "pt-BR"));
+
+  select.innerHTML =
+    '<option value="">Todos</option>' +
+    ativos
+      .map((f) => {
+        const nome = (f.nome_completo || "").toString().trim();
+        const cpf = f.cpf ? ` — ${f.cpf}` : "";
+        const text = nome + cpf;
+        return `<option value="${escapeHtml(String(f.id))}">${escapeHtml(text)}</option>`;
+      })
+      .join("");
+
+  if (selecionado && [...select.options].some((o) => o.value === selecionado)) select.value = selecionado;
+  else select.value = "";
+
+  if (buscaInput) {
+    buscaInput._todasOpcoes = ativos.map((f) => {
+      const nome = (f.nome_completo || "").toString().trim();
+      const cpf = f.cpf ? ` — ${f.cpf}` : "";
+      return { value: String(f.id), text: nome + cpf };
+    });
+  }
+
+  if (select.dataset.buscaBound !== "true") {
+    bindBuscaSelect("proventosFiltroFuncionarioBusca", "proventosFiltroFuncionario");
     select.dataset.buscaBound = "true";
   }
 }
@@ -6654,40 +6693,6 @@ const PROVENTO_STATUS_LABELS = {
   rejeitado: "Rejeitado",
 };
 const PROVENTO_TIPO_LABELS = { vale: "Vale", adiantamento: "Adiantamento", consumo_interno: "Consumo interno", ajuda_custo: "Ajuda de custo", outro: "Outro" };
-
-function getProventosFiltroFuncionariosFonte() {
-  return (state.funcionarios || []).filter((f) => (f.status || "ativo") === "ativo");
-}
-
-/** Lista suspensa filtrada pelo campo de busca; opções com id + nome (e CPF na legenda). */
-function renderProventosFiltroFuncionarioOptions(textOverride) {
-  const sel = document.getElementById("proventosFiltroFuncionario");
-  const busca = document.getElementById("proventosFiltroFuncionarioBusca");
-  if (!sel) return;
-  const q = String(textOverride !== undefined ? textOverride : busca?.value || "")
-    .trim()
-    .toLowerCase();
-  const digits = q.replace(/\D/g, "");
-  const prev = sel.value;
-  const lista = getProventosFiltroFuncionariosFonte();
-  const filtrados = !q
-    ? lista
-    : lista.filter((f) => {
-        const nome = (f.nome_completo || "").toLowerCase();
-        const cpfDigits = (f.cpf || "").replace(/\D/g, "");
-        return nome.includes(q) || (digits.length >= 3 && cpfDigits.includes(digits));
-      });
-  sel.innerHTML = '<option value="">Todos os funcionários</option>';
-  filtrados.forEach((f) => {
-    const o = document.createElement("option");
-    o.value = String(f.id);
-    const cpfLbl = f.cpf ? ` — ${f.cpf}` : "";
-    o.textContent = `${f.nome_completo || "Funcionário " + f.id}${cpfLbl}`;
-    sel.appendChild(o);
-  });
-  if (prev && [...sel.options].some((opt) => opt.value === prev)) sel.value = prev;
-  else sel.value = "";
-}
 
 async function loadProventos(filtros = {}) {
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -7077,7 +7082,6 @@ async function startAppSession(user) {
             if (selUn && state.unidades?.length) {
               selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
             }
-            renderProventosFiltroFuncionarioOptions("");
             await loadProventos({}).catch(() => {});
           } else {
             await loadProventos().catch(() => {});
@@ -9757,18 +9761,13 @@ function setupModals() {
     else if (btn.classList.contains("btn-cancelar-provento")) cancelarProvento(id);
     else if (btn.classList.contains("btn-assinar-provento")) assinarProvento(id);
   });
-  document.getElementById("proventosFiltroFuncionarioBusca")?.addEventListener("input", () => renderProventosFiltroFuncionarioOptions());
-  document.getElementById("proventosFiltroFuncionario")?.addEventListener("change", () => {
-    const sel = document.getElementById("proventosFiltroFuncionario");
-    const busca = document.getElementById("proventosFiltroFuncionarioBusca");
-    const opt = sel?.selectedOptions?.[0];
-    if (busca && opt) busca.value = opt.value ? opt.textContent.trim() : "";
-  });
   document.getElementById("proventosFilterForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await loadProventos(getProventosFiltros()); });
   document.getElementById("proventosLimparFiltros")?.addEventListener("click", () => {
-    const b = document.getElementById("proventosFiltroFuncionarioBusca");
-    if (b) b.value = "";
-    renderProventosFiltroFuncionarioOptions("");
+    const sel = document.getElementById("proventosFiltroFuncionario");
+    const busca = document.getElementById("proventosFiltroFuncionarioBusca");
+    if (sel) sel.value = "";
+    if (busca) busca.value = "";
+    populateProventosFiltroFuncionario(state.funcionarios);
     ["proventosFiltroTipo", "proventosFiltroUnidade", "proventosFiltroStatus", "proventosFiltroDataInicio", "proventosFiltroDataFim"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
@@ -10295,7 +10294,6 @@ function setupNavigation() {
             if (selUn && state.unidades?.length) {
               selUn.innerHTML = '<option value="">Todas as unidades</option>' + state.unidades.map(u => `<option value="${u.id}">${(u.nome||"").replace(/</g,"&lt;")}</option>`).join("");
             }
-            renderProventosFiltroFuncionarioOptions("");
             await loadProventos(getProventosFiltros());
           } else {
             await loadProventos();
