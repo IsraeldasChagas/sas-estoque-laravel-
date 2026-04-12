@@ -6675,7 +6675,17 @@ async function loadProventos(filtros = {}) {
   } catch (e) {
     state.proventos = [];
     const tbl = document.getElementById("proventosTable");
-    if (tbl) tbl.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#c62828">Erro ao carregar. Verifique se as migrations foram executadas.</td></tr>';
+    if (tbl) {
+      const raw = (e?.message || e?.responseData?.error || "Erro ao carregar a lista de proventos.").toString().trim();
+      const safe = raw.replace(/</g, "&lt;").replace(/>/g, "&gt;").slice(0, 400);
+      const hint =
+        e?.status === 401
+          ? " Faça login novamente."
+          : /migrations|tabela|column|SQLSTATE/i.test(raw)
+            ? " Se o problema continuar, rode as migrations do backend (incluindo a coluna PIX em funcionários) ou peça suporte."
+            : "";
+      tbl.innerHTML = `<tr><td colspan="11" style="text-align:center;color:#c62828">${safe}${hint}</td></tr>`;
+    }
     throw e;
   }
 }
