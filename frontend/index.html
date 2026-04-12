@@ -107,8 +107,16 @@
           <a href="#" class="nav-link" data-section="logs">📋 Logs e Auditoria</a>
           <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
           <a href="#" class="nav-link" data-section="fornecedores">Fornecedores</a>
-          <a href="#" class="nav-link" data-section="reservaMesa">Reserva de Mesa</a>
-          <a href="#" class="nav-link" data-section="historicoReservas">Histórico de Reservas</a>
+          <div class="nav-submenu">
+            <a href="#" class="nav-link nav-link-parent" id="reservaMenu">
+              Reserva
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="reservaMesa">Mesa</a>
+              <a href="#" class="nav-link nav-link-child" data-section="historicoReservas">Histórico</a>
+            </div>
+          </div>
           <div class="nav-submenu">
             <a href="#" class="nav-link nav-link-parent" id="rhMenu">
               RH
@@ -2514,7 +2522,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="compras" /> Lista de Compras</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="relatorios" /> Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedores" /> Fornecedores</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reserva de Mesa</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reserva (mesa e histórico)</label>
             <div style="margin-top:0.5rem;"><strong>RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
             <div style="margin-top:0.5rem;"><strong>Financeiro</strong></div>

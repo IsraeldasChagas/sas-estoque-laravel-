@@ -2715,6 +2715,13 @@ function applyPermissions() {
     const faltando = sempre.filter((s) => !sections.includes(s));
     if (faltando.length) sections = [...faltando, ...sections];
   }
+  // Reserva: itens Mesa e Histórico no menu; permissão antiga só com reservaMesa inclui ambos.
+  if (sections.includes("reservaMesa") && !sections.includes("historicoReservas")) {
+    sections = [...sections, "historicoReservas"];
+  }
+  if (sections.includes("historicoReservas") && !sections.includes("reservaMesa")) {
+    sections = [...sections, "reservaMesa"];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2740,6 +2747,12 @@ function applyPermissions() {
   if (configuracoesNavSubmenu) {
     const temAcessoConfig = regras.sections.includes("fornecedoresBackup");
     configuracoesNavSubmenu.classList.toggle("hidden", !temAcessoConfig);
+  }
+  const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
+  if (reservaNavSubmenu) {
+    const temAcessoReserva =
+      regras.sections.includes("reservaMesa") || regras.sections.includes("historicoReservas");
+    reservaNavSubmenu.classList.toggle("hidden", !temAcessoReserva);
   }
 
   dom.sections.forEach((section) => {
@@ -2868,6 +2881,14 @@ function navigateTo(section) {
   dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
   const mainScroll = document.querySelector(".main-content");
   if (mainScroll) mainScroll.scrollTop = 0;
+  const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
+  if (reservaNavSubmenu) {
+    if (section === "reservaMesa" || section === "historicoReservas") {
+      reservaNavSubmenu.classList.add("open");
+    } else {
+      reservaNavSubmenu.classList.remove("open");
+    }
+  }
   if (section === 'boasVindas') {
     const el = document.getElementById('boasVindasNome');
     if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
@@ -10789,6 +10810,15 @@ function setupNavigation() {
       if (parent) {
         parent.classList.toggle('open');
       }
+    });
+  }
+  const reservaMenu = document.getElementById('reservaMenu');
+  if (reservaMenu) {
+    reservaMenu.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = reservaMenu.closest('.nav-submenu');
+      if (parent) parent.classList.toggle('open');
     });
   }
 }
