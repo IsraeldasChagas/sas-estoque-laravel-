@@ -6125,16 +6125,14 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
         $comp = $p->competencia ? $h($p->competencia) : '—';
         $motivoEsc = nl2br($h($p->motivo));
 
-        // Preferir PNG com canal alpha (sem fundo). Coloque em frontend/imagens/logo-transparent.png ou logo-sem-fundo.png
+        // Logo sem fundo: frontend/imagens/logosemfundo.png
         $logoDataUri = '';
         $frontendImagens = dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR;
         $logoCandidates = [
-            $frontendImagens . 'logo-transparent.png',
-            $frontendImagens . 'logo-sem-fundo.png',
+            $frontendImagens . 'logosemfundo.png',
             $frontendImagens . 'logo.png',
             $frontendImagens . 'logo.pdf.png',
-            public_path('imagens/logo-transparent.png'),
-            public_path('imagens/logo-sem-fundo.png'),
+            public_path('imagens/logosemfundo.png'),
             public_path('imagens/logo.png'),
         ];
         foreach ($logoCandidates as $logoPath) {
