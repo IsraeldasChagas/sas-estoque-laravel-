@@ -5797,7 +5797,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
         'cargo' => 'required|string|max:255',
         'status' => 'required|in:ativo,inativo',
     ];
-    if ($possuiAcesso && !$usuarioIdFornecido) {
+    // Só exige login/senha novos quando vai criar usuário: sem usuario_id na requisição e sem vínculo já salvo no funcionário
+    $precisaCriarUsuarioNovo = $possuiAcesso && ! $usuarioIdFornecido && empty($existente->usuario_id);
+    if ($precisaCriarUsuarioNovo) {
         $rules['login_usuario'] = 'required|string|max:255';
         $rules['senha_usuario'] = 'required|string|min:6';
         $rules['perfil_usuario'] = 'required|string|in:ADMIN,GERENTE,FINANCEIRO,ASSISTENTE_ADMINISTRATIVO,ATENDENTE_CAIXA,FUNCIONARIO';
@@ -5824,6 +5826,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
                 return response()->json(['error' => 'Esse usuário já está vinculado a outro funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
             }
             $usuarioId = $usuarioIdFornecido;
+        } elseif (! empty($existente->usuario_id)) {
+            // Edição: mantém o usuário já vinculado (não exige reenviar senha nem usuario_id no form)
+            $usuarioId = (int) $existente->usuario_id;
         } else {
             $login = trim($data['login_usuario'] ?? '');
             if (DB::table('usuarios')->where('email', $login)->exists()) {

@@ -9329,7 +9329,7 @@ function setupModals() {
         if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.remove("hidden");
         if (loginEl) loginEl.value = f.usuario_email || "";
         if (perfilEl) perfilEl.value = f.perfil_usuario || "FUNCIONARIO";
-        if (uidEl) uidEl.value = f.usuario_id ? String(f.usuario_id) : "";
+        if (uidEl) uidEl.value = f.usuario_id != null && String(f.usuario_id).trim() !== "" ? String(f.usuario_id) : "";
         atualizarFuncionarioUsuarioResumo();
       } else {
         // Se não possui acesso, deixa os campos de usuário zerados
@@ -9686,12 +9686,13 @@ function setupModals() {
     if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
     const possuiAcesso = dom.funcionarioPossuiAcesso?.checked || false;
     if (possuiAcesso) {
-      const usuarioId = document.getElementById("funcionarioUsuarioId")?.value;
+      const usuarioId = (document.getElementById("funcionarioUsuarioId")?.value || "").trim();
       const login = (form.elements.login_usuario?.value || "").trim();
       const senha = form.elements.senha_usuario?.value || "";
-      // Se não houver vínculo por usuário existente (`usuario_id`), precisa criar novo:
-      // nesse caso, exigimos login + senha válida para evitar dados "sobrando" do funcionário anterior.
-      if (!usuarioId) {
+      const isCadastroNovo = !id;
+      // Novo funcionário: sem usuário vinculado, é obrigatório configurar e-mail + senha (ou usuário existente).
+      // Edição: quem já tem acesso no cadastro pode salvar sem redigitar senha (o servidor mantém o vínculo).
+      if (isCadastroNovo && !usuarioId) {
         if (!login || senha.length < 6) {
           if (feedback) {
             feedback.textContent = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente.";
