@@ -9147,6 +9147,58 @@ function setupModals() {
       em_andamento,
     };
   }
+  function rowFormacaoTemAlgumCampo(row) {
+    if (!row) return false;
+    const g = (f) => row.querySelector(`[data-f="${f}"]`);
+    if ((g("curso")?.value || "").trim()) return true;
+    if ((g("instituicao")?.value || "").trim()) return true;
+    if ((g("local")?.value || "").trim()) return true;
+    if (g("data_inicio")?.value) return true;
+    if (g("data_conclusao")?.value) return true;
+    if (g("em_andamento")?.checked) return true;
+    return false;
+  }
+  function setFormacaoLinhaConfirmada(row, confirmada) {
+    if (!row) return;
+    const g = (f) => row.querySelector(`[data-f="${f}"]`);
+    const btnSalvar = row.querySelector(".btn-formacao-salvar-linha");
+    const btnEditar = row.querySelector(".btn-formacao-editar-linha");
+    const st = row.querySelector(".formacao-linha__status");
+    if (confirmada) {
+      row.dataset.formacaoConfirmada = "1";
+      row.classList.add("formacao-linha--confirmada");
+      ["curso", "instituicao", "local", "data_inicio", "data_conclusao"].forEach((f) => {
+        const el = g(f);
+        if (el) el.readOnly = true;
+      });
+      const ch = g("em_andamento");
+      if (ch) ch.disabled = true;
+      if (btnSalvar) btnSalvar.hidden = true;
+      if (btnEditar) btnEditar.hidden = false;
+      if (st) st.hidden = false;
+    } else {
+      delete row.dataset.formacaoConfirmada;
+      row.classList.remove("formacao-linha--confirmada");
+      ["curso", "instituicao", "local", "data_inicio", "data_conclusao"].forEach((f) => {
+        const el = g(f);
+        if (el) el.readOnly = false;
+      });
+      const ch = g("em_andamento");
+      if (ch) ch.disabled = false;
+      if (btnSalvar) btnSalvar.hidden = false;
+      if (btnEditar) btnEditar.hidden = true;
+      if (st) st.hidden = true;
+    }
+  }
+  function validarFormacaoLinhaParaSalvar(row) {
+    const g = (f) => row.querySelector(`[data-f="${f}"]`);
+    const curso = (g("curso")?.value || "").trim();
+    const instituicao = (g("instituicao")?.value || "").trim();
+    if (!curso && !instituicao) {
+      return "Informe pelo menos o nome do curso ou a instituição para salvar esta formação.";
+    }
+    return null;
+  }
   function fillFuncionarioFormacaoFields(form, escolaridade, formacaoJson) {
     if (!form) return;
     clearFuncionarioFormacaoLinhas(form);
@@ -9170,6 +9222,7 @@ function setupModals() {
       items.forEach((b) => {
         const row = addFuncionarioFormacaoLinha(form, key);
         fillFuncionarioFormacaoLinha(row, b);
+        setFormacaoLinhaConfirmada(row, true);
       });
     });
   }
@@ -9181,6 +9234,7 @@ function setupModals() {
       if (!wrap) return;
       const arr = [];
       wrap.querySelectorAll(":scope > .formacao-linha").forEach((row) => {
+        if (row.dataset.formacaoConfirmada !== "1") return;
         const one = readFuncionarioFormacaoLinha(row);
         if (one) arr.push(one);
       });
@@ -9417,6 +9471,29 @@ function setupModals() {
       if (key) addFuncionarioFormacaoLinha(dom.funcionarioForm, key);
       return;
     }
+    const salvarLinhaBtn = e.target.closest(".btn-formacao-salvar-linha");
+    if (salvarLinhaBtn && dom.funcionarioForm?.contains(salvarLinhaBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = salvarLinhaBtn.closest(".formacao-linha");
+      if (!row) return;
+      const err = validarFormacaoLinhaParaSalvar(row);
+      if (err) {
+        showToast(err, "warning");
+        return;
+      }
+      setFormacaoLinhaConfirmada(row, true);
+      showToast("Formação incluída neste cadastro. Use Salvar funcionário abaixo para gravar no servidor.", "success");
+      return;
+    }
+    const editarLinhaBtn = e.target.closest(".btn-formacao-editar-linha");
+    if (editarLinhaBtn && dom.funcionarioForm?.contains(editarLinhaBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = editarLinhaBtn.closest(".formacao-linha");
+      if (row) setFormacaoLinhaConfirmada(row, false);
+      return;
+    }
     const remBtn = e.target.closest(".btn-formacao-remover");
     if (remBtn && dom.funcionarioForm?.contains(remBtn)) {
       e.preventDefault();
@@ -9430,6 +9507,7 @@ function setupModals() {
           if (el.type === "checkbox") el.checked = false;
           else el.value = "";
         });
+        setFormacaoLinhaConfirmada(row, false);
       } else {
         row.remove();
       }
@@ -9624,6 +9702,20 @@ function setupModals() {
           }
           return;
         }
+      }
+    }
+    const linhasFormacao = form.querySelectorAll("#funcionarioFormacaoBlocos .formacao-linha");
+    for (const fRow of linhasFormacao) {
+      if (rowFormacaoTemAlgumCampo(fRow) && fRow.dataset.formacaoConfirmada !== "1") {
+        const msg = "Há formação com dados preenchidos sem confirmar. Clique em \"Salvar esta formação\" em cada linha ou limpe os campos.";
+        if (feedback) {
+          feedback.textContent = msg;
+          feedback.className = "form-feedback error";
+          feedback.classList.remove("hidden");
+        } else {
+          showToast(msg, "warning");
+        }
+        return;
       }
     }
     if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; feedback.className = "form-feedback hidden"; }

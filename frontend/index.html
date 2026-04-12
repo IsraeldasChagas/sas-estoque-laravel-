@@ -2621,7 +2621,7 @@
                 <option value="pos_concluida">Pós-graduação concluída</option>
               </select>
             </label>
-            <p class="form-hint" style="margin: 0 0 8px;">Em cada tipo você pode cadastrar <strong>várias formações</strong> (ex.: dois técnicos, duas graduações). Use &quot;Adicionar outro&quot;.</p>
+            <p class="form-hint" style="margin: 0 0 8px;">Em cada tipo você pode cadastrar <strong>várias formações</strong>. Preencha os dados e clique em <strong>Salvar esta formação</strong> em cada linha; depois use <strong>Salvar</strong> no rodapé para gravar o funcionário no sistema.</p>
             <div class="formacao-blocos" id="funcionarioFormacaoBlocos">
               <details class="formacao-bloco" open data-formacao-key="curso_complementar">
                 <summary class="formacao-bloco__summary">
@@ -2655,7 +2655,12 @@
             <template id="funcionarioFormacaoLinhaTpl">
               <div class="formacao-linha">
                 <div class="formacao-linha__head">
-                  <button type="button" class="btn neutral btn-formacao-remover">Remover esta formação</button>
+                  <span class="formacao-linha__status" hidden>Incluída neste cadastro — finalize com <strong>Salvar funcionário</strong> abaixo</span>
+                  <div class="formacao-linha__actions">
+                    <button type="button" class="btn primary btn-formacao-salvar-linha">Salvar esta formação</button>
+                    <button type="button" class="btn neutral btn-formacao-editar-linha" hidden>Editar</button>
+                    <button type="button" class="btn neutral btn-formacao-remover">Remover</button>
+                  </div>
                 </div>
                 <div class="formacao-linha__campos">
                   <label>Nome do curso <input type="text" data-f="curso" maxlength="255" placeholder="Ex: Administração, Informática…" /></label>
