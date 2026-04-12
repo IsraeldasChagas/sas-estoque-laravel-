@@ -5739,12 +5739,12 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
         'possui_acesso' => $possuiAcesso ? 1 : 0,
         'usuario_id' => $usuarioId,
         'observacoes' => $data['observacoes'] ?? null,
-        'banco' => $data['banco'] ?? null,
-        'agencia' => $data['agencia'] ?? null,
-        'conta' => $data['conta'] ?? null,
-        'conta_digito' => $data['conta_digito'] ?? null,
-        'pix' => $data['pix'] ?? null,
     ];
+    foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
+        if (Schema::hasColumn('funcionarios', $colBancario)) {
+            $insert[$colBancario] = $data[$colBancario] ?? null;
+        }
+    }
     if (Schema::hasColumn('funcionarios', 'escolaridade')) {
         $insert['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
@@ -5777,6 +5777,7 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
 });
 
 Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
+    try {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -5857,14 +5858,14 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
         'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
         'status' => $data['status'] ?? 'ativo',
         'observacoes' => $data['observacoes'] ?? null,
-        'banco' => $data['banco'] ?? null,
-        'agencia' => $data['agencia'] ?? null,
-        'conta' => $data['conta'] ?? null,
-        'conta_digito' => $data['conta_digito'] ?? null,
-        'pix' => $data['pix'] ?? null,
         'possui_acesso' => $possuiAcesso ? 1 : 0,
         'usuario_id' => $usuarioId,
     ];
+    foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
+        if (Schema::hasColumn('funcionarios', $colBancario)) {
+            $update[$colBancario] = $data[$colBancario] ?? null;
+        }
+    }
     if (Schema::hasColumn('funcionarios', 'escolaridade')) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
@@ -5895,6 +5896,16 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     DB::table('funcionarios')->where('id', $id)->update($update);
     return response()->json(DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first())
         ->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /funcionarios/{id}/atualizar: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+        $msg = $e->getMessage();
+        if (strpos($msg, 'Base table') !== false || strpos($msg, 'doesn\'t exist') !== false) {
+            $msg = 'Tabela ou coluna não encontrada. Execute no servidor: php artisan migrate --force';
+        } elseif (strpos($msg, 'Unknown column') !== false) {
+            $msg = 'Banco de dados desatualizado (coluna ausente). Execute: php artisan migrate --force';
+        }
+        return response()->json(['error' => $msg], 500)->header('Access-Control-Allow-Origin', '*');
+    }
 });
 
 Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
@@ -5929,12 +5940,12 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
         'data_admissao' => !empty($data['data_admissao']) ? $data['data_admissao'] : null,
         'status' => $data['status'] ?? 'ativo',
         'observacoes' => $data['observacoes'] ?? null,
-        'banco' => $data['banco'] ?? null,
-        'agencia' => $data['agencia'] ?? null,
-        'conta' => $data['conta'] ?? null,
-        'conta_digito' => $data['conta_digito'] ?? null,
-        'pix' => $data['pix'] ?? null,
     ];
+    foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
+        if (Schema::hasColumn('funcionarios', $colBancario)) {
+            $update[$colBancario] = $data[$colBancario] ?? null;
+        }
+    }
     if (Schema::hasColumn('funcionarios', 'escolaridade')) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
