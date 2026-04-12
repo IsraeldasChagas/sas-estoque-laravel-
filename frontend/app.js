@@ -6729,6 +6729,40 @@ async function loadProventos(filtros = {}) {
   }
 }
 
+/** Abre o PDF do recibo (só existe no servidor para status finalizado). */
+async function abrirReciboProventoPdf(proventoId) {
+  if (!proventoId || !currentUser) {
+    showToast("Sessão inválida. Faça login novamente.", "error");
+    return;
+  }
+  try {
+    const headers = {
+      ...getDeviceHeaders(),
+      ...(currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+      ...(currentUser.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+    };
+    const res = await fetch(`${API_URL}/proventos/${proventoId}/recibo.pdf`, { method: "GET", headers, cache: "no-store" });
+    if (!res.ok) {
+      let msg = `Erro ${res.status}`;
+      try {
+        const ct = res.headers.get("Content-Type") || "";
+        if (ct.includes("json")) {
+          const j = await res.json();
+          if (j.error) msg = j.error;
+        }
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+    showToast("Recibo aberto — use o navegador para salvar ou imprimir como PDF.", "success");
+  } catch (e) {
+    showToast(e?.message || "Não foi possível gerar o recibo.", "error");
+  }
+}
+
 function renderProventos(lista) {
   const target = document.getElementById("proventosTable");
   if (!target) return;
@@ -6752,6 +6786,9 @@ function renderProventos(lista) {
     const valorF = "R$ " + (Number(p.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
     const dataF = p.data_provento ? new Date(p.data_provento + "T12:00:00").toLocaleDateString("pt-BR") : "-";
     let acoes = `<button type="button" class="table-action btn-view-provento" data-id="${p.id}">Visualizar</button>`;
+    if (p.status === "finalizado") {
+      acoes += `<button type="button" class="table-action btn-recibo-provento" data-id="${p.id}">Recibo PDF</button>`;
+    }
 
     // Funcionário/atendente assina quando está aguardando assinatura
     if (podeAssinarProvento && p.status === "aguardando_autorizacao") {
@@ -9615,6 +9652,11 @@ function setupModals() {
         btnAssinar.dataset.id = id;
         btnAssinar.style.display = podeAssinar ? "" : "none";
       }
+      const btnRecibo = document.getElementById("proventoViewRecibo");
+      if (btnRecibo) {
+        btnRecibo.dataset.id = id;
+        btnRecibo.style.display = p.status === "finalizado" ? "" : "none";
+      }
       toggleModal(document.getElementById("proventoViewModal"), true);
     }).catch(() => showToast("Erro ao carregar provento.", "error"));
   }
@@ -9749,7 +9791,7 @@ function setupModals() {
   document.getElementById("proventoViewEditar")?.addEventListener("click", () => { const id = document.getElementById("proventoViewEditar")?.dataset?.id; if (id) editProvento(id); });
   document.getElementById("proventoViewAssinar")?.addEventListener("click", () => { const id = document.getElementById("proventoViewAssinar")?.dataset?.id; if (id) { toggleModal(document.getElementById("proventoViewModal"), false); assinarProvento(id); } });
   document.getElementById("proventosSection")?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-view-provento, .btn-edit-provento, .btn-autorizar-provento, .btn-finalizar-provento, .btn-cancelar-provento, .btn-assinar-provento");
+    const btn = e.target.closest(".btn-view-provento, .btn-edit-provento, .btn-autorizar-provento, .btn-finalizar-provento, .btn-cancelar-provento, .btn-assinar-provento, .btn-recibo-provento");
     if (!btn) return;
     const id = btn.dataset.id;
     if (!id) return;
@@ -9760,6 +9802,11 @@ function setupModals() {
     else if (btn.classList.contains("btn-finalizar-provento")) finalizarProvento(id);
     else if (btn.classList.contains("btn-cancelar-provento")) cancelarProvento(id);
     else if (btn.classList.contains("btn-assinar-provento")) assinarProvento(id);
+    else if (btn.classList.contains("btn-recibo-provento")) abrirReciboProventoPdf(id);
+  });
+  document.getElementById("proventoViewRecibo")?.addEventListener("click", () => {
+    const id = document.getElementById("proventoViewRecibo")?.dataset?.id;
+    if (id) abrirReciboProventoPdf(id);
   });
   document.getElementById("proventosFilterForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await loadProventos(getProventosFiltros()); });
   document.getElementById("proventosLimparFiltros")?.addEventListener("click", () => {

@@ -5894,6 +5894,7 @@ Route::options('/proventos/{id}/confirmar-assinatura', $proventosCors);
 Route::options('/proventos/{id}/finalizar', $proventosCors);
 Route::options('/proventos/{id}/cancelar', $proventosCors);
 Route::options('/proventos/{id}/logs', $proventosCors);
+Route::options('/proventos/{id}/recibo.pdf', $proventosCors);
 
 $proventosAuth = function (Request $req) {
     $uid = $req->header('X-Usuario-Id');
@@ -6061,6 +6062,129 @@ Route::get('/proventos/{id}', function (Request $request, $id) use ($proventosAu
     } catch (\Exception $e) {
         \Log::error('GET /proventos/{id}: ' . $e->getMessage());
         return response()->json(['error' => 'Erro ao buscar provento'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($proventosAuth, $podeCriarProvento, $proventoSelectFuncionarioPix) {
+    $h = static fn ($s) => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    try {
+        if (!Schema::hasTable('proventos')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $p = DB::table('proventos')
+            ->leftJoin('funcionarios', 'proventos.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'proventos.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'proventos.criado_por', '=', 'criador.id')
+            ->leftJoin('usuarios as autorizador', 'proventos.autorizado_por', '=', 'autorizador.id')
+            ->leftJoin('usuarios as finalizador', 'proventos.finalizado_por', '=', 'finalizador.id')
+            ->where('proventos.id', $id)
+            ->select('proventos.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'funcionarios.whatsapp', 'funcionarios.email', $proventoSelectFuncionarioPix(),
+                'unidades.nome as unidade_nome', 'criador.nome as criado_por_nome', 'autorizador.nome as autorizado_por_nome', 'finalizador.nome as finalizado_por_nome')
+            ->first();
+        if (!$p) {
+            return response()->json(['error' => 'Provento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$podeCriarProvento($perfil) && (int) $p->funcionario_id !== (int) $funcId) {
+            return response()->json(['error' => 'Acesso negado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($p->status !== 'finalizado') {
+            return response()->json(['error' => 'Recibo disponível apenas para proventos finalizados'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $tipoLabels = [
+            'vale' => 'Vale',
+            'adiantamento' => 'Adiantamento',
+            'consumo_interno' => 'Consumo interno',
+            'ajuda_custo' => 'Ajuda de custo',
+            'outro' => 'Outro',
+        ];
+        $tipoL = $tipoLabels[$p->tipo] ?? $p->tipo;
+        $valorNum = (float) $p->valor;
+        $valorFmt = 'R$ ' . number_format($valorNum, 2, ',', '.');
+
+        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $fmtDt = static function ($v) use ($tz) {
+            if (empty($v)) {
+                return '—';
+            }
+            try {
+                return \Carbon\Carbon::parse($v, $tz)->format('d/m/Y H:i');
+            } catch (\Throwable $e) {
+                return '—';
+            }
+        };
+        $dataProv = $p->data_provento ? \Carbon\Carbon::parse($p->data_provento)->format('d/m/Y') : '—';
+        $comp = $p->competencia ? $h($p->competencia) : '—';
+        $motivoEsc = nl2br($h($p->motivo));
+
+        $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
+            body { font-family: DejaVu Sans, sans-serif; font-size: 11pt; color: #222; margin: 24px; }
+            h1 { font-size: 16pt; text-align: center; margin: 0 0 8px; color: #1565c0; }
+            .sub { text-align: center; font-size: 9pt; color: #666; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+            th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+            th { background: #f5f5f5; width: 32%; }
+            .valor { font-size: 14pt; font-weight: bold; color: #0d47a1; }
+            .decl { margin-top: 20px; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; font-size: 10pt; line-height: 1.5; }
+            .rod { margin-top: 24px; font-size: 9pt; color: #555; border-top: 1px solid #ddd; padding-top: 10px; }
+        </style></head><body>
+        <h1>Recibo de provento</h1>
+        <div class="sub">SAS Estoque — Grupo Sabor Paraense<br/>Documento gerado em ' . $h(\Carbon\Carbon::now($tz)->format('d/m/Y H:i')) . '</div>
+        <table>
+            <tr><th>Nº do lançamento</th><td>' . $h($p->id) . '</td></tr>
+            <tr><th>Funcionário</th><td>' . $h($p->funcionario_nome) . '</td></tr>
+            <tr><th>CPF</th><td>' . $h($p->funcionario_cpf) . '</td></tr>
+            <tr><th>Unidade</th><td>' . $h($p->unidade_nome) . '</td></tr>
+            <tr><th>Tipo</th><td>' . $h($tipoL) . '</td></tr>
+            <tr><th>Verba / descrição</th><td>' . $h($p->verba) . '</td></tr>
+            <tr><th>Valor</th><td class="valor">' . $h($valorFmt) . '</td></tr>
+            <tr><th>Data do provento</th><td>' . $h($dataProv) . '</td></tr>
+            <tr><th>Competência</th><td>' . $comp . '</td></tr>
+            <tr><th>Motivo</th><td>' . $motivoEsc . '</td></tr>
+        </table>
+        <div class="decl">
+            Declaro para os devidos fins que recebi da empresa a importância acima especificada,
+            referente ao provento discriminado neste recibo, e que não há nada a reclamar quanto ao pagamento,
+            estando quitada a referida verba nesta data.
+        </div>
+        <div class="rod">
+            <strong>Aceite eletrônico do funcionário:</strong> ' . $h($fmtDt($p->data_assinatura)) . '<br/>
+            <strong>Autorização (gestão):</strong> ' . $h($p->autorizado_por_nome ?: '—') . ' — ' . $h($fmtDt($p->data_autorizacao)) . '<br/>
+            <strong>Finalizado por:</strong> ' . $h($p->finalizado_por_nome ?: '—') . ' — ' . $h($fmtDt($p->data_finalizacao)) . '<br/>
+            <strong>Lançado por:</strong> ' . $h($p->criado_por_nome ?: '—') . '
+        </div>
+        </body></html>';
+
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+        $fn = 'recibo-provento-' . $id . '.pdf';
+
+        return response($pdfOutput, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $fn . '"')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Exception $e) {
+        \Log::error('GET /proventos/recibo.pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 
