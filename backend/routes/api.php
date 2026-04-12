@@ -6125,8 +6125,30 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
         $comp = $p->competencia ? $h($p->competencia) : '—';
         $motivoEsc = nl2br($h($p->motivo));
 
+        $logoDataUri = '';
+        $logoPaths = [];
+        $frontendImagens = dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR;
+        foreach (['logo.png', 'logo.pdf.png'] as $logoFile) {
+            $logoPaths[] = $frontendImagens . $logoFile;
+        }
+        $logoPaths[] = public_path('imagens/logo.png');
+        foreach ($logoPaths as $logoPath) {
+            if (is_readable($logoPath)) {
+                $logoBytes = @file_get_contents($logoPath);
+                if ($logoBytes !== false && $logoBytes !== '') {
+                    $logoDataUri = 'data:image/png;base64,' . base64_encode($logoBytes);
+                    break;
+                }
+            }
+        }
+        $logoHtml = $logoDataUri !== ''
+            ? '<div class="cabecalho-logo"><img src="' . $logoDataUri . '" alt="" class="logo-img" /></div>'
+            : '';
+
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
             body { font-family: DejaVu Sans, sans-serif; font-size: 11pt; color: #222; margin: 24px; }
+            .cabecalho-logo { text-align: center; margin: 0 0 12px; }
+            .logo-img { max-height: 72px; max-width: 260px; height: auto; width: auto; }
             h1 { font-size: 16pt; text-align: center; margin: 0 0 8px; color: #1565c0; }
             .sub { text-align: center; font-size: 9pt; color: #666; margin-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; margin: 12px 0; }
@@ -6136,8 +6158,9 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
             .decl { margin-top: 20px; padding: 12px; background: #fafafa; border: 1px solid #e0e0e0; font-size: 10pt; line-height: 1.5; }
             .rod { margin-top: 24px; font-size: 9pt; color: #555; border-top: 1px solid #ddd; padding-top: 10px; }
         </style></head><body>
+        ' . $logoHtml . '
         <h1>Recibo de provento</h1>
-        <div class="sub">SAS Estoque — Grupo Sabor Paraense<br/>Documento gerado em ' . $h(\Carbon\Carbon::now($tz)->format('d/m/Y H:i')) . '</div>
+        <div class="sub">Documento gerado em ' . $h(\Carbon\Carbon::now($tz)->format('d/m/Y H:i')) . '</div>
         <table>
             <tr><th>Nº do lançamento</th><td>' . $h($p->id) . '</td></tr>
             <tr><th>Funcionário</th><td>' . $h($p->funcionario_nome) . '</td></tr>
