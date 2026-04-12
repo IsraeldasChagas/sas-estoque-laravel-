@@ -6125,21 +6125,28 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
         $comp = $p->competencia ? $h($p->competencia) : '—';
         $motivoEsc = nl2br($h($p->motivo));
 
+        // Preferir PNG com canal alpha (sem fundo). Coloque em frontend/imagens/logo-transparent.png ou logo-sem-fundo.png
         $logoDataUri = '';
-        $logoPaths = [];
         $frontendImagens = dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR;
-        foreach (['logo.png', 'logo.pdf.png'] as $logoFile) {
-            $logoPaths[] = $frontendImagens . $logoFile;
-        }
-        $logoPaths[] = public_path('imagens/logo.png');
-        foreach ($logoPaths as $logoPath) {
-            if (is_readable($logoPath)) {
-                $logoBytes = @file_get_contents($logoPath);
-                if ($logoBytes !== false && $logoBytes !== '') {
-                    $logoDataUri = 'data:image/png;base64,' . base64_encode($logoBytes);
-                    break;
-                }
+        $logoCandidates = [
+            $frontendImagens . 'logo-transparent.png',
+            $frontendImagens . 'logo-sem-fundo.png',
+            $frontendImagens . 'logo.png',
+            $frontendImagens . 'logo.pdf.png',
+            public_path('imagens/logo-transparent.png'),
+            public_path('imagens/logo-sem-fundo.png'),
+            public_path('imagens/logo.png'),
+        ];
+        foreach ($logoCandidates as $logoPath) {
+            if (! is_readable($logoPath)) {
+                continue;
             }
+            $logoBytes = @file_get_contents($logoPath);
+            if ($logoBytes === false || $logoBytes === '') {
+                continue;
+            }
+            $logoDataUri = 'data:image/png;base64,' . base64_encode($logoBytes);
+            break;
         }
         $logoHtml = $logoDataUri !== ''
             ? '<div class="cabecalho-logo"><img src="' . $logoDataUri . '" alt="" class="logo-img" /></div>'
@@ -6147,8 +6154,8 @@ Route::get('/proventos/{id}/recibo.pdf', function (Request $request, $id) use ($
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
             body { font-family: DejaVu Sans, sans-serif; font-size: 11pt; color: #222; margin: 24px; }
-            .cabecalho-logo { text-align: center; margin: 0 0 12px; }
-            .logo-img { max-height: 72px; max-width: 260px; height: auto; width: auto; }
+            .cabecalho-logo { text-align: center; margin: 0 0 12px; background: transparent; padding: 0; border: none; }
+            .logo-img { max-height: 72px; max-width: 260px; height: auto; width: auto; background: transparent; border: none; vertical-align: middle; }
             h1 { font-size: 16pt; text-align: center; margin: 0 0 8px; color: #1565c0; }
             .sub { text-align: center; font-size: 9pt; color: #666; margin-bottom: 20px; }
             table { width: 100%; border-collapse: collapse; margin: 12px 0; }

@@ -3536,10 +3536,10 @@ function arrayBufferToBase64(buffer) {
 }
 
 let cachedLogoMarkup = null;
-const LOGO_FALLBACK_MARKUP = '<img src="imagens/logo.pdf.png" alt="Logo" />';
+const LOGO_FALLBACK_MARKUP = '<img src="imagens/logo-transparent.png" alt="Logo" onerror="this.onerror=null;this.src=\'imagens/logo.png\';" />';
 async function getReportLogoMarkup() {
   if (cachedLogoMarkup !== null) return cachedLogoMarkup;
-  const logos = ["imagens/logo.pdf.png", "imagens/logo.png", "imagens/logo.pdf"];
+  const logos = ["imagens/logo-transparent.png", "imagens/logo-sem-fundo.png", "imagens/logo.pdf.png", "imagens/logo.png", "imagens/logo.pdf"];
   for (const caminho of logos) {
     try {
       const resposta = await fetch(caminho);
