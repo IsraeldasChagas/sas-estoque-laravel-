@@ -16,7 +16,7 @@
         <!-- Coluna com a identidade visual da aplicacao -->
         <section class="login-hero">
           <div class="login-hero__badge">Gestão inteligente</div>
-          <img src="imagens/logosemfundo.png" alt="SAS Estoque" class="login-hero__logo" onerror="this.onerror=null;this.src='imagens/logo.png';" />
+          <img src="imagens/logo.png" alt="SAS Estoque" class="login-hero__logo" onerror="this.onerror=null;this.src='imagens/logosemfundo.png';" />
           <h1>SAS Estoque</h1>
           <p>Organize, monitore e tome decisões rápidas.</p>
         </section>
@@ -2621,60 +2621,54 @@
                 <option value="pos_concluida">Pós-graduação concluída</option>
               </select>
             </label>
-            <div class="formacao-blocos">
-              <details class="formacao-bloco" open>
-                <summary>Curso / qualificação</summary>
-                <div class="formacao-bloco__campos">
-                  <label>Nome do curso <input type="text" name="formacao_curso_complementar_curso" maxlength="255" placeholder="Ex: Informática básica" /></label>
-                  <label>Instituição <input type="text" name="formacao_curso_complementar_instituicao" maxlength="255" /></label>
-                  <label>Local (cidade / UF) <input type="text" name="formacao_curso_complementar_local" maxlength="500" /></label>
-                  <div class="grid-two">
-                    <label>Data de início <input type="date" name="formacao_curso_complementar_data_inicio" /></label>
-                    <label>Data de conclusão <input type="date" name="formacao_curso_complementar_data_conclusao" /></label>
-                  </div>
-                  <label class="checkbox-label"><input type="checkbox" name="formacao_curso_complementar_em_andamento" value="1" /> Em andamento</label>
-                </div>
+            <p class="form-hint" style="margin: 0 0 8px;">Em cada tipo você pode cadastrar <strong>várias formações</strong> (ex.: dois técnicos, duas graduações). Use &quot;Adicionar outro&quot;.</p>
+            <div class="formacao-blocos" id="funcionarioFormacaoBlocos">
+              <details class="formacao-bloco" open data-formacao-key="curso_complementar">
+                <summary class="formacao-bloco__summary">
+                  <span>Curso / qualificação</span>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="curso_complementar">+ Adicionar outro</button>
+                </summary>
+                <div class="formacao-linhas" data-formacao-key="curso_complementar"></div>
               </details>
-              <details class="formacao-bloco">
-                <summary>Curso técnico</summary>
-                <div class="formacao-bloco__campos">
-                  <label>Nome do curso <input type="text" name="formacao_tecnico_curso" maxlength="255" /></label>
-                  <label>Instituição <input type="text" name="formacao_tecnico_instituicao" maxlength="255" /></label>
-                  <label>Local (cidade / UF) <input type="text" name="formacao_tecnico_local" maxlength="500" /></label>
-                  <div class="grid-two">
-                    <label>Data de início <input type="date" name="formacao_tecnico_data_inicio" /></label>
-                    <label>Data de conclusão <input type="date" name="formacao_tecnico_data_conclusao" /></label>
-                  </div>
-                  <label class="checkbox-label"><input type="checkbox" name="formacao_tecnico_em_andamento" value="1" /> Em andamento</label>
-                </div>
+              <details class="formacao-bloco" data-formacao-key="tecnico">
+                <summary class="formacao-bloco__summary">
+                  <span>Curso técnico</span>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="tecnico">+ Adicionar outro</button>
+                </summary>
+                <div class="formacao-linhas" data-formacao-key="tecnico"></div>
               </details>
-              <details class="formacao-bloco">
-                <summary>Graduação</summary>
-                <div class="formacao-bloco__campos">
-                  <label>Curso (graduação) <input type="text" name="formacao_graduacao_curso" maxlength="255" placeholder="Ex: Administração" /></label>
-                  <label>Instituição <input type="text" name="formacao_graduacao_instituicao" maxlength="255" /></label>
-                  <label>Local (cidade / UF) <input type="text" name="formacao_graduacao_local" maxlength="500" /></label>
-                  <div class="grid-two">
-                    <label>Data de início <input type="date" name="formacao_graduacao_data_inicio" /></label>
-                    <label>Data de conclusão <input type="date" name="formacao_graduacao_data_conclusao" /></label>
-                  </div>
-                  <label class="checkbox-label"><input type="checkbox" name="formacao_graduacao_em_andamento" value="1" /> Em andamento</label>
-                </div>
+              <details class="formacao-bloco" data-formacao-key="graduacao">
+                <summary class="formacao-bloco__summary">
+                  <span>Graduação</span>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="graduacao">+ Adicionar outro</button>
+                </summary>
+                <div class="formacao-linhas" data-formacao-key="graduacao"></div>
               </details>
-              <details class="formacao-bloco">
-                <summary>Pós-graduação</summary>
-                <div class="formacao-bloco__campos">
-                  <label>Curso (especialização, MBA, mestrado…) <input type="text" name="formacao_pos_graduacao_curso" maxlength="255" /></label>
-                  <label>Instituição <input type="text" name="formacao_pos_graduacao_instituicao" maxlength="255" /></label>
-                  <label>Local (cidade / UF) <input type="text" name="formacao_pos_graduacao_local" maxlength="500" /></label>
-                  <div class="grid-two">
-                    <label>Data de início <input type="date" name="formacao_pos_graduacao_data_inicio" /></label>
-                    <label>Data de conclusão <input type="date" name="formacao_pos_graduacao_data_conclusao" /></label>
-                  </div>
-                  <label class="checkbox-label"><input type="checkbox" name="formacao_pos_graduacao_em_andamento" value="1" /> Em andamento</label>
-                </div>
+              <details class="formacao-bloco" data-formacao-key="pos_graduacao">
+                <summary class="formacao-bloco__summary">
+                  <span>Pós-graduação</span>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="pos_graduacao">+ Adicionar outro</button>
+                </summary>
+                <div class="formacao-linhas" data-formacao-key="pos_graduacao"></div>
               </details>
             </div>
+            <template id="funcionarioFormacaoLinhaTpl">
+              <div class="formacao-linha">
+                <div class="formacao-linha__head">
+                  <button type="button" class="btn neutral btn-formacao-remover">Remover esta formação</button>
+                </div>
+                <div class="formacao-linha__campos">
+                  <label>Nome do curso <input type="text" data-f="curso" maxlength="255" placeholder="Ex: Administração, Informática…" /></label>
+                  <label>Instituição <input type="text" data-f="instituicao" maxlength="255" /></label>
+                  <label>Local (cidade / UF) <input type="text" data-f="local" maxlength="500" /></label>
+                  <div class="grid-two">
+                    <label>Data de início <input type="date" data-f="data_inicio" /></label>
+                    <label>Data de conclusão <input type="date" data-f="data_conclusao" /></label>
+                  </div>
+                  <label class="checkbox-label"><input type="checkbox" data-f="em_andamento" value="1" /> Em andamento</label>
+                </div>
+              </div>
+            </template>
           </section>
           <section class="form-section">
             <h3>Contato</h3>

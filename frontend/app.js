@@ -3536,10 +3536,10 @@ function arrayBufferToBase64(buffer) {
 }
 
 let cachedLogoMarkup = null;
-const LOGO_FALLBACK_MARKUP = '<img src="imagens/logosemfundo.png" alt="Logo" onerror="this.onerror=null;this.src=\'imagens/logo.png\';" />';
+const LOGO_FALLBACK_MARKUP = '<img src="imagens/logo.png" alt="Logo" onerror="this.onerror=null;this.src=\'imagens/logosemfundo.png\';" />';
 async function getReportLogoMarkup() {
   if (cachedLogoMarkup !== null) return cachedLogoMarkup;
-  const logos = ["imagens/logosemfundo.png", "imagens/logo.pdf.png", "imagens/logo.png", "imagens/logo.pdf"];
+  const logos = ["imagens/logo.png", "imagens/logosemfundo.png", "imagens/logo.pdf.png", "imagens/logo.pdf"];
   for (const caminho of logos) {
     try {
       const resposta = await fetch(caminho);
@@ -9090,22 +9090,69 @@ function setupModals() {
     { key: "graduacao", titulo: "Graduação" },
     { key: "pos_graduacao", titulo: "Pós-graduação" },
   ];
-  function clearFuncionarioFormacaoFields(form) {
+  function formacaoItemsFromData(data, key) {
+    if (!data || typeof data !== "object") return [];
+    const raw = data[key];
+    if (raw == null) return [];
+    if (Array.isArray(raw)) return raw.filter((x) => x && typeof x === "object");
+    if (typeof raw === "object") return [raw];
+    return [];
+  }
+  function clearFuncionarioFormacaoLinhas(form) {
     if (!form) return;
     FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key }) => {
-      ["curso", "instituicao", "local", "data_inicio", "data_conclusao"].forEach((s) => {
-        const el = form.elements[`formacao_${key}_${s}`];
-        if (el) el.value = "";
-      });
-      const ch = form.elements[`formacao_${key}_em_andamento`];
-      if (ch) ch.checked = false;
+      const wrap = form.querySelector(`.formacao-linhas[data-formacao-key="${key}"]`);
+      if (wrap) wrap.innerHTML = "";
     });
-    if (form.elements.escolaridade) form.elements.escolaridade.value = "";
+  }
+  function addFuncionarioFormacaoLinha(form, key) {
+    const tpl = document.getElementById("funcionarioFormacaoLinhaTpl");
+    const wrap = form.querySelector(`.formacao-linhas[data-formacao-key="${key}"]`);
+    if (!tpl || !wrap) return null;
+    const node = tpl.content.firstElementChild.cloneNode(true);
+    wrap.appendChild(node);
+    return node;
+  }
+  function fillFuncionarioFormacaoLinha(row, b) {
+    if (!row || !b || typeof b !== "object") return;
+    const set = (f, v) => {
+      const el = row.querySelector(`[data-f="${f}"]`);
+      if (!el) return;
+      if (el.type === "checkbox") el.checked = !!v;
+      else if (v != null && v !== "") el.value = String(v);
+    };
+    set("curso", b.curso);
+    set("instituicao", b.instituicao);
+    set("local", b.local);
+    set("data_inicio", b.data_inicio);
+    set("data_conclusao", b.data_conclusao);
+    set("em_andamento", b.em_andamento);
+  }
+  function readFuncionarioFormacaoLinha(row) {
+    if (!row) return null;
+    const g = (f) => row.querySelector(`[data-f="${f}"]`);
+    const curso = (g("curso")?.value || "").trim();
+    const instituicao = (g("instituicao")?.value || "").trim();
+    const local = (g("local")?.value || "").trim();
+    const data_inicio = g("data_inicio")?.value || "";
+    const data_conclusao = g("data_conclusao")?.value || "";
+    const em_andamento = !!(g("em_andamento")?.checked);
+    if (!curso && !instituicao && !local && !data_inicio && !data_conclusao && !em_andamento) return null;
+    return {
+      curso: curso || "",
+      instituicao: instituicao || "",
+      local: local || "",
+      data_inicio: data_inicio || null,
+      data_conclusao: em_andamento ? null : (data_conclusao || null),
+      em_andamento,
+    };
   }
   function fillFuncionarioFormacaoFields(form, escolaridade, formacaoJson) {
     if (!form) return;
-    clearFuncionarioFormacaoFields(form);
-    if (form.elements.escolaridade && escolaridade) form.elements.escolaridade.value = escolaridade;
+    clearFuncionarioFormacaoLinhas(form);
+    if (form.elements.escolaridade) {
+      form.elements.escolaridade.value = escolaridade != null && escolaridade !== "" ? String(escolaridade) : "";
+    }
     let data = formacaoJson;
     if (typeof data === "string" && data.trim()) {
       try {
@@ -9114,42 +9161,30 @@ function setupModals() {
         data = null;
       }
     }
-    if (!data || typeof data !== "object") return;
     FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key }) => {
-      const b = data[key];
-      if (!b || typeof b !== "object") return;
-      const set = (s, v) => {
-        const el = form.elements[`formacao_${key}_${s}`];
-        if (el && v != null && v !== "") el.value = v;
-      };
-      set("curso", b.curso);
-      set("instituicao", b.instituicao);
-      set("local", b.local);
-      set("data_inicio", b.data_inicio);
-      set("data_conclusao", b.data_conclusao);
-      const ch = form.elements[`formacao_${key}_em_andamento`];
-      if (ch) ch.checked = !!b.em_andamento;
+      const items = formacaoItemsFromData(data, key);
+      if (items.length === 0) {
+        addFuncionarioFormacaoLinha(form, key);
+        return;
+      }
+      items.forEach((b) => {
+        const row = addFuncionarioFormacaoLinha(form, key);
+        fillFuncionarioFormacaoLinha(row, b);
+      });
     });
   }
   function collectFuncionarioFormacaoJson(form) {
     if (!form) return null;
     const out = {};
     FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key }) => {
-      const curso = (form.elements[`formacao_${key}_curso`]?.value || "").trim();
-      const instituicao = (form.elements[`formacao_${key}_instituicao`]?.value || "").trim();
-      const local = (form.elements[`formacao_${key}_local`]?.value || "").trim();
-      const data_inicio = form.elements[`formacao_${key}_data_inicio`]?.value || "";
-      const data_conclusao = form.elements[`formacao_${key}_data_conclusao`]?.value || "";
-      const em_andamento = !!(form.elements[`formacao_${key}_em_andamento`]?.checked);
-      if (!curso && !instituicao && !local && !data_inicio && !data_conclusao && !em_andamento) return;
-      out[key] = {
-        curso: curso || "",
-        instituicao: instituicao || "",
-        local: local || "",
-        data_inicio: data_inicio || null,
-        data_conclusao: em_andamento ? null : (data_conclusao || null),
-        em_andamento,
-      };
+      const wrap = form.querySelector(`.formacao-linhas[data-formacao-key="${key}"]`);
+      if (!wrap) return;
+      const arr = [];
+      wrap.querySelectorAll(":scope > .formacao-linha").forEach((row) => {
+        const one = readFuncionarioFormacaoLinha(row);
+        if (one) arr.push(one);
+      });
+      if (arr.length) out[key] = arr;
     });
     return Object.keys(out).length ? out : null;
   }
@@ -9163,7 +9198,7 @@ function setupModals() {
         formacao = null;
       }
     }
-    const linhasBloco = (b) => {
+    const linhasBlocoInner = (b) => {
       if (!b || typeof b !== "object") return "";
       const p = [];
       if (b.curso) p.push(`<strong>Curso:</strong> ${esc(b.curso)}`);
@@ -9172,12 +9207,20 @@ function setupModals() {
       if (b.data_inicio) p.push(`<strong>Início:</strong> ${esc(b.data_inicio)}`);
       if (b.em_andamento) p.push("<strong>Situação:</strong> Em andamento");
       else if (b.data_conclusao) p.push(`<strong>Conclusão:</strong> ${esc(b.data_conclusao)}`);
-      return p.length ? `<div class="view-field-value" style="line-height:1.5;">${p.join("<br/>")}</div>` : "";
+      return p.length ? p.join("<br/>") : "";
     };
     let blocosHtml = "";
     FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key, titulo }) => {
-      const inner = linhasBloco(formacao && formacao[key]);
-      if (inner) blocosHtml += `<div class="view-field"><div class="view-field-label">${esc(titulo)}</div>${inner}</div>`;
+      const items = formacaoItemsFromData(formacao, key);
+      if (!items.length) return;
+      const partes = items.map((b, idx) => {
+        const inner = linhasBlocoInner(b);
+        if (!inner) return "";
+        const prefix = items.length > 1 ? `<span style="font-size:0.85rem;color:#607d8b;">Formação ${idx + 1}</span><br/>` : "";
+        return `<div class="formacao-view-item" style="margin-top:8px;padding:8px 0 8px 10px;border-left:3px solid #90caf9;line-height:1.5;">${prefix}${inner}</div>`;
+      }).filter(Boolean);
+      if (!partes.length) return;
+      blocosHtml += `<div class="view-field" style="grid-column:1/-1;"><div class="view-field-label">${esc(titulo)}</div><div class="view-field-value">${partes.join("")}</div></div>`;
     });
     const temFormacao = escolaridadeTxt || blocosHtml;
     if (!temFormacao) return "";
@@ -9249,6 +9292,7 @@ function setupModals() {
     } else {
       if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = false;
       if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+      fillFuncionarioFormacaoFields(dom.funcionarioForm, "", null);
     }
     toggleModal(dom.funcionarioModal, true);
     } catch (err) {
@@ -9362,6 +9406,34 @@ function setupModals() {
     dom.funcionarioModalTitle.textContent = "Novo Funcionário";
     const submitBtn = document.getElementById("funcionarioFormSubmit");
     if (submitBtn) submitBtn.textContent = "Salvar";
+    fillFuncionarioFormacaoFields(dom.funcionarioForm, "", null);
+  });
+  dom.funcionarioForm?.addEventListener("click", (e) => {
+    const addBtn = e.target.closest(".btn-formacao-add");
+    if (addBtn && dom.funcionarioForm?.contains(addBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const key = addBtn.getAttribute("data-formacao-key");
+      if (key) addFuncionarioFormacaoLinha(dom.funcionarioForm, key);
+      return;
+    }
+    const remBtn = e.target.closest(".btn-formacao-remover");
+    if (remBtn && dom.funcionarioForm?.contains(remBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = remBtn.closest(".formacao-linha");
+      const wrap = row?.parentElement;
+      if (!row || !wrap || !wrap.classList.contains("formacao-linhas")) return;
+      const rows = wrap.querySelectorAll(":scope > .formacao-linha");
+      if (rows.length <= 1) {
+        row.querySelectorAll("[data-f]").forEach((el) => {
+          if (el.type === "checkbox") el.checked = false;
+          else el.value = "";
+        });
+      } else {
+        row.remove();
+      }
+    }
   });
   document.getElementById("funcionariosSection")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-view-funcionario, .btn-edit-funcionario, .btn-inativar-funcionario");

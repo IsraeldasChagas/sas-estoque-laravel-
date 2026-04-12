@@ -5600,11 +5600,7 @@ $normalizeFuncionarioFormacaoJson = static function ($requestData) {
     }
     $allowedKeys = ['curso_complementar', 'tecnico', 'graduacao', 'pos_graduacao'];
     $clean = [];
-    foreach ($allowedKeys as $k) {
-        if (empty($decoded[$k]) || ! is_array($decoded[$k])) {
-            continue;
-        }
-        $b = $decoded[$k];
+    $normalizeItem = static function (array $b) {
         $curso = isset($b['curso']) ? trim((string) $b['curso']) : '';
         $inst = isset($b['instituicao']) ? trim((string) $b['instituicao']) : '';
         $local = isset($b['local']) ? trim((string) $b['local']) : '';
@@ -5612,9 +5608,10 @@ $normalizeFuncionarioFormacaoJson = static function ($requestData) {
         $df = isset($b['data_conclusao']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $b['data_conclusao']) ? $b['data_conclusao'] : null;
         $emAnd = ! empty($b['em_andamento']);
         if ($curso === '' && $inst === '' && $local === '' && ! $di && ! $df && ! $emAnd) {
-            continue;
+            return null;
         }
-        $clean[$k] = [
+
+        return [
             'curso' => mb_substr($curso, 0, 255),
             'instituicao' => mb_substr($inst, 0, 255),
             'local' => mb_substr($local, 0, 500),
@@ -5622,6 +5619,34 @@ $normalizeFuncionarioFormacaoJson = static function ($requestData) {
             'data_conclusao' => $emAnd ? null : $df,
             'em_andamento' => $emAnd,
         ];
+    };
+    foreach ($allowedKeys as $k) {
+        if (empty($decoded[$k])) {
+            continue;
+        }
+        $rawBlock = $decoded[$k];
+        $items = [];
+        if (is_array($rawBlock) && array_is_list($rawBlock)) {
+            $items = $rawBlock;
+        } elseif (is_array($rawBlock)) {
+            // Legado: um único objeto por chave
+            $items = [$rawBlock];
+        } else {
+            continue;
+        }
+        $list = [];
+        foreach ($items as $b) {
+            if (! is_array($b)) {
+                continue;
+            }
+            $one = $normalizeItem($b);
+            if ($one !== null) {
+                $list[] = $one;
+            }
+        }
+        if ($list !== []) {
+            $clean[$k] = $list;
+        }
     }
 
     return empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
