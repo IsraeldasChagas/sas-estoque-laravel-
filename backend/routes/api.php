@@ -5583,7 +5583,51 @@ Route::get('/funcionarios/{id}', function ($id) {
     return response()->json($f)->header('Access-Control-Allow-Origin', '*');
 });
 
-Route::post('/funcionarios', function (Request $request) {
+$normalizeFuncionarioFormacaoJson = static function ($requestData) {
+    $raw = $requestData['formacao_json'] ?? null;
+    if ($raw === null || $raw === '') {
+        return null;
+    }
+    if (is_string($raw)) {
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return null;
+        }
+    } elseif (is_array($raw)) {
+        $decoded = $raw;
+    } else {
+        return null;
+    }
+    $allowedKeys = ['curso_complementar', 'tecnico', 'graduacao', 'pos_graduacao'];
+    $clean = [];
+    foreach ($allowedKeys as $k) {
+        if (empty($decoded[$k]) || ! is_array($decoded[$k])) {
+            continue;
+        }
+        $b = $decoded[$k];
+        $curso = isset($b['curso']) ? trim((string) $b['curso']) : '';
+        $inst = isset($b['instituicao']) ? trim((string) $b['instituicao']) : '';
+        $local = isset($b['local']) ? trim((string) $b['local']) : '';
+        $di = isset($b['data_inicio']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $b['data_inicio']) ? $b['data_inicio'] : null;
+        $df = isset($b['data_conclusao']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $b['data_conclusao']) ? $b['data_conclusao'] : null;
+        $emAnd = ! empty($b['em_andamento']);
+        if ($curso === '' && $inst === '' && $local === '' && ! $di && ! $df && ! $emAnd) {
+            continue;
+        }
+        $clean[$k] = [
+            'curso' => mb_substr($curso, 0, 255),
+            'instituicao' => mb_substr($inst, 0, 255),
+            'local' => mb_substr($local, 0, 500),
+            'data_inicio' => $di,
+            'data_conclusao' => $emAnd ? null : $df,
+            'em_andamento' => $emAnd,
+        ];
+    }
+
+    return empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
+};
+
+Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson) {
     try {
     if (!Schema::hasTable('funcionarios')) {
         return response()->json(['error' => 'Módulo RH não configurado. Execute: php artisan migrate'], 503)
@@ -5676,6 +5720,14 @@ Route::post('/funcionarios', function (Request $request) {
         'conta_digito' => $data['conta_digito'] ?? null,
         'pix' => $data['pix'] ?? null,
     ];
+    if (Schema::hasColumn('funcionarios', 'escolaridade')) {
+        $insert['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
+            ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
+            : null;
+    }
+    if (Schema::hasColumn('funcionarios', 'formacao_json')) {
+        $insert['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
+    }
     if ($request->hasFile('foto')) {
         $foto = $request->file('foto');
         $uploadDir = public_path('uploads/funcionarios');
@@ -5699,7 +5751,7 @@ Route::post('/funcionarios', function (Request $request) {
     }
 });
 
-Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) {
+Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -5783,6 +5835,14 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) {
         'possui_acesso' => $possuiAcesso ? 1 : 0,
         'usuario_id' => $usuarioId,
     ];
+    if (Schema::hasColumn('funcionarios', 'escolaridade')) {
+        $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
+            ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
+            : null;
+    }
+    if (Schema::hasColumn('funcionarios', 'formacao_json')) {
+        $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
+    }
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {
             @unlink(public_path($existente->foto));
@@ -5807,7 +5867,7 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) {
         ->header('Access-Control-Allow-Origin', '*');
 });
 
-Route::put('/funcionarios/{id}', function (Request $request, $id) {
+Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -5845,6 +5905,14 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) {
         'conta_digito' => $data['conta_digito'] ?? null,
         'pix' => $data['pix'] ?? null,
     ];
+    if (Schema::hasColumn('funcionarios', 'escolaridade')) {
+        $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
+            ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
+            : null;
+    }
+    if (Schema::hasColumn('funcionarios', 'formacao_json')) {
+        $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
+    }
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {
             unlink(public_path($existente->foto));

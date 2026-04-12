@@ -9075,6 +9075,121 @@ function setupModals() {
       dom.funcionariosFiltroUnidade.innerHTML = '<option value="">Todas</option>' + opts;
     }
   }
+  const FUNCIONARIO_ESCOLARIDADE_LABELS = {
+    fundamental_incompleto: "Fundamental incompleto",
+    fundamental_completo: "Fundamental completo",
+    medio_incompleto: "Ensino médio incompleto",
+    medio_completo: "Ensino médio completo",
+    superior_incompleto: "Superior incompleto",
+    superior_completo: "Superior completo",
+    pos_concluida: "Pós-graduação concluída",
+  };
+  const FUNCIONARIO_FORMACAO_BLOCOS = [
+    { key: "curso_complementar", titulo: "Curso / qualificação" },
+    { key: "tecnico", titulo: "Curso técnico" },
+    { key: "graduacao", titulo: "Graduação" },
+    { key: "pos_graduacao", titulo: "Pós-graduação" },
+  ];
+  function clearFuncionarioFormacaoFields(form) {
+    if (!form) return;
+    FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key }) => {
+      ["curso", "instituicao", "local", "data_inicio", "data_conclusao"].forEach((s) => {
+        const el = form.elements[`formacao_${key}_${s}`];
+        if (el) el.value = "";
+      });
+      const ch = form.elements[`formacao_${key}_em_andamento`];
+      if (ch) ch.checked = false;
+    });
+    if (form.elements.escolaridade) form.elements.escolaridade.value = "";
+  }
+  function fillFuncionarioFormacaoFields(form, escolaridade, formacaoJson) {
+    if (!form) return;
+    clearFuncionarioFormacaoFields(form);
+    if (form.elements.escolaridade && escolaridade) form.elements.escolaridade.value = escolaridade;
+    let data = formacaoJson;
+    if (typeof data === "string" && data.trim()) {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        data = null;
+      }
+    }
+    if (!data || typeof data !== "object") return;
+    FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key }) => {
+      const b = data[key];
+      if (!b || typeof b !== "object") return;
+      const set = (s, v) => {
+        const el = form.elements[`formacao_${key}_${s}`];
+        if (el && v != null && v !== "") el.value = v;
+      };
+      set("curso", b.curso);
+      set("instituicao", b.instituicao);
+      set("local", b.local);
+      set("data_inicio", b.data_inicio);
+      set("data_conclusao", b.data_conclusao);
+      const ch = form.elements[`formacao_${key}_em_andamento`];
+      if (ch) ch.checked = !!b.em_andamento;
+    });
+  }
+  function collectFuncionarioFormacaoJson(form) {
+    if (!form) return null;
+    const out = {};
+    FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key }) => {
+      const curso = (form.elements[`formacao_${key}_curso`]?.value || "").trim();
+      const instituicao = (form.elements[`formacao_${key}_instituicao`]?.value || "").trim();
+      const local = (form.elements[`formacao_${key}_local`]?.value || "").trim();
+      const data_inicio = form.elements[`formacao_${key}_data_inicio`]?.value || "";
+      const data_conclusao = form.elements[`formacao_${key}_data_conclusao`]?.value || "";
+      const em_andamento = !!(form.elements[`formacao_${key}_em_andamento`]?.checked);
+      if (!curso && !instituicao && !local && !data_inicio && !data_conclusao && !em_andamento) return;
+      out[key] = {
+        curso: curso || "",
+        instituicao: instituicao || "",
+        local: local || "",
+        data_inicio: data_inicio || null,
+        data_conclusao: em_andamento ? null : (data_conclusao || null),
+        em_andamento,
+      };
+    });
+    return Object.keys(out).length ? out : null;
+  }
+  function renderFuncionarioFormacaoViewHtml(f, esc, field) {
+    const escolaridadeTxt = FUNCIONARIO_ESCOLARIDADE_LABELS[f.escolaridade] || f.escolaridade || "";
+    let formacao = f.formacao_json;
+    if (typeof formacao === "string" && formacao.trim()) {
+      try {
+        formacao = JSON.parse(formacao);
+      } catch (e) {
+        formacao = null;
+      }
+    }
+    const linhasBloco = (b) => {
+      if (!b || typeof b !== "object") return "";
+      const p = [];
+      if (b.curso) p.push(`<strong>Curso:</strong> ${esc(b.curso)}`);
+      if (b.instituicao) p.push(`<strong>Instituição:</strong> ${esc(b.instituicao)}`);
+      if (b.local) p.push(`<strong>Local:</strong> ${esc(b.local)}`);
+      if (b.data_inicio) p.push(`<strong>Início:</strong> ${esc(b.data_inicio)}`);
+      if (b.em_andamento) p.push("<strong>Situação:</strong> Em andamento");
+      else if (b.data_conclusao) p.push(`<strong>Conclusão:</strong> ${esc(b.data_conclusao)}`);
+      return p.length ? `<div class="view-field-value" style="line-height:1.5;">${p.join("<br/>")}</div>` : "";
+    };
+    let blocosHtml = "";
+    FUNCIONARIO_FORMACAO_BLOCOS.forEach(({ key, titulo }) => {
+      const inner = linhasBloco(formacao && formacao[key]);
+      if (inner) blocosHtml += `<div class="view-field"><div class="view-field-label">${esc(titulo)}</div>${inner}</div>`;
+    });
+    const temFormacao = escolaridadeTxt || blocosHtml;
+    if (!temFormacao) return "";
+    return `
+        <div class="form-section">
+          <h3>Formação e educação</h3>
+          <div class="view-fields-grid">
+            ${escolaridadeTxt ? field("Escolaridade", escolaridadeTxt) : ""}
+            ${blocosHtml}
+          </div>
+        </div>`;
+  }
   async function openFuncionarioModal(editId = null) {
     try {
       if (!state.unidades?.length) {
@@ -9111,6 +9226,7 @@ function setupModals() {
         const el = dom.funcionarioForm?.elements[k];
         if (el && f[k] != null) el.value = f[k] || "";
       });
+      fillFuncionarioFormacaoFields(dom.funcionarioForm, f.escolaridade, f.formacao_json);
       if (f.possui_acesso) {
         dom.funcionarioPossuiAcesso.checked = true;
         if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.remove("hidden");
@@ -9171,6 +9287,7 @@ function setupModals() {
             ${field("Status", statusLabel)}
           </div>
         </div>
+        ${renderFuncionarioFormacaoViewHtml(f, esc, field)}
         <div class="form-section">
           <h3>Contato</h3>
           <div class="view-fields-grid">
@@ -9456,8 +9573,11 @@ function setupModals() {
       conta: form.elements.conta?.value || null,
       conta_digito: form.elements.conta_digito?.value || null,
       pix: form.elements.pix?.value || null,
+      escolaridade: form.elements.escolaridade?.value || null,
       possui_acesso: dom.funcionarioPossuiAcesso?.checked || false,
     };
+    const formacaoJsonObj = collectFuncionarioFormacaoJson(form);
+    const formacaoJsonStr = formacaoJsonObj ? JSON.stringify(formacaoJsonObj) : "";
     if (payload.possui_acesso) {
       payload.usuario_id = document.getElementById("funcionarioUsuarioId")?.value || null;
       payload.login_usuario = form.elements.login_usuario?.value;
@@ -9486,6 +9606,8 @@ function setupModals() {
           conta: payload.conta,
           conta_digito: payload.conta_digito,
           pix: payload.pix,
+          escolaridade: payload.escolaridade ?? "",
+          formacao_json: formacaoJsonStr,
           // RH (Acesso ao sistema)
           possui_acesso: payload.possui_acesso ? "1" : "0",
           usuario_id: payload.usuario_id ?? null,
@@ -9516,6 +9638,8 @@ function setupModals() {
         if (payload.conta) fd.append("conta", payload.conta);
         if (payload.conta_digito) fd.append("conta_digito", payload.conta_digito);
         if (payload.pix) fd.append("pix", payload.pix);
+        if (payload.escolaridade) fd.append("escolaridade", payload.escolaridade);
+        fd.append("formacao_json", formacaoJsonStr);
         if (payload.possui_acesso) {
           if (payload.usuario_id) fd.append("usuario_id", payload.usuario_id);
           else {

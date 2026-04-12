@@ -2608,6 +2608,75 @@
             </div>
           </section>
           <section class="form-section">
+            <h3>Formação e educação</h3>
+            <label>Escolaridade (nível)
+              <select name="escolaridade">
+                <option value="">Selecione</option>
+                <option value="fundamental_incompleto">Fundamental incompleto</option>
+                <option value="fundamental_completo">Fundamental completo</option>
+                <option value="medio_incompleto">Ensino médio incompleto</option>
+                <option value="medio_completo">Ensino médio completo</option>
+                <option value="superior_incompleto">Superior incompleto</option>
+                <option value="superior_completo">Superior completo</option>
+                <option value="pos_concluida">Pós-graduação concluída</option>
+              </select>
+            </label>
+            <div class="formacao-blocos">
+              <details class="formacao-bloco" open>
+                <summary>Curso / qualificação</summary>
+                <div class="formacao-bloco__campos">
+                  <label>Nome do curso <input type="text" name="formacao_curso_complementar_curso" maxlength="255" placeholder="Ex: Informática básica" /></label>
+                  <label>Instituição <input type="text" name="formacao_curso_complementar_instituicao" maxlength="255" /></label>
+                  <label>Local (cidade / UF) <input type="text" name="formacao_curso_complementar_local" maxlength="500" /></label>
+                  <div class="grid-two">
+                    <label>Data de início <input type="date" name="formacao_curso_complementar_data_inicio" /></label>
+                    <label>Data de conclusão <input type="date" name="formacao_curso_complementar_data_conclusao" /></label>
+                  </div>
+                  <label class="checkbox-label"><input type="checkbox" name="formacao_curso_complementar_em_andamento" value="1" /> Em andamento</label>
+                </div>
+              </details>
+              <details class="formacao-bloco">
+                <summary>Curso técnico</summary>
+                <div class="formacao-bloco__campos">
+                  <label>Nome do curso <input type="text" name="formacao_tecnico_curso" maxlength="255" /></label>
+                  <label>Instituição <input type="text" name="formacao_tecnico_instituicao" maxlength="255" /></label>
+                  <label>Local (cidade / UF) <input type="text" name="formacao_tecnico_local" maxlength="500" /></label>
+                  <div class="grid-two">
+                    <label>Data de início <input type="date" name="formacao_tecnico_data_inicio" /></label>
+                    <label>Data de conclusão <input type="date" name="formacao_tecnico_data_conclusao" /></label>
+                  </div>
+                  <label class="checkbox-label"><input type="checkbox" name="formacao_tecnico_em_andamento" value="1" /> Em andamento</label>
+                </div>
+              </details>
+              <details class="formacao-bloco">
+                <summary>Graduação</summary>
+                <div class="formacao-bloco__campos">
+                  <label>Curso (graduação) <input type="text" name="formacao_graduacao_curso" maxlength="255" placeholder="Ex: Administração" /></label>
+                  <label>Instituição <input type="text" name="formacao_graduacao_instituicao" maxlength="255" /></label>
+                  <label>Local (cidade / UF) <input type="text" name="formacao_graduacao_local" maxlength="500" /></label>
+                  <div class="grid-two">
+                    <label>Data de início <input type="date" name="formacao_graduacao_data_inicio" /></label>
+                    <label>Data de conclusão <input type="date" name="formacao_graduacao_data_conclusao" /></label>
+                  </div>
+                  <label class="checkbox-label"><input type="checkbox" name="formacao_graduacao_em_andamento" value="1" /> Em andamento</label>
+                </div>
+              </details>
+              <details class="formacao-bloco">
+                <summary>Pós-graduação</summary>
+                <div class="formacao-bloco__campos">
+                  <label>Curso (especialização, MBA, mestrado…) <input type="text" name="formacao_pos_graduacao_curso" maxlength="255" /></label>
+                  <label>Instituição <input type="text" name="formacao_pos_graduacao_instituicao" maxlength="255" /></label>
+                  <label>Local (cidade / UF) <input type="text" name="formacao_pos_graduacao_local" maxlength="500" /></label>
+                  <div class="grid-two">
+                    <label>Data de início <input type="date" name="formacao_pos_graduacao_data_inicio" /></label>
+                    <label>Data de conclusão <input type="date" name="formacao_pos_graduacao_data_conclusao" /></label>
+                  </div>
+                  <label class="checkbox-label"><input type="checkbox" name="formacao_pos_graduacao_em_andamento" value="1" /> Em andamento</label>
+                </div>
+              </details>
+            </div>
+          </section>
+          <section class="form-section">
             <h3>Contato</h3>
             <div class="grid-two">
               <label>WhatsApp <input name="whatsapp" placeholder="(00) 00000-0000" /></label>
