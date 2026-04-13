@@ -2045,7 +2045,7 @@
             </div>
 
             <p class="subtle-text fechamento-audit__intro">
-              Em cada linha, <strong>Diferença</strong> = PDV − maquinha (falta ou sobra naquela forma). A <strong>soma</strong> de todas as diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra — <strong>sem quebra</strong>. Se não fechar em zero, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
+              Em cada linha, <strong>Diferença</strong> = <strong>maquinha − PDV</strong> (referência da maquinha). A <strong>soma</strong> das diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra — <strong>sem quebra</strong>. Caso contrário, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
             </p>
 
             <div class="table-card form-card--wide fechamento-audit__meta">
@@ -2123,7 +2123,7 @@
                       <th>Forma de pagamento</th>
                       <th>PDV (R$)</th>
                       <th>Maquinha (R$)</th>
-                      <th title="PDV − maquinha nesta forma">Diferença (R$)</th>
+                      <th title="Maquinha − PDV nesta forma">Diferença (R$)</th>
                     </tr>
                   </thead>
                   <tbody id="fechamentoTbodyValores">
@@ -2163,7 +2163,7 @@
                       <th style="text-align:right">Totais</th>
                       <th id="fechamentoFootPdv">R$ 0,00</th>
                       <th id="fechamentoFootMaq">R$ 0,00</th>
-                      <th id="fechamentoFootDiff" title="Soma (PDV−maquinha) por linha — zero = compensado entre formas">R$ 0,00</th>
+                      <th id="fechamentoFootDiff" title="Soma (maquinha−PDV) por linha — zero = compensado entre formas">R$ 0,00</th>
                     </tr>
                   </tfoot>
                 </table>

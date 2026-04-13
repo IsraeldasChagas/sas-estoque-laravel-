@@ -6209,7 +6209,7 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         $lab = $h($L['label'] ?? $L['key'] ?? '—');
         $vSis = (float) ($L['sis'] ?? 0);
         $vMaq = (float) ($L['maq'] ?? 0);
-        $vDiff = round($vSis - $vMaq, 2);
+        $vDiff = round($vMaq - $vSis, 2);
         $sumPdv += $vSis;
         $sumMaq += $vMaq;
         $sumDiff += $vDiff;
@@ -6279,7 +6279,7 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         $html .= '<p style="font-size:9pt;margin:8px 0;"><strong>Observações:</strong> ' . nl2br($h($row->observacoes)) . '</p>';
     }
     $html .= '<table><thead><tr>
-        <th>Forma</th><th>PDV</th><th>Maquinha</th><th>Diferença (PDV−maq.)</th>
+        <th>Forma</th><th>PDV</th><th>Maquinha</th><th>Diferença (maq.−PDV)</th>
     </tr></thead><tbody>' . $rowsHtml . '</tbody>'
         . '<tfoot><tr>'
         . '<th style="text-align:right">Totais / Σ dif.</th>'

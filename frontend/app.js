@@ -14057,7 +14057,7 @@ function buildFechamentoCaixaPayload() {
     totalInf = roundToCurrency(totalInf + informado);
     totalSis = roundToCurrency(totalSis + sis);
     totalMaq = roundToCurrency(totalMaq + maq);
-    const diffLinha = roundToCurrency(sis - maq);
+    const diffLinha = roundToCurrency(maq - sis);
     somaDiff = roundToCurrency(somaDiff + diffLinha);
     linhas.push({ key, label, esp: 0, sis, maq, informado, diff: diffLinha });
   });
@@ -14239,7 +14239,7 @@ function recalcFechamentoCaixa() {
   FECHAMENTO_CAIXA_FORMAS.forEach(({ key }) => {
     const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
     const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
-    const diffLinha = roundToCurrency(sis - maq);
+    const diffLinha = roundToCurrency(maq - sis);
     totalSis = roundToCurrency(totalSis + sis);
     totalMaq = roundToCurrency(totalMaq + maq);
     somaDiff = roundToCurrency(somaDiff + diffLinha);
