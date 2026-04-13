@@ -5675,8 +5675,30 @@ select[size]:not([size="1"]) {
   overflow-x: auto;
 }
 
+.fechamento-audit__referencia-block {
+  margin-bottom: 1rem;
+}
+
+.fechamento-audit__ref-table-wrap {
+  overflow-x: auto;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.fechamento-audit__ref-table {
+  min-width: 260px;
+  max-width: 420px;
+}
+
 .fechamento-audit__table {
-  min-width: 720px;
+  min-width: 680px;
+}
+
+.fechamento-audit__conf-cell {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: #37474f;
 }
 
 .fechamento-audit__table th,
@@ -5799,6 +5821,11 @@ select[size]:not([size="1"]) {
   .fechamento-audit__money {
     max-width: none;
     margin-top: 0.25rem;
+  }
+
+  .fechamento-audit__conf-cell {
+    white-space: normal;
+    word-break: break-word;
   }
 }
 

@@ -2045,8 +2045,8 @@
             </div>
 
             <p class="subtle-text fechamento-audit__intro">
-              Preencha a <strong>referência</strong> (o que o sistema espera por forma de pagamento) e os valores <strong>conferidos</strong> no PDV e na maquinha.
-              A <strong>diferença</strong> de cada linha é (valor sistema + valor maquinha) − referência. Se a <strong>soma das diferenças</strong> fechar em zero, as faltas e sobras se compensaram (<strong>sem quebra</strong> no fechamento geral); caso contrário, há <strong>quebra líquida</strong>.
+              Primeiro informe a <strong>referência</strong> (o que o relatório do PDV indica por forma de pagamento). Depois preencha o que você <strong>conferiu</strong> no PDV e na maquinha — a coluna <strong>Conferência</strong> mostra a soma no formato <em>100 + 5 = 105</em>.
+              A <strong>diferença</strong> é (PDV + maquinha) − referência. Se a <strong>soma das diferenças</strong> de todas as linhas fechar em zero, houve compensação (<strong>sem quebra</strong> geral).
             </p>
 
             <div class="table-card form-card--wide fechamento-audit__meta">
@@ -2110,11 +2110,52 @@
               </label>
             </div>
 
+            <div class="table-card form-card--wide fechamento-audit__referencia-block">
+              <header>
+                <div>
+                  <h3>Referência pelo relatório</h3>
+                  <p class="subtle-text">O que o PDV ou relatório de fechamento indica em cada forma (base da conferência)</p>
+                </div>
+              </header>
+              <div class="table-wrapper fechamento-audit__ref-table-wrap">
+                <table class="fechamento-audit__table fechamento-audit__ref-table">
+                  <thead>
+                    <tr>
+                      <th>Forma de pagamento</th>
+                      <th>Referência (R$)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Forma"><strong>Dinheiro</strong></td>
+                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Forma"><strong>Débito</strong></td>
+                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Forma"><strong>Crédito</strong></td>
+                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Forma"><strong>PIX</strong></td>
+                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Forma"><strong>PIX Thiago</strong></td>
+                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div class="table-card form-card--wide">
               <header>
                 <div>
-                  <h3>Valores por forma de pagamento</h3>
-                  <p class="subtle-text">Referência × valores no sistema (PDV) × valores na maquinha</p>
+                  <h3>Conferência (PDV e maquinha)</h3>
+                  <p class="subtle-text">Valores conferidos; a coluna <strong>Conferência</strong> mostra <em>PDV + maquinha = total</em> e a <strong>Diferença</strong> compara esse total com a referência acima</p>
                 </div>
               </header>
               <div class="table-wrapper fechamento-audit__table-wrap">
@@ -2122,59 +2163,53 @@
                   <thead>
                     <tr>
                       <th>Forma de pagamento</th>
-                      <th>Referência (R$)</th>
                       <th>Valor sistema / PDV (R$)</th>
                       <th>Valor maquinha (R$)</th>
-                      <th>Informado (soma)</th>
-                      <th>Diferença</th>
+                      <th>Conferência (soma)</th>
+                      <th>Diferença vs referência</th>
                     </tr>
                   </thead>
                   <tbody id="fechamentoTbodyValores">
                     <tr data-fechamento-key="dinheiro">
                       <td data-label="Forma"><strong>Dinheiro</strong></td>
-                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Sistema"><input type="text" class="fechamento-audit__money" id="fechamento_sis_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Sistema / PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Informado" id="fechamento_sum_dinheiro">R$ 0,00</td>
+                      <td data-label="Conferência" class="fechamento-audit__conf-cell" id="fechamento_conf_dinheiro">—</td>
                       <td data-label="Diferença" id="fechamento_diff_dinheiro">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="debito">
                       <td data-label="Forma"><strong>Débito</strong></td>
-                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Sistema"><input type="text" class="fechamento-audit__money" id="fechamento_sis_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Sistema / PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Informado" id="fechamento_sum_debito">R$ 0,00</td>
+                      <td data-label="Conferência" class="fechamento-audit__conf-cell" id="fechamento_conf_debito">—</td>
                       <td data-label="Diferença" id="fechamento_diff_debito">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="credito">
                       <td data-label="Forma"><strong>Crédito</strong></td>
-                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Sistema"><input type="text" class="fechamento-audit__money" id="fechamento_sis_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Sistema / PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Informado" id="fechamento_sum_credito">R$ 0,00</td>
+                      <td data-label="Conferência" class="fechamento-audit__conf-cell" id="fechamento_conf_credito">—</td>
                       <td data-label="Diferença" id="fechamento_diff_credito">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="pix">
                       <td data-label="Forma"><strong>PIX</strong></td>
-                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Sistema"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Sistema / PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Informado" id="fechamento_sum_pix">R$ 0,00</td>
+                      <td data-label="Conferência" class="fechamento-audit__conf-cell" id="fechamento_conf_pix">—</td>
                       <td data-label="Diferença" id="fechamento_diff_pix">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="pix_thiago">
                       <td data-label="Forma"><strong>PIX Thiago</strong></td>
-                      <td data-label="Referência"><input type="text" class="fechamento-audit__money" id="fechamento_esp_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Sistema"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Sistema / PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Informado" id="fechamento_sum_pix_thiago">R$ 0,00</td>
+                      <td data-label="Conferência" class="fechamento-audit__conf-cell" id="fechamento_conf_pix_thiago">—</td>
                       <td data-label="Diferença" id="fechamento_diff_pix_thiago">R$ 0,00</td>
                     </tr>
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colspan="4" style="text-align:right">Totais</th>
-                      <th id="fechamentoTotalInformadoFoot">R$ 0,00</th>
+                      <th colspan="3" style="text-align:right">Totais</th>
+                      <th data-label="Total conferido" id="fechamentoTotalInformadoFoot">R$ 0,00</th>
                       <th id="fechamentoTotalDiffFoot">R$ 0,00</th>
                     </tr>
                   </tfoot>

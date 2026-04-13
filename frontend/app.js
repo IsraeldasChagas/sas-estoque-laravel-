@@ -14209,6 +14209,18 @@ function formatFechamentoSigned(value) {
   return v > 0 ? `+ ${absFmt}` : `− ${absFmt}`;
 }
 
+/** Exibe PDV + maquinha = total (ex.: 100 + 5 = 105) para a coluna Conferência. */
+function formatFechamentoConferenciaLine(sis, maq, informado) {
+  const tol = 0.005;
+  const s = roundToCurrency(sis);
+  const m = roundToCurrency(maq);
+  const i = roundToCurrency(informado);
+  if (Math.abs(s) < tol && Math.abs(m) < tol && Math.abs(i) < tol) {
+    return "—";
+  }
+  return `${formatCurrencyBRL(s)} + ${formatCurrencyBRL(m)} = ${formatCurrencyBRL(i)}`;
+}
+
 let fechamentoRecalcRaf = null;
 function scheduleRecalcFechamentoCaixa() {
   if (fechamentoRecalcRaf) cancelAnimationFrame(fechamentoRecalcRaf);
@@ -14235,8 +14247,8 @@ function recalcFechamentoCaixa() {
     totalInf = roundToCurrency(totalInf + informado);
     totalDiff = roundToCurrency(totalDiff + diff);
 
-    const sumEl = document.getElementById(`fechamento_sum_${key}`);
-    if (sumEl) sumEl.textContent = formatCurrencyBRL(informado);
+    const confEl = document.getElementById(`fechamento_conf_${key}`);
+    if (confEl) confEl.textContent = formatFechamentoConferenciaLine(sis, maq, informado);
 
     const diffEl = document.getElementById(`fechamento_diff_${key}`);
     if (diffEl) {
