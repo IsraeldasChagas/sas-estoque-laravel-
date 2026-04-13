@@ -6290,8 +6290,7 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
     <div class="tot">
         <strong>Total PDV:</strong> ' . $h($fmt($sumPdv)) . ' &nbsp;|&nbsp;
         <strong>Total maquinas:</strong> ' . $h($fmt($sumMaq)) . ' &nbsp;|&nbsp;
-        <strong>Σ diferenças (saldo líquido):</strong> ' . $h($fmt($sumDiff)) . ' &nbsp;|&nbsp;
-        <strong>Total geral (PDV+maq.):</strong> ' . $h($fmt((float) $row->total_informado)) . '
+        <strong>Σ diferenças (saldo líquido):</strong> ' . $h($fmt($sumDiff)) . '
     </div>
     <div class="rod">Grupo Sabor Paraense — SAS Estoque. Documento para conferência e arquivo.</div>
     </body></html>';

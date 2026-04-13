@@ -14120,6 +14120,22 @@ async function downloadFechamentoCaixaPdf(id) {
   URL.revokeObjectURL(url);
 }
 
+function fechamentoTotalMaquinasFromRow(row) {
+  try {
+    const raw = row?.linhas_json;
+    const L = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!Array.isArray(L)) return 0;
+    let s = 0;
+    L.forEach((line) => {
+      const m = Number(line?.maq ?? 0);
+      if (Number.isFinite(m)) s = roundToCurrency(s + m);
+    });
+    return s;
+  } catch (_) {
+    return 0;
+  }
+}
+
 function renderFechamentosCaixaHistorico(rows) {
   const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
   if (!tbody) return;
@@ -14132,7 +14148,7 @@ function renderFechamentosCaixaHistorico(rows) {
     .map((r) => {
       const op = escapeHtml((r.operador_nome || "—").toString());
       const un = escapeHtml((r.unidade_nome || "—").toString());
-      const tot = Number(r.total_informado ?? 0);
+      const tot = fechamentoTotalMaquinasFromRow(r);
       const saldo = Number(r.saldo_liquido ?? 0);
       const tol = 0.009;
       const sem = Number(r.sem_quebra) === 1 || Math.abs(saldo) < tol;
@@ -14153,7 +14169,7 @@ function renderFechamentosCaixaHistorico(rows) {
         <td data-label="Data">${escapeHtml(fmtData(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
         <td data-label="Unidade">${un}</td>
         <td data-label="Operador">${op}</td>
-        <td data-label="Total">${escapeHtml(formatCurrencyBRL(tot))}</td>
+        <td data-label="Total maquinha">${escapeHtml(formatCurrencyBRL(tot))}</td>
         <td data-label="Fechamento">${escapeHtml(rotuloFech)}</td>
         <td data-label="Valor">${escapeHtml(valorFech)}</td>
         <td data-label="PDF"><button type="button" class="btn secondary fechamento-caixa-pdf-btn" data-fechamento-pdf="${escapeHtml(String(r.id))}">PDF</button></td>
