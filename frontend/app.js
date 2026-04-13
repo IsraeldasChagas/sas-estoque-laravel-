@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -354,7 +354,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -386,7 +386,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechaTecnica", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechamento", "fechaTecnica", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -394,7 +394,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechaTecnica"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechamento", "fechaTecnica"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2722,6 +2722,13 @@ function applyPermissions() {
   if (sections.includes("historicoReservas") && !sections.includes("reservaMesa")) {
     sections = [...sections, "reservaMesa"];
   }
+  // Fechamento (Financeiro): permissoes_menu antigas sem o módulo novo mantêm acesso junto a Boleto/Alvará/Proventos
+  if (
+    (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos")) &&
+    !sections.includes("fechamento")
+  ) {
+    sections = [...sections, "fechamento"];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2739,7 +2746,11 @@ function applyPermissions() {
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
-    const temAcessoFinanceiro = regras.sections.includes("boletao") || regras.sections.includes("alvara") || regras.sections.includes("proventos");
+    const temAcessoFinanceiro =
+      regras.sections.includes("boletao") ||
+      regras.sections.includes("alvara") ||
+      regras.sections.includes("proventos") ||
+      regras.sections.includes("fechamento");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
   // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (ex.: Backup de Fornecedores no perfil padrão = só ADMIN)
@@ -2887,6 +2898,14 @@ function navigateTo(section) {
       reservaNavSubmenu.classList.add("open");
     } else {
       reservaNavSubmenu.classList.remove("open");
+    }
+  }
+  const financeiroNavSubmenuNav = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
+  if (financeiroNavSubmenuNav) {
+    if (section === "boletao" || section === "alvara" || section === "proventos" || section === "fechamento") {
+      financeiroNavSubmenuNav.classList.add("open");
+    } else {
+      financeiroNavSubmenuNav.classList.remove("open");
     }
   }
   if (section === 'boasVindas') {
@@ -7038,7 +7057,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas",
       "funcionarios", "logs"
     ]);
 
@@ -10779,6 +10798,9 @@ function setupNavigation() {
           await loadBoletos({}).catch(() => {});
           await loadBoletosResumo().catch(() => {});
         }
+      }
+      else if (target === "fechamento") {
+        /* página em construção — sem carga de dados */
       }
     } catch (err) {
       showToast(err.message, "error");
