@@ -14278,22 +14278,6 @@ function fechamentoTotalMaquinasFromRow(row) {
   }
 }
 
-function fechamentoTotalPdvFromRow(row) {
-  try {
-    const raw = row?.linhas_json;
-    const L = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (!Array.isArray(L)) return 0;
-    let s = 0;
-    L.forEach((line) => {
-      const v = Number(line?.sis ?? 0);
-      if (Number.isFinite(v)) s = roundToCurrency(s + v);
-    });
-    return s;
-  } catch (_) {
-    return 0;
-  }
-}
-
 /** ym = "YYYY-MM" → último dia do mês em "YYYY-MM-DD" */
 function fechamentoUltimoDiaMes(ym) {
   const parts = String(ym || "").split("-");
@@ -14371,57 +14355,28 @@ function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
     out.innerHTML = `<p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — ${escapeHtml(ym)}: nenhum fechamento neste período.</p>`;
     return;
   }
-  let sumPdv = 0;
   let sumMaq = 0;
-  const body = rows
-    .map((r) => {
-      const pdv = fechamentoTotalPdvFromRow(r);
-      const maq = fechamentoTotalMaquinasFromRow(r);
-      sumPdv = roundToCurrency(sumPdv + pdv);
-      sumMaq = roundToCurrency(sumMaq + maq);
-      const saldo = Number(r.saldo_liquido ?? 0);
-      const tol = 0.009;
-      const sem = Number(r.sem_quebra) === 1 || Math.abs(saldo) < tol;
-      let rotuloFech;
-      let valorFech;
-      if (sem) {
-        rotuloFech = "Sem quebra (compensado)";
-        valorFech = formatCurrencyBRL(0);
-      } else if (saldo > 0) {
-        rotuloFech = "Sobras";
-        valorFech = formatCurrencyBRL(saldo);
-      } else {
-        rotuloFech = "Quebra de caixa";
-        valorFech = formatCurrencyBRL(Math.abs(saldo));
-      }
-      const op = escapeHtml((r.operador_nome || "—").toString());
-      return `<tr>
-        <td>${escapeHtml(String(r.id ?? ""))}</td>
-        <td>${escapeHtml(fmtData(r.data_fechamento))}</td>
-        <td>${op}</td>
-        <td style="text-align:right">${escapeHtml(formatCurrencyBRL(pdv))}</td>
-        <td style="text-align:right">${escapeHtml(formatCurrencyBRL(maq))}</td>
-        <td>${escapeHtml(rotuloFech)}</td>
-        <td style="text-align:right">${escapeHtml(valorFech)}</td>
-      </tr>`;
-    })
-    .join("");
+  rows.forEach((r) => {
+    sumMaq = roundToCurrency(sumMaq + fechamentoTotalMaquinasFromRow(r));
+  });
   out.innerHTML = `
-    <p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — mês <strong>${escapeHtml(ym)}</strong> · ${rows.length} registro(s)</p>
-    <div class="table-wrapper">
-      <table>
-        <thead><tr>
-          <th>Nº</th><th>Data</th><th>Operador</th>
-          <th style="text-align:right">Total PDV</th><th style="text-align:right">Total maquinha</th>
-          <th>Fechamento</th><th style="text-align:right">Valor</th>
-        </tr></thead>
-        <tbody>${body}</tbody>
-      </table>
-    </div>
+    <p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — ${escapeHtml(ym)} · ${rows.length} registro(s)</p>
     <div class="fechamento-resumo-mes-totais">
-      Totais do mês: <strong>${escapeHtml(formatCurrencyBRL(sumPdv))}</strong> (PDV) · <strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong> (maquinha)
+      Total maquinha no mês: <strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong>
     </div>
   `;
+}
+
+const FECHAMENTO_RESUMO_MES_PLACEHOLDER =
+  'Escolha o mês e a unidade e clique em <strong>Ver resumo</strong>.';
+
+function limparFechamentoResumoMes() {
+  const out = document.getElementById("fechamentoResumoMesResultado");
+  if (out) out.innerHTML = FECHAMENTO_RESUMO_MES_PLACEHOLDER;
+  const uSel = document.getElementById("fechamentoResumoUnidade");
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  if (uSel && perfil === "ADMIN") uSel.value = "";
+  showToast("Resumo limpo.", "info");
 }
 
 async function carregarFechamentoResumoMensal() {
@@ -14736,6 +14691,9 @@ function setupFechamentoCaixaAuditoria() {
 
   document.getElementById("fechamentoResumoMesBtn")?.addEventListener("click", () => {
     carregarFechamentoResumoMensal();
+  });
+  document.getElementById("fechamentoResumoMesLimparBtn")?.addEventListener("click", () => {
+    limparFechamentoResumoMes();
   });
 
   document.getElementById("fechamentoHistoricoTable")?.addEventListener("click", async (e) => {

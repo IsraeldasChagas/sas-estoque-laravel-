@@ -2191,7 +2191,7 @@
               <header>
                 <div>
                   <h3>Resumo do mês por unidade</h3>
-                  <p class="subtle-text">Todos os fechamentos do mês na unidade escolhida, com total PDV e total maquinha</p>
+                  <p class="subtle-text">Total de maquinha somando todos os fechamentos do mês na unidade</p>
                 </div>
               </header>
               <div class="fechamento-audit__resumo-mes-bar">
@@ -2205,10 +2205,13 @@
                     <option value="">Selecione a unidade</option>
                   </select>
                 </label>
-                <button type="button" class="btn primary" id="fechamentoResumoMesBtn">Ver resumo do mês</button>
+                <div class="fechamento-audit__resumo-mes-actions">
+                  <button type="button" class="btn primary" id="fechamentoResumoMesBtn">Ver resumo</button>
+                  <button type="button" class="btn secondary" id="fechamentoResumoMesLimparBtn">Limpar</button>
+                </div>
               </div>
               <div id="fechamentoResumoMesResultado" class="fechamento-audit__resumo-mes-resultado subtle-text">
-                Escolha o mês e a unidade e clique em <strong>Ver resumo do mês</strong>.
+                Escolha o mês e a unidade e clique em <strong>Ver resumo</strong>.
               </div>
             </div>
 

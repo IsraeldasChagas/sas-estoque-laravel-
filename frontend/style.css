@@ -5781,6 +5781,13 @@ select[size]:not([size="1"]) {
   font-weight: 500;
 }
 
+.fechamento-audit__resumo-mes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+}
+
 .fechamento-audit__resumo-mes-resultado {
   padding: 0 1.25rem 1.25rem;
   line-height: 1.5;
