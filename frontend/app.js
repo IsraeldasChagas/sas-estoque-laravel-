@@ -14356,11 +14356,31 @@ function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
     return;
   }
   let sumMaq = 0;
-  rows.forEach((r) => {
-    sumMaq = roundToCurrency(sumMaq + fechamentoTotalMaquinasFromRow(r));
-  });
+  const body = rows
+    .map((r) => {
+      const maq = fechamentoTotalMaquinasFromRow(r);
+      sumMaq = roundToCurrency(sumMaq + maq);
+      const op = escapeHtml((r.operador_nome || "—").toString());
+      const hora = r.hora_fechamento ? ` <small>${escapeHtml(String(r.hora_fechamento))}</small>` : "";
+      return `<tr>
+        <td>${escapeHtml(String(r.id ?? ""))}</td>
+        <td>${escapeHtml(fmtData(r.data_fechamento))}${hora}</td>
+        <td>${op}</td>
+        <td style="text-align:right">${escapeHtml(formatCurrencyBRL(maq))}</td>
+      </tr>`;
+    })
+    .join("");
   out.innerHTML = `
     <p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — ${escapeHtml(ym)} · ${rows.length} registro(s)</p>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th>Nº</th><th>Data</th><th>Operador</th>
+          <th style="text-align:right">Total maquinha</th>
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
     <div class="fechamento-resumo-mes-totais">
       Total maquinha no mês: <strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong>
     </div>
