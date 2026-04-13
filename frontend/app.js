@@ -7570,6 +7570,16 @@ async function submitUnidade(event, formOverride = null) {
 
 let submittingUsuario = false;
 
+function updateUsuarioAtendeCaixaVisibility() {
+  const wrap = document.getElementById("usuarioAtendeCaixaWrap");
+  const cb = document.getElementById("usuarioAtendeCaixa");
+  const perfil = (dom.usuarioForm?.elements?.perfil?.value || "").toUpperCase();
+  if (!wrap) return;
+  const show = perfil === "ATENDENTE";
+  wrap.classList.toggle("hidden", !show);
+  if (!show && cb) cb.checked = false;
+}
+
 async function submitUsuario(event) {
   event.preventDefault();
   if (submittingUsuario) return;
@@ -7624,6 +7634,9 @@ async function submitUsuario(event) {
     if (senha) payload.senha = senha;
     if (unidade_id && unidade_id !== "null") payload.unidade_id = Number(unidade_id);
     payload.permissoes_menu = permModules;
+    if (perfil === "ATENDENTE") {
+      payload.atende_caixa = form.elements.atende_caixa?.checked ? 1 : 0;
+    }
 
     const temFoto = !!usuarioFotoFile;
     const temRemoverFoto = !!usuarioFotoRemovida;
@@ -7640,6 +7653,9 @@ async function submitUsuario(event) {
       if (usuarioFotoRemovida) formData.append("remove_foto", "1");
       if (usuarioFotoFile) formData.append("foto", usuarioFotoFile);
       formData.append("permissoes_menu", JSON.stringify(permModules));
+      if (perfil === "ATENDENTE") {
+        formData.append("atende_caixa", form.elements.atende_caixa?.checked ? "1" : "0");
+      }
       resultado = await fetchForm(id ? `/usuarios/${id}` : "/usuarios", id ? "PUT" : "POST", formData);
     } else {
       resultado = await fetchJSON(id ? `/usuarios/${id}` : "/usuarios", {
@@ -8374,6 +8390,14 @@ async function handleUsuarioTableClick(event) {
         cb.checked = pm.includes(cb.value);
       });
       if (form.elements.ativo) form.elements.ativo.value = Number(usuario.ativo) === 1 ? "1" : "0";
+      const acCb = document.getElementById("usuarioAtendeCaixa");
+      if (acCb) {
+        acCb.checked =
+          Number(usuario.atende_caixa) === 1 ||
+          usuario.atende_caixa === true ||
+          String(usuario.atende_caixa) === "1";
+      }
+      updateUsuarioAtendeCaixaVisibility();
       if (form.elements.senha) form.elements.senha.value = "";
       if (form.elements.confirmar_senha) form.elements.confirmar_senha.value = "";
       usuarioFotoFile = null;
@@ -9102,8 +9126,12 @@ function setupModals() {
     
     usuarioFotoFile = null;
     usuarioFotoRemovida = false;
+    const acNovo = document.getElementById("usuarioAtendeCaixa");
+    if (acNovo) acNovo.checked = false;
+    updateUsuarioAtendeCaixaVisibility();
     toggleModal(dom.usuarioModal, true);
   });
+  document.getElementById("usuarioPerfilSelect")?.addEventListener("change", updateUsuarioAtendeCaixaVisibility);
   dom.closeUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   document.getElementById("usuarioPermissoesPadrao")?.addEventListener("click", () => {
@@ -13971,8 +13999,16 @@ const FECHAMENTO_CAIXA_FORMAS = [
   { key: "pix_thiago", label: "PIX Thiago" },
 ];
 
-/** Perfis de usuário sugeridos como operador do caixa na auditoria */
-const FECHAMENTO_CAIXA_PERFIS_OPERADOR = new Set(["ATENDENTE_CAIXA", "ATENDENTE"]);
+/** Atendente Caixa sempre; Atendente comum só se marcado “atende caixa” no cadastro. */
+function usuarioApareceComoOperadorCaixa(u) {
+  const p = (u.perfil || "").toString().trim().toUpperCase();
+  if (p === "ATENDENTE_CAIXA") return true;
+  if (p === "ATENDENTE") {
+    const ac = u.atende_caixa;
+    return ac === 1 || ac === true || ac === "1";
+  }
+  return false;
+}
 
 function rotuloFechamentoCaixaOperador(u) {
   const perfil = (u.perfil || "").toString().trim().toUpperCase();
@@ -13987,8 +14023,7 @@ function populateFechamentoCaixaOperadorDatalist() {
   const lista = (state.usuarios || [])
     .filter((u) => {
       if (Number(u?.ativo ?? 1) !== 1) return false;
-      const p = (u.perfil || "").toString().trim().toUpperCase();
-      return FECHAMENTO_CAIXA_PERFIS_OPERADOR.has(p);
+      return usuarioApareceComoOperadorCaixa(u);
     })
     .sort((a, b) =>
       (a.nome || a.email || "").localeCompare(b.nome || b.email || "", "pt-BR")

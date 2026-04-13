@@ -2081,7 +2081,7 @@
                   />
                   <datalist id="fechamentoCaixaOperadorDatalist"></datalist>
                   <input type="hidden" id="fechamentoCaixaUsuarioId" value="" />
-                  <span class="fechamento-audit__field-hint">Sugestões: usuários com perfil <strong>Atendente Caixa</strong> ou <strong>Atendente</strong>. Se não aparecer, digite o nome à mão.</span>
+                  <span class="fechamento-audit__field-hint">Sugestões: <strong>Atendente Caixa</strong>; e <strong>Atendente</strong> apenas se no cadastro de usuário estiver marcado <strong>“Atende caixa”</strong>. Caso contrário, digite o nome à mão.</span>
                 </label>
                 <label>
                   Sistema do fechamento (ex.: PDV)
@@ -2668,6 +2668,13 @@
               <option value="ATENDENTE_CAIXA">Atendente Caixa</option>
             </select>
           </label>
+          <div id="usuarioAtendeCaixaWrap" class="hidden">
+            <label class="checkbox-label">
+              <input type="checkbox" name="atende_caixa" id="usuarioAtendeCaixa" value="1" />
+              Atendente opera caixa (aparece na lista de operador do fechamento)
+            </label>
+            <p class="form-hint" style="margin-top:0.35rem;">Marque só se este atendente também fecha / opera caixa. Atendente Caixa não precisa desta opção.</p>
+          </div>
           <label>
             Unidade
             <select name="unidade_id">

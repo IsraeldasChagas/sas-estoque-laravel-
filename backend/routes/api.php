@@ -1359,6 +1359,16 @@ Route::post('/usuarios', function (Request $request) {
             }
         }
 
+        // Atendente com caixa: usado na auditoria de fechamento (sugestão de operador)
+        if (Schema::hasTable('usuarios') && Schema::hasColumn('usuarios', 'atende_caixa')) {
+            if ($perfilNormalizado === 'ATENDENTE') {
+                $ac = $allData['atende_caixa'] ?? 0;
+                $data['atende_caixa'] = ($ac === true || $ac === 1 || $ac === '1') ? 1 : 0;
+            } else {
+                $data['atende_caixa'] = 0;
+            }
+        }
+
         // Processa foto se fornecida
         if ($request->hasFile('foto')) {
             $foto = $request->file('foto');
@@ -1615,6 +1625,17 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
                 $data['permissoes_menu'] = is_array($decoded) ? json_encode($decoded) : null;
             } else {
                 $data['permissoes_menu'] = null;
+            }
+        }
+
+        if (Schema::hasTable('usuarios') && Schema::hasColumn('usuarios', 'atende_caixa')) {
+            if ($perfilNormalizado === 'ATENDENTE') {
+                if (array_key_exists('atende_caixa', $allData)) {
+                    $ac = $allData['atende_caixa'];
+                    $data['atende_caixa'] = ($ac === true || $ac === 1 || $ac === '1') ? 1 : 0;
+                }
+            } else {
+                $data['atende_caixa'] = 0;
             }
         }
 
