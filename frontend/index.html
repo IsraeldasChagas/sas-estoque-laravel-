@@ -2035,6 +2035,7 @@
 
           <!-- Financeiro - Auditoria fechamento caixa -->
           <section id="fechamentoSection" class="view-section hidden fechamento-audit">
+            <input type="hidden" id="fechamentoEdicaoId" value="" />
             <div class="boletos-header">
               <h2>📋 Auditoria fechamento caixa</h2>
               <div class="boletos-actions">
@@ -2204,7 +2205,7 @@
                       <th>Total maquinha</th>
                       <th>Fechamento</th>
                       <th>Valor</th>
-                      <th>PDF</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody id="fechamentosCaixaHistoricoBody">
@@ -2216,6 +2217,16 @@
           </section>
         </section>
       </main>
+    </div>
+
+    <div class="modal-backdrop" id="fechamentoVerModal" role="presentation">
+      <div class="modal modal--wide fechamento-ver-modal" role="dialog" aria-modal="true" aria-labelledby="fechamentoVerModalTitulo">
+        <header>
+          <h2 id="fechamentoVerModalTitulo">Fechamento de caixa</h2>
+          <button type="button" class="close-btn" id="fechamentoVerModalFechar" aria-label="Fechar">×</button>
+        </header>
+        <div class="fechamento-ver-modal__body" id="fechamentoVerModalBody"></div>
+      </div>
     </div>
 
     <div class="modal-backdrop" id="loteModal">

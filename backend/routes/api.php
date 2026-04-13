@@ -6016,7 +6016,7 @@ Route::put('/funcionarios/{id}/inativar', function (Request $request, $id) {
 
 $fechamentoCaixaCors = fn () => response()->json([])
     ->header('Access-Control-Allow-Origin', '*')
-    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
 
 Route::options('/fechamentos-caixa', $fechamentoCaixaCors);
@@ -6161,6 +6161,128 @@ Route::post('/fechamentos-caixa', function (Request $request) use ($fechamentoCa
         ->first();
 
     return response()->json($row, 201)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::get('/fechamentos-caixa/{id}', function (Request $request, $id) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela não disponível'], 503)->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+    $row = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
+        ->select('fechamentos_caixa.*', 'unidades.nome as unidade_nome', 'reg.nome as registrado_por_nome')
+        ->where('fechamentos_caixa.id', (int) $id)
+        ->first();
+    if (!$row) {
+        return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::put('/fechamentos-caixa/{id}', function (Request $request, $id) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela não disponível'], 503)->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+    $idInt = (int) $id;
+    if (!DB::table('fechamentos_caixa')->where('id', $idInt)->exists()) {
+        return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $d = $request->all();
+    $rules = [
+        'data_fechamento' => 'required|date',
+        'hora_fechamento' => 'nullable|string|max:16',
+        'unidade_id' => 'nullable|integer|exists:unidades,id',
+        'operador_nome' => 'nullable|string|max:500',
+        'operador_usuario_id' => 'nullable|integer|exists:usuarios,id',
+        'sistema_pdv' => 'nullable|string|max:200',
+        'maquinha' => 'nullable|string|max:120',
+        'observacoes' => 'nullable|string|max:5000',
+        'linhas' => 'required|array|min:1',
+        'linhas.*.key' => 'nullable|string|max:64',
+        'linhas.*.label' => 'nullable|string|max:120',
+        'linhas.*.esp' => 'nullable|numeric',
+        'linhas.*.sis' => 'nullable|numeric',
+        'linhas.*.maq' => 'nullable|numeric',
+        'linhas.*.informado' => 'nullable|numeric',
+        'linhas.*.diff' => 'nullable|numeric',
+        'total_referencia' => 'required|numeric',
+        'total_informado' => 'required|numeric',
+        'saldo_liquido' => 'required|numeric',
+        'sem_quebra' => 'required|boolean',
+    ];
+    $v = \Illuminate\Support\Facades\Validator::make($d, $rules);
+    if ($v->fails()) {
+        return response()->json(['error' => implode(' ', $v->errors()->all()), 'details' => $v->errors()], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    try {
+        $linhasJson = json_encode(array_values($d['linhas']), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => 'Formato de linhas inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    DB::table('fechamentos_caixa')->where('id', $idInt)->update([
+        'unidade_id' => isset($d['unidade_id']) && $d['unidade_id'] !== '' ? (int) $d['unidade_id'] : null,
+        'data_fechamento' => $d['data_fechamento'],
+        'hora_fechamento' => $d['hora_fechamento'] ?? null,
+        'operador_nome' => $d['operador_nome'] ?? null,
+        'operador_usuario_id' => isset($d['operador_usuario_id']) && $d['operador_usuario_id'] !== '' ? (int) $d['operador_usuario_id'] : null,
+        'sistema_pdv' => $d['sistema_pdv'] ?? null,
+        'maquinha' => $d['maquinha'] ?? null,
+        'observacoes' => $d['observacoes'] ?? null,
+        'linhas_json' => $linhasJson,
+        'total_referencia' => round((float) $d['total_referencia'], 2),
+        'total_informado' => round((float) $d['total_informado'], 2),
+        'saldo_liquido' => round((float) $d['saldo_liquido'], 2),
+        'sem_quebra' => filter_var($d['sem_quebra'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+        'updated_at' => now(),
+    ]);
+
+    $row = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
+        ->select('fechamentos_caixa.*', 'unidades.nome as unidade_nome', 'reg.nome as registrado_por_nome')
+        ->where('fechamentos_caixa.id', $idInt)
+        ->first();
+
+    return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::delete('/fechamentos-caixa/{id}', function (Request $request, $id) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela não disponível'], 503)->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+    $idInt = (int) $id;
+    $n = DB::table('fechamentos_caixa')->where('id', $idInt)->delete();
+    if ($n === 0) {
+        return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    return response()->json(['message' => 'Registro excluído com sucesso.'])->header('Access-Control-Allow-Origin', '*');
 });
 
 Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {

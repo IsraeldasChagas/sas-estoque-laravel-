@@ -13999,6 +13999,148 @@ const FECHAMENTO_CAIXA_FORMAS = [
   { key: "pix_thiago", label: "PIX Thiago" },
 ];
 
+const FECHAMENTO_MAQUINHA_LABELS = {
+  stone: "Stone",
+  cielo: "Cielo",
+  rede: "Rede",
+  pagbank: "PagBank / PagSeguro",
+  mercado_pago: "Mercado Pago",
+  sumup: "SumUp",
+  nao_utilizada: "Não utilizada neste fechamento",
+  outra: "Outra",
+};
+
+function fechamentoLegivelMaquinha(val) {
+  const k = String(val || "")
+    .trim()
+    .toLowerCase();
+  if (!k) return "—";
+  return FECHAMENTO_MAQUINHA_LABELS[k] || String(val);
+}
+
+function clearFechamentoCaixaModoEdicao() {
+  const hid = document.getElementById("fechamentoEdicaoId");
+  if (hid) hid.value = "";
+  const btn = document.getElementById("fechamentoSalvarBtn");
+  if (btn) btn.textContent = "Salvar registro";
+}
+
+function applyFechamentoValorInput(inp, num) {
+  if (!inp) return;
+  const n = roundToCurrency(Number(num) || 0);
+  inp.dataset.value = String(n);
+  inp.value = n > 0 ? formatCurrencyBRL(n) : "";
+}
+
+async function fetchFechamentoCaixaById(id) {
+  return fetchJSON(`/fechamentos-caixa/${encodeURIComponent(String(id))}`);
+}
+
+function renderFechamentoCaixaVerHtml(r) {
+  let linhas = [];
+  try {
+    const raw = r?.linhas_json;
+    const L = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (Array.isArray(L)) linhas = L;
+  } catch (_) {
+    /* ignore */
+  }
+  const saldo = Number(r.saldo_liquido ?? 0);
+  const tol = 0.009;
+  const sem = Math.abs(saldo) < tol;
+  let sit = "Sem quebra (compensado)";
+  if (!sem && saldo > 0) sit = "Sobras no fechamento";
+  if (!sem && saldo < 0) sit = "Quebra de caixa";
+
+  const rowsT = linhas
+    .map((ln) => {
+      const lab = escapeHtml((ln.label || ln.key || "—").toString());
+      const sis = Number(ln.sis ?? 0);
+      const maq = Number(ln.maq ?? 0);
+      const d = Number(ln.diff ?? roundToCurrency(maq - sis));
+      return `<tr><td>${lab}</td><td style="text-align:right">${escapeHtml(formatCurrencyBRL(sis))}</td><td style="text-align:right">${escapeHtml(formatCurrencyBRL(maq))}</td><td style="text-align:right">${escapeHtml(formatFechamentoSignedDiff(d))}</td></tr>`;
+    })
+    .join("");
+
+  const dataStr = escapeHtml(fmtData(r.data_fechamento));
+  const hora = r.hora_fechamento ? escapeHtml(String(r.hora_fechamento)) : "—";
+  const un = escapeHtml((r.unidade_nome || "—").toString());
+  const op = escapeHtml((r.operador_nome || "—").toString());
+  const reg = escapeHtml((r.registrado_por_nome || "—").toString());
+  const pdvNome = escapeHtml((r.sistema_pdv || "—").toString());
+  const maqNome = escapeHtml(fechamentoLegivelMaquinha(r.maquinha));
+  const obs = (r.observacoes || "").toString().trim();
+  const obsHtml = obs ? `<p style="margin-top:0.75rem"><strong>Observações:</strong> ${escapeHtml(obs).replace(/\n/g, "<br/>")}</p>` : "";
+
+  return `
+    <p class="subtle-text" style="margin:0 0 0.5rem">Registro nº <strong>${escapeHtml(String(r.id ?? ""))}</strong></p>
+    <dl class="fechamento-ver-modal__meta">
+      <dt>Data</dt><dd>${dataStr}</dd>
+      <dt>Hora</dt><dd>${hora}</dd>
+      <dt>Unidade</dt><dd>${un}</dd>
+      <dt>Operador do caixa</dt><dd>${op}</dd>
+      <dt>Sistema (PDV)</dt><dd>${pdvNome}</dd>
+      <dt>Maquinha</dt><dd>${maqNome}</dd>
+      <dt>Registrado por</dt><dd>${reg}</dd>
+      <dt>Fechamento</dt><dd>${escapeHtml(sit)}</dd>
+      <dt>Valor (quebra/sobra)</dt><dd>${escapeHtml(sem ? formatCurrencyBRL(0) : formatCurrencyBRL(Math.abs(saldo)))}</dd>
+    </dl>
+    ${obsHtml}
+    <table>
+      <thead><tr><th>Forma</th><th style="text-align:right">PDV</th><th style="text-align:right">Maquinha</th><th style="text-align:right">Diferença</th></tr></thead>
+      <tbody>${rowsT || `<tr><td colspan="4" style="text-align:center;color:#78909c">Sem linhas</td></tr>`}</tbody>
+    </table>
+  `;
+}
+
+function openFechamentoVerModal(html) {
+  const body = document.getElementById("fechamentoVerModalBody");
+  const backdrop = document.getElementById("fechamentoVerModal");
+  if (body) body.innerHTML = html;
+  if (backdrop) backdrop.classList.add("active");
+}
+
+function closeFechamentoVerModal() {
+  document.getElementById("fechamentoVerModal")?.classList.remove("active");
+}
+
+function popularFechamentoCaixaFormulario(r) {
+  const dEl = document.getElementById("fechamentoData");
+  if (dEl) dEl.value = formatDateForInput(r.data_fechamento);
+  const hEl = document.getElementById("fechamentoHora");
+  if (hEl) hEl.value = (r.hora_fechamento && String(r.hora_fechamento).slice(0, 5)) || "";
+  const uSel = document.getElementById("fechamentoUnidade");
+  if (uSel && r.unidade_id != null) uSel.value = String(r.unidade_id);
+  const opInp = document.getElementById("fechamentoCaixaOperador");
+  if (opInp) opInp.value = (r.operador_nome || "").toString();
+  const opHid = document.getElementById("fechamentoCaixaUsuarioId");
+  if (opHid) opHid.value = r.operador_usuario_id != null ? String(r.operador_usuario_id) : "";
+  const sisNome = document.getElementById("fechamentoSistemaPdv");
+  if (sisNome) sisNome.value = (r.sistema_pdv || "").toString();
+  const maqSel = document.getElementById("fechamentoMaquinha");
+  if (maqSel) maqSel.value = (r.maquinha || "").toString();
+  const obs = document.getElementById("fechamentoObservacoes");
+  if (obs) obs.value = (r.observacoes || "").toString();
+
+  let linhas = [];
+  try {
+    const raw = r?.linhas_json;
+    const L = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (Array.isArray(L)) linhas = L;
+  } catch (_) {
+    /* ignore */
+  }
+  const byKey = Object.fromEntries(
+    linhas.filter((x) => x && x.key).map((x) => [String(x.key), x])
+  );
+  FECHAMENTO_CAIXA_FORMAS.forEach(({ key }) => {
+    const ln = byKey[key] || {};
+    applyFechamentoValorInput(document.getElementById(`fechamento_sis_${key}`), ln.sis ?? 0);
+    applyFechamentoValorInput(document.getElementById(`fechamento_maq_${key}`), ln.maq ?? 0);
+  });
+  scheduleRecalcFechamentoCaixa();
+}
+
 /** Atendente Caixa sempre; Atendente comum só se marcado “atende caixa” no cadastro. */
 function usuarioApareceComoOperadorCaixa(u) {
   const p = (u.perfil || "").toString().trim().toUpperCase();
@@ -14172,7 +14314,12 @@ function renderFechamentosCaixaHistorico(rows) {
         <td data-label="Total maquinha">${escapeHtml(formatCurrencyBRL(tot))}</td>
         <td data-label="Fechamento">${escapeHtml(rotuloFech)}</td>
         <td data-label="Valor">${escapeHtml(valorFech)}</td>
-        <td data-label="PDF"><button type="button" class="btn secondary fechamento-caixa-pdf-btn" data-fechamento-pdf="${escapeHtml(String(r.id))}">PDF</button></td>
+        <td data-label="Ações" class="fechamento-audit__acoes">
+          <button type="button" class="btn secondary fechamento-caixa-ver-btn" data-fechamento-ver="${escapeHtml(String(r.id))}">Ver</button>
+          <button type="button" class="btn secondary fechamento-caixa-edit-btn" data-fechamento-edit="${escapeHtml(String(r.id))}">Editar</button>
+          <button type="button" class="btn danger fechamento-caixa-del-btn" data-fechamento-del="${escapeHtml(String(r.id))}">Excluir</button>
+          <button type="button" class="btn secondary fechamento-caixa-pdf-btn" data-fechamento-pdf="${escapeHtml(String(r.id))}">PDF</button>
+        </td>
       </tr>`;
     })
     .join("");
@@ -14200,6 +14347,7 @@ async function salvarFechamentoCaixaRegistro() {
     showToast("Informe a data do fechamento.", "error");
     return;
   }
+  const editId = document.getElementById("fechamentoEdicaoId")?.value?.trim();
   const btn = document.getElementById("fechamentoSalvarBtn");
   const prev = btn?.textContent;
   try {
@@ -14207,15 +14355,25 @@ async function salvarFechamentoCaixaRegistro() {
       btn.disabled = true;
       btn.textContent = "Salvando…";
     }
-    await fetchJSON("/fechamentos-caixa", { method: "POST", body: JSON.stringify(payload) });
-    showToast("Fechamento salvo no servidor.", "success");
+    if (editId) {
+      await fetchJSON(`/fechamentos-caixa/${encodeURIComponent(editId)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      showToast("Registro atualizado.", "success");
+      clearFechamentoCaixaModoEdicao();
+    } else {
+      await fetchJSON("/fechamentos-caixa", { method: "POST", body: JSON.stringify(payload) });
+      showToast("Fechamento salvo no servidor.", "success");
+    }
     await loadFechamentosCaixaHistorico();
   } catch (err) {
     showToast(err?.message || "Erro ao salvar fechamento.", "error");
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = prev || "Salvar registro";
+      const stillEditing = document.getElementById("fechamentoEdicaoId")?.value?.trim();
+      btn.textContent = stillEditing ? "Atualizar registro" : "Salvar registro";
     }
   }
 }
@@ -14338,6 +14496,7 @@ function ensureFechamentoCaixaCurrencyMasks() {
 }
 
 function resetFechamentoCaixaForm() {
+  clearFechamentoCaixaModoEdicao();
   const root = document.getElementById("fechamentoSection");
   if (!root) return;
   root.querySelectorAll('input[data-currency="1"]').forEach((inp) => {
@@ -14429,16 +14588,72 @@ function setupFechamentoCaixaAuditoria() {
   });
 
   document.getElementById("fechamentoHistoricoTable")?.addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-fechamento-pdf]");
-    if (!btn) return;
-    const id = btn.getAttribute("data-fechamento-pdf");
-    if (!id) return;
-    try {
-      await downloadFechamentoCaixaPdf(id);
-      showToast("PDF baixado.", "success");
-    } catch (err) {
-      showToast(err?.message || "Erro ao baixar PDF.", "error");
+    const pdfBtn = e.target.closest("[data-fechamento-pdf]");
+    if (pdfBtn) {
+      const id = pdfBtn.getAttribute("data-fechamento-pdf");
+      if (!id) return;
+      try {
+        await downloadFechamentoCaixaPdf(id);
+        showToast("PDF baixado.", "success");
+      } catch (err) {
+        showToast(err?.message || "Erro ao baixar PDF.", "error");
+      }
+      return;
     }
+
+    const verBtn = e.target.closest("[data-fechamento-ver]");
+    if (verBtn) {
+      const id = verBtn.getAttribute("data-fechamento-ver");
+      if (!id) return;
+      try {
+        const row = await fetchFechamentoCaixaById(id);
+        openFechamentoVerModal(renderFechamentoCaixaVerHtml(row));
+      } catch (err) {
+        showToast(err?.message || "Erro ao abrir registro.", "error");
+      }
+      return;
+    }
+
+    const editBtn = e.target.closest("[data-fechamento-edit]");
+    if (editBtn) {
+      const id = editBtn.getAttribute("data-fechamento-edit");
+      if (!id || !currentUser?.id) return;
+      try {
+        const row = await fetchFechamentoCaixaById(id);
+        popularFechamentoCaixaFormulario(row);
+        const hid = document.getElementById("fechamentoEdicaoId");
+        if (hid) hid.value = String(id);
+        const sBtn = document.getElementById("fechamentoSalvarBtn");
+        if (sBtn) sBtn.textContent = "Atualizar registro";
+        document.getElementById("fechamentoSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (err) {
+        showToast(err?.message || "Erro ao carregar para edição.", "error");
+      }
+      return;
+    }
+
+    const delBtn = e.target.closest("[data-fechamento-del]");
+    if (delBtn) {
+      const id = delBtn.getAttribute("data-fechamento-del");
+      if (!id || !currentUser?.id) return;
+      if (!window.confirm(`Excluir o fechamento nº ${id}? Esta ação não pode ser desfeita.`)) return;
+      try {
+        await fetchJSON(`/fechamentos-caixa/${encodeURIComponent(id)}`, { method: "DELETE" });
+        showToast("Registro excluído.", "success");
+        const editing = document.getElementById("fechamentoEdicaoId")?.value?.trim();
+        if (editing === String(id)) {
+          resetFechamentoCaixaForm();
+        }
+        await loadFechamentosCaixaHistorico();
+      } catch (err) {
+        showToast(err?.message || "Erro ao excluir.", "error");
+      }
+    }
+  });
+
+  document.getElementById("fechamentoVerModalFechar")?.addEventListener("click", () => closeFechamentoVerModal());
+  document.getElementById("fechamentoVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "fechamentoVerModal") closeFechamentoVerModal();
   });
 }
 

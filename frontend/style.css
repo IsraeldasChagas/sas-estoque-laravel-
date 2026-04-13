@@ -5702,6 +5702,59 @@ select[size]:not([size="1"]) {
   white-space: nowrap;
 }
 
+.fechamento-audit__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fechamento-audit__acoes .btn {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.fechamento-ver-modal__body {
+  padding: 0 1.25rem 1.25rem;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  font-size: 0.9rem;
+}
+
+.fechamento-ver-modal__body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+}
+
+.fechamento-ver-modal__body th,
+.fechamento-ver-modal__body td {
+  border: 1px solid #e0e0e0;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.fechamento-ver-modal__body th {
+  background: #f5f5f5;
+  font-size: 0.8rem;
+}
+
+.fechamento-ver-modal__meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+
+.fechamento-ver-modal__meta dt {
+  font-weight: 700;
+  color: #546e7a;
+}
+
+.fechamento-ver-modal__meta dd {
+  margin: 0;
+}
+
 .fechamento-audit__conf-cell {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
