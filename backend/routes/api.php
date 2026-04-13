@@ -6414,7 +6414,7 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         <strong>Total maquinas:</strong> ' . $h($fmt($sumMaq)) . ' &nbsp;|&nbsp;
         <strong>Σ diferenças (saldo líquido):</strong> ' . $h($fmt($sumDiff)) . '
     </div>
-    <div class="rod">Grupo Sabor Paraense — SAS Estoque. Documento para conferência e arquivo.</div>
+    <div class="rod">Grupo Sabor Paraense</div>
     </body></html>';
 
     try {
