@@ -6011,6 +6011,291 @@ Route::put('/funcionarios/{id}/inativar', function (Request $request, $id) {
 });
 
 // ============================================
+// FECHAMENTOS DE CAIXA (Auditoria — persistência + PDF)
+// ============================================
+
+$fechamentoCaixaCors = fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+
+Route::options('/fechamentos-caixa', $fechamentoCaixaCors);
+Route::options('/fechamentos-caixa/{id}', $fechamentoCaixaCors);
+Route::options('/fechamentos-caixa/{id}/pdf', $fechamentoCaixaCors);
+
+$fechamentoCaixaAuth = function (Request $req) {
+    $uid = $req->header('X-Usuario-Id');
+
+    return $uid ? DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first() : null;
+};
+
+$podeAcessarFechamentoCaixa = function ($u) {
+    if (!$u) {
+        return false;
+    }
+    $p = strtoupper(trim($u->perfil ?? ''));
+    $perfis = ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'ATENDENTE_CAIXA', 'FUNCIONARIO'];
+    if (in_array($p, $perfis, true)) {
+        return true;
+    }
+    $pm = $u->permissoes_menu ?? null;
+    if (is_string($pm)) {
+        $dec = json_decode($pm, true);
+
+        return is_array($dec) && in_array('fechamento', $dec, true);
+    }
+
+    return false;
+};
+
+Route::get('/fechamentos-caixa', function (Request $request) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela de fechamentos não disponível. Execute as migrations.'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão para auditoria de fechamento'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $limit = min(max((int) $request->query('limit', 200), 1), 500);
+    $q = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
+        ->select(
+            'fechamentos_caixa.*',
+            'unidades.nome as unidade_nome',
+            'reg.nome as registrado_por_nome'
+        );
+
+    if ($request->filled('unidade_id')) {
+        $q->where('fechamentos_caixa.unidade_id', (int) $request->query('unidade_id'));
+    }
+    if ($request->filled('de')) {
+        $q->whereDate('fechamentos_caixa.data_fechamento', '>=', $request->query('de'));
+    }
+    if ($request->filled('ate')) {
+        $q->whereDate('fechamentos_caixa.data_fechamento', '<=', $request->query('ate'));
+    }
+
+    $rows = $q->orderByDesc('fechamentos_caixa.created_at')->limit($limit)->get();
+
+    return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::post('/fechamentos-caixa', function (Request $request) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela de fechamentos não disponível. Execute as migrations.'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão para registrar fechamento'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $d = $request->all();
+    $rules = [
+        'data_fechamento' => 'required|date',
+        'hora_fechamento' => 'nullable|string|max:16',
+        'unidade_id' => 'nullable|integer|exists:unidades,id',
+        'operador_nome' => 'nullable|string|max:500',
+        'operador_usuario_id' => 'nullable|integer|exists:usuarios,id',
+        'sistema_pdv' => 'nullable|string|max:200',
+        'maquinha' => 'nullable|string|max:120',
+        'observacoes' => 'nullable|string|max:5000',
+        'linhas' => 'required|array|min:1',
+        'linhas.*.key' => 'nullable|string|max:64',
+        'linhas.*.label' => 'nullable|string|max:120',
+        'linhas.*.esp' => 'nullable|numeric',
+        'linhas.*.sis' => 'nullable|numeric',
+        'linhas.*.maq' => 'nullable|numeric',
+        'linhas.*.informado' => 'nullable|numeric',
+        'linhas.*.diff' => 'nullable|numeric',
+        'total_referencia' => 'required|numeric',
+        'total_informado' => 'required|numeric',
+        'saldo_liquido' => 'required|numeric',
+        'sem_quebra' => 'required|boolean',
+    ];
+    $v = \Illuminate\Support\Facades\Validator::make($d, $rules);
+    if ($v->fails()) {
+        return response()->json(['error' => implode(' ', $v->errors()->all()), 'details' => $v->errors()], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    try {
+        $linhasJson = json_encode(array_values($d['linhas']), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => 'Formato de linhas inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $id = DB::table('fechamentos_caixa')->insertGetId([
+        'registrado_por_usuario_id' => (int) $u->id,
+        'unidade_id' => isset($d['unidade_id']) && $d['unidade_id'] !== '' ? (int) $d['unidade_id'] : null,
+        'data_fechamento' => $d['data_fechamento'],
+        'hora_fechamento' => $d['hora_fechamento'] ?? null,
+        'operador_nome' => $d['operador_nome'] ?? null,
+        'operador_usuario_id' => isset($d['operador_usuario_id']) && $d['operador_usuario_id'] !== '' ? (int) $d['operador_usuario_id'] : null,
+        'sistema_pdv' => $d['sistema_pdv'] ?? null,
+        'maquinha' => $d['maquinha'] ?? null,
+        'observacoes' => $d['observacoes'] ?? null,
+        'linhas_json' => $linhasJson,
+        'total_referencia' => round((float) $d['total_referencia'], 2),
+        'total_informado' => round((float) $d['total_informado'], 2),
+        'saldo_liquido' => round((float) $d['saldo_liquido'], 2),
+        'sem_quebra' => filter_var($d['sem_quebra'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $row = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
+        ->select('fechamentos_caixa.*', 'unidades.nome as unidade_nome', 'reg.nome as registrado_por_nome')
+        ->where('fechamentos_caixa.id', $id)
+        ->first();
+
+    return response()->json($row, 201)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela não disponível'], 503)->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $row = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
+        ->select('fechamentos_caixa.*', 'unidades.nome as unidade_nome', 'reg.nome as registrado_por_nome')
+        ->where('fechamentos_caixa.id', $id)
+        ->first();
+
+    if (!$row) {
+        return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $h = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $fmt = fn ($n) => 'R$ ' . number_format((float) $n, 2, ',', '.');
+
+    try {
+        $linhas = json_decode($row->linhas_json, true, 512, JSON_THROW_ON_ERROR);
+    } catch (\Throwable $e) {
+        $linhas = [];
+    }
+    if (!is_array($linhas)) {
+        $linhas = [];
+    }
+
+    $rowsHtml = '';
+    foreach ($linhas as $L) {
+        if (!is_array($L)) {
+            continue;
+        }
+        $lab = $h($L['label'] ?? $L['key'] ?? '—');
+        $rowsHtml .= '<tr>'
+            . '<td>' . $lab . '</td>'
+            . '<td style="text-align:right">' . $h($fmt((float) ($L['esp'] ?? 0))) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt((float) ($L['sis'] ?? 0))) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt((float) ($L['maq'] ?? 0))) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt((float) ($L['informado'] ?? 0))) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt((float) ($L['diff'] ?? 0))) . '</td>'
+            . '</tr>';
+    }
+
+    $dataBr = $row->data_fechamento ? \Carbon\Carbon::parse($row->data_fechamento)->format('d/m/Y') : '—';
+    $hora = $h($row->hora_fechamento ?? '—');
+    $maqMap = [
+        'stone' => 'Stone',
+        'cielo' => 'Cielo',
+        'rede' => 'Rede',
+        'pagbank' => 'PagBank / PagSeguro',
+        'mercado_pago' => 'Mercado Pago',
+        'sumup' => 'SumUp',
+        'nao_utilizada' => 'Não utilizada neste fechamento',
+        'outra' => 'Outra',
+    ];
+    $mk = strtolower(trim((string) ($row->maquinha ?? '')));
+    $maqLegivel = $mk !== '' ? ($maqMap[$mk] ?? $row->maquinha) : '—';
+    $sit = ((int) $row->sem_quebra === 1) ? 'Sem quebra no fechamento geral' : 'Com quebra (saldo líquido ≠ zero)';
+    $criado = $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y H:i') : '—';
+
+    $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10pt; color: #222; margin: 20px; }
+        h1 { font-size: 15pt; text-align: center; margin: 0 0 6px; color: #1565c0; }
+        .sub { text-align: center; font-size: 9pt; color: #666; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ccc; padding: 6px 8px; }
+        th { background: #f0f0f0; font-size: 9pt; }
+        .meta td { border: none; padding: 3px 0; font-size: 9pt; }
+        .meta th { width: 28%; border: none; background: transparent; text-align: left; font-weight: bold; }
+        .tot { margin-top: 10px; font-size: 10pt; }
+        .rod { margin-top: 16px; font-size: 8pt; color: #555; border-top: 1px solid #ddd; padding-top: 8px; }
+    </style></head><body>
+    <h1>Auditoria — fechamento de caixa</h1>
+    <div class="sub">Registro nº ' . $h($row->id) . ' · Emitido em ' . $h($criado) . '</div>
+    <table class="meta">
+        <tr><th>Data do fechamento</th><td>' . $h($dataBr) . '</td></tr>
+        <tr><th>Hora</th><td>' . $hora . '</td></tr>
+        <tr><th>Unidade</th><td>' . $h($row->unidade_nome ?? '—') . '</td></tr>
+        <tr><th>Operador do caixa</th><td>' . $h($row->operador_nome ?? '—') . '</td></tr>
+        <tr><th>Sistema (PDV)</th><td>' . $h($row->sistema_pdv ?? '—') . '</td></tr>
+        <tr><th>Maquinha</th><td>' . $h($maqLegivel) . '</td></tr>
+        <tr><th>Registrado por</th><td>' . $h($row->registrado_por_nome ?? '—') . '</td></tr>
+        <tr><th>Situação</th><td>' . $h($sit) . '</td></tr>
+    </table>';
+    if (trim((string) ($row->observacoes ?? '')) !== '') {
+        $html .= '<p style="font-size:9pt;margin:8px 0;"><strong>Observações:</strong> ' . nl2br($h($row->observacoes)) . '</p>';
+    }
+    $html .= '<table><thead><tr>
+        <th>Forma</th><th>Referência</th><th>Sistema</th><th>Maquinha</th><th>Informado</th><th>Diferença</th>
+    </tr></thead><tbody>' . $rowsHtml . '</tbody></table>
+    <div class="tot">
+        <strong>Total referência:</strong> ' . $h($fmt($row->total_referencia)) . ' &nbsp;|&nbsp;
+        <strong>Total informado:</strong> ' . $h($fmt($row->total_informado)) . ' &nbsp;|&nbsp;
+        <strong>Saldo líquido:</strong> ' . $h($fmt($row->saldo_liquido)) . '
+    </div>
+    <div class="rod">Grupo Sabor Paraense — SAS Estoque. Documento para conferência e arquivo.</div>
+    </body></html>';
+
+    try {
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+        $fn = 'fechamento-caixa-' . $id . '.pdf';
+
+        return response($pdfOutput, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="' . $fn . '"')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Exception $e) {
+        \Log::error('GET /fechamentos-caixa/pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+// ============================================
 // PROVENTOS (Módulo Financeiro)
 // ============================================
 

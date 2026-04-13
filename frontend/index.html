@@ -2038,6 +2038,8 @@
             <div class="boletos-header">
               <h2>📋 Auditoria fechamento caixa</h2>
               <div class="boletos-actions">
+                <button type="button" class="btn primary" id="fechamentoSalvarBtn">Salvar registro</button>
+                <button type="button" class="btn secondary" id="fechamentoAtualizarHistoricoBtn">Atualizar lista</button>
                 <button type="button" class="btn neutral" id="fechamentoLimparBtn">Limpar conferência</button>
               </div>
             </div>
@@ -2199,6 +2201,34 @@
               </div>
             </div>
             <p class="subtle-text fechamento-audit__explicacao" id="fechamentoResultadoExplicacao"></p>
+
+            <div class="table-card form-card--wide fechamento-audit__historico">
+              <header>
+                <div>
+                  <h3>Registros salvos</h3>
+                  <p class="subtle-text">Histórico armazenado no servidor — baixe o PDF para arquivo</p>
+                </div>
+              </header>
+              <div class="table-wrapper">
+                <table id="fechamentoHistoricoTable">
+                  <thead>
+                    <tr>
+                      <th>Nº</th>
+                      <th>Data</th>
+                      <th>Unidade</th>
+                      <th>Operador</th>
+                      <th>Total ref.</th>
+                      <th>Saldo líq.</th>
+                      <th>Situação</th>
+                      <th>PDF</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fechamentosCaixaHistoricoBody">
+                    <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </section>
         </section>
       </main>

@@ -14044,6 +14044,154 @@ function syncFechamentoCaixaOperadorUsuarioId() {
   if (found && found.id != null) hid.value = String(found.id);
 }
 
+function buildFechamentoCaixaPayload() {
+  const tol = 0.009;
+  const linhas = [];
+  let totalRef = 0;
+  let totalInf = 0;
+  let totalDiff = 0;
+  FECHAMENTO_CAIXA_FORMAS.forEach(({ key, label }) => {
+    const esp = fechamentoMoneyFromInput(document.getElementById(`fechamento_esp_${key}`));
+    const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
+    const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
+    const informado = roundToCurrency(sis + maq);
+    const diff = roundToCurrency(informado - esp);
+    totalRef = roundToCurrency(totalRef + esp);
+    totalInf = roundToCurrency(totalInf + informado);
+    totalDiff = roundToCurrency(totalDiff + diff);
+    linhas.push({ key, label, esp, sis, maq, informado, diff });
+  });
+  const semQuebra = Math.abs(totalDiff) < tol;
+  const unidadeEl = document.getElementById("fechamentoUnidade");
+  const unidadeVal = unidadeEl?.value?.trim();
+  const unidadeId = unidadeVal && Number.isFinite(Number(unidadeVal)) ? Number(unidadeVal) : null;
+  const opIdRaw = document.getElementById("fechamentoCaixaUsuarioId")?.value?.trim();
+  const operadorUsuarioId = opIdRaw && Number.isFinite(Number(opIdRaw)) ? Number(opIdRaw) : null;
+  const horaVal = document.getElementById("fechamentoHora")?.value?.trim();
+  return {
+    data_fechamento: document.getElementById("fechamentoData")?.value?.trim() || "",
+    hora_fechamento: horaVal || null,
+    unidade_id: unidadeId,
+    operador_nome: (document.getElementById("fechamentoCaixaOperador")?.value || "").trim() || null,
+    operador_usuario_id: operadorUsuarioId,
+    sistema_pdv: (document.getElementById("fechamentoSistemaPdv")?.value || "").trim() || null,
+    maquinha: (document.getElementById("fechamentoMaquinha")?.value || "").trim() || null,
+    observacoes: (document.getElementById("fechamentoObservacoes")?.value || "").trim() || null,
+    linhas,
+    total_referencia: totalRef,
+    total_informado: totalInf,
+    saldo_liquido: totalDiff,
+    sem_quebra: semQuebra,
+  };
+}
+
+async function downloadFechamentoCaixaPdf(id) {
+  const headers = {
+    ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+    ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+    ...getDeviceHeaders(),
+  };
+  const res = await fetch(`${API_URL}/fechamentos-caixa/${encodeURIComponent(String(id))}/pdf`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    let msg = "Erro ao gerar PDF";
+    try {
+      const t = await res.text();
+      const j = JSON.parse(t);
+      if (j.error) msg = j.error;
+    } catch (_) {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `fechamento-caixa-${id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function renderFechamentosCaixaHistorico(rows) {
+  const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum registro salvo ainda. Preencha e clique em Salvar registro.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows
+    .map((r) => {
+      const sit =
+        Number(r.sem_quebra) === 1
+          ? '<span style="color:#2e7d32;font-weight:600">Sem quebra</span>'
+          : '<span style="color:#c62828;font-weight:600">Com quebra</span>';
+      const op = escapeHtml((r.operador_nome || "—").toString());
+      const un = escapeHtml((r.unidade_nome || "—").toString());
+      const saldo = Number(r.saldo_liquido ?? 0);
+      const saldoCls = Math.abs(saldo) < 0.009 ? "fechamento-audit__diff--zero" : saldo > 0 ? "fechamento-audit__diff--pos" : "fechamento-audit__diff--neg";
+      return `<tr>
+        <td data-label="Nº">${escapeHtml(String(r.id ?? ""))}</td>
+        <td data-label="Data">${escapeHtml(fmtData(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
+        <td data-label="Unidade">${un}</td>
+        <td data-label="Operador">${op}</td>
+        <td data-label="Total ref.">${escapeHtml(formatCurrencyBRL(r.total_referencia))}</td>
+        <td data-label="Saldo líq." class="${saldoCls}">${escapeHtml(formatCurrencyBRL(saldo))}</td>
+        <td data-label="Situação">${sit}</td>
+        <td data-label="PDF"><button type="button" class="btn secondary fechamento-caixa-pdf-btn" data-fechamento-pdf="${escapeHtml(String(r.id))}">PDF</button></td>
+      </tr>`;
+    })
+    .join("");
+}
+
+async function loadFechamentosCaixaHistorico() {
+  const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
+  if (!tbody) return;
+  try {
+    const list = await fetchJSON("/fechamentos-caixa?limit=200");
+    renderFechamentosCaixaHistorico(Array.isArray(list) ? list : []);
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao carregar histórico.")}</td></tr>`;
+  }
+}
+
+async function salvarFechamentoCaixaRegistro() {
+  if (!currentUser?.id) {
+    showToast("Faça login para salvar.", "error");
+    return;
+  }
+  const payload = buildFechamentoCaixaPayload();
+  if (!payload.data_fechamento) {
+    showToast("Informe a data do fechamento.", "error");
+    return;
+  }
+  const btn = document.getElementById("fechamentoSalvarBtn");
+  const prev = btn?.textContent;
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Salvando…";
+    }
+    await fetchJSON("/fechamentos-caixa", { method: "POST", body: JSON.stringify(payload) });
+    showToast("Fechamento salvo no servidor.", "success");
+    await loadFechamentosCaixaHistorico();
+  } catch (err) {
+    showToast(err?.message || "Erro ao salvar fechamento.", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = prev || "Salvar registro";
+    }
+  }
+}
+
 function fechamentoMoneyFromInput(el) {
   if (!el) return 0;
   if (el.dataset.fechamentoMaskBound) {
@@ -14222,6 +14370,7 @@ async function loadFechamentoCaixaSection() {
   if (t && !t.value) t.value = new Date().toTimeString().slice(0, 5);
   ensureFechamentoCaixaCurrencyMasks();
   scheduleRecalcFechamentoCaixa();
+  loadFechamentosCaixaHistorico();
 }
 
 function setupFechamentoCaixaAuditoria() {
@@ -14249,6 +14398,26 @@ function setupFechamentoCaixaAuditoria() {
   });
   document.getElementById("fechamentoCaixaOperador")?.addEventListener("blur", () => {
     syncFechamentoCaixaOperadorUsuarioId();
+  });
+
+  document.getElementById("fechamentoSalvarBtn")?.addEventListener("click", () => {
+    salvarFechamentoCaixaRegistro();
+  });
+  document.getElementById("fechamentoAtualizarHistoricoBtn")?.addEventListener("click", () => {
+    loadFechamentosCaixaHistorico().then(() => showToast("Lista atualizada.", "info"));
+  });
+
+  document.getElementById("fechamentoHistoricoTable")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-fechamento-pdf]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-fechamento-pdf");
+    if (!id) return;
+    try {
+      await downloadFechamentoCaixaPdf(id);
+      showToast("PDF baixado.", "success");
+    } catch (err) {
+      showToast(err?.message || "Erro ao baixar PDF.", "error");
+    }
   });
 }
 
