@@ -6200,6 +6200,7 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
 
     $sumPdv = 0.0;
     $sumMaq = 0.0;
+    $sumDiff = 0.0;
     $rowsHtml = '';
     foreach ($linhas as $L) {
         if (!is_array($L)) {
@@ -6208,14 +6209,18 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         $lab = $h($L['label'] ?? $L['key'] ?? '—');
         $vSis = (float) ($L['sis'] ?? 0);
         $vMaq = (float) ($L['maq'] ?? 0);
+        $vDiff = round($vSis - $vMaq, 2);
         $sumPdv += $vSis;
         $sumMaq += $vMaq;
+        $sumDiff += $vDiff;
         $rowsHtml .= '<tr>'
             . '<td>' . $lab . '</td>'
             . '<td style="text-align:right">' . $h($fmt($vSis)) . '</td>'
             . '<td style="text-align:right">' . $h($fmt($vMaq)) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($vDiff)) . '</td>'
             . '</tr>';
     }
+    $sumDiff = round($sumDiff, 2);
 
     $dataBr = $row->data_fechamento ? \Carbon\Carbon::parse($row->data_fechamento)->format('d/m/Y') : '—';
     $hora = $h($row->hora_fechamento ?? '—');
@@ -6235,7 +6240,7 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
 
     $saldoL = (float) ($row->saldo_liquido ?? 0);
     if (abs($saldoL) < 0.01) {
-        $fechRot = 'Sem quebra no fechamento';
+        $fechRot = 'Sem quebra (compensado entre formas)';
         $fechVal = $fmt(0);
     } elseif ($saldoL > 0) {
         $fechRot = 'Sobras no fechamento';
@@ -6274,11 +6279,18 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         $html .= '<p style="font-size:9pt;margin:8px 0;"><strong>Observações:</strong> ' . nl2br($h($row->observacoes)) . '</p>';
     }
     $html .= '<table><thead><tr>
-        <th>Forma</th><th>PDV</th><th>Maquinha</th>
-    </tr></thead><tbody>' . $rowsHtml . '</tbody></table>
+        <th>Forma</th><th>PDV</th><th>Maquinha</th><th>Diferença (PDV−maq.)</th>
+    </tr></thead><tbody>' . $rowsHtml . '</tbody>'
+        . '<tfoot><tr>'
+        . '<th style="text-align:right">Totais / Σ dif.</th>'
+        . '<th style="text-align:right">' . $h($fmt($sumPdv)) . '</th>'
+        . '<th style="text-align:right">' . $h($fmt($sumMaq)) . '</th>'
+        . '<th style="text-align:right">' . $h($fmt($sumDiff)) . '</th>'
+        . '</tr></tfoot></table>
     <div class="tot">
         <strong>Total PDV:</strong> ' . $h($fmt($sumPdv)) . ' &nbsp;|&nbsp;
         <strong>Total maquinas:</strong> ' . $h($fmt($sumMaq)) . ' &nbsp;|&nbsp;
+        <strong>Σ diferenças (saldo líquido):</strong> ' . $h($fmt($sumDiff)) . ' &nbsp;|&nbsp;
         <strong>Total geral (PDV+maq.):</strong> ' . $h($fmt((float) $row->total_informado)) . '
     </div>
     <div class="rod">Grupo Sabor Paraense — SAS Estoque. Documento para conferência e arquivo.</div>

@@ -2045,7 +2045,7 @@
             </div>
 
             <p class="subtle-text fechamento-audit__intro">
-              Preencha <strong>PDV</strong> e <strong>maquinha</strong>. O card <strong>Fechamento</strong> diz se houve <strong>quebra</strong>, <strong>sobras</strong> ou <strong>sem quebra</strong>, e mostra o <strong>valor</strong> (diferença entre o total PDV e o total da maquinha).
+              Em cada linha, <strong>Diferença</strong> = PDV − maquinha (falta ou sobra naquela forma). A <strong>soma</strong> de todas as diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra — <strong>sem quebra</strong>. Se não fechar em zero, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
             </p>
 
             <div class="table-card form-card--wide fechamento-audit__meta">
@@ -2113,7 +2113,7 @@
               <header>
                 <div>
                   <h3>Valores por forma de pagamento</h3>
-                  <p class="subtle-text">PDV (sistema) e maquinha</p>
+                  <p class="subtle-text">PDV, maquinha e diferença por lançamento; o rodapé mostra a soma das diferenças (saldo líquido).</p>
                 </div>
               </header>
               <div class="table-wrapper fechamento-audit__table-wrap">
@@ -2123,6 +2123,7 @@
                       <th>Forma de pagamento</th>
                       <th>PDV (R$)</th>
                       <th>Maquinha (R$)</th>
+                      <th title="PDV − maquinha nesta forma">Diferença (R$)</th>
                     </tr>
                   </thead>
                   <tbody id="fechamentoTbodyValores">
@@ -2130,26 +2131,31 @@
                       <td data-label="Forma"><strong>Dinheiro</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Diferença" id="fechamento_diff_linha_dinheiro" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="debito">
                       <td data-label="Forma"><strong>Débito</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Diferença" id="fechamento_diff_linha_debito" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="credito">
                       <td data-label="Forma"><strong>Crédito</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Diferença" id="fechamento_diff_linha_credito" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="pix">
                       <td data-label="Forma"><strong>PIX</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Diferença" id="fechamento_diff_linha_pix" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
                     <tr data-fechamento-key="pix_thiago">
                       <td data-label="Forma"><strong>PIX Thiago</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
+                      <td data-label="Diferença" id="fechamento_diff_linha_pix_thiago" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
                   </tbody>
                   <tfoot>
@@ -2157,6 +2163,7 @@
                       <th style="text-align:right">Totais</th>
                       <th id="fechamentoFootPdv">R$ 0,00</th>
                       <th id="fechamentoFootMaq">R$ 0,00</th>
+                      <th id="fechamentoFootDiff" title="Soma (PDV−maquinha) por linha — zero = compensado entre formas">R$ 0,00</th>
                     </tr>
                   </tfoot>
                 </table>

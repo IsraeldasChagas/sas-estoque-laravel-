@@ -14049,6 +14049,7 @@ function buildFechamentoCaixaPayload() {
   let totalInf = 0;
   let totalSis = 0;
   let totalMaq = 0;
+  let somaDiff = 0;
   FECHAMENTO_CAIXA_FORMAS.forEach(({ key, label }) => {
     const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
     const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
@@ -14056,10 +14057,12 @@ function buildFechamentoCaixaPayload() {
     totalInf = roundToCurrency(totalInf + informado);
     totalSis = roundToCurrency(totalSis + sis);
     totalMaq = roundToCurrency(totalMaq + maq);
-    linhas.push({ key, label, esp: 0, sis, maq, informado, diff: 0 });
+    const diffLinha = roundToCurrency(sis - maq);
+    somaDiff = roundToCurrency(somaDiff + diffLinha);
+    linhas.push({ key, label, esp: 0, sis, maq, informado, diff: diffLinha });
   });
   const tol = 0.009;
-  const saldoLiquido = roundToCurrency(totalSis - totalMaq);
+  const saldoLiquido = somaDiff;
   const semQuebra = Math.abs(saldoLiquido) < tol;
   const unidadeEl = document.getElementById("fechamentoUnidade");
   const unidadeVal = unidadeEl?.value?.trim();
@@ -14136,7 +14139,7 @@ function renderFechamentosCaixaHistorico(rows) {
       let rotuloFech;
       let valorFech;
       if (sem) {
-        rotuloFech = "Sem quebra";
+        rotuloFech = "Sem quebra (compensado)";
         valorFech = formatCurrencyBRL(0);
       } else if (saldo > 0) {
         rotuloFech = "Sobras";
@@ -14210,6 +14213,14 @@ function fechamentoMoneyFromInput(el) {
   return roundToCurrency(parseCurrencyFromString(el.value || ""));
 }
 
+function formatFechamentoSignedDiff(value) {
+  const v = roundToCurrency(value);
+  const tol = 0.005;
+  if (Math.abs(v) < tol) return formatCurrencyBRL(0);
+  const absFmt = formatCurrencyBRL(Math.abs(v));
+  return v > 0 ? `+ ${absFmt}` : `− ${absFmt}`;
+}
+
 let fechamentoRecalcRaf = null;
 function scheduleRecalcFechamentoCaixa() {
   if (fechamentoRecalcRaf) cancelAnimationFrame(fechamentoRecalcRaf);
@@ -14223,12 +14234,24 @@ function recalcFechamentoCaixa() {
   const tol = 0.009;
   let totalSis = 0;
   let totalMaq = 0;
+  let somaDiff = 0;
 
   FECHAMENTO_CAIXA_FORMAS.forEach(({ key }) => {
     const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
     const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
+    const diffLinha = roundToCurrency(sis - maq);
     totalSis = roundToCurrency(totalSis + sis);
     totalMaq = roundToCurrency(totalMaq + maq);
+    somaDiff = roundToCurrency(somaDiff + diffLinha);
+
+    const diffEl = document.getElementById(`fechamento_diff_linha_${key}`);
+    if (diffEl) {
+      diffEl.textContent = formatFechamentoSignedDiff(diffLinha);
+      diffEl.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero");
+      if (Math.abs(diffLinha) < tol) diffEl.classList.add("fechamento-audit__diff--zero");
+      else if (diffLinha > 0) diffEl.classList.add("fechamento-audit__diff--pos");
+      else diffEl.classList.add("fechamento-audit__diff--neg");
+    }
   });
 
   const totPdvEl = document.getElementById("fechamentoTotalSistemaPdv");
@@ -14241,7 +14264,16 @@ function recalcFechamentoCaixa() {
   const footMaq = document.getElementById("fechamentoFootMaq");
   if (footMaq) footMaq.textContent = formatCurrencyBRL(totalMaq);
 
-  const delta = roundToCurrency(totalSis - totalMaq);
+  const footDiff = document.getElementById("fechamentoFootDiff");
+  if (footDiff) {
+    footDiff.textContent = formatFechamentoSignedDiff(somaDiff);
+    footDiff.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero");
+    if (Math.abs(somaDiff) < tol) footDiff.classList.add("fechamento-audit__diff--zero");
+    else if (somaDiff > 0) footDiff.classList.add("fechamento-audit__diff--pos");
+    else footDiff.classList.add("fechamento-audit__diff--neg");
+  }
+
+  const delta = roundToCurrency(somaDiff);
   const temValores = totalSis > tol || totalMaq > tol;
   const badge = document.getElementById("fechamentoStatusBadge");
   const valorEl = document.getElementById("fechamentoStatusValor");
@@ -14267,7 +14299,7 @@ function recalcFechamentoCaixa() {
       badge.textContent = "Preencha PDV e maquinha";
       badge.className = "fechamento-audit__status fechamento-audit__status--neutral";
     } else if (Math.abs(delta) < tol) {
-      badge.textContent = "Sem quebra no fechamento";
+      badge.textContent = "Sem quebra (compensado entre formas)";
       badge.className = "fechamento-audit__status fechamento-audit__status--ok";
     } else if (delta > 0) {
       badge.textContent = "Sobras no fechamento";

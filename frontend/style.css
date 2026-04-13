@@ -5694,7 +5694,12 @@ select[size]:not([size="1"]) {
 }
 
 .fechamento-audit__table--simples {
-  min-width: 420px;
+  min-width: 520px;
+}
+
+.fechamento-audit__diff-cell {
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .fechamento-audit__conf-cell {
@@ -5858,6 +5863,10 @@ select[size]:not([size="1"]) {
   .fechamento-audit__conf-cell {
     white-space: normal;
     word-break: break-word;
+  }
+
+  .fechamento-audit__diff-cell {
+    white-space: normal;
   }
 }
 
