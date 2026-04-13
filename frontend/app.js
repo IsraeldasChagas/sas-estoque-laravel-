@@ -13971,6 +13971,44 @@ const FECHAMENTO_CAIXA_FORMAS = [
   { key: "pix_thiago", label: "PIX Thiago" },
 ];
 
+/** Perfis de usuário sugeridos como operador do caixa na auditoria */
+const FECHAMENTO_CAIXA_PERFIS_OPERADOR = new Set(["ATENDENTE_CAIXA", "ATENDENTE"]);
+
+function rotuloFechamentoCaixaOperador(u) {
+  const perfil = (u.perfil || "").toString().trim().toUpperCase();
+  const nome = (u.nome || u.email || `Usuário ${u.id}`).toString().trim();
+  const pLabel = PERFIL_LABELS[perfil] || u.perfil || perfil;
+  return `${nome} — ${pLabel}`;
+}
+
+function populateFechamentoCaixaOperadorDatalist() {
+  const dl = document.getElementById("fechamentoCaixaOperadorDatalist");
+  if (!dl) return;
+  const lista = (state.usuarios || [])
+    .filter((u) => {
+      if (Number(u?.ativo ?? 1) !== 1) return false;
+      const p = (u.perfil || "").toString().trim().toUpperCase();
+      return FECHAMENTO_CAIXA_PERFIS_OPERADOR.has(p);
+    })
+    .sort((a, b) =>
+      (a.nome || a.email || "").localeCompare(b.nome || b.email || "", "pt-BR")
+    );
+  dl.innerHTML = lista
+    .map((u) => `<option value="${escapeHtml(rotuloFechamentoCaixaOperador(u))}"></option>`)
+    .join("");
+}
+
+function syncFechamentoCaixaOperadorUsuarioId() {
+  const inp = document.getElementById("fechamentoCaixaOperador");
+  const hid = document.getElementById("fechamentoCaixaUsuarioId");
+  if (!inp || !hid) return;
+  const val = (inp.value || "").trim();
+  hid.value = "";
+  if (!val) return;
+  const found = (state.usuarios || []).find((u) => rotuloFechamentoCaixaOperador(u) === val);
+  if (found && found.id != null) hid.value = String(found.id);
+}
+
 function fechamentoMoneyFromInput(el) {
   if (!el) return 0;
   if (el.dataset.fechamentoMaskBound) {
@@ -14106,8 +14144,10 @@ function resetFechamentoCaixaForm() {
   const h = document.getElementById("fechamentoHora");
   if (d) d.value = new Date().toISOString().slice(0, 10);
   if (h) h.value = new Date().toTimeString().slice(0, 5);
-  const caixa = document.getElementById("fechamentoCaixaNome");
-  if (caixa) caixa.value = "";
+  const op = document.getElementById("fechamentoCaixaOperador");
+  const opId = document.getElementById("fechamentoCaixaUsuarioId");
+  if (op) op.value = "";
+  if (opId) opId.value = "";
   const maq = document.getElementById("fechamentoMaquinha");
   if (maq) maq.value = "";
   const sis = document.getElementById("fechamentoSistemaPdv");
@@ -14124,6 +14164,9 @@ function resetFechamentoCaixaForm() {
 
 async function loadFechamentoCaixaSection() {
   await loadUnidades(false).catch(() => {});
+  await loadUsuarios(false).catch(() => {});
+  populateFechamentoCaixaOperadorDatalist();
+  syncFechamentoCaixaOperadorUsuarioId();
   const uSel = document.getElementById("fechamentoUnidade");
   if (uSel && Array.isArray(state.unidades) && state.unidades.length) {
     const options = state.unidades
@@ -14164,6 +14207,13 @@ function setupFechamentoCaixaAuditoria() {
   document.getElementById("fechamentoLimparBtn")?.addEventListener("click", () => {
     resetFechamentoCaixaForm();
     showToast("Conferência limpa.", "success");
+  });
+
+  document.getElementById("fechamentoCaixaOperador")?.addEventListener("change", () => {
+    syncFechamentoCaixaOperadorUsuarioId();
+  });
+  document.getElementById("fechamentoCaixaOperador")?.addEventListener("blur", () => {
+    syncFechamentoCaixaOperadorUsuarioId();
   });
 }
 

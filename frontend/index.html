@@ -2051,7 +2051,7 @@
               <header>
                 <div>
                   <h3>Dados do fechamento</h3>
-                  <p class="subtle-text">Data, hora, unidade, caixa, sistema e maquinha</p>
+                  <p class="subtle-text">Data, hora, unidade, operador do caixa, sistema e maquinha</p>
                 </div>
               </header>
               <div class="fechamento-audit__grid">
@@ -2069,16 +2069,19 @@
                     <option value="">Selecione a unidade</option>
                   </select>
                 </label>
-                <label>
-                  Nome do caixa
-                  <select id="fechamentoCaixaNome">
-                    <option value="">Selecione o caixa</option>
-                    <option value="caixa_01_balcao">Caixa 01 – Balcão</option>
-                    <option value="caixa_02_salao">Caixa 02 – Salão</option>
-                    <option value="caixa_03_delivery">Caixa 03 – Delivery / retirada</option>
-                    <option value="caixa_04_admin">Caixa administrativo</option>
-                    <option value="outro">Outro (use observações)</option>
-                  </select>
+                <label class="fechamento-audit__caixa-operador">
+                  Operador(a) do caixa
+                  <input
+                    type="text"
+                    id="fechamentoCaixaOperador"
+                    list="fechamentoCaixaOperadorDatalist"
+                    maxlength="200"
+                    autocomplete="off"
+                    placeholder="Busque na lista ou digite o nome (se ainda não cadastrado)"
+                  />
+                  <datalist id="fechamentoCaixaOperadorDatalist"></datalist>
+                  <input type="hidden" id="fechamentoCaixaUsuarioId" value="" />
+                  <span class="fechamento-audit__field-hint">Sugestões: usuários com perfil <strong>Atendente Caixa</strong> ou <strong>Atendente</strong>. Se não aparecer, digite o nome à mão.</span>
                 </label>
                 <label>
                   Sistema do fechamento (ex.: PDV)

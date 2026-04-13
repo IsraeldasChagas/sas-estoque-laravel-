@@ -5633,6 +5633,19 @@ select[size]:not([size="1"]) {
   padding: 0 1.25rem 1rem;
 }
 
+.fechamento-audit__caixa-operador {
+  grid-column: 1 / -1;
+}
+
+.fechamento-audit__field-hint {
+  display: block;
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: #607d8b;
+  margin-top: 0.35rem;
+  line-height: 1.35;
+}
+
 .fechamento-audit__meta label,
 .fechamento-audit__obs {
   display: flex;
