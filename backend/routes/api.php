@@ -6233,6 +6233,18 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
     $maqLegivel = $mk !== '' ? ($maqMap[$mk] ?? $row->maquinha) : '—';
     $criado = $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y H:i') : '—';
 
+    $saldoL = (float) ($row->saldo_liquido ?? 0);
+    if (abs($saldoL) < 0.01) {
+        $fechRot = 'Sem quebra no fechamento';
+        $fechVal = $fmt(0);
+    } elseif ($saldoL > 0) {
+        $fechRot = 'Sobras no fechamento';
+        $fechVal = $fmt($saldoL);
+    } else {
+        $fechRot = 'Quebra de caixa';
+        $fechVal = $fmt(abs($saldoL));
+    }
+
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 10pt; color: #222; margin: 20px; }
         h1 { font-size: 15pt; text-align: center; margin: 0 0 6px; color: #1565c0; }
@@ -6255,6 +6267,8 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         <tr><th>Sistema (PDV)</th><td>' . $h($row->sistema_pdv ?? '—') . '</td></tr>
         <tr><th>Maquinha</th><td>' . $h($maqLegivel) . '</td></tr>
         <tr><th>Registrado por</th><td>' . $h($row->registrado_por_nome ?? '—') . '</td></tr>
+        <tr><th>Fechamento</th><td>' . $h($fechRot) . '</td></tr>
+        <tr><th>Valor (quebra/sobra)</th><td>' . $h($fechVal) . '</td></tr>
     </table>';
     if (trim((string) ($row->observacoes ?? '')) !== '') {
         $html .= '<p style="font-size:9pt;margin:8px 0;"><strong>Observações:</strong> ' . nl2br($h($row->observacoes)) . '</p>';

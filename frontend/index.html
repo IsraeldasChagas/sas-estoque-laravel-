@@ -2045,7 +2045,7 @@
             </div>
 
             <p class="subtle-text fechamento-audit__intro">
-              Informe os valores por forma de pagamento: <strong>PDV</strong> (sistema) e <strong>maquinha</strong>.
+              Preencha <strong>PDV</strong> e <strong>maquinha</strong>. O card <strong>Fechamento</strong> diz se houve <strong>quebra</strong>, <strong>sobras</strong> ou <strong>sem quebra</strong>, e mostra o <strong>valor</strong> (diferença entre o total PDV e o total da maquinha).
             </p>
 
             <div class="table-card form-card--wide fechamento-audit__meta">
@@ -2163,7 +2163,7 @@
               </div>
             </div>
 
-            <div class="fechamento-audit__resumo fechamento-audit__resumo--dois-cards">
+            <div class="fechamento-audit__resumo">
               <div class="fechamento-audit__card">
                 <span class="fechamento-audit__card-label">Total PDV</span>
                 <span class="fechamento-audit__card-value" id="fechamentoTotalSistemaPdv">R$ 0,00</span>
@@ -2171,6 +2171,11 @@
               <div class="fechamento-audit__card">
                 <span class="fechamento-audit__card-label">Total maquinas</span>
                 <span class="fechamento-audit__card-value" id="fechamentoTotalMaquinas">R$ 0,00</span>
+              </div>
+              <div class="fechamento-audit__card fechamento-audit__card--status fechamento-audit__card--destaque">
+                <span class="fechamento-audit__card-label">Fechamento</span>
+                <span class="fechamento-audit__status" id="fechamentoStatusBadge">Preencha PDV e maquinha</span>
+                <span class="fechamento-audit__sit-valor" id="fechamentoStatusValor">Valor: —</span>
               </div>
             </div>
 
@@ -2190,11 +2195,13 @@
                       <th>Unidade</th>
                       <th>Operador</th>
                       <th>Total (PDV+maq.)</th>
+                      <th>Fechamento</th>
+                      <th>Valor</th>
                       <th>PDF</th>
                     </tr>
                   </thead>
                   <tbody id="fechamentosCaixaHistoricoBody">
-                    <tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando…</td></tr>
+                    <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>
                   </tbody>
                 </table>
               </div>

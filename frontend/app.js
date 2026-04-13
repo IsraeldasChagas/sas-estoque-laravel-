@@ -14047,13 +14047,20 @@ function syncFechamentoCaixaOperadorUsuarioId() {
 function buildFechamentoCaixaPayload() {
   const linhas = [];
   let totalInf = 0;
+  let totalSis = 0;
+  let totalMaq = 0;
   FECHAMENTO_CAIXA_FORMAS.forEach(({ key, label }) => {
     const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
     const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
     const informado = roundToCurrency(sis + maq);
     totalInf = roundToCurrency(totalInf + informado);
+    totalSis = roundToCurrency(totalSis + sis);
+    totalMaq = roundToCurrency(totalMaq + maq);
     linhas.push({ key, label, esp: 0, sis, maq, informado, diff: 0 });
   });
+  const tol = 0.009;
+  const saldoLiquido = roundToCurrency(totalSis - totalMaq);
+  const semQuebra = Math.abs(saldoLiquido) < tol;
   const unidadeEl = document.getElementById("fechamentoUnidade");
   const unidadeVal = unidadeEl?.value?.trim();
   const unidadeId = unidadeVal && Number.isFinite(Number(unidadeVal)) ? Number(unidadeVal) : null;
@@ -14072,8 +14079,8 @@ function buildFechamentoCaixaPayload() {
     linhas,
     total_referencia: 0,
     total_informado: totalInf,
-    saldo_liquido: 0,
-    sem_quebra: true,
+    saldo_liquido: saldoLiquido,
+    sem_quebra: semQuebra,
   };
 }
 
@@ -14115,7 +14122,7 @@ function renderFechamentosCaixaHistorico(rows) {
   if (!tbody) return;
   if (!rows.length) {
     tbody.innerHTML =
-      '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum registro salvo ainda. Preencha e clique em Salvar registro.</td></tr>';
+      '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum registro salvo ainda. Preencha e clique em Salvar registro.</td></tr>';
     return;
   }
   tbody.innerHTML = rows
@@ -14123,12 +14130,29 @@ function renderFechamentosCaixaHistorico(rows) {
       const op = escapeHtml((r.operador_nome || "—").toString());
       const un = escapeHtml((r.unidade_nome || "—").toString());
       const tot = Number(r.total_informado ?? 0);
+      const saldo = Number(r.saldo_liquido ?? 0);
+      const tol = 0.009;
+      const sem = Number(r.sem_quebra) === 1 || Math.abs(saldo) < tol;
+      let rotuloFech;
+      let valorFech;
+      if (sem) {
+        rotuloFech = "Sem quebra";
+        valorFech = formatCurrencyBRL(0);
+      } else if (saldo > 0) {
+        rotuloFech = "Sobras";
+        valorFech = formatCurrencyBRL(saldo);
+      } else {
+        rotuloFech = "Quebra de caixa";
+        valorFech = formatCurrencyBRL(Math.abs(saldo));
+      }
       return `<tr>
         <td data-label="Nº">${escapeHtml(String(r.id ?? ""))}</td>
         <td data-label="Data">${escapeHtml(fmtData(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
         <td data-label="Unidade">${un}</td>
         <td data-label="Operador">${op}</td>
         <td data-label="Total">${escapeHtml(formatCurrencyBRL(tot))}</td>
+        <td data-label="Fechamento">${escapeHtml(rotuloFech)}</td>
+        <td data-label="Valor">${escapeHtml(valorFech)}</td>
         <td data-label="PDF"><button type="button" class="btn secondary fechamento-caixa-pdf-btn" data-fechamento-pdf="${escapeHtml(String(r.id))}">PDF</button></td>
       </tr>`;
     })
@@ -14143,7 +14167,7 @@ async function loadFechamentosCaixaHistorico() {
     renderFechamentosCaixaHistorico(Array.isArray(list) ? list : []);
   } catch (err) {
     console.error(err);
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao carregar histórico.")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao carregar histórico.")}</td></tr>`;
   }
 }
 
@@ -14196,6 +14220,7 @@ function scheduleRecalcFechamentoCaixa() {
 }
 
 function recalcFechamentoCaixa() {
+  const tol = 0.009;
   let totalSis = 0;
   let totalMaq = 0;
 
@@ -14215,6 +14240,43 @@ function recalcFechamentoCaixa() {
   if (footPdv) footPdv.textContent = formatCurrencyBRL(totalSis);
   const footMaq = document.getElementById("fechamentoFootMaq");
   if (footMaq) footMaq.textContent = formatCurrencyBRL(totalMaq);
+
+  const delta = roundToCurrency(totalSis - totalMaq);
+  const temValores = totalSis > tol || totalMaq > tol;
+  const badge = document.getElementById("fechamentoStatusBadge");
+  const valorEl = document.getElementById("fechamentoStatusValor");
+
+  if (valorEl) {
+    valorEl.classList.remove("fechamento-audit__sit-valor--zero", "fechamento-audit__sit-valor--pos", "fechamento-audit__sit-valor--neg");
+    if (!temValores) {
+      valorEl.textContent = "Valor: —";
+    } else if (Math.abs(delta) < tol) {
+      valorEl.textContent = `Valor: ${formatCurrencyBRL(0)}`;
+      valorEl.classList.add("fechamento-audit__sit-valor--zero");
+    } else if (delta > 0) {
+      valorEl.textContent = `Valor: ${formatCurrencyBRL(delta)}`;
+      valorEl.classList.add("fechamento-audit__sit-valor--pos");
+    } else {
+      valorEl.textContent = `Valor: ${formatCurrencyBRL(Math.abs(delta))}`;
+      valorEl.classList.add("fechamento-audit__sit-valor--neg");
+    }
+  }
+
+  if (badge) {
+    if (!temValores) {
+      badge.textContent = "Preencha PDV e maquinha";
+      badge.className = "fechamento-audit__status fechamento-audit__status--neutral";
+    } else if (Math.abs(delta) < tol) {
+      badge.textContent = "Sem quebra no fechamento";
+      badge.className = "fechamento-audit__status fechamento-audit__status--ok";
+    } else if (delta > 0) {
+      badge.textContent = "Sobras no fechamento";
+      badge.className = "fechamento-audit__status fechamento-audit__status--ok";
+    } else {
+      badge.textContent = "Quebra de caixa";
+      badge.className = "fechamento-audit__status fechamento-audit__status--alert";
+    }
+  }
 }
 
 function ensureFechamentoCaixaCurrencyMasks() {
