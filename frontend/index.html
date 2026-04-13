@@ -2040,6 +2040,17 @@
               <h2>📋 Auditoria fechamento caixa</h2>
               <div class="boletos-actions">
                 <button type="button" class="btn primary" id="fechamentoSalvarBtn">Salvar registro</button>
+                <button
+                  type="button"
+                  class="btn secondary fechamento-audit__toggle-principal"
+                  id="fechamentoTogglePrincipalBtn"
+                  aria-expanded="true"
+                  aria-controls="fechamentoPrincipalPainel"
+                  aria-label="Recolher ou expandir dados do fechamento e resumo do mês"
+                  title="Recolher painel"
+                >
+                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">▼</span>
+                </button>
                 <button type="button" class="btn secondary" id="fechamentoAtualizarHistoricoBtn">Atualizar lista</button>
                 <button type="button" class="btn neutral" id="fechamentoLimparBtn">Limpar conferência</button>
               </div>
@@ -2049,6 +2060,7 @@
               Em cada linha, <strong>Diferença</strong> = <strong>maquinha − PDV</strong> (referência da maquinha). A <strong>soma</strong> das diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra — <strong>sem quebra</strong>. Caso contrário, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
             </p>
 
+            <div id="fechamentoPrincipalPainel" class="fechamento-audit__principal-painel">
             <div class="table-card form-card--wide fechamento-audit__meta">
               <header>
                 <div>
@@ -2213,6 +2225,7 @@
               <div id="fechamentoResumoMesResultado" class="fechamento-audit__resumo-mes-resultado subtle-text">
                 Escolha o mês e a unidade e clique em <strong>Ver resumo</strong>.
               </div>
+            </div>
             </div>
 
             <div class="table-card form-card--wide fechamento-audit__historico">

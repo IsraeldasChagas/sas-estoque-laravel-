@@ -5626,6 +5626,27 @@ select[size]:not([size="1"]) {
   line-height: 1.5;
 }
 
+.fechamento-audit__toggle-principal {
+  min-width: 2.5rem;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+.fechamento-audit__toggle-icon {
+  display: inline-block;
+  font-size: 0.75rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.fechamento-audit__toggle-principal[aria-expanded="false"] .fechamento-audit__toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.fechamento-audit__principal-painel--collapsed {
+  display: none;
+}
+
 .fechamento-audit__meta .fechamento-audit__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

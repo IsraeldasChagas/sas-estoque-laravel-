@@ -14735,6 +14735,14 @@ function setupFechamentoCaixaAuditoria() {
   document.getElementById("fechamentoSalvarBtn")?.addEventListener("click", () => {
     salvarFechamentoCaixaRegistro();
   });
+  document.getElementById("fechamentoTogglePrincipalBtn")?.addEventListener("click", () => {
+    const painel = document.getElementById("fechamentoPrincipalPainel");
+    const btn = document.getElementById("fechamentoTogglePrincipalBtn");
+    if (!painel || !btn) return;
+    const collapsed = painel.classList.toggle("fechamento-audit__principal-painel--collapsed");
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    btn.title = collapsed ? "Expandir painel" : "Recolher painel";
+  });
   document.getElementById("fechamentoAtualizarHistoricoBtn")?.addEventListener("click", () => {
     loadFechamentosCaixaHistorico().then(() => showToast("Lista atualizada.", "info"));
   });
