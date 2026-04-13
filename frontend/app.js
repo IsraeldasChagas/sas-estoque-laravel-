@@ -3670,6 +3670,8 @@ function exportRelatorioCsv() {
       ].map((valor) => String(valor).replace(/;/g, ",")).join(";"),
     );
   });
+  linhas.push("");
+  linhas.push("Grupo Sabor Paraense");
 
   const blob = new Blob([linhas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -3704,6 +3706,15 @@ async function exportRelatorioPdf() {
       th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 12px; text-align: left; }
       th { background: #f0f4f8; }
       .section-title { font-size: 16px; margin: 24px 0 8px; }
+      .report-footer {
+        margin-top: 40px;
+        padding-top: 16px;
+        border-top: 1px solid #ddd;
+        text-align: center;
+        font-size: 13px;
+        color: #333;
+        font-weight: 600;
+      }
     </style>
   `;
   const filtrosHtml = `
@@ -3803,6 +3814,7 @@ async function exportRelatorioPdf() {
         ${filtrosHtml}
         ${resumoHtml}
         ${detalhesHtml}
+        <footer class="report-footer">Grupo Sabor Paraense</footer>
       </body>
     </html>
   `;
