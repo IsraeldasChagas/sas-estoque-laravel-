@@ -5619,6 +5619,176 @@ select[size]:not([size="1"]) {
 
 .modal--wide { max-width: 700px; }
 
+/* Auditoria fechamento caixa */
+.fechamento-audit__intro {
+  max-width: 920px;
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.fechamento-audit__meta .fechamento-audit__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem 1.25rem;
+  padding: 0 1.25rem 1rem;
+}
+
+.fechamento-audit__meta label,
+.fechamento-audit__obs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.fechamento-audit__meta input,
+.fechamento-audit__meta select,
+.fechamento-audit__obs textarea {
+  font-weight: 500;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fechamento-audit__obs {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.fechamento-audit__table-wrap {
+  overflow-x: auto;
+}
+
+.fechamento-audit__table {
+  min-width: 720px;
+}
+
+.fechamento-audit__table th,
+.fechamento-audit__table td {
+  vertical-align: middle;
+  font-size: 0.875rem;
+}
+
+.fechamento-audit__money {
+  width: 100%;
+  min-width: 96px;
+  max-width: 140px;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cfd8dc;
+  box-sizing: border-box;
+}
+
+.fechamento-audit__resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.fechamento-audit__card {
+  background: linear-gradient(145deg, #fafafa 0%, #f0f4f8 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fechamento-audit__card--destaque {
+  border-color: #1565c0;
+  background: linear-gradient(145deg, #e3f2fd 0%, #fff 100%);
+}
+
+.fechamento-audit__card-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #607d8b;
+  font-weight: 700;
+}
+
+.fechamento-audit__card-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #263238;
+}
+
+.fechamento-audit__card--status .fechamento-audit__status {
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.fechamento-audit__status--neutral {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+.fechamento-audit__status--ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.fechamento-audit__status--alert {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.fechamento-audit__explicacao {
+  max-width: 920px;
+  margin-bottom: 2rem;
+  line-height: 1.55;
+}
+
+.fechamento-audit__diff--pos {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.fechamento-audit__diff--neg {
+  color: #c62828;
+  font-weight: 700;
+}
+
+.fechamento-audit__diff--zero {
+  color: #607d8b;
+}
+
+@media (max-width: 768px) {
+  .fechamento-audit__table thead {
+    display: none;
+  }
+  .fechamento-audit__table tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.5rem;
+  }
+  .fechamento-audit__table td {
+    display: block;
+    text-align: left !important;
+    padding: 0.35rem 0;
+  }
+  .fechamento-audit__table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: #607d8b;
+  }
+  .fechamento-audit__money {
+    max-width: none;
+    margin-top: 0.25rem;
+  }
+}
+
 
 
 

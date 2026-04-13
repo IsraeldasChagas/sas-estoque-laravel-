@@ -6069,6 +6069,7 @@ function refreshUnidadeSelects() {
   if (dom.localUnidadeSelect) populateSelect(dom.localUnidadeSelect, options, "Selecione a unidade");
   const proventoFormUnidade = document.getElementById("proventoForm")?.elements?.unidade_id;
   if (proventoFormUnidade) populateSelect(proventoFormUnidade, options, "Selecione");
+  populateSelect(document.getElementById("fechamentoUnidade"), options, "Selecione a unidade");
   
   // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -7178,6 +7179,8 @@ async function startAppSession(user) {
         } else if (sectionToNavigate === 'alvara') {
           await populateAlvarasUnidades().catch(() => {});
           await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
+        } else if (sectionToNavigate === 'fechamento') {
+          await loadFechamentoCaixaSection();
         }
       } catch (err) {
         console.error('Erro ao carregar seção inicial:', err);
@@ -10800,7 +10803,7 @@ function setupNavigation() {
         }
       }
       else if (target === "fechamento") {
-        /* página em construção — sem carga de dados */
+        await loadFechamentoCaixaSection();
       }
     } catch (err) {
       showToast(err.message, "error");
@@ -13960,6 +13963,210 @@ function setupAlvarasModule() {
   });
 }
 
+const FECHAMENTO_CAIXA_FORMAS = [
+  { key: "dinheiro", label: "Dinheiro" },
+  { key: "debito", label: "Débito" },
+  { key: "credito", label: "Crédito" },
+  { key: "pix", label: "PIX" },
+  { key: "pix_thiago", label: "PIX Thiago" },
+];
+
+function fechamentoMoneyFromInput(el) {
+  if (!el) return 0;
+  if (el.dataset.fechamentoMaskBound) {
+    const n = Number(el.dataset.value || 0);
+    if (Number.isFinite(n)) return roundToCurrency(n);
+  }
+  return roundToCurrency(parseCurrencyFromString(el.value || ""));
+}
+
+function formatFechamentoSigned(value) {
+  const v = roundToCurrency(value);
+  const tol = 0.005;
+  if (Math.abs(v) < tol) return formatCurrencyBRL(0);
+  const absFmt = formatCurrencyBRL(Math.abs(v));
+  return v > 0 ? `+ ${absFmt}` : `− ${absFmt}`;
+}
+
+let fechamentoRecalcRaf = null;
+function scheduleRecalcFechamentoCaixa() {
+  if (fechamentoRecalcRaf) cancelAnimationFrame(fechamentoRecalcRaf);
+  fechamentoRecalcRaf = requestAnimationFrame(() => {
+    fechamentoRecalcRaf = null;
+    recalcFechamentoCaixa();
+  });
+}
+
+function recalcFechamentoCaixa() {
+  const tol = 0.009;
+  let totalEsp = 0;
+  let totalInf = 0;
+  let totalDiff = 0;
+  const linhasComDiff = [];
+
+  FECHAMENTO_CAIXA_FORMAS.forEach(({ key, label }) => {
+    const esp = fechamentoMoneyFromInput(document.getElementById(`fechamento_esp_${key}`));
+    const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
+    const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
+    const informado = roundToCurrency(sis + maq);
+    const diff = roundToCurrency(informado - esp);
+    totalEsp = roundToCurrency(totalEsp + esp);
+    totalInf = roundToCurrency(totalInf + informado);
+    totalDiff = roundToCurrency(totalDiff + diff);
+
+    const sumEl = document.getElementById(`fechamento_sum_${key}`);
+    if (sumEl) sumEl.textContent = formatCurrencyBRL(informado);
+
+    const diffEl = document.getElementById(`fechamento_diff_${key}`);
+    if (diffEl) {
+      diffEl.textContent = formatFechamentoSigned(diff);
+      diffEl.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero");
+      if (Math.abs(diff) < tol) diffEl.classList.add("fechamento-audit__diff--zero");
+      else if (diff > 0) diffEl.classList.add("fechamento-audit__diff--pos");
+      else diffEl.classList.add("fechamento-audit__diff--neg");
+    }
+
+    if (Math.abs(diff) >= tol) linhasComDiff.push({ label, diff });
+  });
+
+  const refTotalEl = document.getElementById("fechamentoTotalReferencia");
+  if (refTotalEl) refTotalEl.textContent = formatCurrencyBRL(totalEsp);
+  const ti = document.getElementById("fechamentoTotalInformado");
+  if (ti) ti.textContent = formatCurrencyBRL(totalInf);
+  const sl = document.getElementById("fechamentoSaldoLiquido");
+  if (sl) sl.textContent = formatFechamentoSigned(totalDiff);
+
+  const footInf = document.getElementById("fechamentoTotalInformadoFoot");
+  if (footInf) footInf.textContent = formatCurrencyBRL(totalInf);
+  const footDiff = document.getElementById("fechamentoTotalDiffFoot");
+  if (footDiff) {
+    footDiff.textContent = formatFechamentoSigned(totalDiff);
+    footDiff.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero");
+    if (Math.abs(totalDiff) < tol) footDiff.classList.add("fechamento-audit__diff--zero");
+    else if (totalDiff > 0) footDiff.classList.add("fechamento-audit__diff--pos");
+    else footDiff.classList.add("fechamento-audit__diff--neg");
+  }
+
+  const badge = document.getElementById("fechamentoStatusBadge");
+  const expl = document.getElementById("fechamentoResultadoExplicacao");
+  const temValor = totalEsp > tol || totalInf > tol;
+
+  if (badge) {
+    if (!temValor) {
+      badge.textContent = "Preencha referência e valores conferidos";
+      badge.className = "fechamento-audit__status fechamento-audit__status--neutral";
+    } else if (Math.abs(totalDiff) < tol) {
+      badge.textContent = "Sem quebra no fechamento geral";
+      badge.className = "fechamento-audit__status fechamento-audit__status--ok";
+    } else {
+      badge.textContent = "Com quebra (saldo líquido ≠ zero)";
+      badge.className = "fechamento-audit__status fechamento-audit__status--alert";
+    }
+  }
+
+  if (expl) {
+    if (!temValor) {
+      expl.textContent =
+        "Informe a referência de cada forma (o que o sistema espera) e os valores contados no PDV e na maquinha. " +
+        "Exemplo: faltam R$ 100,00 em dinheiro e há R$ 100,00 a mais em PIX — as diferenças se anulam e o saldo líquido fica zero (sem quebra geral).";
+    } else if (Math.abs(totalDiff) < tol) {
+      const detalhe = linhasComDiff.length
+        ? linhasComDiff.map((l) => `${l.label}: ${formatFechamentoSigned(l.diff)}`).join(" · ")
+        : "Todas as linhas batem com a referência.";
+      expl.textContent =
+        "A soma das diferenças fechou em zero: o que faltou em uma forma foi compensado por sobra em outra(s), ou tudo conferiu. " +
+        (linhasComDiff.length ? `Detalhe: ${detalhe}` : detalhe);
+    } else {
+      const detalhe = linhasComDiff.map((l) => `${l.label}: ${formatFechamentoSigned(l.diff)}`).join(" · ");
+      expl.textContent =
+        `Saldo líquido ${formatFechamentoSigned(totalDiff)} — há diferença que não se compensou entre as formas. ` +
+        (detalhe ? `Resumo por linha: ${detalhe}.` : "Revise referência e valores no PDV e na maquinha.");
+    }
+  }
+}
+
+function ensureFechamentoCaixaCurrencyMasks() {
+  const root = document.getElementById("fechamentoSection");
+  if (!root) return;
+  root.querySelectorAll('input[data-currency="1"]').forEach((inp) => {
+    if (inp.dataset.fechamentoMaskBound) return;
+    inp.dataset.fechamentoMaskBound = "1";
+    attachCurrencyMask(inp);
+  });
+}
+
+function resetFechamentoCaixaForm() {
+  const root = document.getElementById("fechamentoSection");
+  if (!root) return;
+  root.querySelectorAll('input[data-currency="1"]').forEach((inp) => {
+    inp.value = "";
+    inp.dataset.value = "0";
+  });
+  const d = document.getElementById("fechamentoData");
+  const h = document.getElementById("fechamentoHora");
+  if (d) d.value = new Date().toISOString().slice(0, 10);
+  if (h) h.value = new Date().toTimeString().slice(0, 5);
+  const caixa = document.getElementById("fechamentoCaixaNome");
+  if (caixa) caixa.value = "";
+  const maq = document.getElementById("fechamentoMaquinha");
+  if (maq) maq.value = "";
+  const sis = document.getElementById("fechamentoSistemaPdv");
+  if (sis) sis.value = "";
+  const obs = document.getElementById("fechamentoObservacoes");
+  if (obs) obs.value = "";
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const uSel = document.getElementById("fechamentoUnidade");
+  if (uSel && perfil !== "ADMIN") {
+    if (currentUser?.unidade_id) uSel.value = String(currentUser.unidade_id);
+  } else if (uSel) uSel.value = "";
+  scheduleRecalcFechamentoCaixa();
+}
+
+async function loadFechamentoCaixaSection() {
+  await loadUnidades(false).catch(() => {});
+  const uSel = document.getElementById("fechamentoUnidade");
+  if (uSel && Array.isArray(state.unidades) && state.unidades.length) {
+    const options = state.unidades
+      .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
+      .join("");
+    populateSelect(uSel, options, "Selecione a unidade");
+    const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    if (currentUser?.unidade_id && perfil !== "ADMIN") {
+      uSel.value = String(currentUser.unidade_id);
+      uSel.disabled = true;
+    } else {
+      uSel.disabled = false;
+    }
+  }
+  const d = document.getElementById("fechamentoData");
+  const t = document.getElementById("fechamentoHora");
+  if (d && !d.value) d.value = new Date().toISOString().slice(0, 10);
+  if (t && !t.value) t.value = new Date().toTimeString().slice(0, 5);
+  ensureFechamentoCaixaCurrencyMasks();
+  scheduleRecalcFechamentoCaixa();
+}
+
+function setupFechamentoCaixaAuditoria() {
+  const section = document.getElementById("fechamentoSection");
+  if (!section) return;
+
+  section.addEventListener("input", (e) => {
+    if (e.target && e.target.closest && e.target.closest("#fechamentoSection") && e.target.matches("input, textarea")) {
+      scheduleRecalcFechamentoCaixa();
+    }
+  });
+  section.addEventListener("change", (e) => {
+    if (e.target && e.target.closest && e.target.closest("#fechamentoSection")) {
+      scheduleRecalcFechamentoCaixa();
+    }
+  });
+
+  document.getElementById("fechamentoLimparBtn")?.addEventListener("click", () => {
+    resetFechamentoCaixaForm();
+    showToast("Conferência limpa.", "success");
+  });
+}
+
 // Formata data para input type="date" (YYYY-MM-DD)
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
@@ -15802,6 +16009,7 @@ async function init() {
   setupHistoricoReservas();
   setupBoletosModule();
   setupAlvarasModule();
+  setupFechamentoCaixaAuditoria();
   setupFichaTecnicaForm();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
