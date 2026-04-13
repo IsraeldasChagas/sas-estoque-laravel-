@@ -14233,6 +14233,8 @@ function scheduleRecalcFechamentoCaixa() {
 function recalcFechamentoCaixa() {
   const tol = 0.009;
   let totalEsp = 0;
+  let totalSis = 0;
+  let totalMaq = 0;
   let totalInf = 0;
   let totalDiff = 0;
   const linhasComDiff = [];
@@ -14244,6 +14246,8 @@ function recalcFechamentoCaixa() {
     const informado = roundToCurrency(sis + maq);
     const diff = roundToCurrency(informado - esp);
     totalEsp = roundToCurrency(totalEsp + esp);
+    totalSis = roundToCurrency(totalSis + sis);
+    totalMaq = roundToCurrency(totalMaq + maq);
     totalInf = roundToCurrency(totalInf + informado);
     totalDiff = roundToCurrency(totalDiff + diff);
 
@@ -14262,12 +14266,10 @@ function recalcFechamentoCaixa() {
     if (Math.abs(diff) >= tol) linhasComDiff.push({ label, diff });
   });
 
-  const refTotalEl = document.getElementById("fechamentoTotalReferencia");
-  if (refTotalEl) refTotalEl.textContent = formatCurrencyBRL(totalEsp);
-  const ti = document.getElementById("fechamentoTotalInformado");
-  if (ti) ti.textContent = formatCurrencyBRL(totalInf);
-  const sl = document.getElementById("fechamentoSaldoLiquido");
-  if (sl) sl.textContent = formatFechamentoSigned(totalDiff);
+  const totPdvEl = document.getElementById("fechamentoTotalSistemaPdv");
+  if (totPdvEl) totPdvEl.textContent = formatCurrencyBRL(totalSis);
+  const totMaqEl = document.getElementById("fechamentoTotalMaquinas");
+  if (totMaqEl) totMaqEl.textContent = formatCurrencyBRL(totalMaq);
 
   const footInf = document.getElementById("fechamentoTotalInformadoFoot");
   if (footInf) footInf.textContent = formatCurrencyBRL(totalInf);
@@ -14281,8 +14283,21 @@ function recalcFechamentoCaixa() {
   }
 
   const badge = document.getElementById("fechamentoStatusBadge");
+  const sitValorEl = document.getElementById("fechamentoStatusValor");
   const expl = document.getElementById("fechamentoResultadoExplicacao");
-  const temValor = totalEsp > tol || totalInf > tol;
+  const temValor = totalEsp > tol || totalSis > tol || totalMaq > tol;
+
+  if (sitValorEl) {
+    sitValorEl.classList.remove("fechamento-audit__sit-valor--zero", "fechamento-audit__sit-valor--pos", "fechamento-audit__sit-valor--neg");
+    if (!temValor) {
+      sitValorEl.textContent = "Diferença líquida: —";
+    } else {
+      sitValorEl.textContent = `Diferença líquida: ${formatFechamentoSigned(totalDiff)}`;
+      if (Math.abs(totalDiff) < tol) sitValorEl.classList.add("fechamento-audit__sit-valor--zero");
+      else if (totalDiff > 0) sitValorEl.classList.add("fechamento-audit__sit-valor--pos");
+      else sitValorEl.classList.add("fechamento-audit__sit-valor--neg");
+    }
+  }
 
   if (badge) {
     if (!temValor) {
@@ -14292,7 +14307,7 @@ function recalcFechamentoCaixa() {
       badge.textContent = "Sem quebra no fechamento geral";
       badge.className = "fechamento-audit__status fechamento-audit__status--ok";
     } else {
-      badge.textContent = "Com quebra (saldo líquido ≠ zero)";
+      badge.textContent = "Com quebra no fechamento geral";
       badge.className = "fechamento-audit__status fechamento-audit__status--alert";
     }
   }

@@ -2217,22 +2217,21 @@
               </div>
             </div>
 
-            <div class="fechamento-audit__resumo">
+            <div class="fechamento-audit__resumo fechamento-audit__resumo--tres-cards">
               <div class="fechamento-audit__card">
-                <span class="fechamento-audit__card-label">Total referência</span>
-                <span class="fechamento-audit__card-value" id="fechamentoTotalReferencia">R$ 0,00</span>
+                <span class="fechamento-audit__card-label">Total sistema PDV</span>
+                <span class="fechamento-audit__card-value" id="fechamentoTotalSistemaPdv">R$ 0,00</span>
+                <span class="fechamento-audit__card-hint">Soma dos valores na coluna PDV</span>
               </div>
               <div class="fechamento-audit__card">
-                <span class="fechamento-audit__card-label">Total informado (soma geral)</span>
-                <span class="fechamento-audit__card-value" id="fechamentoTotalInformado">R$ 0,00</span>
+                <span class="fechamento-audit__card-label">Total maquinas</span>
+                <span class="fechamento-audit__card-value" id="fechamentoTotalMaquinas">R$ 0,00</span>
+                <span class="fechamento-audit__card-hint">Soma dos valores na coluna maquinha</span>
               </div>
-              <div class="fechamento-audit__card fechamento-audit__card--destaque">
-                <span class="fechamento-audit__card-label">Saldo líquido (Σ diferenças)</span>
-                <span class="fechamento-audit__card-value" id="fechamentoSaldoLiquido">R$ 0,00</span>
-              </div>
-              <div class="fechamento-audit__card fechamento-audit__card--status">
+              <div class="fechamento-audit__card fechamento-audit__card--status fechamento-audit__card--destaque">
                 <span class="fechamento-audit__card-label">Situação do fechamento</span>
                 <span class="fechamento-audit__status" id="fechamentoStatusBadge">Preencha os valores</span>
+                <span class="fechamento-audit__sit-valor" id="fechamentoStatusValor">Diferença líquida: —</span>
               </div>
             </div>
             <p class="subtle-text fechamento-audit__explicacao" id="fechamentoResultadoExplicacao"></p>
