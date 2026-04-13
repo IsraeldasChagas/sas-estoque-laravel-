@@ -5810,6 +5810,17 @@ select[size]:not([size="1"]) {
   color: #0d47a1;
 }
 
+.fechamento-audit__resumo-mes-resultado .fechamento-resumo-mes-totais--negativo {
+  background: linear-gradient(145deg, #ffebee 0%, #fffefe 100%);
+  border-color: #e57373;
+  color: #b71c1c;
+}
+
+.fechamento-valor-negativo {
+  color: #c62828;
+  font-weight: 700;
+}
+
 .fechamento-audit__resumo-mes-resultado table {
   width: 100%;
   border-collapse: collapse;

@@ -14289,6 +14289,19 @@ function fechamentoUltimoDiaMes(ym) {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
+const FECHAMENTO_NEG_TOL = 0.005;
+
+/** Valor maquinha na UI: negativo em vermelho com dica (passe contexto para o title). */
+function fechamentoMaquinhaValorHtml(maqTotal, titleNegativo) {
+  const m = roundToCurrency(maqTotal);
+  const fmt = escapeHtml(formatCurrencyBRL(m));
+  if (m < -FECHAMENTO_NEG_TOL) {
+    const t = escapeHtml(titleNegativo || "Valor negativo (total maquinha)");
+    return `<span class="fechamento-valor-negativo" title="${t}">${fmt}</span>`;
+  }
+  return fmt;
+}
+
 function renderFechamentosCaixaHistorico(rows) {
   const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
   if (!tbody) return;
@@ -14322,7 +14335,7 @@ function renderFechamentosCaixaHistorico(rows) {
         <td data-label="Data">${escapeHtml(fmtData(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
         <td data-label="Unidade">${un}</td>
         <td data-label="Operador">${op}</td>
-        <td data-label="Total maquinha">${escapeHtml(formatCurrencyBRL(tot))}</td>
+        <td data-label="Total maquinha">${fechamentoMaquinhaValorHtml(tot, `Negativo no histórico: fechamento nº ${r.id ?? "—"}, data ${fmtData(r.data_fechamento)}`)}</td>
         <td data-label="Fechamento">${escapeHtml(rotuloFech)}</td>
         <td data-label="Valor">${escapeHtml(valorFech)}</td>
         <td data-label="Ações" class="fechamento-audit__acoes">
@@ -14362,14 +14375,19 @@ function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
       sumMaq = roundToCurrency(sumMaq + maq);
       const op = escapeHtml((r.operador_nome || "—").toString());
       const hora = r.hora_fechamento ? ` <small>${escapeHtml(String(r.hora_fechamento))}</small>` : "";
+      const dataFmt = escapeHtml(fmtData(r.data_fechamento));
+      const negHint = `Negativo na linha: fechamento nº ${r.id ?? "—"}, data ${fmtData(r.data_fechamento)}`;
       return `<tr>
         <td>${escapeHtml(String(r.id ?? ""))}</td>
-        <td>${escapeHtml(fmtData(r.data_fechamento))}${hora}</td>
+        <td>${dataFmt}${hora}</td>
         <td>${op}</td>
-        <td style="text-align:right">${escapeHtml(formatCurrencyBRL(maq))}</td>
+        <td style="text-align:right">${fechamentoMaquinhaValorHtml(maq, negHint)}</td>
       </tr>`;
     })
     .join("");
+  const totNeg = sumMaq < -FECHAMENTO_NEG_TOL;
+  const totBoxClass = totNeg ? "fechamento-resumo-mes-totais fechamento-resumo-mes-totais--negativo" : "fechamento-resumo-mes-totais";
+  const totStrong = fechamentoMaquinhaValorHtml(sumMaq, "Total maquinha do mês negativo (soma dos registros)");
   out.innerHTML = `
     <p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — ${escapeHtml(ym)} · ${rows.length} registro(s)</p>
     <div class="table-wrapper">
@@ -14381,8 +14399,8 @@ function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
         <tbody>${body}</tbody>
       </table>
     </div>
-    <div class="fechamento-resumo-mes-totais">
-      Total maquinha no mês: <strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong>
+    <div class="${totBoxClass}">
+      Total maquinha no mês: <strong>${totStrong}</strong>
     </div>
   `;
 }
