@@ -14278,6 +14278,33 @@ function fechamentoTotalMaquinasFromRow(row) {
   }
 }
 
+function fechamentoTotalPdvFromRow(row) {
+  try {
+    const raw = row?.linhas_json;
+    const L = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!Array.isArray(L)) return 0;
+    let s = 0;
+    L.forEach((line) => {
+      const v = Number(line?.sis ?? 0);
+      if (Number.isFinite(v)) s = roundToCurrency(s + v);
+    });
+    return s;
+  } catch (_) {
+    return 0;
+  }
+}
+
+/** ym = "YYYY-MM" → último dia do mês em "YYYY-MM-DD" */
+function fechamentoUltimoDiaMes(ym) {
+  const parts = String(ym || "").split("-");
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (!y || !m || m < 1 || m > 12) return `${ym}-31`;
+  const last = new Date(y, m, 0);
+  const d = last.getDate();
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
 function renderFechamentosCaixaHistorico(rows) {
   const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
   if (!tbody) return;
@@ -14334,6 +14361,110 @@ async function loadFechamentosCaixaHistorico() {
   } catch (err) {
     console.error(err);
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao carregar histórico.")}</td></tr>`;
+  }
+}
+
+function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
+  const out = document.getElementById("fechamentoResumoMesResultado");
+  if (!out) return;
+  if (!rows.length) {
+    out.innerHTML = `<p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — ${escapeHtml(ym)}: nenhum fechamento neste período.</p>`;
+    return;
+  }
+  let sumPdv = 0;
+  let sumMaq = 0;
+  const body = rows
+    .map((r) => {
+      const pdv = fechamentoTotalPdvFromRow(r);
+      const maq = fechamentoTotalMaquinasFromRow(r);
+      sumPdv = roundToCurrency(sumPdv + pdv);
+      sumMaq = roundToCurrency(sumMaq + maq);
+      const saldo = Number(r.saldo_liquido ?? 0);
+      const tol = 0.009;
+      const sem = Number(r.sem_quebra) === 1 || Math.abs(saldo) < tol;
+      let rotuloFech;
+      let valorFech;
+      if (sem) {
+        rotuloFech = "Sem quebra (compensado)";
+        valorFech = formatCurrencyBRL(0);
+      } else if (saldo > 0) {
+        rotuloFech = "Sobras";
+        valorFech = formatCurrencyBRL(saldo);
+      } else {
+        rotuloFech = "Quebra de caixa";
+        valorFech = formatCurrencyBRL(Math.abs(saldo));
+      }
+      const op = escapeHtml((r.operador_nome || "—").toString());
+      return `<tr>
+        <td>${escapeHtml(String(r.id ?? ""))}</td>
+        <td>${escapeHtml(fmtData(r.data_fechamento))}</td>
+        <td>${op}</td>
+        <td style="text-align:right">${escapeHtml(formatCurrencyBRL(pdv))}</td>
+        <td style="text-align:right">${escapeHtml(formatCurrencyBRL(maq))}</td>
+        <td>${escapeHtml(rotuloFech)}</td>
+        <td style="text-align:right">${escapeHtml(valorFech)}</td>
+      </tr>`;
+    })
+    .join("");
+  out.innerHTML = `
+    <p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — mês <strong>${escapeHtml(ym)}</strong> · ${rows.length} registro(s)</p>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th>Nº</th><th>Data</th><th>Operador</th>
+          <th style="text-align:right">Total PDV</th><th style="text-align:right">Total maquinha</th>
+          <th>Fechamento</th><th style="text-align:right">Valor</th>
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+    <div class="fechamento-resumo-mes-totais">
+      Totais do mês: <strong>${escapeHtml(formatCurrencyBRL(sumPdv))}</strong> (PDV) · <strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong> (maquinha)
+    </div>
+  `;
+}
+
+async function carregarFechamentoResumoMensal() {
+  const out = document.getElementById("fechamentoResumoMesResultado");
+  const uSel = document.getElementById("fechamentoResumoUnidade");
+  const mesInp = document.getElementById("fechamentoResumoMes");
+  if (!out || !uSel || !mesInp) return;
+  const unidadeId = uSel.value?.trim();
+  const ym = mesInp.value?.trim();
+  if (!unidadeId) {
+    showToast("Selecione a unidade.", "error");
+    return;
+  }
+  if (!ym || ym.length < 7) {
+    showToast("Selecione o mês.", "error");
+    return;
+  }
+  const parts = ym.split("-");
+  const y = parseInt(parts[0], 10);
+  const mo = parseInt(parts[1], 10);
+  const de = `${y}-${String(mo).padStart(2, "0")}-01`;
+  const ate = fechamentoUltimoDiaMes(ym);
+  const unidadeLabel = (uSel.options[uSel.selectedIndex]?.text || "").trim() || "Unidade";
+  out.innerHTML = '<p class="subtle-text">Carregando…</p>';
+  try {
+    const qs = new URLSearchParams({
+      unidade_id: unidadeId,
+      de,
+      ate,
+      limit: "500",
+    });
+    const list = await fetchJSON(`/fechamentos-caixa?${qs.toString()}`);
+    const rows = Array.isArray(list) ? [...list] : [];
+    rows.sort((a, b) => {
+      const da = String(a.data_fechamento || "");
+      const db = String(b.data_fechamento || "");
+      if (da !== db) return da.localeCompare(db);
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+    renderFechamentoResumoMensal(rows, ym, unidadeLabel);
+  } catch (err) {
+    console.error(err);
+    out.innerHTML = `<p style="color:#c62828">${escapeHtml(err?.message || "Erro ao carregar resumo.")}</p>`;
   }
 }
 
@@ -14525,25 +14656,41 @@ function resetFechamentoCaixaForm() {
   scheduleRecalcFechamentoCaixa();
 }
 
+function populateFechamentoUnidadeSelectsFromState() {
+  const uSel = document.getElementById("fechamentoUnidade");
+  const rSel = document.getElementById("fechamentoResumoUnidade");
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const fixedUnidade = currentUser?.unidade_id && perfil !== "ADMIN";
+  const apply = (sel) => {
+    if (!sel) return;
+    if (!Array.isArray(state.unidades) || !state.unidades.length) {
+      populateSelect(sel, "", "Selecione a unidade");
+      sel.disabled = false;
+      return;
+    }
+    const options = state.unidades
+      .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
+      .join("");
+    populateSelect(sel, options, "Selecione a unidade");
+    if (fixedUnidade) {
+      sel.value = String(currentUser.unidade_id);
+      sel.disabled = true;
+    } else {
+      sel.disabled = false;
+    }
+  };
+  apply(uSel);
+  apply(rSel);
+}
+
 async function loadFechamentoCaixaSection() {
   await loadUnidades(false).catch(() => {});
   await loadUsuarios(false).catch(() => {});
   populateFechamentoCaixaOperadorDatalist();
   syncFechamentoCaixaOperadorUsuarioId();
-  const uSel = document.getElementById("fechamentoUnidade");
-  if (uSel && Array.isArray(state.unidades) && state.unidades.length) {
-    const options = state.unidades
-      .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
-      .join("");
-    populateSelect(uSel, options, "Selecione a unidade");
-    const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    if (currentUser?.unidade_id && perfil !== "ADMIN") {
-      uSel.value = String(currentUser.unidade_id);
-      uSel.disabled = true;
-    } else {
-      uSel.disabled = false;
-    }
-  }
+  populateFechamentoUnidadeSelectsFromState();
+  const mesResumo = document.getElementById("fechamentoResumoMes");
+  if (mesResumo && !mesResumo.value) mesResumo.value = new Date().toISOString().slice(0, 7);
   const d = document.getElementById("fechamentoData");
   const t = document.getElementById("fechamentoHora");
   if (d && !d.value) d.value = new Date().toISOString().slice(0, 10);
@@ -14585,6 +14732,10 @@ function setupFechamentoCaixaAuditoria() {
   });
   document.getElementById("fechamentoAtualizarHistoricoBtn")?.addEventListener("click", () => {
     loadFechamentosCaixaHistorico().then(() => showToast("Lista atualizada.", "info"));
+  });
+
+  document.getElementById("fechamentoResumoMesBtn")?.addEventListener("click", () => {
+    carregarFechamentoResumoMensal();
   });
 
   document.getElementById("fechamentoHistoricoTable")?.addEventListener("click", async (e) => {

@@ -5755,6 +5755,71 @@ select[size]:not([size="1"]) {
   margin: 0;
 }
 
+.fechamento-audit__resumo-mes-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.25rem;
+  padding: 0 1.25rem 1rem;
+}
+
+.fechamento-audit__resumo-mes-bar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.fechamento-audit__resumo-mes-bar input[type="month"],
+.fechamento-audit__resumo-mes-bar select {
+  min-width: 180px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  font-weight: 500;
+}
+
+.fechamento-audit__resumo-mes-resultado {
+  padding: 0 1.25rem 1.25rem;
+  line-height: 1.5;
+}
+
+.fechamento-audit__resumo-mes-resultado .fechamento-resumo-mes-head {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #37474f;
+}
+
+.fechamento-audit__resumo-mes-resultado .fechamento-resumo-mes-totais {
+  margin: 1rem 0 0;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(145deg, #e3f2fd 0%, #fff 100%);
+  border: 1px solid #90caf9;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0d47a1;
+}
+
+.fechamento-audit__resumo-mes-resultado table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.fechamento-audit__resumo-mes-resultado th,
+.fechamento-audit__resumo-mes-resultado td {
+  border: 1px solid #e0e0e0;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+}
+
+.fechamento-audit__resumo-mes-resultado th {
+  background: #f5f5f5;
+}
+
 .fechamento-audit__conf-cell {
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;

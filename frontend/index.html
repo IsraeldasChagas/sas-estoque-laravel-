@@ -2187,6 +2187,31 @@
               </div>
             </div>
 
+            <div class="table-card form-card--wide fechamento-audit__resumo-mes">
+              <header>
+                <div>
+                  <h3>Resumo do mês por unidade</h3>
+                  <p class="subtle-text">Todos os fechamentos do mês na unidade escolhida, com total PDV e total maquinha</p>
+                </div>
+              </header>
+              <div class="fechamento-audit__resumo-mes-bar">
+                <label>
+                  Mês
+                  <input type="month" id="fechamentoResumoMes" />
+                </label>
+                <label>
+                  Unidade
+                  <select id="fechamentoResumoUnidade">
+                    <option value="">Selecione a unidade</option>
+                  </select>
+                </label>
+                <button type="button" class="btn primary" id="fechamentoResumoMesBtn">Ver resumo do mês</button>
+              </div>
+              <div id="fechamentoResumoMesResultado" class="fechamento-audit__resumo-mes-resultado subtle-text">
+                Escolha o mês e a unidade e clique em <strong>Ver resumo do mês</strong>.
+              </div>
+            </div>
+
             <div class="table-card form-card--wide fechamento-audit__historico">
               <header>
                 <div>
