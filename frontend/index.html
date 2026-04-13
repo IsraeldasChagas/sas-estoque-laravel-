@@ -137,21 +137,21 @@
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
             </div>
           </div>
-          <div class="nav-submenu">
+          <div class="nav-submenu nav-submenu--config">
             <a href="#" class="nav-link nav-link-parent" id="configuracoesMenu">
               Configuracoes
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="fornecedoresBackup">Backup de Fornecedores</a>
+              <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
+                🗄 Backup / Restaurar
+              </button>
+              <button type="button" id="btnZerarHistoricos" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--danger" onclick="zerarHistoricos()" style="display:none;">
+                ⚠ Zerar Históricos
+              </button>
             </div>
           </div>
-          <button type="button" id="btnAbrirBackup" onclick="abrirBackupModal()" style="display:none;margin:1rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#1565c0;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
-            🗄 Backup / Restaurar
-          </button>
-          <button type="button" id="btnZerarHistoricos" onclick="zerarHistoricos()" style="display:none;margin:0.5rem 0.75rem 0;width:calc(100% - 1.5rem);padding:0.6rem 1rem;background:#b71c1c;color:#fff;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;">
-            ⚠ Zerar Históricos
-          </button>
         </nav>
         </div>
         <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" aria-label="Recolher menu" title="Recolher menu">

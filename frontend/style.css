@@ -67,7 +67,8 @@ body.sidebar-open {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
-.sidebar nav a {
+.sidebar nav a,
+.sidebar nav button.nav-link {
   display: block;
   padding: 10px 16px;
   margin-bottom: 8px;
@@ -78,8 +79,17 @@ body.sidebar-open {
   background: rgba(229, 57, 53, 0.18);
 }
 
+.sidebar nav button.nav-link {
+  width: 100%;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
 .sidebar nav a:hover,
-.sidebar nav a.active {
+.sidebar nav a.active,
+.sidebar nav button.nav-link:hover {
   background: #de4309;
 }
 
@@ -112,6 +122,26 @@ body.sidebar-open {
 
 .nav-submenu.open .nav-submenu-content {
   max-height: 200px;
+}
+
+.nav-submenu.nav-submenu--config.open .nav-submenu-content {
+  max-height: 320px;
+}
+
+.nav-submenu-btn--backup.nav-link-child {
+  background: rgba(21, 101, 192, 0.35) !important;
+}
+
+.nav-submenu-btn--backup.nav-link-child:hover {
+  background: rgba(21, 101, 192, 0.65) !important;
+}
+
+.nav-submenu-btn--danger.nav-link-child {
+  background: rgba(183, 28, 28, 0.45) !important;
+}
+
+.nav-submenu-btn--danger.nav-link-child:hover {
+  background: rgba(183, 28, 28, 0.75) !important;
 }
 
 .nav-link-child {
@@ -2670,7 +2700,8 @@ textarea {
     transform: translateX(0);
   }
 
-  .sidebar nav a {
+  .sidebar nav a,
+  .sidebar nav button.nav-link {
     font-size: 0.95rem;
   }
 

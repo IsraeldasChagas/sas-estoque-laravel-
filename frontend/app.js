@@ -2742,7 +2742,7 @@ function applyPermissions() {
     const temAcessoFinanceiro = regras.sections.includes("boletao") || regras.sections.includes("alvara") || regras.sections.includes("proventos");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
-  // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (Backup de Fornecedores = apenas ADMIN)
+  // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (ex.: Backup de Fornecedores no perfil padrão = só ADMIN)
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
     const temAcessoConfig = regras.sections.includes("fornecedoresBackup");
@@ -7029,15 +7029,28 @@ async function startAppSession(user) {
     console.log('Dados iniciais carregados');
   });
   
-  // Navega para Boas-vindas em todo login ou reabertura com sessão (qualquer perfil).
+  // Navegação inicial:
+  // - Login novo (user informado): sempre vai para Boas-vindas.
+  // - Reabertura/refresh com sessão (user não informado): restaura a última seção salva.
   // Exceção: hash QR de saída continua indo ao dashboard e abre o modal de lote.
   (() => {
+    const isFreshLogin = !!user;
+    const allSections = new Set([
+      "boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica",
+      "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "reservaMesa", "historicoReservas",
+      "funcionarios", "logs"
+    ]);
+
     let sectionToNavigate = "boasVindas";
 
-    try {
-      localStorage.setItem(currentSectionKey, sectionToNavigate);
-    } catch (err) {
-      console.warn("Erro ao salvar seção:", err);
+    if (!isFreshLogin) {
+      try {
+        const saved = localStorage.getItem(currentSectionKey);
+        if (saved && allSections.has(saved)) sectionToNavigate = saved;
+      } catch (err) {
+        console.warn("Erro ao ler seção salva:", err);
+      }
     }
 
     const hash = window.location.hash || "";
@@ -7045,11 +7058,6 @@ async function startAppSession(user) {
     const hashSaidaMatch = m && (hash.includes("saida=1") || hash.includes("saida=true")) ? m : null;
     if (hashSaidaMatch) {
       sectionToNavigate = "dashboard";
-      try {
-        localStorage.setItem(currentSectionKey, sectionToNavigate);
-      } catch (err) {
-        console.warn("Erro ao salvar seção:", err);
-      }
     }
 
     navigateTo(sectionToNavigate);
