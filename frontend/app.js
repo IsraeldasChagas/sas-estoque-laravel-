@@ -2722,7 +2722,7 @@ function applyPermissions() {
   if (sections.includes("historicoReservas") && !sections.includes("reservaMesa")) {
     sections = [...sections, "reservaMesa"];
   }
-  // Fechamento (Financeiro): permissoes_menu antigas sem o módulo novo mantêm acesso junto a Boleto/Alvará/Proventos
+  // Auditoria fechamento caixa (id fechamento): permissoes_menu antigas sem o módulo novo mantêm acesso junto a Boleto/Alvará/Proventos
   if (
     (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos")) &&
     !sections.includes("fechamento")
