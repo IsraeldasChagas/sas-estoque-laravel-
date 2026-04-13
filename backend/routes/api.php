@@ -6198,6 +6198,8 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         $linhas = [];
     }
 
+    $sumPdv = 0.0;
+    $sumMaq = 0.0;
     $rowsHtml = '';
     foreach ($linhas as $L) {
         if (!is_array($L)) {
@@ -6206,15 +6208,12 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         $lab = $h($L['label'] ?? $L['key'] ?? '—');
         $vSis = (float) ($L['sis'] ?? 0);
         $vMaq = (float) ($L['maq'] ?? 0);
-        $vInf = (float) ($L['informado'] ?? 0);
-        $confTxt = $h($fmt($vSis) . ' + ' . $fmt($vMaq) . ' = ' . $fmt($vInf));
+        $sumPdv += $vSis;
+        $sumMaq += $vMaq;
         $rowsHtml .= '<tr>'
             . '<td>' . $lab . '</td>'
-            . '<td style="text-align:right">' . $h($fmt((float) ($L['esp'] ?? 0))) . '</td>'
             . '<td style="text-align:right">' . $h($fmt($vSis)) . '</td>'
             . '<td style="text-align:right">' . $h($fmt($vMaq)) . '</td>'
-            . '<td style="text-align:right">' . $confTxt . '</td>'
-            . '<td style="text-align:right">' . $h($fmt((float) ($L['diff'] ?? 0))) . '</td>'
             . '</tr>';
     }
 
@@ -6232,7 +6231,6 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
     ];
     $mk = strtolower(trim((string) ($row->maquinha ?? '')));
     $maqLegivel = $mk !== '' ? ($maqMap[$mk] ?? $row->maquinha) : '—';
-    $sit = ((int) $row->sem_quebra === 1) ? 'Sem quebra no fechamento geral' : 'Com quebra (saldo líquido ≠ zero)';
     $criado = $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y H:i') : '—';
 
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
@@ -6257,18 +6255,17 @@ Route::get('/fechamentos-caixa/{id}/pdf', function (Request $request, $id) use (
         <tr><th>Sistema (PDV)</th><td>' . $h($row->sistema_pdv ?? '—') . '</td></tr>
         <tr><th>Maquinha</th><td>' . $h($maqLegivel) . '</td></tr>
         <tr><th>Registrado por</th><td>' . $h($row->registrado_por_nome ?? '—') . '</td></tr>
-        <tr><th>Situação</th><td>' . $h($sit) . '</td></tr>
     </table>';
     if (trim((string) ($row->observacoes ?? '')) !== '') {
         $html .= '<p style="font-size:9pt;margin:8px 0;"><strong>Observações:</strong> ' . nl2br($h($row->observacoes)) . '</p>';
     }
     $html .= '<table><thead><tr>
-        <th>Forma</th><th>Referência</th><th>Sistema</th><th>Maquinha</th><th>Conferência (PDV+maq.)</th><th>Diferença</th>
+        <th>Forma</th><th>PDV</th><th>Maquinha</th>
     </tr></thead><tbody>' . $rowsHtml . '</tbody></table>
     <div class="tot">
-        <strong>Total referência:</strong> ' . $h($fmt($row->total_referencia)) . ' &nbsp;|&nbsp;
-        <strong>Total informado:</strong> ' . $h($fmt($row->total_informado)) . ' &nbsp;|&nbsp;
-        <strong>Saldo líquido:</strong> ' . $h($fmt($row->saldo_liquido)) . '
+        <strong>Total PDV:</strong> ' . $h($fmt($sumPdv)) . ' &nbsp;|&nbsp;
+        <strong>Total maquinas:</strong> ' . $h($fmt($sumMaq)) . ' &nbsp;|&nbsp;
+        <strong>Total geral (PDV+maq.):</strong> ' . $h($fmt((float) $row->total_informado)) . '
     </div>
     <div class="rod">Grupo Sabor Paraense — SAS Estoque. Documento para conferência e arquivo.</div>
     </body></html>';
