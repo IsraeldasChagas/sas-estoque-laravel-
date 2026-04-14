@@ -14836,17 +14836,74 @@ function setupReciboAjudaCusto() {
   const section = document.getElementById("reciboAjudaSection");
   if (!section) return;
 
+  const edicaoId = document.getElementById("reciboAjudaEdicaoId");
   const funcionarioBusca = document.getElementById("reciboAjudaFuncionarioBusca");
   const funcionarioSelect = document.getElementById("reciboAjudaFuncionarioSelect");
   const unidadeSelect = document.getElementById("reciboAjudaUnidadeSelect");
   const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
   const competencia = document.getElementById("reciboAjudaCompetencia");
-  const finalidade = document.getElementById("reciboAjudaFinalidade");
+  const finalidadeSelect = document.getElementById("reciboAjudaFinalidadeSelect");
   const valor = document.getElementById("reciboAjudaValor");
   const btnPdf = document.getElementById("reciboAjudaGerarPdfBtn");
   const btnLimpar = document.getElementById("reciboAjudaLimparBtn");
   const canvas = document.getElementById("reciboAjudaAssinaturaCanvas");
   const btnLimparAss = document.getElementById("reciboAjudaAssinaturaLimparBtn");
+  const tableBody = document.getElementById("reciboAjudaTableBody");
+
+  const RECIBOS_AJUDA_STORAGE_KEY = "sas-estoque-recibos-ajuda";
+  const FINALIDADE_LABELS = {
+    auxilio_combustivel: "Auxílio Combustível",
+    ajuda_custo: "Ajuda de custo",
+    transporte: "Transporte",
+    alimentacao: "Alimentação",
+    outro: "Outro",
+  };
+
+  function loadRecibosFromStorage() {
+    try {
+      const raw = localStorage.getItem(RECIBOS_AJUDA_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function saveRecibosToStorage(lista) {
+    try {
+      localStorage.setItem(RECIBOS_AJUDA_STORAGE_KEY, JSON.stringify(lista || []));
+    } catch (e) {}
+  }
+  function renderRecibosTabela() {
+    if (!tableBody) return;
+    const lista = loadRecibosFromStorage().sort((a, b) => Number(b.id) - Number(a.id));
+    if (!lista.length) {
+      tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum recibo salvo.</td></tr>`;
+      return;
+    }
+    tableBody.innerHTML = lista
+      .map((r) => {
+        const fid = escapeHtml(r.funcionario_nome || "-");
+        const un = escapeHtml(r.unidade_nome || "-");
+        const comp = escapeHtml(r.competencia || "-");
+        const fin = escapeHtml(FINALIDADE_LABELS[r.finalidade] || r.finalidade || "-");
+        const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
+        const id = escapeHtml(String(r.id));
+        return `<tr>
+          <td data-label="Nº">#${id}</td>
+          <td data-label="Funcionário">${fid}</td>
+          <td data-label="Unidade">${un}</td>
+          <td data-label="Competência">${comp}</td>
+          <td data-label="Finalidade">${fin}</td>
+          <td data-label="Valor">${v}</td>
+          <td data-label="Ações" class="table-actions">
+            <button type="button" class="table-action" data-reciboajuda-ver="${id}">Ver</button>
+            <button type="button" class="table-action" data-reciboajuda-edit="${id}">Editar</button>
+            <button type="button" class="table-action" data-reciboajuda-del="${id}">Deletar</button>
+          </td>
+        </tr>`;
+      })
+      .join("");
+  }
 
   function setUnidadeCnpjFromSelect() {
     if (!unidadeCnpj) return;
@@ -14882,6 +14939,7 @@ function setupReciboAjudaCusto() {
       valor.dataset.reciboMaskBound = "1";
       attachCurrencyMask(valor);
     }
+    renderRecibosTabela();
   }
 
   // expõe para o handler de navegação
@@ -15034,13 +15092,13 @@ function setupReciboAjudaCusto() {
     const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
 
     const comp = (competencia?.value || "").trim();
-    const fin = (finalidade?.value || "").trim();
+    const fin = (finalidadeSelect?.value || "").trim();
     const valorNum = Number(valor?.dataset?.value || 0);
 
     if (!fid) return showToast("Selecione o funcionário.", "warning");
     if (!uid) return showToast("Selecione a unidade.", "warning");
     if (!comp) return showToast("Informe a competência.", "warning");
-    if (!fin) return showToast("Informe a finalidade.", "warning");
+    if (!fin) return showToast("Selecione a finalidade.", "warning");
     if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
     if (isBlankCanvas()) return showToast("Faça a assinatura antes de gerar o PDF.", "warning");
 
@@ -15050,10 +15108,34 @@ function setupReciboAjudaCusto() {
       unidadeNome: un?.nome || "",
       unidadeCnpj: unidadeCnpj?.value || "",
       competencia: comp,
-      finalidade: fin,
+      finalidade: FINALIDADE_LABELS[fin] || fin,
       valorFmt: formatCurrencyBRL(valorNum),
       assinaturaDataUrl,
     });
+
+    // salva/atualiza registro local
+    const lista = loadRecibosFromStorage();
+    const editing = (edicaoId?.value || "").trim();
+    const payload = {
+      id: editing ? Number(editing) : Date.now(),
+      funcionario_id: fid,
+      funcionario_nome: func?.nome_completo || func?.nome || "",
+      unidade_id: uid,
+      unidade_nome: un?.nome || "",
+      unidade_cnpj: unidadeCnpj?.value || "",
+      competencia: comp,
+      finalidade: fin,
+      valor: roundToCurrency(valorNum),
+      assinaturaDataUrl,
+      updated_at: new Date().toISOString(),
+      created_at: editing ? (lista.find((x) => String(x.id) === String(editing))?.created_at || new Date().toISOString()) : new Date().toISOString(),
+    };
+    const idx = lista.findIndex((x) => String(x.id) === String(payload.id));
+    if (idx >= 0) lista[idx] = payload;
+    else lista.push(payload);
+    saveRecibosToStorage(lista);
+    renderRecibosTabela();
+    if (edicaoId) edicaoId.value = "";
 
     const w = window.open("", "_blank", "noopener,noreferrer");
     if (!w) return showToast("Não foi possível abrir o recibo (popup bloqueado).", "error");
@@ -15069,15 +15151,86 @@ function setupReciboAjudaCusto() {
 
   btnPdf?.addEventListener("click", gerarPdf);
   btnLimpar?.addEventListener("click", () => {
+    if (edicaoId) edicaoId.value = "";
     if (funcionarioBusca) funcionarioBusca.value = "";
     if (funcionarioSelect) funcionarioSelect.value = "";
     if (unidadeSelect) unidadeSelect.value = "";
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
-    if (finalidade) finalidade.value = "";
+    if (finalidadeSelect) finalidadeSelect.value = "";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
     filterFuncionarioSelect();
+  });
+
+  // ações da tabela
+  section.querySelector(".recibo-ajuda__historico")?.addEventListener("click", (e) => {
+    const ver = e.target.closest("[data-reciboajuda-ver]");
+    const edit = e.target.closest("[data-reciboajuda-edit]");
+    const del = e.target.closest("[data-reciboajuda-del]");
+    const id = ver?.getAttribute("data-reciboajuda-ver") || edit?.getAttribute("data-reciboajuda-edit") || del?.getAttribute("data-reciboajuda-del");
+    if (!id) return;
+    const lista = loadRecibosFromStorage();
+    const r = lista.find((x) => String(x.id) === String(id));
+    if (!r) return showToast("Recibo não encontrado.", "error");
+
+    if (ver) {
+      const html = gerarReciboHtml({
+        funcionarioNome: r.funcionario_nome,
+        unidadeNome: r.unidade_nome,
+        unidadeCnpj: r.unidade_cnpj,
+        competencia: r.competencia,
+        finalidade: FINALIDADE_LABELS[r.finalidade] || r.finalidade,
+        valorFmt: formatCurrencyBRL(Number(r.valor) || 0),
+        assinaturaDataUrl: r.assinaturaDataUrl,
+      });
+      const w = window.open("", "_blank", "noopener,noreferrer");
+      if (!w) return showToast("Não foi possível abrir o recibo (popup bloqueado).", "error");
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      return;
+    }
+
+    if (edit) {
+      if (edicaoId) edicaoId.value = String(r.id);
+      if (funcionarioBusca) funcionarioBusca.value = "";
+      if (funcionarioSelect) funcionarioSelect.value = String(r.funcionario_id || "");
+      if (unidadeSelect) unidadeSelect.value = String(r.unidade_id || "");
+      setUnidadeCnpjFromSelect();
+      if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(r.unidade_cnpj);
+      if (competencia) competencia.value = r.competencia || "";
+      if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
+      if (valor) {
+        // máscara usa dataset.value (número) + value (texto)
+        valor.dataset.value = String(Number(r.valor) || 0);
+        valor.value = (Number(r.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      clearSignature();
+      if (r.assinaturaDataUrl && canvas?.getContext) {
+        const img = new Image();
+        img.onload = () => {
+          const c = canvas.getContext("2d");
+          if (!c) return;
+          c.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = r.assinaturaDataUrl;
+      }
+      showToast("Recibo carregado para edição.", "info");
+      return;
+    }
+
+    if (del) {
+      if (!window.confirm(`Deletar o recibo #${id}?`)) return;
+      const nova = lista.filter((x) => String(x.id) !== String(id));
+      saveRecibosToStorage(nova);
+      if ((edicaoId?.value || "").trim() === String(id)) {
+        edicaoId.value = "";
+      }
+      renderRecibosTabela();
+      showToast("Recibo deletado.", "success");
+    }
   });
 }
 

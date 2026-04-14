@@ -5636,6 +5636,25 @@ select[size]:not([size="1"]) {
 .recibo-ajuda__finalidade {
   grid-column: 1 / -1;
 }
+.recibo-ajuda__funcionario select,
+.recibo-ajuda__funcionario input,
+.recibo-ajuda__unidade select {
+  width: 100%;
+}
+
+@media (min-width: 960px) {
+  .recibo-ajuda__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+  }
+  .recibo-ajuda__funcionario {
+    grid-column: span 2;
+  }
+  .recibo-ajuda__unidade {
+    grid-column: span 1;
+  }
+}
+
 .recibo-ajuda__sign-actions {
   display: flex;
   gap: 12px;

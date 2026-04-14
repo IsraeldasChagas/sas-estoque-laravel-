@@ -1766,6 +1766,7 @@
 
           <!-- Modulo Financeiro - Recibo ajuda de custo -->
           <section id="reciboAjudaSection" class="view-section hidden recibo-ajuda">
+            <input type="hidden" id="reciboAjudaEdicaoId" value="" />
             <div class="boletos-header">
               <div>
                 <h2>🧾 Recibo (ajuda de custo)</h2>
@@ -1785,7 +1786,7 @@
                 </div>
               </header>
               <div class="recibo-ajuda__grid">
-                <label>
+                <label class="recibo-ajuda__funcionario">
                   Funcionário
                   <input type="text" id="reciboAjudaFuncionarioBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
                   <select id="reciboAjudaFuncionarioSelect">
@@ -1793,7 +1794,7 @@
                   </select>
                 </label>
 
-                <label>
+                <label class="recibo-ajuda__unidade">
                   Unidade
                   <select id="reciboAjudaUnidadeSelect">
                     <option value="">Selecione a unidade</option>
@@ -1812,7 +1813,14 @@
 
                 <label class="recibo-ajuda__finalidade">
                   Finalidade
-                  <input type="text" id="reciboAjudaFinalidade" maxlength="200" placeholder="Ex.: Ajuda de custo (transporte, alimentação...)" />
+                  <select id="reciboAjudaFinalidadeSelect">
+                    <option value="">Selecione</option>
+                    <option value="auxilio_combustivel">Auxílio Combustível</option>
+                    <option value="ajuda_custo">Ajuda de custo</option>
+                    <option value="transporte">Transporte</option>
+                    <option value="alimentacao">Alimentação</option>
+                    <option value="outro">Outro</option>
+                  </select>
                 </label>
 
                 <label>
@@ -1834,6 +1842,33 @@
               </header>
               <div class="recibo-ajuda__sign-wrap">
                 <canvas id="reciboAjudaAssinaturaCanvas" class="recibo-ajuda__sign-canvas" width="900" height="220"></canvas>
+              </div>
+            </div>
+
+            <div class="table-card form-card--wide recibo-ajuda__historico">
+              <header>
+                <div>
+                  <h3>Recibos salvos</h3>
+                  <p class="subtle-text">Ficam salvos neste navegador (para ver em outro dispositivo, gere e salve o PDF).</p>
+                </div>
+              </header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nº</th>
+                      <th>Funcionário</th>
+                      <th>Unidade</th>
+                      <th>Competência</th>
+                      <th>Finalidade</th>
+                      <th>Valor</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reciboAjudaTableBody">
+                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum recibo salvo.</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
