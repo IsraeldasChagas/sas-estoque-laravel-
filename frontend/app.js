@@ -14861,8 +14861,6 @@ function setupReciboAjudaCusto() {
 
   const capturarIpBtn = document.getElementById("reciboAjudaCapturarIpBtn");
   const capturarLocalBtn = document.getElementById("reciboAjudaCapturarLocalBtn");
-  const capturarFotoBtn = document.getElementById("reciboAjudaCapturarFotoBtn");
-  const fotoInput = document.getElementById("reciboAjudaFotoInput");
   const evidResumo = document.getElementById("reciboAjudaEvidenciasResumo");
 
   const FINALIDADE_LABELS = {
@@ -14879,7 +14877,6 @@ function setupReciboAjudaCusto() {
   let confirmadoEmIso = "";
   let evidIpPublico = "";
   let evidGeo = null; // { lat, lng, acc }
-  let evidFotoDataUrl = "";
 
   function setFeedback(el, msg, kind = "info") {
     if (!el) return;
@@ -14903,7 +14900,6 @@ function setupReciboAjudaCusto() {
     if (confirmadoEmIso) parts.push(`Confirmado: ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}`);
     if (evidIpPublico) parts.push(`IP: ${evidIpPublico}`);
     if (evidGeo?.lat && evidGeo?.lng) parts.push(`Geo: ${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)`);
-    if (evidFotoDataUrl) parts.push("Foto: OK");
     evidResumo.textContent = parts.length ? parts.join(" • ") : "";
   }
 
@@ -15009,7 +15005,6 @@ function setupReciboAjudaCusto() {
     confirmadoEmIso = "";
     evidIpPublico = "";
     evidGeo = null;
-    evidFotoDataUrl = "";
     setCanvasLocked(true);
     setFeedback(confirmarFeedback, "Confirme via WhatsApp para liberar a assinatura.", "info");
     if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
@@ -15287,7 +15282,7 @@ function setupReciboAjudaCusto() {
         ip_publico: evidIpPublico,
         geo: geoTxt,
         assinatura_data_url: assinaturaDataUrl,
-        foto_data_url: evidFotoDataUrl,
+        foto_data_url: null,
       };
       const url = editing ? `${API_URL}/recibos-ajuda/${encodeURIComponent(editing)}` : `${API_URL}/recibos-ajuda`;
       const method = editing ? "PUT" : "POST";
@@ -15350,20 +15345,7 @@ function setupReciboAjudaCusto() {
 
   capturarIpBtn?.addEventListener("click", capturePublicIp);
   capturarLocalBtn?.addEventListener("click", captureGeo);
-  capturarFotoBtn?.addEventListener("click", () => fotoInput?.click());
-  fotoInput?.addEventListener("change", async () => {
-    const f = fotoInput.files?.[0];
-    if (!f) return;
-    try {
-      evidFotoDataUrl = await fileToDataUrl(f);
-      updateEvidResumo();
-      showToast("Foto capturada.", "success");
-    } catch (e) {
-      showToast("Não foi possível capturar a foto.", "warning");
-    } finally {
-      fotoInput.value = "";
-    }
-  });
+  // Foto removida (evidência opcional) por solicitação.
 
   function gerarPdf() {
     const fid = funcionarioSelect?.value || "";
@@ -15397,7 +15379,7 @@ function setupReciboAjudaCusto() {
       confirmadoEm: confirmadoEmIso,
       ipPublico: evidIpPublico,
       geo: geoTxt,
-      fotoDataUrl: evidFotoDataUrl,
+      fotoDataUrl: null,
     });
 
     setApiFeedback("", "info");
@@ -15419,7 +15401,7 @@ function setupReciboAjudaCusto() {
           ip_publico: evidIpPublico,
           geo: geoTxt,
           assinatura_data_url: assinaturaDataUrl,
-          foto_data_url: evidFotoDataUrl,
+          foto_data_url: null,
         };
         const url = editing ? `${API_URL}/recibos-ajuda/${encodeURIComponent(editing)}` : `${API_URL}/recibos-ajuda`;
         const method = editing ? "PUT" : "POST";
@@ -15449,7 +15431,7 @@ function setupReciboAjudaCusto() {
           try { pdfWin.location.href = urlBlob; } catch (e) {}
         } else {
           const w2 = window.open(urlBlob, "_blank", "noopener,noreferrer");
-          if (!w2) window.location.href = urlBlob;
+          if (!w2) throw new Error("Popup bloqueado. Permita popups para gerar/visualizar o PDF.");
         }
         setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
         showToast("Recibo salvo e PDF gerado.", "success");
@@ -15481,7 +15463,6 @@ function setupReciboAjudaCusto() {
     confirmadoEmIso = "";
     evidIpPublico = "";
     evidGeo = null;
-    evidFotoDataUrl = "";
     setCanvasLocked(true);
     setFeedback(confirmarFeedback, "Confirme via WhatsApp para liberar a assinatura.", "info");
     if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
@@ -15502,6 +15483,7 @@ function setupReciboAjudaCusto() {
       (async () => {
         try {
           const w0 = window.open("about:blank", "_blank", "noopener,noreferrer");
+          if (!w0) return showToast("Popup bloqueado. Permita popups para visualizar o PDF.", "warning");
           const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
           const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}/pdf`, { method: "GET", headers, cache: "no-store" });
           if (!resPdf.ok) throw new Error("Falha ao abrir PDF");
@@ -15511,7 +15493,7 @@ function setupReciboAjudaCusto() {
             try { w0.location.href = urlBlob; } catch (e) {}
           } else {
             const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
-            if (!w) window.location.href = urlBlob;
+            if (!w) return showToast("Popup bloqueado. Permita popups para visualizar o PDF.", "warning");
           }
           setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
         } catch (e) {
@@ -15555,7 +15537,6 @@ function setupReciboAjudaCusto() {
           confirmadoEmIso = r.confirmado_em || "";
           evidIpPublico = r.ip_publico || "";
           evidGeo = null;
-          evidFotoDataUrl = r.foto_data_url || "";
           setCanvasLocked(!confirmadoEmIso);
           setFeedback(confirmarFeedback, confirmadoEmIso ? `Confirmação já registrada em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}.` : "Confirme via WhatsApp para liberar a assinatura.", confirmadoEmIso ? "success" : "info");
           if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
