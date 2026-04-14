@@ -1382,6 +1382,39 @@ textarea {
   }
 }
 
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Recibo ajuda: pergunta em cima, resposta embaixo (tablet) */
+  #reciboAjudaSection .table-wrapper thead {
+    display: none;
+  }
+  #reciboAjudaSection .table-wrapper tbody {
+    display: grid;
+    gap: 16px;
+  }
+  #reciboAjudaSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  #reciboAjudaSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+  #reciboAjudaSection .table-wrapper td::before {
+    content: attr(data-label);
+    color: #000;
+    font-weight: 700;
+  }
+}
+
 /* Ficha técnica — card largo para lista, formulário e tabela de ações */
 .ficha-tecnica-card {
   width: 100%;
@@ -4182,6 +4215,18 @@ textarea {
     content: attr(data-label);
     font-weight: 600;
     color: var(--muted);
+  }
+
+  /* Recibo ajuda: pergunta em cima, resposta embaixo (celular) */
+  #reciboAjudaSection .table-wrapper td {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 4px;
+  }
+  #reciboAjudaSection .table-wrapper td::before {
+    color: #000;
+    font-weight: 700;
   }
 
   /* Sugestões modal: cabe na tela do celular, sem scroll horizontal */
