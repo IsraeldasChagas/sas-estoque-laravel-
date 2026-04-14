@@ -15147,7 +15147,6 @@ function setupReciboAjudaCusto() {
             <td data-label="Valor">${v}</td>
             <td data-label="Ações" class="table-actions">
               <button type="button" class="table-action" data-reciboajuda-ver="${id}">Ver</button>
-              <button type="button" class="table-action" data-reciboajuda-edit="${id}">Editar</button>
               <button type="button" class="table-action" data-reciboajuda-del="${id}">Deletar</button>
             </td>
           </tr>`;
@@ -15591,9 +15590,8 @@ function setupReciboAjudaCusto() {
   // ações da tabela
   section.querySelector(".recibo-ajuda__historico")?.addEventListener("click", (e) => {
     const ver = e.target.closest("[data-reciboajuda-ver]");
-    const edit = e.target.closest("[data-reciboajuda-edit]");
     const del = e.target.closest("[data-reciboajuda-del]");
-    const id = ver?.getAttribute("data-reciboajuda-ver") || edit?.getAttribute("data-reciboajuda-edit") || del?.getAttribute("data-reciboajuda-del");
+    const id = ver?.getAttribute("data-reciboajuda-ver") || del?.getAttribute("data-reciboajuda-del");
     if (!id) return;
     if (ver) {
       (async () => {
@@ -15601,56 +15599,6 @@ function setupReciboAjudaCusto() {
           await abrirReciboAjudaPdfModal(id);
         } catch (e) {
           showToast("Não foi possível abrir o PDF.", "error");
-        }
-      })();
-      return;
-    }
-
-    if (edit) {
-      (async () => {
-        try {
-          const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
-          const res = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}`, { method: "GET", headers, cache: "no-store" });
-          if (!res.ok) throw new Error("Falha ao carregar recibo");
-          const r = await res.json();
-          if (edicaoId) edicaoId.value = String(r.id);
-          if (funcionarioBusca) funcionarioBusca.value = "";
-          if (funcionarioSelect) funcionarioSelect.value = String(r.funcionario_id || "");
-          setFuncionarioCpfFromSelect();
-          if (funcionarioCpf && r.funcionario_cpf) funcionarioCpf.value = String(formatCnpjCpfDisplay(String(r.funcionario_cpf)));
-          if (unidadeSelect) unidadeSelect.value = String(r.unidade_id || "");
-          setUnidadeCnpjFromSelect();
-          if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(formatCnpjCpfDisplay(String(r.unidade_cnpj)));
-          if (competencia) competencia.value = r.competencia || "";
-          if (dataPagamento) dataPagamento.value = (r.data_pagamento || "").slice(0, 10);
-          if (assinaturaTipo) assinaturaTipo.value = (r.assinatura_tipo || "desenho");
-          if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
-          if (valor) {
-            valor.dataset.value = String(Number(r.valor) || 0);
-            valor.value = (Number(r.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          }
-          clearSignature();
-          if ((r.assinatura_tipo || "desenho") === "desenho" && r.assinatura_data_url && canvas?.getContext) {
-            const img = new Image();
-            img.onload = () => {
-              const c = canvas.getContext("2d");
-              if (!c) return;
-              c.drawImage(img, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = r.assinatura_data_url;
-          }
-          confirmadoEmIso = r.confirmado_em || "";
-          evidIpPublico = r.ip_publico || "";
-          evidGeo = null;
-          applyAssinaturaTipoUI();
-          setFeedback(confirmarFeedback, confirmadoEmIso ? `Confirmação já registrada em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}.` : "Confirme via WhatsApp para liberar a assinatura.", confirmadoEmIso ? "success" : "info");
-          if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
-          confirmarCodigoBtn?.classList.add("hidden");
-          confirmarWhatsappLink?.classList.add("hidden");
-          updateEvidResumo();
-          showToast("Recibo carregado para edição.", "info");
-        } catch (e) {
-          showToast("Não foi possível carregar para edição.", "error");
         }
       })();
       return;
