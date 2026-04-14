@@ -15040,6 +15040,39 @@ function setupReciboAjudaCusto() {
     await abrirReciboAjudaPdfModal(id);
   });
 
+  document.getElementById('reciboAjudaPdfSalvarBtn')?.addEventListener('click', async () => {
+    const modal = document.getElementById('reciboAjudaPdfModal');
+    const id = modal?.dataset?.reciboAjudaId;
+    if (!id) return showToast("Abra um recibo antes de salvar.", "warning");
+
+    try {
+      // se já temos objectUrl carregado, baixa direto
+      let url = reciboAjudaPdfObjectUrl;
+      if (!url) {
+        // fallback: carrega PDF e cria objectUrl
+        const headers = {
+          ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+          ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+          ...getDeviceHeaders(),
+        };
+        const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}/pdf`, { method: "GET", headers, cache: "no-store" });
+        if (!resPdf.ok) throw new Error("Não foi possível carregar o PDF.");
+        const blob = await resPdf.blob();
+        url = URL.createObjectURL(blob);
+        reciboAjudaPdfObjectUrl = url;
+      }
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `recibo-ajuda-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("Download iniciado.", "success");
+    } catch (e) {
+      showToast(e?.message || "Não foi possível salvar o PDF.", "error");
+    }
+  });
+
   function updateEvidResumo() {
     if (!evidResumo) return;
     const parts = [];
