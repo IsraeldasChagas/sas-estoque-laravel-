@@ -6674,7 +6674,7 @@ Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
     }
 });
 
-Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6732,7 +6732,7 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
     }
 });
 
-Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
