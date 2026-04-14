@@ -6592,6 +6592,17 @@ $podeCriarReciboAjuda = function ($perfil) {
     return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO']);
 };
 
+$reciboAjudaParseDateTime = function ($raw) {
+    $v = is_string($raw) ? trim($raw) : '';
+    if ($v === '') return null;
+    try {
+        // Aceita ISO (2026-04-14T12:34:56Z) e também "Y-m-d H:i:s"
+        return \Carbon\Carbon::parse($v)->format('Y-m-d H:i:s');
+    } catch (\Exception $e) {
+        return null;
+    }
+};
+
 Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -6693,7 +6704,7 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
             'competencia' => $competencia ?: null,
             'finalidade' => $finalidade,
             'valor' => $valor,
-            'confirmado_em' => !empty($body['confirmado_em']) ? $body['confirmado_em'] : null,
+            'confirmado_em' => $reciboAjudaParseDateTime($body['confirmado_em'] ?? null),
             'ip_publico' => !empty($body['ip_publico']) ? $body['ip_publico'] : null,
             'geo' => !empty($body['geo']) ? $body['geo'] : null,
             'assinatura_data_url' => !empty($body['assinatura_data_url']) ? $body['assinatura_data_url'] : null,
@@ -6738,7 +6749,7 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
             'competencia' => array_key_exists('competencia', $body) ? (trim((string) $body['competencia']) ?: null) : $r->competencia,
             'finalidade' => array_key_exists('finalidade', $body) ? trim((string) $body['finalidade']) : $r->finalidade,
             'valor' => array_key_exists('valor', $body) ? (float) $body['valor'] : $r->valor,
-            'confirmado_em' => array_key_exists('confirmado_em', $body) ? ($body['confirmado_em'] ?: null) : $r->confirmado_em,
+            'confirmado_em' => array_key_exists('confirmado_em', $body) ? $reciboAjudaParseDateTime($body['confirmado_em'] ?? null) : $r->confirmado_em,
             'ip_publico' => array_key_exists('ip_publico', $body) ? ($body['ip_publico'] ?: null) : $r->ip_publico,
             'geo' => array_key_exists('geo', $body) ? ($body['geo'] ?: null) : $r->geo,
             'assinatura_data_url' => array_key_exists('assinatura_data_url', $body) ? ($body['assinatura_data_url'] ?: null) : $r->assinatura_data_url,
