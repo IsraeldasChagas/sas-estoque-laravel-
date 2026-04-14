@@ -6724,7 +6724,11 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /recibos-ajuda: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao salvar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
+        $debug = trim((string) $request->header('X-Debug', '')) === '1';
+        return response()->json([
+            'error' => 'Erro ao salvar recibo',
+            'details' => $debug ? $e->getMessage() : null,
+        ], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 
@@ -6767,7 +6771,11 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('PUT /recibos-ajuda/{id}: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao atualizar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
+        $debug = trim((string) $request->header('X-Debug', '')) === '1';
+        return response()->json([
+            'error' => 'Erro ao atualizar recibo',
+            'details' => $debug ? $e->getMessage() : null,
+        ], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 
@@ -6879,7 +6887,11 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
             ->header('Content-Length', (string) strlen($pdfOutput));
     } catch (\Exception $e) {
         \Log::error('GET /recibos-ajuda/{id}/pdf: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
+        $debug = trim((string) $request->header('X-Debug', '')) === '1';
+        return response()->json([
+            'error' => 'Erro ao gerar PDF',
+            'details' => $debug ? $e->getMessage() : null,
+        ], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 

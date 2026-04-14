@@ -14909,6 +14909,7 @@ function setupReciboAjudaCusto() {
 
   async function fetchRecibosAjudaLista() {
     const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+    if ((currentUser?.perfil || "").toString().trim().toUpperCase() === "ADMIN") headers["X-Debug"] = "1";
     const res = await fetch(`${API_URL}/recibos-ajuda`, { method: "GET", headers, cache: "no-store" });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
@@ -15274,6 +15275,7 @@ function setupReciboAjudaCusto() {
       const geoTxt = evidGeo?.lat && evidGeo?.lng ? `${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)` : "";
 
       const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+      if ((currentUser?.perfil || "").toString().trim().toUpperCase() === "ADMIN") headers["X-Debug"] = "1";
       const editing = (edicaoId?.value || "").trim();
       const body = {
         funcionario_id: fid,
@@ -15293,7 +15295,7 @@ function setupReciboAjudaCusto() {
       if (!resSave.ok) {
         const txt = await resSave.text().catch(() => "");
         let msg = txt;
-        try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+        try { const j = JSON.parse(txt); if (j && typeof j === "object") msg = j.details || j.error || msg; } catch (e) {}
         throw new Error(msg || `Falha ao salvar recibo (HTTP ${resSave.status})`);
       }
       const saved = await resSave.json().catch(() => null);
@@ -15405,6 +15407,7 @@ function setupReciboAjudaCusto() {
     (async () => {
       try {
         const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+        if ((currentUser?.perfil || "").toString().trim().toUpperCase() === "ADMIN") headers["X-Debug"] = "1";
         const editing = (edicaoId?.value || "").trim();
         const body = {
           funcionario_id: fid,
@@ -15424,7 +15427,7 @@ function setupReciboAjudaCusto() {
         if (!resSave.ok) {
           const txt = await resSave.text().catch(() => "");
           let msg = txt;
-          try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+          try { const j = JSON.parse(txt); if (j && typeof j === "object") msg = j.details || j.error || msg; } catch (e) {}
           throw new Error(msg || `Falha ao salvar recibo (HTTP ${resSave.status})`);
         }
         const saved = await resSave.json().catch(() => null);
@@ -15437,7 +15440,7 @@ function setupReciboAjudaCusto() {
         if (!resPdf.ok) {
           const txt = await resPdf.text().catch(() => "");
           let msg = txt;
-          try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+          try { const j = JSON.parse(txt); if (j && typeof j === "object") msg = j.details || j.error || msg; } catch (e) {}
           throw new Error(msg || `Falha ao gerar PDF (HTTP ${resPdf.status})`);
         }
         const blob = await resPdf.blob();
