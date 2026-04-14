@@ -5662,6 +5662,18 @@ select[size]:not([size="1"]) {
 .recibo-ajuda__sign-wrap {
   padding: 0 1.25rem 1.25rem;
 }
+.recibo-ajuda__evidencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.recibo-ajuda__sign-canvas.is-locked {
+  opacity: 0.55;
+  filter: grayscale(0.2);
+  pointer-events: none;
+}
 .recibo-ajuda__sign-canvas {
   width: 100%;
   max-width: 100%;

@@ -1794,6 +1794,11 @@
                   </select>
                 </label>
 
+                <label>
+                  CPF (funcionário)
+                  <input type="text" id="reciboAjudaFuncionarioCpf" readonly placeholder="Preenchido ao escolher o funcionário" />
+                </label>
+
                 <label class="recibo-ajuda__unidade">
                   Unidade
                   <select id="reciboAjudaUnidadeSelect">
@@ -1834,13 +1839,25 @@
               <header>
                 <div>
                   <h3>Assinatura do funcionário</h3>
-                  <p class="subtle-text">Assine no quadro abaixo (se estiver no celular, use o dedo).</p>
+                  <p class="subtle-text">Antes de assinar, confirme via WhatsApp. Depois, assine no quadro abaixo (se estiver no celular, use o dedo).</p>
                 </div>
                 <div class="recibo-ajuda__sign-actions">
+                  <button type="button" class="btn primary" id="reciboAjudaConfirmarSolicitarBtn">Solicitar confirmação</button>
+                  <a id="reciboAjudaConfirmarWhatsappLink" href="#" target="_blank" rel="noopener" class="btn secondary hidden" style="text-decoration:none;display:inline-flex;align-items:center;gap:0.5rem;">Abrir WhatsApp</a>
+                  <input type="text" id="reciboAjudaConfirmarCodigoInput" placeholder="000000" maxlength="6" pattern="[0-9]*" inputmode="numeric" class="hidden" style="width:120px;font-size:1.05rem;letter-spacing:0.25em;text-align:center;" />
+                  <button type="button" class="btn secondary hidden" id="reciboAjudaConfirmarCodigoBtn">Confirmar código</button>
                   <button type="button" class="btn secondary" id="reciboAjudaAssinaturaLimparBtn">Limpar assinatura</button>
                 </div>
               </header>
               <div class="recibo-ajuda__sign-wrap">
+                <div id="reciboAjudaConfirmarFeedback" class="form-feedback hidden" style="margin-bottom:0.75rem;"></div>
+                <div class="recibo-ajuda__evidencias">
+                  <button type="button" class="btn neutral" id="reciboAjudaCapturarIpBtn">Capturar IP</button>
+                  <button type="button" class="btn neutral" id="reciboAjudaCapturarLocalBtn">Capturar localização</button>
+                  <button type="button" class="btn neutral" id="reciboAjudaCapturarFotoBtn">Capturar foto</button>
+                  <input type="file" id="reciboAjudaFotoInput" accept="image/*" capture="environment" hidden />
+                  <span class="subtle-text" id="reciboAjudaEvidenciasResumo"></span>
+                </div>
                 <canvas id="reciboAjudaAssinaturaCanvas" class="recibo-ajuda__sign-canvas" width="900" height="220"></canvas>
               </div>
             </div>

@@ -14839,6 +14839,7 @@ function setupReciboAjudaCusto() {
   const edicaoId = document.getElementById("reciboAjudaEdicaoId");
   const funcionarioBusca = document.getElementById("reciboAjudaFuncionarioBusca");
   const funcionarioSelect = document.getElementById("reciboAjudaFuncionarioSelect");
+  const funcionarioCpf = document.getElementById("reciboAjudaFuncionarioCpf");
   const unidadeSelect = document.getElementById("reciboAjudaUnidadeSelect");
   const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
   const competencia = document.getElementById("reciboAjudaCompetencia");
@@ -14850,6 +14851,18 @@ function setupReciboAjudaCusto() {
   const btnLimparAss = document.getElementById("reciboAjudaAssinaturaLimparBtn");
   const tableBody = document.getElementById("reciboAjudaTableBody");
 
+  const confirmarSolicitarBtn = document.getElementById("reciboAjudaConfirmarSolicitarBtn");
+  const confirmarWhatsappLink = document.getElementById("reciboAjudaConfirmarWhatsappLink");
+  const confirmarCodigoInput = document.getElementById("reciboAjudaConfirmarCodigoInput");
+  const confirmarCodigoBtn = document.getElementById("reciboAjudaConfirmarCodigoBtn");
+  const confirmarFeedback = document.getElementById("reciboAjudaConfirmarFeedback");
+
+  const capturarIpBtn = document.getElementById("reciboAjudaCapturarIpBtn");
+  const capturarLocalBtn = document.getElementById("reciboAjudaCapturarLocalBtn");
+  const capturarFotoBtn = document.getElementById("reciboAjudaCapturarFotoBtn");
+  const fotoInput = document.getElementById("reciboAjudaFotoInput");
+  const evidResumo = document.getElementById("reciboAjudaEvidenciasResumo");
+
   const RECIBOS_AJUDA_STORAGE_KEY = "sas-estoque-recibos-ajuda";
   const FINALIDADE_LABELS = {
     auxilio_combustivel: "Auxílio Combustível",
@@ -14858,6 +14871,36 @@ function setupReciboAjudaCusto() {
     alimentacao: "Alimentação",
     outro: "Outro",
   };
+
+  const CONFIRM_CODE_STORAGE_KEY = "sas-estoque-recibo-ajuda-confirm-code";
+  const CONFIRM_CODE_TTL_MS = 10 * 60 * 1000;
+
+  let confirmadoEmIso = "";
+  let evidIpPublico = "";
+  let evidGeo = null; // { lat, lng, acc }
+  let evidFotoDataUrl = "";
+
+  function setFeedback(el, msg, kind = "info") {
+    if (!el) return;
+    el.textContent = msg || "";
+    el.className = `form-feedback ${kind}`;
+    el.classList.toggle("hidden", !msg);
+  }
+
+  function setCanvasLocked(locked) {
+    if (!canvas) return;
+    canvas.classList.toggle("is-locked", !!locked);
+  }
+
+  function updateEvidResumo() {
+    if (!evidResumo) return;
+    const parts = [];
+    if (confirmadoEmIso) parts.push(`Confirmado: ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}`);
+    if (evidIpPublico) parts.push(`IP: ${evidIpPublico}`);
+    if (evidGeo?.lat && evidGeo?.lng) parts.push(`Geo: ${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)`);
+    if (evidFotoDataUrl) parts.push("Foto: OK");
+    evidResumo.textContent = parts.length ? parts.join(" • ") : "";
+  }
 
   function loadRecibosFromStorage() {
     try {
@@ -14913,6 +14956,14 @@ function setupReciboAjudaCusto() {
     unidadeCnpj.value = raw != null && String(raw).trim() !== "" ? formatCnpjCpfDisplay(String(raw)) : "";
   }
 
+  function setFuncionarioCpfFromSelect() {
+    if (!funcionarioCpf) return;
+    const fid = (funcionarioSelect?.value || "").trim();
+    const f = (state.funcionarios || []).find((x) => String(x.id) === String(fid));
+    const raw = f?.cpf;
+    funcionarioCpf.value = raw != null && String(raw).trim() !== "" ? formatCnpjCpfDisplay(String(raw)) : "";
+  }
+
   function populateReciboAjudaSelects() {
     if (funcionarioSelect) {
       const ativos = (state.funcionarios || []).filter((f) => (f.status || "ativo") === "ativo");
@@ -14928,6 +14979,7 @@ function setupReciboAjudaCusto() {
         (state.unidades || []).map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`).join("");
     }
     setUnidadeCnpjFromSelect();
+    setFuncionarioCpfFromSelect();
   }
 
   async function loadReciboAjudaSection() {
@@ -14939,6 +14991,17 @@ function setupReciboAjudaCusto() {
       valor.dataset.reciboMaskBound = "1";
       attachCurrencyMask(valor);
     }
+    // por padrão, exige confirmação antes de assinar
+    confirmadoEmIso = "";
+    evidIpPublico = "";
+    evidGeo = null;
+    evidFotoDataUrl = "";
+    setCanvasLocked(true);
+    setFeedback(confirmarFeedback, "Confirme via WhatsApp para liberar a assinatura.", "info");
+    if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
+    confirmarCodigoBtn?.classList.add("hidden");
+    confirmarWhatsappLink?.classList.add("hidden");
+    updateEvidResumo();
     renderRecibosTabela();
   }
 
@@ -14957,6 +15020,9 @@ function setupReciboAjudaCusto() {
 
   funcionarioBusca?.addEventListener("input", filterFuncionarioSelect);
   unidadeSelect?.addEventListener("change", setUnidadeCnpjFromSelect);
+  funcionarioSelect?.addEventListener("change", () => {
+    setFuncionarioCpfFromSelect();
+  });
 
   // Assinatura (canvas) - desenho simples
   let drawing = false;
@@ -15023,6 +15089,14 @@ function setupReciboAjudaCusto() {
     const assinaturaImg = payload.assinaturaDataUrl
       ? `<img src="${payload.assinaturaDataUrl}" alt="Assinatura" style="max-width: 520px; width: 100%; height: auto; display:block; margin-top:8px;" />`
       : "";
+    const fotoImg = payload.fotoDataUrl
+      ? `<div style="margin-top:10px;"><div style="font-size:12px;color:#555;margin-bottom:4px;">Foto (evidência)</div><img src="${payload.fotoDataUrl}" alt="Foto" style="max-width: 520px; width: 100%; height: auto; display:block; border:1px solid #ddd; border-radius:10px;" /></div>`
+      : "";
+    const evidencias = [
+      payload.confirmadoEm ? `Confirmado em: ${esc(new Date(payload.confirmadoEm).toLocaleString("pt-BR"))}` : "",
+      payload.ipPublico ? `IP: ${esc(payload.ipPublico)}` : "",
+      payload.geo ? `Localização: ${esc(payload.geo)}` : "",
+    ].filter(Boolean).join(" • ");
 
     return `<!doctype html>
 <html lang="pt-BR">
@@ -15064,18 +15138,23 @@ function setupReciboAjudaCusto() {
   <div class="box">
     <div class="grid">
       <div class="field"><div class="lbl">Funcionário</div><div class="val">${esc(payload.funcionarioNome || "-")}</div></div>
+      <div class="field"><div class="lbl">CPF</div><div class="val">${esc(payload.funcionarioCpf || "-")}</div></div>
       <div class="field"><div class="lbl">Valor</div><div class="val">${esc(payload.valorFmt || "R$ 0,00")}</div></div>
       <div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">${esc(payload.finalidade || "-")}</div></div>
     </div>
     <div class="text">
+      <strong>Declaro que recebi o valor acima e confirmo as informações.</strong>
+      <br />
       Declaro, para os devidos fins, que recebi da empresa acima identificada o valor informado a título de <strong>ajuda de custo</strong>, referente à competência indicada.
     </div>
+    ${evidencias ? `<div style="margin-top:12px;font-size:12px;color:#444;"><strong>Evidências:</strong> ${evidencias}</div>` : ""}
   </div>
 
   <div class="sign">
     <div>
       <div class="line">Assinatura do funcionário</div>
       ${assinaturaImg}
+      ${fotoImg}
     </div>
     <div>
       <div class="line">Responsável</div>
@@ -15084,6 +15163,135 @@ function setupReciboAjudaCusto() {
 </body>
 </html>`;
   }
+
+  function genCode6() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+  function persistConfirmCode(code, funcionarioNome) {
+    try {
+      localStorage.setItem(CONFIRM_CODE_STORAGE_KEY, JSON.stringify({
+        code,
+        funcionarioNome: funcionarioNome || "",
+        createdAt: Date.now(),
+      }));
+    } catch (e) {}
+  }
+  function getPersistedConfirmCode() {
+    try {
+      const raw = localStorage.getItem(CONFIRM_CODE_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!parsed || !parsed.code || !parsed.createdAt) return null;
+      if (Date.now() - Number(parsed.createdAt) > CONFIRM_CODE_TTL_MS) return null;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function buildWhatsappLink(text, phone = "") {
+    const t = encodeURIComponent(text || "");
+    // se phone estiver vazio, abre só com texto (web/desktop)
+    if (phone) return `https://wa.me/${encodeURIComponent(phone)}?text=${t}`;
+    return `https://wa.me/?text=${t}`;
+  }
+
+  async function capturePublicIp() {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5500);
+      const res = await fetch("https://api.ipify.org?format=json", { signal: ctrl.signal, cache: "no-store" });
+      clearTimeout(t);
+      const data = await res.json().catch(() => null);
+      const ip = data?.ip ? String(data.ip) : "";
+      if (!ip) throw new Error("IP indisponível");
+      evidIpPublico = ip;
+      updateEvidResumo();
+      showToast("IP capturado.", "success");
+    } catch (e) {
+      showToast("Não foi possível capturar IP.", "warning");
+    }
+  }
+
+  async function captureGeo() {
+    if (!navigator.geolocation) return showToast("Geolocalização não suportada neste dispositivo.", "warning");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        evidGeo = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+        updateEvidResumo();
+        showToast("Localização capturada.", "success");
+      },
+      () => showToast("Permissão negada ou localização indisponível.", "warning"),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(new Error("Falha ao ler arquivo"));
+      r.readAsDataURL(file);
+    });
+  }
+
+  function confirmRequiredOk() {
+    return !!confirmadoEmIso;
+  }
+
+  confirmarSolicitarBtn?.addEventListener("click", () => {
+    const fid = funcionarioSelect?.value || "";
+    const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
+    const funcionarioNome = func?.nome_completo || func?.nome || "";
+    const comp = (competencia?.value || "").trim();
+    const fin = (finalidadeSelect?.value || "").trim();
+    const valorNum = Number(valor?.dataset?.value || 0);
+    if (!fid) return setFeedback(confirmarFeedback, "Selecione o funcionário antes de solicitar a confirmação.", "error");
+    if (!comp) return setFeedback(confirmarFeedback, "Informe a competência antes de solicitar a confirmação.", "error");
+    if (!fin) return setFeedback(confirmarFeedback, "Selecione a finalidade antes de solicitar a confirmação.", "error");
+    if (!Number.isFinite(valorNum) || valorNum <= 0) return setFeedback(confirmarFeedback, "Informe um valor válido antes de solicitar a confirmação.", "error");
+
+    const code = genCode6();
+    persistConfirmCode(code, funcionarioNome);
+    const msg = `CONFIRMAÇÃO DE RECIBO\n\nFuncionário: ${funcionarioNome}\nCompetência: ${comp}\nFinalidade: ${FINALIDADE_LABELS[fin] || fin}\nValor: ${formatCurrencyBRL(valorNum)}\n\nCódigo: ${code}\n\nResponda apenas com o código.`;
+    if (confirmarWhatsappLink) {
+      confirmarWhatsappLink.href = buildWhatsappLink(msg);
+      confirmarWhatsappLink.classList.remove("hidden");
+    }
+    confirmarCodigoInput?.classList.remove("hidden");
+    confirmarCodigoBtn?.classList.remove("hidden");
+    setFeedback(confirmarFeedback, "Código gerado. Envie pelo WhatsApp e depois digite o código recebido para liberar a assinatura.", "info");
+    setCanvasLocked(true);
+  });
+
+  confirmarCodigoBtn?.addEventListener("click", () => {
+    const typed = (confirmarCodigoInput?.value || "").replace(/\D/g, "");
+    if (typed.length !== 6) return setFeedback(confirmarFeedback, "Digite o código de 6 dígitos.", "error");
+    const persisted = getPersistedConfirmCode();
+    if (!persisted?.code) return setFeedback(confirmarFeedback, "Código expirado. Solicite novamente.", "error");
+    if (typed !== String(persisted.code)) return setFeedback(confirmarFeedback, "Código inválido.", "error");
+
+    confirmadoEmIso = new Date().toISOString();
+    setCanvasLocked(false);
+    setFeedback(confirmarFeedback, `Confirmação OK em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}. Assinatura liberada.`, "success");
+    updateEvidResumo();
+  });
+
+  capturarIpBtn?.addEventListener("click", capturePublicIp);
+  capturarLocalBtn?.addEventListener("click", captureGeo);
+  capturarFotoBtn?.addEventListener("click", () => fotoInput?.click());
+  fotoInput?.addEventListener("change", async () => {
+    const f = fotoInput.files?.[0];
+    if (!f) return;
+    try {
+      evidFotoDataUrl = await fileToDataUrl(f);
+      updateEvidResumo();
+      showToast("Foto capturada.", "success");
+    } catch (e) {
+      showToast("Não foi possível capturar a foto.", "warning");
+    } finally {
+      fotoInput.value = "";
+    }
+  });
 
   function gerarPdf() {
     const fid = funcionarioSelect?.value || "";
@@ -15100,17 +15308,24 @@ function setupReciboAjudaCusto() {
     if (!comp) return showToast("Informe a competência.", "warning");
     if (!fin) return showToast("Selecione a finalidade.", "warning");
     if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
+    if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
     if (isBlankCanvas()) return showToast("Faça a assinatura antes de gerar o PDF.", "warning");
 
     const assinaturaDataUrl = canvas?.toDataURL ? canvas.toDataURL("image/png") : "";
+    const geoTxt = evidGeo?.lat && evidGeo?.lng ? `${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)` : "";
     const html = gerarReciboHtml({
       funcionarioNome: func?.nome_completo || func?.nome || "",
+      funcionarioCpf: funcionarioCpf?.value || (func?.cpf ? formatCnpjCpfDisplay(String(func.cpf)) : ""),
       unidadeNome: un?.nome || "",
       unidadeCnpj: unidadeCnpj?.value || "",
       competencia: comp,
       finalidade: FINALIDADE_LABELS[fin] || fin,
       valorFmt: formatCurrencyBRL(valorNum),
       assinaturaDataUrl,
+      confirmadoEm: confirmadoEmIso,
+      ipPublico: evidIpPublico,
+      geo: geoTxt,
+      fotoDataUrl: evidFotoDataUrl,
     });
 
     // salva/atualiza registro local
@@ -15120,6 +15335,7 @@ function setupReciboAjudaCusto() {
       id: editing ? Number(editing) : Date.now(),
       funcionario_id: fid,
       funcionario_nome: func?.nome_completo || func?.nome || "",
+      funcionario_cpf: funcionarioCpf?.value || (func?.cpf ? formatCnpjCpfDisplay(String(func.cpf)) : ""),
       unidade_id: uid,
       unidade_nome: un?.nome || "",
       unidade_cnpj: unidadeCnpj?.value || "",
@@ -15127,6 +15343,10 @@ function setupReciboAjudaCusto() {
       finalidade: fin,
       valor: roundToCurrency(valorNum),
       assinaturaDataUrl,
+      confirmado_em: confirmadoEmIso,
+      ip_publico: evidIpPublico,
+      geo: geoTxt,
+      fotoDataUrl: evidFotoDataUrl,
       updated_at: new Date().toISOString(),
       created_at: editing ? (lista.find((x) => String(x.id) === String(editing))?.created_at || new Date().toISOString()) : new Date().toISOString(),
     };
@@ -15154,12 +15374,23 @@ function setupReciboAjudaCusto() {
     if (edicaoId) edicaoId.value = "";
     if (funcionarioBusca) funcionarioBusca.value = "";
     if (funcionarioSelect) funcionarioSelect.value = "";
+    if (funcionarioCpf) funcionarioCpf.value = "";
     if (unidadeSelect) unidadeSelect.value = "";
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
     if (finalidadeSelect) finalidadeSelect.value = "";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
+    confirmadoEmIso = "";
+    evidIpPublico = "";
+    evidGeo = null;
+    evidFotoDataUrl = "";
+    setCanvasLocked(true);
+    setFeedback(confirmarFeedback, "Confirme via WhatsApp para liberar a assinatura.", "info");
+    if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
+    confirmarCodigoBtn?.classList.add("hidden");
+    confirmarWhatsappLink?.classList.add("hidden");
+    updateEvidResumo();
     filterFuncionarioSelect();
   });
 
@@ -15177,12 +15408,17 @@ function setupReciboAjudaCusto() {
     if (ver) {
       const html = gerarReciboHtml({
         funcionarioNome: r.funcionario_nome,
+        funcionarioCpf: r.funcionario_cpf,
         unidadeNome: r.unidade_nome,
         unidadeCnpj: r.unidade_cnpj,
         competencia: r.competencia,
         finalidade: FINALIDADE_LABELS[r.finalidade] || r.finalidade,
         valorFmt: formatCurrencyBRL(Number(r.valor) || 0),
         assinaturaDataUrl: r.assinaturaDataUrl,
+        confirmadoEm: r.confirmado_em,
+        ipPublico: r.ip_publico,
+        geo: r.geo,
+        fotoDataUrl: r.fotoDataUrl,
       });
       const w = window.open("", "_blank", "noopener,noreferrer");
       if (!w) return showToast("Não foi possível abrir o recibo (popup bloqueado).", "error");
@@ -15197,6 +15433,8 @@ function setupReciboAjudaCusto() {
       if (edicaoId) edicaoId.value = String(r.id);
       if (funcionarioBusca) funcionarioBusca.value = "";
       if (funcionarioSelect) funcionarioSelect.value = String(r.funcionario_id || "");
+      setFuncionarioCpfFromSelect();
+      if (funcionarioCpf && r.funcionario_cpf) funcionarioCpf.value = String(r.funcionario_cpf);
       if (unidadeSelect) unidadeSelect.value = String(r.unidade_id || "");
       setUnidadeCnpjFromSelect();
       if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(r.unidade_cnpj);
@@ -15217,6 +15455,16 @@ function setupReciboAjudaCusto() {
         };
         img.src = r.assinaturaDataUrl;
       }
+      confirmadoEmIso = r.confirmado_em || "";
+      evidIpPublico = r.ip_publico || "";
+      evidGeo = null;
+      evidFotoDataUrl = r.fotoDataUrl || "";
+      setCanvasLocked(!confirmadoEmIso);
+      setFeedback(confirmarFeedback, confirmadoEmIso ? `Confirmação já registrada em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}.` : "Confirme via WhatsApp para liberar a assinatura.", confirmadoEmIso ? "success" : "info");
+      if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
+      confirmarCodigoBtn?.classList.add("hidden");
+      confirmarWhatsappLink?.classList.add("hidden");
+      updateEvidResumo();
       showToast("Recibo carregado para edição.", "info");
       return;
     }
