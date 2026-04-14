@@ -6948,9 +6948,8 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
             $html .= '<div style="margin-top:12px;font-size:12px;color:#444;"><strong>Evidências:</strong> ' . e($evidTxt) . '</div>';
         }
         $assinaturaBlock = $assinaturaTipo === 'codigo'
-            ? '<div style="margin-top:8px;font-size:12px;color:#444;">Assinatura por código automático.</div>'
-              // Espaço 2x para assinatura física: linha fica embaixo (como assinatura no papel)
-              . '<div style="height:120px;border-bottom:1px solid #111;margin-top:10px;"></div>'
+            ? // Remove linha/texto "de cima" e sobe as infos para ganhar espaço em branco
+              '<div style="height:150px;border-bottom:1px solid #111;"></div>'
               . '<div style="padding-top:6px;font-size:12px;color:#333;">Assinatura do funcionário</div>'
             : '<div class="line">Assinatura do funcionário</div>' . $assinaturaImg;
 
