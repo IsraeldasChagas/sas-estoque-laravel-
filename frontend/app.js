@@ -14863,7 +14863,6 @@ function setupReciboAjudaCusto() {
   const fotoInput = document.getElementById("reciboAjudaFotoInput");
   const evidResumo = document.getElementById("reciboAjudaEvidenciasResumo");
 
-  const RECIBOS_AJUDA_STORAGE_KEY = "sas-estoque-recibos-ajuda";
   const FINALIDADE_LABELS = {
     auxilio_combustivel: "Auxílio Combustível",
     ajuda_custo: "Ajuda de custo",
@@ -14902,23 +14901,24 @@ function setupReciboAjudaCusto() {
     evidResumo.textContent = parts.length ? parts.join(" • ") : "";
   }
 
-  function loadRecibosFromStorage() {
+  async function fetchRecibosAjudaLista() {
     try {
-      const raw = localStorage.getItem(RECIBOS_AJUDA_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+      const res = await fetch(`${API_URL}/recibos-ajuda`, { method: "GET", headers, cache: "no-store" });
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        throw new Error(msg || "Falha ao carregar recibos");
+      }
+      const data = await res.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
     } catch (e) {
       return [];
     }
   }
-  function saveRecibosToStorage(lista) {
-    try {
-      localStorage.setItem(RECIBOS_AJUDA_STORAGE_KEY, JSON.stringify(lista || []));
-    } catch (e) {}
-  }
-  function renderRecibosTabela() {
+
+  async function renderRecibosTabela() {
     if (!tableBody) return;
-    const lista = loadRecibosFromStorage().sort((a, b) => Number(b.id) - Number(a.id));
+    const lista = (await fetchRecibosAjudaLista()).sort((a, b) => Number(b.id) - Number(a.id));
     if (!lista.length) {
       tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum recibo salvo.</td></tr>`;
       return;
@@ -15002,7 +15002,7 @@ function setupReciboAjudaCusto() {
     confirmarCodigoBtn?.classList.add("hidden");
     confirmarWhatsappLink?.classList.add("hidden");
     updateEvidResumo();
-    renderRecibosTabela();
+    await renderRecibosTabela();
   }
 
   // expõe para o handler de navegação
@@ -15328,45 +15328,53 @@ function setupReciboAjudaCusto() {
       fotoDataUrl: evidFotoDataUrl,
     });
 
-    // salva/atualiza registro local
-    const lista = loadRecibosFromStorage();
-    const editing = (edicaoId?.value || "").trim();
-    const payload = {
-      id: editing ? Number(editing) : Date.now(),
-      funcionario_id: fid,
-      funcionario_nome: func?.nome_completo || func?.nome || "",
-      funcionario_cpf: funcionarioCpf?.value || (func?.cpf ? formatCnpjCpfDisplay(String(func.cpf)) : ""),
-      unidade_id: uid,
-      unidade_nome: un?.nome || "",
-      unidade_cnpj: unidadeCnpj?.value || "",
-      competencia: comp,
-      finalidade: fin,
-      valor: roundToCurrency(valorNum),
-      assinaturaDataUrl,
-      confirmado_em: confirmadoEmIso,
-      ip_publico: evidIpPublico,
-      geo: geoTxt,
-      fotoDataUrl: evidFotoDataUrl,
-      updated_at: new Date().toISOString(),
-      created_at: editing ? (lista.find((x) => String(x.id) === String(editing))?.created_at || new Date().toISOString()) : new Date().toISOString(),
-    };
-    const idx = lista.findIndex((x) => String(x.id) === String(payload.id));
-    if (idx >= 0) lista[idx] = payload;
-    else lista.push(payload);
-    saveRecibosToStorage(lista);
-    renderRecibosTabela();
-    if (edicaoId) edicaoId.value = "";
+    (async () => {
+      try {
+        const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+        const editing = (edicaoId?.value || "").trim();
+        const body = {
+          funcionario_id: fid,
+          unidade_id: uid || null,
+          competencia: comp,
+          finalidade: fin,
+          valor: roundToCurrency(valorNum),
+          confirmado_em: confirmadoEmIso,
+          ip_publico: evidIpPublico,
+          geo: geoTxt,
+          assinatura_data_url: assinaturaDataUrl,
+          foto_data_url: evidFotoDataUrl,
+        };
+        const url = editing ? `${API_URL}/recibos-ajuda/${encodeURIComponent(editing)}` : `${API_URL}/recibos-ajuda`;
+        const method = editing ? "PUT" : "POST";
+        const resSave = await fetch(url, { method, headers, body: JSON.stringify(body) });
+        if (!resSave.ok) {
+          const msg = await resSave.text().catch(() => "");
+          throw new Error(msg || "Falha ao salvar recibo");
+        }
+        const saved = await resSave.json().catch(() => null);
+        const savedId = saved?.id ? String(saved.id) : editing;
+        if (edicaoId) edicaoId.value = "";
+        await renderRecibosTabela();
 
-    const w = window.open("", "_blank", "noopener,noreferrer");
-    if (!w) return showToast("Não foi possível abrir o recibo (popup bloqueado).", "error");
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    // dá um tempinho para as imagens renderizarem antes do print
-    setTimeout(() => {
-      try { w.print(); } catch (e) {}
-    }, 400);
+        // Agora baixa o PDF do servidor e abre em nova aba
+        const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(savedId)}/pdf`, { method: "GET", headers, cache: "no-store" });
+        if (!resPdf.ok) {
+          const msg = await resPdf.text().catch(() => "");
+          throw new Error(msg || "Falha ao gerar PDF");
+        }
+        const blob = await resPdf.blob();
+        const urlBlob = URL.createObjectURL(blob);
+        const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
+        if (!w) {
+          // fallback: navega na mesma aba
+          window.location.href = urlBlob;
+        }
+        setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
+        showToast("Recibo salvo e PDF gerado.", "success");
+      } catch (e) {
+        showToast(e?.message || "Erro ao salvar/gerar PDF.", "error");
+      }
+    })();
   }
 
   btnPdf?.addEventListener("click", gerarPdf);
@@ -15401,83 +15409,87 @@ function setupReciboAjudaCusto() {
     const del = e.target.closest("[data-reciboajuda-del]");
     const id = ver?.getAttribute("data-reciboajuda-ver") || edit?.getAttribute("data-reciboajuda-edit") || del?.getAttribute("data-reciboajuda-del");
     if (!id) return;
-    const lista = loadRecibosFromStorage();
-    const r = lista.find((x) => String(x.id) === String(id));
-    if (!r) return showToast("Recibo não encontrado.", "error");
-
     if (ver) {
-      const html = gerarReciboHtml({
-        funcionarioNome: r.funcionario_nome,
-        funcionarioCpf: r.funcionario_cpf,
-        unidadeNome: r.unidade_nome,
-        unidadeCnpj: r.unidade_cnpj,
-        competencia: r.competencia,
-        finalidade: FINALIDADE_LABELS[r.finalidade] || r.finalidade,
-        valorFmt: formatCurrencyBRL(Number(r.valor) || 0),
-        assinaturaDataUrl: r.assinaturaDataUrl,
-        confirmadoEm: r.confirmado_em,
-        ipPublico: r.ip_publico,
-        geo: r.geo,
-        fotoDataUrl: r.fotoDataUrl,
-      });
-      const w = window.open("", "_blank", "noopener,noreferrer");
-      if (!w) return showToast("Não foi possível abrir o recibo (popup bloqueado).", "error");
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-      w.focus();
+      (async () => {
+        try {
+          const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+          const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}/pdf`, { method: "GET", headers, cache: "no-store" });
+          if (!resPdf.ok) throw new Error("Falha ao abrir PDF");
+          const blob = await resPdf.blob();
+          const urlBlob = URL.createObjectURL(blob);
+          const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
+          if (!w) window.location.href = urlBlob;
+          setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
+        } catch (e) {
+          showToast("Não foi possível abrir o PDF.", "error");
+        }
+      })();
       return;
     }
 
     if (edit) {
-      if (edicaoId) edicaoId.value = String(r.id);
-      if (funcionarioBusca) funcionarioBusca.value = "";
-      if (funcionarioSelect) funcionarioSelect.value = String(r.funcionario_id || "");
-      setFuncionarioCpfFromSelect();
-      if (funcionarioCpf && r.funcionario_cpf) funcionarioCpf.value = String(r.funcionario_cpf);
-      if (unidadeSelect) unidadeSelect.value = String(r.unidade_id || "");
-      setUnidadeCnpjFromSelect();
-      if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(r.unidade_cnpj);
-      if (competencia) competencia.value = r.competencia || "";
-      if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
-      if (valor) {
-        // máscara usa dataset.value (número) + value (texto)
-        valor.dataset.value = String(Number(r.valor) || 0);
-        valor.value = (Number(r.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      }
-      clearSignature();
-      if (r.assinaturaDataUrl && canvas?.getContext) {
-        const img = new Image();
-        img.onload = () => {
-          const c = canvas.getContext("2d");
-          if (!c) return;
-          c.drawImage(img, 0, 0, canvas.width, canvas.height);
-        };
-        img.src = r.assinaturaDataUrl;
-      }
-      confirmadoEmIso = r.confirmado_em || "";
-      evidIpPublico = r.ip_publico || "";
-      evidGeo = null;
-      evidFotoDataUrl = r.fotoDataUrl || "";
-      setCanvasLocked(!confirmadoEmIso);
-      setFeedback(confirmarFeedback, confirmadoEmIso ? `Confirmação já registrada em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}.` : "Confirme via WhatsApp para liberar a assinatura.", confirmadoEmIso ? "success" : "info");
-      if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
-      confirmarCodigoBtn?.classList.add("hidden");
-      confirmarWhatsappLink?.classList.add("hidden");
-      updateEvidResumo();
-      showToast("Recibo carregado para edição.", "info");
+      (async () => {
+        try {
+          const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+          const res = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}`, { method: "GET", headers, cache: "no-store" });
+          if (!res.ok) throw new Error("Falha ao carregar recibo");
+          const r = await res.json();
+          if (edicaoId) edicaoId.value = String(r.id);
+          if (funcionarioBusca) funcionarioBusca.value = "";
+          if (funcionarioSelect) funcionarioSelect.value = String(r.funcionario_id || "");
+          setFuncionarioCpfFromSelect();
+          if (funcionarioCpf && r.funcionario_cpf) funcionarioCpf.value = String(formatCnpjCpfDisplay(String(r.funcionario_cpf)));
+          if (unidadeSelect) unidadeSelect.value = String(r.unidade_id || "");
+          setUnidadeCnpjFromSelect();
+          if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(formatCnpjCpfDisplay(String(r.unidade_cnpj)));
+          if (competencia) competencia.value = r.competencia || "";
+          if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
+          if (valor) {
+            valor.dataset.value = String(Number(r.valor) || 0);
+            valor.value = (Number(r.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+          clearSignature();
+          if (r.assinatura_data_url && canvas?.getContext) {
+            const img = new Image();
+            img.onload = () => {
+              const c = canvas.getContext("2d");
+              if (!c) return;
+              c.drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = r.assinatura_data_url;
+          }
+          confirmadoEmIso = r.confirmado_em || "";
+          evidIpPublico = r.ip_publico || "";
+          evidGeo = null;
+          evidFotoDataUrl = r.foto_data_url || "";
+          setCanvasLocked(!confirmadoEmIso);
+          setFeedback(confirmarFeedback, confirmadoEmIso ? `Confirmação já registrada em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}.` : "Confirme via WhatsApp para liberar a assinatura.", confirmadoEmIso ? "success" : "info");
+          if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
+          confirmarCodigoBtn?.classList.add("hidden");
+          confirmarWhatsappLink?.classList.add("hidden");
+          updateEvidResumo();
+          showToast("Recibo carregado para edição.", "info");
+        } catch (e) {
+          showToast("Não foi possível carregar para edição.", "error");
+        }
+      })();
       return;
     }
 
     if (del) {
-      if (!window.confirm(`Deletar o recibo #${id}?`)) return;
-      const nova = lista.filter((x) => String(x.id) !== String(id));
-      saveRecibosToStorage(nova);
-      if ((edicaoId?.value || "").trim() === String(id)) {
-        edicaoId.value = "";
-      }
-      renderRecibosTabela();
-      showToast("Recibo deletado.", "success");
+      (async () => {
+        if (!window.confirm(`Deletar o recibo #${id}?`)) return;
+        try {
+          const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+          const res = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}`, { method: "DELETE", headers });
+          if (!res.ok) throw new Error("Falha ao deletar");
+          if ((edicaoId?.value || "").trim() === String(id)) edicaoId.value = "";
+          await renderRecibosTabela();
+          showToast("Recibo deletado.", "success");
+        } catch (e) {
+          showToast("Não foi possível deletar.", "error");
+        }
+      })();
     }
   });
 }

@@ -6575,6 +6575,303 @@ Route::get('/proventos', function (Request $request) use ($proventosAuth, $podeC
     }
 });
 
+// ============================================
+// RECIBO AJUDA DE CUSTO (Módulo Financeiro)
+// ============================================
+
+$recibosAjudaCors = fn() => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+Route::options('/recibos-ajuda', $recibosAjudaCors);
+Route::options('/recibos-ajuda/{id}', $recibosAjudaCors);
+Route::options('/recibos-ajuda/{id}/pdf', $recibosAjudaCors);
+
+$podeCriarReciboAjuda = function ($perfil) {
+    $p = strtoupper(trim($perfil ?? ''));
+    return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO']);
+};
+
+Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+    try {
+        if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+
+        $q = DB::table('recibos_ajuda_custo as r')
+            ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'r.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'r.criado_por', '=', 'criador.id')
+            ->select(
+                'r.*',
+                'funcionarios.nome_completo as funcionario_nome',
+                'funcionarios.cpf as funcionario_cpf',
+                'unidades.nome as unidade_nome',
+                $proventoSelectUnidadeCnpj(),
+                'criador.nome as criado_por_nome'
+            );
+
+        // Se não pode criar (ex.: FUNCIONARIO): vê apenas os próprios recibos
+        if (!$podeCriarReciboAjuda($perfil)) {
+            $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if ($funcId) $q->where('r.funcionario_id', $funcId);
+            else return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $lista = $q->orderByDesc('r.id')->get();
+        return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /recibos-ajuda: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao listar recibos'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+    try {
+        if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 404)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+
+        $q = DB::table('recibos_ajuda_custo as r')
+            ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'r.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'r.criado_por', '=', 'criador.id')
+            ->where('r.id', $id)
+            ->select(
+                'r.*',
+                'funcionarios.nome_completo as funcionario_nome',
+                'funcionarios.cpf as funcionario_cpf',
+                'unidades.nome as unidade_nome',
+                $proventoSelectUnidadeCnpj(),
+                'criador.nome as criado_por_nome'
+            );
+
+        if (!$podeCriarReciboAjuda($perfil)) {
+            $funcId = DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if (!$funcId) return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+            $q->where('r.funcionario_id', $funcId);
+        }
+
+        $row = $q->first();
+        if (!$row) return response()->json(['error' => 'Recibo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /recibos-ajuda/{id}: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+    try {
+        if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        // Quem não pode criar só pode criar para si mesmo (funcionario_id derivado do usuário)
+        $body = $request->json()->all() ?: [];
+        $funcionarioId = (int) ($body['funcionario_id'] ?? 0);
+        if (!$podeCriarReciboAjuda($perfil)) {
+            $funcId = (int) DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if (!$funcId) return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+            $funcionarioId = $funcId;
+        }
+
+        $finalidade = trim((string) ($body['finalidade'] ?? ''));
+        $competencia = trim((string) ($body['competencia'] ?? ''));
+        $valor = (float) ($body['valor'] ?? 0);
+
+        if (!$funcionarioId) return response()->json(['error' => 'Funcionário obrigatório'], 422)->header('Access-Control-Allow-Origin', '*');
+        if (!$finalidade) return response()->json(['error' => 'Finalidade obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($valor <= 0) return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $insert = [
+            'funcionario_id' => $funcionarioId,
+            'unidade_id' => $body['unidade_id'] ?? null,
+            'competencia' => $competencia ?: null,
+            'finalidade' => $finalidade,
+            'valor' => $valor,
+            'confirmado_em' => !empty($body['confirmado_em']) ? $body['confirmado_em'] : null,
+            'ip_publico' => !empty($body['ip_publico']) ? $body['ip_publico'] : null,
+            'geo' => !empty($body['geo']) ? $body['geo'] : null,
+            'assinatura_data_url' => !empty($body['assinatura_data_url']) ? $body['assinatura_data_url'] : null,
+            'foto_data_url' => !empty($body['foto_data_url']) ? $body['foto_data_url'] : null,
+            'criado_por' => $u->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $id = DB::table('recibos_ajuda_custo')->insertGetId($insert);
+        $row = DB::table('recibos_ajuda_custo as r')
+            ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'r.unidade_id', '=', 'unidades.id')
+            ->where('r.id', $id)
+            ->select('r.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())
+            ->first();
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /recibos-ajuda: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao salvar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+    try {
+        if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+
+        $r = DB::table('recibos_ajuda_custo')->where('id', $id)->first();
+        if (!$r) return response()->json(['error' => 'Recibo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+
+        if (!$podeCriarReciboAjuda($perfil)) {
+            $funcId = (int) DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if (!$funcId || (int) $r->funcionario_id !== $funcId) return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $body = $request->json()->all() ?: [];
+        $up = [
+            'unidade_id' => $body['unidade_id'] ?? $r->unidade_id,
+            'competencia' => array_key_exists('competencia', $body) ? (trim((string) $body['competencia']) ?: null) : $r->competencia,
+            'finalidade' => array_key_exists('finalidade', $body) ? trim((string) $body['finalidade']) : $r->finalidade,
+            'valor' => array_key_exists('valor', $body) ? (float) $body['valor'] : $r->valor,
+            'confirmado_em' => array_key_exists('confirmado_em', $body) ? ($body['confirmado_em'] ?: null) : $r->confirmado_em,
+            'ip_publico' => array_key_exists('ip_publico', $body) ? ($body['ip_publico'] ?: null) : $r->ip_publico,
+            'geo' => array_key_exists('geo', $body) ? ($body['geo'] ?: null) : $r->geo,
+            'assinatura_data_url' => array_key_exists('assinatura_data_url', $body) ? ($body['assinatura_data_url'] ?: null) : $r->assinatura_data_url,
+            'foto_data_url' => array_key_exists('foto_data_url', $body) ? ($body['foto_data_url'] ?: null) : $r->foto_data_url,
+            'updated_at' => now(),
+        ];
+        DB::table('recibos_ajuda_custo')->where('id', $id)->update($up);
+
+        $row = DB::table('recibos_ajuda_custo as r')
+            ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'r.unidade_id', '=', 'unidades.id')
+            ->where('r.id', $id)
+            ->select('r.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())
+            ->first();
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('PUT /recibos-ajuda/{id}: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao atualizar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::delete('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda) {
+    try {
+        if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+
+        $r = DB::table('recibos_ajuda_custo')->where('id', $id)->first();
+        if (!$r) return response()->json(['error' => 'Recibo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+
+        if (!$podeCriarReciboAjuda($perfil)) {
+            $funcId = (int) DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if (!$funcId || (int) $r->funcionario_id !== $funcId) return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        DB::table('recibos_ajuda_custo')->where('id', $id)->delete();
+        return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('DELETE /recibos-ajuda/{id}: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao deletar recibo'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
+    try {
+        if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 404)->header('Access-Control-Allow-Origin', '*');
+        $u = $proventosAuth($request);
+        if (!$u) return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+
+        $q = DB::table('recibos_ajuda_custo as r')
+            ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
+            ->leftJoin('unidades', 'r.unidade_id', '=', 'unidades.id')
+            ->leftJoin('usuarios as criador', 'r.criado_por', '=', 'criador.id')
+            ->where('r.id', $id)
+            ->select(
+                'r.*',
+                'funcionarios.nome_completo as funcionario_nome',
+                'funcionarios.cpf as funcionario_cpf',
+                'unidades.nome as unidade_nome',
+                $proventoSelectUnidadeCnpj(),
+                'criador.nome as criado_por_nome'
+            );
+        if (!$podeCriarReciboAjuda($perfil)) {
+            $funcId = (int) DB::table('funcionarios')->where('usuario_id', $u->id)->value('id');
+            if (!$funcId) return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+            $q->where('r.funcionario_id', $funcId);
+        }
+        $r = $q->first();
+        if (!$r) return response()->json(['error' => 'Recibo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+
+        $empresa = 'Grupo Sabor Paraense';
+        $cnpj = $r->unidade_cnpj ? $r->unidade_cnpj : '';
+        $func = $r->funcionario_nome ?: '';
+        $cpf = $r->funcionario_cpf ?: '';
+        $un = $r->unidade_nome ?: '';
+        $competencia = $r->competencia ?: '';
+        $finalidade = $r->finalidade ?: '';
+        $valor = number_format((float) ($r->valor ?? 0), 2, ',', '.');
+        $evid = [];
+        if (!empty($r->confirmado_em)) $evid[] = 'Confirmado em: ' . \Carbon\Carbon::parse($r->confirmado_em)->format('d/m/Y H:i');
+        if (!empty($r->ip_publico)) $evid[] = 'IP: ' . $r->ip_publico;
+        if (!empty($r->geo)) $evid[] = 'Localização: ' . $r->geo;
+        $evidTxt = implode(' • ', $evid);
+
+        $assinaturaImg = !empty($r->assinatura_data_url) ? '<img src="' . $r->assinatura_data_url . '" style="max-width:520px;width:100%;height:auto;display:block;margin-top:8px;" />' : '';
+        $fotoImg = !empty($r->foto_data_url) ? '<div style="margin-top:10px;"><div style="font-size:12px;color:#555;margin-bottom:4px;">Foto (evidência)</div><img src="' . $r->foto_data_url . '" style="max-width:520px;width:100%;height:auto;display:block;border:1px solid #ddd;border-radius:10px;" /></div>' : '';
+
+        $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
+            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:1px solid #ddd;padding-bottom:12px;margin-bottom:18px}.brand{font-weight:700;font-size:18px}.meta{font-size:12px;color:#444;text-align:right}h1{font-size:18px;margin:0 0 10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:8px}.field{font-size:13px}.lbl{color:#555;font-size:12px}.val{font-weight:600}.box{border:1px solid #ddd;border-radius:10px;padding:12px}.text{margin-top:14px;font-size:13px;line-height:1.45}.sign{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:end}.line{border-top:1px solid #111;padding-top:6px;font-size:12px;color:#333}</style></head><body>';
+
+        $html .= '<div class="top"><div><div class="brand">' . e($empresa) . '</div>'
+            . '<div style="font-size:12px;color:#444;margin-top:4px;">CNPJ: ' . e($cnpj ?: '-') . '</div></div>'
+            . '<div class="meta"><div><strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>'
+            . '<div><strong>Unidade:</strong> ' . e($un ?: '-') . '</div>'
+            . '<div><strong>Competência:</strong> ' . e($competencia ?: '-') . '</div></div></div>';
+
+        $html .= '<h1>Recibo de ajuda de custo</h1><div class="box"><div class="grid">'
+            . '<div class="field"><div class="lbl">Funcionário</div><div class="val">' . e($func ?: '-') . '</div></div>'
+            . '<div class="field"><div class="lbl">CPF</div><div class="val">' . e($cpf ?: '-') . '</div></div>'
+            . '<div class="field"><div class="lbl">Valor</div><div class="val">R$ ' . e($valor) . '</div></div>'
+            . '<div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">' . e($finalidade ?: '-') . '</div></div>'
+            . '</div><div class="text"><strong>Declaro que recebi o valor acima e confirmo as informações.</strong><br />'
+            . 'Declaro, para os devidos fins, que recebi da empresa acima identificada o valor informado a título de <strong>ajuda de custo</strong>, referente à competência indicada.</div>';
+
+        if (!empty($evidTxt)) {
+            $html .= '<div style="margin-top:12px;font-size:12px;color:#444;"><strong>Evidências:</strong> ' . e($evidTxt) . '</div>';
+        }
+        $html .= '</div><div class="sign"><div><div class="line">Assinatura do funcionário</div>' . $assinaturaImg . $fotoImg . '</div>'
+            . '<div><div class="line">Responsável</div></div></div></body></html>';
+
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->setIsRemoteEnabled(true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+        $fn = 'recibo-ajuda-' . $id . '.pdf';
+
+        return response($pdfOutput, 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="' . $fn . '"')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Exception $e) {
+        \Log::error('GET /recibos-ajuda/{id}/pdf: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
 Route::get('/proventos/meus', function (Request $request) use ($proventosAuth, $proventoSelectFuncionarioPix, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
