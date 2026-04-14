@@ -4247,6 +4247,23 @@ textarea {
     overflow-wrap: anywhere;
   }
 
+  /* Recibo ajuda: ações em linha, centralizadas (celular) */
+  #reciboAjudaSection .table-wrapper td.table-actions {
+    width: 100%;
+  }
+  #reciboAjudaSection .table-wrapper td.table-actions .table-action {
+    flex: 1 1 auto;
+  }
+  #reciboAjudaSection .table-wrapper td.table-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+  }
+
   /* Sugestões modal: cabe na tela do celular, sem scroll horizontal */
   #sugestoesComprasModal {
     align-items: flex-start;
