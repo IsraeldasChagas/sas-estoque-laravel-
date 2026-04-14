@@ -15380,6 +15380,9 @@ function setupReciboAjudaCusto() {
       fotoDataUrl: evidFotoDataUrl,
     });
 
+    // abre a janela/aba imediatamente para evitar bloqueio de popup (desktop)
+    const pdfWin = window.open("about:blank", "_blank", "noopener,noreferrer");
+
     (async () => {
       try {
         const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
@@ -15400,8 +15403,10 @@ function setupReciboAjudaCusto() {
         const method = editing ? "PUT" : "POST";
         const resSave = await fetch(url, { method, headers, body: JSON.stringify(body) });
         if (!resSave.ok) {
-          const msg = await resSave.text().catch(() => "");
-          throw new Error(msg || "Falha ao salvar recibo");
+          const txt = await resSave.text().catch(() => "");
+          let msg = txt;
+          try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+          throw new Error(msg || `Falha ao salvar recibo (HTTP ${resSave.status})`);
         }
         const saved = await resSave.json().catch(() => null);
         const savedId = saved?.id ? String(saved.id) : editing;
@@ -15411,19 +15416,25 @@ function setupReciboAjudaCusto() {
         // Agora baixa o PDF do servidor e abre em nova aba
         const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(savedId)}/pdf`, { method: "GET", headers, cache: "no-store" });
         if (!resPdf.ok) {
-          const msg = await resPdf.text().catch(() => "");
-          throw new Error(msg || "Falha ao gerar PDF");
+          const txt = await resPdf.text().catch(() => "");
+          let msg = txt;
+          try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+          throw new Error(msg || `Falha ao gerar PDF (HTTP ${resPdf.status})`);
         }
         const blob = await resPdf.blob();
         const urlBlob = URL.createObjectURL(blob);
-        const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
-        if (!w) {
-          // fallback: navega na mesma aba
-          window.location.href = urlBlob;
+        if (pdfWin && !pdfWin.closed) {
+          try { pdfWin.location.href = urlBlob; } catch (e) {}
+        } else {
+          const w2 = window.open(urlBlob, "_blank", "noopener,noreferrer");
+          if (!w2) window.location.href = urlBlob;
         }
         setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
         showToast("Recibo salvo e PDF gerado.", "success");
       } catch (e) {
+        if (pdfWin && !pdfWin.closed) {
+          try { pdfWin.close(); } catch (err) {}
+        }
         showToast(e?.message || "Erro ao salvar/gerar PDF.", "error");
       }
     })();
@@ -15465,13 +15476,18 @@ function setupReciboAjudaCusto() {
     if (ver) {
       (async () => {
         try {
+          const w0 = window.open("about:blank", "_blank", "noopener,noreferrer");
           const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
           const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}/pdf`, { method: "GET", headers, cache: "no-store" });
           if (!resPdf.ok) throw new Error("Falha ao abrir PDF");
           const blob = await resPdf.blob();
           const urlBlob = URL.createObjectURL(blob);
-          const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
-          if (!w) window.location.href = urlBlob;
+          if (w0 && !w0.closed) {
+            try { w0.location.href = urlBlob; } catch (e) {}
+          } else {
+            const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
+            if (!w) window.location.href = urlBlob;
+          }
           setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
         } catch (e) {
           showToast("Não foi possível abrir o PDF.", "error");
