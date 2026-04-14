@@ -14845,7 +14845,6 @@ function setupReciboAjudaCusto() {
   const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
   const competencia = document.getElementById("reciboAjudaCompetencia");
   const dataPagamento = document.getElementById("reciboAjudaDataPagamento");
-  const dataGeracao = document.getElementById("reciboAjudaDataGeracao");
   const finalidadeSelect = document.getElementById("reciboAjudaFinalidadeSelect");
   const valor = document.getElementById("reciboAjudaValor");
   const btnSalvar = document.getElementById("reciboAjudaSalvarBtn");
@@ -15144,12 +15143,6 @@ function setupReciboAjudaCusto() {
     await loadFuncionarios(false).catch(() => {});
     populateReciboAjudaSelects();
     if (competencia && !competencia.value) competencia.value = new Date().toISOString().slice(0, 7);
-    if (dataGeracao && !dataGeracao.value) {
-      // datetime-local: yyyy-MM-ddTHH:mm
-      const d = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      dataGeracao.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
     if (valor && !valor.dataset.reciboMaskBound) {
       valor.dataset.reciboMaskBound = "1";
       attachCurrencyMask(valor);
@@ -15409,7 +15402,6 @@ function setupReciboAjudaCusto() {
       const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
       const comp = (competencia?.value || "").trim();
       const dtPag = (dataPagamento?.value || "").trim();
-      const dtGer = (dataGeracao?.value || "").trim();
       const fin = (finalidadeSelect?.value || "").trim();
       const valorNum = Number(valor?.dataset?.value || 0);
 
@@ -15432,7 +15424,6 @@ function setupReciboAjudaCusto() {
         unidade_id: uid || null,
         competencia: comp,
         data_pagamento: dtPag || null,
-        data_geracao: dtGer ? new Date(dtGer).toISOString() : null,
         finalidade: fin,
         valor: roundToCurrency(valorNum),
         confirmado_em: confirmadoEmIso,
@@ -15516,11 +15507,6 @@ function setupReciboAjudaCusto() {
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
     if (dataPagamento) dataPagamento.value = "";
-    if (dataGeracao) {
-      const d = new Date();
-      const pad = (n) => String(n).padStart(2, "0");
-      dataGeracao.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
     if (finalidadeSelect) finalidadeSelect.value = "";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
@@ -15571,16 +15557,6 @@ function setupReciboAjudaCusto() {
           if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(formatCnpjCpfDisplay(String(r.unidade_cnpj)));
           if (competencia) competencia.value = r.competencia || "";
           if (dataPagamento) dataPagamento.value = (r.data_pagamento || "").slice(0, 10);
-          if (dataGeracao) {
-            // backend pode vir como "YYYY-MM-DD HH:mm:ss" ou ISO; normaliza para datetime-local
-            const raw = (r.data_geracao || "").toString().trim();
-            if (!raw) {
-              dataGeracao.value = "";
-            } else {
-              const iso = raw.includes("T") ? raw : raw.replace(" ", "T");
-              dataGeracao.value = iso.slice(0, 16);
-            }
-          }
           if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
           if (valor) {
             valor.dataset.value = String(Number(r.valor) || 0);

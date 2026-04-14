@@ -6866,10 +6866,9 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
         $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
             . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:1px solid #ddd;padding-bottom:12px;margin-bottom:18px}.brand{font-weight:700;font-size:18px}.meta{font-size:12px;color:#444;text-align:right}h1{font-size:18px;margin:0 0 10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:8px}.field{font-size:13px}.lbl{color:#555;font-size:12px}.val{font-weight:600}.box{border:1px solid #ddd;border-radius:10px;padding:12px}.text{margin-top:14px;font-size:13px;line-height:1.45}.sign{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:end}.line{border-top:1px solid #111;padding-top:6px;font-size:12px;color:#333}</style></head><body>';
 
-        $html .= '<div class="top"><div><div class="brand">' . e($empresa) . '</div>'
+        $html .= '<div class="top"><div><div class="brand">' . e($empresa) . ' — ' . e($un ?: '-') . '</div>'
             . '<div style="font-size:12px;color:#444;margin-top:4px;">CNPJ: ' . e($cnpj ?: '-') . '</div></div>'
             . '<div class="meta"><div><strong>Gerado em:</strong> ' . e($dataGeracao ?: now()->format('d/m/Y H:i')) . '</div>'
-            . '<div><strong>Unidade:</strong> ' . e($un ?: '-') . '</div>'
             . '<div><strong>Competência:</strong> ' . e($competencia ?: '-') . '</div></div></div>';
 
         $html .= '<h1>Recibo de ajuda de custo</h1><div class="box"><div class="grid">'
