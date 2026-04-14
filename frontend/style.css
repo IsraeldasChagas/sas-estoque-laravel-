@@ -4229,6 +4229,24 @@ textarea {
     font-weight: 700;
   }
 
+  /* Recibo ajuda: evitar scroll horizontal (celular) */
+  #reciboAjudaSection .table-wrapper {
+    overflow-x: hidden;
+  }
+  #reciboAjudaSection .table-wrapper table {
+    width: 100%;
+    min-width: 0 !important;
+  }
+  #reciboAjudaSection .table-wrapper tr,
+  #reciboAjudaSection .table-wrapper td {
+    min-width: 0;
+    max-width: 100%;
+  }
+  #reciboAjudaSection .table-wrapper td {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
   /* Sugestões modal: cabe na tela do celular, sem scroll horizontal */
   #sugestoesComprasModal {
     align-items: flex-start;
