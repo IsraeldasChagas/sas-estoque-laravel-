@@ -14836,6 +14836,7 @@ function setupReciboAjudaCusto() {
   const section = document.getElementById("reciboAjudaSection");
   if (!section) return;
 
+  const apiFeedback = document.getElementById("reciboAjudaApiFeedback");
   const edicaoId = document.getElementById("reciboAjudaEdicaoId");
   const funcionarioBusca = document.getElementById("reciboAjudaFuncionarioBusca");
   const funcionarioSelect = document.getElementById("reciboAjudaFuncionarioSelect");
@@ -14887,6 +14888,10 @@ function setupReciboAjudaCusto() {
     el.classList.toggle("hidden", !msg);
   }
 
+  function setApiFeedback(msg, kind = "info") {
+    setFeedback(apiFeedback, msg, kind);
+  }
+
   function setCanvasLocked(locked) {
     if (!canvas) return;
     canvas.classList.toggle("is-locked", !!locked);
@@ -14918,6 +14923,7 @@ function setupReciboAjudaCusto() {
   async function renderRecibosTabela() {
     if (!tableBody) return;
     try {
+      setApiFeedback("", "info");
       const lista = (await fetchRecibosAjudaLista()).sort((a, b) => Number(b.id) - Number(a.id));
       if (!lista.length) {
         tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum recibo salvo.</td></tr>`;
@@ -14949,8 +14955,9 @@ function setupReciboAjudaCusto() {
     } catch (e) {
       const msg = escapeHtml(e?.message || "Não foi possível carregar a lista.");
       tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">Falha ao listar: ${msg}</td></tr>`;
-      // toast curto para o usuário entender o motivo
       showToast(e?.message || "Falha ao listar recibos.", "error");
+      setApiFeedback(`Falha ao listar recibos na API (${API_URL}): ${e?.message || "erro"}`, "error");
+      console.error("ReciboAjuda: listar falhou", e);
     }
   }
 
@@ -15246,6 +15253,7 @@ function setupReciboAjudaCusto() {
 
   async function salvarReciboSomente() {
     try {
+      setApiFeedback("", "info");
       const fid = funcionarioSelect?.value || "";
       const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
       const uid = unidadeSelect?.value || "";
@@ -15283,15 +15291,20 @@ function setupReciboAjudaCusto() {
       const method = editing ? "PUT" : "POST";
       const resSave = await fetch(url, { method, headers, body: JSON.stringify(body) });
       if (!resSave.ok) {
-        const msg = await resSave.text().catch(() => "");
-        throw new Error(msg || "Falha ao salvar recibo");
+        const txt = await resSave.text().catch(() => "");
+        let msg = txt;
+        try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+        throw new Error(msg || `Falha ao salvar recibo (HTTP ${resSave.status})`);
       }
       const saved = await resSave.json().catch(() => null);
       if (edicaoId && saved?.id) edicaoId.value = String(saved.id);
       await renderRecibosTabela();
       showToast("Recibo salvo.", "success");
+      setApiFeedback("Salvo com sucesso no servidor.", "success");
     } catch (e) {
       showToast(e?.message || "Erro ao salvar recibo.", "error");
+      setApiFeedback(`Falha ao salvar na API (${API_URL}): ${e?.message || "erro"}`, "error");
+      console.error("ReciboAjuda: salvar falhou", e);
     }
   }
 
@@ -15385,6 +15398,7 @@ function setupReciboAjudaCusto() {
       fotoDataUrl: evidFotoDataUrl,
     });
 
+    setApiFeedback("", "info");
     // abre a janela/aba imediatamente para evitar bloqueio de popup (desktop)
     const pdfWin = window.open("about:blank", "_blank", "noopener,noreferrer");
 
@@ -15436,11 +15450,14 @@ function setupReciboAjudaCusto() {
         }
         setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
         showToast("Recibo salvo e PDF gerado.", "success");
+        setApiFeedback("PDF gerado com sucesso.", "success");
       } catch (e) {
         if (pdfWin && !pdfWin.closed) {
           try { pdfWin.close(); } catch (err) {}
         }
         showToast(e?.message || "Erro ao salvar/gerar PDF.", "error");
+        setApiFeedback(`Falha ao gerar PDF na API (${API_URL}): ${e?.message || "erro"}`, "error");
+        console.error("ReciboAjuda: gerar PDF falhou", e);
       }
     })();
   }
