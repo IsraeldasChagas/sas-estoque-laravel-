@@ -1850,6 +1850,14 @@
                   Valor (R$)
                   <input type="text" id="reciboAjudaValor" data-currency="1" inputmode="decimal" placeholder="0,00" />
                 </label>
+
+                <label>
+                  Tipo de assinatura
+                  <select id="reciboAjudaAssinaturaTipo">
+                    <option value="desenho">Assinatura (desenho)</option>
+                    <option value="codigo">Código automático (sem assinatura)</option>
+                  </select>
+                </label>
               </div>
             </div>
 
@@ -1873,6 +1881,9 @@
                   <button type="button" class="btn neutral" id="reciboAjudaCapturarIpBtn">Capturar IP</button>
                   <button type="button" class="btn neutral" id="reciboAjudaCapturarLocalBtn">Capturar localização</button>
                   <span class="subtle-text" id="reciboAjudaEvidenciasResumo"></span>
+                </div>
+                <div id="reciboAjudaModoCodigoInfo" class="subtle-text hidden" style="margin: 0.25rem 0 0.75rem;">
+                  Modo <strong>Código automático</strong>: não precisa assinatura. O sistema vai gerar um código de verificação no PDF.
                 </div>
                 <canvas id="reciboAjudaAssinaturaCanvas" class="recibo-ajuda__sign-canvas" width="900" height="220"></canvas>
               </div>

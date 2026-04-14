@@ -6613,6 +6613,21 @@ $reciboAjudaParseDate = function ($raw) {
     }
 };
 
+$reciboAjudaHmacKey = function () {
+    $k = (string) config('app.key', '');
+    if (str_starts_with($k, 'base64:')) {
+        $b64 = substr($k, 7);
+        $dec = base64_decode($b64, true);
+        if ($dec !== false) return $dec;
+    }
+    return $k;
+};
+$reciboAjudaMakeHash = function ($payload) use ($reciboAjudaHmacKey) {
+    $key = $reciboAjudaHmacKey();
+    $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    return hash_hmac('sha256', $json ?: '', $key ?: 'sas-recibo-ajuda');
+};
+
 Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -6703,6 +6718,8 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
         $finalidade = trim((string) ($body['finalidade'] ?? ''));
         $competencia = trim((string) ($body['competencia'] ?? ''));
         $valor = (float) ($body['valor'] ?? 0);
+        $assinaturaTipo = strtolower(trim((string) ($body['assinatura_tipo'] ?? 'desenho')));
+        if (!in_array($assinaturaTipo, ['desenho', 'codigo'])) $assinaturaTipo = 'desenho';
 
         if (!$funcionarioId) return response()->json(['error' => 'Funcionário obrigatório'], 422)->header('Access-Control-Allow-Origin', '*');
         if (!$finalidade) return response()->json(['error' => 'Finalidade obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -6716,10 +6733,12 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
             'data_geracao' => $reciboAjudaParseDateTime($body['data_geracao'] ?? null) ?? now()->format('Y-m-d H:i:s'),
             'finalidade' => $finalidade,
             'valor' => $valor,
-            'confirmado_em' => $reciboAjudaParseDateTime($body['confirmado_em'] ?? null),
+            'assinatura_tipo' => $assinaturaTipo,
+            'assinatura_hash' => null,
+            'confirmado_em' => $assinaturaTipo === 'desenho' ? $reciboAjudaParseDateTime($body['confirmado_em'] ?? null) : null,
             'ip_publico' => !empty($body['ip_publico']) ? $body['ip_publico'] : null,
             'geo' => !empty($body['geo']) ? $body['geo'] : null,
-            'assinatura_data_url' => !empty($body['assinatura_data_url']) ? $body['assinatura_data_url'] : null,
+            'assinatura_data_url' => $assinaturaTipo === 'desenho' && !empty($body['assinatura_data_url']) ? $body['assinatura_data_url'] : null,
             'foto_data_url' => !empty($body['foto_data_url']) ? $body['foto_data_url'] : null,
             'criado_por' => $u->id,
             'created_at' => now(),
@@ -6727,6 +6746,24 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
         ];
 
         $id = DB::table('recibos_ajuda_custo')->insertGetId($insert);
+
+        // Se modo código: gera hash verificável no servidor e salva
+        if ($assinaturaTipo === 'codigo' && Schema::hasColumn('recibos_ajuda_custo', 'assinatura_hash')) {
+            $payload = [
+                'id' => (int) $id,
+                'funcionario_id' => (int) $funcionarioId,
+                'unidade_id' => $insert['unidade_id'] ? (int) $insert['unidade_id'] : null,
+                'competencia' => $insert['competencia'],
+                'data_pagamento' => $insert['data_pagamento'],
+                'data_geracao' => $insert['data_geracao'],
+                'finalidade' => $insert['finalidade'],
+                'valor' => (string) $insert['valor'],
+                'ip_publico' => $insert['ip_publico'],
+                'geo' => $insert['geo'],
+            ];
+            $hash = $reciboAjudaMakeHash($payload);
+            DB::table('recibos_ajuda_custo')->where('id', $id)->update(['assinatura_hash' => $hash]);
+        }
         $row = DB::table('recibos_ajuda_custo as r')
             ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
             ->leftJoin('unidades', 'r.unidade_id', '=', 'unidades.id')
@@ -6760,21 +6797,42 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
         }
 
         $body = $request->json()->all() ?: [];
+        $assinaturaTipo = array_key_exists('assinatura_tipo', $body) ? strtolower(trim((string) ($body['assinatura_tipo'] ?? ''))) : ($r->assinatura_tipo ?? 'desenho');
+        if (!in_array($assinaturaTipo, ['desenho', 'codigo'])) $assinaturaTipo = 'desenho';
         $up = [
             'unidade_id' => $body['unidade_id'] ?? $r->unidade_id,
             'competencia' => array_key_exists('competencia', $body) ? (trim((string) $body['competencia']) ?: null) : $r->competencia,
             'data_pagamento' => array_key_exists('data_pagamento', $body) ? $reciboAjudaParseDate($body['data_pagamento'] ?? null) : $r->data_pagamento,
             'data_geracao' => array_key_exists('data_geracao', $body) ? ($reciboAjudaParseDateTime($body['data_geracao'] ?? null) ?? $r->data_geracao) : $r->data_geracao,
+            'assinatura_tipo' => $assinaturaTipo,
             'finalidade' => array_key_exists('finalidade', $body) ? trim((string) $body['finalidade']) : $r->finalidade,
             'valor' => array_key_exists('valor', $body) ? (float) $body['valor'] : $r->valor,
-            'confirmado_em' => array_key_exists('confirmado_em', $body) ? $reciboAjudaParseDateTime($body['confirmado_em'] ?? null) : $r->confirmado_em,
+            'confirmado_em' => array_key_exists('confirmado_em', $body) ? ($assinaturaTipo === 'desenho' ? $reciboAjudaParseDateTime($body['confirmado_em'] ?? null) : null) : $r->confirmado_em,
             'ip_publico' => array_key_exists('ip_publico', $body) ? ($body['ip_publico'] ?: null) : $r->ip_publico,
             'geo' => array_key_exists('geo', $body) ? ($body['geo'] ?: null) : $r->geo,
-            'assinatura_data_url' => array_key_exists('assinatura_data_url', $body) ? ($body['assinatura_data_url'] ?: null) : $r->assinatura_data_url,
+            'assinatura_data_url' => array_key_exists('assinatura_data_url', $body) ? ($assinaturaTipo === 'desenho' ? ($body['assinatura_data_url'] ?: null) : null) : $r->assinatura_data_url,
             'foto_data_url' => array_key_exists('foto_data_url', $body) ? ($body['foto_data_url'] ?: null) : $r->foto_data_url,
             'updated_at' => now(),
         ];
         DB::table('recibos_ajuda_custo')->where('id', $id)->update($up);
+
+        if ($assinaturaTipo === 'codigo' && Schema::hasColumn('recibos_ajuda_custo', 'assinatura_hash')) {
+            $novo = DB::table('recibos_ajuda_custo')->where('id', $id)->first();
+            $payload = [
+                'id' => (int) $id,
+                'funcionario_id' => (int) ($novo->funcionario_id ?? $r->funcionario_id),
+                'unidade_id' => $novo->unidade_id ? (int) $novo->unidade_id : null,
+                'competencia' => $novo->competencia,
+                'data_pagamento' => $novo->data_pagamento,
+                'data_geracao' => $novo->data_geracao,
+                'finalidade' => $novo->finalidade,
+                'valor' => (string) $novo->valor,
+                'ip_publico' => $novo->ip_publico,
+                'geo' => $novo->geo,
+            ];
+            $hash = $reciboAjudaMakeHash($payload);
+            DB::table('recibos_ajuda_custo')->where('id', $id)->update(['assinatura_hash' => $hash]);
+        }
 
         $row = DB::table('recibos_ajuda_custo as r')
             ->leftJoin('funcionarios', 'r.funcionario_id', '=', 'funcionarios.id')
@@ -6854,6 +6912,8 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
         $dataGeracao = !empty($r->data_geracao) ? \Carbon\Carbon::parse($r->data_geracao)->format('d/m/Y H:i') : '';
         $finalidade = $r->finalidade ?: '';
         $valor = number_format((float) ($r->valor ?? 0), 2, ',', '.');
+        $assinaturaTipo = $r->assinatura_tipo ?? 'desenho';
+        $assinaturaHash = $r->assinatura_hash ?? '';
         $evid = [];
         if (!empty($r->confirmado_em)) $evid[] = 'Confirmado em: ' . \Carbon\Carbon::parse($r->confirmado_em)->format('d/m/Y H:i');
         if (!empty($r->ip_publico)) $evid[] = 'IP: ' . $r->ip_publico;
@@ -6880,10 +6940,18 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
             . '</div><div class="text"><strong>Declaro que recebi o valor acima e confirmo as informações.</strong><br />'
             . 'Declaro, para os devidos fins, que recebi da empresa acima identificada o valor informado a título de <strong>ajuda de custo</strong>, referente à competência indicada.</div>';
 
+        if ($assinaturaTipo === 'codigo' && $assinaturaHash) {
+            $html .= '<div style="margin-top:12px;font-size:12px;color:#444;"><strong>Código de verificação:</strong> ' . e($assinaturaHash) . '</div>';
+        }
+
         if (!empty($evidTxt)) {
             $html .= '<div style="margin-top:12px;font-size:12px;color:#444;"><strong>Evidências:</strong> ' . e($evidTxt) . '</div>';
         }
-        $html .= '</div><div class="sign"><div><div class="line">Assinatura do funcionário</div>' . $assinaturaImg . $fotoImg . '</div>'
+        $assinaturaBlock = $assinaturaTipo === 'codigo'
+            ? '<div class="line">Assinatura do funcionário</div><div style="margin-top:8px;font-size:12px;color:#444;">Assinatura por código automático.</div>'
+            : '<div class="line">Assinatura do funcionário</div>' . $assinaturaImg;
+
+        $html .= '</div><div class="sign"><div>' . $assinaturaBlock . $fotoImg . '</div>'
             . '<div><div class="line">Responsável</div></div></div></body></html>';
 
         $dompdf = new \Dompdf\Dompdf();

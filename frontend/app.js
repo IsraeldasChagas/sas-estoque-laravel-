@@ -14847,11 +14847,13 @@ function setupReciboAjudaCusto() {
   const dataPagamento = document.getElementById("reciboAjudaDataPagamento");
   const finalidadeSelect = document.getElementById("reciboAjudaFinalidadeSelect");
   const valor = document.getElementById("reciboAjudaValor");
+  const assinaturaTipo = document.getElementById("reciboAjudaAssinaturaTipo");
   const btnSalvar = document.getElementById("reciboAjudaSalvarBtn");
   const btnLimpar = document.getElementById("reciboAjudaLimparBtn");
   const canvas = document.getElementById("reciboAjudaAssinaturaCanvas");
   const btnLimparAss = document.getElementById("reciboAjudaAssinaturaLimparBtn");
   const tableBody = document.getElementById("reciboAjudaTableBody");
+  const modoCodigoInfo = document.getElementById("reciboAjudaModoCodigoInfo");
 
   const togglePainelBtn = document.getElementById("reciboAjudaTogglePainelBtn");
   const painel = document.getElementById("reciboAjudaPainel");
@@ -14896,6 +14898,26 @@ function setupReciboAjudaCusto() {
     if (!canvas) return;
     canvas.classList.toggle("is-locked", !!locked);
   }
+
+  function getAssinaturaTipo() {
+    const v = (assinaturaTipo?.value || "desenho").toString().trim().toLowerCase();
+    return v === "codigo" ? "codigo" : "desenho";
+  }
+  function applyAssinaturaTipoUI() {
+    const tipo = getAssinaturaTipo();
+    const isCodigo = tipo === "codigo";
+    if (modoCodigoInfo) modoCodigoInfo.classList.toggle("hidden", !isCodigo);
+    if (btnLimparAss) btnLimparAss.disabled = isCodigo;
+    if (canvas) canvas.style.display = isCodigo ? "none" : "";
+    // No modo código: não exige WhatsApp/assinatura
+    if (isCodigo) {
+      setCanvasLocked(true);
+      setFeedback(confirmarFeedback, "Modo código: não precisa confirmação/assinatura.", "info");
+    } else {
+      setCanvasLocked(!confirmadoEmIso);
+    }
+  }
+  assinaturaTipo?.addEventListener("change", applyAssinaturaTipoUI);
 
   togglePainelBtn?.addEventListener("click", () => {
     if (!painel || !togglePainelBtn) return;
@@ -15183,7 +15205,7 @@ function setupReciboAjudaCusto() {
       valor.dataset.reciboMaskBound = "1";
       attachCurrencyMask(valor);
     }
-    // por padrão, exige confirmação antes de assinar
+    // por padrão, exige confirmação antes de assinar (exceto modo código)
     confirmadoEmIso = "";
     evidIpPublico = "";
     evidGeo = null;
@@ -15193,6 +15215,8 @@ function setupReciboAjudaCusto() {
     confirmarCodigoBtn?.classList.add("hidden");
     confirmarWhatsappLink?.classList.add("hidden");
     updateEvidResumo();
+    if (assinaturaTipo && !assinaturaTipo.value) assinaturaTipo.value = "desenho";
+    applyAssinaturaTipoUI();
     await renderRecibosTabela();
   }
 
@@ -15440,16 +15464,19 @@ function setupReciboAjudaCusto() {
       const dtPag = (dataPagamento?.value || "").trim();
       const fin = (finalidadeSelect?.value || "").trim();
       const valorNum = Number(valor?.dataset?.value || 0);
+      const tipoAss = getAssinaturaTipo();
 
       if (!fid) return showToast("Selecione o funcionário.", "warning");
       if (!uid) return showToast("Selecione a unidade.", "warning");
       if (!comp) return showToast("Informe a competência.", "warning");
       if (!fin) return showToast("Selecione a finalidade.", "warning");
       if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
-      if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
-      if (isBlankCanvas()) return showToast("Faça a assinatura antes de salvar.", "warning");
+      if (tipoAss === "desenho") {
+        if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
+        if (isBlankCanvas()) return showToast("Faça a assinatura antes de salvar.", "warning");
+      }
 
-      const assinaturaDataUrl = canvas?.toDataURL ? canvas.toDataURL("image/png") : "";
+      const assinaturaDataUrl = tipoAss === "desenho" && canvas?.toDataURL ? canvas.toDataURL("image/png") : null;
       const geoTxt = evidGeo?.lat && evidGeo?.lng ? `${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)` : "";
 
       const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
@@ -15460,9 +15487,10 @@ function setupReciboAjudaCusto() {
         unidade_id: uid || null,
         competencia: comp,
         data_pagamento: dtPag || null,
+        assinatura_tipo: tipoAss,
         finalidade: fin,
         valor: roundToCurrency(valorNum),
-        confirmado_em: confirmadoEmIso,
+        confirmado_em: tipoAss === "desenho" ? confirmadoEmIso : null,
         ip_publico: evidIpPublico,
         geo: geoTxt,
         assinatura_data_url: assinaturaDataUrl,
@@ -15544,6 +15572,7 @@ function setupReciboAjudaCusto() {
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
     if (dataPagamento) dataPagamento.value = "";
     if (finalidadeSelect) finalidadeSelect.value = "";
+    if (assinaturaTipo) assinaturaTipo.value = "desenho";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
     confirmadoEmIso = "";
@@ -15556,6 +15585,7 @@ function setupReciboAjudaCusto() {
     confirmarWhatsappLink?.classList.add("hidden");
     updateEvidResumo();
     filterFuncionarioSelect();
+    applyAssinaturaTipoUI();
   });
 
   // ações da tabela
@@ -15593,13 +15623,14 @@ function setupReciboAjudaCusto() {
           if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(formatCnpjCpfDisplay(String(r.unidade_cnpj)));
           if (competencia) competencia.value = r.competencia || "";
           if (dataPagamento) dataPagamento.value = (r.data_pagamento || "").slice(0, 10);
+          if (assinaturaTipo) assinaturaTipo.value = (r.assinatura_tipo || "desenho");
           if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
           if (valor) {
             valor.dataset.value = String(Number(r.valor) || 0);
             valor.value = (Number(r.valor) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           }
           clearSignature();
-          if (r.assinatura_data_url && canvas?.getContext) {
+          if ((r.assinatura_tipo || "desenho") === "desenho" && r.assinatura_data_url && canvas?.getContext) {
             const img = new Image();
             img.onload = () => {
               const c = canvas.getContext("2d");
@@ -15611,7 +15642,7 @@ function setupReciboAjudaCusto() {
           confirmadoEmIso = r.confirmado_em || "";
           evidIpPublico = r.ip_publico || "";
           evidGeo = null;
-          setCanvasLocked(!confirmadoEmIso);
+          applyAssinaturaTipoUI();
           setFeedback(confirmarFeedback, confirmadoEmIso ? `Confirmação já registrada em ${new Date(confirmadoEmIso).toLocaleString("pt-BR")}.` : "Confirme via WhatsApp para liberar a assinatura.", confirmadoEmIso ? "success" : "info");
           if (confirmarCodigoInput) { confirmarCodigoInput.value = ""; confirmarCodigoInput.classList.add("hidden"); }
           confirmarCodigoBtn?.classList.add("hidden");
