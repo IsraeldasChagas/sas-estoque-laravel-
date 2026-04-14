@@ -6603,6 +6603,16 @@ $reciboAjudaParseDateTime = function ($raw) {
     }
 };
 
+$reciboAjudaParseDate = function ($raw) {
+    $v = is_string($raw) ? trim($raw) : '';
+    if ($v === '') return null;
+    try {
+        return \Carbon\Carbon::parse($v)->format('Y-m-d');
+    } catch (\Exception $e) {
+        return null;
+    }
+};
+
 Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -6674,7 +6684,7 @@ Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
     }
 });
 
-Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime) {
+Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime, $reciboAjudaParseDate) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6702,6 +6712,8 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
             'funcionario_id' => $funcionarioId,
             'unidade_id' => $body['unidade_id'] ?? null,
             'competencia' => $competencia ?: null,
+            'data_pagamento' => $reciboAjudaParseDate($body['data_pagamento'] ?? null),
+            'data_geracao' => $reciboAjudaParseDateTime($body['data_geracao'] ?? null) ?? now()->format('Y-m-d H:i:s'),
             'finalidade' => $finalidade,
             'valor' => $valor,
             'confirmado_em' => $reciboAjudaParseDateTime($body['confirmado_em'] ?? null),
@@ -6732,7 +6744,7 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
     }
 });
 
-Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime) {
+Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime, $reciboAjudaParseDate) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6751,6 +6763,8 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
         $up = [
             'unidade_id' => $body['unidade_id'] ?? $r->unidade_id,
             'competencia' => array_key_exists('competencia', $body) ? (trim((string) $body['competencia']) ?: null) : $r->competencia,
+            'data_pagamento' => array_key_exists('data_pagamento', $body) ? $reciboAjudaParseDate($body['data_pagamento'] ?? null) : $r->data_pagamento,
+            'data_geracao' => array_key_exists('data_geracao', $body) ? ($reciboAjudaParseDateTime($body['data_geracao'] ?? null) ?? $r->data_geracao) : $r->data_geracao,
             'finalidade' => array_key_exists('finalidade', $body) ? trim((string) $body['finalidade']) : $r->finalidade,
             'valor' => array_key_exists('valor', $body) ? (float) $body['valor'] : $r->valor,
             'confirmado_em' => array_key_exists('confirmado_em', $body) ? $reciboAjudaParseDateTime($body['confirmado_em'] ?? null) : $r->confirmado_em,
@@ -6836,6 +6850,8 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
         $cpf = $r->funcionario_cpf ?: '';
         $un = $r->unidade_nome ?: '';
         $competencia = $r->competencia ?: '';
+        $dataPagamento = !empty($r->data_pagamento) ? \Carbon\Carbon::parse($r->data_pagamento)->format('d/m/Y') : '';
+        $dataGeracao = !empty($r->data_geracao) ? \Carbon\Carbon::parse($r->data_geracao)->format('d/m/Y H:i') : '';
         $finalidade = $r->finalidade ?: '';
         $valor = number_format((float) ($r->valor ?? 0), 2, ',', '.');
         $evid = [];
@@ -6852,7 +6868,7 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
 
         $html .= '<div class="top"><div><div class="brand">' . e($empresa) . '</div>'
             . '<div style="font-size:12px;color:#444;margin-top:4px;">CNPJ: ' . e($cnpj ?: '-') . '</div></div>'
-            . '<div class="meta"><div><strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>'
+            . '<div class="meta"><div><strong>Gerado em:</strong> ' . e($dataGeracao ?: now()->format('d/m/Y H:i')) . '</div>'
             . '<div><strong>Unidade:</strong> ' . e($un ?: '-') . '</div>'
             . '<div><strong>Competência:</strong> ' . e($competencia ?: '-') . '</div></div></div>';
 
@@ -6861,6 +6877,7 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
             . '<div class="field"><div class="lbl">CPF</div><div class="val">' . e($cpf ?: '-') . '</div></div>'
             . '<div class="field"><div class="lbl">Valor</div><div class="val">R$ ' . e($valor) . '</div></div>'
             . '<div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">' . e($finalidade ?: '-') . '</div></div>'
+            . '<div class="field"><div class="lbl">Data de pagamento</div><div class="val">' . e($dataPagamento ?: '-') . '</div></div>'
             . '</div><div class="text"><strong>Declaro que recebi o valor acima e confirmo as informações.</strong><br />'
             . 'Declaro, para os devidos fins, que recebi da empresa acima identificada o valor informado a título de <strong>ajuda de custo</strong>, referente à competência indicada.</div>';
 

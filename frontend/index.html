@@ -1770,11 +1770,10 @@
             <div class="boletos-header">
               <div>
                 <h2>🧾 Recibo (ajuda de custo)</h2>
-                <p class="subtle-text">Preencha os dados, assine e clique em <strong>Gerar PDF</strong> para abrir o recibo pronto para salvar/imprimir.</p>
+                <p class="subtle-text">Preencha os dados, confirme, assine e salve. Use <strong>Ver</strong> na lista para abrir o PDF.</p>
               </div>
               <div class="boletos-actions">
                 <button type="button" class="btn secondary" id="reciboAjudaSalvarBtn">Salvar</button>
-                <button type="button" class="btn primary" id="reciboAjudaGerarPdfBtn">Gerar PDF</button>
                 <button type="button" class="btn neutral" id="reciboAjudaLimparBtn">Limpar</button>
               </div>
             </div>
@@ -1816,6 +1815,16 @@
                 <label>
                   Competência
                   <input type="month" id="reciboAjudaCompetencia" />
+                </label>
+
+                <label>
+                  Data de pagamento
+                  <input type="date" id="reciboAjudaDataPagamento" />
+                </label>
+
+                <label>
+                  Data/hora de geração
+                  <input type="datetime-local" id="reciboAjudaDataGeracao" />
                 </label>
 
                 <label class="recibo-ajuda__finalidade">
@@ -3750,6 +3759,7 @@
         </div>
         <footer style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
           <a class="btn secondary" id="reciboAjudaPdfBaixar" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:none;">⬇️ Baixar</a>
+          <button type="button" class="btn primary" id="reciboAjudaPdfGerarBtn">Gerar PDF</button>
           <button type="button" class="btn neutral" id="fecharReciboAjudaPdf">Fechar</button>
         </footer>
       </div>

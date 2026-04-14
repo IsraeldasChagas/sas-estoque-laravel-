@@ -14844,10 +14844,11 @@ function setupReciboAjudaCusto() {
   const unidadeSelect = document.getElementById("reciboAjudaUnidadeSelect");
   const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
   const competencia = document.getElementById("reciboAjudaCompetencia");
+  const dataPagamento = document.getElementById("reciboAjudaDataPagamento");
+  const dataGeracao = document.getElementById("reciboAjudaDataGeracao");
   const finalidadeSelect = document.getElementById("reciboAjudaFinalidadeSelect");
   const valor = document.getElementById("reciboAjudaValor");
   const btnSalvar = document.getElementById("reciboAjudaSalvarBtn");
-  const btnPdf = document.getElementById("reciboAjudaGerarPdfBtn");
   const btnLimpar = document.getElementById("reciboAjudaLimparBtn");
   const canvas = document.getElementById("reciboAjudaAssinaturaCanvas");
   const btnLimparAss = document.getElementById("reciboAjudaAssinaturaLimparBtn");
@@ -14986,6 +14987,7 @@ function setupReciboAjudaCusto() {
     if (!modal || !host || !frame) return;
 
     if (title) title.textContent = `🧾 Recibo (PDF) #${id}`;
+    modal.dataset.reciboAjudaId = String(id);
     limparVisualizacaoPdfReciboAjuda();
     modal.classList.add('active');
 
@@ -15030,6 +15032,13 @@ function setupReciboAjudaCusto() {
   document.getElementById('fecharReciboAjudaPdf')?.addEventListener('click', closeReciboPdf);
   document.getElementById('reciboAjudaPdfModal')?.addEventListener('click', (e) => {
     if (e.target && e.target.id === 'reciboAjudaPdfModal') closeReciboPdf();
+  });
+
+  document.getElementById('reciboAjudaPdfGerarBtn')?.addEventListener('click', async () => {
+    const modal = document.getElementById('reciboAjudaPdfModal');
+    const id = modal?.dataset?.reciboAjudaId;
+    if (!id) return showToast("Salve o recibo antes de gerar/visualizar o PDF.", "warning");
+    await abrirReciboAjudaPdfModal(id);
   });
 
   function updateEvidResumo() {
@@ -15135,6 +15144,12 @@ function setupReciboAjudaCusto() {
     await loadFuncionarios(false).catch(() => {});
     populateReciboAjudaSelects();
     if (competencia && !competencia.value) competencia.value = new Date().toISOString().slice(0, 7);
+    if (dataGeracao && !dataGeracao.value) {
+      // datetime-local: yyyy-MM-ddTHH:mm
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      dataGeracao.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
     if (valor && !valor.dataset.reciboMaskBound) {
       valor.dataset.reciboMaskBound = "1";
       attachCurrencyMask(valor);
@@ -15393,6 +15408,8 @@ function setupReciboAjudaCusto() {
       const uid = unidadeSelect?.value || "";
       const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
       const comp = (competencia?.value || "").trim();
+      const dtPag = (dataPagamento?.value || "").trim();
+      const dtGer = (dataGeracao?.value || "").trim();
       const fin = (finalidadeSelect?.value || "").trim();
       const valorNum = Number(valor?.dataset?.value || 0);
 
@@ -15414,6 +15431,8 @@ function setupReciboAjudaCusto() {
         funcionario_id: fid,
         unidade_id: uid || null,
         competencia: comp,
+        data_pagamento: dtPag || null,
+        data_geracao: dtGer ? new Date(dtGer).toISOString() : null,
         finalidade: fin,
         valor: roundToCurrency(valorNum),
         confirmado_em: confirmadoEmIso,
@@ -15485,108 +15504,9 @@ function setupReciboAjudaCusto() {
   capturarLocalBtn?.addEventListener("click", captureGeo);
   // Foto removida (evidência opcional) por solicitação.
 
-  function gerarPdf() {
-    const fid = funcionarioSelect?.value || "";
-    const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
-    const uid = unidadeSelect?.value || "";
-    const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
-
-    const comp = (competencia?.value || "").trim();
-    const fin = (finalidadeSelect?.value || "").trim();
-    const valorNum = Number(valor?.dataset?.value || 0);
-
-    if (!fid) return showToast("Selecione o funcionário.", "warning");
-    if (!uid) return showToast("Selecione a unidade.", "warning");
-    if (!comp) return showToast("Informe a competência.", "warning");
-    if (!fin) return showToast("Selecione a finalidade.", "warning");
-    if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
-    if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
-    if (isBlankCanvas()) return showToast("Faça a assinatura antes de gerar o PDF.", "warning");
-
-    const assinaturaDataUrl = canvas?.toDataURL ? canvas.toDataURL("image/png") : "";
-    const geoTxt = evidGeo?.lat && evidGeo?.lng ? `${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)` : "";
-    const html = gerarReciboHtml({
-      funcionarioNome: func?.nome_completo || func?.nome || "",
-      funcionarioCpf: funcionarioCpf?.value || (func?.cpf ? formatCnpjCpfDisplay(String(func.cpf)) : ""),
-      unidadeNome: un?.nome || "",
-      unidadeCnpj: unidadeCnpj?.value || "",
-      competencia: comp,
-      finalidade: FINALIDADE_LABELS[fin] || fin,
-      valorFmt: formatCurrencyBRL(valorNum),
-      assinaturaDataUrl,
-      confirmadoEm: confirmadoEmIso,
-      ipPublico: evidIpPublico,
-      geo: geoTxt,
-      fotoDataUrl: null,
-    });
-
-    setApiFeedback("", "info");
-    // abre a janela/aba imediatamente para evitar bloqueio de popup (desktop)
-    const pdfWin = window.open("about:blank", "_blank", "noopener,noreferrer");
-
-    (async () => {
-      try {
-        const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
-        if ((currentUser?.perfil || "").toString().trim().toUpperCase() === "ADMIN") headers["X-Debug"] = "1";
-        const editing = (edicaoId?.value || "").trim();
-        const body = {
-          funcionario_id: fid,
-          unidade_id: uid || null,
-          competencia: comp,
-          finalidade: fin,
-          valor: roundToCurrency(valorNum),
-          confirmado_em: confirmadoEmIso,
-          ip_publico: evidIpPublico,
-          geo: geoTxt,
-          assinatura_data_url: assinaturaDataUrl,
-          foto_data_url: null,
-        };
-        const url = editing ? `${API_URL}/recibos-ajuda/${encodeURIComponent(editing)}` : `${API_URL}/recibos-ajuda`;
-        const method = editing ? "PUT" : "POST";
-        const resSave = await fetch(url, { method, headers, body: JSON.stringify(body) });
-        if (!resSave.ok) {
-          const txt = await resSave.text().catch(() => "");
-          let msg = txt;
-          try { const j = JSON.parse(txt); if (j && typeof j === "object") msg = j.details || j.error || msg; } catch (e) {}
-          throw new Error(msg || `Falha ao salvar recibo (HTTP ${resSave.status})`);
-        }
-        const saved = await resSave.json().catch(() => null);
-        const savedId = saved?.id ? String(saved.id) : editing;
-        if (edicaoId) edicaoId.value = "";
-        await renderRecibosTabela();
-
-        // Agora baixa o PDF do servidor e abre em nova aba
-        const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(savedId)}/pdf`, { method: "GET", headers, cache: "no-store" });
-        if (!resPdf.ok) {
-          const txt = await resPdf.text().catch(() => "");
-          let msg = txt;
-          try { const j = JSON.parse(txt); if (j && typeof j === "object") msg = j.details || j.error || msg; } catch (e) {}
-          throw new Error(msg || `Falha ao gerar PDF (HTTP ${resPdf.status})`);
-        }
-        const blob = await resPdf.blob();
-        const urlBlob = URL.createObjectURL(blob);
-        if (pdfWin && !pdfWin.closed) {
-          try { pdfWin.location.href = urlBlob; } catch (e) {}
-        } else {
-          const w2 = window.open(urlBlob, "_blank", "noopener,noreferrer");
-          if (!w2) throw new Error("Popup bloqueado. Permita popups para gerar/visualizar o PDF.");
-        }
-        setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
-        showToast("Recibo salvo e PDF gerado.", "success");
-        setApiFeedback("PDF gerado com sucesso.", "success");
-      } catch (e) {
-        if (pdfWin && !pdfWin.closed) {
-          try { pdfWin.close(); } catch (err) {}
-        }
-        showToast(e?.message || "Erro ao salvar/gerar PDF.", "error");
-        setApiFeedback(`Falha ao gerar PDF na API (${API_URL}): ${e?.message || "erro"}`, "error");
-        console.error("ReciboAjuda: gerar PDF falhou", e);
-      }
-    })();
-  }
+  // Geração/visualização do PDF agora acontece no botão "Ver" (modal).
 
   btnSalvar?.addEventListener("click", salvarReciboSomente);
-  btnPdf?.addEventListener("click", gerarPdf);
   btnLimpar?.addEventListener("click", () => {
     if (edicaoId) edicaoId.value = "";
     if (funcionarioBusca) funcionarioBusca.value = "";
@@ -15595,6 +15515,12 @@ function setupReciboAjudaCusto() {
     if (unidadeSelect) unidadeSelect.value = "";
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
+    if (dataPagamento) dataPagamento.value = "";
+    if (dataGeracao) {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      dataGeracao.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
     if (finalidadeSelect) finalidadeSelect.value = "";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
@@ -15644,6 +15570,17 @@ function setupReciboAjudaCusto() {
           setUnidadeCnpjFromSelect();
           if (unidadeCnpj && r.unidade_cnpj) unidadeCnpj.value = String(formatCnpjCpfDisplay(String(r.unidade_cnpj)));
           if (competencia) competencia.value = r.competencia || "";
+          if (dataPagamento) dataPagamento.value = (r.data_pagamento || "").slice(0, 10);
+          if (dataGeracao) {
+            // backend pode vir como "YYYY-MM-DD HH:mm:ss" ou ISO; normaliza para datetime-local
+            const raw = (r.data_geracao || "").toString().trim();
+            if (!raw) {
+              dataGeracao.value = "";
+            } else {
+              const iso = raw.includes("T") ? raw : raw.replace(" ", "T");
+              dataGeracao.value = iso.slice(0, 16);
+            }
+          }
           if (finalidadeSelect) finalidadeSelect.value = r.finalidade || "";
           if (valor) {
             valor.dataset.value = String(Number(r.valor) || 0);
