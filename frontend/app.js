@@ -14903,50 +14903,55 @@ function setupReciboAjudaCusto() {
   }
 
   async function fetchRecibosAjudaLista() {
-    try {
-      const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
-      const res = await fetch(`${API_URL}/recibos-ajuda`, { method: "GET", headers, cache: "no-store" });
-      if (!res.ok) {
-        const msg = await res.text().catch(() => "");
-        throw new Error(msg || "Falha ao carregar recibos");
-      }
-      const data = await res.json().catch(() => []);
-      return Array.isArray(data) ? data : [];
-    } catch (e) {
-      return [];
+    const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+    const res = await fetch(`${API_URL}/recibos-ajuda`, { method: "GET", headers, cache: "no-store" });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      let msg = txt;
+      try { const j = JSON.parse(txt); if (j && typeof j === "object" && j.error) msg = j.error; } catch (e) {}
+      throw new Error(msg || `Falha ao carregar recibos (HTTP ${res.status})`);
     }
+    const data = await res.json().catch(() => []);
+    return Array.isArray(data) ? data : [];
   }
 
   async function renderRecibosTabela() {
     if (!tableBody) return;
-    const lista = (await fetchRecibosAjudaLista()).sort((a, b) => Number(b.id) - Number(a.id));
-    if (!lista.length) {
-      tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum recibo salvo.</td></tr>`;
-      return;
+    try {
+      const lista = (await fetchRecibosAjudaLista()).sort((a, b) => Number(b.id) - Number(a.id));
+      if (!lista.length) {
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum recibo salvo.</td></tr>`;
+        return;
+      }
+      tableBody.innerHTML = lista
+        .map((r) => {
+          const fid = escapeHtml(r.funcionario_nome || "-");
+          const un = escapeHtml(r.unidade_nome || "-");
+          const comp = escapeHtml(r.competencia || "-");
+          const fin = escapeHtml(FINALIDADE_LABELS[r.finalidade] || r.finalidade || "-");
+          const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
+          const id = escapeHtml(String(r.id));
+          return `<tr>
+            <td data-label="Nº">#${id}</td>
+            <td data-label="Funcionário">${fid}</td>
+            <td data-label="Unidade">${un}</td>
+            <td data-label="Competência">${comp}</td>
+            <td data-label="Finalidade">${fin}</td>
+            <td data-label="Valor">${v}</td>
+            <td data-label="Ações" class="table-actions">
+              <button type="button" class="table-action" data-reciboajuda-ver="${id}">Ver</button>
+              <button type="button" class="table-action" data-reciboajuda-edit="${id}">Editar</button>
+              <button type="button" class="table-action" data-reciboajuda-del="${id}">Deletar</button>
+            </td>
+          </tr>`;
+        })
+        .join("");
+    } catch (e) {
+      const msg = escapeHtml(e?.message || "Não foi possível carregar a lista.");
+      tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">Falha ao listar: ${msg}</td></tr>`;
+      // toast curto para o usuário entender o motivo
+      showToast(e?.message || "Falha ao listar recibos.", "error");
     }
-    tableBody.innerHTML = lista
-      .map((r) => {
-        const fid = escapeHtml(r.funcionario_nome || "-");
-        const un = escapeHtml(r.unidade_nome || "-");
-        const comp = escapeHtml(r.competencia || "-");
-        const fin = escapeHtml(FINALIDADE_LABELS[r.finalidade] || r.finalidade || "-");
-        const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
-        const id = escapeHtml(String(r.id));
-        return `<tr>
-          <td data-label="Nº">#${id}</td>
-          <td data-label="Funcionário">${fid}</td>
-          <td data-label="Unidade">${un}</td>
-          <td data-label="Competência">${comp}</td>
-          <td data-label="Finalidade">${fin}</td>
-          <td data-label="Valor">${v}</td>
-          <td data-label="Ações" class="table-actions">
-            <button type="button" class="table-action" data-reciboajuda-ver="${id}">Ver</button>
-            <button type="button" class="table-action" data-reciboajuda-edit="${id}">Editar</button>
-            <button type="button" class="table-action" data-reciboajuda-del="${id}">Deletar</button>
-          </td>
-        </tr>`;
-      })
-      .join("");
   }
 
   function setUnidadeCnpjFromSelect() {
