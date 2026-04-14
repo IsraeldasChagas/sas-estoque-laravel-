@@ -14845,6 +14845,7 @@ function setupReciboAjudaCusto() {
   const competencia = document.getElementById("reciboAjudaCompetencia");
   const finalidadeSelect = document.getElementById("reciboAjudaFinalidadeSelect");
   const valor = document.getElementById("reciboAjudaValor");
+  const btnSalvar = document.getElementById("reciboAjudaSalvarBtn");
   const btnPdf = document.getElementById("reciboAjudaGerarPdfBtn");
   const btnLimpar = document.getElementById("reciboAjudaLimparBtn");
   const canvas = document.getElementById("reciboAjudaAssinaturaCanvas");
@@ -15238,6 +15239,57 @@ function setupReciboAjudaCusto() {
     return !!confirmadoEmIso;
   }
 
+  async function salvarReciboSomente() {
+    try {
+      const fid = funcionarioSelect?.value || "";
+      const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
+      const uid = unidadeSelect?.value || "";
+      const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
+      const comp = (competencia?.value || "").trim();
+      const fin = (finalidadeSelect?.value || "").trim();
+      const valorNum = Number(valor?.dataset?.value || 0);
+
+      if (!fid) return showToast("Selecione o funcionário.", "warning");
+      if (!uid) return showToast("Selecione a unidade.", "warning");
+      if (!comp) return showToast("Informe a competência.", "warning");
+      if (!fin) return showToast("Selecione a finalidade.", "warning");
+      if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
+      if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
+      if (isBlankCanvas()) return showToast("Faça a assinatura antes de salvar.", "warning");
+
+      const assinaturaDataUrl = canvas?.toDataURL ? canvas.toDataURL("image/png") : "";
+      const geoTxt = evidGeo?.lat && evidGeo?.lng ? `${evidGeo.lat.toFixed(5)}, ${evidGeo.lng.toFixed(5)} (±${Math.round(evidGeo.acc || 0)}m)` : "";
+
+      const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
+      const editing = (edicaoId?.value || "").trim();
+      const body = {
+        funcionario_id: fid,
+        unidade_id: uid || null,
+        competencia: comp,
+        finalidade: fin,
+        valor: roundToCurrency(valorNum),
+        confirmado_em: confirmadoEmIso,
+        ip_publico: evidIpPublico,
+        geo: geoTxt,
+        assinatura_data_url: assinaturaDataUrl,
+        foto_data_url: evidFotoDataUrl,
+      };
+      const url = editing ? `${API_URL}/recibos-ajuda/${encodeURIComponent(editing)}` : `${API_URL}/recibos-ajuda`;
+      const method = editing ? "PUT" : "POST";
+      const resSave = await fetch(url, { method, headers, body: JSON.stringify(body) });
+      if (!resSave.ok) {
+        const msg = await resSave.text().catch(() => "");
+        throw new Error(msg || "Falha ao salvar recibo");
+      }
+      const saved = await resSave.json().catch(() => null);
+      if (edicaoId && saved?.id) edicaoId.value = String(saved.id);
+      await renderRecibosTabela();
+      showToast("Recibo salvo.", "success");
+    } catch (e) {
+      showToast(e?.message || "Erro ao salvar recibo.", "error");
+    }
+  }
+
   confirmarSolicitarBtn?.addEventListener("click", () => {
     const fid = funcionarioSelect?.value || "";
     const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
@@ -15377,6 +15429,7 @@ function setupReciboAjudaCusto() {
     })();
   }
 
+  btnSalvar?.addEventListener("click", salvarReciboSomente);
   btnPdf?.addEventListener("click", gerarPdf);
   btnLimpar?.addEventListener("click", () => {
     if (edicaoId) edicaoId.value = "";
