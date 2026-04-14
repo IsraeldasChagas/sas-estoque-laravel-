@@ -15033,13 +15033,6 @@ function setupReciboAjudaCusto() {
     if (e.target && e.target.id === 'reciboAjudaPdfModal') closeReciboPdf();
   });
 
-  document.getElementById('reciboAjudaPdfGerarBtn')?.addEventListener('click', async () => {
-    const modal = document.getElementById('reciboAjudaPdfModal');
-    const id = modal?.dataset?.reciboAjudaId;
-    if (!id) return showToast("Salve o recibo antes de gerar/visualizar o PDF.", "warning");
-    await abrirReciboAjudaPdfModal(id);
-  });
-
   document.getElementById('reciboAjudaPdfSalvarBtn')?.addEventListener('click', async () => {
     const modal = document.getElementById('reciboAjudaPdfModal');
     const id = modal?.dataset?.reciboAjudaId;
