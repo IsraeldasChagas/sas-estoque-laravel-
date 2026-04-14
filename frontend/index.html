@@ -3730,6 +3730,31 @@
       </div>
     </div>
 
+    <!-- Modal de Visualização do Recibo (PDF) - Ajuda de custo (sem sair da página) -->
+    <div class="modal-backdrop" id="reciboAjudaPdfModal">
+      <div class="modal" style="width: min(920px, 96vw);">
+        <header>
+          <h2 id="reciboAjudaPdfTitle">🧾 Recibo (PDF)</h2>
+          <button type="button" class="close-btn" id="closeReciboAjudaPdf" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
+          <!-- PDF: renderizado com PDF.js (canvas) — iframe+blob falha em muitos celulares -->
+          <div
+            id="reciboAjudaPdfHost"
+            class="recibo-ajuda-pdf-host"
+            aria-live="polite"
+            style="display: none"
+          ></div>
+          <!-- Fallback desktop (se PDF.js não carregar) -->
+          <iframe id="reciboAjudaPdfFrame" title="Recibo PDF" style="display:none;width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
+        </div>
+        <footer style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
+          <a class="btn secondary" id="reciboAjudaPdfBaixar" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:none;">⬇️ Baixar</a>
+          <button type="button" class="btn neutral" id="fecharReciboAjudaPdf">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
     <!-- Modal de Detalhes do Boleto -->
     <div class="modal-backdrop" id="boletoDetalhesModal">
       <div class="modal">

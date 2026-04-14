@@ -14894,6 +14894,144 @@ function setupReciboAjudaCusto() {
     canvas.classList.toggle("is-locked", !!locked);
   }
 
+  // === Modal PDF (Recibo ajuda) ===
+  let reciboAjudaPdfObjectUrl = null;
+  let reciboAjudaPdfDocumentProxy = null;
+  let reciboAjudaPdfLoadingTask = null;
+
+  function limparVisualizacaoPdfReciboAjuda() {
+    if (reciboAjudaPdfDocumentProxy) {
+      try { reciboAjudaPdfDocumentProxy.destroy(); } catch (_) {}
+      reciboAjudaPdfDocumentProxy = null;
+    }
+    if (reciboAjudaPdfLoadingTask) {
+      try { reciboAjudaPdfLoadingTask.destroy(); } catch (_) {}
+      reciboAjudaPdfLoadingTask = null;
+    }
+    const host = document.getElementById('reciboAjudaPdfHost');
+    if (host) {
+      host.innerHTML = '';
+      host.style.display = 'none';
+    }
+    const frame = document.getElementById('reciboAjudaPdfFrame');
+    if (frame) {
+      frame.src = 'about:blank';
+      frame.style.display = 'none';
+    }
+    const dl = document.getElementById('reciboAjudaPdfBaixar');
+    if (dl) {
+      dl.href = '#';
+      dl.style.display = 'none';
+    }
+    if (reciboAjudaPdfObjectUrl) {
+      try { URL.revokeObjectURL(reciboAjudaPdfObjectUrl); } catch (_) {}
+      reciboAjudaPdfObjectUrl = null;
+    }
+  }
+
+  async function renderizarPdfReciboAjudaComPdfJs(arrayBuffer) {
+    const host = document.getElementById('reciboAjudaPdfHost');
+    const frame = document.getElementById('reciboAjudaPdfFrame');
+    if (!host) throw new Error('Container de PDF ausente');
+    limparVisualizacaoPdfReciboAjuda();
+
+    host.style.display = 'block';
+    host.innerHTML = '<p style="text-align:center;color:#e0e0e0;padding:1.25rem;margin:0;">Carregando documento…</p>';
+
+    // Reaproveita o loader do Alvará (PDF.js)
+    const pdfjsLib = await ensurePdfJsParaAlvara();
+    const data = arrayBuffer.slice(0);
+    reciboAjudaPdfLoadingTask = pdfjsLib.getDocument({ data });
+    let pdf;
+    try {
+      pdf = await reciboAjudaPdfLoadingTask.promise;
+    } finally {
+      reciboAjudaPdfLoadingTask = null;
+    }
+    reciboAjudaPdfDocumentProxy = pdf;
+
+    host.innerHTML = '';
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const hostW = Math.max(280, host.getBoundingClientRect().width || window.innerWidth - 48);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const baseVp = page.getViewport({ scale: 1 });
+      const scale = Math.min(2.5, hostW / baseVp.width);
+      const viewport = page.getViewport({ scale: scale * dpr });
+      const c = document.createElement('canvas');
+      const ctx = c.getContext('2d', { alpha: false });
+      c.width = viewport.width;
+      c.height = viewport.height;
+      c.style.width = `${viewport.width / dpr}px`;
+      c.style.maxWidth = '100%';
+      c.style.height = 'auto';
+      host.appendChild(c);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+
+    if (frame) {
+      frame.style.display = 'none';
+      frame.src = 'about:blank';
+    }
+  }
+
+  async function abrirReciboAjudaPdfModal(id) {
+    const modal = document.getElementById('reciboAjudaPdfModal');
+    const host = document.getElementById('reciboAjudaPdfHost');
+    const frame = document.getElementById('reciboAjudaPdfFrame');
+    const title = document.getElementById('reciboAjudaPdfTitle');
+    const baixar = document.getElementById('reciboAjudaPdfBaixar');
+    if (!modal || !host || !frame) return;
+
+    if (title) title.textContent = `🧾 Recibo (PDF) #${id}`;
+    limparVisualizacaoPdfReciboAjuda();
+    modal.classList.add('active');
+
+    try {
+      const headers = {
+        ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+        ...getDeviceHeaders(),
+      };
+      // NÃO enviar Content-Type JSON em binário
+      const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}/pdf`, { method: "GET", headers, cache: "no-store" });
+      if (!resPdf.ok) throw new Error("Não foi possível carregar o PDF.");
+      const blob = await resPdf.blob();
+      reciboAjudaPdfObjectUrl = URL.createObjectURL(blob);
+      if (baixar) {
+        baixar.href = reciboAjudaPdfObjectUrl;
+        baixar.style.display = '';
+      }
+      const buffer = await blob.arrayBuffer();
+      try {
+        await renderizarPdfReciboAjudaComPdfJs(buffer);
+      } catch (pdfErr) {
+        // fallback: iframe
+        if (host) host.style.display = 'none';
+        frame.src = reciboAjudaPdfObjectUrl;
+        frame.style.display = 'block';
+      }
+    } catch (e) {
+      if (host) {
+        host.style.display = 'block';
+        host.innerHTML = '<p style="text-align:center;color:#ff8a80;padding:1.25rem;margin:0;">❌ Erro ao carregar PDF</p>';
+      }
+    }
+  }
+
+  const closeReciboPdf = () => {
+    const m = document.getElementById('reciboAjudaPdfModal');
+    if (m) m.classList.remove('active');
+    limparVisualizacaoPdfReciboAjuda();
+  };
+  document.getElementById('closeReciboAjudaPdf')?.addEventListener('click', closeReciboPdf);
+  document.getElementById('fecharReciboAjudaPdf')?.addEventListener('click', closeReciboPdf);
+  document.getElementById('reciboAjudaPdfModal')?.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'reciboAjudaPdfModal') closeReciboPdf();
+  });
+
   function updateEvidResumo() {
     if (!evidResumo) return;
     const parts = [];
@@ -15482,20 +15620,7 @@ function setupReciboAjudaCusto() {
     if (ver) {
       (async () => {
         try {
-          const w0 = window.open("about:blank", "_blank", "noopener,noreferrer");
-          if (!w0) return showToast("Popup bloqueado. Permita popups para visualizar o PDF.", "warning");
-          const headers = { "Content-Type": "application/json", "X-Usuario-Id": String(currentUser?.id || ""), ...getDeviceHeaders() };
-          const resPdf = await fetch(`${API_URL}/recibos-ajuda/${encodeURIComponent(String(id))}/pdf`, { method: "GET", headers, cache: "no-store" });
-          if (!resPdf.ok) throw new Error("Falha ao abrir PDF");
-          const blob = await resPdf.blob();
-          const urlBlob = URL.createObjectURL(blob);
-          if (w0 && !w0.closed) {
-            try { w0.location.href = urlBlob; } catch (e) {}
-          } else {
-            const w = window.open(urlBlob, "_blank", "noopener,noreferrer");
-            if (!w) return showToast("Popup bloqueado. Permita popups para visualizar o PDF.", "warning");
-          }
-          setTimeout(() => URL.revokeObjectURL(urlBlob), 60_000);
+          await abrirReciboAjudaPdfModal(id);
         } catch (e) {
           showToast("Não foi possível abrir o PDF.", "error");
         }
