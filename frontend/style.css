@@ -5626,6 +5626,32 @@ select[size]:not([size="1"]) {
   line-height: 1.5;
 }
 
+/* Recibo ajuda de custo */
+.recibo-ajuda__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem 1.25rem;
+  padding: 0 1.25rem 1rem;
+}
+.recibo-ajuda__finalidade {
+  grid-column: 1 / -1;
+}
+.recibo-ajuda__sign-actions {
+  display: flex;
+  gap: 12px;
+}
+.recibo-ajuda__sign-wrap {
+  padding: 0 1.25rem 1.25rem;
+}
+.recibo-ajuda__sign-canvas {
+  width: 100%;
+  max-width: 100%;
+  background: #fff;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  touch-action: none; /* importante para desenhar no mobile */
+}
+
 .fechamento-audit__toggle-principal {
   min-width: 2.5rem;
   padding-left: 0.65rem;

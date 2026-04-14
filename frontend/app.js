@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -354,7 +354,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -386,7 +386,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechamento", "fechaTecnica", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechaTecnica", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -394,7 +394,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "fechamento", "fechaTecnica"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechaTecnica"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2750,6 +2750,7 @@ function applyPermissions() {
       regras.sections.includes("boletao") ||
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
+      regras.sections.includes("reciboAjuda") ||
       regras.sections.includes("fechamento");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
@@ -2902,7 +2903,7 @@ function navigateTo(section) {
   }
   const financeiroNavSubmenuNav = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenuNav) {
-    if (section === "boletao" || section === "alvara" || section === "proventos" || section === "fechamento") {
+    if (section === "boletao" || section === "alvara" || section === "proventos" || section === "reciboAjuda" || section === "fechamento") {
       financeiroNavSubmenuNav.classList.add("open");
     } else {
       financeiroNavSubmenuNav.classList.remove("open");
@@ -10732,6 +10733,13 @@ function setupNavigation() {
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
       else if (target === "funcionarios") await loadFuncionarios();
+      else if (target === "reciboAjuda") {
+        if (typeof window.loadReciboAjudaSection === "function") {
+          await window.loadReciboAjudaSection();
+        } else {
+          await Promise.all([loadUnidades(false).catch(() => {}), loadFuncionarios(false).catch(() => {})]);
+        }
+      }
       else if (target === "proventos") {
         try {
           const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -14824,6 +14832,255 @@ function setupFechamentoCaixaAuditoria() {
   });
 }
 
+function setupReciboAjudaCusto() {
+  const section = document.getElementById("reciboAjudaSection");
+  if (!section) return;
+
+  const funcionarioBusca = document.getElementById("reciboAjudaFuncionarioBusca");
+  const funcionarioSelect = document.getElementById("reciboAjudaFuncionarioSelect");
+  const unidadeSelect = document.getElementById("reciboAjudaUnidadeSelect");
+  const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
+  const competencia = document.getElementById("reciboAjudaCompetencia");
+  const finalidade = document.getElementById("reciboAjudaFinalidade");
+  const valor = document.getElementById("reciboAjudaValor");
+  const btnPdf = document.getElementById("reciboAjudaGerarPdfBtn");
+  const btnLimpar = document.getElementById("reciboAjudaLimparBtn");
+  const canvas = document.getElementById("reciboAjudaAssinaturaCanvas");
+  const btnLimparAss = document.getElementById("reciboAjudaAssinaturaLimparBtn");
+
+  function setUnidadeCnpjFromSelect() {
+    if (!unidadeCnpj) return;
+    const uid = (unidadeSelect?.value || "").trim();
+    const u = (state.unidades || []).find((x) => String(x.id) === String(uid));
+    const raw = u?.cnpj;
+    unidadeCnpj.value = raw != null && String(raw).trim() !== "" ? formatCnpjCpfDisplay(String(raw)) : "";
+  }
+
+  function populateReciboAjudaSelects() {
+    if (funcionarioSelect) {
+      const ativos = (state.funcionarios || []).filter((f) => (f.status || "ativo") === "ativo");
+      funcionarioSelect.innerHTML =
+        '<option value="">Selecione</option>' +
+        ativos
+          .map((f) => `<option value="${f.id}">${escapeHtml(f.nome_completo || f.nome || "")}</option>`)
+          .join("");
+    }
+    if (unidadeSelect) {
+      unidadeSelect.innerHTML =
+        '<option value="">Selecione a unidade</option>' +
+        (state.unidades || []).map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`).join("");
+    }
+    setUnidadeCnpjFromSelect();
+  }
+
+  async function loadReciboAjudaSection() {
+    await loadUnidades(false).catch(() => {});
+    await loadFuncionarios(false).catch(() => {});
+    populateReciboAjudaSelects();
+    if (competencia && !competencia.value) competencia.value = new Date().toISOString().slice(0, 7);
+    if (valor && !valor.dataset.reciboMaskBound) {
+      valor.dataset.reciboMaskBound = "1";
+      attachCurrencyMask(valor);
+    }
+  }
+
+  // expõe para o handler de navegação
+  window.loadReciboAjudaSection = loadReciboAjudaSection;
+
+  function filterFuncionarioSelect() {
+    if (!funcionarioSelect || !funcionarioBusca) return;
+    const q = funcionarioBusca.value.trim().toLowerCase();
+    Array.from(funcionarioSelect.options).forEach((opt, idx) => {
+      if (idx === 0) return; // placeholder
+      const show = !q || (opt.textContent || "").toLowerCase().includes(q);
+      opt.hidden = !show;
+    });
+  }
+
+  funcionarioBusca?.addEventListener("input", filterFuncionarioSelect);
+  unidadeSelect?.addEventListener("change", setUnidadeCnpjFromSelect);
+
+  // Assinatura (canvas) - desenho simples
+  let drawing = false;
+  let last = null;
+  const ctx = canvas?.getContext ? canvas.getContext("2d") : null;
+  function canvasPointFromEvent(ev) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = ev.touches?.[0]?.clientX ?? ev.clientX;
+    const clientY = ev.touches?.[0]?.clientY ?? ev.clientY;
+    const x = ((clientX - rect.left) / rect.width) * canvas.width;
+    const y = ((clientY - rect.top) / rect.height) * canvas.height;
+    return { x, y };
+  }
+  function startDraw(ev) {
+    if (!canvas || !ctx) return;
+    drawing = true;
+    last = canvasPointFromEvent(ev);
+    ev.preventDefault?.();
+  }
+  function moveDraw(ev) {
+    if (!drawing || !canvas || !ctx || !last) return;
+    const p = canvasPointFromEvent(ev);
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#263238";
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+    ev.preventDefault?.();
+  }
+  function endDraw() {
+    drawing = false;
+    last = null;
+  }
+  function clearSignature() {
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  if (canvas) {
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", moveDraw);
+    window.addEventListener("mouseup", endDraw);
+    canvas.addEventListener("touchstart", startDraw, { passive: false });
+    canvas.addEventListener("touchmove", moveDraw, { passive: false });
+    canvas.addEventListener("touchend", endDraw);
+    canvas.addEventListener("touchcancel", endDraw);
+  }
+  btnLimparAss?.addEventListener("click", clearSignature);
+
+  function isBlankCanvas() {
+    if (!canvas || !ctx) return true;
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let i = 3; i < img.length; i += 4) {
+      if (img[i] !== 0) return false;
+    }
+    return true;
+  }
+
+  function gerarReciboHtml(payload) {
+    const agora = new Date();
+    const esc = escapeHtml;
+    const assinaturaImg = payload.assinaturaDataUrl
+      ? `<img src="${payload.assinaturaDataUrl}" alt="Assinatura" style="max-width: 520px; width: 100%; height: auto; display:block; margin-top:8px;" />`
+      : "";
+
+    return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recibo - Ajuda de custo</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color:#111; margin: 24px; }
+    .top { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:12px; margin-bottom:18px; }
+    .brand { font-weight:700; font-size:18px; }
+    .meta { font-size:12px; color:#444; text-align:right; }
+    h1 { font-size:18px; margin: 0 0 10px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin-top: 8px; }
+    .field { font-size: 13px; }
+    .lbl { color:#555; font-size: 12px; }
+    .val { font-weight: 600; }
+    .box { border:1px solid #ddd; border-radius:10px; padding:12px; }
+    .text { margin-top: 14px; font-size: 13px; line-height: 1.45; }
+    .sign { margin-top: 22px; display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:end; }
+    .line { border-top: 1px solid #111; padding-top: 6px; font-size: 12px; color:#333; }
+    @media print { body { margin: 10mm; } }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="brand">Grupo Sabor Paraense</div>
+      <div style="font-size:12px;color:#444;margin-top:4px;">CNPJ: ${esc(payload.unidadeCnpj || "-")}</div>
+    </div>
+    <div class="meta">
+      <div><strong>Gerado em:</strong> ${esc(agora.toLocaleString("pt-BR"))}</div>
+      <div><strong>Unidade:</strong> ${esc(payload.unidadeNome || "-")}</div>
+      <div><strong>Competência:</strong> ${esc(payload.competencia || "-")}</div>
+    </div>
+  </div>
+
+  <h1>Recibo de ajuda de custo</h1>
+  <div class="box">
+    <div class="grid">
+      <div class="field"><div class="lbl">Funcionário</div><div class="val">${esc(payload.funcionarioNome || "-")}</div></div>
+      <div class="field"><div class="lbl">Valor</div><div class="val">${esc(payload.valorFmt || "R$ 0,00")}</div></div>
+      <div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">${esc(payload.finalidade || "-")}</div></div>
+    </div>
+    <div class="text">
+      Declaro, para os devidos fins, que recebi da empresa acima identificada o valor informado a título de <strong>ajuda de custo</strong>, referente à competência indicada.
+    </div>
+  </div>
+
+  <div class="sign">
+    <div>
+      <div class="line">Assinatura do funcionário</div>
+      ${assinaturaImg}
+    </div>
+    <div>
+      <div class="line">Responsável</div>
+    </div>
+  </div>
+</body>
+</html>`;
+  }
+
+  function gerarPdf() {
+    const fid = funcionarioSelect?.value || "";
+    const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
+    const uid = unidadeSelect?.value || "";
+    const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
+
+    const comp = (competencia?.value || "").trim();
+    const fin = (finalidade?.value || "").trim();
+    const valorNum = Number(valor?.dataset?.value || 0);
+
+    if (!fid) return showToast("Selecione o funcionário.", "warning");
+    if (!uid) return showToast("Selecione a unidade.", "warning");
+    if (!comp) return showToast("Informe a competência.", "warning");
+    if (!fin) return showToast("Informe a finalidade.", "warning");
+    if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
+    if (isBlankCanvas()) return showToast("Faça a assinatura antes de gerar o PDF.", "warning");
+
+    const assinaturaDataUrl = canvas?.toDataURL ? canvas.toDataURL("image/png") : "";
+    const html = gerarReciboHtml({
+      funcionarioNome: func?.nome_completo || func?.nome || "",
+      unidadeNome: un?.nome || "",
+      unidadeCnpj: unidadeCnpj?.value || "",
+      competencia: comp,
+      finalidade: fin,
+      valorFmt: formatCurrencyBRL(valorNum),
+      assinaturaDataUrl,
+    });
+
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) return showToast("Não foi possível abrir o recibo (popup bloqueado).", "error");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    // dá um tempinho para as imagens renderizarem antes do print
+    setTimeout(() => {
+      try { w.print(); } catch (e) {}
+    }, 400);
+  }
+
+  btnPdf?.addEventListener("click", gerarPdf);
+  btnLimpar?.addEventListener("click", () => {
+    if (funcionarioBusca) funcionarioBusca.value = "";
+    if (funcionarioSelect) funcionarioSelect.value = "";
+    if (unidadeSelect) unidadeSelect.value = "";
+    if (unidadeCnpj) unidadeCnpj.value = "";
+    if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
+    if (finalidade) finalidade.value = "";
+    if (valor) { valor.value = ""; valor.dataset.value = "0"; }
+    clearSignature();
+    filterFuncionarioSelect();
+  });
+}
+
 // Formata data para input type="date" (YYYY-MM-DD)
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
@@ -16667,6 +16924,7 @@ async function init() {
   setupBoletosModule();
   setupAlvarasModule();
   setupFechamentoCaixaAuditoria();
+  setupReciboAjudaCusto();
   setupFichaTecnicaForm();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();

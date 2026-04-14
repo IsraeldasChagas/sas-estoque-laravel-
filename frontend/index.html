@@ -135,6 +135,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boleto</a>
               <a href="#" class="nav-link nav-link-child" data-section="alvara">Alvará</a>
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
+              <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo (ajuda de custo)</a>
               <a href="#" class="nav-link nav-link-child" data-section="fechamento">Auditoria fechamento caixa</a>
             </div>
           </div>
@@ -1759,6 +1760,80 @@
                     <tr><td colspan="11" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Modulo Financeiro - Recibo ajuda de custo -->
+          <section id="reciboAjudaSection" class="view-section hidden recibo-ajuda">
+            <div class="boletos-header">
+              <div>
+                <h2>🧾 Recibo (ajuda de custo)</h2>
+                <p class="subtle-text">Preencha os dados, assine e clique em <strong>Gerar PDF</strong> para abrir o recibo pronto para salvar/imprimir.</p>
+              </div>
+              <div class="boletos-actions">
+                <button type="button" class="btn primary" id="reciboAjudaGerarPdfBtn">Gerar PDF</button>
+                <button type="button" class="btn neutral" id="reciboAjudaLimparBtn">Limpar</button>
+              </div>
+            </div>
+
+            <div class="table-card form-card--wide">
+              <header>
+                <div>
+                  <h3>Dados do recibo</h3>
+                  <p class="subtle-text">Funcionário, unidade, competência/finalidade e valor</p>
+                </div>
+              </header>
+              <div class="recibo-ajuda__grid">
+                <label>
+                  Funcionário
+                  <input type="text" id="reciboAjudaFuncionarioBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
+                  <select id="reciboAjudaFuncionarioSelect">
+                    <option value="">Selecione</option>
+                  </select>
+                </label>
+
+                <label>
+                  Unidade
+                  <select id="reciboAjudaUnidadeSelect">
+                    <option value="">Selecione a unidade</option>
+                  </select>
+                </label>
+
+                <label>
+                  CNPJ (unidade)
+                  <input type="text" id="reciboAjudaUnidadeCnpj" readonly placeholder="Preenchido ao escolher a unidade" />
+                </label>
+
+                <label>
+                  Competência
+                  <input type="month" id="reciboAjudaCompetencia" />
+                </label>
+
+                <label class="recibo-ajuda__finalidade">
+                  Finalidade
+                  <input type="text" id="reciboAjudaFinalidade" maxlength="200" placeholder="Ex.: Ajuda de custo (transporte, alimentação...)" />
+                </label>
+
+                <label>
+                  Valor (R$)
+                  <input type="text" id="reciboAjudaValor" data-currency="1" inputmode="decimal" placeholder="0,00" />
+                </label>
+              </div>
+            </div>
+
+            <div class="table-card form-card--wide">
+              <header>
+                <div>
+                  <h3>Assinatura do funcionário</h3>
+                  <p class="subtle-text">Assine no quadro abaixo (se estiver no celular, use o dedo).</p>
+                </div>
+                <div class="recibo-ajuda__sign-actions">
+                  <button type="button" class="btn secondary" id="reciboAjudaAssinaturaLimparBtn">Limpar assinatura</button>
+                </div>
+              </header>
+              <div class="recibo-ajuda__sign-wrap">
+                <canvas id="reciboAjudaAssinaturaCanvas" class="recibo-ajuda__sign-canvas" width="900" height="220"></canvas>
               </div>
             </div>
           </section>
