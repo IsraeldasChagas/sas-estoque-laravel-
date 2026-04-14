@@ -5769,6 +5769,10 @@ select[size]:not([size="1"]) {
   touch-action: none; /* importante para desenhar no mobile */
 }
 
+.recibo-ajuda__painel--collapsed {
+  display: none;
+}
+
 .fechamento-audit__toggle-principal {
   min-width: 2.5rem;
   padding-left: 0.65rem;

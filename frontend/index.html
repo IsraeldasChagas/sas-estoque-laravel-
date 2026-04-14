@@ -1773,12 +1773,24 @@
                 <p class="subtle-text">Preencha os dados, confirme, assine e salve. Use <strong>Ver</strong> na lista para abrir o PDF.</p>
               </div>
               <div class="boletos-actions">
+                <button
+                  type="button"
+                  class="btn secondary fechamento-audit__toggle-principal"
+                  id="reciboAjudaTogglePainelBtn"
+                  aria-expanded="true"
+                  aria-controls="reciboAjudaPainel"
+                  aria-label="Recolher ou expandir dados do recibo e assinatura"
+                  title="Recolher painel"
+                >
+                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">▼</span>
+                </button>
                 <button type="button" class="btn secondary" id="reciboAjudaSalvarBtn">Salvar</button>
                 <button type="button" class="btn neutral" id="reciboAjudaLimparBtn">Limpar</button>
               </div>
             </div>
             <div id="reciboAjudaApiFeedback" class="form-feedback hidden" style="margin-bottom:1rem;"></div>
 
+            <div id="reciboAjudaPainel" class="recibo-ajuda__painel">
             <div class="table-card form-card--wide">
               <header>
                 <div>
@@ -1864,6 +1876,7 @@
                 </div>
                 <canvas id="reciboAjudaAssinaturaCanvas" class="recibo-ajuda__sign-canvas" width="900" height="220"></canvas>
               </div>
+            </div>
             </div>
 
             <div class="table-card form-card--wide recibo-ajuda__historico">

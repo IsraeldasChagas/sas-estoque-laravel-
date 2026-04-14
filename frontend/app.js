@@ -14853,6 +14853,9 @@ function setupReciboAjudaCusto() {
   const btnLimparAss = document.getElementById("reciboAjudaAssinaturaLimparBtn");
   const tableBody = document.getElementById("reciboAjudaTableBody");
 
+  const togglePainelBtn = document.getElementById("reciboAjudaTogglePainelBtn");
+  const painel = document.getElementById("reciboAjudaPainel");
+
   const confirmarSolicitarBtn = document.getElementById("reciboAjudaConfirmarSolicitarBtn");
   const confirmarWhatsappLink = document.getElementById("reciboAjudaConfirmarWhatsappLink");
   const confirmarCodigoInput = document.getElementById("reciboAjudaConfirmarCodigoInput");
@@ -14893,6 +14896,13 @@ function setupReciboAjudaCusto() {
     if (!canvas) return;
     canvas.classList.toggle("is-locked", !!locked);
   }
+
+  togglePainelBtn?.addEventListener("click", () => {
+    if (!painel || !togglePainelBtn) return;
+    const collapsed = painel.classList.toggle("recibo-ajuda__painel--collapsed");
+    togglePainelBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    togglePainelBtn.title = collapsed ? "Expandir painel" : "Recolher painel";
+  });
 
   // === Modal PDF (Recibo ajuda) ===
   let reciboAjudaPdfObjectUrl = null;
