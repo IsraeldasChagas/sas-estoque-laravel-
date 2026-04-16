@@ -5720,11 +5720,12 @@ select[size]:not([size="1"]) {
   padding: 0 1.25rem 1rem;
 }
 .recibo-ajuda__finalidade {
-  grid-column: 1 / -1;
+  grid-column: span 1;
 }
 .multi-select {
   position: relative;
   width: 100%;
+  max-width: 420px;
 }
 .multi-select__btn {
   width: 100%;

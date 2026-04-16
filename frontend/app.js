@@ -14875,6 +14875,7 @@ function setupReciboAjudaCusto() {
     ajuda_custo: "Ajuda de custo",
     transporte: "Transporte",
     alimentacao: "Alimentação",
+    auxilio_alimentacao_ifood: "Auxílio Alimentação (Cartão iFood)",
     outro: "Outro",
   };
 
