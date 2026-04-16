@@ -5609,13 +5609,13 @@ Route::get('/funcionarios/{id}', function ($id) {
  * Importante: em closures PHP, variáveis do arquivo NÃO entram no escopo automaticamente — por isso tudo fica aqui dentro.
  */
 $funcionariosTableHasColumn = static function (string $column): bool {
+    // Só cacheia listagem quando a tabela existe. Se cachear [] quando a tabela não existia,
+    // o mesmo worker PHP poderia continuar achando que não há colunas após um migrate.
     static $cols = null;
     if (is_array($cols)) {
         return in_array($column, $cols, true);
     }
     if (! Schema::hasTable('funcionarios')) {
-        $cols = [];
-
         return false;
     }
     $cols = Schema::getColumnListing('funcionarios');
