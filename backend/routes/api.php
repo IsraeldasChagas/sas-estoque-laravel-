@@ -5687,6 +5687,18 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     }
 
     $data = $request->all();
+    // Evita "falso sucesso": se o front enviar escolaridade/formação mas o banco não tiver as colunas,
+    // a API deve retornar erro claro (em vez de salvar sem persistir nada).
+    $temEscolaridade = array_key_exists('escolaridade', $data) && trim((string) ($data['escolaridade'] ?? '')) !== '';
+    $temFormacaoJson = array_key_exists('formacao_json', $data) && trim((string) ($data['formacao_json'] ?? '')) !== '';
+    if ($temEscolaridade && !Schema::hasColumn('funcionarios', 'escolaridade')) {
+        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna escolaridade. Execute no servidor: php artisan migrate --force'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    if ($temFormacaoJson && !Schema::hasColumn('funcionarios', 'formacao_json')) {
+        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna formacao_json. Execute no servidor: php artisan migrate --force'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     $cpfLimpo = preg_replace('/\D/', '', $data['cpf'] ?? '');
     if (strlen($cpfLimpo) !== 11) {
         return response()->json(['error' => 'CPF inválido'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -5810,6 +5822,18 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     }
 
     $data = $request->all();
+    // Evita "falso sucesso": se o front enviar escolaridade/formação mas o banco não tiver as colunas,
+    // retorna erro claro (em vez de ignorar e parecer que salvou).
+    $temEscolaridade = array_key_exists('escolaridade', $data) && trim((string) ($data['escolaridade'] ?? '')) !== '';
+    $temFormacaoJson = array_key_exists('formacao_json', $data) && trim((string) ($data['formacao_json'] ?? '')) !== '';
+    if ($temEscolaridade && !Schema::hasColumn('funcionarios', 'escolaridade')) {
+        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna escolaridade. Execute no servidor: php artisan migrate --force'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    if ($temFormacaoJson && !Schema::hasColumn('funcionarios', 'formacao_json')) {
+        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna formacao_json. Execute no servidor: php artisan migrate --force'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
 
     // Permite atualizar CPF (mantendo validação e unicidade)
     $cpfFormatado = null;
@@ -5961,6 +5985,18 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
     }
 
     $data = $request->all();
+    // Evita "falso sucesso": se o front enviar escolaridade/formação mas o banco não tiver as colunas,
+    // retorna erro claro (em vez de ignorar e parecer que salvou).
+    $temEscolaridade = array_key_exists('escolaridade', $data) && trim((string) ($data['escolaridade'] ?? '')) !== '';
+    $temFormacaoJson = array_key_exists('formacao_json', $data) && trim((string) ($data['formacao_json'] ?? '')) !== '';
+    if ($temEscolaridade && !Schema::hasColumn('funcionarios', 'escolaridade')) {
+        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna escolaridade. Execute no servidor: php artisan migrate --force'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    if ($temFormacaoJson && !Schema::hasColumn('funcionarios', 'formacao_json')) {
+        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna formacao_json. Execute no servidor: php artisan migrate --force'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:255', 'status' => 'required|in:ativo,inativo'];
     $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
     if ($validator->fails()) {
