@@ -5771,6 +5771,17 @@ select[size]:not([size="1"]) {
   scrollbar-gutter: stable;
 }
 
+/* Recibo: o dropdown da finalidade fica abaixo do botão (position absolute).
+   .table-card usa overflow:hidden e recorta o menu; o card seguinte pode cobrir o menu sem z-index. */
+#reciboAjudaPainel > .table-card.form-card--wide:first-of-type {
+  overflow: visible;
+  position: relative;
+  z-index: 6;
+}
+#reciboAjudaSection .multi-select__menu {
+  z-index: 80;
+}
+
 /* deixa a rolagem mais visível */
 .multi-select__menu {
   scrollbar-width: thin;
