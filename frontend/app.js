@@ -9538,7 +9538,8 @@ function setupModals() {
     try {
       await fetchJSON(`/funcionarios/${id}/inativar`, { method: "PUT" });
       showToast("Funcionário inativado.", "success");
-      await loadFuncionarios(getFuncionariosFiltros());
+      // Após salvar, recarrega lista completa (sem filtros) para evitar "sumir" registros por filtros ativos.
+      await loadFuncionarios();
     } catch (e) {
       showToast(e?.message || "Erro ao inativar.", "error");
     }
@@ -10753,7 +10754,11 @@ function setupNavigation() {
       else if (target === "estoque") await loadEstoqueProdutos();
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
-      else if (target === "funcionarios") await loadFuncionarios();
+      else if (target === "funcionarios") {
+        // Entra sempre com lista completa (sem filtros)
+        dom.funcionariosLimparFiltros?.click();
+        await loadFuncionarios();
+      }
       else if (target === "reciboAjuda") {
         if (typeof window.loadReciboAjudaSection === "function") {
           await window.loadReciboAjudaSection();
