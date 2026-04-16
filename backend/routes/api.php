@@ -6662,6 +6662,7 @@ $reciboAjudaParseFinalidades = function ($raw) {
     // Aceita:
     // - legado: string (ex.: "transporte")
     // - novo: array (ex.: ["transporte","alimentacao"])
+    // - novo com valores: array (ex.: [{"k":"transporte","v":10.5},{"k":"alimentacao","v":20}])
     // - novo armazenado: JSON string (ex.: '["transporte","alimentacao"]')
     if (is_array($raw)) {
         $arr = $raw;
@@ -6677,24 +6678,90 @@ $reciboAjudaParseFinalidades = function ($raw) {
     }
     $out = [];
     foreach ($arr as $v) {
+        if (is_array($v)) {
+            $k = trim((string) ($v['k'] ?? $v['key'] ?? $v['codigo'] ?? $v['finalidade'] ?? ''));
+            if ($k === '') {
+                continue;
+            }
+            $out[$k] = true;
+            continue;
+        }
         $t = trim((string) ($v ?? ''));
-        if ($t === '') continue;
+        if ($t === '') {
+            continue;
+        }
         $out[$t] = true;
     }
     return array_keys($out);
 };
 
-$reciboAjudaFormatFinalidades = function ($raw) use ($reciboAjudaParseFinalidades, $reciboAjudaFinalidadeLabels) {
-    $fins = $reciboAjudaParseFinalidades($raw);
-    if (!$fins) return '';
+$reciboAjudaFormatFinalidades = function ($raw) use ($reciboAjudaFinalidadeLabels) {
+    $items = [];
+    if (is_array($raw)) {
+        $items = $raw;
+    } else {
+        $s = is_string($raw) ? trim($raw) : '';
+        if ($s === '') {
+            return '';
+        }
+        if (str_starts_with($s, '[') && str_ends_with($s, ']')) {
+            $decoded = json_decode($s, true);
+            if (is_array($decoded)) {
+                $items = $decoded;
+            }
+        }
+        if (!$items) {
+            $items = [$s];
+        }
+    }
+
     $parts = [];
-    foreach ($fins as $f) {
-        $parts[] = $reciboAjudaFinalidadeLabels[$f] ?? $f;
+    foreach ($items as $v) {
+        if (is_array($v)) {
+            $k = trim((string) ($v['k'] ?? $v['key'] ?? $v['codigo'] ?? $v['finalidade'] ?? ''));
+            if ($k === '') {
+                continue;
+            }
+            $lbl = $reciboAjudaFinalidadeLabels[$k] ?? $k;
+            $vv = $v['v'] ?? $v['valor'] ?? $v['value'] ?? null;
+            $n = is_numeric($vv) ? (float) $vv : null;
+            if ($n !== null && $n > 0) {
+                $parts[] = $lbl . ': R$ ' . number_format($n, 2, ',', '.');
+            } else {
+                $parts[] = $lbl;
+            }
+            continue;
+        }
+        $t = trim((string) ($v ?? ''));
+        if ($t === '') {
+            continue;
+        }
+        $parts[] = $reciboAjudaFinalidadeLabels[$t] ?? $t;
     }
     return implode(', ', $parts);
 };
 
-Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseFinalidades) {
+$reciboAjudaValorFromFinalidades = function ($raw) {
+    if (!is_array($raw)) {
+        return null;
+    }
+    $sum = 0.0;
+    $has = false;
+    foreach ($raw as $v) {
+        if (!is_array($v)) {
+            continue;
+        }
+        $vv = $v['v'] ?? $v['valor'] ?? $v['value'] ?? null;
+        if (!is_numeric($vv)) {
+            continue;
+        }
+        $has = true;
+        $sum += (float) $vv;
+    }
+    return $has ? $sum : null;
+};
+
+Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json([])->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6723,7 +6790,11 @@ Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $p
 
         $lista = $q->orderByDesc('r.id')->get();
         foreach ($lista as $row) {
-            $row->finalidade = $reciboAjudaParseFinalidades($row->finalidade ?? null);
+            $raw = $row->finalidade ?? null;
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                $row->finalidade = is_array($decoded) ? $decoded : $raw;
+            }
         }
         return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -6732,7 +6803,7 @@ Route::get('/recibos-ajuda', function (Request $request) use ($proventosAuth, $p
     }
 });
 
-Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseFinalidades) {
+Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 404)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6761,7 +6832,11 @@ Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
 
         $row = $q->first();
         if (!$row) return response()->json(['error' => 'Recibo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
-        $row->finalidade = $reciboAjudaParseFinalidades($row->finalidade ?? null);
+        $raw = $row->finalidade ?? null;
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $row->finalidade = is_array($decoded) ? $decoded : $raw;
+        }
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('GET /recibos-ajuda/{id}: ' . $e->getMessage());
@@ -6769,7 +6844,7 @@ Route::get('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
     }
 });
 
-Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime, $reciboAjudaParseDate, $reciboAjudaMakeHash, $reciboAjudaParseFinalidades) {
+Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime, $reciboAjudaParseDate, $reciboAjudaMakeHash, $reciboAjudaParseFinalidades, $reciboAjudaValorFromFinalidades) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6785,7 +6860,8 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
             $funcionarioId = $funcId;
         }
 
-        $finalidades = $reciboAjudaParseFinalidades($body['finalidade'] ?? null);
+        $finalidadeRaw = $body['finalidade'] ?? null;
+        $finalidades = $reciboAjudaParseFinalidades($finalidadeRaw);
         $competencia = trim((string) ($body['competencia'] ?? ''));
         $valor = (float) ($body['valor'] ?? 0);
         $assinaturaTipo = strtolower(trim((string) ($body['assinatura_tipo'] ?? 'desenho')));
@@ -6793,9 +6869,48 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
 
         if (!$funcionarioId) return response()->json(['error' => 'Funcionário obrigatório'], 422)->header('Access-Control-Allow-Origin', '*');
         if (!$finalidades) return response()->json(['error' => 'Finalidade obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
+
+        $finalidadeStoreArr = null;
+        if (is_array($finalidadeRaw) && $finalidadeRaw) {
+            $temObj = false;
+            foreach ($finalidadeRaw as $it) {
+                if (is_array($it)) {
+                    $temObj = true;
+                    break;
+                }
+            }
+            if ($temObj) {
+                $norm = [];
+                foreach ($finalidadeRaw as $it) {
+                    if (!is_array($it)) {
+                        continue;
+                    }
+                    $k = trim((string) ($it['k'] ?? $it['key'] ?? $it['codigo'] ?? $it['finalidade'] ?? ''));
+                    if ($k === '') {
+                        continue;
+                    }
+                    $vv = $it['v'] ?? $it['valor'] ?? $it['value'] ?? null;
+                    if (!is_numeric($vv) || (float) $vv <= 0) {
+                        return response()->json(['error' => 'Valor inválido para finalidade: ' . $k], 422)->header('Access-Control-Allow-Origin', '*');
+                    }
+                    $norm[] = ['k' => $k, 'v' => (float) $vv];
+                }
+                if (!$norm) {
+                    return response()->json(['error' => 'Finalidade obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
+                }
+                $finalidadeStoreArr = $norm;
+                $sum = $reciboAjudaValorFromFinalidades($norm);
+                if ($sum !== null) {
+                    $valor = (float) $sum;
+                }
+            }
+        }
+
         if ($valor <= 0) return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
 
-        $finalidadeStore = json_encode(array_values($finalidades), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $finalidadeStore = $finalidadeStoreArr !== null
+            ? json_encode(array_values($finalidadeStoreArr), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : json_encode(array_values($finalidades), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $insert = [
             'funcionario_id' => $funcionarioId,
             'unidade_id' => $body['unidade_id'] ?? null,
@@ -6820,6 +6935,10 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
 
         // Se modo código: gera hash verificável no servidor e salva
         if ($assinaturaTipo === 'codigo' && Schema::hasColumn('recibos_ajuda_custo', 'assinatura_hash')) {
+            $finalHash = json_decode($insert['finalidade'] ?? '[]', true);
+            if (!is_array($finalHash)) {
+                $finalHash = array_values($finalidades);
+            }
             $payload = [
                 'id' => (int) $id,
                 'funcionario_id' => (int) $funcionarioId,
@@ -6827,7 +6946,7 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
                 'competencia' => $insert['competencia'],
                 'data_pagamento' => $insert['data_pagamento'],
                 'data_geracao' => $insert['data_geracao'],
-                'finalidade' => array_values($finalidades),
+                'finalidade' => $finalHash,
                 'valor' => (string) $insert['valor'],
                 'ip_publico' => $insert['ip_publico'],
                 'geo' => $insert['geo'],
@@ -6841,7 +6960,13 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
             ->where('r.id', $id)
             ->select('r.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())
             ->first();
-        if ($row) $row->finalidade = $reciboAjudaParseFinalidades($row->finalidade ?? null);
+        if ($row) {
+            $raw = $row->finalidade ?? null;
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                $row->finalidade = is_array($decoded) ? $decoded : $raw;
+            }
+        }
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /recibos-ajuda: ' . $e->getMessage());
@@ -6853,7 +6978,7 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
     }
 });
 
-Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime, $reciboAjudaParseDate, $reciboAjudaMakeHash, $reciboAjudaParseFinalidades) {
+Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($proventosAuth, $podeCriarReciboAjuda, $proventoSelectUnidadeCnpj, $reciboAjudaParseDateTime, $reciboAjudaParseDate, $reciboAjudaMakeHash, $reciboAjudaParseFinalidades, $reciboAjudaValorFromFinalidades) {
     try {
         if (!Schema::hasTable('recibos_ajuda_custo')) return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
         $u = $proventosAuth($request);
@@ -6871,7 +6996,8 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
         $body = $request->json()->all() ?: [];
         $assinaturaTipo = array_key_exists('assinatura_tipo', $body) ? strtolower(trim((string) ($body['assinatura_tipo'] ?? ''))) : ($r->assinatura_tipo ?? 'desenho');
         if (!in_array($assinaturaTipo, ['desenho', 'codigo'])) $assinaturaTipo = 'desenho';
-        $finalidadesUp = array_key_exists('finalidade', $body) ? $reciboAjudaParseFinalidades($body['finalidade'] ?? null) : null;
+        $finalidadeRawUp = array_key_exists('finalidade', $body) ? ($body['finalidade'] ?? null) : null;
+        $finalidadesUp = array_key_exists('finalidade', $body) ? $reciboAjudaParseFinalidades($finalidadeRawUp) : null;
         if (array_key_exists('finalidade', $body) && !$finalidadesUp) {
             return response()->json(['error' => 'Finalidade obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
         }
@@ -6881,10 +7007,8 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
             'data_pagamento' => array_key_exists('data_pagamento', $body) ? $reciboAjudaParseDate($body['data_pagamento'] ?? null) : $r->data_pagamento,
             'data_geracao' => array_key_exists('data_geracao', $body) ? ($reciboAjudaParseDateTime($body['data_geracao'] ?? null) ?? $r->data_geracao) : $r->data_geracao,
             'assinatura_tipo' => $assinaturaTipo,
-            'finalidade' => array_key_exists('finalidade', $body)
-                ? json_encode(array_values($finalidadesUp), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-                : $r->finalidade,
-            'valor' => array_key_exists('valor', $body) ? (float) $body['valor'] : $r->valor,
+            'finalidade' => $r->finalidade,
+            'valor' => $r->valor,
             'confirmado_em' => array_key_exists('confirmado_em', $body) ? ($assinaturaTipo === 'desenho' ? $reciboAjudaParseDateTime($body['confirmado_em'] ?? null) : null) : $r->confirmado_em,
             'ip_publico' => array_key_exists('ip_publico', $body) ? ($body['ip_publico'] ?: null) : $r->ip_publico,
             'geo' => array_key_exists('geo', $body) ? ($body['geo'] ?: null) : $r->geo,
@@ -6892,11 +7016,60 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
             'foto_data_url' => array_key_exists('foto_data_url', $body) ? ($body['foto_data_url'] ?: null) : $r->foto_data_url,
             'updated_at' => now(),
         ];
+        if (array_key_exists('finalidade', $body)) {
+            $finalidadeStoreArr = null;
+            if (is_array($finalidadeRawUp) && $finalidadeRawUp) {
+                $temObj = false;
+                foreach ($finalidadeRawUp as $it) {
+                    if (is_array($it)) {
+                        $temObj = true;
+                        break;
+                    }
+                }
+                if ($temObj) {
+                    $norm = [];
+                    foreach ($finalidadeRawUp as $it) {
+                        if (!is_array($it)) {
+                            continue;
+                        }
+                        $k = trim((string) ($it['k'] ?? $it['key'] ?? $it['codigo'] ?? $it['finalidade'] ?? ''));
+                        if ($k === '') {
+                            continue;
+                        }
+                        $vv = $it['v'] ?? $it['valor'] ?? $it['value'] ?? null;
+                        if (!is_numeric($vv) || (float) $vv <= 0) {
+                            return response()->json(['error' => 'Valor inválido para finalidade: ' . $k], 422)->header('Access-Control-Allow-Origin', '*');
+                        }
+                        $norm[] = ['k' => $k, 'v' => (float) $vv];
+                    }
+                    if (!$norm) {
+                        return response()->json(['error' => 'Finalidade obrigatória'], 422)->header('Access-Control-Allow-Origin', '*');
+                    }
+                    $finalidadeStoreArr = $norm;
+                    $sum = $reciboAjudaValorFromFinalidades($norm);
+                    if ($sum !== null) {
+                        $up['valor'] = (float) $sum;
+                    }
+                    $up['finalidade'] = json_encode(array_values($finalidadeStoreArr), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                } else {
+                    $up['finalidade'] = json_encode(array_values($finalidadesUp), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                }
+            } else {
+                $up['finalidade'] = json_encode(array_values($finalidadesUp), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+        }
+        if (array_key_exists('valor', $body)) {
+            $up['valor'] = (float) $body['valor'];
+        }
+
         DB::table('recibos_ajuda_custo')->where('id', $id)->update($up);
 
         if ($assinaturaTipo === 'codigo' && Schema::hasColumn('recibos_ajuda_custo', 'assinatura_hash')) {
             $novo = DB::table('recibos_ajuda_custo')->where('id', $id)->first();
-            $finalidadesNovo = $reciboAjudaParseFinalidades($novo->finalidade ?? null);
+            $finalHash = json_decode($novo->finalidade ?? '[]', true);
+            if (!is_array($finalHash)) {
+                $finalHash = $reciboAjudaParseFinalidades($novo->finalidade ?? null);
+            }
             $payload = [
                 'id' => (int) $id,
                 'funcionario_id' => (int) ($novo->funcionario_id ?? $r->funcionario_id),
@@ -6904,7 +7077,7 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
                 'competencia' => $novo->competencia,
                 'data_pagamento' => $novo->data_pagamento,
                 'data_geracao' => $novo->data_geracao,
-                'finalidade' => array_values($finalidadesNovo),
+                'finalidade' => $finalHash,
                 'valor' => (string) $novo->valor,
                 'ip_publico' => $novo->ip_publico,
                 'geo' => $novo->geo,
@@ -6919,7 +7092,13 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
             ->where('r.id', $id)
             ->select('r.*', 'funcionarios.nome_completo as funcionario_nome', 'funcionarios.cpf as funcionario_cpf', 'unidades.nome as unidade_nome', $proventoSelectUnidadeCnpj())
             ->first();
-        if ($row) $row->finalidade = $reciboAjudaParseFinalidades($row->finalidade ?? null);
+        if ($row) {
+            $raw = $row->finalidade ?? null;
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                $row->finalidade = is_array($decoded) ? $decoded : $raw;
+            }
+        }
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('PUT /recibos-ajuda/{id}: ' . $e->getMessage());

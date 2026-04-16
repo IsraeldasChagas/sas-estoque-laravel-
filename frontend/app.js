@@ -14877,6 +14877,8 @@ function setupReciboAjudaCusto() {
   const finalidadeBtn = document.getElementById("reciboAjudaFinalidadeBtn");
   const finalidadeBtnLabel = document.getElementById("reciboAjudaFinalidadeLabel");
   const finalidadeMenu = document.getElementById("reciboAjudaFinalidadeMenu");
+  const finalidadeValoresWrap = document.getElementById("reciboAjudaFinalidadeValoresWrap");
+  const valorTotalWrap = document.getElementById("reciboAjudaValorTotalWrap");
   const valor = document.getElementById("reciboAjudaValor");
   const assinaturaTipo = document.getElementById("reciboAjudaAssinaturaTipo");
   const btnSalvar = document.getElementById("reciboAjudaSalvarBtn");
@@ -14917,6 +14919,119 @@ function setupReciboAjudaCusto() {
     "outro",
   ];
 
+  function parseFinalidadeItensFromApi(raw) {
+    // Retorna [{k, v?}] preservando valores quando existirem
+    if (Array.isArray(raw)) {
+      const out = [];
+      raw.forEach((x) => {
+        if (x && typeof x === "object") {
+          const k = String(x.k ?? x.key ?? x.codigo ?? x.finalidade ?? "").trim();
+          const vv = x.v ?? x.valor ?? x.value;
+          const vnum = vv === undefined || vv === null || String(vv).trim() === "" ? null : Number(vv);
+          if (k) out.push({ k, v: Number.isFinite(vnum) ? vnum : null });
+        } else {
+          const k = String(x || "").trim();
+          if (k) out.push({ k, v: null });
+        }
+      });
+      return out;
+    }
+    const s = String(raw || "").trim();
+    if (!s) return [];
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) return parseFinalidadeItensFromApi(parsed);
+      } catch (_) {}
+    }
+    return [{ k: s, v: null }];
+  }
+
+  function normalizeFinalidades(raw) {
+    return parseFinalidadeItensFromApi(raw).map((x) => x.k).filter(Boolean);
+  }
+
+  function formatFinalidadesDisplay(raw) {
+    const itens = parseFinalidadeItensFromApi(raw);
+    if (!itens.length) return "-";
+    return itens
+      .map(({ k, v }) => {
+        const lbl = FINALIDADE_LABELS[k] || k;
+        if (v != null && Number.isFinite(Number(v)) && Number(v) > 0) return `${lbl}: ${formatCurrencyBRL(Number(v))}`;
+        return lbl;
+      })
+      .join(", ");
+  }
+
+  function getSelectedFinalidades() {
+    if (!finalidadeMenu) return [];
+    const inputs = Array.from(finalidadeMenu.querySelectorAll('input[type="checkbox"]') || []);
+    return inputs.filter((i) => i && i.checked).map((i) => String(i.value || "").trim()).filter(Boolean);
+  }
+
+  function buildFinalidadePayloadFromUi() {
+    const keys = getSelectedFinalidades();
+    if (!keys.length) return [];
+    return keys.map((k) => {
+      const inp = finalidadeValoresWrap?.querySelector(`input[data-recibo-fin-k="${k}"]`);
+      const v = inp ? Number(inp.dataset?.value || 0) : 0;
+      return { k, v: roundToCurrency(v) };
+    });
+  }
+
+  function recalcTotalValorFromFinalidades() {
+    const itens = buildFinalidadePayloadFromUi();
+    const total = itens.reduce((acc, x) => acc + (Number(x.v) || 0), 0);
+    if (valor) {
+      valor.value = formatCurrencyBRL(total);
+      valor.dataset.value = String(total);
+    }
+    return total;
+  }
+
+  function renderFinalidadeValorInputs() {
+    if (!finalidadeValoresWrap) return;
+    const keys = getSelectedFinalidades();
+    if (!keys.length) {
+      finalidadeValoresWrap.innerHTML = "";
+      finalidadeValoresWrap.classList.add("hidden");
+      valorTotalWrap?.classList.add("hidden");
+      if (valor) { valor.value = ""; valor.dataset.value = "0"; }
+      return;
+    }
+
+    finalidadeValoresWrap.classList.remove("hidden");
+    valorTotalWrap?.classList.remove("hidden");
+
+    const prev = new Map();
+    finalidadeValoresWrap.querySelectorAll("input[data-recibo-fin-k]").forEach((inp) => {
+      const k = inp.getAttribute("data-recibo-fin-k");
+      if (k) prev.set(k, { v: Number(inp.dataset?.value || 0), el: inp });
+    });
+
+    finalidadeValoresWrap.innerHTML =
+      `<div class="subtle-text" style="margin:0 0 0.5rem;">Informe o valor para cada finalidade selecionada.</div>` +
+      keys
+        .map((k) => {
+          const lbl = escapeHtml(FINALIDADE_LABELS[k] || k);
+          const existed = prev.get(k);
+          const startNum = existed && Number.isFinite(existed.v) && existed.v > 0 ? existed.v : 0;
+          const startTxt = startNum > 0 ? formatCurrencyBRL(startNum) : "";
+          return `<label class="recibo-fin-valor-item">${lbl}
+            <input type="text" data-currency="1" data-recibo-fin-k="${escapeHtml(k)}" inputmode="decimal" placeholder="0,00" value="${startTxt}" />
+          </label>`;
+        })
+        .join("");
+
+    finalidadeValoresWrap.querySelectorAll('input[data-recibo-fin-k][data-currency="1"]').forEach((inp) => {
+      inp.dataset.reciboMaskBound = "";
+      attachCurrencyMask(inp);
+      inp.addEventListener("input", () => recalcTotalValorFromFinalidades());
+      inp.addEventListener("blur", () => recalcTotalValorFromFinalidades());
+    });
+    recalcTotalValorFromFinalidades();
+  }
+
   function ensureFinalidadeMenuOptions() {
     if (!finalidadeMenu) return;
     const keys = FINALIDADE_ORDER.filter((k) => FINALIDADE_LABELS[k]).concat(
@@ -14927,34 +15042,6 @@ function setupReciboAjudaCusto() {
       .join("");
   }
 
-  function normalizeFinalidades(raw) {
-    if (Array.isArray(raw)) {
-      return raw.map((x) => String(x || "").trim()).filter(Boolean);
-    }
-    const s = String(raw || "").trim();
-    if (!s) return [];
-    // aceita legado (string) e também JSON (["a","b"])
-    if (s.startsWith("[") && s.endsWith("]")) {
-      try {
-        const parsed = JSON.parse(s);
-        if (Array.isArray(parsed)) return parsed.map((x) => String(x || "").trim()).filter(Boolean);
-      } catch (_) {}
-    }
-    return [s];
-  }
-
-  function formatFinalidadesDisplay(raw) {
-    const fins = normalizeFinalidades(raw);
-    if (!fins.length) return "-";
-    return fins.map((f) => FINALIDADE_LABELS[f] || f).join(", ");
-  }
-
-  function getSelectedFinalidades() {
-    if (!finalidadeMenu) return [];
-    const inputs = Array.from(finalidadeMenu.querySelectorAll('input[type="checkbox"]') || []);
-    return inputs.filter((i) => i && i.checked).map((i) => String(i.value || "").trim()).filter(Boolean);
-  }
-
   function setFinalidadesChecked(values) {
     if (!finalidadeMenu) return;
     const want = new Set(normalizeFinalidades(values));
@@ -14962,6 +15049,7 @@ function setupReciboAjudaCusto() {
       i.checked = want.has(String(i.value || "").trim());
     });
     updateFinalidadeBtnLabel();
+    renderFinalidadeValorInputs();
   }
 
   function updateFinalidadeBtnLabel() {
@@ -14979,6 +15067,7 @@ function setupReciboAjudaCusto() {
   // Garante que a lista de opções sempre esteja completa (mesmo se o HTML vier desatualizado)
   ensureFinalidadeMenuOptions();
   updateFinalidadeBtnLabel();
+  renderFinalidadeValorInputs();
 
   function isFinalidadeMenuOpen() {
     return !!finalidadeMenu && !finalidadeMenu.classList.contains("hidden");
@@ -15008,7 +15097,10 @@ function setupReciboAjudaCusto() {
 
   finalidadeMenu?.addEventListener("change", (ev) => {
     const t = ev.target;
-    if (t && t.matches && t.matches('input[type="checkbox"]')) updateFinalidadeBtnLabel();
+    if (t && t.matches && t.matches('input[type="checkbox"]')) {
+      updateFinalidadeBtnLabel();
+      renderFinalidadeValorInputs();
+    }
   });
 
   document.addEventListener("click", (ev) => {
@@ -15362,6 +15454,7 @@ function setupReciboAjudaCusto() {
     updateEvidResumo();
     if (assinaturaTipo && !assinaturaTipo.value) assinaturaTipo.value = "desenho";
     updateFinalidadeBtnLabel();
+    renderFinalidadeValorInputs();
     applyAssinaturaTipoUI();
     await renderRecibosTabela();
   }
@@ -15609,13 +15702,17 @@ function setupReciboAjudaCusto() {
       const comp = (competencia?.value || "").trim();
       const dtPag = (dataPagamento?.value || "").trim();
       const fins = getSelectedFinalidades();
-      const valorNum = Number(valor?.dataset?.value || 0);
+      const finsPayload = buildFinalidadePayloadFromUi();
+      const valorNum = recalcTotalValorFromFinalidades();
       const tipoAss = getAssinaturaTipo();
 
       if (!fid) return showToast("Selecione o funcionário.", "warning");
       if (!uid) return showToast("Selecione a unidade.", "warning");
       if (!comp) return showToast("Informe a competência.", "warning");
       if (!fins.length) return showToast("Selecione ao menos uma finalidade.", "warning");
+      if (!finsPayload.length || finsPayload.some((x) => !Number.isFinite(Number(x.v)) || Number(x.v) <= 0)) {
+        return showToast("Informe um valor válido para cada finalidade selecionada.", "warning");
+      }
       if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
       if (tipoAss === "desenho") {
         if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
@@ -15634,7 +15731,7 @@ function setupReciboAjudaCusto() {
         competencia: comp,
         data_pagamento: dtPag || null,
         assinatura_tipo: tipoAss,
-        finalidade: fins,
+        finalidade: finsPayload,
         valor: roundToCurrency(valorNum),
         confirmado_em: tipoAss === "desenho" ? confirmadoEmIso : null,
         ip_publico: evidIpPublico,
@@ -15669,15 +15766,22 @@ function setupReciboAjudaCusto() {
     const funcionarioNome = func?.nome_completo || func?.nome || "";
     const comp = (competencia?.value || "").trim();
     const fins = getSelectedFinalidades();
-    const valorNum = Number(valor?.dataset?.value || 0);
+    const finsPayload = buildFinalidadePayloadFromUi();
+    const valorNum = recalcTotalValorFromFinalidades();
     if (!fid) return setFeedback(confirmarFeedback, "Selecione o funcionário antes de solicitar a confirmação.", "error");
     if (!comp) return setFeedback(confirmarFeedback, "Informe a competência antes de solicitar a confirmação.", "error");
     if (!fins.length) return setFeedback(confirmarFeedback, "Selecione ao menos uma finalidade antes de solicitar a confirmação.", "error");
+    if (!finsPayload.length || finsPayload.some((x) => !Number.isFinite(Number(x.v)) || Number(x.v) <= 0)) {
+      return setFeedback(confirmarFeedback, "Informe um valor válido para cada finalidade selecionada antes de solicitar a confirmação.", "error");
+    }
     if (!Number.isFinite(valorNum) || valorNum <= 0) return setFeedback(confirmarFeedback, "Informe um valor válido antes de solicitar a confirmação.", "error");
 
     const code = genCode6();
     persistConfirmCode(code, funcionarioNome);
-    const msg = `CONFIRMAÇÃO DE RECIBO\n\nFuncionário: ${funcionarioNome}\nCompetência: ${comp}\nFinalidade: ${formatFinalidadesDisplay(fins)}\nValor: ${formatCurrencyBRL(valorNum)}\n\nCódigo: ${code}\n\nResponda apenas com o código.`;
+    const detalhe = finsPayload
+      .map((x) => `${FINALIDADE_LABELS[x.k] || x.k}: ${formatCurrencyBRL(Number(x.v) || 0)}`)
+      .join("\n");
+    const msg = `CONFIRMAÇÃO DE RECIBO\n\nFuncionário: ${funcionarioNome}\nCompetência: ${comp}\nFinalidades:\n${detalhe}\nTotal: ${formatCurrencyBRL(valorNum)}\n\nCódigo: ${code}\n\nResponda apenas com o código.`;
     if (confirmarWhatsappLink) {
       confirmarWhatsappLink.href = buildWhatsappLink(msg);
       confirmarWhatsappLink.classList.remove("hidden");
