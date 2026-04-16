@@ -5605,25 +5605,22 @@ Route::get('/funcionarios/{id}', function ($id) {
 });
 
 /**
- * Lista física de colunas da tabela funcionarios (mais confiável que Schema::hasColumn em alguns hosts).
- * Cache estático por request para não ficar consultando o schema repetidamente.
+ * Verifica colunas reais em `funcionarios` via Schema::getColumnListing (mais confiável que Schema::hasColumn em alguns hosts).
+ * Importante: em closures PHP, variáveis do arquivo NÃO entram no escopo automaticamente — por isso tudo fica aqui dentro.
  */
-$funcionariosTableColumnNames = static function (): array {
+$funcionariosTableHasColumn = static function (string $column): bool {
     static $cols = null;
     if (is_array($cols)) {
-        return $cols;
+        return in_array($column, $cols, true);
     }
     if (! Schema::hasTable('funcionarios')) {
         $cols = [];
 
-        return $cols;
+        return false;
     }
     $cols = Schema::getColumnListing('funcionarios');
 
-    return $cols;
-};
-$funcionariosTableHasColumn = static function (string $column): bool {
-    return in_array($column, $funcionariosTableColumnNames(), true);
+    return in_array($column, $cols, true);
 };
 
 $normalizeFuncionarioFormacaoJson = static function ($requestData) {
