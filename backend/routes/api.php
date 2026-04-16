@@ -5604,6 +5604,28 @@ Route::get('/funcionarios/{id}', function ($id) {
     return response()->json($f)->header('Access-Control-Allow-Origin', '*');
 });
 
+/**
+ * Lista física de colunas da tabela funcionarios (mais confiável que Schema::hasColumn em alguns hosts).
+ * Cache estático por request para não ficar consultando o schema repetidamente.
+ */
+$funcionariosTableColumnNames = static function (): array {
+    static $cols = null;
+    if (is_array($cols)) {
+        return $cols;
+    }
+    if (! Schema::hasTable('funcionarios')) {
+        $cols = [];
+
+        return $cols;
+    }
+    $cols = Schema::getColumnListing('funcionarios');
+
+    return $cols;
+};
+$funcionariosTableHasColumn = static function (string $column): bool {
+    return in_array($column, $funcionariosTableColumnNames(), true);
+};
+
 $normalizeFuncionarioFormacaoJson = static function ($requestData) {
     $raw = $requestData['formacao_json'] ?? null;
     if ($raw === null || $raw === '') {
@@ -5673,7 +5695,7 @@ $normalizeFuncionarioFormacaoJson = static function ($requestData) {
     return empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
 };
 
-Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson) {
+Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson, $funcionariosTableHasColumn) {
     try {
     if (!Schema::hasTable('funcionarios')) {
         return response()->json(['error' => 'Módulo RH não configurado. Execute: php artisan migrate'], 503)
@@ -5766,12 +5788,12 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             $insert[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if (Schema::hasColumn('funcionarios', 'escolaridade') && array_key_exists('escolaridade', $data)) {
+    if ($funcionariosTableHasColumn('escolaridade') && array_key_exists('escolaridade', $data)) {
         $insert['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if (Schema::hasColumn('funcionarios', 'formacao_json') && array_key_exists('formacao_json', $data)) {
+    if ($funcionariosTableHasColumn('formacao_json') && array_key_exists('formacao_json', $data)) {
         $insert['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
@@ -5797,7 +5819,7 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     }
 });
 
-Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
+Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $funcionariosTableHasColumn) {
     try {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
@@ -5907,12 +5929,12 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if (Schema::hasColumn('funcionarios', 'escolaridade') && array_key_exists('escolaridade', $data)) {
+    if ($funcionariosTableHasColumn('escolaridade') && array_key_exists('escolaridade', $data)) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if (Schema::hasColumn('funcionarios', 'formacao_json') && array_key_exists('formacao_json', $data)) {
+    if ($funcionariosTableHasColumn('formacao_json') && array_key_exists('formacao_json', $data)) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
@@ -5949,7 +5971,7 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     }
 });
 
-Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
+Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $funcionariosTableHasColumn) {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -5987,12 +6009,12 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if (Schema::hasColumn('funcionarios', 'escolaridade') && array_key_exists('escolaridade', $data)) {
+    if ($funcionariosTableHasColumn('escolaridade') && array_key_exists('escolaridade', $data)) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if (Schema::hasColumn('funcionarios', 'formacao_json') && array_key_exists('formacao_json', $data)) {
+    if ($funcionariosTableHasColumn('formacao_json') && array_key_exists('formacao_json', $data)) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
