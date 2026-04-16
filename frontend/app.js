@@ -9334,7 +9334,9 @@ function setupModals() {
       if (!wrap) return;
       const arr = [];
       wrap.querySelectorAll(":scope > .formacao-linha").forEach((row) => {
-        if (row.dataset.formacaoConfirmada !== "1") return;
+        const confirmada = row.dataset.formacaoConfirmada === "1";
+        const temAlgumCampo = rowFormacaoTemAlgumCampo(row);
+        if (!confirmada && !temAlgumCampo) return;
         const one = readFuncionarioFormacaoLinha(row);
         if (one) arr.push(one);
       });
