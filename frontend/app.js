@@ -14872,9 +14872,10 @@ function setupReciboAjudaCusto() {
 
   const FINALIDADE_LABELS = {
     auxilio_combustivel: "Auxílio Combustível",
-    ajuda_custo: "Ajuda de custo",
+    ajuda_custo: "Auxílio Alimentação (Cartão iFood)",
     transporte: "Transporte",
     alimentacao: "Alimentação",
+    // compatibilidade (itens antigos podem ter sido salvos com esta chave)
     auxilio_alimentacao_ifood: "Auxílio Alimentação (Cartão iFood)",
     outro: "Outro",
   };
@@ -14884,7 +14885,6 @@ function setupReciboAjudaCusto() {
     "ajuda_custo",
     "transporte",
     "alimentacao",
-    "auxilio_alimentacao_ifood",
     "outro",
   ];
 
