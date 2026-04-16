@@ -5765,8 +5765,26 @@ select[size]:not([size="1"]) {
   border-radius: 12px;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.16);
   padding: 8px;
-  max-height: 260px;
-  overflow: auto;
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* deixa a rolagem mais visível */
+.multi-select__menu {
+  scrollbar-width: thin;
+}
+.multi-select__menu::-webkit-scrollbar {
+  width: 10px;
+}
+.multi-select__menu::-webkit-scrollbar-thumb {
+  background: rgba(38, 50, 56, 0.25);
+  border-radius: 999px;
+}
+.multi-select__menu::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 999px;
 }
 .multi-select__item {
   display: flex;
