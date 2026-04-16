@@ -5548,6 +5548,58 @@ Route::post('/admin/restaurar', function (Request $request) {
 Route::options('/funcionarios', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/{id}/atualizar', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/rh-diagnostico', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+/** Diagnóstico RH: lista colunas reais da tabela (precisa estar logado). Deve vir ANTES de /funcionarios/{id}. */
+Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    if (! $userId || ! DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $out = [
+        'tabela_funcionarios_existe' => Schema::hasTable('funcionarios'),
+        'colunas' => [],
+        'tem_escolaridade' => false,
+        'tem_formacao_json' => false,
+        'tem_banco' => false,
+        'tem_agencia' => false,
+        'tem_conta' => false,
+        'tem_conta_digito' => false,
+        'tem_pix' => false,
+        'acao_se_faltar_colunas' => 'No servidor, na pasta backend: php artisan migrate --force',
+    ];
+    if (! $out['tabela_funcionarios_existe']) {
+        return response()->json($out)->header('Access-Control-Allow-Origin', '*');
+    }
+    try {
+        $driver = Schema::getConnection()->getDriverName();
+        if ($driver === 'mysql') {
+            foreach (DB::select('SHOW COLUMNS FROM funcionarios') as $row) {
+                $f = is_object($row)
+                    ? (string) ($row->Field ?? $row->field ?? '')
+                    : (string) ($row['Field'] ?? $row['field'] ?? '');
+                if ($f !== '') {
+                    $out['colunas'][] = $f;
+                }
+            }
+        } else {
+            $out['colunas'] = Schema::getColumnListing('funcionarios');
+        }
+    } catch (\Throwable $e) {
+        $out['erro_listar_colunas'] = $e->getMessage();
+    }
+    $lower = array_map('strtolower', $out['colunas']);
+    $out['tem_escolaridade'] = in_array('escolaridade', $lower, true);
+    $out['tem_formacao_json'] = in_array('formacao_json', $lower, true);
+    $out['tem_banco'] = in_array('banco', $lower, true);
+    $out['tem_agencia'] = in_array('agencia', $lower, true);
+    $out['tem_conta'] = in_array('conta', $lower, true);
+    $out['tem_conta_digito'] = in_array('conta_digito', $lower, true);
+    $out['tem_pix'] = in_array('pix', $lower, true);
+
+    return response()->json($out)->header('Access-Control-Allow-Origin', '*');
+});
 
 Route::get('/funcionarios', function (Request $request) {
     try {
