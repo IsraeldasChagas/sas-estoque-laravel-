@@ -9294,8 +9294,12 @@ function setupModals() {
     const g = (f) => row.querySelector(`[data-f="${f}"]`);
     const curso = (g("curso")?.value || "").trim();
     const instituicao = (g("instituicao")?.value || "").trim();
-    if (!curso && !instituicao) {
-      return "Informe pelo menos o nome do curso ou a instituição para salvar esta formação.";
+    const local = (g("local")?.value || "").trim();
+    const di = g("data_inicio")?.value || "";
+    const df = g("data_conclusao")?.value || "";
+    const em = !!(g("em_andamento")?.checked);
+    if (!curso && !instituicao && !local && !di && !df && !em) {
+      return "Preencha os dados desta formação ou remova a linha vazia.";
     }
     return null;
   }
