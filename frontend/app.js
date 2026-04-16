@@ -9396,6 +9396,8 @@ function setupModals() {
       }
     populateFuncionarioUnidades("unidade_id", true);
     dom.funcionarioForm?.reset();
+    // controla se o funcionário já tinha usuário vinculado (para validação no submit)
+    if (dom.funcionarioForm) dom.funcionarioForm.dataset.usuarioVinculado = "";
     setFuncionarioFormRecordId(dom.funcionarioForm, editId || "");
     dom.funcionarioModalTitle.textContent = editId ? "Editar funcionário" : "Novo funcionário";
     const submitBtn = document.getElementById("funcionarioFormSubmit");
@@ -9434,6 +9436,7 @@ function setupModals() {
         cargoSel.value = c;
       }
       fillFuncionarioFormacaoFields(dom.funcionarioForm, f.escolaridade, f.formacao_json);
+      if (dom.funcionarioForm) dom.funcionarioForm.dataset.usuarioVinculado = f.usuario_id != null && String(f.usuario_id).trim() !== "" ? String(f.usuario_id) : "";
       if (f.possui_acesso) {
         dom.funcionarioPossuiAcesso.checked = true;
         if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.remove("hidden");
@@ -9558,6 +9561,7 @@ function setupModals() {
     funcionarioFotoFile = null;
     funcionarioFotoRemovida = false;
     setFuncionarioFormRecordId(dom.funcionarioForm, "");
+    if (dom.funcionarioForm) dom.funcionarioForm.dataset.usuarioVinculado = "";
     if (dom.funcionarioFormFeedback) { dom.funcionarioFormFeedback.classList.add("hidden"); dom.funcionarioFormFeedback.textContent = ""; }
     if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
     if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
@@ -9816,20 +9820,23 @@ function setupModals() {
       const usuarioId = (document.getElementById("funcionarioUsuarioId")?.value || "").trim();
       const login = (form.elements.login_usuario?.value || "").trim();
       const senha = form.elements.senha_usuario?.value || "";
-      const isCadastroNovo = !id;
-      // Novo funcionário: sem usuário vinculado, é obrigatório configurar e-mail + senha (ou usuário existente).
-      // Edição: quem já tem acesso no cadastro pode salvar sem redigitar senha (o servidor mantém o vínculo).
-      if (isCadastroNovo && !usuarioId) {
-        if (!login || senha.length < 6) {
-          if (feedback) {
-            feedback.textContent = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente.";
-            feedback.className = "form-feedback error";
-            feedback.classList.remove("hidden");
-          } else {
-            showToast("Configure o usuário antes de salvar.", "error");
-          }
-          return;
+      const usuarioVinculado = (form.dataset.usuarioVinculado || "").trim();
+      const jaTinhaUsuarioNoCadastro = !!usuarioVinculado;
+
+      // Mesma regra do backend:
+      // se marcou "possui acesso" e NÃO existe usuário vinculado ainda, então precisa configurar login+senha
+      // (ou vincular um usuário existente).
+      const precisaCriarUsuarioNovo = !usuarioId && !jaTinhaUsuarioNoCadastro;
+      if (precisaCriarUsuarioNovo && (!login || senha.length < 6)) {
+        const msg = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente.";
+        if (feedback) {
+          feedback.textContent = msg;
+          feedback.className = "form-feedback error";
+          feedback.classList.remove("hidden");
+        } else {
+          showToast(msg, "error");
         }
+        return;
       }
     }
     const linhasFormacao = form.querySelectorAll("#funcionarioFormacaoBlocos .formacao-linha");
