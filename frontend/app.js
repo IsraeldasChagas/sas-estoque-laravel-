@@ -14879,6 +14879,25 @@ function setupReciboAjudaCusto() {
     outro: "Outro",
   };
 
+  const FINALIDADE_ORDER = [
+    "auxilio_combustivel",
+    "ajuda_custo",
+    "transporte",
+    "alimentacao",
+    "auxilio_alimentacao_ifood",
+    "outro",
+  ];
+
+  function ensureFinalidadeMenuOptions() {
+    if (!finalidadeMenu) return;
+    const keys = FINALIDADE_ORDER.filter((k) => FINALIDADE_LABELS[k]).concat(
+      Object.keys(FINALIDADE_LABELS).filter((k) => !FINALIDADE_ORDER.includes(k))
+    );
+    finalidadeMenu.innerHTML = keys
+      .map((k) => `<label class="multi-select__item"><input type="checkbox" value="${escapeHtml(k)}" /> ${escapeHtml(FINALIDADE_LABELS[k] || k)}</label>`)
+      .join("");
+  }
+
   function normalizeFinalidades(raw) {
     if (Array.isArray(raw)) {
       return raw.map((x) => String(x || "").trim()).filter(Boolean);
@@ -14926,6 +14945,10 @@ function setupReciboAjudaCusto() {
     const txt = formatFinalidadesDisplay(fins);
     finalidadeBtn.childNodes[0].textContent = txt.length > 60 ? `${txt.slice(0, 57)}…` : txt;
   }
+
+  // Garante que a lista de opções sempre esteja completa (mesmo se o HTML vier desatualizado)
+  ensureFinalidadeMenuOptions();
+  updateFinalidadeBtnLabel();
 
   function isFinalidadeMenuOpen() {
     return !!finalidadeMenu && !finalidadeMenu.classList.contains("hidden");
