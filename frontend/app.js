@@ -9368,7 +9368,9 @@ function setupModals() {
     return Object.keys(out).length ? out : null;
   }
   function renderFuncionarioFormacaoViewHtml(f, esc, field) {
-    const escolaridadeTxt = FUNCIONARIO_ESCOLARIDADE_LABELS[f.escolaridade] || f.escolaridade || "";
+    const escolaridadeHuman = f.escolaridade
+      ? (FUNCIONARIO_ESCOLARIDADE_LABELS[f.escolaridade] || String(f.escolaridade))
+      : "";
     let formacao = f.formacao_json;
     if (typeof formacao === "string" && formacao.trim()) {
       try {
@@ -9376,6 +9378,10 @@ function setupModals() {
       } catch (e) {
         formacao = null;
       }
+    } else if (formacao != null && typeof formacao === "object" && !Array.isArray(formacao)) {
+      // Alguns drivers / proxies já devolvem objeto no JSON da API
+    } else {
+      formacao = null;
     }
     const linhasBlocoInner = (b) => {
       if (!b || typeof b !== "object") return "";
@@ -9401,14 +9407,12 @@ function setupModals() {
       if (!partes.length) return;
       blocosHtml += `<div class="view-field" style="grid-column:1/-1;"><div class="view-field-label">${esc(titulo)}</div><div class="view-field-value">${partes.join("")}</div></div>`;
     });
-    const temFormacao = escolaridadeTxt || blocosHtml;
-    if (!temFormacao) return "";
     return `
         <div class="form-section">
           <h3>Formação e educação</h3>
           <div class="view-fields-grid">
-            ${escolaridadeTxt ? field("Escolaridade", escolaridadeTxt) : ""}
-            ${blocosHtml}
+            ${field("Escolaridade (nível)", escolaridadeHuman || null)}
+            ${blocosHtml || field("Cursos / qualificações", "Nenhum registro cadastrado.")}
           </div>
         </div>`;
   }
