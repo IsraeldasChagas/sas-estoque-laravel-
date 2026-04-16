@@ -9299,6 +9299,32 @@ function setupModals() {
     }
     return null;
   }
+  /**
+   * Ao salvar o funcionário, confirma automaticamente linhas de formação válidas.
+   * Assim não depende de clicar em "Salvar esta formação" para persistir no servidor.
+   */
+  function autoConfirmarFormacoesPendentesNoSubmit(form, feedback) {
+    if (!form) return true;
+    const linhas = form.querySelectorAll("#funcionarioFormacaoBlocos .formacao-linha");
+    for (const row of linhas) {
+      if (!rowFormacaoTemAlgumCampo(row)) continue;
+      if (row.dataset.formacaoConfirmada === "1") continue;
+      const err = validarFormacaoLinhaParaSalvar(row);
+      if (err) {
+        const msg = err;
+        if (feedback) {
+          feedback.textContent = msg;
+          feedback.className = "form-feedback error";
+          feedback.classList.remove("hidden");
+        } else {
+          showToast(msg, "warning");
+        }
+        return false;
+      }
+      setFormacaoLinhaConfirmada(row, true);
+    }
+    return true;
+  }
   function fillFuncionarioFormacaoFields(form, escolaridade, formacaoJson) {
     if (!form) return;
     clearFuncionarioFormacaoLinhas(form);
@@ -9800,10 +9826,13 @@ function setupModals() {
     funcionarioSaving = true;
     const submitBtn = document.getElementById("funcionarioFormSubmit");
     if (submitBtn) submitBtn.disabled = true;
-    if (!currentUser?.id) {
-      showToast("Faça login novamente. Sessão expirada.", "error");
+    const releaseSubmitLock = () => {
       if (submitBtn) submitBtn.disabled = false;
       funcionarioSaving = false;
+    };
+    if (!currentUser?.id) {
+      showToast("Faça login novamente. Sessão expirada.", "error");
+      releaseSubmitLock();
       return;
     }
     const form = dom.funcionarioForm;
@@ -9812,9 +9841,9 @@ function setupModals() {
     const cpf = (form.elements.cpf?.value || "").replace(/\D/g, "");
     const cargo = (form.elements.cargo?.value || "").trim();
     const feedback = dom.funcionarioFormFeedback;
-    if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
-    if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
-    if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
+    if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); releaseSubmitLock(); return; }
+    if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); releaseSubmitLock(); return; }
+    if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); releaseSubmitLock(); return; }
     // Funcionário é só cadastro. Acesso ao sistema é opcional.
     // Se marcar "acesso" mas não configurar (nem vincular usuário), salva SEM acesso.
     let possuiAcesso = dom.funcionarioPossuiAcesso?.checked || false;
@@ -9837,19 +9866,9 @@ function setupModals() {
       if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
       showToast("Funcionário salvo sem acesso ao sistema (usuário não configurado).", "info");
     }
-    const linhasFormacao = form.querySelectorAll("#funcionarioFormacaoBlocos .formacao-linha");
-    for (const fRow of linhasFormacao) {
-      if (rowFormacaoTemAlgumCampo(fRow) && fRow.dataset.formacaoConfirmada !== "1") {
-        const msg = "Há formação com dados preenchidos sem confirmar. Clique em \"Salvar esta formação\" em cada linha ou limpe os campos.";
-        if (feedback) {
-          feedback.textContent = msg;
-          feedback.className = "form-feedback error";
-          feedback.classList.remove("hidden");
-        } else {
-          showToast(msg, "warning");
-        }
-        return;
-      }
+    if (!autoConfirmarFormacoesPendentesNoSubmit(form, feedback)) {
+      releaseSubmitLock();
+      return;
     }
     if (feedback) { feedback.classList.add("hidden"); feedback.textContent = ""; feedback.className = "form-feedback hidden"; }
     const payload = {
