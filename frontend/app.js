@@ -14903,21 +14903,15 @@ function setupReciboAjudaCusto() {
 
   const FINALIDADE_LABELS = {
     auxilio_combustivel: "Auxílio Combustível",
+    alimentacao: "Alimentação",
+    outro: "Outro",
+    // legado (só exibição em lista/PDF — não entram no menu)
     ajuda_custo: "Auxílio Alimentação (Cartão iFood)",
     transporte: "Transporte",
-    alimentacao: "Alimentação",
-    // compatibilidade (itens antigos podem ter sido salvos com esta chave)
     auxilio_alimentacao_ifood: "Auxílio Alimentação (Cartão iFood)",
-    outro: "Outro",
   };
 
-  const FINALIDADE_ORDER = [
-    "auxilio_combustivel",
-    "ajuda_custo",
-    "transporte",
-    "alimentacao",
-    "outro",
-  ];
+  const FINALIDADE_ORDER = ["auxilio_combustivel", "alimentacao", "outro"];
 
   function parseFinalidadeItensFromApi(raw) {
     // Retorna [{k, v?}] preservando valores quando existirem
@@ -15034,9 +15028,7 @@ function setupReciboAjudaCusto() {
 
   function ensureFinalidadeMenuOptions() {
     if (!finalidadeMenu) return;
-    const keys = FINALIDADE_ORDER.filter((k) => FINALIDADE_LABELS[k]).concat(
-      Object.keys(FINALIDADE_LABELS).filter((k) => !FINALIDADE_ORDER.includes(k))
-    );
+    const keys = FINALIDADE_ORDER.filter((k) => FINALIDADE_LABELS[k]);
     finalidadeMenu.innerHTML = keys
       .map((k) => `<label class="multi-select__item"><input type="checkbox" value="${escapeHtml(k)}" /> ${escapeHtml(FINALIDADE_LABELS[k] || k)}</label>`)
       .join("");
