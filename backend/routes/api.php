@@ -5810,6 +5810,23 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     }
 
     $data = $request->all();
+
+    // Permite atualizar CPF (mantendo validação e unicidade)
+    $cpfFormatado = null;
+    if (array_key_exists('cpf', $data)) {
+        $cpfLimpo = preg_replace('/\D/', '', (string) ($data['cpf'] ?? ''));
+        if (strlen($cpfLimpo) !== 11) {
+            return response()->json(['error' => 'CPF inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $cpfFormatado = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $cpfLimpo);
+        $exists = DB::table('funcionarios')
+            ->where('cpf', $cpfFormatado)
+            ->where('id', '!=', $id)
+            ->exists();
+        if ($exists) {
+            return response()->json(['error' => 'CPF já cadastrado'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+    }
     // RH: acesso ao sistema (persistir vínculo usuário/email)
     $possuiAcesso = !empty($data['possui_acesso']) && !in_array($data['possui_acesso'], [false, 'false', '0', 0, ''], true);
     $usuarioIdFornecido = !empty($data['usuario_id']) ? (int)$data['usuario_id'] : null;
@@ -5882,6 +5899,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
         'possui_acesso' => $possuiAcesso ? 1 : 0,
         'usuario_id' => $usuarioId,
     ];
+    if ($cpfFormatado !== null) {
+        $update['cpf'] = $cpfFormatado;
+    }
     foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
         if (Schema::hasColumn('funcionarios', $colBancario)) {
             $update[$colBancario] = $data[$colBancario] ?? null;

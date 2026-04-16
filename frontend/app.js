@@ -9449,7 +9449,8 @@ function setupModals() {
         if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
         if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
       }
-      if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = true;
+      // Permite editar CPF também na edição
+      if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = false;
       if (dom.funcionarioAvatarPreview) {
         const url = f.foto ? getUsuarioFotoUrl(f.foto) : null;
         dom.funcionarioAvatarPreview.innerHTML = url
@@ -9888,6 +9889,7 @@ function setupModals() {
       if (id) {
         const putPayload = {
           nome_completo: payload.nome_completo,
+          cpf: (payload.cpf || "").replace(/\D/g, ""),
           data_nascimento: payload.data_nascimento,
           sexo: payload.sexo,
           estado_civil: payload.estado_civil,
@@ -14873,6 +14875,7 @@ function setupReciboAjudaCusto() {
   const dataPagamento = document.getElementById("reciboAjudaDataPagamento");
   const finalidadeWrap = document.getElementById("reciboAjudaFinalidadeWrap");
   const finalidadeBtn = document.getElementById("reciboAjudaFinalidadeBtn");
+  const finalidadeBtnLabel = document.getElementById("reciboAjudaFinalidadeLabel");
   const finalidadeMenu = document.getElementById("reciboAjudaFinalidadeMenu");
   const valor = document.getElementById("reciboAjudaValor");
   const assinaturaTipo = document.getElementById("reciboAjudaAssinaturaTipo");
@@ -14965,11 +14968,12 @@ function setupReciboAjudaCusto() {
     if (!finalidadeBtn) return;
     const fins = getSelectedFinalidades();
     if (!fins.length) {
-      finalidadeBtn.childNodes[0].textContent = "Selecione…";
+      if (finalidadeBtnLabel) finalidadeBtnLabel.textContent = "Selecione…";
       return;
     }
     const txt = formatFinalidadesDisplay(fins);
-    finalidadeBtn.childNodes[0].textContent = txt.length > 60 ? `${txt.slice(0, 57)}…` : txt;
+    const out = txt.length > 60 ? `${txt.slice(0, 57)}…` : txt;
+    if (finalidadeBtnLabel) finalidadeBtnLabel.textContent = out;
   }
 
   // Garante que a lista de opções sempre esteja completa (mesmo se o HTML vier desatualizado)
