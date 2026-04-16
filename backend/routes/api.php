@@ -5605,18 +5605,42 @@ Route::get('/funcionarios/{id}', function ($id) {
 });
 
 /**
- * Verifica colunas reais em `funcionarios` via Schema::getColumnListing (mais confiável que Schema::hasColumn em alguns hosts).
- * Importante: em closures PHP, variáveis do arquivo NÃO entram no escopo automaticamente — por isso tudo fica aqui dentro.
+ * Colunas reais da tabela `funcionarios` (escolaridade, formacao_json, banco…).
+ * Usa SHOW COLUMNS no MySQL + cache só no $GLOBALS da requisição atual (cada HTTP limpa o GLOBALS),
+ * evitando Schema do Laravel desatualizado e cache estático entre requests no PHP-FPM.
  */
 $funcionariosTableHasColumn = static function (string $column): bool {
     if (! Schema::hasTable('funcionarios')) {
         return false;
     }
-    // Sem cache estático: após migrate (banco, escolaridade, formacao_json) o worker PHP
-    // precisa enxergar as colunas novas sem reiniciar o pool.
-    $cols = Schema::getColumnListing('funcionarios');
+    $g = '__rh_funcionarios_colset';
+    if (! isset($GLOBALS[$g]) || ! is_array($GLOBALS[$g])) {
+        $GLOBALS[$g] = [];
+        try {
+            $driver = Schema::getConnection()->getDriverName();
+            if ($driver === 'mysql') {
+                foreach (DB::select('SHOW COLUMNS FROM funcionarios') as $row) {
+                    $f = is_object($row)
+                        ? ($row->Field ?? $row->field ?? '')
+                        : ($row['Field'] ?? $row['field'] ?? '');
+                    if ($f !== '') {
+                        $GLOBALS[$g][strtolower((string) $f)] = true;
+                    }
+                }
+            } else {
+                foreach (Schema::getColumnListing('funcionarios') as $f) {
+                    $GLOBALS[$g][strtolower((string) $f)] = true;
+                }
+            }
+        } catch (\Throwable $e) {
+            $GLOBALS[$g] = [];
+            foreach (Schema::getColumnListing('funcionarios') as $f) {
+                $GLOBALS[$g][strtolower((string) $f)] = true;
+            }
+        }
+    }
 
-    return in_array($column, $cols, true);
+    return isset($GLOBALS[$g][strtolower($column)]);
 };
 
 $normalizeFuncionarioFormacaoJson = static function ($requestData) {

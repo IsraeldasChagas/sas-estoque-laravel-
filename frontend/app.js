@@ -9363,7 +9363,9 @@ function setupModals() {
       const wrap = form.querySelector(`.formacao-linhas[data-formacao-key="${key}"]`);
       if (!wrap) return;
       const arr = [];
-      wrap.querySelectorAll(":scope > .formacao-linha").forEach((row) => {
+      // Evita ":scope >" (alguns navegadores antigos não coletam linhas e o JSON ia vazio)
+      wrap.querySelectorAll(".formacao-linha").forEach((row) => {
+        if (row.closest(".formacao-linhas") !== wrap) return;
         const one = readFuncionarioFormacaoLinha(row);
         if (one) arr.push(one);
       });
