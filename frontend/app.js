@@ -288,7 +288,7 @@ const dom = {
   funcionariosFiltroUnidade: document.getElementById("funcionariosFiltroUnidade"),
   funcionarioViewModal: document.getElementById("funcionarioViewModal"),
   funcionarioViewContent: document.getElementById("funcionarioViewContent"),
-  closeFuncionarioViewBtn: document.getElementById("closeFuncionarioView"),
+  closeFuncionarioViewBtn: document.getElementById("closeFuncionarioViewBtn"),
   funcionarioViewEditar: document.getElementById("funcionarioViewEditar"),
   funcionarioViewInativar: document.getElementById("funcionarioViewInativar"),
   closeFuncionarioView: document.getElementById("closeFuncionarioView"),
