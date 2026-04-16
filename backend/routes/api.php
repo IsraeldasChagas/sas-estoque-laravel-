@@ -5604,44 +5604,6 @@ Route::get('/funcionarios/{id}', function ($id) {
     return response()->json($f)->header('Access-Control-Allow-Origin', '*');
 });
 
-/**
- * Verifica se a coluna existe de forma mais confiável que Schema::hasColumn em alguns ambientes.
- * (Evita falso negativo quando a migration já rodou, mas o Schema não reflete corretamente.)
- */
-$funcionariosHasPhysicalColumn = static function (string $column): bool {
-    if (! Schema::hasTable('funcionarios')) {
-        return false;
-    }
-    $driver = Schema::getConnection()->getDriverName();
-    if ($driver === 'sqlite') {
-        $row = DB::selectOne(
-            "select 1 as ok from sqlite_master where type = 'table' and name = 'funcionarios' and sql like ? limit 1",
-            ['%' . $column . '%']
-        );
-
-        return (bool) ($row?->ok ?? false);
-    }
-    if (in_array($driver, ['mysql', 'mariadb'], true)) {
-        $db = Schema::getConnection()->getDatabaseName();
-        $row = DB::selectOne(
-            'select 1 as ok from information_schema.columns where table_schema = ? and table_name = ? and column_name = ? limit 1',
-            [$db, 'funcionarios', $column]
-        );
-
-        return (bool) ($row?->ok ?? false);
-    }
-    if ($driver === 'pgsql') {
-        $row = DB::selectOne(
-            "select 1 as ok from information_schema.columns where table_name = 'funcionarios' and column_name = ? limit 1",
-            [$column]
-        );
-
-        return (bool) ($row?->ok ?? false);
-    }
-
-    return Schema::hasColumn('funcionarios', $column);
-};
-
 $normalizeFuncionarioFormacaoJson = static function ($requestData) {
     $raw = $requestData['formacao_json'] ?? null;
     if ($raw === null || $raw === '') {
@@ -5711,7 +5673,7 @@ $normalizeFuncionarioFormacaoJson = static function ($requestData) {
     return empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
 };
 
-Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson, $funcionariosHasPhysicalColumn) {
+Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson) {
     try {
     if (!Schema::hasTable('funcionarios')) {
         return response()->json(['error' => 'Módulo RH não configurado. Execute: php artisan migrate'], 503)
@@ -5725,18 +5687,6 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     }
 
     $data = $request->all();
-    // Evita "falso sucesso": se o front enviar escolaridade/formação mas o banco não tiver as colunas,
-    // a API deve retornar erro claro (em vez de salvar sem persistir nada).
-    $temEscolaridade = array_key_exists('escolaridade', $data) && trim((string) ($data['escolaridade'] ?? '')) !== '';
-    $temFormacaoJson = array_key_exists('formacao_json', $data) && trim((string) ($data['formacao_json'] ?? '')) !== '';
-    if ($temEscolaridade && ! $funcionariosHasPhysicalColumn('escolaridade')) {
-        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna escolaridade. Execute no servidor: php artisan migrate --force'], 422)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
-    if ($temFormacaoJson && ! $funcionariosHasPhysicalColumn('formacao_json')) {
-        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna formacao_json. Execute no servidor: php artisan migrate --force'], 422)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
     $cpfLimpo = preg_replace('/\D/', '', $data['cpf'] ?? '');
     if (strlen($cpfLimpo) !== 11) {
         return response()->json(['error' => 'CPF inválido'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -5816,12 +5766,12 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             $insert[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if ($funcionariosHasPhysicalColumn('escolaridade')) {
+    if (Schema::hasColumn('funcionarios', 'escolaridade')) {
         $insert['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if ($funcionariosHasPhysicalColumn('formacao_json')) {
+    if (Schema::hasColumn('funcionarios', 'formacao_json')) {
         $insert['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
@@ -5847,7 +5797,7 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     }
 });
 
-Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $funcionariosHasPhysicalColumn) {
+Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
     try {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
@@ -5860,18 +5810,6 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     }
 
     $data = $request->all();
-    // Evita "falso sucesso": se o front enviar escolaridade/formação mas o banco não tiver as colunas,
-    // retorna erro claro (em vez de ignorar e parecer que salvou).
-    $temEscolaridade = array_key_exists('escolaridade', $data) && trim((string) ($data['escolaridade'] ?? '')) !== '';
-    $temFormacaoJson = array_key_exists('formacao_json', $data) && trim((string) ($data['formacao_json'] ?? '')) !== '';
-    if ($temEscolaridade && ! $funcionariosHasPhysicalColumn('escolaridade')) {
-        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna escolaridade. Execute no servidor: php artisan migrate --force'], 422)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
-    if ($temFormacaoJson && ! $funcionariosHasPhysicalColumn('formacao_json')) {
-        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna formacao_json. Execute no servidor: php artisan migrate --force'], 422)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
 
     // Permite atualizar CPF (mantendo validação e unicidade)
     $cpfFormatado = null;
@@ -5969,12 +5907,12 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if ($funcionariosHasPhysicalColumn('escolaridade')) {
+    if (Schema::hasColumn('funcionarios', 'escolaridade')) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if ($funcionariosHasPhysicalColumn('formacao_json')) {
+    if (Schema::hasColumn('funcionarios', 'formacao_json')) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
@@ -6011,7 +5949,7 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     }
 });
 
-Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $funcionariosHasPhysicalColumn) {
+Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson) {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -6023,18 +5961,6 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
     }
 
     $data = $request->all();
-    // Evita "falso sucesso": se o front enviar escolaridade/formação mas o banco não tiver as colunas,
-    // retorna erro claro (em vez de ignorar e parecer que salvou).
-    $temEscolaridade = array_key_exists('escolaridade', $data) && trim((string) ($data['escolaridade'] ?? '')) !== '';
-    $temFormacaoJson = array_key_exists('formacao_json', $data) && trim((string) ($data['formacao_json'] ?? '')) !== '';
-    if ($temEscolaridade && ! $funcionariosHasPhysicalColumn('escolaridade')) {
-        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna escolaridade. Execute no servidor: php artisan migrate --force'], 422)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
-    if ($temFormacaoJson && ! $funcionariosHasPhysicalColumn('formacao_json')) {
-        return response()->json(['error' => 'Banco de dados desatualizado: falta a coluna formacao_json. Execute no servidor: php artisan migrate --force'], 422)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
     $rules = ['nome_completo' => 'required|string|max:255', 'cargo' => 'required|string|max:255', 'status' => 'required|in:ativo,inativo'];
     $validator = \Illuminate\Support\Facades\Validator::make($data, $rules);
     if ($validator->fails()) {
@@ -6061,12 +5987,12 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if ($funcionariosHasPhysicalColumn('escolaridade')) {
+    if (Schema::hasColumn('funcionarios', 'escolaridade')) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if ($funcionariosHasPhysicalColumn('formacao_json')) {
+    if (Schema::hasColumn('funcionarios', 'formacao_json')) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
