@@ -9653,6 +9653,16 @@ function setupModals() {
     if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
     if (dom.funcionarioFotoInput) dom.funcionarioFotoInput.value = "";
   });
+
+  // Fallback: alguns ambientes não disparam submit do modal corretamente
+  // (ex.: clique em botão dentro de footer com overflow). Força o submit do form.
+  document.getElementById("funcionarioFormSubmit")?.addEventListener("click", (ev) => {
+    if (!dom.funcionarioForm) return;
+    if (typeof dom.funcionarioForm.requestSubmit === "function") {
+      ev.preventDefault();
+      dom.funcionarioForm.requestSubmit();
+    }
+  });
   dom.funcionarioPossuiAcesso?.addEventListener("change", function() {
     if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.toggle("hidden", !this.checked);
     if (!this.checked) {
@@ -9779,10 +9789,17 @@ function setupModals() {
     toggleModal(dom.funcionarioUsuarioModal, false);
   });
 
+  let funcionarioSaving = false;
   dom.funcionarioForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (funcionarioSaving) return;
+    funcionarioSaving = true;
+    const submitBtn = document.getElementById("funcionarioFormSubmit");
+    if (submitBtn) submitBtn.disabled = true;
     if (!currentUser?.id) {
       showToast("Faça login novamente. Sessão expirada.", "error");
+      if (submitBtn) submitBtn.disabled = false;
+      funcionarioSaving = false;
       return;
     }
     const form = dom.funcionarioForm;
@@ -9942,6 +9959,10 @@ function setupModals() {
       const safeMsg = msg.length > 500 || msg.trim().startsWith("<") ? "Erro no servidor. Tente novamente ou contate o suporte." : msg;
       if (feedback) { feedback.textContent = safeMsg; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); }
       else showToast(safeMsg, "error");
+    } finally {
+      const submitBtn2 = document.getElementById("funcionarioFormSubmit");
+      if (submitBtn2) submitBtn2.disabled = false;
+      funcionarioSaving = false;
     }
   });
   dom.funcionariosFilterForm?.addEventListener("submit", async (e) => { e.preventDefault(); await loadFuncionarios(getFuncionariosFiltros()); });
