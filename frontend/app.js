@@ -9949,13 +9949,13 @@ function setupModals() {
         if (payload.whatsapp) fd.append("whatsapp", payload.whatsapp);
         if (payload.email) fd.append("email", payload.email);
         if (payload.data_admissao) fd.append("data_admissao", payload.data_admissao);
-        if (payload.observacoes) fd.append("observacoes", payload.observacoes);
-        if (payload.banco) fd.append("banco", payload.banco);
-        if (payload.agencia) fd.append("agencia", payload.agencia);
-        if (payload.conta) fd.append("conta", payload.conta);
-        if (payload.conta_digito) fd.append("conta_digito", payload.conta_digito);
-        if (payload.pix) fd.append("pix", payload.pix);
-        if (payload.escolaridade) fd.append("escolaridade", payload.escolaridade);
+        fd.append("observacoes", payload.observacoes != null ? String(payload.observacoes) : "");
+        fd.append("banco", payload.banco != null ? String(payload.banco) : "");
+        fd.append("agencia", payload.agencia != null ? String(payload.agencia) : "");
+        fd.append("conta", payload.conta != null ? String(payload.conta) : "");
+        fd.append("conta_digito", payload.conta_digito != null ? String(payload.conta_digito) : "");
+        fd.append("pix", payload.pix != null ? String(payload.pix) : "");
+        fd.append("escolaridade", payload.escolaridade != null ? String(payload.escolaridade) : "");
         fd.append("formacao_json", formacaoJsonStr);
         if (payload.possui_acesso) {
           if (payload.usuario_id) fd.append("usuario_id", payload.usuario_id);

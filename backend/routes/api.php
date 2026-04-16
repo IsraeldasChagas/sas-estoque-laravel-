@@ -5781,7 +5781,7 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
         'observacoes' => $data['observacoes'] ?? null,
     ];
     foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
-        if (Schema::hasColumn('funcionarios', $colBancario)) {
+        if ($funcionariosTableHasColumn($colBancario)) {
             $insert[$colBancario] = $data[$colBancario] ?? null;
         }
     }
@@ -5922,7 +5922,7 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
         $update['cpf'] = $cpfFormatado;
     }
     foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
-        if (Schema::hasColumn('funcionarios', $colBancario)) {
+        if ($funcionariosTableHasColumn($colBancario)) {
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
@@ -6002,7 +6002,7 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
         'observacoes' => $data['observacoes'] ?? null,
     ];
     foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
-        if (Schema::hasColumn('funcionarios', $colBancario)) {
+        if ($funcionariosTableHasColumn($colBancario)) {
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
@@ -6512,10 +6512,13 @@ $mergeDeviceExtras = function (Request $req, $extras) {
 };
 /** Evita SQL error se a coluna pix ainda não existir em funcionarios (migration pendente em produção). */
 $proventoSelectFuncionarioPix = function () {
-    if (Schema::hasTable('funcionarios') && Schema::hasColumn('funcionarios', 'pix')) {
-        return 'funcionarios.pix as funcionario_pix';
+    if (!Schema::hasTable('funcionarios')) {
+        return DB::raw('NULL as funcionario_pix');
     }
-    return DB::raw('NULL as funcionario_pix');
+    $cols = Schema::getColumnListing('funcionarios');
+    return in_array('pix', $cols, true)
+        ? 'funcionarios.pix as funcionario_pix'
+        : DB::raw('NULL as funcionario_pix');
 };
 $proventoSelectUnidadeCnpj = function () {
     if (Schema::hasTable('unidades') && Schema::hasColumn('unidades', 'cnpj')) {
