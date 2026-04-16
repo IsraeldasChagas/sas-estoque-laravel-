@@ -9815,29 +9815,27 @@ function setupModals() {
     if (!nome) { if (feedback) { feedback.textContent = "Nome completo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Nome completo é obrigatório.", "error"); return; }
     if (cpf.length !== 11) { if (feedback) { feedback.textContent = "CPF inválido. Informe 11 dígitos."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("CPF inválido.", "error"); return; }
     if (!cargo) { if (feedback) { feedback.textContent = "Cargo é obrigatório."; feedback.className = "form-feedback error"; feedback.classList.remove("hidden"); } else showToast("Cargo é obrigatório.", "error"); return; }
-    const possuiAcesso = dom.funcionarioPossuiAcesso?.checked || false;
-    if (possuiAcesso) {
-      const usuarioId = (document.getElementById("funcionarioUsuarioId")?.value || "").trim();
-      const login = (form.elements.login_usuario?.value || "").trim();
-      const senha = form.elements.senha_usuario?.value || "";
-      const usuarioVinculado = (form.dataset.usuarioVinculado || "").trim();
-      const jaTinhaUsuarioNoCadastro = !!usuarioVinculado;
+    // Funcionário é só cadastro. Acesso ao sistema é opcional.
+    // Se marcar "acesso" mas não configurar (nem vincular usuário), salva SEM acesso.
+    let possuiAcesso = dom.funcionarioPossuiAcesso?.checked || false;
+    const usuarioId = (document.getElementById("funcionarioUsuarioId")?.value || "").trim();
+    const login = (form.elements.login_usuario?.value || "").trim();
+    const senha = form.elements.senha_usuario?.value || "";
+    const usuarioVinculado = (form.dataset.usuarioVinculado || "").trim();
+    const jaTinhaUsuarioNoCadastro = !!usuarioVinculado;
+    const temConfigNovoUsuario = !!login && senha.length >= 6;
+    const temVinculoOuExistente = !!usuarioId || jaTinhaUsuarioNoCadastro;
 
-      // Mesma regra do backend:
-      // se marcou "possui acesso" e NÃO existe usuário vinculado ainda, então precisa configurar login+senha
-      // (ou vincular um usuário existente).
-      const precisaCriarUsuarioNovo = !usuarioId && !jaTinhaUsuarioNoCadastro;
-      if (precisaCriarUsuarioNovo && (!login || senha.length < 6)) {
-        const msg = "Clique em 'Configurar usuário' e preencha e-mail e senha (mín. 6 caracteres), ou vincule um usuário existente.";
-        if (feedback) {
-          feedback.textContent = msg;
-          feedback.className = "form-feedback error";
-          feedback.classList.remove("hidden");
-        } else {
-          showToast(msg, "error");
-        }
-        return;
-      }
+    if (possuiAcesso && !temVinculoOuExistente && !temConfigNovoUsuario) {
+      possuiAcesso = false;
+      if (dom.funcionarioPossuiAcesso) dom.funcionarioPossuiAcesso.checked = false;
+      if (dom.funcionarioAcessoArea) dom.funcionarioAcessoArea.classList.add("hidden");
+      ["funcionarioLoginUsuario","funcionarioSenhaUsuario","funcionarioPerfilUsuario","funcionarioUsuarioId"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = id === "funcionarioPerfilUsuario" ? "FUNCIONARIO" : "";
+      });
+      if (dom.funcionarioUsuarioResumo) { dom.funcionarioUsuarioResumo.textContent = ""; dom.funcionarioUsuarioResumo.style.display = "none"; }
+      showToast("Funcionário salvo sem acesso ao sistema (usuário não configurado).", "info");
     }
     const linhasFormacao = form.querySelectorAll("#funcionarioFormacaoBlocos .formacao-linha");
     for (const fRow of linhasFormacao) {
@@ -9873,7 +9871,7 @@ function setupModals() {
       conta_digito: form.elements.conta_digito?.value || null,
       pix: form.elements.pix?.value || null,
       escolaridade: form.elements.escolaridade?.value || null,
-      possui_acesso: dom.funcionarioPossuiAcesso?.checked || false,
+      possui_acesso: possuiAcesso,
     };
     const formacaoJsonObj = collectFuncionarioFormacaoJson(form);
     const formacaoJsonStr = formacaoJsonObj ? JSON.stringify(formacaoJsonObj) : "";
