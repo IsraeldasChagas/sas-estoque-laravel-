@@ -6652,7 +6652,7 @@ $reciboAjudaFinalidadeLabels = [
     'auxilio_combustivel' => 'Auxílio Combustível',
     'ajuda_custo' => 'Auxílio Alimentação (Cartão iFood)',
     'transporte' => 'Transporte',
-    'alimentacao' => 'Alimentação',
+    'alimentacao' => 'Alimentação(Cartão iFood)',
     // compatibilidade (registros antigos podem ter sido salvos com esta chave)
     'auxilio_alimentacao_ifood' => 'Auxílio Alimentação (Cartão iFood)',
     'outro' => 'Outro',

@@ -14903,7 +14903,7 @@ function setupReciboAjudaCusto() {
 
   const FINALIDADE_LABELS = {
     auxilio_combustivel: "Auxílio Combustível",
-    alimentacao: "Alimentação",
+    alimentacao: "Alimentação(Cartão iFood)",
     outro: "Outro",
     // legado (só exibição em lista/PDF — não entram no menu)
     ajuda_custo: "Auxílio Alimentação (Cartão iFood)",
