@@ -14876,6 +14876,34 @@ function setupReciboAjudaCusto() {
     outro: "Outro",
   };
 
+  function normalizeFinalidades(raw) {
+    if (Array.isArray(raw)) {
+      return raw.map((x) => String(x || "").trim()).filter(Boolean);
+    }
+    const s = String(raw || "").trim();
+    if (!s) return [];
+    // aceita legado (string) e também JSON (["a","b"])
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) return parsed.map((x) => String(x || "").trim()).filter(Boolean);
+      } catch (_) {}
+    }
+    return [s];
+  }
+
+  function formatFinalidadesDisplay(raw) {
+    const fins = normalizeFinalidades(raw);
+    if (!fins.length) return "-";
+    return fins.map((f) => FINALIDADE_LABELS[f] || f).join(", ");
+  }
+
+  function getSelectedFinalidades() {
+    if (!finalidadeSelect) return [];
+    const opts = Array.from(finalidadeSelect.selectedOptions || []);
+    return opts.map((o) => String(o.value || "").trim()).filter(Boolean);
+  }
+
   const CONFIRM_CODE_STORAGE_KEY = "sas-estoque-recibo-ajuda-confirm-code";
   const CONFIRM_CODE_TTL_MS = 10 * 60 * 1000;
 
@@ -15135,7 +15163,7 @@ function setupReciboAjudaCusto() {
           const fid = escapeHtml(r.funcionario_nome || "-");
           const un = escapeHtml(r.unidade_nome || "-");
           const comp = escapeHtml(r.competencia || "-");
-          const fin = escapeHtml(FINALIDADE_LABELS[r.finalidade] || r.finalidade || "-");
+          const fin = escapeHtml(formatFinalidadesDisplay(r.finalidade));
           const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
           const id = escapeHtml(String(r.id));
           return `<tr>
@@ -15354,7 +15382,7 @@ function setupReciboAjudaCusto() {
       <div class="field"><div class="lbl">Funcionário</div><div class="val">${esc(payload.funcionarioNome || "-")}</div></div>
       <div class="field"><div class="lbl">CPF</div><div class="val">${esc(payload.funcionarioCpf || "-")}</div></div>
       <div class="field"><div class="lbl">Valor</div><div class="val">${esc(payload.valorFmt || "R$ 0,00")}</div></div>
-      <div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">${esc(payload.finalidade || "-")}</div></div>
+      <div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">${esc(payload.finalidadeFmt || payload.finalidade || "-")}</div></div>
     </div>
     <div class="text">
       <strong>Declaro que recebi o valor acima e confirmo as informações.</strong>
@@ -15461,14 +15489,14 @@ function setupReciboAjudaCusto() {
       const un = (state.unidades || []).find((u) => String(u.id) === String(uid));
       const comp = (competencia?.value || "").trim();
       const dtPag = (dataPagamento?.value || "").trim();
-      const fin = (finalidadeSelect?.value || "").trim();
+      const fins = getSelectedFinalidades();
       const valorNum = Number(valor?.dataset?.value || 0);
       const tipoAss = getAssinaturaTipo();
 
       if (!fid) return showToast("Selecione o funcionário.", "warning");
       if (!uid) return showToast("Selecione a unidade.", "warning");
       if (!comp) return showToast("Informe a competência.", "warning");
-      if (!fin) return showToast("Selecione a finalidade.", "warning");
+      if (!fins.length) return showToast("Selecione ao menos uma finalidade.", "warning");
       if (!Number.isFinite(valorNum) || valorNum <= 0) return showToast("Informe um valor válido.", "warning");
       if (tipoAss === "desenho") {
         if (!confirmRequiredOk()) return showToast("Confirme via WhatsApp para liberar a assinatura.", "warning");
@@ -15487,7 +15515,7 @@ function setupReciboAjudaCusto() {
         competencia: comp,
         data_pagamento: dtPag || null,
         assinatura_tipo: tipoAss,
-        finalidade: fin,
+        finalidade: fins,
         valor: roundToCurrency(valorNum),
         confirmado_em: tipoAss === "desenho" ? confirmadoEmIso : null,
         ip_publico: evidIpPublico,
@@ -15521,16 +15549,16 @@ function setupReciboAjudaCusto() {
     const func = (state.funcionarios || []).find((f) => String(f.id) === String(fid));
     const funcionarioNome = func?.nome_completo || func?.nome || "";
     const comp = (competencia?.value || "").trim();
-    const fin = (finalidadeSelect?.value || "").trim();
+    const fins = getSelectedFinalidades();
     const valorNum = Number(valor?.dataset?.value || 0);
     if (!fid) return setFeedback(confirmarFeedback, "Selecione o funcionário antes de solicitar a confirmação.", "error");
     if (!comp) return setFeedback(confirmarFeedback, "Informe a competência antes de solicitar a confirmação.", "error");
-    if (!fin) return setFeedback(confirmarFeedback, "Selecione a finalidade antes de solicitar a confirmação.", "error");
+    if (!fins.length) return setFeedback(confirmarFeedback, "Selecione ao menos uma finalidade antes de solicitar a confirmação.", "error");
     if (!Number.isFinite(valorNum) || valorNum <= 0) return setFeedback(confirmarFeedback, "Informe um valor válido antes de solicitar a confirmação.", "error");
 
     const code = genCode6();
     persistConfirmCode(code, funcionarioNome);
-    const msg = `CONFIRMAÇÃO DE RECIBO\n\nFuncionário: ${funcionarioNome}\nCompetência: ${comp}\nFinalidade: ${FINALIDADE_LABELS[fin] || fin}\nValor: ${formatCurrencyBRL(valorNum)}\n\nCódigo: ${code}\n\nResponda apenas com o código.`;
+    const msg = `CONFIRMAÇÃO DE RECIBO\n\nFuncionário: ${funcionarioNome}\nCompetência: ${comp}\nFinalidade: ${formatFinalidadesDisplay(fins)}\nValor: ${formatCurrencyBRL(valorNum)}\n\nCódigo: ${code}\n\nResponda apenas com o código.`;
     if (confirmarWhatsappLink) {
       confirmarWhatsappLink.href = buildWhatsappLink(msg);
       confirmarWhatsappLink.classList.remove("hidden");
@@ -15570,7 +15598,7 @@ function setupReciboAjudaCusto() {
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
     if (dataPagamento) dataPagamento.value = "";
-    if (finalidadeSelect) finalidadeSelect.value = "";
+    if (finalidadeSelect) Array.from(finalidadeSelect.options || []).forEach((o) => { o.selected = false; });
     if (assinaturaTipo) assinaturaTipo.value = "desenho";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
