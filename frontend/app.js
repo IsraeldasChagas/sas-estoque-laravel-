@@ -496,13 +496,13 @@ let inactivityResetHandler = null;
 const INACTIVITY_TIMEOUT = 6 * 60 * 1000; // 6 minutos em milissegundos
 
 // --- Utilidades de interface e formatação ---
-function showToast(message, type = "info") {
+function showToast(message, type = "info", durationMs = 3200) {
   if (!dom.toast) return;
   dom.toast.textContent = message;
   dom.toast.className = `toast toast--${type}`;
   setTimeout(() => {
     dom.toast.className = "toast";
-  }, 3200);
+  }, durationMs);
 }
 
 /**
@@ -9373,6 +9373,58 @@ function setupModals() {
     });
     return Object.keys(out).length ? out : null;
   }
+  /** Resposta do GET/POST funcionário: formação ainda vazia no servidor? */
+  function rhFormacaoRespostaVazia(salvForm) {
+    if (salvForm == null || salvForm === "") return true;
+    if (typeof salvForm === "string") {
+      const t = salvForm.trim();
+      if (!t || t === "null" || t === "{}") return true;
+      try {
+        const o = JSON.parse(t);
+        return !o || typeof o !== "object" || Object.keys(o).length === 0;
+      } catch (e) {
+        return true;
+      }
+    }
+    if (typeof salvForm === "object") return Object.keys(salvForm).length === 0;
+    return true;
+  }
+  /**
+   * Compara o que o usuário enviou com o que o servidor devolveu após salvar.
+   * Se faltar coluna no MySQL, o cadastro “salva” mas esses campos voltam vazios.
+   */
+  function rhAvisosPersistenciaFuncionario(enviado, salvo) {
+    const avisos = [];
+    const escE = String(enviado.escolaridade || "").trim();
+    const escS = String(salvo.escolaridade != null ? salvo.escolaridade : "").trim();
+    if (escE && escS !== escE) {
+      avisos.push(
+        "A escolaridade não foi gravada: no banco precisa existir a coluna escolaridade (php artisan migrate --force ou ALTER TABLE).",
+      );
+    }
+    const fjE = String(enviado.formacao_json_str || "").trim();
+    if (fjE && fjE !== "{}" && fjE !== "null") {
+      if (rhFormacaoRespostaVazia(salvo.formacao_json)) {
+        avisos.push(
+          "Cursos/formação não foram gravados: precisa existir a coluna formacao_json (migrate ou ALTER TABLE).",
+        );
+      }
+    }
+    const bk = ["banco", "agencia", "conta", "conta_digito", "pix"];
+    const tinha = bk.some((k) => String(enviado[k] || "").trim() !== "");
+    if (tinha) {
+      const igual = bk.every((k) => String(salvo[k] != null ? salvo[k] : "").trim() === String(enviado[k] || "").trim());
+      if (!igual) {
+        const tudoNuloNoServidor = bk.every((k) => salvo[k] == null || String(salvo[k]).trim() === "");
+        if (tudoNuloNoServidor) {
+          avisos.push(
+            "Dados bancários não foram gravados: precisam existir as colunas banco, agencia, conta, conta_digito e pix (migrate ou ALTER TABLE).",
+          );
+        }
+      }
+    }
+    return avisos;
+  }
   function renderFuncionarioFormacaoViewHtml(f, esc, field) {
     const escolaridadeHuman = f.escolaridade
       ? (FUNCIONARIO_ESCOLARIDADE_LABELS[f.escolaridade] || String(f.escolaridade))
@@ -9914,6 +9966,7 @@ function setupModals() {
     const temRemoverFoto = !!funcionarioFotoRemovida;
     try {
       const fd = new FormData();
+      let salvoFuncionario = null;
       if (id) {
         const putPayload = {
           nome_completo: payload.nome_completo,
@@ -9945,7 +9998,7 @@ function setupModals() {
         Object.entries(putPayload).forEach(([k, v]) => { fd.append(k, v != null ? String(v) : ""); });
         if (temRemoverFoto) fd.append("remove_foto", "1");
         if (temFoto) fd.append("foto", funcionarioFotoFile);
-        await fetchForm(`/funcionarios/${id}/atualizar`, "POST", fd);
+        salvoFuncionario = await fetchForm(`/funcionarios/${id}/atualizar`, "POST", fd);
       } else {
         fd.append("nome_completo", payload.nome_completo);
         fd.append("cpf", (payload.cpf || "").replace(/\D/g, ""));
@@ -9977,9 +10030,27 @@ function setupModals() {
         }
         if (temRemoverFoto) fd.append("remove_foto", "1");
         if (temFoto) fd.append("foto", funcionarioFotoFile);
-        await fetchForm("/funcionarios", "POST", fd);
+        salvoFuncionario = await fetchForm("/funcionarios", "POST", fd);
       }
-      showToast(id ? "Funcionário atualizado." : "Funcionário cadastrado.", "success");
+      const enviadoRh = {
+        escolaridade: payload.escolaridade,
+        formacao_json_str: formacaoJsonStr,
+        banco: payload.banco,
+        agencia: payload.agencia,
+        conta: payload.conta,
+        conta_digito: payload.conta_digito,
+        pix: payload.pix,
+      };
+      const avisosRh = salvoFuncionario && typeof salvoFuncionario === "object" && !salvoFuncionario.error
+        ? rhAvisosPersistenciaFuncionario(enviadoRh, salvoFuncionario)
+        : [];
+      showToast(id ? "Alterações salvas." : "Cadastro salvo.", "success");
+      if (avisosRh.length) {
+        showToast(avisosRh.join(" "), "warning", 14000);
+      } else if (dom.funcionarioFormFeedback) {
+        dom.funcionarioFormFeedback.classList.add("hidden");
+        dom.funcionarioFormFeedback.textContent = "";
+      }
       toggleModal(dom.funcionarioModal, false);
       funcionarioFotoFile = null;
       funcionarioFotoRemovida = false;
