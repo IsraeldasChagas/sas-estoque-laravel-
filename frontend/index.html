@@ -1835,15 +1835,20 @@
                 </label>
 
                 <label class="recibo-ajuda__finalidade">
-                  Finalidade (pode selecionar mais de uma)
-                  <select id="reciboAjudaFinalidadeSelect" multiple size="5">
-                    <option value="">Selecione</option>
-                    <option value="auxilio_combustivel">Auxílio Combustível</option>
-                    <option value="ajuda_custo">Ajuda de custo</option>
-                    <option value="transporte">Transporte</option>
-                    <option value="alimentacao">Alimentação</option>
-                    <option value="outro">Outro</option>
-                  </select>
+                  Finalidade
+                  <div class="multi-select" id="reciboAjudaFinalidadeWrap">
+                    <button type="button" class="multi-select__btn" id="reciboAjudaFinalidadeBtn" aria-expanded="false">
+                      Selecione…
+                      <span class="multi-select__arrow" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="multi-select__menu hidden" id="reciboAjudaFinalidadeMenu" role="listbox" aria-multiselectable="true">
+                      <label class="multi-select__item"><input type="checkbox" value="auxilio_combustivel" /> Auxílio Combustível</label>
+                      <label class="multi-select__item"><input type="checkbox" value="ajuda_custo" /> Ajuda de custo</label>
+                      <label class="multi-select__item"><input type="checkbox" value="transporte" /> Transporte</label>
+                      <label class="multi-select__item"><input type="checkbox" value="alimentacao" /> Alimentação</label>
+                      <label class="multi-select__item"><input type="checkbox" value="outro" /> Outro</label>
+                    </div>
+                  </div>
                 </label>
 
                 <label>

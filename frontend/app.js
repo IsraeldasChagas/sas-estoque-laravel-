@@ -14845,7 +14845,9 @@ function setupReciboAjudaCusto() {
   const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
   const competencia = document.getElementById("reciboAjudaCompetencia");
   const dataPagamento = document.getElementById("reciboAjudaDataPagamento");
-  const finalidadeSelect = document.getElementById("reciboAjudaFinalidadeSelect");
+  const finalidadeWrap = document.getElementById("reciboAjudaFinalidadeWrap");
+  const finalidadeBtn = document.getElementById("reciboAjudaFinalidadeBtn");
+  const finalidadeMenu = document.getElementById("reciboAjudaFinalidadeMenu");
   const valor = document.getElementById("reciboAjudaValor");
   const assinaturaTipo = document.getElementById("reciboAjudaAssinaturaTipo");
   const btnSalvar = document.getElementById("reciboAjudaSalvarBtn");
@@ -14899,10 +14901,72 @@ function setupReciboAjudaCusto() {
   }
 
   function getSelectedFinalidades() {
-    if (!finalidadeSelect) return [];
-    const opts = Array.from(finalidadeSelect.selectedOptions || []);
-    return opts.map((o) => String(o.value || "").trim()).filter(Boolean);
+    if (!finalidadeMenu) return [];
+    const inputs = Array.from(finalidadeMenu.querySelectorAll('input[type="checkbox"]') || []);
+    return inputs.filter((i) => i && i.checked).map((i) => String(i.value || "").trim()).filter(Boolean);
   }
+
+  function setFinalidadesChecked(values) {
+    if (!finalidadeMenu) return;
+    const want = new Set(normalizeFinalidades(values));
+    Array.from(finalidadeMenu.querySelectorAll('input[type="checkbox"]') || []).forEach((i) => {
+      i.checked = want.has(String(i.value || "").trim());
+    });
+    updateFinalidadeBtnLabel();
+  }
+
+  function updateFinalidadeBtnLabel() {
+    if (!finalidadeBtn) return;
+    const fins = getSelectedFinalidades();
+    if (!fins.length) {
+      finalidadeBtn.childNodes[0].textContent = "Selecione…";
+      return;
+    }
+    const txt = formatFinalidadesDisplay(fins);
+    finalidadeBtn.childNodes[0].textContent = txt.length > 60 ? `${txt.slice(0, 57)}…` : txt;
+  }
+
+  function isFinalidadeMenuOpen() {
+    return !!finalidadeMenu && !finalidadeMenu.classList.contains("hidden");
+  }
+
+  function openFinalidadeMenu() {
+    if (!finalidadeMenu || !finalidadeBtn) return;
+    finalidadeMenu.classList.remove("hidden");
+    finalidadeBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function closeFinalidadeMenu() {
+    if (!finalidadeMenu || !finalidadeBtn) return;
+    finalidadeMenu.classList.add("hidden");
+    finalidadeBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleFinalidadeMenu() {
+    if (isFinalidadeMenuOpen()) closeFinalidadeMenu();
+    else openFinalidadeMenu();
+  }
+
+  finalidadeBtn?.addEventListener("click", (ev) => {
+    ev.preventDefault?.();
+    toggleFinalidadeMenu();
+  });
+
+  finalidadeMenu?.addEventListener("change", (ev) => {
+    const t = ev.target;
+    if (t && t.matches && t.matches('input[type="checkbox"]')) updateFinalidadeBtnLabel();
+  });
+
+  document.addEventListener("click", (ev) => {
+    if (!isFinalidadeMenuOpen()) return;
+    const target = ev.target;
+    if (finalidadeWrap && target && finalidadeWrap.contains(target)) return;
+    closeFinalidadeMenu();
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && isFinalidadeMenuOpen()) closeFinalidadeMenu();
+  });
 
   const CONFIRM_CODE_STORAGE_KEY = "sas-estoque-recibo-ajuda-confirm-code";
   const CONFIRM_CODE_TTL_MS = 10 * 60 * 1000;
@@ -15243,6 +15307,7 @@ function setupReciboAjudaCusto() {
     confirmarWhatsappLink?.classList.add("hidden");
     updateEvidResumo();
     if (assinaturaTipo && !assinaturaTipo.value) assinaturaTipo.value = "desenho";
+    updateFinalidadeBtnLabel();
     applyAssinaturaTipoUI();
     await renderRecibosTabela();
   }
@@ -15598,7 +15663,7 @@ function setupReciboAjudaCusto() {
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
     if (dataPagamento) dataPagamento.value = "";
-    if (finalidadeSelect) Array.from(finalidadeSelect.options || []).forEach((o) => { o.selected = false; });
+    setFinalidadesChecked([]);
     if (assinaturaTipo) assinaturaTipo.value = "desenho";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }
     clearSignature();
