@@ -3023,44 +3023,49 @@
               <label>Status <select name="status" required><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></label>
             </div>
           </section>
-          <section class="form-section">
-            <h3>Formação e educação</h3>
+          <section class="form-section" id="funcionarioEducacaoSecao">
+            <h3>Educação</h3>
             <label>Escolaridade (nível)
-              <select name="escolaridade">
+              <select name="escolaridade" id="funcionarioEscolaridade">
                 <option value="">Selecione</option>
                 <option value="fundamental_incompleto">Fundamental incompleto</option>
                 <option value="fundamental_completo">Fundamental completo</option>
                 <option value="medio_incompleto">Ensino médio incompleto</option>
                 <option value="medio_completo">Ensino médio completo</option>
+                <option value="superior_incompleto">Superior incompleto</option>
+                <option value="superior_completo">Superior completo</option>
+                <option value="pos_concluida">Pós-graduação concluída</option>
               </select>
             </label>
-            <p class="form-hint" style="margin: 0 0 8px;">Em cada tipo você pode cadastrar <strong>várias formações</strong>. Preencha os dados da linha e use <strong>Salvar esta formação</strong> para travar a linha (opcional). Ao clicar em <strong>Salvar funcionário</strong>, linhas com dados preenchidos são validadas automaticamente antes de gravar.</p>
+            <p class="form-hint" style="margin: 0 0 8px;">
+              Cadastre cursos/qualificações e salve o funcionário para gravar no sistema.
+            </p>
             <div class="formacao-blocos" id="funcionarioFormacaoBlocos">
               <details class="formacao-bloco" data-formacao-key="curso_complementar">
                 <summary class="formacao-bloco__summary">
                   <span>Curso / qualificação</span>
-                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="curso_complementar">+ Adicionar outro</button>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="curso_complementar">+ Adicionar</button>
                 </summary>
                 <div class="formacao-linhas" data-formacao-key="curso_complementar"></div>
               </details>
               <details class="formacao-bloco" data-formacao-key="tecnico">
                 <summary class="formacao-bloco__summary">
                   <span>Curso técnico</span>
-                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="tecnico">+ Adicionar outro</button>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="tecnico">+ Adicionar</button>
                 </summary>
                 <div class="formacao-linhas" data-formacao-key="tecnico"></div>
               </details>
               <details class="formacao-bloco" data-formacao-key="graduacao">
                 <summary class="formacao-bloco__summary">
                   <span>Graduação</span>
-                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="graduacao">+ Adicionar outro</button>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="graduacao">+ Adicionar</button>
                 </summary>
                 <div class="formacao-linhas" data-formacao-key="graduacao"></div>
               </details>
               <details class="formacao-bloco" data-formacao-key="pos_graduacao">
                 <summary class="formacao-bloco__summary">
                   <span>Pós-graduação</span>
-                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="pos_graduacao">+ Adicionar outro</button>
+                  <button type="button" class="btn secondary btn-formacao-add" data-formacao-key="pos_graduacao">+ Adicionar</button>
                 </summary>
                 <div class="formacao-linhas" data-formacao-key="pos_graduacao"></div>
               </details>
@@ -3095,16 +3100,16 @@
               <label>E-mail <input type="email" name="email" /></label>
             </div>
           </section>
-          <section class="form-section">
+          <section class="form-section" id="funcionarioBancarioSecao">
             <h3>Dados bancários</h3>
-            <label>Banco <input name="banco" placeholder="Ex: Itaú, Bradesco" /></label>
+            <label>Banco <input name="banco" id="funcionarioBanco" placeholder="Ex: Itaú, Bradesco" /></label>
             <div class="grid-two">
-              <label>Agência <input name="agencia" placeholder="Número da agência" /></label>
-              <label>Conta <input name="conta" placeholder="Número da conta" /></label>
+              <label>Agência <input name="agencia" id="funcionarioAgencia" placeholder="Número da agência" /></label>
+              <label>Conta <input name="conta" id="funcionarioConta" placeholder="Número da conta" /></label>
             </div>
             <div class="grid-two">
-              <label>Dígito <input name="conta_digito" placeholder="Dígito" maxlength="2" /></label>
-              <label>PIX <input name="pix" placeholder="CPF, e-mail, celular ou chave aleatória" /></label>
+              <label>Dígito <input name="conta_digito" id="funcionarioContaDigito" placeholder="Dígito" maxlength="5" /></label>
+              <label>PIX <input name="pix" id="funcionarioPix" placeholder="CPF, e-mail, celular ou chave aleatória" /></label>
             </div>
           </section>
           <section class="form-section" id="funcionarioAcessoSecao">
