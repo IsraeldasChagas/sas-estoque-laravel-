@@ -5338,6 +5338,12 @@ Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new Reserva
 // Remover após uso
 // ============================================
 Route::post('/admin/zerar-historicos', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem executar esta ação.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     $chave = $request->input('chave');
     if ($chave !== 'ZERAR-SABORPARAENSE-2026') {
         return response()->json(['error' => 'Chave inválida.'], 403);
@@ -5352,6 +5358,12 @@ Route::post('/admin/zerar-historicos', function (Request $request) {
     DB::table('logs_etiquetas')->truncate();
     DB::table('logs_usuarios')->truncate();
     DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+
+    \Log::warning('ADMIN zerar-historicos executado', [
+        'usuario_id' => (int) $userId,
+        'ip' => $request->ip(),
+        'ua' => (string) $request->userAgent(),
+    ]);
 
     return response()->json([
         'sucesso' => true,
@@ -5380,6 +5392,12 @@ Route::post('/admin/zerar-historicos', function (Request $request) {
 
 // Gerar backup completo
 Route::post('/admin/backup', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem gerar backup.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     $chave = $request->input('chave');
     if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
         return response()->json(['error' => 'Chave inválida.'], 403);
@@ -5394,6 +5412,8 @@ Route::post('/admin/backup', function (Request $request) {
                 'unidades'              => DB::table('unidades')->get()->toArray(),
                 'locais'                => DB::table('locais')->get()->toArray(),
                 'usuarios'              => DB::table('usuarios')->get()->toArray(),
+                // RH
+                'funcionarios'          => Schema::hasTable('funcionarios') ? DB::table('funcionarios')->get()->toArray() : [],
                 'lotes'                 => DB::table('lotes')->get()->toArray(),
                 'stock_lotes'           => DB::table('stock_lotes')->get()->toArray(),
                 'movimentacoes'         => DB::table('movimentacoes')->get()->toArray(),
@@ -5417,6 +5437,13 @@ Route::post('/admin/backup', function (Request $request) {
         foreach (array_slice($arquivos, 10) as $antigo) {
             unlink($antigo);
         }
+
+        \Log::info('ADMIN backup gerado', [
+            'usuario_id' => (int) $userId,
+            'ip' => $request->ip(),
+            'arquivo' => $nomeArquivo,
+            'totais' => array_map(fn($t) => count((array)$t), $snapshot['tabelas']),
+        ]);
 
         return response()->json([
             'sucesso'      => true,
@@ -5463,6 +5490,61 @@ Route::get('/admin/backups', function (Request $request) {
     return response()->json($lista);
 });
 
+// Prévia do impacto do restore (apenas ADMIN)
+Route::get('/admin/backups/{arquivo}/preview', function (Request $request, $arquivo) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem visualizar esta prévia.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $chave = $request->query('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403);
+    }
+    if (!preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/', $arquivo)) {
+        return response()->json(['error' => 'Arquivo inválido.'], 400)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $caminho = storage_path('app/backups/' . $arquivo);
+    if (!file_exists($caminho)) {
+        return response()->json(['error' => 'Backup não encontrado.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $snapshot = json_decode(file_get_contents($caminho), true);
+    if (!isset($snapshot['tabelas']) || !is_array($snapshot['tabelas'])) {
+        return response()->json(['error' => 'Arquivo de backup corrompido.'], 400)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $totaisArquivo = [];
+    foreach ($snapshot['tabelas'] as $tabela => $dados) {
+        $totaisArquivo[$tabela] = is_array($dados) ? count($dados) : 0;
+    }
+
+    $tabelasCriticas = ['usuarios', 'funcionarios', 'produtos', 'unidades', 'locais'];
+    $atuais = [];
+    foreach ($tabelasCriticas as $t) {
+        if (!Schema::hasTable($t)) {
+            $atuais[$t] = null;
+            continue;
+        }
+        $atuais[$t] = (int) DB::table($t)->count();
+    }
+
+    return response()->json([
+        'arquivo' => $arquivo,
+        'gerado_em' => $snapshot['gerado_em'] ?? null,
+        'versao' => $snapshot['versao'] ?? null,
+        'totais_arquivo' => $totaisArquivo,
+        'totais_atuais' => $atuais,
+        'alertas' => [
+            'zeraria_funcionarios' => ($atuais['funcionarios'] ?? 0) > 0 && (($totaisArquivo['funcionarios'] ?? 0) === 0),
+            'zeraria_usuarios' => ($atuais['usuarios'] ?? 0) > 0 && (($totaisArquivo['usuarios'] ?? 0) === 0),
+        ],
+    ])->header('Access-Control-Allow-Origin', '*');
+});
+
 // Download de um backup
 Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) {
     $chave = $request->query('chave');
@@ -5485,6 +5567,12 @@ Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) {
 
 // Restaurar a partir de um backup
 Route::post('/admin/restaurar', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem restaurar backups.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     $chave = $request->input('chave');
     if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
         return response()->json(['error' => 'Chave inválida.'], 403);
@@ -5501,6 +5589,11 @@ Route::post('/admin/restaurar', function (Request $request) {
     }
 
     try {
+        $antes = [
+            'funcionarios' => Schema::hasTable('funcionarios') ? (int) DB::table('funcionarios')->count() : null,
+            'usuarios' => Schema::hasTable('usuarios') ? (int) DB::table('usuarios')->count() : null,
+            'produtos' => Schema::hasTable('produtos') ? (int) DB::table('produtos')->count() : null,
+        ];
         $snapshot = json_decode(file_get_contents($caminho), true);
         if (!isset($snapshot['tabelas'])) {
             return response()->json(['error' => 'Arquivo de backup corrompido.'], 400);
@@ -5510,7 +5603,7 @@ Route::post('/admin/restaurar', function (Request $request) {
 
         // Ordem respeitando dependências
         $ordem = [
-            'unidades', 'locais', 'usuarios', 'produtos',
+            'unidades', 'locais', 'usuarios', 'funcionarios', 'produtos',
             'lotes', 'stock_lotes', 'movimentacoes',
             'listas_compras', 'listas_itens',
             'boletos', 'estabelecimentos_compra',
@@ -5528,6 +5621,14 @@ Route::post('/admin/restaurar', function (Request $request) {
         }
 
         DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+
+        \Log::warning('ADMIN restore executado', [
+            'usuario_id' => (int) $userId,
+            'ip' => $request->ip(),
+            'arquivo' => $arquivo,
+            'antes' => $antes,
+            'restaurados' => $restaurados,
+        ]);
 
         return response()->json([
             'sucesso'     => true,
@@ -5549,6 +5650,7 @@ Route::options('/funcionarios', fn() => response()->json([])->header('Access-Con
 Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/{id}/atualizar', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/rh-diagnostico', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/{id}/excluir', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 /** Diagnóstico RH: lista colunas reais da tabela (precisa estar logado). Deve vir ANTES de /funcionarios/{id}. */
 Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
@@ -5558,6 +5660,11 @@ Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $out = [
+        // Ajuda a detectar "tô olhando outro banco / outra API"
+        'db_driver' => null,
+        'db_name' => null,
+        'funcionarios_total' => null,
+        'funcionarios_ultimo_created_at' => null,
         'tabela_funcionarios_existe' => Schema::hasTable('funcionarios'),
         'colunas' => [],
         'tem_escolaridade' => false,
@@ -5574,6 +5681,14 @@ Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
     }
     try {
         $driver = Schema::getConnection()->getDriverName();
+        $out['db_driver'] = $driver;
+        if ($driver === 'mysql') {
+            $dbRow = DB::selectOne('SELECT DATABASE() AS db');
+            $out['db_name'] = is_object($dbRow) ? ($dbRow->db ?? null) : ($dbRow['db'] ?? null);
+        }
+        $out['funcionarios_total'] = (int) (DB::table('funcionarios')->count());
+        $out['funcionarios_ultimo_created_at'] = DB::table('funcionarios')->max('created_at');
+
         if ($driver === 'mysql') {
             foreach (DB::select('SHOW COLUMNS FROM funcionarios') as $row) {
                 $f = is_object($row)
@@ -6119,6 +6234,38 @@ Route::put('/funcionarios/{id}/inativar', function (Request $request, $id) {
     if (!$f) return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
     DB::table('funcionarios')->where('id', $id)->update(['status' => 'inativo']);
     return response()->json(['message' => 'Funcionário inativado com sucesso'])->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::delete('/funcionarios/{id}/excluir', function (Request $request, $id) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem excluir funcionários.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $f = DB::table('funcionarios')->where('id', $id)->first();
+    if (!$f) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    // Remove foto do disco (se existir)
+    if (!empty($f->foto) && is_string($f->foto) && file_exists(public_path($f->foto))) {
+        @unlink(public_path($f->foto));
+    }
+
+    DB::table('funcionarios')->where('id', $id)->delete();
+
+    \Log::warning('ADMIN excluiu funcionário', [
+        'usuario_id' => (int) $userId,
+        'funcionario_id' => (int) $id,
+        'cpf' => (string) ($f->cpf ?? ''),
+        'nome' => (string) ($f->nome_completo ?? ''),
+        'ip' => $request->ip(),
+    ]);
+
+    return response()->json(['sucesso' => true])->header('Access-Control-Allow-Origin', '*');
 });
 
 // ============================================

@@ -1716,6 +1716,10 @@ async function carregarListaBackups() {
              style="padding:0.4rem 0.8rem;background:#1565c0;color:#fff;border-radius:5px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">
             ⬇ Baixar
           </a>
+          <button onclick="previewBackup('${escapeHtml(b.arquivo)}')"
+            style="padding:0.4rem 0.8rem;background:#546e7a;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
+            👁 Prévia
+          </button>
           <button onclick="restaurarBackup('${escapeHtml(b.arquivo)}')"
             style="padding:0.4rem 0.8rem;background:#e65100;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
             🔄 Restaurar
@@ -1730,13 +1734,76 @@ async function carregarListaBackups() {
   }
 }
 
+async function previewBackup(arquivo) {
+  try {
+    const res = await fetch(`${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/preview?chave=BACKUP-SABORPARAENSE-2026`, {
+      headers: {
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      alert('❌ Não foi possível carregar a prévia: ' + (data?.error || ('HTTP ' + res.status)));
+      return;
+    }
+    const tA = data?.totais_atuais || {};
+    const tB = data?.totais_arquivo || {};
+    const linhas = [];
+    ['usuarios','funcionarios','produtos','unidades','locais','movimentacoes','lotes','listas_compras','boletos'].forEach((k) => {
+      if (tA[k] == null && tB[k] == null) return;
+      const a = tA[k] == null ? '—' : String(tA[k]);
+      const b = tB[k] == null ? '—' : String(tB[k]);
+      linhas.push(`${k}: atual ${a} → backup ${b}`);
+    });
+    const alertas = data?.alertas || {};
+    const warn = [
+      alertas.zeraria_usuarios ? '⚠ Este backup ZERARIA usuários.' : null,
+      alertas.zeraria_funcionarios ? '⚠ Este backup ZERARIA funcionários.' : null,
+    ].filter(Boolean).join('\n');
+    alert(
+      `📦 Prévia do restore\nArquivo: ${data?.arquivo || arquivo}\nGerado em: ${data?.gerado_em || '—'}\n\n` +
+      linhas.join('\n') +
+      (warn ? `\n\n${warn}` : '')
+    );
+  } catch (e) {
+    alert('❌ Falha na conexão: ' + e.message);
+  }
+}
+
 async function restaurarBackup(arquivo) {
-  const confirmado = window.confirm(
+  // Prévia + proteções contra “zerar sem querer”
+  let preview = null;
+  try {
+    const resPrev = await fetch(`${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/preview?chave=BACKUP-SABORPARAENSE-2026`, {
+      headers: {
+        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+      },
+    });
+    preview = await resPrev.json().catch(() => null);
+    if (!resPrev.ok) preview = null;
+  } catch (_) {
+    preview = null;
+  }
+
+  const alertas = preview?.alertas || {};
+  const precisaConfirmacaoExtra = !!(alertas.zeraria_funcionarios || alertas.zeraria_usuarios);
+  const frase = precisaConfirmacaoExtra ? 'RESTaurar mesmo' : 'RESTAURAR';
+  const promptMsg =
     `⚠ ATENÇÃO!\n\nVocê vai restaurar o backup:\n${arquivo}\n\n` +
     'TODOS os dados atuais serão substituídos pelos dados deste backup.\n\n' +
-    'Esta ação NÃO pode ser desfeita. Tem certeza?'
-  );
-  if (!confirmado) return;
+    (precisaConfirmacaoExtra
+      ? '🚨 ESTE BACKUP ZERA DADOS CRÍTICOS (usuários/funcionários). Só continue se tiver certeza.\n\n'
+      : '') +
+    `Para confirmar, digite exatamente: ${frase}`;
+
+  const typed = window.prompt(promptMsg, '');
+  if (!typed) return;
+  if (typed.trim() !== frase) {
+    alert('Cancelado: frase de confirmação incorreta.');
+    return;
+  }
 
   try {
     const res = await fetch(API_URL + '/admin/restaurar', {
@@ -6711,6 +6778,9 @@ function renderFuncionarios(lista) {
     const acessoLabel = f.possui_acesso ? "Sim" : "Não";
     const isAtivo = (f.status || "ativo") === "ativo";
     const btnInativar = isAtivo ? `<button type="button" class="table-action btn-inativar-funcionario" data-id="${f.id}" title="Inativar">Inativar</button>` : "";
+    const btnExcluir = isAdmin()
+      ? `<button type="button" class="table-action btn-excluir-funcionario" data-id="${f.id}" title="Excluir" style="background:#b71c1c;color:#fff;">Excluir</button>`
+      : "";
     const fotoUrl = f.foto ? getUsuarioFotoUrl(f.foto) : null;
     const fotoCell = fotoUrl
       ? `<img src="${fotoUrl}" alt="${escape(f.nome_completo)}" class="usuarios-foto" loading="lazy" />`
@@ -6730,6 +6800,7 @@ function renderFuncionarios(lista) {
         <button type="button" class="table-action btn-view-funcionario" data-id="${f.id}" title="Visualizar">Visualizar</button>
         <button type="button" class="table-action btn-edit-funcionario" data-id="${f.id}" title="Editar">Editar</button>
         ${btnInativar}
+        ${btnExcluir}
       </td>
     </tr>`;
   });
@@ -9634,6 +9705,36 @@ function setupModals() {
       showToast(e?.message || "Erro ao inativar.", "error");
     }
   }
+
+  async function excluirFuncionario(id) {
+    if (!isAdmin()) {
+      showToast("Apenas ADMIN pode excluir.", "error");
+      return;
+    }
+    const ok = confirm(
+      "⚠ ATENÇÃO\n\nIsso vai EXCLUIR o funcionário definitivamente.\n" +
+      "Use apenas para remover duplicados.\n\n" +
+      "Deseja continuar?"
+    );
+    if (!ok) return;
+    try {
+      const tokenHeaders = currentUser && currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {};
+      const userHeaders =
+        currentUser && typeof currentUser.id !== "undefined" && currentUser.id !== null
+          ? { "X-Usuario-Id": String(currentUser.id) }
+          : {};
+      const res = await fetch(`${API_URL}/funcionarios/${encodeURIComponent(String(id))}/excluir`, {
+        method: "DELETE",
+        headers: { ...tokenHeaders, ...userHeaders, ...getDeviceHeaders() },
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || payload?.message || `Erro ${res.status}`);
+      showToast("Funcionário excluído.", "success");
+      await loadFuncionarios(getFuncionariosFiltros());
+    } catch (e) {
+      showToast(e?.message || "Erro ao excluir.", "error");
+    }
+  }
   function getFuncionariosFiltros() {
     const nome = document.getElementById("funcionariosFiltroNome")?.value;
     const cpf = document.getElementById("funcionariosFiltroCpf")?.value?.trim();
@@ -9716,7 +9817,7 @@ function setupModals() {
     }
   });
   document.getElementById("funcionariosSection")?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-view-funcionario, .btn-edit-funcionario, .btn-inativar-funcionario");
+    const btn = e.target.closest(".btn-view-funcionario, .btn-edit-funcionario, .btn-inativar-funcionario, .btn-excluir-funcionario");
     if (!btn) return;
     const id = btn.dataset.id;
     if (!id) return;
@@ -9724,6 +9825,7 @@ function setupModals() {
     if (btn.classList.contains("btn-view-funcionario")) viewFuncionario(id);
     else if (btn.classList.contains("btn-edit-funcionario")) editFuncionario(id);
     else if (btn.classList.contains("btn-inativar-funcionario")) inativarFuncionario(id);
+    else if (btn.classList.contains("btn-excluir-funcionario")) excluirFuncionario(id);
   });
   dom.funcionarioFotoInput?.addEventListener("change", (ev) => {
     const file = ev.target.files?.[0];
