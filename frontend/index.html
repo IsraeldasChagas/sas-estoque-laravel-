@@ -125,6 +125,7 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="funcionarios">Funcionários</a>
+              <a href="#" class="nav-link nav-link-child" data-section="rhRelatorio">Relatório</a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--financeiro">
@@ -1680,6 +1681,61 @@
                 </table>
               </div>
             </div>
+          </section>
+
+          <!-- RH — Relatório (PDF contatos) -->
+          <section id="rhRelatorioSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Relatório</h2>
+                <p class="subtle-text">Gera PDF com nome, WhatsApp, unidade e função (cargo). Use os filtros abaixo ou deixe em branco para listar todos conforme permissão.</p>
+              </div>
+            </div>
+            <form id="rhRelatorioFiltroForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>
+                  Nome (contém)
+                  <input type="text" id="rhRelatorioFiltroNome" name="nome" placeholder="Parte do nome" maxlength="120" autocomplete="off" />
+                </label>
+                <label>
+                  CPF
+                  <input type="text" id="rhRelatorioFiltroCpf" name="cpf" placeholder="Buscar por CPF" autocomplete="off" />
+                </label>
+                <label>
+                  Cargo
+                  <select id="rhRelatorioFiltroCargo" name="cargo">
+                    <option value="">Todos</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="atendente">Atendente</option>
+                    <option value="atendente bar">Atendente Bar</option>
+                    <option value="atendente caixa">Atendente Caixa</option>
+                    <option value="auxiliar administrativo">Auxiliar Administrativo</option>
+                    <option value="serviços gerais">Serviços Gerais</option>
+                    <option value="cozinheiro(a)">Cozinheiro(a)</option>
+                    <option value="auxiliar de cozinha">Auxiliar de Cozinha</option>
+                    <option value="estoquista">Estoquista</option>
+                  </select>
+                </label>
+                <label>
+                  Unidade
+                  <select id="rhRelatorioFiltroUnidade" name="unidade_id">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select id="rhRelatorioFiltroStatus" name="status">
+                    <option value="">Todos</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                  </select>
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary" id="rhRelatorioGerarPdf">Gerar PDF</button>
+                <button type="button" class="btn" id="rhRelatorioLimparFiltros">Limpar filtros</button>
+              </div>
+            </form>
           </section>
 
           <!-- Kanban Administrativo -->
@@ -4092,7 +4148,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260417u"></script>
+    <script src="app.js?v=20260417v"></script>
      
   </body>
 </html>

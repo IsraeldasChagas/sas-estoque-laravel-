@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2809,7 +2809,8 @@ function applyPermissions() {
   // Oculta o menu pai "RH" quando nenhum filho está permitido
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
-    const temAcessoRH = regras.sections.includes("funcionarios");
+    const temAcessoRH =
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorio");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
@@ -2976,6 +2977,14 @@ function navigateTo(section) {
       financeiroNavSubmenuNav.classList.add("open");
     } else {
       financeiroNavSubmenuNav.classList.remove("open");
+    }
+  }
+  const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
+  if (rhNavSubmenuNav) {
+    if (section === "funcionarios" || section === "rhRelatorio") {
+      rhNavSubmenuNav.classList.add("open");
+    } else {
+      rhNavSubmenuNav.classList.remove("open");
     }
   }
   if (section === 'boasVindas') {
@@ -6698,6 +6707,63 @@ async function loadFuncionarios(filtros = {}) {
   return state.funcionarios;
 }
 
+/** Preenche unidades no filtro da tela RH — Relatório. */
+async function loadRhRelatorioSection() {
+  await loadUnidades(false).catch(() => {});
+  const sel = document.getElementById("rhRelatorioFiltroUnidade");
+  if (sel) {
+    const opts = (state.unidades || [])
+      .map((u) => `<option value="${escapeHtml(String(u.id))}">${escapeHtml(u.nome || "")}</option>`)
+      .join("");
+    sel.innerHTML = '<option value="">Todas</option>' + opts;
+  }
+}
+
+/** PDF nome, WhatsApp, unidade e função — mesmos query params de GET /funcionarios. */
+async function abrirRhRelatorioContatosPdf() {
+  if (!currentUser) {
+    showToast("Sessão inválida. Faça login novamente.", "error");
+    return;
+  }
+  const params = new URLSearchParams();
+  const nome = document.getElementById("rhRelatorioFiltroNome")?.value?.trim();
+  const cpf = document.getElementById("rhRelatorioFiltroCpf")?.value?.trim();
+  const cargo = document.getElementById("rhRelatorioFiltroCargo")?.value;
+  const unidadeId = document.getElementById("rhRelatorioFiltroUnidade")?.value;
+  const status = document.getElementById("rhRelatorioFiltroStatus")?.value;
+  if (nome) params.append("nome", nome);
+  if (cpf) params.append("cpf", cpf);
+  if (cargo) params.append("cargo", cargo);
+  if (unidadeId) params.append("unidade_id", unidadeId);
+  if (status) params.append("status", status);
+  const qs = params.toString();
+  const url = `${API_URL}/funcionarios/relatorio/contatos.pdf${qs ? `?${qs}` : ""}`;
+  const headers = {
+    ...getDeviceHeaders(),
+    ...(currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+    ...(currentUser.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+  };
+  const res = await fetch(url, { method: "GET", headers, cache: "no-store" });
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const ct = res.headers.get("Content-Type") || "";
+      if (ct.includes("json")) {
+        const j = await res.json();
+        if (j.error) msg = j.error;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  window.open(blobUrl, "_blank", "noopener,noreferrer");
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+  showToast("PDF aberto — use o navegador para salvar ou imprimir.", "success");
+}
+
 function populateFuncionariosFiltroNome(lista) {
   const select = document.getElementById("funcionariosFiltroNome");
   const buscaInput = document.getElementById("funcionariosFiltroNomeBusca");
@@ -7145,7 +7211,7 @@ async function startAppSession(user) {
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
       "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas",
-      "funcionarios", "logs"
+      "funcionarios", "rhRelatorio", "logs"
     ]);
 
     let sectionToNavigate = "boasVindas";
@@ -7260,6 +7326,7 @@ async function startAppSession(user) {
           }
         }
         else if (sectionToNavigate === 'funcionarios') await loadFuncionarios();
+        else if (sectionToNavigate === "rhRelatorio") await loadRhRelatorioSection();
         else if (sectionToNavigate === 'fechaTecnica') {
           onNavigateFichaTecnicaCallback();
         } else if (sectionToNavigate === 'alvara') {
@@ -11330,6 +11397,7 @@ function setupNavigation() {
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
       else if (target === "funcionarios") await loadFuncionarios();
+      else if (target === "rhRelatorio") await loadRhRelatorioSection();
       else if (target === "reciboAjuda") {
         if (typeof window.loadReciboAjudaSection === "function") {
           await window.loadReciboAjudaSection();
@@ -11504,6 +11572,17 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
+
+  document.getElementById("rhRelatorioFiltroForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    abrirRhRelatorioContatosPdf().catch((err) => showToast(err?.message || "Erro ao gerar PDF.", "error"));
+  });
+  document.getElementById("rhRelatorioLimparFiltros")?.addEventListener("click", () => {
+    ["rhRelatorioFiltroNome", "rhRelatorioFiltroCpf", "rhRelatorioFiltroCargo", "rhRelatorioFiltroUnidade", "rhRelatorioFiltroStatus"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+  });
 }
 
 function togglePasswordVisibility(button) {

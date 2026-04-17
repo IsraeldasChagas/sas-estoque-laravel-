@@ -5651,6 +5651,10 @@ Route::options('/funcionarios', fn() => response()->json([])->header('Access-Con
 Route::options('/funcionarios/{id}', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/{id}/atualizar', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/rh-diagnostico', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/relatorio/contatos.pdf', fn() => response('', 200)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/{id}/excluir', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 /** Diagnóstico RH: lista colunas reais da tabela (precisa estar logado). Deve vir ANTES de /funcionarios/{id}. */
@@ -5715,6 +5719,112 @@ Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
     $out['tem_pix'] = in_array('pix', $lower, true);
 
     return response()->json($out)->header('Access-Control-Allow-Origin', '*');
+});
+
+/** Relatório PDF: nome, WhatsApp, unidade e função (cargo). Respeita os mesmos filtros de GET /funcionarios. */
+Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    if (! $userId || ! DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+
+    if (! Schema::hasTable('funcionarios')) {
+        return response()->json(['error' => 'Módulo de funcionários indisponível'], 404)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+
+    try {
+        $query = DB::table('funcionarios')
+            ->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
+            ->select(
+                'funcionarios.nome_completo',
+                'funcionarios.whatsapp',
+                'funcionarios.cargo',
+                'unidades.nome as unidade_nome',
+                'funcionarios.status'
+            );
+
+        if ($nome = trim($request->query('nome', ''))) {
+            $query->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
+        }
+        if ($cpf = preg_replace('/\D/', '', trim($request->query('cpf', '')))) {
+            $query->whereRaw('REPLACE(REPLACE(REPLACE(funcionarios.cpf, ".", ""), "-", ""), " ", "") LIKE ?', ['%' . $cpf . '%']);
+        }
+        if ($cargo = trim($request->query('cargo', ''))) {
+            $query->where('funcionarios.cargo', $cargo);
+        }
+        if ($unidadeId = $request->query('unidade_id')) {
+            $query->where('funcionarios.unidade_id', $unidadeId);
+        }
+        if (in_array($request->query('status'), ['ativo', 'inativo'], true)) {
+            $query->where('funcionarios.status', $request->query('status'));
+        }
+
+        $funcionarios = $query->orderBy('funcionarios.nome_completo')->get();
+
+        $h = static fn (?string $s): string => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        $rowsHtml = '';
+        foreach ($funcionarios as $f) {
+            $nome = $h($f->nome_completo ?? '');
+            $wa = $h(trim((string) ($f->whatsapp ?? '')) !== '' ? (string) $f->whatsapp : '—');
+            $uni = $h(trim((string) ($f->unidade_nome ?? '')) !== '' ? (string) $f->unidade_nome : '—');
+            $cargo = $h(trim((string) ($f->cargo ?? '')) !== '' ? (string) $f->cargo : '—');
+            $st = ($f->status ?? '') === 'inativo' ? ' <span style="color:#757575;font-size:8pt;">(inativo)</span>' : '';
+            $rowsHtml .= '<tr><td>' . $nome . $st . '</td><td>' . $wa . '</td><td>' . $uni . '</td><td>' . $cargo . '</td></tr>';
+        }
+        if ($rowsHtml === '') {
+            $rowsHtml = '<tr><td colspan="4" style="text-align:center;color:#607d8b;padding:12px;">Nenhum funcionário encontrado com os filtros atuais.</td></tr>';
+        }
+
+        $emitido = now()->format('d/m/Y H:i');
+        $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
+<style>
+body { font-family: DejaVu Sans, sans-serif; font-size: 10pt; color: #212121; }
+h1 { font-size: 15pt; margin: 0 0 4px 0; color: #0d47a1; }
+.meta { font-size: 9pt; color: #616161; margin-bottom: 14px; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #1565c0; color: #fff; text-align: left; padding: 8px 6px; font-size: 9pt; }
+td { border-bottom: 1px solid #e0e0e0; padding: 7px 6px; vertical-align: top; }
+tr:nth-child(even) td { background: #fafafa; }
+</style></head><body>
+<h1>Relatório de funcionários — contato</h1>
+<p class="meta">Colunas: nome, WhatsApp, unidade e função (cargo). Emitido em ' . $h($emitido) . '.</p>
+<table><thead><tr>
+<th>Nome</th><th>WhatsApp</th><th>Unidade</th><th>Função</th>
+</tr></thead><tbody>' . $rowsHtml . '</tbody></table>
+</body></html>';
+
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+
+        return response($pdfOutput, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="funcionarios-contatos.pdf"')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Throwable $e) {
+        \Log::error('GET /funcionarios/relatorio/contatos.pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
 });
 
 Route::get('/funcionarios', function (Request $request) {
