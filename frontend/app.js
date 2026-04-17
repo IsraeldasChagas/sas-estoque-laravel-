@@ -11014,9 +11014,17 @@ function renderKanbanAdministrativoBoard() {
     const atraso = kanbanTaskAtrasada(t);
     const priRaw = String(t.prioridade || "media").toLowerCase();
     const pri = ["baixa", "media", "alta"].includes(priRaw) ? priRaw : "media";
+    const stRaw = String(st).toLowerCase();
+    const stSafe = KANBAN_ADMIN_STATUSES.includes(stRaw) ? stRaw : "planejamento";
     const unNome = t.unidade && t.unidade.nome ? t.unidade.nome : "";
     const card = document.createElement("div");
-    card.className = `kanban-card kanban-card--prior-${pri}${atraso ? " kanban-card--atrasada" : ""}`;
+    const clsParts = ["kanban-card"];
+    if (stSafe === "finalizado") clsParts.push("kanban-card--full-finalizado");
+    else if (stSafe === "em_execucao") clsParts.push("kanban-card--full-em-execucao");
+    else if (pri === "alta") clsParts.push("kanban-card--full-alta");
+    else clsParts.push(`kanban-card--prior-${pri}`);
+    if (atraso) clsParts.push("kanban-card--atrasada");
+    card.className = clsParts.join(" ");
     card.dataset.taskId = String(t.id);
     card.innerHTML = `
       <div class="kanban-card__title">${escapeHtml(t.titulo || "")}</div>

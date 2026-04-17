@@ -17,10 +17,16 @@
         .kanban-col-body { padding: 0.5rem; overflow-y: auto; flex: 1; min-height: 120px; }
         .kanban-card { background: #fff; border-radius: 10px; border: 1px solid #e0e0e0; padding: 0.65rem 0.75rem; margin-bottom: 0.5rem; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .15s; }
         .kanban-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-        .kanban-card--baixa { border-left: 3px solid #90a4ae; }
-        .kanban-card--media { border-left: 3px solid #fb8c00; }
-        .kanban-card--alta { border-left: 3px solid #c62828; }
-        .kanban-card--atrasada { outline: 1px solid #c62828; background: #fff8f8; }
+        .kanban-card--prior-baixa { border-left: 3px solid #90a4ae; }
+        .kanban-card--prior-media { border-left: 3px solid #fb8c00; }
+        .kanban-card--prior-alta { border-left: 3px solid #c62828; }
+        .kanban-card--full-alta { background: linear-gradient(145deg,#ef5350,#c62828); border-color:#b71c1c; color:#fff; }
+        .kanban-card--full-finalizado { background: linear-gradient(145deg,#1e88e5,#0d47a1); border-color:#0d47a1; color:#fff; }
+        .kanban-card--full-em-execucao { background: linear-gradient(145deg,#26a69a,#00695c); border-color:#004d40; color:#fff; }
+        .kanban-card--full-alta .text-muted, .kanban-card--full-finalizado .text-muted, .kanban-card--full-em-execucao .text-muted { color: rgba(255,255,255,.88) !important; }
+        .kanban-card--full-alta .fw-semibold, .kanban-card--full-finalizado .fw-semibold, .kanban-card--full-em-execucao .fw-semibold { color: #fff !important; }
+        .kanban-card--atrasada:not(.kanban-card--full-alta):not(.kanban-card--full-finalizado):not(.kanban-card--full-em-execucao) { outline: 1px solid #c62828; background: #fff8f8; }
+        .kanban-card--full-alta.kanban-card--atrasada, .kanban-card--full-finalizado.kanban-card--atrasada, .kanban-card--full-em-execucao.kanban-card--atrasada { outline: 2px solid #ffeb3b; outline-offset: 1px; }
         .badge-atrasada { font-size: 0.65rem; }
         .empty-kanban { max-width: 520px; }
     </style>
@@ -56,7 +62,7 @@
             <label class="form-label small mb-0">Setor</label>
             <select class="form-select form-select-sm" id="kbFSetor">
                 <option value="">Todos</option>
-                @foreach (['Administrativo','Financeiro','Compras','RH','Marketing','Estoque','Manutenção','Geral'] as $s)
+                @foreach (['Administrativo','Financeiro','Compras','Cozinha','RH','Marketing','Estoque','Manutenção','Geral'] as $s)
                     <option value="{{ $s }}">{{ $s }}</option>
                 @endforeach
             </select>
@@ -135,7 +141,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Setor *</label>
                             <select class="form-select" name="setor" id="kbFormSetor" required>
-                                @foreach (['Administrativo','Financeiro','Compras','RH','Marketing','Estoque','Manutenção','Geral'] as $s)
+                                @foreach (['Administrativo','Financeiro','Compras','Cozinha','RH','Marketing','Estoque','Manutenção','Geral'] as $s)
                                     <option value="{{ $s }}">{{ $s }}</option>
                                 @endforeach
                             </select>
@@ -245,10 +251,18 @@
             const el = document.getElementById('kbDrop-' + t.status);
             if (!el) return;
             const atraso = cardAtrasada(t);
-            const pri = t.prioridade || 'media';
+            const pri = (t.prioridade || 'media').toString().toLowerCase();
+            const st = (t.status || 'planejamento').toString();
+            const stOk = STATUSES.includes(st) ? st : 'planejamento';
             const un = (t.unidade && t.unidade.nome) ? t.unidade.nome : ('#' + t.unidade_id);
             const div = document.createElement('div');
-            div.className = 'kanban-card kanban-card--' + esc(pri) + (atraso ? ' kanban-card--atrasada' : '');
+            let cls = 'kanban-card';
+            if (stOk === 'finalizado') cls += ' kanban-card--full-finalizado';
+            else if (stOk === 'em_execucao') cls += ' kanban-card--full-em-execucao';
+            else if (pri === 'alta') cls += ' kanban-card--full-alta';
+            else cls += ' kanban-card--prior-' + (['baixa','media','alta'].includes(pri) ? pri : 'media');
+            if (atraso) cls += ' kanban-card--atrasada';
+            div.className = cls;
             div.dataset.taskId = String(t.id);
             div.innerHTML =
                 '<div class="fw-semibold small">' + esc(t.titulo) + '</div>' +
