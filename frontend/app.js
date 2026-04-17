@@ -9620,6 +9620,9 @@ function setupModals() {
       if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
       fillFuncionarioFormacaoFields(dom.funcionarioForm, "", null);
     }
+    // RH: cursos/formação devem iniciar recolhidos (mesmo ao editar)
+    dom.funcionarioForm?.querySelectorAll('#funcionarioFormacaoBlocos details.formacao-bloco')
+      ?.forEach((d) => { try { d.open = false; } catch (e) {} });
     toggleModal(dom.funcionarioModal, true);
     } catch (err) {
       const msg = String(err?.message || "Erro ao abrir formulário.");
