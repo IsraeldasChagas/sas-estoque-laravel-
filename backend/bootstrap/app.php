@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+        $middleware->alias([
+            'sas.usuario' => \App\Http\Middleware\EnsureSasUsuario::class,
+        ]);
+        $middleware->validateCsrfTokens(except: [
+            'kanban-administrativo/tasks',
+            'kanban-administrativo/tasks/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

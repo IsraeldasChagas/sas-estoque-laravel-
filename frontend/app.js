@@ -314,7 +314,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -322,7 +322,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -354,7 +354,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -454,6 +454,8 @@ const state = {
   fichaTecnicaIngredientes: [],
   /** Fichas técnicas (servidor; localStorage só como cache / fallback). */
   fichaTecnicaPratos: [],
+  /** Tarefas do Kanban Administrativo (API). */
+  kanbanTasks: [],
 };
 
 // Variáveis auxiliares para session e rastreamento de efeitos.
@@ -7140,7 +7142,7 @@ async function startAppSession(user) {
   (() => {
     const isFreshLogin = !!user;
     const allSections = new Set([
-      "boasVindas", "minhaConta", "dashboard", "unidades", "usuarios", "produtos", "fechaTecnica",
+      "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
       "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas",
       "funcionarios", "logs"
@@ -7265,6 +7267,10 @@ async function startAppSession(user) {
           await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
         } else if (sectionToNavigate === 'fechamento') {
           await loadFechamentoCaixaSection();
+        } else if (sectionToNavigate === "kanbanAdministrativo") {
+          await loadUnidades(false).catch(() => {});
+          populateKanbanUnidadeSelects();
+          await loadKanbanAdministrativoTasks().catch(() => {});
         }
       } catch (err) {
         console.error('Erro ao carregar seção inicial:', err);
@@ -10945,6 +10951,294 @@ function setupCards() {
   });
 }
 
+// --- Kanban Administrativo (API /kanban-tasks) ---
+const KANBAN_ADMIN_STATUSES = ["planejamento", "a_fazer", "em_execucao", "aguardando", "finalizado"];
+let kanbanSortableInstances = [];
+
+function kanbanHojeISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function kanbanTaskAtrasada(task) {
+  if (!task || !task.prazo || task.status === "finalizado") return false;
+  return String(task.prazo).slice(0, 10) < kanbanHojeISO();
+}
+
+function getKanbanFiltroQuery() {
+  const u = document.getElementById("kanbanFiltroUnidade")?.value || "";
+  const se = document.getElementById("kanbanFiltroSetor")?.value || "";
+  const pr = document.getElementById("kanbanFiltroPrioridade")?.value || "";
+  const p = new URLSearchParams();
+  if (u) p.set("unidade_id", u);
+  if (se) p.set("setor", se);
+  if (pr) p.set("prioridade", pr);
+  const q = p.toString();
+  return q ? `?${q}` : "";
+}
+
+async function loadKanbanAdministrativoTasks() {
+  const data = await fetchJSON(`/kanban-tasks${getKanbanFiltroQuery()}`);
+  state.kanbanTasks = Array.isArray(data) ? data : [];
+  renderKanbanAdministrativoBoard();
+}
+
+function populateKanbanUnidadeSelects() {
+  const opts = (state.unidades || [])
+    .map((unit) => `<option value="${escapeHtml(String(unit.id))}">${escapeHtml(unit.nome || "")}</option>`)
+    .join("");
+  const filtro = document.getElementById("kanbanFiltroUnidade");
+  if (filtro) {
+    const cur = filtro.value;
+    filtro.innerHTML = '<option value="">Todas</option>' + opts;
+    filtro.value = cur;
+  }
+  const formU = document.getElementById("kanbanFieldUnidade");
+  if (formU) {
+    const cur2 = formU.value;
+    formU.innerHTML = '<option value="">Selecione</option>' + opts;
+    formU.value = cur2;
+  }
+}
+
+function renderKanbanAdministrativoBoard() {
+  KANBAN_ADMIN_STATUSES.forEach((st) => {
+    const wrap = document.getElementById(`kanbanDrop-${st}`);
+    if (wrap) wrap.innerHTML = "";
+  });
+  const tasks = state.kanbanTasks || [];
+  tasks.forEach((t) => {
+    const st = t.status || "planejamento";
+    const wrap = document.getElementById(`kanbanDrop-${st}`);
+    if (!wrap) return;
+    const atraso = kanbanTaskAtrasada(t);
+    const priRaw = String(t.prioridade || "media").toLowerCase();
+    const pri = ["baixa", "media", "alta"].includes(priRaw) ? priRaw : "media";
+    const unNome = t.unidade && t.unidade.nome ? t.unidade.nome : "";
+    const card = document.createElement("div");
+    card.className = `kanban-card kanban-card--prior-${pri}${atraso ? " kanban-card--atrasada" : ""}`;
+    card.dataset.taskId = String(t.id);
+    card.innerHTML = `
+      <div class="kanban-card__title">${escapeHtml(t.titulo || "")}</div>
+      ${atraso ? '<span class="kanban-tag kanban-tag--danger">Atrasada</span>' : ""}
+      <div class="kanban-card__meta">${escapeHtml(unNome || "—")} · ${escapeHtml(t.setor || "")}</div>
+      <div class="kanban-card__meta">${t.responsavel ? escapeHtml(t.responsavel) : "—"}</div>
+      <div class="kanban-card__footer">
+        <span class="kanban-pill kanban-pill--${pri}">${escapeHtml(pri)}</span>
+        ${
+          t.prazo
+            ? `<span class="kanban-card__prazo">Prazo ${escapeHtml(String(t.prazo).slice(0, 10))}</span>`
+            : `<span class="kanban-card__prazo subtle-text">Sem prazo</span>`
+        }
+      </div>`;
+    card.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openKanbanTaskModal(t);
+    });
+    wrap.appendChild(card);
+  });
+  let total = 0;
+  KANBAN_ADMIN_STATUSES.forEach((st) => {
+    const wrap = document.getElementById(`kanbanDrop-${st}`);
+    const n = wrap ? wrap.querySelectorAll(".kanban-card").length : 0;
+    total += n;
+    const c = document.querySelector(`.kanban-count[data-col="${st}"]`);
+    if (c) c.textContent = String(n);
+  });
+  const empty = document.getElementById("kanbanEmptyState");
+  if (empty) empty.classList.toggle("hidden", total > 0);
+  initKanbanSortables();
+}
+
+function destroyKanbanSortables() {
+  kanbanSortableInstances.forEach((s) => {
+    try {
+      s.destroy();
+    } catch (e) {
+      /* ignore */
+    }
+  });
+  kanbanSortableInstances = [];
+}
+
+function initKanbanSortables() {
+  destroyKanbanSortables();
+  if (typeof Sortable === "undefined") return;
+  document.querySelectorAll("#kanbanBoard .kanban-column__body").forEach((drop) => {
+    const inst = Sortable.create(drop, {
+      group: "kanban",
+      animation: 160,
+      draggable: ".kanban-card",
+      onEnd: async (evt) => {
+        const taskId = evt.item?.dataset?.taskId;
+        const newStatus = evt.to?.dataset?.status;
+        const oldStatus = evt.from?.dataset?.status;
+        if (!taskId || !newStatus || oldStatus === newStatus) return;
+        try {
+          await fetchJSON(`/kanban-tasks/${encodeURIComponent(taskId)}/status`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: newStatus }),
+          });
+          const t = (state.kanbanTasks || []).find((x) => String(x.id) === String(taskId));
+          if (t) t.status = newStatus;
+          showToast("Tarefa movida.", "success");
+        } catch (err) {
+          showToast(err?.message || "Erro ao mover tarefa.", "error");
+          await loadKanbanAdministrativoTasks().catch(() => {});
+        }
+      },
+    });
+    kanbanSortableInstances.push(inst);
+  });
+}
+
+function openKanbanTaskModal(task) {
+  const modal = document.getElementById("kanbanTaskModal");
+  const title = document.getElementById("kanbanTaskModalTitle");
+  const idEl = document.getElementById("kanbanTaskEditId");
+  const delBtn = document.getElementById("kanbanTaskExcluir");
+  const fb = document.getElementById("kanbanTaskFormFeedback");
+  if (fb) {
+    fb.classList.add("hidden");
+    fb.textContent = "";
+  }
+  populateKanbanUnidadeSelects();
+  if (task) {
+    if (title) title.textContent = "Editar tarefa";
+    if (idEl) idEl.value = String(task.id);
+    const titulo = document.getElementById("kanbanFieldTitulo");
+    const desc = document.getElementById("kanbanFieldDescricao");
+    const uni = document.getElementById("kanbanFieldUnidade");
+    const setor = document.getElementById("kanbanFieldSetor");
+    const resp = document.getElementById("kanbanFieldResponsavel");
+    const pri = document.getElementById("kanbanFieldPrioridade");
+    const st = document.getElementById("kanbanFieldStatus");
+    const prazo = document.getElementById("kanbanFieldPrazo");
+    const obs = document.getElementById("kanbanFieldObservacoes");
+    if (titulo) titulo.value = task.titulo || "";
+    if (desc) desc.value = task.descricao || "";
+    if (uni) uni.value = task.unidade_id != null ? String(task.unidade_id) : "";
+    if (setor) setor.value = task.setor || "Administrativo";
+    if (resp) resp.value = task.responsavel || "";
+    if (pri) pri.value = task.prioridade || "media";
+    if (st) st.value = task.status || "planejamento";
+    if (prazo) prazo.value = task.prazo ? String(task.prazo).slice(0, 10) : "";
+    if (obs) obs.value = task.observacoes || "";
+    if (delBtn) delBtn.classList.remove("hidden");
+  } else {
+    if (title) title.textContent = "Nova tarefa";
+    if (idEl) idEl.value = "";
+    document.getElementById("kanbanFieldTitulo") && (document.getElementById("kanbanFieldTitulo").value = "");
+    document.getElementById("kanbanFieldDescricao") && (document.getElementById("kanbanFieldDescricao").value = "");
+    document.getElementById("kanbanFieldUnidade") && (document.getElementById("kanbanFieldUnidade").value = "");
+    const setor = document.getElementById("kanbanFieldSetor");
+    if (setor) setor.value = "Administrativo";
+    document.getElementById("kanbanFieldResponsavel") && (document.getElementById("kanbanFieldResponsavel").value = "");
+    const pri = document.getElementById("kanbanFieldPrioridade");
+    if (pri) pri.value = "media";
+    const st = document.getElementById("kanbanFieldStatus");
+    if (st) st.value = "planejamento";
+    document.getElementById("kanbanFieldPrazo") && (document.getElementById("kanbanFieldPrazo").value = "");
+    document.getElementById("kanbanFieldObservacoes") && (document.getElementById("kanbanFieldObservacoes").value = "");
+    if (delBtn) delBtn.classList.add("hidden");
+  }
+  if (modal) toggleModal(modal, true);
+}
+
+function closeKanbanTaskModal() {
+  const modal = document.getElementById("kanbanTaskModal");
+  if (modal) toggleModal(modal, false);
+}
+
+async function salvarKanbanTaskDesdeForm() {
+  const fb = document.getElementById("kanbanTaskFormFeedback");
+  const id = (document.getElementById("kanbanTaskEditId")?.value || "").trim();
+  const titulo = (document.getElementById("kanbanFieldTitulo")?.value || "").trim();
+  const unidade_id = parseInt(document.getElementById("kanbanFieldUnidade")?.value || "", 10);
+  const setor = document.getElementById("kanbanFieldSetor")?.value;
+  const prioridade = document.getElementById("kanbanFieldPrioridade")?.value;
+  const status = document.getElementById("kanbanFieldStatus")?.value;
+  if (!titulo) {
+    if (fb) {
+      fb.textContent = "Título é obrigatório.";
+      fb.className = "form-feedback error";
+      fb.classList.remove("hidden");
+    }
+    return;
+  }
+  if (!unidade_id) {
+    if (fb) {
+      fb.textContent = "Selecione a unidade.";
+      fb.className = "form-feedback error";
+      fb.classList.remove("hidden");
+    }
+    return;
+  }
+  const body = {
+    titulo,
+    descricao: (document.getElementById("kanbanFieldDescricao")?.value || "").trim() || null,
+    unidade_id,
+    setor,
+    responsavel: (document.getElementById("kanbanFieldResponsavel")?.value || "").trim() || null,
+    prioridade,
+    status,
+    prazo: (document.getElementById("kanbanFieldPrazo")?.value || "").trim() || null,
+    observacoes: (document.getElementById("kanbanFieldObservacoes")?.value || "").trim() || null,
+  };
+  try {
+    if (id) {
+      await fetchJSON(`/kanban-tasks/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
+    } else {
+      await fetchJSON("/kanban-tasks", { method: "POST", body: JSON.stringify(body) });
+    }
+    showToast(id ? "Tarefa atualizada." : "Tarefa criada.", "success");
+    closeKanbanTaskModal();
+    await loadKanbanAdministrativoTasks();
+  } catch (err) {
+    if (fb) {
+      fb.textContent = err?.message || "Erro ao salvar.";
+      fb.className = "form-feedback error";
+      fb.classList.remove("hidden");
+    }
+  }
+}
+
+async function excluirKanbanTaskAtual() {
+  const id = (document.getElementById("kanbanTaskEditId")?.value || "").trim();
+  if (!id || !confirm("Excluir esta tarefa?")) return;
+  try {
+    await fetchJSON(`/kanban-tasks/${encodeURIComponent(id)}`, { method: "DELETE" });
+    showToast("Tarefa excluída.", "success");
+    closeKanbanTaskModal();
+    await loadKanbanAdministrativoTasks();
+  } catch (err) {
+    showToast(err?.message || "Erro ao excluir.", "error");
+  }
+}
+
+let __kanbanListenersRegistrados = false;
+function setupKanbanAdministrativoModule() {
+  if (__kanbanListenersRegistrados) return;
+  __kanbanListenersRegistrados = true;
+  document.getElementById("kanbanFiltroForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadKanbanAdministrativoTasks().catch((err) => showToast(err.message, "error"));
+  });
+  document.getElementById("kanbanFiltroLimpar")?.addEventListener("click", () => {
+    const u = document.getElementById("kanbanFiltroUnidade");
+    const s = document.getElementById("kanbanFiltroSetor");
+    const p = document.getElementById("kanbanFiltroPrioridade");
+    if (u) u.value = "";
+    if (s) s.value = "";
+    if (p) p.value = "";
+    loadKanbanAdministrativoTasks().catch(() => {});
+  });
+  document.getElementById("openKanbanNovaTarefa")?.addEventListener("click", () => openKanbanTaskModal(null));
+  document.getElementById("closeKanbanTaskModal")?.addEventListener("click", closeKanbanTaskModal);
+  document.getElementById("cancelKanbanTaskModal")?.addEventListener("click", closeKanbanTaskModal);
+  document.getElementById("saveKanbanTaskBtn")?.addEventListener("click", () => salvarKanbanTaskDesdeForm());
+  document.getElementById("kanbanTaskExcluir")?.addEventListener("click", () => excluirKanbanTaskAtual());
+}
+
 // Mapeia cliques de navegacao lateral e recarrega secoes conforme necessario.
 function setupNavigation() {
   dom.navLinks.forEach((link) => {
@@ -11084,6 +11378,10 @@ function setupNavigation() {
       }
       else if (target === "fechamento") {
         await loadFechamentoCaixaSection();
+      } else if (target === "kanbanAdministrativo") {
+        await loadUnidades(false).catch(() => {});
+        populateKanbanUnidadeSelects();
+        await loadKanbanAdministrativoTasks().catch((e) => showToast(e?.message || "Erro ao carregar Kanban.", "error"));
       }
     } catch (err) {
       showToast(err.message, "error");
@@ -18008,6 +18306,7 @@ async function init() {
   setupFechamentoCaixaAuditoria();
   setupReciboAjudaCusto();
   setupFichaTecnicaForm();
+  setupKanbanAdministrativoModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }

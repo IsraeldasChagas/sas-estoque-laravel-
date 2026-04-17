@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\EntradaEstoqueController;
+use App\Http\Controllers\KanbanTaskController;
 use App\Services\EntradaEstoqueService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
@@ -8114,6 +8115,26 @@ Route::get('/proventos/{id}/export-pericia', function (Request $request, $id) us
         \Log::error('GET /proventos/export-pericia: ' . $e->getMessage());
         return response()->json(['error' => 'Erro ao exportar'], 500)->header('Access-Control-Allow-Origin', '*');
     }
+});
+
+// ============================================
+// KANBAN ADMINISTRATIVO
+// ============================================
+$kanbanCors = fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+
+Route::options('/kanban-tasks', $kanbanCors);
+Route::options('/kanban-tasks/{task}', $kanbanCors);
+Route::options('/kanban-tasks/{task}/status', $kanbanCors);
+
+Route::middleware(['sas.usuario'])->group(function () {
+    Route::get('/kanban-tasks', [KanbanTaskController::class, 'index']);
+    Route::post('/kanban-tasks', [KanbanTaskController::class, 'store']);
+    Route::put('/kanban-tasks/{task}', [KanbanTaskController::class, 'update']);
+    Route::delete('/kanban-tasks/{task}', [KanbanTaskController::class, 'destroy']);
+    Route::patch('/kanban-tasks/{task}/status', [KanbanTaskController::class, 'updateStatus']);
 });
 
 // ============================================

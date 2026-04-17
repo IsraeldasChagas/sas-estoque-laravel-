@@ -23,4 +23,9 @@ class Unidade extends Model
     {
         return $this->hasMany(ReservaMesa::class, 'unidade_id');
     }
+
+    public function kanbanTasks()
+    {
+        return $this->hasMany(KanbanTask::class, 'unidade_id');
+    }
 }

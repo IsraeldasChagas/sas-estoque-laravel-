@@ -95,6 +95,7 @@
           <a href="#" class="nav-link active" data-section="boasVindas">Boas-vindas</a>
           <a href="#" class="nav-link" data-section="minhaConta">Minha conta</a>
           <a href="#" class="nav-link" data-section="dashboard">Dashboard</a>
+          <a href="#" class="nav-link" data-section="kanbanAdministrativo">Kanban Administrativo</a>
           <a href="#" class="nav-link" data-section="unidades">Unidades</a>
           <a href="#" class="nav-link" data-section="usuarios">Usuarios</a>
           <a href="#" class="nav-link" data-section="produtos">Produtos</a>
@@ -1681,6 +1682,150 @@
             </div>
           </section>
 
+          <!-- Kanban Administrativo -->
+          <section id="kanbanAdministrativoSection" class="view-section hidden">
+            <div class="kanban-page-header">
+              <div>
+                <h2>Kanban Administrativo</h2>
+                <p class="subtle-text">Tarefas administrativas por unidade, setor e prioridade</p>
+              </div>
+              <button type="button" class="btn primary" id="openKanbanNovaTarefa">+ Nova tarefa</button>
+            </div>
+            <form id="kanbanFiltroForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>Unidade
+                  <select id="kanbanFiltroUnidade" name="unidade_id"><option value="">Todas</option></select>
+                </label>
+                <label>Setor
+                  <select id="kanbanFiltroSetor" name="setor">
+                    <option value="">Todos</option>
+                    <option value="Administrativo">Administrativo</option>
+                    <option value="Financeiro">Financeiro</option>
+                    <option value="Compras">Compras</option>
+                    <option value="RH">RH</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Estoque">Estoque</option>
+                    <option value="Manutenção">Manutenção</option>
+                    <option value="Geral">Geral</option>
+                  </select>
+                </label>
+                <label>Prioridade
+                  <select id="kanbanFiltroPrioridade" name="prioridade">
+                    <option value="">Todas</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Aplicar filtros</button>
+                <button type="button" class="btn" id="kanbanFiltroLimpar">Limpar</button>
+              </div>
+            </form>
+            <div id="kanbanEmptyState" class="kanban-empty-state hidden">
+              <p>Nenhuma tarefa no quadro com os filtros atuais.</p>
+              <p class="subtle-text">Clique em <strong>Nova tarefa</strong> para começar.</p>
+            </div>
+            <div class="kanban-board-scroll">
+              <div class="kanban-board" id="kanbanBoard">
+                <div class="kanban-column" data-status="planejamento">
+                  <div class="kanban-column__head"><span>Planejamento</span><span class="kanban-count" data-col="planejamento">0</span></div>
+                  <div class="kanban-column__body" id="kanbanDrop-planejamento" data-status="planejamento"></div>
+                </div>
+                <div class="kanban-column" data-status="a_fazer">
+                  <div class="kanban-column__head"><span>A Fazer</span><span class="kanban-count" data-col="a_fazer">0</span></div>
+                  <div class="kanban-column__body" id="kanbanDrop-a_fazer" data-status="a_fazer"></div>
+                </div>
+                <div class="kanban-column" data-status="em_execucao">
+                  <div class="kanban-column__head"><span>Em Execução</span><span class="kanban-count" data-col="em_execucao">0</span></div>
+                  <div class="kanban-column__body" id="kanbanDrop-em_execucao" data-status="em_execucao"></div>
+                </div>
+                <div class="kanban-column" data-status="aguardando">
+                  <div class="kanban-column__head"><span>Aguardando</span><span class="kanban-count" data-col="aguardando">0</span></div>
+                  <div class="kanban-column__body" id="kanbanDrop-aguardando" data-status="aguardando"></div>
+                </div>
+                <div class="kanban-column" data-status="finalizado">
+                  <div class="kanban-column__head"><span>Finalizado</span><span class="kanban-count" data-col="finalizado">0</span></div>
+                  <div class="kanban-column__body" id="kanbanDrop-finalizado" data-status="finalizado"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Modal Kanban tarefa -->
+          <div class="modal-backdrop" id="kanbanTaskModal">
+            <div class="modal kanban-task-modal">
+              <header>
+                <h2 id="kanbanTaskModalTitle">Nova tarefa</h2>
+                <button type="button" class="close-btn" id="closeKanbanTaskModal" aria-label="Fechar">×</button>
+              </header>
+              <form id="kanbanTaskForm">
+                <input type="hidden" id="kanbanTaskEditId" value="" />
+                <div id="kanbanTaskFormFeedback" class="form-feedback hidden"></div>
+                <label>Título *
+                  <input type="text" id="kanbanFieldTitulo" name="titulo" required maxlength="255" />
+                </label>
+                <label>Descrição
+                  <textarea id="kanbanFieldDescricao" name="descricao" rows="2"></textarea>
+                </label>
+                <div class="grid-two">
+                  <label>Unidade *
+                    <select id="kanbanFieldUnidade" name="unidade_id" required><option value="">Selecione</option></select>
+                  </label>
+                  <label>Setor *
+                    <select id="kanbanFieldSetor" name="setor" required>
+                      <option value="Administrativo">Administrativo</option>
+                      <option value="Financeiro">Financeiro</option>
+                      <option value="Compras">Compras</option>
+                      <option value="RH">RH</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Estoque">Estoque</option>
+                      <option value="Manutenção">Manutenção</option>
+                      <option value="Geral">Geral</option>
+                    </select>
+                  </label>
+                </div>
+                <label>Responsável (texto)
+                  <input type="text" id="kanbanFieldResponsavel" name="responsavel" maxlength="255" placeholder="Nome ou equipe" />
+                </label>
+                <div class="grid-two">
+                  <label>Prioridade *
+                    <select id="kanbanFieldPrioridade" name="prioridade" required>
+                      <option value="baixa">Baixa</option>
+                      <option value="media" selected>Média</option>
+                      <option value="alta">Alta</option>
+                    </select>
+                  </label>
+                  <label>Status *
+                    <select id="kanbanFieldStatus" name="status" required>
+                      <option value="planejamento">Planejamento</option>
+                      <option value="a_fazer">A Fazer</option>
+                      <option value="em_execucao">Em Execução</option>
+                      <option value="aguardando">Aguardando</option>
+                      <option value="finalizado">Finalizado</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="grid-two">
+                  <label>Prazo
+                    <input type="date" id="kanbanFieldPrazo" name="prazo" />
+                  </label>
+                  <label>Observações
+                    <textarea id="kanbanFieldObservacoes" name="observacoes" rows="2"></textarea>
+                  </label>
+                </div>
+              </form>
+              <footer class="kanban-task-modal__footer">
+                <button type="button" class="btn danger hidden" id="kanbanTaskExcluir">Excluir</button>
+                <div class="kanban-task-modal__footer-right">
+                  <button type="button" class="btn neutral" id="cancelKanbanTaskModal">Cancelar</button>
+                  <button type="button" class="btn primary" id="saveKanbanTaskBtn">Salvar</button>
+                </div>
+              </footer>
+            </div>
+          </div>
+
           <!-- Modulo Financeiro - Proventos -->
           <section id="proventosSection" class="view-section hidden">
             <div class="funcionarios-header" style="margin-bottom: 1.5rem;">
@@ -2918,6 +3063,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boasVindas" /> Boas-vindas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="minhaConta" /> Minha conta</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="dashboard" /> Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="kanbanAdministrativo" /> Kanban Administrativo</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="unidades" /> Unidades</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="usuarios" /> Usuários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="produtos" /> Produtos</label>
@@ -3927,8 +4073,9 @@
     <script src="src/routes/router.js"></script>
     <!-- Sanitização HTML do modo de preparo (ficha técnica) -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260417b"></script>
+    <script src="app.js?v=20260417c"></script>
      
   </body>
 </html>
