@@ -6339,6 +6339,17 @@ select[size]:not([size="1"]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(180deg, #ef5350, #c62828);
+  border-color: #b71c1c;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(198, 40, 40, 0.35);
+}
+.kanban-toolbar-toggle:hover {
+  filter: brightness(1.06);
+}
+.kanban-toolbar-toggle:focus-visible {
+  outline: 2px solid #ffeb3b;
+  outline-offset: 2px;
 }
 .kanban-toolbar-toggle__icon {
   display: block;
@@ -6346,12 +6357,12 @@ select[size]:not([size="1"]) {
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 8px solid #455a64;
+  border-bottom: 8px solid #ffffff;
   transition: transform 0.2s ease;
 }
 #kanbanAdministrativoSection.kanban--collapsed .kanban-toolbar-toggle__icon {
   transform: rotate(180deg);
-  border-bottom-color: #455a64;
+  border-bottom-color: #ffffff;
 }
 #kanbanAdministrativoSection.kanban--collapsed .kanban-toolbar {
   display: none;

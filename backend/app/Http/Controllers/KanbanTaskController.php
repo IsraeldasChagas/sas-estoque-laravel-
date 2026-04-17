@@ -49,7 +49,10 @@ class KanbanTaskController extends Controller
         $q = KanbanTask::query()->with('unidade:id,nome');
 
         if ($request->filled('unidade_id')) {
-            $q->where('unidade_id', (int) $request->query('unidade_id'));
+            $uid = (int) $request->query('unidade_id');
+            $q->where(function ($qq) use ($uid) {
+                $qq->where('unidade_id', $uid)->orWhereNull('unidade_id');
+            });
         }
         if ($request->filled('setor')) {
             $q->where('setor', $request->query('setor'));
@@ -76,7 +79,7 @@ class KanbanTaskController extends Controller
         $validated = $request->validate([
             'titulo' => 'required|string|max:255',
             'descricao' => 'nullable|string',
-            'unidade_id' => 'required|integer|exists:unidades,id',
+            'unidade_id' => 'nullable|integer|exists:unidades,id',
             'setor' => 'required|string|max:80',
             'responsavel' => 'nullable|string|max:255',
             'prioridade' => 'required|in:baixa,media,alta',
@@ -100,7 +103,7 @@ class KanbanTaskController extends Controller
         $validated = $request->validate([
             'titulo' => 'sometimes|required|string|max:255',
             'descricao' => 'nullable|string',
-            'unidade_id' => 'sometimes|required|integer|exists:unidades,id',
+            'unidade_id' => 'sometimes|nullable|integer|exists:unidades,id',
             'setor' => 'sometimes|required|string|max:80',
             'responsavel' => 'nullable|string|max:255',
             'prioridade' => 'sometimes|required|in:baixa,media,alta',

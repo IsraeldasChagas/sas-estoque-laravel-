@@ -130,9 +130,9 @@
                     </div>
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <label class="form-label">Unidade *</label>
-                            <select class="form-select" name="unidade_id" id="kbFormUnidade" required>
-                                <option value="">Selecione</option>
+                            <label class="form-label">Unidade</label>
+                            <select class="form-select" name="unidade_id" id="kbFormUnidade">
+                                <option value="">Todas</option>
                                 @foreach ($unidades as $u)
                                     <option value="{{ $u->id }}">{{ $u->nome }}</option>
                                 @endforeach
@@ -254,7 +254,7 @@
             const pri = (t.prioridade || 'media').toString().toLowerCase();
             const st = (t.status || 'planejamento').toString();
             const stOk = STATUSES.includes(st) ? st : 'planejamento';
-            const un = (t.unidade && t.unidade.nome) ? t.unidade.nome : ('#' + t.unidade_id);
+            const un = (t.unidade && t.unidade.nome) ? t.unidade.nome : ((t.unidade_id == null || t.unidade_id === '') ? 'Todas' : ('#' + t.unidade_id));
             const div = document.createElement('div');
             let cls = 'kanban-card';
             if (stOk === 'finalizado') cls += ' kanban-card--full-finalizado';
@@ -287,6 +287,20 @@
         sortables = [];
     }
 
+    function revertKbSortableMove(evt) {
+        if (!evt || !evt.from || !evt.item) return;
+        const ref = evt.from.children[evt.oldIndex] || null;
+        evt.from.insertBefore(evt.item, ref);
+    }
+
+    function refreshKbColumnCounts() {
+        STATUSES.forEach(st => {
+            const c = document.querySelector('.kb-count[data-col="' + st + '"]');
+            const n = document.querySelectorAll('#kbDrop-' + st + ' .kanban-card').length;
+            if (c) c.textContent = String(n);
+        });
+    }
+
     function initSortables() {
         destroySortables();
         if (typeof Sortable === 'undefined') return;
@@ -300,11 +314,22 @@
                     const newStatus = evt.to.getAttribute('data-status');
                     const oldStatus = evt.from.getAttribute('data-status');
                     if (!id || !newStatus || oldStatus === newStatus) return;
+                    const ok = window.confirm(
+                        'Deseja realmente mover esta tarefa para outra coluna?\n\nToque em OK para confirmar ou em Cancelar para desfazer.'
+                    );
+                    if (!ok) {
+                        revertKbSortableMove(evt);
+                        refreshKbColumnCounts();
+                        return;
+                    }
                     try {
                         await api('/kanban-tasks/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
                         const t = tasks.find(x => String(x.id) === String(id));
                         if (t) t.status = newStatus;
+                        refreshKbColumnCounts();
                     } catch (e) {
+                        revertKbSortableMove(evt);
+                        refreshKbColumnCounts();
                         alert(e.message || 'Erro ao mover');
                         await loadTasks();
                     }
@@ -337,7 +362,7 @@
         document.getElementById('kbFormId').value = t ? t.id : '';
         document.getElementById('kbFormTitulo').value = t ? (t.titulo || '') : '';
         document.getElementById('kbFormDescricao').value = t ? (t.descricao || '') : '';
-        document.getElementById('kbFormUnidade').value = t ? String(t.unidade_id || '') : '';
+        document.getElementById('kbFormUnidade').value = t && t.unidade_id != null && t.unidade_id !== '' ? String(t.unidade_id) : '';
         document.getElementById('kbFormSetor').value = t ? (t.setor || 'Administrativo') : 'Administrativo';
         document.getElementById('kbFormResp').value = t ? (t.responsavel || '') : '';
         document.getElementById('kbFormPri').value = t ? (t.prioridade || 'media') : 'media';
@@ -356,7 +381,12 @@
         const body = {
             titulo: document.getElementById('kbFormTitulo').value.trim(),
             descricao: document.getElementById('kbFormDescricao').value || null,
-            unidade_id: parseInt(document.getElementById('kbFormUnidade').value, 10),
+            unidade_id: (function () {
+                const v = document.getElementById('kbFormUnidade').value;
+                if (v === '' || v == null) return null;
+                const n = parseInt(v, 10);
+                return Number.isFinite(n) ? n : null;
+            })(),
             setor: document.getElementById('kbFormSetor').value,
             responsavel: document.getElementById('kbFormResp').value.trim() || null,
             prioridade: document.getElementById('kbFormPri').value,

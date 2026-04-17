@@ -10996,7 +10996,7 @@ function populateKanbanUnidadeSelects() {
   const formU = document.getElementById("kanbanFieldUnidade");
   if (formU) {
     const cur2 = formU.value;
-    formU.innerHTML = '<option value="">Selecione</option>' + opts;
+    formU.innerHTML = '<option value="">Todas</option>' + opts;
     formU.value = cur2;
   }
 }
@@ -11016,7 +11016,12 @@ function renderKanbanAdministrativoBoard() {
     const pri = ["baixa", "media", "alta"].includes(priRaw) ? priRaw : "media";
     const stRaw = String(st).toLowerCase();
     const stSafe = KANBAN_ADMIN_STATUSES.includes(stRaw) ? stRaw : "planejamento";
-    const unNome = t.unidade && t.unidade.nome ? t.unidade.nome : "";
+    const unNome =
+      t.unidade && t.unidade.nome
+        ? t.unidade.nome
+        : t.unidade_id == null || t.unidade_id === ""
+          ? "Todas"
+          : `#${t.unidade_id}`;
     const card = document.createElement("div");
     const clsParts = ["kanban-card"];
     if (stSafe === "finalizado") clsParts.push("kanban-card--full-finalizado");
@@ -11069,6 +11074,21 @@ function destroyKanbanSortables() {
   kanbanSortableInstances = [];
 }
 
+function revertKanbanSortableMove(evt) {
+  if (!evt?.from || !evt.item) return;
+  const ref = evt.from.children[evt.oldIndex] || null;
+  evt.from.insertBefore(evt.item, ref);
+}
+
+function refreshKanbanAdminColumnCounts() {
+  KANBAN_ADMIN_STATUSES.forEach((st) => {
+    const wrap = document.getElementById(`kanbanDrop-${st}`);
+    const n = wrap ? wrap.querySelectorAll(".kanban-card").length : 0;
+    const c = document.querySelector(`.kanban-count[data-col="${st}"]`);
+    if (c) c.textContent = String(n);
+  });
+}
+
 function initKanbanSortables() {
   destroyKanbanSortables();
   if (typeof Sortable === "undefined") return;
@@ -11082,6 +11102,14 @@ function initKanbanSortables() {
         const newStatus = evt.to?.dataset?.status;
         const oldStatus = evt.from?.dataset?.status;
         if (!taskId || !newStatus || oldStatus === newStatus) return;
+        const ok = window.confirm(
+          "Deseja realmente mover esta tarefa para outra coluna?\n\nToque em OK para confirmar ou em Cancelar para desfazer.",
+        );
+        if (!ok) {
+          revertKanbanSortableMove(evt);
+          refreshKanbanAdminColumnCounts();
+          return;
+        }
         try {
           await fetchJSON(`/kanban-tasks/${encodeURIComponent(taskId)}/status`, {
             method: "PATCH",
@@ -11089,8 +11117,11 @@ function initKanbanSortables() {
           });
           const t = (state.kanbanTasks || []).find((x) => String(x.id) === String(taskId));
           if (t) t.status = newStatus;
+          refreshKanbanAdminColumnCounts();
           showToast("Tarefa movida.", "success");
         } catch (err) {
+          revertKanbanSortableMove(evt);
+          refreshKanbanAdminColumnCounts();
           showToast(err?.message || "Erro ao mover tarefa.", "error");
           await loadKanbanAdministrativoTasks().catch(() => {});
         }
@@ -11162,21 +11193,18 @@ async function salvarKanbanTaskDesdeForm() {
   const fb = document.getElementById("kanbanTaskFormFeedback");
   const id = (document.getElementById("kanbanTaskEditId")?.value || "").trim();
   const titulo = (document.getElementById("kanbanFieldTitulo")?.value || "").trim();
-  const unidade_id = parseInt(document.getElementById("kanbanFieldUnidade")?.value || "", 10);
+  const unidadeRaw = (document.getElementById("kanbanFieldUnidade")?.value || "").trim();
+  const unidade_id =
+    unidadeRaw === "" ? null : (() => {
+      const n = parseInt(unidadeRaw, 10);
+      return Number.isFinite(n) ? n : null;
+    })();
   const setor = document.getElementById("kanbanFieldSetor")?.value;
   const prioridade = document.getElementById("kanbanFieldPrioridade")?.value;
   const status = document.getElementById("kanbanFieldStatus")?.value;
   if (!titulo) {
     if (fb) {
       fb.textContent = "Título é obrigatório.";
-      fb.className = "form-feedback error";
-      fb.classList.remove("hidden");
-    }
-    return;
-  }
-  if (!unidade_id) {
-    if (fb) {
-      fb.textContent = "Selecione a unidade.";
       fb.className = "form-feedback error";
       fb.classList.remove("hidden");
     }
