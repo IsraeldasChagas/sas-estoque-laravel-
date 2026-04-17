@@ -17128,6 +17128,86 @@ function setupFichaTecnicaForm() {
   const ingNome = document.getElementById('fichaTecnicaIngredienteNome');
   const ingQ = document.getElementById('fichaTecnicaIngredienteQuantidade');
   const ingUn = document.getElementById('fichaTecnicaIngredienteUnidade');
+  const ingNovaUnidade = document.getElementById('fichaTecnicaNovaUnidadeMedida');
+  const ingBtnAddUnidade = document.getElementById('fichaTecnicaAdicionarUnidadeMedida');
+  const FICHA_TECNICA_UNIDADES_EXTRAS_KEY = 'fichaTecnicaUnidadesMedidaExtras';
+
+  const lerUnidadesMedidaExtrasStorage = () => {
+    try {
+      const raw = localStorage.getItem(FICHA_TECNICA_UNIDADES_EXTRAS_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string' && x.trim()) : [];
+    } catch (_) {
+      return [];
+    }
+  };
+
+  const salvarUnidadesMedidaExtrasStorage = (lista) => {
+    try {
+      const seen = new Set();
+      const out = [];
+      lista.forEach((x) => {
+        const s = String(x || '').trim().replace(/</g, '').slice(0, 40);
+        if (!s) return;
+        const k = s.toLowerCase();
+        if (seen.has(k)) return;
+        seen.add(k);
+        out.push(s);
+      });
+      out.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      localStorage.setItem(FICHA_TECNICA_UNIDADES_EXTRAS_KEY, JSON.stringify(out));
+    } catch (_) {}
+  };
+
+  const opcoesUnidadeMedidaJaExistem = (sel, texto) => {
+    const t = String(texto || '').trim().toLowerCase();
+    if (!t || !sel) return true;
+    return [...sel.options].some((o) => String(o.value || '').trim().toLowerCase() === t);
+  };
+
+  const aplicarUnidadesMedidaExtrasNoSelect = () => {
+    if (!ingUn) return;
+    const extras = lerUnidadesMedidaExtrasStorage();
+    extras.forEach((label) => {
+      const s = String(label || '').trim().replace(/</g, '').slice(0, 40);
+      if (!s || opcoesUnidadeMedidaJaExistem(ingUn, s)) return;
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      ingUn.appendChild(opt);
+    });
+  };
+
+  const adicionarUnidadeMedidaExtra = () => {
+    if (!ingUn) return;
+    const raw = (ingNovaUnidade?.value || '').trim().replace(/</g, '');
+    if (!raw) {
+      showToast('Digite o nome da nova unidade de medida.', 'error');
+      ingNovaUnidade?.focus();
+      return;
+    }
+    const s = raw.slice(0, 40);
+    if (opcoesUnidadeMedidaJaExistem(ingUn, s)) {
+      showToast('Essa unidade já está no select.', 'info');
+      ingUn.value = s;
+      if (ingNovaUnidade) ingNovaUnidade.value = '';
+      return;
+    }
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    ingUn.appendChild(opt);
+    ingUn.value = s;
+    if (ingNovaUnidade) ingNovaUnidade.value = '';
+    const lista = lerUnidadesMedidaExtrasStorage();
+    lista.push(s);
+    salvarUnidadesMedidaExtrasStorage(lista);
+    showToast('Unidade adicionada ao select.', 'success');
+  };
+
+  aplicarUnidadesMedidaExtrasNoSelect();
+
   const ingCu = document.getElementById('fichaTecnicaIngredienteCustoUnitario');
   const ingTot = document.getElementById('fichaTecnicaIngredienteCustoTotal');
   const ingEmpty = document.getElementById('fichaTecnicaIngredientesEmpty');
@@ -17183,6 +17263,14 @@ function setupFichaTecnicaForm() {
   ingCu?.addEventListener('input', recalcIngredienteCustoTotal);
   recalcIngredienteCustoTotal();
 
+  ingBtnAddUnidade?.addEventListener('click', adicionarUnidadeMedidaExtra);
+  ingNovaUnidade?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      adicionarUnidadeMedidaExtra();
+    }
+  });
+
   const fecharFormularioIngrediente = () => {
     if (ingWrap) ingWrap.hidden = true;
     resetModoEdicaoIngrediente();
@@ -17224,6 +17312,7 @@ function setupFichaTecnicaForm() {
     if (ingNome) ingNome.value = '';
     if (ingQ) ingQ.value = '';
     if (ingUn) ingUn.value = '';
+    if (ingNovaUnidade) ingNovaUnidade.value = '';
     if (ingCu) ingCu.value = '';
     if (ingTot) ingTot.value = '';
     recalcIngredienteCustoTotal();

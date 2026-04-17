@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260416l" />
+    <link rel="stylesheet" href="style.css?v=20260416p" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1349,20 +1349,24 @@
                           <span>Quantidade <small class="ficha-tecnica-form__hint-inline">(opcional)</small></span>
                           <input type="number" id="fichaTecnicaIngredienteQuantidade" name="ingrediente_quantidade" min="0" step="any" placeholder="0" />
                         </label>
-                        <label class="ficha-tecnica-form__field">
+                        <div class="ficha-tecnica-form__field">
                           <span>Unidade de medida *</span>
-                          <select id="fichaTecnicaIngredienteUnidade" name="ingrediente_unidade_medida">
-                            <option value="">Selecione</option>
-                            <option value="kg">kg</option>
-                            <option value="g">g</option>
-                            <option value="L">L</option>
-                            <option value="ml">ml</option>
-                            <option value="un">un</option>
-                            <option value="dz">dz (duzia)</option>
-                            <option value="pct">pct (pacote)</option>
-                            <option value="cx">cx (caixa)</option>
-                          </select>
-                        </label>
+                          <div class="ficha-tecnica-unidade-medida-linha">
+                            <select id="fichaTecnicaIngredienteUnidade" name="ingrediente_unidade_medida" class="ficha-tecnica-unidade-medida-select">
+                              <option value="">Selecione</option>
+                              <option value="kg">kg</option>
+                              <option value="g">g</option>
+                              <option value="L">L</option>
+                              <option value="ml">ml</option>
+                              <option value="un">un</option>
+                              <option value="dz">dz (duzia)</option>
+                              <option value="pct">pct (pacote)</option>
+                              <option value="cx">cx (caixa)</option>
+                            </select>
+                            <input type="text" id="fichaTecnicaNovaUnidadeMedida" class="ficha-tecnica-nova-unidade-input" maxlength="40" placeholder="Nova unidade" autocomplete="off" title="Digite e clique em + Unidade para incluir no select" />
+                            <button type="button" class="btn secondary ficha-tecnica-unidade-add-btn" id="fichaTecnicaAdicionarUnidadeMedida">+ Unidade de medida</button>
+                          </div>
+                        </div>
                       </div>
                       <div class="ficha-tecnica-form__grid-two">
                         <label class="ficha-tecnica-form__field">
@@ -3919,7 +3923,7 @@
     <!-- Sanitização HTML do modo de preparo (ficha técnica) -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260416o"></script>
+    <script src="app.js?v=20260416p"></script>
      
   </body>
 </html>

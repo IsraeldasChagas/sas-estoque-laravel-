@@ -1672,6 +1672,34 @@ textarea {
   color: var(--text);
   cursor: default;
 }
+
+/* Ficha técnica — ingrediente: select de unidade + criar nova ao lado */
+.ficha-tecnica-unidade-medida-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ficha-tecnica-unidade-medida-linha .ficha-tecnica-unidade-medida-select {
+  flex: 1 1 140px;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+}
+.ficha-tecnica-nova-unidade-input {
+  flex: 0 1 160px;
+  min-width: 100px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #ddd);
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+.ficha-tecnica-unidade-add-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .ficha-tecnica-form__grid-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
