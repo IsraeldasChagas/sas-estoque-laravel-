@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260416p" />
+    <link rel="stylesheet" href="style.css?v=20260417k" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1684,12 +1684,26 @@
 
           <!-- Kanban Administrativo -->
           <section id="kanbanAdministrativoSection" class="view-section hidden">
+            <div class="kanban-actions-bar">
+              <button
+                type="button"
+                class="btn neutral kanban-toolbar-toggle"
+                id="kanbanToggleToolbarBtn"
+                aria-expanded="true"
+                aria-controls="kanbanToolbar"
+                aria-label="Recolher ou expandir título e filtros"
+                title="Recolher título e filtros"
+              >
+                <span class="kanban-toolbar-toggle__icon" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="btn primary" id="openKanbanNovaTarefa">+ Nova tarefa</button>
+            </div>
+            <div id="kanbanToolbar" class="kanban-toolbar">
             <div class="kanban-page-header">
               <div>
                 <h2>Kanban Administrativo</h2>
                 <p class="subtle-text">Tarefas administrativas por unidade, setor e prioridade</p>
               </div>
-              <button type="button" class="btn primary" id="openKanbanNovaTarefa">+ Nova tarefa</button>
             </div>
             <form id="kanbanFiltroForm" class="filters-panel">
               <div class="filters-grid">
@@ -1723,6 +1737,7 @@
                 <button type="button" class="btn" id="kanbanFiltroLimpar">Limpar</button>
               </div>
             </form>
+            </div>
             <div id="kanbanEmptyState" class="kanban-empty-state hidden">
               <p>Nenhuma tarefa no quadro com os filtros atuais.</p>
               <p class="subtle-text">Clique em <strong>Nova tarefa</strong> para começar.</p>

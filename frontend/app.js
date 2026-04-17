@@ -7268,6 +7268,7 @@ async function startAppSession(user) {
         } else if (sectionToNavigate === 'fechamento') {
           await loadFechamentoCaixaSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
+          syncKanbanToolbarCollapsedFromStorage();
           await loadUnidades(false).catch(() => {});
           populateKanbanUnidadeSelects();
           await loadKanbanAdministrativoTasks().catch(() => {});
@@ -11215,10 +11216,44 @@ async function excluirKanbanTaskAtual() {
   }
 }
 
+const KANBAN_TOOLBAR_COLLAPSE_KEY = "kanban-toolbar-collapsed";
+
+function syncKanbanToolbarCollapsedFromStorage() {
+  const sec = document.getElementById("kanbanAdministrativoSection");
+  const btn = document.getElementById("kanbanToggleToolbarBtn");
+  if (!sec || !btn) return;
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(KANBAN_TOOLBAR_COLLAPSE_KEY) === "1";
+  } catch (e) {
+    collapsed = false;
+  }
+  sec.classList.toggle("kanban--collapsed", collapsed);
+  btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  btn.title = collapsed ? "Mostrar título e filtros" : "Recolher título e filtros";
+}
+
 let __kanbanListenersRegistrados = false;
 function setupKanbanAdministrativoModule() {
   if (__kanbanListenersRegistrados) return;
   __kanbanListenersRegistrados = true;
+  document.getElementById("kanbanToggleToolbarBtn")?.addEventListener("click", () => {
+    const sec = document.getElementById("kanbanAdministrativoSection");
+    if (!sec) return;
+    sec.classList.toggle("kanban--collapsed");
+    const collapsed = sec.classList.contains("kanban--collapsed");
+    try {
+      localStorage.setItem(KANBAN_TOOLBAR_COLLAPSE_KEY, collapsed ? "1" : "0");
+    } catch (e) {
+      /* ignore */
+    }
+    const btn = document.getElementById("kanbanToggleToolbarBtn");
+    if (btn) {
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.title = collapsed ? "Mostrar título e filtros" : "Recolher título e filtros";
+    }
+  });
+  syncKanbanToolbarCollapsedFromStorage();
   document.getElementById("kanbanFiltroForm")?.addEventListener("submit", (e) => {
     e.preventDefault();
     loadKanbanAdministrativoTasks().catch((err) => showToast(err.message, "error"));
@@ -11379,6 +11414,7 @@ function setupNavigation() {
       else if (target === "fechamento") {
         await loadFechamentoCaixaSection();
       } else if (target === "kanbanAdministrativo") {
+        syncKanbanToolbarCollapsedFromStorage();
         await loadUnidades(false).catch(() => {});
         populateKanbanUnidadeSelects();
         await loadKanbanAdministrativoTasks().catch((e) => showToast(e?.message || "Erro ao carregar Kanban.", "error"));
