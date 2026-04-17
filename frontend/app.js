@@ -17242,6 +17242,11 @@ function setupFichaTecnicaForm() {
   const fmtIngQtdCell = (q) => (q != null && q !== '' ? formatQuantityDisplay(q) : '—');
   const fmtIngBRLCell = (v) =>
     v != null && v !== '' && Number.isFinite(Number(v)) ? formatCurrencyBRL(v) : '—';
+  /** Legado: fichas antigas gravavam "un"; padronizar para "und". */
+  const normalizarUnidadeMedidaFichaTecnica = (u) => {
+    const s = String(u ?? '').trim();
+    return s.toLowerCase() === 'un' ? 'und' : s;
+  };
   const recalcIngredienteCustoTotal = () => {
     if (!ingTot) return;
     const qs = String(ingQ?.value ?? '').trim();
@@ -17294,7 +17299,7 @@ function setupFichaTecnicaForm() {
       <tr>
         <td data-label="Ingrediente">${escapeHtml(it.nome)}</td>
         <td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td>
-        <td data-label="Un.">${escapeHtml(it.unidade_medida)}</td>
+        <td data-label="Un.">${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td>
         <td data-label="Custo unitário">${escapeHtml(fmtIngBRLCell(it.custo_unitario))}</td>
         <td data-label="Custo total">${escapeHtml(fmtIngBRLCell(it.custo_total))}</td>
         <td class="ficha-tecnica-ingredientes-td-acoes" data-label="Ações">
@@ -17358,7 +17363,7 @@ function setupFichaTecnicaForm() {
         ? `<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${(p.ingredientes || [])
             .map(
               (it) =>
-                `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td>${escapeHtml(it.unidade_medida)}</td><td>${fmtIngBRLCell(it.custo_unitario)}</td><td>${fmtIngBRLCell(it.custo_total)}</td></tr>`
+                `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td>${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td><td>${fmtIngBRLCell(it.custo_unitario)}</td><td>${fmtIngBRLCell(it.custo_total)}</td></tr>`
             )
             .join('')}</tbody></table>`
         : '<p>—</p>';
@@ -17392,7 +17397,7 @@ function setupFichaTecnicaForm() {
     const ingRows = ings
       .map(
         (it) =>
-          `<tr><td data-label="Ingrediente">${escapeHtml(it.nome)}</td><td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td data-label="Un.">${escapeHtml(it.unidade_medida)}</td><td data-label="Custo unitário">${fmtIngBRLCell(it.custo_unitario)}</td><td data-label="Custo total">${fmtIngBRLCell(it.custo_total)}</td></tr>`
+          `<tr><td data-label="Ingrediente">${escapeHtml(it.nome)}</td><td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td data-label="Un.">${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td><td data-label="Custo unitário">${fmtIngBRLCell(it.custo_unitario)}</td><td data-label="Custo total">${fmtIngBRLCell(it.custo_total)}</td></tr>`
       )
       .join('');
     const fotoBlock =
@@ -17560,7 +17565,7 @@ function setupFichaTecnicaForm() {
           id: it.id != null ? it.id : Date.now() + Math.random(),
           nome: it.nome,
           quantidade: it.quantidade,
-          unidade_medida: it.unidade_medida,
+          unidade_medida: normalizarUnidadeMedidaFichaTecnica(it.unidade_medida),
           custo_unitario: it.custo_unitario,
           custo_total: it.custo_total,
         }))
@@ -17789,7 +17794,7 @@ function setupFichaTecnicaForm() {
       if (ingWrap) ingWrap.hidden = false;
       if (ingNome) ingNome.value = it.nome || '';
       if (ingQ) ingQ.value = it.quantidade != null && it.quantidade !== '' ? String(it.quantidade) : '';
-      if (ingUn) ingUn.value = it.unidade_medida || '';
+      if (ingUn) ingUn.value = normalizarUnidadeMedidaFichaTecnica(it.unidade_medida || '');
       if (ingCu) ingCu.value = it.custo_unitario != null && it.custo_unitario !== '' ? String(it.custo_unitario) : '';
       recalcIngredienteCustoTotal();
       atualizarRotuloBotaoIngrediente();
@@ -17826,7 +17831,7 @@ function setupFichaTecnicaForm() {
     recalcIngredienteCustoTotal();
     const nome = (ingNome?.value || '').trim();
     const quantidade = parseOptionalIngNum(ingQ?.value);
-    const unidade_medida = (ingUn?.value || '').trim();
+    const unidade_medida = normalizarUnidadeMedidaFichaTecnica((ingUn?.value || '').trim());
     const custo_unitario = parseOptionalIngNum(ingCu?.value);
     const custo_total =
       quantidade != null && custo_unitario != null
