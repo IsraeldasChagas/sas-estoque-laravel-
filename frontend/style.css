@@ -5989,6 +5989,38 @@ select[size]:not([size="1"]) {
   padding: 0 1.25rem 1.25rem;
 }
 
+.fechamento-audit__formas-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.fechamento-audit__formas-header h3 {
+  margin: 0 0 0.25rem;
+}
+
+.fechamento-audit__formas-header .subtle-text {
+  margin: 0;
+}
+
+.fechamento-audit__formas-header .btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.fechamento-audit__forma-nome {
+  width: 100%;
+  min-width: 7rem;
+  max-width: 220px;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cfd8dc;
+  box-sizing: border-box;
+  font-weight: 600;
+}
+
 .fechamento-audit__table-wrap {
   overflow-x: auto;
 }

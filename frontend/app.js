@@ -14700,6 +14700,90 @@ const FECHAMENTO_CAIXA_FORMAS = [
   { key: "pix_thiago", label: "PIX Thiago" },
 ];
 
+const FECHAMENTO_CAIXA_CHAVES_FIXAS = new Set(FECHAMENTO_CAIXA_FORMAS.map((f) => f.key));
+
+function fechamentoTbodyValores() {
+  return document.getElementById("fechamentoTbodyValores");
+}
+
+function fechamentoColetarLinhasTr() {
+  const tb = fechamentoTbodyValores();
+  if (!tb) return [];
+  return Array.from(tb.querySelectorAll("tr[data-fechamento-key]"));
+}
+
+function fechamentoMoneyInputsFromTr(tr) {
+  const inputs = tr.querySelectorAll("input.fechamento-audit__money");
+  return { sis: inputs[0] || null, maq: inputs[1] || null };
+}
+
+function fechamentoLabelLinha(tr, key) {
+  if (tr.getAttribute("data-fechamento-fixa") === "1") {
+    const hit = FECHAMENTO_CAIXA_FORMAS.find((f) => f.key === key);
+    return hit ? hit.label : key;
+  }
+  const inp = tr.querySelector(".fechamento-audit__forma-nome");
+  const t = (inp && inp.value ? inp.value : "").trim();
+  return t || key || "Nova forma";
+}
+
+function fechamentoGerarChaveExtra() {
+  return `x_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function fechamentoRemoverLinhasExtras() {
+  const tb = fechamentoTbodyValores();
+  if (!tb) return;
+  tb.querySelectorAll('tr[data-fechamento-extra="1"]').forEach((el) => el.remove());
+}
+
+function appendFechamentoCaixaLinhaExtra({ key, label, sis, maq }) {
+  const tb = fechamentoTbodyValores();
+  if (!tb) return;
+  const k = (key && String(key).trim()) || fechamentoGerarChaveExtra();
+  const tr = document.createElement("tr");
+  tr.setAttribute("data-fechamento-key", k);
+  tr.setAttribute("data-fechamento-extra", "1");
+
+  const tdForma = document.createElement("td");
+  tdForma.setAttribute("data-label", "Forma");
+  const nameInp = document.createElement("input");
+  nameInp.type = "text";
+  nameInp.className = "fechamento-audit__forma-nome";
+  nameInp.maxLength = 120;
+  nameInp.placeholder = "Nome da forma";
+  nameInp.value = (label != null ? String(label) : "").slice(0, 120);
+  tdForma.appendChild(nameInp);
+
+  const mkMoneyTd = (dataLabel) => {
+    const td = document.createElement("td");
+    td.setAttribute("data-label", dataLabel);
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.className = "fechamento-audit__money";
+    inp.setAttribute("data-currency", "1");
+    inp.setAttribute("inputmode", "decimal");
+    inp.setAttribute("placeholder", "0,00");
+    td.appendChild(inp);
+    return td;
+  };
+
+  const tdDiff = document.createElement("td");
+  tdDiff.setAttribute("data-label", "Diferença");
+  tdDiff.className = "fechamento-audit__diff-cell";
+  tdDiff.textContent = formatFechamentoSignedDiff(0);
+
+  tr.appendChild(tdForma);
+  tr.appendChild(mkMoneyTd("PDV"));
+  tr.appendChild(mkMoneyTd("Maquinha"));
+  tr.appendChild(tdDiff);
+  tb.appendChild(tr);
+
+  const { sis: sisEl, maq: maqEl } = fechamentoMoneyInputsFromTr(tr);
+  applyFechamentoValorInput(sisEl, sis ?? 0);
+  applyFechamentoValorInput(maqEl, maq ?? 0);
+}
+
 const FECHAMENTO_MAQUINHA_LABELS = {
   stone: "Stone",
   cielo: "Cielo",
@@ -14834,11 +14918,24 @@ function popularFechamentoCaixaFormulario(r) {
   const byKey = Object.fromEntries(
     linhas.filter((x) => x && x.key).map((x) => [String(x.key), x])
   );
+  fechamentoRemoverLinhasExtras();
   FECHAMENTO_CAIXA_FORMAS.forEach(({ key }) => {
     const ln = byKey[key] || {};
     applyFechamentoValorInput(document.getElementById(`fechamento_sis_${key}`), ln.sis ?? 0);
     applyFechamentoValorInput(document.getElementById(`fechamento_maq_${key}`), ln.maq ?? 0);
   });
+  linhas.forEach((ln) => {
+    if (!ln || ln.key == null || ln.key === "") return;
+    const k = String(ln.key);
+    if (FECHAMENTO_CAIXA_CHAVES_FIXAS.has(k)) return;
+    appendFechamentoCaixaLinhaExtra({
+      key: k,
+      label: (ln.label || k).toString().slice(0, 120),
+      sis: ln.sis ?? 0,
+      maq: ln.maq ?? 0,
+    });
+  });
+  ensureFechamentoCaixaCurrencyMasks();
   scheduleRecalcFechamentoCaixa();
 }
 
@@ -14893,9 +14990,13 @@ function buildFechamentoCaixaPayload() {
   let totalSis = 0;
   let totalMaq = 0;
   let somaDiff = 0;
-  FECHAMENTO_CAIXA_FORMAS.forEach(({ key, label }) => {
-    const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
-    const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
+  fechamentoColetarLinhasTr().forEach((tr) => {
+    const key = tr.getAttribute("data-fechamento-key");
+    if (!key) return;
+    const label = fechamentoLabelLinha(tr, key);
+    const { sis: sisEl, maq: maqEl } = fechamentoMoneyInputsFromTr(tr);
+    const sis = fechamentoMoneyFromInput(sisEl);
+    const maq = fechamentoMoneyFromInput(maqEl);
     const informado = roundToCurrency(sis + maq);
     totalInf = roundToCurrency(totalInf + informado);
     totalSis = roundToCurrency(totalSis + sis);
@@ -15235,15 +15336,20 @@ function recalcFechamentoCaixa() {
   let totalMaq = 0;
   let somaDiff = 0;
 
-  FECHAMENTO_CAIXA_FORMAS.forEach(({ key }) => {
-    const sis = fechamentoMoneyFromInput(document.getElementById(`fechamento_sis_${key}`));
-    const maq = fechamentoMoneyFromInput(document.getElementById(`fechamento_maq_${key}`));
+  fechamentoColetarLinhasTr().forEach((tr) => {
+    const key = tr.getAttribute("data-fechamento-key");
+    if (!key) return;
+    const { sis: sisEl, maq: maqEl } = fechamentoMoneyInputsFromTr(tr);
+    const sis = fechamentoMoneyFromInput(sisEl);
+    const maq = fechamentoMoneyFromInput(maqEl);
     const diffLinha = roundToCurrency(maq - sis);
     totalSis = roundToCurrency(totalSis + sis);
     totalMaq = roundToCurrency(totalMaq + maq);
     somaDiff = roundToCurrency(somaDiff + diffLinha);
 
-    const diffEl = document.getElementById(`fechamento_diff_linha_${key}`);
+    const diffEl =
+      tr.querySelector(".fechamento-audit__diff-cell") ||
+      document.getElementById(`fechamento_diff_linha_${key}`);
     if (diffEl) {
       diffEl.textContent = formatFechamentoSignedDiff(diffLinha);
       diffEl.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero");
@@ -15322,6 +15428,7 @@ function ensureFechamentoCaixaCurrencyMasks() {
 
 function resetFechamentoCaixaForm() {
   clearFechamentoCaixaModoEdicao();
+  fechamentoRemoverLinhasExtras();
   const root = document.getElementById("fechamentoSection");
   if (!root) return;
   root.querySelectorAll('input[data-currency="1"]').forEach((inp) => {
@@ -15407,6 +15514,15 @@ function setupFechamentoCaixaAuditoria() {
     if (e.target && e.target.closest && e.target.closest("#fechamentoSection")) {
       scheduleRecalcFechamentoCaixa();
     }
+  });
+
+  document.getElementById("fechamentoAddFormaBtn")?.addEventListener("click", () => {
+    appendFechamentoCaixaLinhaExtra({ key: fechamentoGerarChaveExtra(), label: "Nova forma", sis: 0, maq: 0 });
+    ensureFechamentoCaixaCurrencyMasks();
+    scheduleRecalcFechamentoCaixa();
+    const extras = fechamentoTbodyValores()?.querySelectorAll('tr[data-fechamento-extra="1"]');
+    const tr = extras && extras.length ? extras[extras.length - 1] : null;
+    tr?.querySelector(".fechamento-audit__forma-nome")?.focus();
   });
 
   document.getElementById("fechamentoLimparBtn")?.addEventListener("click", () => {

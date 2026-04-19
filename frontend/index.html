@@ -2506,9 +2506,12 @@
 
             <div class="table-card form-card--wide">
               <header>
-                <div>
-                  <h3>Valores por forma de pagamento</h3>
-                  <p class="subtle-text">PDV, maquinha e diferença por lançamento; o rodapé mostra a soma das diferenças (saldo líquido).</p>
+                <div class="fechamento-audit__formas-header">
+                  <div>
+                    <h3>Valores por forma de pagamento</h3>
+                    <p class="subtle-text">PDV, maquinha e diferença por lançamento; o rodapé mostra a soma das diferenças (saldo líquido).</p>
+                  </div>
+                  <button type="button" class="btn secondary" id="fechamentoAddFormaBtn" title="Adiciona uma linha para outra forma de pagamento">+ Forma de pagamento</button>
                 </div>
               </header>
               <div class="table-wrapper fechamento-audit__table-wrap">
@@ -2522,31 +2525,31 @@
                     </tr>
                   </thead>
                   <tbody id="fechamentoTbodyValores">
-                    <tr data-fechamento-key="dinheiro">
+                    <tr data-fechamento-key="dinheiro" data-fechamento-fixa="1">
                       <td data-label="Forma"><strong>Dinheiro</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Diferença" id="fechamento_diff_linha_dinheiro" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
-                    <tr data-fechamento-key="debito">
+                    <tr data-fechamento-key="debito" data-fechamento-fixa="1">
                       <td data-label="Forma"><strong>Débito</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Diferença" id="fechamento_diff_linha_debito" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
-                    <tr data-fechamento-key="credito">
+                    <tr data-fechamento-key="credito" data-fechamento-fixa="1">
                       <td data-label="Forma"><strong>Crédito</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Diferença" id="fechamento_diff_linha_credito" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
-                    <tr data-fechamento-key="pix">
+                    <tr data-fechamento-key="pix" data-fechamento-fixa="1">
                       <td data-label="Forma"><strong>PIX</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Diferença" id="fechamento_diff_linha_pix" class="fechamento-audit__diff-cell">R$ 0,00</td>
                     </tr>
-                    <tr data-fechamento-key="pix_thiago">
+                    <tr data-fechamento-key="pix_thiago" data-fechamento-fixa="1">
                       <td data-label="Forma"><strong>PIX Thiago</strong></td>
                       <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
                       <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
