@@ -2770,61 +2770,9 @@ function updateUnidadeInlineUI(canManage) {
   }
 }
 
-/** Garante o item "Dashboard fechamentos" no submenu Financeiro (produção com index.html antigo sem o link). */
-function ensureFinanceiroFechamentoDashNavLink() {
-  const wrap =
-    document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
-    document.getElementById("financeiroMenu")?.closest(".nav-submenu")?.querySelector(".nav-submenu-content") ||
-    null;
-  if (!wrap) return;
-  if (wrap.querySelector('a.nav-link[data-section="fechamentoDash"]')) return;
-  const ref =
-    wrap.querySelector('a.nav-link[data-section="fechamento"]') ||
-    Array.from(wrap.querySelectorAll("a.nav-link[data-section]")).pop() ||
-    null;
-  if (!ref) return;
-  const a = document.createElement("a");
-  a.href = "#";
-  a.className = "nav-link nav-link-child";
-  a.dataset.section = "fechamentoDash";
-  a.dataset.sasDynamicNav = "1";
-  a.textContent = "Dashboard fechamentos";
-  ref.insertAdjacentElement("afterend", a);
-}
-
-let __fechamentoDashNavDelegacaoFeita = false;
-function bindFechamentoDashNavClickDelegation() {
-  if (__fechamentoDashNavDelegacaoFeita) return;
-  const nav =
-    document.querySelector(".sidebar-nav-scroll nav") ||
-    document.querySelector("#sidebar nav") ||
-    document.querySelector("#appShell nav");
-  if (!nav) return;
-  __fechamentoDashNavDelegacaoFeita = true;
-  nav.addEventListener("click", async (event) => {
-    const link = event.target.closest('a.nav-link[data-section="fechamentoDash"][data-sas-dynamic-nav="1"]');
-    if (!link) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const regras = applyPermissions();
-    if (!regras.sections.includes("fechamentoDash")) {
-      showToast("Perfil sem permissao para acessar esta area.", "error");
-      return;
-    }
-    navigateTo("fechamentoDash");
-    if (typeof isMobileViewport === "function" && isMobileViewport()) setSidebarOpen(false);
-    try {
-      await loadFechamentoDashSection();
-    } catch (err) {
-      showToast(err?.message || "Erro ao carregar painel.", "error");
-    }
-  });
-}
-
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
 // Se o usuário tem permissoes_menu personalizadas (array não vazio), usa-as. Caso contrário, usa o padrão do perfil.
 function applyPermissions() {
-  ensureFinanceiroFechamentoDashNavLink();
   refreshDomShellNav();
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
   const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
@@ -11665,7 +11613,6 @@ function setupNavigation() {
     });
   });
 
-  bindFechamentoDashNavClickDelegation();
 }
 
 function togglePasswordVisibility(button) {
@@ -16070,6 +16017,14 @@ function renderFechamentoDashUI(rows) {
 }
 
 async function loadFechamentoDashSection() {
+  if (!document.getElementById("fechamentoDashSection")) {
+    showToast(
+      "Painel não encontrado: o index.html no servidor precisa incluir a seção fechamentoDashSection. Suba o index.html do repositório.",
+      "error",
+      12000
+    );
+    return;
+  }
   await loadUnidades(false).catch(() => {});
   populateFechamentoDashUnidadeSelect();
   const d0 = document.getElementById("fechamentoDashDe");
@@ -16112,7 +16067,18 @@ async function loadFechamentoDashSection() {
     if (hint) hint.textContent = "";
     destroyFechamentoDashCharts();
     renderFechamentoDashUI([]);
-    showToast(err?.message || "Erro ao carregar fechamentos.", "error");
+    const st = err?.status;
+    const msg = (err?.message || "").toString();
+    const tabela =
+      st === 503 ||
+      /tabela de fechamentos|migrations|não disponível|nao disponivel/i.test(msg);
+    showToast(
+      tabela
+        ? "API sem tabela fechamentos_caixa. No servidor do Laravel execute: php artisan migrate"
+        : msg || "Erro ao carregar fechamentos.",
+      "error",
+      tabela ? 14000 : 8000
+    );
   }
 }
 
