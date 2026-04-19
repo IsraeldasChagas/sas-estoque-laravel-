@@ -1553,16 +1553,43 @@ async function fetchForm(path, method, body) {
   return payload;
 }
 
+/** permissoes_menu pode vir string JSON do Laravel; sem parse o menu personalizado quebra (ex.: some Dashboard fechamentos). */
+function normalizarPermissoesMenuLista(raw) {
+  if (raw == null || raw === "") return null;
+  if (Array.isArray(raw)) {
+    const out = raw.map((x) => String(x || "").trim()).filter(Boolean);
+    return out.length ? out : null;
+  }
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (!t || t === "null") return null;
+    try {
+      const p = JSON.parse(t);
+      return Array.isArray(p) ? normalizarPermissoesMenuLista(p) : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 function setUser(user) {
-  localStorage.setItem(storageKey, JSON.stringify(user));
-  currentUser = user;
+  const pm = normalizarPermissoesMenuLista(user?.permissoes_menu);
+  const normalized = { ...user, permissoes_menu: pm && pm.length ? pm : null };
+  localStorage.setItem(storageKey, JSON.stringify(normalized));
+  currentUser = normalized;
 }
 
 function getUser() {
   const raw = localStorage.getItem(storageKey);
   if (!raw) return null;
   try {
-    return JSON.parse(raw);
+    const u = JSON.parse(raw);
+    if (u && u.permissoes_menu != null) {
+      const pm = normalizarPermissoesMenuLista(u.permissoes_menu);
+      u.permissoes_menu = pm && pm.length ? pm : null;
+    }
+    return u;
   } catch (err) {
     return null;
   }
@@ -2787,39 +2814,8 @@ function ensureFinanceiroFechamentoDashNavLink() {
   a.href = "#";
   a.className = "nav-link nav-link-child";
   a.dataset.section = "fechamentoDash";
-  a.dataset.sasDynamicNav = "1";
   a.textContent = "Dashboard fechamentos";
   ref.insertAdjacentElement("afterend", a);
-}
-
-let __fechamentoDashNavDelegacaoFeita = false;
-/** Clique no link injetado (não recebeu listener no setupNavigation). */
-function bindFechamentoDashNavClickDelegation() {
-  if (__fechamentoDashNavDelegacaoFeita) return;
-  const nav =
-    document.querySelector(".sidebar-nav-scroll nav") ||
-    document.querySelector("#sidebar nav") ||
-    document.querySelector("#appShell nav");
-  if (!nav) return;
-  __fechamentoDashNavDelegacaoFeita = true;
-  nav.addEventListener("click", async (event) => {
-    const link = event.target.closest('a.nav-link[data-section="fechamentoDash"][data-sas-dynamic-nav="1"]');
-    if (!link) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const regras = applyPermissions();
-    if (!regras.sections.includes("fechamentoDash")) {
-      showToast("Perfil sem permissao para acessar esta area.", "error");
-      return;
-    }
-    navigateTo("fechamentoDash");
-    if (typeof isMobileViewport === "function" && isMobileViewport()) setSidebarOpen(false);
-    try {
-      await loadFechamentoDashSection();
-    } catch (err) {
-      showToast(err?.message || "Erro ao carregar painel.", "error");
-    }
-  });
 }
 
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
@@ -2829,8 +2825,9 @@ function applyPermissions() {
   refreshDomShellNav();
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
   const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
-  const permPersonalizadas = currentUser && Array.isArray(currentUser.permissoes_menu) && currentUser.permissoes_menu.length > 0;
-  let sections = permPersonalizadas ? [...currentUser.permissoes_menu] : (regrasBase.sections || []);
+  const pmLista = normalizarPermissoesMenuLista(currentUser?.permissoes_menu);
+  const permPersonalizadas = currentUser && pmLista && pmLista.length > 0;
+  let sections = permPersonalizadas ? [...pmLista] : (regrasBase.sections || []);
   // ADMIN e GERENTE sempre têm acesso a Logs (mesmo com permissões personalizadas)
   if (["ADMIN", "GERENTE"].includes(perfil) && !sections.includes("logs")) {
     sections = [...sections, "logs"];
@@ -7228,6 +7225,8 @@ async function startAppSession(user) {
   }
   
   applyPermissions();
+  refreshDomShellNav();
+  wireSidebarSectionNavClicks();
 
   if (typeof stopMatrixAnimation === "function") {
     stopMatrixAnimation();
@@ -11457,9 +11456,14 @@ function setupKanbanAdministrativoModule() {
   document.getElementById("kanbanTaskExcluir")?.addEventListener("click", () => excluirKanbanTaskAtual());
 }
 
-// Mapeia cliques de navegacao lateral e recarrega secoes conforme necessario.
-function setupNavigation() {
-  dom.navLinks.forEach((link) => {
+// Liga cliques nos itens do menu lateral (pode rodar de novo após login — ignora links já ligados).
+function wireSidebarSectionNavClicks() {
+  const shell = document.getElementById("appShell");
+  if (!shell) return;
+  shell.querySelectorAll("nav a.nav-link[data-section]").forEach((link) => {
+    if (link.classList.contains("nav-link-parent")) return;
+    if (link.dataset.sasNavBound === "1") return;
+    link.dataset.sasNavBound = "1";
     link.addEventListener("click", async (event) => {
       event.preventDefault();
       const regras = applyPermissions();
@@ -11610,10 +11614,15 @@ function setupNavigation() {
       }
     });
   });
+}
+
+function setupNavigation() {
+  wireSidebarSectionNavClicks();
 
   // Setup submenu toggle for Financeiro
   const financeiroMenu = document.getElementById('financeiroMenu');
-  if (financeiroMenu) {
+  if (financeiroMenu && financeiroMenu.dataset.sasSubmenuToggleBound !== "1") {
+    financeiroMenu.dataset.sasSubmenuToggleBound = "1";
     financeiroMenu.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -11625,7 +11634,8 @@ function setupNavigation() {
   }
   // Setup submenu toggle for RH
   const rhMenu = document.getElementById('rhMenu');
-  if (rhMenu) {
+  if (rhMenu && rhMenu.dataset.sasSubmenuToggleBound !== "1") {
+    rhMenu.dataset.sasSubmenuToggleBound = "1";
     rhMenu.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -11635,7 +11645,8 @@ function setupNavigation() {
   }
   // Setup submenu toggle for Configuracoes
   const configuracoesMenu = document.getElementById('configuracoesMenu');
-  if (configuracoesMenu) {
+  if (configuracoesMenu && configuracoesMenu.dataset.sasSubmenuToggleBound !== "1") {
+    configuracoesMenu.dataset.sasSubmenuToggleBound = "1";
     configuracoesMenu.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -11646,7 +11657,8 @@ function setupNavigation() {
     });
   }
   const reservaMenu = document.getElementById('reservaMenu');
-  if (reservaMenu) {
+  if (reservaMenu && reservaMenu.dataset.sasSubmenuToggleBound !== "1") {
+    reservaMenu.dataset.sasSubmenuToggleBound = "1";
     reservaMenu.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -11665,8 +11677,6 @@ function setupNavigation() {
       if (el) el.value = "";
     });
   });
-
-  bindFechamentoDashNavClickDelegation();
 }
 
 function togglePasswordVisibility(button) {
