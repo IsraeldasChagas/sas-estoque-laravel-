@@ -468,6 +468,8 @@ const state = {
   fechamentoDashRows: [],
 };
 
+const FECHAMENTO_DASH_UNIDADES_CARDS_KEY = "sas-fechamento-dash-unidades-cards";
+
 // Variáveis auxiliares para session e rastreamento de efeitos.
 let currentUser = null;
 let usuarioFotoFile = null;
@@ -15752,6 +15754,154 @@ function setupFechamentoCaixaAuditoria() {
 
 let __fechamentoDashPanelSetup = false;
 
+function fechamentoDashDistinctUnidadesFromRows(rows) {
+  const map = new Map();
+  (rows || []).forEach((r) => {
+    const id = r.unidade_id;
+    if (id == null || id === "") return;
+    const k = String(id);
+    if (!map.has(k)) map.set(k, String((r.unidade_nome || "").trim() || `Unidade ${k}`));
+  });
+  return [...map.entries()]
+    .map(([id, nome]) => ({ id, nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+function fechamentoDashLoadPersistedCardUnidades() {
+  try {
+    const raw = localStorage.getItem(FECHAMENTO_DASH_UNIDADES_CARDS_KEY);
+    if (!raw) return null;
+    const a = JSON.parse(raw);
+    if (!Array.isArray(a)) return null;
+    return new Set(a.map(String));
+  } catch {
+    return null;
+  }
+}
+
+function fechamentoDashPersistCardUnidadeSelection() {
+  const wrap = document.getElementById("fechamentoDashUnidadesCardsPick");
+  if (!wrap) return;
+  const ids = [...wrap.querySelectorAll('input[type="checkbox"][data-unidade-id]:checked')]
+    .map((el) => String(el.dataset.unidadeId))
+    .filter(Boolean)
+    .sort();
+  try {
+    localStorage.setItem(FECHAMENTO_DASH_UNIDADES_CARDS_KEY, JSON.stringify(ids));
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+/** null = sem UI ainda ou tratar como todas; Set vazio = nenhuma marcada; Set com ids = filtro. */
+function fechamentoDashGetUnidadeIdsParaCardsPick() {
+  const wrap = document.getElementById("fechamentoDashUnidadesCardsPick");
+  if (!wrap) return null;
+  const boxes = [...wrap.querySelectorAll('input[type="checkbox"][data-unidade-id]')];
+  if (!boxes.length) return null;
+  const checked = boxes.filter((b) => b.checked).map((b) => String(b.dataset.unidadeId));
+  if (!checked.length) return new Set();
+  return new Set(checked);
+}
+
+function fechamentoDashFilterRowsByUnidadeCardsPick(rows) {
+  const set = fechamentoDashGetUnidadeIdsParaCardsPick();
+  if (set === null) return rows;
+  if (set.size === 0) return [];
+  return rows.filter((r) => set.has(String(r.unidade_id ?? "")));
+}
+
+function fechamentoDashUnidadesOrdemParaBlocos(rows) {
+  const distinct = fechamentoDashDistinctUnidadesFromRows(rows);
+  const set = fechamentoDashGetUnidadeIdsParaCardsPick();
+  if (set === null) return distinct;
+  if (set.size === 0) return [];
+  return distinct.filter((u) => set.has(String(u.id)));
+}
+
+function populateFechamentoDashUnidadesCardsPick() {
+  const wrap = document.getElementById("fechamentoDashUnidadesCardsPick");
+  if (!wrap) return;
+  const rows = Array.isArray(state.fechamentoDashRows) ? state.fechamentoDashRows : [];
+  const units = fechamentoDashDistinctUnidadesFromRows(rows);
+  const persisted = fechamentoDashLoadPersistedCardUnidades();
+  wrap.innerHTML = "";
+  if (!units.length) {
+    wrap.innerHTML = '<span class="subtle-text">Nenhuma unidade nos dados carregados (ou sem unidade vinculada).</span>';
+    return;
+  }
+  units.forEach(({ id, nome }) => {
+    const idStr = String(id);
+    const lab = document.createElement("label");
+    lab.className = "fechamento-dash__unidade-pick-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.dataset.unidadeId = idStr;
+    const usarPersistido = persisted && persisted.size > 0;
+    cb.checked = usarPersistido ? persisted.has(idStr) : true;
+    const span = document.createElement("span");
+    span.textContent = nome;
+    lab.appendChild(cb);
+    lab.appendChild(span);
+    wrap.appendChild(lab);
+  });
+  if (![...wrap.querySelectorAll('input[type="checkbox"]')].some((c) => c.checked)) {
+    wrap.querySelectorAll('input[type="checkbox"]').forEach((c) => {
+      c.checked = true;
+    });
+  }
+}
+
+function renderFechamentoDashPorUnidadeCards(rows) {
+  const host = document.getElementById("fechamentoDashCardsPorUnidade");
+  if (!host) return;
+  const set = fechamentoDashGetUnidadeIdsParaCardsPick();
+  if (set && set.size === 0) {
+    host.innerHTML =
+      '<p class="subtle-text fechamento-dash__por-unidade-empty">Marque ao menos uma unidade em <strong>Unidades nos cards</strong> ou clique em <strong>Marcar todas</strong>.</p>';
+    return;
+  }
+  const lista = fechamentoDashUnidadesOrdemParaBlocos(rows);
+  if (!lista.length) {
+    host.innerHTML = "";
+    return;
+  }
+  const blocos = lista
+    .map(({ id, nome }) => {
+      const idStr = String(id);
+      const ur = rows.filter((r) => String(r.unidade_id ?? "") === idStr);
+      const n = ur.length;
+      let sumMaq = 0;
+      let sumPdv = 0;
+      let sumQuebra = 0;
+      let sumSobra = 0;
+      let nSem = 0;
+      ur.forEach((r) => {
+        sumMaq = roundToCurrency(sumMaq + fechamentoTotalMaquinasFromRow(r));
+        sumPdv = roundToCurrency(sumPdv + fechamentoTotalPdvFromRow(r));
+        const sit = fechamentoDashRowSituation(r);
+        const saldo = Number(r.saldo_liquido ?? 0);
+        if (sit === "sem") nSem += 1;
+        else if (sit === "quebra") sumQuebra = roundToCurrency(sumQuebra + Math.abs(saldo));
+        else sumSobra = roundToCurrency(sumSobra + saldo);
+      });
+      const pctSem = n ? `${Math.round((nSem / n) * 1000) / 10}% (${nSem} reg.)` : "—";
+      return `<article class="fechamento-dash__unidade-bloco">
+        <h4 class="fechamento-dash__unidade-bloco-title">${escapeHtml(nome)}</h4>
+        <div class="fechamento-dash__unidade-bloco-grid">
+          <div class="fechamento-dash__unidade-metric"><span>Fechamentos</span><strong>${n}</strong></div>
+          <div class="fechamento-dash__unidade-metric"><span>Maquinha</span><strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong></div>
+          <div class="fechamento-dash__unidade-metric"><span>PDV</span><strong>${escapeHtml(formatCurrencyBRL(sumPdv))}</strong></div>
+          <div class="fechamento-dash__unidade-metric fechamento-dash__unidade-metric--alert"><span>Quebras</span><strong>${escapeHtml(formatCurrencyBRL(sumQuebra))}</strong></div>
+          <div class="fechamento-dash__unidade-metric fechamento-dash__unidade-metric--ok"><span>Sobras</span><strong>${escapeHtml(formatCurrencyBRL(sumSobra))}</strong></div>
+          <div class="fechamento-dash__unidade-metric"><span>Sem dif. líquida</span><strong>${escapeHtml(pctSem)}</strong></div>
+        </div>
+      </article>`;
+    })
+    .join("");
+  host.innerHTML = `<h3 class="fechamento-dash__por-unidade-heading">Por unidade</h3><div class="fechamento-dash__unidade-blocos">${blocos}</div>`;
+}
+
 function fechamentoDashRowSituation(r) {
   const saldo = Number(r.saldo_liquido ?? 0);
   const tol = 0.009;
@@ -15868,7 +16018,9 @@ function renderFechamentoDashTop3List(top3) {
 }
 
 function renderFechamentoDashFromCache() {
-  renderFechamentoDashUI(fechamentoDashFilteredRows());
+  const base = fechamentoDashFilteredRows();
+  const vis = fechamentoDashFilterRowsByUnidadeCardsPick(base);
+  renderFechamentoDashUI(vis);
 }
 
 function renderFechamentoDashUI(rows) {
@@ -16089,6 +16241,8 @@ function renderFechamentoDashUI(rows) {
     console.error("renderFechamentoDashUI charts:", e);
     showToast("Os números foram atualizados, mas houve erro ao desenhar os gráficos.", "error");
   }
+
+  renderFechamentoDashPorUnidadeCards(rows);
 }
 
 async function loadFechamentoDashSection() {
@@ -16124,6 +16278,7 @@ async function loadFechamentoDashSection() {
     const list = await fetchJSON(`/fechamentos-caixa?${qs.toString()}`);
     state.fechamentoDashRows = Array.isArray(list) ? list : [];
     populateFechamentoDashOperadorSelect(state.fechamentoDashRows);
+    populateFechamentoDashUnidadesCardsPick();
     const lim = state.fechamentoDashRows.length >= 3000;
     if (hint) {
       delete hint.dataset.chartMissing;
@@ -16139,6 +16294,7 @@ async function loadFechamentoDashSection() {
   } catch (err) {
     state.fechamentoDashRows = [];
     populateFechamentoDashOperadorSelect([]);
+    populateFechamentoDashUnidadesCardsPick();
     if (hint) hint.textContent = "";
     destroyFechamentoDashCharts();
     renderFechamentoDashUI([]);
@@ -16164,6 +16320,24 @@ function setupFechamentoDashPanel() {
     loadFechamentoDashSection();
   });
   document.getElementById("fechamentoDashOperador")?.addEventListener("change", () => {
+    renderFechamentoDashFromCache();
+  });
+  document.getElementById("fechamentoDashUnidadesCardsPick")?.addEventListener("change", () => {
+    fechamentoDashPersistCardUnidadeSelection();
+    renderFechamentoDashFromCache();
+  });
+  document.getElementById("fechamentoDashCardsUnidadesTodas")?.addEventListener("click", () => {
+    document.querySelectorAll('#fechamentoDashUnidadesCardsPick input[type="checkbox"]').forEach((c) => {
+      c.checked = true;
+    });
+    fechamentoDashPersistCardUnidadeSelection();
+    renderFechamentoDashFromCache();
+  });
+  document.getElementById("fechamentoDashCardsUnidadesNenhuma")?.addEventListener("click", () => {
+    document.querySelectorAll('#fechamentoDashUnidadesCardsPick input[type="checkbox"]').forEach((c) => {
+      c.checked = false;
+    });
+    fechamentoDashPersistCardUnidadeSelection();
     renderFechamentoDashFromCache();
   });
 }

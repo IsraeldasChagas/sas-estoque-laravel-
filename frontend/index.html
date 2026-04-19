@@ -2703,6 +2703,20 @@
               <p class="subtle-text fechamento-dash__hint" id="fechamentoDashHint"></p>
             </div>
 
+            <div class="table-card fechamento-dash__unidades-pick">
+              <header><h3>Unidades nos cards</h3></header>
+              <p class="subtle-text fechamento-dash__unidades-pick-desc">
+                Marque quais unidades aparecem nos cards de totais, nos gráficos e nos blocos por unidade abaixo. Se nenhuma estiver marcada, usa-se todas as que têm dados no período.
+              </p>
+              <div class="fechamento-dash__unidades-pick-actions">
+                <button type="button" class="btn neutral" id="fechamentoDashCardsUnidadesTodas">Marcar todas</button>
+                <button type="button" class="btn neutral" id="fechamentoDashCardsUnidadesNenhuma">Desmarcar todas</button>
+              </div>
+              <div id="fechamentoDashUnidadesCardsPick" class="fechamento-dash__unidades-pick-list" role="group" aria-label="Unidades exibidas nos cards"></div>
+            </div>
+
+            <p class="subtle-text fechamento-dash__cards-legend">Totais abaixo respeitam datas, unidade (API), operador e as unidades marcadas em <strong>Unidades nos cards</strong>.</p>
+
             <div class="fechamento-dash__cards" id="fechamentoDashCards">
               <div class="fechamento-dash__card">
                 <span class="fechamento-dash__card-label">Fechamentos no filtro</span>
@@ -2729,6 +2743,8 @@
                 <span class="fechamento-dash__card-value" id="fechamentoDashCardPctSem">—</span>
               </div>
             </div>
+
+            <div id="fechamentoDashCardsPorUnidade" class="fechamento-dash__por-unidade" aria-live="polite"></div>
 
             <div class="fechamento-dash__charts">
               <div class="table-card fechamento-dash__chart-card">
@@ -4280,7 +4296,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260420fechmenu3"></script>
+    <script src="app.js?v=20260420fechdash-unidades1"></script>
      
   </body>
 </html>

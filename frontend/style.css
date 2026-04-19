@@ -6041,6 +6041,126 @@ select[size]:not([size="1"]) {
   font-size: 0.82rem;
 }
 
+.fechamento-dash__unidades-pick {
+  margin-bottom: 1.25rem;
+}
+
+.fechamento-dash__unidades-pick header h3 {
+  margin: 0;
+}
+
+.fechamento-dash__unidades-pick-desc {
+  margin: 0 1.25rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.fechamento-dash__unidades-pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 1.25rem 0.75rem;
+}
+
+.fechamento-dash__unidades-pick-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.fechamento-dash__unidade-pick-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fechamento-dash__unidade-pick-item input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.fechamento-dash__cards-legend {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+
+.fechamento-dash__por-unidade {
+  margin-bottom: 1.25rem;
+}
+
+.fechamento-dash__por-unidade-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.fechamento-dash__unidade-blocos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.fechamento-dash__unidade-bloco {
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem;
+  background: linear-gradient(145deg, #fff 0%, #f5f9fc 100%);
+}
+
+.fechamento-dash__unidade-bloco-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  color: #1565c0;
+}
+
+.fechamento-dash__unidade-bloco-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem 0.65rem;
+}
+
+@media (max-width: 520px) {
+  .fechamento-dash__unidade-bloco-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.fechamento-dash__unidade-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #607d8b;
+}
+
+.fechamento-dash__unidade-metric strong {
+  font-size: 0.95rem;
+  color: #1a237e;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.fechamento-dash__unidade-metric--alert strong {
+  color: #b71c1c;
+}
+
+.fechamento-dash__unidade-metric--ok strong {
+  color: #2e7d32;
+}
+
+.fechamento-dash__por-unidade-empty {
+  margin: 0;
+  padding: 0.75rem 1rem;
+}
+
 .fechamento-dash__cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
