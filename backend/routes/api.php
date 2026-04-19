@@ -5916,6 +5916,16 @@ $funcionariosTableHasColumn = static function (string $column): bool {
                 $GLOBALS[$g][strtolower((string) $f)] = true;
             }
         }
+        // MySQL: se SHOW COLUMNS veio vazio (permissão/driver), não deixar colset vazio — senão RH nunca grava.
+        if ($GLOBALS[$g] === [] && Schema::hasTable('funcionarios')) {
+            try {
+                foreach (Schema::getColumnListing('funcionarios') as $f) {
+                    $GLOBALS[$g][strtolower((string) $f)] = true;
+                }
+            } catch (\Throwable $e) {
+                // mantém vazio
+            }
+        }
     }
 
     return isset($GLOBALS[$g][strtolower($column)]);
@@ -6083,12 +6093,12 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             $insert[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if ($funcionariosTableHasColumn('escolaridade') && array_key_exists('escolaridade', $data)) {
+    if ($funcionariosTableHasColumn('escolaridade') && ($request->exists('escolaridade') || array_key_exists('escolaridade', $data))) {
         $insert['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if ($funcionariosTableHasColumn('formacao_json') && array_key_exists('formacao_json', $data)) {
+    if ($funcionariosTableHasColumn('formacao_json') && ($request->exists('formacao_json') || array_key_exists('formacao_json', $data))) {
         $insert['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
@@ -6224,12 +6234,12 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if ($funcionariosTableHasColumn('escolaridade') && array_key_exists('escolaridade', $data)) {
+    if ($funcionariosTableHasColumn('escolaridade') && ($request->exists('escolaridade') || array_key_exists('escolaridade', $data))) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if ($funcionariosTableHasColumn('formacao_json') && array_key_exists('formacao_json', $data)) {
+    if ($funcionariosTableHasColumn('formacao_json') && ($request->exists('formacao_json') || array_key_exists('formacao_json', $data))) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
@@ -6304,12 +6314,12 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
             $update[$colBancario] = $data[$colBancario] ?? null;
         }
     }
-    if ($funcionariosTableHasColumn('escolaridade') && array_key_exists('escolaridade', $data)) {
+    if ($funcionariosTableHasColumn('escolaridade') && ($request->exists('escolaridade') || array_key_exists('escolaridade', $data))) {
         $update['escolaridade'] = isset($data['escolaridade']) && trim((string) $data['escolaridade']) !== ''
             ? mb_substr(trim((string) $data['escolaridade']), 0, 80)
             : null;
     }
-    if ($funcionariosTableHasColumn('formacao_json') && array_key_exists('formacao_json', $data)) {
+    if ($funcionariosTableHasColumn('formacao_json') && ($request->exists('formacao_json') || array_key_exists('formacao_json', $data))) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
     if ($request->hasFile('foto')) {
