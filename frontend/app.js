@@ -16022,9 +16022,16 @@ function fechamentoDashSumPdvByUnidade(rows) {
   return map;
 }
 
-function fechamentoDashChartLabelUnidadeCurta(nome) {
-  const s = (nome || "").trim() || "—";
-  return s.length > 24 ? `${s.slice(0, 22)}…` : s;
+/** Soma PDV por dia (todas as unidades no conjunto filtrado). */
+function fechamentoDashSumPdvByDay(rows) {
+  const map = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((r) => {
+    const d = String(r.data_fechamento || "").slice(0, 10);
+    if (!d) return;
+    const p = fechamentoTotalPdvFromRow(r);
+    map.set(d, roundToCurrency((map.get(d) || 0) + p));
+  });
+  return map;
 }
 
 /** Rótulo do gráfico de fechamento (dashboard): mesmo formato da auditoria. */
@@ -16132,6 +16139,16 @@ function renderFechamentoDashUI(rows) {
   if (elPct) elPct.textContent = n ? `${Math.round((nSem / n) * 1000) / 10}% (${nSem} reg.)` : "—";
 
   const byDay = fechamentoDashSumMaquinhaByDay(rows);
+  const byDayPdv = fechamentoDashSumPdvByDay(rows);
+  const top3DiasPdv = [...byDayPdv.entries()]
+    .map(([data, total]) => ({
+      data,
+      total,
+      nRegs: rows.filter((r) => String(r.data_fechamento || "").slice(0, 10) === data).length,
+    }))
+    .sort((a, b) => b.total - a.total || b.nRegs - a.nRegs)
+    .slice(0, 3);
+
   const byUnitPdv = fechamentoDashSumPdvByUnidade(rows);
   const top3UnidadesPdv = [...byUnitPdv.values()]
     .sort((a, b) => b.total - a.total || b.nRegs - a.nRegs)
@@ -16161,16 +16178,16 @@ function renderFechamentoDashUI(rows) {
   try {
     const barCv = document.getElementById("fechamentoDashChartBar");
     if (barCv) {
-      if (top3UnidadesPdv.length) {
+      if (top3DiasPdv.length) {
         new Chart(barCv, {
           type: "bar",
           data: {
-            labels: top3UnidadesPdv.map((x) => fechamentoDashChartLabelUnidadeCurta(x.unidade_nome)),
+            labels: top3DiasPdv.map((x) => fechamentoDashLabelDiaSemanaCurto(x.data)),
             datasets: [
               {
-                label: "Vendas PDV (R$)",
-                data: top3UnidadesPdv.map((x) => x.total),
-                backgroundColor: top3UnidadesPdv.map((_, i) => palette.bar[i % palette.bar.length]),
+                label: "Vendas PDV no dia (R$)",
+                data: top3DiasPdv.map((x) => x.total),
+                backgroundColor: top3DiasPdv.map((_, i) => palette.bar[i % palette.bar.length]),
                 borderRadius: 6,
               },
             ],
@@ -16184,7 +16201,13 @@ function renderFechamentoDashUI(rows) {
                 callbacks: {
                   title(items) {
                     const i = items[0]?.dataIndex;
-                    return i != null && top3UnidadesPdv[i] ? String(top3UnidadesPdv[i].unidade_nome || "") : "";
+                    const row = i != null ? top3DiasPdv[i] : null;
+                    return row ? fmtDataComDiaSemanaCurto(row.data) : "";
+                  },
+                  footer(items) {
+                    const i = items[0]?.dataIndex;
+                    const row = i != null ? top3DiasPdv[i] : null;
+                    return row ? `${row.nRegs} fechamento(s) neste dia` : "";
                   },
                   label(ctx) {
                     const v = ctx.parsed.y;
