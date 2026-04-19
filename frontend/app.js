@@ -2799,7 +2799,7 @@ function updateUnidadeInlineUI(canManage) {
   }
 }
 
-/** Coloca "Dashboard fechamentos" no submenu Financeiro se o HTML do servidor ainda não tiver o <a> (deploy antigo). Primeiro item para ficar sempre visível ao abrir Financeiro. */
+/** Coloca "Dashboard fechamentos" no submenu Financeiro se o HTML do servidor ainda não tiver o <a> (deploy antigo), logo após Auditoria fechamento caixa. */
 function ensureFinanceiroFechamentoDashNavLink() {
   const wrap =
     document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
@@ -2807,14 +2807,18 @@ function ensureFinanceiroFechamentoDashNavLink() {
     null;
   if (!wrap) return;
   if (wrap.querySelector('a.nav-link[data-section="fechamentoDash"]')) return;
+  const ref =
+    wrap.querySelector('a.nav-link[data-section="fechamento"]') ||
+    wrap.querySelector('a.nav-link[data-section="reciboAjuda"]') ||
+    Array.from(wrap.querySelectorAll("a.nav-link[data-section]")).pop() ||
+    null;
+  if (!ref) return;
   const a = document.createElement("a");
   a.href = "#";
   a.className = "nav-link nav-link-child";
   a.dataset.section = "fechamentoDash";
   a.textContent = "Dashboard fechamentos";
-  const primeiro = wrap.querySelector('a.nav-link[data-section="boletao"]');
-  if (primeiro) wrap.insertBefore(a, primeiro);
-  else wrap.prepend(a);
+  ref.insertAdjacentElement("afterend", a);
 }
 
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
@@ -2879,6 +2883,11 @@ function applyPermissions() {
   }
   if (regras.sections.includes("fechamentoDash")) {
     document.querySelectorAll('a.nav-link[data-section="fechamentoDash"]').forEach((el) => {
+      el.classList.remove("hidden");
+    });
+  }
+  if (regras.sections.includes("fechamento")) {
+    document.querySelectorAll('a.nav-link[data-section="fechamento"]').forEach((el) => {
       el.classList.remove("hidden");
     });
   }
