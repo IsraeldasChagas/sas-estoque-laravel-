@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260417n" />
+    <link rel="stylesheet" href="style.css?v=20260419dash" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -139,6 +139,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo (ajuda de custo)</a>
               <a href="#" class="nav-link nav-link-child" data-section="fechamento">Auditoria fechamento caixa</a>
+              <a href="#" class="nav-link nav-link-child" data-section="fechamentoDash">Dashboard fechamentos</a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--config">
@@ -2641,6 +2642,113 @@
               </div>
             </div>
           </section>
+
+          <!-- Financeiro — Dashboard análise fechamentos de caixa -->
+          <section id="fechamentoDashSection" class="view-section hidden fechamento-dash">
+            <div class="fechamento-dash__head">
+              <h2>📊 Dashboard — fechamentos de caixa</h2>
+              <p class="subtle-text">
+                Volume referente aos totais informados nos registros de auditoria (soma <strong>PDV</strong> e <strong>maquinha</strong> nas linhas de pagamento).
+                Quebras e sobras usam o <strong>saldo líquido</strong> do fechamento.
+              </p>
+            </div>
+
+            <div class="table-card fechamento-dash__filters">
+              <header><h3>Filtros</h3></header>
+              <div class="fechamento-dash__filters-grid">
+                <label>
+                  Data inicial
+                  <input type="date" id="fechamentoDashDe" />
+                </label>
+                <label>
+                  Data final
+                  <input type="date" id="fechamentoDashAte" />
+                </label>
+                <label>
+                  Unidade
+                  <select id="fechamentoDashUnidade">
+                    <option value="">Todas as unidades</option>
+                  </select>
+                </label>
+                <label>
+                  Operador do caixa
+                  <select id="fechamentoDashOperador">
+                    <option value="">Todos os operadores</option>
+                  </select>
+                </label>
+                <div class="fechamento-dash__filters-actions">
+                  <button type="button" class="btn primary" id="fechamentoDashAplicarBtn">Atualizar dados</button>
+                </div>
+              </div>
+              <p class="subtle-text fechamento-dash__hint" id="fechamentoDashHint"></p>
+            </div>
+
+            <div class="fechamento-dash__cards" id="fechamentoDashCards">
+              <div class="fechamento-dash__card">
+                <span class="fechamento-dash__card-label">Fechamentos no filtro</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardRegs">—</span>
+              </div>
+              <div class="fechamento-dash__card">
+                <span class="fechamento-dash__card-label">Total maquinha (R$)</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardMaq">—</span>
+              </div>
+              <div class="fechamento-dash__card">
+                <span class="fechamento-dash__card-label">Total PDV (R$)</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardPdv">—</span>
+              </div>
+              <div class="fechamento-dash__card fechamento-dash__card--alert">
+                <span class="fechamento-dash__card-label">Soma quebras (R$)</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardQuebra">—</span>
+              </div>
+              <div class="fechamento-dash__card fechamento-dash__card--ok">
+                <span class="fechamento-dash__card-label">Soma sobras (R$)</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardSobra">—</span>
+              </div>
+              <div class="fechamento-dash__card">
+                <span class="fechamento-dash__card-label">Sem diferença líquida</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardPctSem">—</span>
+              </div>
+            </div>
+
+            <div class="fechamento-dash__charts">
+              <div class="table-card fechamento-dash__chart-card">
+                <header>
+                  <h3>Top 3 dias — volume maquinha</h3>
+                  <p class="subtle-text">Dias com maior soma de totais na maquinha (após filtros).</p>
+                </header>
+                <div class="fechamento-dash__canvas-wrap">
+                  <canvas id="fechamentoDashChartBar" aria-label="Gráfico de barras top 3 dias"></canvas>
+                </div>
+              </div>
+              <div class="table-card fechamento-dash__chart-card fechamento-dash__chart-card--wide">
+                <header>
+                  <h3>Evolução diária — maquinha</h3>
+                  <p class="subtle-text">Soma por dia no período (eixo = todas as datas entre inicial e final).</p>
+                </header>
+                <div class="fechamento-dash__canvas-wrap fechamento-dash__canvas-wrap--tall">
+                  <canvas id="fechamentoDashChartLine" aria-label="Gráfico de linha evolução diária"></canvas>
+                </div>
+              </div>
+              <div class="table-card fechamento-dash__chart-card">
+                <header>
+                  <h3>Distribuição — % por situação</h3>
+                  <p class="subtle-text">Proporção de registros: sem diferença líquida, quebra ou sobra.</p>
+                </header>
+                <div class="fechamento-dash__canvas-wrap">
+                  <canvas id="fechamentoDashChartPie" aria-label="Gráfico de porcentagem situação fechamento"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-card fechamento-dash__top3">
+              <header>
+                <h3>Ranking — 3 dias com maior volume (maquinha)</h3>
+              </header>
+              <ol class="fechamento-dash__top3-list" id="fechamentoDashTop3List">
+                <li class="subtle-text">Atualize os dados para ver o ranking.</li>
+              </ol>
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -4150,8 +4258,9 @@
     <!-- Sanitização HTML do modo de preparo (ficha técnica) -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260417v"></script>
+    <script src="app.js?v=20260419dash"></script>
      
   </body>
 </html>

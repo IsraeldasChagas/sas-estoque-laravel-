@@ -456,6 +456,8 @@ const state = {
   fichaTecnicaPratos: [],
   /** Tarefas do Kanban Administrativo (API). */
   kanbanTasks: [],
+  /** Cache do GET /fechamentos-caixa para o dashboard (antes do filtro por operador). */
+  fechamentoDashRows: [],
 };
 
 // Variáveis auxiliares para session e rastreamento de efeitos.
@@ -2798,6 +2800,9 @@ function applyPermissions() {
   ) {
     sections = [...sections, "fechamento"];
   }
+  if (sections.includes("fechamento") && !sections.includes("fechamentoDash")) {
+    sections = [...sections, "fechamentoDash"];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2821,7 +2826,8 @@ function applyPermissions() {
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
       regras.sections.includes("reciboAjuda") ||
-      regras.sections.includes("fechamento");
+      regras.sections.includes("fechamento") ||
+      regras.sections.includes("fechamentoDash");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
   // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (ex.: Backup de Fornecedores no perfil padrão = só ADMIN)
@@ -2973,7 +2979,14 @@ function navigateTo(section) {
   }
   const financeiroNavSubmenuNav = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenuNav) {
-    if (section === "boletao" || section === "alvara" || section === "proventos" || section === "reciboAjuda" || section === "fechamento") {
+    if (
+      section === "boletao" ||
+      section === "alvara" ||
+      section === "proventos" ||
+      section === "reciboAjuda" ||
+      section === "fechamento" ||
+      section === "fechamentoDash"
+    ) {
       financeiroNavSubmenuNav.classList.add("open");
     } else {
       financeiroNavSubmenuNav.classList.remove("open");
@@ -7210,7 +7223,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorio", "logs"
     ]);
 
@@ -7334,6 +7347,8 @@ async function startAppSession(user) {
           await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
         } else if (sectionToNavigate === 'fechamento') {
           await loadFechamentoCaixaSection();
+        } else if (sectionToNavigate === "fechamentoDash") {
+          await loadFechamentoDashSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
           syncKanbanToolbarCollapsedFromStorage();
           await loadUnidades(false).catch(() => {});
@@ -11517,6 +11532,8 @@ function setupNavigation() {
       }
       else if (target === "fechamento") {
         await loadFechamentoCaixaSection();
+      } else if (target === "fechamentoDash") {
+        await loadFechamentoDashSection();
       } else if (target === "kanbanAdministrativo") {
         syncKanbanToolbarCollapsedFromStorage();
         await loadUnidades(false).catch(() => {});
@@ -15080,6 +15097,22 @@ function fechamentoTotalMaquinasFromRow(row) {
   }
 }
 
+function fechamentoTotalPdvFromRow(row) {
+  try {
+    const raw = row?.linhas_json;
+    const L = typeof raw === "string" ? JSON.parse(raw) : raw;
+    if (!Array.isArray(L)) return 0;
+    let s = 0;
+    L.forEach((line) => {
+      const v = Number(line?.sis ?? 0);
+      if (Number.isFinite(v)) s = roundToCurrency(s + v);
+    });
+    return s;
+  } catch (_) {
+    return 0;
+  }
+}
+
 /** ym = "YYYY-MM" → último dia do mês em "YYYY-MM-DD" */
 function fechamentoUltimoDiaMes(ym) {
   const parts = String(ym || "").split("-");
@@ -15626,6 +15659,377 @@ function setupFechamentoCaixaAuditoria() {
   document.getElementById("fechamentoVerModalFechar")?.addEventListener("click", () => closeFechamentoVerModal());
   document.getElementById("fechamentoVerModal")?.addEventListener("click", (ev) => {
     if (ev.target && ev.target.id === "fechamentoVerModal") closeFechamentoVerModal();
+  });
+}
+
+function fechamentoDashRowSituation(r) {
+  const saldo = Number(r.saldo_liquido ?? 0);
+  const tol = 0.009;
+  const semFlag =
+    Number(r.sem_quebra) === 1 || r.sem_quebra === true || String(r.sem_quebra) === "1";
+  if (semFlag || Math.abs(saldo) < tol) return "sem";
+  if (saldo > tol) return "sobra";
+  return "quebra";
+}
+
+function destroyFechamentoDashCharts() {
+  ["fechamentoDashChartBar", "fechamentoDashChartLine", "fechamentoDashChartPie"].forEach((id) => {
+    const c = document.getElementById(id);
+    if (!c || typeof Chart === "undefined") return;
+    const inst = Chart.getChart(c);
+    if (inst) inst.destroy();
+  });
+}
+
+function fechamentoDashDayRangeIso() {
+  const de = document.getElementById("fechamentoDashDe")?.value?.trim();
+  const ate = document.getElementById("fechamentoDashAte")?.value?.trim();
+  if (!de || !ate) return [];
+  const days = [];
+  const a = new Date(de + "T12:00:00");
+  const b = new Date(ate + "T12:00:00");
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return [];
+  if (a > b) return [de];
+  for (let x = new Date(a); x <= b; x.setDate(x.getDate() + 1)) {
+    days.push(x.toISOString().slice(0, 10));
+    if (days.length > 400) break;
+  }
+  return days;
+}
+
+function fechamentoDashSumMaquinhaByDay(rows) {
+  const map = new Map();
+  rows.forEach((r) => {
+    const d = String(r.data_fechamento || "").slice(0, 10);
+    if (!d) return;
+    const m = fechamentoTotalMaquinasFromRow(r);
+    map.set(d, roundToCurrency((map.get(d) || 0) + m));
+  });
+  return map;
+}
+
+function populateFechamentoDashUnidadeSelect() {
+  const sel = document.getElementById("fechamentoDashUnidade");
+  if (!sel) return;
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const fixed = currentUser?.unidade_id && perfil !== "ADMIN";
+  const opts = (state.unidades || [])
+    .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
+    .join("");
+  sel.innerHTML = `<option value="">Todas as unidades</option>${opts}`;
+  if (fixed) {
+    sel.value = String(currentUser.unidade_id);
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+  }
+}
+
+function populateFechamentoDashOperadorSelect(rows) {
+  const sel = document.getElementById("fechamentoDashOperador");
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = "";
+  const o0 = document.createElement("option");
+  o0.value = "";
+  o0.textContent = "Todos os operadores";
+  sel.appendChild(o0);
+  const nomes = [
+    ...new Set(rows.map((r) => (r.operador_nome || "").trim()).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  nomes.forEach((n) => {
+    const o = document.createElement("option");
+    o.value = n;
+    o.textContent = n;
+    sel.appendChild(o);
+  });
+  if (cur && [...sel.options].some((x) => x.value === cur)) sel.value = cur;
+}
+
+function fechamentoDashFilteredRows() {
+  const rows = Array.isArray(state.fechamentoDashRows) ? state.fechamentoDashRows : [];
+  const op = document.getElementById("fechamentoDashOperador")?.value?.trim();
+  if (!op) return rows;
+  return rows.filter((r) => (r.operador_nome || "").trim() === op);
+}
+
+function renderFechamentoDashTop3List(top3) {
+  const ol = document.getElementById("fechamentoDashTop3List");
+  if (!ol) return;
+  if (!top3.length) {
+    ol.innerHTML =
+      '<li class="subtle-text">Nenhum fechamento no período/filtro para ranquear dias.</li>';
+    return;
+  }
+  ol.innerHTML = top3
+    .map(
+      (x, i) =>
+        `<li><strong>${i + 1}º</strong> — ${escapeHtml(fmtData(x.data))}: <strong>${escapeHtml(
+          formatCurrencyBRL(x.total)
+        )}</strong> na maquinha (${escapeHtml(String(x.nRegs))} registro(s) neste dia)</li>`
+    )
+    .join("");
+}
+
+function renderFechamentoDashFromCache() {
+  renderFechamentoDashUI(fechamentoDashFilteredRows());
+}
+
+function renderFechamentoDashUI(rows) {
+  const elRegs = document.getElementById("fechamentoDashCardRegs");
+  const elMaq = document.getElementById("fechamentoDashCardMaq");
+  const elPdv = document.getElementById("fechamentoDashCardPdv");
+  const elQ = document.getElementById("fechamentoDashCardQuebra");
+  const elS = document.getElementById("fechamentoDashCardSobra");
+  const elPct = document.getElementById("fechamentoDashCardPctSem");
+  const n = rows.length;
+  let sumMaq = 0;
+  let sumPdv = 0;
+  let sumQuebra = 0;
+  let sumSobra = 0;
+  let nSem = 0;
+  rows.forEach((r) => {
+    sumMaq = roundToCurrency(sumMaq + fechamentoTotalMaquinasFromRow(r));
+    sumPdv = roundToCurrency(sumPdv + fechamentoTotalPdvFromRow(r));
+    const sit = fechamentoDashRowSituation(r);
+    const saldo = Number(r.saldo_liquido ?? 0);
+    if (sit === "sem") nSem += 1;
+    else if (sit === "quebra") sumQuebra = roundToCurrency(sumQuebra + Math.abs(saldo));
+    else sumSobra = roundToCurrency(sumSobra + saldo);
+  });
+  if (elRegs) elRegs.textContent = String(n);
+  if (elMaq) elMaq.textContent = formatCurrencyBRL(sumMaq);
+  if (elPdv) elPdv.textContent = formatCurrencyBRL(sumPdv);
+  if (elQ) elQ.textContent = formatCurrencyBRL(sumQuebra);
+  if (elS) elS.textContent = formatCurrencyBRL(sumSobra);
+  if (elPct) elPct.textContent = n ? `${Math.round((nSem / n) * 1000) / 10}% (${nSem} reg.)` : "—";
+
+  const byDay = fechamentoDashSumMaquinhaByDay(rows);
+  const top3 = [...byDay.entries()]
+    .map(([data, total]) => ({
+      data,
+      total,
+      nRegs: rows.filter((r) => String(r.data_fechamento || "").slice(0, 10) === data).length,
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3);
+  renderFechamentoDashTop3List(top3);
+
+  destroyFechamentoDashCharts();
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const palette = {
+    bar: ["#1565c0", "#2e7d32", "#ef6c00"],
+    line: "#1565c0",
+    pie: ["#546e7a", "#c62828", "#2e7d32"],
+  };
+
+  const barCv = document.getElementById("fechamentoDashChartBar");
+  if (barCv) {
+    if (top3.length) {
+      new Chart(barCv, {
+        type: "bar",
+        data: {
+          labels: top3.map((x) => fmtData(x.data)),
+          datasets: [
+            {
+              label: "Total maquinha (R$)",
+              data: top3.map((x) => x.total),
+              backgroundColor: top3.map((_, i) => palette.bar[i % palette.bar.length]),
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback(v) {
+                  return formatCurrencyBRL(Number(v));
+                },
+              },
+            },
+          },
+        },
+      });
+    } else {
+      new Chart(barCv, {
+        type: "bar",
+        data: { labels: ["—"], datasets: [{ data: [0], backgroundColor: ["#eceff1"] }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+        },
+      });
+    }
+  }
+
+  const lineCv = document.getElementById("fechamentoDashChartLine");
+  if (lineCv) {
+    let lineLabelsIso = fechamentoDashDayRangeIso();
+    if (!lineLabelsIso.length && byDay.size) {
+      lineLabelsIso = [...byDay.keys()].sort();
+    }
+    if (!lineLabelsIso.length) {
+      new Chart(lineCv, {
+        type: "line",
+        data: { labels: ["—"], datasets: [{ data: [0], borderColor: "#90a4ae" }] },
+        options: { responsive: true, maintainAspectRatio: false },
+      });
+    } else {
+      const lineVals = lineLabelsIso.map((d) => byDay.get(d) || 0);
+      new Chart(lineCv, {
+        type: "line",
+        data: {
+          labels: lineLabelsIso.map((d) => {
+            const dt = new Date(d + "T12:00:00");
+            return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+          }),
+          datasets: [
+            {
+              label: "Maquinha (R$) por dia",
+              data: lineVals,
+              borderColor: palette.line,
+              backgroundColor: "rgba(21, 101, 192, 0.12)",
+              fill: true,
+              tension: 0.25,
+              pointRadius: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.parsed.y;
+                  return ` ${formatCurrencyBRL(Number(v))}`;
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback(v) {
+                  return formatCurrencyBRL(Number(v));
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+  }
+
+  const pieCv = document.getElementById("fechamentoDashChartPie");
+  if (pieCv) {
+    let nQ = 0;
+    let nSb = 0;
+    rows.forEach((r) => {
+      const sit = fechamentoDashRowSituation(r);
+      if (sit === "quebra") nQ += 1;
+      else if (sit === "sobra") nSb += 1;
+    });
+    const nSemPie = rows.length - nQ - nSb;
+    const dataPie = [nSemPie, nQ, nSb];
+    const labelsPie = ["Sem dif. líquida", "Quebra", "Sobra"];
+    const totalPie = dataPie.reduce((a, b) => a + b, 0);
+    if (!totalPie) {
+      new Chart(pieCv, {
+        type: "doughnut",
+        data: {
+          labels: ["Sem dados"],
+          datasets: [{ data: [1], backgroundColor: ["#eceff1"], borderWidth: 1 }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
+      });
+    } else {
+      new Chart(pieCv, {
+        type: "doughnut",
+        data: {
+          labels: labelsPie,
+          datasets: [{ data: dataPie, backgroundColor: palette.pie, borderWidth: 1 }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const val = Number(ctx.raw);
+                  const pct = Math.round((val / totalPie) * 1000) / 10;
+                  return ` ${ctx.label}: ${val} (${pct}%)`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+  }
+}
+
+async function loadFechamentoDashSection() {
+  await loadUnidades(false).catch(() => {});
+  populateFechamentoDashUnidadeSelect();
+  const d0 = document.getElementById("fechamentoDashDe");
+  const d1 = document.getElementById("fechamentoDashAte");
+  if (d0 && !d0.value) d0.value = new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10);
+  if (d1 && !d1.value) d1.value = new Date().toISOString().slice(0, 10);
+  const de = d0?.value?.trim();
+  const ate = d1?.value?.trim();
+  const u = document.getElementById("fechamentoDashUnidade")?.value?.trim();
+  const hint = document.getElementById("fechamentoDashHint");
+  if (!de || !ate) {
+    if (hint) hint.textContent = "Informe data inicial e final.";
+    return;
+  }
+  const qs = new URLSearchParams();
+  qs.set("de", de);
+  qs.set("ate", ate);
+  qs.set("limit", "3000");
+  qs.set("sort", "data_desc");
+  if (u) qs.set("unidade_id", u);
+  try {
+    const list = await fetchJSON(`/fechamentos-caixa?${qs.toString()}`);
+    state.fechamentoDashRows = Array.isArray(list) ? list : [];
+    populateFechamentoDashOperadorSelect(state.fechamentoDashRows);
+    const lim = state.fechamentoDashRows.length >= 3000;
+    if (hint) {
+      hint.textContent = lim
+        ? "Foram retornados até 3.000 registros (limite da API). Refine datas ou unidade se precisar de mais detalhe."
+        : `${state.fechamentoDashRows.length} registro(s) carregados. O filtro por operador aplica-se apenas na tela.`;
+    }
+    renderFechamentoDashFromCache();
+  } catch (err) {
+    state.fechamentoDashRows = [];
+    populateFechamentoDashOperadorSelect([]);
+    if (hint) hint.textContent = "";
+    destroyFechamentoDashCharts();
+    renderFechamentoDashUI([]);
+    showToast(err?.message || "Erro ao carregar fechamentos.", "error");
+  }
+}
+
+function setupFechamentoDashPanel() {
+  document.getElementById("fechamentoDashAplicarBtn")?.addEventListener("click", () => {
+    loadFechamentoDashSection();
+  });
+  document.getElementById("fechamentoDashOperador")?.addEventListener("change", () => {
+    renderFechamentoDashFromCache();
   });
 }
 
@@ -18571,6 +18975,7 @@ async function init() {
   setupBoletosModule();
   setupAlvarasModule();
   setupFechamentoCaixaAuditoria();
+  setupFechamentoDashPanel();
   setupReciboAjudaCusto();
   setupFichaTecnicaForm();
   setupKanbanAdministrativoModule();

@@ -6430,7 +6430,7 @@ Route::get('/fechamentos-caixa', function (Request $request) use ($fechamentoCai
         return response()->json(['error' => 'Sem permissão para auditoria de fechamento'], 403)->header('Access-Control-Allow-Origin', '*');
     }
 
-    $limit = min(max((int) $request->query('limit', 200), 1), 500);
+    $limit = min(max((int) $request->query('limit', 200), 1), 3000);
     $q = DB::table('fechamentos_caixa')
         ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
         ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
@@ -6450,7 +6450,14 @@ Route::get('/fechamentos-caixa', function (Request $request) use ($fechamentoCai
         $q->whereDate('fechamentos_caixa.data_fechamento', '<=', $request->query('ate'));
     }
 
-    $rows = $q->orderByDesc('fechamentos_caixa.created_at')->limit($limit)->get();
+    $sort = $request->query('sort');
+    if ($sort === 'data_desc') {
+        $q->orderByDesc('fechamentos_caixa.data_fechamento')->orderByDesc('fechamentos_caixa.id');
+    } else {
+        $q->orderByDesc('fechamentos_caixa.created_at');
+    }
+
+    $rows = $q->limit($limit)->get();
 
     return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
 });

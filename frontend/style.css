@@ -5989,6 +5989,148 @@ select[size]:not([size="1"]) {
   padding: 0 1.25rem 1.25rem;
 }
 
+/* Dashboard fechamentos de caixa (Financeiro) */
+.fechamento-dash__head {
+  margin-bottom: 1.25rem;
+}
+
+.fechamento-dash__head h2 {
+  margin: 0 0 0.35rem;
+}
+
+.fechamento-dash__filters {
+  margin-bottom: 1.25rem;
+}
+
+.fechamento-dash__filters header h3 {
+  margin: 0;
+}
+
+.fechamento-dash__filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: end;
+  padding: 0 1.25rem 1rem;
+}
+
+.fechamento-dash__filters-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #455a64;
+}
+
+.fechamento-dash__filters-grid input,
+.fechamento-dash__filters-grid select {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  font-size: 0.9rem;
+}
+
+.fechamento-dash__filters-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.fechamento-dash__hint {
+  margin: 0 1.25rem 1rem;
+  font-size: 0.82rem;
+}
+
+.fechamento-dash__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.fechamento-dash__card {
+  background: linear-gradient(145deg, #fafafa 0%, #eef4f9 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.fechamento-dash__card--alert {
+  border-color: #ffcdd2;
+  background: linear-gradient(145deg, #fff8f8 0%, #ffebee 100%);
+}
+
+.fechamento-dash__card--ok {
+  border-color: #c8e6c9;
+  background: linear-gradient(145deg, #f9fff9 0%, #e8f5e9 100%);
+}
+
+.fechamento-dash__card-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #607d8b;
+  font-weight: 700;
+}
+
+.fechamento-dash__card-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1a237e;
+  font-variant-numeric: tabular-nums;
+}
+
+.fechamento-dash__charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 1100px) {
+  .fechamento-dash__charts {
+    grid-template-columns: minmax(280px, 1fr) minmax(360px, 1.6fr) minmax(260px, 1fr);
+    align-items: stretch;
+  }
+}
+
+.fechamento-dash__chart-card header h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.fechamento-dash__chart-card header .subtle-text {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.fechamento-dash__canvas-wrap {
+  position: relative;
+  height: 240px;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.fechamento-dash__canvas-wrap--tall {
+  height: 300px;
+}
+
+.fechamento-dash__top3 {
+  margin-bottom: 1rem;
+}
+
+.fechamento-dash__top3-list {
+  margin: 0 1.25rem 1.25rem;
+  padding-left: 1.25rem;
+  line-height: 1.65;
+}
+
+.fechamento-dash__top3-list li strong {
+  color: #1565c0;
+}
+
 .fechamento-audit__formas-header {
   display: flex;
   align-items: flex-start;
