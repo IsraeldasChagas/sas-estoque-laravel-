@@ -1044,6 +1044,23 @@ function fmtData(dataStr) {
   }
 }
 
+/** Data com dia da semana abreviado (pt-BR) + DD/MM; YYYY-MM-DD interpretado ao meio-dia local (evita voltar um dia). */
+function fmtDataComDiaSemanaCurto(dataStr) {
+  if (!dataStr) return "--";
+  const s = String(dataStr).trim().slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return fmtData(dataStr);
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10) - 1;
+  const d = parseInt(m[3], 10);
+  const dt = new Date(y, mo, d, 12, 0, 0, 0);
+  if (Number.isNaN(dt.getTime())) return fmtData(dataStr);
+  let sem = dt.toLocaleDateString("pt-BR", { weekday: "short" });
+  sem = sem.replace(/\.$/, "").trim();
+  const dm = `${String(d).padStart(2, "0")}/${String(mo + 1).padStart(2, "0")}`;
+  return `${sem} ${dm}`;
+}
+
 function formatDate(value) {
   if (!value) return "--";
   // Qualquer string com YYYY-MM-DD: extrai só a data e formata, sem usar new Date().
@@ -14976,7 +14993,7 @@ function renderFechamentoCaixaVerHtml(r) {
     })
     .join("");
 
-  const dataStr = escapeHtml(fmtData(r.data_fechamento));
+  const dataStr = escapeHtml(fmtDataComDiaSemanaCurto(r.data_fechamento));
   const hora = r.hora_fechamento ? escapeHtml(String(r.hora_fechamento)) : "—";
   const un = escapeHtml((r.unidade_nome || "—").toString());
   const op = escapeHtml((r.operador_nome || "—").toString());
@@ -15279,10 +15296,10 @@ function renderFechamentosCaixaHistorico(rows) {
       }
       return `<tr>
         <td data-label="Nº">${escapeHtml(String(r.id ?? ""))}</td>
-        <td data-label="Data">${escapeHtml(fmtData(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
+        <td data-label="Data">${escapeHtml(fmtDataComDiaSemanaCurto(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
         <td data-label="Unidade">${un}</td>
         <td data-label="Operador">${op}</td>
-        <td data-label="Total maquinha">${fechamentoMaquinhaValorHtml(tot, `Negativo no histórico: fechamento nº ${r.id ?? "—"}, data ${fmtData(r.data_fechamento)}`)}</td>
+        <td data-label="Total maquinha">${fechamentoMaquinhaValorHtml(tot, `Negativo no histórico: fechamento nº ${r.id ?? "—"}, data ${fmtDataComDiaSemanaCurto(r.data_fechamento)}`)}</td>
         <td data-label="Fechamento">${escapeHtml(rotuloFech)}</td>
         <td data-label="Valor">${escapeHtml(valorFech)}</td>
         <td data-label="Ações" class="fechamento-audit__acoes">
@@ -15322,8 +15339,8 @@ function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
       sumMaq = roundToCurrency(sumMaq + maq);
       const op = escapeHtml((r.operador_nome || "—").toString());
       const hora = r.hora_fechamento ? ` <small>${escapeHtml(String(r.hora_fechamento))}</small>` : "";
-      const dataFmt = escapeHtml(fmtData(r.data_fechamento));
-      const negHint = `Negativo na linha: fechamento nº ${r.id ?? "—"}, data ${fmtData(r.data_fechamento)}`;
+      const dataFmt = escapeHtml(fmtDataComDiaSemanaCurto(r.data_fechamento));
+      const negHint = `Negativo na linha: fechamento nº ${r.id ?? "—"}, data ${fmtDataComDiaSemanaCurto(r.data_fechamento)}`;
       return `<tr>
         <td>${escapeHtml(String(r.id ?? ""))}</td>
         <td>${dataFmt}${hora}</td>
@@ -16005,20 +16022,9 @@ function fechamentoDashSumPdvByUnidade(rows) {
   return map;
 }
 
-/** Rótulo curto para eixo de datas: dia da semana abreviado + DD/MM (meio-dia local evita voltar um dia). */
+/** Rótulo do gráfico de fechamento (dashboard): mesmo formato da auditoria. */
 function fechamentoDashLabelDiaSemanaCurto(isoYmd) {
-  const s = String(isoYmd || "").trim().slice(0, 10);
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return fmtData(isoYmd);
-  const y = parseInt(m[1], 10);
-  const mo = parseInt(m[2], 10) - 1;
-  const d = parseInt(m[3], 10);
-  const dt = new Date(y, mo, d, 12, 0, 0, 0);
-  if (Number.isNaN(dt.getTime())) return fmtData(isoYmd);
-  let sem = dt.toLocaleDateString("pt-BR", { weekday: "short" });
-  sem = sem.replace(/\.$/, "").trim();
-  const dm = `${String(d).padStart(2, "0")}/${String(mo + 1).padStart(2, "0")}`;
-  return `${sem} ${dm}`;
+  return fmtDataComDiaSemanaCurto(isoYmd);
 }
 
 function fechamentoDashChartLabelUnidadeCurta(nome) {
