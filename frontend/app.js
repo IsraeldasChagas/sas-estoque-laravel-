@@ -2770,9 +2770,62 @@ function updateUnidadeInlineUI(canManage) {
   }
 }
 
+/** Coloca "Dashboard fechamentos" no submenu Financeiro se o HTML do servidor ainda não tiver o <a> (deploy antigo). */
+function ensureFinanceiroFechamentoDashNavLink() {
+  const wrap =
+    document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
+    document.getElementById("financeiroMenu")?.closest(".nav-submenu")?.querySelector(".nav-submenu-content") ||
+    null;
+  if (!wrap) return;
+  if (wrap.querySelector('a.nav-link[data-section="fechamentoDash"]')) return;
+  const ref =
+    wrap.querySelector('a.nav-link[data-section="fechamento"]') ||
+    Array.from(wrap.querySelectorAll("a.nav-link[data-section]")).pop() ||
+    null;
+  if (!ref) return;
+  const a = document.createElement("a");
+  a.href = "#";
+  a.className = "nav-link nav-link-child";
+  a.dataset.section = "fechamentoDash";
+  a.dataset.sasDynamicNav = "1";
+  a.textContent = "Dashboard fechamentos";
+  ref.insertAdjacentElement("afterend", a);
+}
+
+let __fechamentoDashNavDelegacaoFeita = false;
+/** Clique no link injetado (não recebeu listener no setupNavigation). */
+function bindFechamentoDashNavClickDelegation() {
+  if (__fechamentoDashNavDelegacaoFeita) return;
+  const nav =
+    document.querySelector(".sidebar-nav-scroll nav") ||
+    document.querySelector("#sidebar nav") ||
+    document.querySelector("#appShell nav");
+  if (!nav) return;
+  __fechamentoDashNavDelegacaoFeita = true;
+  nav.addEventListener("click", async (event) => {
+    const link = event.target.closest('a.nav-link[data-section="fechamentoDash"][data-sas-dynamic-nav="1"]');
+    if (!link) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const regras = applyPermissions();
+    if (!regras.sections.includes("fechamentoDash")) {
+      showToast("Perfil sem permissao para acessar esta area.", "error");
+      return;
+    }
+    navigateTo("fechamentoDash");
+    if (typeof isMobileViewport === "function" && isMobileViewport()) setSidebarOpen(false);
+    try {
+      await loadFechamentoDashSection();
+    } catch (err) {
+      showToast(err?.message || "Erro ao carregar painel.", "error");
+    }
+  });
+}
+
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
 // Se o usuário tem permissoes_menu personalizadas (array não vazio), usa-as. Caso contrário, usa o padrão do perfil.
 function applyPermissions() {
+  ensureFinanceiroFechamentoDashNavLink();
   refreshDomShellNav();
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
   const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
@@ -11613,6 +11666,7 @@ function setupNavigation() {
     });
   });
 
+  bindFechamentoDashNavClickDelegation();
 }
 
 function togglePasswordVisibility(button) {
