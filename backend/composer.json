@@ -50,6 +50,9 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
+        "verify:rh-migrations": [
+            "@php artisan rh:verify-migration-safety --ansi"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
