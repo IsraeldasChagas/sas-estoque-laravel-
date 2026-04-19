@@ -128,8 +128,11 @@ body.sidebar-open {
   max-height: 320px;
 }
 
+/* Financeiro tem 6+ itens (Boleto…Auditoria…Dashboard); 280px cortava o último com overflow:hidden */
 .nav-submenu.nav-submenu--financeiro.open .nav-submenu-content {
-  max-height: 280px;
+  max-height: min(72vh, 520px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .nav-submenu-btn--backup.nav-link-child {

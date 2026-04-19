@@ -2799,27 +2799,39 @@ function updateUnidadeInlineUI(canManage) {
   }
 }
 
-/** Coloca "Dashboard fechamentos" no submenu Financeiro se o HTML do servidor ainda não tiver o <a> (deploy antigo), logo após Auditoria fechamento caixa. */
+/**
+ * Garante o item Dashboard logo abaixo de Auditoria (nunca remove a auditoria).
+ * Se o link do dashboard existir em outro lugar do submenu, move-o para depois da auditoria.
+ */
 function ensureFinanceiroFechamentoDashNavLink() {
   const wrap =
     document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
     document.getElementById("financeiroMenu")?.closest(".nav-submenu")?.querySelector(".nav-submenu-content") ||
     null;
   if (!wrap) return;
-  if (wrap.querySelector('a.nav-link[data-section="fechamentoDash"]')) return;
-  const ref =
-    wrap.querySelector('a.nav-link[data-section="fechamento"]') ||
-    wrap.querySelector('a.nav-link[data-section="reciboAjuda"]') ||
-    Array.from(wrap.querySelectorAll("a.nav-link[data-section]")).pop() ||
-    null;
-  if (!ref) return;
-  const a = document.createElement("a");
-  a.href = "#";
-  a.className = "nav-link nav-link-child";
-  a.dataset.section = "fechamentoDash";
-  a.title = "Painel só leitura: gráficos, totais por unidade e análise dos fechamentos";
-  a.textContent = "Dashboard — análise fechamentos";
-  ref.insertAdjacentElement("afterend", a);
+  const aud = wrap.querySelector('a.nav-link[data-section="fechamento"]');
+  let dash = wrap.querySelector('a.nav-link[data-section="fechamentoDash"]');
+  if (!dash) {
+    const ref =
+      aud ||
+      wrap.querySelector('a.nav-link[data-section="reciboAjuda"]') ||
+      Array.from(wrap.querySelectorAll("a.nav-link[data-section]")).pop() ||
+      null;
+    if (!ref) return;
+    dash = document.createElement("a");
+    dash.href = "#";
+    dash.className = "nav-link nav-link-child";
+    dash.id = "navFinanceiroFechamentoDash";
+    dash.dataset.section = "fechamentoDash";
+    dash.title = "Painel só leitura: gráficos, totais por unidade e análise dos fechamentos";
+    dash.textContent = "Dashboard — análise fechamentos";
+    ref.insertAdjacentElement("afterend", dash);
+    return;
+  }
+  if (!dash.id) dash.id = "navFinanceiroFechamentoDash";
+  if (aud && dash.previousElementSibling !== aud) {
+    aud.insertAdjacentElement("afterend", dash);
+  }
 }
 
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
