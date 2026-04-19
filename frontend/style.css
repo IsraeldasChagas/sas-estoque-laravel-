@@ -165,35 +165,31 @@ body.sidebar-open {
   transform: translateX(0);
 }
 
-/* Botao recolher/expandir sidebar — no topo da barra lateral (sempre à vista no desktop) */
+/* Botao recolher/expandir sidebar — fica na topbar (lado do conteúdo), sticky junto com ela */
 .sidebar-collapse-btn {
   display: none;
-  position: absolute;
-  top: 18px;
-  right: -14px;
-  transform: none;
-  width: 28px;
-  height: 28px;
+  position: relative;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  background: #070403;
+  border: 2px solid rgba(7, 4, 3, 0.28);
+  background: linear-gradient(180deg, #1a1510, #070403);
   color: #fff;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   line-height: 1;
   cursor: pointer;
-  z-index: 30;
+  z-index: 2;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
   transition: background 0.2s, border-color 0.2s, transform 0.2s;
 }
 
 .sidebar-collapse-btn:hover {
   background: #de4309;
-  border-color: #fff;
-  transform: scale(1.08);
+  border-color: rgba(255, 255, 255, 0.85);
 }
 
 .sidebar-collapse-btn:focus-visible {
@@ -245,11 +241,12 @@ body.sidebar-open {
     min-height: 0;
   }
 
-  .sidebar.is-collapsed .sidebar-collapse-icon::before {
+  /* Botão está fora do aside: seta segue estado #sidebar no DOM (~ .main-content) */
+  #sidebar.is-collapsed ~ .main-content .sidebar-collapse-icon::before {
     content: "›";
   }
 
-  .sidebar:not(.is-collapsed) .sidebar-collapse-icon::before {
+  #sidebar:not(.is-collapsed) ~ .main-content .sidebar-collapse-icon::before {
     content: "‹";
   }
 }
@@ -347,6 +344,24 @@ body.sidebar-open {
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Recolher menu (desktop): não usar estilo pill do Sair — fica à esquerda da topbar, junto ao menu */
+.topbar .sidebar-collapse-btn.sidebar-collapse-btn--in-topbar {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #1a1510, #070403);
+  color: #fff;
+  border: 2px solid rgba(7, 4, 3, 0.28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  margin-left: -4px;
+  margin-right: 4px;
+}
+
+.topbar .sidebar-collapse-btn.sidebar-collapse-btn--in-topbar:hover {
+  transform: scale(1.06);
 }
 
 .topbar__left {

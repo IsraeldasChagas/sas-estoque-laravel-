@@ -87,9 +87,6 @@
     <div class="app-shell hidden" id="appShell">
       <!-- Barra lateral com navegacao e atalhos -->
       <aside class="sidebar" id="sidebar">
-        <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" aria-label="Recolher menu" title="Recolher menu">
-          <span class="sidebar-collapse-icon" aria-hidden="true"></span>
-        </button>
         <div class="sidebar-logo">
           <img src="imagens/logo.png" alt="SAS Estoque" onerror="this.onerror=null;this.src='imagens/logosemfundo.png';" />
         </div>
@@ -171,6 +168,15 @@
         <!-- Barra superior com menu e botao de sair -->
         <header class="topbar">
           <div class="topbar__left">
+            <button
+              type="button"
+              id="sidebarCollapseBtn"
+              class="sidebar-collapse-btn sidebar-collapse-btn--in-topbar"
+              aria-label="Recolher menu"
+              title="Recolher menu"
+            >
+              <span class="sidebar-collapse-icon" aria-hidden="true"></span>
+            </button>
             <button type="button" id="menuToggle" class="topbar__menu-btn" aria-label="Abrir menu de navegação">
               <span></span>
               <span></span>
