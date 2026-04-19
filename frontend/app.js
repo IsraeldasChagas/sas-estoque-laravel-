@@ -2797,7 +2797,7 @@ function updateUnidadeInlineUI(canManage) {
   }
 }
 
-/** Coloca "Dashboard fechamentos" no submenu Financeiro se o HTML do servidor ainda não tiver o <a> (deploy antigo). */
+/** Coloca "Dashboard fechamentos" no submenu Financeiro se o HTML do servidor ainda não tiver o <a> (deploy antigo). Primeiro item para ficar sempre visível ao abrir Financeiro. */
 function ensureFinanceiroFechamentoDashNavLink() {
   const wrap =
     document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
@@ -2805,17 +2805,14 @@ function ensureFinanceiroFechamentoDashNavLink() {
     null;
   if (!wrap) return;
   if (wrap.querySelector('a.nav-link[data-section="fechamentoDash"]')) return;
-  const ref =
-    wrap.querySelector('a.nav-link[data-section="fechamento"]') ||
-    Array.from(wrap.querySelectorAll("a.nav-link[data-section]")).pop() ||
-    null;
-  if (!ref) return;
   const a = document.createElement("a");
   a.href = "#";
   a.className = "nav-link nav-link-child";
   a.dataset.section = "fechamentoDash";
   a.textContent = "Dashboard fechamentos";
-  ref.insertAdjacentElement("afterend", a);
+  const primeiro = wrap.querySelector('a.nav-link[data-section="boletao"]');
+  if (primeiro) wrap.insertBefore(a, primeiro);
+  else wrap.prepend(a);
 }
 
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
@@ -2862,13 +2859,27 @@ function applyPermissions() {
   if (sections.includes("fechamento") && !sections.includes("fechamentoDash")) {
     sections = [...sections, "fechamentoDash"];
   }
+  // Quem acessa pela hash #fechamentoDash precisa do mesmo módulo no menu que "Auditoria fechamento" (id fechamento).
+  if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
+    sections = [...sections, "fechamento"];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
-  dom.navLinks.forEach((link) => {
-    const allowed = regras.sections.includes(link.dataset.section);
-    link.classList.toggle("hidden", !allowed);
-  });
+  const shellPerm = document.getElementById("appShell");
+  if (shellPerm) {
+    shellPerm.querySelectorAll(".nav-link[data-section]").forEach((link) => {
+      const sec = link.dataset.section;
+      if (!sec) return;
+      const allowed = regras.sections.includes(sec);
+      link.classList.toggle("hidden", !allowed);
+    });
+  }
+  if (regras.sections.includes("fechamentoDash")) {
+    document.querySelectorAll('a.nav-link[data-section="fechamentoDash"]').forEach((el) => {
+      el.classList.remove("hidden");
+    });
+  }
 
   // Oculta o menu pai "RH" quando nenhum filho está permitido
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
