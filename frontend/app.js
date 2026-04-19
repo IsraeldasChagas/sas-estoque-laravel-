@@ -15976,6 +15976,56 @@ function fechamentoDashSumMaquinhaByDay(rows) {
   return map;
 }
 
+/** Soma vendas (PDV = totais “sistema” nas linhas do fechamento) por unidade. `rows` já vem filtrado. */
+function fechamentoDashSumPdvByUnidade(rows) {
+  const map = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((r) => {
+    const id = String(r.unidade_id ?? "").trim();
+    const key = id || "__sem__";
+    const nomeBruto = (r.unidade_nome || "").toString().trim();
+    const nome = nomeBruto || (id ? `Unidade ${id}` : "Sem unidade");
+    const pdv = fechamentoTotalPdvFromRow(r);
+    const cur = map.get(key);
+    if (!cur) {
+      map.set(key, {
+        unidade_id: id,
+        unidade_nome: nome,
+        total: roundToCurrency(pdv),
+        nRegs: 1,
+      });
+      return;
+    }
+    cur.total = roundToCurrency(cur.total + pdv);
+    cur.nRegs += 1;
+    if ((!cur.unidade_nome || cur.unidade_nome === `Unidade ${id}`) && nomeBruto) {
+      cur.unidade_nome = nome;
+    }
+    map.set(key, cur);
+  });
+  return map;
+}
+
+/** Rótulo curto para eixo de datas: dia da semana abreviado + DD/MM (meio-dia local evita voltar um dia). */
+function fechamentoDashLabelDiaSemanaCurto(isoYmd) {
+  const s = String(isoYmd || "").trim().slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return fmtData(isoYmd);
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10) - 1;
+  const d = parseInt(m[3], 10);
+  const dt = new Date(y, mo, d, 12, 0, 0, 0);
+  if (Number.isNaN(dt.getTime())) return fmtData(isoYmd);
+  let sem = dt.toLocaleDateString("pt-BR", { weekday: "short" });
+  sem = sem.replace(/\.$/, "").trim();
+  const dm = `${String(d).padStart(2, "0")}/${String(mo + 1).padStart(2, "0")}`;
+  return `${sem} ${dm}`;
+}
+
+function fechamentoDashChartLabelUnidadeCurta(nome) {
+  const s = (nome || "").trim() || "—";
+  return s.length > 24 ? `${s.slice(0, 22)}…` : s;
+}
+
 function populateFechamentoDashUnidadeSelect() {
   const sel = document.getElementById("fechamentoDashUnidade");
   if (!sel) return;
@@ -16021,20 +16071,21 @@ function fechamentoDashFilteredRows() {
   return rows.filter((r) => (r.operador_nome || "").trim() === op);
 }
 
+/** `top3`: { unidade_id, unidade_nome, total, nRegs }[] — vendas = soma PDV. */
 function renderFechamentoDashTop3List(top3) {
   const ol = document.getElementById("fechamentoDashTop3List");
   if (!ol) return;
   if (!top3.length) {
     ol.innerHTML =
-      '<li class="subtle-text">Nenhum fechamento no período/filtro para ranquear dias.</li>';
+      '<li class="subtle-text">Nenhum total PDV no período/filtro para ranquear unidades (verifique fechamentos com linhas preenchidas).</li>';
     return;
   }
   ol.innerHTML = top3
     .map(
       (x, i) =>
-        `<li><strong>${i + 1}º</strong> — ${escapeHtml(fmtData(x.data))}: <strong>${escapeHtml(
+        `<li><strong>${i + 1}º</strong> — ${escapeHtml(x.unidade_nome || "—")}: <strong>${escapeHtml(
           formatCurrencyBRL(x.total)
-        )}</strong> na maquinha (${escapeHtml(String(x.nRegs))} registro(s) neste dia)</li>`
+        )}</strong> em PDV (${escapeHtml(String(x.nRegs))} fechamento(s))</li>`
     )
     .join("");
 }
@@ -16075,15 +16126,12 @@ function renderFechamentoDashUI(rows) {
   if (elPct) elPct.textContent = n ? `${Math.round((nSem / n) * 1000) / 10}% (${nSem} reg.)` : "—";
 
   const byDay = fechamentoDashSumMaquinhaByDay(rows);
-  const top3 = [...byDay.entries()]
-    .map(([data, total]) => ({
-      data,
-      total,
-      nRegs: rows.filter((r) => String(r.data_fechamento || "").slice(0, 10) === data).length,
-    }))
-    .sort((a, b) => b.total - a.total)
+  const byUnit = fechamentoDashSumPdvByUnidade(rows);
+  const top3Unidades = [...byUnit.values()]
+    .sort((a, b) => b.total - a.total || b.nRegs - a.nRegs)
+    .filter((x) => x.total > FECHAMENTO_NEG_TOL)
     .slice(0, 3);
-  renderFechamentoDashTop3List(top3);
+  renderFechamentoDashTop3List(top3Unidades);
 
   destroyFechamentoDashCharts();
   if (typeof Chart === "undefined") {
@@ -16107,16 +16155,16 @@ function renderFechamentoDashUI(rows) {
   try {
     const barCv = document.getElementById("fechamentoDashChartBar");
     if (barCv) {
-      if (top3.length) {
+      if (top3Unidades.length) {
         new Chart(barCv, {
           type: "bar",
           data: {
-            labels: top3.map((x) => fmtData(x.data)),
+            labels: top3Unidades.map((x) => fechamentoDashChartLabelUnidadeCurta(x.unidade_nome)),
             datasets: [
               {
-                label: "Total maquinha (R$)",
-                data: top3.map((x) => x.total),
-                backgroundColor: top3.map((_, i) => palette.bar[i % palette.bar.length]),
+                label: "Vendas PDV (R$)",
+                data: top3Unidades.map((x) => x.total),
+                backgroundColor: top3Unidades.map((_, i) => palette.bar[i % palette.bar.length]),
                 borderRadius: 6,
               },
             ],
@@ -16124,7 +16172,21 @@ function renderFechamentoDashUI(rows) {
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title(items) {
+                    const i = items[0]?.dataIndex;
+                    return i != null && top3Unidades[i] ? String(top3Unidades[i].unidade_nome || "") : "";
+                  },
+                  label(ctx) {
+                    const v = ctx.parsed.y;
+                    return ` ${formatCurrencyBRL(Number(v))}`;
+                  },
+                },
+              },
+            },
             scales: {
               y: {
                 beginAtZero: true,
@@ -16167,10 +16229,7 @@ function renderFechamentoDashUI(rows) {
         new Chart(lineCv, {
           type: "line",
           data: {
-            labels: lineLabelsIso.map((d) => {
-              const dt = new Date(d + "T12:00:00");
-              return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-            }),
+            labels: lineLabelsIso.map((d) => fechamentoDashLabelDiaSemanaCurto(d)),
             datasets: [
               {
                 label: "Maquinha (R$) por dia",
