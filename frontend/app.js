@@ -294,6 +294,14 @@ const dom = {
   closeFuncionarioView: document.getElementById("closeFuncionarioView"),
 };
 
+/** Recarrega seções e links do menu dentro do appShell (evita cache de NodeList após mudanças no HTML). */
+function refreshDomShellNav() {
+  const shell = document.getElementById("appShell");
+  if (!shell) return;
+  dom.sections = Array.from(shell.querySelectorAll(".view-section"));
+  dom.navLinks = Array.from(shell.querySelectorAll(".nav-link[data-section]"));
+}
+
 let stopMatrixAnimation = null;
 
 // Traducao simples de perfis para nomes amigaveis.
@@ -2765,6 +2773,7 @@ function updateUnidadeInlineUI(canManage) {
 // Controla quais secoes e botoes ficam habilitados de acordo com o perfil logado.
 // Se o usuário tem permissoes_menu personalizadas (array não vazio), usa-as. Caso contrário, usa o padrão do perfil.
 function applyPermissions() {
+  refreshDomShellNav();
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
   const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
   const permPersonalizadas = currentUser && Array.isArray(currentUser.permissoes_menu) && currentUser.permissoes_menu.length > 0;
@@ -2955,6 +2964,7 @@ function applyPermissions() {
 }
 
 function navigateTo(section) {
+  refreshDomShellNav();
   // Salva a seção atual no localStorage para restaurar após refresh
   if (section) {
     try {
@@ -15662,6 +15672,8 @@ function setupFechamentoCaixaAuditoria() {
   });
 }
 
+let __fechamentoDashPanelSetup = false;
+
 function fechamentoDashRowSituation(r) {
   const saldo = Number(r.saldo_liquido ?? 0);
   const tol = 0.009;
@@ -15676,8 +15688,14 @@ function destroyFechamentoDashCharts() {
   ["fechamentoDashChartBar", "fechamentoDashChartLine", "fechamentoDashChartPie"].forEach((id) => {
     const c = document.getElementById(id);
     if (!c || typeof Chart === "undefined") return;
-    const inst = Chart.getChart(c);
-    if (inst) inst.destroy();
+    try {
+      if (typeof Chart.getChart === "function") {
+        const inst = Chart.getChart(c);
+        if (inst) inst.destroy();
+      }
+    } catch (e) {
+      console.warn("destroyFechamentoDashCharts:", id, e);
+    }
   });
 }
 
@@ -15817,6 +15835,14 @@ function renderFechamentoDashUI(rows) {
 
   destroyFechamentoDashCharts();
   if (typeof Chart === "undefined") {
+    const h = document.getElementById("fechamentoDashHint");
+    if (h && !h.dataset.chartMissing) {
+      h.dataset.chartMissing = "1";
+      const base = (h.textContent || "").trim();
+      h.textContent = base
+        ? `${base} — Gráficos indisponíveis (Chart.js não carregou).`
+        : "Gráficos indisponíveis (Chart.js não carregou). Verifique rede ou bloqueio de script.";
+    }
     return;
   }
 
@@ -15826,159 +15852,164 @@ function renderFechamentoDashUI(rows) {
     pie: ["#546e7a", "#c62828", "#2e7d32"],
   };
 
-  const barCv = document.getElementById("fechamentoDashChartBar");
-  if (barCv) {
-    if (top3.length) {
-      new Chart(barCv, {
-        type: "bar",
-        data: {
-          labels: top3.map((x) => fmtData(x.data)),
-          datasets: [
-            {
-              label: "Total maquinha (R$)",
-              data: top3.map((x) => x.total),
-              backgroundColor: top3.map((_, i) => palette.bar[i % palette.bar.length]),
-              borderRadius: 6,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback(v) {
-                  return formatCurrencyBRL(Number(v));
+  try {
+    const barCv = document.getElementById("fechamentoDashChartBar");
+    if (barCv) {
+      if (top3.length) {
+        new Chart(barCv, {
+          type: "bar",
+          data: {
+            labels: top3.map((x) => fmtData(x.data)),
+            datasets: [
+              {
+                label: "Total maquinha (R$)",
+                data: top3.map((x) => x.total),
+                backgroundColor: top3.map((_, i) => palette.bar[i % palette.bar.length]),
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback(v) {
+                    return formatCurrencyBRL(Number(v));
+                  },
                 },
               },
             },
           },
-        },
-      });
-    } else {
-      new Chart(barCv, {
-        type: "bar",
-        data: { labels: ["—"], datasets: [{ data: [0], backgroundColor: ["#eceff1"] }] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-        },
-      });
+        });
+      } else {
+        new Chart(barCv, {
+          type: "bar",
+          data: { labels: ["—"], datasets: [{ data: [0], backgroundColor: ["#eceff1"] }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          },
+        });
+      }
     }
-  }
 
-  const lineCv = document.getElementById("fechamentoDashChartLine");
-  if (lineCv) {
-    let lineLabelsIso = fechamentoDashDayRangeIso();
-    if (!lineLabelsIso.length && byDay.size) {
-      lineLabelsIso = [...byDay.keys()].sort();
-    }
-    if (!lineLabelsIso.length) {
-      new Chart(lineCv, {
-        type: "line",
-        data: { labels: ["—"], datasets: [{ data: [0], borderColor: "#90a4ae" }] },
-        options: { responsive: true, maintainAspectRatio: false },
-      });
-    } else {
-      const lineVals = lineLabelsIso.map((d) => byDay.get(d) || 0);
-      new Chart(lineCv, {
-        type: "line",
-        data: {
-          labels: lineLabelsIso.map((d) => {
-            const dt = new Date(d + "T12:00:00");
-            return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-          }),
-          datasets: [
-            {
-              label: "Maquinha (R$) por dia",
-              data: lineVals,
-              borderColor: palette.line,
-              backgroundColor: "rgba(21, 101, 192, 0.12)",
-              fill: true,
-              tension: 0.25,
-              pointRadius: 2,
+    const lineCv = document.getElementById("fechamentoDashChartLine");
+    if (lineCv) {
+      let lineLabelsIso = fechamentoDashDayRangeIso();
+      if (!lineLabelsIso.length && byDay.size) {
+        lineLabelsIso = [...byDay.keys()].sort();
+      }
+      if (!lineLabelsIso.length) {
+        new Chart(lineCv, {
+          type: "line",
+          data: { labels: ["—"], datasets: [{ data: [0], borderColor: "#90a4ae" }] },
+          options: { responsive: true, maintainAspectRatio: false },
+        });
+      } else {
+        const lineVals = lineLabelsIso.map((d) => byDay.get(d) || 0);
+        new Chart(lineCv, {
+          type: "line",
+          data: {
+            labels: lineLabelsIso.map((d) => {
+              const dt = new Date(d + "T12:00:00");
+              return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+            }),
+            datasets: [
+              {
+                label: "Maquinha (R$) por dia",
+                data: lineVals,
+                borderColor: palette.line,
+                backgroundColor: "rgba(21, 101, 192, 0.12)",
+                fill: true,
+                tension: 0.25,
+                pointRadius: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    const v = ctx.parsed.y;
+                    return ` ${formatCurrencyBRL(Number(v))}`;
+                  },
+                },
+              },
             },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label(ctx) {
-                  const v = ctx.parsed.y;
-                  return ` ${formatCurrencyBRL(Number(v))}`;
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback(v) {
+                    return formatCurrencyBRL(Number(v));
+                  },
                 },
               },
             },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback(v) {
-                  return formatCurrencyBRL(Number(v));
-                },
-              },
-            },
-          },
-        },
-      });
+        });
+      }
     }
-  }
 
-  const pieCv = document.getElementById("fechamentoDashChartPie");
-  if (pieCv) {
-    let nQ = 0;
-    let nSb = 0;
-    rows.forEach((r) => {
-      const sit = fechamentoDashRowSituation(r);
-      if (sit === "quebra") nQ += 1;
-      else if (sit === "sobra") nSb += 1;
-    });
-    const nSemPie = rows.length - nQ - nSb;
-    const dataPie = [nSemPie, nQ, nSb];
-    const labelsPie = ["Sem dif. líquida", "Quebra", "Sobra"];
-    const totalPie = dataPie.reduce((a, b) => a + b, 0);
-    if (!totalPie) {
-      new Chart(pieCv, {
-        type: "doughnut",
-        data: {
-          labels: ["Sem dados"],
-          datasets: [{ data: [1], backgroundColor: ["#eceff1"], borderWidth: 1 }],
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
+    const pieCv = document.getElementById("fechamentoDashChartPie");
+    if (pieCv) {
+      let nQ = 0;
+      let nSb = 0;
+      rows.forEach((r) => {
+        const sit = fechamentoDashRowSituation(r);
+        if (sit === "quebra") nQ += 1;
+        else if (sit === "sobra") nSb += 1;
       });
-    } else {
-      new Chart(pieCv, {
-        type: "doughnut",
-        data: {
-          labels: labelsPie,
-          datasets: [{ data: dataPie, backgroundColor: palette.pie, borderWidth: 1 }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: "bottom" },
-            tooltip: {
-              callbacks: {
-                label(ctx) {
-                  const val = Number(ctx.raw);
-                  const pct = Math.round((val / totalPie) * 1000) / 10;
-                  return ` ${ctx.label}: ${val} (${pct}%)`;
+      const nSemPie = rows.length - nQ - nSb;
+      const dataPie = [nSemPie, nQ, nSb];
+      const labelsPie = ["Sem dif. líquida", "Quebra", "Sobra"];
+      const totalPie = dataPie.reduce((a, b) => a + b, 0);
+      if (!totalPie) {
+        new Chart(pieCv, {
+          type: "doughnut",
+          data: {
+            labels: ["Sem dados"],
+            datasets: [{ data: [1], backgroundColor: ["#eceff1"], borderWidth: 1 }],
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
+        });
+      } else {
+        new Chart(pieCv, {
+          type: "doughnut",
+          data: {
+            labels: labelsPie,
+            datasets: [{ data: dataPie, backgroundColor: palette.pie, borderWidth: 1 }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label(ctx) {
+                    const val = Number(ctx.raw);
+                    const pct = Math.round((val / totalPie) * 1000) / 10;
+                    return ` ${ctx.label}: ${val} (${pct}%)`;
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
+      }
     }
+  } catch (e) {
+    console.error("renderFechamentoDashUI charts:", e);
+    showToast("Os números foram atualizados, mas houve erro ao desenhar os gráficos.", "error");
   }
 }
 
@@ -16009,11 +16040,16 @@ async function loadFechamentoDashSection() {
     populateFechamentoDashOperadorSelect(state.fechamentoDashRows);
     const lim = state.fechamentoDashRows.length >= 3000;
     if (hint) {
+      delete hint.dataset.chartMissing;
       hint.textContent = lim
         ? "Foram retornados até 3.000 registros (limite da API). Refine datas ou unidade se precisar de mais detalhe."
         : `${state.fechamentoDashRows.length} registro(s) carregados. O filtro por operador aplica-se apenas na tela.`;
     }
-    renderFechamentoDashFromCache();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        renderFechamentoDashFromCache();
+      });
+    });
   } catch (err) {
     state.fechamentoDashRows = [];
     populateFechamentoDashOperadorSelect([]);
@@ -16025,6 +16061,8 @@ async function loadFechamentoDashSection() {
 }
 
 function setupFechamentoDashPanel() {
+  if (__fechamentoDashPanelSetup) return;
+  __fechamentoDashPanelSetup = true;
   document.getElementById("fechamentoDashAplicarBtn")?.addEventListener("click", () => {
     loadFechamentoDashSection();
   });
