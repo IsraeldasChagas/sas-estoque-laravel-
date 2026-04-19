@@ -322,7 +322,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -330,7 +330,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -362,7 +362,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -370,7 +370,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -394,7 +394,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechaTecnica", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -402,7 +402,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   FUNCIONARIO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechaTecnica"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -3527,7 +3527,6 @@ function renderProdutosDashboard(lista) {
   }
   
   if (!dom.produtosDashboardTable) {
-    console.warn("dom.produtosDashboardTable não encontrado");
     return;
   }
   
