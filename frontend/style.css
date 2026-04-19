@@ -165,13 +165,13 @@ body.sidebar-open {
   transform: translateX(0);
 }
 
-/* Botao recolher/expandir sidebar - apenas em desktop */
+/* Botao recolher/expandir sidebar — no topo da barra lateral (sempre à vista no desktop) */
 .sidebar-collapse-btn {
   display: none;
   position: absolute;
-  top: 50%;
+  top: 18px;
   right: -14px;
-  transform: translateY(-50%);
+  transform: none;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -181,7 +181,8 @@ body.sidebar-open {
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
-  z-index: 10;
+  z-index: 30;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -192,7 +193,7 @@ body.sidebar-open {
 .sidebar-collapse-btn:hover {
   background: #de4309;
   border-color: #fff;
-  transform: translateY(-50%) scale(1.08);
+  transform: scale(1.08);
 }
 
 .sidebar-collapse-btn:focus-visible {
@@ -5924,20 +5925,6 @@ select[size]:not([size="1"]) {
 
 .recibo-ajuda__painel--collapsed {
   display: none;
-}
-
-/* Faixa no topo: seta de recolher fica sempre à vista ao rolar a auditoria */
-#fechamentoSection .fechamento-audit__sticky-collapse-bar {
-  position: sticky;
-  top: 0;
-  z-index: 25;
-  display: flex;
-  align-items: center;
-  margin: 0 0 0.75rem;
-  padding: 0.35rem 0 0.65rem;
-  background: var(--card-bg);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .fechamento-audit__toggle-principal {
