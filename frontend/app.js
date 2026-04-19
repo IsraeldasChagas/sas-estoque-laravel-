@@ -2817,7 +2817,8 @@ function ensureFinanceiroFechamentoDashNavLink() {
   a.href = "#";
   a.className = "nav-link nav-link-child";
   a.dataset.section = "fechamentoDash";
-  a.textContent = "Dashboard fechamentos";
+  a.title = "Painel só leitura: gráficos, totais por unidade e análise dos fechamentos";
+  a.textContent = "Dashboard — análise fechamentos";
   ref.insertAdjacentElement("afterend", a);
 }
 
