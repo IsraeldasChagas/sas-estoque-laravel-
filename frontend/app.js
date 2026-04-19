@@ -7284,7 +7284,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorio", "logs"
     ]);
 
@@ -7304,6 +7304,9 @@ async function startAppSession(user) {
     const hashSaidaMatch = m && (hash.includes("saida=1") || hash.includes("saida=true")) ? m : null;
     if (hashSaidaMatch) {
       sectionToNavigate = "dashboard";
+    } else if (!isFreshLogin && hash.length > 1) {
+      const raw = hash.slice(1).split(/[?&]/)[0];
+      if (raw && allSections.has(raw)) sectionToNavigate = raw;
     }
 
     navigateTo(sectionToNavigate);
@@ -19049,7 +19052,10 @@ async function init() {
       showToast('⚠️ Para funcionar corretamente, use um servidor HTTP. Execute: cd frontend && php -S localhost:8000', 'error', 10000);
     }, 1000);
   }
-  
+
+  // Sessão já salva no localStorage: sem isto a primeira applyPermissions() roda com currentUser null e o menu fica errado até o fim do init.
+  currentUser = getUser();
+
   applyPermissions();
   setupModals();
   setupNavigation();
