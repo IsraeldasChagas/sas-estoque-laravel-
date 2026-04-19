@@ -2439,20 +2439,22 @@
           <!-- Financeiro - Auditoria fechamento caixa -->
           <section id="fechamentoSection" class="view-section hidden fechamento-audit">
             <input type="hidden" id="fechamentoEdicaoId" value="" />
+            <div class="fechamento-audit__sticky-collapse-bar">
+              <button
+                type="button"
+                class="btn secondary fechamento-audit__toggle-principal"
+                id="fechamentoTogglePrincipalBtn"
+                aria-expanded="true"
+                aria-controls="fechamentoPrincipalPainel"
+                aria-label="Recolher ou expandir dados do fechamento e resumo do mês"
+                title="Recolher painel"
+              >
+                <span class="fechamento-audit__toggle-icon" aria-hidden="true">▼</span>
+              </button>
+            </div>
             <div class="boletos-header">
               <h2>📋 Auditoria fechamento caixa</h2>
               <div class="boletos-actions">
-                <button
-                  type="button"
-                  class="btn secondary fechamento-audit__toggle-principal"
-                  id="fechamentoTogglePrincipalBtn"
-                  aria-expanded="true"
-                  aria-controls="fechamentoPrincipalPainel"
-                  aria-label="Recolher ou expandir dados do fechamento e resumo do mês"
-                  title="Recolher painel"
-                >
-                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">▼</span>
-                </button>
                 <button type="button" class="btn primary" id="fechamentoSalvarBtn">Salvar registro</button>
                 <button type="button" class="btn secondary" id="fechamentoAtualizarHistoricoBtn">Atualizar lista</button>
                 <button type="button" class="btn neutral" id="fechamentoLimparBtn">Limpar conferência</button>

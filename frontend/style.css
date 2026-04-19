@@ -5926,6 +5926,20 @@ select[size]:not([size="1"]) {
   display: none;
 }
 
+/* Faixa no topo: seta de recolher fica sempre à vista ao rolar a auditoria */
+#fechamentoSection .fechamento-audit__sticky-collapse-bar {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  margin: 0 0 0.75rem;
+  padding: 0.35rem 0 0.65rem;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
 .fechamento-audit__toggle-principal {
   min-width: 2.5rem;
   padding-left: 0.65rem;
