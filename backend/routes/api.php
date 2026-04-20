@@ -6673,11 +6673,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     $deBr = \Carbon\Carbon::parse($de)->format('d/m/Y');
     $ateBr = \Carbon\Carbon::parse($ate)->format('d/m/Y');
     $emitido = \Carbon\Carbon::now()->format('d/m/Y H:i');
-    $unidadeLeg = $request->filled('unidade_id') ? $h('Unidade ID ' . (int) $request->query('unidade_id')) : $h('Todas as unidades (API)');
-    $opLeg = $operadorFiltro !== '' ? $h($operadorFiltro) : $h('Todos os operadores');
-    $cardsLeg = $request->has('unidades_cards')
-        ? (trim((string) $cardsRaw) === '' ? $h('Nenhuma unidade marcada (vazio)') : $h('Apenas unidades: ' . trim((string) $cardsRaw)))
-        : $h('Todas (sem filtro “Unidades nos cards”)');
 
     $diasSemPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     $htmlTop3Dias = '';
@@ -6881,8 +6876,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         .pdf-title { font-size: 11pt; color: #1565c0; margin-top: 3px; }
         .pdf-meta { font-size: 7.5pt; color: #546e7a; text-align: right; line-height: 1.35; }
         .sub { text-align: center; font-size: 8pt; color: #666; margin-bottom: 10px; }
-        .filtros-mini { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 7.5pt; }
-        .filtros-mini td { border: 1px solid #e0e0e0; padding: 5px 8px; background: #fafafa; vertical-align: top; width: 33%; }
         .dash-cards { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 0 10px; }
         .dash-card { border: 1px solid #e0e0e0; border-radius: 10px; padding: 8px 10px; background: #eef4f9; vertical-align: top; }
         .dash-card.alert { border-color: #ffcdd2; background: #ffebee; }
@@ -6900,16 +6893,11 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             <td style="width: 120px; text-align: left;">' . $logoImgHtml . '</td>
             <td style="padding-left: 10px;">
                 <div class="pdf-brand">Grupo Sabor Paraense</div>
-                <div class="pdf-title">Dashboard — fechamentos de caixa</div>
+                <div class="pdf-title">Auditoria de fechamento de caixa</div>
             </td>
             <td class="pdf-meta">Emitido em ' . $h($emitido) . '<br/>Período: ' . $h($deBr) . ' a ' . $h($ateBr) . '</td>
         </tr>
     </table>
-    <table class="filtros-mini"><tr>
-        <td><strong>Unidade (API)</strong><br/>' . $unidadeLeg . '</td>
-        <td><strong>Operador</strong><br/>' . $opLeg . '</td>
-        <td><strong>Unidades nos cards</strong><br/>' . $cardsLeg . '</td>
-    </tr></table>
 
     <table class="dash-cards"><tr>
         <td class="dash-card"><div class="dash-card-label">Fechamentos no filtro</div><div class="dash-card-value">' . $cardRegs . '</div></td>
