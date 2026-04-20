@@ -6604,9 +6604,12 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     $sumQuebra = 0.0;
     $sumSobra = 0.0;
     $nSem = 0;
+    $nQuebraRegs = 0;
+    $nSobraRegs = 0;
 
     $porUnidade = [];
     $porDiaPdv = [];
+    $porDiaMaq = [];
 
     foreach ($rows as $r) {
         $pdv = $totPdvLinha($r);
@@ -6619,8 +6622,10 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             $nSem++;
         } elseif ($sit === 'quebra') {
             $sumQuebra += abs($saldo);
+            $nQuebraRegs++;
         } else {
             $sumSobra += $saldo;
+            $nSobraRegs++;
         }
 
         $uid = (int) ($r->unidade_id ?? 0);
@@ -6647,6 +6652,10 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             }
             $porDiaPdv[$dia]['pdv'] += $pdv;
             $porDiaPdv[$dia]['n']++;
+            if (!isset($porDiaMaq[$dia])) {
+                $porDiaMaq[$dia] = 0.0;
+            }
+            $porDiaMaq[$dia] = round($porDiaMaq[$dia] + $maq, 2);
         }
     }
 
@@ -6692,18 +6701,207 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         $htmlPorUnidade = '<tr><td colspan="7" style="text-align:center;color:#666">Nenhum registro no período/filtro.</td></tr>';
     }
 
-    $htmlTop3 = '';
+    $diasSemPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    $htmlTop3Dias = '';
     $rank = 1;
     foreach ($top3Dias as $diaIso => $info) {
-        $diaFmt = \Carbon\Carbon::parse($diaIso)->format('d/m/Y');
-        $htmlTop3 .= '<tr><td>' . $h((string) $rank . 'º') . '</td><td>' . $h($diaFmt) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($info['pdv'])) . '</td>'
-            . '<td style="text-align:right">' . $h((string) $info['n']) . '</td></tr>';
+        $cDia = \Carbon\Carbon::parse($diaIso);
+        $diaComSemana = $h($diasSemPt[$cDia->dayOfWeek] . ' ' . $cDia->format('d/m/Y'));
+        $valorPdv = $h($fmt($info['pdv']));
+        $nRegsDia = $h((string) $info['n']);
+        $ord = $h((string) $rank . 'º');
+        $htmlTop3Dias .= '<td width="33.33%" style="padding:4px;vertical-align:top;">'
+            . '<div style="border:1px solid #e0e0e0;border-radius:12px;padding:12px 10px;background:#f5f9fc;text-align:center;min-height:118px;">'
+            . '<div style="font-size:17pt;font-weight:bold;color:#1565c0;line-height:1;">' . $ord . '</div>'
+            . '<div style="font-size:8.5pt;color:#455a64;margin:8px 0 4px;">' . $diaComSemana . '</div>'
+            . '<div style="font-size:12pt;font-weight:bold;color:#1a237e;">' . $valorPdv . '</div>'
+            . '<div style="font-size:7pt;color:#607d8b;text-transform:uppercase;margin-top:2px;">em PDV</div>'
+            . '<div style="font-size:8pt;color:#546e7a;margin-top:8px;">' . $nRegsDia . ' fechamento(s) neste dia</div>'
+            . '</div></td>';
         $rank++;
     }
-    if ($htmlTop3 === '') {
-        $htmlTop3 = '<tr><td colspan="4" style="text-align:center;color:#666">—</td></tr>';
+    while ($rank <= 3) {
+        $htmlTop3Dias .= '<td width="33.33%" style="padding:4px;vertical-align:top;">'
+            . '<div style="border:1px dashed #cfd8dc;border-radius:12px;padding:12px;text-align:center;color:#90a4ae;font-size:8pt;min-height:118px;">—</div></td>';
+        $rank++;
     }
+
+    $unitsRank = array_values($porUnidade);
+    usort($unitsRank, function ($a, $b) {
+        if (abs($a['pdv'] - $b['pdv']) < 0.0001) {
+            return $b['n'] <=> $a['n'];
+        }
+
+        return $b['pdv'] <=> $a['pdv'];
+    });
+    $top3Unid = [];
+    foreach ($unitsRank as $u) {
+        if ($u['pdv'] > 0.005) {
+            $top3Unid[] = $u;
+        }
+        if (count($top3Unid) >= 3) {
+            break;
+        }
+    }
+
+    $linePts = [];
+    $c0 = \Carbon\Carbon::parse($de)->startOfDay();
+    $c1 = \Carbon\Carbon::parse($ate)->startOfDay();
+    for ($c = $c0->copy(); $c->lte($c1); $c->addDay()) {
+        $k = $c->format('Y-m-d');
+        $linePts[] = ['d' => $k, 'v' => (float) ($porDiaMaq[$k] ?? 0)];
+    }
+
+    $Wbar = 268;
+    $Hbar = 188;
+    $svgBar = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $Wbar . '" height="' . $Hbar . '" viewBox="0 0 ' . $Wbar . ' ' . $Hbar . '">';
+    $svgBar .= '<text x="' . ($Wbar / 2) . '" y="13" text-anchor="middle" font-size="9" fill="#37474f" font-weight="bold">Top 3 unidades — PDV (R$)</text>';
+    if (count($top3Unid) === 0) {
+        $svgBar .= '<text x="' . ($Wbar / 2) . '" y="' . ($Hbar / 2) . '" text-anchor="middle" font-size="9" fill="#90a4ae">Sem dados no filtro</text>';
+    } else {
+        $left = 38;
+        $right = 10;
+        $top = 28;
+        $bottom = 40;
+        $plotW = $Wbar - $left - $right;
+        $plotH = $Hbar - $top - $bottom;
+        $maxV = 0.01;
+        foreach ($top3Unid as $uu) {
+            $maxV = max($maxV, $uu['pdv']);
+        }
+        $nb = count($top3Unid);
+        $gap = 14;
+        $bw = ($plotW - $gap * ($nb - 1)) / $nb;
+        $colorsBar = ['#1565c0', '#2e7d32', '#ef6c00'];
+        foreach ($top3Unid as $i => $uu) {
+            $hBar = ($uu['pdv'] / $maxV) * $plotH;
+            $x = $left + $i * ($bw + $gap);
+            $y = $top + $plotH - $hBar;
+            $svgBar .= sprintf(
+                '<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f" fill="%s" rx="5"/>',
+                $x,
+                $y,
+                $bw,
+                max(1, $hBar),
+                $colorsBar[$i % 3]
+            );
+            $lab = $uu['nome'];
+            if (function_exists('mb_substr')) {
+                $lab = mb_substr($lab, 0, 14);
+            } else {
+                $lab = substr($lab, 0, 14);
+            }
+            $svgBar .= '<text x="' . ($x + $bw / 2) . '" y="' . ($Hbar - 22) . '" text-anchor="middle" font-size="7" fill="#455a64">' . $h($lab) . '</text>';
+            $svgBar .= '<text x="' . ($x + $bw / 2) . '" y="' . ($Hbar - 10) . '" text-anchor="middle" font-size="7" fill="#1a237e" font-weight="bold">' . $h($fmt($uu['pdv'])) . '</text>';
+        }
+    }
+    $svgBar .= '</svg>';
+
+    $Wline = 360;
+    $Hline = 200;
+    $svgLine = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $Wline . '" height="' . $Hline . '" viewBox="0 0 ' . $Wline . ' ' . $Hline . '">';
+    $svgLine .= '<text x="' . ($Wline / 2) . '" y="13" text-anchor="middle" font-size="9" fill="#37474f" font-weight="bold">Evolução diária — maquinha (R$)</text>';
+    $nPts = count($linePts);
+    if ($nPts === 0) {
+        $svgLine .= '<text x="' . ($Wline / 2) . '" y="' . ($Hline / 2) . '" text-anchor="middle" font-size="9" fill="#90a4ae">Sem período</text>';
+    } else {
+        $lpL = 46;
+        $lpR = 12;
+        $lpT = 30;
+        $lpB = 46;
+        $lpW = $Wline - $lpL - $lpR;
+        $lpH = $Hline - $lpT - $lpB;
+        $maxM = 0.01;
+        foreach ($linePts as $p) {
+            $maxM = max($maxM, $p['v']);
+        }
+        $ptsStr = '';
+        foreach ($linePts as $ix => $p) {
+            $px = $lpL + ($nPts <= 1 ? $lpW / 2 : ($ix / max(1, $nPts - 1)) * $lpW);
+            $py = $lpT + $lpH - ($p['v'] / $maxM) * $lpH;
+            $ptsStr .= ($ix ? ' ' : '') . round($px, 2) . ',' . round($py, 2);
+        }
+        if ($nPts === 1) {
+            $p0 = $linePts[0];
+            $pxm = $lpL + $lpW / 2;
+            $py0 = $lpT + $lpH - ($p0['v'] / $maxM) * $lpH;
+            $ptsStr = round($pxm - min(40, $lpW / 3), 2) . ',' . round($py0, 2) . ' ' . round($pxm + min(40, $lpW / 3), 2) . ',' . round($py0, 2);
+        }
+        $svgLine .= '<polyline fill="none" stroke="#1565c0" stroke-width="1.8" points="' . $ptsStr . '" />';
+        $stepLbl = $nPts <= 8 ? 1 : (int) max(1, floor($nPts / 7));
+        foreach ($linePts as $ix => $p) {
+            if ($ix % $stepLbl !== 0 && $ix !== $nPts - 1) {
+                continue;
+            }
+            $cPt = \Carbon\Carbon::parse($p['d']);
+            $lbl = $cPt->format('d/m');
+            $px = $lpL + ($nPts <= 1 ? $lpW / 2 : ($ix / max(1, $nPts - 1)) * $lpW);
+            $svgLine .= '<text x="' . round($px, 2) . '" y="' . ($Hline - 12) . '" text-anchor="middle" font-size="6.5" fill="#607d8b">' . $h($lbl) . '</text>';
+        }
+        $svgLine .= '<text x="8" y="' . ($lpT + 8) . '" font-size="7" fill="#78909c">' . $h($fmt($maxM)) . '</text>';
+        $svgLine .= '<text x="8" y="' . ($lpT + $lpH) . '" font-size="7" fill="#78909c">0</text>';
+    }
+    $svgLine .= '</svg>';
+
+    $cx = 92;
+    $cy = 108;
+    $ro = 62;
+    $ri = 34;
+    $totalPie = $nSem + $nQuebraRegs + $nSobraRegs;
+    $svgPie = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="210" viewBox="0 0 200 210">';
+    $svgPie .= '<text x="100" y="14" text-anchor="middle" font-size="9" fill="#37474f" font-weight="bold">Situação (% registros)</text>';
+    if ($totalPie < 1) {
+        $svgPie .= '<text x="100" y="115" text-anchor="middle" font-size="9" fill="#90a4ae">Sem dados</text>';
+    } else {
+        $partsPie = [
+            [$nSem, '#546e7a'],
+            [$nQuebraRegs, '#c62828'],
+            [$nSobraRegs, '#2e7d32'],
+        ];
+        $startDeg = 0.0;
+        foreach ($partsPie as $seg) {
+            [$cnt, $col] = $seg;
+            if ($cnt <= 0) {
+                continue;
+            }
+            $span = ($cnt / $totalPie) * 360.0;
+            $endDeg = $startDeg + $span;
+            $a0 = deg2rad($startDeg - 90);
+            $a1 = deg2rad($endDeg - 90);
+            $x0 = $cx + $ro * cos($a0);
+            $y0 = $cy + $ro * sin($a0);
+            $x1 = $cx + $ro * cos($a1);
+            $y1 = $cy + $ro * sin($a1);
+            $large = ($span > 180) ? 1 : 0;
+            $dPie = sprintf(
+                'M %.2f %.2f L %.2f %.2f A %.2f %.2f 0 %d 1 %.2f %.2f Z',
+                $cx,
+                $cy,
+                $x0,
+                $y0,
+                $ro,
+                $ro,
+                $large,
+                $x1,
+                $y1
+            );
+            $svgPie .= '<path d="' . $dPie . '" fill="' . $col . '" stroke="#ffffff" stroke-width="0.9"/>';
+            $startDeg = $endDeg;
+        }
+        $svgPie .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $ri . '" fill="#ffffff" stroke="#eceff1" stroke-width="0.7"/>';
+    }
+    $pctSemPie = $totalPie > 0 ? round(($nSem / $totalPie) * 1000) / 10 : 0;
+    $pctQPie = $totalPie > 0 ? round(($nQuebraRegs / $totalPie) * 1000) / 10 : 0;
+    $pctSPie = $totalPie > 0 ? round(($nSobraRegs / $totalPie) * 1000) / 10 : 0;
+    $svgPie .= '<text x="100" y="198" text-anchor="middle" font-size="6.5" fill="#546e7a">Sem dif.: ' . $h((string) $pctSemPie) . '% · Quebra: ' . $h((string) $pctQPie) . '% · Sobra: ' . $h((string) $pctSPie) . '%</text>';
+    $svgPie .= '</svg>';
+
+    $pctSemTxt = $h($pctSem . '% (' . $nSem . ' reg.)');
+    $cardRegs = $h((string) $n);
+    $cardMaq = $h($fmt($sumMaq));
+    $cardPdv = $h($fmt($sumPdv));
+    $cardQ = $h($fmt($sumQuebra));
+    $cardS = $h($fmt($sumSobra));
 
     $detalheMax = 300;
     $detRows = $rows->take($detalheMax);
@@ -6732,34 +6930,52 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         : '';
 
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 16px; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 12px 14px; }
         h1 { font-size: 14pt; text-align: center; margin: 0 0 4px; color: #1565c0; }
-        .sub { text-align: center; font-size: 8pt; color: #666; margin-bottom: 12px; }
-        .resumo { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
-        .resumo th, .resumo td { border: 1px solid #ccc; padding: 6px 8px; }
-        .resumo th { background: #e3f2fd; text-align: left; width: 42%; }
-        table.data { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 8pt; }
-        table.data th, table.data td { border: 1px solid #ccc; padding: 4px 5px; }
+        .sub { text-align: center; font-size: 8pt; color: #666; margin-bottom: 10px; }
+        .filtros-mini { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 7.5pt; }
+        .filtros-mini td { border: 1px solid #e0e0e0; padding: 5px 8px; background: #fafafa; vertical-align: top; width: 33%; }
+        .dash-cards { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 0 10px; }
+        .dash-card { border: 1px solid #e0e0e0; border-radius: 10px; padding: 8px 10px; background: #eef4f9; vertical-align: top; }
+        .dash-card.alert { border-color: #ffcdd2; background: #ffebee; }
+        .dash-card.ok { border-color: #c8e6c9; background: #e8f5e9; }
+        .dash-card-label { font-size: 7pt; color: #607d8b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.03em; }
+        .dash-card-value { font-size: 12pt; font-weight: bold; color: #1a237e; margin-top: 3px; }
+        .chart-wrap { border: 1px solid #e0e0e0; border-radius: 10px; padding: 8px 6px 6px; background: #fff; text-align: center; }
+        .charts-row { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 0 12px; }
+        .charts-row td { width: 33%; vertical-align: top; }
+        h2 { font-size: 10.5pt; margin: 12px 0 6px; color: #37474f; border-bottom: 1px solid #e3f2fd; padding-bottom: 3px; }
+        table.data { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 7.5pt; }
+        table.data th, table.data td { border: 1px solid #ccc; padding: 3px 4px; }
         table.data th { background: #f0f0f0; }
-        h2 { font-size: 11pt; margin: 14px 0 6px; color: #333; }
-        .rod { margin-top: 14px; font-size: 7pt; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
+        .rod { margin-top: 12px; font-size: 7pt; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
     </style></head><body>
     <h1>Dashboard — fechamentos de caixa</h1>
     <div class="sub">Emitido em ' . $h($emitido) . ' · Período: ' . $h($deBr) . ' a ' . $h($ateBr) . '</div>
-    <table class="resumo">
-        <tr><th>Unidade (filtro API)</th><td>' . $unidadeLeg . '</td></tr>
-        <tr><th>Operador (filtro tela)</th><td>' . $opLeg . '</td></tr>
-        <tr><th>Unidades nos cards</th><td>' . $cardsLeg . '</td></tr>
-        <tr><th>Fechamentos no filtro</th><td>' . $h((string) $n) . '</td></tr>
-        <tr><th>Total maquinha</th><td>' . $h($fmt($sumMaq)) . '</td></tr>
-        <tr><th>Total PDV</th><td>' . $h($fmt($sumPdv)) . '</td></tr>
-        <tr><th>Soma quebras (R$)</th><td>' . $h($fmt($sumQuebra)) . '</td></tr>
-        <tr><th>Soma sobras (R$)</th><td>' . $h($fmt($sumSobra)) . '</td></tr>
-        <tr><th>Sem diferença líquida</th><td>' . $h($pctSem . '% (' . $nSem . ' reg.)') . '</td></tr>
-    </table>
+    <table class="filtros-mini"><tr>
+        <td><strong>Unidade (API)</strong><br/>' . $unidadeLeg . '</td>
+        <td><strong>Operador</strong><br/>' . $opLeg . '</td>
+        <td><strong>Unidades nos cards</strong><br/>' . $cardsLeg . '</td>
+    </tr></table>
 
-    <h2>Ranking — 3 dias com maior PDV</h2>
-    <table class="data"><thead><tr><th>#</th><th>Data</th><th>Total PDV</th><th>Fechamentos</th></tr></thead><tbody>' . $htmlTop3 . '</tbody></table>
+    <table class="dash-cards"><tr>
+        <td class="dash-card"><div class="dash-card-label">Fechamentos no filtro</div><div class="dash-card-value">' . $cardRegs . '</div></td>
+        <td class="dash-card"><div class="dash-card-label">Total maquinha (R$)</div><div class="dash-card-value">' . $cardMaq . '</div></td>
+        <td class="dash-card"><div class="dash-card-label">Total PDV (R$)</div><div class="dash-card-value">' . $cardPdv . '</div></td>
+    </tr><tr>
+        <td class="dash-card alert"><div class="dash-card-label">Soma quebras (R$)</div><div class="dash-card-value">' . $cardQ . '</div></td>
+        <td class="dash-card ok"><div class="dash-card-label">Soma sobras (R$)</div><div class="dash-card-value">' . $cardS . '</div></td>
+        <td class="dash-card"><div class="dash-card-label">Sem diferença líquida</div><div class="dash-card-value">' . $pctSemTxt . '</div></td>
+    </tr></table>
+
+    <table class="charts-row"><tr>
+        <td><div class="chart-wrap">' . $svgBar . '</div></td>
+        <td><div class="chart-wrap">' . $svgLine . '</div></td>
+        <td><div class="chart-wrap">' . $svgPie . '</div></td>
+    </tr></table>
+
+    <h2>Ranking — 3 dias com maior venda (PDV)</h2>
+    <table width="100%" style="border-collapse:separate;border-spacing:4px;margin:0 0 10px;"><tr>' . $htmlTop3Dias . '</tr></table>
 
     <h2>Resumo por unidade</h2>
     <table class="data"><thead><tr><th>Unidade</th><th>Regs</th><th>PDV</th><th>Maquinha</th><th>Quebras</th><th>Sobras</th><th>% sem dif.</th></tr></thead><tbody>'
@@ -6779,7 +6995,7 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         $options->set('isHtml5ParserEnabled', true);
         $dompdf->setOptions($options);
         $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
         $pdfOutput = $dompdf->output();
         $fn = 'dashboard-fechamentos-caixa-' . preg_replace('/[^0-9-]/', '', $de) . '-' . preg_replace('/[^0-9-]/', '', $ate) . '.pdf';
