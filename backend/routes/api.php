@@ -6683,24 +6683,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         ? (trim((string) $cardsRaw) === '' ? $h('Nenhuma unidade marcada (vazio)') : $h('Apenas unidades: ' . trim((string) $cardsRaw)))
         : $h('Todas (sem filtro “Unidades nos cards”)');
 
-    $htmlPorUnidade = '';
-    foreach ($porUnidade as $bl) {
-        $nn = (int) $bl['n'];
-        $pctU = $nn > 0 ? (round(($bl['sem'] / $nn) * 1000) / 10) : 0.0;
-        $htmlPorUnidade .= '<tr>'
-            . '<td>' . $h($bl['nome']) . '</td>'
-            . '<td style="text-align:right">' . $h((string) $bl['n']) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($bl['pdv'])) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($bl['maq'])) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($bl['q'])) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($bl['s'])) . '</td>'
-            . '<td style="text-align:right">' . $h($pctU . '%') . '</td>'
-            . '</tr>';
-    }
-    if ($htmlPorUnidade === '') {
-        $htmlPorUnidade = '<tr><td colspan="7" style="text-align:center;color:#666">Nenhum registro no período/filtro.</td></tr>';
-    }
-
     $diasSemPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     $htmlTop3Dias = '';
     $rank = 1;
@@ -6976,10 +6958,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
 
     <h2>Ranking — 3 dias com maior venda (PDV)</h2>
     <table width="100%" style="border-collapse:separate;border-spacing:4px;margin:0 0 10px;"><tr>' . $htmlTop3Dias . '</tr></table>
-
-    <h2>Resumo por unidade</h2>
-    <table class="data"><thead><tr><th>Unidade</th><th>Regs</th><th>PDV</th><th>Maquinha</th><th>Quebras</th><th>Sobras</th><th>% sem dif.</th></tr></thead><tbody>'
-        . $htmlPorUnidade . '</tbody></table>
 
     <h2>Detalhe dos fechamentos</h2>
     <table class="data"><thead><tr><th>ID</th><th>Data</th><th>Unidade</th><th>Operador</th><th>PDV</th><th>Maquinha</th><th>Saldo líq.</th><th>Situação</th></tr></thead><tbody>'
