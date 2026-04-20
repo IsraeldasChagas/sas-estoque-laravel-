@@ -6748,27 +6748,27 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         }
         $nome = $uu['nome'];
         if (function_exists('mb_substr')) {
-            $nome = mb_substr($nome, 0, 42);
+            $nome = mb_substr($nome, 0, 30);
         } else {
-            $nome = substr($nome, 0, 42);
+            $nome = substr($nome, 0, 30);
         }
         $barCells = $restPct > 0
-            ? '<td width="' . $h((string) $pctDisp) . '%" bgcolor="#1565c0" style="height:14px;font-size:1px;line-height:14px;">&#160;</td>'
-                . '<td width="' . $h((string) $restPct) . '%" bgcolor="#eceff1" style="height:14px;font-size:1px;line-height:14px;">&#160;</td>'
-            : '<td bgcolor="#1565c0" style="height:14px;font-size:1px;line-height:14px;width:100%;">&#160;</td>';
+            ? '<td width="' . $h((string) $pctDisp) . '%" bgcolor="#1565c0" style="height:12px;font-size:1px;line-height:12px;">&#160;</td>'
+                . '<td width="' . $h((string) $restPct) . '%" bgcolor="#eceff1" style="height:12px;font-size:1px;line-height:12px;">&#160;</td>'
+            : '<td bgcolor="#1565c0" style="height:12px;font-size:1px;line-height:12px;width:100%;">&#160;</td>';
         $htmlBarUnidadesBody .= '<tr>'
-            . '<td style="padding:4px 8px 4px 0;vertical-align:middle;border-bottom:1px solid #eceff1;width:30%;font-size:8pt;color:#37474f;">' . $h($nome) . '</td>'
-            . '<td style="padding:4px 0;border-bottom:1px solid #eceff1;vertical-align:middle;">'
-            . '<table width="100%" cellpadding="0" cellspacing="0"><tr>' . $barCells . '</tr></table></td>'
-            . '<td style="padding:4px 0 4px 8px;vertical-align:middle;border-bottom:1px solid #eceff1;font-size:8pt;font-weight:bold;color:#1a237e;width:20%;white-space:nowrap;">' . $h($fmt($uu['pdv'])) . '</td>'
+            . '<td class="pdf-uni-name">' . $h($nome) . '</td>'
+            . '<td class="pdf-uni-bar"><table width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;"><tr>' . $barCells . '</tr></table></td>'
+            . '<td class="pdf-uni-val">' . $h($fmt($uu['pdv'])) . '</td>'
             . '</tr>';
         $unitRows++;
     }
     if ($htmlBarUnidadesBody === '') {
         $htmlBarUnidadesBody = '<tr><td colspan="3" style="padding:10px;color:#90a4ae;font-size:9pt;">Sem vendas PDV por unidade no filtro.</td></tr>';
     }
-    $htmlBarUnidades = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 6px;">Vendas PDV por unidade (R$)</div>'
-        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">' . $htmlBarUnidadesBody . '</table>';
+    $htmlBarUnidades = '<div class="pdf-chart-title">Vendas PDV por unidade (R$)</div>'
+        . '<table class="pdf-uni-tbl" width="100%" cellpadding="0" cellspacing="0"><colgroup><col style="width:26%" /><col style="width:48%" /><col style="width:26%" /></colgroup>'
+        . $htmlBarUnidadesBody . '</table>';
 
     $linePts = [];
     $c0 = \Carbon\Carbon::parse($de)->startOfDay();
@@ -6780,7 +6780,7 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
 
     $lineDisp = $linePts;
     $nL = count($lineDisp);
-    $maxColsMaq = 28;
+    $maxColsMaq = 16;
     if ($nL > $maxColsMaq) {
         $step = (int) ceil($nL / $maxColsMaq);
         $tmp = [];
@@ -6796,26 +6796,23 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     foreach ($lineDisp as $p) {
         $maxMLine = max($maxMLine, $p['v']);
     }
-    $barH = 120;
+    $barH = 100;
     $nD = count($lineDisp);
-    $showValsAbove = $nD <= 24;
-    $htmlLineMaq = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 4px;">Evolução diária — maquinha (R$)</div>';
-    $htmlLineMaq .= '<p style="font-size:7.5pt;color:#546e7a;margin:0 0 8px;line-height:1.4;">'
-        . 'Cada coluna é um dia: as <strong>barras sobem de baixo para cima</strong> (linha cinza = zero); a altura azul = total da maquinha naquele dia. '
-        . '<strong>Teto:</strong> ' . $h($fmt($maxMLine)) . '.</p>';
-    $htmlLineMaq .= '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #b0bec5;border-radius:8px;background:#fafafa;border-collapse:collapse;">';
+    $showValsAbove = $nD <= 12;
+    $htmlLineMaq = '<div class="pdf-chart-title">Evolução diária — maquinha (R$)</div>';
+    $htmlLineMaq .= '<p class="pdf-chart-desc">Barras de baixo para cima; linha escura = zero. <strong>Teto:</strong> ' . $h($fmt($maxMLine)) . '.</p>';
+    $htmlLineMaq .= '<table class="pdf-maq-outer" width="100%" cellpadding="0" cellspacing="0">';
     if ($nD === 0) {
         $htmlLineMaq .= '<tr><td style="padding:14px;color:#90a4ae;font-size:9pt;">Sem período</td></tr>';
     } else {
-        $htmlLineMaq .= '<tr style="background:#eceff1;">'
-            . '<td colspan="' . (string) $nD . '" style="padding:5px 10px;font-size:7.5pt;color:#37474f;text-align:center;border-bottom:1px solid #cfd8dc;">'
-            . '<strong>Eixo</strong> · 0 &nbsp;·&nbsp; ' . $h($fmt($maxMLine / 2)) . ' (metade) &nbsp;·&nbsp; ' . $h($fmt($maxMLine)) . ' (máximo)'
+        $htmlLineMaq .= '<tr style="background:#eceff1;"><td colspan="' . (string) $nD . '" class="pdf-maq-axis">'
+            . '<strong>Escala</strong> · 0 · ' . $h($fmt($maxMLine / 2)) . ' · ' . $h($fmt($maxMLine))
             . '</td></tr>';
+        $wcolPct = round(100 / max(1, $nD), 3);
         $htmlLineMaq .= '<tr>';
-        $wcol = round(100 / max(1, $nD), 2);
         $ixMaq = 0;
         foreach ($lineDisp as $p) {
-            $vh = $maxMLine > 0 ? max(4, (int) round($p['v'] / $maxMLine * $barH)) : 4;
+            $vh = $maxMLine > 0 ? max(3, (int) round($p['v'] / $maxMLine * $barH)) : 3;
             if ($vh > $barH) {
                 $vh = $barH;
             }
@@ -6824,18 +6821,18 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             $dow = $diasSemPt[$dObj->dayOfWeek];
             $dm = $dObj->format('d/m');
             $valBlock = $showValsAbove
-                ? '<div style="font-size:6.5pt;font-weight:bold;color:#0d47a1;line-height:1.2;padding:0 2px 4px;min-height:24px;">' . $h($fmt($p['v'])) . '</div>'
-                : '<div style="min-height:20px;">&#160;</div>';
+                ? '<div class="pdf-maq-val">' . $h($fmt($p['v'])) . '</div>'
+                : '<div class="pdf-maq-val-sp">&#160;</div>';
             $leftBd = $ixMaq > 0 ? 'border-left:1px solid #e0e0e0;' : '';
             $ixMaq++;
-            $htmlLineMaq .= '<td align="center" style="width:' . $h((string) $wcol) . '%;padding:8px 4px 10px;vertical-align:top;' . $leftBd . 'background:#ffffff;">'
+            $htmlLineMaq .= '<td class="pdf-maq-cell" style="width:' . $h((string) $wcolPct) . '%;' . $leftBd . '">'
                 . $valBlock
-                . '<table cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;border-collapse:collapse;border-bottom:2px solid #37474f;width:24px;">'
-                . '<tr><td style="height:' . (string) $spacerH . 'px;font-size:1px;line-height:1px;background:#f1f5f9;">&#160;</td></tr>'
-                . '<tr><td align="center" bgcolor="#1565c0" style="height:' . (string) $vh . 'px;font-size:1px;line-height:1px;border-left:1px solid #0d47a1;border-right:1px solid #0d47a1;border-top:1px solid #0d47a1;border-radius:3px 3px 0 0;">&#160;</td></tr>'
+                . '<table class="pdf-maq-barwrap" cellpadding="0" cellspacing="0" align="center">'
+                . '<tr><td class="pdf-maq-spacer" style="height:' . (string) $spacerH . 'px;">&#160;</td></tr>'
+                . '<tr><td class="pdf-maq-bar" style="height:' . (string) $vh . 'px;">&#160;</td></tr>'
                 . '</table>'
-                . '<div style="font-size:7.5pt;color:#263238;margin-top:8px;font-weight:bold;line-height:1.2;">' . $h($dow) . '</div>'
-                . '<div style="font-size:7pt;color:#546e7a;">' . $h($dm) . '</div>'
+                . '<div class="pdf-maq-dow">' . $h($dow) . '</div>'
+                . '<div class="pdf-maq-dm">' . $h($dm) . '</div>'
                 . '</td>';
         }
         $htmlLineMaq .= '</tr>';
@@ -6846,7 +6843,7 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     $pctSemPie = $totalPie > 0 ? round(($nSem / $totalPie) * 1000) / 10 : 0;
     $pctQPie = $totalPie > 0 ? round(($nQuebraRegs / $totalPie) * 1000) / 10 : 0;
     $pctSPie = $totalPie > 0 ? round(($nSobraRegs / $totalPie) * 1000) / 10 : 0;
-    $htmlSituacao = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 6px;">Situação (registros)</div>';
+    $htmlSituacao = '<div class="pdf-chart-title">Situação (registros)</div>';
     if ($totalPie < 1) {
         $htmlSituacao .= '<p style="color:#90a4ae;font-size:9pt;margin:8px 0;">Sem dados.</p>';
     } else {
@@ -6882,7 +6879,23 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         .dash-card.ok { border-color: #c8e6c9; background: #e8f5e9; }
         .dash-card-label { font-size: 7pt; color: #607d8b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.03em; }
         .dash-card-value { font-size: 12pt; font-weight: bold; color: #1a237e; margin-top: 3px; }
-        .chart-wrap { border: 1px solid #e0e0e0; border-radius: 10px; padding: 8px 6px 6px; background: #fff; text-align: center; }
+        .chart-wrap { border: 1px solid #e0e0e0; border-radius: 10px; padding: 6px 5px 5px; background: #fff; text-align: center; max-width: 100%; overflow: hidden; box-sizing: border-box; }
+        .pdf-chart-title { font-size: 9pt; font-weight: bold; color: #37474f; margin: 2px 0 4px; text-align: left; }
+        .pdf-chart-desc { font-size: 7pt; color: #546e7a; margin: 0 0 6px; line-height: 1.35; text-align: left; }
+        .pdf-uni-tbl { table-layout: fixed; width: 100%; border-collapse: collapse; }
+        .pdf-uni-name { padding: 3px 6px 3px 0; vertical-align: middle; border-bottom: 1px solid #eceff1; font-size: 7pt; color: #37474f; overflow: hidden; word-wrap: break-word; }
+        .pdf-uni-bar { padding: 3px 2px; vertical-align: middle; border-bottom: 1px solid #eceff1; overflow: hidden; }
+        .pdf-uni-val { padding: 3px 0 3px 4px; vertical-align: middle; border-bottom: 1px solid #eceff1; font-size: 7pt; font-weight: bold; color: #1a237e; text-align: right; word-wrap: break-word; overflow: hidden; }
+        .pdf-maq-outer { table-layout: fixed; width: 100%; border-collapse: collapse; border: 1px solid #b0bec5; border-radius: 8px; background: #fafafa; }
+        .pdf-maq-axis { padding: 4px 6px; font-size: 6.5pt; color: #37474f; text-align: center; border-bottom: 1px solid #cfd8dc; word-wrap: break-word; }
+        .pdf-maq-cell { padding: 3px 1px 5px; vertical-align: top; text-align: center; background: #ffffff; overflow: hidden; box-sizing: border-box; }
+        .pdf-maq-val { font-size: 5.5pt; font-weight: bold; color: #0d47a1; line-height: 1.1; padding: 0 1px 2px; min-height: 14px; word-wrap: break-word; overflow: hidden; }
+        .pdf-maq-val-sp { min-height: 12px; font-size: 1px; line-height: 1px; }
+        .pdf-maq-barwrap { width: 10px; margin: 0 auto; border-collapse: collapse; border-bottom: 2px solid #37474f; table-layout: fixed; }
+        .pdf-maq-spacer { font-size: 1px; line-height: 1px; background: #f1f5f9; }
+        .pdf-maq-bar { font-size: 1px; line-height: 1px; background: #1565c0; border: 1px solid #0d47a1; border-bottom: none; border-radius: 2px 2px 0 0; }
+        .pdf-maq-dow { font-size: 6pt; color: #263238; margin-top: 4px; font-weight: bold; line-height: 1.1; word-wrap: break-word; }
+        .pdf-maq-dm { font-size: 5.5pt; color: #546e7a; line-height: 1.1; }
         .charts-row { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 0 12px; }
         .charts-row td { vertical-align: top; }
         h2 { font-size: 10.5pt; margin: 12px 0 6px; color: #37474f; border-bottom: 1px solid #e3f2fd; padding-bottom: 3px; }
@@ -6910,11 +6923,9 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     </tr></table>
 
     <table class="charts-row" width="100%">
-        <tr><td colspan="2" style="padding-bottom: 8px;"><div class="chart-wrap">' . $htmlBarUnidades . '</div></td></tr>
-        <tr>
-            <td style="width: 68%; padding-right: 6px; vertical-align: top;"><div class="chart-wrap">' . $htmlLineMaq . '</div></td>
-            <td style="width: 32%; vertical-align: top;"><div class="chart-wrap">' . $htmlSituacao . '</div></td>
-        </tr>
+        <tr><td colspan="2" style="padding-bottom: 6px;"><div class="chart-wrap">' . $htmlBarUnidades . '</div></td></tr>
+        <tr><td colspan="2" style="padding-bottom: 6px;"><div class="chart-wrap">' . $htmlLineMaq . '</div></td></tr>
+        <tr><td colspan="2"><div class="chart-wrap" style="max-width: 520px; margin: 0 auto;">' . $htmlSituacao . '</div></td></tr>
     </table>
 
     <h2>Ranking — 3 dias com maior venda (PDV)</h2>
