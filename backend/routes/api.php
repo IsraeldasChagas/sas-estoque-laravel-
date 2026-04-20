@@ -6594,10 +6594,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         return 'quebra';
     };
 
-    $sitLabel = function ($s) {
-        return $s === 'sem' ? 'Sem dif. líquida' : ($s === 'sobra' ? 'Sobra' : 'Quebra');
-    };
-
     $n = $rows->count();
     $sumMaq = 0.0;
     $sumPdv = 0.0;
@@ -6850,32 +6846,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     $cardQ = $h($fmt($sumQuebra));
     $cardS = $h($fmt($sumSobra));
 
-    $detalheMax = 300;
-    $detRows = $rows->take($detalheMax);
-    $htmlDet = '';
-    foreach ($detRows as $r) {
-        $pdv = $totPdvLinha($r);
-        $maq = $totMaqLinha($r);
-        $sit = $situation($r);
-        $dataBr = $r->data_fechamento ? \Carbon\Carbon::parse($r->data_fechamento)->format('d/m/Y') : '—';
-        $htmlDet .= '<tr>'
-            . '<td style="text-align:right">' . $h((string) $r->id) . '</td>'
-            . '<td>' . $h($dataBr) . '</td>'
-            . '<td>' . $h($r->unidade_nome ?? '—') . '</td>'
-            . '<td>' . $h($r->operador_nome ?? '—') . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($pdv)) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($maq)) . '</td>'
-            . '<td style="text-align:right">' . $h($fmt($r->saldo_liquido ?? 0)) . '</td>'
-            . '<td>' . $h($sitLabel($sit)) . '</td>'
-            . '</tr>';
-    }
-    if ($htmlDet === '') {
-        $htmlDet = '<tr><td colspan="8" style="text-align:center;color:#666">Nenhum registro.</td></tr>';
-    }
-    $notaDet = $n > $detalheMax
-        ? '<p class="sub" style="margin-top:6px"><strong>Nota:</strong> tabela detalhada limitada aos ' . $h((string) $detalheMax) . ' registros mais recentes de ' . $h((string) $n) . ' no filtro.</p>'
-        : '';
-
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 12px 14px; }
         .pdf-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-bottom: 2px solid #1565c0; padding-bottom: 10px; }
@@ -6896,9 +6866,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         .charts-row { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 0 12px; }
         .charts-row td { vertical-align: top; }
         h2 { font-size: 10.5pt; margin: 12px 0 6px; color: #37474f; border-bottom: 1px solid #e3f2fd; padding-bottom: 3px; }
-        table.data { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 7.5pt; }
-        table.data th, table.data td { border: 1px solid #ccc; padding: 3px 4px; }
-        table.data th { background: #f0f0f0; }
         .rod { margin-top: 12px; font-size: 7pt; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
     </style></head><body>
     <table class="pdf-header">
@@ -6938,10 +6905,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     <h2>Ranking — 3 dias com maior venda (PDV)</h2>
     <table width="100%" style="border-collapse:separate;border-spacing:4px;margin:0 0 10px;"><tr>' . $htmlTop3Dias . '</tr></table>
 
-    <h2>Detalhe dos fechamentos</h2>
-    <table class="data"><thead><tr><th>ID</th><th>Data</th><th>Unidade</th><th>Operador</th><th>PDV</th><th>Maquinha</th><th>Saldo líq.</th><th>Situação</th></tr></thead><tbody>'
-        . $htmlDet . '</tbody></table>'
-        . $notaDet . '
     <div class="rod">Grupo Sabor Paraense — relatório gerado pelo sistema.</div>
     </body></html>';
 
