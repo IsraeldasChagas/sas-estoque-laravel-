@@ -6399,6 +6399,7 @@ $fechamentoCaixaCors = fn () => response()->json([])
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
 
 Route::options('/fechamentos-caixa', $fechamentoCaixaCors);
+Route::options('/fechamentos-caixa/relatorio-dashboard-pdf', $fechamentoCaixaCors);
 Route::options('/fechamentos-caixa/{id}', $fechamentoCaixaCors);
 Route::options('/fechamentos-caixa/{id}/pdf', $fechamentoCaixaCors);
 
@@ -6470,6 +6471,331 @@ Route::get('/fechamentos-caixa', function (Request $request) use ($fechamentoCai
     $rows = $q->limit($limit)->get();
 
     return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
+});
+
+/**
+ * Relatório PDF do dashboard de fechamentos (mesmos filtros: período, unidade API, operador, unidades nos cards).
+ */
+Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $request) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela de fechamentos não disponível. Execute as migrations.'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão para auditoria de fechamento'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $de = $request->query('de');
+    $ate = $request->query('ate');
+    if (!$de || !$ate) {
+        return response()->json(['error' => 'Informe data inicial (de) e final (ate).'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $limit = min(max((int) $request->query('limit', 3000), 1), 3000);
+    $q = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->leftJoin('usuarios as reg', 'fechamentos_caixa.registrado_por_usuario_id', '=', 'reg.id')
+        ->select(
+            'fechamentos_caixa.*',
+            'unidades.nome as unidade_nome',
+            'reg.nome as registrado_por_nome'
+        )
+        ->whereDate('fechamentos_caixa.data_fechamento', '>=', $de)
+        ->whereDate('fechamentos_caixa.data_fechamento', '<=', $ate);
+
+    if ($request->filled('unidade_id')) {
+        $q->where('fechamentos_caixa.unidade_id', (int) $request->query('unidade_id'));
+    }
+
+    $q->orderByDesc('fechamentos_caixa.data_fechamento')->orderByDesc('fechamentos_caixa.id');
+    $rows = $q->limit($limit)->get();
+
+    $operadorFiltro = trim((string) $request->query('operador_nome', ''));
+    if ($operadorFiltro !== '') {
+        $rows = $rows->filter(function ($r) use ($operadorFiltro) {
+            return trim((string) ($r->operador_nome ?? '')) === $operadorFiltro;
+        })->values();
+    }
+
+    $cardsRaw = $request->query('unidades_cards');
+    if ($request->has('unidades_cards')) {
+        $cardsStr = trim((string) $cardsRaw);
+        if ($cardsStr === '') {
+            $rows = collect([]);
+        } else {
+            $allowed = array_filter(array_map('intval', explode(',', $cardsStr)));
+            $allowedSet = array_flip($allowed);
+            $rows = $rows->filter(function ($r) use ($allowedSet) {
+                $uid = (int) ($r->unidade_id ?? 0);
+
+                return $uid !== 0 && isset($allowedSet[$uid]);
+            })->values();
+        }
+    }
+
+    $h = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $fmt = fn ($n) => 'R$ ' . number_format((float) $n, 2, ',', '.');
+
+    $totPdvLinha = function ($row) {
+        try {
+            $linhas = json_decode($row->linhas_json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            return 0.0;
+        }
+        if (!is_array($linhas)) {
+            return 0.0;
+        }
+        $s = 0.0;
+        foreach ($linhas as $L) {
+            if (!is_array($L)) {
+                continue;
+            }
+            $s += (float) ($L['sis'] ?? 0);
+        }
+
+        return round($s, 2);
+    };
+
+    $totMaqLinha = function ($row) {
+        try {
+            $linhas = json_decode($row->linhas_json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            return 0.0;
+        }
+        if (!is_array($linhas)) {
+            return 0.0;
+        }
+        $s = 0.0;
+        foreach ($linhas as $L) {
+            if (!is_array($L)) {
+                continue;
+            }
+            $s += (float) ($L['maq'] ?? 0);
+        }
+
+        return round($s, 2);
+    };
+
+    $situation = function ($row) {
+        $saldo = (float) ($row->saldo_liquido ?? 0);
+        $tol = 0.009;
+        $semFlag = (int) ($row->sem_quebra ?? 0) === 1;
+        if ($semFlag || abs($saldo) < $tol) {
+            return 'sem';
+        }
+        if ($saldo > $tol) {
+            return 'sobra';
+        }
+
+        return 'quebra';
+    };
+
+    $sitLabel = function ($s) {
+        return $s === 'sem' ? 'Sem dif. líquida' : ($s === 'sobra' ? 'Sobra' : 'Quebra');
+    };
+
+    $n = $rows->count();
+    $sumMaq = 0.0;
+    $sumPdv = 0.0;
+    $sumQuebra = 0.0;
+    $sumSobra = 0.0;
+    $nSem = 0;
+
+    $porUnidade = [];
+    $porDiaPdv = [];
+
+    foreach ($rows as $r) {
+        $pdv = $totPdvLinha($r);
+        $maq = $totMaqLinha($r);
+        $sumPdv += $pdv;
+        $sumMaq += $maq;
+        $sit = $situation($r);
+        $saldo = (float) ($r->saldo_liquido ?? 0);
+        if ($sit === 'sem') {
+            $nSem++;
+        } elseif ($sit === 'quebra') {
+            $sumQuebra += abs($saldo);
+        } else {
+            $sumSobra += $saldo;
+        }
+
+        $uid = (int) ($r->unidade_id ?? 0);
+        $unome = (string) ($r->unidade_nome ?? '—');
+        $key = $uid > 0 ? (string) $uid : '_null';
+        if (!isset($porUnidade[$key])) {
+            $porUnidade[$key] = ['nome' => $unome, 'n' => 0, 'pdv' => 0.0, 'maq' => 0.0, 'q' => 0.0, 's' => 0.0, 'sem' => 0];
+        }
+        $porUnidade[$key]['n']++;
+        $porUnidade[$key]['pdv'] += $pdv;
+        $porUnidade[$key]['maq'] += $maq;
+        if ($sit === 'sem') {
+            $porUnidade[$key]['sem']++;
+        } elseif ($sit === 'quebra') {
+            $porUnidade[$key]['q'] += abs($saldo);
+        } else {
+            $porUnidade[$key]['s'] += $saldo;
+        }
+
+        $dia = $r->data_fechamento ? \Carbon\Carbon::parse($r->data_fechamento)->format('Y-m-d') : '';
+        if ($dia !== '') {
+            if (!isset($porDiaPdv[$dia])) {
+                $porDiaPdv[$dia] = ['pdv' => 0.0, 'n' => 0];
+            }
+            $porDiaPdv[$dia]['pdv'] += $pdv;
+            $porDiaPdv[$dia]['n']++;
+        }
+    }
+
+    $sumPdv = round($sumPdv, 2);
+    $sumMaq = round($sumMaq, 2);
+    $sumQuebra = round($sumQuebra, 2);
+    $sumSobra = round($sumSobra, 2);
+    $pctSem = $n > 0 ? (round(($nSem / $n) * 1000) / 10) : 0.0;
+
+    uasort($porDiaPdv, function ($a, $b) {
+        if ($a['pdv'] === $b['pdv']) {
+            return $b['n'] <=> $a['n'];
+        }
+
+        return $b['pdv'] <=> $a['pdv'];
+    });
+    $top3Dias = array_slice($porDiaPdv, 0, 3, true);
+
+    $deBr = \Carbon\Carbon::parse($de)->format('d/m/Y');
+    $ateBr = \Carbon\Carbon::parse($ate)->format('d/m/Y');
+    $emitido = \Carbon\Carbon::now()->format('d/m/Y H:i');
+    $unidadeLeg = $request->filled('unidade_id') ? $h('Unidade ID ' . (int) $request->query('unidade_id')) : $h('Todas as unidades (API)');
+    $opLeg = $operadorFiltro !== '' ? $h($operadorFiltro) : $h('Todos os operadores');
+    $cardsLeg = $request->has('unidades_cards')
+        ? (trim((string) $cardsRaw) === '' ? $h('Nenhuma unidade marcada (vazio)') : $h('Apenas unidades: ' . trim((string) $cardsRaw)))
+        : $h('Todas (sem filtro “Unidades nos cards”)');
+
+    $htmlPorUnidade = '';
+    foreach ($porUnidade as $bl) {
+        $nn = (int) $bl['n'];
+        $pctU = $nn > 0 ? (round(($bl['sem'] / $nn) * 1000) / 10) : 0.0;
+        $htmlPorUnidade .= '<tr>'
+            . '<td>' . $h($bl['nome']) . '</td>'
+            . '<td style="text-align:right">' . $h((string) $bl['n']) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($bl['pdv'])) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($bl['maq'])) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($bl['q'])) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($bl['s'])) . '</td>'
+            . '<td style="text-align:right">' . $h($pctU . '%') . '</td>'
+            . '</tr>';
+    }
+    if ($htmlPorUnidade === '') {
+        $htmlPorUnidade = '<tr><td colspan="7" style="text-align:center;color:#666">Nenhum registro no período/filtro.</td></tr>';
+    }
+
+    $htmlTop3 = '';
+    $rank = 1;
+    foreach ($top3Dias as $diaIso => $info) {
+        $diaFmt = \Carbon\Carbon::parse($diaIso)->format('d/m/Y');
+        $htmlTop3 .= '<tr><td>' . $h((string) $rank . 'º') . '</td><td>' . $h($diaFmt) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($info['pdv'])) . '</td>'
+            . '<td style="text-align:right">' . $h((string) $info['n']) . '</td></tr>';
+        $rank++;
+    }
+    if ($htmlTop3 === '') {
+        $htmlTop3 = '<tr><td colspan="4" style="text-align:center;color:#666">—</td></tr>';
+    }
+
+    $detalheMax = 300;
+    $detRows = $rows->take($detalheMax);
+    $htmlDet = '';
+    foreach ($detRows as $r) {
+        $pdv = $totPdvLinha($r);
+        $maq = $totMaqLinha($r);
+        $sit = $situation($r);
+        $dataBr = $r->data_fechamento ? \Carbon\Carbon::parse($r->data_fechamento)->format('d/m/Y') : '—';
+        $htmlDet .= '<tr>'
+            . '<td style="text-align:right">' . $h((string) $r->id) . '</td>'
+            . '<td>' . $h($dataBr) . '</td>'
+            . '<td>' . $h($r->unidade_nome ?? '—') . '</td>'
+            . '<td>' . $h($r->operador_nome ?? '—') . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($pdv)) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($maq)) . '</td>'
+            . '<td style="text-align:right">' . $h($fmt($r->saldo_liquido ?? 0)) . '</td>'
+            . '<td>' . $h($sitLabel($sit)) . '</td>'
+            . '</tr>';
+    }
+    if ($htmlDet === '') {
+        $htmlDet = '<tr><td colspan="8" style="text-align:center;color:#666">Nenhum registro.</td></tr>';
+    }
+    $notaDet = $n > $detalheMax
+        ? '<p class="sub" style="margin-top:6px"><strong>Nota:</strong> tabela detalhada limitada aos ' . $h((string) $detalheMax) . ' registros mais recentes de ' . $h((string) $n) . ' no filtro.</p>'
+        : '';
+
+    $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 16px; }
+        h1 { font-size: 14pt; text-align: center; margin: 0 0 4px; color: #1565c0; }
+        .sub { text-align: center; font-size: 8pt; color: #666; margin-bottom: 12px; }
+        .resumo { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
+        .resumo th, .resumo td { border: 1px solid #ccc; padding: 6px 8px; }
+        .resumo th { background: #e3f2fd; text-align: left; width: 42%; }
+        table.data { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 8pt; }
+        table.data th, table.data td { border: 1px solid #ccc; padding: 4px 5px; }
+        table.data th { background: #f0f0f0; }
+        h2 { font-size: 11pt; margin: 14px 0 6px; color: #333; }
+        .rod { margin-top: 14px; font-size: 7pt; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
+    </style></head><body>
+    <h1>Dashboard — fechamentos de caixa</h1>
+    <div class="sub">Emitido em ' . $h($emitido) . ' · Período: ' . $h($deBr) . ' a ' . $h($ateBr) . '</div>
+    <table class="resumo">
+        <tr><th>Unidade (filtro API)</th><td>' . $unidadeLeg . '</td></tr>
+        <tr><th>Operador (filtro tela)</th><td>' . $opLeg . '</td></tr>
+        <tr><th>Unidades nos cards</th><td>' . $cardsLeg . '</td></tr>
+        <tr><th>Fechamentos no filtro</th><td>' . $h((string) $n) . '</td></tr>
+        <tr><th>Total maquinha</th><td>' . $h($fmt($sumMaq)) . '</td></tr>
+        <tr><th>Total PDV</th><td>' . $h($fmt($sumPdv)) . '</td></tr>
+        <tr><th>Soma quebras (R$)</th><td>' . $h($fmt($sumQuebra)) . '</td></tr>
+        <tr><th>Soma sobras (R$)</th><td>' . $h($fmt($sumSobra)) . '</td></tr>
+        <tr><th>Sem diferença líquida</th><td>' . $h($pctSem . '% (' . $nSem . ' reg.)') . '</td></tr>
+    </table>
+
+    <h2>Ranking — 3 dias com maior PDV</h2>
+    <table class="data"><thead><tr><th>#</th><th>Data</th><th>Total PDV</th><th>Fechamentos</th></tr></thead><tbody>' . $htmlTop3 . '</tbody></table>
+
+    <h2>Resumo por unidade</h2>
+    <table class="data"><thead><tr><th>Unidade</th><th>Regs</th><th>PDV</th><th>Maquinha</th><th>Quebras</th><th>Sobras</th><th>% sem dif.</th></tr></thead><tbody>'
+        . $htmlPorUnidade . '</tbody></table>
+
+    <h2>Detalhe dos fechamentos</h2>
+    <table class="data"><thead><tr><th>ID</th><th>Data</th><th>Unidade</th><th>Operador</th><th>PDV</th><th>Maquinha</th><th>Saldo líq.</th><th>Situação</th></tr></thead><tbody>'
+        . $htmlDet . '</tbody></table>'
+        . $notaDet . '
+    <div class="rod">Grupo Sabor Paraense — relatório gerado pelo sistema.</div>
+    </body></html>';
+
+    try {
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+        $fn = 'dashboard-fechamentos-caixa-' . preg_replace('/[^0-9-]/', '', $de) . '-' . preg_replace('/[^0-9-]/', '', $ate) . '.pdf';
+
+        return response($pdfOutput, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="' . $fn . '"')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Exception $e) {
+        \Log::error('GET /fechamentos-caixa/relatorio-dashboard-pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
 });
 
 Route::post('/fechamentos-caixa', function (Request $request) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {

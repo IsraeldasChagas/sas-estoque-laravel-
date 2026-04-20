@@ -15210,6 +15210,68 @@ async function downloadFechamentoCaixaPdf(id) {
   URL.revokeObjectURL(url);
 }
 
+/** PDF do dashboard de fechamentos: mesmos filtros da tela (datas, unidade API, operador, checkboxes “Unidades nos cards”). */
+async function downloadFechamentoDashPdf() {
+  const de = document.getElementById("fechamentoDashDe")?.value?.trim();
+  const ate = document.getElementById("fechamentoDashAte")?.value?.trim();
+  if (!de || !ate) {
+    showToast("Informe data inicial e data final para gerar o relatório.", "warning");
+    return;
+  }
+  const qs = new URLSearchParams();
+  qs.set("de", de);
+  qs.set("ate", ate);
+  const u = document.getElementById("fechamentoDashUnidade")?.value?.trim();
+  if (u) qs.set("unidade_id", u);
+  const op = document.getElementById("fechamentoDashOperador")?.value?.trim();
+  if (op) qs.set("operador_nome", op);
+  const set = fechamentoDashGetUnidadeIdsParaCardsPick();
+  if (set !== null) {
+    if (set.size === 0) qs.set("unidades_cards", "");
+    else qs.set("unidades_cards", [...set].join(","));
+  }
+  const headers = {
+    ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+    ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+    ...getDeviceHeaders(),
+  };
+  let res;
+  try {
+    res = await fetch(`${API_URL}/fechamentos-caixa/relatorio-dashboard-pdf?${qs.toString()}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+  } catch (e) {
+    showToast(e?.message || "Falha de rede ao gerar PDF.", "error");
+    return;
+  }
+  if (!res.ok) {
+    let msg = "Erro ao gerar PDF";
+    try {
+      const t = await res.text();
+      const j = JSON.parse(t);
+      if (j.error) msg = j.error;
+    } catch (_) {
+      /* ignore */
+    }
+    showToast(msg, "error");
+    return;
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeDe = de.replace(/\D/g, "");
+  const safeAte = ate.replace(/\D/g, "");
+  a.download = `dashboard-fechamentos-caixa-${safeDe}-${safeAte}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast("Relatório PDF baixado.", "success");
+}
+
 function fechamentoTotalMaquinasFromRow(row) {
   try {
     const raw = row?.linhas_json;
@@ -16432,6 +16494,12 @@ function setupFechamentoDashPanel() {
   __fechamentoDashPanelSetup = true;
   document.getElementById("fechamentoDashAplicarBtn")?.addEventListener("click", () => {
     loadFechamentoDashSection();
+  });
+  document.getElementById("fechamentoDashPdfBtn")?.addEventListener("click", () => {
+    downloadFechamentoDashPdf().catch((err) => {
+      console.error(err);
+      showToast(err?.message || "Erro ao baixar PDF.", "error");
+    });
   });
   document.getElementById("fechamentoDashOperador")?.addEventListener("change", () => {
     renderFechamentoDashFromCache();
