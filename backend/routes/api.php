@@ -6714,8 +6714,9 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     });
     $logoDataUri = '';
     foreach ([
-        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
         dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png',
+        base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png'),
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
         base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png'),
         base_path('public' . DIRECTORY_SEPARATOR . 'logo.png'),
     ] as $_lp) {
@@ -6784,8 +6785,9 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
 
     $lineDisp = $linePts;
     $nL = count($lineDisp);
-    if ($nL > 52) {
-        $step = (int) ceil($nL / 52);
+    $maxColsMaq = 28;
+    if ($nL > $maxColsMaq) {
+        $step = (int) ceil($nL / $maxColsMaq);
         $tmp = [];
         for ($i = 0; $i < $nL; $i += $step) {
             $tmp[] = $lineDisp[$i];
@@ -6799,26 +6801,46 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     foreach ($lineDisp as $p) {
         $maxMLine = max($maxMLine, $p['v']);
     }
-    $barH = 90;
-    $htmlLineMaq = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 6px;">Evolução diária — maquinha (R$)</div>';
-    $htmlLineMaq .= '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr valign="bottom">';
+    $barH = 120;
     $nD = count($lineDisp);
+    $showValsAbove = $nD <= 24;
+    $htmlLineMaq = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 4px;">Evolução diária — maquinha (R$)</div>';
+    $htmlLineMaq .= '<p style="font-size:7.5pt;color:#546e7a;margin:0 0 8px;line-height:1.4;">'
+        . 'Cada coluna é um dia: a <strong>altura da barra azul</strong> é proporcional ao total da maquinha naquele dia. '
+        . '<strong>Teto do gráfico:</strong> ' . $h($fmt($maxMLine)) . ' (valor máximo no período exibido).</p>';
+    $htmlLineMaq .= '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #b0bec5;border-radius:8px;background:#fafafa;border-collapse:collapse;">';
     if ($nD === 0) {
-        $htmlLineMaq .= '<td style="padding:12px;color:#90a4ae;font-size:9pt;">Sem período</td>';
+        $htmlLineMaq .= '<tr><td style="padding:14px;color:#90a4ae;font-size:9pt;">Sem período</td></tr>';
     } else {
+        $htmlLineMaq .= '<tr style="background:#eceff1;">'
+            . '<td colspan="' . (string) $nD . '" style="padding:5px 10px;font-size:7.5pt;color:#37474f;text-align:center;border-bottom:1px solid #cfd8dc;">'
+            . '<strong>Eixo</strong> · 0 &nbsp;·&nbsp; ' . $h($fmt($maxMLine / 2)) . ' (metade) &nbsp;·&nbsp; ' . $h($fmt($maxMLine)) . ' (máximo)'
+            . '</td></tr>';
+        $htmlLineMaq .= '<tr valign="bottom">';
         $wcol = round(100 / max(1, $nD), 2);
+        $ixMaq = 0;
         foreach ($lineDisp as $p) {
-            $vh = $maxMLine > 0 ? max(3, (int) round($p['v'] / $maxMLine * $barH)) : 3;
-            $dShow = \Carbon\Carbon::parse($p['d'])->format('d/m');
-            $htmlLineMaq .= '<td align="center" style="width:' . $h((string) $wcol) . '%;padding:0 1px;vertical-align:bottom;">'
-                . '<table cellpadding="0" cellspacing="0" align="center" style="height:' . (string) ($barH + 18) . 'px;"><tr valign="bottom"><td align="center">'
-                . '<div style="width:8px;height:' . (string) $vh . 'px;background:#1565c0;border-radius:2px 2px 0 0;">&#160;</div>'
+            $vh = $maxMLine > 0 ? max(8, (int) round($p['v'] / $maxMLine * $barH)) : 8;
+            $dObj = \Carbon\Carbon::parse($p['d']);
+            $dow = $diasSemPt[$dObj->dayOfWeek];
+            $dm = $dObj->format('d/m');
+            $valBlock = $showValsAbove
+                ? '<div style="font-size:6.5pt;font-weight:bold;color:#0d47a1;line-height:1.2;padding:0 2px;min-height:26px;">' . $h($fmt($p['v'])) . '</div>'
+                : '<div style="min-height:22px;">&#160;</div>';
+            $leftBd = $ixMaq > 0 ? 'border-left:1px solid #e0e0e0;' : '';
+            $ixMaq++;
+            $htmlLineMaq .= '<td align="center" style="width:' . $h((string) $wcol) . '%;padding:8px 4px 10px;vertical-align:bottom;' . $leftBd . 'background:#ffffff;">'
+                . $valBlock
+                . '<table cellpadding="0" cellspacing="0" align="center" style="margin-top:4px;height:' . (string) $barH . 'px;"><tr valign="bottom"><td align="center" bgcolor="#f5f9fc" style="padding:0 4px 0;">'
+                . '<div style="width:18px;height:' . (string) $vh . 'px;background:#1565c0;border-radius:4px 4px 0 0;margin:0 auto;border:1px solid #0d47a1;">&#160;</div>'
                 . '</td></tr></table>'
-                . '<div style="font-size:5.5pt;color:#78909c;line-height:1.15;margin-top:2px;">' . $h($dShow) . '</div>'
+                . '<div style="font-size:7.5pt;color:#263238;margin-top:8px;font-weight:bold;line-height:1.2;">' . $h($dow) . '</div>'
+                . '<div style="font-size:7pt;color:#546e7a;">' . $h($dm) . '</div>'
                 . '</td>';
         }
+        $htmlLineMaq .= '</tr>';
     }
-    $htmlLineMaq .= '</tr></table>';
+    $htmlLineMaq .= '</table>';
 
     $totalPie = $nSem + $nQuebraRegs + $nSobraRegs;
     $pctSemPie = $totalPie > 0 ? round(($nSem / $totalPie) * 1000) / 10 : 0;
