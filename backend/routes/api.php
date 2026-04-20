@@ -6716,15 +6716,67 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
 
         return $b['pdv'] <=> $a['pdv'];
     });
-    $top3Unid = [];
-    foreach ($unitsRank as $u) {
-        if ($u['pdv'] > 0.005) {
-            $top3Unid[] = $u;
-        }
-        if (count($top3Unid) >= 3) {
-            break;
+    $logoDataUri = '';
+    foreach ([
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png',
+        base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png'),
+        base_path('public' . DIRECTORY_SEPARATOR . 'logo.png'),
+    ] as $_lp) {
+        if (is_string($_lp) && is_readable($_lp)) {
+            $raw = @file_get_contents($_lp);
+            if ($raw !== false && strlen($raw) > 20) {
+                $ext = strtolower((string) pathinfo($_lp, PATHINFO_EXTENSION));
+                $mime = ($ext === 'jpg' || $ext === 'jpeg') ? 'image/jpeg' : 'image/png';
+                $logoDataUri = 'data:' . $mime . ';base64,' . base64_encode($raw);
+                break;
+            }
         }
     }
+
+    $maxBarPdv = 0.01;
+    foreach ($unitsRank as $_u) {
+        $maxBarPdv = max($maxBarPdv, $_u['pdv']);
+    }
+    $htmlBarUnidadesBody = '';
+    $unitRows = 0;
+    foreach ($unitsRank as $uu) {
+        if ($uu['pdv'] < 0.005 && (int) $uu['n'] === 0) {
+            continue;
+        }
+        if ($unitRows >= 28) {
+            break;
+        }
+        $pctRaw = $maxBarPdv > 0 ? (($uu['pdv'] / $maxBarPdv) * 100) : 0;
+        $pctDisp = max(1.5, min(100, round($pctRaw, 1)));
+        $restPct = max(0.5, round(100 - $pctDisp, 1));
+        if ($pctDisp >= 99.5) {
+            $pctDisp = 100;
+            $restPct = 0;
+        }
+        $nome = $uu['nome'];
+        if (function_exists('mb_substr')) {
+            $nome = mb_substr($nome, 0, 42);
+        } else {
+            $nome = substr($nome, 0, 42);
+        }
+        $barCells = $restPct > 0
+            ? '<td width="' . $h((string) $pctDisp) . '%" bgcolor="#1565c0" style="height:14px;font-size:1px;line-height:14px;">&#160;</td>'
+                . '<td width="' . $h((string) $restPct) . '%" bgcolor="#eceff1" style="height:14px;font-size:1px;line-height:14px;">&#160;</td>'
+            : '<td bgcolor="#1565c0" style="height:14px;font-size:1px;line-height:14px;width:100%;">&#160;</td>';
+        $htmlBarUnidadesBody .= '<tr>'
+            . '<td style="padding:4px 8px 4px 0;vertical-align:middle;border-bottom:1px solid #eceff1;width:30%;font-size:8pt;color:#37474f;">' . $h($nome) . '</td>'
+            . '<td style="padding:4px 0;border-bottom:1px solid #eceff1;vertical-align:middle;">'
+            . '<table width="100%" cellpadding="0" cellspacing="0"><tr>' . $barCells . '</tr></table></td>'
+            . '<td style="padding:4px 0 4px 8px;vertical-align:middle;border-bottom:1px solid #eceff1;font-size:8pt;font-weight:bold;color:#1a237e;width:20%;white-space:nowrap;">' . $h($fmt($uu['pdv'])) . '</td>'
+            . '</tr>';
+        $unitRows++;
+    }
+    if ($htmlBarUnidadesBody === '') {
+        $htmlBarUnidadesBody = '<tr><td colspan="3" style="padding:10px;color:#90a4ae;font-size:9pt;">Sem vendas PDV por unidade no filtro.</td></tr>';
+    }
+    $htmlBarUnidades = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 6px;">Vendas PDV por unidade (R$)</div>'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">' . $htmlBarUnidadesBody . '</table>';
 
     $linePts = [];
     $c0 = \Carbon\Carbon::parse($de)->startOfDay();
@@ -6734,149 +6786,62 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         $linePts[] = ['d' => $k, 'v' => (float) ($porDiaMaq[$k] ?? 0)];
     }
 
-    $Wbar = 268;
-    $Hbar = 188;
-    $svgBar = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $Wbar . '" height="' . $Hbar . '" viewBox="0 0 ' . $Wbar . ' ' . $Hbar . '">';
-    $svgBar .= '<text x="' . ($Wbar / 2) . '" y="13" text-anchor="middle" font-size="9" fill="#37474f" font-weight="bold">Top 3 unidades — PDV (R$)</text>';
-    if (count($top3Unid) === 0) {
-        $svgBar .= '<text x="' . ($Wbar / 2) . '" y="' . ($Hbar / 2) . '" text-anchor="middle" font-size="9" fill="#90a4ae">Sem dados no filtro</text>';
-    } else {
-        $left = 38;
-        $right = 10;
-        $top = 28;
-        $bottom = 40;
-        $plotW = $Wbar - $left - $right;
-        $plotH = $Hbar - $top - $bottom;
-        $maxV = 0.01;
-        foreach ($top3Unid as $uu) {
-            $maxV = max($maxV, $uu['pdv']);
+    $lineDisp = $linePts;
+    $nL = count($lineDisp);
+    if ($nL > 52) {
+        $step = (int) ceil($nL / 52);
+        $tmp = [];
+        for ($i = 0; $i < $nL; $i += $step) {
+            $tmp[] = $lineDisp[$i];
         }
-        $nb = count($top3Unid);
-        $gap = 14;
-        $bw = ($plotW - $gap * ($nb - 1)) / $nb;
-        $colorsBar = ['#1565c0', '#2e7d32', '#ef6c00'];
-        foreach ($top3Unid as $i => $uu) {
-            $hBar = ($uu['pdv'] / $maxV) * $plotH;
-            $x = $left + $i * ($bw + $gap);
-            $y = $top + $plotH - $hBar;
-            $svgBar .= sprintf(
-                '<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f" fill="%s" rx="5"/>',
-                $x,
-                $y,
-                $bw,
-                max(1, $hBar),
-                $colorsBar[$i % 3]
-            );
-            $lab = $uu['nome'];
-            if (function_exists('mb_substr')) {
-                $lab = mb_substr($lab, 0, 14);
-            } else {
-                $lab = substr($lab, 0, 14);
-            }
-            $svgBar .= '<text x="' . ($x + $bw / 2) . '" y="' . ($Hbar - 22) . '" text-anchor="middle" font-size="7" fill="#455a64">' . $h($lab) . '</text>';
-            $svgBar .= '<text x="' . ($x + $bw / 2) . '" y="' . ($Hbar - 10) . '" text-anchor="middle" font-size="7" fill="#1a237e" font-weight="bold">' . $h($fmt($uu['pdv'])) . '</text>';
+        if ($tmp !== [] && ($tmp[count($tmp) - 1]['d'] ?? '') !== ($lineDisp[$nL - 1]['d'] ?? '')) {
+            $tmp[] = $lineDisp[$nL - 1];
+        }
+        $lineDisp = $tmp;
+    }
+    $maxMLine = 0.01;
+    foreach ($lineDisp as $p) {
+        $maxMLine = max($maxMLine, $p['v']);
+    }
+    $barH = 90;
+    $htmlLineMaq = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 6px;">Evolução diária — maquinha (R$)</div>';
+    $htmlLineMaq .= '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr valign="bottom">';
+    $nD = count($lineDisp);
+    if ($nD === 0) {
+        $htmlLineMaq .= '<td style="padding:12px;color:#90a4ae;font-size:9pt;">Sem período</td>';
+    } else {
+        $wcol = round(100 / max(1, $nD), 2);
+        foreach ($lineDisp as $p) {
+            $vh = $maxMLine > 0 ? max(3, (int) round($p['v'] / $maxMLine * $barH)) : 3;
+            $dShow = \Carbon\Carbon::parse($p['d'])->format('d/m');
+            $htmlLineMaq .= '<td align="center" style="width:' . $h((string) $wcol) . '%;padding:0 1px;vertical-align:bottom;">'
+                . '<table cellpadding="0" cellspacing="0" align="center" style="height:' . (string) ($barH + 18) . 'px;"><tr valign="bottom"><td align="center">'
+                . '<div style="width:8px;height:' . (string) $vh . 'px;background:#1565c0;border-radius:2px 2px 0 0;">&#160;</div>'
+                . '</td></tr></table>'
+                . '<div style="font-size:5.5pt;color:#78909c;line-height:1.15;margin-top:2px;">' . $h($dShow) . '</div>'
+                . '</td>';
         }
     }
-    $svgBar .= '</svg>';
+    $htmlLineMaq .= '</tr></table>';
 
-    $Wline = 360;
-    $Hline = 200;
-    $svgLine = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $Wline . '" height="' . $Hline . '" viewBox="0 0 ' . $Wline . ' ' . $Hline . '">';
-    $svgLine .= '<text x="' . ($Wline / 2) . '" y="13" text-anchor="middle" font-size="9" fill="#37474f" font-weight="bold">Evolução diária — maquinha (R$)</text>';
-    $nPts = count($linePts);
-    if ($nPts === 0) {
-        $svgLine .= '<text x="' . ($Wline / 2) . '" y="' . ($Hline / 2) . '" text-anchor="middle" font-size="9" fill="#90a4ae">Sem período</text>';
-    } else {
-        $lpL = 46;
-        $lpR = 12;
-        $lpT = 30;
-        $lpB = 46;
-        $lpW = $Wline - $lpL - $lpR;
-        $lpH = $Hline - $lpT - $lpB;
-        $maxM = 0.01;
-        foreach ($linePts as $p) {
-            $maxM = max($maxM, $p['v']);
-        }
-        $ptsStr = '';
-        foreach ($linePts as $ix => $p) {
-            $px = $lpL + ($nPts <= 1 ? $lpW / 2 : ($ix / max(1, $nPts - 1)) * $lpW);
-            $py = $lpT + $lpH - ($p['v'] / $maxM) * $lpH;
-            $ptsStr .= ($ix ? ' ' : '') . round($px, 2) . ',' . round($py, 2);
-        }
-        if ($nPts === 1) {
-            $p0 = $linePts[0];
-            $pxm = $lpL + $lpW / 2;
-            $py0 = $lpT + $lpH - ($p0['v'] / $maxM) * $lpH;
-            $ptsStr = round($pxm - min(40, $lpW / 3), 2) . ',' . round($py0, 2) . ' ' . round($pxm + min(40, $lpW / 3), 2) . ',' . round($py0, 2);
-        }
-        $svgLine .= '<polyline fill="none" stroke="#1565c0" stroke-width="1.8" points="' . $ptsStr . '" />';
-        $stepLbl = $nPts <= 8 ? 1 : (int) max(1, floor($nPts / 7));
-        foreach ($linePts as $ix => $p) {
-            if ($ix % $stepLbl !== 0 && $ix !== $nPts - 1) {
-                continue;
-            }
-            $cPt = \Carbon\Carbon::parse($p['d']);
-            $lbl = $cPt->format('d/m');
-            $px = $lpL + ($nPts <= 1 ? $lpW / 2 : ($ix / max(1, $nPts - 1)) * $lpW);
-            $svgLine .= '<text x="' . round($px, 2) . '" y="' . ($Hline - 12) . '" text-anchor="middle" font-size="6.5" fill="#607d8b">' . $h($lbl) . '</text>';
-        }
-        $svgLine .= '<text x="8" y="' . ($lpT + 8) . '" font-size="7" fill="#78909c">' . $h($fmt($maxM)) . '</text>';
-        $svgLine .= '<text x="8" y="' . ($lpT + $lpH) . '" font-size="7" fill="#78909c">0</text>';
-    }
-    $svgLine .= '</svg>';
-
-    $cx = 92;
-    $cy = 108;
-    $ro = 62;
-    $ri = 34;
     $totalPie = $nSem + $nQuebraRegs + $nSobraRegs;
-    $svgPie = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="210" viewBox="0 0 200 210">';
-    $svgPie .= '<text x="100" y="14" text-anchor="middle" font-size="9" fill="#37474f" font-weight="bold">Situação (% registros)</text>';
-    if ($totalPie < 1) {
-        $svgPie .= '<text x="100" y="115" text-anchor="middle" font-size="9" fill="#90a4ae">Sem dados</text>';
-    } else {
-        $partsPie = [
-            [$nSem, '#546e7a'],
-            [$nQuebraRegs, '#c62828'],
-            [$nSobraRegs, '#2e7d32'],
-        ];
-        $startDeg = 0.0;
-        foreach ($partsPie as $seg) {
-            [$cnt, $col] = $seg;
-            if ($cnt <= 0) {
-                continue;
-            }
-            $span = ($cnt / $totalPie) * 360.0;
-            $endDeg = $startDeg + $span;
-            $a0 = deg2rad($startDeg - 90);
-            $a1 = deg2rad($endDeg - 90);
-            $x0 = $cx + $ro * cos($a0);
-            $y0 = $cy + $ro * sin($a0);
-            $x1 = $cx + $ro * cos($a1);
-            $y1 = $cy + $ro * sin($a1);
-            $large = ($span > 180) ? 1 : 0;
-            $dPie = sprintf(
-                'M %.2f %.2f L %.2f %.2f A %.2f %.2f 0 %d 1 %.2f %.2f Z',
-                $cx,
-                $cy,
-                $x0,
-                $y0,
-                $ro,
-                $ro,
-                $large,
-                $x1,
-                $y1
-            );
-            $svgPie .= '<path d="' . $dPie . '" fill="' . $col . '" stroke="#ffffff" stroke-width="0.9"/>';
-            $startDeg = $endDeg;
-        }
-        $svgPie .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $ri . '" fill="#ffffff" stroke="#eceff1" stroke-width="0.7"/>';
-    }
     $pctSemPie = $totalPie > 0 ? round(($nSem / $totalPie) * 1000) / 10 : 0;
     $pctQPie = $totalPie > 0 ? round(($nQuebraRegs / $totalPie) * 1000) / 10 : 0;
     $pctSPie = $totalPie > 0 ? round(($nSobraRegs / $totalPie) * 1000) / 10 : 0;
-    $svgPie .= '<text x="100" y="198" text-anchor="middle" font-size="6.5" fill="#546e7a">Sem dif.: ' . $h((string) $pctSemPie) . '% · Quebra: ' . $h((string) $pctQPie) . '% · Sobra: ' . $h((string) $pctSPie) . '%</text>';
-    $svgPie .= '</svg>';
+    $htmlSituacao = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 6px;">Situação (registros)</div>';
+    if ($totalPie < 1) {
+        $htmlSituacao .= '<p style="color:#90a4ae;font-size:9pt;margin:8px 0;">Sem dados.</p>';
+    } else {
+        $htmlSituacao .= '<table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:8pt;">'
+            . '<tr><td style="width:14px;background:#546e7a;">&#160;</td><td style="padding-left:8px;border-bottom:1px solid #eee;">Sem dif. líquida</td><td align="right" style="border-bottom:1px solid #eee;"><strong>' . $h((string) $nSem) . '</strong> (' . $h((string) $pctSemPie) . '%)</td></tr>'
+            . '<tr><td style="background:#c62828;">&#160;</td><td style="padding-left:8px;border-bottom:1px solid #eee;">Quebra</td><td align="right" style="border-bottom:1px solid #eee;"><strong>' . $h((string) $nQuebraRegs) . '</strong> (' . $h((string) $pctQPie) . '%)</td></tr>'
+            . '<tr><td style="background:#2e7d32;">&#160;</td><td style="padding-left:8px;">Sobra</td><td align="right"><strong>' . $h((string) $nSobraRegs) . '</strong> (' . $h((string) $pctSPie) . '%)</td></tr>'
+            . '</table>';
+    }
+
+    $logoImgHtml = $logoDataUri !== ''
+        ? '<img src="' . $logoDataUri . '" alt="" style="max-height:54px;max-width:130px;display:block;" />'
+        : '<div style="width:64px;height:50px;border:1px solid #cfd8dc;border-radius:8px;text-align:center;line-height:50px;font-size:7pt;color:#78909c;">Logo</div>';
 
     $pctSemTxt = $h($pctSem . '% (' . $nSem . ' reg.)');
     $cardRegs = $h((string) $n);
@@ -6913,7 +6878,11 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
 
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 12px 14px; }
-        h1 { font-size: 14pt; text-align: center; margin: 0 0 4px; color: #1565c0; }
+        .pdf-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-bottom: 2px solid #1565c0; padding-bottom: 10px; }
+        .pdf-header td { vertical-align: middle; }
+        .pdf-brand { font-size: 15pt; font-weight: bold; color: #0d47a1; letter-spacing: 0.02em; }
+        .pdf-title { font-size: 11pt; color: #1565c0; margin-top: 3px; }
+        .pdf-meta { font-size: 7.5pt; color: #546e7a; text-align: right; line-height: 1.35; }
         .sub { text-align: center; font-size: 8pt; color: #666; margin-bottom: 10px; }
         .filtros-mini { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 7.5pt; }
         .filtros-mini td { border: 1px solid #e0e0e0; padding: 5px 8px; background: #fafafa; vertical-align: top; width: 33%; }
@@ -6925,15 +6894,23 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         .dash-card-value { font-size: 12pt; font-weight: bold; color: #1a237e; margin-top: 3px; }
         .chart-wrap { border: 1px solid #e0e0e0; border-radius: 10px; padding: 8px 6px 6px; background: #fff; text-align: center; }
         .charts-row { width: 100%; border-collapse: separate; border-spacing: 6px; margin: 0 0 12px; }
-        .charts-row td { width: 33%; vertical-align: top; }
+        .charts-row td { vertical-align: top; }
         h2 { font-size: 10.5pt; margin: 12px 0 6px; color: #37474f; border-bottom: 1px solid #e3f2fd; padding-bottom: 3px; }
         table.data { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 7.5pt; }
         table.data th, table.data td { border: 1px solid #ccc; padding: 3px 4px; }
         table.data th { background: #f0f0f0; }
         .rod { margin-top: 12px; font-size: 7pt; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
     </style></head><body>
-    <h1>Dashboard — fechamentos de caixa</h1>
-    <div class="sub">Emitido em ' . $h($emitido) . ' · Período: ' . $h($deBr) . ' a ' . $h($ateBr) . '</div>
+    <table class="pdf-header">
+        <tr>
+            <td style="width: 120px; text-align: left;">' . $logoImgHtml . '</td>
+            <td style="padding-left: 10px;">
+                <div class="pdf-brand">Grupo Sabor Paraense</div>
+                <div class="pdf-title">Dashboard — fechamentos de caixa</div>
+            </td>
+            <td class="pdf-meta">Emitido em ' . $h($emitido) . '<br/>Período: ' . $h($deBr) . ' a ' . $h($ateBr) . '</td>
+        </tr>
+    </table>
     <table class="filtros-mini"><tr>
         <td><strong>Unidade (API)</strong><br/>' . $unidadeLeg . '</td>
         <td><strong>Operador</strong><br/>' . $opLeg . '</td>
@@ -6950,11 +6927,13 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         <td class="dash-card"><div class="dash-card-label">Sem diferença líquida</div><div class="dash-card-value">' . $pctSemTxt . '</div></td>
     </tr></table>
 
-    <table class="charts-row"><tr>
-        <td><div class="chart-wrap">' . $svgBar . '</div></td>
-        <td><div class="chart-wrap">' . $svgLine . '</div></td>
-        <td><div class="chart-wrap">' . $svgPie . '</div></td>
-    </tr></table>
+    <table class="charts-row" width="100%">
+        <tr><td colspan="2" style="padding-bottom: 8px;"><div class="chart-wrap">' . $htmlBarUnidades . '</div></td></tr>
+        <tr>
+            <td style="width: 68%; padding-right: 6px; vertical-align: top;"><div class="chart-wrap">' . $htmlLineMaq . '</div></td>
+            <td style="width: 32%; vertical-align: top;"><div class="chart-wrap">' . $htmlSituacao . '</div></td>
+        </tr>
+    </table>
 
     <h2>Ranking — 3 dias com maior venda (PDV)</h2>
     <table width="100%" style="border-collapse:separate;border-spacing:4px;margin:0 0 10px;"><tr>' . $htmlTop3Dias . '</tr></table>
