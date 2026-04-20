@@ -6806,8 +6806,8 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     $showValsAbove = $nD <= 24;
     $htmlLineMaq = '<div style="font-size:9pt;font-weight:bold;color:#37474f;margin:4px 0 4px;">Evolução diária — maquinha (R$)</div>';
     $htmlLineMaq .= '<p style="font-size:7.5pt;color:#546e7a;margin:0 0 8px;line-height:1.4;">'
-        . 'Cada coluna é um dia: a <strong>altura da barra azul</strong> é proporcional ao total da maquinha naquele dia. '
-        . '<strong>Teto do gráfico:</strong> ' . $h($fmt($maxMLine)) . ' (valor máximo no período exibido).</p>';
+        . 'Cada coluna é um dia: as <strong>barras sobem de baixo para cima</strong> (linha cinza = zero); a altura azul = total da maquinha naquele dia. '
+        . '<strong>Teto:</strong> ' . $h($fmt($maxMLine)) . '.</p>';
     $htmlLineMaq .= '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #b0bec5;border-radius:8px;background:#fafafa;border-collapse:collapse;">';
     if ($nD === 0) {
         $htmlLineMaq .= '<tr><td style="padding:14px;color:#90a4ae;font-size:9pt;">Sem período</td></tr>';
@@ -6816,24 +6816,29 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             . '<td colspan="' . (string) $nD . '" style="padding:5px 10px;font-size:7.5pt;color:#37474f;text-align:center;border-bottom:1px solid #cfd8dc;">'
             . '<strong>Eixo</strong> · 0 &nbsp;·&nbsp; ' . $h($fmt($maxMLine / 2)) . ' (metade) &nbsp;·&nbsp; ' . $h($fmt($maxMLine)) . ' (máximo)'
             . '</td></tr>';
-        $htmlLineMaq .= '<tr valign="bottom">';
+        $htmlLineMaq .= '<tr>';
         $wcol = round(100 / max(1, $nD), 2);
         $ixMaq = 0;
         foreach ($lineDisp as $p) {
-            $vh = $maxMLine > 0 ? max(8, (int) round($p['v'] / $maxMLine * $barH)) : 8;
+            $vh = $maxMLine > 0 ? max(4, (int) round($p['v'] / $maxMLine * $barH)) : 4;
+            if ($vh > $barH) {
+                $vh = $barH;
+            }
+            $spacerH = max(0, $barH - $vh);
             $dObj = \Carbon\Carbon::parse($p['d']);
             $dow = $diasSemPt[$dObj->dayOfWeek];
             $dm = $dObj->format('d/m');
             $valBlock = $showValsAbove
-                ? '<div style="font-size:6.5pt;font-weight:bold;color:#0d47a1;line-height:1.2;padding:0 2px;min-height:26px;">' . $h($fmt($p['v'])) . '</div>'
-                : '<div style="min-height:22px;">&#160;</div>';
+                ? '<div style="font-size:6.5pt;font-weight:bold;color:#0d47a1;line-height:1.2;padding:0 2px 4px;min-height:24px;">' . $h($fmt($p['v'])) . '</div>'
+                : '<div style="min-height:20px;">&#160;</div>';
             $leftBd = $ixMaq > 0 ? 'border-left:1px solid #e0e0e0;' : '';
             $ixMaq++;
-            $htmlLineMaq .= '<td align="center" style="width:' . $h((string) $wcol) . '%;padding:8px 4px 10px;vertical-align:bottom;' . $leftBd . 'background:#ffffff;">'
+            $htmlLineMaq .= '<td align="center" style="width:' . $h((string) $wcol) . '%;padding:8px 4px 10px;vertical-align:top;' . $leftBd . 'background:#ffffff;">'
                 . $valBlock
-                . '<table cellpadding="0" cellspacing="0" align="center" style="margin-top:4px;height:' . (string) $barH . 'px;"><tr valign="bottom"><td align="center" bgcolor="#f5f9fc" style="padding:0 4px 0;">'
-                . '<div style="width:18px;height:' . (string) $vh . 'px;background:#1565c0;border-radius:4px 4px 0 0;margin:0 auto;border:1px solid #0d47a1;">&#160;</div>'
-                . '</td></tr></table>'
+                . '<table cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;border-collapse:collapse;border-bottom:2px solid #37474f;width:24px;">'
+                . '<tr><td style="height:' . (string) $spacerH . 'px;font-size:1px;line-height:1px;background:#f1f5f9;">&#160;</td></tr>'
+                . '<tr><td align="center" bgcolor="#1565c0" style="height:' . (string) $vh . 'px;font-size:1px;line-height:1px;border-left:1px solid #0d47a1;border-right:1px solid #0d47a1;border-top:1px solid #0d47a1;border-radius:3px 3px 0 0;">&#160;</td></tr>'
+                . '</table>'
                 . '<div style="font-size:7.5pt;color:#263238;margin-top:8px;font-weight:bold;line-height:1.2;">' . $h($dow) . '</div>'
                 . '<div style="font-size:7pt;color:#546e7a;">' . $h($dm) . '</div>'
                 . '</td>';
