@@ -6798,7 +6798,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     }
     $barH = 100;
     $nD = count($lineDisp);
-    $showValsAbove = $nD <= 12;
     $htmlLineMaq = '<div class="pdf-chart-title">Evolução diária — maquinha (R$)</div>';
     $htmlLineMaq .= '<p class="pdf-chart-desc">Barras de baixo para cima; linha escura = zero. <strong>Teto:</strong> ' . $h($fmt($maxMLine)) . '.</p>';
     $htmlLineMaq .= '<table class="pdf-maq-outer" width="100%" cellpadding="0" cellspacing="0">';
@@ -6820,9 +6819,7 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             $dObj = \Carbon\Carbon::parse($p['d']);
             $dow = $diasSemPt[$dObj->dayOfWeek];
             $dm = $dObj->format('d/m');
-            $valBlock = $showValsAbove
-                ? '<div class="pdf-maq-val">' . $h($fmt($p['v'])) . '</div>'
-                : '<div class="pdf-maq-val-sp">&#160;</div>';
+            $valBlock = '<div class="pdf-maq-val">' . $h($fmt($p['v'])) . '</div>';
             $leftBd = $ixMaq > 0 ? 'border-left:1px solid #e0e0e0;' : '';
             $ixMaq++;
             $htmlLineMaq .= '<td class="pdf-maq-cell" style="width:' . $h((string) $wcolPct) . '%;' . $leftBd . '">'
@@ -6890,7 +6887,6 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         .pdf-maq-axis { padding: 4px 6px; font-size: 6.5pt; color: #37474f; text-align: center; border-bottom: 1px solid #cfd8dc; word-wrap: break-word; }
         .pdf-maq-cell { padding: 3px 1px 5px; vertical-align: top; text-align: center; background: #ffffff; overflow: hidden; box-sizing: border-box; }
         .pdf-maq-val { font-size: 5.5pt; font-weight: bold; color: #0d47a1; line-height: 1.1; padding: 0 1px 2px; min-height: 14px; word-wrap: break-word; overflow: hidden; }
-        .pdf-maq-val-sp { min-height: 12px; font-size: 1px; line-height: 1px; }
         .pdf-maq-barwrap { width: 10px; margin: 0 auto; border-collapse: collapse; border-bottom: 2px solid #37474f; table-layout: fixed; }
         .pdf-maq-spacer { font-size: 1px; line-height: 1px; background: #f1f5f9; }
         .pdf-maq-bar { font-size: 1px; line-height: 1px; background: #1565c0; border: 1px solid #0d47a1; border-bottom: none; border-radius: 2px 2px 0 0; }
