@@ -13947,6 +13947,16 @@ function setupBoletosModule() {
         const formData = new FormData(boletoForm);
         formData.set('valor', valor.toFixed(2));
         formData.set('valor_pago', valorPago.toFixed(2));
+        // Multipart envia "" nos number hidden; JSON antigo mandava número — evita 422 em juros_multa / meses
+        const jurosEl = boletoForm.querySelector('[name="juros_multa"]');
+        if (jurosEl) {
+          const jv = parseFloat(String(jurosEl.value || '').replace(',', '.'));
+          formData.set('juros_multa', Number.isFinite(jv) && jv >= 0 ? jv.toFixed(2) : '0');
+        }
+        const mesesEl = boletoForm.querySelector('[name="meses_recorrencia"]');
+        if (mesesEl && String(mesesEl.value || '').trim() === '') {
+          formData.delete('meses_recorrencia');
+        }
 
         // Debug: mostra todos os campos
         console.log('📝 Campos do formulário:');

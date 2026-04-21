@@ -84,7 +84,12 @@ class BoletoController extends Controller
         if (isset($input['data_pagamento']) && $input['data_pagamento'] === '') {
             $request->merge(['data_pagamento' => null]);
         }
-        
+        foreach (['juros_multa', 'meses_recorrencia', 'valor_pago'] as $field) {
+            if ($request->has($field) && $request->input($field) === '') {
+                $request->merge([$field => null]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'fornecedor' => 'required|string|max:255',
             'descricao' => 'required|string|max:255',
@@ -203,6 +208,11 @@ class BoletoController extends Controller
         if (isset($input['data_pagamento']) && $input['data_pagamento'] === '') {
             $request->merge(['data_pagamento' => null]);
         }
+        foreach (['juros_multa', 'meses_recorrencia', 'valor_pago'] as $field) {
+            if ($request->has($field) && $request->input($field) === '') {
+                $request->merge([$field => null]);
+            }
+        }
 
         $validator = Validator::make($request->all(), [
             'fornecedor' => 'sometimes|required|string|max:255',
@@ -231,10 +241,11 @@ class BoletoController extends Controller
 
         try {
             $boleto = Boleto::findOrFail($id);
-            $data = $request->all();
+            $data = $request->except(['anexo']);
 
-            // Remove anexo (arquivo) - será processado separadamente se houver
-            unset($data['anexo']);
+            // Evita sobrescrever colunas com chaves estranhas do multipart
+            $allowed = array_flip((new Boleto())->getFillable());
+            $data = array_intersect_key($data, $allowed);
 
             // Processa upload do anexo se houver
             if ($request->hasFile('anexo')) {
