@@ -166,6 +166,7 @@ const dom = {
   boletosMesAnoFiltro: document.getElementById("boletosMesAnoFiltro"),
   boletosUnidadeFiltro: document.getElementById("boletosUnidadeFiltro"),
   boletosStatusFiltro: document.getElementById("boletosStatusFiltro"),
+  boletosDataVencimentoFiltro: document.getElementById("boletosDataVencimentoFiltro"),
   limparFiltrosBoletos: document.getElementById("limparFiltrosBoletos"),
   boletosTable: document.getElementById("boletosTable"),
   boletosTotalMes: document.getElementById("boletosTotalMes"),
@@ -11800,6 +11801,16 @@ function populateAlvarasMesAnoFiltro() {
   if (valorAtual) select.value = valorAtual;
 }
 
+/** Filtros ativos na tabela de boletos (mesmo conjunto em toda a UI). */
+function getActiveBoletosTableFilters() {
+  const f = {};
+  if (dom.boletosMesAnoFiltro?.value) f.mes_ano = dom.boletosMesAnoFiltro.value;
+  if (dom.boletosUnidadeFiltro?.value) f.unidade_id = dom.boletosUnidadeFiltro.value;
+  if (dom.boletosStatusFiltro?.value) f.status = dom.boletosStatusFiltro.value;
+  if (dom.boletosDataVencimentoFiltro?.value) f.data_vencimento = dom.boletosDataVencimentoFiltro.value;
+  return f;
+}
+
 async function populateBoletosUnidades() {
   const select = document.querySelector('#boletoForm select[name="unidade_id"]');
   if (!select) return;
@@ -11850,6 +11861,7 @@ async function loadBoletos(filtros = {}) {
     if (filtros.mes_ano) params.append('mes_ano', filtros.mes_ano);
     if (filtros.unidade_id) params.append('unidade_id', filtros.unidade_id);
     if (filtros.status) params.append('status', filtros.status);
+    if (filtros.data_vencimento) params.append('data_vencimento', filtros.data_vencimento);
 
     const url = `${API_URL}/boletos?${params.toString()}`;
     console.log('📤 URL:', url);
@@ -12023,11 +12035,9 @@ function renderBoletos(boletos) {
         try {
           await fetchJSON(`/boletos/${id}`, { method: 'DELETE' });
           showToast('Boleto excluído com sucesso.', 'success');
-          const mesAno = dom.boletosMesAnoFiltro?.value || '';
-          const unidadeId = dom.boletosUnidadeFiltro?.value || '';
-          const status = dom.boletosStatusFiltro?.value || '';
-          await loadBoletos({ mes_ano: mesAno, unidade_id: unidadeId, status });
-          await loadBoletosResumo(mesAno);
+          const filtros = getActiveBoletosTableFilters();
+          await loadBoletos(filtros);
+          await loadBoletosResumo(filtros.mes_ano);
         } catch (e) {
           showToast('Erro ao excluir: ' + (e.message || 'Falha na operação.'), 'error');
           btn.disabled = false;
@@ -13666,17 +13676,10 @@ function setupBoletosModule() {
         recarregarTabelaBoletos.disabled = true;
         recarregarTabelaBoletos.textContent = '⏳ Atualizando...';
         
-        const mesAno = boletosMesAnoFiltro?.value;
-        
-        if (mesAno && mesAno !== '') {
-          console.log('📅 Recarregando boletos do mês:', mesAno);
-          await loadBoletos({ mes_ano: mesAno });
-          await loadBoletosResumo(mesAno);
-        } else {
-          console.log('📋 Recarregando TODOS os boletos');
-          await loadBoletos({});
-          await loadBoletosResumo();
-        }
+        const filtros = getActiveBoletosTableFilters();
+        console.log('📋 Recarregando boletos com filtros:', filtros);
+        await loadBoletos(filtros);
+        await loadBoletosResumo(filtros.mes_ano);
         
         showToast('✅ Boletos atualizados!', 'success');
         console.log('✅ Atualização concluída!');
@@ -13736,6 +13739,50 @@ function setupBoletosModule() {
     });
   }
 
+  const boletoRemoverAnexoAtual = document.getElementById('boletoRemoverAnexoAtual');
+  if (boletoRemoverAnexoAtual && boletoForm) {
+    boletoRemoverAnexoAtual.addEventListener('click', async () => {
+      const id = boletoForm.querySelector('input[name="id"]')?.value?.trim();
+      if (!id) return;
+      if (!currentUser?.id) {
+        showToast('Sessão expirada. Faça login novamente.', 'error');
+        return;
+      }
+      if (!confirm('Remover o anexo deste boleto? O ficheiro será apagado do servidor.')) return;
+      try {
+        boletoRemoverAnexoAtual.disabled = true;
+        const res = await fetch(`${API_URL}/boletos/${id}/anexo`, {
+          method: 'DELETE',
+          headers: {
+            Accept: 'application/json',
+            'X-Usuario-Id': String(currentUser.id)
+          }
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          let msg = t;
+          try {
+            const j = JSON.parse(t);
+            msg = j.message || j.error || t;
+          } catch (_) {}
+          throw new Error(msg || `Erro ${res.status}`);
+        }
+        const wrap = document.getElementById('boletoAnexoAtualWrap');
+        if (wrap) wrap.style.display = 'none';
+        const link = document.getElementById('boletoAnexoAtualLink');
+        if (link) {
+          link.href = '#';
+          link.textContent = '—';
+        }
+        showToast('Anexo removido.', 'success');
+      } catch (e) {
+        showToast('Erro ao remover anexo: ' + (e.message || ''), 'error');
+      } finally {
+        boletoRemoverAnexoAtual.disabled = false;
+      }
+    });
+  }
+
   // Segurança: garante que "Novo Boleto" nunca herda ID/modo de edição
   const resetBoletoFormToCreateMode = () => {
     if (!boletoForm) return;
@@ -13745,6 +13792,13 @@ function setupBoletosModule() {
     const pagamentoFields = document.getElementById('pagamentoFields');
     if (pagamentoFields) pagamentoFields.style.display = 'none';
     if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+    const anexoAtualWrap = document.getElementById('boletoAnexoAtualWrap');
+    if (anexoAtualWrap) anexoAtualWrap.style.display = 'none';
+    const anexoAtualLink = document.getElementById('boletoAnexoAtualLink');
+    if (anexoAtualLink) {
+      anexoAtualLink.href = '#';
+      anexoAtualLink.textContent = '—';
+    }
     const recorrenteFields = document.getElementById('recorrenteFields');
     if (recorrenteFields) recorrenteFields.style.display = 'none';
     const boletoRecorrente = document.getElementById('boletoRecorrente');
@@ -13821,6 +13875,10 @@ function setupBoletosModule() {
     if (boletosStatusFiltro?.value) {
       filtros.status = boletosStatusFiltro.value;
     }
+
+    if (dom.boletosDataVencimentoFiltro?.value) {
+      filtros.data_vencimento = dom.boletosDataVencimentoFiltro.value;
+    }
     
     return filtros;
   }
@@ -13853,6 +13911,10 @@ function setupBoletosModule() {
   if (boletosStatusFiltro) {
     boletosStatusFiltro.addEventListener('change', aplicarFiltrosBoletos);
   }
+
+  if (dom.boletosDataVencimentoFiltro) {
+    dom.boletosDataVencimentoFiltro.addEventListener('change', aplicarFiltrosBoletos);
+  }
   
   // Botão limpar filtros
   if (limparFiltrosBoletos) {
@@ -13864,6 +13926,7 @@ function setupBoletosModule() {
         if (boletosMesAnoFiltro) boletosMesAnoFiltro.value = '';
         if (boletosUnidadeFiltro) boletosUnidadeFiltro.value = '';
         if (boletosStatusFiltro) boletosStatusFiltro.value = '';
+        if (dom.boletosDataVencimentoFiltro) dom.boletosDataVencimentoFiltro.value = '';
         
         // Carrega todos os boletos
         await loadBoletos({});
@@ -14072,8 +14135,9 @@ function setupBoletosModule() {
                 boletoModal.classList.remove('active');
                 boletoForm.reset();
                 showToast('Boleto não encontrado (pode ter sido excluído). Lista atualizada.', 'warning');
-                await loadBoletos({});
-                await loadBoletosResumo();
+                const f404 = getActiveBoletosTableFilters();
+                await loadBoletos(f404);
+                await loadBoletosResumo(f404.mes_ano);
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Salvar Boleto'; }
                 return;
               }
@@ -14137,6 +14201,13 @@ function setupBoletosModule() {
         if (idReset) idReset.value = '';
         if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
         if (recorrenteFields) recorrenteFields.style.display = 'none';
+        const anexoAtualW = document.getElementById('boletoAnexoAtualWrap');
+        if (anexoAtualW) anexoAtualW.style.display = 'none';
+        const anexoAtualL = document.getElementById('boletoAnexoAtualLink');
+        if (anexoAtualL) {
+          anexoAtualL.href = '#';
+          anexoAtualL.textContent = '—';
+        }
         
         // Reabilita o botão
         if (submitBtn) {
@@ -14146,8 +14217,9 @@ function setupBoletosModule() {
         
         // Recarregar lista de boletos E resumo
         console.log('🔄 Recarregando lista e cards...');
-        await loadBoletos({});  // Carrega TODOS os boletos
-        await loadBoletosResumo();  // Atualiza os cards
+        const filtrosPosSave = getActiveBoletosTableFilters();
+        await loadBoletos(filtrosPosSave);
+        await loadBoletosResumo(filtrosPosSave.mes_ano);
         
         console.log('✅ Processo concluído!');
       } catch (error) {
@@ -17602,6 +17674,20 @@ async function editarBoleto(id) {
     if (anexoEl) anexoEl.value = '';
     const anexoPreview = document.getElementById('boletoAnexoPreview');
     if (anexoPreview) anexoPreview.style.display = 'none';
+
+    const anexoAtualWrap = document.getElementById('boletoAnexoAtualWrap');
+    const anexoAtualLink = document.getElementById('boletoAnexoAtualLink');
+    if (boleto.anexo_path && anexoAtualWrap && anexoAtualLink) {
+      anexoAtualWrap.style.display = 'block';
+      anexoAtualLink.href = `${API_URL}/boletos/${boleto.id}/anexo`;
+      anexoAtualLink.textContent = boleto.anexo_nome || 'Baixar anexo';
+    } else if (anexoAtualWrap) {
+      anexoAtualWrap.style.display = 'none';
+      if (anexoAtualLink) {
+        anexoAtualLink.href = '#';
+        anexoAtualLink.textContent = '—';
+      }
+    }
     
     // Atualiza título e abre modal
     document.getElementById('boletoModalTitle').textContent = '✏️ Editar Boleto';

@@ -43,6 +43,12 @@ class BoletoController extends Controller
                 }
             }
 
+            // Filtro por data exata de vencimento (YYYY-MM-DD)
+            if ($request->filled('data_vencimento')) {
+                $query->whereDate('data_vencimento', $request->data_vencimento);
+                \Log::info('📅 Filtrando por data de vencimento: ' . $request->data_vencimento);
+            }
+
             // Filtro por periodo
             if ($request->has('data_inicio')) {
                 $query->where('data_vencimento', '>=', $request->data_inicio);
