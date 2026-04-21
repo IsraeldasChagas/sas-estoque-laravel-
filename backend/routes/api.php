@@ -5164,7 +5164,7 @@ Route::options('/boletos/economia-mensal', function () {
 Route::options('/boletos/{id}', function () {
     return response()->json([])
         ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
 
@@ -5224,7 +5224,17 @@ Route::put('/boletos/{id}', function (Request $request, $id) {
     $response = $controller->update($request, $id);
     return $response
         ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+// Atualizar boleto com anexo (multipart) — POST evita falhas comuns de PUT + ficheiro no PHP
+Route::post('/boletos/{id}', function (Request $request, $id) {
+    $controller = new BoletoController();
+    $response = $controller->update($request, $id);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
 

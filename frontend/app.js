@@ -14043,36 +14043,17 @@ function setupBoletosModule() {
           }
           
           if (isEdicao) {
-            // EDIÇÃO - usa PUT
+            // EDIÇÃO: multipart (FormData) para incluir anexo; POST /boletos/{id} (PUT+multipart falha em vários stacks PHP)
             console.log('✏️ Editando boleto ID:', boletoId);
-            
-            const unidadeVal = boletoForm.querySelector('[name="unidade_id"]')?.value;
-            const jurosVal = parseFloat(boletoForm.querySelector('[name="juros_multa"]')?.value) || 0;
-            const data = {
-              fornecedor,
-              descricao,
-              data_vencimento: dataVenc,
-              valor: valor.toFixed(2),
-              unidade_id: unidadeVal && unidadeVal !== '' ? unidadeVal : null,
-              categoria: boletoForm.querySelector('[name="categoria"]')?.value || null,
-              numero_boleto: boletoForm.querySelector('[name="numero_boleto"]')?.value || null,
-              nome_pagador: boletoForm.querySelector('[name="nome_pagador"]')?.value || null,
-              whatsapp_pagador: boletoForm.querySelector('[name="whatsapp_pagador"]')?.value || null,
-              status: boletoForm.querySelector('[name="status"]')?.value || 'A_VENCER',
-              data_pagamento: boletoForm.querySelector('[name="data_pagamento"]')?.value || null,
-              valor_pago: valorPago > 0 ? valorPago.toFixed(2) : null,
-              juros_multa: jurosVal,
-              observacoes: boletoForm.querySelector('[name="observacoes"]')?.value?.trim() || null
-            };
-            
+            formData.delete('id');
+
             const response = await fetch(`${API_URL}/boletos/${boletoId}`, {
-              method: 'PUT',
+              method: 'POST',
               headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'X-Usuario-Id': currentUser?.id || ''
               },
-              body: JSON.stringify(data)
+              body: formData
             });
             
             if (!response.ok) {
@@ -17606,6 +17587,11 @@ async function editarBoleto(id) {
     const boletoRecorrente = document.getElementById('boletoRecorrente');
     if (recorrenteFields) recorrenteFields.style.display = 'none';
     if (boletoRecorrente) boletoRecorrente.checked = false;
+
+    const anexoEl = document.getElementById('boletoAnexoInput');
+    if (anexoEl) anexoEl.value = '';
+    const anexoPreview = document.getElementById('boletoAnexoPreview');
+    if (anexoPreview) anexoPreview.style.display = 'none';
     
     // Atualiza título e abre modal
     document.getElementById('boletoModalTitle').textContent = '✏️ Editar Boleto';
