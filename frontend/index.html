@@ -832,8 +832,6 @@
                 <div class="reservas-mesas-actions">
                   <button type="button" class="btn primary" id="openNovaReservaMesa">+ Nova Reserva</button>
                   <button type="button" class="btn neutral" id="btnNovaMesaReserva" title="Criar nova mesa">+ Nova mesa</button>
-                  <button type="button" class="btn secondary" id="btnHistoricoReservas" title="Ver histórico de reservas">📋 Histórico</button>
-                  <button type="button" class="btn secondary" id="openGerenciarMesas" style="display:none;">⚙️ Gerenciar Mesas</button>
                 </div>
               </div>
 
@@ -1080,60 +1078,6 @@
                 <button type="button" class="close-btn" id="closeReservaDetalhes" aria-label="Fechar">×</button>
               </header>
               <div id="reservaDetalhesContent" style="padding: 1.5rem;"></div>
-            </div>
-          </div>
-
-          <!-- Modal Gerenciar Mesas -->
-          <div class="modal-backdrop" id="mesasModal">
-            <div class="modal modal--wide">
-              <header>
-                <h2>⚙️ Gerenciar Mesas</h2>
-                <button type="button" class="close-btn" id="closeMesasModal" aria-label="Fechar">×</button>
-              </header>
-              <div style="padding: 1rem;">
-                <div class="mesas-modal-actions">
-                  <label>Unidade: <select id="mesasModalUnidade"></select></label>
-                  <button type="button" class="btn primary" id="addMesaBtn">+ Adicionar Mesa</button>
-                </div>
-                <div id="mesaFormCard" class="form-card" style="display:none; margin-top: 1rem;">
-                  <h3 id="mesaFormTitle">Nova Mesa</h3>
-                  <form id="mesaForm">
-                    <input type="hidden" name="id" />
-                    <input type="hidden" name="unidade_id" id="mesaFormUnidadeId" />
-                    <div class="form-card__grid">
-                      <label class="form-card__field">Número da mesa * <input name="numero_mesa" placeholder="Ex: 01, 02, Mesa 1" required /></label>
-                      <label class="form-card__field">Nome (opcional) <input name="nome_mesa" placeholder="Ex: Varanda 1, Salão principal" /></label>
-                      <label class="form-card__field">Pessoas (capacidade) * <input type="number" name="capacidade" min="1" value="4" required /></label>
-                      <label class="form-card__field">Localização <input name="localizacao" placeholder="Ex: salão, varanda" /></label>
-                      <label class="form-card__field" style="display:flex;align-items:center;gap:0.5rem;">
-                        <input type="checkbox" name="pode_juntar" value="1" /> Pode juntar com outras
-                      </label>
-                      <label class="form-card__field" style="display:flex;align-items:center;gap:0.5rem;">
-                        <input type="checkbox" name="pode_separar" value="1" /> Pode separar
-                      </label>
-                    </div>
-                    <div style="margin-top: 1rem;">
-                      <button type="button" class="btn neutral" id="cancelMesaForm">Cancelar</button>
-                      <button type="submit" class="btn primary">Salvar Mesa</button>
-                    </div>
-                  </form>
-                </div>
-                <div class="table-wrapper" style="margin-top: 1rem;">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nº</th>
-                        <th>Nome</th>
-                        <th>Capacidade</th>
-                        <th>Localização</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody id="mesasModalTableBody"></tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           </div>
 

@@ -1450,6 +1450,9 @@ async function fetchJSON(path, options = {}) {
           message = payload.message;
         } else if (payload.error) {
           message = payload.error;
+        } else if (payload.errors && typeof payload.errors === 'object') {
+          const errors = Object.values(payload.errors).flat();
+          message = errors.length > 0 ? errors.join(', ') : message;
         } else if (payload.messages && typeof payload.messages === 'object') {
           // Erros de validação do Laravel
           const errors = Object.values(payload.messages).flat();
@@ -13292,12 +13295,6 @@ async function abrirEditarReserva(id) {
 
 function setupReservasMesasModule() {
   var isAdmin = function() { return currentUser && (currentUser.perfil || '').toUpperCase() === 'ADMIN'; };
-  var podeGerenciarMesas = function() {
-    var p = (currentUser && currentUser.perfil || '').toUpperCase();
-    return p === 'ADMIN' || p === 'GERENTE' || p === 'ASSISTENTE_ADMINISTRATIVO';
-  };
-  var openGerenciar = document.getElementById('openGerenciarMesas');
-  if (openGerenciar) openGerenciar.style.display = podeGerenciarMesas() ? '' : 'none';
 
   var unidadeSelect = document.getElementById('reservasUnidadeFiltro');
   var dataInput = document.getElementById('reservasDataFiltro');
@@ -13409,20 +13406,30 @@ function setupReservasMesasModule() {
       if (optUnidade) unidadeVal = String(optUnidade).trim();
     }
     if (!unidadeVal) { showToast('Selecione a unidade no filtro acima primeiro.', 'error'); return; }
+    var mesaIdStr = (form.querySelector('[name="mesa_id"]') && form.querySelector('[name="mesa_id"]').value) || '';
+    var qtdRaw = form.querySelector('[name="qtd_pessoas"]') && form.querySelector('[name="qtd_pessoas"]').value;
+    var qtdNum = parseInt(qtdRaw, 10);
+    var horaRaw = (form.querySelector('[name="hora_reserva"]') && form.querySelector('[name="hora_reserva"]').value) || '';
+    if (horaRaw.length >= 8 && horaRaw.charAt(5) === ':') {
+      horaRaw = horaRaw.slice(0, 5);
+    }
     var data = {
-      unidade_id: parseInt(unidadeVal, 10) || unidadeVal,
-      mesa_id: form.querySelector('[name="mesa_id"]').value,
-      nome_cliente: form.querySelector('[name="nome_cliente"]').value,
-      telefone_cliente: form.querySelector('[name="telefone_cliente"]').value,
+      unidade_id: parseInt(unidadeVal, 10),
+      mesa_id: parseInt(mesaIdStr, 10),
+      nome_cliente: (form.querySelector('[name="nome_cliente"]') && form.querySelector('[name="nome_cliente"]').value.trim()) || '',
+      telefone_cliente: (form.querySelector('[name="telefone_cliente"]') && form.querySelector('[name="telefone_cliente"]').value.trim()) || '',
       data_reserva: form.querySelector('[name="data_reserva"]').value,
-      hora_reserva: form.querySelector('[name="hora_reserva"]').value,
-      qtd_pessoas: parseInt(form.querySelector('[name="qtd_pessoas"]').value, 10),
+      hora_reserva: horaRaw,
+      qtd_pessoas: Number.isFinite(qtdNum) && qtdNum >= 1 ? qtdNum : 1,
       status: form.querySelector('[name="status"]').value,
       observacao: form.querySelector('[name="observacao"]').value,
       local: form.querySelector('[name="local"]') && form.querySelector('[name="local"]').value,
       ocasiao: form.querySelector('[name="ocasiao"]') && form.querySelector('[name="ocasiao"]').value
     };
-    if (!data.unidade_id || !data.mesa_id) { showToast('Selecione unidade e mesa.', 'error'); return; }
+    if (!Number.isFinite(data.unidade_id) || data.unidade_id < 1 || !Number.isFinite(data.mesa_id) || data.mesa_id < 1) {
+      showToast('Selecione unidade e mesa.', 'error');
+      return;
+    }
     try {
       if (id) {
         await fetchJSON('/reservas-mesas/' + id, { method: 'PUT', body: JSON.stringify(data) });
@@ -13450,33 +13457,6 @@ function setupReservasMesasModule() {
   document.getElementById('reservasTurnoFiltro') && document.getElementById('reservasTurnoFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasStatusFiltro') && document.getElementById('reservasStatusFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasAtualizar') && document.getElementById('reservasAtualizar').addEventListener('click', function() { loadReservasMesas(); });
-
-  document.getElementById('btnHistoricoReservas') && document.getElementById('btnHistoricoReservas').addEventListener('click', async function() {
-    var unidadeAtual = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
-    navigateTo('historicoReservas');
-    var uSelect = document.getElementById('historicoUnidadeFiltro');
-    if (uSelect && uSelect.options.length <= 1) {
-      var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
-      state.unidades = unidades;
-      uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-      (unidades || []).forEach(function(u) {
-        var opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = u.nome || 'Unidade ' + u.id;
-        uSelect.appendChild(opt);
-      });
-      if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
-        uSelect.value = currentUser.unidade_id;
-        uSelect.disabled = true;
-      }
-    }
-    if (unidadeAtual && uSelect) uSelect.value = unidadeAtual;
-    var dInicio = document.getElementById('historicoDataInicio');
-    var dFim = document.getElementById('historicoDataFim');
-    if (dInicio && !dInicio.value) dInicio.value = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    if (dFim && !dFim.value) dFim.value = new Date().toISOString().slice(0, 10);
-    await loadHistoricoReservas();
-  });
 
   var cardsContainer = document.getElementById('reservasMesasCards');
   if (cardsContainer) {
@@ -13507,120 +13487,6 @@ function setupReservasMesasModule() {
       else showToast('Selecione uma unidade primeiro.', 'warning');
     });
   }
-
-  document.getElementById('openGerenciarMesas') && document.getElementById('openGerenciarMesas').addEventListener('click', async function() {
-    await loadUnidades(false);
-    var select = document.getElementById('mesasModalUnidade');
-    select.innerHTML = '';
-    var unidadePadrao = (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value) || (currentUser && currentUser.unidade_id) || (state.unidades && state.unidades[0] && state.unidades[0].id) || '';
-    var unidadesParaMostrar = state.unidades || [];
-    if (!isAdmin() && currentUser && currentUser.unidade_id) {
-      unidadesParaMostrar = (state.unidades || []).filter(function(u) { return u.id == currentUser.unidade_id; });
-      unidadePadrao = currentUser.unidade_id;
-      select.disabled = true;
-    } else {
-      select.disabled = false;
-    }
-    unidadesParaMostrar.forEach(function(u) {
-      var opt = document.createElement('option');
-      opt.value = u.id;
-      opt.textContent = u.nome;
-      select.appendChild(opt);
-    });
-    select.value = unidadePadrao || (unidadesParaMostrar[0] && unidadesParaMostrar[0].id) || '';
-    document.getElementById('mesaFormCard').style.display = 'none';
-    await carregarMesasModal();
-    document.getElementById('mesasModal').classList.add('active');
-  });
-
-  document.getElementById('closeMesasModal') && document.getElementById('closeMesasModal').addEventListener('click', function() { document.getElementById('mesasModal').classList.remove('active'); });
-  document.getElementById('mesasModalUnidade') && document.getElementById('mesasModalUnidade').addEventListener('change', function() { carregarMesasModal(); });
-
-  async function carregarMesasModal() {
-    var unidadeId = document.getElementById('mesasModalUnidade') && document.getElementById('mesasModalUnidade').value;
-    if (!unidadeId) return;
-    var mesas = await fetchJSON('/mesas?unidade_id=' + unidadeId);
-    var tbody = document.getElementById('mesasModalTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = (mesas || []).map(function(m) {
-      var estaOcupada = (m.status || 'livre') === 'ocupada';
-      var btnDelTitle = estaOcupada ? 'Inativar mesa (ocupada)' : 'Excluir mesa';
-      return '<tr><td>' + m.numero_mesa + '</td><td>' + escapeHtml(m.nome_mesa || '-') + '</td><td>' + m.capacidade + '</td><td>' + escapeHtml(m.localizacao || '-') + '</td><td>' + (m.status || 'livre').replace(/_/g, ' ') + '</td><td>' +
-        '<button class="btn-icon" title="Editar mesa" data-mesa-id="' + m.id + '">✏️</button> ' +
-        '<button class="btn-icon" title="' + btnDelTitle + '" data-mesa-id="' + m.id + '" data-action="excluir">🗑️</button></td></tr>';
-    }).join('') || '<tr><td colspan="6">Nenhuma mesa.</td></tr>';
-
-    tbody.querySelectorAll('[data-mesa-id]').forEach(function(btn) {
-      btn.addEventListener('click', async function() {
-        var mid = btn.getAttribute('data-mesa-id');
-        if (btn.getAttribute('data-action') === 'excluir') {
-          var m = mesas.find(function(x) { return x.id == mid; });
-          var msg = (m && (m.status || 'livre') === 'ocupada') ? 'Mesa ocupada. Será apenas inativada. Continuar?' : 'Excluir esta mesa permanentemente?';
-          if (!confirm(msg)) return;
-          var resp = await fetchJSON('/mesas/' + mid, { method: 'DELETE' });
-          showToast((resp && resp.message) || 'Mesa removida.', 'success');
-          await carregarMesasModal();
-          await loadReservasMesas();
-        } else {
-          var m = mesas.find(function(x) { return x.id == mid; });
-          if (m) {
-            document.getElementById('mesaFormTitle').textContent = 'Editar Mesa';
-            document.getElementById('mesaForm').querySelector('[name="id"]').value = m.id;
-            document.getElementById('mesaFormUnidadeId').value = m.unidade_id;
-            document.getElementById('mesaForm').querySelector('[name="numero_mesa"]').value = m.numero_mesa;
-            document.getElementById('mesaForm').querySelector('[name="nome_mesa"]').value = m.nome_mesa || '';
-            document.getElementById('mesaForm').querySelector('[name="capacidade"]').value = m.capacidade || 4;
-            document.getElementById('mesaForm').querySelector('[name="localizacao"]').value = m.localizacao || '';
-            var pj = document.getElementById('mesaForm').querySelector('[name="pode_juntar"]');
-            var ps = document.getElementById('mesaForm').querySelector('[name="pode_separar"]');
-            if (pj) pj.checked = !!m.pode_juntar;
-            if (ps) ps.checked = !!m.pode_separar;
-            document.getElementById('mesaFormCard').style.display = 'block';
-          }
-        }
-      });
-    });
-  }
-
-  document.getElementById('addMesaBtn') && document.getElementById('addMesaBtn').addEventListener('click', function() {
-    document.getElementById('mesaFormTitle').textContent = 'Nova Mesa';
-    document.getElementById('mesaForm').reset();
-    document.getElementById('mesaForm').querySelector('[name="id"]').value = '';
-    document.getElementById('mesaFormUnidadeId').value = (document.getElementById('mesasModalUnidade') && document.getElementById('mesasModalUnidade').value) || '';
-    document.getElementById('mesaForm').querySelector('[name="capacidade"]').value = 4;
-    document.getElementById('mesaFormCard').style.display = 'block';
-  });
-
-  document.getElementById('cancelMesaForm') && document.getElementById('cancelMesaForm').addEventListener('click', function() {
-    document.getElementById('mesaFormCard').style.display = 'none';
-  });
-
-  document.getElementById('mesaForm') && document.getElementById('mesaForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    var form = e.target;
-    var id = form.querySelector('[name="id"]').value;
-    var payload = {
-      unidade_id: form.querySelector('[name="unidade_id"]').value,
-      numero_mesa: form.querySelector('[name="numero_mesa"]').value,
-      nome_mesa: form.querySelector('[name="nome_mesa"]').value || null,
-      capacidade: parseInt(form.querySelector('[name="capacidade"]').value, 10),
-      localizacao: form.querySelector('[name="localizacao"]').value || null,
-      pode_juntar: !!form.querySelector('[name="pode_juntar"]') && form.querySelector('[name="pode_juntar"]').checked,
-      pode_separar: !!form.querySelector('[name="pode_separar"]') && form.querySelector('[name="pode_separar"]').checked
-    };
-    try {
-      if (id) {
-        await fetchJSON('/mesas/' + id, { method: 'PUT', body: JSON.stringify(payload) });
-        showToast('Mesa atualizada.', 'success');
-      } else {
-        await fetchJSON('/mesas', { method: 'POST', body: JSON.stringify(payload) });
-        showToast('Mesa criada.', 'success');
-      }
-      document.getElementById('mesaFormCard').style.display = 'none';
-      await carregarMesasModal();
-      await loadReservasMesas();
-    } catch (err) { showToast(err.message || 'Erro ao salvar', 'error'); }
-  });
 }
 
 function setupBoletosModule() {

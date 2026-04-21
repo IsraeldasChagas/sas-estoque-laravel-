@@ -11,6 +11,19 @@ use Carbon\Carbon;
 
 class ReservaMesaController extends Controller
 {
+    /** Normaliza hora para H:i (alguns browsers enviam HH:MM:SS e a regra date_format:H:i falha). */
+    protected function normalizeHoraReservaRequest(Request $request): void
+    {
+        $h = $request->input('hora_reserva');
+        if (! is_string($h) || trim($h) === '') {
+            return;
+        }
+        $h = trim($h);
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', $h, $m)) {
+            $request->merge(['hora_reserva' => sprintf('%02d:%02d', (int) $m[1], (int) $m[2])]);
+        }
+    }
+
     public function index(Request $request)
     {
         $usuarioId = $request->header('X-Usuario-Id');
@@ -152,6 +165,8 @@ class ReservaMesaController extends Controller
         }
         $request->merge(['unidade_id' => $unidadeId]);
 
+        $this->normalizeHoraReservaRequest($request);
+
         $validator = Validator::make($request->all(), [
             'unidade_id' => 'required|exists:unidades,id',
             'mesa_id' => 'required|exists:mesas,id',
@@ -233,6 +248,8 @@ class ReservaMesaController extends Controller
         if (in_array($reserva->status, [ReservaMesa::STATUS_CANCELADA, ReservaMesa::STATUS_FINALIZADA, ReservaMesa::STATUS_NO_SHOW])) {
             return response()->json(['message' => 'Reserva não pode ser editada neste status.'], 422);
         }
+
+        $this->normalizeHoraReservaRequest($request);
 
         $validator = Validator::make($request->all(), [
             'mesa_id' => 'sometimes|required|exists:mesas,id',
