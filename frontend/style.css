@@ -4983,7 +4983,9 @@ select[size]:not([size="1"]) {
 .boletos-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem 1.25rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 2px solid var(--border);
@@ -4993,11 +4995,17 @@ select[size]:not([size="1"]) {
   margin: 0;
   color: var(--primary);
   font-size: 1.75rem;
+  flex: 1 1 min(100%, 18rem);
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .boletos-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  flex-shrink: 0;
+  align-items: center;
 }
 
 /* Modulo RH - Funcionarios */
@@ -5089,21 +5097,52 @@ select[size]:not([size="1"]) {
 .view-foto-placeholder { background: var(--border); display: flex; align-items: center; justify-content: center; }
 .view-fields-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0 1.5rem; }
 
-/* Filtro de Mes/Ano */
+/* Filtro de Mes/Ano — grid estável com sidebar aberta, recolhida ou mobile */
 .boletos-filtro {
   background: var(--card-bg);
   padding: 1.25rem;
   border-radius: var(--radius);
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr));
+  gap: 1rem 1.25rem;
+  align-items: end;
+  min-width: 0;
 }
 
-.boletos-filtro label {
+.boletos-filtro label,
+.boletos-filtro .boletos-filtro__field {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
   font-weight: 600;
   color: var(--text);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.boletos-filtro .boletos-mes-select,
+.boletos-filtro input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.boletos-filtro input[type="date"] {
+  min-height: 2.65rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+}
+
+.boletos-filtro .btn {
+  min-height: 42px;
+  align-self: end;
+  justify-self: start;
+  width: auto;
+  white-space: nowrap;
 }
 
 .boletos-mes-select {
@@ -5341,7 +5380,7 @@ select[size]:not([size="1"]) {
 @media (max-width: 768px) {
   .boletos-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1rem;
   }
 
@@ -5351,6 +5390,18 @@ select[size]:not([size="1"]) {
 
   .boletos-actions button {
     flex: 1;
+    min-width: 0;
+  }
+
+  .boletos-filtro {
+    grid-template-columns: 1fr;
+  }
+
+  .boletos-filtro .btn.boletos-filtro__clear {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+    white-space: normal;
   }
 
   .boletos-resumo {
@@ -5364,6 +5415,20 @@ select[size]:not([size="1"]) {
   .boleto-card__value {
     font-size: 1.5rem;
   }
+}
+
+/* Secções financeiras: não estourar quando a área principal fica mais larga */
+#boletaoSection,
+#alvaraSection,
+#fechamentoSection {
+  min-width: 0;
+}
+
+#boletaoSection .table-wrapper,
+#alvaraSection .table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Estilo para input de arquivo no modal de boleto */

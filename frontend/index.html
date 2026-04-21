@@ -2277,23 +2277,23 @@
             </div>
 
             <!-- Filtros -->
-            <div class="boletos-filtro" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
-              <label style="flex: 1; min-width: 200px;">
-                📅 Mês/Ano:
+            <div class="boletos-filtro">
+              <label class="boletos-filtro__field">
+                📅 Mês/Ano
                 <select id="boletosMesAnoFiltro" class="boletos-mes-select">
                   <option value="">📋 Todos os boletos</option>
                 </select>
               </label>
 
-              <label style="flex: 1; min-width: 200px;">
-                🏢 Unidade:
+              <label class="boletos-filtro__field">
+                🏢 Unidade
                 <select id="boletosUnidadeFiltro" class="boletos-mes-select">
                   <option value="">Todas as unidades</option>
                 </select>
               </label>
 
-              <label style="flex: 1; min-width: 200px;">
-                📊 Status:
+              <label class="boletos-filtro__field">
+                📊 Status
                 <select id="boletosStatusFiltro" class="boletos-mes-select">
                   <option value="">Todos os status</option>
                   <option value="A_VENCER">A vencer</option>
@@ -2303,12 +2303,12 @@
                 </select>
               </label>
 
-              <label style="flex: 0 1 auto; min-width: 180px;">
-                📆 Data vencimento:
-                <input type="date" id="boletosDataVencimentoFiltro" class="boletos-mes-select" style="width: 100%; height: 42px; padding: 0 0.5rem; border-radius: 8px; border: 1px solid #cfd8dc;" title="Filtra boletos com vencimento neste dia" />
+              <label class="boletos-filtro__field">
+                📆 Data vencimento
+                <input type="date" id="boletosDataVencimentoFiltro" class="boletos-mes-select" title="Filtra boletos com vencimento neste dia" />
               </label>
 
-              <button type="button" id="limparFiltrosBoletos" class="btn neutral" style="height: 42px;">
+              <button type="button" id="limparFiltrosBoletos" class="btn neutral boletos-filtro__clear">
                 🔄 Limpar Filtros
               </button>
             </div>
@@ -2395,22 +2395,22 @@
             </div>
 
             <!-- Filtros -->
-            <div class="boletos-filtro" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
-              <label style="flex: 1; min-width: 200px;">
-                📅 Mês/Ano (vencimento):
+            <div class="boletos-filtro">
+              <label class="boletos-filtro__field">
+                📅 Mês/Ano (vencimento)
                 <select id="alvarasMesAnoFiltro" class="boletos-mes-select">
                   <option value="">📋 Todos os alvarás</option>
                 </select>
               </label>
 
-              <label style="flex: 1; min-width: 200px;">
-                🏢 Unidade:
+              <label class="boletos-filtro__field">
+                🏢 Unidade
                 <select id="alvarasUnidadeFiltro" class="boletos-mes-select">
                   <option value="">Todas as unidades</option>
                 </select>
               </label>
 
-              <button type="button" id="limparFiltrosAlvaras" class="btn neutral" style="height: 42px;">
+              <button type="button" id="limparFiltrosAlvaras" class="btn neutral boletos-filtro__clear">
                 🔄 Limpar Filtros
               </button>
             </div>
