@@ -16501,6 +16501,7 @@ function setupReciboAjudaCusto() {
   const unidadeCnpj = document.getElementById("reciboAjudaUnidadeCnpj");
   const competencia = document.getElementById("reciboAjudaCompetencia");
   const dataPagamento = document.getElementById("reciboAjudaDataPagamento");
+  const descricao = document.getElementById("reciboAjudaDescricao");
   const finalidadeWrap = document.getElementById("reciboAjudaFinalidadeWrap");
   const finalidadeBtn = document.getElementById("reciboAjudaFinalidadeBtn");
   const finalidadeBtnLabel = document.getElementById("reciboAjudaFinalidadeLabel");
@@ -17350,6 +17351,7 @@ function setupReciboAjudaCusto() {
         unidade_id: uid || null,
         competencia: comp,
         data_pagamento: dtPag || null,
+        descricao: (descricao?.value || "").trim() || null,
         assinatura_tipo: tipoAss,
         finalidade: finsPayload,
         valor: roundToCurrency(valorNum),
@@ -17441,6 +17443,7 @@ function setupReciboAjudaCusto() {
     if (unidadeCnpj) unidadeCnpj.value = "";
     if (competencia) competencia.value = new Date().toISOString().slice(0, 7);
     if (dataPagamento) dataPagamento.value = "";
+    if (descricao) descricao.value = "";
     setFinalidadesChecked([]);
     if (assinaturaTipo) assinaturaTipo.value = "desenho";
     if (valor) { valor.value = ""; valor.dataset.value = "0"; }

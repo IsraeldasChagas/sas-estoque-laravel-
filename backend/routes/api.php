@@ -7793,6 +7793,10 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
             'created_at' => now(),
             'updated_at' => now(),
         ];
+        if (Schema::hasColumn('recibos_ajuda_custo', 'descricao')) {
+            $dDesc = trim((string) ($body['descricao'] ?? ''));
+            $insert['descricao'] = $dDesc === '' ? null : mb_substr($dDesc, 0, 4000);
+        }
 
         $id = DB::table('recibos_ajuda_custo')->insertGetId($insert);
 
@@ -7814,6 +7818,9 @@ Route::post('/recibos-ajuda', function (Request $request) use ($proventosAuth, $
                 'ip_publico' => $insert['ip_publico'],
                 'geo' => $insert['geo'],
             ];
+            if (Schema::hasColumn('recibos_ajuda_custo', 'descricao')) {
+                $payload['descricao'] = $insert['descricao'] ?? null;
+            }
             $hash = $reciboAjudaMakeHash($payload);
             DB::table('recibos_ajuda_custo')->where('id', $id)->update(['assinatura_hash' => $hash]);
         }
@@ -7879,6 +7886,14 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
             'foto_data_url' => array_key_exists('foto_data_url', $body) ? ($body['foto_data_url'] ?: null) : $r->foto_data_url,
             'updated_at' => now(),
         ];
+        if (Schema::hasColumn('recibos_ajuda_custo', 'descricao')) {
+            if (array_key_exists('descricao', $body)) {
+                $dDescUp = trim((string) ($body['descricao'] ?? ''));
+                $up['descricao'] = $dDescUp === '' ? null : mb_substr($dDescUp, 0, 4000);
+            } else {
+                $up['descricao'] = $r->descricao ?? null;
+            }
+        }
         if (array_key_exists('finalidade', $body)) {
             $finalidadeStoreArr = null;
             if (is_array($finalidadeRawUp) && $finalidadeRawUp) {
@@ -7945,6 +7960,9 @@ Route::put('/recibos-ajuda/{id}', function (Request $request, $id) use ($provent
                 'ip_publico' => $novo->ip_publico,
                 'geo' => $novo->geo,
             ];
+            if (Schema::hasColumn('recibos_ajuda_custo', 'descricao')) {
+                $payload['descricao'] = $novo->descricao ?? null;
+            }
             $hash = $reciboAjudaMakeHash($payload);
             DB::table('recibos_ajuda_custo')->where('id', $id)->update(['assinatura_hash' => $hash]);
         }
@@ -8033,6 +8051,7 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
         $dataPagamento = !empty($r->data_pagamento) ? \Carbon\Carbon::parse($r->data_pagamento)->format('d/m/Y') : '';
         $dataGeracao = !empty($r->data_geracao) ? \Carbon\Carbon::parse($r->data_geracao)->format('d/m/Y H:i') : '';
         $finalidade = $reciboAjudaFormatFinalidades($r->finalidade ?? null);
+        $descricaoPdf = trim((string) ($r->descricao ?? ''));
         $valor = number_format((float) ($r->valor ?? 0), 2, ',', '.');
         $assinaturaTipo = $r->assinatura_tipo ?? 'desenho';
         $assinaturaHash = $r->assinatura_hash ?? '';
@@ -8058,6 +8077,7 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
             . '<div class="field"><div class="lbl">CPF</div><div class="val">' . e($cpf ?: '-') . '</div></div>'
             . '<div class="field"><div class="lbl">Valor</div><div class="val">R$ ' . e($valor) . '</div></div>'
             . '<div class="field" style="grid-column:1 / -1;"><div class="lbl">Finalidade</div><div class="val">' . e($finalidade ?: '-') . '</div></div>'
+            . ($descricaoPdf !== '' ? '<div class="field" style="grid-column:1 / -1;"><div class="lbl">Descrição</div><div class="val">' . nl2br(e($descricaoPdf)) . '</div></div>' : '')
             . '<div class="field"><div class="lbl">Data de pagamento</div><div class="val">' . e($dataPagamento ?: '-') . '</div></div>'
             . '</div><div class="text"><strong>Declaro que recebi o valor acima e confirmo as informações.</strong><br />'
             . 'Declaro, para os devidos fins, que recebi da empresa acima identificada o valor informado a título de <strong>ajuda de custo</strong>, referente à competência indicada.</div>';

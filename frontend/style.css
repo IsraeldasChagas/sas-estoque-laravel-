@@ -5861,6 +5861,18 @@ select[size]:not([size="1"]) {
   gap: 1rem 1.25rem;
   padding: 0 1.25rem 1rem;
 }
+.recibo-ajuda__descricao {
+  grid-column: 1 / -1;
+}
+.recibo-ajuda__descricao textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font: inherit;
+}
 .recibo-ajuda__finalidade {
   grid-column: span 1;
 }
