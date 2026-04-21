@@ -323,7 +323,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -331,7 +331,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -363,7 +363,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -371,7 +371,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2903,6 +2903,16 @@ function applyPermissions() {
   if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
     sections = [...sections, "fechamento"];
   }
+  // Despesas fixas: mesmo pacote Financeiro (menus antigos com Boleto/Proventos/Recibo ganham o item novo)
+  if (
+    (sections.includes("boletao") ||
+      sections.includes("alvara") ||
+      sections.includes("proventos") ||
+      sections.includes("reciboAjuda")) &&
+    !sections.includes("despesasFixas")
+  ) {
+    sections = [...sections, "despesasFixas"];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2941,6 +2951,7 @@ function applyPermissions() {
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
       regras.sections.includes("reciboAjuda") ||
+      regras.sections.includes("despesasFixas") ||
       regras.sections.includes("fechamento") ||
       regras.sections.includes("fechamentoDash");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
@@ -3100,6 +3111,7 @@ function navigateTo(section) {
       section === "alvara" ||
       section === "proventos" ||
       section === "reciboAjuda" ||
+      section === "despesasFixas" ||
       section === "fechamento" ||
       section === "fechamentoDash"
     ) {
@@ -7340,7 +7352,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorio", "logs"
     ]);
 
@@ -7469,6 +7481,8 @@ async function startAppSession(user) {
           await loadFechamentoCaixaSection();
         } else if (sectionToNavigate === "fechamentoDash") {
           await loadFechamentoDashSection();
+        } else if (sectionToNavigate === "despesasFixas") {
+          if (typeof window.loadDespesasFixasSection === "function") await window.loadDespesasFixasSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
           syncKanbanToolbarCollapsedFromStorage();
           await loadUnidades(false).catch(() => {});
@@ -11544,6 +11558,8 @@ function wireSidebarSectionNavClicks() {
         } else {
           await Promise.all([loadUnidades(false).catch(() => {}), loadFuncionarios(false).catch(() => {})]);
         }
+      } else if (target === "despesasFixas") {
+        if (typeof window.loadDespesasFixasSection === "function") await window.loadDespesasFixasSection();
       }
       else if (target === "proventos") {
         try {
@@ -17496,6 +17512,338 @@ function setupReciboAjudaCusto() {
   });
 }
 
+const DESP_FIXAS_CATEGORIA_LABELS = {
+  aluguel: "Aluguel",
+  energia: "Energia",
+  agua: "Água / esgoto",
+  internet: "Internet / telefonia",
+  salarios: "Salários e encargos",
+  impostos: "Impostos e taxas",
+  manutencao: "Manutenção",
+  marketing: "Marketing",
+  outro: "Outro",
+};
+
+let __despesasFixasUiSetup = false;
+/** Lista em memória (prévia sem API) */
+let despesasFixasLista = [];
+
+function despesasFixasDemoRows() {
+  return [
+    {
+      id: 1,
+      nome: "Aluguel — Matriz",
+      categoria: "aluguel",
+      unidadesLabel: "Matriz",
+      valor: 12500,
+      diaVenc: 10,
+      fornecedor: "Imobiliária Alpha",
+      obs: "Contrato 24 meses.",
+      status: "ativo",
+    },
+    {
+      id: 2,
+      nome: "Energia elétrica",
+      categoria: "energia",
+      unidadesLabel: "Todas as unidades",
+      valor: 4200.5,
+      diaVenc: 15,
+      fornecedor: "Distribuidora local",
+      obs: "",
+      status: "ativo",
+    },
+    {
+      id: 3,
+      nome: "Internet fibra",
+      categoria: "internet",
+      unidadesLabel: "Matriz, Filial Norte",
+      valor: 299.9,
+      diaVenc: 5,
+      fornecedor: "ISP Local",
+      obs: "Link redundante.",
+      status: "pausado",
+    },
+  ];
+}
+
+function despesasFixasNextId() {
+  const ids = despesasFixasLista.map((r) => Number(r.id) || 0);
+  const m = ids.length ? Math.max(...ids) : 0;
+  return m + 1;
+}
+
+function despesasFixasSyncEditCategoriaOptions() {
+  const orig = document.getElementById("despFixasCategoria");
+  const ed = document.getElementById("despFixasEditCategoria");
+  if (orig && ed) ed.innerHTML = orig.innerHTML;
+}
+
+function despesasFixasRenderUnidadeCheckboxes() {
+  const host = document.getElementById("despFixasUnidadesCheckboxes");
+  if (!host) return;
+  const unidades =
+    Array.isArray(state.unidades) && state.unidades.length
+      ? state.unidades
+      : [
+          { id: 1, nome: "Matriz (exemplo)" },
+          { id: 2, nome: "Filial Norte (exemplo)" },
+          { id: 3, nome: "Filial Sul (exemplo)" },
+        ];
+  host.innerHTML = unidades
+    .map((u) => {
+      const id = String(u.id);
+      const safeId = id.replace(/\W/g, "_");
+      const nome = escapeHtml(u.nome || `Unidade ${id}`);
+      return `<div class="col">
+        <div class="form-check">
+          <input class="form-check-input desp-fixa-u-chk" type="checkbox" value="${escapeHtml(id)}" id="despFu_${safeId}" />
+          <label class="form-check-label" for="despFu_${safeId}">${nome}</label>
+        </div>
+      </div>`;
+    })
+    .join("");
+}
+
+function despesasFixasUnidadesLabelFromForm() {
+  const todas = document.getElementById("despFixasUnidadeTodas")?.checked;
+  if (todas) return "Todas as unidades";
+  const boxes = Array.from(document.querySelectorAll("#despFixasUnidadesCheckboxes .desp-fixa-u-chk:checked"));
+  if (!boxes.length) return "";
+  const labels = boxes.map((cb) => {
+    const id = cb.value;
+    const u = (state.unidades || []).find((x) => String(x.id) === String(id));
+    if (u && u.nome) return u.nome;
+    const lbl = document.querySelector(`label[for="${cb.id}"]`);
+    return (lbl && lbl.textContent) || id;
+  });
+  return labels.join(", ");
+}
+
+function despesasFixasModalOpen(el) {
+  if (!el) return;
+  el.classList.add("active");
+  el.setAttribute("aria-hidden", "false");
+}
+
+function despesasFixasModalClose(el) {
+  if (!el) return;
+  el.classList.remove("active");
+  el.setAttribute("aria-hidden", "true");
+}
+
+function despesasFixasRenderTabela() {
+  const tb = document.getElementById("despFixasTableBody");
+  if (!tb) return;
+  if (!despesasFixasLista.length) {
+    tb.innerHTML =
+      '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma despesa na lista. Cadastre acima ou use <strong>Restaurar exemplos</strong>.</td></tr>';
+    return;
+  }
+  tb.innerHTML = despesasFixasLista
+    .map((r) => {
+      const cat = escapeHtml(DESP_FIXAS_CATEGORIA_LABELS[r.categoria] || r.categoria || "—");
+      const st =
+        r.status === "ativo"
+          ? '<span class="badge rounded-pill text-bg-success">Ativo</span>'
+          : '<span class="badge rounded-pill text-bg-secondary">Pausado</span>';
+      const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
+      const id = escapeHtml(String(r.id));
+      return `<tr>
+        <td data-label="#">${id}</td>
+        <td data-label="Nome">${escapeHtml(r.nome || "—")}</td>
+        <td data-label="Categoria">${cat}</td>
+        <td data-label="Unidades">${escapeHtml(r.unidadesLabel || "—")}</td>
+        <td data-label="Valor" class="text-end fw-semibold">${v}</td>
+        <td data-label="Venc." class="text-center">${escapeHtml(String(r.diaVenc ?? "—"))}</td>
+        <td data-label="Status" class="text-center">${st}</td>
+        <td data-label="Ações" class="text-end text-nowrap">
+          <button type="button" class="btn btn-sm btn-outline-primary me-1" data-desp-view="${id}">Ver</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-desp-edit="${id}">Editar</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" data-desp-del="${id}">Excluir</button>
+        </td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function setupDespesasFixasUi() {
+  if (__despesasFixasUiSetup) return;
+  __despesasFixasUiSetup = true;
+  despesasFixasLista = despesasFixasDemoRows();
+
+  const formCad = document.getElementById("despFixasFormCadastro");
+  const chkTodas = document.getElementById("despFixasUnidadeTodas");
+  const backdropVer = document.getElementById("despFixasBackdropVer");
+  const backdropEdit = document.getElementById("despFixasBackdropEdit");
+  const backdropDel = document.getElementById("despFixasBackdropDel");
+  let delTargetId = null;
+
+  despesasFixasSyncEditCategoriaOptions();
+
+  chkTodas?.addEventListener("change", () => {
+    const on = !!chkTodas.checked;
+    document.querySelectorAll("#despFixasUnidadesCheckboxes .desp-fixa-u-chk").forEach((c) => {
+      c.disabled = on;
+      if (on) c.checked = false;
+    });
+  });
+
+  document.getElementById("despFixasLimparForm")?.addEventListener("click", () => {
+    formCad?.reset();
+    chkTodas?.dispatchEvent(new Event("change"));
+    formCad?.classList.remove("was-validated");
+  });
+
+  document.getElementById("despFixasRecarregarDemo")?.addEventListener("click", () => {
+    despesasFixasLista = despesasFixasDemoRows();
+    despesasFixasRenderTabela();
+    showToast("Lista de exemplo restaurada.", "info");
+  });
+
+  formCad?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!formCad.checkValidity()) {
+      formCad.classList.add("was-validated");
+      return;
+    }
+    const todas = !!document.getElementById("despFixasUnidadeTodas")?.checked;
+    const unidadesTxt = despesasFixasUnidadesLabelFromForm();
+    if (!todas && !unidadesTxt) {
+      showToast("Selecione ao menos uma unidade ou marque “Todas as unidades”.", "warning");
+      return;
+    }
+    const nome = (document.getElementById("despFixasNome")?.value || "").trim();
+    const categoria = (document.getElementById("despFixasCategoria")?.value || "").trim();
+    const valor = Number(document.getElementById("despFixasValor")?.value);
+    const diaVenc = Number(document.getElementById("despFixasDiaVenc")?.value);
+    const status = (document.getElementById("despFixasStatus")?.value || "ativo").trim();
+    const fornecedor = (document.getElementById("despFixasFornecedor")?.value || "").trim();
+    const obs = (document.getElementById("despFixasObs")?.value || "").trim();
+    despesasFixasLista.unshift({
+      id: despesasFixasNextId(),
+      nome,
+      categoria,
+      unidadesLabel: todas ? "Todas as unidades" : unidadesTxt,
+      valor,
+      diaVenc,
+      fornecedor,
+      obs,
+      status,
+    });
+    despesasFixasRenderTabela();
+    formCad.reset();
+    chkTodas?.dispatchEvent(new Event("change"));
+    formCad.classList.remove("was-validated");
+    showToast("Despesa incluída na lista (somente nesta sessão).", "success");
+  });
+
+  document.getElementById("despFixasTableBody")?.addEventListener("click", (e) => {
+    const v = e.target.closest("[data-desp-view]");
+    const ed = e.target.closest("[data-desp-edit]");
+    const del = e.target.closest("[data-desp-del]");
+    const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
+    if (!idStr) return;
+    const id = Number(idStr);
+    const row = despesasFixasLista.find((x) => Number(x.id) === id);
+    if (!row) return;
+    if (v) {
+      const cat = DESP_FIXAS_CATEGORIA_LABELS[row.categoria] || row.categoria;
+      const body = document.getElementById("despFixasVerBody");
+      if (body) {
+        body.innerHTML = `<dl class="row mb-0">
+          <dt class="col-sm-4">Nome</dt><dd class="col-sm-8">${escapeHtml(row.nome)}</dd>
+          <dt class="col-sm-4">Categoria</dt><dd class="col-sm-8">${escapeHtml(cat)}</dd>
+          <dt class="col-sm-4">Unidades</dt><dd class="col-sm-8">${escapeHtml(row.unidadesLabel || "—")}</dd>
+          <dt class="col-sm-4">Valor mensal</dt><dd class="col-sm-8">${escapeHtml(formatCurrencyBRL(Number(row.valor) || 0))}</dd>
+          <dt class="col-sm-4">Dia vencimento</dt><dd class="col-sm-8">${escapeHtml(String(row.diaVenc ?? "—"))}</dd>
+          <dt class="col-sm-4">Status</dt><dd class="col-sm-8">${escapeHtml(row.status === "ativo" ? "Ativo" : "Pausado")}</dd>
+          <dt class="col-sm-4">Fornecedor</dt><dd class="col-sm-8">${escapeHtml(row.fornecedor || "—")}</dd>
+          <dt class="col-sm-4">Observações</dt><dd class="col-sm-8">${escapeHtml(row.obs || "—")}</dd>
+        </dl>`;
+      }
+      despesasFixasModalOpen(backdropVer);
+    } else if (ed) {
+      document.getElementById("despFixasEditId").value = String(row.id);
+      document.getElementById("despFixasEditNome").value = row.nome || "";
+      document.getElementById("despFixasEditCategoria").value = row.categoria || "";
+      document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
+      document.getElementById("despFixasEditDia").value = String(row.diaVenc ?? "");
+      document.getElementById("despFixasEditStatus").value = row.status || "ativo";
+      document.getElementById("despFixasEditUnidades").value = row.unidadesLabel || "";
+      document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
+      document.getElementById("despFixasEditObs").value = row.obs || "";
+      despesasFixasModalOpen(backdropEdit);
+    } else if (del) {
+      delTargetId = id;
+      const msg = document.getElementById("despFixasDelMsg");
+      if (msg) msg.textContent = `Confirma a exclusão de “${row.nome}” (#${row.id})?`;
+      despesasFixasModalOpen(backdropDel);
+    }
+  });
+
+  const closeVer = () => despesasFixasModalClose(backdropVer);
+  document.getElementById("despFixasCloseVer")?.addEventListener("click", closeVer);
+  document.getElementById("despFixasFecharVer")?.addEventListener("click", closeVer);
+  backdropVer?.addEventListener("click", (ev) => {
+    if (ev.target === backdropVer) closeVer();
+  });
+
+  const closeEdit = () => despesasFixasModalClose(backdropEdit);
+  document.getElementById("despFixasCloseEdit")?.addEventListener("click", closeEdit);
+  document.getElementById("despFixasCancelarEdit")?.addEventListener("click", closeEdit);
+  backdropEdit?.addEventListener("click", (ev) => {
+    if (ev.target === backdropEdit) closeEdit();
+  });
+
+  document.getElementById("despFixasFormEditar")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = Number(document.getElementById("despFixasEditId")?.value);
+    const row = despesasFixasLista.find((x) => Number(x.id) === id);
+    if (!row) return closeEdit();
+    row.nome = (document.getElementById("despFixasEditNome")?.value || "").trim();
+    row.categoria = (document.getElementById("despFixasEditCategoria")?.value || "").trim();
+    row.valor = Number(document.getElementById("despFixasEditValor")?.value);
+    row.diaVenc = Number(document.getElementById("despFixasEditDia")?.value);
+    row.status = (document.getElementById("despFixasEditStatus")?.value || "ativo").trim();
+    row.unidadesLabel = (document.getElementById("despFixasEditUnidades")?.value || "").trim() || "—";
+    row.fornecedor = (document.getElementById("despFixasEditFornecedor")?.value || "").trim();
+    row.obs = (document.getElementById("despFixasEditObs")?.value || "").trim();
+    despesasFixasRenderTabela();
+    showToast("Alterações aplicadas na lista local.", "success");
+    closeEdit();
+  });
+
+  const closeDel = () => {
+    despesasFixasModalClose(backdropDel);
+    delTargetId = null;
+  };
+  document.getElementById("despFixasCloseDel")?.addEventListener("click", closeDel);
+  document.getElementById("despFixasCancelarDel")?.addEventListener("click", closeDel);
+  backdropDel?.addEventListener("click", (ev) => {
+    if (ev.target === backdropDel) closeDel();
+  });
+  document.getElementById("despFixasConfirmarDel")?.addEventListener("click", () => {
+    if (delTargetId == null) return closeDel();
+    despesasFixasLista = despesasFixasLista.filter((x) => Number(x.id) !== Number(delTargetId));
+    despesasFixasRenderTabela();
+    showToast("Registro removido da lista local.", "info");
+    closeDel();
+  });
+
+  despesasFixasRenderUnidadeCheckboxes();
+  chkTodas?.dispatchEvent(new Event("change"));
+  despesasFixasRenderTabela();
+}
+
+window.loadDespesasFixasSection = async function loadDespesasFixasSection() {
+  setupDespesasFixasUi();
+  await loadUnidades(false).catch(() => {});
+  despesasFixasRenderUnidadeCheckboxes();
+  const chkTodas = document.getElementById("despFixasUnidadeTodas");
+  chkTodas?.dispatchEvent(new Event("change"));
+  despesasFixasRenderTabela();
+};
+
 // Formata data para input type="date" (YYYY-MM-DD)
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
@@ -19457,6 +19805,7 @@ async function init() {
   setupFechamentoCaixaAuditoria();
   setupFechamentoDashPanel();
   setupReciboAjudaCusto();
+  setupDespesasFixasUi();
   setupFichaTecnicaForm();
   setupKanbanAdministrativoModule();
   if (!stopMatrixAnimation) {

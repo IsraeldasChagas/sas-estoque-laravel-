@@ -1,0 +1,39 @@
+/* Página Despesas fixas — complementa Bootstrap (carregado antes de style.css) */
+
+#despesasFixasSection .despesas-fixas-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+#despesasFixasSection .table-responsive {
+  -webkit-overflow-scrolling: touch;
+}
+
+#despesasFixasSection .card {
+  border-radius: 12px;
+}
+
+#despesasFixasSection .table thead th {
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+#despesasFixasSection #despFixasUnidadesCheckboxes {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Modais: backdrop do app + botão fechar Bootstrap */
+#despFixasBackdropVer .modal,
+#despFixasBackdropEdit .modal,
+#despFixasBackdropDel .modal {
+  width: min(96vw, 640px);
+}
+
+#despFixasBackdropVer .btn-close,
+#despFixasBackdropEdit .btn-close,
+#despFixasBackdropDel .btn-close {
+  flex-shrink: 0;
+}
