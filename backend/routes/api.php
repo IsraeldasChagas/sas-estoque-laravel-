@@ -8122,6 +8122,367 @@ Route::get('/recibos-ajuda/{id}/pdf', function (Request $request, $id) use ($pro
     }
 });
 
+// ============================================
+// DESPESAS FIXAS (Financeiro)
+// ============================================
+
+$despesasFixasCors = fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Debug, X-Device-Model, X-Device-Platform');
+
+Route::options('/despesas-fixas/categorias', $despesasFixasCors);
+Route::options('/despesas-fixas/categorias/{id}', $despesasFixasCors);
+Route::options('/despesas-fixas', $despesasFixasCors);
+Route::options('/despesas-fixas/{id}', $despesasFixasCors);
+
+$despFixasPodeGerir = function ($perfil) {
+    $p = strtoupper(trim($perfil ?? ''));
+
+    return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO'], true);
+};
+
+$despFixasParseUnidadeIds = function ($raw) {
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    if (is_array($raw)) {
+        return array_values(array_unique(array_filter(array_map('intval', $raw))));
+    }
+    if (is_string($raw)) {
+        $d = json_decode($raw, true);
+
+        return is_array($d) ? array_values(array_unique(array_filter(array_map('intval', $d)))) : [];
+    }
+
+    return [];
+};
+
+$despFixasLabelUnidades = function ($aplicaTodas, $ids) {
+    if ($aplicaTodas) {
+        return 'Todas as unidades';
+    }
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids ?: []))));
+    if ($ids === []) {
+        return '—';
+    }
+    if (!Schema::hasTable('unidades')) {
+        return implode(', ', $ids);
+    }
+    $rows = DB::table('unidades')->whereIn('id', $ids)->pluck('nome', 'id');
+    $parts = [];
+    foreach ($ids as $i) {
+        if ($rows->has($i)) {
+            $parts[] = (string) $rows[$i];
+        }
+    }
+
+    return $parts !== [] ? implode(', ', $parts) : '—';
+};
+
+$despFixasHidratarLinha = function ($row) use ($despFixasLabelUnidades) {
+    $raw = $row->unidade_ids ?? null;
+    if (is_string($raw)) {
+        $uids = json_decode($raw, true);
+    } elseif (is_array($raw)) {
+        $uids = $raw;
+    } else {
+        $uids = [];
+    }
+    if (!is_array($uids)) {
+        $uids = [];
+    }
+    $row->unidade_ids = array_values(array_unique(array_filter(array_map('intval', $uids))));
+    $row->unidades_label = $despFixasLabelUnidades((bool) ($row->aplica_todas_unidades ?? false), $row->unidade_ids);
+
+    return $row;
+};
+
+Route::get('/despesas-fixas/categorias', function (Request $request) use ($proventosAuth, $despFixasPodeGerir) {
+    try {
+        if (!Schema::hasTable('despesas_fixas_categorias')) {
+            return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $lista = DB::table('despesas_fixas_categorias')
+            ->where('ativo', 1)
+            ->orderBy('ordem')
+            ->orderBy('nome')
+            ->get();
+
+        return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /despesas-fixas/categorias: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao listar categorias'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/despesas-fixas/categorias', function (Request $request) use ($proventosAuth, $despFixasPodeGerir) {
+    try {
+        if (!Schema::hasTable('despesas_fixas_categorias')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $body = $request->json()->all() ?: [];
+        $nome = trim((string) ($body['nome'] ?? ''));
+        if ($nome === '') {
+            return response()->json(['error' => 'Nome da categoria obrigatório'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $nome = mb_substr($nome, 0, 120);
+        $dup = DB::table('despesas_fixas_categorias')
+            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome, 'UTF-8')])
+            ->exists();
+        if ($dup) {
+            return response()->json(['error' => 'Já existe uma categoria com este nome'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $ordem = (int) (DB::table('despesas_fixas_categorias')->max('ordem') ?? 0) + 10;
+        $id = DB::table('despesas_fixas_categorias')->insertGetId([
+            'nome' => $nome,
+            'ordem' => $ordem,
+            'ativo' => true,
+            'criado_por' => $u->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $row = DB::table('despesas_fixas_categorias')->where('id', $id)->first();
+
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /despesas-fixas/categorias: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao criar categoria'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/despesas-fixas', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $despFixasHidratarLinha) {
+    try {
+        if (!Schema::hasTable('despesas_fixas')) {
+            return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $lista = DB::table('despesas_fixas as d')
+            ->leftJoin('despesas_fixas_categorias as c', 'd.categoria_id', '=', 'c.id')
+            ->select('d.*', 'c.nome as categoria_nome')
+            ->orderByDesc('d.id')
+            ->get();
+        foreach ($lista as $row) {
+            $despFixasHidratarLinha($row);
+        }
+
+        return response()->json($lista)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /despesas-fixas: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao listar despesas'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $despFixasParseUnidadeIds, $despFixasHidratarLinha) {
+    try {
+        if (!Schema::hasTable('despesas_fixas')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $body = $request->json()->all() ?: [];
+        $nome = trim((string) ($body['nome'] ?? ''));
+        $catId = (int) ($body['categoria_id'] ?? 0);
+        $valor = (float) ($body['valor'] ?? 0);
+        $dia = (int) ($body['dia_vencimento'] ?? 0);
+        $fornecedor = trim((string) ($body['fornecedor'] ?? ''));
+        $obs = trim((string) ($body['observacoes'] ?? $body['obs'] ?? ''));
+        $status = strtolower(trim((string) ($body['status'] ?? 'ativo')));
+        if (!in_array($status, ['ativo', 'pausado'], true)) {
+            $status = 'ativo';
+        }
+        $aplicaTodas = !empty($body['aplica_todas_unidades']);
+        $uids = $despFixasParseUnidadeIds($body['unidade_ids'] ?? []);
+
+        if ($nome === '' || mb_strlen($nome) > 180) {
+            return response()->json(['error' => 'Nome inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($catId <= 0 || !DB::table('despesas_fixas_categorias')->where('id', $catId)->where('ativo', 1)->exists()) {
+            return response()->json(['error' => 'Categoria inválida'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($valor <= 0) {
+            return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($dia < 1 || $dia > 28) {
+            return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 28'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if (!$aplicaTodas && $uids === []) {
+            return response()->json(['error' => 'Selecione ao menos uma unidade ou marque todas'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if (!$aplicaTodas && Schema::hasTable('unidades')) {
+            $n = DB::table('unidades')->whereIn('id', $uids)->count();
+            if ($n !== count(array_unique($uids))) {
+                return response()->json(['error' => 'Unidade inválida na lista'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+        }
+
+        $id = DB::table('despesas_fixas')->insertGetId([
+            'nome' => $nome,
+            'categoria_id' => $catId,
+            'valor' => $valor,
+            'dia_vencimento' => $dia,
+            'fornecedor' => $fornecedor !== '' ? mb_substr($fornecedor, 0, 160) : null,
+            'observacoes' => $obs !== '' ? mb_substr($obs, 0, 2000) : null,
+            'status' => $status,
+            'aplica_todas_unidades' => $aplicaTodas ? 1 : 0,
+            'unidade_ids' => json_encode($aplicaTodas ? [] : array_values($uids), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'criado_por' => $u->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $row = DB::table('despesas_fixas as d')
+            ->leftJoin('despesas_fixas_categorias as c', 'd.categoria_id', '=', 'c.id')
+            ->where('d.id', $id)
+            ->select('d.*', 'c.nome as categoria_nome')
+            ->first();
+        $despFixasHidratarLinha($row);
+
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /despesas-fixas: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao salvar despesa'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proventosAuth, $despFixasPodeGerir, $despFixasParseUnidadeIds, $despFixasHidratarLinha) {
+    try {
+        if (!Schema::hasTable('despesas_fixas')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $r = DB::table('despesas_fixas')->where('id', $id)->first();
+        if (!$r) {
+            return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+        $body = $request->json()->all() ?: [];
+        $nome = array_key_exists('nome', $body) ? trim((string) $body['nome']) : $r->nome;
+        $catId = array_key_exists('categoria_id', $body) ? (int) $body['categoria_id'] : (int) $r->categoria_id;
+        $valor = array_key_exists('valor', $body) ? (float) $body['valor'] : (float) $r->valor;
+        $dia = array_key_exists('dia_vencimento', $body) ? (int) $body['dia_vencimento'] : (int) $r->dia_vencimento;
+        $fornecedor = array_key_exists('fornecedor', $body) ? trim((string) $body['fornecedor']) : (string) ($r->fornecedor ?? '');
+        $obs = array_key_exists('observacoes', $body) ? trim((string) $body['observacoes']) : (string) ($r->observacoes ?? '');
+        $status = array_key_exists('status', $body) ? strtolower(trim((string) $body['status'])) : strtolower((string) ($r->status ?? 'ativo'));
+        if (!in_array($status, ['ativo', 'pausado'], true)) {
+            $status = 'ativo';
+        }
+        $aplicaTodas = array_key_exists('aplica_todas_unidades', $body) ? !empty($body['aplica_todas_unidades']) : (bool) $r->aplica_todas_unidades;
+        $uids = array_key_exists('unidade_ids', $body) ? $despFixasParseUnidadeIds($body['unidade_ids']) : $despFixasParseUnidadeIds($r->unidade_ids ?? []);
+
+        if ($nome === '' || mb_strlen($nome) > 180) {
+            return response()->json(['error' => 'Nome inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($catId <= 0 || !DB::table('despesas_fixas_categorias')->where('id', $catId)->where('ativo', 1)->exists()) {
+            return response()->json(['error' => 'Categoria inválida'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($valor <= 0) {
+            return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if ($dia < 1 || $dia > 28) {
+            return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 28'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if (!$aplicaTodas && $uids === []) {
+            return response()->json(['error' => 'Selecione ao menos uma unidade ou marque todas'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if (!$aplicaTodas && Schema::hasTable('unidades')) {
+            $n = DB::table('unidades')->whereIn('id', $uids)->count();
+            if ($n !== count(array_unique($uids))) {
+                return response()->json(['error' => 'Unidade inválida na lista'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+        }
+
+        DB::table('despesas_fixas')->where('id', $id)->update([
+            'nome' => $nome,
+            'categoria_id' => $catId,
+            'valor' => $valor,
+            'dia_vencimento' => $dia,
+            'fornecedor' => $fornecedor !== '' ? mb_substr($fornecedor, 0, 160) : null,
+            'observacoes' => $obs !== '' ? mb_substr($obs, 0, 2000) : null,
+            'status' => $status,
+            'aplica_todas_unidades' => $aplicaTodas ? 1 : 0,
+            'unidade_ids' => json_encode($aplicaTodas ? [] : array_values($uids), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'updated_at' => now(),
+        ]);
+        $row = DB::table('despesas_fixas as d')
+            ->leftJoin('despesas_fixas_categorias as c', 'd.categoria_id', '=', 'c.id')
+            ->where('d.id', $id)
+            ->select('d.*', 'c.nome as categoria_nome')
+            ->first();
+        $despFixasHidratarLinha($row);
+
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('PUT /despesas-fixas/{id}: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao atualizar despesa'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::delete('/despesas-fixas/{id}', function (Request $request, $id) use ($proventosAuth, $despFixasPodeGerir) {
+    try {
+        if (!Schema::hasTable('despesas_fixas')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (!$u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (!$despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $n = DB::table('despesas_fixas')->where('id', $id)->delete();
+        if (!$n) {
+            return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('DELETE /despesas-fixas/{id}: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao excluir'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
 Route::get('/proventos/meus', function (Request $request) use ($proventosAuth, $proventoSelectFuncionarioPix, $proventoSelectUnidadeCnpj) {
     try {
         if (!Schema::hasTable('proventos')) return response()->json([])->header('Access-Control-Allow-Origin', '*');

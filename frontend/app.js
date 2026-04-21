@@ -17512,74 +17512,25 @@ function setupReciboAjudaCusto() {
   });
 }
 
-const DESP_FIXAS_CATEGORIA_LABELS = {
-  aluguel: "Aluguel",
-  energia: "Energia",
-  agua: "Água / esgoto",
-  internet: "Internet / telefonia",
-  salarios: "Salários e encargos",
-  impostos: "Impostos e taxas",
-  manutencao: "Manutenção",
-  marketing: "Marketing",
-  outro: "Outro",
-};
-
 let __despesasFixasUiSetup = false;
-/** Lista em memória (prévia sem API) */
+let despesasFixasCategorias = [];
 let despesasFixasLista = [];
 
-function despesasFixasDemoRows() {
-  return [
-    {
-      id: 1,
-      nome: "Aluguel — Matriz",
-      categoria: "aluguel",
-      unidadesLabel: "Matriz",
-      valor: 12500,
-      diaVenc: 10,
-      fornecedor: "Imobiliária Alpha",
-      obs: "Contrato 24 meses.",
-      status: "ativo",
-    },
-    {
-      id: 2,
-      nome: "Energia elétrica",
-      categoria: "energia",
-      unidadesLabel: "Todas as unidades",
-      valor: 4200.5,
-      diaVenc: 15,
-      fornecedor: "Distribuidora local",
-      obs: "",
-      status: "ativo",
-    },
-    {
-      id: 3,
-      nome: "Internet fibra",
-      categoria: "internet",
-      unidadesLabel: "Matriz, Filial Norte",
-      valor: 299.9,
-      diaVenc: 5,
-      fornecedor: "ISP Local",
-      obs: "Link redundante.",
-      status: "pausado",
-    },
-  ];
+function despesasFixasPopularSelectCategorias(selectEl, selectedId) {
+  if (!selectEl) return;
+  const cur = selectedId != null && selectedId !== "" ? String(selectedId) : String(selectEl.value || "");
+  selectEl.innerHTML = '<option value="">Selecione…</option>';
+  (despesasFixasCategorias || []).forEach((c) => {
+    const o = document.createElement("option");
+    o.value = String(c.id);
+    o.textContent = c.nome || `Categoria ${c.id}`;
+    selectEl.appendChild(o);
+  });
+  if (cur && [...selectEl.options].some((o) => o.value === cur)) selectEl.value = cur;
 }
 
-function despesasFixasNextId() {
-  const ids = despesasFixasLista.map((r) => Number(r.id) || 0);
-  const m = ids.length ? Math.max(...ids) : 0;
-  return m + 1;
-}
-
-function despesasFixasSyncEditCategoriaOptions() {
-  const orig = document.getElementById("despFixasCategoria");
-  const ed = document.getElementById("despFixasEditCategoria");
-  if (orig && ed) ed.innerHTML = orig.innerHTML;
-}
-
-function despesasFixasRenderUnidadeCheckboxes() {
-  const host = document.getElementById("despFixasUnidadesCheckboxes");
+function despesasFixasRenderUnidadeCheckboxes(hostId, chkClass, selectedIds, aplicaTodas) {
+  const host = document.getElementById(hostId);
   if (!host) return;
   const unidades =
     Array.isArray(state.unidades) && state.unidades.length
@@ -17589,34 +17540,58 @@ function despesasFixasRenderUnidadeCheckboxes() {
           { id: 2, nome: "Filial Norte (exemplo)" },
           { id: 3, nome: "Filial Sul (exemplo)" },
         ];
+  const sel = new Set((selectedIds || []).map((x) => String(x)));
   host.innerHTML = unidades
     .map((u) => {
       const id = String(u.id);
       const safeId = id.replace(/\W/g, "_");
       const nome = escapeHtml(u.nome || `Unidade ${id}`);
+      const checked = !aplicaTodas && sel.has(id) ? " checked" : "";
       return `<div class="col">
         <div class="form-check">
-          <input class="form-check-input desp-fixa-u-chk" type="checkbox" value="${escapeHtml(id)}" id="despFu_${safeId}" />
-          <label class="form-check-label" for="despFu_${safeId}">${nome}</label>
+          <input class="form-check-input desp-fixa-u-chk ${chkClass}" type="checkbox" value="${escapeHtml(id)}" id="despFu_${hostId}_${safeId}"${checked} />
+          <label class="form-check-label" for="despFu_${hostId}_${safeId}">${nome}</label>
         </div>
       </div>`;
     })
     .join("");
 }
 
-function despesasFixasUnidadesLabelFromForm() {
-  const todas = document.getElementById("despFixasUnidadeTodas")?.checked;
-  if (todas) return "Todas as unidades";
-  const boxes = Array.from(document.querySelectorAll("#despFixasUnidadesCheckboxes .desp-fixa-u-chk:checked"));
-  if (!boxes.length) return "";
-  const labels = boxes.map((cb) => {
-    const id = cb.value;
-    const u = (state.unidades || []).find((x) => String(x.id) === String(id));
-    if (u && u.nome) return u.nome;
-    const lbl = document.querySelector(`label[for="${cb.id}"]`);
-    return (lbl && lbl.textContent) || id;
-  });
-  return labels.join(", ");
+function despesasFixasBindTodasUnidades(todasId, hostId, chkClass) {
+  const chkTodas = document.getElementById(todasId);
+  const sync = () => {
+    const on = !!chkTodas?.checked;
+    document.querySelectorAll(`#${hostId} .${chkClass}`).forEach((c) => {
+      c.disabled = on;
+      if (on) c.checked = false;
+    });
+  };
+  chkTodas?.removeEventListener("change", chkTodas._despFixasTodasSync);
+  chkTodas._despFixasTodasSync = sync;
+  chkTodas?.addEventListener("change", sync);
+  sync();
+}
+
+function despesasFixasUnidadePayload(todasId, hostId, chkClass) {
+  const aplicaTodas = !!document.getElementById(todasId)?.checked;
+  const boxes = Array.from(document.querySelectorAll(`#${hostId} .${chkClass}:checked`));
+  const unidade_ids = aplicaTodas ? [] : boxes.map((b) => Number(b.value)).filter((n) => Number.isFinite(n) && n > 0);
+  return { aplica_todas_unidades: aplicaTodas, unidade_ids };
+}
+
+async function despesasFixasCarregarCategorias() {
+  const data = await fetchJSON("/despesas-fixas/categorias", { method: "GET" });
+  despesasFixasCategorias = Array.isArray(data) ? data : [];
+  const selCad = document.getElementById("despFixasCategoria");
+  const selEd = document.getElementById("despFixasEditCategoria");
+  despesasFixasPopularSelectCategorias(selCad, selCad?.value);
+  despesasFixasPopularSelectCategorias(selEd, selEd?.value);
+}
+
+async function despesasFixasCarregarLista() {
+  const data = await fetchJSON("/despesas-fixas", { method: "GET" });
+  despesasFixasLista = Array.isArray(data) ? data : [];
+  despesasFixasRenderTabela();
 }
 
 function despesasFixasModalOpen(el) {
@@ -17636,25 +17611,27 @@ function despesasFixasRenderTabela() {
   if (!tb) return;
   if (!despesasFixasLista.length) {
     tb.innerHTML =
-      '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma despesa na lista. Cadastre acima ou use <strong>Restaurar exemplos</strong>.</td></tr>';
+      '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma despesa cadastrada. Use o formulário acima ou o botão <strong>Atualizar</strong>.</td></tr>';
     return;
   }
   tb.innerHTML = despesasFixasLista
     .map((r) => {
-      const cat = escapeHtml(DESP_FIXAS_CATEGORIA_LABELS[r.categoria] || r.categoria || "—");
+      const cat = escapeHtml(r.categoria_nome || "—");
+      const uni = escapeHtml(r.unidades_label || r.unidadesLabel || "—");
       const st =
         r.status === "ativo"
           ? '<span class="badge rounded-pill text-bg-success">Ativo</span>'
           : '<span class="badge rounded-pill text-bg-secondary">Pausado</span>';
       const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
       const id = escapeHtml(String(r.id));
+      const dia = r.dia_vencimento != null ? String(r.dia_vencimento) : r.diaVenc != null ? String(r.diaVenc) : "—";
       return `<tr>
         <td data-label="#">${id}</td>
         <td data-label="Nome">${escapeHtml(r.nome || "—")}</td>
         <td data-label="Categoria">${cat}</td>
-        <td data-label="Unidades">${escapeHtml(r.unidadesLabel || "—")}</td>
+        <td data-label="Unidades">${uni}</td>
         <td data-label="Valor" class="text-end fw-semibold">${v}</td>
-        <td data-label="Venc." class="text-center">${escapeHtml(String(r.diaVenc ?? "—"))}</td>
+        <td data-label="Venc." class="text-center">${escapeHtml(dia)}</td>
         <td data-label="Status" class="text-center">${st}</td>
         <td data-label="Ações" class="text-end text-nowrap">
           <button type="button" class="btn btn-sm btn-outline-primary me-1" data-desp-view="${id}">Ver</button>
@@ -17669,72 +17646,104 @@ function despesasFixasRenderTabela() {
 function setupDespesasFixasUi() {
   if (__despesasFixasUiSetup) return;
   __despesasFixasUiSetup = true;
-  despesasFixasLista = despesasFixasDemoRows();
 
   const formCad = document.getElementById("despFixasFormCadastro");
-  const chkTodas = document.getElementById("despFixasUnidadeTodas");
   const backdropVer = document.getElementById("despFixasBackdropVer");
   const backdropEdit = document.getElementById("despFixasBackdropEdit");
   const backdropDel = document.getElementById("despFixasBackdropDel");
+  const backdropNovaCat = document.getElementById("despFixasBackdropNovaCategoria");
   let delTargetId = null;
 
-  despesasFixasSyncEditCategoriaOptions();
-
-  chkTodas?.addEventListener("change", () => {
-    const on = !!chkTodas.checked;
-    document.querySelectorAll("#despFixasUnidadesCheckboxes .desp-fixa-u-chk").forEach((c) => {
-      c.disabled = on;
-      if (on) c.checked = false;
-    });
-  });
+  despesasFixasBindTodasUnidades("despFixasUnidadeTodas", "despFixasUnidadesCheckboxes", "desp-fixa-u-cad");
+  despesasFixasBindTodasUnidades("despFixasEditUnidadeTodas", "despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit");
 
   document.getElementById("despFixasLimparForm")?.addEventListener("click", () => {
     formCad?.reset();
-    chkTodas?.dispatchEvent(new Event("change"));
+    despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
+    document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
     formCad?.classList.remove("was-validated");
   });
 
-  document.getElementById("despFixasRecarregarDemo")?.addEventListener("click", () => {
-    despesasFixasLista = despesasFixasDemoRows();
-    despesasFixasRenderTabela();
-    showToast("Lista de exemplo restaurada.", "info");
+  document.getElementById("despFixasBtnAtualizar")?.addEventListener("click", () => {
+    window.loadDespesasFixasSection().catch((err) => showToast(err?.message || "Falha ao atualizar.", "error"));
   });
 
-  formCad?.addEventListener("submit", (e) => {
+  const openNovaCat = () => {
+    const inp = document.getElementById("despFixasNovaCatNome");
+    if (inp) inp.value = "";
+    despesasFixasModalOpen(backdropNovaCat);
+    setTimeout(() => inp?.focus(), 100);
+  };
+  const closeNovaCat = () => despesasFixasModalClose(backdropNovaCat);
+  document.getElementById("despFixasBtnNovaCategoria")?.addEventListener("click", openNovaCat);
+  document.getElementById("despFixasCloseNovaCat")?.addEventListener("click", closeNovaCat);
+  document.getElementById("despFixasCancelarNovaCat")?.addEventListener("click", closeNovaCat);
+  backdropNovaCat?.addEventListener("click", (ev) => {
+    if (ev.target === backdropNovaCat) closeNovaCat();
+  });
+  document.getElementById("despFixasFormNovaCategoria")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nome = (document.getElementById("despFixasNovaCatNome")?.value || "").trim();
+    if (!nome) return showToast("Informe o nome da categoria.", "warning");
+    try {
+      const created = await fetchJSON("/despesas-fixas/categorias", { method: "POST", body: JSON.stringify({ nome }) });
+      await despesasFixasCarregarCategorias();
+      const sel = document.getElementById("despFixasCategoria");
+      if (sel && created?.id) sel.value = String(created.id);
+      closeNovaCat();
+      showToast("Categoria criada.", "success");
+    } catch (err) {
+      showToast(err?.message || "Não foi possível criar a categoria.", "error");
+    }
+  });
+
+  formCad?.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!formCad.checkValidity()) {
       formCad.classList.add("was-validated");
       return;
     }
-    const todas = !!document.getElementById("despFixasUnidadeTodas")?.checked;
-    const unidadesTxt = despesasFixasUnidadesLabelFromForm();
-    if (!todas && !unidadesTxt) {
+    const { aplica_todas_unidades, unidade_ids } = despesasFixasUnidadePayload(
+      "despFixasUnidadeTodas",
+      "despFixasUnidadesCheckboxes",
+      "desp-fixa-u-cad"
+    );
+    if (!aplica_todas_unidades && (!unidade_ids || !unidade_ids.length)) {
       showToast("Selecione ao menos uma unidade ou marque “Todas as unidades”.", "warning");
       return;
     }
     const nome = (document.getElementById("despFixasNome")?.value || "").trim();
-    const categoria = (document.getElementById("despFixasCategoria")?.value || "").trim();
+    const categoria_id = Number(document.getElementById("despFixasCategoria")?.value);
     const valor = Number(document.getElementById("despFixasValor")?.value);
-    const diaVenc = Number(document.getElementById("despFixasDiaVenc")?.value);
+    const dia_vencimento = Number(document.getElementById("despFixasDiaVenc")?.value);
     const status = (document.getElementById("despFixasStatus")?.value || "ativo").trim();
     const fornecedor = (document.getElementById("despFixasFornecedor")?.value || "").trim();
-    const obs = (document.getElementById("despFixasObs")?.value || "").trim();
-    despesasFixasLista.unshift({
-      id: despesasFixasNextId(),
-      nome,
-      categoria,
-      unidadesLabel: todas ? "Todas as unidades" : unidadesTxt,
-      valor,
-      diaVenc,
-      fornecedor,
-      obs,
-      status,
-    });
-    despesasFixasRenderTabela();
-    formCad.reset();
-    chkTodas?.dispatchEvent(new Event("change"));
-    formCad.classList.remove("was-validated");
-    showToast("Despesa incluída na lista (somente nesta sessão).", "success");
+    const observacoes = (document.getElementById("despFixasObs")?.value || "").trim();
+    if (!categoria_id) return showToast("Selecione uma categoria.", "warning");
+    try {
+      await fetchJSON("/despesas-fixas", {
+        method: "POST",
+        body: JSON.stringify({
+          nome,
+          categoria_id,
+          valor,
+          dia_vencimento,
+          status,
+          fornecedor: fornecedor || null,
+          observacoes: observacoes || null,
+          aplica_todas_unidades,
+          unidade_ids,
+        }),
+      });
+      formCad.reset();
+      despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
+      document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
+      formCad.classList.remove("was-validated");
+      await despesasFixasCarregarLista();
+      showToast("Despesa cadastrada.", "success");
+    } catch (err) {
+      showToast(err?.message || "Erro ao salvar despesa.", "error");
+    }
   });
 
   document.getElementById("despFixasTableBody")?.addEventListener("click", (e) => {
@@ -17747,31 +17756,41 @@ function setupDespesasFixasUi() {
     const row = despesasFixasLista.find((x) => Number(x.id) === id);
     if (!row) return;
     if (v) {
-      const cat = DESP_FIXAS_CATEGORIA_LABELS[row.categoria] || row.categoria;
+      const cat = row.categoria_nome || "—";
+      const ul = row.unidades_label || row.unidadesLabel || "—";
+      const dia = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
+      const obs = row.observacoes != null ? row.observacoes : row.obs;
       const body = document.getElementById("despFixasVerBody");
       if (body) {
         body.innerHTML = `<dl class="row mb-0">
           <dt class="col-sm-4">Nome</dt><dd class="col-sm-8">${escapeHtml(row.nome)}</dd>
           <dt class="col-sm-4">Categoria</dt><dd class="col-sm-8">${escapeHtml(cat)}</dd>
-          <dt class="col-sm-4">Unidades</dt><dd class="col-sm-8">${escapeHtml(row.unidadesLabel || "—")}</dd>
+          <dt class="col-sm-4">Unidades</dt><dd class="col-sm-8">${escapeHtml(ul)}</dd>
           <dt class="col-sm-4">Valor mensal</dt><dd class="col-sm-8">${escapeHtml(formatCurrencyBRL(Number(row.valor) || 0))}</dd>
-          <dt class="col-sm-4">Dia vencimento</dt><dd class="col-sm-8">${escapeHtml(String(row.diaVenc ?? "—"))}</dd>
+          <dt class="col-sm-4">Dia vencimento</dt><dd class="col-sm-8">${escapeHtml(String(dia ?? "—"))}</dd>
           <dt class="col-sm-4">Status</dt><dd class="col-sm-8">${escapeHtml(row.status === "ativo" ? "Ativo" : "Pausado")}</dd>
           <dt class="col-sm-4">Fornecedor</dt><dd class="col-sm-8">${escapeHtml(row.fornecedor || "—")}</dd>
-          <dt class="col-sm-4">Observações</dt><dd class="col-sm-8">${escapeHtml(row.obs || "—")}</dd>
+          <dt class="col-sm-4">Observações</dt><dd class="col-sm-8">${escapeHtml(obs || "—")}</dd>
         </dl>`;
       }
       despesasFixasModalOpen(backdropVer);
     } else if (ed) {
       document.getElementById("despFixasEditId").value = String(row.id);
       document.getElementById("despFixasEditNome").value = row.nome || "";
-      document.getElementById("despFixasEditCategoria").value = row.categoria || "";
+      despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
       document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
-      document.getElementById("despFixasEditDia").value = String(row.diaVenc ?? "");
+      const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
+      document.getElementById("despFixasEditDia").value = String(diaE ?? "");
       document.getElementById("despFixasEditStatus").value = row.status || "ativo";
-      document.getElementById("despFixasEditUnidades").value = row.unidadesLabel || "";
+      const aplica = !!Number(row.aplica_todas_unidades ?? 0);
+      const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
+      const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
+      if (chkEdTodas) chkEdTodas.checked = aplica;
+      despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
+      chkEdTodas?.dispatchEvent(new Event("change"));
       document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
-      document.getElementById("despFixasEditObs").value = row.obs || "";
+      const obsE = row.observacoes != null ? row.observacoes : row.obs;
+      document.getElementById("despFixasEditObs").value = obsE || "";
       despesasFixasModalOpen(backdropEdit);
     } else if (del) {
       delTargetId = id;
@@ -17795,22 +17814,47 @@ function setupDespesasFixasUi() {
     if (ev.target === backdropEdit) closeEdit();
   });
 
-  document.getElementById("despFixasFormEditar")?.addEventListener("submit", (e) => {
+  document.getElementById("despFixasFormEditar")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = Number(document.getElementById("despFixasEditId")?.value);
-    const row = despesasFixasLista.find((x) => Number(x.id) === id);
-    if (!row) return closeEdit();
-    row.nome = (document.getElementById("despFixasEditNome")?.value || "").trim();
-    row.categoria = (document.getElementById("despFixasEditCategoria")?.value || "").trim();
-    row.valor = Number(document.getElementById("despFixasEditValor")?.value);
-    row.diaVenc = Number(document.getElementById("despFixasEditDia")?.value);
-    row.status = (document.getElementById("despFixasEditStatus")?.value || "ativo").trim();
-    row.unidadesLabel = (document.getElementById("despFixasEditUnidades")?.value || "").trim() || "—";
-    row.fornecedor = (document.getElementById("despFixasEditFornecedor")?.value || "").trim();
-    row.obs = (document.getElementById("despFixasEditObs")?.value || "").trim();
-    despesasFixasRenderTabela();
-    showToast("Alterações aplicadas na lista local.", "success");
-    closeEdit();
+    const { aplica_todas_unidades, unidade_ids } = despesasFixasUnidadePayload(
+      "despFixasEditUnidadeTodas",
+      "despFixasEditUnidadesCheckboxes",
+      "desp-fixa-u-edit"
+    );
+    if (!aplica_todas_unidades && (!unidade_ids || !unidade_ids.length)) {
+      showToast("Selecione ao menos uma unidade ou marque “Todas as unidades”.", "warning");
+      return;
+    }
+    const nome = (document.getElementById("despFixasEditNome")?.value || "").trim();
+    const categoria_id = Number(document.getElementById("despFixasEditCategoria")?.value);
+    const valor = Number(document.getElementById("despFixasEditValor")?.value);
+    const dia_vencimento = Number(document.getElementById("despFixasEditDia")?.value);
+    const status = (document.getElementById("despFixasEditStatus")?.value || "ativo").trim();
+    const fornecedor = (document.getElementById("despFixasEditFornecedor")?.value || "").trim();
+    const observacoes = (document.getElementById("despFixasEditObs")?.value || "").trim();
+    if (!categoria_id) return showToast("Selecione uma categoria.", "warning");
+    try {
+      await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          nome,
+          categoria_id,
+          valor,
+          dia_vencimento,
+          status,
+          fornecedor: fornecedor || null,
+          observacoes: observacoes || null,
+          aplica_todas_unidades,
+          unidade_ids,
+        }),
+      });
+      await despesasFixasCarregarLista();
+      showToast("Despesa atualizada.", "success");
+      closeEdit();
+    } catch (err) {
+      showToast(err?.message || "Erro ao atualizar.", "error");
+    }
   });
 
   const closeDel = () => {
@@ -17822,26 +17866,39 @@ function setupDespesasFixasUi() {
   backdropDel?.addEventListener("click", (ev) => {
     if (ev.target === backdropDel) closeDel();
   });
-  document.getElementById("despFixasConfirmarDel")?.addEventListener("click", () => {
+  document.getElementById("despFixasConfirmarDel")?.addEventListener("click", async () => {
     if (delTargetId == null) return closeDel();
-    despesasFixasLista = despesasFixasLista.filter((x) => Number(x.id) !== Number(delTargetId));
-    despesasFixasRenderTabela();
-    showToast("Registro removido da lista local.", "info");
+    try {
+      await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(delTargetId))}`, { method: "DELETE" });
+      await despesasFixasCarregarLista();
+      showToast("Despesa excluída.", "success");
+    } catch (err) {
+      showToast(err?.message || "Erro ao excluir.", "error");
+    }
     closeDel();
   });
-
-  despesasFixasRenderUnidadeCheckboxes();
-  chkTodas?.dispatchEvent(new Event("change"));
-  despesasFixasRenderTabela();
 }
 
 window.loadDespesasFixasSection = async function loadDespesasFixasSection() {
   setupDespesasFixasUi();
   await loadUnidades(false).catch(() => {});
-  despesasFixasRenderUnidadeCheckboxes();
-  const chkTodas = document.getElementById("despFixasUnidadeTodas");
-  chkTodas?.dispatchEvent(new Event("change"));
-  despesasFixasRenderTabela();
+  try {
+    await despesasFixasCarregarCategorias();
+  } catch (err) {
+    despesasFixasCategorias = [];
+    despesasFixasPopularSelectCategorias(document.getElementById("despFixasCategoria"), "");
+    despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), "");
+    showToast(err?.message || "Categorias indisponíveis (migração aplicada no servidor?).", "warning");
+  }
+  despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
+  document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
+  try {
+    await despesasFixasCarregarLista();
+  } catch (err) {
+    despesasFixasLista = [];
+    despesasFixasRenderTabela();
+    showToast(err?.message || "Não foi possível carregar despesas.", "error");
+  }
 };
 
 // Formata data para input type="date" (YYYY-MM-DD)
