@@ -17733,6 +17733,19 @@ async function despesasFixasCarregarLista() {
   despesasFixasRenderTabela();
 }
 
+/** Linha atual na lista ou detalhe remoto (ex.: lista desatualizada após filtro). */
+async function despesasFixasObterRegistro(idStr) {
+  const rowLocal = (despesasFixasLista || []).find(
+    (x) => x != null && (String(x.id) === String(idStr) || Number(x.id) === Number(idStr))
+  );
+  if (rowLocal) return rowLocal;
+  try {
+    return await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(idStr))}`, { method: "GET" });
+  } catch {
+    return null;
+  }
+}
+
 function despesasFixasModalOpen(el) {
   if (!el) return;
   el.classList.add("active");
@@ -17960,20 +17973,23 @@ function setupDespesasFixasUi() {
     }
   });
 
-  document.getElementById("despFixasTableBody")?.addEventListener("click", (e) => {
+  document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
     const v = e.target.closest("[data-desp-view]");
     const ed = e.target.closest("[data-desp-edit]");
     const del = e.target.closest("[data-desp-del]");
     const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
     if (!idStr) return;
-    const id = Number(idStr);
-    const row = despesasFixasLista.find((x) => Number(x.id) === id);
-    if (!row) return;
-    if (v) {
-      const body = document.getElementById("despFixasVerBody");
-      if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
-      despesasFixasModalOpen(backdropVer);
-      (async () => {
+    void (async () => {
+      const row = await despesasFixasObterRegistro(idStr);
+      if (!row) {
+        showToast("Não foi possível localizar esta despesa.", "warning");
+        return;
+      }
+      const id = Number(row.id);
+      if (v) {
+        const body = document.getElementById("despFixasVerBody");
+        if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
+        despesasFixasModalOpen(backdropVer);
         try {
           const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
           const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
@@ -17981,33 +17997,33 @@ function setupDespesasFixasUi() {
           if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
         } catch (err) {
           if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
-          showToast(err?.message || "Detalhe parcial (cache da lista).", "warning");
+          showToast(err?.message || "Detalhe parcial (dados da lista).", "warning");
         }
-      })();
-    } else if (ed) {
-      document.getElementById("despFixasEditId").value = String(row.id);
-      document.getElementById("despFixasEditNome").value = row.nome || "";
-      despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
-      document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
-      const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
-      document.getElementById("despFixasEditDia").value = String(diaE ?? "");
-      document.getElementById("despFixasEditStatus").value = row.status || "ativo";
-      const aplica = !!Number(row.aplica_todas_unidades ?? 0);
-      const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
-      const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
-      if (chkEdTodas) chkEdTodas.checked = aplica;
-      despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
-      chkEdTodas?.dispatchEvent(new Event("change"));
-      document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
-      const obsE = row.observacoes != null ? row.observacoes : row.obs;
-      document.getElementById("despFixasEditObs").value = obsE || "";
-      despesasFixasModalOpen(backdropEdit);
-    } else if (del) {
-      delTargetId = id;
-      const msg = document.getElementById("despFixasDelMsg");
-      if (msg) msg.textContent = `Confirma a exclusão de “${row.nome}” (#${row.id})?`;
-      despesasFixasModalOpen(backdropDel);
-    }
+      } else if (ed) {
+        document.getElementById("despFixasEditId").value = String(row.id);
+        document.getElementById("despFixasEditNome").value = row.nome || "";
+        despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
+        document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
+        const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
+        document.getElementById("despFixasEditDia").value = String(diaE ?? "");
+        document.getElementById("despFixasEditStatus").value = row.status || "ativo";
+        const aplica = !!Number(row.aplica_todas_unidades ?? 0);
+        const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
+        const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
+        if (chkEdTodas) chkEdTodas.checked = aplica;
+        despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
+        chkEdTodas?.dispatchEvent(new Event("change"));
+        document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
+        const obsE = row.observacoes != null ? row.observacoes : row.obs;
+        document.getElementById("despFixasEditObs").value = obsE || "";
+        despesasFixasModalOpen(backdropEdit);
+      } else if (del) {
+        delTargetId = id;
+        const msg = document.getElementById("despFixasDelMsg");
+        if (msg) msg.textContent = `Confirma a exclusão de “${row.nome || "—"}” (#${row.id})?`;
+        despesasFixasModalOpen(backdropDel);
+      }
+    })();
   });
 
   const closeVer = () => despesasFixasModalClose(backdropVer);
