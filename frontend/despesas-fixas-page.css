@@ -30,9 +30,7 @@
 }
 
 /* Garante que Ver / Editar / Excluir recebam o clique (stacking em layouts responsivos). */
-#despesasFixasSection [data-desp-view],
-#despesasFixasSection [data-desp-edit],
-#despesasFixasSection [data-desp-del] {
+#despesasFixasSection .desp-fixas-acao-btn {
   position: relative;
   z-index: 1;
   cursor: pointer;

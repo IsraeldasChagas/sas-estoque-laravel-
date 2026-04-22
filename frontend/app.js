@@ -17513,8 +17513,6 @@ function setupReciboAjudaCusto() {
 }
 
 let __despesasFixasUiSetup = false;
-/** Clique Ver/Editar/Excluir: listener global em fase de captura (funciona mesmo com overlays ou re-render da tabela). */
-let __despFixasListaDocCaptureBound = false;
 let despesasFixasCategorias = [];
 let despesasFixasLista = [];
 /** Id da linha em confirmação de exclusão (modal). */
@@ -17766,83 +17764,72 @@ function despesasFixasClickTargetElement(ev) {
   return null;
 }
 
-/** Ver / Editar / Excluir na tabela (chamado a partir do listener em captura no document). */
-function despesasFixasHandleListaAcoesClick(e) {
-  const base = despesasFixasClickTargetElement(e);
-  if (!base) return;
-  const v = base.closest("[data-desp-view]");
-  const ed = base.closest("[data-desp-edit]");
-  const del = base.closest("[data-desp-del]");
-  const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
-  if (!idStr) return;
-  e.preventDefault();
-  e.stopPropagation();
-  void (async () => {
-    const row = await despesasFixasObterRegistro(idStr);
-    if (!row) {
-      showToast("Não foi possível localizar esta despesa.", "warning");
-      return;
+/** Ver / Editar / Excluir — acionado pelos botões `.desp-fixas-acao-btn` (delegação no tbody). */
+async function despesasFixasListaExecutarAcao(acao, idStr) {
+  const row = await despesasFixasObterRegistro(idStr);
+  if (!row) {
+    showToast("Não foi possível localizar esta despesa.", "warning");
+    return;
+  }
+  const id = Number(row.id);
+  const backdropVer = document.getElementById("despFixasBackdropVer");
+  const backdropEdit = document.getElementById("despFixasBackdropEdit");
+  const backdropDel = document.getElementById("despFixasBackdropDel");
+  if (acao === "ver") {
+    const body = document.getElementById("despFixasVerBody");
+    if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
+    despesasFixasModalOpen(backdropVer);
+    try {
+      const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
+      const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
+      if (idx >= 0) despesasFixasLista[idx] = fresh;
+      if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
+    } catch (err) {
+      if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
+      showToast(err?.message || "Detalhe parcial (dados da lista).", "warning");
     }
-    const id = Number(row.id);
-    const backdropVer = document.getElementById("despFixasBackdropVer");
-    const backdropEdit = document.getElementById("despFixasBackdropEdit");
-    const backdropDel = document.getElementById("despFixasBackdropDel");
-    if (v) {
-      const body = document.getElementById("despFixasVerBody");
-      if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
-      despesasFixasModalOpen(backdropVer);
-      try {
-        const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
-        const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
-        if (idx >= 0) despesasFixasLista[idx] = fresh;
-        if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
-      } catch (err) {
-        if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
-        showToast(err?.message || "Detalhe parcial (dados da lista).", "warning");
-      }
-    } else if (ed) {
-      document.getElementById("despFixasEditId").value = String(row.id);
-      document.getElementById("despFixasEditNome").value = row.nome || "";
-      despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
-      document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
-      const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
-      document.getElementById("despFixasEditDia").value = String(diaE ?? "");
-      document.getElementById("despFixasEditStatus").value = row.status || "ativo";
-      const aplica = !!Number(row.aplica_todas_unidades ?? 0);
-      const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
-      const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
-      if (chkEdTodas) chkEdTodas.checked = aplica;
-      despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
-      chkEdTodas?.dispatchEvent(new Event("change"));
-      document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
-      const obsE = row.observacoes != null ? row.observacoes : row.obs;
-      document.getElementById("despFixasEditObs").value = obsE || "";
-      despesasFixasModalOpen(backdropEdit);
-    } else if (del) {
-      despesasFixasDelTargetId = Number.isFinite(id) ? id : Number(idStr);
-      const msg = document.getElementById("despFixasDelMsg");
-      if (msg) msg.textContent = `Confirma a exclusão de “${row.nome || "—"}” (#${row.id})?`;
-      despesasFixasModalOpen(backdropDel);
-    }
-  })();
+  } else if (acao === "editar") {
+    document.getElementById("despFixasEditId").value = String(row.id);
+    document.getElementById("despFixasEditNome").value = row.nome || "";
+    despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
+    document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
+    const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
+    document.getElementById("despFixasEditDia").value = String(diaE ?? "");
+    document.getElementById("despFixasEditStatus").value = row.status || "ativo";
+    const aplica = !!Number(row.aplica_todas_unidades ?? 0);
+    const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
+    const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
+    if (chkEdTodas) chkEdTodas.checked = aplica;
+    despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
+    chkEdTodas?.dispatchEvent(new Event("change"));
+    document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
+    const obsE = row.observacoes != null ? row.observacoes : row.obs;
+    document.getElementById("despFixasEditObs").value = obsE || "";
+    despesasFixasModalOpen(backdropEdit);
+  } else if (acao === "excluir") {
+    despesasFixasDelTargetId = Number.isFinite(id) ? id : Number(idStr);
+    const msg = document.getElementById("despFixasDelMsg");
+    if (msg) msg.textContent = `Confirma a exclusão de “${row.nome || "—"}” (#${row.id})?`;
+    despesasFixasModalOpen(backdropDel);
+  }
 }
 
-/** Garante delegação Ver/Editar/Excluir mesmo se o resto de setupDespesasFixasUi falhar ou retornar cedo. */
-function despesasFixasEnsureListaClickCapture() {
-  if (__despFixasListaDocCaptureBound) return;
-  __despFixasListaDocCaptureBound = true;
-  document.addEventListener(
-    "click",
-    (e) => {
-      const tb = document.getElementById("despFixasTableBody");
-      if (!tb) return;
-      const base = despesasFixasClickTargetElement(e);
-      if (!base || !tb.contains(base)) return;
-      if (!base.closest("[data-desp-view],[data-desp-edit],[data-desp-del]")) return;
-      despesasFixasHandleListaAcoesClick(e);
-    },
-    true
-  );
+/** Um único listener no `#despFixasTableBody` (o nó tbody não é recriado ao atualizar linhas). */
+function despesasFixasEnsureListaTbodyDelegate() {
+  const tb = document.getElementById("despFixasTableBody");
+  if (!tb || tb._despFixasListaDelegateBound) return;
+  tb._despFixasListaDelegateBound = true;
+  tb.addEventListener("click", (e) => {
+    const base = despesasFixasClickTargetElement(e);
+    const btn = base?.closest("button.desp-fixas-acao-btn");
+    if (!btn || !tb.contains(btn)) return;
+    const acao = (btn.getAttribute("data-desp-acao") || "").trim().toLowerCase();
+    const idStr = btn.getAttribute("data-desp-id");
+    if (!idStr || (acao !== "ver" && acao !== "editar" && acao !== "excluir")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    void despesasFixasListaExecutarAcao(acao, idStr);
+  });
 }
 
 function despesasFixasModalOpen(el) {
@@ -17866,6 +17853,7 @@ function despesasFixasRenderTabela() {
       : "Nenhuma despesa cadastrada.";
     tb.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">${escapeHtml(msg)}</td></tr>`;
     despesasFixasAtualizarRodapeLista();
+    despesasFixasEnsureListaTbodyDelegate();
     return;
   }
   tb.innerHTML = despesasFixasLista
@@ -17887,19 +17875,20 @@ function despesasFixasRenderTabela() {
         <td data-label="Valor" class="text-end fw-semibold">${v}</td>
         <td data-label="Venc." class="text-center">${escapeHtml(dia)}</td>
         <td data-label="Status" class="text-center">${st}</td>
-        <td data-label="Ações" class="text-end text-nowrap">
-          <button type="button" class="btn btn-sm btn-outline-primary me-1" data-desp-view="${id}">Ver</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-desp-edit="${id}">Editar</button>
-          <button type="button" class="btn btn-sm btn-outline-danger" data-desp-del="${id}">Excluir</button>
+        <td data-label="Ações" class="text-end text-nowrap desp-fixas-acoes-cell">
+          <button type="button" class="btn btn-sm btn-outline-primary me-1 desp-fixas-acao-btn" data-desp-acao="ver" data-desp-id="${id}">Ver</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary me-1 desp-fixas-acao-btn" data-desp-acao="editar" data-desp-id="${id}">Editar</button>
+          <button type="button" class="btn btn-sm btn-outline-danger desp-fixas-acao-btn" data-desp-acao="excluir" data-desp-id="${id}">Excluir</button>
         </td>
       </tr>`;
     })
     .join("");
   despesasFixasAtualizarRodapeLista();
+  despesasFixasEnsureListaTbodyDelegate();
 }
 
 function setupDespesasFixasUi() {
-  despesasFixasEnsureListaClickCapture();
+  despesasFixasEnsureListaTbodyDelegate();
   if (__despesasFixasUiSetup) return;
   __despesasFixasUiSetup = true;
 
