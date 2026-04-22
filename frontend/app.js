@@ -17756,11 +17756,22 @@ async function despesasFixasObterRegistro(idStr) {
   }
 }
 
+/** Elemento clicado (clique no texto do botão vira Text — Text não tem closest). */
+function despesasFixasClickTargetElement(ev) {
+  const t = ev.target;
+  if (!t) return null;
+  if (t.nodeType === 1) return t;
+  if (t.nodeType === 3 && t.parentElement) return t.parentElement;
+  return null;
+}
+
 /** Ver / Editar / Excluir na tabela (chamado a partir do listener em captura no document). */
 function despesasFixasHandleListaAcoesClick(e) {
-  const v = e.target.closest("[data-desp-view]");
-  const ed = e.target.closest("[data-desp-edit]");
-  const del = e.target.closest("[data-desp-del]");
+  const base = despesasFixasClickTargetElement(e);
+  if (!base) return;
+  const v = base.closest("[data-desp-view]");
+  const ed = base.closest("[data-desp-edit]");
+  const del = base.closest("[data-desp-del]");
   const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
   if (!idStr) return;
   e.preventDefault();
@@ -18047,8 +18058,10 @@ function setupDespesasFixasUi() {
       "click",
       (e) => {
         const tb = document.getElementById("despFixasTableBody");
-        if (!tb || !tb.contains(e.target)) return;
-        if (!e.target.closest("[data-desp-view],[data-desp-edit],[data-desp-del]")) return;
+        if (!tb) return;
+        const base = despesasFixasClickTargetElement(e);
+        if (!base || !tb.contains(base)) return;
+        if (!base.closest("[data-desp-view],[data-desp-edit],[data-desp-del]")) return;
         despesasFixasHandleListaAcoesClick(e);
       },
       true
