@@ -127,9 +127,14 @@
   width: min(96vw, 640px);
 }
 
+#despFixasBackdropGerirCategorias .modal {
+  width: min(96vw, 720px);
+}
+
 #despFixasBackdropVer .btn-close,
 #despFixasBackdropEdit .btn-close,
 #despFixasBackdropDel .btn-close,
-#despFixasBackdropNovaCategoria .btn-close {
+#despFixasBackdropNovaCategoria .btn-close,
+#despFixasBackdropGerirCategorias .btn-close {
   flex-shrink: 0;
 }

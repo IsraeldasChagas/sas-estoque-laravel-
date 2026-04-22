@@ -17515,6 +17515,145 @@ function setupReciboAjudaCusto() {
 let __despesasFixasUiSetup = false;
 let despesasFixasCategorias = [];
 let despesasFixasLista = [];
+/** Contexto do modal «Nova categoria»: formulário de cadastro ou de edição. */
+let despesasFixasNovaCatContext = "cad";
+
+function despesasFixasListaBuildUrl() {
+  const q = new URLSearchParams();
+  const cat = document.getElementById("despFixasFiltroCategoria")?.value?.trim() || "";
+  const st = document.getElementById("despFixasFiltroStatus")?.value?.trim() || "";
+  const uni = document.getElementById("despFixasFiltroUnidade")?.value?.trim() || "";
+  if (cat) q.set("categoria_id", cat);
+  if (st) q.set("status", st);
+  if (uni) q.set("unidade_id", uni);
+  const s = q.toString();
+  return s ? `/despesas-fixas?${s}` : "/despesas-fixas";
+}
+
+function despesasFixasFiltrosAtivos() {
+  return !!(
+    document.getElementById("despFixasFiltroCategoria")?.value ||
+    document.getElementById("despFixasFiltroStatus")?.value ||
+    document.getElementById("despFixasFiltroUnidade")?.value
+  );
+}
+
+function despesasFixasPopularFiltroSelects() {
+  const selCat = document.getElementById("despFixasFiltroCategoria");
+  if (selCat) {
+    const keep = selCat.value;
+    selCat.innerHTML = '<option value="">Todas</option>';
+    (despesasFixasCategorias || []).forEach((c) => {
+      const o = document.createElement("option");
+      o.value = String(c.id);
+      o.textContent = c.nome || `Categoria ${c.id}`;
+      selCat.appendChild(o);
+    });
+    if (keep && [...selCat.options].some((o) => o.value === keep)) selCat.value = keep;
+  }
+  const selUni = document.getElementById("despFixasFiltroUnidade");
+  if (selUni) {
+    const keepU = selUni.value;
+    selUni.innerHTML = '<option value="">Todas</option>';
+    const unidades =
+      Array.isArray(state.unidades) && state.unidades.length
+        ? state.unidades
+        : [
+            { id: 1, nome: "Matriz (exemplo)" },
+            { id: 2, nome: "Filial Norte (exemplo)" },
+            { id: 3, nome: "Filial Sul (exemplo)" },
+          ];
+    unidades.forEach((u) => {
+      const o = document.createElement("option");
+      o.value = String(u.id);
+      o.textContent = u.nome || `Unidade ${u.id}`;
+      selUni.appendChild(o);
+    });
+    if (keepU && [...selUni.options].some((o) => o.value === keepU)) selUni.value = keepU;
+  }
+}
+
+function despesasFixasFormatUpdatedAt(iso) {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return "—";
+  }
+}
+
+function despesasFixasVerHtmlFromRow(row) {
+  const cat = row.categoria_nome || "—";
+  const ul = row.unidades_label || row.unidadesLabel || "—";
+  const dia = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
+  const obs = row.observacoes != null ? row.observacoes : row.obs;
+  const criador = row.criado_por_nome || (row.criado_por ? `#${row.criado_por}` : "—");
+  const upd = despesasFixasFormatUpdatedAt(row.updated_at);
+  return `<dl class="row mb-0">
+    <dt class="col-sm-4">Nome</dt><dd class="col-sm-8">${escapeHtml(row.nome)}</dd>
+    <dt class="col-sm-4">Categoria</dt><dd class="col-sm-8">${escapeHtml(cat)}</dd>
+    <dt class="col-sm-4">Unidades</dt><dd class="col-sm-8">${escapeHtml(ul)}</dd>
+    <dt class="col-sm-4">Valor mensal</dt><dd class="col-sm-8">${escapeHtml(formatCurrencyBRL(Number(row.valor) || 0))}</dd>
+    <dt class="col-sm-4">Dia vencimento</dt><dd class="col-sm-8">${escapeHtml(String(dia ?? "—"))}</dd>
+    <dt class="col-sm-4">Status</dt><dd class="col-sm-8">${escapeHtml(row.status === "ativo" ? "Ativo" : "Pausado")}</dd>
+    <dt class="col-sm-4">Fornecedor</dt><dd class="col-sm-8">${escapeHtml(row.fornecedor || "—")}</dd>
+    <dt class="col-sm-4">Observações</dt><dd class="col-sm-8">${escapeHtml(obs || "—")}</dd>
+    <dt class="col-sm-4">Cadastrado por</dt><dd class="col-sm-8">${escapeHtml(criador)}</dd>
+    <dt class="col-sm-4">Última atualização</dt><dd class="col-sm-8">${escapeHtml(upd)}</dd>
+  </dl>`;
+}
+
+function despesasFixasAtualizarRodapeLista() {
+  const el = document.getElementById("despFixasListaTotalLabel");
+  const hint = document.getElementById("despFixasListaFiltroHint");
+  if (!el) return;
+  const sum = (despesasFixasLista || []).reduce((acc, r) => acc + (Number(r.valor) || 0), 0);
+  el.textContent = `Total (lista): ${formatCurrencyBRL(sum)}`;
+  if (hint) {
+    const on = despesasFixasFiltrosAtivos();
+    hint.classList.toggle("d-none", !on);
+    hint.textContent = on ? "Filtros aplicados." : "";
+  }
+}
+
+async function despesasFixasRefreshGerirCategoriasBody() {
+  const host = document.getElementById("despFixasGerirCatBody");
+  if (!host) return;
+  host.innerHTML = '<p class="text-secondary small mb-0">Carregando…</p>';
+  try {
+    const list = await fetchJSON("/despesas-fixas/categorias?inativos=1", { method: "GET" });
+    const arr = Array.isArray(list) ? list : [];
+    if (!arr.length) {
+      host.innerHTML = '<p class="text-secondary mb-0">Nenhuma categoria.</p>';
+      return;
+    }
+    const rows = arr
+      .map((c) => {
+        const id = escapeHtml(String(c.id));
+        const nomeEsc = escapeHtml(String(c.nome || ""));
+        const ativo = Number(c.ativo) === 1;
+        const badge = ativo
+          ? '<span class="badge text-bg-success">Ativa</span>'
+          : '<span class="badge text-bg-secondary">Inativa</span>';
+        return `<tr>
+          <td class="text-muted">#${id}</td>
+          <td><input type="text" class="form-control form-control-sm" data-cat-nome="${id}" maxlength="120" value="${nomeEsc}" /></td>
+          <td>${badge}</td>
+          <td class="text-end text-nowrap">
+            <button type="button" class="btn btn-sm btn-primary" data-desp-cat-save="${id}">Salvar</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-desp-cat-toggle="${id}" data-ativo="${ativo ? "1" : "0"}">${ativo ? "Desativar" : "Reativar"}</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-desp-cat-del="${id}">Excluir</button>
+          </td>
+        </tr>`;
+      })
+      .join("");
+    host.innerHTML = `<div class="table-responsive"><table class="table table-sm table-striped align-middle mb-0"><thead><tr><th>#</th><th>Nome</th><th>Estado</th><th class="text-end">Ações</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  } catch (err) {
+    host.innerHTML = `<p class="text-danger small mb-0">${escapeHtml(err?.message || "Erro ao carregar categorias.")}</p>`;
+  }
+}
 
 function despesasFixasPopularSelectCategorias(selectEl, selectedId) {
   if (!selectEl) return;
@@ -17589,7 +17728,7 @@ async function despesasFixasCarregarCategorias() {
 }
 
 async function despesasFixasCarregarLista() {
-  const data = await fetchJSON("/despesas-fixas", { method: "GET" });
+  const data = await fetchJSON(despesasFixasListaBuildUrl(), { method: "GET" });
   despesasFixasLista = Array.isArray(data) ? data : [];
   despesasFixasRenderTabela();
 }
@@ -17610,8 +17749,11 @@ function despesasFixasRenderTabela() {
   const tb = document.getElementById("despFixasTableBody");
   if (!tb) return;
   if (!despesasFixasLista.length) {
-    tb.innerHTML =
-      '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma despesa cadastrada.</td></tr>';
+    const msg = despesasFixasFiltrosAtivos()
+      ? "Nenhuma despesa corresponde aos filtros."
+      : "Nenhuma despesa cadastrada.";
+    tb.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">${escapeHtml(msg)}</td></tr>`;
+    despesasFixasAtualizarRodapeLista();
     return;
   }
   tb.innerHTML = despesasFixasLista
@@ -17641,6 +17783,7 @@ function despesasFixasRenderTabela() {
       </tr>`;
     })
     .join("");
+  despesasFixasAtualizarRodapeLista();
 }
 
 function setupDespesasFixasUi() {
@@ -17652,6 +17795,7 @@ function setupDespesasFixasUi() {
   const backdropEdit = document.getElementById("despFixasBackdropEdit");
   const backdropDel = document.getElementById("despFixasBackdropDel");
   const backdropNovaCat = document.getElementById("despFixasBackdropNovaCategoria");
+  const backdropGerirCat = document.getElementById("despFixasBackdropGerirCategorias");
   let delTargetId = null;
 
   despesasFixasBindTodasUnidades("despFixasUnidadeTodas", "despFixasUnidadesCheckboxes", "desp-fixa-u-cad");
@@ -17668,14 +17812,76 @@ function setupDespesasFixasUi() {
     window.loadDespesasFixasSection().catch((err) => showToast(err?.message || "Falha ao atualizar.", "error"));
   });
 
-  const openNovaCat = () => {
+  document.getElementById("despFixasBtnFiltrar")?.addEventListener("click", () => {
+    despesasFixasCarregarLista().catch((err) => showToast(err?.message || "Falha ao filtrar.", "error"));
+  });
+  document.getElementById("despFixasBtnLimparFiltros")?.addEventListener("click", () => {
+    const a = document.getElementById("despFixasFiltroCategoria");
+    const b = document.getElementById("despFixasFiltroStatus");
+    const c = document.getElementById("despFixasFiltroUnidade");
+    if (a) a.value = "";
+    if (b) b.value = "";
+    if (c) c.value = "";
+    despesasFixasCarregarLista().catch((err) => showToast(err?.message || "Falha ao atualizar lista.", "error"));
+  });
+
+  const closeGerirCat = () => despesasFixasModalClose(backdropGerirCat);
+  document.getElementById("despFixasBtnGerirCategorias")?.addEventListener("click", () => {
+    despesasFixasModalOpen(backdropGerirCat);
+    despesasFixasRefreshGerirCategoriasBody().catch(() => {});
+  });
+  document.getElementById("despFixasCloseGerirCat")?.addEventListener("click", closeGerirCat);
+  document.getElementById("despFixasFecharGerirCat")?.addEventListener("click", closeGerirCat);
+  backdropGerirCat?.addEventListener("click", async (ev) => {
+    if (ev.target === backdropGerirCat) {
+      closeGerirCat();
+      return;
+    }
+    const saveBtn = ev.target.closest("[data-desp-cat-save]");
+    const toggleBtn = ev.target.closest("[data-desp-cat-toggle]");
+    const delBtn = ev.target.closest("[data-desp-cat-del]");
+    const idStr = saveBtn?.getAttribute("data-desp-cat-save") || toggleBtn?.getAttribute("data-desp-cat-toggle") || delBtn?.getAttribute("data-desp-cat-del");
+    if (!idStr) return;
+    const idEnc = encodeURIComponent(idStr);
+    const nomeInput = document.querySelector(`[data-cat-nome="${idStr}"]`);
+    try {
+      if (saveBtn) {
+        const nome = (nomeInput?.value || "").trim();
+        if (!nome) return showToast("Informe o nome da categoria.", "warning");
+        await fetchJSON(`/despesas-fixas/categorias/${idEnc}`, { method: "PUT", body: JSON.stringify({ nome }) });
+        showToast("Categoria atualizada.", "success");
+      } else if (toggleBtn) {
+        const nome = (nomeInput?.value || "").trim();
+        if (!nome) return showToast("Informe o nome da categoria.", "warning");
+        const eraAtivo = toggleBtn.getAttribute("data-ativo") === "1";
+        await fetchJSON(`/despesas-fixas/categorias/${idEnc}`, {
+          method: "PUT",
+          body: JSON.stringify({ nome, ativo: !eraAtivo }),
+        });
+        showToast(!eraAtivo ? "Categoria reativada." : "Categoria desativada.", "success");
+      } else if (delBtn) {
+        await fetchJSON(`/despesas-fixas/categorias/${idEnc}`, { method: "DELETE" });
+        showToast("Categoria excluída.", "success");
+      }
+      await despesasFixasCarregarCategorias();
+      despesasFixasPopularFiltroSelects();
+      await despesasFixasRefreshGerirCategoriasBody();
+      await despesasFixasCarregarLista();
+    } catch (err) {
+      showToast(err?.message || "Operação não concluída.", "error");
+    }
+  });
+
+  const openNovaCat = (ctx) => {
+    despesasFixasNovaCatContext = ctx === "edit" ? "edit" : "cad";
     const inp = document.getElementById("despFixasNovaCatNome");
     if (inp) inp.value = "";
     despesasFixasModalOpen(backdropNovaCat);
     setTimeout(() => inp?.focus(), 100);
   };
   const closeNovaCat = () => despesasFixasModalClose(backdropNovaCat);
-  document.getElementById("despFixasBtnNovaCategoria")?.addEventListener("click", openNovaCat);
+  document.getElementById("despFixasBtnNovaCategoria")?.addEventListener("click", () => openNovaCat("cad"));
+  document.getElementById("despFixasBtnNovaCategoriaEdit")?.addEventListener("click", () => openNovaCat("edit"));
   document.getElementById("despFixasCloseNovaCat")?.addEventListener("click", closeNovaCat);
   document.getElementById("despFixasCancelarNovaCat")?.addEventListener("click", closeNovaCat);
   backdropNovaCat?.addEventListener("click", (ev) => {
@@ -17688,8 +17894,16 @@ function setupDespesasFixasUi() {
     try {
       const created = await fetchJSON("/despesas-fixas/categorias", { method: "POST", body: JSON.stringify({ nome }) });
       await despesasFixasCarregarCategorias();
-      const sel = document.getElementById("despFixasCategoria");
-      if (sel && created?.id) sel.value = String(created.id);
+      despesasFixasPopularFiltroSelects();
+      const ctx = despesasFixasNovaCatContext;
+      despesasFixasNovaCatContext = "cad";
+      if (ctx === "edit") {
+        const sel = document.getElementById("despFixasEditCategoria");
+        if (sel && created?.id) sel.value = String(created.id);
+      } else {
+        const sel = document.getElementById("despFixasCategoria");
+        if (sel && created?.id) sel.value = String(created.id);
+      }
       closeNovaCat();
       showToast("Categoria criada.", "success");
     } catch (err) {
@@ -17756,24 +17970,20 @@ function setupDespesasFixasUi() {
     const row = despesasFixasLista.find((x) => Number(x.id) === id);
     if (!row) return;
     if (v) {
-      const cat = row.categoria_nome || "—";
-      const ul = row.unidades_label || row.unidadesLabel || "—";
-      const dia = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
-      const obs = row.observacoes != null ? row.observacoes : row.obs;
       const body = document.getElementById("despFixasVerBody");
-      if (body) {
-        body.innerHTML = `<dl class="row mb-0">
-          <dt class="col-sm-4">Nome</dt><dd class="col-sm-8">${escapeHtml(row.nome)}</dd>
-          <dt class="col-sm-4">Categoria</dt><dd class="col-sm-8">${escapeHtml(cat)}</dd>
-          <dt class="col-sm-4">Unidades</dt><dd class="col-sm-8">${escapeHtml(ul)}</dd>
-          <dt class="col-sm-4">Valor mensal</dt><dd class="col-sm-8">${escapeHtml(formatCurrencyBRL(Number(row.valor) || 0))}</dd>
-          <dt class="col-sm-4">Dia vencimento</dt><dd class="col-sm-8">${escapeHtml(String(dia ?? "—"))}</dd>
-          <dt class="col-sm-4">Status</dt><dd class="col-sm-8">${escapeHtml(row.status === "ativo" ? "Ativo" : "Pausado")}</dd>
-          <dt class="col-sm-4">Fornecedor</dt><dd class="col-sm-8">${escapeHtml(row.fornecedor || "—")}</dd>
-          <dt class="col-sm-4">Observações</dt><dd class="col-sm-8">${escapeHtml(obs || "—")}</dd>
-        </dl>`;
-      }
+      if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
       despesasFixasModalOpen(backdropVer);
+      (async () => {
+        try {
+          const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
+          const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
+          if (idx >= 0) despesasFixasLista[idx] = fresh;
+          if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
+        } catch (err) {
+          if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
+          showToast(err?.message || "Detalhe parcial (cache da lista).", "warning");
+        }
+      })();
     } else if (ed) {
       document.getElementById("despFixasEditId").value = String(row.id);
       document.getElementById("despFixasEditNome").value = row.nome || "";
@@ -17890,6 +18100,7 @@ window.loadDespesasFixasSection = async function loadDespesasFixasSection() {
     despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), "");
     showToast(err?.message || "Categorias indisponíveis (migração aplicada no servidor?).", "warning");
   }
+  despesasFixasPopularFiltroSelects();
   despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
   document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
   try {
