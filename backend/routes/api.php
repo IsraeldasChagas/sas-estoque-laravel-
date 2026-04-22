@@ -8357,9 +8357,13 @@ Route::get('/despesas-fixas', function (Request $request) use ($proventosAuth, $
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         $q = DB::table('despesas_fixas as d')
-            ->leftJoin('despesas_fixas_categorias as c', 'd.categoria_id', '=', 'c.id')
-            ->leftJoin('usuarios as criador', 'd.criado_por', '=', 'criador.id')
-            ->select('d.*', 'c.nome as categoria_nome', 'criador.nome as criado_por_nome');
+            ->leftJoin('despesas_fixas_categorias as c', 'd.categoria_id', '=', 'c.id');
+        if (Schema::hasTable('usuarios')) {
+            $q->leftJoin('usuarios as criador', 'd.criado_por', '=', 'criador.id')
+                ->select('d.*', 'c.nome as categoria_nome', 'criador.nome as criado_por_nome');
+        } else {
+            $q->select('d.*', 'c.nome as categoria_nome', DB::raw('NULL as criado_por_nome'));
+        }
 
         $catF = trim((string) $request->query('categoria_id', ''));
         if ($catF !== '' && is_numeric($catF)) {
@@ -8404,12 +8408,16 @@ Route::get('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         if (!$despFixasPodeGerir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
-        $row = DB::table('despesas_fixas as d')
+        $qOne = DB::table('despesas_fixas as d')
             ->leftJoin('despesas_fixas_categorias as c', 'd.categoria_id', '=', 'c.id')
-            ->leftJoin('usuarios as criador', 'd.criado_por', '=', 'criador.id')
-            ->where('d.id', $id)
-            ->select('d.*', 'c.nome as categoria_nome', 'criador.nome as criado_por_nome')
-            ->first();
+            ->where('d.id', $id);
+        if (Schema::hasTable('usuarios')) {
+            $qOne->leftJoin('usuarios as criador', 'd.criado_por', '=', 'criador.id')
+                ->select('d.*', 'c.nome as categoria_nome', 'criador.nome as criado_por_nome');
+        } else {
+            $qOne->select('d.*', 'c.nome as categoria_nome', DB::raw('NULL as criado_por_nome'));
+        }
+        $row = $qOne->first();
         if (!$row) {
             return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }

@@ -17513,6 +17513,8 @@ function setupReciboAjudaCusto() {
 }
 
 let __despesasFixasUiSetup = false;
+/** Clique Ver/Editar/Excluir: listener global em fase de captura (funciona mesmo com overlays ou re-render da tabela). */
+let __despFixasListaDocCaptureBound = false;
 let despesasFixasCategorias = [];
 let despesasFixasLista = [];
 /** Id da linha em confirmação de exclusão (modal). */
@@ -17731,7 +17733,13 @@ async function despesasFixasCarregarCategorias() {
 
 async function despesasFixasCarregarLista() {
   const data = await fetchJSON(despesasFixasListaBuildUrl(), { method: "GET" });
-  despesasFixasLista = Array.isArray(data) ? data : [];
+  if (Array.isArray(data)) {
+    despesasFixasLista = data;
+  } else if (data && typeof data === "object" && Array.isArray(data.data)) {
+    despesasFixasLista = data.data;
+  } else {
+    despesasFixasLista = [];
+  }
   despesasFixasRenderTabela();
 }
 
@@ -17748,7 +17756,7 @@ async function despesasFixasObterRegistro(idStr) {
   }
 }
 
-/** Ver / Editar / Excluir na tabela — ligado ao tbody a cada renderização (mais fiável que delegação na secção). */
+/** Ver / Editar / Excluir na tabela (chamado a partir do listener em captura no document). */
 function despesasFixasHandleListaAcoesClick(e) {
   const v = e.target.closest("[data-desp-view]");
   const ed = e.target.closest("[data-desp-edit]");
@@ -17756,6 +17764,7 @@ function despesasFixasHandleListaAcoesClick(e) {
   const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
   if (!idStr) return;
   e.preventDefault();
+  e.stopPropagation();
   void (async () => {
     const row = await despesasFixasObterRegistro(idStr);
     if (!row) {
@@ -17806,11 +17815,6 @@ function despesasFixasHandleListaAcoesClick(e) {
   })();
 }
 
-function despesasFixasBindListaAcoesNoBody() {
-  const tb = document.getElementById("despFixasTableBody");
-  if (tb) tb.onclick = despesasFixasHandleListaAcoesClick;
-}
-
 function despesasFixasModalOpen(el) {
   if (!el) return;
   el.classList.add("active");
@@ -17832,7 +17836,6 @@ function despesasFixasRenderTabela() {
       : "Nenhuma despesa cadastrada.";
     tb.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">${escapeHtml(msg)}</td></tr>`;
     despesasFixasAtualizarRodapeLista();
-    despesasFixasBindListaAcoesNoBody();
     return;
   }
   tb.innerHTML = despesasFixasLista
@@ -17863,7 +17866,6 @@ function despesasFixasRenderTabela() {
     })
     .join("");
   despesasFixasAtualizarRodapeLista();
-  despesasFixasBindListaAcoesNoBody();
 }
 
 function setupDespesasFixasUi() {
@@ -18039,7 +18041,19 @@ function setupDespesasFixasUi() {
     }
   });
 
-  despesasFixasBindListaAcoesNoBody();
+  if (!__despFixasListaDocCaptureBound) {
+    __despFixasListaDocCaptureBound = true;
+    document.addEventListener(
+      "click",
+      (e) => {
+        const tb = document.getElementById("despFixasTableBody");
+        if (!tb || !tb.contains(e.target)) return;
+        if (!e.target.closest("[data-desp-view],[data-desp-edit],[data-desp-del]")) return;
+        despesasFixasHandleListaAcoesClick(e);
+      },
+      true
+    );
+  }
 
   const closeVer = () => despesasFixasModalClose(backdropVer);
   document.getElementById("despFixasCloseVer")?.addEventListener("click", closeVer);
