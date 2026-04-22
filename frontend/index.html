@@ -7,7 +7,7 @@
     <title>Grupo Sabor Paraense</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
     <link rel="stylesheet" href="style.css?v=20260419dash" />
-    <link rel="stylesheet" href="despesas-fixas-page.css?v=1" />
+    <link rel="stylesheet" href="despesas-fixas-page.css?v=2" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -2128,28 +2128,18 @@
           <section id="despesasFixasSection" class="view-section hidden">
             <div class="container-fluid px-2 px-md-3 py-3 py-md-4 despesas-fixas-page">
               <div class="row align-items-end g-3 mb-4">
-                <div class="col-12 col-lg">
+                <div class="col-12">
                   <h2 class="h3 fw-bold text-dark mb-1">Despesas fixas da empresa</h2>
-                  <p class="text-secondary mb-0 small">
-                    Cadastro por unidade, categorias personalizáveis e registro persistido no servidor.
-                  </p>
-                </div>
-                <div class="col-12 col-lg-auto">
-                  <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-                    <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">Responsivo</span>
-                    <span class="badge rounded-pill bg-secondary-subtle text-secondary border px-3 py-2">Bootstrap 5</span>
-                  </div>
                 </div>
               </div>
 
               <div class="row g-4">
-                <div class="col-12 col-xl-7">
+                <div class="col-12">
                   <div class="card shadow-sm border-0 h-100">
                     <div class="card-header bg-white border-bottom py-3">
                       <h3 class="h5 mb-0 d-flex align-items-center gap-2">
                         <span class="text-primary" aria-hidden="true">➕</span> Nova despesa fixa
                       </h3>
-                      <p class="small text-secondary mb-0 mt-1">Preencha os dados e salve. Use <strong>+ Categorias</strong> para criar tipos novos em um clique.</p>
                     </div>
                     <div class="card-body p-3 p-md-4">
                       <form id="despFixasFormCadastro" class="needs-validation" novalidate>
@@ -2162,7 +2152,7 @@
                           <div class="col-12 col-md-4">
                             <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                               <label for="despFixasCategoria" class="form-label fw-semibold mb-0">Categoria</label>
-                              <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="despFixasBtnNovaCategoria" title="Criar nova categoria">
+                              <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" id="despFixasBtnNovaCategoria" title="Criar nova categoria">
                                 + Categorias
                               </button>
                             </div>
@@ -2177,8 +2167,7 @@
                               <input class="form-check-input" type="checkbox" value="1" id="despFixasUnidadeTodas" />
                               <label class="form-check-label" for="despFixasUnidadeTodas">Aplicar a <strong>todas</strong> as unidades</label>
                             </div>
-                            <div id="despFixasUnidadesCheckboxes" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 p-2 rounded border bg-light" data-desp-chk-role="cad"></div>
-                            <div class="form-text">Marque uma ou mais unidades, ou use “todas”.</div>
+                            <div id="despFixasUnidadesCheckboxes" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 p-2 rounded border bg-light"></div>
                           </div>
                           <div class="col-6 col-md-4">
                             <label for="despFixasValor" class="form-label fw-semibold">Valor mensal (R$)</label>
@@ -2214,28 +2203,12 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-12 col-xl-5">
-                  <div class="card shadow-sm border-0 h-100 bg-primary text-white">
-                    <div class="card-body p-3 p-md-4 d-flex flex-column">
-                      <h3 class="h5 text-white mb-3">Resumo rápido</h3>
-                      <ul class="list-unstyled small mb-0 flex-grow-1 opacity-90">
-                        <li class="mb-2">✓ Dados gravados no <strong>banco</strong></li>
-                        <li class="mb-2">✓ Categorias editáveis com <strong>+ Categorias</strong></li>
-                        <li class="mb-2">✓ Ver, editar e excluir na tabela</li>
-                      </ul>
-                      <p class="small mb-0 mt-3 pt-3 border-top border-light border-opacity-25">Use “Atualizar” na lista para recarregar do servidor.</p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               <div class="card shadow-sm border-0 mt-4">
                 <div class="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-                  <div>
-                    <h3 class="h5 mb-0">Despesas cadastradas</h3>
-                    <p class="small text-secondary mb-0">Lista responsiva — em telas pequenas use rolagem horizontal.</p>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-outline-primary" id="despFixasBtnAtualizar">Atualizar</button>
+                  <h3 class="h5 mb-0">Despesas cadastradas</h3>
+                  <button type="button" class="btn btn-sm btn-primary" id="despFixasBtnAtualizar">Atualizar</button>
                 </div>
                 <div class="card-body p-0">
                   <div class="table-responsive">
@@ -4450,7 +4423,7 @@
                 <input class="form-check-input" type="checkbox" value="1" id="despFixasEditUnidadeTodas" />
                 <label class="form-check-label" for="despFixasEditUnidadeTodas">Aplicar a <strong>todas</strong> as unidades</label>
               </div>
-              <div id="despFixasEditUnidadesCheckboxes" class="row row-cols-1 row-cols-sm-2 g-2 p-2 rounded border bg-light" data-desp-chk-role="edit"></div>
+              <div id="despFixasEditUnidadesCheckboxes" class="row row-cols-1 row-cols-sm-2 g-2 p-2 rounded border bg-light"></div>
             </div>
             <div class="col-12">
               <label class="form-label fw-semibold" for="despFixasEditFornecedor">Fornecedor</label>
@@ -4474,8 +4447,7 @@
           <h2 class="h5 mb-0 text-danger">Excluir despesa</h2>
           <button type="button" class="btn-close" id="despFixasCloseDel" aria-label="Fechar"></button>
         </header>
-        <p class="mb-2" id="despFixasDelMsg">Confirma a exclusão deste registro?</p>
-        <p class="small text-secondary mb-0">A exclusão remove o registro no servidor.</p>
+        <p class="mb-0" id="despFixasDelMsg">Confirma a exclusão deste registro?</p>
         <footer class="mt-4 d-flex flex-wrap gap-2 justify-content-end border-top pt-3">
           <button type="button" class="btn btn-outline-secondary" id="despFixasCancelarDel">Cancelar</button>
           <button type="button" class="btn btn-danger" id="despFixasConfirmarDel">Excluir</button>
@@ -4492,7 +4464,6 @@
         <form id="despFixasFormNovaCategoria">
           <label for="despFixasNovaCatNome" class="form-label fw-semibold">Nome</label>
           <input type="text" class="form-control form-control-lg" id="despFixasNovaCatNome" maxlength="120" placeholder="Ex.: Software / licenças" required autocomplete="off" />
-          <p class="small text-secondary mt-2 mb-0">O nome não pode repetir uma categoria já existente.</p>
           <footer class="mt-4 d-flex flex-wrap gap-2 justify-content-end border-top pt-3">
             <button type="button" class="btn btn-outline-secondary" id="despFixasCancelarNovaCat">Cancelar</button>
             <button type="submit" class="btn btn-primary">Salvar categoria</button>

@@ -17611,7 +17611,7 @@ function despesasFixasRenderTabela() {
   if (!tb) return;
   if (!despesasFixasLista.length) {
     tb.innerHTML =
-      '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma despesa cadastrada. Use o formulário acima ou o botão <strong>Atualizar</strong>.</td></tr>';
+      '<tr><td colspan="8" class="text-center text-secondary py-4">Nenhuma despesa cadastrada.</td></tr>';
     return;
   }
   tb.innerHTML = despesasFixasLista
