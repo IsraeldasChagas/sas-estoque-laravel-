@@ -17515,6 +17515,8 @@ function setupReciboAjudaCusto() {
 let __despesasFixasUiSetup = false;
 let despesasFixasCategorias = [];
 let despesasFixasLista = [];
+/** Id da linha em confirmação de exclusão (modal). */
+let despesasFixasDelTargetId = null;
 /** Contexto do modal «Nova categoria»: formulário de cadastro ou de edição. */
 let despesasFixasNovaCatContext = "cad";
 
@@ -17746,6 +17748,69 @@ async function despesasFixasObterRegistro(idStr) {
   }
 }
 
+/** Ver / Editar / Excluir na tabela — ligado ao tbody a cada renderização (mais fiável que delegação na secção). */
+function despesasFixasHandleListaAcoesClick(e) {
+  const v = e.target.closest("[data-desp-view]");
+  const ed = e.target.closest("[data-desp-edit]");
+  const del = e.target.closest("[data-desp-del]");
+  const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
+  if (!idStr) return;
+  e.preventDefault();
+  void (async () => {
+    const row = await despesasFixasObterRegistro(idStr);
+    if (!row) {
+      showToast("Não foi possível localizar esta despesa.", "warning");
+      return;
+    }
+    const id = Number(row.id);
+    const backdropVer = document.getElementById("despFixasBackdropVer");
+    const backdropEdit = document.getElementById("despFixasBackdropEdit");
+    const backdropDel = document.getElementById("despFixasBackdropDel");
+    if (v) {
+      const body = document.getElementById("despFixasVerBody");
+      if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
+      despesasFixasModalOpen(backdropVer);
+      try {
+        const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
+        const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
+        if (idx >= 0) despesasFixasLista[idx] = fresh;
+        if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
+      } catch (err) {
+        if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
+        showToast(err?.message || "Detalhe parcial (dados da lista).", "warning");
+      }
+    } else if (ed) {
+      document.getElementById("despFixasEditId").value = String(row.id);
+      document.getElementById("despFixasEditNome").value = row.nome || "";
+      despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
+      document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
+      const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
+      document.getElementById("despFixasEditDia").value = String(diaE ?? "");
+      document.getElementById("despFixasEditStatus").value = row.status || "ativo";
+      const aplica = !!Number(row.aplica_todas_unidades ?? 0);
+      const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
+      const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
+      if (chkEdTodas) chkEdTodas.checked = aplica;
+      despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
+      chkEdTodas?.dispatchEvent(new Event("change"));
+      document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
+      const obsE = row.observacoes != null ? row.observacoes : row.obs;
+      document.getElementById("despFixasEditObs").value = obsE || "";
+      despesasFixasModalOpen(backdropEdit);
+    } else if (del) {
+      despesasFixasDelTargetId = Number.isFinite(id) ? id : Number(idStr);
+      const msg = document.getElementById("despFixasDelMsg");
+      if (msg) msg.textContent = `Confirma a exclusão de “${row.nome || "—"}” (#${row.id})?`;
+      despesasFixasModalOpen(backdropDel);
+    }
+  })();
+}
+
+function despesasFixasBindListaAcoesNoBody() {
+  const tb = document.getElementById("despFixasTableBody");
+  if (tb) tb.onclick = despesasFixasHandleListaAcoesClick;
+}
+
 function despesasFixasModalOpen(el) {
   if (!el) return;
   el.classList.add("active");
@@ -17767,6 +17832,7 @@ function despesasFixasRenderTabela() {
       : "Nenhuma despesa cadastrada.";
     tb.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">${escapeHtml(msg)}</td></tr>`;
     despesasFixasAtualizarRodapeLista();
+    despesasFixasBindListaAcoesNoBody();
     return;
   }
   tb.innerHTML = despesasFixasLista
@@ -17797,6 +17863,7 @@ function despesasFixasRenderTabela() {
     })
     .join("");
   despesasFixasAtualizarRodapeLista();
+  despesasFixasBindListaAcoesNoBody();
 }
 
 function setupDespesasFixasUi() {
@@ -17809,7 +17876,6 @@ function setupDespesasFixasUi() {
   const backdropDel = document.getElementById("despFixasBackdropDel");
   const backdropNovaCat = document.getElementById("despFixasBackdropNovaCategoria");
   const backdropGerirCat = document.getElementById("despFixasBackdropGerirCategorias");
-  let delTargetId = null;
 
   despesasFixasBindTodasUnidades("despFixasUnidadeTodas", "despFixasUnidadesCheckboxes", "desp-fixa-u-cad");
   despesasFixasBindTodasUnidades("despFixasEditUnidadeTodas", "despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit");
@@ -17973,58 +18039,7 @@ function setupDespesasFixasUi() {
     }
   });
 
-  document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
-    const v = e.target.closest("[data-desp-view]");
-    const ed = e.target.closest("[data-desp-edit]");
-    const del = e.target.closest("[data-desp-del]");
-    const idStr = v?.getAttribute("data-desp-view") || ed?.getAttribute("data-desp-edit") || del?.getAttribute("data-desp-del");
-    if (!idStr) return;
-    void (async () => {
-      const row = await despesasFixasObterRegistro(idStr);
-      if (!row) {
-        showToast("Não foi possível localizar esta despesa.", "warning");
-        return;
-      }
-      const id = Number(row.id);
-      if (v) {
-        const body = document.getElementById("despFixasVerBody");
-        if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
-        despesasFixasModalOpen(backdropVer);
-        try {
-          const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
-          const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
-          if (idx >= 0) despesasFixasLista[idx] = fresh;
-          if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
-        } catch (err) {
-          if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
-          showToast(err?.message || "Detalhe parcial (dados da lista).", "warning");
-        }
-      } else if (ed) {
-        document.getElementById("despFixasEditId").value = String(row.id);
-        document.getElementById("despFixasEditNome").value = row.nome || "";
-        despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
-        document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
-        const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
-        document.getElementById("despFixasEditDia").value = String(diaE ?? "");
-        document.getElementById("despFixasEditStatus").value = row.status || "ativo";
-        const aplica = !!Number(row.aplica_todas_unidades ?? 0);
-        const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
-        const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
-        if (chkEdTodas) chkEdTodas.checked = aplica;
-        despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
-        chkEdTodas?.dispatchEvent(new Event("change"));
-        document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
-        const obsE = row.observacoes != null ? row.observacoes : row.obs;
-        document.getElementById("despFixasEditObs").value = obsE || "";
-        despesasFixasModalOpen(backdropEdit);
-      } else if (del) {
-        delTargetId = id;
-        const msg = document.getElementById("despFixasDelMsg");
-        if (msg) msg.textContent = `Confirma a exclusão de “${row.nome || "—"}” (#${row.id})?`;
-        despesasFixasModalOpen(backdropDel);
-      }
-    })();
-  });
+  despesasFixasBindListaAcoesNoBody();
 
   const closeVer = () => despesasFixasModalClose(backdropVer);
   document.getElementById("despFixasCloseVer")?.addEventListener("click", closeVer);
@@ -18085,7 +18100,7 @@ function setupDespesasFixasUi() {
 
   const closeDel = () => {
     despesasFixasModalClose(backdropDel);
-    delTargetId = null;
+    despesasFixasDelTargetId = null;
   };
   document.getElementById("despFixasCloseDel")?.addEventListener("click", closeDel);
   document.getElementById("despFixasCancelarDel")?.addEventListener("click", closeDel);
@@ -18093,9 +18108,9 @@ function setupDespesasFixasUi() {
     if (ev.target === backdropDel) closeDel();
   });
   document.getElementById("despFixasConfirmarDel")?.addEventListener("click", async () => {
-    if (delTargetId == null) return closeDel();
+    if (despesasFixasDelTargetId == null) return closeDel();
     try {
-      await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(delTargetId))}`, { method: "DELETE" });
+      await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(despesasFixasDelTargetId))}`, { method: "DELETE" });
       await despesasFixasCarregarLista();
       showToast("Despesa excluída.", "success");
     } catch (err) {

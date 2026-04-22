@@ -1,5 +1,14 @@
 /* Página Despesas fixas — complementa Bootstrap (carregado antes de style.css) */
 
+/* Modais acima do menu lateral (z-index ~2100 no mobile). */
+#despFixasBackdropVer,
+#despFixasBackdropEdit,
+#despFixasBackdropDel,
+#despFixasBackdropNovaCategoria,
+#despFixasBackdropGerirCategorias {
+  z-index: 2200 !important;
+}
+
 #despesasFixasSection .despesas-fixas-page {
   max-width: 1400px;
   margin: 0 auto;
