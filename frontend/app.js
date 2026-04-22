@@ -17709,9 +17709,10 @@ function despesasFixasBindTodasUnidades(todasId, hostId, chkClass) {
       if (on) c.checked = false;
     });
   };
-  chkTodas?.removeEventListener("change", chkTodas._despFixasTodasSync);
+  if (!chkTodas) return;
+  chkTodas.removeEventListener("change", chkTodas._despFixasTodasSync);
   chkTodas._despFixasTodasSync = sync;
-  chkTodas?.addEventListener("change", sync);
+  chkTodas.addEventListener("change", sync);
   sync();
 }
 
@@ -17826,6 +17827,24 @@ function despesasFixasHandleListaAcoesClick(e) {
   })();
 }
 
+/** Garante delegação Ver/Editar/Excluir mesmo se o resto de setupDespesasFixasUi falhar ou retornar cedo. */
+function despesasFixasEnsureListaClickCapture() {
+  if (__despFixasListaDocCaptureBound) return;
+  __despFixasListaDocCaptureBound = true;
+  document.addEventListener(
+    "click",
+    (e) => {
+      const tb = document.getElementById("despFixasTableBody");
+      if (!tb) return;
+      const base = despesasFixasClickTargetElement(e);
+      if (!base || !tb.contains(base)) return;
+      if (!base.closest("[data-desp-view],[data-desp-edit],[data-desp-del]")) return;
+      despesasFixasHandleListaAcoesClick(e);
+    },
+    true
+  );
+}
+
 function despesasFixasModalOpen(el) {
   if (!el) return;
   el.classList.add("active");
@@ -17880,6 +17899,7 @@ function despesasFixasRenderTabela() {
 }
 
 function setupDespesasFixasUi() {
+  despesasFixasEnsureListaClickCapture();
   if (__despesasFixasUiSetup) return;
   __despesasFixasUiSetup = true;
 
@@ -18051,22 +18071,6 @@ function setupDespesasFixasUi() {
       showToast(err?.message || "Erro ao salvar despesa.", "error");
     }
   });
-
-  if (!__despFixasListaDocCaptureBound) {
-    __despFixasListaDocCaptureBound = true;
-    document.addEventListener(
-      "click",
-      (e) => {
-        const tb = document.getElementById("despFixasTableBody");
-        if (!tb) return;
-        const base = despesasFixasClickTargetElement(e);
-        if (!base || !tb.contains(base)) return;
-        if (!base.closest("[data-desp-view],[data-desp-edit],[data-desp-del]")) return;
-        despesasFixasHandleListaAcoesClick(e);
-      },
-      true
-    );
-  }
 
   const closeVer = () => despesasFixasModalClose(backdropVer);
   document.getElementById("despFixasCloseVer")?.addEventListener("click", closeVer);
