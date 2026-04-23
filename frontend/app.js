@@ -323,7 +323,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -331,7 +331,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -363,7 +363,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -371,7 +371,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2903,16 +2903,6 @@ function applyPermissions() {
   if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
     sections = [...sections, "fechamento"];
   }
-  // Despesas fixas: mesmo pacote Financeiro (menus antigos com Boleto/Proventos/Recibo ganham o item novo)
-  if (
-    (sections.includes("boletao") ||
-      sections.includes("alvara") ||
-      sections.includes("proventos") ||
-      sections.includes("reciboAjuda")) &&
-    !sections.includes("despesasFixas")
-  ) {
-    sections = [...sections, "despesasFixas"];
-  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2951,7 +2941,6 @@ function applyPermissions() {
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
       regras.sections.includes("reciboAjuda") ||
-      regras.sections.includes("despesasFixas") ||
       regras.sections.includes("fechamento") ||
       regras.sections.includes("fechamentoDash");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
@@ -3111,7 +3100,6 @@ function navigateTo(section) {
       section === "alvara" ||
       section === "proventos" ||
       section === "reciboAjuda" ||
-      section === "despesasFixas" ||
       section === "fechamento" ||
       section === "fechamentoDash"
     ) {
@@ -7352,7 +7340,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorio", "logs"
     ]);
 
@@ -7481,8 +7469,6 @@ async function startAppSession(user) {
           await loadFechamentoCaixaSection();
         } else if (sectionToNavigate === "fechamentoDash") {
           await loadFechamentoDashSection();
-        } else if (sectionToNavigate === "despesasFixas") {
-          if (typeof window.loadDespesasFixasSection === "function") await window.loadDespesasFixasSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
           syncKanbanToolbarCollapsedFromStorage();
           await loadUnidades(false).catch(() => {});
@@ -11558,8 +11544,6 @@ function wireSidebarSectionNavClicks() {
         } else {
           await Promise.all([loadUnidades(false).catch(() => {}), loadFuncionarios(false).catch(() => {})]);
         }
-      } else if (target === "despesasFixas") {
-        if (typeof window.loadDespesasFixasSection === "function") await window.loadDespesasFixasSection();
       }
       else if (target === "proventos") {
         try {
