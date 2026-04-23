@@ -11248,7 +11248,10 @@ function renderKanbanAdministrativoBoard() {
     card.className = clsParts.join(" ");
     card.dataset.taskId = String(t.id);
     card.innerHTML = `
-      <div class="kanban-card__title">${escapeHtml(t.titulo || "")}</div>
+      <div class="kanban-card__head">
+        <button type="button" class="kanban-card__drag" aria-label="Arrastar tarefa" title="Arrastar">⋮⋮</button>
+        <div class="kanban-card__title">${escapeHtml(t.titulo || "")}</div>
+      </div>
       ${atraso ? '<span class="kanban-tag kanban-tag--danger">Atrasada</span>' : ""}
       <div class="kanban-card__meta">${escapeHtml(unNome || "—")} · ${escapeHtml(t.setor || "")}</div>
       <div class="kanban-card__meta">${t.responsavel ? escapeHtml(t.responsavel) : "—"}</div>
@@ -11262,6 +11265,8 @@ function renderKanbanAdministrativoBoard() {
       </div>`;
     card.addEventListener("click", (e) => {
       e.stopPropagation();
+      // Clique no handle é só para arrastar (Sortable); não abrir modal.
+      if (e.target && e.target.closest && e.target.closest(".kanban-card__drag")) return;
       openKanbanTaskModal(t);
     });
     wrap.appendChild(card);
@@ -11313,6 +11318,8 @@ function initKanbanSortables() {
       group: "kanban",
       animation: 160,
       draggable: ".kanban-card",
+      // Sem handle, o Sortable compete com o clique do card (abrir modal). O handle libera edição no restante do cartão.
+      handle: ".kanban-card__drag",
       onEnd: async (evt) => {
         const taskId = evt.item?.dataset?.taskId;
         const newStatus = evt.to?.dataset?.status;
