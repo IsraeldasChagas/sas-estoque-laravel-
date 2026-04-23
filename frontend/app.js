@@ -323,7 +323,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -331,7 +331,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -363,7 +363,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -371,7 +371,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2903,16 +2903,6 @@ function applyPermissions() {
   if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
     sections = [...sections, "fechamento"];
   }
-  // Despesas fixas: mesmo pacote Financeiro (menus antigos com Boleto/Proventos/Recibo ganham o item novo)
-  if (
-    (sections.includes("boletao") ||
-      sections.includes("alvara") ||
-      sections.includes("proventos") ||
-      sections.includes("reciboAjuda")) &&
-    !sections.includes("despesasFixas")
-  ) {
-    sections = [...sections, "despesasFixas"];
-  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -2951,7 +2941,6 @@ function applyPermissions() {
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
       regras.sections.includes("reciboAjuda") ||
-      regras.sections.includes("despesasFixas") ||
       regras.sections.includes("fechamento") ||
       regras.sections.includes("fechamentoDash");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
@@ -3111,7 +3100,6 @@ function navigateTo(section) {
       section === "alvara" ||
       section === "proventos" ||
       section === "reciboAjuda" ||
-      section === "despesasFixas" ||
       section === "fechamento" ||
       section === "fechamentoDash"
     ) {
@@ -7352,7 +7340,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "despesasFixas", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorio", "logs"
     ]);
 
@@ -7481,8 +7469,6 @@ async function startAppSession(user) {
           await loadFechamentoCaixaSection();
         } else if (sectionToNavigate === "fechamentoDash") {
           await loadFechamentoDashSection();
-        } else if (sectionToNavigate === "despesasFixas") {
-          if (typeof window.loadDespesasFixasSection === "function") await window.loadDespesasFixasSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
           syncKanbanToolbarCollapsedFromStorage();
           await loadUnidades(false).catch(() => {});
@@ -11558,8 +11544,6 @@ function wireSidebarSectionNavClicks() {
         } else {
           await Promise.all([loadUnidades(false).catch(() => {}), loadFuncionarios(false).catch(() => {})]);
         }
-      } else if (target === "despesasFixas") {
-        if (typeof window.loadDespesasFixasSection === "function") await window.loadDespesasFixasSection();
       }
       else if (target === "proventos") {
         try {
@@ -17512,657 +17496,6 @@ function setupReciboAjudaCusto() {
   });
 }
 
-let __despesasFixasUiSetup = false;
-let despesasFixasCategorias = [];
-let despesasFixasLista = [];
-/** Id da linha em confirmação de exclusão (modal). */
-let despesasFixasDelTargetId = null;
-/** Contexto do modal «Nova categoria»: formulário de cadastro ou de edição. */
-let despesasFixasNovaCatContext = "cad";
-
-function despesasFixasListaBuildUrl() {
-  const q = new URLSearchParams();
-  const cat = document.getElementById("despFixasFiltroCategoria")?.value?.trim() || "";
-  const st = document.getElementById("despFixasFiltroStatus")?.value?.trim() || "";
-  const uni = document.getElementById("despFixasFiltroUnidade")?.value?.trim() || "";
-  if (cat) q.set("categoria_id", cat);
-  if (st) q.set("status", st);
-  if (uni) q.set("unidade_id", uni);
-  const s = q.toString();
-  return s ? `/despesas-fixas?${s}` : "/despesas-fixas";
-}
-
-function despesasFixasFiltrosAtivos() {
-  return !!(
-    document.getElementById("despFixasFiltroCategoria")?.value ||
-    document.getElementById("despFixasFiltroStatus")?.value ||
-    document.getElementById("despFixasFiltroUnidade")?.value
-  );
-}
-
-function despesasFixasPopularFiltroSelects() {
-  const selCat = document.getElementById("despFixasFiltroCategoria");
-  if (selCat) {
-    const keep = selCat.value;
-    selCat.innerHTML = '<option value="">Todas</option>';
-    (despesasFixasCategorias || []).forEach((c) => {
-      const o = document.createElement("option");
-      o.value = String(c.id);
-      o.textContent = c.nome || `Categoria ${c.id}`;
-      selCat.appendChild(o);
-    });
-    if (keep && [...selCat.options].some((o) => o.value === keep)) selCat.value = keep;
-  }
-  const selUni = document.getElementById("despFixasFiltroUnidade");
-  if (selUni) {
-    const keepU = selUni.value;
-    selUni.innerHTML = '<option value="">Todas</option>';
-    const unidades =
-      Array.isArray(state.unidades) && state.unidades.length
-        ? state.unidades
-        : [
-            { id: 1, nome: "Matriz (exemplo)" },
-            { id: 2, nome: "Filial Norte (exemplo)" },
-            { id: 3, nome: "Filial Sul (exemplo)" },
-          ];
-    unidades.forEach((u) => {
-      const o = document.createElement("option");
-      o.value = String(u.id);
-      o.textContent = u.nome || `Unidade ${u.id}`;
-      selUni.appendChild(o);
-    });
-    if (keepU && [...selUni.options].some((o) => o.value === keepU)) selUni.value = keepU;
-  }
-}
-
-function despesasFixasFormatUpdatedAt(iso) {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return String(iso);
-    return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-  } catch {
-    return "—";
-  }
-}
-
-function despesasFixasVerHtmlFromRow(row) {
-  const cat = row.categoria_nome || "—";
-  const ul = row.unidades_label || row.unidadesLabel || "—";
-  const dia = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
-  const obs = row.observacoes != null ? row.observacoes : row.obs;
-  const criador = row.criado_por_nome || (row.criado_por ? `#${row.criado_por}` : "—");
-  const upd = despesasFixasFormatUpdatedAt(row.updated_at);
-  return `<dl class="row mb-0">
-    <dt class="col-sm-4">Nome</dt><dd class="col-sm-8">${escapeHtml(row.nome)}</dd>
-    <dt class="col-sm-4">Categoria</dt><dd class="col-sm-8">${escapeHtml(cat)}</dd>
-    <dt class="col-sm-4">Unidades</dt><dd class="col-sm-8">${escapeHtml(ul)}</dd>
-    <dt class="col-sm-4">Valor mensal</dt><dd class="col-sm-8">${escapeHtml(formatCurrencyBRL(Number(row.valor) || 0))}</dd>
-    <dt class="col-sm-4">Dia vencimento</dt><dd class="col-sm-8">${escapeHtml(String(dia ?? "—"))}</dd>
-    <dt class="col-sm-4">Status</dt><dd class="col-sm-8">${escapeHtml(row.status === "ativo" ? "Ativo" : "Pausado")}</dd>
-    <dt class="col-sm-4">Fornecedor</dt><dd class="col-sm-8">${escapeHtml(row.fornecedor || "—")}</dd>
-    <dt class="col-sm-4">Observações</dt><dd class="col-sm-8">${escapeHtml(obs || "—")}</dd>
-    <dt class="col-sm-4">Cadastrado por</dt><dd class="col-sm-8">${escapeHtml(criador)}</dd>
-    <dt class="col-sm-4">Última atualização</dt><dd class="col-sm-8">${escapeHtml(upd)}</dd>
-  </dl>`;
-}
-
-function despesasFixasAtualizarRodapeLista() {
-  const el = document.getElementById("despFixasListaTotalLabel");
-  const hint = document.getElementById("despFixasListaFiltroHint");
-  if (!el) return;
-  const sum = (despesasFixasLista || []).reduce((acc, r) => acc + (Number(r.valor) || 0), 0);
-  el.textContent = `Total (lista): ${formatCurrencyBRL(sum)}`;
-  if (hint) {
-    const on = despesasFixasFiltrosAtivos();
-    hint.classList.toggle("d-none", !on);
-    hint.textContent = on ? "Filtros aplicados." : "";
-  }
-}
-
-async function despesasFixasRefreshGerirCategoriasBody() {
-  const host = document.getElementById("despFixasGerirCatBody");
-  if (!host) return;
-  host.innerHTML = '<p class="text-secondary small mb-0">Carregando…</p>';
-  try {
-    const list = await fetchJSON("/despesas-fixas/categorias?inativos=1", { method: "GET" });
-    const arr = Array.isArray(list) ? list : [];
-    if (!arr.length) {
-      host.innerHTML = '<p class="text-secondary mb-0">Nenhuma categoria.</p>';
-      return;
-    }
-    const rows = arr
-      .map((c) => {
-        const id = escapeHtml(String(c.id));
-        const nomeEsc = escapeHtml(String(c.nome || ""));
-        const ativo = Number(c.ativo) === 1;
-        const badge = ativo
-          ? '<span class="badge text-bg-success">Ativa</span>'
-          : '<span class="badge text-bg-secondary">Inativa</span>';
-        return `<tr>
-          <td class="text-muted">#${id}</td>
-          <td><input type="text" class="form-control form-control-sm" data-cat-nome="${id}" maxlength="120" value="${nomeEsc}" /></td>
-          <td>${badge}</td>
-          <td class="text-end text-nowrap">
-            <button type="button" class="btn btn-sm btn-primary" data-desp-cat-save="${id}">Salvar</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-desp-cat-toggle="${id}" data-ativo="${ativo ? "1" : "0"}">${ativo ? "Desativar" : "Reativar"}</button>
-            <button type="button" class="btn btn-sm btn-outline-danger" data-desp-cat-del="${id}">Excluir</button>
-          </td>
-        </tr>`;
-      })
-      .join("");
-    host.innerHTML = `<div class="table-responsive"><table class="table table-sm table-striped align-middle mb-0"><thead><tr><th>#</th><th>Nome</th><th>Estado</th><th class="text-end">Ações</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  } catch (err) {
-    host.innerHTML = `<p class="text-danger small mb-0">${escapeHtml(err?.message || "Erro ao carregar categorias.")}</p>`;
-  }
-}
-
-function despesasFixasPopularSelectCategorias(selectEl, selectedId) {
-  if (!selectEl) return;
-  const cur = selectedId != null && selectedId !== "" ? String(selectedId) : String(selectEl.value || "");
-  selectEl.innerHTML = '<option value="">Selecione…</option>';
-  (despesasFixasCategorias || []).forEach((c) => {
-    const o = document.createElement("option");
-    o.value = String(c.id);
-    o.textContent = c.nome || `Categoria ${c.id}`;
-    selectEl.appendChild(o);
-  });
-  if (cur && [...selectEl.options].some((o) => o.value === cur)) selectEl.value = cur;
-}
-
-function despesasFixasRenderUnidadeCheckboxes(hostId, chkClass, selectedIds, aplicaTodas) {
-  const host = document.getElementById(hostId);
-  if (!host) return;
-  const unidades =
-    Array.isArray(state.unidades) && state.unidades.length
-      ? state.unidades
-      : [
-          { id: 1, nome: "Matriz (exemplo)" },
-          { id: 2, nome: "Filial Norte (exemplo)" },
-          { id: 3, nome: "Filial Sul (exemplo)" },
-        ];
-  const sel = new Set((selectedIds || []).map((x) => String(x)));
-  host.innerHTML = unidades
-    .map((u) => {
-      const id = String(u.id);
-      const safeId = id.replace(/\W/g, "_");
-      const nome = escapeHtml(u.nome || `Unidade ${id}`);
-      const checked = !aplicaTodas && sel.has(id) ? " checked" : "";
-      return `<div class="col">
-        <div class="form-check">
-          <input class="form-check-input desp-fixa-u-chk ${chkClass}" type="checkbox" value="${escapeHtml(id)}" id="despFu_${hostId}_${safeId}"${checked} />
-          <label class="form-check-label" for="despFu_${hostId}_${safeId}">${nome}</label>
-        </div>
-      </div>`;
-    })
-    .join("");
-}
-
-function despesasFixasBindTodasUnidades(todasId, hostId, chkClass) {
-  const chkTodas = document.getElementById(todasId);
-  const sync = () => {
-    const on = !!chkTodas?.checked;
-    document.querySelectorAll(`#${hostId} .${chkClass}`).forEach((c) => {
-      c.disabled = on;
-      if (on) c.checked = false;
-    });
-  };
-  if (!chkTodas) return;
-  chkTodas.removeEventListener("change", chkTodas._despFixasTodasSync);
-  chkTodas._despFixasTodasSync = sync;
-  chkTodas.addEventListener("change", sync);
-  sync();
-}
-
-function despesasFixasUnidadePayload(todasId, hostId, chkClass) {
-  const aplicaTodas = !!document.getElementById(todasId)?.checked;
-  const boxes = Array.from(document.querySelectorAll(`#${hostId} .${chkClass}:checked`));
-  const unidade_ids = aplicaTodas ? [] : boxes.map((b) => Number(b.value)).filter((n) => Number.isFinite(n) && n > 0);
-  return { aplica_todas_unidades: aplicaTodas, unidade_ids };
-}
-
-async function despesasFixasCarregarCategorias() {
-  const data = await fetchJSON("/despesas-fixas/categorias", { method: "GET" });
-  despesasFixasCategorias = Array.isArray(data) ? data : [];
-  const selCad = document.getElementById("despFixasCategoria");
-  const selEd = document.getElementById("despFixasEditCategoria");
-  despesasFixasPopularSelectCategorias(selCad, selCad?.value);
-  despesasFixasPopularSelectCategorias(selEd, selEd?.value);
-}
-
-async function despesasFixasCarregarLista() {
-  const data = await fetchJSON(despesasFixasListaBuildUrl(), { method: "GET" });
-  if (Array.isArray(data)) {
-    despesasFixasLista = data;
-  } else if (data && typeof data === "object" && Array.isArray(data.data)) {
-    despesasFixasLista = data.data;
-  } else {
-    despesasFixasLista = [];
-  }
-  despesasFixasRenderTabela();
-}
-
-/** Linha atual na lista ou detalhe remoto (ex.: lista desatualizada após filtro). */
-async function despesasFixasObterRegistro(idStr) {
-  const rowLocal = (despesasFixasLista || []).find(
-    (x) => x != null && (String(x.id) === String(idStr) || Number(x.id) === Number(idStr))
-  );
-  if (rowLocal) return rowLocal;
-  try {
-    return await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(idStr))}`, { method: "GET" });
-  } catch {
-    return null;
-  }
-}
-
-/** Elemento clicado (clique no texto do botão vira Text — Text não tem closest). */
-function despesasFixasClickTargetElement(ev) {
-  const t = ev.target;
-  if (!t) return null;
-  if (t.nodeType === 1) return t;
-  if (t.nodeType === 3 && t.parentElement) return t.parentElement;
-  return null;
-}
-
-/** Ver / Editar / Excluir — acionado pelos botões `.desp-fixas-acao-btn` (delegação no tbody). */
-async function despesasFixasListaExecutarAcao(acao, idStr) {
-  const row = await despesasFixasObterRegistro(idStr);
-  if (!row) {
-    showToast("Não foi possível localizar esta despesa.", "warning");
-    return;
-  }
-  const id = Number(row.id);
-  const backdropVer = document.getElementById("despFixasBackdropVer");
-  const backdropEdit = document.getElementById("despFixasBackdropEdit");
-  const backdropDel = document.getElementById("despFixasBackdropDel");
-  if (acao === "ver") {
-    const body = document.getElementById("despFixasVerBody");
-    if (body) body.innerHTML = '<p class="text-secondary mb-0">Carregando…</p>';
-    despesasFixasModalOpen(backdropVer);
-    try {
-      const fresh = await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "GET" });
-      const idx = despesasFixasLista.findIndex((x) => Number(x.id) === Number(fresh.id));
-      if (idx >= 0) despesasFixasLista[idx] = fresh;
-      if (body) body.innerHTML = despesasFixasVerHtmlFromRow(fresh);
-    } catch (err) {
-      if (body) body.innerHTML = despesasFixasVerHtmlFromRow(row);
-      showToast(err?.message || "Detalhe parcial (dados da lista).", "warning");
-    }
-  } else if (acao === "editar") {
-    document.getElementById("despFixasEditId").value = String(row.id);
-    document.getElementById("despFixasEditNome").value = row.nome || "";
-    despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), String(row.categoria_id || ""));
-    document.getElementById("despFixasEditValor").value = String(row.valor ?? "");
-    const diaE = row.dia_vencimento != null ? row.dia_vencimento : row.diaVenc;
-    document.getElementById("despFixasEditDia").value = String(diaE ?? "");
-    document.getElementById("despFixasEditStatus").value = row.status || "ativo";
-    const aplica = !!Number(row.aplica_todas_unidades ?? 0);
-    const uids = Array.isArray(row.unidade_ids) ? row.unidade_ids : [];
-    const chkEdTodas = document.getElementById("despFixasEditUnidadeTodas");
-    if (chkEdTodas) chkEdTodas.checked = aplica;
-    despesasFixasRenderUnidadeCheckboxes("despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit", uids, aplica);
-    chkEdTodas?.dispatchEvent(new Event("change"));
-    document.getElementById("despFixasEditFornecedor").value = row.fornecedor || "";
-    const obsE = row.observacoes != null ? row.observacoes : row.obs;
-    document.getElementById("despFixasEditObs").value = obsE || "";
-    despesasFixasModalOpen(backdropEdit);
-  } else if (acao === "excluir") {
-    despesasFixasDelTargetId = Number.isFinite(id) ? id : Number(idStr);
-    const msg = document.getElementById("despFixasDelMsg");
-    if (msg) msg.textContent = `Confirma a exclusão de “${row.nome || "—"}” (#${row.id})?`;
-    despesasFixasModalOpen(backdropDel);
-  }
-}
-
-/** Um único listener no `#despFixasTableBody` (o nó tbody não é recriado ao atualizar linhas). */
-function despesasFixasEnsureListaTbodyDelegate() {
-  const tb = document.getElementById("despFixasTableBody");
-  if (!tb || tb._despFixasListaDelegateBound) return;
-  tb._despFixasListaDelegateBound = true;
-  tb.addEventListener("click", (e) => {
-    const base = despesasFixasClickTargetElement(e);
-    const btn = base?.closest("button.desp-fixas-acao-btn");
-    if (!btn || !tb.contains(btn)) return;
-    const acao = (btn.getAttribute("data-desp-acao") || "").trim().toLowerCase();
-    const idStr = btn.getAttribute("data-desp-id");
-    if (!idStr || (acao !== "ver" && acao !== "editar" && acao !== "excluir")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    void despesasFixasListaExecutarAcao(acao, idStr);
-  });
-}
-
-function despesasFixasModalOpen(el) {
-  if (!el) return;
-  el.classList.add("active");
-  el.setAttribute("aria-hidden", "false");
-}
-
-function despesasFixasModalClose(el) {
-  if (!el) return;
-  el.classList.remove("active");
-  el.setAttribute("aria-hidden", "true");
-}
-
-function despesasFixasRenderTabela() {
-  const tb = document.getElementById("despFixasTableBody");
-  if (!tb) return;
-  if (!despesasFixasLista.length) {
-    const msg = despesasFixasFiltrosAtivos()
-      ? "Nenhuma despesa corresponde aos filtros."
-      : "Nenhuma despesa cadastrada.";
-    tb.innerHTML = `<tr><td colspan="8" class="text-center text-secondary py-4">${escapeHtml(msg)}</td></tr>`;
-    despesasFixasAtualizarRodapeLista();
-    despesasFixasEnsureListaTbodyDelegate();
-    return;
-  }
-  tb.innerHTML = despesasFixasLista
-    .map((r) => {
-      const cat = escapeHtml(r.categoria_nome || "—");
-      const uni = escapeHtml(r.unidades_label || r.unidadesLabel || "—");
-      const st =
-        r.status === "ativo"
-          ? '<span class="badge rounded-pill text-bg-success">Ativo</span>'
-          : '<span class="badge rounded-pill text-bg-secondary">Pausado</span>';
-      const v = escapeHtml(formatCurrencyBRL(Number(r.valor) || 0));
-      const id = escapeHtml(String(r.id));
-      const dia = r.dia_vencimento != null ? String(r.dia_vencimento) : r.diaVenc != null ? String(r.diaVenc) : "—";
-      return `<tr>
-        <td data-label="#">${id}</td>
-        <td data-label="Nome">${escapeHtml(r.nome || "—")}</td>
-        <td data-label="Categoria">${cat}</td>
-        <td data-label="Unidades">${uni}</td>
-        <td data-label="Valor" class="text-end fw-semibold">${v}</td>
-        <td data-label="Venc." class="text-center">${escapeHtml(dia)}</td>
-        <td data-label="Status" class="text-center">${st}</td>
-        <td data-label="Ações" class="text-end text-nowrap desp-fixas-acoes-cell">
-          <button type="button" class="btn btn-sm btn-outline-primary me-1 desp-fixas-acao-btn" data-desp-acao="ver" data-desp-id="${id}">Ver</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary me-1 desp-fixas-acao-btn" data-desp-acao="editar" data-desp-id="${id}">Editar</button>
-          <button type="button" class="btn btn-sm btn-outline-danger desp-fixas-acao-btn" data-desp-acao="excluir" data-desp-id="${id}">Excluir</button>
-        </td>
-      </tr>`;
-    })
-    .join("");
-  despesasFixasAtualizarRodapeLista();
-  despesasFixasEnsureListaTbodyDelegate();
-}
-
-function setupDespesasFixasUi() {
-  despesasFixasEnsureListaTbodyDelegate();
-  if (__despesasFixasUiSetup) return;
-  __despesasFixasUiSetup = true;
-
-  const formCad = document.getElementById("despFixasFormCadastro");
-  const backdropVer = document.getElementById("despFixasBackdropVer");
-  const backdropEdit = document.getElementById("despFixasBackdropEdit");
-  const backdropDel = document.getElementById("despFixasBackdropDel");
-  const backdropNovaCat = document.getElementById("despFixasBackdropNovaCategoria");
-  const backdropGerirCat = document.getElementById("despFixasBackdropGerirCategorias");
-
-  despesasFixasBindTodasUnidades("despFixasUnidadeTodas", "despFixasUnidadesCheckboxes", "desp-fixa-u-cad");
-  despesasFixasBindTodasUnidades("despFixasEditUnidadeTodas", "despFixasEditUnidadesCheckboxes", "desp-fixa-u-edit");
-
-  document.getElementById("despFixasLimparForm")?.addEventListener("click", () => {
-    formCad?.reset();
-    despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
-    document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
-    formCad?.classList.remove("was-validated");
-  });
-
-  document.getElementById("despFixasBtnAtualizar")?.addEventListener("click", () => {
-    window.loadDespesasFixasSection().catch((err) => showToast(err?.message || "Falha ao atualizar.", "error"));
-  });
-
-  document.getElementById("despFixasBtnFiltrar")?.addEventListener("click", () => {
-    despesasFixasCarregarLista().catch((err) => showToast(err?.message || "Falha ao filtrar.", "error"));
-  });
-  document.getElementById("despFixasBtnLimparFiltros")?.addEventListener("click", () => {
-    const a = document.getElementById("despFixasFiltroCategoria");
-    const b = document.getElementById("despFixasFiltroStatus");
-    const c = document.getElementById("despFixasFiltroUnidade");
-    if (a) a.value = "";
-    if (b) b.value = "";
-    if (c) c.value = "";
-    despesasFixasCarregarLista().catch((err) => showToast(err?.message || "Falha ao atualizar lista.", "error"));
-  });
-
-  const closeGerirCat = () => despesasFixasModalClose(backdropGerirCat);
-  document.getElementById("despFixasBtnGerirCategorias")?.addEventListener("click", () => {
-    despesasFixasModalOpen(backdropGerirCat);
-    despesasFixasRefreshGerirCategoriasBody().catch(() => {});
-  });
-  document.getElementById("despFixasCloseGerirCat")?.addEventListener("click", closeGerirCat);
-  document.getElementById("despFixasFecharGerirCat")?.addEventListener("click", closeGerirCat);
-  backdropGerirCat?.addEventListener("click", async (ev) => {
-    if (ev.target === backdropGerirCat) {
-      closeGerirCat();
-      return;
-    }
-    const saveBtn = ev.target.closest("[data-desp-cat-save]");
-    const toggleBtn = ev.target.closest("[data-desp-cat-toggle]");
-    const delBtn = ev.target.closest("[data-desp-cat-del]");
-    const idStr = saveBtn?.getAttribute("data-desp-cat-save") || toggleBtn?.getAttribute("data-desp-cat-toggle") || delBtn?.getAttribute("data-desp-cat-del");
-    if (!idStr) return;
-    const idEnc = encodeURIComponent(idStr);
-    const nomeInput = document.querySelector(`[data-cat-nome="${idStr}"]`);
-    try {
-      if (saveBtn) {
-        const nome = (nomeInput?.value || "").trim();
-        if (!nome) return showToast("Informe o nome da categoria.", "warning");
-        await fetchJSON(`/despesas-fixas/categorias/${idEnc}`, { method: "PUT", body: JSON.stringify({ nome }) });
-        showToast("Categoria atualizada.", "success");
-      } else if (toggleBtn) {
-        const nome = (nomeInput?.value || "").trim();
-        if (!nome) return showToast("Informe o nome da categoria.", "warning");
-        const eraAtivo = toggleBtn.getAttribute("data-ativo") === "1";
-        await fetchJSON(`/despesas-fixas/categorias/${idEnc}`, {
-          method: "PUT",
-          body: JSON.stringify({ nome, ativo: !eraAtivo }),
-        });
-        showToast(!eraAtivo ? "Categoria reativada." : "Categoria desativada.", "success");
-      } else if (delBtn) {
-        await fetchJSON(`/despesas-fixas/categorias/${idEnc}`, { method: "DELETE" });
-        showToast("Categoria excluída.", "success");
-      }
-      await despesasFixasCarregarCategorias();
-      despesasFixasPopularFiltroSelects();
-      await despesasFixasRefreshGerirCategoriasBody();
-      await despesasFixasCarregarLista();
-    } catch (err) {
-      showToast(err?.message || "Operação não concluída.", "error");
-    }
-  });
-
-  const openNovaCat = (ctx) => {
-    despesasFixasNovaCatContext = ctx === "edit" ? "edit" : "cad";
-    const inp = document.getElementById("despFixasNovaCatNome");
-    if (inp) inp.value = "";
-    despesasFixasModalOpen(backdropNovaCat);
-    setTimeout(() => inp?.focus(), 100);
-  };
-  const closeNovaCat = () => despesasFixasModalClose(backdropNovaCat);
-  document.getElementById("despFixasBtnNovaCategoria")?.addEventListener("click", () => openNovaCat("cad"));
-  document.getElementById("despFixasBtnNovaCategoriaEdit")?.addEventListener("click", () => openNovaCat("edit"));
-  document.getElementById("despFixasCloseNovaCat")?.addEventListener("click", closeNovaCat);
-  document.getElementById("despFixasCancelarNovaCat")?.addEventListener("click", closeNovaCat);
-  backdropNovaCat?.addEventListener("click", (ev) => {
-    if (ev.target === backdropNovaCat) closeNovaCat();
-  });
-  document.getElementById("despFixasFormNovaCategoria")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const nome = (document.getElementById("despFixasNovaCatNome")?.value || "").trim();
-    if (!nome) return showToast("Informe o nome da categoria.", "warning");
-    try {
-      const created = await fetchJSON("/despesas-fixas/categorias", { method: "POST", body: JSON.stringify({ nome }) });
-      await despesasFixasCarregarCategorias();
-      despesasFixasPopularFiltroSelects();
-      const ctx = despesasFixasNovaCatContext;
-      despesasFixasNovaCatContext = "cad";
-      if (ctx === "edit") {
-        const sel = document.getElementById("despFixasEditCategoria");
-        if (sel && created?.id) sel.value = String(created.id);
-      } else {
-        const sel = document.getElementById("despFixasCategoria");
-        if (sel && created?.id) sel.value = String(created.id);
-      }
-      closeNovaCat();
-      showToast("Categoria criada.", "success");
-    } catch (err) {
-      showToast(err?.message || "Não foi possível criar a categoria.", "error");
-    }
-  });
-
-  formCad?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!formCad.checkValidity()) {
-      formCad.classList.add("was-validated");
-      return;
-    }
-    const { aplica_todas_unidades, unidade_ids } = despesasFixasUnidadePayload(
-      "despFixasUnidadeTodas",
-      "despFixasUnidadesCheckboxes",
-      "desp-fixa-u-cad"
-    );
-    if (!aplica_todas_unidades && (!unidade_ids || !unidade_ids.length)) {
-      showToast("Selecione ao menos uma unidade ou marque “Todas as unidades”.", "warning");
-      return;
-    }
-    const nome = (document.getElementById("despFixasNome")?.value || "").trim();
-    const categoria_id = Number(document.getElementById("despFixasCategoria")?.value);
-    const valor = Number(document.getElementById("despFixasValor")?.value);
-    const dia_vencimento = Number(document.getElementById("despFixasDiaVenc")?.value);
-    const status = (document.getElementById("despFixasStatus")?.value || "ativo").trim();
-    const fornecedor = (document.getElementById("despFixasFornecedor")?.value || "").trim();
-    const observacoes = (document.getElementById("despFixasObs")?.value || "").trim();
-    if (!categoria_id) return showToast("Selecione uma categoria.", "warning");
-    try {
-      await fetchJSON("/despesas-fixas", {
-        method: "POST",
-        body: JSON.stringify({
-          nome,
-          categoria_id,
-          valor,
-          dia_vencimento,
-          status,
-          fornecedor: fornecedor || null,
-          observacoes: observacoes || null,
-          aplica_todas_unidades,
-          unidade_ids,
-        }),
-      });
-      formCad.reset();
-      despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
-      document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
-      formCad.classList.remove("was-validated");
-      await despesasFixasCarregarLista();
-      showToast("Despesa cadastrada.", "success");
-    } catch (err) {
-      showToast(err?.message || "Erro ao salvar despesa.", "error");
-    }
-  });
-
-  const closeVer = () => despesasFixasModalClose(backdropVer);
-  document.getElementById("despFixasCloseVer")?.addEventListener("click", closeVer);
-  document.getElementById("despFixasFecharVer")?.addEventListener("click", closeVer);
-  backdropVer?.addEventListener("click", (ev) => {
-    if (ev.target === backdropVer) closeVer();
-  });
-
-  const closeEdit = () => despesasFixasModalClose(backdropEdit);
-  document.getElementById("despFixasCloseEdit")?.addEventListener("click", closeEdit);
-  document.getElementById("despFixasCancelarEdit")?.addEventListener("click", closeEdit);
-  backdropEdit?.addEventListener("click", (ev) => {
-    if (ev.target === backdropEdit) closeEdit();
-  });
-
-  document.getElementById("despFixasFormEditar")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const id = Number(document.getElementById("despFixasEditId")?.value);
-    const { aplica_todas_unidades, unidade_ids } = despesasFixasUnidadePayload(
-      "despFixasEditUnidadeTodas",
-      "despFixasEditUnidadesCheckboxes",
-      "desp-fixa-u-edit"
-    );
-    if (!aplica_todas_unidades && (!unidade_ids || !unidade_ids.length)) {
-      showToast("Selecione ao menos uma unidade ou marque “Todas as unidades”.", "warning");
-      return;
-    }
-    const nome = (document.getElementById("despFixasEditNome")?.value || "").trim();
-    const categoria_id = Number(document.getElementById("despFixasEditCategoria")?.value);
-    const valor = Number(document.getElementById("despFixasEditValor")?.value);
-    const dia_vencimento = Number(document.getElementById("despFixasEditDia")?.value);
-    const status = (document.getElementById("despFixasEditStatus")?.value || "ativo").trim();
-    const fornecedor = (document.getElementById("despFixasEditFornecedor")?.value || "").trim();
-    const observacoes = (document.getElementById("despFixasEditObs")?.value || "").trim();
-    if (!categoria_id) return showToast("Selecione uma categoria.", "warning");
-    try {
-      await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          nome,
-          categoria_id,
-          valor,
-          dia_vencimento,
-          status,
-          fornecedor: fornecedor || null,
-          observacoes: observacoes || null,
-          aplica_todas_unidades,
-          unidade_ids,
-        }),
-      });
-      await despesasFixasCarregarLista();
-      showToast("Despesa atualizada.", "success");
-      closeEdit();
-    } catch (err) {
-      showToast(err?.message || "Erro ao atualizar.", "error");
-    }
-  });
-
-  const closeDel = () => {
-    despesasFixasModalClose(backdropDel);
-    despesasFixasDelTargetId = null;
-  };
-  document.getElementById("despFixasCloseDel")?.addEventListener("click", closeDel);
-  document.getElementById("despFixasCancelarDel")?.addEventListener("click", closeDel);
-  backdropDel?.addEventListener("click", (ev) => {
-    if (ev.target === backdropDel) closeDel();
-  });
-  document.getElementById("despFixasConfirmarDel")?.addEventListener("click", async () => {
-    if (despesasFixasDelTargetId == null) return closeDel();
-    try {
-      await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(despesasFixasDelTargetId))}`, { method: "DELETE" });
-      await despesasFixasCarregarLista();
-      showToast("Despesa excluída.", "success");
-    } catch (err) {
-      showToast(err?.message || "Erro ao excluir.", "error");
-    }
-    closeDel();
-  });
-}
-
-window.loadDespesasFixasSection = async function loadDespesasFixasSection() {
-  setupDespesasFixasUi();
-  await loadUnidades(false).catch(() => {});
-  try {
-    await despesasFixasCarregarCategorias();
-  } catch (err) {
-    despesasFixasCategorias = [];
-    despesasFixasPopularSelectCategorias(document.getElementById("despFixasCategoria"), "");
-    despesasFixasPopularSelectCategorias(document.getElementById("despFixasEditCategoria"), "");
-    showToast(err?.message || "Categorias indisponíveis (migração aplicada no servidor?).", "warning");
-  }
-  despesasFixasPopularFiltroSelects();
-  despesasFixasRenderUnidadeCheckboxes("despFixasUnidadesCheckboxes", "desp-fixa-u-cad", [], false);
-  document.getElementById("despFixasUnidadeTodas")?.dispatchEvent(new Event("change"));
-  try {
-    await despesasFixasCarregarLista();
-  } catch (err) {
-    despesasFixasLista = [];
-    despesasFixasRenderTabela();
-    showToast(err?.message || "Não foi possível carregar despesas.", "error");
-  }
-};
-
 // Formata data para input type="date" (YYYY-MM-DD)
 function formatDateForInput(dateStr) {
   if (!dateStr) return '';
@@ -20124,7 +19457,6 @@ async function init() {
   setupFechamentoCaixaAuditoria();
   setupFechamentoDashPanel();
   setupReciboAjudaCusto();
-  setupDespesasFixasUi();
   setupFichaTecnicaForm();
   setupKanbanAdministrativoModule();
   if (!stopMatrixAnimation) {
