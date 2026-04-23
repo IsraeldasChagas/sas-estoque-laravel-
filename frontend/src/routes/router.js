@@ -24,17 +24,6 @@ class Router {
       console.error('Container não encontrado:', containerId);
       return;
     }
-
-    // O index.html principal já traz todas as telas em <section class="view-section">.
-    // Se o router fizer fetch e innerHTML aqui, apaga Kanban, Despesas fixas, etc. do DOM.
-    const embeddedSectionCount = this.contentContainer.querySelectorAll('.view-section').length;
-    if (embeddedSectionCount > 1) {
-      console.log(
-        'Router: SPA monolítico detectado (' + embeddedSectionCount + ' seções). Navegação por fetch desativada.',
-      );
-      this.initialNavigationDone = true;
-      return;
-    }
     
     // Verifica se há usuário logado E seção salva
     let userLoggedIn = false;
@@ -49,9 +38,8 @@ class Router {
       
       const savedSection = localStorage.getItem('sas-estoque-current-section');
       if (savedSection) {
-        // Qualquer seção que exista no DOM (ex.: despesasFixas, reciboAjuda) deve impedir o fetch inicial.
-        const el = document.getElementById(String(savedSection) + 'Section');
-        hasSavedSection = !!el;
+        const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'fornecedoresBackup', 'boletao', 'kanbanAdministrativo', 'fechamento', 'fechamentoDash'];
+        hasSavedSection = validSections.includes(savedSection);
       }
     } catch (err) {
       // Ignora erros de parsing
@@ -180,19 +168,6 @@ class Router {
   }
 
   async navigate(section) {
-    if (!this.contentContainer) {
-      console.error('Router: container de conteúdo não inicializado');
-      return;
-    }
-    const embeddedSectionCount = this.contentContainer.querySelectorAll('.view-section').length;
-    if (embeddedSectionCount > 1) {
-      console.warn(
-        'Router.navigate ignorado: várias seções já estão no index (use o menu / app.js). Seção pedida:',
-        section,
-      );
-      return;
-    }
-
     if (!this.routes[section]) {
       console.error('Rota não encontrada:', section);
       return;
