@@ -1194,8 +1194,7 @@ table tbody tr:hover {
   display: none;
   align-items: center;
   justify-content: center;
-  /* Precisa ficar acima do sidebar/backdrop (mobile) e do toast */
-  z-index: 2300;
+  z-index: 1000;
 }
 
 .modal-backdrop.active {
