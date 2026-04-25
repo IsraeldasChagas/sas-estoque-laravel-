@@ -221,6 +221,12 @@ async function despFixasOpenForId(id, mode) {
   const els = despFixasEls();
   if (!els.formCard) return;
 
+  // Garante que unidades e categorias estejam carregadas para permitir:
+  // - selecionar unidades específicas, ou
+  // - marcar "todas as unidades"
+  // Sem isso, o checklist pode aparecer vazio em perfis que não entram na tela "Unidades".
+  await loadUnidades(false).catch(() => {});
+
   // Busca registro no cache primeiro; se não existir, chama endpoint /despesas-fixas/{id}
   const cached = despesasFixasListaCache.find((x) => String(x?.id) === String(id)) || null;
   const d = cached || await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`);
@@ -255,6 +261,8 @@ async function despFixasOpenForId(id, mode) {
     try { uids = JSON.parse(d.unidade_ids) || []; } catch { uids = []; }
   }
   despFixasRenderUnidadesChecklist(uids);
+  // Se aplica a todas, não força seleção no checklist.
+  // Se NÃO aplica a todas, a seleção acima permite escolher unidades específicas.
 
   despFixasFormSetMode(mode);
 }
