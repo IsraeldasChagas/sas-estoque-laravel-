@@ -118,12 +118,17 @@ function despFixasRenderUnidadesChecklist(selectedIds = []) {
   const ids = new Set((selectedIds || []).map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0));
   const unidades = Array.isArray(state.unidades) ? state.unidades : [];
   const html = unidades
-    .filter((u) => u && (u.ativo === undefined || u.ativo === 1 || u.ativo === true))
+    // Não filtra por "ativo": despesas fixas podem precisar referenciar qualquer unidade existente.
+    // Além disso, o backend pode devolver `ativo` como string ("1"/"0"), e filtrar aqui pode ocultar tudo.
+    .filter((u) => !!u)
     .map((u) => {
       const id = Number(u.id);
       if (!Number.isFinite(id) || id <= 0) return "";
       const checked = ids.has(id) ? "checked" : "";
-      return `<label class="checkbox-label"><input type="checkbox" data-unidade-check="1" value="${escapeHtml(String(id))}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}</label>`;
+      const ativoNum = u.ativo == null ? 1 : Number(u.ativo);
+      const isInativa = Number.isFinite(ativoNum) ? ativoNum === 0 : (u.ativo === false);
+      const suffix = isInativa ? ` <span class="subtle-text">(inativa)</span>` : "";
+      return `<label class="checkbox-label"><input type="checkbox" data-unidade-check="1" value="${escapeHtml(String(id))}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}${suffix}</label>`;
     })
     .filter(Boolean)
     .join("");
