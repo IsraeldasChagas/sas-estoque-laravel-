@@ -21,6 +21,381 @@ function getUsuarioFotoUrl(path) {
   return p ? `${BASE_URL}/${p}` : null;
 }
 
+// ==========================================================
+// DESPESAS FIXAS (Financeiro) — UI completa (listar/cadastrar/ver/editar/excluir)
+// ==========================================================
+
+// Cache simples em memória para evitar piscar a UI durante edições.
+let despesasFixasListaCache = [];
+let despesasFixasCategoriasCache = [];
+
+function despFixasEls() {
+  return {
+    table: document.getElementById("despFixasTable"),
+    btnNovo: document.getElementById("despFixasOpenNovo"),
+    btnAtualizar: document.getElementById("despFixasAtualizar"),
+
+    formCard: document.getElementById("despFixasFormCard"),
+    form: document.getElementById("despFixasForm"),
+    closeForm: document.getElementById("despFixasCloseForm"),
+    cancelar: document.getElementById("despFixasCancelar"),
+    excluir: document.getElementById("despFixasExcluir"),
+    salvar: document.getElementById("despFixasSalvar"),
+
+    title: document.getElementById("despFixasFormTitle"),
+    subtitle: document.getElementById("despFixasFormSubtitle"),
+    feedback: document.getElementById("despFixasFormFeedback"),
+
+    id: document.getElementById("despFixasId"),
+    nome: document.getElementById("despFixasNome"),
+    categoria: document.getElementById("despFixasCategoria"),
+    valor: document.getElementById("despFixasValor"),
+    dia: document.getElementById("despFixasDiaVencimento"),
+    fornecedor: document.getElementById("despFixasFornecedor"),
+    status: document.getElementById("despFixasStatus"),
+    obs: document.getElementById("despFixasObservacoes"),
+    aplicaTodas: document.getElementById("despFixasAplicaTodas"),
+    unidadesWrap: document.getElementById("despFixasUnidadesWrap"),
+    unidadesList: document.getElementById("despFixasUnidadesList"),
+  };
+}
+
+function despFixasSetFeedback(message, type = "error") {
+  const el = despFixasEls().feedback;
+  if (!el) return;
+  if (!message) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    el.classList.remove("form-feedback--ok", "form-feedback--warn");
+    return;
+  }
+  el.classList.remove("hidden");
+  el.classList.toggle("form-feedback--ok", type === "success");
+  el.classList.toggle("form-feedback--warn", type === "warn");
+  el.textContent = message;
+}
+
+function despFixasFormSetMode(mode) {
+  // mode: "create" | "edit" | "view"
+  const els = despFixasEls();
+  if (!els.formCard) return;
+
+  const isView = mode === "view";
+  const isEdit = mode === "edit";
+
+  if (els.title) els.title.textContent = isView ? "Visualizar despesa" : (isEdit ? "Editar despesa" : "Cadastrar despesa");
+  if (els.subtitle) {
+    els.subtitle.textContent = isView
+      ? "Dados somente leitura."
+      : "Informe os dados da despesa fixa.";
+  }
+
+  // Em modo "ver", desabilita campos e esconde ações de escrita.
+  const fields = [els.nome, els.categoria, els.valor, els.dia, els.fornecedor, els.status, els.obs, els.aplicaTodas];
+  fields.forEach((f) => { if (f) f.disabled = isView; });
+  els.unidadesList?.querySelectorAll("input[type=checkbox]")?.forEach((c) => { c.disabled = isView; });
+
+  if (els.salvar) els.salvar.classList.toggle("hidden", isView);
+  if (els.excluir) els.excluir.classList.toggle("hidden", !isEdit);
+}
+
+function despFixasShowForm(show) {
+  const els = despFixasEls();
+  if (!els.formCard) return;
+  els.formCard.classList.toggle("hidden", !show);
+  if (!show) {
+    despFixasSetFeedback("");
+    if (els.form) els.form.reset();
+    if (els.id) els.id.value = "";
+    if (els.unidadesList) els.unidadesList.innerHTML = "";
+    if (els.unidadesWrap) els.unidadesWrap.classList.remove("hidden");
+  }
+}
+
+function despFixasRenderUnidadesChecklist(selectedIds = []) {
+  const els = despFixasEls();
+  if (!els.unidadesList) return;
+  const ids = new Set((selectedIds || []).map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0));
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  const html = unidades
+    .filter((u) => u && (u.ativo === undefined || u.ativo === 1 || u.ativo === true))
+    .map((u) => {
+      const id = Number(u.id);
+      if (!Number.isFinite(id) || id <= 0) return "";
+      const checked = ids.has(id) ? "checked" : "";
+      return `<label class="checkbox-label"><input type="checkbox" data-unidade-check="1" value="${escapeHtml(String(id))}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}</label>`;
+    })
+    .filter(Boolean)
+    .join("");
+  els.unidadesList.innerHTML = html || `<div class="subtle-text">Nenhuma unidade disponível.</div>`;
+}
+
+function despFixasSetAplicaTodasUI(aplicaTodas) {
+  const els = despFixasEls();
+  if (!els.unidadesWrap) return;
+  els.unidadesWrap.classList.toggle("hidden", !!aplicaTodas);
+}
+
+function despFixasResetForm() {
+  const els = despFixasEls();
+  if (els.form) els.form.reset();
+  if (els.id) els.id.value = "";
+  if (els.status) els.status.value = "ativo";
+  if (els.aplicaTodas) els.aplicaTodas.checked = false;
+  despFixasSetAplicaTodasUI(false);
+  despFixasRenderUnidadesChecklist([]);
+  despFixasSetFeedback("");
+}
+
+async function despFixasLoadCategorias() {
+  // Categorias vêm do backend (tabela despesas_fixas_categorias). Mantemos cache para reuso.
+  const lista = await fetchJSON("/despesas-fixas/categorias");
+  despesasFixasCategoriasCache = Array.isArray(lista) ? lista : [];
+
+  const els = despFixasEls();
+  if (!els.categoria) return;
+  const opts = despesasFixasCategoriasCache
+    .map((c) => `<option value="${escapeHtml(String(c.id))}">${escapeHtml(c.nome || `Categoria ${c.id}`)}</option>`)
+    .join("");
+  els.categoria.innerHTML = `<option value="">Selecione…</option>${opts}`;
+}
+
+function despFixasRenderTable(lista) {
+  const els = despFixasEls();
+  if (!els.table) return;
+
+  if (!Array.isArray(lista) || lista.length === 0) {
+    renderTable(els.table, "", "Sem despesas fixas cadastradas.", 8);
+    return;
+  }
+
+  const rows = lista.map((d) => {
+    const id = escapeHtml(String(d.id ?? ""));
+    const nome = escapeHtml(String(d.nome ?? "—"));
+    const cat = escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
+    const valor = formatCurrency(Number(d.valor ?? 0));
+    const dia = escapeHtml(String(d.dia_vencimento ?? "—"));
+    const status = escapeHtml(String(d.status ?? "—"));
+    const unidadesLabel = escapeHtml(String(d.unidades_label ?? "—"));
+
+    return `
+      <tr>
+        <td data-label="ID">${id}</td>
+        <td data-label="Nome">${nome}</td>
+        <td data-label="Categoria">${cat}</td>
+        <td data-label="Valor">${escapeHtml(valor)}</td>
+        <td data-label="Venc.">Dia ${dia}</td>
+        <td data-label="Status">${status}</td>
+        <td data-label="Unidades">${unidadesLabel}</td>
+        <td data-label="Ações">
+          <button type="button" class="btn secondary" data-despfixas-action="view" data-id="${id}">Ver</button>
+          <button type="button" class="btn primary" data-despfixas-action="edit" data-id="${id}">Editar</button>
+          <button type="button" class="btn danger" data-despfixas-action="delete" data-id="${id}">Excluir</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  els.table.innerHTML = rows;
+}
+
+async function loadDespesasFixas() {
+  const els = despFixasEls();
+  if (!els.table) return; // Seção ainda não existe no DOM (segurança)
+
+  // Garante dados base: unidades e categorias (para o formulário).
+  await loadUnidades(false).catch(() => {});
+  await despFixasLoadCategorias().catch(() => {
+    // Se falhar, a listagem ainda pode carregar; formulário mostrará "Carregando..."
+    const c = despFixasEls().categoria;
+    if (c && (!c.options || !c.options.length)) c.innerHTML = `<option value="">Falha ao carregar</option>`;
+  });
+
+  els.table.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando...</td></tr>`;
+  const lista = await fetchJSON("/despesas-fixas");
+  despesasFixasListaCache = Array.isArray(lista) ? lista : [];
+  despFixasRenderTable(despesasFixasListaCache);
+}
+
+async function despFixasOpenForId(id, mode) {
+  const els = despFixasEls();
+  if (!els.formCard) return;
+
+  // Busca registro no cache primeiro; se não existir, chama endpoint /despesas-fixas/{id}
+  const cached = despesasFixasListaCache.find((x) => String(x?.id) === String(id)) || null;
+  const d = cached || await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`);
+
+  despFixasShowForm(true);
+  despFixasSetFeedback("");
+
+  if (els.id) els.id.value = d?.id != null ? String(d.id) : "";
+  if (els.nome) els.nome.value = d?.nome ?? "";
+  if (els.valor) els.valor.value = d?.valor != null ? String(d.valor) : "";
+  if (els.dia) els.dia.value = d?.dia_vencimento != null ? String(d.dia_vencimento) : "";
+  if (els.fornecedor) els.fornecedor.value = d?.fornecedor ?? "";
+  if (els.status) els.status.value = (d?.status || "ativo").toString();
+  if (els.obs) els.obs.value = d?.observacoes ?? "";
+
+  // Categoria: garante select populado antes de setar valor.
+  if (els.categoria) {
+    if (!els.categoria.options || els.categoria.options.length <= 1) {
+      await despFixasLoadCategorias().catch(() => {});
+    }
+    els.categoria.value = d?.categoria_id != null ? String(d.categoria_id) : "";
+  }
+
+  const aplicaTodas = !!d?.aplica_todas_unidades;
+  if (els.aplicaTodas) els.aplicaTodas.checked = aplicaTodas;
+  despFixasSetAplicaTodasUI(aplicaTodas);
+
+  // Unidade IDs podem vir como array (API) ou string JSON (segurança)
+  let uids = [];
+  if (Array.isArray(d?.unidade_ids)) uids = d.unidade_ids;
+  else if (typeof d?.unidade_ids === "string") {
+    try { uids = JSON.parse(d.unidade_ids) || []; } catch { uids = []; }
+  }
+  despFixasRenderUnidadesChecklist(uids);
+
+  despFixasFormSetMode(mode);
+}
+
+async function despFixasHandleDelete(id) {
+  if (!id) return;
+  if (!confirm("Excluir esta despesa fixa?")) return;
+
+  await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`, { method: "DELETE" });
+  despesasFixasListaCache = despesasFixasListaCache.filter((x) => String(x?.id) !== String(id));
+  despFixasRenderTable(despesasFixasListaCache);
+  despFixasShowForm(false);
+  showToast("Despesa excluída.", "success");
+}
+
+function despFixasBindOnce() {
+  const els = despFixasEls();
+  if (!els.btnNovo || els.btnNovo.dataset.bound === "1") return;
+  els.btnNovo.dataset.bound = "1";
+
+  els.btnNovo.addEventListener("click", async () => {
+    try {
+      await loadUnidades(false).catch(() => {});
+      await despFixasLoadCategorias().catch(() => {});
+      despFixasShowForm(true);
+      despFixasResetForm();
+      despFixasFormSetMode("create");
+    } catch (err) {
+      showToast(err?.message || "Falha ao abrir formulário.", "error");
+    }
+  });
+
+  els.btnAtualizar?.addEventListener("click", () => {
+    loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao atualizar despesas.", "error"));
+  });
+
+  els.closeForm?.addEventListener("click", () => despFixasShowForm(false));
+  els.cancelar?.addEventListener("click", () => despFixasShowForm(false));
+
+  els.aplicaTodas?.addEventListener("change", (e) => {
+    despFixasSetAplicaTodasUI(!!e.target.checked);
+  });
+
+  // Delegação de eventos da tabela (ver/editar/excluir)
+  els.table?.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.("button[data-despfixas-action]");
+    if (!btn) return;
+    const action = btn.dataset.despfixasAction;
+    const id = btn.dataset.id;
+    if (!id) return;
+
+    if (action === "view") {
+      despFixasOpenForId(id, "view").catch((err) => showToast(err?.message || "Falha ao abrir.", "error"));
+    } else if (action === "edit") {
+      despFixasOpenForId(id, "edit").catch((err) => showToast(err?.message || "Falha ao abrir.", "error"));
+    } else if (action === "delete") {
+      despFixasHandleDelete(id).catch((err) => showToast(err?.message || "Falha ao excluir.", "error"));
+    }
+  });
+
+  // Botão excluir dentro do formulário (edição)
+  els.excluir?.addEventListener("click", () => {
+    const id = els.id?.value;
+    despFixasHandleDelete(id).catch((err) => showToast(err?.message || "Falha ao excluir.", "error"));
+  });
+
+  // Submit (salvar)
+  els.form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = (els.id?.value || "").trim();
+
+    // Validações rápidas no frontend (backend também valida).
+    const nome = (els.nome?.value || "").trim();
+    const categoriaId = Number(els.categoria?.value || 0);
+    const valor = Number(els.valor?.value || 0);
+    const dia = Number(els.dia?.value || 0);
+    const status = (els.status?.value || "ativo").toString();
+    const aplicaTodas = !!els.aplicaTodas?.checked;
+    const fornecedor = (els.fornecedor?.value || "").trim() || null;
+    const observacoes = (els.obs?.value || "").trim() || null;
+
+    if (!nome) return despFixasSetFeedback("Informe o nome da despesa.");
+    if (!Number.isFinite(categoriaId) || categoriaId <= 0) return despFixasSetFeedback("Selecione uma categoria válida.");
+    if (!Number.isFinite(valor) || valor <= 0) return despFixasSetFeedback("Informe um valor válido.");
+    if (!Number.isFinite(dia) || dia < 1 || dia > 31) return despFixasSetFeedback("Informe um dia de vencimento entre 1 e 31.");
+
+    let unidadeIds = [];
+    if (!aplicaTodas) {
+      const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
+      unidadeIds = Array.from(checks).map((c) => Number(c.value)).filter((n) => Number.isFinite(n) && n > 0);
+      if (!unidadeIds.length) return despFixasSetFeedback("Selecione ao menos 1 unidade ou marque 'todas as unidades'.", "warn");
+    }
+
+    const payload = {
+      nome,
+      categoria_id: categoriaId,
+      valor,
+      dia_vencimento: dia,
+      fornecedor,
+      observacoes,
+      status,
+      aplica_todas_unidades: aplicaTodas ? 1 : 0,
+      unidade_ids: aplicaTodas ? [] : unidadeIds,
+    };
+
+    try {
+      despFixasSetFeedback("Salvando...", "success");
+      const res = await fetchJSON(id ? `/despesas-fixas/${encodeURIComponent(id)}` : "/despesas-fixas", {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      });
+
+      // Atualiza cache sem precisar recarregar tudo; depois recarrega para refletir labels/unidades.
+      if (id) {
+        despesasFixasListaCache = despesasFixasListaCache.map((x) => (String(x?.id) === String(id) ? res : x));
+      } else {
+        despesasFixasListaCache = [res, ...despesasFixasListaCache];
+      }
+      despFixasRenderTable(despesasFixasListaCache);
+      despFixasShowForm(false);
+      showToast("Despesa salva com sucesso.", "success");
+
+      // Recarrega lista do backend (garante consistência com joins/labels)
+      loadDespesasFixas().catch(() => {});
+    } catch (err) {
+      const msg = err?.responseData?.error || err?.message || "Falha ao salvar despesa.";
+      despFixasSetFeedback(msg);
+    }
+  });
+}
+
+// Faz o bind assim que o DOM estiver pronto (o app usa navegação por seções no mesmo HTML).
+// Também é seguro chamar várias vezes: há guardas de "bound".
+document.addEventListener("DOMContentLoaded", () => {
+  despFixasBindOnce();
+});
+
+// Se o script for carregado após DOMContentLoaded (ex.: cache / defer), ainda assim faz bind.
+despFixasBindOnce();
+
+
 const storageKey = "sas-estoque-user";
 const currentSectionKey = "sas-estoque-current-section";
 
@@ -323,7 +698,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -331,7 +706,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -363,7 +738,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -371,7 +746,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2889,6 +3264,14 @@ function applyPermissions() {
   if (sections.includes("historicoReservas") && !sections.includes("reservaMesa")) {
     sections = [...sections, "reservaMesa"];
   }
+  // Despesas fixas: módulo novo no Financeiro (permissoes_menu antigas não incluem automaticamente).
+  // Se o usuário já tem acesso a qualquer item financeiro, libera o acesso ao módulo também.
+  if (
+    (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos") || sections.includes("fechamento") || sections.includes("fechamentoDash")) &&
+    !sections.includes("despesasFixas")
+  ) {
+    sections = [...sections, "despesasFixas"];
+  }
   // Auditoria fechamento caixa (id fechamento): permissoes_menu antigas sem o módulo novo mantêm acesso junto a Boleto/Alvará/Proventos
   if (
     (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos")) &&
@@ -2940,6 +3323,7 @@ function applyPermissions() {
       regras.sections.includes("boletao") ||
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
+      regras.sections.includes("despesasFixas") ||
       regras.sections.includes("reciboAjuda") ||
       regras.sections.includes("fechamento") ||
       regras.sections.includes("fechamentoDash");
@@ -3099,6 +3483,7 @@ function navigateTo(section) {
       section === "boletao" ||
       section === "alvara" ||
       section === "proventos" ||
+      section === "despesasFixas" ||
       section === "reciboAjuda" ||
       section === "fechamento" ||
       section === "fechamentoDash"
@@ -3123,6 +3508,7 @@ function navigateTo(section) {
   if (section === 'fornecedores') loadFornecedores();
   else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
   else if (section === 'logs') loadLogs();
+  else if (section === 'despesasFixas') loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao carregar despesas.", "error"));
 }
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.

@@ -137,6 +137,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boleto</a>
               <a href="#" class="nav-link nav-link-child" data-section="alvara">Alvará</a>
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
+              <a href="#" class="nav-link nav-link-child" data-section="despesasFixas">Despesas fixas</a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo (ajuda de custo)</a>
               <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Registros de auditoria: lançar, editar e conferir fechamentos de caixa">Auditoria — fechamento de caixa</a>
               <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Painel só leitura: gráficos, totais por unidade e análise dos fechamentos">Dashboard — análise fechamentos</a>
@@ -2390,6 +2391,124 @@
                   </thead>
                   <tbody id="alvarasTable">
                     <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Módulo Financeiro - Despesas fixas -->
+          <section id="despesasFixasSection" class="view-section hidden">
+            <div class="boletos-header">
+              <div>
+                <h2>📌 Despesas fixas</h2>
+                <p class="subtle-text">Cadastre despesas recorrentes e vincule às unidades (ou marque para todas).</p>
+              </div>
+              <div class="boletos-actions">
+                <button type="button" class="btn primary" id="despFixasOpenNovo">+ Cadastrar despesa</button>
+                <button type="button" class="btn secondary" id="despFixasAtualizar">🔄 Atualizar</button>
+              </div>
+            </div>
+
+            <!-- Formulário (fica oculto por padrão; aparece ao clicar em Cadastrar/Editar/Ver) -->
+            <div class="form-card form-card--wide hidden" id="despFixasFormCard" style="margin-bottom: 1rem;">
+              <header style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+                <div>
+                  <h3 id="despFixasFormTitle" style="margin:0;">Cadastro</h3>
+                  <p class="subtle-text" id="despFixasFormSubtitle" style="margin:0.35rem 0 0 0;">Informe os dados da despesa fixa.</p>
+                </div>
+                <button type="button" class="btn neutral" id="despFixasCloseForm">Fechar</button>
+              </header>
+
+              <input type="hidden" id="despFixasId" value="" />
+              <div id="despFixasFormFeedback" class="form-feedback hidden" style="margin-top:0.75rem;"></div>
+
+              <form id="despFixasForm" style="margin-top: 1rem;">
+                <div class="filters-grid" style="gap: 0.85rem;">
+                  <label>
+                    Nome *
+                    <input type="text" id="despFixasNome" maxlength="180" required placeholder="Ex.: Aluguel loja, Internet, Energia..." />
+                  </label>
+
+                  <label>
+                    Categoria *
+                    <select id="despFixasCategoria" required>
+                      <option value="">Carregando...</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Valor (R$) *
+                    <input type="number" id="despFixasValor" required step="0.01" min="0" inputmode="decimal" placeholder="0,00" />
+                  </label>
+
+                  <label>
+                    Dia do vencimento *
+                    <input type="number" id="despFixasDiaVencimento" required min="1" max="31" inputmode="numeric" placeholder="1 a 31" />
+                  </label>
+
+                  <label>
+                    Fornecedor
+                    <input type="text" id="despFixasFornecedor" maxlength="160" placeholder="Opcional" />
+                  </label>
+
+                  <label>
+                    Status
+                    <select id="despFixasStatus">
+                      <option value="ativo">Ativo</option>
+                      <option value="pausado">Pausado</option>
+                    </select>
+                  </label>
+
+                  <label style="grid-column: 1 / -1;">
+                    Observações
+                    <textarea id="despFixasObservacoes" rows="3" placeholder="Opcional"></textarea>
+                  </label>
+
+                  <div style="grid-column: 1 / -1;">
+                    <label class="checkbox-label" style="margin-bottom:0.5rem;">
+                      <input type="checkbox" id="despFixasAplicaTodas" />
+                      Aplicar em <strong>todas</strong> as unidades
+                    </label>
+                    <div id="despFixasUnidadesWrap" class="filters-panel" style="margin:0;padding:0.75rem;border-radius:10px;">
+                      <div class="subtle-text" style="margin-bottom:0.5rem;">Selecione as unidades:</div>
+                      <div id="despFixasUnidadesList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.35rem 0.75rem;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="filters-actions" style="margin-top: 1rem; justify-content: flex-end;">
+                  <button type="button" class="btn danger hidden" id="despFixasExcluir">Excluir</button>
+                  <button type="button" class="btn neutral" id="despFixasCancelar">Cancelar</button>
+                  <button type="submit" class="btn primary" id="despFixasSalvar">Salvar</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Lista -->
+            <div class="table-card form-card--wide">
+              <header>
+                <div>
+                  <h3>Despesas cadastradas</h3>
+                  <p class="subtle-text">Ver, editar e excluir despesas fixas.</p>
+                </div>
+              </header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>Categoria</th>
+                      <th>Valor</th>
+                      <th>Venc.</th>
+                      <th>Status</th>
+                      <th>Unidades</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="despFixasTable">
+                    <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>
