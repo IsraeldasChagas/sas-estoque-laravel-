@@ -28,12 +28,19 @@ function getUsuarioFotoUrl(path) {
 // Cache simples em memória para evitar piscar a UI durante edições.
 let despesasFixasListaCache = [];
 let despesasFixasCategoriasCache = [];
+let despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
 
 function despFixasEls() {
   return {
     table: document.getElementById("despFixasTable"),
     btnNovo: document.getElementById("despFixasOpenNovo"),
     btnAtualizar: document.getElementById("despFixasAtualizar"),
+
+    filtrosForm: document.getElementById("despFixasFiltrosForm"),
+    filtroDia: document.getElementById("despFixasFiltroDia"),
+    filtroCategoria: document.getElementById("despFixasFiltroCategoria"),
+    filtroUnidade: document.getElementById("despFixasFiltroUnidade"),
+    filtroLimpar: document.getElementById("despFixasFiltroLimpar"),
 
     formCard: document.getElementById("despFixasFormCard"),
     form: document.getElementById("despFixasForm"),
@@ -169,12 +176,37 @@ function despFixasRenderTable(lista) {
   const els = despFixasEls();
   if (!els.table) return;
 
-  if (!Array.isArray(lista) || lista.length === 0) {
+  const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
+  const diaFiltro = Number(filtros.dia || 0);
+  const listaFiltrada = (Array.isArray(lista) ? lista : []).filter((d) => {
+    if (Number.isFinite(diaFiltro) && diaFiltro > 0) {
+      const dia = Number(d?.dia_vencimento ?? 0);
+      if (!Number.isFinite(dia) || dia !== diaFiltro) return false;
+    }
+    // Categoria e Unidade já podem ser filtradas no backend; aqui só garantimos caso venha do cache antigo.
+    if (filtros.categoriaId) {
+      const cid = String(d?.categoria_id ?? "");
+      if (cid !== String(filtros.categoriaId)) return false;
+    }
+    if (filtros.unidadeId) {
+      const uid = Number(filtros.unidadeId);
+      if (Number.isFinite(uid) && uid > 0) {
+        const aplicaTodas = !!d?.aplica_todas_unidades;
+        if (aplicaTodas) return true;
+        const uids = Array.isArray(d?.unidade_ids) ? d.unidade_ids : [];
+        const has = uids.map((x) => Number(x)).some((x) => Number.isFinite(x) && x === uid);
+        if (!has) return false;
+      }
+    }
+    return true;
+  });
+
+  if (!Array.isArray(listaFiltrada) || listaFiltrada.length === 0) {
     renderTable(els.table, "", "Sem despesas fixas cadastradas.", 8);
     return;
   }
 
-  const rows = lista.map((d) => {
+  const rows = listaFiltrada.map((d) => {
     const id = escapeHtml(String(d.id ?? ""));
     const nome = escapeHtml(String(d.nome ?? "—"));
     const cat = escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
@@ -215,11 +247,39 @@ async function loadDespesasFixas() {
     const c = despFixasEls().categoria;
     if (c && (!c.options || !c.options.length)) c.innerHTML = `<option value="">Falha ao carregar</option>`;
   });
+  // Atualiza opções dos filtros da lista (categoria/unidade)
+  despFixasRenderFiltrosOptions();
 
   els.table.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando...</td></tr>`;
-  const lista = await fetchJSON("/despesas-fixas");
+
+  const params = new URLSearchParams();
+  if (despesasFixasFiltros?.categoriaId) params.set("categoria_id", String(despesasFixasFiltros.categoriaId));
+  if (despesasFixasFiltros?.unidadeId) params.set("unidade_id", String(despesasFixasFiltros.unidadeId));
+  const url = params.toString() ? `/despesas-fixas?${params}` : "/despesas-fixas";
+  const lista = await fetchJSON(url);
   despesasFixasListaCache = Array.isArray(lista) ? lista : [];
   despFixasRenderTable(despesasFixasListaCache);
+}
+
+function despFixasRenderFiltrosOptions() {
+  const els = despFixasEls();
+  if (!els.filtroCategoria || !els.filtroUnidade) return;
+
+  // Categorias
+  const cats = Array.isArray(despesasFixasCategoriasCache) ? despesasFixasCategoriasCache : [];
+  els.filtroCategoria.innerHTML =
+    `<option value="">Todas</option>` +
+    cats.map((c) => `<option value="${escapeHtml(String(c.id))}">${escapeHtml(c.nome || `Categoria ${c.id}`)}</option>`).join("");
+
+  // Unidades
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  els.filtroUnidade.innerHTML =
+    `<option value="">Todas</option>` +
+    unidades.map((u) => `<option value="${escapeHtml(String(u.id))}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`).join("");
+
+  if (els.filtroDia) els.filtroDia.value = despesasFixasFiltros?.dia || "";
+  els.filtroCategoria.value = despesasFixasFiltros?.categoriaId || "";
+  els.filtroUnidade.value = despesasFixasFiltros?.unidadeId || "";
 }
 
 async function despFixasOpenForId(id, mode) {
@@ -302,6 +362,23 @@ function despFixasBindOnce() {
 
   els.btnAtualizar?.addEventListener("click", () => {
     loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao atualizar despesas.", "error"));
+  });
+
+  // Filtros da lista
+  els.filtrosForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const dia = (els.filtroDia?.value || "").trim();
+    const catId = (els.filtroCategoria?.value || "").trim();
+    const unId = (els.filtroUnidade?.value || "").trim();
+    despesasFixasFiltros = { dia, categoriaId: catId, unidadeId: unId };
+    loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao filtrar despesas.", "error"));
+  });
+  els.filtroLimpar?.addEventListener("click", () => {
+    despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
+    if (els.filtroDia) els.filtroDia.value = "";
+    if (els.filtroCategoria) els.filtroCategoria.value = "";
+    if (els.filtroUnidade) els.filtroUnidade.value = "";
+    loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao limpar filtros.", "error"));
   });
 
   els.closeForm?.addEventListener("click", () => despFixasShowForm(false));
