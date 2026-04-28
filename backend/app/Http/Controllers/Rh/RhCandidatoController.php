@@ -185,7 +185,12 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Currículo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
-        return Storage::disk('public')->download($cv->arquivo_path, $cv->arquivo_nome_original ?: basename($cv->arquivo_path));
+        $res = Storage::disk('public')->download($cv->arquivo_path, $cv->arquivo_nome_original ?: basename($cv->arquivo_path));
+        $res->headers->set('Access-Control-Allow-Origin', '*');
+        $res->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        $res->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+        $res->headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
+        return $res;
     }
 
     public function downloadFoto(Request $request, int $id)
@@ -203,7 +208,12 @@ class RhCandidatoController extends Controller
         }
 
         $name = 'foto-candidato-' . $id . '.' . pathinfo($path, PATHINFO_EXTENSION);
-        return Storage::disk('public')->download($path, $name);
+        $res = Storage::disk('public')->download($path, $name);
+        $res->headers->set('Access-Control-Allow-Origin', '*');
+        $res->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        $res->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+        $res->headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
+        return $res;
     }
 }
 
