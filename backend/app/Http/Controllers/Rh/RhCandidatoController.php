@@ -33,7 +33,7 @@ class RhCandidatoController extends Controller
                 'rh_candidatos.*',
                 'rh_vagas.titulo as vaga_titulo',
                 'rh_vagas.slug as vaga_slug',
-                DB::raw('EXISTS(SELECT 1 FROM rh_curriculos cv WHERE cv.candidato_id = rh_candidatos.id) as tem_curriculo')
+                DB::raw('(SELECT cv.arquivo_path FROM rh_curriculos cv WHERE cv.candidato_id = rh_candidatos.id ORDER BY cv.id DESC LIMIT 1) as curriculo_path')
             )
             ->orderByDesc('rh_candidatos.id');
 
@@ -43,7 +43,16 @@ class RhCandidatoController extends Controller
         if ($request->filled('email')) $q->where('rh_candidatos.email', 'like', '%' . $request->email . '%');
         if ($request->filled('telefone')) $q->where('rh_candidatos.telefone', 'like', '%' . $request->telefone . '%');
 
-        return response()->json($q->get())->header('Access-Control-Allow-Origin', '*');
+        $rows = $q->get();
+        // Garante flags corretas (arquivo pode ter sido removido/anônimo/LGPD).
+        foreach ($rows as $r) {
+            $cvPath = $r->curriculo_path ?? null;
+            $r->tem_curriculo = (bool) ($cvPath && Storage::disk('public')->exists($cvPath));
+            $r->tem_foto = (bool) (! empty($r->foto_path) && Storage::disk('public')->exists($r->foto_path));
+            unset($r->curriculo_path);
+        }
+
+        return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
     }
 
     public function show(Request $request, int $id)

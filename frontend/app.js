@@ -7435,8 +7435,8 @@ function renderRhCandidatos(lista) {
   tb.innerHTML = lista.map((c) => {
     const tel = (c.telefone || "").toString().replace(/\D+/g, "");
     const waLabel = tel ? `+55 ${tel}` : "";
-    const temCurriculo = String(c.tem_curriculo ?? "").toLowerCase() === "1" || c.tem_curriculo === 1 || c.tem_curriculo === true;
-    const temFoto = !!c.foto_path;
+    const temCurriculo = c.tem_curriculo === true || c.tem_curriculo === 1 || String(c.tem_curriculo ?? "").toLowerCase() === "1";
+    const temFoto = c.tem_foto === true || c.tem_foto === 1 || String(c.tem_foto ?? "").toLowerCase() === "1";
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
     const badgeFoto = temFoto ? ' <span title="Tem foto anexada" aria-label="Tem foto anexada">🖼️</span>' : "";
     return `<tr data-id="${esc(c.id)}">
@@ -12639,11 +12639,10 @@ function setupNavigation() {
             }, { once: true });
             img.addEventListener("error", () => {
               try { URL.revokeObjectURL(url); } catch (_) {}
-              img.remove();
+              showToast("Não foi possível carregar a foto do candidato.", "warning");
             }, { once: true });
           } catch (_) {
-            // se falhar, remove a tag para não quebrar layout
-            img.remove();
+            showToast("Não foi possível carregar a foto do candidato.", "warning");
           }
         }
 
