@@ -7422,7 +7422,7 @@ function renderRhCandidatos(lista) {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
     return;
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
@@ -7436,10 +7436,8 @@ function renderRhCandidatos(lista) {
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
       <td data-label="WhatsApp">${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener noreferrer" class="table-action">Abrir</a><div class="subtle-text">${esc(waLabel)}</div>` : "-"}</td>
-      <td data-label="Currículo"><button type="button" class="table-action btn-rh-cv" data-id="${esc(c.id)}">Ver</button></td>
       <td data-label="Ações" class="table-actions">
         <button type="button" class="table-action btn-rh-ver" data-id="${esc(c.id)}">Abrir</button>
-        <button type="button" class="table-action btn-rh-anonimizar" data-id="${esc(c.id)}" style="background:#b71c1c;color:#fff;">Anonimizar</button>
       </td>
     </tr>`;
   }).join("");
@@ -12562,21 +12560,6 @@ function setupNavigation() {
     loadRhCandidatos().catch(() => {});
   });
   document.getElementById("rhCandidatosSection")?.addEventListener("click", async (e) => {
-    const btnCv = e.target.closest(".btn-rh-cv");
-    if (btnCv) {
-      e.preventDefault();
-      const id = btnCv.dataset.id;
-      if (!id) return;
-      try {
-        const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
-        const url = URL.createObjectURL(blob);
-        window.open(url, "_blank", "noopener,noreferrer");
-        setTimeout(() => URL.revokeObjectURL(url), 120000);
-      } catch (err) {
-        showToast(err?.message || "Erro ao abrir currículo.", "error");
-      }
-      return;
-    }
     const btnVer = e.target.closest(".btn-rh-ver");
     if (btnVer) {
       e.preventDefault();
@@ -12588,20 +12571,6 @@ function setupNavigation() {
         showToast(err?.message || "Erro ao abrir candidato.", "error");
       }
       return;
-    }
-    const btnAnon = e.target.closest(".btn-rh-anonimizar");
-    if (btnAnon) {
-      e.preventDefault();
-      const id = btnAnon.dataset.id;
-      if (!id) return;
-      if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
-      try {
-        await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
-        showToast("Candidato anonimizado (excluído via LGPD).", "success");
-        await loadRhCandidatos();
-      } catch (err) {
-        showToast(err?.message || "Erro ao anonimizar.", "error");
-      }
     }
   });
 
