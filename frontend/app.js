@@ -7429,9 +7429,11 @@ function renderRhCandidatos(lista) {
   tb.innerHTML = lista.map((c) => {
     const tel = (c.telefone || "").toString().replace(/\D+/g, "");
     const waLabel = tel ? `+55 ${tel}` : "";
+    const temCurriculo = String(c.tem_curriculo ?? "").toLowerCase() === "1" || c.tem_curriculo === 1 || c.tem_curriculo === true;
+    const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
     return `<tr data-id="${esc(c.id)}">
       <td data-label="ID">${esc(c.id)}</td>
-      <td data-label="Nome">${esc(c.nome)}</td>
+      <td data-label="Nome">${esc(c.nome)}${badgeCurriculo}</td>
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
       <td data-label="WhatsApp">${waLabel ? `<span>${esc(waLabel)}</span>` : "-"}</td>
@@ -7463,7 +7465,7 @@ async function abrirRhCandidatoModal(id) {
   const c = payload?.candidato;
   if (!c) throw new Error("Candidato não encontrado");
 
-  rhCandidatoModalState = { id: Number(id) };
+  rhCandidatoModalState = { id: Number(id), temCurriculo: !!payload?.curriculo };
 
   const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
   const whatsapp = buildWhatsappLink(c.nome, vagaTitulo, c.telefone);
@@ -7492,6 +7494,11 @@ async function abrirRhCandidatoModal(id) {
     waBtn.href = whatsapp.url || "#";
     waBtn.classList.toggle("hidden", !whatsapp.url);
     waBtn.textContent = whatsapp.url ? `WhatsApp (${whatsapp.label})` : "WhatsApp";
+  }
+
+  const cvBtn = document.getElementById("rhCandCurriculoBtn");
+  if (cvBtn) {
+    cvBtn.classList.toggle("hidden", !rhCandidatoModalState.temCurriculo);
   }
 
   setModalOpen("rhCandidatoModalOverlay", true);
@@ -12583,6 +12590,10 @@ function setupNavigation() {
   document.getElementById("rhCandCurriculoBtn")?.addEventListener("click", async () => {
     const id = rhCandidatoModalState?.id;
     if (!id) return;
+    if (!rhCandidatoModalState?.temCurriculo) {
+      showToast("Este candidato não enviou currículo.", "info");
+      return;
+    }
     try {
       const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
       const url = URL.createObjectURL(blob);

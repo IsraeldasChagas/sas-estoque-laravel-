@@ -32,7 +32,8 @@ class RhCandidatoController extends Controller
             ->select(
                 'rh_candidatos.*',
                 'rh_vagas.titulo as vaga_titulo',
-                'rh_vagas.slug as vaga_slug'
+                'rh_vagas.slug as vaga_slug',
+                DB::raw('EXISTS(SELECT 1 FROM rh_curriculos cv WHERE cv.candidato_id = rh_candidatos.id) as tem_curriculo')
             )
             ->orderByDesc('rh_candidatos.id');
 
