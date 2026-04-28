@@ -187,5 +187,23 @@ class RhCandidatoController extends Controller
 
         return Storage::disk('public')->download($cv->arquivo_path, $cv->arquivo_nome_original ?: basename($cv->arquivo_path));
     }
+
+    public function downloadFoto(Request $request, int $id)
+    {
+        if (! RhAcesso::pode($request, 'rh.candidatos')) {
+            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $c = DB::table('rh_candidatos')->where('id', $id)->first();
+        if (! $c) return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+
+        $path = $c->foto_path ?? null;
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            return response()->json(['error' => 'Foto não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $name = 'foto-candidato-' . $id . '.' . pathinfo($path, PATHINFO_EXTENSION);
+        return Storage::disk('public')->download($path, $name);
+    }
 }
 

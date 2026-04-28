@@ -9294,6 +9294,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     Route::get('/candidatos', [RhCandidatoController::class, 'index']);
     Route::get('/candidatos/{id}', [RhCandidatoController::class, 'show']);
     Route::get('/candidatos/{id}/curriculo', [RhCandidatoController::class, 'downloadCurriculo']);
+    Route::get('/candidatos/{id}/foto', [RhCandidatoController::class, 'downloadFoto']);
     Route::put('/candidatos/{id}/status', [RhCandidatoController::class, 'updateStatus']);
     Route::put('/candidatos/{id}/observacoes', [RhCandidatoController::class, 'updateObservacoes']);
     Route::post('/candidatos/{id}/anonimizar', [RhCandidatoController::class, 'anonymize']);

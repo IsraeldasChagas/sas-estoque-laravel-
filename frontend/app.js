@@ -7467,7 +7467,6 @@ function renderRhCandidatoInlineRow(payload) {
   if (!c) return "";
   const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
   const temCurriculo = !!payload?.curriculo;
-  const fotoUrl = c.foto_path ? getPublicStorageUrl(c.foto_path) : "";
   const esc = (s) => escapeHtml(String(s ?? ""));
   const lgpd = c.consentimento_lgpd ? `OK (${(c.consentimento_em || "").toString().slice(0,19).replace("T"," ")})` : "NÃO";
 
@@ -7476,7 +7475,7 @@ function renderRhCandidatoInlineRow(payload) {
       <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
-            ${fotoUrl ? `<img src="${esc(fotoUrl)}" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
+            ${c.foto_path ? `<img data-rh-cand-foto="1" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
           </div>
           <div style="flex:1; min-width: 260px;">
             <div class="filters-grid">
@@ -12626,6 +12625,26 @@ function setupNavigation() {
         // Preenche status selecionado
         const statusSel = detailsTr.querySelector(".rh-cand-status");
         if (statusSel) statusSel.value = payload?.candidato?.status || "novo";
+
+        // Carrega foto (se existir) via API (não depende de /storage público).
+        const img = detailsTr.querySelector('img[data-rh-cand-foto="1"]');
+        if (img) {
+          try {
+            const blob = await fetchBlob(`/rh/candidatos/${id}/foto`);
+            const url = URL.createObjectURL(blob);
+            img.src = url;
+            img.addEventListener("load", () => {
+              setTimeout(() => URL.revokeObjectURL(url), 120000);
+            }, { once: true });
+            img.addEventListener("error", () => {
+              try { URL.revokeObjectURL(url); } catch (_) {}
+              img.remove();
+            }, { once: true });
+          } catch (_) {
+            // se falhar, remove a tag para não quebrar layout
+            img.remove();
+          }
+        }
 
         // Botões
         detailsTr.querySelector(".rh-cand-fechar")?.addEventListener("click", () => {
