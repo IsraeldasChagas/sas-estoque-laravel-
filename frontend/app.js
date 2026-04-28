@@ -7366,6 +7366,57 @@ async function fetchBlob(path, options = {}) {
   return await res.blob();
 }
 
+// ================================
+// RH — Visualização/Download PDF (mesmo padrão do Financeiro/Alvará: modal + baixar)
+// ================================
+let rhPdfObjectUrl = null;
+function closeRhPdfModal() {
+  const m = document.getElementById("rhPdfModal");
+  const f = document.getElementById("rhPdfFrame");
+  const dl = document.getElementById("rhPdfDownload");
+  if (f) f.src = "about:blank";
+  if (dl) { dl.style.display = "none"; dl.href = "#"; dl.removeAttribute("download"); }
+  if (rhPdfObjectUrl) {
+    try { URL.revokeObjectURL(rhPdfObjectUrl); } catch (_) {}
+    rhPdfObjectUrl = null;
+  }
+  if (m) m.classList.remove("active");
+}
+
+async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
+  const m = document.getElementById("rhPdfModal");
+  const f = document.getElementById("rhPdfFrame");
+  const t = document.getElementById("rhPdfTitle");
+  const dl = document.getElementById("rhPdfDownload");
+  if (!m || !f) throw new Error("Modal de PDF não encontrado.");
+
+  if (t) t.textContent = titulo || "Documento";
+  if (dl) { dl.style.display = "none"; dl.href = "#"; dl.removeAttribute("download"); }
+
+  if (rhPdfObjectUrl) {
+    try { URL.revokeObjectURL(rhPdfObjectUrl); } catch (_) {}
+    rhPdfObjectUrl = null;
+  }
+
+  m.classList.add("active");
+  f.src = "about:blank";
+
+  const blob = await fetchBlob(path);
+  const ct = (blob && blob.type) ? String(blob.type).toLowerCase() : "";
+  if (ct && !ct.includes("pdf")) {
+    closeRhPdfModal();
+    throw new Error("Documento inválido (não é PDF).");
+  }
+  rhPdfObjectUrl = URL.createObjectURL(blob);
+  f.src = rhPdfObjectUrl;
+
+  if (dl) {
+    dl.href = rhPdfObjectUrl;
+    dl.download = downloadName;
+    dl.style.display = "";
+  }
+}
+
 async function loadRhDashboard() {
   const stats = await fetchJSON("/rh/dashboard/stats");
   const set = (id, v) => {
@@ -12656,30 +12707,9 @@ function setupNavigation() {
             showToast("Este candidato não tem currículo anexado.", "info");
             return;
           }
-          // Abre a nova aba/janela ANTES do await para não ser bloqueado pelo popup blocker.
-          // Não usamos noopener aqui porque alguns browsers retornam null e impedem navegar depois.
-          const win = window.open("", "_blank");
-          if (win) {
-            try {
-              win.document.title = "Currículo";
-              win.document.body.style.margin = "0";
-              win.document.body.innerHTML = '<div style="font-family:system-ui,Segoe UI,Arial; padding:16px;">Carregando currículo...</div>';
-            } catch (_) {
-              /* ignore */
-            }
-          }
           try {
-            const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
-            if (blob && blob.type && !String(blob.type).toLowerCase().includes("pdf")) {
-              // Se veio erro/HTML por engano, evita deixar a aba em branco.
-              throw new Error("Currículo inválido (não é PDF).");
-            }
-            const url = URL.createObjectURL(blob);
-            if (win) win.location.href = url;
-            else window.open(url, "_blank");
-            setTimeout(() => URL.revokeObjectURL(url), 120000);
+            await openRhPdfFromApi(`/rh/candidatos/${id}/curriculo`, "📄 Currículo (PDF)", `curriculo-${id}.pdf`);
           } catch (err) {
-            if (win) try { win.close(); } catch (_) {}
             showToast(err?.message || "Erro ao abrir currículo.", "error");
           }
         });
@@ -12782,10 +12812,7 @@ function setupNavigation() {
     const id = btn.dataset.id;
     if (!id) return;
     try {
-      const blob = await fetchBlob(`/rh/documentos/${id}/download`);
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(url), 120000);
+      await openRhPdfFromApi(`/rh/documentos/${id}/download`, "📄 Documento RH", `documento-${id}.pdf`);
     } catch (err) {
       showToast(err?.message || "Erro ao baixar documento.", "error");
     }
@@ -12809,6 +12836,13 @@ function togglePasswordVisibility(button) {
 function setupPasswordToggles() {
   dom.passwordToggles.forEach((button) => {
     button.addEventListener("click", () => togglePasswordVisibility(button));
+  });
+
+  // RH PDF modal close
+  document.getElementById("closeRhPdf")?.addEventListener("click", closeRhPdfModal);
+  document.getElementById("fecharRhPdf")?.addEventListener("click", closeRhPdfModal);
+  document.getElementById("rhPdfModal")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "rhPdfModal") closeRhPdfModal();
   });
 }
 

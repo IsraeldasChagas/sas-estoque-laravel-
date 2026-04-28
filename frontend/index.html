@@ -4558,6 +4558,23 @@
       </div>
     </div>
 
+    <!-- Modal genérico para PDF do RH (Currículo / Documentos) -->
+    <div class="modal-backdrop" id="rhPdfModal">
+      <div class="modal" style="width: min(920px, 96vw);">
+        <header>
+          <h2 id="rhPdfTitle">📄 Documento</h2>
+          <button type="button" class="close-btn" id="closeRhPdf" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
+          <iframe id="rhPdfFrame" title="Documento RH" style="display:block;width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
+        </div>
+        <footer style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
+          <a class="btn secondary" id="rhPdfDownload" href="#" style="text-decoration:none;display:none;">⬇️ Baixar</a>
+          <button type="button" class="btn neutral" id="fecharRhPdf">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
     <!-- Modal de Detalhes do Boleto -->
     <div class="modal-backdrop" id="boletoDetalhesModal">
       <div class="modal">
@@ -4692,7 +4709,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260428-rh-candidatos-fix5"></script>
+    <script src="app.js?v=20260428-rh-pdf-modal1"></script>
      
   </body>
 </html>
