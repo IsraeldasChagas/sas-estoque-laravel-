@@ -226,12 +226,17 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Foto não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $name = 'foto-candidato-' . $id . '.' . pathinfo($path, PATHINFO_EXTENSION);
-        $res = Storage::disk('public')->download($path, $name);
-        $res->headers->set('Access-Control-Allow-Origin', '*');
-        $res->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        $res->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
-        $res->headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
+        // Para <img> renderizar corretamente, precisamos responder com o mime real.
+        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
+        $content = Storage::disk('public')->get($path);
+
+        $res = response($content, 200)
+            ->header('Content-Type', $mime)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+            ->header('Access-Control-Expose-Headers', 'Content-Type, Content-Length');
+
         return $res;
     }
 }
