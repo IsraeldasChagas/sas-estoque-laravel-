@@ -57,6 +57,14 @@ class RhCandidatoController extends Controller
 
         $vaga = $c->vaga_id ? DB::table('rh_vagas')->where('id', $c->vaga_id)->first() : null;
         $curriculo = DB::table('rh_curriculos')->where('candidato_id', $id)->orderByDesc('id')->first();
+        if ($curriculo && (! $curriculo->arquivo_path || ! Storage::disk('public')->exists($curriculo->arquivo_path))) {
+            $curriculo = null;
+        }
+
+        $fotoOk = false;
+        if (! empty($c->foto_path) && Storage::disk('public')->exists($c->foto_path)) {
+            $fotoOk = true;
+        }
         $entrevistas = DB::table('rh_entrevistas')->where('candidato_id', $id)->orderByDesc('id')->get();
         $documentos = DB::table('rh_documentos')->where('candidato_id', $id)->orderByDesc('id')->get();
         $historico = DB::table('rh_historico')->where('candidato_id', $id)->orderByDesc('id')->get();
@@ -65,6 +73,8 @@ class RhCandidatoController extends Controller
             'candidato' => $c,
             'vaga' => $vaga,
             'curriculo' => $curriculo,
+            'tem_curriculo' => (bool) $curriculo,
+            'tem_foto' => $fotoOk,
             'entrevistas' => $entrevistas,
             'documentos' => $documentos,
             'historico' => $historico,

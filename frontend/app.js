@@ -7466,7 +7466,8 @@ function renderRhCandidatoInlineRow(payload) {
   const c = payload?.candidato;
   if (!c) return "";
   const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
-  const temCurriculo = !!payload?.curriculo;
+  const temCurriculo = !!payload?.tem_curriculo || !!payload?.curriculo;
+  const temFoto = !!payload?.tem_foto || !!c.foto_path;
   const esc = (s) => escapeHtml(String(s ?? ""));
   const lgpd = c.consentimento_lgpd ? `OK (${(c.consentimento_em || "").toString().slice(0,19).replace("T"," ")})` : "NÃO";
 
@@ -7475,7 +7476,7 @@ function renderRhCandidatoInlineRow(payload) {
       <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
-            ${c.foto_path ? `<img data-rh-cand-foto="1" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
+            ${temFoto ? `<img data-rh-cand-foto="1" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
           </div>
           <div style="flex:1; min-width: 260px;">
             <div class="filters-grid">
@@ -7517,7 +7518,7 @@ function renderRhCandidatoInlineRow(payload) {
             <textarea class="rh-cand-obs" style="width:100%; min-height: 110px;">${esc(c.observacoes_internas || "")}</textarea>
 
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-              <button type="button" class="btn rh-cand-cv ${temCurriculo ? "" : "hidden"}">Ver currículo</button>
+              <button type="button" class="btn rh-cand-cv" data-has-cv="${temCurriculo ? "1" : "0"}" ${temCurriculo ? "" : "disabled"}>Ver currículo</button>
               <button type="button" class="btn primary rh-cand-salvar">Salvar</button>
               <button type="button" class="btn rh-cand-fechar">Fechar</button>
               <button type="button" class="btn rh-cand-anon" style="background:#b71c1c;color:#fff;">Anonimizar (excluir)</button>
@@ -12651,6 +12652,11 @@ function setupNavigation() {
           closeRhCandidatoInlineRow();
         });
         detailsTr.querySelector(".rh-cand-cv")?.addEventListener("click", async () => {
+          const hasCv = detailsTr.querySelector(".rh-cand-cv")?.getAttribute("data-has-cv") === "1";
+          if (!hasCv) {
+            showToast("Este candidato não tem currículo anexado.", "info");
+            return;
+          }
           try {
             const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
             const url = URL.createObjectURL(blob);
