@@ -135,6 +135,26 @@ body.sidebar-open {
   -webkit-overflow-scrolling: touch;
 }
 
+/* RH tem muitos itens + nested submenu (Recrutamento). */
+.nav-submenu.nav-submenu--rh.open .nav-submenu-content {
+  max-height: min(72vh, 520px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Submenu aninhado (usado em RH -> Recrutamento). */
+.nav-submenu.nav-submenu--nested {
+  margin-bottom: 0;
+}
+.nav-submenu.nav-submenu--nested .nav-submenu-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.nav-submenu.nav-submenu--nested.open .nav-submenu-content {
+  max-height: 260px;
+}
+
 .nav-submenu-btn--backup.nav-link-child {
   background: rgba(21, 101, 192, 0.35) !important;
 }
