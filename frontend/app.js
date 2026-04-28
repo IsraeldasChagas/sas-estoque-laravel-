@@ -7444,14 +7444,6 @@ function renderRhCandidatos(lista) {
   }).join("");
 }
 
-function buildWhatsappLink(nome, vagaTitulo, telefoneRaw) {
-  const tel = (telefoneRaw || "").toString().replace(/\D+/g, "");
-  if (!tel) return { url: "", label: "" };
-  const msg = `Olá ${nome}, sobre a vaga ${vagaTitulo || ""} do Sabor Paraense...`.trim();
-  const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
-  return { url, label: `+55 ${tel}` };
-}
-
 let rhCandidatoModalState = { id: null, curriculoId: null };
 
 async function abrirRhCandidatoModal(id) {
@@ -7462,7 +7454,6 @@ async function abrirRhCandidatoModal(id) {
   rhCandidatoModalState = { id: Number(id), temCurriculo: !!payload?.curriculo };
 
   const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
-  const whatsapp = buildWhatsappLink(c.nome, vagaTitulo, c.telefone);
 
   const setVal = (elId, v) => {
     const el = document.getElementById(elId);
@@ -7482,13 +7473,6 @@ async function abrirRhCandidatoModal(id) {
 
   const statusEl = document.getElementById("rhCandStatus");
   if (statusEl) statusEl.value = c.status || "novo";
-
-  const waBtn = document.getElementById("rhCandWhatsappBtn");
-  if (waBtn) {
-    waBtn.href = whatsapp.url || "#";
-    waBtn.classList.toggle("hidden", !whatsapp.url);
-    waBtn.textContent = whatsapp.url ? `WhatsApp (${whatsapp.label})` : "WhatsApp";
-  }
 
   const cvBtn = document.getElementById("rhCandCurriculoBtn");
   if (cvBtn) {
