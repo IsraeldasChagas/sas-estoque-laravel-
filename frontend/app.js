@@ -12375,6 +12375,7 @@ function setupNavigation() {
   // Setup nested submenu toggle for RH -> Recrutamento (delegado para não falhar se o menu for recriado)
   if (document.body && document.body.dataset.sasRhRecrutamentoToggleBound !== "1") {
     document.body.dataset.sasRhRecrutamentoToggleBound = "1";
+    // Usa capture=true para funcionar mesmo se algum handler fizer stopPropagation no bubble.
     document.addEventListener('click', (event) => {
       const el = event.target?.closest?.('#rhRecrutamentoMenu');
       if (!el) return;
@@ -12382,7 +12383,7 @@ function setupNavigation() {
       event.stopPropagation();
       const parent = el.closest('.nav-submenu');
       if (parent) parent.classList.toggle('open');
-    });
+    }, true);
   }
   // Setup submenu toggle for Configuracoes
   const configuracoesMenu = document.getElementById('configuracoesMenu');
