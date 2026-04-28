@@ -7429,19 +7429,75 @@ function renderRhCandidatos(lista) {
   tb.innerHTML = lista.map((c) => {
     const tel = (c.telefone || "").toString().replace(/\D+/g, "");
     const wa = tel ? `https://wa.me/55${tel}` : "";
+    const waLabel = tel ? `+55 ${tel}` : "";
     return `<tr data-id="${esc(c.id)}">
       <td data-label="ID">${esc(c.id)}</td>
       <td data-label="Nome">${esc(c.nome)}</td>
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
-      <td data-label="WhatsApp">${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener noreferrer" class="table-action">Abrir</a>` : "-"}</td>
+      <td data-label="WhatsApp">${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener noreferrer" class="table-action">Abrir</a><div class="subtle-text">${esc(waLabel)}</div>` : "-"}</td>
       <td data-label="Currículo"><button type="button" class="table-action btn-rh-cv" data-id="${esc(c.id)}">Ver</button></td>
       <td data-label="Ações" class="table-actions">
-        <button type="button" class="table-action btn-rh-status" data-id="${esc(c.id)}">Alterar status</button>
+        <button type="button" class="table-action btn-rh-ver" data-id="${esc(c.id)}">Abrir</button>
         <button type="button" class="table-action btn-rh-anonimizar" data-id="${esc(c.id)}" style="background:#b71c1c;color:#fff;">Anonimizar</button>
       </td>
     </tr>`;
   }).join("");
+}
+
+function buildWhatsappLink(nome, vagaTitulo, telefoneRaw) {
+  const tel = (telefoneRaw || "").toString().replace(/\D+/g, "");
+  if (!tel) return { url: "", label: "" };
+  const msg = `Olá ${nome}, sobre a vaga ${vagaTitulo || ""} do Sabor Paraense...`.trim();
+  const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+  return { url, label: `+55 ${tel}` };
+}
+
+function setModalOpen(overlayId, open) {
+  const ov = document.getElementById(overlayId);
+  if (!ov) return;
+  ov.classList.toggle("hidden", !open);
+}
+
+let rhCandidatoModalState = { id: null, curriculoId: null };
+
+async function abrirRhCandidatoModal(id) {
+  const payload = await fetchJSON(`/rh/candidatos/${id}`);
+  const c = payload?.candidato;
+  if (!c) throw new Error("Candidato não encontrado");
+
+  rhCandidatoModalState = { id: Number(id) };
+
+  const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
+  const whatsapp = buildWhatsappLink(c.nome, vagaTitulo, c.telefone);
+
+  const setVal = (elId, v) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.value = v == null ? "" : String(v);
+  };
+  setVal("rhCandNome", c.nome);
+  setVal("rhCandTelefone", c.telefone || "");
+  setVal("rhCandEmail", c.email || "");
+  setVal("rhCandVaga", vagaTitulo || "-");
+  setVal("rhCandUnidade", c.unidade || "-");
+  setVal("rhCandCidadeBairro", [c.cidade, c.bairro].filter(Boolean).join(" / ") || "-");
+  setVal("rhCandObs", c.observacoes_internas || "");
+
+  const lgpd = c.consentimento_lgpd ? `OK (${(c.consentimento_em || "").toString().slice(0,19).replace("T"," ")})` : "NÃO";
+  setVal("rhCandLgpd", lgpd);
+
+  const statusEl = document.getElementById("rhCandStatus");
+  if (statusEl) statusEl.value = c.status || "novo";
+
+  const waBtn = document.getElementById("rhCandWhatsappBtn");
+  if (waBtn) {
+    waBtn.href = whatsapp.url || "#";
+    waBtn.classList.toggle("hidden", !whatsapp.url);
+    waBtn.textContent = whatsapp.url ? `WhatsApp (${whatsapp.label})` : "WhatsApp";
+  }
+
+  setModalOpen("rhCandidatoModalOverlay", true);
 }
 
 async function loadRhBancoTalentos() {
@@ -12521,24 +12577,15 @@ function setupNavigation() {
       }
       return;
     }
-    const btnStatus = e.target.closest(".btn-rh-status");
-    if (btnStatus) {
+    const btnVer = e.target.closest(".btn-rh-ver");
+    if (btnVer) {
       e.preventDefault();
-      const id = btnStatus.dataset.id;
+      const id = btnVer.dataset.id;
       if (!id) return;
-      const novo = prompt("Novo status (novo, em_analise, entrevista, aprovado, em_contratacao, contratado, reprovado, banco_talentos):");
-      if (!novo) return;
       try {
-        await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status: novo }) });
-        showToast("Status atualizado.", "success");
-        await loadRhCandidatos({
-          status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
-          nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-          email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
-          telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
-        });
+        await abrirRhCandidatoModal(id);
       } catch (err) {
-        showToast(err?.message || "Erro ao atualizar status.", "error");
+        showToast(err?.message || "Erro ao abrir candidato.", "error");
       }
       return;
     }
@@ -12550,11 +12597,64 @@ function setupNavigation() {
       if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
       try {
         await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
-        showToast("Candidato anonimizado.", "success");
+        showToast("Candidato anonimizado (excluído via LGPD).", "success");
         await loadRhCandidatos();
       } catch (err) {
         showToast(err?.message || "Erro ao anonimizar.", "error");
       }
+    }
+  });
+
+  // Modal candidato
+  const closeCandModal = () => setModalOpen("rhCandidatoModalOverlay", false);
+  document.getElementById("rhCandidatoModalClose")?.addEventListener("click", closeCandModal);
+  document.getElementById("rhCandFecharBtn")?.addEventListener("click", closeCandModal);
+  document.getElementById("rhCandidatoModalOverlay")?.addEventListener("click", (e) => {
+    if (e.target?.id === "rhCandidatoModalOverlay") closeCandModal();
+  });
+  document.getElementById("rhCandCurriculoBtn")?.addEventListener("click", async () => {
+    const id = rhCandidatoModalState?.id;
+    if (!id) return;
+    try {
+      const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+    } catch (err) {
+      showToast(err?.message || "Erro ao abrir currículo.", "error");
+    }
+  });
+  document.getElementById("rhCandSalvarBtn")?.addEventListener("click", async () => {
+    const id = rhCandidatoModalState?.id;
+    if (!id) return;
+    const status = document.getElementById("rhCandStatus")?.value || "novo";
+    const obs = document.getElementById("rhCandObs")?.value || "";
+    try {
+      await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
+      await fetchJSON(`/rh/candidatos/${id}/observacoes`, { method: "PUT", body: JSON.stringify({ observacoes_internas: obs }) });
+      showToast("Candidato atualizado.", "success");
+      closeCandModal();
+      await loadRhCandidatos({
+        status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+        nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+        email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
+        telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+      });
+    } catch (err) {
+      showToast(err?.message || "Erro ao salvar candidato.", "error");
+    }
+  });
+  document.getElementById("rhCandAnonimizarBtn")?.addEventListener("click", async () => {
+    const id = rhCandidatoModalState?.id;
+    if (!id) return;
+    if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
+    try {
+      await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
+      showToast("Candidato anonimizado (excluído via LGPD).", "success");
+      closeCandModal();
+      await loadRhCandidatos();
+    } catch (err) {
+      showToast(err?.message || "Erro ao anonimizar.", "error");
     }
   });
 
