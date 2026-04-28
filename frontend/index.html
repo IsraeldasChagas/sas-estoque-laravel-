@@ -124,8 +124,24 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="funcionarios">Funcionários</a>
-              <a href="#" class="nav-link nav-link-child" data-section="rhRelatorio">Relatório</a>
+              <a href="#" class="nav-link nav-link-child" data-section="rhDashboard">Dashboard</a>
+
+              <div class="nav-submenu nav-submenu--nested">
+                <a href="#" class="nav-link nav-link-parent nav-link-child" id="rhRecrutamentoMenu">
+                  Recrutamento
+                  <span class="nav-arrow">▼</span>
+                </a>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="rhVagas">Vagas</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhCandidatos">Candidatos</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhEntrevistas">Entrevistas</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhBancoTalentos">Banco de Talentos</a>
+                </div>
+              </div>
+
+              <a href="#" class="nav-link nav-link-child" data-section="rhDocumentos">Documentos de Contratação</a>
+              <a href="#" class="nav-link nav-link-child" data-section="rhRelatorios">Relatórios RH</a>
+              <a href="#" class="nav-link nav-link-child" data-section="rhConfig">Configurações</a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--financeiro">
@@ -1571,6 +1587,284 @@
             </div>
           </section>
 
+          <!-- RH — Dashboard -->
+          <section id="rhDashboardSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Dashboard</h2>
+                <p class="subtle-text">Resumo do recrutamento.</p>
+              </div>
+            </div>
+            <div class="cards-grid" id="rhDashboardCards">
+              <div class="card-metric">
+                <div class="card-metric__label">Vagas abertas</div>
+                <div class="card-metric__value" id="rhDashVagasAbertas">—</div>
+              </div>
+              <div class="card-metric">
+                <div class="card-metric__label">Candidatos</div>
+                <div class="card-metric__value" id="rhDashCandidatosTotal">—</div>
+              </div>
+              <div class="card-metric">
+                <div class="card-metric__label">Novos candidatos</div>
+                <div class="card-metric__value" id="rhDashCandidatosNovos">—</div>
+              </div>
+              <div class="card-metric">
+                <div class="card-metric__label">Entrevistas</div>
+                <div class="card-metric__value" id="rhDashEntrevistasTotal">—</div>
+              </div>
+              <div class="card-metric">
+                <div class="card-metric__label">Aprovados</div>
+                <div class="card-metric__value" id="rhDashAprovados">—</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RH — Recrutamento: Vagas -->
+          <section id="rhVagasSection" class="view-section hidden">
+            <div class="funcionarios-header">
+              <div>
+                <h2>RH — Vagas</h2>
+                <p class="subtle-text">Cadastro e gestão de vagas (link público por slug).</p>
+              </div>
+              <button type="button" class="btn primary" id="rhVagaNovaBtn">+ Nova vaga</button>
+            </div>
+            <form id="rhVagasFiltroForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>Status
+                  <select id="rhVagasFiltroStatus" name="status">
+                    <option value="">Todos</option>
+                    <option value="aberta">Aberta</option>
+                    <option value="pausada">Pausada</option>
+                    <option value="encerrada">Encerrada</option>
+                  </select>
+                </label>
+                <label>Título
+                  <input type="text" id="rhVagasFiltroTitulo" name="titulo" placeholder="Buscar..." maxlength="160" autocomplete="off" />
+                </label>
+                <label>Unidade
+                  <input type="text" id="rhVagasFiltroUnidade" name="unidade" placeholder="Unidade..." maxlength="120" autocomplete="off" />
+                </label>
+                <label>Setor
+                  <input type="text" id="rhVagasFiltroSetor" name="setor" placeholder="Setor..." maxlength="120" autocomplete="off" />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Filtrar</button>
+                <button type="button" class="btn" id="rhVagasLimparFiltros">Limpar</button>
+              </div>
+            </form>
+            <div class="table-card form-card--wide">
+              <header>Vagas</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Título</th>
+                      <th>Unidade</th>
+                      <th>Setor</th>
+                      <th>Status</th>
+                      <th>Link</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhVagasTable">
+                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- RH — Recrutamento: Candidatos -->
+          <section id="rhCandidatosSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Candidatos</h2>
+                <p class="subtle-text">LGPD: documentos de contratação só após status Aprovado / Em contratação.</p>
+              </div>
+            </div>
+            <form id="rhCandidatosFiltroForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>Status
+                  <select id="rhCandidatosFiltroStatus" name="status">
+                    <option value="">Todos</option>
+                    <option value="novo">Novo</option>
+                    <option value="em_analise">Em análise</option>
+                    <option value="entrevista">Entrevista</option>
+                    <option value="aprovado">Aprovado</option>
+                    <option value="em_contratacao">Em contratação</option>
+                    <option value="contratado">Contratado</option>
+                    <option value="reprovado">Reprovado</option>
+                    <option value="banco_talentos">Banco de talentos</option>
+                  </select>
+                </label>
+                <label>Nome
+                  <input type="text" id="rhCandidatosFiltroNome" name="nome" placeholder="Buscar..." maxlength="160" autocomplete="off" />
+                </label>
+                <label>Email
+                  <input type="text" id="rhCandidatosFiltroEmail" name="email" placeholder="Buscar..." maxlength="160" autocomplete="off" />
+                </label>
+                <label>Telefone
+                  <input type="text" id="rhCandidatosFiltroTelefone" name="telefone" placeholder="Buscar..." maxlength="40" autocomplete="off" />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Filtrar</button>
+                <button type="button" class="btn" id="rhCandidatosLimparFiltros">Limpar</button>
+              </div>
+            </form>
+            <div class="table-card form-card--wide">
+              <header>Candidatos</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>Vaga</th>
+                      <th>Status</th>
+                      <th>WhatsApp</th>
+                      <th>Currículo</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhCandidatosTable">
+                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- RH — Recrutamento: Entrevistas -->
+          <section id="rhEntrevistasSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Entrevistas</h2>
+                <p class="subtle-text">Agenda e status das entrevistas.</p>
+              </div>
+              <button type="button" class="btn primary" id="rhEntrevistaNovaBtn">+ Nova entrevista</button>
+            </div>
+            <div class="table-card form-card--wide">
+              <header>Entrevistas</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Candidato</th>
+                      <th>Vaga</th>
+                      <th>Data</th>
+                      <th>Hora</th>
+                      <th>Local</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhEntrevistasTable">
+                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- RH — Banco de Talentos -->
+          <section id="rhBancoTalentosSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Banco de Talentos</h2>
+                <p class="subtle-text">Candidatos com status "Banco de talentos".</p>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header>Banco de talentos</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>Vaga</th>
+                      <th>Contato</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhBancoTalentosTable">
+                    <tr><td colspan="5" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- RH — Documentos de Contratação -->
+          <section id="rhDocumentosSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Documentos de Contratação</h2>
+                <p class="subtle-text">Disponível apenas para candidatos Aprovados / Em contratação.</p>
+              </div>
+            </div>
+            <form id="rhDocumentosUploadForm" class="filters-panel">
+              <div class="filters-grid">
+                <label>ID do candidato
+                  <input type="number" id="rhDocCandidatoId" name="candidato_id" min="1" required />
+                </label>
+                <label>Tipo
+                  <select id="rhDocTipo" name="tipo" required>
+                    <option value="cpf">CPF</option>
+                    <option value="rg">RG</option>
+                    <option value="comprovante">Comprovante</option>
+                    <option value="ctps">Carteira de trabalho</option>
+                  </select>
+                </label>
+                <label>Arquivo (PDF/JPG/PNG)
+                  <input type="file" id="rhDocArquivo" name="arquivo" required />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="submit" class="btn primary">Enviar documento</button>
+              </div>
+            </form>
+            <div class="table-card form-card--wide">
+              <header>Documentos enviados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Candidato</th>
+                      <th>Vaga</th>
+                      <th>Tipo</th>
+                      <th>Arquivo</th>
+                      <th>Enviado em</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhDocumentosTable">
+                    <tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- RH — Configurações -->
+          <section id="rhConfigSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Configurações</h2>
+                <p class="subtle-text">Atalhos e configurações do módulo RH.</p>
+              </div>
+            </div>
+            <div class="table-card">
+              <header>Atalhos</header>
+              <div style="padding: 1rem; display:flex; gap: .75rem; flex-wrap: wrap;">
+                <button type="button" class="btn" data-section="funcionarios">Abrir Funcionários (legado)</button>
+              </div>
+            </div>
+          </section>
+
           <!-- Modulo RH - Funcionarios -->
           <section id="funcionariosSection" class="view-section hidden">
             <div class="funcionarios-header">
@@ -1655,11 +1949,11 @@
             </div>
           </section>
 
-          <!-- RH — Relatório (PDF contatos) -->
-          <section id="rhRelatorioSection" class="view-section hidden">
+          <!-- RH — Relatórios RH (PDF contatos) -->
+          <section id="rhRelatoriosSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH — Relatório</h2>
+                <h2>RH — Relatórios</h2>
                 <p class="subtle-text">Gera PDF com nome, WhatsApp, unidade e função (cargo). Use os filtros abaixo ou deixe em branco para listar todos conforme permissão.</p>
               </div>
             </div>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\KanbanTaskController;
+use App\Http\Controllers\Rh\RhPublicoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,3 +30,9 @@ Route::middleware(['web', 'sas.usuario'])->prefix('kanban-administrativo')->grou
     Route::delete('/tasks/{task}', [KanbanTaskController::class, 'destroy'])->name('kanban.web.tasks.destroy');
     Route::patch('/tasks/{task}/status', [KanbanTaskController::class, 'updateStatus'])->name('kanban.web.tasks.updateStatus');
 });
+
+// ============================================
+// RH (Recrutamento) - Link público de vagas
+// ============================================
+Route::get('/vagas/{slug}', [RhPublicoController::class, 'showVaga']);
+Route::post('/vagas/{slug}/candidatar', [RhPublicoController::class, 'candidatar']);

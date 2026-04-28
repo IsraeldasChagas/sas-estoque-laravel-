@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Api\EntradaEstoqueController;
 use App\Http\Controllers\KanbanTaskController;
+use App\Http\Controllers\Rh\RhCandidatoController;
+use App\Http\Controllers\Rh\RhDashboardController;
+use App\Http\Controllers\Rh\RhDocumentoController;
+use App\Http\Controllers\Rh\RhEntrevistaController;
+use App\Http\Controllers\Rh\RhVagaController;
 use App\Services\EntradaEstoqueService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
@@ -9269,6 +9274,39 @@ Route::middleware(['sas.usuario'])->group(function () {
     Route::put('/kanban-tasks/{task}', [KanbanTaskController::class, 'update']);
     Route::delete('/kanban-tasks/{task}', [KanbanTaskController::class, 'destroy']);
     Route::patch('/kanban-tasks/{task}/status', [KanbanTaskController::class, 'updateStatus']);
+});
+
+// ============================================
+// RH (Recrutamento) - API Admin
+// ============================================
+Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
+    // Dashboard
+    Route::get('/dashboard/stats', [RhDashboardController::class, 'stats']);
+
+    // Vagas
+    Route::get('/vagas', [RhVagaController::class, 'index']);
+    Route::post('/vagas', [RhVagaController::class, 'store']);
+    Route::put('/vagas/{id}', [RhVagaController::class, 'update']);
+    Route::delete('/vagas/{id}', [RhVagaController::class, 'destroy']);
+    Route::get('/vagas/{id}/qrcode', [RhVagaController::class, 'qrcode']);
+
+    // Candidatos
+    Route::get('/candidatos', [RhCandidatoController::class, 'index']);
+    Route::get('/candidatos/{id}', [RhCandidatoController::class, 'show']);
+    Route::get('/candidatos/{id}/curriculo', [RhCandidatoController::class, 'downloadCurriculo']);
+    Route::put('/candidatos/{id}/status', [RhCandidatoController::class, 'updateStatus']);
+    Route::put('/candidatos/{id}/observacoes', [RhCandidatoController::class, 'updateObservacoes']);
+    Route::post('/candidatos/{id}/anonimizar', [RhCandidatoController::class, 'anonymize']);
+
+    // Entrevistas
+    Route::get('/entrevistas', [RhEntrevistaController::class, 'index']);
+    Route::post('/entrevistas', [RhEntrevistaController::class, 'store']);
+    Route::put('/entrevistas/{id}', [RhEntrevistaController::class, 'update']);
+
+    // Documentos (pós aprovação)
+    Route::get('/documentos', [RhDocumentoController::class, 'index']);
+    Route::post('/candidatos/{candidatoId}/documentos', [RhDocumentoController::class, 'upload']);
+    Route::get('/documentos/{id}/download', [RhDocumentoController::class, 'download']);
 });
 
 // ============================================

@@ -788,7 +788,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "rhConfig", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -796,7 +796,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "rhConfig", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -836,7 +836,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorio"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "rhConfig"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -3403,7 +3403,7 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorio");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || regras.sections.includes("rhDocumentos") || regras.sections.includes("rhConfig");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
@@ -3585,7 +3585,7 @@ function navigateTo(section) {
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    if (section === "funcionarios" || section === "rhRelatorio") {
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || section === "rhDocumentos" || section === "rhConfig") {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
@@ -7311,7 +7311,7 @@ async function loadFuncionarios(filtros = {}) {
   return state.funcionarios;
 }
 
-/** Preenche unidades no filtro da tela RH — Relatório. */
+/** Preenche unidades no filtro da tela RH — Relatórios. */
 async function loadRhRelatorioSection() {
   await loadUnidades(false).catch(() => {});
   const sel = document.getElementById("rhRelatorioFiltroUnidade");
@@ -7321,6 +7321,191 @@ async function loadRhRelatorioSection() {
       .join("");
     sel.innerHTML = '<option value="">Todas</option>' + opts;
   }
+}
+
+function getPublicBaseUrl() {
+  const api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) ? String(window.APP_CONFIG.API_URL) : String(API_URL || "");
+  return api.replace(/\/api\/?$/i, "");
+}
+
+function getVagaPublicUrl(slug) {
+  return `${getPublicBaseUrl()}/vagas/${slug}`;
+}
+
+async function fetchBlob(path, options = {}) {
+  const tokenHeaders = currentUser && currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {};
+  const userHeaders =
+    currentUser && typeof currentUser.id !== "undefined" && currentUser.id !== null
+      ? { "X-Usuario-Id": String(currentUser.id) }
+      : {};
+  const { headers, ...rest } = options;
+  const mergedHeaders = {
+    ...tokenHeaders,
+    ...userHeaders,
+    ...getDeviceHeaders(),
+    ...(headers || {}),
+  };
+  const res = await fetch(`${API_URL}${path}`, { cache: "no-store", headers: mergedHeaders, ...rest });
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const ct = res.headers.get("Content-Type") || "";
+      if (ct.includes("json")) {
+        const j = await res.json();
+        if (j?.error) msg = j.error;
+      }
+    } catch (_) {}
+    throw new Error(msg);
+  }
+  return await res.blob();
+}
+
+async function loadRhDashboard() {
+  const stats = await fetchJSON("/rh/dashboard/stats");
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (v ?? "—");
+  };
+  set("rhDashVagasAbertas", stats?.vagas_abertas);
+  set("rhDashCandidatosTotal", stats?.candidatos_total);
+  set("rhDashCandidatosNovos", stats?.candidatos_novos);
+  set("rhDashEntrevistasTotal", stats?.entrevistas_total);
+  set("rhDashAprovados", stats?.aprovados);
+}
+
+async function loadRhVagas(filtros = {}) {
+  const qs = new URLSearchParams();
+  ["status", "titulo", "unidade", "setor"].forEach((k) => {
+    if (filtros[k]) qs.append(k, filtros[k]);
+  });
+  const path = `/rh/vagas${qs.toString() ? `?${qs}` : ""}`;
+  const lista = await fetchJSON(path);
+  renderRhVagas(Array.isArray(lista) ? lista : []);
+}
+
+function renderRhVagas(lista) {
+  const tb = document.getElementById("rhVagasTable");
+  if (!tb) return;
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhuma vaga encontrada.</td></tr>';
+    return;
+  }
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = lista.map((v) => {
+    const link = getVagaPublicUrl(v.slug);
+    return `<tr data-id="${esc(v.id)}" data-slug="${esc(v.slug)}">
+      <td data-label="ID">${esc(v.id)}</td>
+      <td data-label="Título">${esc(v.titulo)}</td>
+      <td data-label="Unidade">${esc(v.unidade || "-")}</td>
+      <td data-label="Setor">${esc(v.setor || "-")}</td>
+      <td data-label="Status">${esc((v.status || "").toUpperCase())}</td>
+      <td data-label="Link"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">Abrir</a></td>
+      <td data-label="Ações" class="table-actions">
+        <button type="button" class="table-action btn-rh-vaga-copiar-link" data-link="${esc(link)}">Copiar link</button>
+        <button type="button" class="table-action btn-rh-vaga-qrcode" data-id="${esc(v.id)}">QR Code</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function loadRhCandidatos(filtros = {}) {
+  const qs = new URLSearchParams();
+  ["status", "nome", "email", "telefone"].forEach((k) => {
+    if (filtros[k]) qs.append(k, filtros[k]);
+  });
+  const path = `/rh/candidatos${qs.toString() ? `?${qs}` : ""}`;
+  const lista = await fetchJSON(path);
+  renderRhCandidatos(Array.isArray(lista) ? lista : []);
+}
+
+function renderRhCandidatos(lista) {
+  const tb = document.getElementById("rhCandidatosTable");
+  if (!tb) return;
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
+    return;
+  }
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = lista.map((c) => {
+    const tel = (c.telefone || "").toString().replace(/\D+/g, "");
+    const wa = tel ? `https://wa.me/55${tel}` : "";
+    return `<tr data-id="${esc(c.id)}">
+      <td data-label="ID">${esc(c.id)}</td>
+      <td data-label="Nome">${esc(c.nome)}</td>
+      <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
+      <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
+      <td data-label="WhatsApp">${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener noreferrer" class="table-action">Abrir</a>` : "-"}</td>
+      <td data-label="Currículo"><button type="button" class="table-action btn-rh-cv" data-id="${esc(c.id)}">Ver</button></td>
+      <td data-label="Ações" class="table-actions">
+        <button type="button" class="table-action btn-rh-status" data-id="${esc(c.id)}">Alterar status</button>
+        <button type="button" class="table-action btn-rh-anonimizar" data-id="${esc(c.id)}" style="background:#b71c1c;color:#fff;">Anonimizar</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function loadRhBancoTalentos() {
+  const lista = await fetchJSON("/rh/candidatos?status=banco_talentos");
+  const tb = document.getElementById("rhBancoTalentosTable");
+  if (!tb) return;
+  const items = Array.isArray(lista) ? lista : [];
+  if (!items.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#607d8b">Nenhum candidato no banco de talentos.</td></tr>';
+    return;
+  }
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = items.map((c) => {
+    const tel = (c.telefone || "").toString().replace(/\D+/g, "");
+    const wa = tel ? `https://wa.me/55${tel}` : "";
+    return `<tr data-id="${esc(c.id)}">
+      <td>${esc(c.id)}</td>
+      <td>${esc(c.nome)}</td>
+      <td>${esc(c.vaga_titulo || "-")}</td>
+      <td>${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : "-"}</td>
+      <td class="table-actions"><button type="button" class="table-action btn-rh-cv" data-id="${esc(c.id)}">Ver currículo</button></td>
+    </tr>`;
+  }).join("");
+}
+
+async function loadRhEntrevistas() {
+  const lista = await fetchJSON("/rh/entrevistas");
+  const tb = document.getElementById("rhEntrevistasTable");
+  if (!tb) return;
+  const items = Array.isArray(lista) ? lista : [];
+  if (!items.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhuma entrevista registrada.</td></tr>';
+    return;
+  }
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = items.map((e) => `<tr>
+    <td>${esc(e.id)}</td>
+    <td>${esc(e.candidato_nome || "-")}</td>
+    <td>${esc(e.vaga_titulo || "-")}</td>
+    <td>${esc(e.data || "-")}</td>
+    <td>${esc(e.hora || "-")}</td>
+    <td>${esc(e.local || "-")}</td>
+    <td>${esc((e.status || "").toUpperCase())}</td>
+  </tr>`).join("");
+}
+
+async function loadRhDocumentos() {
+  const lista = await fetchJSON("/rh/documentos");
+  const tb = document.getElementById("rhDocumentosTable");
+  if (!tb) return;
+  const items = Array.isArray(lista) ? lista : [];
+  if (!items.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
+    return;
+  }
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = items.map((d) => `<tr>
+    <td>${esc(d.id)}</td>
+    <td>${esc(d.candidato_nome || "-")}</td>
+    <td>${esc(d.vaga_titulo || "-")}</td>
+    <td>${esc((d.tipo || "").toUpperCase())}</td>
+    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${esc(d.id)}">Baixar</button></td>
+    <td>${esc((d.created_at || "").toString().slice(0,19).replace("T"," "))}</td>
+  </tr>`).join("");
 }
 
 /** PDF nome, WhatsApp, unidade e função — mesmos query params de GET /funcionarios. */
@@ -7817,7 +8002,7 @@ async function startAppSession(user) {
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
       "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
-      "funcionarios", "rhRelatorio", "logs"
+      "funcionarios", "rhRelatorios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhConfig", "logs"
     ]);
 
     let sectionToNavigate = "boasVindas";
@@ -7935,7 +8120,13 @@ async function startAppSession(user) {
           }
         }
         else if (sectionToNavigate === 'funcionarios') await loadFuncionarios();
-        else if (sectionToNavigate === "rhRelatorio") await loadRhRelatorioSection();
+        else if (sectionToNavigate === "rhDashboard") await loadRhDashboard();
+        else if (sectionToNavigate === "rhVagas") await loadRhVagas();
+        else if (sectionToNavigate === "rhCandidatos") await loadRhCandidatos();
+        else if (sectionToNavigate === "rhEntrevistas") await loadRhEntrevistas();
+        else if (sectionToNavigate === "rhBancoTalentos") await loadRhBancoTalentos();
+        else if (sectionToNavigate === "rhDocumentos") await loadRhDocumentos();
+        else if (sectionToNavigate === "rhRelatorios") await loadRhRelatorioSection();
         else if (sectionToNavigate === 'fechaTecnica') {
           onNavigateFichaTecnicaCallback();
         } else if (sectionToNavigate === 'alvara') {
@@ -12013,7 +12204,13 @@ function wireSidebarSectionNavClicks() {
       else if (target === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
       else if (target === "usuarios") await loadUsuarios();
       else if (target === "funcionarios") await loadFuncionarios();
-      else if (target === "rhRelatorio") await loadRhRelatorioSection();
+      else if (target === "rhDashboard") await loadRhDashboard();
+      else if (target === "rhVagas") await loadRhVagas();
+      else if (target === "rhCandidatos") await loadRhCandidatos();
+      else if (target === "rhEntrevistas") await loadRhEntrevistas();
+      else if (target === "rhBancoTalentos") await loadRhBancoTalentos();
+      else if (target === "rhDocumentos") await loadRhDocumentos();
+      else if (target === "rhRelatorios") await loadRhRelatorioSection();
       else if (target === "reciboAjuda") {
         if (typeof window.loadReciboAjudaSection === "function") {
           await window.loadReciboAjudaSection();
@@ -12175,6 +12372,17 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
+  // Setup nested submenu toggle for RH -> Recrutamento
+  const rhRecrutamentoMenu = document.getElementById('rhRecrutamentoMenu');
+  if (rhRecrutamentoMenu && rhRecrutamentoMenu.dataset.sasSubmenuToggleBound !== "1") {
+    rhRecrutamentoMenu.dataset.sasSubmenuToggleBound = "1";
+    rhRecrutamentoMenu.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = rhRecrutamentoMenu.closest('.nav-submenu');
+      if (parent) parent.classList.toggle('open');
+    });
+  }
   // Setup submenu toggle for Configuracoes
   const configuracoesMenu = document.getElementById('configuracoesMenu');
   if (configuracoesMenu && configuracoesMenu.dataset.sasSubmenuToggleBound !== "1") {
@@ -12208,6 +12416,228 @@ function setupNavigation() {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
+  });
+
+  // RH — Dashboard
+  document.getElementById("rhDashboardSection")?.addEventListener("section:load", () => {
+    loadRhDashboard().catch((err) => showToast(err?.message || "Erro ao carregar dashboard RH.", "error"));
+  });
+
+  // RH — Vagas
+  document.getElementById("rhVagasFiltroForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadRhVagas({
+      status: document.getElementById("rhVagasFiltroStatus")?.value || "",
+      titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
+      unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
+      setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
+    }).catch((err) => showToast(err?.message || "Erro ao carregar vagas.", "error"));
+  });
+  document.getElementById("rhVagasLimparFiltros")?.addEventListener("click", () => {
+    ["rhVagasFiltroStatus", "rhVagasFiltroTitulo", "rhVagasFiltroUnidade", "rhVagasFiltroSetor"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    loadRhVagas().catch(() => {});
+  });
+  document.getElementById("rhVagaNovaBtn")?.addEventListener("click", async () => {
+    try {
+      const titulo = prompt("Título da vaga:");
+      if (!titulo) return;
+      const descricao = prompt("Descrição da vaga:");
+      if (!descricao) return;
+      const unidade = prompt("Unidade (opcional):") || "";
+      const setor = prompt("Setor (opcional):") || "";
+      const quantidadeRaw = prompt("Quantidade (padrão 1):") || "1";
+      const quantidade = Math.max(1, Number(quantidadeRaw) || 1);
+      await fetchJSON("/rh/vagas", { method: "POST", body: JSON.stringify({ titulo, descricao, unidade, setor, quantidade }) });
+      showToast("Vaga criada.", "success");
+      await loadRhVagas();
+    } catch (err) {
+      showToast(err?.message || "Erro ao criar vaga.", "error");
+    }
+  });
+  document.getElementById("rhVagasSection")?.addEventListener("click", async (e) => {
+    const btnCopy = e.target.closest(".btn-rh-vaga-copiar-link");
+    if (btnCopy) {
+      e.preventDefault();
+      const link = btnCopy.dataset.link || "";
+      try {
+        await navigator.clipboard.writeText(link);
+        showToast("Link copiado.", "success");
+      } catch (_) {
+        showToast("Não foi possível copiar. Copie manualmente o link da vaga.", "warning");
+      }
+      return;
+    }
+    const btnQr = e.target.closest(".btn-rh-vaga-qrcode");
+    if (btnQr) {
+      e.preventDefault();
+      const id = btnQr.dataset.id;
+      if (!id) return;
+      try {
+        const blob = await fetchBlob(`/rh/vagas/${id}/qrcode`);
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank", "noopener,noreferrer");
+        setTimeout(() => URL.revokeObjectURL(url), 120000);
+      } catch (err) {
+        showToast(err?.message || "Erro ao gerar QR Code.", "error");
+      }
+    }
+  });
+
+  // RH — Candidatos
+  document.getElementById("rhCandidatosFiltroForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadRhCandidatos({
+      status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+      nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+      email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
+      telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+    }).catch((err) => showToast(err?.message || "Erro ao carregar candidatos.", "error"));
+  });
+  document.getElementById("rhCandidatosLimparFiltros")?.addEventListener("click", () => {
+    ["rhCandidatosFiltroStatus", "rhCandidatosFiltroNome", "rhCandidatosFiltroEmail", "rhCandidatosFiltroTelefone"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    loadRhCandidatos().catch(() => {});
+  });
+  document.getElementById("rhCandidatosSection")?.addEventListener("click", async (e) => {
+    const btnCv = e.target.closest(".btn-rh-cv");
+    if (btnCv) {
+      e.preventDefault();
+      const id = btnCv.dataset.id;
+      if (!id) return;
+      try {
+        const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank", "noopener,noreferrer");
+        setTimeout(() => URL.revokeObjectURL(url), 120000);
+      } catch (err) {
+        showToast(err?.message || "Erro ao abrir currículo.", "error");
+      }
+      return;
+    }
+    const btnStatus = e.target.closest(".btn-rh-status");
+    if (btnStatus) {
+      e.preventDefault();
+      const id = btnStatus.dataset.id;
+      if (!id) return;
+      const novo = prompt("Novo status (novo, em_analise, entrevista, aprovado, em_contratacao, contratado, reprovado, banco_talentos):");
+      if (!novo) return;
+      try {
+        await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status: novo }) });
+        showToast("Status atualizado.", "success");
+        await loadRhCandidatos({
+          status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+          nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+          email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
+          telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+        });
+      } catch (err) {
+        showToast(err?.message || "Erro ao atualizar status.", "error");
+      }
+      return;
+    }
+    const btnAnon = e.target.closest(".btn-rh-anonimizar");
+    if (btnAnon) {
+      e.preventDefault();
+      const id = btnAnon.dataset.id;
+      if (!id) return;
+      if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
+      try {
+        await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
+        showToast("Candidato anonimizado.", "success");
+        await loadRhCandidatos();
+      } catch (err) {
+        showToast(err?.message || "Erro ao anonimizar.", "error");
+      }
+    }
+  });
+
+  // RH — Entrevistas
+  document.getElementById("rhEntrevistaNovaBtn")?.addEventListener("click", async () => {
+    try {
+      const candidato_id = Number(prompt("ID do candidato:") || "");
+      if (!candidato_id) return;
+      const data = prompt("Data (AAAA-MM-DD) opcional:") || "";
+      const hora = prompt("Hora (HH:MM) opcional:") || "";
+      const local = prompt("Local (opcional):") || "";
+      const responsavel = prompt("Responsável (opcional):") || "";
+      const observacao = prompt("Observação (opcional):") || "";
+      await fetchJSON("/rh/entrevistas", { method: "POST", body: JSON.stringify({ candidato_id, data: data || null, hora: hora || null, local, responsavel, observacao }) });
+      showToast("Entrevista criada.", "success");
+      await loadRhEntrevistas();
+    } catch (err) {
+      showToast(err?.message || "Erro ao criar entrevista.", "error");
+    }
+  });
+
+  // RH — Documentos
+  document.getElementById("rhDocumentosUploadForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const candidatoId = document.getElementById("rhDocCandidatoId")?.value;
+    const tipo = document.getElementById("rhDocTipo")?.value;
+    const file = document.getElementById("rhDocArquivo")?.files?.[0];
+    if (!candidatoId || !tipo || !file) {
+      showToast("Informe candidato, tipo e arquivo.", "warning");
+      return;
+    }
+    try {
+      const fd = new FormData();
+      fd.append("tipo", tipo);
+      fd.append("arquivo", file);
+      const headers = {
+        ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+        ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+        ...getDeviceHeaders(),
+      };
+      const res = await fetch(`${API_URL}/rh/candidatos/${encodeURIComponent(String(candidatoId))}/documentos`, {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+      const text = await res.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch (_) {}
+      if (!res.ok) throw new Error(payload?.error || `Erro ${res.status}`);
+      showToast("Documento enviado.", "success");
+      await loadRhDocumentos();
+      const input = document.getElementById("rhDocArquivo");
+      if (input) input.value = "";
+    } catch (err) {
+      showToast(err?.message || "Erro ao enviar documento.", "error");
+    }
+  });
+  document.getElementById("rhDocumentosSection")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".btn-rh-doc-download");
+    if (!btn) return;
+    e.preventDefault();
+    const id = btn.dataset.id;
+    if (!id) return;
+    try {
+      const blob = await fetchBlob(`/rh/documentos/${id}/download`);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+    } catch (err) {
+      showToast(err?.message || "Erro ao baixar documento.", "error");
+    }
+  });
+
+  // RH — Config: botões que navegam para seções internas
+  document.getElementById("rhConfigSection")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-section]");
+    const target = btn?.getAttribute("data-section");
+    if (!target) return;
+    e.preventDefault();
+    const regras = applyPermissions();
+    if (!regras.sections.includes(target)) {
+      showToast("Perfil sem permissão para acessar esta área.", "error");
+      return;
+    }
+    navigateTo(target);
   });
 }
 
