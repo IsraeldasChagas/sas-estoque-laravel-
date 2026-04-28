@@ -120,23 +120,23 @@ body.sidebar-open {
   transition: max-height 0.3s ease;
 }
 
-.nav-submenu.open .nav-submenu-content {
+.nav-submenu.open > .nav-submenu-content {
   max-height: 200px;
 }
 
-.nav-submenu.nav-submenu--config.open .nav-submenu-content {
+.nav-submenu.nav-submenu--config.open > .nav-submenu-content {
   max-height: 320px;
 }
 
 /* Financeiro tem 6+ itens (Boleto…Auditoria…Dashboard); 280px cortava o último com overflow:hidden */
-.nav-submenu.nav-submenu--financeiro.open .nav-submenu-content {
+.nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content {
   max-height: min(72vh, 520px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 /* RH tem muitos itens + nested submenu (Recrutamento). */
-.nav-submenu.nav-submenu--rh.open .nav-submenu-content {
+.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
   max-height: min(72vh, 520px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -146,12 +146,12 @@ body.sidebar-open {
 .nav-submenu.nav-submenu--nested {
   margin-bottom: 0;
 }
-.nav-submenu.nav-submenu--nested .nav-submenu-content {
+.nav-submenu.nav-submenu--nested > .nav-submenu-content {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease;
 }
-.nav-submenu.nav-submenu--nested.open .nav-submenu-content {
+.nav-submenu.nav-submenu--nested.open > .nav-submenu-content {
   max-height: 260px;
 }
 
