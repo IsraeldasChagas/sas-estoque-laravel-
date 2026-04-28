@@ -9279,6 +9279,16 @@ Route::middleware(['sas.usuario'])->group(function () {
 // ============================================
 // RH (Recrutamento) - API Admin
 // ============================================
+$rhCors = fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+    ->header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
+
+// Preflight CORS (IMPORTANTE: não passa pelo sas.usuario)
+Route::options('/rh/candidatos/{id}/curriculo', $rhCors);
+Route::options('/rh/candidatos/{id}/foto', $rhCors);
+
 Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     // Dashboard
     Route::get('/dashboard/stats', [RhDashboardController::class, 'stats']);

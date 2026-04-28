@@ -12657,12 +12657,15 @@ function setupNavigation() {
             showToast("Este candidato não tem currículo anexado.", "info");
             return;
           }
+          const win = window.open("about:blank", "_blank", "noopener,noreferrer");
           try {
             const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
             const url = URL.createObjectURL(blob);
-            window.open(url, "_blank", "noopener,noreferrer");
+            if (win) win.location.href = url;
+            else window.open(url, "_blank", "noopener,noreferrer");
             setTimeout(() => URL.revokeObjectURL(url), 120000);
           } catch (err) {
+            if (win) try { win.close(); } catch (_) {}
             showToast(err?.message || "Erro ao abrir currículo.", "error");
           }
         });
