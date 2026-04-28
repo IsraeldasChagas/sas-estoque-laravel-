@@ -1733,71 +1733,7 @@
               </div>
             </div>
 
-            <!-- Modal: Detalhes do candidato -->
-            <div class="modal-backdrop" id="rhCandidatoModal" role="presentation">
-              <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="rhCandidatoModalTitle" style="max-width: 920px;">
-                <header>
-                  <h2 id="rhCandidatoModalTitle">Candidato</h2>
-                  <button type="button" class="close-btn" id="rhCandidatoModalClose" aria-label="Fechar">×</button>
-                </header>
-                <div class="modal-body">
-                  <div class="filters-grid" style="margin-bottom: 1rem;">
-                    <label>Nome
-                      <input type="text" id="rhCandNome" readonly />
-                    </label>
-                    <label>Telefone
-                      <input type="text" id="rhCandTelefone" readonly />
-                    </label>
-                    <label>Email
-                      <input type="text" id="rhCandEmail" readonly />
-                    </label>
-                    <label>Status
-                      <select id="rhCandStatus">
-                        <option value="novo">Novo</option>
-                        <option value="em_analise">Em análise</option>
-                        <option value="entrevista">Entrevista</option>
-                        <option value="aprovado">Aprovado</option>
-                        <option value="em_contratacao">Em contratação</option>
-                        <option value="contratado">Contratado</option>
-                        <option value="reprovado">Reprovado</option>
-                        <option value="banco_talentos">Banco de talentos</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div class="filters-grid" style="margin-bottom: 1rem;">
-                    <label>Vaga
-                      <input type="text" id="rhCandVaga" readonly />
-                    </label>
-                    <label>Unidade
-                      <input type="text" id="rhCandUnidade" readonly />
-                    </label>
-                    <label>Cidade / Bairro
-                      <input type="text" id="rhCandCidadeBairro" readonly />
-                    </label>
-                    <label>Consentimento LGPD
-                      <input type="text" id="rhCandLgpd" readonly />
-                    </label>
-                  </div>
-
-                  <label style="display:block; margin-bottom:.35rem;">Observações internas</label>
-                  <textarea id="rhCandObs" class="form-control" style="width:100%; min-height: 120px;"></textarea>
-
-                  <div class="filters-actions" style="margin-top: 1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
-                    <button type="button" class="btn" id="rhCandCurriculoBtn">Ver currículo</button>
-                    <button type="button" class="btn primary" id="rhCandSalvarBtn">Salvar</button>
-                    <button type="button" class="btn" id="rhCandFecharBtn">Fechar</button>
-                    <button type="button" class="btn" id="rhCandAnonimizarBtn" style="background:#b71c1c;color:#fff;">Anonimizar (excluir)</button>
-                  </div>
-                  <div class="subtle-text" style="margin-top:.5rem;">
-                    LGPD: anonimizar remove dados pessoais e apaga arquivos do candidato.
-                  </div>
-                </div>
-                <footer style="display:flex; justify-content:flex-end; gap:.5rem;">
-                  <button type="button" class="btn" id="rhCandFecharBtn">Fechar</button>
-                </footer>
-              </div>
-            </div>
+            <!-- Detalhes inline do candidato: é inserido via JS logo abaixo da linha -->
           </section>
 
           <!-- RH — Recrutamento: Entrevistas -->

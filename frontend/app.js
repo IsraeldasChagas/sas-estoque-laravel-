@@ -7332,6 +7332,12 @@ function getVagaPublicUrl(slug) {
   return `${getPublicBaseUrl()}/vagas/${slug}`;
 }
 
+function getPublicStorageUrl(storagePath) {
+  if (!storagePath) return "";
+  const base = getPublicBaseUrl().replace(/\/$/, "");
+  return `${base}/storage/${String(storagePath).replace(/^\/+/, "")}`;
+}
+
 async function fetchBlob(path, options = {}) {
   const tokenHeaders = currentUser && currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {};
   const userHeaders =
@@ -7430,56 +7436,101 @@ function renderRhCandidatos(lista) {
     const tel = (c.telefone || "").toString().replace(/\D+/g, "");
     const waLabel = tel ? `+55 ${tel}` : "";
     const temCurriculo = String(c.tem_curriculo ?? "").toLowerCase() === "1" || c.tem_curriculo === 1 || c.tem_curriculo === true;
+    const temFoto = !!c.foto_path;
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
+    const badgeFoto = temFoto ? ' <span title="Tem foto anexada" aria-label="Tem foto anexada">🖼️</span>' : "";
     return `<tr data-id="${esc(c.id)}">
       <td data-label="ID">${esc(c.id)}</td>
-      <td data-label="Nome">${esc(c.nome)}${badgeCurriculo}</td>
+      <td data-label="Nome">${esc(c.nome)}${badgeCurriculo}${badgeFoto}</td>
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
       <td data-label="WhatsApp">${waLabel ? `<span>${esc(waLabel)}</span>` : "-"}</td>
       <td data-label="Ações" class="table-actions">
-        <button type="button" class="table-action btn-rh-ver" data-id="${esc(c.id)}">Abrir</button>
+        <button type="button" class="table-action btn-rh-toggle" data-id="${esc(c.id)}">Abrir</button>
       </td>
     </tr>`;
   }).join("");
 }
 
-let rhCandidatoModalState = { id: null, curriculoId: null };
+let rhCandidatoInlineOpenId = null;
 
-async function abrirRhCandidatoModal(id) {
-  const payload = await fetchJSON(`/rh/candidatos/${id}`);
+function closeRhCandidatoInlineRow() {
+  const tb = document.getElementById("rhCandidatosTable");
+  if (!tb) return;
+  const openRow = tb.querySelector('tr[data-rh-candidato-inline="1"]');
+  if (openRow) openRow.remove();
+  rhCandidatoInlineOpenId = null;
+}
+
+function renderRhCandidatoInlineRow(payload) {
   const c = payload?.candidato;
-  if (!c) throw new Error("Candidato não encontrado");
-
-  rhCandidatoModalState = { id: Number(id), temCurriculo: !!payload?.curriculo };
-
+  if (!c) return "";
   const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
-
-  const setVal = (elId, v) => {
-    const el = document.getElementById(elId);
-    if (!el) return;
-    el.value = v == null ? "" : String(v);
-  };
-  setVal("rhCandNome", c.nome);
-  setVal("rhCandTelefone", c.telefone || "");
-  setVal("rhCandEmail", c.email || "");
-  setVal("rhCandVaga", vagaTitulo || "-");
-  setVal("rhCandUnidade", c.unidade || "-");
-  setVal("rhCandCidadeBairro", [c.cidade, c.bairro].filter(Boolean).join(" / ") || "-");
-  setVal("rhCandObs", c.observacoes_internas || "");
-
+  const temCurriculo = !!payload?.curriculo;
+  const fotoUrl = c.foto_path ? getPublicStorageUrl(c.foto_path) : "";
+  const esc = (s) => escapeHtml(String(s ?? ""));
   const lgpd = c.consentimento_lgpd ? `OK (${(c.consentimento_em || "").toString().slice(0,19).replace("T"," ")})` : "NÃO";
-  setVal("rhCandLgpd", lgpd);
 
-  const statusEl = document.getElementById("rhCandStatus");
-  if (statusEl) statusEl.value = c.status || "novo";
+  return `
+    <td colspan="6" style="padding: 0;">
+      <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
+        <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
+          <div style="min-width: 120px;">
+            ${fotoUrl ? `<img src="${esc(fotoUrl)}" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
+          </div>
+          <div style="flex:1; min-width: 260px;">
+            <div class="filters-grid">
+              <label>Nome
+                <input type="text" value="${esc(c.nome)}" readonly />
+              </label>
+              <label>Telefone
+                <input type="text" value="${esc(c.telefone || "")}" readonly />
+              </label>
+              <label>Email
+                <input type="text" value="${esc(c.email || "")}" readonly />
+              </label>
+              <label>Status
+                <select class="rh-cand-status">
+                  <option value="novo">Novo</option>
+                  <option value="em_analise">Em análise</option>
+                  <option value="entrevista">Entrevista</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="em_contratacao">Em contratação</option>
+                  <option value="contratado">Contratado</option>
+                  <option value="reprovado">Reprovado</option>
+                  <option value="banco_talentos">Banco de talentos</option>
+                </select>
+              </label>
+              <label>Vaga
+                <input type="text" value="${esc(vagaTitulo || "-")}" readonly />
+              </label>
+              <label>Unidade
+                <input type="text" value="${esc(c.unidade || "-")}" readonly />
+              </label>
+              <label>Cidade / Bairro
+                <input type="text" value="${esc([c.cidade, c.bairro].filter(Boolean).join(" / ") || "-")}" readonly />
+              </label>
+              <label>Consentimento LGPD
+                <input type="text" value="${esc(lgpd)}" readonly />
+              </label>
+            </div>
+            <label style="display:block; margin: .6rem 0 .35rem;">Observações internas</label>
+            <textarea class="rh-cand-obs" style="width:100%; min-height: 110px;">${esc(c.observacoes_internas || "")}</textarea>
 
-  const cvBtn = document.getElementById("rhCandCurriculoBtn");
-  if (cvBtn) {
-    cvBtn.classList.toggle("hidden", !rhCandidatoModalState.temCurriculo);
-  }
-
-  toggleModal(document.getElementById("rhCandidatoModal"), true);
+            <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+              <button type="button" class="btn rh-cand-cv ${temCurriculo ? "" : "hidden"}">Ver currículo</button>
+              <button type="button" class="btn primary rh-cand-salvar">Salvar</button>
+              <button type="button" class="btn rh-cand-fechar">Fechar</button>
+              <button type="button" class="btn rh-cand-anon" style="background:#b71c1c;color:#fff;">Anonimizar (excluir)</button>
+            </div>
+            <div class="subtle-text" style="margin-top:.5rem;">
+              LGPD: anonimizar remove dados pessoais e apaga arquivos do candidato.
+            </div>
+          </div>
+        </div>
+      </div>
+    </td>
+  `;
 }
 
 async function loadRhBancoTalentos() {
@@ -12544,74 +12595,87 @@ function setupNavigation() {
     loadRhCandidatos().catch(() => {});
   });
   document.getElementById("rhCandidatosSection")?.addEventListener("click", async (e) => {
-    const btnVer = e.target.closest(".btn-rh-ver");
-    if (btnVer) {
+    const btnToggle = e.target.closest(".btn-rh-toggle");
+    if (btnToggle) {
       e.preventDefault();
-      const id = btnVer.dataset.id;
+      const id = Number(btnToggle.dataset.id || "");
       if (!id) return;
+      const tr = btnToggle.closest("tr");
+      if (!tr) return;
+
+      // Toggle: se já está aberto, fecha.
+      if (rhCandidatoInlineOpenId === id) {
+        closeRhCandidatoInlineRow();
+        return;
+      }
+
+      closeRhCandidatoInlineRow();
+      rhCandidatoInlineOpenId = id;
+
       try {
-        await abrirRhCandidatoModal(id);
+        const payload = await fetchJSON(`/rh/candidatos/${id}`);
+        const html = renderRhCandidatoInlineRow(payload);
+        if (!html) throw new Error("Não foi possível montar os detalhes do candidato.");
+
+        const detailsTr = document.createElement("tr");
+        detailsTr.dataset.rhCandidatoInline = "1";
+        detailsTr.dataset.id = String(id);
+        detailsTr.innerHTML = html;
+        tr.insertAdjacentElement("afterend", detailsTr);
+
+        // Preenche status selecionado
+        const statusSel = detailsTr.querySelector(".rh-cand-status");
+        if (statusSel) statusSel.value = payload?.candidato?.status || "novo";
+
+        // Botões
+        detailsTr.querySelector(".rh-cand-fechar")?.addEventListener("click", () => {
+          closeRhCandidatoInlineRow();
+        });
+        detailsTr.querySelector(".rh-cand-cv")?.addEventListener("click", async () => {
+          try {
+            const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
+            const url = URL.createObjectURL(blob);
+            window.open(url, "_blank", "noopener,noreferrer");
+            setTimeout(() => URL.revokeObjectURL(url), 120000);
+          } catch (err) {
+            showToast(err?.message || "Erro ao abrir currículo.", "error");
+          }
+        });
+        detailsTr.querySelector(".rh-cand-salvar")?.addEventListener("click", async () => {
+          const status = detailsTr.querySelector(".rh-cand-status")?.value || "novo";
+          const obs = detailsTr.querySelector(".rh-cand-obs")?.value || "";
+          try {
+            await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
+            await fetchJSON(`/rh/candidatos/${id}/observacoes`, { method: "PUT", body: JSON.stringify({ observacoes_internas: obs }) });
+            showToast("Candidato atualizado.", "success");
+            await loadRhCandidatos({
+              status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+              nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+              email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
+              telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+            });
+            // Reabre os detalhes (já com dados atualizados) opcionalmente
+            rhCandidatoInlineOpenId = null;
+          } catch (err) {
+            showToast(err?.message || "Erro ao salvar candidato.", "error");
+          }
+        });
+        detailsTr.querySelector(".rh-cand-anon")?.addEventListener("click", async () => {
+          if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
+          try {
+            await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
+            showToast("Candidato anonimizado (excluído via LGPD).", "success");
+            closeRhCandidatoInlineRow();
+            await loadRhCandidatos();
+          } catch (err) {
+            showToast(err?.message || "Erro ao anonimizar.", "error");
+          }
+        });
       } catch (err) {
+        rhCandidatoInlineOpenId = null;
         showToast(err?.message || "Erro ao abrir candidato.", "error");
       }
       return;
-    }
-  });
-
-  // Modal candidato
-  const closeCandModal = () => toggleModal(document.getElementById("rhCandidatoModal"), false);
-  document.getElementById("rhCandidatoModalClose")?.addEventListener("click", closeCandModal);
-  document.getElementById("rhCandFecharBtn")?.addEventListener("click", closeCandModal);
-  document.getElementById("rhCandidatoModal")?.addEventListener("click", (e) => {
-    if (e.target?.id === "rhCandidatoModal") closeCandModal();
-  });
-  document.getElementById("rhCandCurriculoBtn")?.addEventListener("click", async () => {
-    const id = rhCandidatoModalState?.id;
-    if (!id) return;
-    if (!rhCandidatoModalState?.temCurriculo) {
-      showToast("Este candidato não enviou currículo.", "info");
-      return;
-    }
-    try {
-      const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(url), 120000);
-    } catch (err) {
-      showToast(err?.message || "Erro ao abrir currículo.", "error");
-    }
-  });
-  document.getElementById("rhCandSalvarBtn")?.addEventListener("click", async () => {
-    const id = rhCandidatoModalState?.id;
-    if (!id) return;
-    const status = document.getElementById("rhCandStatus")?.value || "novo";
-    const obs = document.getElementById("rhCandObs")?.value || "";
-    try {
-      await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
-      await fetchJSON(`/rh/candidatos/${id}/observacoes`, { method: "PUT", body: JSON.stringify({ observacoes_internas: obs }) });
-      showToast("Candidato atualizado.", "success");
-      closeCandModal();
-      await loadRhCandidatos({
-        status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
-        nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-        email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
-        telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
-      });
-    } catch (err) {
-      showToast(err?.message || "Erro ao salvar candidato.", "error");
-    }
-  });
-  document.getElementById("rhCandAnonimizarBtn")?.addEventListener("click", async () => {
-    const id = rhCandidatoModalState?.id;
-    if (!id) return;
-    if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
-    try {
-      await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
-      showToast("Candidato anonimizado (excluído via LGPD).", "success");
-      closeCandModal();
-      await loadRhCandidatos();
-    } catch (err) {
-      showToast(err?.message || "Erro ao anonimizar.", "error");
     }
   });
 
