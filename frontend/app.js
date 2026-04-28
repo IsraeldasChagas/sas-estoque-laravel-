@@ -12372,17 +12372,6 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
-  // Setup nested submenu toggle for RH -> Recrutamento
-  const rhRecrutamentoMenu = document.getElementById('rhRecrutamentoMenu');
-  if (rhRecrutamentoMenu && rhRecrutamentoMenu.dataset.sasSubmenuToggleBound !== "1") {
-    rhRecrutamentoMenu.dataset.sasSubmenuToggleBound = "1";
-    rhRecrutamentoMenu.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const parent = rhRecrutamentoMenu.closest('.nav-submenu');
-      if (parent) parent.classList.toggle('open');
-    });
-  }
   // Setup submenu toggle for Configuracoes
   const configuracoesMenu = document.getElementById('configuracoesMenu');
   if (configuracoesMenu && configuracoesMenu.dataset.sasSubmenuToggleBound !== "1") {
