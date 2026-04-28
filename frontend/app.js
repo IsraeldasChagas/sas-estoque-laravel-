@@ -7428,14 +7428,13 @@ function renderRhCandidatos(lista) {
   const esc = (s) => escapeHtml(String(s ?? ""));
   tb.innerHTML = lista.map((c) => {
     const tel = (c.telefone || "").toString().replace(/\D+/g, "");
-    const wa = tel ? `https://wa.me/55${tel}` : "";
     const waLabel = tel ? `+55 ${tel}` : "";
     return `<tr data-id="${esc(c.id)}">
       <td data-label="ID">${esc(c.id)}</td>
       <td data-label="Nome">${esc(c.nome)}</td>
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
-      <td data-label="WhatsApp">${wa ? `<a href="${esc(wa)}" target="_blank" rel="noopener noreferrer" class="table-action">Abrir</a><div class="subtle-text">${esc(waLabel)}</div>` : "-"}</td>
+      <td data-label="WhatsApp">${waLabel ? `<span>${esc(waLabel)}</span>` : "-"}</td>
       <td data-label="Ações" class="table-actions">
         <button type="button" class="table-action btn-rh-ver" data-id="${esc(c.id)}">Abrir</button>
       </td>
