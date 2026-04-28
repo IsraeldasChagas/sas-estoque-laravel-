@@ -7452,12 +7452,6 @@ function buildWhatsappLink(nome, vagaTitulo, telefoneRaw) {
   return { url, label: `+55 ${tel}` };
 }
 
-function setModalOpen(overlayId, open) {
-  const ov = document.getElementById(overlayId);
-  if (!ov) return;
-  ov.classList.toggle("hidden", !open);
-}
-
 let rhCandidatoModalState = { id: null, curriculoId: null };
 
 async function abrirRhCandidatoModal(id) {
@@ -7501,7 +7495,7 @@ async function abrirRhCandidatoModal(id) {
     cvBtn.classList.toggle("hidden", !rhCandidatoModalState.temCurriculo);
   }
 
-  setModalOpen("rhCandidatoModalOverlay", true);
+  toggleModal(document.getElementById("rhCandidatoModal"), true);
 }
 
 async function loadRhBancoTalentos() {
@@ -12581,11 +12575,11 @@ function setupNavigation() {
   });
 
   // Modal candidato
-  const closeCandModal = () => setModalOpen("rhCandidatoModalOverlay", false);
+  const closeCandModal = () => toggleModal(document.getElementById("rhCandidatoModal"), false);
   document.getElementById("rhCandidatoModalClose")?.addEventListener("click", closeCandModal);
   document.getElementById("rhCandFecharBtn")?.addEventListener("click", closeCandModal);
-  document.getElementById("rhCandidatoModalOverlay")?.addEventListener("click", (e) => {
-    if (e.target?.id === "rhCandidatoModalOverlay") closeCandModal();
+  document.getElementById("rhCandidatoModal")?.addEventListener("click", (e) => {
+    if (e.target?.id === "rhCandidatoModal") closeCandModal();
   });
   document.getElementById("rhCandCurriculoBtn")?.addEventListener("click", async () => {
     const id = rhCandidatoModalState?.id;
