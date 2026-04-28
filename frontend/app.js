@@ -788,7 +788,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "rhConfig", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -796,7 +796,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "rhConfig", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -836,7 +836,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "rhConfig"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhDocumentos", "rhRelatorios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -3403,7 +3403,7 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || regras.sections.includes("rhDocumentos") || regras.sections.includes("rhConfig");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || regras.sections.includes("rhDocumentos");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
@@ -3585,7 +3585,7 @@ function navigateTo(section) {
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || section === "rhDocumentos" || section === "rhConfig") {
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || section === "rhDocumentos") {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
@@ -8002,7 +8002,7 @@ async function startAppSession(user) {
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
       "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
-      "funcionarios", "rhRelatorios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "rhConfig", "logs"
+      "funcionarios", "rhRelatorios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "logs"
     ]);
 
     let sectionToNavigate = "boasVindas";
@@ -12372,14 +12372,15 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
-  // Setup nested submenu toggle for RH -> Recrutamento
-  const rhRecrutamentoMenu = document.getElementById('rhRecrutamentoMenu');
-  if (rhRecrutamentoMenu && rhRecrutamentoMenu.dataset.sasSubmenuToggleBound !== "1") {
-    rhRecrutamentoMenu.dataset.sasSubmenuToggleBound = "1";
-    rhRecrutamentoMenu.addEventListener('click', (event) => {
+  // Setup nested submenu toggle for RH -> Recrutamento (delegado para não falhar se o menu for recriado)
+  if (document.body && document.body.dataset.sasRhRecrutamentoToggleBound !== "1") {
+    document.body.dataset.sasRhRecrutamentoToggleBound = "1";
+    document.addEventListener('click', (event) => {
+      const el = event.target?.closest?.('#rhRecrutamentoMenu');
+      if (!el) return;
       event.preventDefault();
       event.stopPropagation();
-      const parent = rhRecrutamentoMenu.closest('.nav-submenu');
+      const parent = el.closest('.nav-submenu');
       if (parent) parent.classList.toggle('open');
     });
   }
@@ -12626,19 +12627,6 @@ function setupNavigation() {
     }
   });
 
-  // RH — Config: botões que navegam para seções internas
-  document.getElementById("rhConfigSection")?.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-section]");
-    const target = btn?.getAttribute("data-section");
-    if (!target) return;
-    e.preventDefault();
-    const regras = applyPermissions();
-    if (!regras.sections.includes(target)) {
-      showToast("Perfil sem permissão para acessar esta área.", "error");
-      return;
-    }
-    navigateTo(target);
-  });
 }
 
 function togglePasswordVisibility(button) {
