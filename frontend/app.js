@@ -12656,12 +12656,27 @@ function setupNavigation() {
             showToast("Este candidato não tem currículo anexado.", "info");
             return;
           }
-          const win = window.open("about:blank", "_blank", "noopener,noreferrer");
+          // Abre a nova aba/janela ANTES do await para não ser bloqueado pelo popup blocker.
+          // Não usamos noopener aqui porque alguns browsers retornam null e impedem navegar depois.
+          const win = window.open("", "_blank");
+          if (win) {
+            try {
+              win.document.title = "Currículo";
+              win.document.body.style.margin = "0";
+              win.document.body.innerHTML = '<div style="font-family:system-ui,Segoe UI,Arial; padding:16px;">Carregando currículo...</div>';
+            } catch (_) {
+              /* ignore */
+            }
+          }
           try {
             const blob = await fetchBlob(`/rh/candidatos/${id}/curriculo`);
+            if (blob && blob.type && !String(blob.type).toLowerCase().includes("pdf")) {
+              // Se veio erro/HTML por engano, evita deixar a aba em branco.
+              throw new Error("Currículo inválido (não é PDF).");
+            }
             const url = URL.createObjectURL(blob);
             if (win) win.location.href = url;
-            else window.open(url, "_blank", "noopener,noreferrer");
+            else window.open(url, "_blank");
             setTimeout(() => URL.revokeObjectURL(url), 120000);
           } catch (err) {
             if (win) try { win.close(); } catch (_) {}
