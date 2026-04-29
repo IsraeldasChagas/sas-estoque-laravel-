@@ -12847,6 +12847,19 @@ function setupNavigation() {
     loadRhCandidatos().catch(() => {});
   });
   document.getElementById("rhCandidatosSection")?.addEventListener("click", async (e) => {
+    const btnCvTable = e.target.closest(".btn-rh-cv");
+    if (btnCvTable) {
+      e.preventDefault();
+      const id = Number(btnCvTable.getAttribute("data-id") || "");
+      if (!id) return;
+      try {
+        await openRhPdfUsingAlvaraViewer(`/rh/candidatos/${id}/curriculo`, "📄 Currículo (PDF)", `curriculo-${id}.pdf`);
+      } catch (err) {
+        showToast(err?.message || "Erro ao abrir currículo.", "error");
+      }
+      return;
+    }
+
     const btnToggle = e.target.closest(".btn-rh-toggle");
     if (btnToggle) {
       e.preventDefault();
