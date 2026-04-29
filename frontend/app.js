@@ -7404,10 +7404,7 @@ async function renderizarPdfRhComPdfJs(arrayBuffer) {
   // Mostra host, esconde iframe fallback
   host.style.display = "block";
   host.innerHTML = '<p style="text-align:center;color:#e0e0e0;padding:1.25rem;margin:0;">Carregando documento…</p>';
-  if (frame) {
-    frame.style.display = "none";
-    frame.src = "about:blank";
-  }
+  // Só escondemos o iframe depois que o PDF.js renderizar (evita modal vazio se algo falhar).
 
   // Reaproveita o loader do Alvará (PDF.js)
   const pdfjsLib = await ensurePdfJsParaAlvara();
@@ -7453,6 +7450,12 @@ async function renderizarPdfRhComPdfJs(arrayBuffer) {
 
     await page.render({ canvasContext: ctx, viewport: v2 }).promise;
   }
+
+  // Render finalizado com sucesso: agora sim esconde o iframe fallback.
+  if (frame) {
+    frame.style.display = "none";
+    frame.src = "about:blank";
+  }
 }
 
 function closeRhPdfModal() {
@@ -7490,7 +7493,8 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
     host.style.display = "none";
     host.innerHTML = "";
   }
-  f.style.display = "none";
+  // Mantém o iframe visível por padrão (igual antes). Se PDF.js renderizar, ele será ocultado.
+  f.style.display = "block";
   f.src = "about:blank";
 
   const blob = await fetchBlob(path);
