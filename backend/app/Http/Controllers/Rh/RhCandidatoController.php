@@ -204,6 +204,19 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Currículo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
+        // Garante que o arquivo é realmente um PDF (evita iframe branco por arquivo corrompido/errado).
+        // Checa assinatura "%PDF-" nos primeiros bytes.
+        $stream = Storage::disk('public')->readStream($cv->arquivo_path);
+        if (! $stream) {
+            return response()->json(['error' => 'Não foi possível ler o currículo'], 500)->header('Access-Control-Allow-Origin', '*');
+        }
+        $head = (string) fread($stream, 5);
+        try { fclose($stream); } catch (\Throwable $e) {}
+        if ($head !== '%PDF-') {
+            return response()->json(['error' => 'Arquivo de currículo não é um PDF válido. Reenvie o currículo em PDF.'], 422)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+
         // Importante: responder como PDF inline para o viewer do navegador renderizar dentro do <iframe>.
         // `download()` força Content-Disposition: attachment e pode vir com Content-Type genérico (octet-stream).
         $nome = $cv->arquivo_nome_original ?: basename($cv->arquivo_path);

@@ -7410,6 +7410,17 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
     closeRhPdfModal();
     throw new Error("Documento inválido (não é PDF).");
   }
+  // Confere assinatura "%PDF-" para evitar modal branco quando o arquivo não é PDF de verdade.
+  try {
+    const ab = await blob.slice(0, 5).arrayBuffer();
+    const head = new TextDecoder().decode(new Uint8Array(ab));
+    if (head !== "%PDF-") {
+      closeRhPdfModal();
+      throw new Error("Arquivo recebido não é PDF válido.");
+    }
+  } catch (e) {
+    // Se o navegador não suportar TextDecoder/arrayBuffer (muito raro), segue o fluxo normal.
+  }
   if (!ct.includes("pdf")) {
     try { blob = new Blob([blob], { type: "application/pdf" }); } catch (_) {}
   }
