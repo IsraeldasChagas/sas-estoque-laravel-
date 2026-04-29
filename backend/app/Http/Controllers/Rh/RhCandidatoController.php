@@ -204,7 +204,16 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Currículo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $res = Storage::disk('public')->download($cv->arquivo_path, $cv->arquivo_nome_original ?: basename($cv->arquivo_path));
+        // Importante: responder como PDF inline para o viewer do navegador renderizar dentro do <iframe>.
+        // `download()` força Content-Disposition: attachment e pode vir com Content-Type genérico (octet-stream).
+        $nome = $cv->arquivo_nome_original ?: basename($cv->arquivo_path);
+        $mime = Storage::disk('public')->mimeType($cv->arquivo_path) ?: 'application/pdf';
+        if (! str_contains(strtolower($mime), 'pdf')) $mime = 'application/pdf';
+
+        $res = Storage::disk('public')->response($cv->arquivo_path, $nome, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . str_replace('"', '', $nome) . '"',
+        ]);
         $res->headers->set('Access-Control-Allow-Origin', '*');
         $res->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
         $res->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');

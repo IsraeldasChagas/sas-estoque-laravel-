@@ -7401,11 +7401,17 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
   m.classList.add("active");
   f.src = "about:blank";
 
-  const blob = await fetchBlob(path);
+  let blob = await fetchBlob(path);
   const ct = (blob && blob.type) ? String(blob.type).toLowerCase() : "";
-  if (ct && !ct.includes("pdf")) {
+  // Alguns servidores/caches retornam application/octet-stream para PDF.
+  // Forçamos o type para garantir que o viewer do navegador renderize no <iframe>.
+  const looksLikePdf = ct.includes("pdf") || ct.includes("octet-stream") || ct === "";
+  if (!looksLikePdf) {
     closeRhPdfModal();
     throw new Error("Documento inválido (não é PDF).");
+  }
+  if (!ct.includes("pdf")) {
+    try { blob = new Blob([blob], { type: "application/pdf" }); } catch (_) {}
   }
   rhPdfObjectUrl = URL.createObjectURL(blob);
   f.src = rhPdfObjectUrl;
