@@ -7430,7 +7430,14 @@ async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath,
     }
     const mime = mimeFromResponse(res);
     const buffer = await res.arrayBuffer();
-    const isPdf = mime === 'application/pdf' || possivelPdf;
+    // Mesmo padrão do Alvará: se o servidor vier com octet-stream, detecta pelo header %PDF-
+    let isPdf = mime === 'application/pdf' || possivelPdf;
+    if (!isPdf && (mime === 'application/octet-stream' || !mime)) {
+      try {
+        const head = new TextDecoder().decode(new Uint8Array(buffer.slice(0, 5)));
+        if (head === '%PDF-') isPdf = true;
+      } catch (_) {}
+    }
 
     if (isPdf) {
       img.style.display = 'none';
@@ -12719,12 +12726,7 @@ function setupNavigation() {
       const id = Number(btnCvTable.getAttribute("data-id") || "");
       if (!id) return;
       try {
-        let nome = `curriculo-${id}.pdf`;
-        try {
-          const payload = await fetchJSON(`/rh/candidatos/${id}`);
-          const n = payload?.curriculo?.arquivo_nome_original || payload?.curriculo?.arquivo_nome || "";
-          if (n) nome = String(n);
-        } catch (_) {}
+        const nome = `curriculo-${id}.pdf`;
         await abrirModalPdfNoViewerDoAlvara({
           nomeArquivo: nome,
           titulo: "📄 Currículo (PDF)",
@@ -12799,7 +12801,7 @@ function setupNavigation() {
             return;
           }
           try {
-            const nome = (payload?.curriculo?.arquivo_nome_original || `curriculo-${id}.pdf`);
+            const nome = `curriculo-${id}.pdf`;
             await abrirModalPdfNoViewerDoAlvara({
               nomeArquivo: nome,
               titulo: "📄 Currículo (PDF)",

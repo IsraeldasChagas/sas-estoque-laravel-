@@ -236,12 +236,8 @@ class RhCandidatoController extends Controller
             return $this->aplicarCorsRespostaCurriculo(response()->download($path, $nome));
         }
 
-        // Sempre PDF no currículo (upload público valida), mas mantém fallback seguro.
+        // Currículo é sempre PDF (upload público valida). Força Content-Type para evitar octet-stream no frontend.
         $mime = 'application/pdf';
-        try {
-            $diskMime = Storage::disk('public')->mimeType($cv->arquivo_path);
-            if ($diskMime && str_contains(strtolower($diskMime), 'pdf')) $mime = $diskMime;
-        } catch (\Throwable $e) {}
 
         return $this->aplicarCorsRespostaCurriculo(response()->file($path, [
             'Content-Type' => $mime,
