@@ -7543,6 +7543,81 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
   }
 }
 
+// ================================
+// RH — Abrir currículo usando o MESMO visualizador do Alvará (PDF.js + fallback)
+// ================================
+async function openRhPdfUsingAlvaraViewer(apiPath, titulo, downloadName = "documento.pdf") {
+  // Reusa exatamente o modal e o render do Alvará (que já funciona no seu ambiente).
+  const modal = document.getElementById('alvaraAnexoModal');
+  const frame = document.getElementById('alvaraAnexoFrame');
+  const img = document.getElementById('alvaraAnexoImg');
+  const pdfHost = document.getElementById('alvaraAnexoPdfHost');
+  const title = document.getElementById('alvaraAnexoTitle');
+  const baixarLink = document.getElementById('baixarAlvaraAnexo');
+  if (!modal || !frame || !pdfHost || !title || !baixarLink) {
+    throw new Error('Visualizador de PDF (Alvará) não encontrado.');
+  }
+
+  // Abre modal e prepara estado visual (igual Alvará)
+  title.textContent = titulo || '📄 Documento (PDF)';
+  modal.classList.add('active');
+  limparVisualizacaoPdfAlvara();
+  frame.style.display = 'none';
+  frame.src = 'about:blank';
+  if (img) { img.style.display = 'none'; img.src = ''; }
+  pdfHost.style.display = 'none';
+  pdfHost.innerHTML = '';
+
+  // Revoga URL anterior usada no modal de anexo do alvará
+  if (typeof alvaraAnexoObjectUrl !== 'undefined' && alvaraAnexoObjectUrl) {
+    try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
+    alvaraAnexoObjectUrl = null;
+  }
+
+  // Busca binário com os MESMOS headers do Alvará
+  const url = `${API_URL}${apiPath}`;
+  const res = await fetch(url, { method: 'GET', headers: headersParaAnexoAlvara(), cache: 'no-store' });
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const ct = res.headers.get('Content-Type') || '';
+      if (ct.includes('json')) {
+        const j = await res.json();
+        if (j?.error) msg = j.error;
+      }
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const mime = (res.headers.get('Content-Type') || '').toLowerCase();
+  const buffer = await res.arrayBuffer();
+
+  // Botão baixar: usa blobUrl (não depende de cookies/headers)
+  const blobPdf = new Blob([buffer], { type: (mime.includes('pdf') ? 'application/pdf' : (mime || 'application/octet-stream')) });
+  alvaraAnexoObjectUrl = URL.createObjectURL(blobPdf);
+  baixarLink.style.display = '';
+  baixarLink.href = alvaraAnexoObjectUrl;
+  baixarLink.removeAttribute('target');
+  baixarLink.removeAttribute('rel');
+  baixarLink.setAttribute('download', downloadName);
+
+  // PDF: tenta PDF.js (igual), fallback iframe
+  if ((mime && mime.includes('pdf')) || (!mime && new TextDecoder().decode(new Uint8Array(buffer.slice(0, 5))) === '%PDF-')) {
+    try {
+      await renderizarPdfAlvaraComPdfJs(buffer);
+    } catch (pdfErr) {
+      limparVisualizacaoPdfAlvara();
+      frame.style.display = 'block';
+      frame.src = alvaraAnexoObjectUrl;
+      showToast('Visualização alternativa (PDF). Se estiver em branco no celular, use Baixar.', 'info');
+    }
+  } else {
+    // Se não for PDF, tenta mostrar no iframe mesmo assim
+    frame.style.display = 'block';
+    frame.src = alvaraAnexoObjectUrl;
+  }
+}
+
 async function loadRhDashboard() {
   const stats = await fetchJSON("/rh/dashboard/stats");
   const set = (id, v) => {
@@ -12834,7 +12909,8 @@ function setupNavigation() {
             return;
           }
           try {
-            await openRhPdfFromApi(`/rh/candidatos/${id}/curriculo`, "📄 Currículo (PDF)", `curriculo-${id}.pdf`);
+            // Usa o MESMO visualizador do Alvará (PDF.js + fallback) para ficar idêntico.
+            await openRhPdfUsingAlvaraViewer(`/rh/candidatos/${id}/curriculo`, "📄 Currículo (PDF)", `curriculo-${id}.pdf`);
           } catch (err) {
             showToast(err?.message || "Erro ao abrir currículo.", "error");
           }
