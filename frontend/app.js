@@ -7370,11 +7370,96 @@ async function fetchBlob(path, options = {}) {
 // RH — Visualização/Download PDF (mesmo padrão do Financeiro/Alvará: modal + baixar)
 // ================================
 let rhPdfObjectUrl = null;
+/** Instância PDF.js após carregar o documento (precisa de destroy() ao fechar o modal). */
+let rhPdfDocumentProxy = null;
+/** Task de carregamento em andamento (cancelável). */
+let rhPdfLoadingTask = null;
+
+function limparVisualizacaoPdfRh() {
+  if (rhPdfDocumentProxy) {
+    try { rhPdfDocumentProxy.destroy(); } catch (_) {}
+    rhPdfDocumentProxy = null;
+  }
+  if (rhPdfLoadingTask) {
+    try { rhPdfLoadingTask.destroy(); } catch (_) {}
+    rhPdfLoadingTask = null;
+  }
+  const host = document.getElementById("rhPdfHost");
+  if (host) {
+    host.innerHTML = "";
+    host.style.display = "none";
+  }
+  const frame = document.getElementById("rhPdfFrame");
+  if (frame) {
+    frame.src = "about:blank";
+    frame.style.display = "none";
+  }
+}
+
+async function renderizarPdfRhComPdfJs(arrayBuffer) {
+  const host = document.getElementById("rhPdfHost");
+  const frame = document.getElementById("rhPdfFrame");
+  if (!host) throw new Error("Container de PDF ausente");
+
+  // Mostra host, esconde iframe fallback
+  host.style.display = "block";
+  host.innerHTML = '<p style="text-align:center;color:#e0e0e0;padding:1.25rem;margin:0;">Carregando documento…</p>';
+  if (frame) {
+    frame.style.display = "none";
+    frame.src = "about:blank";
+  }
+
+  // Reaproveita o loader do Alvará (PDF.js)
+  const pdfjsLib = await ensurePdfJsParaAlvara();
+  const data = arrayBuffer.slice(0);
+  rhPdfLoadingTask = pdfjsLib.getDocument({ data });
+  let pdf;
+  try {
+    pdf = await rhPdfLoadingTask.promise;
+  } finally {
+    rhPdfLoadingTask = null;
+  }
+  rhPdfDocumentProxy = pdf;
+
+  const total = pdf.numPages || 0;
+  host.innerHTML = "";
+
+  // Mesma UX do Alvará: páginas empilhadas, rolagem vertical
+  for (let pageNum = 1; pageNum <= total; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 1.0 });
+
+    const container = document.createElement("div");
+    container.style.padding = "10px 0";
+    container.style.display = "flex";
+    container.style.justifyContent = "center";
+    host.appendChild(container);
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) throw new Error("Canvas indisponível");
+
+    // Ajusta escala para a largura do modal
+    const maxWidth = Math.min(920, Math.max(320, host.clientWidth || 800)) - 24;
+    const scale = maxWidth / viewport.width;
+    const v2 = page.getViewport({ scale: Math.max(0.5, Math.min(scale, 2.0)) });
+    canvas.width = Math.floor(v2.width);
+    canvas.height = Math.floor(v2.height);
+    canvas.style.background = "#fff";
+    canvas.style.borderRadius = "8px";
+    canvas.style.maxWidth = "100%";
+    canvas.style.height = "auto";
+    container.appendChild(canvas);
+
+    await page.render({ canvasContext: ctx, viewport: v2 }).promise;
+  }
+}
+
 function closeRhPdfModal() {
   const m = document.getElementById("rhPdfModal");
   const f = document.getElementById("rhPdfFrame");
   const dl = document.getElementById("rhPdfDownload");
-  if (f) f.src = "about:blank";
+  limparVisualizacaoPdfRh();
   if (dl) { dl.style.display = "none"; dl.href = "#"; dl.removeAttribute("download"); }
   if (rhPdfObjectUrl) {
     try { URL.revokeObjectURL(rhPdfObjectUrl); } catch (_) {}
@@ -7386,6 +7471,7 @@ function closeRhPdfModal() {
 async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
   const m = document.getElementById("rhPdfModal");
   const f = document.getElementById("rhPdfFrame");
+  const host = document.getElementById("rhPdfHost");
   const t = document.getElementById("rhPdfTitle");
   const dl = document.getElementById("rhPdfDownload");
   if (!m || !f) throw new Error("Modal de PDF não encontrado.");
@@ -7397,11 +7483,17 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
     try { URL.revokeObjectURL(rhPdfObjectUrl); } catch (_) {}
     rhPdfObjectUrl = null;
   }
+  limparVisualizacaoPdfRh();
 
   m.classList.add("active");
+  if (host) {
+    host.style.display = "none";
+    host.innerHTML = "";
+  }
+  f.style.display = "none";
   f.src = "about:blank";
 
-  let blob = await fetchBlob(path);
+  const blob = await fetchBlob(path);
   const ct = (blob && blob.type) ? String(blob.type).toLowerCase() : "";
   // Alguns servidores/caches retornam application/octet-stream para PDF.
   // Forçamos o type para garantir que o viewer do navegador renderize no <iframe>.
@@ -7410,24 +7502,35 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
     closeRhPdfModal();
     throw new Error("Documento inválido (não é PDF).");
   }
+  const buffer = await blob.arrayBuffer();
   // Confere assinatura "%PDF-" para evitar modal branco quando o arquivo não é PDF de verdade.
   try {
-    const ab = await blob.slice(0, 5).arrayBuffer();
-    const head = new TextDecoder().decode(new Uint8Array(ab));
+    const head = new TextDecoder().decode(new Uint8Array(buffer.slice(0, 5)));
     if (head !== "%PDF-") {
       closeRhPdfModal();
       throw new Error("Arquivo recebido não é PDF válido.");
     }
-  } catch (e) {
-    // Se o navegador não suportar TextDecoder/arrayBuffer (muito raro), segue o fluxo normal.
+  } catch (_) {}
+
+  // 1) Tenta PDF.js (igual Alvará/Recibo Ajuda)
+  try {
+    await renderizarPdfRhComPdfJs(buffer);
+  } catch (pdfErr) {
+    // 2) Fallback: iframe + blob (desktop)
+    limparVisualizacaoPdfRh();
+    const blobPdf = new Blob([buffer], { type: "application/pdf" });
+    rhPdfObjectUrl = URL.createObjectURL(blobPdf);
+    f.style.display = "block";
+    f.src = rhPdfObjectUrl;
+    showToast("Visualização alternativa (PDF). Se estiver em branco no celular, use Baixar.", "info");
   }
-  if (!ct.includes("pdf")) {
-    try { blob = new Blob([blob], { type: "application/pdf" }); } catch (_) {}
-  }
-  rhPdfObjectUrl = URL.createObjectURL(blob);
-  f.src = rhPdfObjectUrl;
 
   if (dl) {
+    // Baixar sempre via blobUrl (não depende de autenticação/cookies)
+    if (!rhPdfObjectUrl) {
+      const blobPdf = new Blob([buffer], { type: "application/pdf" });
+      rhPdfObjectUrl = URL.createObjectURL(blobPdf);
+    }
     dl.href = rhPdfObjectUrl;
     dl.download = downloadName;
     dl.style.display = "";
