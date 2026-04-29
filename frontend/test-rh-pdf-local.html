@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teste RH PDF (local)</title>
+    <link rel="stylesheet" href="style.css?v=test-local" />
+    <style>
+      body { padding: 24px; }
+      .box { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 16px; }
+      .row { display:flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      code { background:#f5f5f5; padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h2>Teste RH PDF (mock local)</h2>
+      <p>
+        Esta página aponta o <code>API_URL</code> para o mock local e abre o modal de currículo.
+      </p>
+      <div class="row">
+        <button class="btn primary" id="btnAbrir">Abrir currículo (ID 2)</button>
+        <span id="status" style="color:#607d8b;"></span>
+      </div>
+    </div>
+
+    <!-- Modal genérico para PDF do RH (Currículo / Documentos) -->
+    <div class="modal-backdrop" id="rhPdfModal">
+      <div class="modal" style="width: min(920px, 96vw);">
+        <header>
+          <h2 id="rhPdfTitle">📄 Documento</h2>
+          <button type="button" class="close-btn" id="closeRhPdf" aria-label="Fechar modal">x</button>
+        </header>
+        <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
+          <div id="rhPdfHost" class="rh-pdf-host" aria-live="polite" style="display:none"></div>
+          <iframe id="rhPdfFrame" title="Documento RH" style="display:block;width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
+        </div>
+        <footer style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
+          <a class="btn secondary" id="rhPdfDownload" href="#" style="text-decoration:none;display:none;">⬇️ Baixar</a>
+          <button type="button" class="btn neutral" id="fecharRhPdf">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      window.APP_CONFIG = { API_URL: "http://127.0.0.1:8011/api" };
+    </script>
+    <script src="app.js?v=test-local-rh-pdf"></script>
+    <script>
+      document.getElementById("btnAbrir").addEventListener("click", async () => {
+        const status = document.getElementById("status");
+        status.textContent = "Abrindo...";
+        try {
+          await openRhPdfFromApi("/rh/candidatos/2/curriculo", "📄 Currículo (PDF)", "curriculo-2.pdf");
+          status.textContent = "OK (modal aberto)";
+        } catch (e) {
+          status.textContent = "Erro: " + (e?.message || String(e));
+        }
+      });
+    </script>
+  </body>
+</html>
+

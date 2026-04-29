@@ -7369,6 +7369,7 @@ async function fetchBlob(path, options = {}) {
 // ================================
 // RH — Visualização/Download PDF (mesmo padrão do Financeiro/Alvará: modal + baixar)
 // ================================
+window.__RH_PDF_BUILD = "2026-04-29-rhpdf-3";
 let rhPdfObjectUrl = null;
 /** Instância PDF.js após carregar o documento (precisa de destroy() ao fechar o modal). */
 let rhPdfDocumentProxy = null;
@@ -7478,6 +7479,7 @@ async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
   const t = document.getElementById("rhPdfTitle");
   const dl = document.getElementById("rhPdfDownload");
   if (!m || !f) throw new Error("Modal de PDF não encontrado.");
+  try { console.log("[RH PDF] build:", window.__RH_PDF_BUILD); } catch (_) {}
 
   if (t) t.textContent = titulo || "Documento";
   if (dl) { dl.style.display = "none"; dl.href = "#"; dl.removeAttribute("download"); }
