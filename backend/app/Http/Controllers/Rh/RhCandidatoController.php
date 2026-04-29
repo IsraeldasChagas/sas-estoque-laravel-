@@ -7,6 +7,7 @@ use App\Support\Rh\RhAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class RhCandidatoController extends Controller
 {
@@ -20,6 +21,25 @@ class RhCandidatoController extends Controller
         'reprovado',
         'banco_talentos',
     ];
+
+    /**
+     * CORS do GET /rh/candidatos/{id}/curriculo (frontend em outro domínio + fetch com Authorization / X-Usuario-Id).
+     *
+     * IMPORTANTE: response()->file() / response()->download() retornam Symfony BinaryFileResponse.
+     * Não use ->header() em cadeia, use $response->headers->set(...) (mesmo padrão do Alvará).
+     */
+    private function aplicarCorsRespostaCurriculo(SymfonyResponse $response): SymfonyResponse
+    {
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        $response->headers->set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform'
+        );
+        $response->headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
+
+        return $response;
+    }
 
     public function index(Request $request)
     {
@@ -192,46 +212,43 @@ class RhCandidatoController extends Controller
     public function downloadCurriculo(Request $request, int $id)
     {
         if (! RhAcesso::pode($request, 'rh.candidatos')) {
-            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Sem permissão.'], 403));
         }
 
         if (! DB::table('rh_candidatos')->where('id', $id)->exists()) {
-            return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Candidato não encontrado'], 404));
         }
 
         $cv = DB::table('rh_curriculos')->where('candidato_id', $id)->orderByDesc('id')->first();
         if (! $cv || ! $cv->arquivo_path || ! Storage::disk('public')->exists($cv->arquivo_path)) {
-            return response()->json(['error' => 'Currículo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Currículo não encontrado'], 404));
         }
 
-        // Garante que o arquivo é realmente um PDF (evita iframe branco por arquivo corrompido/errado).
-        // Checa assinatura "%PDF-" nos primeiros bytes.
-        $stream = Storage::disk('public')->readStream($cv->arquivo_path);
-        if (! $stream) {
-            return response()->json(['error' => 'Não foi possível ler o currículo'], 500)->header('Access-Control-Allow-Origin', '*');
-        }
-        $head = (string) fread($stream, 5);
-        try { fclose($stream); } catch (\Throwable $e) {}
-        if ($head !== '%PDF-') {
-            return response()->json(['error' => 'Arquivo de currículo não é um PDF válido. Reenvie o currículo em PDF.'], 422)
-                ->header('Access-Control-Allow-Origin', '*');
+        // Mesmo padrão do Alvará: pega o caminho físico e responde como inline (ou download com ?download=1).
+        $path = storage_path('app/public/' . ltrim((string) $cv->arquivo_path, '/'));
+        if (! file_exists($path)) {
+            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Arquivo não encontrado'], 404));
         }
 
-        // Importante: responder como PDF inline para o viewer do navegador renderizar dentro do <iframe>.
-        // `download()` força Content-Disposition: attachment e pode vir com Content-Type genérico (octet-stream).
-        $nome = $cv->arquivo_nome_original ?: basename($cv->arquivo_path);
-        $mime = Storage::disk('public')->mimeType($cv->arquivo_path) ?: 'application/pdf';
-        if (! str_contains(strtolower($mime), 'pdf')) $mime = 'application/pdf';
+        $nome = $cv->arquivo_nome_original ?: basename($path);
+        $forcarDownload = $request->boolean('download', false);
+        if ($forcarDownload) {
+            return $this->aplicarCorsRespostaCurriculo(response()->download($path, $nome));
+        }
 
-        $res = Storage::disk('public')->response($cv->arquivo_path, $nome, [
+        // Sempre PDF no currículo (upload público valida), mas mantém fallback seguro.
+        $mime = 'application/pdf';
+        try {
+            $diskMime = Storage::disk('public')->mimeType($cv->arquivo_path);
+            if ($diskMime && str_contains(strtolower($diskMime), 'pdf')) $mime = $diskMime;
+        } catch (\Throwable $e) {}
+
+        return $this->aplicarCorsRespostaCurriculo(response()->file($path, [
             'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . str_replace('"', '', $nome) . '"',
-        ]);
-        $res->headers->set('Access-Control-Allow-Origin', '*');
-        $res->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        $res->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
-        $res->headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
-        return $res;
+            'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
+            'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
+            'X-Frame-Options' => 'ALLOWALL',
+        ]));
     }
 
     public function downloadFoto(Request $request, int $id)

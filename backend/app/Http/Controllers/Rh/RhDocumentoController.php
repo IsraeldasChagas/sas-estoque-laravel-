@@ -7,9 +7,27 @@ use App\Support\Rh\RhAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class RhDocumentoController extends Controller
 {
+    /**
+     * CORS do GET /rh/documentos/{id}/download (frontend em outro domínio + fetch com Authorization / X-Usuario-Id).
+     * Mesma regra do Alvará: BinaryFileResponse não suporta ->header() fluente.
+     */
+    private function aplicarCorsRespostaDownload(SymfonyResponse $response): SymfonyResponse
+    {
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        $response->headers->set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform'
+        );
+        $response->headers->set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length');
+
+        return $response;
+    }
+
     public function index(Request $request)
     {
         if (! RhAcesso::pode($request, 'rh.documentos')) {
@@ -78,18 +96,35 @@ class RhDocumentoController extends Controller
     public function download(Request $request, int $id)
     {
         if (! RhAcesso::pode($request, 'rh.documentos')) {
-            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+            return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Sem permissão.'], 403));
         }
 
         $doc = DB::table('rh_documentos')->where('id', $id)->first();
-        if (! $doc) return response()->json(['error' => 'Documento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        if (! $doc) return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Documento não encontrado'], 404));
 
         $path = $doc->arquivo_path;
         if (! $path || ! Storage::disk('public')->exists($path)) {
-            return response()->json(['error' => 'Arquivo não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+            return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
         }
 
-        return Storage::disk('public')->download($path, $doc->arquivo_nome_original ?: basename($path));
+        $fullPath = storage_path('app/public/' . ltrim((string) $path, '/'));
+        if (! file_exists($fullPath)) {
+            return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
+        }
+
+        $nome = $doc->arquivo_nome_original ?: basename($fullPath);
+        $forcarDownload = $request->boolean('download', false);
+        if ($forcarDownload) {
+            return $this->aplicarCorsRespostaDownload(response()->download($fullPath, $nome));
+        }
+
+        $mime = $doc->mime ?: 'application/octet-stream';
+        return $this->aplicarCorsRespostaDownload(response()->file($fullPath, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
+            'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
+            'X-Frame-Options' => 'ALLOWALL',
+        ]));
     }
 }
 

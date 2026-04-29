@@ -7367,254 +7367,120 @@ async function fetchBlob(path, options = {}) {
 }
 
 // ================================
-// RH — Visualização/Download PDF (mesmo padrão do Financeiro/Alvará: modal + baixar)
+// RH — PDF do zero (idêntico ao Alvará)
 // ================================
-window.__RH_PDF_BUILD = "2026-04-29-rhpdf-3";
-let rhPdfObjectUrl = null;
-/** Instância PDF.js após carregar o documento (precisa de destroy() ao fechar o modal). */
-let rhPdfDocumentProxy = null;
-/** Task de carregamento em andamento (cancelável). */
-let rhPdfLoadingTask = null;
-
-function limparVisualizacaoPdfRh() {
-  if (rhPdfDocumentProxy) {
-    try { rhPdfDocumentProxy.destroy(); } catch (_) {}
-    rhPdfDocumentProxy = null;
-  }
-  if (rhPdfLoadingTask) {
-    try { rhPdfLoadingTask.destroy(); } catch (_) {}
-    rhPdfLoadingTask = null;
-  }
-  const host = document.getElementById("rhPdfHost");
-  if (host) {
-    host.innerHTML = "";
-    host.style.display = "none";
-  }
-  const frame = document.getElementById("rhPdfFrame");
-  if (frame) {
-    frame.src = "about:blank";
-    frame.style.display = "none";
-  }
-}
-
-async function renderizarPdfRhComPdfJs(arrayBuffer) {
-  const host = document.getElementById("rhPdfHost");
-  const frame = document.getElementById("rhPdfFrame");
-  if (!host) throw new Error("Container de PDF ausente");
-
-  // Mostra host, esconde iframe fallback
-  host.style.display = "block";
-  host.innerHTML = '<p style="text-align:center;color:#e0e0e0;padding:1.25rem;margin:0;">Carregando documento…</p>';
-  // Só escondemos o iframe depois que o PDF.js renderizar (evita modal vazio se algo falhar).
-
-  // Reaproveita o loader do Alvará (PDF.js)
-  const pdfjsLib = await ensurePdfJsParaAlvara();
-  const data = arrayBuffer.slice(0);
-  rhPdfLoadingTask = pdfjsLib.getDocument({ data });
-  let pdf;
-  try {
-    pdf = await rhPdfLoadingTask.promise;
-  } finally {
-    rhPdfLoadingTask = null;
-  }
-  rhPdfDocumentProxy = pdf;
-
-  const total = pdf.numPages || 0;
-  host.innerHTML = "";
-
-  // Mesma UX do Alvará: páginas empilhadas, rolagem vertical
-  for (let pageNum = 1; pageNum <= total; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 1.0 });
-
-    const container = document.createElement("div");
-    container.style.padding = "10px 0";
-    container.style.display = "flex";
-    container.style.justifyContent = "center";
-    host.appendChild(container);
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) throw new Error("Canvas indisponível");
-
-    // Ajusta escala para a largura do modal
-    const maxWidth = Math.min(920, Math.max(320, host.clientWidth || 800)) - 24;
-    const scale = maxWidth / viewport.width;
-    const v2 = page.getViewport({ scale: Math.max(0.5, Math.min(scale, 2.0)) });
-    canvas.width = Math.floor(v2.width);
-    canvas.height = Math.floor(v2.height);
-    canvas.style.background = "#fff";
-    canvas.style.borderRadius = "8px";
-    canvas.style.maxWidth = "100%";
-    canvas.style.height = "auto";
-    container.appendChild(canvas);
-
-    await page.render({ canvasContext: ctx, viewport: v2 }).promise;
-  }
-
-  // Render finalizado com sucesso: agora sim esconde o iframe fallback.
-  if (frame) {
-    frame.style.display = "none";
-    frame.src = "about:blank";
-  }
-}
-
-function closeRhPdfModal() {
-  const m = document.getElementById("rhPdfModal");
-  const f = document.getElementById("rhPdfFrame");
-  const dl = document.getElementById("rhPdfDownload");
-  limparVisualizacaoPdfRh();
-  if (dl) { dl.style.display = "none"; dl.href = "#"; dl.removeAttribute("download"); }
-  if (rhPdfObjectUrl) {
-    try { URL.revokeObjectURL(rhPdfObjectUrl); } catch (_) {}
-    rhPdfObjectUrl = null;
-  }
-  if (m) m.classList.remove("active");
-}
-
-async function openRhPdfFromApi(path, titulo, downloadName = "documento.pdf") {
-  const m = document.getElementById("rhPdfModal");
-  const f = document.getElementById("rhPdfFrame");
-  const host = document.getElementById("rhPdfHost");
-  const t = document.getElementById("rhPdfTitle");
-  const dl = document.getElementById("rhPdfDownload");
-  if (!m || !f) throw new Error("Modal de PDF não encontrado.");
-  try { console.log("[RH PDF] build:", window.__RH_PDF_BUILD); } catch (_) {}
-
-  if (t) t.textContent = titulo || "Documento";
-  if (dl) { dl.style.display = "none"; dl.href = "#"; dl.removeAttribute("download"); }
-
-  if (rhPdfObjectUrl) {
-    try { URL.revokeObjectURL(rhPdfObjectUrl); } catch (_) {}
-    rhPdfObjectUrl = null;
-  }
-  limparVisualizacaoPdfRh();
-
-  m.classList.add("active");
-  if (host) {
-    host.style.display = "none";
-    host.innerHTML = "";
-  }
-  // Mantém o iframe visível por padrão (igual antes). Se PDF.js renderizar, ele será ocultado.
-  f.style.display = "block";
-  f.src = "about:blank";
-
-  const blob = await fetchBlob(path);
-  const ct = (blob && blob.type) ? String(blob.type).toLowerCase() : "";
-  // Alguns servidores/caches retornam application/octet-stream para PDF.
-  // Forçamos o type para garantir que o viewer do navegador renderize no <iframe>.
-  const looksLikePdf = ct.includes("pdf") || ct.includes("octet-stream") || ct === "";
-  if (!looksLikePdf) {
-    closeRhPdfModal();
-    throw new Error("Documento inválido (não é PDF).");
-  }
-  const buffer = await blob.arrayBuffer();
-  // Confere assinatura "%PDF-" para evitar modal branco quando o arquivo não é PDF de verdade.
-  try {
-    const head = new TextDecoder().decode(new Uint8Array(buffer.slice(0, 5)));
-    if (head !== "%PDF-") {
-      closeRhPdfModal();
-      throw new Error("Arquivo recebido não é PDF válido.");
-    }
-  } catch (_) {}
-
-  // 1) Tenta PDF.js (igual Alvará/Recibo Ajuda)
-  try {
-    await renderizarPdfRhComPdfJs(buffer);
-  } catch (pdfErr) {
-    // 2) Fallback: iframe + blob (desktop)
-    limparVisualizacaoPdfRh();
-    const blobPdf = new Blob([buffer], { type: "application/pdf" });
-    rhPdfObjectUrl = URL.createObjectURL(blobPdf);
-    f.style.display = "block";
-    f.src = rhPdfObjectUrl;
-    showToast("Visualização alternativa (PDF). Se estiver em branco no celular, use Baixar.", "info");
-  }
-
-  if (dl) {
-    // Baixar sempre via blobUrl (não depende de autenticação/cookies)
-    if (!rhPdfObjectUrl) {
-      const blobPdf = new Blob([buffer], { type: "application/pdf" });
-      rhPdfObjectUrl = URL.createObjectURL(blobPdf);
-    }
-    dl.href = rhPdfObjectUrl;
-    dl.download = downloadName;
-    dl.style.display = "";
-  }
-}
-
-// ================================
-// RH — Abrir currículo usando o MESMO visualizador do Alvará (PDF.js + fallback)
-// ================================
-async function openRhPdfUsingAlvaraViewer(apiPath, titulo, downloadName = "documento.pdf") {
-  // Reusa exatamente o modal e o render do Alvará (que já funciona no seu ambiente).
+async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath, downloadApiPath }) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
   const img = document.getElementById('alvaraAnexoImg');
   const pdfHost = document.getElementById('alvaraAnexoPdfHost');
   const title = document.getElementById('alvaraAnexoTitle');
   const baixarLink = document.getElementById('baixarAlvaraAnexo');
-  if (!modal || !frame || !pdfHost || !title || !baixarLink) {
-    throw new Error('Visualizador de PDF (Alvará) não encontrado.');
+  if (!modal || !frame || !img || !title || !baixarLink) {
+    throw new Error('Visualizador do Alvará não encontrado.');
   }
 
-  // Abre modal e prepara estado visual (igual Alvará)
-  title.textContent = titulo || '📄 Documento (PDF)';
-  modal.classList.add('active');
-  limparVisualizacaoPdfAlvara();
-  frame.style.display = 'none';
-  frame.src = 'about:blank';
-  if (img) { img.style.display = 'none'; img.src = ''; }
-  pdfHost.style.display = 'none';
-  pdfHost.innerHTML = '';
+  const nome = (nomeArquivo || 'Documento.pdf').toString();
+  if (title) title.textContent = titulo || `📄 ${nome}`;
 
-  // Revoga URL anterior usada no modal de anexo do alvará
+  const viewUrl = `${API_URL}${viewApiPath}`;
+  const downloadUrl = `${API_URL}${downloadApiPath}`;
+
   if (typeof alvaraAnexoObjectUrl !== 'undefined' && alvaraAnexoObjectUrl) {
     try { URL.revokeObjectURL(alvaraAnexoObjectUrl); } catch (_) {}
     alvaraAnexoObjectUrl = null;
   }
+  limparVisualizacaoPdfAlvara();
 
-  // Busca binário com os MESMOS headers do Alvará
-  const url = `${API_URL}${apiPath}`;
-  const res = await fetch(url, { method: 'GET', headers: headersParaAnexoAlvara(), cache: 'no-store' });
-  if (!res.ok) {
-    let msg = `Erro ${res.status}`;
-    try {
-      const ct = res.headers.get('Content-Type') || '';
-      if (ct.includes('json')) {
-        const j = await res.json();
-        if (j?.error) msg = j.error;
+  frame.style.display = 'none';
+  img.style.display = 'none';
+  frame.src = 'about:blank';
+  img.src = '';
+  if (pdfHost) pdfHost.style.display = 'none';
+  modal.classList.add('active');
+
+  const nomeLower = String(nome).toLowerCase();
+  const possivelPdf = nomeLower.endsWith('.pdf');
+  const possivelImagem = /\.(jpe?g|png|gif|webp)$/i.test(nomeLower);
+
+  const mimeFromResponse = (res) => {
+    const raw = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (raw && raw !== 'application/octet-stream') return raw;
+    if (possivelPdf) return 'application/pdf';
+    if (possivelImagem) {
+      if (nomeLower.endsWith('.png')) return 'image/png';
+      if (nomeLower.endsWith('.gif')) return 'image/gif';
+      if (nomeLower.endsWith('.webp')) return 'image/webp';
+      return 'image/jpeg';
+    }
+    return 'application/octet-stream';
+  };
+
+  try {
+    const res = await fetch(viewUrl, { method: 'GET', cache: 'no-store', headers: headersParaAnexoAlvara() });
+    if (!res.ok) {
+      let msg = 'Falha ao carregar documento';
+      try {
+        const t = await res.text();
+        const j = JSON.parse(t);
+        if (j.error) msg = j.error;
+        if (j.message) msg = j.message;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    const mime = mimeFromResponse(res);
+    const buffer = await res.arrayBuffer();
+    const isPdf = mime === 'application/pdf' || possivelPdf;
+
+    if (isPdf) {
+      img.style.display = 'none';
+      img.src = '';
+      try {
+        await renderizarPdfAlvaraComPdfJs(buffer);
+      } catch (pdfErr) {
+        limparVisualizacaoPdfAlvara();
+        const blob = new Blob([buffer], { type: 'application/pdf' });
+        alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+        frame.style.display = 'block';
+        frame.src = alvaraAnexoObjectUrl;
+        showToast('Visualização alternativa (PDF). Se estiver em branco no celular, use Baixar.', 'info');
       }
-    } catch (_) {}
-    throw new Error(msg);
+    } else {
+      const blob = new Blob([buffer], { type: mime });
+      alvaraAnexoObjectUrl = URL.createObjectURL(blob);
+      frame.style.display = 'none';
+      frame.src = 'about:blank';
+      img.style.display = 'block';
+      img.src = alvaraAnexoObjectUrl;
+    }
+  } catch (e) {
+    showToast('Erro ao abrir documento: ' + (e.message || 'Falha'), 'error');
   }
 
-  const mime = (res.headers.get('Content-Type') || '').toLowerCase();
-  const buffer = await res.arrayBuffer();
-
-  // Botão baixar: usa blobUrl (não depende de cookies/headers)
-  const blobPdf = new Blob([buffer], { type: (mime.includes('pdf') ? 'application/pdf' : (mime || 'application/octet-stream')) });
-  alvaraAnexoObjectUrl = URL.createObjectURL(blobPdf);
-  baixarLink.style.display = '';
-  baixarLink.href = alvaraAnexoObjectUrl;
-  baixarLink.removeAttribute('target');
-  baixarLink.removeAttribute('rel');
-  baixarLink.setAttribute('download', downloadName);
-
-  // PDF: tenta PDF.js (igual), fallback iframe
-  if ((mime && mime.includes('pdf')) || (!mime && new TextDecoder().decode(new Uint8Array(buffer.slice(0, 5))) === '%PDF-')) {
-    try {
-      await renderizarPdfAlvaraComPdfJs(buffer);
-    } catch (pdfErr) {
-      limparVisualizacaoPdfAlvara();
-      frame.style.display = 'block';
-      frame.src = alvaraAnexoObjectUrl;
-      showToast('Visualização alternativa (PDF). Se estiver em branco no celular, use Baixar.', 'info');
-    }
-  } else {
-    // Se não for PDF, tenta mostrar no iframe mesmo assim
-    frame.style.display = 'block';
-    frame.src = alvaraAnexoObjectUrl;
+  if (baixarLink) {
+    baixarLink.style.display = '';
+    baixarLink.href = '#';
+    baixarLink.onclick = async (ev) => {
+      ev.preventDefault();
+      try {
+        const res = await fetch(downloadUrl, { method: 'GET', cache: 'no-store', headers: headersParaAnexoAlvara() });
+        if (!res.ok) throw new Error('Falha ao baixar');
+        const b = await res.blob();
+        const url = URL.createObjectURL(b);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nome;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+        }, 60_000);
+      } catch (err) {
+        showToast('Erro ao baixar: ' + (err.message || 'Falha'), 'error');
+      }
+    };
   }
 }
 
@@ -12853,7 +12719,18 @@ function setupNavigation() {
       const id = Number(btnCvTable.getAttribute("data-id") || "");
       if (!id) return;
       try {
-        await openRhPdfUsingAlvaraViewer(`/rh/candidatos/${id}/curriculo`, "📄 Currículo (PDF)", `curriculo-${id}.pdf`);
+        let nome = `curriculo-${id}.pdf`;
+        try {
+          const payload = await fetchJSON(`/rh/candidatos/${id}`);
+          const n = payload?.curriculo?.arquivo_nome_original || payload?.curriculo?.arquivo_nome || "";
+          if (n) nome = String(n);
+        } catch (_) {}
+        await abrirModalPdfNoViewerDoAlvara({
+          nomeArquivo: nome,
+          titulo: "📄 Currículo (PDF)",
+          viewApiPath: `/rh/candidatos/${id}/curriculo`,
+          downloadApiPath: `/rh/candidatos/${id}/curriculo?download=1`,
+        });
       } catch (err) {
         showToast(err?.message || "Erro ao abrir currículo.", "error");
       }
@@ -12922,8 +12799,13 @@ function setupNavigation() {
             return;
           }
           try {
-            // Usa o MESMO visualizador do Alvará (PDF.js + fallback) para ficar idêntico.
-            await openRhPdfUsingAlvaraViewer(`/rh/candidatos/${id}/curriculo`, "📄 Currículo (PDF)", `curriculo-${id}.pdf`);
+            const nome = (payload?.curriculo?.arquivo_nome_original || `curriculo-${id}.pdf`);
+            await abrirModalPdfNoViewerDoAlvara({
+              nomeArquivo: nome,
+              titulo: "📄 Currículo (PDF)",
+              viewApiPath: `/rh/candidatos/${id}/curriculo`,
+              downloadApiPath: `/rh/candidatos/${id}/curriculo?download=1`,
+            });
           } catch (err) {
             showToast(err?.message || "Erro ao abrir currículo.", "error");
           }
@@ -13027,7 +12909,12 @@ function setupNavigation() {
     const id = btn.dataset.id;
     if (!id) return;
     try {
-      await openRhPdfFromApi(`/rh/documentos/${id}/download`, "📄 Documento RH", `documento-${id}.pdf`);
+      await abrirModalPdfNoViewerDoAlvara({
+        nomeArquivo: `documento-${id}.pdf`,
+        titulo: "📄 Documento RH",
+        viewApiPath: `/rh/documentos/${id}/download`,
+        downloadApiPath: `/rh/documentos/${id}/download?download=1`,
+      });
     } catch (err) {
       showToast(err?.message || "Erro ao baixar documento.", "error");
     }
@@ -13051,13 +12938,6 @@ function togglePasswordVisibility(button) {
 function setupPasswordToggles() {
   dom.passwordToggles.forEach((button) => {
     button.addEventListener("click", () => togglePasswordVisibility(button));
-  });
-
-  // RH PDF modal close
-  document.getElementById("closeRhPdf")?.addEventListener("click", closeRhPdfModal);
-  document.getElementById("fecharRhPdf")?.addEventListener("click", closeRhPdfModal);
-  document.getElementById("rhPdfModal")?.addEventListener("click", (e) => {
-    if (e.target && e.target.id === "rhPdfModal") closeRhPdfModal();
   });
 }
 
