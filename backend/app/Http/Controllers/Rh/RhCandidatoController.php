@@ -211,40 +211,47 @@ class RhCandidatoController extends Controller
 
     public function downloadCurriculo(Request $request, int $id)
     {
-        if (! RhAcesso::pode($request, 'rh.candidatos')) {
-            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Sem permissão.'], 403));
+        try {
+            if (! RhAcesso::pode($request, 'rh.candidatos')) {
+                return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Sem permissão.'], 403));
+            }
+
+            if (! DB::table('rh_candidatos')->where('id', $id)->exists()) {
+                return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Candidato não encontrado'], 404));
+            }
+
+            $cv = DB::table('rh_curriculos')->where('candidato_id', $id)->orderByDesc('id')->first();
+            if (! $cv || ! $cv->arquivo_path || ! Storage::disk('public')->exists($cv->arquivo_path)) {
+                return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Currículo não encontrado'], 404));
+            }
+
+            // Pega o caminho físico via Storage::path() para respeitar a configuração do disk no servidor.
+            $path = Storage::disk('public')->path($cv->arquivo_path);
+            if (! $path || ! file_exists($path)) {
+                return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Arquivo não encontrado'], 404));
+            }
+
+            $nome = $cv->arquivo_nome_original ?: basename($path);
+            $forcarDownload = $request->boolean('download', false);
+            if ($forcarDownload) {
+                return $this->aplicarCorsRespostaCurriculo(response()->download($path, $nome));
+            }
+
+            // Currículo é sempre PDF.
+            $mime = 'application/pdf';
+
+            return $this->aplicarCorsRespostaCurriculo(response()->file($path, [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
+                'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
+                'X-Frame-Options' => 'ALLOWALL',
+            ]));
+        } catch (\Throwable $e) {
+            return $this->aplicarCorsRespostaCurriculo(response()->json([
+                'error' => 'Erro ao baixar currículo',
+                'detail' => $e->getMessage(),
+            ], 500));
         }
-
-        if (! DB::table('rh_candidatos')->where('id', $id)->exists()) {
-            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Candidato não encontrado'], 404));
-        }
-
-        $cv = DB::table('rh_curriculos')->where('candidato_id', $id)->orderByDesc('id')->first();
-        if (! $cv || ! $cv->arquivo_path || ! Storage::disk('public')->exists($cv->arquivo_path)) {
-            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Currículo não encontrado'], 404));
-        }
-
-        // Mesmo padrão do Alvará: pega o caminho físico e responde como inline (ou download com ?download=1).
-        $path = storage_path('app/public/' . ltrim((string) $cv->arquivo_path, '/'));
-        if (! file_exists($path)) {
-            return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Arquivo não encontrado'], 404));
-        }
-
-        $nome = $cv->arquivo_nome_original ?: basename($path);
-        $forcarDownload = $request->boolean('download', false);
-        if ($forcarDownload) {
-            return $this->aplicarCorsRespostaCurriculo(response()->download($path, $nome));
-        }
-
-        // Currículo é sempre PDF (upload público valida). Força Content-Type para evitar octet-stream no frontend.
-        $mime = 'application/pdf';
-
-        return $this->aplicarCorsRespostaCurriculo(response()->file($path, [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
-            'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
-            'X-Frame-Options' => 'ALLOWALL',
-        ]));
     }
 
     public function downloadFoto(Request $request, int $id)

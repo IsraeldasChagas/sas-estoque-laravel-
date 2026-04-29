@@ -95,36 +95,43 @@ class RhDocumentoController extends Controller
 
     public function download(Request $request, int $id)
     {
-        if (! RhAcesso::pode($request, 'rh.documentos')) {
-            return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Sem permissão.'], 403));
+        try {
+            if (! RhAcesso::pode($request, 'rh.documentos')) {
+                return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Sem permissão.'], 403));
+            }
+
+            $doc = DB::table('rh_documentos')->where('id', $id)->first();
+            if (! $doc) return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Documento não encontrado'], 404));
+
+            $path = $doc->arquivo_path;
+            if (! $path || ! Storage::disk('public')->exists($path)) {
+                return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
+            }
+
+            $fullPath = Storage::disk('public')->path($path);
+            if (! $fullPath || ! file_exists($fullPath)) {
+                return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
+            }
+
+            $nome = $doc->arquivo_nome_original ?: basename($fullPath);
+            $forcarDownload = $request->boolean('download', false);
+            if ($forcarDownload) {
+                return $this->aplicarCorsRespostaDownload(response()->download($fullPath, $nome));
+            }
+
+            $mime = $doc->mime ?: 'application/octet-stream';
+            return $this->aplicarCorsRespostaDownload(response()->file($fullPath, [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
+                'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
+                'X-Frame-Options' => 'ALLOWALL',
+            ]));
+        } catch (\Throwable $e) {
+            return $this->aplicarCorsRespostaDownload(response()->json([
+                'error' => 'Erro ao baixar documento',
+                'detail' => $e->getMessage(),
+            ], 500));
         }
-
-        $doc = DB::table('rh_documentos')->where('id', $id)->first();
-        if (! $doc) return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Documento não encontrado'], 404));
-
-        $path = $doc->arquivo_path;
-        if (! $path || ! Storage::disk('public')->exists($path)) {
-            return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
-        }
-
-        $fullPath = storage_path('app/public/' . ltrim((string) $path, '/'));
-        if (! file_exists($fullPath)) {
-            return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
-        }
-
-        $nome = $doc->arquivo_nome_original ?: basename($fullPath);
-        $forcarDownload = $request->boolean('download', false);
-        if ($forcarDownload) {
-            return $this->aplicarCorsRespostaDownload(response()->download($fullPath, $nome));
-        }
-
-        $mime = $doc->mime ?: 'application/octet-stream';
-        return $this->aplicarCorsRespostaDownload(response()->file($fullPath, [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
-            'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
-            'X-Frame-Options' => 'ALLOWALL',
-        ]));
     }
 }
 
