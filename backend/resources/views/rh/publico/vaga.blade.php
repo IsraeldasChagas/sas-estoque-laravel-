@@ -135,7 +135,11 @@
 
                 <div class="col-md-6">
                     <label class="form-label">Disponibilidade <span class="text-danger">*</span></label>
-                    <input name="disponibilidade" class="form-control" value="{{ old('disponibilidade') }}" required maxlength="80" />
+                    <select name="disponibilidade" class="form-control" required>
+                        <option value="">Selecione...</option>
+                        <option value="sim" @selected(old('disponibilidade') === 'sim')>Sim</option>
+                        <option value="nao" @selected(old('disponibilidade') === 'nao')>Não</option>
+                    </select>
                 </div>
 
                 <div class="col-md-8">

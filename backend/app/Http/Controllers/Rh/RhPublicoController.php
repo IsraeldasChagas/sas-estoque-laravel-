@@ -43,7 +43,7 @@ class RhPublicoController extends Controller
             'email' => 'required|email|max:160',
             'cidade' => 'required|string|max:120',
             'bairro' => 'required|string|max:120',
-            'disponibilidade' => 'required|string|max:80',
+            'disponibilidade' => 'required|string|in:sim,nao',
             'curriculo' => 'required|file|max:5120', // 5MB
             'foto' => 'required|file|max:2048', // 2MB
             'lgpd' => 'accepted',
