@@ -7,12 +7,33 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body { background: radial-gradient(900px 380px at 18% 0%, rgba(255,140,0,.55), transparent 60%), linear-gradient(180deg, #ff7a00 0%, #2b1608 35%, #0b0b0d 100%); color: rgba(255,255,255,.92); }
-        .gsp-brand { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+        .gsp-brand {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        .gsp-group,
+        .gsp-subbrand,
+        .gsp-sep { flex: 0 0 auto; }
         .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
-        .gsp-group { display:flex; align-items:center; gap:.6rem; }
-        .gsp-sep { width: 1px; height: 44px; background: rgba(255,255,255,.18); }
-        .gsp-subbrand { display:flex; align-items:center; gap:.6rem; }
-        .gsp-submark { width: 152px; height: 104px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); }
+        .gsp-group { display: flex; align-items: center; gap: .6rem; }
+        .gsp-sep {
+            width: 1px;
+            align-self: stretch;
+            min-height: 3rem;
+            background: rgba(255,255,255,.18);
+        }
+        .gsp-subbrand { display: flex; align-items: center; gap: .6rem; }
+        .gsp-submark {
+            width: 132px;
+            height: 88px;
+            object-fit: contain;
+            filter: drop-shadow(0 6px 18px rgba(0,0,0,.22));
+        }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; color: #fff; }
         .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
@@ -27,7 +48,7 @@
 </head>
 <body>
 <main class="container py-4" style="max-width: 980px;">
-    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
         <div class="gsp-brand">
             <div class="gsp-group">
                 <img class="gsp-mark" src="/imagens/logosemfundo.png" alt="Grupo Sabor Paraense" />

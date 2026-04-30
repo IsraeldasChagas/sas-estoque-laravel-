@@ -6,12 +6,33 @@
     <title>{{ $vaga->titulo }} — Vaga</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
-        .gsp-brand { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+        .gsp-brand {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        .gsp-group,
+        .gsp-subbrand,
+        .gsp-sep { flex: 0 0 auto; }
         .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
-        .gsp-group { display:flex; align-items:center; gap:.6rem; }
-        .gsp-sep { width: 1px; height: 44px; background: rgba(255,255,255,.18); }
-        .gsp-subbrand { display:flex; align-items:center; gap:.6rem; }
-        .gsp-submark { width: 152px; height: 104px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); }
+        .gsp-group { display: flex; align-items: center; gap: .6rem; }
+        .gsp-sep {
+            width: 1px;
+            align-self: stretch;
+            min-height: 3rem;
+            background: rgba(255,255,255,.18);
+        }
+        .gsp-subbrand { display: flex; align-items: center; gap: .6rem; }
+        .gsp-submark {
+            width: 132px;
+            height: 88px;
+            object-fit: contain;
+            filter: drop-shadow(0 6px 18px rgba(0,0,0,.22));
+        }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
         .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
