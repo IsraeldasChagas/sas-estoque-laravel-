@@ -8,7 +8,7 @@
     <style>
         body { background: radial-gradient(900px 380px at 18% 0%, rgba(255,140,0,.55), transparent 60%), linear-gradient(180deg, #ff7a00 0%, #2b1608 35%, #0b0b0d 100%); color: rgba(255,255,255,.92); }
         .gsp-brand { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-        .gsp-mark { width: 176px; height: 176px; flex: 0 0 auto; object-fit: contain; }
+        .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
         .gsp-group { display:flex; align-items:center; gap:.6rem; }
         .gsp-sep { width: 1px; height: 44px; background: rgba(255,255,255,.18); }
         .gsp-subbrand { display:flex; align-items:center; gap:.6rem; }
