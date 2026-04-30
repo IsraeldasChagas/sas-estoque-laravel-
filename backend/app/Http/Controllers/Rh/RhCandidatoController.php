@@ -170,8 +170,18 @@ class RhCandidatoController extends Controller
             ], 500)->header('Access-Control-Allow-Origin', '*');
         }
 
-        // Mesma origem da requisição (inclui subpasta pública, se existir); evita APP_URL errado.
-        $url = rtrim($request->root(), '/') . '/documentacao/' . $token;
+        // root() em chamadas /api/... vira https://host/api — a rota web /documentacao fica fora do prefixo api.
+        $base = rtrim($request->root(), '/');
+        if (str_ends_with($base, '/api')) {
+            $base = substr($base, 0, -4);
+        }
+        if ($base === '') {
+            $base = rtrim((string) config('app.url'), '/');
+            if (str_ends_with($base, '/api')) {
+                $base = substr($base, 0, -4);
+            }
+        }
+        $url = $base . '/documentacao/' . $token;
 
         return response()->json([
             'url' => $url,

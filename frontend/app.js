@@ -7517,6 +7517,80 @@ function closeRhCandidatoInlineRow() {
   rhCandidatoInlineOpenId = null;
 }
 
+/** Modal simples: o RH sempre vê o link completo (clipboard nem sempre funciona em HTTP / políticas do navegador). */
+function showRhDocumentacaoLinkModal(url) {
+  const wrap = document.createElement("div");
+  wrap.className = "rh-doc-link-modal-overlay";
+  wrap.setAttribute("role", "dialog");
+  wrap.setAttribute("aria-modal", "true");
+  wrap.style.cssText =
+    "position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10050;padding:1rem;";
+  const panel = document.createElement("div");
+  panel.style.cssText =
+    "background:#1e293b;color:#f1f5f9;max-width:560px;width:100%;border-radius:12px;padding:1.25rem;box-shadow:0 12px 40px rgba(0,0,0,.45);";
+  const h = document.createElement("h3");
+  h.textContent = "Link — documentos do candidato (PDF)";
+  h.style.cssText = "margin:0 0 .5rem;font-size:1.05rem;font-weight:700;";
+  const p = document.createElement("p");
+  p.textContent = "Copie e envie por WhatsApp ou e-mail. Cada novo link invalida o anterior.";
+  p.style.cssText = "margin:0 0 1rem;font-size:.88rem;opacity:.88;line-height:1.35;";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.readOnly = true;
+  input.value = url;
+  input.style.cssText =
+    "width:100%;box-sizing:border-box;padding:.55rem .65rem;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:.8rem;margin-bottom:1rem;";
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;";
+  const btnClose = document.createElement("button");
+  btnClose.type = "button";
+  btnClose.className = "btn neutral";
+  btnClose.textContent = "Fechar";
+  const btnCopy = document.createElement("button");
+  btnCopy.type = "button";
+  btnCopy.className = "btn primary";
+  btnCopy.textContent = "Copiar link";
+  const close = () => {
+    wrap.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (ev) => {
+    if (ev.key === "Escape") close();
+  };
+  btnClose.addEventListener("click", close);
+  btnCopy.addEventListener("click", async () => {
+    input.focus();
+    input.select();
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Link copiado.", "success");
+    } catch (_) {
+      try {
+        document.execCommand("copy");
+        showToast("Link copiado.", "success");
+      } catch (_2) {
+        showToast("Selecione o texto acima e use Ctrl+C.", "info");
+      }
+    }
+  });
+  wrap.addEventListener("click", (e) => {
+    if (e.target === wrap) close();
+  });
+  document.addEventListener("keydown", onKey);
+  actions.appendChild(btnClose);
+  actions.appendChild(btnCopy);
+  panel.appendChild(h);
+  panel.appendChild(p);
+  panel.appendChild(input);
+  panel.appendChild(actions);
+  wrap.appendChild(panel);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => {
+    input.focus();
+    input.select();
+  });
+}
+
 function renderRhCandidatoInlineRow(payload) {
   const c = payload?.candidato;
   if (!c) return "";
@@ -12926,18 +13000,15 @@ function setupNavigation() {
         detailsTr.querySelector(".rh-cand-doc-link")?.addEventListener("click", async () => {
           try {
             const out = await fetchJSON(`/rh/candidatos/${id}/documentacao-link`, { method: "POST", body: "{}" });
-            const url = (out && out.url) ? String(out.url) : "";
+            const url = (out && out.url) ? String(out.url).trim() : "";
             if (!url) {
               showToast("Resposta sem URL do link.", "error");
               return;
             }
-            let copied = false;
             try {
               await navigator.clipboard.writeText(url);
-              copied = true;
             } catch (_) {}
-            if (copied) showToast("Link copiado. Envie ao candidato (WhatsApp, e-mail, etc.).", "success");
-            else window.prompt("Copie o link e envie ao candidato:", url);
+            showRhDocumentacaoLinkModal(url);
           } catch (err) {
             showToast(err?.message || "Erro ao gerar link.", "error");
           }
