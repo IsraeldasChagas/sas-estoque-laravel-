@@ -7,8 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Writer\PngWriter;
 
 class RhPublicoController extends Controller
 {
@@ -100,24 +98,7 @@ class RhPublicoController extends Controller
         $apiBase = rtrim((string) config('app.url'), '/');
         $publicUrl = $apiBase . '/vagas/' . $vaga->slug;
 
-        // Sempre tenta gerar localmente, mas NUNCA deixe estourar 500:
-        // se faltar lib/extensão ou ocorrer qualquer erro, cai no gerador externo.
-        try {
-            if (class_exists(Builder::class)) {
-                $result = Builder::create()
-                    ->writer(new PngWriter())
-                    ->data($publicUrl)
-                    ->size(420)
-                    ->margin(10)
-                    ->build();
-
-                return response($result->getString(), 200)
-                    ->header('Content-Type', 'image/png');
-            }
-        } catch (\Throwable $e) {
-            // fallback abaixo
-        }
-
+        // QR Code público sem dependências de vendor (evita 500 por diferença de versões no servidor).
         $qrUrl = 'https://quickchart.io/qr?size=420&format=png&text=' . urlencode($publicUrl);
         return redirect()->away($qrUrl);
     }
