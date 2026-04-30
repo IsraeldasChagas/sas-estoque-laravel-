@@ -13,9 +13,13 @@
         .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }
         .vaga-choices { border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: .75rem; background: #fff; }
         .vaga-choices .form-check { margin: .2rem 0; }
+        body { color: rgba(255,255,255,.92); }
+        .gsp-name .title { color: #ffffff; }
+        .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
+        .text-muted { color: rgba(255,255,255,.72) !important; }
     </style>
 </head>
-<body class="bg-light" style="background: radial-gradient(900px 380px at 12% 8%, rgba(25,135,84,.14), transparent 60%), radial-gradient(800px 420px at 88% 22%, rgba(13,110,253,.10), transparent 55%), linear-gradient(180deg, #f7faf9 0%, #f1f5f9 60%, #eef2f7 100%);">
+<body class="bg-light" style="background: radial-gradient(900px 380px at 18% 0%, rgba(255,140,0,.55), transparent 60%), linear-gradient(180deg, #ff7a00 0%, #2b1608 35%, #0b0b0d 100%);">
 <main class="container py-4" style="max-width: 860px;">
     <div class="mb-4">
         <div class="gsp-brand mb-3">
