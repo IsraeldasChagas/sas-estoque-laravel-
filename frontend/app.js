@@ -7602,6 +7602,24 @@ function renderRhCandidatoInlineRow(payload) {
   const stCand = (c.status || "novo").toString();
   const docLinkHabilitado = stCand === "aprovado" || stCand === "em_contratacao";
 
+  const docsLista = Array.isArray(payload?.documentos) ? payload.documentos : [];
+  const tiposDocEnviados = new Set(
+    docsLista.map((d) => String(d?.tipo || "").toLowerCase().trim()).filter(Boolean),
+  );
+  const rotulosDocTipo = { cpf: "CPF", rg: "RG", comprovante: "Comprovante de residência", ctps: "CTPS" };
+  const ordemDocTipos = ["cpf", "rg", "comprovante", "ctps"];
+  const docBadgesHtml = ordemDocTipos
+    .map((t) => {
+      const ok = tiposDocEnviados.has(t);
+      const label = rotulosDocTipo[t] || t;
+      const bg = ok ? "rgba(34,197,94,.22)" : "rgba(255,255,255,.06)";
+      const bd = ok ? "1px solid rgba(34,197,94,.5)" : "1px solid rgba(255,255,255,.14)";
+      const fg = ok ? "#bbf7d0" : "rgba(255,255,255,.68)";
+      const txt = ok ? `${label} ✓` : `${label} — pendente`;
+      return `<span style="display:inline-block;padding:.38rem .7rem;border-radius:999px;font-size:.8rem;font-weight:600;background:${bg};border:${bd};color:${fg};">${esc(txt)}</span>`;
+    })
+    .join("");
+
   return `
     <td colspan="6" style="padding: 0;">
       <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
@@ -7647,6 +7665,12 @@ function renderRhCandidatoInlineRow(payload) {
             </div>
             <label style="display:block; margin: .6rem 0 .35rem;">Observações internas</label>
             <textarea class="rh-cand-obs" style="width:100%; min-height: 110px;">${esc(c.observacoes_internas || "")}</textarea>
+
+            <div style="margin-top:1rem;padding:1rem;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);">
+              <div style="font-weight:700;margin-bottom:.4rem;font-size:.95rem;">Documentos de contratação</div>
+              <div class="subtle-text" style="margin-bottom:.65rem;font-size:.82rem;">Status dos envios (igual à página do link enviado ao candidato).</div>
+              <div style="display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;">${docBadgesHtml}</div>
+            </div>
 
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
               <button type="button" class="btn rh-cand-cv" data-has-cv="${temCurriculo ? "1" : "0"}" ${temCurriculo ? "" : "disabled"}>Ver currículo</button>
