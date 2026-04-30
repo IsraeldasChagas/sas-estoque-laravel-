@@ -9321,6 +9321,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     Route::get('/documentos', [RhDocumentoController::class, 'index']);
     Route::post('/candidatos/{candidatoId}/documentos', [RhDocumentoController::class, 'upload']);
     Route::get('/documentos/{id}/download', [RhDocumentoController::class, 'download']);
+    Route::delete('/documentos/{id}', [RhDocumentoController::class, 'destroy']);
 });
 
 // ============================================

@@ -55,7 +55,8 @@ class RhDocumentoController extends Controller
         if (! $c) return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
 
         // LGPD: documentos só após aprovação / em contratação
-        if (! in_array($c->status, ['aprovado', 'em_contratacao'], true)) {
+        $stUp = strtolower(trim((string) ($c->status ?? '')));
+        if (! in_array($stUp, ['aprovado', 'em_contratacao'], true)) {
             return response()->json(['error' => 'Documentos só podem ser enviados após aprovação (Aprovado / Em contratação).'], 422)
                 ->header('Access-Control-Allow-Origin', '*');
         }
@@ -153,6 +154,49 @@ class RhDocumentoController extends Controller
                 'detail' => $e->getMessage(),
             ], 500));
         }
+    }
+
+    /**
+     * Remove documento (arquivo + registro) para o candidato poder enviar de novo.
+     */
+    public function destroy(Request $request, int $id)
+    {
+        if (! RhAcesso::pode($request, 'rh.documentos') && ! RhAcesso::pode($request, 'rh.candidatos')) {
+            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $doc = DB::table('rh_documentos')->where('id', $id)->first();
+        if (! $doc) {
+            return response()->json(['error' => 'Documento não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $c = DB::table('rh_candidatos')->where('id', $doc->candidato_id)->first();
+        if (! $c) {
+            return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        if (! empty($c->anonimizado_em)) {
+            return response()->json(['error' => 'Candidato anonimizado.'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $st = strtolower(trim((string) ($c->status ?? '')));
+        if (! in_array($st, ['aprovado', 'em_contratacao', 'contratado'], true)) {
+            return response()->json([
+                'error' => 'Só é permitido excluir documentos com candidato Aprovado, Em contratação ou Contratado.',
+            ], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $path = $doc->arquivo_path ?? null;
+        if ($path) {
+            try {
+                Storage::disk('public')->delete($path);
+            } catch (\Throwable $_) {
+            }
+        }
+
+        DB::table('rh_documentos')->where('id', $id)->delete();
+
+        return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     }
 }
 

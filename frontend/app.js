@@ -7517,6 +7517,14 @@ function closeRhCandidatoInlineRow() {
   rhCandidatoInlineOpenId = null;
 }
 
+/** Monta link wa.me a partir do telefone do candidato (somente dígitos, BR com 55). */
+function rhWhatsAppHrefFromTelefone(telRaw) {
+  const d = String(telRaw || "").replace(/\D/g, "");
+  if (d.length < 10) return "";
+  const n = d.startsWith("55") ? d : `55${d}`;
+  return `https://wa.me/${n}`;
+}
+
 /** Modal simples: o RH sempre vê o link completo (clipboard nem sempre funciona em HTTP / políticas do navegador). */
 function showRhDocumentacaoLinkModal(url) {
   const wrap = document.createElement("div");
@@ -7605,21 +7613,27 @@ function renderRhCandidatoInlineRow(payload) {
   const docsLista = Array.isArray(payload?.documentos) ? payload.documentos : [];
   const nomeCandTbl = esc(c.nome || "-");
   const vagaTbl = esc(vagaTitulo || "-");
+  const waHref = rhWhatsAppHrefFromTelefone(c.telefone);
+  const waHeaderBtn = waHref
+    ? `<a href="${esc(waHref)}" target="_blank" rel="noopener noreferrer" class="btn primary" style="text-decoration:none;font-size:.88rem;">WhatsApp candidato</a>`
+    : `<span class="subtle-text" style="font-size:.82rem;">Sem telefone para WhatsApp</span>`;
+
   const docRowsHtml =
     docsLista.length === 0
-      ? `<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>`
+      ? `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>`
       : docsLista
           .map((d) => {
             const tipoU = esc(String(d?.tipo || "").toUpperCase());
             const dt = esc(String(d?.created_at || "").slice(0, 19).replace("T", " "));
-            const did = esc(String(d?.id ?? ""));
-            return `<tr>
-    <td>${did}</td>
+            const rid = esc(String(d?.id ?? ""));
+            return `<tr data-doc-id="${rid}">
+    <td>${rid}</td>
     <td>${nomeCandTbl}</td>
     <td>${vagaTbl}</td>
     <td>${tipoU}</td>
-    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${did}">Baixar</button></td>
+    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${rid}">Baixar</button></td>
     <td>${dt}</td>
+    <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${rid}">Excluir</button></td>
   </tr>`;
           })
           .join("");
@@ -7671,7 +7685,10 @@ function renderRhCandidatoInlineRow(payload) {
             <textarea class="rh-cand-obs" style="width:100%; min-height: 110px;">${esc(c.observacoes_internas || "")}</textarea>
 
             <div class="table-card form-card--wide" style="margin-top:1rem;">
-              <header>Documentos enviados</header>
+              <header style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.65rem;padding:.75rem 1rem;">
+                <span>Documentos enviados</span>
+                ${waHeaderBtn}
+              </header>
               <div class="table-wrapper">
                 <table>
                   <thead>
@@ -7682,6 +7699,7 @@ function renderRhCandidatoInlineRow(payload) {
                       <th>Tipo</th>
                       <th>Arquivo</th>
                       <th>Enviado em</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -7699,6 +7717,9 @@ function renderRhCandidatoInlineRow(payload) {
               <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
             </div>
             <div class="subtle-text" style="margin-top:.45rem;">
+              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. <strong>WhatsApp candidato</strong> abre o chat com o telefone cadastrado.
+            </div>
+            <div class="subtle-text" style="margin-top:.35rem;">
               Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia PDF pela página pública.
             </div>
             <div class="subtle-text" style="margin-top:.5rem;">
@@ -7761,17 +7782,18 @@ async function loadRhDocumentos() {
   if (!tb) return;
   const items = Array.isArray(lista) ? lista : [];
   if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
     return;
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
-  tb.innerHTML = items.map((d) => `<tr>
+  tb.innerHTML = items.map((d) => `<tr data-doc-id="${esc(d.id)}">
     <td>${esc(d.id)}</td>
     <td>${esc(d.candidato_nome || "-")}</td>
     <td>${esc(d.vaga_titulo || "-")}</td>
     <td>${esc((d.tipo || "").toUpperCase())}</td>
     <td><button type="button" class="table-action btn-rh-doc-download" data-id="${esc(d.id)}">Baixar</button></td>
     <td>${esc((d.created_at || "").toString().slice(0,19).replace("T"," "))}</td>
+    <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${esc(d.id)}">Excluir</button></td>
   </tr>`).join("");
 }
 
@@ -12957,6 +12979,29 @@ function setupNavigation() {
       return;
     }
 
+    const btnDocDelCand = e.target.closest(".btn-rh-doc-delete");
+    if (btnDocDelCand && e.target.closest("#rhCandidatosSection") && !e.target.closest("#rhDocumentosSection")) {
+      e.preventDefault();
+      const docId = btnDocDelCand.getAttribute("data-id");
+      if (!docId) return;
+      if (!confirm("Excluir este documento? O arquivo some do sistema e o candidato pode enviar de novo pelo link.")) return;
+      try {
+        await fetchJSON(`/rh/documentos/${encodeURIComponent(docId)}`, { method: "DELETE" });
+        showToast("Documento excluído.", "success");
+        const tr = btnDocDelCand.closest("tr");
+        const tbody = tr?.parentElement;
+        tr?.remove();
+        if (tbody && !tbody.querySelector("tr")) {
+          tbody.innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
+        }
+        loadRhDocumentos().catch(() => {});
+      } catch (err) {
+        showToast(err?.message || "Erro ao excluir documento.", "error");
+      }
+      return;
+    }
+
     const btnToggle = e.target.closest(".btn-rh-toggle");
     if (btnToggle) {
       e.preventDefault();
@@ -13148,6 +13193,22 @@ function setupNavigation() {
     }
   });
   document.getElementById("rhDocumentosSection")?.addEventListener("click", async (e) => {
+    const btnDel = e.target.closest(".btn-rh-doc-delete");
+    if (btnDel) {
+      e.preventDefault();
+      const docId = btnDel.getAttribute("data-id");
+      if (!docId) return;
+      if (!confirm("Excluir este documento? O arquivo some do sistema e o candidato pode enviar de novo pelo link.")) return;
+      try {
+        await fetchJSON(`/rh/documentos/${encodeURIComponent(docId)}`, { method: "DELETE" });
+        showToast("Documento excluído.", "success");
+        await loadRhDocumentos();
+      } catch (err) {
+        showToast(err?.message || "Erro ao excluir documento.", "error");
+      }
+      return;
+    }
+
     const btn = e.target.closest(".btn-rh-doc-download");
     if (!btn) return;
     e.preventDefault();
