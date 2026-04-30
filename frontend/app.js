@@ -7603,22 +7603,26 @@ function renderRhCandidatoInlineRow(payload) {
   const docLinkHabilitado = stCand === "aprovado" || stCand === "em_contratacao";
 
   const docsLista = Array.isArray(payload?.documentos) ? payload.documentos : [];
-  const tiposDocEnviados = new Set(
-    docsLista.map((d) => String(d?.tipo || "").toLowerCase().trim()).filter(Boolean),
-  );
-  const rotulosDocTipo = { cpf: "CPF", rg: "RG", comprovante: "Comprovante de residência", ctps: "CTPS" };
-  const ordemDocTipos = ["cpf", "rg", "comprovante", "ctps"];
-  const docBadgesHtml = ordemDocTipos
-    .map((t) => {
-      const ok = tiposDocEnviados.has(t);
-      const label = rotulosDocTipo[t] || t;
-      const bg = ok ? "rgba(34,197,94,.22)" : "rgba(255,255,255,.06)";
-      const bd = ok ? "1px solid rgba(34,197,94,.5)" : "1px solid rgba(255,255,255,.14)";
-      const fg = ok ? "#bbf7d0" : "rgba(255,255,255,.68)";
-      const txt = ok ? `${label} ✓` : `${label} — pendente`;
-      return `<span style="display:inline-block;padding:.38rem .7rem;border-radius:999px;font-size:.8rem;font-weight:600;background:${bg};border:${bd};color:${fg};">${esc(txt)}</span>`;
-    })
-    .join("");
+  const nomeCandTbl = esc(c.nome || "-");
+  const vagaTbl = esc(vagaTitulo || "-");
+  const docRowsHtml =
+    docsLista.length === 0
+      ? `<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>`
+      : docsLista
+          .map((d) => {
+            const tipoU = esc(String(d?.tipo || "").toUpperCase());
+            const dt = esc(String(d?.created_at || "").slice(0, 19).replace("T", " "));
+            const did = esc(String(d?.id ?? ""));
+            return `<tr>
+    <td>${did}</td>
+    <td>${nomeCandTbl}</td>
+    <td>${vagaTbl}</td>
+    <td>${tipoU}</td>
+    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${did}">Baixar</button></td>
+    <td>${dt}</td>
+  </tr>`;
+          })
+          .join("");
 
   return `
     <td colspan="6" style="padding: 0;">
@@ -7666,10 +7670,25 @@ function renderRhCandidatoInlineRow(payload) {
             <label style="display:block; margin: .6rem 0 .35rem;">Observações internas</label>
             <textarea class="rh-cand-obs" style="width:100%; min-height: 110px;">${esc(c.observacoes_internas || "")}</textarea>
 
-            <div style="margin-top:1rem;padding:1rem;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);">
-              <div style="font-weight:700;margin-bottom:.4rem;font-size:.95rem;">Documentos de contratação</div>
-              <div class="subtle-text" style="margin-bottom:.65rem;font-size:.82rem;">Status dos envios (igual à página do link enviado ao candidato).</div>
-              <div style="display:flex;flex-wrap:wrap;gap:.45rem;align-items:center;">${docBadgesHtml}</div>
+            <div class="table-card form-card--wide" style="margin-top:1rem;">
+              <header>Documentos enviados</header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Candidato</th>
+                      <th>Vaga</th>
+                      <th>Tipo</th>
+                      <th>Arquivo</th>
+                      <th>Enviado em</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${docRowsHtml}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
@@ -12916,6 +12935,24 @@ function setupNavigation() {
         });
       } catch (err) {
         showToast(err?.message || "Erro ao abrir currículo.", "error");
+      }
+      return;
+    }
+
+    const btnDocCand = e.target.closest(".btn-rh-doc-download");
+    if (btnDocCand && e.target.closest("#rhCandidatosSection") && !e.target.closest("#rhDocumentosSection")) {
+      e.preventDefault();
+      const docId = btnDocCand.getAttribute("data-id");
+      if (!docId) return;
+      try {
+        await abrirModalPdfNoViewerDoAlvara({
+          nomeArquivo: `documento-${docId}.pdf`,
+          titulo: "📄 Documento RH",
+          viewApiPath: `/rh/documentos/${docId}/download`,
+          downloadApiPath: `/rh/documentos/${docId}/download?download=1`,
+        });
+      } catch (err) {
+        showToast(err?.message || "Erro ao baixar documento.", "error");
       }
       return;
     }
