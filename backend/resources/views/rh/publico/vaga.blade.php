@@ -81,6 +81,8 @@
 
             <form method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
                 @csrf
+                @php($disabled = (!empty($vagaBloqueada) && $vagaBloqueada))
+                <fieldset @disabled($disabled) class="row g-3 m-0 p-0" style="border:0;">
 
                 @php
                     $vagas = isset($vagasAbertas) ? $vagasAbertas : collect();
@@ -156,6 +158,7 @@
                 <div class="col-12">
                     <button class="btn btn-primary" @disabled(!empty($vagaBloqueada) && $vagaBloqueada)>Enviar candidatura</button>
                 </div>
+                </fieldset>
             </form>
         </div>
     </div>
