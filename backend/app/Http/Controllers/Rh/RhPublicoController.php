@@ -38,13 +38,13 @@ class RhPublicoController extends Controller
             'vaga_ids' => 'nullable|array',
             'vaga_ids.*' => 'integer',
             'nome' => 'required|string|max:160',
-            'telefone' => 'nullable|string|max:40',
-            'email' => 'nullable|email|max:160',
-            'cidade' => 'nullable|string|max:120',
-            'bairro' => 'nullable|string|max:120',
-            'disponibilidade' => 'nullable|string|max:80',
+            'telefone' => 'required|string|max:40',
+            'email' => 'required|email|max:160',
+            'cidade' => 'required|string|max:120',
+            'bairro' => 'required|string|max:120',
+            'disponibilidade' => 'required|string|max:80',
             'curriculo' => 'required|file|max:5120', // 5MB
-            'foto' => 'nullable|file|max:2048', // 2MB
+            'foto' => 'required|file|max:2048', // 2MB
             'lgpd' => 'accepted',
         ], [
             'lgpd.accepted' => 'Você precisa autorizar o uso dos seus dados para recrutamento e seleção.',
@@ -75,29 +75,25 @@ class RhPublicoController extends Controller
         }
 
         $foto = $request->file('foto');
-        if ($foto && $foto->isValid()) {
-            $fotoMime = $foto->getMimeType() ?: '';
-            if (! in_array($fotoMime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-                return back()->withErrors(['foto' => 'Foto deve ser JPG, PNG ou WEBP.'])->withInput();
-            }
+        if (! $foto || ! $foto->isValid()) {
+            return back()->withErrors(['foto' => 'Foto inválida.'])->withInput();
+        }
+        $fotoMime = $foto->getMimeType() ?: '';
+        if (! in_array($fotoMime, ['image/jpeg', 'image/png'], true)) {
+            return back()->withErrors(['foto' => 'Foto deve ser JPG ou PNG.'])->withInput();
         }
 
         $origCvName = $curriculo->getClientOriginalName();
-        $origFotoName = $foto && $foto->isValid() ? $foto->getClientOriginalName() : null;
+        $origFotoName = $foto->getClientOriginalName();
 
         // Lê os arquivos uma vez para replicar por vaga (uma candidatura por vaga marcada).
         $cvBytes = file_get_contents($curriculo->getRealPath());
         if ($cvBytes === false) {
             return back()->withErrors(['curriculo' => 'Não foi possível ler o currículo.'])->withInput();
         }
-        $fotoBytes = null;
-        $fotoMime = null;
-        if ($foto && $foto->isValid()) {
-            $fotoBytes = file_get_contents($foto->getRealPath());
-            $fotoMime = $foto->getMimeType() ?: null;
-            if ($fotoBytes === false) {
-                return back()->withErrors(['foto' => 'Não foi possível ler a foto.'])->withInput();
-            }
+        $fotoBytes = file_get_contents($foto->getRealPath());
+        if ($fotoBytes === false) {
+            return back()->withErrors(['foto' => 'Não foi possível ler a foto.'])->withInput();
         }
 
         foreach ($vagasEscolhidas as $vagaEscolhida) {
@@ -131,17 +127,13 @@ class RhPublicoController extends Controller
                 'updated_at' => now(),
             ]);
 
-            if ($fotoBytes !== null) {
-                $ext = 'jpg';
-                if ($fotoMime === 'image/png') $ext = 'png';
-                if ($fotoMime === 'image/webp') $ext = 'webp';
-                $fotoPath = "rh/fotos/{$candidatoId}/" . (time() . '-' . Str::random(10) . '.' . $ext);
+            $ext = $fotoMime === 'image/png' ? 'png' : 'jpg';
+            $fotoPath = "rh/fotos/{$candidatoId}/" . (time() . '-' . Str::random(10) . '.' . $ext);
                 \Storage::disk('public')->put($fotoPath, $fotoBytes);
                 DB::table('rh_candidatos')->where('id', $candidatoId)->update([
                     'foto_path' => $fotoPath,
                     'updated_at' => now(),
                 ]);
-            }
         }
 
         return redirect()->to("/vagas/{$slug}?ok=1");

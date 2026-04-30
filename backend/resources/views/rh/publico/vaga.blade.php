@@ -106,25 +106,25 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">WhatsApp</label>
-                    <input name="telefone" class="form-control" value="{{ old('telefone') }}" maxlength="40" />
+                    <input name="telefone" class="form-control" value="{{ old('telefone') }}" required maxlength="40" />
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-control" value="{{ old('email') }}" maxlength="160" />
+                    <input type="email" name="email" class="form-control" value="{{ old('email') }}" required maxlength="160" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Cidade</label>
-                    <input name="cidade" class="form-control" value="{{ old('cidade') }}" maxlength="120" />
+                    <input name="cidade" class="form-control" value="{{ old('cidade') }}" required maxlength="120" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Bairro</label>
-                    <input name="bairro" class="form-control" value="{{ old('bairro') }}" maxlength="120" />
+                    <input name="bairro" class="form-control" value="{{ old('bairro') }}" required maxlength="120" />
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label">Disponibilidade</label>
-                    <input name="disponibilidade" class="form-control" value="{{ old('disponibilidade') }}" maxlength="80" />
+                    <input name="disponibilidade" class="form-control" value="{{ old('disponibilidade') }}" required maxlength="80" />
                 </div>
 
                 <div class="col-md-8">
@@ -133,8 +133,8 @@
                     <div class="form-text">Não envie CPF/RG/CTPS na candidatura. Documentos só após aprovação.</div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Foto (opcional)</label>
-                    <input type="file" name="foto" class="form-control" accept="image/jpeg,image/png,image/webp" />
+                    <label class="form-label">Foto</label>
+                    <input type="file" name="foto" class="form-control" accept="image/jpeg,image/png" required />
                 </div>
 
                 <div class="col-12">
