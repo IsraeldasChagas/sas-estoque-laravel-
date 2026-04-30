@@ -75,3 +75,8 @@ Route::get('/vagas', [RhPublicoController::class, 'indexVagas']);
 Route::get('/vagas/{slug}', [RhPublicoController::class, 'showVaga']);
 Route::get('/vagas/{slug}/qrcode', [RhPublicoController::class, 'qrcodeVaga']);
 Route::post('/vagas/{slug}/candidatar', [RhPublicoController::class, 'candidatar']);
+
+Route::get('/documentacao/{token}', [RhPublicoController::class, 'documentacaoForm'])
+    ->where('token', '[a-fA-F0-9]{64}');
+Route::post('/documentacao/{token}', [RhPublicoController::class, 'documentacaoEnviar'])
+    ->where('token', '[a-fA-F0-9]{64}');

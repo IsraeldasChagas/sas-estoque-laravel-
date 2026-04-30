@@ -70,6 +70,7 @@ class RhCandidatoController extends Controller
             $r->tem_curriculo = (bool) ($cvPath && Storage::disk('public')->exists($cvPath));
             $r->tem_foto = (bool) (! empty($r->foto_path) && Storage::disk('public')->exists($r->foto_path));
             unset($r->curriculo_path);
+            unset($r->documentacao_token_hash);
         }
 
         return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
@@ -98,8 +99,14 @@ class RhCandidatoController extends Controller
         $documentos = DB::table('rh_documentos')->where('candidato_id', $id)->orderByDesc('id')->get();
         $historico = DB::table('rh_historico')->where('candidato_id', $id)->orderByDesc('id')->get();
 
+        $docTokenGerado = $c->documentacao_token_gerado_em ?? null;
+        $docPublicaAtiva = (bool) (! empty($c->documentacao_token_hash));
+
+        $candidatoApi = (array) $c;
+        unset($candidatoApi['documentacao_token_hash']);
+
         return response()->json([
-            'candidato' => $c,
+            'candidato' => (object) $candidatoApi,
             'vaga' => $vaga,
             'curriculo' => $curriculo,
             'tem_curriculo' => (bool) $curriculo,
@@ -107,6 +114,53 @@ class RhCandidatoController extends Controller
             'entrevistas' => $entrevistas,
             'documentos' => $documentos,
             'historico' => $historico,
+            'documentacao_publica_ativa' => $docPublicaAtiva,
+            'documentacao_publica_gerada_em' => $docTokenGerado,
+        ])->header('Access-Control-Allow-Origin', '*');
+    }
+
+    /**
+     * Gera link público (token opaco) para o candidato enviar documentos de contratação em PDF.
+     * Só permitido com status Aprovado ou Em contratação.
+     */
+    public function gerarLinkDocumentacao(Request $request, int $id)
+    {
+        if (! RhAcesso::pode($request, 'rh.candidatos') && ! RhAcesso::pode($request, 'rh.documentos')) {
+            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $c = DB::table('rh_candidatos')->where('id', $id)->first();
+        if (! $c) {
+            return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        if (! empty($c->anonimizado_em)) {
+            return response()->json(['error' => 'Candidato anonimizado.'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        if (! in_array($c->status, ['aprovado', 'em_contratacao'], true)) {
+            return response()->json([
+                'error' => 'Gere o link apenas com status Aprovado ou Em contratação.',
+            ], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $hash = hash('sha256', $token);
+        $now = now();
+
+        DB::table('rh_candidatos')->where('id', $id)->update([
+            'documentacao_token_hash' => $hash,
+            'documentacao_token_gerado_em' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $base = rtrim((string) config('app.url'), '/');
+        $url = $base . '/documentacao/' . $token;
+
+        return response()->json([
+            'url' => $url,
+            'documentacao_publica_ativa' => true,
+            'documentacao_publica_gerada_em' => $now->format('c'),
         ])->header('Access-Control-Allow-Origin', '*');
     }
 
@@ -185,6 +239,8 @@ class RhCandidatoController extends Controller
             'pretensao_salarial' => null,
             'foto_path' => null,
             'observacoes_internas' => null,
+            'documentacao_token_hash' => null,
+            'documentacao_token_gerado_em' => null,
             'anonimizado_em' => now(),
             'anonimizado_por' => $request->header('X-Usuario-Id') ? (int) $request->header('X-Usuario-Id') : null,
             'updated_at' => now(),

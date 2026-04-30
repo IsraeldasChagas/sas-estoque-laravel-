@@ -9307,6 +9307,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     Route::get('/candidatos/{id}/curriculo', [RhCandidatoController::class, 'downloadCurriculo']);
     Route::get('/candidatos/{id}/foto', [RhCandidatoController::class, 'downloadFoto']);
     Route::put('/candidatos/{id}/status', [RhCandidatoController::class, 'updateStatus']);
+    Route::post('/candidatos/{id}/documentacao-link', [RhCandidatoController::class, 'gerarLinkDocumentacao']);
     Route::put('/candidatos/{id}/observacoes', [RhCandidatoController::class, 'updateObservacoes']);
     Route::post('/candidatos/{id}/anonimizar', [RhCandidatoController::class, 'anonymize']);
     Route::delete('/candidatos/{id}', [RhCandidatoController::class, 'destroyDefinitivo']);

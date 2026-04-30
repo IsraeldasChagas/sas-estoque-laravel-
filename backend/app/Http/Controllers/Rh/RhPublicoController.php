@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Rh;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -225,6 +226,110 @@ class RhPublicoController extends Controller
         }
 
         return redirect()->to("/vagas/{$slug}?ok=1");
+    }
+
+    /**
+     * Resolve candidato pelo token opaco (hash armazenado). Só status pós-aprovação.
+     */
+    private function candidatoDocumentacaoPorToken(string $token): ?object
+    {
+        if (strlen($token) !== 64 || ! ctype_xdigit($token)) {
+            return null;
+        }
+
+        $hash = hash('sha256', $token);
+        $c = DB::table('rh_candidatos')->where('documentacao_token_hash', $hash)->first();
+        if (! $c || ! empty($c->anonimizado_em)) {
+            return null;
+        }
+
+        if (! in_array($c->status, ['aprovado', 'em_contratacao'], true)) {
+            return null;
+        }
+
+        return $c;
+    }
+
+    public function documentacaoForm(string $token)
+    {
+        $c = $this->candidatoDocumentacaoPorToken($token);
+        if (! $c) {
+            return response()
+                ->view('rh.publico.documentacao', [
+                    'invalido' => true,
+                    'nome' => '',
+                    'tiposOk' => [],
+                    'token' => $token,
+                ], 404);
+        }
+
+        $tiposOk = DB::table('rh_documentos')
+            ->where('candidato_id', $c->id)
+            ->pluck('tipo')
+            ->unique()
+            ->values()
+            ->all();
+
+        $nome = trim((string) ($c->nome ?? ''));
+        $partes = preg_split('/\s+/', $nome, 2) ?: [];
+        $nomePrimeiro = $partes[0] !== '' ? $partes[0] : 'Candidato(a)';
+
+        return view('rh.publico.documentacao', [
+            'invalido' => false,
+            'nome' => $nomePrimeiro,
+            'tiposOk' => $tiposOk,
+            'token' => $token,
+        ]);
+    }
+
+    public function documentacaoEnviar(Request $request, string $token)
+    {
+        $c = $this->candidatoDocumentacaoPorToken($token);
+        if (! $c) {
+            return back()->withErrors(['arquivo' => 'Link inválido ou indisponível.']);
+        }
+
+        $data = $request->validate([
+            'tipo' => 'required|string|in:cpf,rg,comprovante,ctps',
+            'arquivo' => 'required|file|max:6144',
+        ]);
+
+        $f = $request->file('arquivo');
+        if (! $f || ! $f->isValid()) {
+            return back()->withErrors(['arquivo' => 'Arquivo inválido.'])->withInput();
+        }
+
+        $mime = $f->getMimeType() ?: '';
+        if ($mime !== 'application/pdf') {
+            return back()->withErrors(['arquivo' => 'Envie apenas PDF.'])->withInput();
+        }
+
+        $disk = Storage::disk('public');
+        $existentes = DB::table('rh_documentos')->where('candidato_id', $c->id)->where('tipo', $data['tipo'])->get();
+        foreach ($existentes as $ex) {
+            if (! empty($ex->arquivo_path)) {
+                try {
+                    $disk->delete($ex->arquivo_path);
+                } catch (\Throwable $_) {
+                }
+            }
+        }
+        DB::table('rh_documentos')->where('candidato_id', $c->id)->where('tipo', $data['tipo'])->delete();
+
+        $path = $f->store("rh/documentos/{$c->id}", 'public');
+        DB::table('rh_documentos')->insert([
+            'candidato_id' => $c->id,
+            'tipo' => $data['tipo'],
+            'arquivo_path' => $path,
+            'arquivo_nome_original' => $f->getClientOriginalName(),
+            'mime' => $mime,
+            'tamanho_bytes' => $f->getSize(),
+            'enviado_por' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->to('/documentacao/' . $token . '?ok=1');
     }
 }
 

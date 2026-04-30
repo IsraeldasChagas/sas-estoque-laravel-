@@ -7598,6 +7598,8 @@ function renderRhCandidatoInlineRow(payload) {
   const temFoto = !!payload?.tem_foto || !!c.foto_path;
   const esc = (s) => escapeHtml(String(s ?? ""));
   const lgpd = c.consentimento_lgpd ? `OK (${(c.consentimento_em || "").toString().slice(0,19).replace("T"," ")})` : "NÃO";
+  const stCand = (c.status || "novo").toString();
+  const docLinkHabilitado = stCand === "aprovado" || stCand === "em_contratacao";
 
   return `
     <td colspan="6" style="padding: 0;">
@@ -7648,8 +7650,12 @@ function renderRhCandidatoInlineRow(payload) {
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
               <button type="button" class="btn rh-cand-cv" data-has-cv="${temCurriculo ? "1" : "0"}" ${temCurriculo ? "" : "disabled"}>Ver currículo</button>
               <button type="button" class="btn primary rh-cand-salvar">Salvar</button>
+              <button type="button" class="btn rh-cand-doc-link" title="Gera um link público para o candidato enviar CPF, RG, comprovante e CTPS em PDF" ${docLinkHabilitado ? "" : "disabled"}>Link documentos (candidato)</button>
               <button type="button" class="btn rh-cand-fechar">Fechar</button>
               <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
+            </div>
+            <div class="subtle-text" style="margin-top:.45rem;">
+              Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia PDF pela página pública.
             </div>
             <div class="subtle-text" style="margin-top:.5rem;">
               Exclusão definitiva: remove candidato, registros e arquivos (não pode desfazer).
@@ -13002,6 +13008,25 @@ function setupNavigation() {
             rhCandidatoInlineOpenId = null;
           } catch (err) {
             showToast(err?.message || "Erro ao salvar candidato.", "error");
+          }
+        });
+        detailsTr.querySelector(".rh-cand-doc-link")?.addEventListener("click", async () => {
+          try {
+            const out = await fetchJSON(`/rh/candidatos/${id}/documentacao-link`, { method: "POST", body: "{}" });
+            const url = (out && out.url) ? String(out.url) : "";
+            if (!url) {
+              showToast("Resposta sem URL do link.", "error");
+              return;
+            }
+            let copied = false;
+            try {
+              await navigator.clipboard.writeText(url);
+              copied = true;
+            } catch (_) {}
+            if (copied) showToast("Link copiado. Envie ao candidato (WhatsApp, e-mail, etc.).", "success");
+            else window.prompt("Copie o link e envie ao candidato:", url);
+          } catch (err) {
+            showToast(err?.message || "Erro ao gerar link.", "error");
           }
         });
         detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
