@@ -14,7 +14,7 @@
         .gsp-submark { width: 152px; height: 104px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
-        .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }
+        .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
         .vaga-choices { border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: .75rem; background: #fff; }
         .vaga-choices .form-check { margin: .2rem 0; }
         body { color: rgba(255,255,255,.92); }
@@ -39,6 +39,14 @@
                 <img class="gsp-submark" src="/imagens/logo-docemango.jpg" alt="Doce Mango" />
                 <div class="gsp-name">
                     <div class="title" style="font-size: 1.05rem;">Doce Mango</div>
+                    <div class="sub">Faz parte do grupo</div>
+                </div>
+            </div>
+            <div class="gsp-sep" aria-hidden="true"></div>
+            <div class="gsp-subbrand">
+                <img class="gsp-submark" src="/imagens/logo-docenorte.jpg" alt="Doce Norte" />
+                <div class="gsp-name">
+                    <div class="title" style="font-size: 1.05rem;">Doce Norte</div>
                     <div class="sub">Faz parte do grupo</div>
                 </div>
             </div>

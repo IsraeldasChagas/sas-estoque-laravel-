@@ -44,6 +44,14 @@
                     <div class="sub">Faz parte do grupo</div>
                 </div>
             </div>
+            <div class="gsp-sep" aria-hidden="true"></div>
+            <div class="gsp-subbrand">
+                <img class="gsp-submark" src="/imagens/logo-docenorte.jpg" alt="Doce Norte" />
+                <div class="gsp-name">
+                    <div class="title" style="font-size: 1.05rem;">Doce Norte</div>
+                    <div class="sub">Faz parte do grupo</div>
+                </div>
+            </div>
         </div>
         <div class="text-muted" style="max-width: 520px;">
             Selecione uma vaga e clique em <strong>Ver vaga</strong>.
