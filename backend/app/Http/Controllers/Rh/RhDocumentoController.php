@@ -28,6 +28,11 @@ class RhDocumentoController extends Controller
         return $response;
     }
 
+    private function podeRhDocsOuCandidatos(Request $request): bool
+    {
+        return RhAcesso::pode($request, 'rh.documentos') || RhAcesso::pode($request, 'rh.candidatos');
+    }
+
     public function index(Request $request)
     {
         if (! RhAcesso::pode($request, 'rh.documentos')) {
@@ -47,7 +52,7 @@ class RhDocumentoController extends Controller
 
     public function upload(Request $request, int $candidatoId)
     {
-        if (! RhAcesso::pode($request, 'rh.documentos')) {
+        if (! $this->podeRhDocsOuCandidatos($request)) {
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
@@ -97,7 +102,7 @@ class RhDocumentoController extends Controller
     public function download(Request $request, int $id)
     {
         try {
-            if (! RhAcesso::pode($request, 'rh.documentos')) {
+            if (! $this->podeRhDocsOuCandidatos($request)) {
                 return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Sem permissão.'], 403));
             }
 

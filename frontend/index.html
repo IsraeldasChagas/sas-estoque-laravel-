@@ -136,7 +136,6 @@
                   <a href="#" class="nav-link nav-link-child" data-section="rhDashboard">Dashboard</a>
                   <a href="#" class="nav-link nav-link-child" data-section="rhVagas">Vagas</a>
                   <a href="#" class="nav-link nav-link-child" data-section="rhCandidatos">Candidatos</a>
-                  <a href="#" class="nav-link nav-link-child" data-section="rhDocumentos">Documentos de Contratação</a>
                 </div>
               </div>
 
@@ -1858,58 +1857,6 @@
                   </thead>
                   <tbody id="rhBancoTalentosTable">
                     <tr><td colspan="5" style="text-align:center;color:#607d8b">Carregando...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- RH — Documentos de Contratação -->
-          <section id="rhDocumentosSection" class="view-section hidden">
-            <div class="kanban-page-header" style="margin-bottom: 1rem;">
-              <div>
-                <h2>RH — Documentos de Contratação</h2>
-                <p class="subtle-text">Candidatos aprovados podem enviar em PDF pelo link gerado em <strong>Candidatos</strong>. O RH pode anexar PDF ou imagem e <strong>excluir</strong> um arquivo ilegível/errado para o candidato reenviar.</p>
-              </div>
-            </div>
-            <form id="rhDocumentosUploadForm" class="filters-panel">
-              <div class="filters-grid">
-                <label>ID do candidato
-                  <input type="number" id="rhDocCandidatoId" name="candidato_id" min="1" required />
-                </label>
-                <label>Tipo
-                  <select id="rhDocTipo" name="tipo" required>
-                    <option value="cpf">CPF</option>
-                    <option value="rg">RG</option>
-                    <option value="comprovante">Comprovante</option>
-                    <option value="ctps">Carteira de trabalho</option>
-                  </select>
-                </label>
-                <label>Arquivo (PDF/JPG/PNG)
-                  <input type="file" id="rhDocArquivo" name="arquivo" required />
-                </label>
-              </div>
-              <div class="filters-actions">
-                <button type="submit" class="btn primary">Enviar documento</button>
-              </div>
-            </form>
-            <div class="table-card form-card--wide">
-              <header>Documentos enviados</header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Candidato</th>
-                      <th>Vaga</th>
-                      <th>Tipo</th>
-                      <th>Arquivo</th>
-                      <th>Enviado em</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="rhDocumentosTable">
-                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -4760,7 +4707,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260430-rh-doc-delete-wa"></script>
+    <script src="app.js?v=20260430-rh-remove-doc-page"></script>
      
   </body>
 </html>

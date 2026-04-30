@@ -788,7 +788,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -796,7 +796,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhDocumentos", "rhRelatorios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -836,7 +836,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhDocumentos", "rhRelatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -3360,6 +3360,11 @@ function applyPermissions() {
   if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
     sections = [...sections, "fechamento"];
   }
+  // RH: documentos de contratação ficam em Candidatos — permissoes_menu antigas com rhDocumentos viram rhCandidatos.
+  if (sections.includes("rhDocumentos") && !sections.includes("rhCandidatos")) {
+    sections = [...sections, "rhCandidatos"];
+  }
+  sections = sections.filter((s) => s !== "rhDocumentos");
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -3387,7 +3392,7 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || regras.sections.includes("rhDocumentos");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
@@ -3528,6 +3533,7 @@ function applyPermissions() {
 }
 
 function navigateTo(section) {
+  if (section === "rhDocumentos") section = "rhCandidatos";
   refreshDomShellNav();
   // Salva a seção atual no localStorage para restaurar após refresh
   if (section) {
@@ -3569,7 +3575,7 @@ function navigateTo(section) {
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || section === "rhDocumentos") {
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
@@ -7707,6 +7713,24 @@ function renderRhCandidatoInlineRow(payload) {
                   </tbody>
                 </table>
               </div>
+              <div class="filters-panel" style="margin:.75rem 1rem 1rem;border-radius:8px;border:1px solid rgba(255,255,255,.1);">
+                <div style="font-weight:600;margin-bottom:.5rem;font-size:.9rem;">Anexar documento (RH)</div>
+                <div class="filters-grid" style="align-items:flex-end;">
+                  <label>Tipo
+                    <select class="rh-cand-doc-upload-tipo">
+                      <option value="cpf">CPF</option>
+                      <option value="rg">RG</option>
+                      <option value="comprovante">Comprovante</option>
+                      <option value="ctps">Carteira de trabalho</option>
+                    </select>
+                  </label>
+                  <label>Arquivo (PDF/JPG/PNG)
+                    <input type="file" class="rh-cand-doc-upload-arquivo" accept=".pdf,.jpg,.jpeg,.png,application/pdf" />
+                  </label>
+                  <button type="button" class="btn primary rh-cand-doc-upload-enviar">Enviar</button>
+                </div>
+                <p class="subtle-text" style="margin:.45rem 0 0;font-size:.82rem;">Envio pelo sistema só com candidato <strong>Aprovado</strong> ou <strong>Em contratação</strong>.</p>
+              </div>
             </div>
 
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
@@ -7773,27 +7797,6 @@ async function loadRhEntrevistas() {
     <td>${esc(e.hora || "-")}</td>
     <td>${esc(e.local || "-")}</td>
     <td>${esc((e.status || "").toUpperCase())}</td>
-  </tr>`).join("");
-}
-
-async function loadRhDocumentos() {
-  const lista = await fetchJSON("/rh/documentos");
-  const tb = document.getElementById("rhDocumentosTable");
-  if (!tb) return;
-  const items = Array.isArray(lista) ? lista : [];
-  if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
-    return;
-  }
-  const esc = (s) => escapeHtml(String(s ?? ""));
-  tb.innerHTML = items.map((d) => `<tr data-doc-id="${esc(d.id)}">
-    <td>${esc(d.id)}</td>
-    <td>${esc(d.candidato_nome || "-")}</td>
-    <td>${esc(d.vaga_titulo || "-")}</td>
-    <td>${esc((d.tipo || "").toUpperCase())}</td>
-    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${esc(d.id)}">Baixar</button></td>
-    <td>${esc((d.created_at || "").toString().slice(0,19).replace("T"," "))}</td>
-    <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${esc(d.id)}">Excluir</button></td>
   </tr>`).join("");
 }
 
@@ -8272,7 +8275,7 @@ async function startAppSession(user) {
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
       "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
-      "funcionarios", "rhRelatorios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "rhDocumentos", "logs"
+      "funcionarios", "rhRelatorios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs"
     ]);
 
     let sectionToNavigate = "boasVindas";
@@ -8280,7 +8283,12 @@ async function startAppSession(user) {
     if (!isFreshLogin) {
       try {
         const saved = localStorage.getItem(currentSectionKey);
-        if (saved && allSections.has(saved)) sectionToNavigate = saved;
+        if (saved === "rhDocumentos") {
+          try {
+            localStorage.setItem(currentSectionKey, "rhCandidatos");
+          } catch (_) {}
+          sectionToNavigate = "rhCandidatos";
+        } else if (saved && allSections.has(saved)) sectionToNavigate = saved;
       } catch (err) {
         console.warn("Erro ao ler seção salva:", err);
       }
@@ -8293,7 +8301,8 @@ async function startAppSession(user) {
       sectionToNavigate = "dashboard";
     } else if (!isFreshLogin && hash.length > 1) {
       const raw = hash.slice(1).split(/[?&]/)[0];
-      if (raw && allSections.has(raw)) sectionToNavigate = raw;
+      if (raw === "rhDocumentos") sectionToNavigate = "rhCandidatos";
+      else if (raw && allSections.has(raw)) sectionToNavigate = raw;
     }
 
     navigateTo(sectionToNavigate);
@@ -8395,7 +8404,6 @@ async function startAppSession(user) {
         else if (sectionToNavigate === "rhCandidatos") await loadRhCandidatos();
         else if (sectionToNavigate === "rhEntrevistas") await loadRhEntrevistas();
         else if (sectionToNavigate === "rhBancoTalentos") await loadRhBancoTalentos();
-        else if (sectionToNavigate === "rhDocumentos") await loadRhDocumentos();
         else if (sectionToNavigate === "rhRelatorios") await loadRhRelatorioSection();
         else if (sectionToNavigate === 'fechaTecnica') {
           onNavigateFichaTecnicaCallback();
@@ -12475,7 +12483,6 @@ function wireSidebarSectionNavClicks() {
       else if (target === "rhCandidatos") await loadRhCandidatos();
       else if (target === "rhEntrevistas") await loadRhEntrevistas();
       else if (target === "rhBancoTalentos") await loadRhBancoTalentos();
-      else if (target === "rhDocumentos") await loadRhDocumentos();
       else if (target === "rhRelatorios") await loadRhRelatorioSection();
       else if (target === "reciboAjuda") {
         if (typeof window.loadReciboAjudaSection === "function") {
@@ -12962,7 +12969,7 @@ function setupNavigation() {
     }
 
     const btnDocCand = e.target.closest(".btn-rh-doc-download");
-    if (btnDocCand && e.target.closest("#rhCandidatosSection") && !e.target.closest("#rhDocumentosSection")) {
+    if (btnDocCand && e.target.closest("#rhCandidatosSection")) {
       e.preventDefault();
       const docId = btnDocCand.getAttribute("data-id");
       if (!docId) return;
@@ -12980,7 +12987,7 @@ function setupNavigation() {
     }
 
     const btnDocDelCand = e.target.closest(".btn-rh-doc-delete");
-    if (btnDocDelCand && e.target.closest("#rhCandidatosSection") && !e.target.closest("#rhDocumentosSection")) {
+    if (btnDocDelCand && e.target.closest("#rhCandidatosSection")) {
       e.preventDefault();
       const docId = btnDocDelCand.getAttribute("data-id");
       if (!docId) return;
@@ -12995,7 +13002,6 @@ function setupNavigation() {
           tbody.innerHTML =
             '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
         }
-        loadRhDocumentos().catch(() => {});
       } catch (err) {
         showToast(err?.message || "Erro ao excluir documento.", "error");
       }
@@ -13029,6 +13035,13 @@ function setupNavigation() {
         detailsTr.dataset.id = String(id);
         detailsTr.innerHTML = html;
         tr.insertAdjacentElement("afterend", detailsTr);
+        detailsTr.dataset.rhCandNome = (payload?.candidato?.nome || "-").toString();
+        detailsTr.dataset.rhCandVaga = (
+          payload?.vaga?.titulo ||
+          payload?.vaga?.titulo_vaga ||
+          payload?.candidato?.vaga_titulo ||
+          "-"
+        ).toString();
 
         // Preenche status selecionado
         const statusSel = detailsTr.querySelector(".rh-cand-status");
@@ -13119,6 +13132,67 @@ function setupNavigation() {
             showToast(err?.message || "Erro ao gerar link.", "error");
           }
         });
+        detailsTr.querySelector(".rh-cand-doc-upload-enviar")?.addEventListener("click", async () => {
+          const tipo = detailsTr.querySelector(".rh-cand-doc-upload-tipo")?.value || "";
+          const file = detailsTr.querySelector(".rh-cand-doc-upload-arquivo")?.files?.[0];
+          if (!tipo || !file) {
+            showToast("Escolha tipo e arquivo.", "warning");
+            return;
+          }
+          try {
+            const fd = new FormData();
+            fd.append("tipo", tipo);
+            fd.append("arquivo", file);
+            const headers = {
+              ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+              ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+              ...getDeviceHeaders(),
+            };
+            const res = await fetch(`${API_URL}/rh/candidatos/${encodeURIComponent(String(id))}/documentos`, {
+              method: "POST",
+              headers,
+              body: fd,
+            });
+            const text = await res.text();
+            let payloadDoc = null;
+            try {
+              payloadDoc = text ? JSON.parse(text) : null;
+            } catch (_) {
+              /* ignore */
+            }
+            if (!res.ok) throw new Error(payloadDoc?.error || `Erro ${res.status}`);
+            const d = payloadDoc;
+            const nomeTbl = escapeHtml(String(detailsTr.dataset.rhCandNome || "-"));
+            const vagaTbl = escapeHtml(String(detailsTr.dataset.rhCandVaga || "-"));
+            const rid = escapeHtml(String(d?.id ?? ""));
+            const tipoU = escapeHtml(String(d?.tipo || "").toUpperCase());
+            const dt = escapeHtml(String(d?.created_at || "").slice(0, 19).replace("T", " "));
+            const tbody = detailsTr.querySelector(".table-card tbody");
+            if (tbody) {
+              const rows = tbody.querySelectorAll("tr");
+              rows.forEach((r) => {
+                if (r.textContent.includes("Nenhum documento")) r.remove();
+              });
+              tbody.insertAdjacentHTML(
+                "afterbegin",
+                `<tr data-doc-id="${rid}">
+    <td>${rid}</td>
+    <td>${nomeTbl}</td>
+    <td>${vagaTbl}</td>
+    <td>${tipoU}</td>
+    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${rid}">Baixar</button></td>
+    <td>${dt}</td>
+    <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${rid}">Excluir</button></td>
+  </tr>`
+              );
+            }
+            const arq = detailsTr.querySelector(".rh-cand-doc-upload-arquivo");
+            if (arq) arq.value = "";
+            showToast("Documento enviado.", "success");
+          } catch (err) {
+            showToast(err?.message || "Erro ao enviar documento.", "error");
+          }
+        });
         detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
           if (!confirm("EXCLUIR candidato definitivamente?\n\nIsso vai apagar TUDO: dados, entrevistas, histórico, currículo, documentos e arquivos.\n\nEssa ação NÃO pode ser desfeita.")) return;
           try {
@@ -13153,76 +13227,6 @@ function setupNavigation() {
       await loadRhEntrevistas();
     } catch (err) {
       showToast(err?.message || "Erro ao criar entrevista.", "error");
-    }
-  });
-
-  // RH — Documentos
-  document.getElementById("rhDocumentosUploadForm")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const candidatoId = document.getElementById("rhDocCandidatoId")?.value;
-    const tipo = document.getElementById("rhDocTipo")?.value;
-    const file = document.getElementById("rhDocArquivo")?.files?.[0];
-    if (!candidatoId || !tipo || !file) {
-      showToast("Informe candidato, tipo e arquivo.", "warning");
-      return;
-    }
-    try {
-      const fd = new FormData();
-      fd.append("tipo", tipo);
-      fd.append("arquivo", file);
-      const headers = {
-        ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
-        ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
-        ...getDeviceHeaders(),
-      };
-      const res = await fetch(`${API_URL}/rh/candidatos/${encodeURIComponent(String(candidatoId))}/documentos`, {
-        method: "POST",
-        headers,
-        body: fd,
-      });
-      const text = await res.text();
-      let payload = null;
-      try { payload = text ? JSON.parse(text) : null; } catch (_) {}
-      if (!res.ok) throw new Error(payload?.error || `Erro ${res.status}`);
-      showToast("Documento enviado.", "success");
-      await loadRhDocumentos();
-      const input = document.getElementById("rhDocArquivo");
-      if (input) input.value = "";
-    } catch (err) {
-      showToast(err?.message || "Erro ao enviar documento.", "error");
-    }
-  });
-  document.getElementById("rhDocumentosSection")?.addEventListener("click", async (e) => {
-    const btnDel = e.target.closest(".btn-rh-doc-delete");
-    if (btnDel) {
-      e.preventDefault();
-      const docId = btnDel.getAttribute("data-id");
-      if (!docId) return;
-      if (!confirm("Excluir este documento? O arquivo some do sistema e o candidato pode enviar de novo pelo link.")) return;
-      try {
-        await fetchJSON(`/rh/documentos/${encodeURIComponent(docId)}`, { method: "DELETE" });
-        showToast("Documento excluído.", "success");
-        await loadRhDocumentos();
-      } catch (err) {
-        showToast(err?.message || "Erro ao excluir documento.", "error");
-      }
-      return;
-    }
-
-    const btn = e.target.closest(".btn-rh-doc-download");
-    if (!btn) return;
-    e.preventDefault();
-    const id = btn.dataset.id;
-    if (!id) return;
-    try {
-      await abrirModalPdfNoViewerDoAlvara({
-        nomeArquivo: `documento-${id}.pdf`,
-        titulo: "📄 Documento RH",
-        viewApiPath: `/rh/documentos/${id}/download`,
-        downloadApiPath: `/rh/documentos/${id}/download?download=1`,
-      });
-    } catch (err) {
-      showToast(err?.message || "Erro ao baixar documento.", "error");
     }
   });
 
