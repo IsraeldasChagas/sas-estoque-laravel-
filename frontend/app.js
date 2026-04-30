@@ -12750,6 +12750,10 @@ function setupNavigation() {
         const slug = tr?.dataset?.slug || "";
         if (slug) link = getVagaPublicUrl(slug);
       }
+      // Além de copiar, abre o link em nova aba (feedback imediato mesmo quando clipboard é bloqueado).
+      if (link) {
+        try { window.open(link, "_blank", "noopener,noreferrer"); } catch (_) {}
+      }
       try {
         if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(link);

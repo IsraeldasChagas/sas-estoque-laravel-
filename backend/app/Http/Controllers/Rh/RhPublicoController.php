@@ -100,6 +100,13 @@ class RhPublicoController extends Controller
         $apiBase = rtrim((string) config('app.url'), '/');
         $publicUrl = $apiBase . '/vagas/' . $vaga->slug;
 
+        // Proteção: se a lib não estiver disponível no servidor (vendor desatualizado),
+        // usa um gerador externo (evita 500 e mantém o botão funcionando).
+        if (! class_exists(Builder::class)) {
+            $qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=420x420&chl=' . urlencode($publicUrl);
+            return redirect()->away($qrUrl);
+        }
+
         $result = Builder::create()
             ->writer(new PngWriter())
             ->data($publicUrl)
