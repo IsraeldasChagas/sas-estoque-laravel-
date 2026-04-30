@@ -7,11 +7,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         .gsp-brand { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-        .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
+        .gsp-mark { width: 176px; height: 176px; flex: 0 0 auto; object-fit: contain; }
         .gsp-group { display:flex; align-items:center; gap:.6rem; }
         .gsp-sep { width: 1px; height: 44px; background: rgba(255,255,255,.18); }
         .gsp-subbrand { display:flex; align-items:center; gap:.6rem; }
-        .gsp-submark { width: 76px; height: 52px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); }
+        .gsp-submark { width: 152px; height: 104px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
         .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }
