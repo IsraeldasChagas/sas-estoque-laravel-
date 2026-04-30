@@ -31,8 +31,7 @@
             </div>
         </div>
         <div class="text-muted" style="max-width: 520px;">
-            Selecione uma ou mais vagas e clique em <strong>Ver vaga(s)</strong>.
-            Na próxima tela você consegue ver detalhes e se candidatar.
+            Escolha uma vaga para ver os detalhes e se candidatar.
         </div>
     </div>
 
@@ -41,23 +40,19 @@
     @if(!count($items))
         <div class="alert alert-info">Nenhuma vaga cadastrada no momento.</div>
     @else
-        <form id="vagasPublicasForm">
+        <div>
             <div class="row g-3">
                 @foreach($items as $v)
                     @php
                         $status = strtolower((string) ($v->status ?? ''));
                         $isOpen = $status === 'aberta';
                         $badgeClass = $isOpen ? 'bg-success' : ($status === 'pausada' ? 'bg-warning text-dark' : 'bg-secondary');
-                        $disabled = $isOpen ? '' : 'disabled="disabled"';
                     @endphp
                     <div class="col-12 col-md-6">
                         <div class="vaga-card">
                             <div class="vaga-card__top">
                                 <div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="slug[]" value="{{ $v->slug }}" id="vaga_{{ $v->id }}" {{ $disabled }}>
-                                        <label class="form-check-label fw-semibold" for="vaga_{{ $v->id }}">{{ $v->titulo }}</label>
-                                    </div>
+                                    <div class="fw-semibold">{{ $v->titulo }}</div>
                                     <div class="vaga-meta mt-1">
                                         @if(!empty($v->unidade)) <span><strong>Unidade:</strong> {{ $v->unidade }}</span>@endif
                                         @if(!empty($v->setor)) <span class="ms-2"><strong>Setor:</strong> {{ $v->setor }}</span>@endif
@@ -72,39 +67,16 @@
                                 <div class="vaga-card__desc">{{ \Illuminate\Support\Str::limit($v->descricao, 240) }}</div>
                             @endif
                             <div class="vaga-card__bottom">
-                                <a class="btn btn-outline-primary btn-sm" href="/vagas/{{ $v->slug }}">Ver detalhes</a>
+                                <a class="btn btn-primary btn-sm" href="/vagas/{{ $v->slug }}">Ver vaga</a>
                                 <a class="btn btn-outline-secondary btn-sm" href="/vagas/{{ $v->slug }}/qrcode" target="_blank" rel="noopener noreferrer">QR Code</a>
                             </div>
                         </div>
                     </div>
                 @endforeach
             </div>
-
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4">
-                <div class="text-muted">Apenas vagas <strong>ABERTAS</strong> podem ser selecionadas.</div>
-                <button type="button" class="btn btn-primary" id="vagasPublicasVerBtn">Ver vaga(s)</button>
-            </div>
-        </form>
+        </div>
     @endif
 </main>
-
-<script>
-  (function () {
-    const btn = document.getElementById('vagasPublicasVerBtn');
-    const form = document.getElementById('vagasPublicasForm');
-    if (!btn || !form) return;
-    btn.addEventListener('click', function () {
-      const checked = form.querySelectorAll('input[name="slug[]"]:checked');
-      if (!checked.length) {
-        alert('Selecione pelo menos 1 vaga aberta.');
-        return;
-      }
-      // abre a primeira selecionada; na página da vaga dá pra marcar outras também.
-      const slug = checked[0].value;
-      window.location.href = '/vagas/' + encodeURIComponent(slug);
-    });
-  })();
-</script>
 </body>
 </html>
 
