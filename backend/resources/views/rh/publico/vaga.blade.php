@@ -5,10 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ $vaga->titulo }} — Vaga</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .gsp-brand { display:flex; align-items:center; gap:.75rem; }
+        .gsp-mark { width: 44px; height: 44px; flex: 0 0 auto; }
+        .gsp-name { line-height: 1.05; }
+        .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
+        .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }
+        .vaga-choices { border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: .75rem; background: #fff; }
+        .vaga-choices .form-check { margin: .2rem 0; }
+    </style>
 </head>
 <body class="bg-light">
 <main class="container py-4" style="max-width: 860px;">
     <div class="mb-4">
+        <div class="gsp-brand mb-3">
+            <svg class="gsp-mark" viewBox="0 0 64 64" aria-hidden="true">
+                <path d="M36.8 10.2c-6 2.5-11 7.7-13.2 14.1-2.3 6.8-1.1 14.1 3.3 19.6 3.9 4.8 9.8 7.6 16 7.6 7.3 0 13.9-3.8 17.6-10.1 3-5.2 3.5-11.6 1.3-17.2-2.4-6.1-7.5-10.9-13.9-13.2-.8-.3-1.6.6-1.2 1.4 2.1 4.4 1.5 9.6-1.6 13.5-2.2 2.8-5.3 4.6-8.7 5.1 2.1-2.6 3.2-5.9 3.2-9.3 0-3.8-1.3-7.4-3.8-10.4-.3-.4-.8-.5-1.2-.3Z" fill="#1b8f3a"/>
+                <path d="M12.5 52.2c5.1-4.3 11.9-6.8 19.1-6.8 7.2 0 14 2.5 19.1 6.8.8.7.3 2-0.8 2H13.3c-1.1 0-1.6-1.3-.8-2Z" fill="#0f6f2b"/>
+            </svg>
+            <div class="gsp-name">
+                <div class="title">Grupo Sabor Paraense</div>
+                <div class="sub">Recrutamento e seleção</div>
+            </div>
+        </div>
+
         <h1 class="h3 mb-1">{{ $vaga->titulo }}</h1>
         <div class="text-muted">
             @if(!empty($vaga->unidade)) <span class="me-3"><strong>Unidade:</strong> {{ $vaga->unidade }}</span>@endif
@@ -58,6 +78,31 @@
             <form method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
                 @csrf
 
+                @php
+                    $vagas = isset($vagasAbertas) ? $vagasAbertas : collect();
+                    $vagasCount = is_countable($vagas) ? count($vagas) : 0;
+                @endphp
+
+                @if($vagasCount > 1)
+                    <div class="col-12">
+                        <div class="vaga-choices">
+                            <div class="fw-semibold mb-2">Escolha a(s) vaga(s)</div>
+                            @foreach($vagas as $v)
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="vaga_ids[]" id="vaga_{{ $v->id }}" value="{{ $v->id }}"
+                                           @checked(old('vaga_ids') ? in_array($v->id, (array) old('vaga_ids')) : ($v->id === $vaga->id)) />
+                                    <label class="form-check-label" for="vaga_{{ $v->id }}">
+                                        {{ $v->titulo }}@if(!empty($v->unidade)) — <span class="text-muted">{{ $v->unidade }}</span>@endif
+                                    </label>
+                                </div>
+                            @endforeach
+                            <div class="form-text mt-2">Se marcar mais de uma, sua candidatura será enviada para cada vaga selecionada.</div>
+                        </div>
+                    </div>
+                @else
+                    <input type="hidden" name="vaga_ids[]" value="{{ $vaga->id }}" />
+                @endif
+
                 <div class="col-md-8">
                     <label class="form-label">Nome</label>
                     <input name="nome" class="form-control" value="{{ old('nome') }}" required maxlength="160" />
@@ -80,22 +125,9 @@
                     <input name="bairro" class="form-control" value="{{ old('bairro') }}" maxlength="120" />
                 </div>
 
-                <div class="col-12">
-                    <label class="form-label">Experiência</label>
-                    <textarea name="experiencia" class="form-control" rows="4" maxlength="20000">{{ old('experiencia') }}</textarea>
-                </div>
-
                 <div class="col-md-6">
-                    <label class="form-label">Último emprego</label>
-                    <input name="ultimo_emprego" class="form-control" value="{{ old('ultimo_emprego') }}" maxlength="160" />
-                </div>
-                <div class="col-md-3">
                     <label class="form-label">Disponibilidade</label>
                     <input name="disponibilidade" class="form-control" value="{{ old('disponibilidade') }}" maxlength="80" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Pretensão salarial</label>
-                    <input name="pretensao_salarial" class="form-control" value="{{ old('pretensao_salarial') }}" maxlength="80" />
                 </div>
 
                 <div class="col-md-8">

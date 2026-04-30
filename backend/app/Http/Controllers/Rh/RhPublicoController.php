@@ -16,7 +16,15 @@ class RhPublicoController extends Controller
             abort(404);
         }
 
-        return view('rh.publico.vaga', ['vaga' => $vaga]);
+        $vagasAbertas = DB::table('rh_vagas')
+            ->where('status', 'aberta')
+            ->orderBy('titulo')
+            ->get();
+
+        return view('rh.publico.vaga', [
+            'vaga' => $vaga,
+            'vagasAbertas' => $vagasAbertas,
+        ]);
     }
 
     public function candidatar(Request $request, string $slug)
@@ -27,21 +35,35 @@ class RhPublicoController extends Controller
         }
 
         $data = $request->validate([
+            'vaga_ids' => 'nullable|array',
+            'vaga_ids.*' => 'integer',
             'nome' => 'required|string|max:160',
             'telefone' => 'nullable|string|max:40',
             'email' => 'nullable|email|max:160',
             'cidade' => 'nullable|string|max:120',
             'bairro' => 'nullable|string|max:120',
-            'experiencia' => 'nullable|string|max:20000',
-            'ultimo_emprego' => 'nullable|string|max:160',
             'disponibilidade' => 'nullable|string|max:80',
-            'pretensao_salarial' => 'nullable|string|max:80',
             'curriculo' => 'required|file|max:5120', // 5MB
             'foto' => 'nullable|file|max:2048', // 2MB
             'lgpd' => 'accepted',
         ], [
             'lgpd.accepted' => 'Você precisa autorizar o uso dos seus dados para recrutamento e seleção.',
         ]);
+
+        $vagaIds = $data['vaga_ids'] ?? null;
+        if (! is_array($vagaIds) || ! count($vagaIds)) {
+            $vagaIds = [$vaga->id];
+        }
+        $vagaIds = array_values(array_unique(array_map('intval', $vagaIds)));
+
+        // Segurança: só permite candidatar para vagas abertas.
+        $vagasEscolhidas = DB::table('rh_vagas')
+            ->whereIn('id', $vagaIds)
+            ->where('status', 'aberta')
+            ->get();
+        if (count($vagasEscolhidas) !== count($vagaIds)) {
+            return back()->withErrors(['vaga_ids' => 'Selecione apenas vagas abertas.'])->withInput();
+        }
 
         $curriculo = $request->file('curriculo');
         if (! $curriculo || ! $curriculo->isValid()) {
@@ -60,44 +82,66 @@ class RhPublicoController extends Controller
             }
         }
 
-        $candidatoId = DB::table('rh_candidatos')->insertGetId([
-            'vaga_id' => $vaga->id,
-            'nome' => $data['nome'],
-            'telefone' => $data['telefone'] ?? null,
-            'email' => $data['email'] ?? null,
-            'cidade' => $data['cidade'] ?? null,
-            'bairro' => $data['bairro'] ?? null,
-            'experiencia' => $data['experiencia'] ?? null,
-            'ultimo_emprego' => $data['ultimo_emprego'] ?? null,
-            'disponibilidade' => $data['disponibilidade'] ?? null,
-            'pretensao_salarial' => $data['pretensao_salarial'] ?? null,
-            'unidade' => $vaga->unidade ?? null,
-            'consentimento_lgpd' => true,
-            'consentimento_em' => now(),
-            'consentimento_ip' => $request->ip(),
-            'consentimento_user_agent' => Str::limit((string) $request->userAgent(), 255, ''),
-            'status' => 'novo',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $origCvName = $curriculo->getClientOriginalName();
+        $origFotoName = $foto && $foto->isValid() ? $foto->getClientOriginalName() : null;
 
-        $cvPath = $curriculo->store("rh/curriculos/{$candidatoId}", 'public');
-        DB::table('rh_curriculos')->insert([
-            'candidato_id' => $candidatoId,
-            'arquivo_path' => $cvPath,
-            'arquivo_nome_original' => $curriculo->getClientOriginalName(),
-            'mime' => $cvMime,
-            'tamanho_bytes' => $curriculo->getSize(),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
+        // Lê os arquivos uma vez para replicar por vaga (uma candidatura por vaga marcada).
+        $cvBytes = file_get_contents($curriculo->getRealPath());
+        if ($cvBytes === false) {
+            return back()->withErrors(['curriculo' => 'Não foi possível ler o currículo.'])->withInput();
+        }
+        $fotoBytes = null;
+        $fotoMime = null;
         if ($foto && $foto->isValid()) {
-            $fotoPath = $foto->store("rh/fotos/{$candidatoId}", 'public');
-            DB::table('rh_candidatos')->where('id', $candidatoId)->update([
-                'foto_path' => $fotoPath,
+            $fotoBytes = file_get_contents($foto->getRealPath());
+            $fotoMime = $foto->getMimeType() ?: null;
+            if ($fotoBytes === false) {
+                return back()->withErrors(['foto' => 'Não foi possível ler a foto.'])->withInput();
+            }
+        }
+
+        foreach ($vagasEscolhidas as $vagaEscolhida) {
+            $candidatoId = DB::table('rh_candidatos')->insertGetId([
+                'vaga_id' => $vagaEscolhida->id,
+                'nome' => $data['nome'],
+                'telefone' => $data['telefone'] ?? null,
+                'email' => $data['email'] ?? null,
+                'cidade' => $data['cidade'] ?? null,
+                'bairro' => $data['bairro'] ?? null,
+                'disponibilidade' => $data['disponibilidade'] ?? null,
+                'unidade' => $vagaEscolhida->unidade ?? null,
+                'consentimento_lgpd' => true,
+                'consentimento_em' => now(),
+                'consentimento_ip' => $request->ip(),
+                'consentimento_user_agent' => Str::limit((string) $request->userAgent(), 255, ''),
+                'status' => 'novo',
+                'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            $cvPath = "rh/curriculos/{$candidatoId}/" . (time() . '-' . Str::random(10) . '.pdf');
+            \Storage::disk('public')->put($cvPath, $cvBytes);
+            DB::table('rh_curriculos')->insert([
+                'candidato_id' => $candidatoId,
+                'arquivo_path' => $cvPath,
+                'arquivo_nome_original' => $origCvName,
+                'mime' => $cvMime,
+                'tamanho_bytes' => strlen($cvBytes),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if ($fotoBytes !== null) {
+                $ext = 'jpg';
+                if ($fotoMime === 'image/png') $ext = 'png';
+                if ($fotoMime === 'image/webp') $ext = 'webp';
+                $fotoPath = "rh/fotos/{$candidatoId}/" . (time() . '-' . Str::random(10) . '.' . $ext);
+                \Storage::disk('public')->put($fotoPath, $fotoBytes);
+                DB::table('rh_candidatos')->where('id', $candidatoId)->update([
+                    'foto_path' => $fotoPath,
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
         return redirect()->to("/vagas/{$slug}?ok=1");
