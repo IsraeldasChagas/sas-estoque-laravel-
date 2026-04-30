@@ -1897,15 +1897,7 @@ async function fetchJSON(path, options = {}) {
     } catch (parseError) {
       throw new Error(`Erro ao processar resposta do servidor (Status: ${res.status}): ${parseError.message}`);
     }
-    
-    // ✅ 3. Conferir a resposta do backend
-    console.log("Resposta do servidor:", {
-      url: `${API_URL}${path}`,
-      status: res.status,
-      statusText: res.statusText,
-      payload: payload
-    });
-    
+
     if (!res.ok) {
       let message = `Erro ${res.status}: ${res.statusText}`;
       
@@ -8173,19 +8165,15 @@ async function startAppSession(user) {
     stopMatrixAnimation = null;
   }
   
-  console.log('Iniciando sessão do usuário:', currentUser);
-  
   // Esconde tela de login e mostra aplicação
   if (dom.loginOverlay) {
     dom.loginOverlay.classList.add("hidden");
-    console.log('Tela de login escondida');
   } else {
     console.error('loginOverlay não encontrado!');
   }
   
   if (dom.appShell) {
     dom.appShell.classList.remove("hidden");
-    console.log('App shell mostrado');
   } else {
     console.error('appShell não encontrado!');
   }
@@ -8211,9 +8199,7 @@ async function startAppSession(user) {
     loadMovimentacoesDetalhadas().catch(err => console.error("Erro ao carregar movimentações:", err)),
     loadListasCompras().catch(err => console.error("Erro ao carregar listas:", err)),
     loadRelatorio({}).catch(err => console.error("Erro ao carregar relatório:", err)),
-  ]).then(() => {
-    console.log('Dados iniciais carregados');
-  });
+  ]).then(() => {});
   
   // Navegação inicial:
   // - Login novo (user informado): sempre vai para Boas-vindas.
@@ -8427,8 +8413,6 @@ function startInactivityTimer() {
   
   // Inicia o timer
   inactivityResetHandler();
-  
-  console.log('Monitoramento de inatividade iniciado (6 minutos)');
 }
 
 function stopInactivityTimer() {
@@ -8455,8 +8439,6 @@ function stopInactivityTimer() {
     
     inactivityResetHandler = null;
   }
-  
-  console.log('Monitoramento de inatividade parado');
 }
 
 function resetForms() {
@@ -19387,9 +19369,6 @@ function setupForms() {
     attachCurrencyMask(boletoFormEl.querySelector('[name="valor_pago"]'));
   }
 
-  // Setup de formulários com logs
-  console.log('🔧 Configurando event listeners de formulários...');
-  
   if (dom.produtosForm) {
     dom.produtosForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -19491,7 +19470,6 @@ function setupForms() {
   if (dom.saidaForm) {
     // Anexa event listener de submit no formulário
     dom.saidaForm.onsubmit = (e) => {
-      console.log("📝 Evento submit capturado (onsubmit)");
       e.preventDefault();
       e.stopPropagation();
       submitSaida(e).catch(err => {
@@ -19500,11 +19478,9 @@ function setupForms() {
       });
       return false;
     };
-    console.log("✅ Handler onsubmit anexado ao formulário de saída");
-    
+
     // Anexa também addEventListener como fallback
     dom.saidaForm.addEventListener("submit", (e) => {
-      console.log("📝 Evento submit capturado (addEventListener)");
       e.preventDefault();
       e.stopPropagation();
       submitSaida(e).catch(err => {
@@ -19518,7 +19494,6 @@ function setupForms() {
     if (submitBtn) {
       // Usa onclick direto
       submitBtn.onclick = (e) => {
-        console.log("🔘 Botão clicado (onclick direto)");
         e.preventDefault();
         e.stopPropagation();
         submitSaida(e).catch(err => {
@@ -19529,7 +19504,6 @@ function setupForms() {
       
       // Também adiciona addEventListener como backup
       submitBtn.addEventListener("click", (e) => {
-        console.log("🔘 Botão clicado (addEventListener)");
         e.preventDefault();
         e.stopPropagation();
         submitSaida(e).catch(err => {
@@ -19537,14 +19511,12 @@ function setupForms() {
           showToast(err.message || "Erro ao registrar saída", "error");
         });
       });
-      console.log("✅ Handlers anexados ao botão de submit");
     } else {
       console.warn("⚠️ Botão de submit não encontrado no formulário de saída");
     }
     
     // Expõe função globalmente como fallback
     window.submitSaida = submitSaida;
-    console.log("✅ Função submitSaida exposta globalmente");
   } else {
     console.error("❌ Formulário de saída não encontrado na inicialização!");
   }
@@ -20858,20 +20830,14 @@ async function init() {
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
-  // Verifica se o formulário existe antes de adicionar listener
-  console.log('🔍 Verificando formulário de login...');
-  console.log('dom.loginForm:', dom.loginForm);
   if (dom.loginForm) {
-    console.log('✅ Formulário de login encontrado, adicionando listener');
     dom.loginForm.addEventListener("submit", handleLogin);
-    console.log('✅ Listener adicionado com sucesso');
   } else {
     console.error('❌ ERRO: Formulário de login não encontrado! ID: loginForm');
     // Tenta encontrar novamente após um delay
     setTimeout(() => {
       const form = document.getElementById("loginForm");
       if (form) {
-        console.log('✅ Formulário encontrado no segundo try, adicionando listener');
         form.addEventListener("submit", handleLogin);
       } else {
         console.error('❌ Formulário ainda não encontrado após delay');

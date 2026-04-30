@@ -49,7 +49,6 @@ class Router {
     // Deixa o startAppSession fazer a navegação inicial para restaurar a seção salva
     // Isso evita o "flash" para o dashboard
     if (userLoggedIn || hasSavedSection) {
-      console.log('Router: Usuário logado ou seção salva detectada, aguardando startAppSession para navegação inicial');
       this.initialNavigationDone = false; // Marca que ainda não navegou
       return;
     }
@@ -59,11 +58,8 @@ class Router {
     setTimeout(() => {
       // Só navega se ainda não houver uma seção atual definida
       if (!this.currentSection && !this.initialNavigationDone) {
-        console.log('Router: Navegando para dashboard (usuário não logado)');
         this.navigate('dashboard');
         this.initialNavigationDone = true;
-      } else {
-        console.log('Router: Navegação inicial já realizada ou seção já definida');
       }
     }, 100);
   }
