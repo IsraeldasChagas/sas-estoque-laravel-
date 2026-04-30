@@ -3,6 +3,7 @@
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhPublicoController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Response;
 
 Route::get('/', function () {
     return redirect('/dashboard');
@@ -34,5 +35,17 @@ Route::middleware(['web', 'sas.usuario'])->prefix('kanban-administrativo')->grou
 // ============================================
 // RH (Recrutamento) - Link público de vagas
 // ============================================
+Route::get('/imagens/logosemfundo.png', function () {
+    $path = base_path('../frontend/imagens/logosemfundo.png');
+    if (! is_file($path)) {
+        abort(404);
+    }
+
+    return Response::file($path, [
+        'Content-Type' => 'image/png',
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+});
+
 Route::get('/vagas/{slug}', [RhPublicoController::class, 'showVaga']);
 Route::post('/vagas/{slug}/candidatar', [RhPublicoController::class, 'candidatar']);

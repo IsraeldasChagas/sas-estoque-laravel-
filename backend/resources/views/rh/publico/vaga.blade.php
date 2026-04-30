@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         .gsp-brand { display:flex; align-items:center; gap:.75rem; }
-        .gsp-mark { width: 44px; height: 44px; flex: 0 0 auto; }
+        .gsp-mark { width: 44px; height: 44px; flex: 0 0 auto; object-fit: contain; }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
         .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }
@@ -19,10 +19,7 @@
 <main class="container py-4" style="max-width: 860px;">
     <div class="mb-4">
         <div class="gsp-brand mb-3">
-            <svg class="gsp-mark" viewBox="0 0 64 64" aria-hidden="true">
-                <path d="M36.8 10.2c-6 2.5-11 7.7-13.2 14.1-2.3 6.8-1.1 14.1 3.3 19.6 3.9 4.8 9.8 7.6 16 7.6 7.3 0 13.9-3.8 17.6-10.1 3-5.2 3.5-11.6 1.3-17.2-2.4-6.1-7.5-10.9-13.9-13.2-.8-.3-1.6.6-1.2 1.4 2.1 4.4 1.5 9.6-1.6 13.5-2.2 2.8-5.3 4.6-8.7 5.1 2.1-2.6 3.2-5.9 3.2-9.3 0-3.8-1.3-7.4-3.8-10.4-.3-.4-.8-.5-1.2-.3Z" fill="#1b8f3a"/>
-                <path d="M12.5 52.2c5.1-4.3 11.9-6.8 19.1-6.8 7.2 0 14 2.5 19.1 6.8.8.7.3 2-0.8 2H13.3c-1.1 0-1.6-1.3-.8-2Z" fill="#0f6f2b"/>
-            </svg>
+            <img class="gsp-mark" src="/imagens/logosemfundo.png" alt="Grupo Sabor Paraense" />
             <div class="gsp-name">
                 <div class="title">Grupo Sabor Paraense</div>
                 <div class="sub">Recrutamento e seleção</div>
@@ -108,7 +105,7 @@
                     <input name="nome" class="form-control" value="{{ old('nome') }}" required maxlength="160" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Telefone</label>
+                    <label class="form-label">WhatsApp</label>
                     <input name="telefone" class="form-control" value="{{ old('telefone') }}" maxlength="40" />
                 </div>
 
