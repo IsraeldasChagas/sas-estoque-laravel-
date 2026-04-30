@@ -12666,6 +12666,9 @@ function setupNavigation() {
       showToast("Modal de vaga não encontrado.", "error");
       return;
     }
+    window.__rhVagaEditId = null;
+    const t = document.getElementById("rhVagaModalTitle");
+    if (t) t.textContent = "+ Nova vaga";
     form.reset?.();
     const qtd = document.getElementById("rhVagaQuantidade");
     if (qtd) qtd.value = "1";
@@ -12707,22 +12710,26 @@ function setupNavigation() {
       if (!titulo) throw new Error("Informe o título.");
       if (!descricao) throw new Error("Informe a descrição.");
 
-      await fetchJSON("/rh/vagas", {
-        method: "POST",
-        body: JSON.stringify({
-          titulo,
-          descricao,
-          unidade: unidade || null,
-          setor: setor || null,
-          quantidade,
-          requisitos: requisitos || null,
-          beneficios: beneficios || null,
-          tipo_contratacao: tipo_contratacao || null,
-          status,
-        }),
-      });
+      const payload = {
+        titulo,
+        descricao,
+        unidade: unidade || null,
+        setor: setor || null,
+        quantidade,
+        requisitos: requisitos || null,
+        beneficios: beneficios || null,
+        tipo_contratacao: tipo_contratacao || null,
+        status,
+      };
+
+      const editId = window.__rhVagaEditId ? Number(window.__rhVagaEditId) : null;
+      if (editId) {
+        await fetchJSON(`/rh/vagas/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
+      } else {
+        await fetchJSON("/rh/vagas", { method: "POST", body: JSON.stringify(payload) });
+      }
       fecharRhVagaModal();
-      showToast("Vaga criada.", "success");
+      showToast(editId ? "Vaga atualizada." : "Vaga criada.", "success");
       await loadRhVagas({
         status: document.getElementById("rhVagasFiltroStatus")?.value || "",
         titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
@@ -12730,7 +12737,7 @@ function setupNavigation() {
         setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
       });
     } catch (err) {
-      showToast(err?.message || "Erro ao criar vaga.", "error");
+      showToast(err?.message || (window.__rhVagaEditId ? "Erro ao editar vaga." : "Erro ao criar vaga."), "error");
     }
   });
   document.getElementById("rhVagasSection")?.addEventListener("click", async (e) => {
@@ -12772,34 +12779,33 @@ function setupNavigation() {
         showToast("Vaga não encontrada na lista. Recarregue.", "warning");
         return;
       }
-      try {
-        const titulo = prompt("Título da vaga:", vaga.titulo || "");
-        if (!titulo) return;
-        const descricao = prompt("Descrição da vaga:", vaga.descricao || "");
-        if (!descricao) return;
-        const requisitos = prompt("Requisitos (opcional):", vaga.requisitos || "") || "";
-        const beneficios = prompt("Benefícios (opcional):", vaga.beneficios || "") || "";
-        const unidade = prompt("Unidade (opcional):", vaga.unidade || "") || "";
-        const setor = prompt("Setor (opcional):", vaga.setor || "") || "";
-        const tipo_contratacao = prompt("Tipo de contratação (opcional):", vaga.tipo_contratacao || "") || "";
-        const status = (prompt("Status (aberta/pausada/encerrada):", vaga.status || "aberta") || "aberta").toLowerCase().trim();
-        const quantidadeRaw = prompt("Quantidade (padrão 1):", String(vaga.quantidade ?? 1)) || "1";
-        const quantidade = Math.max(1, Number(quantidadeRaw) || 1);
-
-        await fetchJSON(`/rh/vagas/${id}`, {
-          method: "PUT",
-          body: JSON.stringify({ titulo, descricao, requisitos, beneficios, unidade, setor, tipo_contratacao, status, quantidade }),
-        });
-        showToast("Vaga atualizada.", "success");
-        await loadRhVagas({
-          status: document.getElementById("rhVagasFiltroStatus")?.value || "",
-          titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
-          unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
-          setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
-        });
-      } catch (err) {
-        showToast(err?.message || "Erro ao editar vaga.", "error");
+      const modal = document.getElementById("rhVagaModal");
+      const form = document.getElementById("rhVagaForm");
+      if (!modal || !form) {
+        showToast("Modal de vaga não encontrado.", "error");
+        return;
       }
+      window.__rhVagaEditId = id;
+      const t = document.getElementById("rhVagaModalTitle");
+      if (t) t.textContent = "Editar vaga";
+
+      // Preenche campos
+      const setVal = (elId, val) => {
+        const el = document.getElementById(elId);
+        if (el) el.value = (val ?? "").toString();
+      };
+      setVal("rhVagaTitulo", vaga.titulo || "");
+      setVal("rhVagaStatus", (vaga.status || "aberta").toString().toLowerCase());
+      setVal("rhVagaDescricao", vaga.descricao || "");
+      setVal("rhVagaUnidade", vaga.unidade || "");
+      setVal("rhVagaSetor", vaga.setor || "");
+      setVal("rhVagaQuantidade", String(vaga.quantidade ?? 1));
+      setVal("rhVagaTipo", vaga.tipo_contratacao || "");
+      setVal("rhVagaRequisitos", vaga.requisitos || "");
+      setVal("rhVagaBeneficios", vaga.beneficios || "");
+
+      modal.classList.add("active");
+      document.getElementById("rhVagaTitulo")?.focus?.();
       return;
     }
 
