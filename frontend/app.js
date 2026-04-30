@@ -7713,24 +7713,6 @@ function renderRhCandidatoInlineRow(payload) {
                   </tbody>
                 </table>
               </div>
-              <div class="filters-panel" style="margin:.75rem 1rem 1rem;border-radius:8px;border:1px solid rgba(255,255,255,.1);">
-                <div style="font-weight:600;margin-bottom:.5rem;font-size:.9rem;">Anexar documento (RH)</div>
-                <div class="filters-grid" style="align-items:flex-end;">
-                  <label>Tipo
-                    <select class="rh-cand-doc-upload-tipo">
-                      <option value="cpf">CPF</option>
-                      <option value="rg">RG</option>
-                      <option value="comprovante">Comprovante</option>
-                      <option value="ctps">Carteira de trabalho</option>
-                    </select>
-                  </label>
-                  <label>Arquivo (PDF/JPG/PNG)
-                    <input type="file" class="rh-cand-doc-upload-arquivo" accept=".pdf,.jpg,.jpeg,.png,application/pdf" />
-                  </label>
-                  <button type="button" class="btn primary rh-cand-doc-upload-enviar">Enviar</button>
-                </div>
-                <p class="subtle-text" style="margin:.45rem 0 0;font-size:.82rem;">Envio pelo sistema só com candidato <strong>Aprovado</strong> ou <strong>Em contratação</strong>.</p>
-              </div>
             </div>
 
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
@@ -13035,13 +13017,6 @@ function setupNavigation() {
         detailsTr.dataset.id = String(id);
         detailsTr.innerHTML = html;
         tr.insertAdjacentElement("afterend", detailsTr);
-        detailsTr.dataset.rhCandNome = (payload?.candidato?.nome || "-").toString();
-        detailsTr.dataset.rhCandVaga = (
-          payload?.vaga?.titulo ||
-          payload?.vaga?.titulo_vaga ||
-          payload?.candidato?.vaga_titulo ||
-          "-"
-        ).toString();
 
         // Preenche status selecionado
         const statusSel = detailsTr.querySelector(".rh-cand-status");
@@ -13130,67 +13105,6 @@ function setupNavigation() {
             showRhDocumentacaoLinkModal(url);
           } catch (err) {
             showToast(err?.message || "Erro ao gerar link.", "error");
-          }
-        });
-        detailsTr.querySelector(".rh-cand-doc-upload-enviar")?.addEventListener("click", async () => {
-          const tipo = detailsTr.querySelector(".rh-cand-doc-upload-tipo")?.value || "";
-          const file = detailsTr.querySelector(".rh-cand-doc-upload-arquivo")?.files?.[0];
-          if (!tipo || !file) {
-            showToast("Escolha tipo e arquivo.", "warning");
-            return;
-          }
-          try {
-            const fd = new FormData();
-            fd.append("tipo", tipo);
-            fd.append("arquivo", file);
-            const headers = {
-              ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
-              ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
-              ...getDeviceHeaders(),
-            };
-            const res = await fetch(`${API_URL}/rh/candidatos/${encodeURIComponent(String(id))}/documentos`, {
-              method: "POST",
-              headers,
-              body: fd,
-            });
-            const text = await res.text();
-            let payloadDoc = null;
-            try {
-              payloadDoc = text ? JSON.parse(text) : null;
-            } catch (_) {
-              /* ignore */
-            }
-            if (!res.ok) throw new Error(payloadDoc?.error || `Erro ${res.status}`);
-            const d = payloadDoc;
-            const nomeTbl = escapeHtml(String(detailsTr.dataset.rhCandNome || "-"));
-            const vagaTbl = escapeHtml(String(detailsTr.dataset.rhCandVaga || "-"));
-            const rid = escapeHtml(String(d?.id ?? ""));
-            const tipoU = escapeHtml(String(d?.tipo || "").toUpperCase());
-            const dt = escapeHtml(String(d?.created_at || "").slice(0, 19).replace("T", " "));
-            const tbody = detailsTr.querySelector(".table-card tbody");
-            if (tbody) {
-              const rows = tbody.querySelectorAll("tr");
-              rows.forEach((r) => {
-                if (r.textContent.includes("Nenhum documento")) r.remove();
-              });
-              tbody.insertAdjacentHTML(
-                "afterbegin",
-                `<tr data-doc-id="${rid}">
-    <td>${rid}</td>
-    <td>${nomeTbl}</td>
-    <td>${vagaTbl}</td>
-    <td>${tipoU}</td>
-    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${rid}">Baixar</button></td>
-    <td>${dt}</td>
-    <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${rid}">Excluir</button></td>
-  </tr>`
-              );
-            }
-            const arq = detailsTr.querySelector(".rh-cand-doc-upload-arquivo");
-            if (arq) arq.value = "";
-            showToast("Documento enviado.", "success");
-          } catch (err) {
-            showToast(err?.message || "Erro ao enviar documento.", "error");
           }
         });
         detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
