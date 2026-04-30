@@ -12744,7 +12744,12 @@ function setupNavigation() {
     const btnCopy = e.target.closest(".btn-rh-vaga-copiar-link");
     if (btnCopy) {
       e.preventDefault();
-      const link = btnCopy.dataset.link || "";
+      let link = btnCopy.dataset.link || "";
+      if (!link) {
+        const tr = btnCopy.closest("tr");
+        const slug = tr?.dataset?.slug || "";
+        if (slug) link = getVagaPublicUrl(slug);
+      }
       try {
         if (navigator.clipboard?.writeText) {
           await navigator.clipboard.writeText(link);
@@ -12778,11 +12783,13 @@ function setupNavigation() {
     const btnQr = e.target.closest(".btn-rh-vaga-qrcode");
     if (btnQr) {
       e.preventDefault();
-      const id = btnQr.dataset.id;
-      if (!id) return;
       try {
-        const blob = await fetchBlob(`/rh/vagas/${id}/qrcode`);
-        const url = URL.createObjectURL(blob);
+        const tr = btnQr.closest("tr");
+        const slug = tr?.dataset?.slug || "";
+        if (!slug) throw new Error("Slug da vaga não encontrado.");
+
+        // QR Code público por slug (não depende de auth).
+        const url = `${getPublicBaseUrl().replace(/\/$/, "")}/vagas/${encodeURIComponent(String(slug))}/qrcode`;
         // Evita bloqueio de popup: abre via <a target=_blank>.
         const a = document.createElement("a");
         a.href = url;
@@ -12791,7 +12798,6 @@ function setupNavigation() {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 120000);
       } catch (err) {
         showToast(err?.message || "Erro ao gerar QR Code.", "error");
       }

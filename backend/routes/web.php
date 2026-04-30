@@ -48,4 +48,5 @@ Route::get('/imagens/logosemfundo.png', function () {
 });
 
 Route::get('/vagas/{slug}', [RhPublicoController::class, 'showVaga']);
+Route::get('/vagas/{slug}/qrcode', [RhPublicoController::class, 'qrcodeVaga']);
 Route::post('/vagas/{slug}/candidatar', [RhPublicoController::class, 'candidatar']);

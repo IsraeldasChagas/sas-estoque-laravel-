@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Writer\PngWriter;
 
 class RhPublicoController extends Controller
 {
@@ -86,6 +88,27 @@ class RhPublicoController extends Controller
             'vagasAbertas' => $vagasAbertas,
             'vagaBloqueada' => ($vaga->status !== 'aberta'),
         ]);
+    }
+
+    public function qrcodeVaga(string $slug)
+    {
+        $vaga = DB::table('rh_vagas')->where('slug', $slug)->first();
+        if (! $vaga) {
+            abort(404);
+        }
+
+        $apiBase = rtrim((string) config('app.url'), '/');
+        $publicUrl = $apiBase . '/vagas/' . $vaga->slug;
+
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->data($publicUrl)
+            ->size(420)
+            ->margin(10)
+            ->build();
+
+        return response($result->getString(), 200)
+            ->header('Content-Type', 'image/png');
     }
 
     public function candidatar(Request $request, string $slug)
