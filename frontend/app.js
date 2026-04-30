@@ -7511,7 +7511,8 @@ async function loadRhVagas(filtros = {}) {
   });
   const path = `/rh/vagas${qs.toString() ? `?${qs}` : ""}`;
   const lista = await fetchJSON(path);
-  renderRhVagas(Array.isArray(lista) ? lista : []);
+  state.rhVagas = Array.isArray(lista) ? lista : [];
+  renderRhVagas(state.rhVagas);
 }
 
 function renderRhVagas(lista) {
@@ -7534,6 +7535,8 @@ function renderRhVagas(lista) {
       <td data-label="Ações" class="table-actions">
         <button type="button" class="table-action btn-rh-vaga-copiar-link" data-link="${esc(link)}">Copiar link</button>
         <button type="button" class="table-action btn-rh-vaga-qrcode" data-id="${esc(v.id)}">QR Code</button>
+        <button type="button" class="table-action btn-rh-vaga-editar" data-id="${esc(v.id)}">Editar</button>
+        <button type="button" class="table-action danger btn-rh-vaga-excluir" data-id="${esc(v.id)}">Excluir</button>
       </td>
     </tr>`;
   }).join("");
@@ -12699,6 +12702,69 @@ function setupNavigation() {
       } catch (err) {
         showToast(err?.message || "Erro ao gerar QR Code.", "error");
       }
+      return;
+    }
+
+    const btnEditar = e.target.closest(".btn-rh-vaga-editar");
+    if (btnEditar) {
+      e.preventDefault();
+      const id = Number(btnEditar.dataset.id || "");
+      if (!id) return;
+      const vaga = (state.rhVagas || []).find((v) => Number(v?.id) === id);
+      if (!vaga) {
+        showToast("Vaga não encontrada na lista. Recarregue.", "warning");
+        return;
+      }
+      try {
+        const titulo = prompt("Título da vaga:", vaga.titulo || "");
+        if (!titulo) return;
+        const descricao = prompt("Descrição da vaga:", vaga.descricao || "");
+        if (!descricao) return;
+        const requisitos = prompt("Requisitos (opcional):", vaga.requisitos || "") || "";
+        const beneficios = prompt("Benefícios (opcional):", vaga.beneficios || "") || "";
+        const unidade = prompt("Unidade (opcional):", vaga.unidade || "") || "";
+        const setor = prompt("Setor (opcional):", vaga.setor || "") || "";
+        const tipo_contratacao = prompt("Tipo de contratação (opcional):", vaga.tipo_contratacao || "") || "";
+        const status = (prompt("Status (aberta/pausada/encerrada):", vaga.status || "aberta") || "aberta").toLowerCase().trim();
+        const quantidadeRaw = prompt("Quantidade (padrão 1):", String(vaga.quantidade ?? 1)) || "1";
+        const quantidade = Math.max(1, Number(quantidadeRaw) || 1);
+
+        await fetchJSON(`/rh/vagas/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ titulo, descricao, requisitos, beneficios, unidade, setor, tipo_contratacao, status, quantidade }),
+        });
+        showToast("Vaga atualizada.", "success");
+        await loadRhVagas({
+          status: document.getElementById("rhVagasFiltroStatus")?.value || "",
+          titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
+          unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
+          setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
+        });
+      } catch (err) {
+        showToast(err?.message || "Erro ao editar vaga.", "error");
+      }
+      return;
+    }
+
+    const btnExcluir = e.target.closest(".btn-rh-vaga-excluir");
+    if (btnExcluir) {
+      e.preventDefault();
+      const id = Number(btnExcluir.dataset.id || "");
+      if (!id) return;
+      if (!confirm("Excluir vaga?\n\nObs: para preservar histórico, a vaga será ENCERRADA (não remove candidatos).")) return;
+      try {
+        await fetchJSON(`/rh/vagas/${id}`, { method: "DELETE" });
+        showToast("Vaga encerrada.", "success");
+        await loadRhVagas({
+          status: document.getElementById("rhVagasFiltroStatus")?.value || "",
+          titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
+          unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
+          setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
+        });
+      } catch (err) {
+        showToast(err?.message || "Erro ao excluir vaga.", "error");
+      }
+      return;
     }
   });
 
