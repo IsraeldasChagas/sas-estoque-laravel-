@@ -100,22 +100,26 @@ class RhPublicoController extends Controller
         $apiBase = rtrim((string) config('app.url'), '/');
         $publicUrl = $apiBase . '/vagas/' . $vaga->slug;
 
-        // Proteção: se a lib não estiver disponível no servidor (vendor desatualizado),
-        // usa um gerador externo (evita 500 e mantém o botão funcionando).
-        if (! class_exists(Builder::class)) {
-            $qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=420x420&chl=' . urlencode($publicUrl);
-            return redirect()->away($qrUrl);
+        // Sempre tenta gerar localmente, mas NUNCA deixe estourar 500:
+        // se faltar lib/extensão ou ocorrer qualquer erro, cai no gerador externo.
+        try {
+            if (class_exists(Builder::class)) {
+                $result = Builder::create()
+                    ->writer(new PngWriter())
+                    ->data($publicUrl)
+                    ->size(420)
+                    ->margin(10)
+                    ->build();
+
+                return response($result->getString(), 200)
+                    ->header('Content-Type', 'image/png');
+            }
+        } catch (\Throwable $e) {
+            // fallback abaixo
         }
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->data($publicUrl)
-            ->size(420)
-            ->margin(10)
-            ->build();
-
-        return response($result->getString(), 200)
-            ->header('Content-Type', 'image/png');
+        $qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=420x420&chl=' . urlencode($publicUrl);
+        return redirect()->away($qrUrl);
     }
 
     public function candidatar(Request $request, string $slug)
