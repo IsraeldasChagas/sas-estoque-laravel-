@@ -16,9 +16,13 @@
 /public/build
 /public/hot
 /public/storage
+/public/uploads/
 /storage/*.key
 /storage/pail
 /vendor
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# cPanel/servidor às vezes cria esse arquivo sem extensão
+error_log

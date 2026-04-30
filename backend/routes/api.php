@@ -9288,6 +9288,7 @@ $rhCors = fn () => response()->json([])
 // Preflight CORS (IMPORTANTE: não passa pelo sas.usuario)
 Route::options('/rh/candidatos/{id}/curriculo', $rhCors);
 Route::options('/rh/candidatos/{id}/foto', $rhCors);
+Route::options('/rh/candidatos/{id}', $rhCors);
 
 Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     // Dashboard
@@ -9308,6 +9309,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     Route::put('/candidatos/{id}/status', [RhCandidatoController::class, 'updateStatus']);
     Route::put('/candidatos/{id}/observacoes', [RhCandidatoController::class, 'updateObservacoes']);
     Route::post('/candidatos/{id}/anonimizar', [RhCandidatoController::class, 'anonymize']);
+    Route::delete('/candidatos/{id}', [RhCandidatoController::class, 'destroyDefinitivo']);
 
     // Entrevistas
     Route::get('/entrevistas', [RhEntrevistaController::class, 'index']);

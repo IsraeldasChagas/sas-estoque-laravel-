@@ -209,6 +209,52 @@ class RhCandidatoController extends Controller
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     }
 
+    /**
+     * Exclusão definitiva (remove candidato + registros relacionados + arquivos).
+     * Use quando a intenção for "apagar de vez" e não apenas LGPD/anônimizar.
+     */
+    public function destroyDefinitivo(Request $request, int $id)
+    {
+        if (! RhAcesso::pode($request, 'rh.candidatos')) {
+            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $c = DB::table('rh_candidatos')->where('id', $id)->first();
+        if (! $c) return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+
+        $disk = Storage::disk('public');
+
+        // Coleta paths antes de apagar no banco.
+        $paths = [];
+        if (! empty($c->foto_path)) $paths[] = $c->foto_path;
+
+        $curriculos = DB::table('rh_curriculos')->where('candidato_id', $id)->get();
+        foreach ($curriculos as $cv) {
+            if (! empty($cv->arquivo_path)) $paths[] = $cv->arquivo_path;
+        }
+
+        $docs = DB::table('rh_documentos')->where('candidato_id', $id)->get();
+        foreach ($docs as $d) {
+            if (! empty($d->arquivo_path)) $paths[] = $d->arquivo_path;
+        }
+
+        // Apaga arquivos (best effort).
+        $paths = array_values(array_unique(array_filter($paths, fn ($p) => is_string($p) && trim($p) !== '')));
+        foreach ($paths as $p) {
+            try { $disk->delete($p); } catch (\Throwable $_) {}
+        }
+
+        DB::transaction(function () use ($id) {
+            DB::table('rh_historico')->where('candidato_id', $id)->delete();
+            DB::table('rh_entrevistas')->where('candidato_id', $id)->delete();
+            DB::table('rh_documentos')->where('candidato_id', $id)->delete();
+            DB::table('rh_curriculos')->where('candidato_id', $id)->delete();
+            DB::table('rh_candidatos')->where('id', $id)->delete();
+        });
+
+        return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
+    }
+
     public function downloadCurriculo(Request $request, int $id)
     {
         try {

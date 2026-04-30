@@ -1,0 +1,10 @@
+## Hospedagem / cPanel / Git
+FETCH_HEAD
+
+## Logs soltos comuns em produção
+error_log
+**/error_log
+
+## Arquivos temporários
+tmp/
+**/tmp/

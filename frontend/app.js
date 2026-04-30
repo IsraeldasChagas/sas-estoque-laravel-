@@ -7646,10 +7646,10 @@ function renderRhCandidatoInlineRow(payload) {
               <button type="button" class="btn rh-cand-cv" data-has-cv="${temCurriculo ? "1" : "0"}" ${temCurriculo ? "" : "disabled"}>Ver currículo</button>
               <button type="button" class="btn primary rh-cand-salvar">Salvar</button>
               <button type="button" class="btn rh-cand-fechar">Fechar</button>
-              <button type="button" class="btn rh-cand-anon" style="background:#b71c1c;color:#fff;">Anonimizar (excluir)</button>
+              <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
             </div>
             <div class="subtle-text" style="margin-top:.5rem;">
-              LGPD: anonimizar remove dados pessoais e apaga arquivos do candidato.
+              Exclusão definitiva: remove candidato, registros e arquivos (não pode desfazer).
             </div>
           </div>
         </div>
@@ -12831,15 +12831,15 @@ function setupNavigation() {
             showToast(err?.message || "Erro ao salvar candidato.", "error");
           }
         });
-        detailsTr.querySelector(".rh-cand-anon")?.addEventListener("click", async () => {
-          if (!confirm("Anonimizar candidato? Isso remove dados pessoais e apaga arquivos (LGPD).")) return;
+        detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
+          if (!confirm("EXCLUIR candidato definitivamente?\n\nIsso vai apagar TUDO: dados, entrevistas, histórico, currículo, documentos e arquivos.\n\nEssa ação NÃO pode ser desfeita.")) return;
           try {
-            await fetchJSON(`/rh/candidatos/${id}/anonimizar`, { method: "POST", body: JSON.stringify({}) });
-            showToast("Candidato anonimizado (excluído via LGPD).", "success");
+            await fetchJSON(`/rh/candidatos/${id}`, { method: "DELETE" });
+            showToast("Candidato excluído definitivamente.", "success");
             closeRhCandidatoInlineRow();
             await loadRhCandidatos();
           } catch (err) {
-            showToast(err?.message || "Erro ao anonimizar.", "error");
+            showToast(err?.message || "Erro ao excluir.", "error");
           }
         });
       } catch (err) {
