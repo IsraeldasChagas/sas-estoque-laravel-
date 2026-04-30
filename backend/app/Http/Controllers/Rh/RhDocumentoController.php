@@ -108,24 +108,45 @@ class RhDocumentoController extends Controller
                 return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
             }
 
-            $fullPath = Storage::disk('public')->path($path);
-            if (! $fullPath || ! file_exists($fullPath)) {
+            // Não dependa de arquivo local: use stream (disk pode ser remoto).
+            $disk = Storage::disk('public');
+            $nome = $doc->arquivo_nome_original ?: basename((string) $path);
+            $forcarDownload = $request->boolean('download', false);
+
+            $mime = $doc->mime ?: 'application/octet-stream';
+            $headers = [
+                'Content-Type' => $mime,
+                'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
+                'X-Frame-Options' => 'ALLOWALL',
+            ];
+
+            $stream = $disk->readStream($path);
+            if (! $stream) {
                 return $this->aplicarCorsRespostaDownload(response()->json(['error' => 'Arquivo não encontrado'], 404));
             }
 
-            $nome = $doc->arquivo_nome_original ?: basename($fullPath);
-            $forcarDownload = $request->boolean('download', false);
             if ($forcarDownload) {
-                return $this->aplicarCorsRespostaDownload(response()->download($fullPath, $nome));
+                $res = response()->streamDownload(function () use ($stream) {
+                    try {
+                        fpassthru($stream);
+                    } finally {
+                        if (is_resource($stream)) fclose($stream);
+                    }
+                }, $nome, $headers);
+
+                return $this->aplicarCorsRespostaDownload($res);
             }
 
-            $mime = $doc->mime ?: 'application/octet-stream';
-            return $this->aplicarCorsRespostaDownload(response()->file($fullPath, [
-                'Content-Type' => $mime,
-                'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
-                'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
-                'X-Frame-Options' => 'ALLOWALL',
-            ]));
+            $headers['Content-Disposition'] = 'inline; filename="' . addslashes((string) $nome) . '"';
+            $res = response()->stream(function () use ($stream) {
+                try {
+                    fpassthru($stream);
+                } finally {
+                    if (is_resource($stream)) fclose($stream);
+                }
+            }, 200, $headers);
+
+            return $this->aplicarCorsRespostaDownload($res);
         } catch (\Throwable $e) {
             return $this->aplicarCorsRespostaDownload(response()->json([
                 'error' => 'Erro ao baixar documento',

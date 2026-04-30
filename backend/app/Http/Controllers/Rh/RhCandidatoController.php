@@ -225,27 +225,48 @@ class RhCandidatoController extends Controller
                 return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Currículo não encontrado'], 404));
             }
 
-            // Pega o caminho físico via Storage::path() para respeitar a configuração do disk no servidor.
-            $path = Storage::disk('public')->path($cv->arquivo_path);
-            if (! $path || ! file_exists($path)) {
-                return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Arquivo não encontrado'], 404));
-            }
-
-            $nome = $cv->arquivo_nome_original ?: basename($path);
+            // IMPORTANTE: não dependa de Storage::path() / arquivo local.
+            // Em produção o disk pode não ser "local" (ex.: S3) e path() pode falhar.
+            $disk = Storage::disk('public');
+            $nome = $cv->arquivo_nome_original ?: ('curriculo-' . $id . '.pdf');
             $forcarDownload = $request->boolean('download', false);
-            if ($forcarDownload) {
-                return $this->aplicarCorsRespostaCurriculo(response()->download($path, $nome));
-            }
 
             // Currículo é sempre PDF.
             $mime = 'application/pdf';
 
-            return $this->aplicarCorsRespostaCurriculo(response()->file($path, [
+            $headers = [
                 'Content-Type' => $mime,
-                'Content-Disposition' => 'inline; filename="' . addslashes((string) $nome) . '"',
                 'Content-Security-Policy' => "frame-ancestors 'self' https://*.gruposaborparaense.com.br http://localhost:*",
                 'X-Frame-Options' => 'ALLOWALL',
-            ]));
+            ];
+
+            $stream = $disk->readStream($cv->arquivo_path);
+            if (! $stream) {
+                return $this->aplicarCorsRespostaCurriculo(response()->json(['error' => 'Arquivo não encontrado'], 404));
+            }
+
+            if ($forcarDownload) {
+                $res = response()->streamDownload(function () use ($stream) {
+                    try {
+                        fpassthru($stream);
+                    } finally {
+                        if (is_resource($stream)) fclose($stream);
+                    }
+                }, $nome, $headers);
+
+                return $this->aplicarCorsRespostaCurriculo($res);
+            }
+
+            $headers['Content-Disposition'] = 'inline; filename="' . addslashes((string) $nome) . '"';
+            $res = response()->stream(function () use ($stream) {
+                try {
+                    fpassthru($stream);
+                } finally {
+                    if (is_resource($stream)) fclose($stream);
+                }
+            }, 200, $headers);
+
+            return $this->aplicarCorsRespostaCurriculo($res);
         } catch (\Throwable $e) {
             return $this->aplicarCorsRespostaCurriculo(response()->json([
                 'error' => 'Erro ao baixar currículo',
