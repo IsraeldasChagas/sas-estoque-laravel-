@@ -109,7 +109,7 @@ class RhPublicoController extends Controller
         $publicUrl = $apiBase . '/vagas/' . $vaga->slug;
 
         // QR Code público sem dependências de vendor (evita 500 por diferença de versões no servidor).
-        $qrUrl = 'https://quickchart.io/qr?size=420&format=png&text=' . urlencode($publicUrl);
+        $qrUrl = 'https://quickchart.io/qr?size=420&format=jpg&text=' . urlencode($publicUrl);
         return redirect()->away($qrUrl);
     }
 

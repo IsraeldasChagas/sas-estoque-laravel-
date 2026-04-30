@@ -8,7 +8,7 @@
     <style>
         body { background: radial-gradient(900px 380px at 12% 8%, rgba(25,135,84,.14), transparent 60%), radial-gradient(800px 420px at 88% 22%, rgba(13,110,253,.10), transparent 55%), linear-gradient(180deg, #f7faf9 0%, #f1f5f9 60%, #eef2f7 100%); }
         .gsp-brand { display:flex; align-items:center; gap:.75rem; }
-        .gsp-mark { width: 44px; height: 44px; flex: 0 0 auto; object-fit: contain; }
+        .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
         .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }

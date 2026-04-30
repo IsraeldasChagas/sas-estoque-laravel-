@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         .gsp-brand { display:flex; align-items:center; gap:.75rem; }
-        .gsp-mark { width: 44px; height: 44px; flex: 0 0 auto; object-fit: contain; }
+        .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
         .gsp-name .sub { font-size: .86rem; color: rgba(0,0,0,.55); }
