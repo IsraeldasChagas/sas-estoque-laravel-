@@ -12751,10 +12751,10 @@ function setupNavigation() {
       e.preventDefault();
       const id = Number(btnExcluir.dataset.id || "");
       if (!id) return;
-      if (!confirm("Excluir vaga?\n\nObs: para preservar histórico, a vaga será ENCERRADA (não remove candidatos).")) return;
+      if (!confirm("EXCLUIR vaga definitivamente?\n\nIsso vai apagar a vaga e TODOS os candidatos vinculados (com currículos, fotos, documentos, entrevistas e histórico).\n\nEssa ação NÃO pode ser desfeita.")) return;
       try {
         await fetchJSON(`/rh/vagas/${id}`, { method: "DELETE" });
-        showToast("Vaga encerrada.", "success");
+        showToast("Vaga excluída definitivamente.", "success");
         await loadRhVagas({
           status: document.getElementById("rhVagasFiltroStatus")?.value || "",
           titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
