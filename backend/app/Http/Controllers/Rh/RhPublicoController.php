@@ -69,6 +69,16 @@ class RhPublicoController extends Controller
         ];
     }
 
+    public function indexVagas()
+    {
+        $vagas = DB::table('rh_vagas')
+            ->orderByRaw("CASE status WHEN 'aberta' THEN 0 WHEN 'pausada' THEN 1 ELSE 2 END")
+            ->orderBy('titulo')
+            ->get();
+
+        return view('rh.publico.vagas', ['vagas' => $vagas]);
+    }
+
     public function showVaga(string $slug)
     {
         $vaga = DB::table('rh_vagas')->where('slug', $slug)->first();
