@@ -71,6 +71,7 @@
     <div class="card">
         <div class="card-body">
             <h2 class="h5 mb-3">Candidatar-se</h2>
+            <div class="text-muted mb-3" style="font-size: .95rem;">Campos com <strong>*</strong> são obrigatórios.</div>
 
             <form method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
                 @csrf
@@ -101,39 +102,39 @@
                 @endif
 
                 <div class="col-md-8">
-                    <label class="form-label">Nome</label>
+                    <label class="form-label">Nome <span class="text-danger">*</span></label>
                     <input name="nome" class="form-control" value="{{ old('nome') }}" required maxlength="160" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">WhatsApp</label>
+                    <label class="form-label">WhatsApp <span class="text-danger">*</span></label>
                     <input name="telefone" class="form-control" value="{{ old('telefone') }}" required maxlength="40" />
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">Email <span class="text-danger">*</span></label>
                     <input type="email" name="email" class="form-control" value="{{ old('email') }}" required maxlength="160" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Cidade</label>
+                    <label class="form-label">Cidade <span class="text-danger">*</span></label>
                     <input name="cidade" class="form-control" value="{{ old('cidade') }}" required maxlength="120" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Bairro</label>
+                    <label class="form-label">Bairro <span class="text-danger">*</span></label>
                     <input name="bairro" class="form-control" value="{{ old('bairro') }}" required maxlength="120" />
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label">Disponibilidade</label>
+                    <label class="form-label">Disponibilidade <span class="text-danger">*</span></label>
                     <input name="disponibilidade" class="form-control" value="{{ old('disponibilidade') }}" required maxlength="80" />
                 </div>
 
                 <div class="col-md-8">
-                    <label class="form-label">Currículo (PDF)</label>
+                    <label class="form-label">Currículo (PDF) <span class="text-danger">*</span></label>
                     <input type="file" name="curriculo" class="form-control" accept="application/pdf" required />
                     <div class="form-text">Não envie CPF/RG/CTPS na candidatura. Documentos só após aprovação.</div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Foto</label>
+                    <label class="form-label">Foto <span class="text-danger">*</span></label>
                     <input type="file" name="foto" class="form-control" accept="image/jpeg,image/png" required />
                 </div>
 
@@ -141,7 +142,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
                         <label class="form-check-label" for="lgpd">
-                            Autorizo o uso dos meus dados para fins de recrutamento e seleção.
+                            Autorizo o uso dos meus dados para fins de recrutamento e seleção. <span class="text-danger">*</span>
                         </label>
                     </div>
                 </div>
