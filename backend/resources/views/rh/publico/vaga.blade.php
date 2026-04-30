@@ -201,6 +201,11 @@
                     </select>
                 </div>
 
+                <div class="col-md-6">
+                    <label class="form-label">Horários de trabalho <span class="text-danger">*</span></label>
+                    <input name="horarios_trabalho" class="form-control" value="{{ old('horarios_trabalho') }}" required maxlength="255" placeholder="Ex.: 08:00 às 17:00, 14:00 às 22:00" />
+                </div>
+
                 <div class="col-md-8">
                     <label class="form-label">Currículo (PDF) <span class="text-danger">*</span></label>
                     <input type="file" name="curriculo" class="form-control" accept="application/pdf" required />
