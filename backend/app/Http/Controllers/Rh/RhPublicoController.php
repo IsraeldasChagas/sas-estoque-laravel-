@@ -6,9 +6,69 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class RhPublicoController extends Controller
 {
+    /** Municípios de RO — igual ao select da candidatura pública. */
+    private static function cidadesRo(): array
+    {
+        return [
+            'Alta Floresta d\'Oeste',
+            'Alto Alegre dos Parecis',
+            'Alto Paraíso',
+            'Alvorada d\'Oeste',
+            'Ariquemes',
+            'Buritis',
+            'Cabixi',
+            'Cacaulândia',
+            'Cacoal',
+            'Campo Novo de Rondônia',
+            'Candeias do Jamari',
+            'Castanheiras',
+            'Cerejeiras',
+            'Chupinguaia',
+            'Colorado do Oeste',
+            'Corumbiara',
+            'Costa Marques',
+            'Cujubim',
+            'Espigão d\'Oeste',
+            'Governador Jorge Teixeira',
+            'Guajará-Mirim',
+            'Itapuã do Oeste',
+            'Jaru',
+            'Ji-Paraná',
+            'Machadinho d\'Oeste',
+            'Ministro Andreazza',
+            'Mirante da Serra',
+            'Monte Negro',
+            'Nova Brasilândia d\'Oeste',
+            'Nova Mamoré',
+            'Nova União',
+            'Novo Horizonte do Oeste',
+            'Ouro Preto do Oeste',
+            'Parecis',
+            'Pimenta Bueno',
+            'Pimenteiras do Oeste',
+            'Porto Velho',
+            'Presidente Médici',
+            'Primavera de Rondônia',
+            'Rio Crespo',
+            'Rolim de Moura',
+            'Santa Luzia d\'Oeste',
+            'São Felipe d\'Oeste',
+            'São Francisco do Guaporé',
+            'São Miguel do Guaporé',
+            'Seringueiras',
+            'Teixeirópolis',
+            'Theobroma',
+            'Urupá',
+            'Vale do Anari',
+            'Vale do Paraíso',
+            'Vilhena',
+        ];
+    }
+
     public function showVaga(string $slug)
     {
         $vaga = DB::table('rh_vagas')->where('slug', $slug)->first();
@@ -35,13 +95,15 @@ class RhPublicoController extends Controller
             return back()->withErrors(['vaga' => 'Vaga indisponível.'])->withInput();
         }
 
+        $cidadesRo = self::cidadesRo();
+
         $data = $request->validate([
             'vaga_ids' => 'nullable|array',
             'vaga_ids.*' => 'integer',
             'nome' => 'required|string|max:160',
             'telefone' => 'required|string|max:40',
             'email' => 'required|email|max:160',
-            'cidade' => 'required|string|max:120',
+            'cidade' => ['required', 'string', 'max:120', Rule::in($cidadesRo)],
             'bairro' => 'required|string|max:120',
             'disponibilidade' => 'required|string|in:sim,nao',
             'curriculo' => 'required|file|max:5120', // 5MB

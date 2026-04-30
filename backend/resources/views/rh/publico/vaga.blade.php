@@ -83,6 +83,60 @@
                 @csrf
                 @php
                     $disabled = (!empty($vagaBloqueada) && $vagaBloqueada);
+                    $cidadesRo = [
+                        'Alta Floresta d\'Oeste',
+                        'Alto Alegre dos Parecis',
+                        'Alto Paraíso',
+                        'Alvorada d\'Oeste',
+                        'Ariquemes',
+                        'Buritis',
+                        'Cabixi',
+                        'Cacaulândia',
+                        'Cacoal',
+                        'Campo Novo de Rondônia',
+                        'Candeias do Jamari',
+                        'Castanheiras',
+                        'Cerejeiras',
+                        'Chupinguaia',
+                        'Colorado do Oeste',
+                        'Corumbiara',
+                        'Costa Marques',
+                        'Cujubim',
+                        'Espigão d\'Oeste',
+                        'Governador Jorge Teixeira',
+                        'Guajará-Mirim',
+                        'Itapuã do Oeste',
+                        'Jaru',
+                        'Ji-Paraná',
+                        'Machadinho d\'Oeste',
+                        'Ministro Andreazza',
+                        'Mirante da Serra',
+                        'Monte Negro',
+                        'Nova Brasilândia d\'Oeste',
+                        'Nova Mamoré',
+                        'Nova União',
+                        'Novo Horizonte do Oeste',
+                        'Ouro Preto do Oeste',
+                        'Parecis',
+                        'Pimenta Bueno',
+                        'Pimenteiras do Oeste',
+                        'Porto Velho',
+                        'Presidente Médici',
+                        'Primavera de Rondônia',
+                        'Rio Crespo',
+                        'Rolim de Moura',
+                        'Santa Luzia d\'Oeste',
+                        'São Felipe d\'Oeste',
+                        'São Francisco do Guaporé',
+                        'São Miguel do Guaporé',
+                        'Seringueiras',
+                        'Teixeirópolis',
+                        'Theobroma',
+                        'Urupá',
+                        'Vale do Anari',
+                        'Vale do Paraíso',
+                        'Vilhena',
+                    ];
                 @endphp
                 <fieldset {{ $disabled ? 'disabled="disabled"' : '' }} class="row g-3 m-0 p-0" style="border:0;">
 
@@ -126,7 +180,12 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Cidade <span class="text-danger">*</span></label>
-                    <input name="cidade" class="form-control" value="{{ old('cidade') }}" required maxlength="120" />
+                    <select name="cidade" class="form-control" required>
+                        <option value="">Selecione a cidade</option>
+                        @foreach($cidadesRo as $cidadeNome)
+                            <option value="{{ $cidadeNome }}" @selected(old('cidade') === $cidadeNome)>{{ $cidadeNome }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Bairro <span class="text-danger">*</span></label>
