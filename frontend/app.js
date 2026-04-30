@@ -12660,18 +12660,75 @@ function setupNavigation() {
     loadRhVagas().catch(() => {});
   });
   document.getElementById("rhVagaNovaBtn")?.addEventListener("click", async () => {
+    const modal = document.getElementById("rhVagaModal");
+    const form = document.getElementById("rhVagaForm");
+    if (!modal || !form) {
+      showToast("Modal de vaga não encontrado.", "error");
+      return;
+    }
+    form.reset?.();
+    const qtd = document.getElementById("rhVagaQuantidade");
+    if (qtd) qtd.value = "1";
+    const status = document.getElementById("rhVagaStatus");
+    if (status) status.value = "aberta";
+    modal.classList.add("active");
+    document.getElementById("rhVagaTitulo")?.focus?.();
+  });
+
+  const fecharRhVagaModal = () => {
+    const modal = document.getElementById("rhVagaModal");
+    if (modal) modal.classList.remove("active");
+  };
+  document.getElementById("rhVagaModalFechar")?.addEventListener("click", fecharRhVagaModal);
+  document.getElementById("rhVagaCancelar")?.addEventListener("click", fecharRhVagaModal);
+  document.getElementById("rhVagaModal")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "rhVagaModal") fecharRhVagaModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const modal = document.getElementById("rhVagaModal");
+      if (modal?.classList?.contains("active")) fecharRhVagaModal();
+    }
+  });
+
+  document.getElementById("rhVagaForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
     try {
-      const titulo = prompt("Título da vaga:");
-      if (!titulo) return;
-      const descricao = prompt("Descrição da vaga:");
-      if (!descricao) return;
-      const unidade = prompt("Unidade (opcional):") || "";
-      const setor = prompt("Setor (opcional):") || "";
-      const quantidadeRaw = prompt("Quantidade (padrão 1):") || "1";
-      const quantidade = Math.max(1, Number(quantidadeRaw) || 1);
-      await fetchJSON("/rh/vagas", { method: "POST", body: JSON.stringify({ titulo, descricao, unidade, setor, quantidade }) });
+      const titulo = document.getElementById("rhVagaTitulo")?.value?.trim() || "";
+      const descricao = document.getElementById("rhVagaDescricao")?.value?.trim() || "";
+      const unidade = document.getElementById("rhVagaUnidade")?.value?.trim() || "";
+      const setor = document.getElementById("rhVagaSetor")?.value?.trim() || "";
+      const requisitos = document.getElementById("rhVagaRequisitos")?.value?.trim() || "";
+      const beneficios = document.getElementById("rhVagaBeneficios")?.value?.trim() || "";
+      const tipo_contratacao = document.getElementById("rhVagaTipo")?.value?.trim() || "";
+      const status = (document.getElementById("rhVagaStatus")?.value || "aberta").toLowerCase().trim();
+      const quantidade = Math.max(1, Number(document.getElementById("rhVagaQuantidade")?.value || "1") || 1);
+
+      if (!titulo) throw new Error("Informe o título.");
+      if (!descricao) throw new Error("Informe a descrição.");
+
+      await fetchJSON("/rh/vagas", {
+        method: "POST",
+        body: JSON.stringify({
+          titulo,
+          descricao,
+          unidade: unidade || null,
+          setor: setor || null,
+          quantidade,
+          requisitos: requisitos || null,
+          beneficios: beneficios || null,
+          tipo_contratacao: tipo_contratacao || null,
+          status,
+        }),
+      });
+      fecharRhVagaModal();
       showToast("Vaga criada.", "success");
-      await loadRhVagas();
+      await loadRhVagas({
+        status: document.getElementById("rhVagasFiltroStatus")?.value || "",
+        titulo: document.getElementById("rhVagasFiltroTitulo")?.value?.trim() || "",
+        unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
+        setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
+      });
     } catch (err) {
       showToast(err?.message || "Erro ao criar vaga.", "error");
     }

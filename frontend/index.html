@@ -1674,6 +1674,69 @@
             </div>
           </section>
 
+          <!-- Modal RH — Nova vaga -->
+          <div class="modal-backdrop" id="rhVagaModal" role="presentation">
+            <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="rhVagaModalTitle">
+              <div class="modal-header">
+                <h2 id="rhVagaModalTitle">+ Nova vaga</h2>
+                <button type="button" class="close-btn" id="rhVagaModalFechar" aria-label="Fechar">×</button>
+              </div>
+              <div class="modal-body">
+                <form id="rhVagaForm" class="row g-3">
+                  <div class="col-md-8">
+                    <label class="form-label">Título</label>
+                    <input id="rhVagaTitulo" class="form-control" maxlength="160" required />
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select id="rhVagaStatus" class="form-control" required>
+                      <option value="aberta">Aberta</option>
+                      <option value="pausada">Pausada</option>
+                      <option value="encerrada">Encerrada</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Descrição</label>
+                    <textarea id="rhVagaDescricao" class="form-control" rows="4" maxlength="20000" required></textarea>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Unidade (opcional)</label>
+                    <input id="rhVagaUnidade" class="form-control" maxlength="120" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Setor (opcional)</label>
+                    <input id="rhVagaSetor" class="form-control" maxlength="120" />
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label">Quantidade</label>
+                    <input id="rhVagaQuantidade" type="number" class="form-control" min="1" max="1000" value="1" required />
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label">Tipo de contratação (opcional)</label>
+                    <input id="rhVagaTipo" class="form-control" maxlength="60" />
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label">Requisitos (opcional)</label>
+                    <textarea id="rhVagaRequisitos" class="form-control" rows="3" maxlength="20000"></textarea>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Benefícios (opcional)</label>
+                    <textarea id="rhVagaBeneficios" class="form-control" rows="3" maxlength="20000"></textarea>
+                  </div>
+
+                  <div class="col-12" style="display:flex; gap:.5rem; justify-content:flex-end; flex-wrap:wrap;">
+                    <button type="button" class="btn neutral" id="rhVagaCancelar">Cancelar</button>
+                    <button type="submit" class="btn primary" id="rhVagaSalvar">Salvar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
           <!-- RH — Recrutamento: Candidatos -->
           <section id="rhCandidatosSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
