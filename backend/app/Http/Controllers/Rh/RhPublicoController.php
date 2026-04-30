@@ -12,7 +12,7 @@ class RhPublicoController extends Controller
     public function showVaga(string $slug)
     {
         $vaga = DB::table('rh_vagas')->where('slug', $slug)->first();
-        if (! $vaga || $vaga->status !== 'aberta') {
+        if (! $vaga) {
             abort(404);
         }
 
@@ -24,6 +24,7 @@ class RhPublicoController extends Controller
         return view('rh.publico.vaga', [
             'vaga' => $vaga,
             'vagasAbertas' => $vagasAbertas,
+            'vagaBloqueada' => ($vaga->status !== 'aberta'),
         ]);
     }
 

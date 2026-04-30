@@ -73,6 +73,12 @@
             <h2 class="h5 mb-3">Candidatar-se</h2>
             <div class="text-muted mb-3" style="font-size: .95rem;">Campos com <strong>*</strong> são obrigatórios.</div>
 
+            @if(!empty($vagaBloqueada) && $vagaBloqueada)
+                <div class="alert alert-warning">
+                    Esta vaga está <strong>{{ strtoupper($vaga->status) }}</strong> no momento e não está aceitando novas candidaturas.
+                </div>
+            @endif
+
             <form method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
                 @csrf
 
@@ -148,7 +154,7 @@
                 </div>
 
                 <div class="col-12">
-                    <button class="btn btn-primary">Enviar candidatura</button>
+                    <button class="btn btn-primary" @disabled(!empty($vagaBloqueada) && $vagaBloqueada)>Enviar candidatura</button>
                 </div>
             </form>
         </div>
