@@ -162,7 +162,7 @@
                                         <span>
                                             {{ $v->titulo }}@if(!empty($v->unidade)) — <span class="text-muted">{{ $v->unidade }}</span>@endif
                                         </span>
-                                        <a class="btn btn-sm btn-outline-primary" href="/vagas/{{ $v->slug }}" target="_blank" rel="noopener noreferrer">Ver</a>
+                                        <a class="btn btn-sm btn-outline-primary" href="/vagas/{{ $v->slug }}">Ver</a>
                                     </label>
                                 </div>
                             @endforeach
