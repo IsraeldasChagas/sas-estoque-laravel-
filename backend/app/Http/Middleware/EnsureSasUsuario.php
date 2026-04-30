@@ -22,6 +22,11 @@ class EnsureSasUsuario
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Preflight CORS: navegador não envia X-Usuario-Id no OPTIONS.
+        if ($request->isMethod('OPTIONS')) {
+            return $this->aplicarCors(response('', 204));
+        }
+
         $uid = $request->header('X-Usuario-Id');
         if (! $uid || ! DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->exists()) {
             return $this->aplicarCors(

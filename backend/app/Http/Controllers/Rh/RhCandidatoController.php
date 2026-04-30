@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Rh\RhAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
@@ -129,6 +130,12 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
+        if (! Schema::hasTable('rh_candidatos') || ! Schema::hasColumn('rh_candidatos', 'documentacao_token_hash')) {
+            return response()->json([
+                'error' => 'Banco desatualizado: rode php artisan migrate (colunas documentacao_token no rh_candidatos).',
+            ], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+
         $c = DB::table('rh_candidatos')->where('id', $id)->first();
         if (! $c) {
             return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
@@ -138,9 +145,10 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Candidato anonimizado.'], 422)->header('Access-Control-Allow-Origin', '*');
         }
 
-        if (! in_array($c->status, ['aprovado', 'em_contratacao'], true)) {
+        $status = strtolower(trim((string) ($c->status ?? '')));
+        if (! in_array($status, ['aprovado', 'em_contratacao'], true)) {
             return response()->json([
-                'error' => 'Gere o link apenas com status Aprovado ou Em contratação.',
+                'error' => 'Salve o candidato com status Aprovado ou Em contratação antes de gerar o link.',
             ], 422)->header('Access-Control-Allow-Origin', '*');
         }
 
@@ -148,14 +156,22 @@ class RhCandidatoController extends Controller
         $hash = hash('sha256', $token);
         $now = now();
 
-        DB::table('rh_candidatos')->where('id', $id)->update([
-            'documentacao_token_hash' => $hash,
-            'documentacao_token_gerado_em' => $now,
-            'updated_at' => $now,
-        ]);
+        try {
+            DB::table('rh_candidatos')->where('id', $id)->update([
+                'documentacao_token_hash' => $hash,
+                'documentacao_token_gerado_em' => $now,
+                'updated_at' => $now,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
 
-        $base = rtrim((string) config('app.url'), '/');
-        $url = $base . '/documentacao/' . $token;
+            return response()->json([
+                'error' => 'Não foi possível gravar o link. Verifique migrations e o banco de dados.',
+            ], 500)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        // Mesma origem da requisição (inclui subpasta pública, se existir); evita APP_URL errado.
+        $url = rtrim($request->root(), '/') . '/documentacao/' . $token;
 
         return response()->json([
             'url' => $url,

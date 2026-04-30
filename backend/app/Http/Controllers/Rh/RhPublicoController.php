@@ -243,7 +243,8 @@ class RhPublicoController extends Controller
             return null;
         }
 
-        if (! in_array($c->status, ['aprovado', 'em_contratacao'], true)) {
+        $status = strtolower(trim((string) ($c->status ?? '')));
+        if (! in_array($status, ['aprovado', 'em_contratacao'], true)) {
             return null;
         }
 

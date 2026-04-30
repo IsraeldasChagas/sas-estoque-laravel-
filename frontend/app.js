@@ -13010,6 +13010,15 @@ function setupNavigation() {
             showToast(err?.message || "Erro ao salvar candidato.", "error");
           }
         });
+        const syncRhCandDocLinkBtn = () => {
+          const st = (detailsTr.querySelector(".rh-cand-status")?.value || "").toString();
+          const btn = detailsTr.querySelector(".rh-cand-doc-link");
+          if (!btn) return;
+          btn.disabled = !(st === "aprovado" || st === "em_contratacao");
+        };
+        detailsTr.querySelector(".rh-cand-status")?.addEventListener("change", syncRhCandDocLinkBtn);
+        syncRhCandDocLinkBtn();
+
         detailsTr.querySelector(".rh-cand-doc-link")?.addEventListener("click", async () => {
           try {
             const out = await fetchJSON(`/rh/candidatos/${id}/documentacao-link`, { method: "POST", body: "{}" });
