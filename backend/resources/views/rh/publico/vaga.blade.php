@@ -158,8 +158,11 @@
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="vaga_ids[]" id="vaga_{{ $v->id }}" value="{{ $v->id }}"
                                            @checked(old('vaga_ids') ? in_array($v->id, (array) old('vaga_ids')) : ($v->id === $vaga->id)) />
-                                    <label class="form-check-label" for="vaga_{{ $v->id }}">
-                                        {{ $v->titulo }}@if(!empty($v->unidade)) — <span class="text-muted">{{ $v->unidade }}</span>@endif
+                                    <label class="form-check-label" for="vaga_{{ $v->id }}" style="display:flex; align-items:center; gap:.5rem; justify-content:space-between;">
+                                        <span>
+                                            {{ $v->titulo }}@if(!empty($v->unidade)) — <span class="text-muted">{{ $v->unidade }}</span>@endif
+                                        </span>
+                                        <a class="btn btn-sm btn-outline-primary" href="/vagas/{{ $v->slug }}" target="_blank" rel="noopener noreferrer">Ver</a>
                                     </label>
                                 </div>
                             @endforeach
