@@ -44,6 +44,7 @@ class RhVagaController extends Controller
             'setor' => 'nullable|string|max:120',
             'quantidade' => 'nullable|integer|min:1|max:1000',
             'tipo_contratacao' => 'nullable|string|max:60',
+            'horarios_trabalho' => 'nullable|string|max:255',
             'status' => 'nullable|string|in:aberta,pausada,encerrada',
         ]);
 
@@ -64,6 +65,7 @@ class RhVagaController extends Controller
             'setor' => $data['setor'] ?? null,
             'quantidade' => (int) ($data['quantidade'] ?? 1),
             'tipo_contratacao' => $data['tipo_contratacao'] ?? null,
+            'horarios_trabalho' => $data['horarios_trabalho'] ?? null,
             'status' => $data['status'] ?? 'aberta',
             'slug' => $slug,
             'created_at' => now(),
@@ -92,6 +94,7 @@ class RhVagaController extends Controller
             'setor' => 'nullable|string|max:120',
             'quantidade' => 'nullable|integer|min:1|max:1000',
             'tipo_contratacao' => 'nullable|string|max:60',
+            'horarios_trabalho' => 'nullable|string|max:255',
             'status' => 'nullable|string|in:aberta,pausada,encerrada',
         ]);
 

@@ -65,6 +65,11 @@
                 <h3 class="h6">Benefícios</h3>
                 <div class="mb-0" style="white-space: pre-wrap;">{{ $vaga->beneficios }}</div>
             @endif
+
+            @if(!empty($vaga->horarios_trabalho))
+                <h3 class="h6 mt-3">Horários de trabalho</h3>
+                <div class="mb-0" style="white-space: pre-wrap;">{{ $vaga->horarios_trabalho }}</div>
+            @endif
         </div>
     </div>
 
@@ -199,11 +204,6 @@
                         <option value="sim" @selected(old('disponibilidade') === 'sim')>Sim</option>
                         <option value="nao" @selected(old('disponibilidade') === 'nao')>Não</option>
                     </select>
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Horários de trabalho <span class="text-danger">*</span></label>
-                    <input name="horarios_trabalho" class="form-control" value="{{ old('horarios_trabalho') }}" required maxlength="255" placeholder="Ex.: 08:00 às 17:00, 14:00 às 22:00" />
                 </div>
 
                 <div class="col-md-8">

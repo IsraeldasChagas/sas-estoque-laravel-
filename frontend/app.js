@@ -12674,6 +12674,8 @@ function setupNavigation() {
     if (qtd) qtd.value = "1";
     const status = document.getElementById("rhVagaStatus");
     if (status) status.value = "aberta";
+    const horarios = document.getElementById("rhVagaHorarios");
+    if (horarios) horarios.value = "";
     modal.classList.add("active");
     document.getElementById("rhVagaTitulo")?.focus?.();
   });
@@ -12704,6 +12706,7 @@ function setupNavigation() {
       const requisitos = document.getElementById("rhVagaRequisitos")?.value?.trim() || "";
       const beneficios = document.getElementById("rhVagaBeneficios")?.value?.trim() || "";
       const tipo_contratacao = document.getElementById("rhVagaTipo")?.value?.trim() || "";
+      const horarios_trabalho = document.getElementById("rhVagaHorarios")?.value?.trim() || "";
       const status = (document.getElementById("rhVagaStatus")?.value || "aberta").toLowerCase().trim();
       const quantidade = Math.max(1, Number(document.getElementById("rhVagaQuantidade")?.value || "1") || 1);
 
@@ -12719,6 +12722,7 @@ function setupNavigation() {
         requisitos: requisitos || null,
         beneficios: beneficios || null,
         tipo_contratacao: tipo_contratacao || null,
+        horarios_trabalho: horarios_trabalho || null,
         status,
       };
 
@@ -12840,6 +12844,7 @@ function setupNavigation() {
       setVal("rhVagaSetor", vaga.setor || "");
       setVal("rhVagaQuantidade", String(vaga.quantidade ?? 1));
       setVal("rhVagaTipo", vaga.tipo_contratacao || "");
+      setVal("rhVagaHorarios", vaga.horarios_trabalho || "");
       setVal("rhVagaRequisitos", vaga.requisitos || "");
       setVal("rhVagaBeneficios", vaga.beneficios || "");
 

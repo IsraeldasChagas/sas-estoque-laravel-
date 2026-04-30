@@ -121,7 +121,6 @@ class RhPublicoController extends Controller
             'cidade' => ['required', 'string', 'max:120', Rule::in($cidadesRo)],
             'bairro' => 'required|string|max:120',
             'disponibilidade' => 'required|string|in:sim,nao',
-            'horarios_trabalho' => 'required|string|max:255',
             'curriculo' => 'required|file|max:5120', // 5MB
             'foto' => 'required|file|max:2048', // 2MB
             'lgpd' => 'accepted',
@@ -184,7 +183,6 @@ class RhPublicoController extends Controller
                 'cidade' => $data['cidade'] ?? null,
                 'bairro' => $data['bairro'] ?? null,
                 'disponibilidade' => $data['disponibilidade'] ?? null,
-                'horarios_trabalho' => $data['horarios_trabalho'] ?? null,
                 'unidade' => $vagaEscolhida->unidade ?? null,
                 'consentimento_lgpd' => true,
                 'consentimento_em' => now(),
