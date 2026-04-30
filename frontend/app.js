@@ -12746,10 +12746,32 @@ function setupNavigation() {
       e.preventDefault();
       const link = btnCopy.dataset.link || "";
       try {
-        await navigator.clipboard.writeText(link);
-        showToast("Link copiado.", "success");
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(link);
+          showToast("Link copiado.", "success");
+        } else {
+          throw new Error("Clipboard indisponível");
+        }
       } catch (_) {
-        showToast("Não foi possível copiar. Copie manualmente o link da vaga.", "warning");
+        // Fallback: tenta copiar via textarea; se falhar, mostra prompt.
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = link;
+          ta.setAttribute("readonly", "readonly");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand && document.execCommand("copy");
+          ta.remove();
+          if (ok) {
+            showToast("Link copiado.", "success");
+          } else {
+            throw new Error("copy failed");
+          }
+        } catch (_) {
+          prompt("Copie o link da vaga:", link);
+        }
       }
       return;
     }
@@ -12761,7 +12783,14 @@ function setupNavigation() {
       try {
         const blob = await fetchBlob(`/rh/vagas/${id}/qrcode`);
         const url = URL.createObjectURL(blob);
-        window.open(url, "_blank", "noopener,noreferrer");
+        // Evita bloqueio de popup: abre via <a target=_blank>.
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       } catch (err) {
         showToast(err?.message || "Erro ao gerar QR Code.", "error");
