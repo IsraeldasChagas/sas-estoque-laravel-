@@ -118,7 +118,7 @@ class RhPublicoController extends Controller
             // fallback abaixo
         }
 
-        $qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=420x420&chl=' . urlencode($publicUrl);
+        $qrUrl = 'https://quickchart.io/qr?size=420&format=png&text=' . urlencode($publicUrl);
         return redirect()->away($qrUrl);
     }
 
