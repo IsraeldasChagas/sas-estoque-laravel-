@@ -7,8 +7,12 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
         body { background: radial-gradient(900px 380px at 18% 0%, rgba(255,140,0,.55), transparent 60%), linear-gradient(180deg, #ff7a00 0%, #2b1608 35%, #0b0b0d 100%); color: rgba(255,255,255,.92); }
-        .gsp-brand { display:flex; align-items:center; gap:.75rem; }
+        .gsp-brand { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
         .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
+        .gsp-group { display:flex; align-items:center; gap:.6rem; }
+        .gsp-sep { width: 1px; height: 44px; background: rgba(255,255,255,.18); }
+        .gsp-subbrand { display:flex; align-items:center; gap:.6rem; }
+        .gsp-submark { width: 76px; height: 52px; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0,0,0,.22)); }
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; color: #fff; }
         .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
@@ -25,10 +29,20 @@
 <main class="container py-4" style="max-width: 980px;">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
         <div class="gsp-brand">
-            <img class="gsp-mark" src="/imagens/logosemfundo.png" alt="Grupo Sabor Paraense" />
-            <div class="gsp-name">
-                <div class="title">Grupo Sabor Paraense</div>
-                <div class="sub">Vagas abertas e candidatura</div>
+            <div class="gsp-group">
+                <img class="gsp-mark" src="/imagens/logosemfundo.png" alt="Grupo Sabor Paraense" />
+                <div class="gsp-name">
+                    <div class="title">Grupo Sabor Paraense</div>
+                    <div class="sub">Vagas abertas e candidatura</div>
+                </div>
+            </div>
+            <div class="gsp-sep" aria-hidden="true"></div>
+            <div class="gsp-subbrand">
+                <img class="gsp-submark" src="/imagens/logo-docemango.jpg" alt="Doce Mango" />
+                <div class="gsp-name">
+                    <div class="title" style="font-size: 1.05rem;">Doce Mango</div>
+                    <div class="sub">Faz parte do grupo</div>
+                </div>
             </div>
         </div>
         <div class="text-muted" style="max-width: 520px;">
