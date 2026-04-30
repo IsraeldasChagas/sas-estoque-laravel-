@@ -31,7 +31,7 @@
             </div>
         </div>
         <div class="text-muted" style="max-width: 520px;">
-            Escolha uma vaga para ver os detalhes e se candidatar.
+            Selecione uma vaga e clique em <strong>Ver vaga</strong>.
         </div>
     </div>
 
@@ -40,7 +40,7 @@
     @if(!count($items))
         <div class="alert alert-info">Nenhuma vaga cadastrada no momento.</div>
     @else
-        <div>
+        <form id="vagasPublicasForm">
             <div class="row g-3">
                 @foreach($items as $v)
                     @php
@@ -52,7 +52,10 @@
                         <div class="vaga-card">
                             <div class="vaga-card__top">
                                 <div>
-                                    <div class="fw-semibold">{{ $v->titulo }}</div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="slug" value="{{ $v->slug }}" id="vaga_{{ $v->id }}" {{ $isOpen ? '' : 'disabled="disabled"' }}>
+                                        <label class="form-check-label fw-semibold" for="vaga_{{ $v->id }}">{{ $v->titulo }}</label>
+                                    </div>
                                     <div class="vaga-meta mt-1">
                                         @if(!empty($v->unidade)) <span><strong>Unidade:</strong> {{ $v->unidade }}</span>@endif
                                         @if(!empty($v->setor)) <span class="ms-2"><strong>Setor:</strong> {{ $v->setor }}</span>@endif
@@ -67,16 +70,49 @@
                                 <div class="vaga-card__desc">{{ \Illuminate\Support\Str::limit($v->descricao, 240) }}</div>
                             @endif
                             <div class="vaga-card__bottom">
-                                <a class="btn btn-primary btn-sm" href="/vagas/{{ $v->slug }}">Ver vaga</a>
+                                <a class="btn btn-outline-primary btn-sm" href="/vagas/{{ $v->slug }}">Ver detalhes</a>
                                 <a class="btn btn-outline-secondary btn-sm" href="/vagas/{{ $v->slug }}/qrcode" target="_blank" rel="noopener noreferrer">QR Code</a>
                             </div>
                         </div>
                     </div>
                 @endforeach
             </div>
-        </div>
+
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4">
+                <div class="text-muted">Apenas vagas <strong>ABERTAS</strong> podem ser selecionadas.</div>
+                <button type="button" class="btn btn-primary" id="vagasPublicasVerBtn">Ver vaga</button>
+            </div>
+        </form>
     @endif
 </main>
+
+<script>
+  (function () {
+    const form = document.getElementById('vagasPublicasForm');
+    const btn = document.getElementById('vagasPublicasVerBtn');
+    if (!form || !btn) return;
+
+    // seleção única
+    form.addEventListener('change', function (e) {
+      const t = e.target;
+      if (!t || t.name !== 'slug') return;
+      if (t.checked) {
+        form.querySelectorAll('input[name="slug"]').forEach(function (el) {
+          if (el !== t) el.checked = false;
+        });
+      }
+    });
+
+    btn.addEventListener('click', function () {
+      const checked = form.querySelector('input[name="slug"]:checked');
+      if (!checked) {
+        alert('Selecione uma vaga aberta.');
+        return;
+      }
+      window.location.href = '/vagas/' + encodeURIComponent(checked.value);
+    });
+  })();
+</script>
 </body>
 </html>
 
