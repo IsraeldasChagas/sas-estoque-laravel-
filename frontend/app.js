@@ -1923,11 +1923,7 @@ async function fetchJSON(path, options = {}) {
         message = res.status >= 500 ? 'Erro no servidor. Tente novamente.' : `Erro ${res.status}`;
       }
       
-      console.error("Erro na resposta do servidor:", {
-        status: res.status,
-        message: message,
-        payload: payload
-      });
+      console.error(`fetchJSON ${path} → ${res.status}: ${message}`);
       
       // Cria um erro com os dados completos do payload
       const error = new Error(message);
@@ -2001,8 +1997,6 @@ async function fetchForm(path, method, body) {
   // Se não for FormData, pode definir Content-Type se necessário
   // Mas para FormData, deixamos o navegador fazer isso
   
-  console.log("📤 fetchForm:", { path, method, bodyType: body instanceof FormData ? "FormData" : typeof body });
-  
   const res = await fetch(`${API_URL}${path}`, { method, body, headers });
   
   const text = await res.text();
@@ -2013,9 +2007,7 @@ async function fetchForm(path, method, body) {
     console.error("Erro ao parsear resposta:", text);
     payload = { error: text || "Resposta inválida do servidor" };
   }
-  
-  console.log("📥 fetchForm resposta:", { status: res.status, payload });
-  
+
   if (!res.ok) {
     let errorMsg = payload.error || payload.message || `Erro ${res.status}: ${res.statusText}`;
     if (payload.details && typeof payload.details === 'object') {
@@ -3603,19 +3595,12 @@ function renderTable(target, rowsHtml, emptyMessage, cols) {
   }
 }
 function renderMovimentacoes(lista, target, emptyMessage) {
-  console.log("renderMovimentacoes chamado:", {
-    listaLength: Array.isArray(lista) ? lista.length : 0,
-    target: target ? "encontrado" : "não encontrado",
-    emptyMessage
-  });
-  
   if (!target) {
     console.error("Target não fornecido para renderMovimentacoes");
     return;
   }
   
   if (!Array.isArray(lista) || lista.length === 0) {
-    console.log("Lista vazia, renderizando mensagem vazia");
     renderTable(target, "", emptyMessage, 8);
     return;
   }
@@ -3624,8 +3609,7 @@ function renderMovimentacoes(lista, target, emptyMessage) {
   const isAdmin = user && (user.perfil || "").toString().toUpperCase() === "ADMIN";
   
   const dadosOrdenados = sortMovimentacoes(lista);
-  console.log("Dados ordenados para renderização:", dadosOrdenados.length);
-  
+
   const rows = dadosOrdenados.map((item) => {
     const quantidadeValor = Number(item.qtd ?? item.quantidade ?? 0);
     const unidadeLabel = (() => {
@@ -3689,18 +3673,13 @@ function renderMovimentacoes(lista, target, emptyMessage) {
     </tr>`;
   }).join("");
 
-  console.log("Renderizando", rows.split("</tr>").length - 1, "linhas na tabela");
   renderTable(target, rows, emptyMessage, 8);
-  console.log("Tabela renderizada com sucesso");
 }
 
 function renderMovimentacoesDashboard(lista) {
-  console.log("renderMovimentacoesDashboard chamado com:", lista?.length || 0, "itens");
-  
   // Tenta encontrar o elemento novamente se não estiver disponível
   if (!dom.movTable) {
     dom.movTable = document.getElementById("movTable");
-    console.log("movTable buscado novamente:", dom.movTable ? "encontrado" : "não encontrado");
   }
   
   if (!dom.movTable) {
@@ -3709,7 +3688,6 @@ function renderMovimentacoesDashboard(lista) {
     setTimeout(() => {
       dom.movTable = document.getElementById("movTable");
       if (dom.movTable) {
-        console.log("movTable encontrado no retry, renderizando...");
         renderMovimentacoesDashboard(lista);
       } else {
         console.error("movTable ainda não encontrado após retry");
@@ -3720,8 +3698,7 @@ function renderMovimentacoesDashboard(lista) {
   
   // Usar a lista passada ou fallback para movimentacoesRecentes
   const listaParaUsar = Array.isArray(lista) && lista.length > 0 ? lista : (Array.isArray(state.movimentacoesRecentes) ? state.movimentacoesRecentes : []);
-  console.log("Lista para usar:", listaParaUsar.length, "itens");
-  
+
   if (listaParaUsar.length === 0) {
     console.warn("Nenhuma movimentação disponível para renderizar");
     renderTable(dom.movTable, "", "Sem movimentacoes recentes.", 7);
@@ -3734,31 +3711,16 @@ function renderMovimentacoesDashboard(lista) {
     const id = mov.id || mov.movimentacao_id;
     if (!id) return true; // Mantém se não tiver ID
     if (idsVistos.has(id)) {
-      console.warn("Movimentação duplicada removida:", id);
       return false;
     }
     idsVistos.add(id);
     return true;
   });
   
-  console.log("Lista sem duplicatas:", listaSemDuplicatas.length, "itens (removidos", listaParaUsar.length - listaSemDuplicatas.length, "duplicatas)");
-  
   const dados = sortMovimentacoes(listaSemDuplicatas);
-  console.log("Dados ordenados:", dados.length, "itens");
-  
-  // Debug: verificar quantas movimentações temos
-  if (dados.length > 0) {
-    const tipos = dados.reduce((acc, m) => {
-      const tipo = (m.tipo || "DESCONHECIDO").toUpperCase();
-      acc[tipo] = (acc[tipo] || 0) + 1;
-      return acc;
-    }, {});
-    console.log("Renderizando movimentacoes no dashboard:", dados.length, "total. Tipos:", tipos);
-  }
-  
+
   // Renderiza as movimentações
   const dadosParaRenderizar = dados.slice(0, 10);
-  console.log("Renderizando", dadosParaRenderizar.length, "movimentações na tabela");
   
   // Verifica novamente se o elemento existe antes de renderizar
   if (!dom.movTable) {
@@ -3768,7 +3730,6 @@ function renderMovimentacoesDashboard(lista) {
   
   try {
     renderMovimentacoes(dadosParaRenderizar, dom.movTable, "Sem movimentacoes recentes.");
-    console.log("Movimentações renderizadas com sucesso!");
   } catch (error) {
     console.error("Erro ao renderizar movimentações:", error);
   }
@@ -3879,9 +3840,6 @@ function renderLotesStatusChart(stats) {
 }
 
 function renderLotesGerenciamento(lista) {
-  console.log("🔍 renderLotesGerenciamento chamado com", lista?.length || 0, "lotes");
-  
-  let primeiroLoteLogado = false;
   const rows = (lista || []).map((lote) => {
     const ativo = Number(lote.ativo) === 1;
     const quantidade = `${formatNumber(lote.quantidade ?? lote.qtd_atual ?? 0, 3)} ${escapeHtml(normalizarUnidadeBase(lote.unidade))}`.trim();
@@ -3999,19 +3957,6 @@ function renderLotesGerenciamento(lista) {
       }
     }
     
-    // Debug: log do primeiro lote para verificar dados
-    if (!primeiroLoteLogado) {
-      console.log("📋 Primeiro lote renderizado:", {
-        id: lote.id,
-        data_validade: lote.data_validade,
-        validadeFormatada: validadeFormatada,
-        dias_para_vencer: lote.dias_para_vencer,
-        diffDays: diffDays,
-        dias: dias
-      });
-      primeiroLoteLogado = true;
-    }
-    
     return `<tr data-id="${lote.id}">
       <td data-label="Produto">${escapeHtml(lote.produto_nome || "--")}</td>
       <td data-label="Unidade">${escapeHtml(lote.unidade_nome || "--")}</td>
@@ -4024,8 +3969,7 @@ function renderLotesGerenciamento(lista) {
       <td data-label="Acoes" class="table-actions">${acoes}</td>
     </tr>`;
   }).join("");
-  
-  console.log("✅ Renderizando", rows.split("</tr>").length - 1, "linhas na tabela de lotes");
+
   if (!dom.lotesManageTable) {
     console.error("❌ dom.lotesManageTable não encontrado!");
     return;
@@ -6437,8 +6381,6 @@ function populateSelect(select, options, emptyLabel) {
   if (previousValue && Array.from(select.options).some((opt) => opt.value === previousValue)) {
     select.value = previousValue;
   }
-  
-  console.log(`populateSelect: ${select.name || 'select'} atualizado com ${select.options.length} opções`);
 }
 
 // Vincula um input de busca a um select: digitar filtra as opções visíveis
@@ -6521,8 +6463,7 @@ function refreshProdutoSelects() {
   }
   
   const ativos = state.produtos.filter((produto) => Number(produto.ativo) === 1);
-  console.log("refreshProdutoSelects: Atualizando selects com", ativos.length, "produtos ativos");
-  
+
   const options = ativos.map((produto) => `<option value="${produto.id}">${escapeHtml(produto.nome)}</option>`).join("");
 
   // Filtro por digitação nos selects de produto
@@ -6537,7 +6478,6 @@ function refreshProdutoSelects() {
   if (entradaProdutoSelect) {
     populateSelect(entradaProdutoSelect, options, "Selecione");
     bindBuscaSelect("entradaProdutoBusca", "entradaProdutoSelect");
-    console.log("Select de produtos do formulário de entrada atualizado");
   } else {
     console.warn("Select de produtos do formulário de entrada não encontrado");
   }
@@ -6951,14 +6891,12 @@ async function loadDashboard() {
 async function loadProdutos(search) {
   const searchEl = document.getElementById('produtoSearch');
   const termo = search !== undefined ? String(search || '').trim() : (searchEl ? (searchEl.value || '').trim() : '');
-  console.log("loadProdutos: Carregando produtos da API...", termo ? `(search: ${termo})` : '');
   try {
     const params = new URLSearchParams();
     params.set('todas', '1');
     if (termo) params.set('search', termo);
     const produtos = await fetchJSON(`/produtos?${params}`);
-    console.log("loadProdutos: Produtos recebidos da API:", produtos?.length || 0);
-    
+
     if (!Array.isArray(produtos)) {
       console.error("loadProdutos: Resposta da API não é um array:", produtos);
       state.produtos = [];
@@ -6966,10 +6904,7 @@ async function loadProdutos(search) {
     }
     
     state.produtos = produtos;
-    const produtosAtivos = produtos.filter(p => Number(p.ativo) === 1);
-    console.log("loadProdutos: Produtos ativos:", produtosAtivos.length);
-    console.log("loadProdutos: Total de produtos:", produtos.length);
-    
+
     renderProdutos(state.produtos);
     refreshProdutoSelects();
   } catch (error) {
@@ -8029,15 +7964,6 @@ async function loadLotes(filtros = {}) {
   const params = new URLSearchParams();
   Object.entries(filtros).forEach(([key, value]) => { if (value) params.append(key, value); });
   const dados = await fetchJSON(params.toString() ? `/lotes?${params}` : "/lotes");
-  console.log("📦 Dados recebidos do backend (/lotes):", dados?.length || 0, "lotes");
-  if (dados && dados.length > 0) {
-    console.log("📦 Primeiro lote recebido:", {
-      id: dados[0].id,
-      data_validade: dados[0].data_validade,
-      dias_para_vencer: dados[0].dias_para_vencer,
-      produto_nome: dados[0].produto_nome
-    });
-  }
   state.lotes = dados;
   renderLotesGerenciamento(dados);
   handleSaidaOrigemChange();
@@ -8063,9 +7989,7 @@ async function loadMovimentacoesDetalhadas(filtros = {}, options = {}) {
   const queryString = params.toString();
   const bustParam = `_=${Date.now()}`;
   const url = queryString ? `/movimentacoes?${queryString}&${bustParam}` : `/movimentacoes?limit=100&${bustParam}`;
-  
-  console.log("Carregando movimentações:", { filtros, url });
-  
+
   try {
     const dados = await fetchJSON(url);
     if (movimentacoesRequestId !== requestId) return;
@@ -8074,9 +7998,7 @@ async function loadMovimentacoesDetalhadas(filtros = {}, options = {}) {
     const dadosArray = Array.isArray(dados) ? dados : [];
     const dadosOrdenados = sortMovimentacoes(dadosArray);
     state.movimentacoes = dadosOrdenados;
-    
-    console.log(`Movimentações carregadas: ${dadosOrdenados.length} registros`);
-    
+
     // ✅ Renderiza na tabela de movimentações
     renderMovimentacoes(dadosOrdenados, dom.movimentacoesTable, "Sem movimentacoes para os filtros selecionados.");
     
@@ -14936,8 +14858,6 @@ function setupBoletosModule() {
         option.textContent = unidade.nome;
         boletosUnidadeFiltro.appendChild(option);
       });
-      
-      console.log('✅ Unidades carregadas no filtro de boletos:', unidades.length);
     } catch (error) {
       console.error('❌ Erro ao carregar unidades no filtro:', error);
     }
@@ -14949,27 +14869,21 @@ function setupBoletosModule() {
   // Botão de atualizar na tabela
   if (recarregarTabelaBoletos) {
     recarregarTabelaBoletos.addEventListener('click', async () => {
-      console.log('🔄 === ATUALIZAR TABELA CLICADO ===');
-      
       try {
         recarregarTabelaBoletos.disabled = true;
         recarregarTabelaBoletos.textContent = '⏳ Atualizando...';
-        
+
         const filtros = getActiveBoletosTableFilters();
-        console.log('📋 Recarregando boletos com filtros:', filtros);
         await loadBoletos(filtros);
         await loadBoletosResumo(filtros.mes_ano);
         
         showToast('✅ Boletos atualizados!', 'success');
-        console.log('✅ Atualização concluída!');
-        
       } catch (error) {
         console.error('❌ Erro ao atualizar:', error);
         showToast('Erro ao atualizar boletos', 'error');
       } finally {
         recarregarTabelaBoletos.disabled = false;
         recarregarTabelaBoletos.textContent = '🔄 Atualizar';
-        console.log('🔄 === FIM ATUALIZAR ===');
       }
     });
   }
