@@ -4017,6 +4017,50 @@ textarea {
     font-size: 0.85rem;
   }
 
+  /* RH — Vagas: card em tablet, pergunta (rótulo) em cima e resposta em baixo */
+  #rhVagasSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #rhVagasSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #rhVagasSection .table-wrapper thead {
+    display: none;
+  }
+
+  #rhVagasSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #rhVagasSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #rhVagasSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #rhVagasSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   .sidebar {
     width: min(300px, 80vw);
   }
@@ -4447,6 +4491,22 @@ textarea {
   }
 
   #produtosSection .table-wrapper td.table-actions {
+    gap: 8px;
+  }
+
+  /* RH — Vagas: rótulo em cima e valor em baixo no celular (sobrepor justify-content do .table-wrapper) */
+  #rhVagasSection .table-wrapper td {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  #rhVagasSection .table-wrapper td::before {
+    font-size: 0.85rem;
+  }
+
+  #rhVagasSection .table-wrapper td.table-actions {
     gap: 8px;
   }
 
