@@ -4061,6 +4061,50 @@ textarea {
     font-size: 0.85rem;
   }
 
+  /* RH — Candidatos: card em tablet, rótulo em cima e valor em baixo */
+  #rhCandidatosSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #rhCandidatosSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #rhCandidatosSection .table-wrapper thead {
+    display: none;
+  }
+
+  #rhCandidatosSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #rhCandidatosSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #rhCandidatosSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  #rhCandidatosSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
   .sidebar {
     width: min(300px, 80vw);
   }
@@ -4507,6 +4551,22 @@ textarea {
   }
 
   #rhVagasSection .table-wrapper td.table-actions {
+    gap: 8px;
+  }
+
+  /* RH — Candidatos: rótulo em cima e valor em baixo no celular */
+  #rhCandidatosSection .table-wrapper td {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  #rhCandidatosSection .table-wrapper td::before {
+    font-size: 0.85rem;
+  }
+
+  #rhCandidatosSection .table-wrapper td.table-actions {
     gap: 8px;
   }
 
