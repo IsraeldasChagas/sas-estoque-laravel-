@@ -17,14 +17,14 @@ class RhDashboardController extends Controller
 
         $abertas = DB::table('rh_vagas')->where('status', 'aberta')->count();
         $totalCandidatos = DB::table('rh_candidatos')->count();
-        $novos = DB::table('rh_candidatos')->where('status', 'novo')->count();
+        $emTeste = DB::table('rh_candidatos')->where('status', 'em_teste')->count();
         $entrevistas = DB::table('rh_entrevistas')->count();
         $aprovados = DB::table('rh_candidatos')->whereIn('status', ['aprovado', 'em_contratacao'])->count();
 
         return response()->json([
             'vagas_abertas' => $abertas,
             'candidatos_total' => $totalCandidatos,
-            'candidatos_novos' => $novos,
+            'candidatos_em_teste' => $emTeste,
             'entrevistas_total' => $entrevistas,
             'aprovados' => $aprovados,
         ])->header('Access-Control-Allow-Origin', '*');

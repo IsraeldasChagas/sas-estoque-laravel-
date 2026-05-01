@@ -7432,7 +7432,7 @@ async function loadRhDashboard() {
   };
   set("rhDashVagasAbertas", stats?.vagas_abertas);
   set("rhDashCandidatosTotal", stats?.candidatos_total);
-  set("rhDashCandidatosNovos", stats?.candidatos_novos);
+  set("rhDashCandidatosNovos", stats?.candidatos_em_teste);
   set("rhDashEntrevistasTotal", stats?.entrevistas_total);
   set("rhDashAprovados", stats?.aprovados);
 }
@@ -7667,6 +7667,7 @@ function renderRhCandidatoInlineRow(payload) {
                   <option value="novo">Novo</option>
                   <option value="em_analise">Em análise</option>
                   <option value="entrevista">Entrevista</option>
+                  <option value="em_teste">Em teste</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="em_contratacao">Em contratação</option>
                   <option value="contratado">Contratado</option>

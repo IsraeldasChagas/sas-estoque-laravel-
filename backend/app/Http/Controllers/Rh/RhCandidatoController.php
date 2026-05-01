@@ -16,6 +16,7 @@ class RhCandidatoController extends Controller
         'novo',
         'em_analise',
         'entrevista',
+        'em_teste',
         'aprovado',
         'em_contratacao',
         'contratado',
