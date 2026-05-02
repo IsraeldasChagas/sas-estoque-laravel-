@@ -5175,6 +5175,20 @@ select[size]:not([size="1"]) {
 #funcionariosSection .table-wrapper .usuarios-foto--placeholder { width: 48px; height: 48px; }
 #funcionariosSection .table-action { cursor: pointer; }
 
+/* RH — Folha de ponto */
+.rh-fp-grid .input-compact {
+  width: 100%;
+  max-width: 5.25rem;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.82rem;
+}
+.rh-fp-grid .rh-fp-sign {
+  max-width: 9rem;
+}
+#rhFolhaPontoSection .modal--wide {
+  max-width: 920px;
+}
+
 @media (min-width: 901px) {
   #funcionariosSection .table-wrapper {
     overflow-x: auto;

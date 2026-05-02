@@ -788,7 +788,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -796,7 +796,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -836,7 +836,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -3365,6 +3365,10 @@ function applyPermissions() {
     sections = [...sections, "rhCandidatos"];
   }
   sections = sections.filter((s) => s !== "rhDocumentos");
+  // Folha de ponto: quem já tinha Funcionários ou Relatório RH ganha o item novo sem precisar regravar permissões.
+  if ((sections.includes("funcionarios") || sections.includes("rhRelatorios")) && !sections.includes("rhFolhaPonto")) {
+    sections = [...sections, "rhFolhaPonto"];
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -3392,7 +3396,7 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
@@ -3575,7 +3579,7 @@ function navigateTo(section) {
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
@@ -7256,6 +7260,416 @@ async function loadRhRelatorioSection() {
   }
 }
 
+// --- RH — Folha de ponto ---
+const RH_FP_DEFAULT_EMPRESA = {
+  empresa_nome: "SABOR PARAENSE",
+  empresa_endereco: "Unidade 2 – Rua Rui Barbosa nº 831, Arigolândia – PVH/RO",
+  empresa_cep: "76.801-196",
+  empresa_cnpj: "56.936.257/0001-04",
+  empresa_cidade_ano: "Porto Velho 2026",
+  empresa_email: "saborparaense.pvh@gmail.com",
+};
+
+const RH_FP_DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+function rhFpDiasNoMes(ano, mes) {
+  return new Date(Number(ano), Number(mes), 0).getDate();
+}
+
+function rhFpMontarAnosSelect(sel, centro) {
+  if (!sel) return;
+  const y = new Date().getFullYear();
+  const c = Number(centro) || y;
+  const opts = [];
+  for (let a = y - 3; a <= y + 2; a++) opts.push(`<option value="${a}">${a}</option>`);
+  sel.innerHTML = opts.join("");
+  if (c >= y - 3 && c <= y + 2) sel.value = String(c);
+  else sel.value = String(y);
+}
+
+function rhFpPreencherEmpresaDefaults() {
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  };
+  set("rhFpEmpresaNome", RH_FP_DEFAULT_EMPRESA.empresa_nome);
+  set("rhFpEmpresaEndereco", RH_FP_DEFAULT_EMPRESA.empresa_endereco);
+  set("rhFpEmpresaCep", RH_FP_DEFAULT_EMPRESA.empresa_cep);
+  set("rhFpEmpresaCnpj", RH_FP_DEFAULT_EMPRESA.empresa_cnpj);
+  set("rhFpEmpresaCidadeAno", RH_FP_DEFAULT_EMPRESA.empresa_cidade_ano);
+  set("rhFpEmpresaEmail", RH_FP_DEFAULT_EMPRESA.empresa_email);
+}
+
+function rhFpRebuildDiasBody(ano, mes, diasExistentes) {
+  const tb = document.getElementById("rhFpDiasBody");
+  if (!tb) return;
+  const n = rhFpDiasNoMes(ano, mes);
+  const arr = Array.isArray(diasExistentes) ? diasExistentes : [];
+  const rows = [];
+  for (let d = 1; d <= n; d++) {
+    const dt = new Date(Number(ano), Number(mes) - 1, d);
+    const wd = RH_FP_DIAS_SEMANA[dt.getDay()];
+    const cel = arr[d - 1] || {};
+    const esc = (s) => escapeHtml(String(s ?? ""));
+    const val = (k) => esc(cel[k] != null ? cel[k] : "");
+    rows.push(
+      `<tr data-di="${d - 1}">
+      <td style="white-space:nowrap;font-weight:600;">${esc(wd)} ${d}</td>
+      <td><input type="text" class="input-compact" data-k="entrada" maxlength="20" value="${val("entrada")}" /></td>
+      <td><input type="text" class="input-compact" data-k="intervalo_inicio" maxlength="20" value="${val("intervalo_inicio")}" /></td>
+      <td><input type="text" class="input-compact" data-k="intervalo_fim" maxlength="20" value="${val("intervalo_fim")}" /></td>
+      <td><input type="text" class="input-compact" data-k="saida" maxlength="20" value="${val("saida")}" /></td>
+      <td><input type="text" class="input-compact" data-k="hora_extra" maxlength="20" value="${val("hora_extra")}" /></td>
+      <td><input type="text" class="input-compact rh-fp-sign" data-k="assinatura" maxlength="80" value="${val("assinatura")}" /></td>
+    </tr>`
+    );
+  }
+  tb.innerHTML = rows.join("");
+}
+
+function rhFpShowEditor(show) {
+  const card = document.getElementById("rhFpEditorCard");
+  if (card) card.classList.toggle("hidden", !show);
+}
+
+function rhFpColetarDiasDoForm(ano, mes) {
+  const n = rhFpDiasNoMes(ano, mes);
+  const dias = [];
+  const tb = document.getElementById("rhFpDiasBody");
+  if (!tb) throw new Error("Tabela de dias não encontrada.");
+  for (let i = 0; i < n; i++) {
+    const tr = tb.querySelector(`tr[data-di="${i}"]`);
+    if (!tr) throw new Error("Monte a grade (mês/ano) antes de salvar.");
+    const g = (k) => (tr.querySelector(`[data-k="${k}"]`)?.value || "").trim();
+    dias.push({
+      entrada: g("entrada"),
+      intervalo_inicio: g("intervalo_inicio"),
+      intervalo_fim: g("intervalo_fim"),
+      saida: g("saida"),
+      hora_extra: g("hora_extra"),
+      assinatura: g("assinatura"),
+    });
+  }
+  return dias;
+}
+
+function rhFpColetarPayload() {
+  const ano = Number(document.getElementById("rhFpAno")?.value);
+  const mes = Number(document.getElementById("rhFpMes")?.value);
+  if (!Number.isFinite(ano) || !Number.isFinite(mes) || mes < 1 || mes > 12) {
+    throw new Error("Selecione mês e ano válidos.");
+  }
+  const nome = (document.getElementById("rhFpFuncNome")?.value || "").trim();
+  if (!nome) throw new Error("Informe o nome do funcionário.");
+  const dias = rhFpColetarDiasDoForm(ano, mes);
+  const trimOrNull = (id) => {
+    const v = (document.getElementById(id)?.value || "").trim();
+    return v ? v : null;
+  };
+  return {
+    ano,
+    mes,
+    empresa_nome: trimOrNull("rhFpEmpresaNome"),
+    empresa_endereco: trimOrNull("rhFpEmpresaEndereco"),
+    empresa_cep: trimOrNull("rhFpEmpresaCep"),
+    empresa_cnpj: trimOrNull("rhFpEmpresaCnpj"),
+    empresa_cidade_ano: trimOrNull("rhFpEmpresaCidadeAno"),
+    empresa_email: trimOrNull("rhFpEmpresaEmail"),
+    funcionario_nome: nome,
+    funcionario_cpf: trimOrNull("rhFpFuncCpf"),
+    funcionario_cargo: trimOrNull("rhFpFuncCargo"),
+    funcionario_ctps: trimOrNull("rhFpFuncCtps"),
+    dias,
+  };
+}
+
+function rhFpOnMesAnoChange() {
+  const ano = Number(document.getElementById("rhFpAno")?.value);
+  const mes = Number(document.getElementById("rhFpMes")?.value);
+  if (!Number.isFinite(ano) || !Number.isFinite(mes)) return;
+  const tb = document.getElementById("rhFpDiasBody");
+  const old = [];
+  if (tb) {
+    const trs = tb.querySelectorAll("tr[data-di]");
+    trs.forEach((tr) => {
+      const g = (k) => (tr.querySelector(`[data-k="${k}"]`)?.value || "").trim();
+      old.push({
+        entrada: g("entrada"),
+        intervalo_inicio: g("intervalo_inicio"),
+        intervalo_fim: g("intervalo_fim"),
+        saida: g("saida"),
+        hora_extra: g("hora_extra"),
+        assinatura: g("assinatura"),
+      });
+    });
+  }
+  const n = rhFpDiasNoMes(ano, mes);
+  const merged = [];
+  for (let i = 0; i < n; i++) merged.push(old[i] || {});
+  rhFpRebuildDiasBody(ano, mes, merged);
+}
+
+async function loadRhFolhasPontoLista() {
+  const ano = document.getElementById("rhFpFiltroAno")?.value || "";
+  const mes = document.getElementById("rhFpFiltroMes")?.value || "";
+  const qs = new URLSearchParams();
+  if (ano) qs.set("ano", ano);
+  if (mes) qs.set("mes", mes);
+  const path = `/rh/folhas-ponto${qs.toString() ? `?${qs}` : ""}`;
+  const lista = await fetchJSON(path);
+  const tb = document.getElementById("rhFpListaBody");
+  if (!tb) return;
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhuma folha neste filtro.</td></tr>';
+    return;
+  }
+  const mesesN = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = lista
+    .map((row) => {
+      const per = `${mesesN[row.mes] || row.mes}/${row.ano}`;
+      const at = (row.updated_at || row.created_at || "").toString().slice(0, 16).replace("T", " ");
+      return `<tr data-id="${esc(row.id)}">
+      <td data-label="ID">${esc(row.id)}</td>
+      <td data-label="Período">${esc(per)}</td>
+      <td data-label="Funcionário">${esc(row.funcionario_nome)}</td>
+      <td data-label="CPF">${esc(row.funcionario_cpf || "—")}</td>
+      <td data-label="Atualizado">${esc(at || "—")}</td>
+      <td data-label="Ações" class="table-actions">
+        <button type="button" class="table-action btn-rh-fp-ver" data-id="${esc(row.id)}">Ver</button>
+        <button type="button" class="table-action btn-rh-fp-editar" data-id="${esc(row.id)}">Editar</button>
+        <button type="button" class="table-action btn-rh-fp-pdf" data-id="${esc(row.id)}">PDF</button>
+        <button type="button" class="table-action danger btn-rh-fp-excluir" data-id="${esc(row.id)}">Excluir</button>
+      </td>
+    </tr>`;
+    })
+    .join("");
+}
+
+async function rhFpAbrirPdf(id) {
+  if (!currentUser) {
+    showToast("Sessão inválida.", "error");
+    return;
+  }
+  const url = `${API_URL}/rh/folhas-ponto/${id}/pdf`;
+  const headers = {
+    ...getDeviceHeaders(),
+    ...(currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+    ...(currentUser.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+  };
+  const res = await fetch(url, { method: "GET", headers, cache: "no-store" });
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      if ((res.headers.get("Content-Type") || "").includes("json")) {
+        const j = await res.json();
+        if (j.error) msg = j.error;
+      }
+    } catch (_) {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  window.open(blobUrl, "_blank", "noopener,noreferrer");
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+  showToast("PDF aberto — use o navegador para imprimir ou salvar.", "success");
+}
+
+async function loadRhFolhaPontoSection() {
+  const y = new Date().getFullYear();
+  const fa = document.getElementById("rhFpFiltroAno");
+  if (fa && !fa.dataset.populated) {
+    for (let a = y - 3; a <= y + 2; a++) fa.appendChild(new Option(String(a), String(a)));
+    fa.value = String(y);
+    fa.dataset.populated = "1";
+  }
+  const san = document.getElementById("rhFpAno");
+  if (san && !san.dataset.populated) {
+    rhFpMontarAnosSelect(san, y);
+    san.dataset.populated = "1";
+  }
+  await loadFuncionarios().catch(() => {});
+  const pf = document.getElementById("rhFpPreencherFuncionario");
+  if (pf) {
+    const sel = pf.value;
+    pf.innerHTML =
+      '<option value="">— Manual —</option>' +
+      (state.funcionarios || [])
+        .map((f) => {
+          const nome = (f.nome_completo || "").trim();
+          return `<option value="${escapeHtml(String(f.id))}">${escapeHtml(nome || "—")}</option>`;
+        })
+        .join("");
+    if (sel && [...pf.options].some((o) => o.value === sel)) pf.value = sel;
+  }
+  await loadRhFolhasPontoLista().catch((err) => {
+    const tb = document.getElementById("rhFpListaBody");
+    if (tb) tb.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao listar.")}</td></tr>`;
+  });
+  const tit = document.getElementById("rhFpEditorTitulo");
+  if (tit) tit.textContent = "Nova folha de ponto";
+  window.__rhFpEditingId = null;
+  rhFpShowEditor(false);
+}
+
+function setupRhFolhaPontoHandlers() {
+  const sec = document.getElementById("rhFolhaPontoSection");
+  if (!sec || sec.dataset.rhFpBound === "1") return;
+  sec.dataset.rhFpBound = "1";
+
+  document.getElementById("rhFpBtnNova")?.addEventListener("click", () => {
+    window.__rhFpEditingId = null;
+    const tit = document.getElementById("rhFpEditorTitulo");
+    if (tit) tit.textContent = "Nova folha de ponto";
+    rhFpPreencherEmpresaDefaults();
+    const now = new Date();
+    const m = document.getElementById("rhFpMes");
+    const a = document.getElementById("rhFpAno");
+    if (m) m.value = String(now.getMonth() + 1);
+    if (a) a.value = String(now.getFullYear());
+    document.getElementById("rhFpFuncNome").value = "";
+    document.getElementById("rhFpFuncCpf").value = "";
+    document.getElementById("rhFpFuncCargo").value = "";
+    document.getElementById("rhFpFuncCtps").value = "";
+    const pf = document.getElementById("rhFpPreencherFuncionario");
+    if (pf) pf.value = "";
+    rhFpRebuildDiasBody(Number(a?.value), Number(m?.value), []);
+    rhFpShowEditor(true);
+  });
+
+  document.getElementById("rhFpCancelar")?.addEventListener("click", () => {
+    window.__rhFpEditingId = null;
+    rhFpShowEditor(false);
+  });
+
+  document.getElementById("rhFpFiltroAplicar")?.addEventListener("click", () => {
+    loadRhFolhasPontoLista().catch((err) => showToast(err?.message || "Erro ao filtrar.", "error"));
+  });
+
+  document.getElementById("rhFpMes")?.addEventListener("change", () => rhFpOnMesAnoChange());
+  document.getElementById("rhFpAno")?.addEventListener("change", () => rhFpOnMesAnoChange());
+
+  document.getElementById("rhFpPreencherFuncionario")?.addEventListener("change", (e) => {
+    const id = (e.target?.value || "").trim();
+    if (!id) return;
+    const f = (state.funcionarios || []).find((x) => String(x.id) === String(id));
+    if (!f) return;
+    const set = (hid, v) => {
+      const el = document.getElementById(hid);
+      if (el) el.value = v != null ? String(v) : "";
+    };
+    set("rhFpFuncNome", f.nome_completo || "");
+    set("rhFpFuncCpf", f.cpf || "");
+    set("rhFpFuncCargo", f.cargo || "");
+  });
+
+  document.getElementById("rhFpSalvar")?.addEventListener("click", async () => {
+    try {
+      const payload = rhFpColetarPayload();
+      const editId = window.__rhFpEditingId ? Number(window.__rhFpEditingId) : null;
+      if (editId) {
+        await fetchJSON(`/rh/folhas-ponto/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
+        showToast("Folha atualizada.", "success");
+      } else {
+        await fetchJSON("/rh/folhas-ponto", { method: "POST", body: JSON.stringify(payload) });
+        showToast("Folha salva.", "success");
+      }
+      window.__rhFpEditingId = null;
+      rhFpShowEditor(false);
+      await loadRhFolhasPontoLista();
+    } catch (err) {
+      showToast(err?.message || "Erro ao salvar.", "error");
+    }
+  });
+
+  sec.addEventListener("click", async (e) => {
+    const ver = e.target.closest(".btn-rh-fp-ver");
+    const ed = e.target.closest(".btn-rh-fp-editar");
+    const pdf = e.target.closest(".btn-rh-fp-pdf");
+    const ex = e.target.closest(".btn-rh-fp-excluir");
+    const id = ver?.dataset?.id || ed?.dataset?.id || pdf?.dataset?.id || ex?.dataset?.id;
+    if (!id) return;
+    if (ex) {
+      if (!confirm("Excluir esta folha de ponto?")) return;
+      try {
+        await fetchJSON(`/rh/folhas-ponto/${id}`, { method: "DELETE" });
+        showToast("Folha excluída.", "success");
+        await loadRhFolhasPontoLista();
+      } catch (err) {
+        showToast(err?.message || "Erro ao excluir.", "error");
+      }
+      return;
+    }
+    if (pdf) {
+      try {
+        await rhFpAbrirPdf(id);
+      } catch (err) {
+        showToast(err?.message || "Erro ao gerar PDF.", "error");
+      }
+      return;
+    }
+    try {
+      const data = await fetchJSON(`/rh/folhas-ponto/${id}`);
+      if (ver) {
+        const mesesL = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const esc = (s) => escapeHtml(String(s ?? ""));
+        const dias = Array.isArray(data.dias) ? data.dias : [];
+        let rows = "";
+        for (let d = 1; d <= dias.length; d++) {
+          const dt = new Date(Number(data.ano), Number(data.mes) - 1, d);
+          const wd = RH_FP_DIAS_SEMANA[dt.getDay()];
+          const c = dias[d - 1] || {};
+          rows += `<tr><td>${esc(wd + " " + d)}</td><td>${esc(c.entrada)}</td><td>${esc(c.intervalo_inicio)}</td><td>${esc(c.intervalo_fim)}</td><td>${esc(c.saida)}</td><td>${esc(c.hora_extra)}</td><td>${esc(c.assinatura)}</td></tr>`;
+        }
+        const head = `${esc(data.empresa_endereco || "")}<br/>CEP: ${esc(data.empresa_cep || "")} · CNPJ: ${esc(data.empresa_cnpj || "")}<br/>${esc(data.empresa_cidade_ano || "")}<br/>E-mail: ${esc(data.empresa_email || "")}`;
+        const html = `<div class="subtle-text" style="margin-bottom:0.75rem;">${head}</div>
+          <p><strong>Folha de Ponto — ${esc((mesesL[data.mes] || "") + "/" + data.ano)}</strong> · ${esc(data.empresa_nome || "")}</p>
+          <p><strong>${esc(data.funcionario_nome)}</strong> · CPF: ${esc(data.funcionario_cpf || "—")}<br/>Cargo: ${esc(data.funcionario_cargo || "—")} · CTPS: ${esc(data.funcionario_ctps || "—")}</p>
+          <div class="table-wrapper"><table><thead><tr><th>Dia</th><th>Entrada</th><th>Início int.</th><th>Fim int.</th><th>Saída</th><th>H.extra</th><th>Assinatura</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        const box = document.getElementById("rhFpVerConteudo");
+        const modal = document.getElementById("rhFpVerModal");
+        if (box) box.innerHTML = html;
+        if (modal) modal.classList.add("active");
+        return;
+      }
+      if (ed) {
+        window.__rhFpEditingId = id;
+        const tit = document.getElementById("rhFpEditorTitulo");
+        if (tit) tit.textContent = "Editar folha de ponto";
+        const set = (hid, v) => {
+          const el = document.getElementById(hid);
+          if (el) el.value = v != null ? String(v) : "";
+        };
+        set("rhFpEmpresaNome", data.empresa_nome || "");
+        set("rhFpEmpresaEndereco", data.empresa_endereco || "");
+        set("rhFpEmpresaCep", data.empresa_cep || "");
+        set("rhFpEmpresaCnpj", data.empresa_cnpj || "");
+        set("rhFpEmpresaCidadeAno", data.empresa_cidade_ano || "");
+        set("rhFpEmpresaEmail", data.empresa_email || "");
+        set("rhFpFuncNome", data.funcionario_nome || "");
+        set("rhFpFuncCpf", data.funcionario_cpf || "");
+        set("rhFpFuncCargo", data.funcionario_cargo || "");
+        set("rhFpFuncCtps", data.funcionario_ctps || "");
+        const m = document.getElementById("rhFpMes");
+        const a = document.getElementById("rhFpAno");
+        if (m) m.value = String(data.mes);
+        if (a) a.value = String(data.ano);
+        rhFpRebuildDiasBody(Number(data.ano), Number(data.mes), data.dias || []);
+        rhFpShowEditor(true);
+      }
+    } catch (err) {
+      showToast(err?.message || "Erro ao carregar folha.", "error");
+    }
+  });
+
+  document.getElementById("rhFpVerFechar")?.addEventListener("click", () => {
+    document.getElementById("rhFpVerModal")?.classList.remove("active");
+  });
+  document.getElementById("rhFpVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "rhFpVerModal") document.getElementById("rhFpVerModal")?.classList.remove("active");
+  });
+}
+
 function getPublicBaseUrl() {
   const api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) ? String(window.APP_CONFIG.API_URL) : String(API_URL || "");
   return api.replace(/\/api\/?$/i, "");
@@ -8258,7 +8672,7 @@ async function startAppSession(user) {
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
       "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
-      "funcionarios", "rhRelatorios", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs"
+      "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs"
     ]);
 
     let sectionToNavigate = "boasVindas";
@@ -8388,6 +8802,7 @@ async function startAppSession(user) {
         else if (sectionToNavigate === "rhEntrevistas") await loadRhEntrevistas();
         else if (sectionToNavigate === "rhBancoTalentos") await loadRhBancoTalentos();
         else if (sectionToNavigate === "rhRelatorios") await loadRhRelatorioSection();
+        else if (sectionToNavigate === "rhFolhaPonto") await loadRhFolhaPontoSection();
         else if (sectionToNavigate === 'fechaTecnica') {
           onNavigateFichaTecnicaCallback();
         } else if (sectionToNavigate === 'alvara') {
@@ -12467,6 +12882,7 @@ function wireSidebarSectionNavClicks() {
       else if (target === "rhEntrevistas") await loadRhEntrevistas();
       else if (target === "rhBancoTalentos") await loadRhBancoTalentos();
       else if (target === "rhRelatorios") await loadRhRelatorioSection();
+      else if (target === "rhFolhaPonto") await loadRhFolhaPontoSection();
       else if (target === "reciboAjuda") {
         if (typeof window.loadReciboAjudaSection === "function") {
           await window.loadReciboAjudaSection();
@@ -12675,6 +13091,8 @@ function setupNavigation() {
       if (el) el.value = "";
     });
   });
+
+  setupRhFolhaPontoHandlers();
 
   // RH — Dashboard
   document.getElementById("rhDashboardSection")?.addEventListener("section:load", () => {

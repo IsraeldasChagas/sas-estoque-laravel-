@@ -126,6 +126,7 @@
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="funcionarios">Funcionários</a>
               <a href="#" class="nav-link nav-link-child" data-section="rhRelatorios">Relatório</a>
+              <a href="#" class="nav-link nav-link-child" data-section="rhFolhaPonto">Folha de ponto</a>
 
               <div class="nav-submenu nav-submenu--nested">
                 <a href="#" class="nav-link nav-link-parent nav-link-child" id="rhRecrutamentoMenu">
@@ -2003,6 +2004,154 @@
             </form>
           </section>
 
+          <!-- RH — Folha de ponto -->
+          <section id="rhFolhaPontoSection" class="view-section hidden">
+            <div class="kanban-page-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2>RH — Folha de ponto</h2>
+                <p class="subtle-text">Monte a folha por mês (inclusive meses anteriores), preencha os horários, salve e use Ver, Editar, Excluir ou PDF para imprimir — no mesmo formato do modelo em papel.</p>
+              </div>
+            </div>
+            <div class="table-card form-card--wide" style="margin-bottom: 1rem;">
+              <header>Folhas salvas</header>
+              <div class="filters-actions" style="padding: 0.75rem 1rem; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn primary" id="rhFpBtnNova">+ Nova folha</button>
+                <label style="display:inline-flex; align-items:center; gap:0.35rem;">Ano
+                  <select id="rhFpFiltroAno" style="min-width:5rem;"></select>
+                </label>
+                <label style="display:inline-flex; align-items:center; gap:0.35rem;">Mês
+                  <select id="rhFpFiltroMes" style="min-width:8rem;">
+                    <option value="">Todos</option>
+                    <option value="1">Janeiro</option>
+                    <option value="2">Fevereiro</option>
+                    <option value="3">Março</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Maio</option>
+                    <option value="6">Junho</option>
+                    <option value="7">Julho</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                  </select>
+                </label>
+                <button type="button" class="btn" id="rhFpFiltroAplicar">Aplicar filtro</button>
+              </div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Período</th>
+                      <th>Funcionário</th>
+                      <th>CPF</th>
+                      <th>Atualizado</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rhFpListaBody">
+                    <tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="table-card form-card--wide hidden" id="rhFpEditorCard">
+              <header id="rhFpEditorTitulo">Nova folha de ponto</header>
+              <div style="padding: 1rem;">
+                <p class="subtle-text" style="margin-top:0;">Cabeçalho da empresa (editável a cada folha)</p>
+                <div class="filters-grid" style="margin-bottom: 1rem;">
+                  <label>Razão social
+                    <input type="text" id="rhFpEmpresaNome" maxlength="180" placeholder="SABOR PARAENSE" />
+                  </label>
+                  <label>Endereço (linha)
+                    <input type="text" id="rhFpEmpresaEndereco" maxlength="400" placeholder="Unidade 2 – Rua …" />
+                  </label>
+                  <label>CEP
+                    <input type="text" id="rhFpEmpresaCep" maxlength="40" placeholder="76.801-196" />
+                  </label>
+                  <label>CNPJ
+                    <input type="text" id="rhFpEmpresaCnpj" maxlength="40" placeholder="56.936.257/0001-04" />
+                  </label>
+                  <label>Cidade / ano (linha)
+                    <input type="text" id="rhFpEmpresaCidadeAno" maxlength="140" placeholder="Porto Velho 2026" />
+                  </label>
+                  <label>E-mail
+                    <input type="text" id="rhFpEmpresaEmail" maxlength="180" placeholder="saborparaense.pvh@gmail.com" />
+                  </label>
+                </div>
+                <p class="subtle-text">Funcionário e período</p>
+                <div class="filters-grid" style="margin-bottom: 1rem;">
+                  <label>Preencher a partir do cadastro
+                    <select id="rhFpPreencherFuncionario">
+                      <option value="">— Manual —</option>
+                    </select>
+                  </label>
+                  <label>Mês *
+                    <select id="rhFpMes" required>
+                      <option value="1">Janeiro</option>
+                      <option value="2">Fevereiro</option>
+                      <option value="3">Março</option>
+                      <option value="4">Abril</option>
+                      <option value="5">Maio</option>
+                      <option value="6">Junho</option>
+                      <option value="7">Julho</option>
+                      <option value="8">Agosto</option>
+                      <option value="9">Setembro</option>
+                      <option value="10">Outubro</option>
+                      <option value="11">Novembro</option>
+                      <option value="12">Dezembro</option>
+                    </select>
+                  </label>
+                  <label>Ano *
+                    <select id="rhFpAno" required></select>
+                  </label>
+                  <label>Nome completo *
+                    <input type="text" id="rhFpFuncNome" maxlength="200" required />
+                  </label>
+                  <label>CPF
+                    <input type="text" id="rhFpFuncCpf" maxlength="32" />
+                  </label>
+                  <label>Cargo
+                    <input type="text" id="rhFpFuncCargo" maxlength="140" />
+                  </label>
+                  <label>CTPS
+                    <input type="text" id="rhFpFuncCtps" maxlength="80" />
+                  </label>
+                </div>
+                <div class="table-wrapper" style="overflow-x:auto;">
+                  <table class="rh-fp-grid">
+                    <thead>
+                      <tr>
+                        <th>Dia</th>
+                        <th>Entrada</th>
+                        <th>Início intervalo</th>
+                        <th>Fim intervalo</th>
+                        <th>Saída</th>
+                        <th>Hora extra</th>
+                        <th>Assinatura</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rhFpDiasBody"></tbody>
+                  </table>
+                </div>
+                <div class="filters-actions" style="margin-top: 1rem;">
+                  <button type="button" class="btn primary" id="rhFpSalvar">Salvar</button>
+                  <button type="button" class="btn" id="rhFpCancelar">Cancelar</button>
+                </div>
+              </div>
+            </div>
+            <div class="modal-backdrop" id="rhFpVerModal" role="dialog" aria-modal="true" aria-labelledby="rhFpVerModalTitle">
+              <div class="modal modal--wide">
+                <header>
+                  <h2 id="rhFpVerModalTitle">Folha de ponto</h2>
+                  <button type="button" class="close-btn" id="rhFpVerFechar" aria-label="Fechar">×</button>
+                </header>
+                <div id="rhFpVerConteudo" style="padding:0 1rem 1rem; max-height:70vh; overflow:auto;"></div>
+              </div>
+            </div>
+          </section>
+
           <!-- Kanban Administrativo -->
           <section id="kanbanAdministrativoSection" class="view-section hidden">
             <div class="kanban-actions-bar">
@@ -3697,6 +3846,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reserva (mesa e histórico)</label>
             <div style="margin-top:0.5rem;"><strong>RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhFolhaPonto" /> Folha de ponto (RH)</label>
             <div style="margin-top:0.5rem;"><strong>Financeiro</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boletao" /> Boleto</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="proventos" /> Proventos</label>

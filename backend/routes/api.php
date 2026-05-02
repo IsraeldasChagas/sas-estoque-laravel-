@@ -6,6 +6,7 @@ use App\Http\Controllers\Rh\RhCandidatoController;
 use App\Http\Controllers\Rh\RhDashboardController;
 use App\Http\Controllers\Rh\RhDocumentoController;
 use App\Http\Controllers\Rh\RhEntrevistaController;
+use App\Http\Controllers\Rh\RhFolhaPontoController;
 use App\Http\Controllers\Rh\RhVagaController;
 use App\Services\EntradaEstoqueService;
 use Illuminate\Support\Facades\Route;
@@ -9322,6 +9323,14 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
     Route::post('/candidatos/{candidatoId}/documentos', [RhDocumentoController::class, 'upload']);
     Route::get('/documentos/{id}/download', [RhDocumentoController::class, 'download']);
     Route::delete('/documentos/{id}', [RhDocumentoController::class, 'destroy']);
+
+    // Folha de ponto
+    Route::get('/folhas-ponto', [RhFolhaPontoController::class, 'index']);
+    Route::post('/folhas-ponto', [RhFolhaPontoController::class, 'store']);
+    Route::get('/folhas-ponto/{id}', [RhFolhaPontoController::class, 'show']);
+    Route::put('/folhas-ponto/{id}', [RhFolhaPontoController::class, 'update']);
+    Route::delete('/folhas-ponto/{id}', [RhFolhaPontoController::class, 'destroy']);
+    Route::get('/folhas-ponto/{id}/pdf', [RhFolhaPontoController::class, 'pdf']);
 });
 
 // ============================================
