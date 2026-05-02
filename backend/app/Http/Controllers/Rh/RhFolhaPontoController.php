@@ -236,23 +236,22 @@ class RhFolhaPontoController extends Controller
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
-/* Margens: pouco nas laterais e no topo do cabeçalho; texto base 12pt */
-@page { margin: 8mm 5mm 10mm 5mm; }
+/* 10pt, margens e espaçamento simples */
+@page { margin: 10mm 8mm 12mm 8mm; }
 html, body { width: 100%; margin: 0; padding: 0; }
-body { font-family: DejaVu Sans, sans-serif; font-size: 12pt; color: #111; }
+body { font-family: DejaVu Sans, sans-serif; font-size: 10pt; line-height: 1.3; color: #111; }
 .sheet { width: 100%; box-sizing: border-box; padding: 0; margin: 0; }
-.top { text-align: center; font-size: 12pt; line-height: 1.3; margin: 0 0 4px 0; padding: 0; }
-.top > div { margin: 0; padding: 0; }
-.titulo { text-align: center; font-weight: bold; font-size: 12pt; margin: 4px 0 2px; padding: 0; }
-.empresa { text-align: center; font-weight: bold; font-size: 12pt; margin: 0 0 4px 0; padding: 0; }
-.func { font-size: 12pt; margin: 0 0 5px 0; line-height: 1.35; padding: 0; text-align: center; }
-.func-line { margin: 0; padding: 0; }
+.top { text-align: center; font-size: 10pt; line-height: 1.35; margin: 0 0 6px 0; padding: 0; }
+.top > div { margin: 0 0 2px 0; padding: 0; }
+.titulo { text-align: center; font-weight: bold; font-size: 10pt; margin: 6px 0 4px; padding: 0; }
+.empresa { text-align: center; font-weight: bold; font-size: 10pt; margin: 0 0 6px 0; padding: 0; }
+.func { font-size: 10pt; margin: 0 0 8px 0; line-height: 1.35; padding: 0; text-align: center; }
+.func-line { margin: 2px 0 0 0; padding: 0; }
 .tbl-wrap { width: 100%; margin: 0; padding: 0; box-sizing: border-box; }
-table.fp { width: 100%; border-collapse: collapse; font-size: 12pt; table-layout: fixed; }
-th, td { border: 1px solid #111; padding: 2px 4px; vertical-align: middle; word-wrap: break-word; }
-th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.15; font-size: 12pt; }
-.fp td { line-height: 1.2; }
-.fp tbody tr td { padding-top: 2px; padding-bottom: 2px; }
+table.fp { width: 100%; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
+th, td { border: 1px solid #111; padding: 4px 5px; vertical-align: middle; word-wrap: break-word; }
+th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.25; font-size: 10pt; }
+.fp td { line-height: 1.25; }
 .c-dia { text-align: left; white-space: nowrap; width: 12%; }
 th:nth-child(2), td:nth-child(2) { width: 11%; text-align: center; }
 th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; }
