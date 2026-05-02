@@ -5175,18 +5175,72 @@ select[size]:not([size="1"]) {
 #funcionariosSection .table-wrapper .usuarios-foto--placeholder { width: 48px; height: 48px; }
 #funcionariosSection .table-action { cursor: pointer; }
 
-/* RH — Folha de ponto */
-.rh-fp-grid .input-compact {
+/* RH — Folha de ponto: tabela usa a largura toda do cartão (como folha para preencher) */
+#rhFolhaPontoSection .rh-fp-grid-wrap {
   width: 100%;
-  max-width: 5.25rem;
-  padding: 0.25rem 0.35rem;
-  font-size: 0.82rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
-.rh-fp-grid .rh-fp-sign {
-  max-width: 9rem;
+#rhFolhaPontoSection table.rh-fp-grid {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+#rhFolhaPontoSection .rh-fp-grid th,
+#rhFolhaPontoSection .rh-fp-grid td {
+  border: 1px solid var(--border, #cfd8dc);
+  vertical-align: middle;
+}
+#rhFolhaPontoSection .rh-fp-grid th {
+  padding: 0.55rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  background: rgba(21, 101, 192, 0.08);
+  line-height: 1.2;
+}
+#rhFolhaPontoSection .rh-fp-grid td:first-child {
+  width: 12%;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.35rem;
+}
+#rhFolhaPontoSection .rh-fp-grid td:nth-child(2),
+#rhFolhaPontoSection .rh-fp-grid td:nth-child(3),
+#rhFolhaPontoSection .rh-fp-grid td:nth-child(4),
+#rhFolhaPontoSection .rh-fp-grid td:nth-child(5),
+#rhFolhaPontoSection .rh-fp-grid td:nth-child(6) {
+  width: 11%;
+}
+#rhFolhaPontoSection .rh-fp-grid td:nth-child(7) {
+  width: 32%;
+}
+#rhFolhaPontoSection .rh-fp-grid .input-compact {
+  width: 100%;
+  max-width: none;
+  min-height: 2.35rem;
+  box-sizing: border-box;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.9rem;
+}
+#rhFolhaPontoSection .rh-fp-grid .rh-fp-sign {
+  max-width: none;
+  min-height: 2.5rem;
 }
 #rhFolhaPontoSection .modal--wide {
   max-width: 920px;
+}
+#rhFolhaPontoSection #rhFpVerConteudo .table-wrapper table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+#rhFolhaPontoSection #rhFpVerConteudo .table-wrapper th,
+#rhFolhaPontoSection #rhFpVerConteudo .table-wrapper td {
+  padding: 0.4rem 0.35rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border, #cfd8dc);
 }
 
 @media (min-width: 901px) {

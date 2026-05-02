@@ -237,25 +237,30 @@ class RhFolhaPontoController extends Controller
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
-@page { margin: 8mm 7mm; }
-body { font-family: DejaVu Sans, sans-serif; font-size: 6.5pt; color: #111; margin: 0; padding: 0; }
-.top { text-align: center; font-size: 6pt; line-height: 1.2; margin: 0 0 3px 0; }
-.titulo { text-align: center; font-weight: bold; font-size: 8.5pt; margin: 2px 0 1px; }
-.empresa { text-align: center; font-weight: bold; font-size: 7.5pt; margin-bottom: 2px; }
-.func { font-size: 6.5pt; margin-bottom: 3px; line-height: 1.25; }
-.tbl-wrap { width: 100%; }
-table.fp { width: 100%; border-collapse: collapse; font-size: 5.8pt; table-layout: fixed; }
-th, td { border: 1px solid #222; padding: 0.8px 1px; vertical-align: middle; word-wrap: break-word; }
-th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.05; }
-.fp td { line-height: 1.08; }
-.c-dia { text-align: left; white-space: nowrap; width: 11%; }
-th:nth-child(2), td:nth-child(2) { width: 9%; text-align: center; }
-th:nth-child(3), td:nth-child(3) { width: 11%; text-align: center; }
-th:nth-child(4), td:nth-child(4) { width: 11%; text-align: center; }
-th:nth-child(5), td:nth-child(5) { width: 9%; text-align: center; }
-th:nth-child(6), td:nth-child(6) { width: 8%; text-align: center; }
-th:nth-child(7), td:nth-child(7) { width: 41%; text-align: left; font-size: 5.5pt; }
+@page { margin: 10mm 10mm 12mm 10mm; }
+html, body { width: 100%; margin: 0; padding: 0; }
+body { font-family: DejaVu Sans, sans-serif; font-size: 7pt; color: #111; }
+.sheet { width: 100%; box-sizing: border-box; }
+.top { text-align: center; font-size: 6.5pt; line-height: 1.35; margin: 0 0 5px 0; padding: 0 1mm; }
+.titulo { text-align: center; font-weight: bold; font-size: 10pt; margin: 5px 0 3px; }
+.empresa { text-align: center; font-weight: bold; font-size: 8.5pt; margin-bottom: 4px; }
+.func { font-size: 7pt; margin: 0 0 6px 0; line-height: 1.4; padding: 0 2mm; text-align: center; }
+.func-line { margin: 1px 0; }
+.tbl-wrap { width: 100%; margin: 0; padding: 0; box-sizing: border-box; }
+table.fp { width: 100%; border-collapse: collapse; font-size: 6.8pt; table-layout: fixed; }
+th, td { border: 1px solid #111; padding: 4px 5px; vertical-align: middle; word-wrap: break-word; }
+th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.2; font-size: 6.5pt; }
+.fp td { line-height: 1.25; }
+.fp tbody tr td { padding-top: 5px; padding-bottom: 5px; }
+.c-dia { text-align: left; white-space: nowrap; width: 12%; }
+th:nth-child(2), td:nth-child(2) { width: 11%; text-align: center; }
+th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; }
+th:nth-child(4), td:nth-child(4) { width: 12%; text-align: center; }
+th:nth-child(5), td:nth-child(5) { width: 11%; text-align: center; }
+th:nth-child(6), td:nth-child(6) { width: 10%; text-align: center; }
+th:nth-child(7), td:nth-child(7) { width: 32%; text-align: left; }
 </style></head><body>
+<div class="sheet">
 <div class="top">'
             . ($end !== '' ? '<div>' . $end . '</div>' : '')
             . ($cep !== '' ? '<div>CEP: ' . $cep . '</div>' : '')
@@ -266,20 +271,24 @@ th:nth-child(7), td:nth-child(7) { width: 41%; text-align: left; font-size: 5.5p
             . '</div>
 <div class="titulo">Folha de Ponto - Período ' . $periodo . '</div>
 <div class="empresa">Empresa ' . $empresa . '</div>
-<div class="func"><strong>FUNCIONÁRIO (a)</strong> — Nome: ' . $nome . ' · CPF: ' . $cpf . ' · Cargo: ' . $cargo . ' · CTPS: ' . $ctps . '</div>
+<div class="func"><strong>FUNCIONÁRIO (a)</strong>
+<div class="func-line">Nome: ' . $nome . ' &nbsp;&nbsp; CPF: ' . $cpf . '</div>
+<div class="func-line">Cargo: ' . $cargo . ' &nbsp;&nbsp; CTPS: ' . $ctps . '</div>
+</div>
 <div class="tbl-wrap">
 <table class="fp">
 <thead><tr>
 <th>Dia</th>
-<th>Entr.</th>
-<th>In. int.</th>
-<th>F. int.</th>
+<th>Entrada</th>
+<th>Início do<br/>intervalo</th>
+<th>Fim do<br/>intervalo</th>
 <th>Saída</th>
-<th>H.ex.</th>
-<th>Assinatura</th>
+<th>Hora extra</th>
+<th>Assinatura do<br/>empregado (a)</th>
 </tr></thead>
 <tbody>' . $rowsHtml . '</tbody>
 </table>
+</div>
 </div>
 </body></html>';
 

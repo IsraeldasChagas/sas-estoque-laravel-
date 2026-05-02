@@ -7672,7 +7672,7 @@ function setupRhFolhaPontoHandlers() {
           ${uniLinha}
           <p><strong>Folha de Ponto — ${esc((mesesL[data.mes] || "") + "/" + data.ano)}</strong> · ${esc(data.empresa_nome || "")}</p>
           <p><strong>${esc(data.funcionario_nome)}</strong> · CPF: ${esc(data.funcionario_cpf || "—")}<br/>Cargo: ${esc(data.funcionario_cargo || "—")} · CTPS: ${esc(data.funcionario_ctps || "—")}</p>
-          <div class="table-wrapper"><table><thead><tr><th>Dia</th><th>Entrada</th><th>Início int.</th><th>Fim int.</th><th>Saída</th><th>H.extra</th><th>Assinatura</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+          <div class="table-wrapper"><table><thead><tr><th>Dia</th><th>Entrada</th><th>Início do intervalo</th><th>Fim do intervalo</th><th>Saída</th><th>Hora extra</th><th>Assinatura do empregado (a)</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         const box = document.getElementById("rhFpVerConteudo");
         const modal = document.getElementById("rhFpVerModal");
         if (box) box.innerHTML = html;
