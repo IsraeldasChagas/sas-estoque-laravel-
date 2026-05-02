@@ -2060,33 +2060,21 @@
             <div class="table-card form-card--wide hidden" id="rhFpEditorCard">
               <header id="rhFpEditorTitulo">Nova folha de ponto</header>
               <div style="padding: 1rem;">
-                <p class="subtle-text" style="margin-top:0;">Cabeçalho da empresa (editável a cada folha)</p>
-                <div class="filters-grid" style="margin-bottom: 1rem;">
-                  <label>Razão social
-                    <input type="text" id="rhFpEmpresaNome" maxlength="180" placeholder="SABOR PARAENSE" />
-                  </label>
-                  <label>Endereço (linha)
-                    <input type="text" id="rhFpEmpresaEndereco" maxlength="400" placeholder="Unidade 2 – Rua …" />
-                  </label>
-                  <label>CEP
-                    <input type="text" id="rhFpEmpresaCep" maxlength="40" placeholder="76.801-196" />
-                  </label>
-                  <label>CNPJ
-                    <input type="text" id="rhFpEmpresaCnpj" maxlength="40" placeholder="56.936.257/0001-04" />
-                  </label>
-                  <label>Cidade / ano (linha)
-                    <input type="text" id="rhFpEmpresaCidadeAno" maxlength="140" placeholder="Porto Velho 2026" />
-                  </label>
-                  <label>E-mail
-                    <input type="text" id="rhFpEmpresaEmail" maxlength="180" placeholder="saborparaense.pvh@gmail.com" />
-                  </label>
-                </div>
-                <p class="subtle-text">Unidade e funcionário</p>
+                <p class="subtle-text" style="margin-top:0;">Ao escolher a <strong>unidade</strong>, a linha de <strong>endereço</strong> do PDF usa o cadastro (nome da unidade + endereço). CEP e cidade/ano você ajusta aqui se precisar; razão social, CNPJ e e-mail do PDF vêm do cadastro da unidade ao salvar.</p>
                 <div class="filters-grid" style="margin-bottom: 1rem;">
                   <label>Unidade
                     <select id="rhFpUnidade">
                       <option value="">Todas as unidades</option>
                     </select>
+                  </label>
+                  <label>Endereço (linha no PDF)
+                    <input type="text" id="rhFpEmpresaEndereco" maxlength="400" placeholder="Preenche ao escolher a unidade" />
+                  </label>
+                  <label>CEP
+                    <input type="text" id="rhFpEmpresaCep" maxlength="40" placeholder="Opcional" />
+                  </label>
+                  <label>Cidade / ano (linha no PDF)
+                    <input type="text" id="rhFpEmpresaCidadeAno" maxlength="140" placeholder="Ex.: Porto Velho 2026" />
                   </label>
                   <label>Preencher a partir do cadastro
                     <select id="rhFpPreencherFuncionario">

@@ -7261,16 +7261,36 @@ async function loadRhRelatorioSection() {
 }
 
 // --- RH — Folha de ponto ---
-const RH_FP_DEFAULT_EMPRESA = {
-  empresa_nome: "SABOR PARAENSE",
-  empresa_endereco: "Unidade 2 – Rua Rui Barbosa nº 831, Arigolândia – PVH/RO",
-  empresa_cep: "76.801-196",
-  empresa_cnpj: "56.936.257/0001-04",
-  empresa_cidade_ano: "Porto Velho 2026",
-  empresa_email: "saborparaense.pvh@gmail.com",
-};
-
 const RH_FP_DIAS_SEMANA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+/** Monta a linha de endereço do PDF a partir do cadastro da unidade (nome + endereço). */
+function rhFpMontarEnderecoLinhaDaUnidade(u) {
+  if (!u || typeof u !== "object") return "";
+  const nome = (u.nome || "").toString().trim();
+  const end = (u.endereco || "").toString().trim();
+  if (nome && end) return `${nome} – ${end}`;
+  return nome || end || "";
+}
+
+function rhFpLimparCabecalhoLinhasPdf() {
+  ["rhFpEmpresaEndereco", "rhFpEmpresaCep", "rhFpEmpresaCidadeAno"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+}
+
+/** Preenche endereço (e opcionalmente sugere cidade/ano) com dados do cadastro da unidade. */
+function rhFpAplicarUnidadeNoCabecalhoPdf(uid) {
+  const idStr = (uid != null ? String(uid) : "").trim();
+  if (!idStr) {
+    rhFpLimparCabecalhoLinhasPdf();
+    return;
+  }
+  const u = (state.unidades || []).find((x) => String(x.id) === idStr);
+  if (!u) return;
+  const endEl = document.getElementById("rhFpEmpresaEndereco");
+  if (endEl) endEl.value = rhFpMontarEnderecoLinhaDaUnidade(u);
+}
 
 function rhFpDiasNoMes(ano, mes) {
   return new Date(Number(ano), Number(mes), 0).getDate();
@@ -7285,19 +7305,6 @@ function rhFpMontarAnosSelect(sel, centro) {
   sel.innerHTML = opts.join("");
   if (c >= y - 3 && c <= y + 2) sel.value = String(c);
   else sel.value = String(y);
-}
-
-function rhFpPreencherEmpresaDefaults() {
-  const set = (id, v) => {
-    const el = document.getElementById(id);
-    if (el) el.value = v;
-  };
-  set("rhFpEmpresaNome", RH_FP_DEFAULT_EMPRESA.empresa_nome);
-  set("rhFpEmpresaEndereco", RH_FP_DEFAULT_EMPRESA.empresa_endereco);
-  set("rhFpEmpresaCep", RH_FP_DEFAULT_EMPRESA.empresa_cep);
-  set("rhFpEmpresaCnpj", RH_FP_DEFAULT_EMPRESA.empresa_cnpj);
-  set("rhFpEmpresaCidadeAno", RH_FP_DEFAULT_EMPRESA.empresa_cidade_ano);
-  set("rhFpEmpresaEmail", RH_FP_DEFAULT_EMPRESA.empresa_email);
 }
 
 function rhFpRebuildDiasBody(ano, mes, diasExistentes) {
@@ -7369,16 +7376,27 @@ function rhFpColetarPayload() {
   const unRaw = (document.getElementById("rhFpUnidade")?.value || "").trim();
   const unidade_id = unRaw ? Number(unRaw) : null;
   if (unRaw && !Number.isFinite(unidade_id)) throw new Error("Unidade inválida.");
+  let empresa_nome = null;
+  let empresa_cnpj = null;
+  let empresa_email = null;
+  if (unRaw) {
+    const u = (state.unidades || []).find((x) => String(x.id) === String(unRaw));
+    if (u) {
+      empresa_nome = (u.nome || "").trim() || null;
+      empresa_cnpj = (u.cnpj || "").trim() || null;
+      empresa_email = (u.email || "").trim() || null;
+    }
+  }
   return {
     ano,
     mes,
     unidade_id: unRaw ? unidade_id : null,
-    empresa_nome: trimOrNull("rhFpEmpresaNome"),
+    empresa_nome,
     empresa_endereco: trimOrNull("rhFpEmpresaEndereco"),
     empresa_cep: trimOrNull("rhFpEmpresaCep"),
-    empresa_cnpj: trimOrNull("rhFpEmpresaCnpj"),
+    empresa_cnpj,
     empresa_cidade_ano: trimOrNull("rhFpEmpresaCidadeAno"),
-    empresa_email: trimOrNull("rhFpEmpresaEmail"),
+    empresa_email,
     funcionario_nome: nome,
     funcionario_cpf: trimOrNull("rhFpFuncCpf"),
     funcionario_cargo: trimOrNull("rhFpFuncCargo"),
@@ -7427,6 +7445,7 @@ function rhFpPopularSelectUnidades() {
     const idStr = String(currentUser.unidade_id);
     if ([...sel.options].some((o) => o.value === idStr)) sel.value = idStr;
   }
+  rhFpAplicarUnidadeNoCabecalhoPdf(sel.value);
 }
 
 function rhFpRefreshFuncionariosSelect() {
@@ -7538,6 +7557,7 @@ async function loadRhFolhaPontoSection() {
     const tb = document.getElementById("rhFpListaBody");
     if (tb) tb.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao listar.")}</td></tr>`;
   });
+  rhFpAplicarUnidadeNoCabecalhoPdf(document.getElementById("rhFpUnidade")?.value || "");
   const tit = document.getElementById("rhFpEditorTitulo");
   if (tit) tit.textContent = "Nova folha de ponto";
   window.__rhFpEditingId = null;
@@ -7553,7 +7573,7 @@ function setupRhFolhaPontoHandlers() {
     window.__rhFpEditingId = null;
     const tit = document.getElementById("rhFpEditorTitulo");
     if (tit) tit.textContent = "Nova folha de ponto";
-    rhFpPreencherEmpresaDefaults();
+    rhFpLimparCabecalhoLinhasPdf();
     const now = new Date();
     const m = document.getElementById("rhFpMes");
     const a = document.getElementById("rhFpAno");
@@ -7571,6 +7591,7 @@ function setupRhFolhaPontoHandlers() {
         if ([...un.options].some((o) => o.value === idStr)) un.value = idStr;
       }
     }
+    rhFpAplicarUnidadeNoCabecalhoPdf(document.getElementById("rhFpUnidade")?.value || "");
     rhFpRefreshFuncionariosSelect();
     rhFpRebuildDiasBody(Number(a?.value), Number(m?.value), []);
     rhFpShowEditor(true);
@@ -7591,6 +7612,7 @@ function setupRhFolhaPontoHandlers() {
   document.getElementById("rhFpUnidade")?.addEventListener("change", () => {
     const pff = document.getElementById("rhFpPreencherFuncionario");
     if (pff) pff.value = "";
+    rhFpAplicarUnidadeNoCabecalhoPdf(document.getElementById("rhFpUnidade")?.value || "");
     rhFpRefreshFuncionariosSelect();
   });
 
@@ -7666,7 +7688,7 @@ function setupRhFolhaPontoHandlers() {
           const c = dias[d - 1] || {};
           rows += `<tr><td>${esc(wd + " " + d)}</td><td>${esc(c.entrada)}</td><td>${esc(c.intervalo_inicio)}</td><td>${esc(c.intervalo_fim)}</td><td>${esc(c.saida)}</td><td>${esc(c.hora_extra)}</td><td>${esc(c.assinatura)}</td></tr>`;
         }
-        const head = `${esc(data.empresa_endereco || "")}<br/>CEP: ${esc(data.empresa_cep || "")} · CNPJ: ${esc(data.empresa_cnpj || "")}<br/>${esc(data.empresa_cidade_ano || "")}<br/>E-mail: ${esc(data.empresa_email || "")}`;
+        const head = `${esc(data.empresa_endereco || "")}<br/>CEP: ${esc(data.empresa_cep || "—")} · CNPJ: ${esc(data.empresa_cnpj || "—")}<br/>${esc(data.empresa_cidade_ano || "")}<br/>E-mail: ${esc(data.empresa_email || "—")}`;
         const uniLinha = data.unidade_nome ? `<p><strong>Unidade:</strong> ${esc(data.unidade_nome)}</p>` : "";
         const html = `<div class="subtle-text" style="margin-bottom:0.75rem;">${head}</div>
           ${uniLinha}
@@ -7687,12 +7709,9 @@ function setupRhFolhaPontoHandlers() {
           const el = document.getElementById(hid);
           if (el) el.value = v != null ? String(v) : "";
         };
-        set("rhFpEmpresaNome", data.empresa_nome || "");
         set("rhFpEmpresaEndereco", data.empresa_endereco || "");
         set("rhFpEmpresaCep", data.empresa_cep || "");
-        set("rhFpEmpresaCnpj", data.empresa_cnpj || "");
         set("rhFpEmpresaCidadeAno", data.empresa_cidade_ano || "");
-        set("rhFpEmpresaEmail", data.empresa_email || "");
         const unSel = document.getElementById("rhFpUnidade");
         if (unSel) {
           const uid = data.unidade_id != null ? String(data.unidade_id) : "";
