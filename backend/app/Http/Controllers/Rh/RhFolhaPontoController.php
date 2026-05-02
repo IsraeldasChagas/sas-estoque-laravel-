@@ -235,11 +235,11 @@ class RhFolhaPontoController extends Controller
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
-/* 8pt — espaço fixo no topo (Dompdf ignora @page às vezes; o bloco abaixo empurra o cabeçalho pra baixo) */
-@page { margin: 10mm 8mm 12mm 8mm; }
+/* 8pt — margem página simétrica (topo ≈ rodapé) + respiro leve antes/depois do conteúdo */
+@page { margin: 12mm 8mm 12mm 8mm; }
 html, body { width: 100%; margin: 0; padding: 0; }
 body { font-family: DejaVu Sans, sans-serif; font-size: 8pt; line-height: 1.3; color: #111; }
-.rh-fp-top-spacer { height: 30mm; min-height: 30mm; margin: 0; padding: 0; font-size: 0; line-height: 0; overflow: hidden; }
+.rh-fp-top-spacer, .rh-fp-bottom-spacer { height: 8mm; min-height: 8mm; margin: 0; padding: 0; font-size: 0; line-height: 0; overflow: hidden; }
 .sheet { width: 100%; box-sizing: border-box; padding: 0; margin: 0; }
 .top { text-align: center; font-size: 8pt; line-height: 1.35; margin: 0 0 6px 0; padding: 0; }
 .top > div { margin: 0 0 2px 0; padding: 0; }
@@ -287,6 +287,7 @@ th:nth-child(7), td:nth-child(7) { width: 32%; text-align: left; }
 <tbody>' . $rowsHtml . '</tbody>
 </table>
 </div>
+<div class="rh-fp-bottom-spacer" aria-hidden="true">&nbsp;</div>
 </div>
 </body></html>';
 
