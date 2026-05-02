@@ -235,11 +235,11 @@ class RhFolhaPontoController extends Controller
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
-/* 8pt, margens e espaçamento simples */
-@page { margin: 10mm 8mm 12mm 8mm; }
+/* 8pt, margens e espaçamento simples — mais espaço no topo para o cabeçalho não colar */
+@page { margin: 20mm 8mm 12mm 8mm; }
 html, body { width: 100%; margin: 0; padding: 0; }
 body { font-family: DejaVu Sans, sans-serif; font-size: 8pt; line-height: 1.3; color: #111; }
-.sheet { width: 100%; box-sizing: border-box; padding: 0; margin: 0; }
+.sheet { width: 100%; box-sizing: border-box; padding: 5mm 0 0 0; margin: 0; }
 .top { text-align: center; font-size: 8pt; line-height: 1.35; margin: 0 0 6px 0; padding: 0; }
 .top > div { margin: 0 0 2px 0; padding: 0; }
 .titulo { text-align: center; font-weight: bold; font-size: 8pt; margin: 6px 0 6px; padding: 0; }
