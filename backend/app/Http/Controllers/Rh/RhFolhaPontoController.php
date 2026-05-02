@@ -225,34 +225,34 @@ class RhFolhaPontoController extends Controller
         $cep = $h($row->empresa_cep ?? '');
         $cnpj = $h($row->empresa_cnpj ?? '');
         $cidade = $h($row->empresa_cidade_ano ?? '');
-        $email = $h($row->empresa_email ?? '');
 
         $nome = $h($row->funcionario_nome ?? '');
         $cpf = $h($row->funcionario_cpf ?? '');
         $cargo = $h($row->funcionario_cargo ?? '');
         $ctps = $h($row->funcionario_ctps ?? '');
         $unidadeLinha = trim((string) ($row->unidade_nome ?? '')) !== ''
-            ? '<div style="margin-top:4px;font-weight:bold;">Unidade: ' . $h($row->unidade_nome) . '</div>'
+            ? '<div style="margin-top:2px;font-weight:bold;">Unidade: ' . $h($row->unidade_nome) . '</div>'
             : '';
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
-/* Margens generosas: em cima, embaixo e nas laterais (fica apresentável na impressão) */
-@page { margin: 18mm 16mm 20mm 16mm; }
+/* Margens: pouco nas laterais e no topo do cabeçalho; texto base 12pt */
+@page { margin: 8mm 5mm 10mm 5mm; }
 html, body { width: 100%; margin: 0; padding: 0; }
-body { font-family: DejaVu Sans, sans-serif; font-size: 7pt; color: #111; }
-.sheet { width: 100%; box-sizing: border-box; padding: 0; }
-.top { text-align: center; font-size: 6.5pt; line-height: 1.35; margin: 0 0 5px 0; padding: 0 2mm; }
-.titulo { text-align: center; font-weight: bold; font-size: 10pt; margin: 5px 0 3px; }
-.empresa { text-align: center; font-weight: bold; font-size: 8.5pt; margin-bottom: 4px; }
-.func { font-size: 7pt; margin: 0 0 6px 0; line-height: 1.4; padding: 0 2mm; text-align: center; }
-.func-line { margin: 1px 0; }
+body { font-family: DejaVu Sans, sans-serif; font-size: 12pt; color: #111; }
+.sheet { width: 100%; box-sizing: border-box; padding: 0; margin: 0; }
+.top { text-align: center; font-size: 12pt; line-height: 1.3; margin: 0 0 4px 0; padding: 0; }
+.top > div { margin: 0; padding: 0; }
+.titulo { text-align: center; font-weight: bold; font-size: 12pt; margin: 4px 0 2px; padding: 0; }
+.empresa { text-align: center; font-weight: bold; font-size: 12pt; margin: 0 0 4px 0; padding: 0; }
+.func { font-size: 12pt; margin: 0 0 5px 0; line-height: 1.35; padding: 0; text-align: center; }
+.func-line { margin: 0; padding: 0; }
 .tbl-wrap { width: 100%; margin: 0; padding: 0; box-sizing: border-box; }
-table.fp { width: 100%; border-collapse: collapse; font-size: 6.8pt; table-layout: fixed; }
-th, td { border: 1px solid #111; padding: 4px 5px; vertical-align: middle; word-wrap: break-word; }
-th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.2; font-size: 6.5pt; }
-.fp td { line-height: 1.25; }
-.fp tbody tr td { padding-top: 5px; padding-bottom: 5px; }
+table.fp { width: 100%; border-collapse: collapse; font-size: 12pt; table-layout: fixed; }
+th, td { border: 1px solid #111; padding: 2px 4px; vertical-align: middle; word-wrap: break-word; }
+th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.15; font-size: 12pt; }
+.fp td { line-height: 1.2; }
+.fp tbody tr td { padding-top: 2px; padding-bottom: 2px; }
 .c-dia { text-align: left; white-space: nowrap; width: 12%; }
 th:nth-child(2), td:nth-child(2) { width: 11%; text-align: center; }
 th:nth-child(3), td:nth-child(3) { width: 12%; text-align: center; }
@@ -267,7 +267,6 @@ th:nth-child(7), td:nth-child(7) { width: 32%; text-align: left; }
             . ($cep !== '' ? '<div>CEP: ' . $cep . '</div>' : '')
             . ($cnpj !== '' ? '<div>CNPJ: ' . $cnpj . '</div>' : '')
             . ($cidade !== '' ? '<div>' . $cidade . '</div>' : '')
-            . ($email !== '' ? '<div>E-mail: ' . $email . '</div>' : '')
             . $unidadeLinha
             . '</div>
 <div class="titulo">Folha de Ponto - Período ' . $periodo . '</div>
