@@ -7628,6 +7628,7 @@ function setupRhFolhaPontoHandlers() {
     set("rhFpFuncNome", f.nome_completo || "");
     set("rhFpFuncCpf", f.cpf || "");
     set("rhFpFuncCargo", f.cargo || "");
+    set("rhFpFuncCtps", f.ctps || "");
   });
 
   document.getElementById("rhFpSalvar")?.addEventListener("click", async () => {
