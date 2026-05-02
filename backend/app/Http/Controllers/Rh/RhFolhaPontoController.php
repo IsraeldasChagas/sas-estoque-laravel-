@@ -22,6 +22,12 @@ class RhFolhaPontoController extends Controller
         4 => 'Quinta', 5 => 'Sexta', 6 => 'Sábado',
     ];
 
+    /** Abreviações para o PDF retrato caber em uma folha. */
+    private const DIAS_SEMANA_PDF = [
+        0 => 'Dom', 1 => 'Seg', 2 => 'Ter', 3 => 'Qua',
+        4 => 'Qui', 5 => 'Sex', 6 => 'Sáb',
+    ];
+
     public function index(Request $request)
     {
         if (! RhAcesso::pode($request, 'rh.folha_ponto')) {
@@ -200,10 +206,10 @@ class RhFolhaPontoController extends Controller
         for ($d = 1; $d <= $nDias; $d++) {
             $ts = strtotime(sprintf('%04d-%02d-%02d', $ano, $mes, $d));
             $w = (int) date('w', $ts);
-            $diaSemana = self::DIAS_SEMANA[$w] ?? '';
+            $diaSemana = self::DIAS_SEMANA_PDF[$w] ?? '';
             $cel = $dias[$d - 1] ?? [];
             $rowsHtml .= '<tr>'
-                . '<td style="white-space:nowrap;">' . $h($diaSemana . ' ' . $d) . '</td>'
+                . '<td class="c-dia">' . $h($diaSemana . ' ' . $d) . '</td>'
                 . '<td>' . $h($cel['entrada'] ?? '') . '</td>'
                 . '<td>' . $h($cel['intervalo_inicio'] ?? '') . '</td>'
                 . '<td>' . $h($cel['intervalo_fim'] ?? '') . '</td>'
@@ -231,15 +237,24 @@ class RhFolhaPontoController extends Controller
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
-body { font-family: DejaVu Sans, sans-serif; font-size: 8pt; color: #111; margin: 12px; }
-.top { text-align: center; font-size: 8pt; line-height: 1.4; margin-bottom: 10px; }
-.titulo { text-align: center; font-weight: bold; font-size: 11pt; margin: 8px 0 4px; }
-.empresa { text-align: center; font-weight: bold; font-size: 10pt; margin-bottom: 8px; }
-.func { font-size: 9pt; margin-bottom: 10px; line-height: 1.45; }
-table { width: 100%; border-collapse: collapse; font-size: 7pt; }
-th, td { border: 1px solid #222; padding: 4px 3px; vertical-align: middle; }
-th { background: #e8e8e8; font-weight: bold; text-align: center; }
-td:nth-child(1) { text-align: left; }
+@page { margin: 8mm 7mm; }
+body { font-family: DejaVu Sans, sans-serif; font-size: 6.5pt; color: #111; margin: 0; padding: 0; }
+.top { text-align: center; font-size: 6pt; line-height: 1.2; margin: 0 0 3px 0; }
+.titulo { text-align: center; font-weight: bold; font-size: 8.5pt; margin: 2px 0 1px; }
+.empresa { text-align: center; font-weight: bold; font-size: 7.5pt; margin-bottom: 2px; }
+.func { font-size: 6.5pt; margin-bottom: 3px; line-height: 1.25; }
+.tbl-wrap { width: 100%; }
+table.fp { width: 100%; border-collapse: collapse; font-size: 5.8pt; table-layout: fixed; }
+th, td { border: 1px solid #222; padding: 0.8px 1px; vertical-align: middle; word-wrap: break-word; }
+th { background: #e8e8e8; font-weight: bold; text-align: center; line-height: 1.05; }
+.fp td { line-height: 1.08; }
+.c-dia { text-align: left; white-space: nowrap; width: 11%; }
+th:nth-child(2), td:nth-child(2) { width: 9%; text-align: center; }
+th:nth-child(3), td:nth-child(3) { width: 11%; text-align: center; }
+th:nth-child(4), td:nth-child(4) { width: 11%; text-align: center; }
+th:nth-child(5), td:nth-child(5) { width: 9%; text-align: center; }
+th:nth-child(6), td:nth-child(6) { width: 8%; text-align: center; }
+th:nth-child(7), td:nth-child(7) { width: 41%; text-align: left; font-size: 5.5pt; }
 </style></head><body>
 <div class="top">'
             . ($end !== '' ? '<div>' . $end . '</div>' : '')
@@ -251,22 +266,21 @@ td:nth-child(1) { text-align: left; }
             . '</div>
 <div class="titulo">Folha de Ponto - Período ' . $periodo . '</div>
 <div class="empresa">Empresa ' . $empresa . '</div>
-<div class="func"><strong>FUNCIONÁRIO (a)</strong><br/>
-Nome: ' . $nome . ' &nbsp; CPF: ' . $cpf . '<br/>
-Cargo: ' . $cargo . ' &nbsp; CTPS: ' . $ctps . '
-</div>
-<table>
+<div class="func"><strong>FUNCIONÁRIO (a)</strong> — Nome: ' . $nome . ' · CPF: ' . $cpf . ' · Cargo: ' . $cargo . ' · CTPS: ' . $ctps . '</div>
+<div class="tbl-wrap">
+<table class="fp">
 <thead><tr>
 <th>Dia</th>
-<th>Entrada</th>
-<th>Início do<br/>Intervalo</th>
-<th>Fim do<br/>Intervalo</th>
+<th>Entr.</th>
+<th>In. int.</th>
+<th>F. int.</th>
 <th>Saída</th>
-<th>Hora Extra</th>
-<th>Assinatura do<br/>Empregado (a)</th>
+<th>H.ex.</th>
+<th>Assinatura</th>
 </tr></thead>
 <tbody>' . $rowsHtml . '</tbody>
 </table>
+</div>
 </body></html>';
 
         try {
@@ -276,7 +290,7 @@ Cargo: ' . $cargo . ' &nbsp; CTPS: ' . $ctps . '
             $options->set('isHtml5ParserEnabled', true);
             $dompdf->setOptions($options);
             $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'landscape');
+            $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
             $pdfOutput = $dompdf->output();
             $fn = 'folha-ponto-' . $id . '.pdf';
