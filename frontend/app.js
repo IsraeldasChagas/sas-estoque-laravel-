@@ -7366,9 +7366,13 @@ function rhFpColetarPayload() {
     const v = (document.getElementById(id)?.value || "").trim();
     return v ? v : null;
   };
+  const unRaw = (document.getElementById("rhFpUnidade")?.value || "").trim();
+  const unidade_id = unRaw ? Number(unRaw) : null;
+  if (unRaw && !Number.isFinite(unidade_id)) throw new Error("Unidade inválida.");
   return {
     ano,
     mes,
+    unidade_id: unRaw ? unidade_id : null,
     empresa_nome: trimOrNull("rhFpEmpresaNome"),
     empresa_endereco: trimOrNull("rhFpEmpresaEndereco"),
     empresa_cep: trimOrNull("rhFpEmpresaCep"),
@@ -7409,6 +7413,43 @@ function rhFpOnMesAnoChange() {
   rhFpRebuildDiasBody(ano, mes, merged);
 }
 
+function rhFpPopularSelectUnidades() {
+  const sel = document.getElementById("rhFpUnidade");
+  if (!sel) return;
+  const prev = sel.value;
+  const opts = (state.unidades || [])
+    .map((u) => `<option value="${escapeHtml(String(u.id))}">${escapeHtml(u.nome || "")}</option>`)
+    .join("");
+  sel.innerHTML = '<option value="">Todas as unidades</option>' + opts;
+  if (prev && [...sel.options].some((o) => o.value === prev)) {
+    sel.value = prev;
+  } else if (currentUser?.unidade_id && (currentUser?.perfil || "").toString().trim().toUpperCase() !== "ADMIN") {
+    const idStr = String(currentUser.unidade_id);
+    if ([...sel.options].some((o) => o.value === idStr)) sel.value = idStr;
+  }
+}
+
+function rhFpRefreshFuncionariosSelect() {
+  const uid = (document.getElementById("rhFpUnidade")?.value || "").trim();
+  const pf = document.getElementById("rhFpPreencherFuncionario");
+  if (!pf) return;
+  const prev = pf.value;
+  const lista = (state.funcionarios || []).filter((f) => {
+    if (!uid) return true;
+    return String(f.unidade_id ?? "") === String(uid);
+  });
+  pf.innerHTML =
+    '<option value="">— Manual —</option>' +
+    lista
+      .map((f) => {
+        const nome = (f.nome_completo || "").trim();
+        return `<option value="${escapeHtml(String(f.id))}">${escapeHtml(nome || "—")}</option>`;
+      })
+      .join("");
+  if (prev && lista.some((x) => String(x.id) === prev)) pf.value = prev;
+  else pf.value = "";
+}
+
 async function loadRhFolhasPontoLista() {
   const ano = document.getElementById("rhFpFiltroAno")?.value || "";
   const mes = document.getElementById("rhFpFiltroMes")?.value || "";
@@ -7420,7 +7461,7 @@ async function loadRhFolhasPontoLista() {
   const tb = document.getElementById("rhFpListaBody");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhuma folha neste filtro.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhuma folha neste filtro.</td></tr>';
     return;
   }
   const mesesN = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -7431,6 +7472,7 @@ async function loadRhFolhasPontoLista() {
       const at = (row.updated_at || row.created_at || "").toString().slice(0, 16).replace("T", " ");
       return `<tr data-id="${esc(row.id)}">
       <td data-label="ID">${esc(row.id)}</td>
+      <td data-label="Unidade">${esc(row.unidade_nome || "—")}</td>
       <td data-label="Período">${esc(per)}</td>
       <td data-label="Funcionário">${esc(row.funcionario_nome)}</td>
       <td data-label="CPF">${esc(row.funcionario_cpf || "—")}</td>
@@ -7488,23 +7530,13 @@ async function loadRhFolhaPontoSection() {
     rhFpMontarAnosSelect(san, y);
     san.dataset.populated = "1";
   }
+  await loadUnidades(false).catch(() => {});
+  rhFpPopularSelectUnidades();
   await loadFuncionarios().catch(() => {});
-  const pf = document.getElementById("rhFpPreencherFuncionario");
-  if (pf) {
-    const sel = pf.value;
-    pf.innerHTML =
-      '<option value="">— Manual —</option>' +
-      (state.funcionarios || [])
-        .map((f) => {
-          const nome = (f.nome_completo || "").trim();
-          return `<option value="${escapeHtml(String(f.id))}">${escapeHtml(nome || "—")}</option>`;
-        })
-        .join("");
-    if (sel && [...pf.options].some((o) => o.value === sel)) pf.value = sel;
-  }
+  rhFpRefreshFuncionariosSelect();
   await loadRhFolhasPontoLista().catch((err) => {
     const tb = document.getElementById("rhFpListaBody");
-    if (tb) tb.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao listar.")}</td></tr>`;
+    if (tb) tb.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao listar.")}</td></tr>`;
   });
   const tit = document.getElementById("rhFpEditorTitulo");
   if (tit) tit.textContent = "Nova folha de ponto";
@@ -7531,8 +7563,15 @@ function setupRhFolhaPontoHandlers() {
     document.getElementById("rhFpFuncCpf").value = "";
     document.getElementById("rhFpFuncCargo").value = "";
     document.getElementById("rhFpFuncCtps").value = "";
-    const pf = document.getElementById("rhFpPreencherFuncionario");
-    if (pf) pf.value = "";
+    const un = document.getElementById("rhFpUnidade");
+    if (un) {
+      un.value = "";
+      if (currentUser?.unidade_id && (currentUser?.perfil || "").toString().trim().toUpperCase() !== "ADMIN") {
+        const idStr = String(currentUser.unidade_id);
+        if ([...un.options].some((o) => o.value === idStr)) un.value = idStr;
+      }
+    }
+    rhFpRefreshFuncionariosSelect();
     rhFpRebuildDiasBody(Number(a?.value), Number(m?.value), []);
     rhFpShowEditor(true);
   });
@@ -7548,6 +7587,12 @@ function setupRhFolhaPontoHandlers() {
 
   document.getElementById("rhFpMes")?.addEventListener("change", () => rhFpOnMesAnoChange());
   document.getElementById("rhFpAno")?.addEventListener("change", () => rhFpOnMesAnoChange());
+
+  document.getElementById("rhFpUnidade")?.addEventListener("change", () => {
+    const pff = document.getElementById("rhFpPreencherFuncionario");
+    if (pff) pff.value = "";
+    rhFpRefreshFuncionariosSelect();
+  });
 
   document.getElementById("rhFpPreencherFuncionario")?.addEventListener("change", (e) => {
     const id = (e.target?.value || "").trim();
@@ -7622,7 +7667,9 @@ function setupRhFolhaPontoHandlers() {
           rows += `<tr><td>${esc(wd + " " + d)}</td><td>${esc(c.entrada)}</td><td>${esc(c.intervalo_inicio)}</td><td>${esc(c.intervalo_fim)}</td><td>${esc(c.saida)}</td><td>${esc(c.hora_extra)}</td><td>${esc(c.assinatura)}</td></tr>`;
         }
         const head = `${esc(data.empresa_endereco || "")}<br/>CEP: ${esc(data.empresa_cep || "")} · CNPJ: ${esc(data.empresa_cnpj || "")}<br/>${esc(data.empresa_cidade_ano || "")}<br/>E-mail: ${esc(data.empresa_email || "")}`;
+        const uniLinha = data.unidade_nome ? `<p><strong>Unidade:</strong> ${esc(data.unidade_nome)}</p>` : "";
         const html = `<div class="subtle-text" style="margin-bottom:0.75rem;">${head}</div>
+          ${uniLinha}
           <p><strong>Folha de Ponto — ${esc((mesesL[data.mes] || "") + "/" + data.ano)}</strong> · ${esc(data.empresa_nome || "")}</p>
           <p><strong>${esc(data.funcionario_nome)}</strong> · CPF: ${esc(data.funcionario_cpf || "—")}<br/>Cargo: ${esc(data.funcionario_cargo || "—")} · CTPS: ${esc(data.funcionario_ctps || "—")}</p>
           <div class="table-wrapper"><table><thead><tr><th>Dia</th><th>Entrada</th><th>Início int.</th><th>Fim int.</th><th>Saída</th><th>H.extra</th><th>Assinatura</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -7646,6 +7693,28 @@ function setupRhFolhaPontoHandlers() {
         set("rhFpEmpresaCnpj", data.empresa_cnpj || "");
         set("rhFpEmpresaCidadeAno", data.empresa_cidade_ano || "");
         set("rhFpEmpresaEmail", data.empresa_email || "");
+        const unSel = document.getElementById("rhFpUnidade");
+        if (unSel) {
+          const uid = data.unidade_id != null ? String(data.unidade_id) : "";
+          unSel.value = uid && [...unSel.options].some((o) => o.value === uid) ? uid : "";
+        }
+        rhFpRefreshFuncionariosSelect();
+        const pfEl = document.getElementById("rhFpPreencherFuncionario");
+        if (pfEl) {
+          const cpfNorm = (s) => String(s || "").replace(/\D/g, "");
+          const alvoCpf = cpfNorm(data.funcionario_cpf);
+          const uidStr = data.unidade_id != null && data.unidade_id !== "" ? String(data.unidade_id) : "";
+          const match =
+            (state.funcionarios || []).find(
+              (x) => alvoCpf && cpfNorm(x.cpf) === alvoCpf && (!uidStr || String(x.unidade_id ?? "") === uidStr)
+            ) ||
+            (state.funcionarios || []).find(
+              (x) =>
+                String((x.nome_completo || "").trim()).toLowerCase() === String((data.funcionario_nome || "").trim()).toLowerCase() &&
+                (!uidStr || String(x.unidade_id ?? "") === uidStr)
+            );
+          if (match && [...pfEl.options].some((o) => o.value === String(match.id))) pfEl.value = String(match.id);
+        }
         set("rhFpFuncNome", data.funcionario_nome || "");
         set("rhFpFuncCpf", data.funcionario_cpf || "");
         set("rhFpFuncCargo", data.funcionario_cargo || "");

@@ -32,13 +32,18 @@ class RhFolhaPontoController extends Controller
             return response()->json([])->header('Access-Control-Allow-Origin', '*');
         }
 
-        $q = DB::table('rh_folhas_ponto')->orderByDesc('ano')->orderByDesc('mes')->orderByDesc('id');
+        $q = DB::table('rh_folhas_ponto')
+            ->leftJoin('unidades', 'rh_folhas_ponto.unidade_id', '=', 'unidades.id')
+            ->select('rh_folhas_ponto.*', 'unidades.nome as unidade_nome')
+            ->orderByDesc('rh_folhas_ponto.ano')
+            ->orderByDesc('rh_folhas_ponto.mes')
+            ->orderByDesc('rh_folhas_ponto.id');
 
         if ($request->filled('ano')) {
-            $q->where('ano', (int) $request->query('ano'));
+            $q->where('rh_folhas_ponto.ano', (int) $request->query('ano'));
         }
         if ($request->filled('mes')) {
-            $q->where('mes', (int) $request->query('mes'));
+            $q->where('rh_folhas_ponto.mes', (int) $request->query('mes'));
         }
 
         $rows = $q->get();
@@ -61,7 +66,11 @@ class RhFolhaPontoController extends Controller
             return response()->json(['error' => 'Módulo indisponível'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $row = DB::table('rh_folhas_ponto')->where('id', $id)->first();
+        $row = DB::table('rh_folhas_ponto')
+            ->leftJoin('unidades', 'rh_folhas_ponto.unidade_id', '=', 'unidades.id')
+            ->where('rh_folhas_ponto.id', $id)
+            ->select('rh_folhas_ponto.*', 'unidades.nome as unidade_nome')
+            ->first();
         if (! $row) {
             return response()->json(['error' => 'Não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
@@ -88,6 +97,7 @@ class RhFolhaPontoController extends Controller
         $id = DB::table('rh_folhas_ponto')->insertGetId([
             'ano' => $data['ano'],
             'mes' => $data['mes'],
+            'unidade_id' => $data['unidade_id'],
             'empresa_nome' => $data['empresa_nome'],
             'empresa_endereco' => $data['empresa_endereco'],
             'empresa_cep' => $data['empresa_cep'],
@@ -126,6 +136,7 @@ class RhFolhaPontoController extends Controller
         DB::table('rh_folhas_ponto')->where('id', $id)->update([
             'ano' => $data['ano'],
             'mes' => $data['mes'],
+            'unidade_id' => $data['unidade_id'],
             'empresa_nome' => $data['empresa_nome'],
             'empresa_endereco' => $data['empresa_endereco'],
             'empresa_cep' => $data['empresa_cep'],
@@ -168,7 +179,11 @@ class RhFolhaPontoController extends Controller
             return response()->json(['error' => 'Módulo indisponível'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $row = DB::table('rh_folhas_ponto')->where('id', $id)->first();
+        $row = DB::table('rh_folhas_ponto')
+            ->leftJoin('unidades', 'rh_folhas_ponto.unidade_id', '=', 'unidades.id')
+            ->where('rh_folhas_ponto.id', $id)
+            ->select('rh_folhas_ponto.*', 'unidades.nome as unidade_nome')
+            ->first();
         if (! $row) {
             return response()->json(['error' => 'Não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
@@ -210,6 +225,9 @@ class RhFolhaPontoController extends Controller
         $cpf = $h($row->funcionario_cpf ?? '');
         $cargo = $h($row->funcionario_cargo ?? '');
         $ctps = $h($row->funcionario_ctps ?? '');
+        $unidadeLinha = trim((string) ($row->unidade_nome ?? '')) !== ''
+            ? '<div style="margin-top:4px;font-weight:bold;">Unidade: ' . $h($row->unidade_nome) . '</div>'
+            : '';
 
         $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
 <style>
@@ -229,6 +247,7 @@ td:nth-child(1) { text-align: left; }
             . ($cnpj !== '' ? '<div>CNPJ: ' . $cnpj . '</div>' : '')
             . ($cidade !== '' ? '<div>' . $cidade . '</div>' : '')
             . ($email !== '' ? '<div>E-mail: ' . $email . '</div>' : '')
+            . $unidadeLinha
             . '</div>
 <div class="titulo">Folha de Ponto - Período ' . $periodo . '</div>
 <div class="empresa">Empresa ' . $empresa . '</div>
@@ -291,13 +310,14 @@ Cargo: ' . $cargo . ' &nbsp; CTPS: ' . $ctps . '
     }
 
     /**
-     * @return array{ano:int,mes:int,empresa_nome:?string,empresa_endereco:?string,empresa_cep:?string,empresa_cnpj:?string,empresa_cidade_ano:?string,empresa_email:?string,funcionario_nome:string,funcionario_cpf:?string,funcionario_cargo:?string,funcionario_ctps:?string,dias:array}
+     * @return array{ano:int,mes:int,unidade_id:?int,empresa_nome:?string,empresa_endereco:?string,empresa_cep:?string,empresa_cnpj:?string,empresa_cidade_ano:?string,empresa_email:?string,funcionario_nome:string,funcionario_cpf:?string,funcionario_cargo:?string,funcionario_ctps:?string,dias:array}
      */
     private function validatedPayload(Request $request): array
     {
         $v = $request->validate([
             'ano' => 'required|integer|min:2000|max:2100',
             'mes' => 'required|integer|min:1|max:12',
+            'unidade_id' => 'nullable|integer|exists:unidades,id',
             'empresa_nome' => 'nullable|string|max:180',
             'empresa_endereco' => 'nullable|string|max:400',
             'empresa_cep' => 'nullable|string|max:40',
@@ -339,9 +359,14 @@ Cargo: ' . $cargo . ' &nbsp; CTPS: ' . $ctps . '
             ];
         }
 
+        $unidadeId = isset($v['unidade_id']) && $v['unidade_id'] !== null && $v['unidade_id'] !== ''
+            ? (int) $v['unidade_id']
+            : null;
+
         return [
             'ano' => $ano,
             'mes' => $mes,
+            'unidade_id' => $unidadeId,
             'empresa_nome' => $v['empresa_nome'] ?? null,
             'empresa_endereco' => $v['empresa_endereco'] ?? null,
             'empresa_cep' => $v['empresa_cep'] ?? null,

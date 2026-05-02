@@ -2043,6 +2043,7 @@
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Unidade</th>
                       <th>Período</th>
                       <th>Funcionário</th>
                       <th>CPF</th>
@@ -2051,7 +2052,7 @@
                     </tr>
                   </thead>
                   <tbody id="rhFpListaBody">
-                    <tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -2080,8 +2081,13 @@
                     <input type="text" id="rhFpEmpresaEmail" maxlength="180" placeholder="saborparaense.pvh@gmail.com" />
                   </label>
                 </div>
-                <p class="subtle-text">Funcionário e período</p>
+                <p class="subtle-text">Unidade e funcionário</p>
                 <div class="filters-grid" style="margin-bottom: 1rem;">
+                  <label>Unidade
+                    <select id="rhFpUnidade">
+                      <option value="">Todas as unidades</option>
+                    </select>
+                  </label>
                   <label>Preencher a partir do cadastro
                     <select id="rhFpPreencherFuncionario">
                       <option value="">— Manual —</option>
