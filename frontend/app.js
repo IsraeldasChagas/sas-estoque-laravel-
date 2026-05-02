@@ -7692,7 +7692,7 @@ function setupRhFolhaPontoHandlers() {
         const uniLinha = data.unidade_nome ? `<p><strong>Unidade:</strong> ${esc(data.unidade_nome)}</p>` : "";
         const html = `<div class="subtle-text" style="margin-bottom:0.75rem;">${head}</div>
           ${uniLinha}
-          <p><strong>Folha de Ponto — ${esc((mesesL[data.mes] || "") + "/" + data.ano)}</strong> · ${esc(data.empresa_nome || "")}</p>
+          <p><strong>Folha de Ponto — ${esc((mesesL[data.mes] || "") + "/" + data.ano)}</strong></p>
           <p><strong>${esc(data.funcionario_nome)}</strong> · CPF: ${esc(data.funcionario_cpf || "—")}<br/>Cargo: ${esc(data.funcionario_cargo || "—")} · CTPS: ${esc(data.funcionario_ctps || "—")}</p>
           <div class="table-wrapper"><table><thead><tr><th>Dia</th><th>Entrada</th><th>Início do intervalo</th><th>Fim do intervalo</th><th>Saída</th><th>Hora extra</th><th>Assinatura do empregado (a)</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         const box = document.getElementById("rhFpVerConteudo");
