@@ -6117,6 +6117,11 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     if ($funcionariosTableHasColumn('formacao_json') && ($request->exists('formacao_json') || array_key_exists('formacao_json', $data))) {
         $insert['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
+    if ($funcionariosTableHasColumn('ctps') && ($request->exists('ctps') || array_key_exists('ctps', $data))) {
+        $insert['ctps'] = isset($data['ctps']) && trim((string) $data['ctps']) !== ''
+            ? mb_substr(trim((string) $data['ctps']), 0, 80)
+            : null;
+    }
     if ($request->hasFile('foto')) {
         $foto = $request->file('foto');
         $uploadDir = public_path('uploads/funcionarios');
@@ -6258,6 +6263,11 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     if ($funcionariosTableHasColumn('formacao_json') && ($request->exists('formacao_json') || array_key_exists('formacao_json', $data))) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
     }
+    if ($funcionariosTableHasColumn('ctps') && ($request->exists('ctps') || array_key_exists('ctps', $data))) {
+        $update['ctps'] = isset($data['ctps']) && trim((string) $data['ctps']) !== ''
+            ? mb_substr(trim((string) $data['ctps']), 0, 80)
+            : null;
+    }
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {
             @unlink(public_path($existente->foto));
@@ -6337,6 +6347,11 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
     }
     if ($funcionariosTableHasColumn('formacao_json') && ($request->exists('formacao_json') || array_key_exists('formacao_json', $data))) {
         $update['formacao_json'] = $normalizeFuncionarioFormacaoJson($data);
+    }
+    if ($funcionariosTableHasColumn('ctps') && ($request->exists('ctps') || array_key_exists('ctps', $data))) {
+        $update['ctps'] = isset($data['ctps']) && trim((string) $data['ctps']) !== ''
+            ? mb_substr(trim((string) $data['ctps']), 0, 80)
+            : null;
     }
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {

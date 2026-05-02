@@ -11130,6 +11130,13 @@ function setupModals() {
         }
       }
     }
+    const ctpsE = String(enviado.ctps || "").trim();
+    const ctpsS = String(salvo.ctps != null ? salvo.ctps : "").trim();
+    if (ctpsE && ctpsS !== ctpsE) {
+      avisos.push(
+        "O CTPS não foi gravado: no banco precisa existir a coluna ctps (php artisan migrate --force ou ALTER TABLE).",
+      );
+    }
     return avisos;
   }
   function renderFuncionarioFormacaoViewHtml(f, esc, field) {
@@ -11214,7 +11221,7 @@ function setupModals() {
     funcionarioFotoRemovida = false;
     if (editId) {
       const f = await fetchJSON(`/funcionarios/${editId}`);
-      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix"].forEach(k => {
+      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix","ctps"].forEach(k => {
         const el = dom.funcionarioForm?.elements[k];
         if (el && f[k] != null) el.value = f[k] || "";
       });
@@ -11294,6 +11301,7 @@ function setupModals() {
             ${field("Unidade", f.unidade_nome)}
             ${field("Data de admissão", f.data_admissao)}
             ${field("Status", statusLabel)}
+            ${field("CTPS", f.ctps)}
           </div>
         </div>
         ${renderFuncionarioFormacaoViewHtml(f, esc, field)}
@@ -11692,6 +11700,7 @@ function setupModals() {
       conta: form.elements.conta?.value || null,
       conta_digito: form.elements.conta_digito?.value || null,
       pix: form.elements.pix?.value || null,
+      ctps: (form.elements.ctps?.value || "").trim() || null,
       escolaridade: form.elements.escolaridade?.value || null,
       possui_acesso: possuiAcesso,
     };
@@ -11727,6 +11736,7 @@ function setupModals() {
           conta: payload.conta,
           conta_digito: payload.conta_digito,
           pix: payload.pix,
+          ctps: payload.ctps ?? "",
           escolaridade: payload.escolaridade ?? "",
           formacao_json: formacaoJsonStr,
           // RH (Acesso ao sistema)
@@ -11759,6 +11769,7 @@ function setupModals() {
         fd.append("conta", payload.conta != null ? String(payload.conta) : "");
         fd.append("conta_digito", payload.conta_digito != null ? String(payload.conta_digito) : "");
         fd.append("pix", payload.pix != null ? String(payload.pix) : "");
+        fd.append("ctps", payload.ctps != null ? String(payload.ctps) : "");
         fd.append("escolaridade", payload.escolaridade != null ? String(payload.escolaridade) : "");
         fd.append("formacao_json", formacaoJsonStr);
         if (payload.possui_acesso) {
@@ -11781,6 +11792,7 @@ function setupModals() {
         conta: payload.conta,
         conta_digito: payload.conta_digito,
         pix: payload.pix,
+        ctps: payload.ctps,
       };
       const avisosRh = salvoFuncionario && typeof salvoFuncionario === "object" && !salvoFuncionario.error
         ? rhAvisosPersistenciaFuncionario(enviadoRh, salvoFuncionario)
