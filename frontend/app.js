@@ -13480,9 +13480,26 @@ function setupNavigation() {
       e.preventDefault();
       const id = Number(btnExcluir.dataset.id || "");
       if (!id) return;
-      if (!confirm("EXCLUIR vaga definitivamente?\n\nIsso vai apagar a vaga e TODOS os candidatos vinculados (com currículos, fotos, documentos, entrevistas e histórico).\n\nEssa ação NÃO pode ser desfeita.")) return;
+      if (!confirm("EXCLUIR vaga definitivamente?\n\nIsso pode apagar a vaga e TODOS os candidatos vinculados (com currículos, fotos, documentos, entrevistas e histórico).\n\nSe houver candidatos, o sistema vai pedir uma segunda confirmação.\n\nEssa ação NÃO pode ser desfeita.")) return;
       try {
-        await fetchJSON(`/rh/vagas/${id}`, { method: "DELETE" });
+        try {
+          await fetchJSON(`/rh/vagas/${id}`, { method: "DELETE", body: JSON.stringify({}) });
+        } catch (err) {
+          const d = err.responseData;
+          if (err.status === 422 && d?.requer_confirmacao === true && typeof d.candidatos_vinculados === "number") {
+            const n = d.candidatos_vinculados;
+            if (
+              !confirm(
+                `Esta vaga tem ${n} candidato(s) inscrito(s).\n\nEXCLUIR agora remove todos do sistema permanentemente.\n\nConfirme novamente para continuar (segunda etapa obrigatória).`
+              )
+            )
+              return;
+            await fetchJSON(`/rh/vagas/${id}`, {
+              method: "DELETE",
+              body: JSON.stringify({ confirmar_exclusao_candidatos: true }),
+            });
+          } else throw err;
+        }
         showToast("Vaga excluída definitivamente.", "success");
         await loadRhVagas({
           status: document.getElementById("rhVagasFiltroStatus")?.value || "",

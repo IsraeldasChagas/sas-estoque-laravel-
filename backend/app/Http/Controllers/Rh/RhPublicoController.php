@@ -11,6 +11,17 @@ use Illuminate\Validation\Rule;
 
 class RhPublicoController extends Controller
 {
+    private static function normalizarEmailCandidato(string $email): string
+    {
+        return strtolower(trim($email));
+    }
+
+    /** Só dígitos, para comparar telefone e evitar candidatura duplicada na mesma vaga. */
+    private static function normalizarTelefoneDigitos(?string $telefone): string
+    {
+        return (string) preg_replace('/\D+/', '', (string) $telefone);
+    }
+
     /** Municípios de RO — igual ao select da candidatura pública. */
     private static function cidadesRo(): array
     {
@@ -123,6 +134,13 @@ class RhPublicoController extends Controller
 
         $cidadesRo = self::cidadesRo();
 
+        // Limite anterior do PDF (5120 KB) + metade (2560 KB) = 7680 KB (~7,5 MB).
+        $maxCurriculoKb = 7680;
+        $maxFotoKb = 3072; // 2048 + metade (1024), menos erro por foto grande
+
+        $maxCvMb = round($maxCurriculoKb / 1024, 1);
+        $maxFotoMb = round($maxFotoKb / 1024, 1);
+
         $data = $request->validate([
             'vaga_ids' => 'nullable|array',
             'vaga_ids.*' => 'integer',
@@ -132,11 +150,32 @@ class RhPublicoController extends Controller
             'cidade' => ['required', 'string', 'max:120', Rule::in($cidadesRo)],
             'bairro' => 'required|string|max:120',
             'disponibilidade' => 'required|string|in:sim,nao',
-            'curriculo' => 'required|file|max:5120', // 5MB
-            'foto' => 'required|file|max:2048', // 2MB
+            'curriculo' => 'required|file|max:' . $maxCurriculoKb,
+            'foto' => 'required|file|max:' . $maxFotoKb,
             'lgpd' => 'accepted',
         ], [
+            'required' => 'Preencha o campo :attribute.',
+            'string' => 'O campo :attribute deve ser texto válido.',
+            'max.string' => 'O campo :attribute aceita no máximo :max caracteres.',
+            'email.email' => 'Digite um :attribute válido (exemplo: nome@email.com).',
+            'file' => 'O arquivo de :attribute não foi aceito. Envie um arquivo válido.',
+            'cidade.in' => 'Selecione uma cidade válida na lista.',
+            'disponibilidade.in' => 'Em disponibilidade, selecione Sim ou Não.',
+            'curriculo.required' => 'Anexe o currículo em PDF.',
+            'curriculo.max' => 'O PDF do currículo é grande demais. O tamanho máximo permitido é ' . $maxCvMb . ' MB. Diminua o arquivo: comprima o PDF, reduza imagens dentro do documento ou remova páginas desnecessárias e tente novamente.',
+            'foto.required' => 'Anexe sua foto.',
+            'foto.max' => 'A foto é grande demais. O tamanho máximo permitido é ' . $maxFotoMb . ' MB. Use uma foto em qualidade menor ou comprima a imagem (JPG) e tente novamente.',
             'lgpd.accepted' => 'Você precisa autorizar o uso dos seus dados para recrutamento e seleção.',
+        ], [
+            'nome' => 'nome completo',
+            'telefone' => 'WhatsApp',
+            'email' => 'e-mail',
+            'cidade' => 'cidade',
+            'bairro' => 'bairro',
+            'disponibilidade' => 'disponibilidade',
+            'curriculo' => 'currículo (PDF)',
+            'foto' => 'foto',
+            'lgpd' => 'autorização de dados',
         ]);
 
         $vagaIds = $data['vaga_ids'] ?? null;
@@ -154,22 +193,70 @@ class RhPublicoController extends Controller
             return back()->withErrors(['vaga_ids' => 'Selecione apenas vagas abertas.'])->withInput();
         }
 
+        $emailNorm = self::normalizarEmailCandidato($data['email']);
+        $telDigitos = self::normalizarTelefoneDigitos($data['telefone'] ?? '');
+
+        $existentesMesmasVagas = DB::table('rh_candidatos')
+            ->whereIn('vaga_id', $vagaIds)
+            ->get(['vaga_id', 'email', 'telefone']);
+
+        $jaInscritoTitulos = [];
+        $vagasParaInserir = [];
+        foreach ($vagasEscolhidas as $ve) {
+            $vid = (int) $ve->id;
+            $duplicado = false;
+            foreach ($existentesMesmasVagas as $row) {
+                if ((int) $row->vaga_id !== $vid) {
+                    continue;
+                }
+                $e = self::normalizarEmailCandidato((string) ($row->email ?? ''));
+                $telRow = self::normalizarTelefoneDigitos($row->telefone ?? null);
+                $mesmoEmail = $e !== '' && $e === $emailNorm;
+                $mesmoTel = $telDigitos !== '' && $telRow !== '' && $telRow === $telDigitos;
+                if ($mesmoEmail || $mesmoTel) {
+                    $duplicado = true;
+                    break;
+                }
+            }
+            if ($duplicado) {
+                $jaInscritoTitulos[] = (string) ($ve->titulo ?? 'Vaga #' . $ve->id);
+            } else {
+                $vagasParaInserir[] = $ve;
+            }
+        }
+
+        if ($vagasParaInserir === []) {
+            $lista = implode(', ', array_unique($jaInscritoTitulos));
+
+            return back()->withErrors([
+                'duplicate' => 'Você já se candidatou a esta(s) vaga(s) com o mesmo e-mail ou telefone: ' . $lista . '. Em outras vagas diferentes você pode se inscrever.',
+            ])->withInput();
+        }
+
         $curriculo = $request->file('curriculo');
         if (! $curriculo || ! $curriculo->isValid()) {
-            return back()->withErrors(['curriculo' => 'Currículo inválido.'])->withInput();
+            return back()->withErrors([
+                'curriculo' => 'Não foi possível aceitar o arquivo do currículo. Confira se é PDF, se não está corrompido e se o tamanho é no máximo ' . $maxCvMb . ' MB (comprima o PDF se precisar).',
+            ])->withInput();
         }
         $cvMime = $curriculo->getMimeType() ?: '';
         if (! in_array($cvMime, ['application/pdf'], true)) {
-            return back()->withErrors(['curriculo' => 'Envie o currículo em PDF.'])->withInput();
+            return back()->withErrors([
+                'curriculo' => 'O currículo precisa estar em formato PDF. Converta o arquivo e envie novamente.',
+            ])->withInput();
         }
 
         $foto = $request->file('foto');
         if (! $foto || ! $foto->isValid()) {
-            return back()->withErrors(['foto' => 'Foto inválida.'])->withInput();
+            return back()->withErrors([
+                'foto' => 'Não foi possível aceitar a foto. Confira se é JPG ou PNG e se o tamanho é no máximo ' . $maxFotoMb . ' MB.',
+            ])->withInput();
         }
         $fotoMime = $foto->getMimeType() ?: '';
         if (! in_array($fotoMime, ['image/jpeg', 'image/png'], true)) {
-            return back()->withErrors(['foto' => 'Foto deve ser JPG ou PNG.'])->withInput();
+            return back()->withErrors([
+                'foto' => 'A foto deve ser JPG ou PNG. Envie outro arquivo.',
+            ])->withInput();
         }
 
         $origCvName = $curriculo->getClientOriginalName();
@@ -178,19 +265,23 @@ class RhPublicoController extends Controller
         // Lê os arquivos uma vez para replicar por vaga (uma candidatura por vaga marcada).
         $cvBytes = file_get_contents($curriculo->getRealPath());
         if ($cvBytes === false) {
-            return back()->withErrors(['curriculo' => 'Não foi possível ler o currículo.'])->withInput();
+            return back()->withErrors([
+                'curriculo' => 'Não foi possível ler o PDF. Tente outro arquivo ou comprima o currículo e envie de novo.',
+            ])->withInput();
         }
         $fotoBytes = file_get_contents($foto->getRealPath());
         if ($fotoBytes === false) {
-            return back()->withErrors(['foto' => 'Não foi possível ler a foto.'])->withInput();
+            return back()->withErrors([
+                'foto' => 'Não foi possível ler a foto. Escolha outra imagem e tente novamente.',
+            ])->withInput();
         }
 
-        foreach ($vagasEscolhidas as $vagaEscolhida) {
+        foreach ($vagasParaInserir as $vagaEscolhida) {
             $candidatoId = DB::table('rh_candidatos')->insertGetId([
                 'vaga_id' => $vagaEscolhida->id,
                 'nome' => $data['nome'],
                 'telefone' => $data['telefone'] ?? null,
-                'email' => $data['email'] ?? null,
+                'email' => $emailNorm,
                 'cidade' => $data['cidade'] ?? null,
                 'bairro' => $data['bairro'] ?? null,
                 'disponibilidade' => $data['disponibilidade'] ?? null,
@@ -225,7 +316,15 @@ class RhPublicoController extends Controller
                 ]);
         }
 
-        return redirect()->to("/vagas/{$slug}?ok=1");
+        $redirect = redirect()->to("/vagas/{$slug}?ok=1");
+        if ($jaInscritoTitulos !== []) {
+            $redirect->with(
+                'candidatura_parcial',
+                'Você já tinha candidatura com este e-mail ou telefone em: ' . implode(', ', array_unique($jaInscritoTitulos)) . '. As demais vagas selecionadas foram registradas.'
+            );
+        }
+
+        return $redirect;
     }
 
     /**

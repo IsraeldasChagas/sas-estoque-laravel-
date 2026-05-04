@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
 use App\Support\Rh\RhAcesso;
+use App\Support\Rh\RhAuditoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -334,6 +335,20 @@ class RhCandidatoController extends Controller
             DB::table('rh_curriculos')->where('candidato_id', $id)->delete();
             DB::table('rh_candidatos')->where('id', $id)->delete();
         });
+
+        $uid = $request->header('X-Usuario-Id') ? (int) $request->header('X-Usuario-Id') : null;
+        RhAuditoria::registrar(
+            'candidato_excluido',
+            'candidato',
+            $id,
+            $uid,
+            $request->ip(),
+            [
+                'nome' => $c->nome ?? null,
+                'vaga_id' => $c->vaga_id ?? null,
+                'status' => $c->status ?? null,
+            ]
+        );
 
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     }

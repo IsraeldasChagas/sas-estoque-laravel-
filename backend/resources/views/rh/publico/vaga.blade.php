@@ -87,6 +87,12 @@
         </div>
     @endif
 
+    @if(session('candidatura_parcial'))
+        <div class="alert alert-warning">
+            {{ session('candidatura_parcial') }}
+        </div>
+    @endif
+
     @if ($errors->any())
         <div class="alert alert-danger">
             <div class="fw-semibold mb-2">Verifique os campos e tente novamente.</div>
@@ -259,11 +265,12 @@
                 <div class="col-md-8">
                     <label class="form-label">Currículo (PDF) <span class="text-danger">*</span></label>
                     <input type="file" name="curriculo" class="form-control" accept="application/pdf" required />
-                    <div class="form-text">Não envie CPF/RG/CTPS na candidatura. Documentos só após aprovação.</div>
+                    <div class="form-text">Tamanho máximo do PDF: <strong>7,5 MB</strong>. Se der erro, comprima o arquivo antes de enviar. Não envie CPF/RG/CTPS na candidatura (documentos só após aprovação).</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Foto <span class="text-danger">*</span></label>
                     <input type="file" name="foto" class="form-control" accept="image/jpeg,image/png" required />
+                    <div class="form-text">JPG ou PNG, até <strong>3 MB</strong>. Se necessário, reduza a qualidade da foto.</div>
                 </div>
 
                 <div class="col-12">

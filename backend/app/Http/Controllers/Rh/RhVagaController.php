@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
 use App\Support\Rh\RhAcesso;
+use App\Support\Rh\RhAuditoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -118,6 +119,15 @@ class RhVagaController extends Controller
             return response()->json(['error' => 'Vaga não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
         }
 
+        $nCandidatos = DB::table('rh_candidatos')->where('vaga_id', $id)->count();
+        if ($nCandidatos > 0 && ! $request->boolean('confirmar_exclusao_candidatos')) {
+            return response()->json([
+                'error' => 'Esta vaga possui candidatos inscritos. É preciso confirmar de novo no sistema para apagar a vaga e todos os candidatos vinculados.',
+                'candidatos_vinculados' => $nCandidatos,
+                'requer_confirmacao' => true,
+            ], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
         $disk = Storage::disk('public');
 
         // Coleta candidatos e arquivos relacionados para apagar do storage.
@@ -154,6 +164,20 @@ class RhVagaController extends Controller
 
             DB::table('rh_vagas')->where('id', $id)->delete();
         });
+
+        $uid = $request->header('X-Usuario-Id') ? (int) $request->header('X-Usuario-Id') : null;
+        RhAuditoria::registrar(
+            'vaga_excluida',
+            'vaga',
+            $id,
+            $uid,
+            $request->ip(),
+            [
+                'titulo' => $vaga->titulo ?? null,
+                'slug' => $vaga->slug ?? null,
+                'candidatos_removidos' => count($candidatos),
+            ]
+        );
 
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     }

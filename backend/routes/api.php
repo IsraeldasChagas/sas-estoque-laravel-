@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\RhRecruitmentMergeController;
 use App\Http\Controllers\Api\EntradaEstoqueController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhCandidatoController;
@@ -5422,15 +5423,22 @@ Route::post('/admin/backup', function (Request $request) {
 
     try {
         $snapshot = [
-            'versao'     => '1.1',
+            'versao'     => '1.2',
             'gerado_em'  => now()->toIso8601String(),
             'tabelas'    => [
                 'produtos'              => DB::table('produtos')->get()->toArray(),
                 'unidades'              => DB::table('unidades')->get()->toArray(),
                 'locais'                => DB::table('locais')->get()->toArray(),
                 'usuarios'              => DB::table('usuarios')->get()->toArray(),
-                // RH
+                // RH (funcionários)
                 'funcionarios'          => Schema::hasTable('funcionarios') ? DB::table('funcionarios')->get()->toArray() : [],
+                // Recrutamento (vagas + candidatos e vínculos; usado em backup/restore e merge)
+                'rh_vagas'              => Schema::hasTable('rh_vagas') ? DB::table('rh_vagas')->get()->toArray() : [],
+                'rh_candidatos'         => Schema::hasTable('rh_candidatos') ? DB::table('rh_candidatos')->get()->toArray() : [],
+                'rh_curriculos'         => Schema::hasTable('rh_curriculos') ? DB::table('rh_curriculos')->get()->toArray() : [],
+                'rh_entrevistas'        => Schema::hasTable('rh_entrevistas') ? DB::table('rh_entrevistas')->get()->toArray() : [],
+                'rh_documentos'         => Schema::hasTable('rh_documentos') ? DB::table('rh_documentos')->get()->toArray() : [],
+                'rh_historico'          => Schema::hasTable('rh_historico') ? DB::table('rh_historico')->get()->toArray() : [],
                 'lotes'                 => DB::table('lotes')->get()->toArray(),
                 'stock_lotes'           => DB::table('stock_lotes')->get()->toArray(),
                 'movimentacoes'         => DB::table('movimentacoes')->get()->toArray(),
@@ -5673,12 +5681,13 @@ Route::post('/admin/restaurar', function (Request $request) {
             return response()->json(['error' => 'Arquivo de backup corrompido.'], 400);
         }
 
-        // Ordem respeitando dependências
+        // Ordem respeitando dependências (recrutamento: vagas antes de candidatos; filhos após candidatos)
         $ordem = [
             'unidades', 'locais', 'usuarios', 'funcionarios', 'produtos',
             'lotes', 'stock_lotes', 'movimentacoes',
             'listas_compras', 'listas_itens',
             'boletos', 'estabelecimentos_compra',
+            'rh_vagas', 'rh_candidatos', 'rh_curriculos', 'rh_entrevistas', 'rh_documentos', 'rh_historico',
         ];
 
         $restaurados = [];
@@ -5741,6 +5750,75 @@ Route::post('/admin/restaurar', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
 });
+
+// Reintegrar só registros de RH (recrutamento) que faltam no banco, a partir de um backup JSON (merge por id).
+// Útil para trazer de volta candidatos apagados se o arquivo de backup for anterior à exclusão.
+// Requer que o JSON contenha as chaves rh_* (backups gerados com versão >= 1.2).
+Route::post('/admin/restaurar-rh-merge', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem executar merge de RH.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $chave = $request->input('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $arquivo = $request->input('arquivo');
+    if (! preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/', (string) $arquivo)) {
+        return response()->json(['error' => 'Arquivo inválido.'], 400)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $caminho = storage_path('app/backups/' . $arquivo);
+    if (! file_exists($caminho)) {
+        return response()->json(['error' => 'Backup não encontrado.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    try {
+        $snapshot = json_decode(file_get_contents($caminho), true);
+        if (! isset($snapshot['tabelas']) || ! is_array($snapshot['tabelas'])) {
+            return response()->json(['error' => 'Arquivo de backup corrompido.'], 400)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $temRh = isset($snapshot['tabelas']['rh_candidatos']) || isset($snapshot['tabelas']['rh_vagas']);
+        if (! $temRh) {
+            return response()->json([
+                'error' => 'Este arquivo não contém dados de recrutamento (rh_*). Gere um backup novo (versão 1.2+) ou use um dump MySQL do provedor.',
+                'inseridos' => [],
+            ], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $inseridos = RhRecruitmentMergeController::mergeFromSnapshot($snapshot);
+
+        \Log::warning('ADMIN restaurar-rh-merge executado', [
+            'usuario_id' => (int) $userId,
+            'ip' => $request->ip(),
+            'arquivo' => $arquivo,
+            'inseridos' => $inseridos,
+        ]);
+
+        return response()->json([
+            'sucesso' => true,
+            'mensagem' => 'Merge concluído: foram inseridas apenas linhas cujo id ainda não existia.',
+            'arquivo' => $arquivo,
+            'inseridos' => $inseridos,
+        ])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Throwable $e) {
+        return response()->json(['error' => 'Erro no merge: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::options('/admin/restaurar-rh-merge', fn () => response('', 204)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 Route::options('/admin/backups/{arquivo}', fn() => response('', 204)
     ->header('Access-Control-Allow-Origin', '*')
