@@ -104,6 +104,8 @@
         </div>
     @endif
 
+    <div id="candidatura-erros-ajax" class="alert alert-danger d-none" role="alert"></div>
+
     <div class="card mb-4">
         <div class="card-body">
             <h2 class="h5">Descrição</h2>
@@ -137,7 +139,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
+            <form id="formCandidaturaRh" method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
                 @csrf
                 @php
                     $disabled = (!empty($vagaBloqueada) && $vagaBloqueada);
@@ -283,13 +285,108 @@
                 </div>
 
                 <div class="col-12">
-                    <button class="btn btn-primary" {{ $disabled ? 'disabled="disabled"' : '' }}>Enviar candidatura</button>
+                    <button type="submit" id="btnCandidaturaRh" class="btn btn-primary" {{ $disabled ? 'disabled="disabled"' : '' }}>Enviar candidatura</button>
                 </div>
                 </fieldset>
             </form>
         </div>
     </div>
 </main>
+<script>
+(function () {
+    var avisoKey = "rhCandidaturaAvisoParcial";
+    var form = document.getElementById("formCandidaturaRh");
+    var btn = document.getElementById("btnCandidaturaRh");
+    var boxAjax = document.getElementById("candidatura-erros-ajax");
+    if (!form || !btn || form.hasAttribute("data-rh-async-bound")) return;
+    form.setAttribute("data-rh-async-bound", "1");
+    form.addEventListener("submit", function (e) {
+        if (btn.disabled) return;
+        e.preventDefault();
+        if (boxAjax) {
+            boxAjax.classList.add("d-none");
+            boxAjax.innerHTML = "";
+        }
+        btn.disabled = true;
+        var txt = btn.textContent;
+        btn.textContent = "Enviando...";
+        var fd = new FormData(form);
+        fetch(form.action, {
+            method: "POST",
+            body: fd,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json"
+            },
+            credentials: "same-origin"
+        })
+            .then(function (res) {
+                var ct = res.headers.get("Content-Type") || "";
+                if (res.status === 422 && ct.indexOf("application/json") !== -1) {
+                    return res.json().then(function (data) {
+                        var errs = data.errors || {};
+                        var lines = [];
+                        Object.keys(errs).forEach(function (k) {
+                            var v = errs[k];
+                            if (Array.isArray(v)) v.forEach(function (x) { lines.push(x); });
+                            else if (v) lines.push(String(v));
+                        });
+                        if (lines.length === 0 && data.message) lines.push(data.message);
+                        if (boxAjax) {
+                            boxAjax.innerHTML = "<div class=\"fw-semibold mb-2\">Não foi possível enviar. Corrija e tente de novo.</div><ul class=\"mb-0\">" +
+                                lines.map(function (t) { return "<li>" + String(t).replace(/</g, "&lt;") + "</li>"; }).join("") + "</ul>";
+                            boxAjax.classList.remove("d-none");
+                            boxAjax.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        }
+                    });
+                }
+                if (res.ok && ct.indexOf("application/json") !== -1) {
+                    return res.json().then(function (data) {
+                        if (data.ok && data.redirect) {
+                            try {
+                                if (data.aviso_parcial) sessionStorage.setItem(avisoKey, data.aviso_parcial);
+                                else sessionStorage.removeItem(avisoKey);
+                            } catch (_) {}
+                            window.location.href = data.redirect;
+                            return;
+                        }
+                    });
+                }
+                if (res.ok && res.redirected && res.url) {
+                    window.location.href = res.url;
+                    return;
+                }
+                form.submit();
+            })
+            .catch(function () {
+                try {
+                    form.submit();
+                } catch (_) {
+                    window.location.reload();
+                }
+            })
+            .finally(function () {
+                btn.disabled = false;
+                btn.textContent = txt;
+            });
+    });
+    try {
+        var u = new URL(window.location.href);
+        if (u.searchParams.get("ok") === "1") {
+            var msg = sessionStorage.getItem(avisoKey);
+            if (msg) {
+                sessionStorage.removeItem(avisoKey);
+                var w = document.createElement("div");
+                w.className = "alert alert-warning";
+                w.setAttribute("role", "alert");
+                w.textContent = msg;
+                var okEl = document.querySelector(".alert.alert-success");
+                if (okEl && okEl.parentNode) okEl.parentNode.insertBefore(w, okEl.nextSibling);
+            }
+        }
+    } catch (_) {}
+})();
+</script>
 </body>
 </html>
 

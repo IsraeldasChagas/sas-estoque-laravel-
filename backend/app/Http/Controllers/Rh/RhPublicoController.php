@@ -81,6 +81,32 @@ class RhPublicoController extends Controller
         ];
     }
 
+    private function candidaturaQuerRespostaJson(Request $request): bool
+    {
+        return $request->ajax()
+            || $request->wantsJson()
+            || $request->expectsJson();
+    }
+
+    /**
+     * Erros da candidatura pública: JSON para envio via fetch, senão redirect com flash.
+     *
+     * @param  array<string, string|array<int, string>>  $errors
+     */
+    private function candidatarErro(Request $request, array $errors)
+    {
+        if ($this->candidaturaQuerRespostaJson($request)) {
+            $flat = collect($errors)->map(fn ($v) => is_array($v) ? $v : [$v])->flatten()->filter()->values()->all();
+
+            return response()->json([
+                'message' => $flat[0] ?? 'Não foi possível enviar a candidatura.',
+                'errors' => collect($errors)->map(fn ($v) => is_array($v) ? $v : [$v])->all(),
+            ], 422);
+        }
+
+        return back()->withErrors($errors)->withInput();
+    }
+
     public function indexVagas()
     {
         $vagas = DB::table('rh_vagas')
@@ -129,7 +155,7 @@ class RhPublicoController extends Controller
     {
         $vaga = DB::table('rh_vagas')->where('slug', $slug)->first();
         if (! $vaga || $vaga->status !== 'aberta') {
-            return back()->withErrors(['vaga' => 'Vaga indisponível.'])->withInput();
+            return $this->candidatarErro($request, ['vaga' => 'Vaga indisponível no momento.']);
         }
 
         $cidadesRo = self::cidadesRo();
@@ -190,7 +216,7 @@ class RhPublicoController extends Controller
             ->where('status', 'aberta')
             ->get();
         if (count($vagasEscolhidas) !== count($vagaIds)) {
-            return back()->withErrors(['vaga_ids' => 'Selecione apenas vagas abertas.'])->withInput();
+            return $this->candidatarErro($request, ['vaga_ids' => 'Selecione apenas vagas abertas.']);
         }
 
         $emailNorm = self::normalizarEmailCandidato($data['email']);
@@ -228,35 +254,35 @@ class RhPublicoController extends Controller
         if ($vagasParaInserir === []) {
             $lista = implode(', ', array_unique($jaInscritoTitulos));
 
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'duplicate' => 'Você já se candidatou a esta(s) vaga(s) com o mesmo e-mail ou telefone: ' . $lista . '. Em outras vagas diferentes você pode se inscrever.',
-            ])->withInput();
+            ]);
         }
 
         $curriculo = $request->file('curriculo');
         if (! $curriculo || ! $curriculo->isValid()) {
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'curriculo' => 'Não foi possível aceitar o arquivo do currículo. Confira se é PDF, se não está corrompido e se o tamanho é no máximo ' . $maxCvMb . ' MB (comprima o PDF se precisar).',
-            ])->withInput();
+            ]);
         }
         $cvMime = $curriculo->getMimeType() ?: '';
         if (! in_array($cvMime, ['application/pdf'], true)) {
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'curriculo' => 'O currículo precisa estar em formato PDF. Converta o arquivo e envie novamente.',
-            ])->withInput();
+            ]);
         }
 
         $foto = $request->file('foto');
         if (! $foto || ! $foto->isValid()) {
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'foto' => 'Não foi possível aceitar a foto. Confira se é JPG ou PNG e se o tamanho é no máximo ' . $maxFotoMb . ' MB.',
-            ])->withInput();
+            ]);
         }
         $fotoMime = $foto->getMimeType() ?: '';
         if (! in_array($fotoMime, ['image/jpeg', 'image/png'], true)) {
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'foto' => 'A foto deve ser JPG ou PNG. Envie outro arquivo.',
-            ])->withInput();
+            ]);
         }
 
         $origCvName = $curriculo->getClientOriginalName();
@@ -265,15 +291,15 @@ class RhPublicoController extends Controller
         // Lê os arquivos uma vez para replicar por vaga (uma candidatura por vaga marcada).
         $cvBytes = file_get_contents($curriculo->getRealPath());
         if ($cvBytes === false) {
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'curriculo' => 'Não foi possível ler o PDF. Tente outro arquivo ou comprima o currículo e envie de novo.',
-            ])->withInput();
+            ]);
         }
         $fotoBytes = file_get_contents($foto->getRealPath());
         if ($fotoBytes === false) {
-            return back()->withErrors([
+            return $this->candidatarErro($request, [
                 'foto' => 'Não foi possível ler a foto. Escolha outra imagem e tente novamente.',
-            ])->withInput();
+            ]);
         }
 
         foreach ($vagasParaInserir as $vagaEscolhida) {
@@ -314,6 +340,19 @@ class RhPublicoController extends Controller
                     'foto_path' => $fotoPath,
                     'updated_at' => now(),
                 ]);
+        }
+
+        if ($this->candidaturaQuerRespostaJson($request)) {
+            $aviso = null;
+            if ($jaInscritoTitulos !== []) {
+                $aviso = 'Você já tinha candidatura com este e-mail ou telefone em: ' . implode(', ', array_unique($jaInscritoTitulos)) . '. As demais vagas selecionadas foram registradas.';
+            }
+
+            return response()->json([
+                'ok' => true,
+                'redirect' => url("/vagas/{$slug}?ok=1"),
+                'aviso_parcial' => $aviso,
+            ]);
         }
 
         $redirect = redirect()->to("/vagas/{$slug}?ok=1");

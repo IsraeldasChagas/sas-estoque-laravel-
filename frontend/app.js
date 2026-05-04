@@ -8042,12 +8042,14 @@ function renderRhVagas(lista) {
   }).join("");
 }
 
-async function loadRhCandidatos(filtros = {}) {
+async function loadRhCandidatos(filtros = {}, opts = {}) {
   const qs = new URLSearchParams();
   ["status", "nome", "email", "telefone"].forEach((k) => {
     if (filtros[k]) qs.append(k, filtros[k]);
   });
-  const path = `/rh/candidatos${qs.toString() ? `?${qs}` : ""}`;
+  if (opts.bustCache) qs.append("_t", String(Date.now()));
+  const q = qs.toString();
+  const path = `/rh/candidatos${q ? `?${q}` : ""}`;
   const lista = await fetchJSON(path);
   renderRhCandidatos(Array.isArray(lista) ? lista : []);
 }
@@ -13709,27 +13711,28 @@ function setupNavigation() {
         });
         detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
           if (!confirm("EXCLUIR candidato definitivamente?\n\nIsso vai apagar TUDO: dados, entrevistas, histórico, currículo, documentos e arquivos.\n\nEssa ação NÃO pode ser desfeita.")) return;
-          // Linha da listagem (não o <tr> do painel expandido — esse também tinha data-id e quebrava o querySelector).
-          let mainCandRow = detailsTr.previousElementSibling;
-          if (!mainCandRow || mainCandRow.tagName !== "TR" || mainCandRow.getAttribute("data-rh-candidato-inline") === "1") {
-            mainCandRow = document.getElementById("rhCandidatosTable")?.querySelector(
-              `tr[data-id="${String(id)}"]:not([data-rh-candidato-inline="1"])`
-            );
-          }
+          const tbCand = document.getElementById("rhCandidatosTable");
+          const mainCandRow = tbCand?.querySelector(
+            `tr[data-id="${String(id)}"]:not([data-rh-candidato-inline="1"])`
+          );
+          closeRhCandidatoInlineRow();
+          rhCandidatoInlineOpenId = null;
+          mainCandRow?.remove();
+          showToast("Candidato excluído definitivamente.", "success");
+          const filtrosCand = {
+            status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+            nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+            email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
+            telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+          };
           try {
             await fetchJSON(`/rh/candidatos/${id}`, { method: "DELETE" });
-            showToast("Candidato excluído definitivamente.", "success");
-            closeRhCandidatoInlineRow();
-            mainCandRow?.remove();
-            await loadRhCandidatos({
-              status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
-              nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-              email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
-              telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
-            });
           } catch (err) {
-            showToast(err?.message || "Erro ao excluir.", "error");
+            showToast(err?.message || "Erro ao excluir no servidor.", "error");
           }
+          try {
+            await loadRhCandidatos(filtrosCand, { bustCache: true });
+          } catch (_) {}
         });
       } catch (err) {
         rhCandidatoInlineOpenId = null;
