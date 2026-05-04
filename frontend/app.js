@@ -13615,7 +13615,6 @@ function setupNavigation() {
 
         const detailsTr = document.createElement("tr");
         detailsTr.dataset.rhCandidatoInline = "1";
-        detailsTr.dataset.id = String(id);
         detailsTr.innerHTML = html;
         tr.insertAdjacentElement("afterend", detailsTr);
 
@@ -13710,19 +13709,24 @@ function setupNavigation() {
         });
         detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
           if (!confirm("EXCLUIR candidato definitivamente?\n\nIsso vai apagar TUDO: dados, entrevistas, histórico, currículo, documentos e arquivos.\n\nEssa ação NÃO pode ser desfeita.")) return;
+          // Linha da listagem (não o <tr> do painel expandido — esse também tinha data-id e quebrava o querySelector).
+          let mainCandRow = detailsTr.previousElementSibling;
+          if (!mainCandRow || mainCandRow.tagName !== "TR" || mainCandRow.getAttribute("data-rh-candidato-inline") === "1") {
+            mainCandRow = document.getElementById("rhCandidatosTable")?.querySelector(
+              `tr[data-id="${String(id)}"]:not([data-rh-candidato-inline="1"])`
+            );
+          }
           try {
             await fetchJSON(`/rh/candidatos/${id}`, { method: "DELETE" });
             showToast("Candidato excluído definitivamente.", "success");
             closeRhCandidatoInlineRow();
-            const tbCand = document.getElementById("rhCandidatosTable");
-            const rowRem = tbCand?.querySelector(`tr[data-id="${id}"]`);
-            if (rowRem) rowRem.remove();
-            void loadRhCandidatos({
+            mainCandRow?.remove();
+            await loadRhCandidatos({
               status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
               nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
               email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
               telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
-            }).catch(() => {});
+            });
           } catch (err) {
             showToast(err?.message || "Erro ao excluir.", "error");
           }
