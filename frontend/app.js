@@ -13714,7 +13714,15 @@ function setupNavigation() {
             await fetchJSON(`/rh/candidatos/${id}`, { method: "DELETE" });
             showToast("Candidato excluído definitivamente.", "success");
             closeRhCandidatoInlineRow();
-            await loadRhCandidatos();
+            const tbCand = document.getElementById("rhCandidatosTable");
+            const rowRem = tbCand?.querySelector(`tr[data-id="${id}"]`);
+            if (rowRem) rowRem.remove();
+            void loadRhCandidatos({
+              status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+              nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+              email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
+              telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+            }).catch(() => {});
           } catch (err) {
             showToast(err?.message || "Erro ao excluir.", "error");
           }

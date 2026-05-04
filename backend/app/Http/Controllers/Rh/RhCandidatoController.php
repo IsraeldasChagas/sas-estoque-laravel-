@@ -324,9 +324,6 @@ class RhCandidatoController extends Controller
 
         // Apaga arquivos (best effort).
         $paths = array_values(array_unique(array_filter($paths, fn ($p) => is_string($p) && trim($p) !== '')));
-        foreach ($paths as $p) {
-            try { $disk->delete($p); } catch (\Throwable $_) {}
-        }
 
         DB::transaction(function () use ($id) {
             DB::table('rh_historico')->where('candidato_id', $id)->delete();
@@ -349,6 +346,17 @@ class RhCandidatoController extends Controller
                 'status' => $c->status ?? null,
             ]
         );
+
+        // Remove arquivos depois que a resposta JSON já foi enviada — a UI some na hora; I/O no disco não trava o usuário.
+        $pathsToDelete = $paths;
+        app()->terminating(function () use ($disk, $pathsToDelete) {
+            foreach ($pathsToDelete as $p) {
+                try {
+                    $disk->delete($p);
+                } catch (\Throwable $_) {
+                }
+            }
+        });
 
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     }
