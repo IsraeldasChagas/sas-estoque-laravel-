@@ -5572,11 +5572,11 @@ Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) {
         return response()->json(['error' => 'Backup não encontrado.'], 404);
     }
 
-        return response()->download($caminho, $arquivo, ['Content-Type' => 'application/json']);
+    return response()->download($caminho, $arquivo, ['Content-Type' => 'application/json']);
 });
 
-// Excluir um backup (ADMIN — não apaga mais antigos automaticamente no POST /admin/backup)
-Route::delete('/admin/backups/{arquivo}', function (Request $request, $arquivo) {
+// Excluir um backup (ADMIN). DELETE + POST /excluir: algumas hospedagens bloqueiam DELETE; o front usa POST.
+$excluirBackupAdminJson = static function (Request $request, string $arquivo) {
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5597,7 +5597,10 @@ Route::delete('/admin/backups/{arquivo}', function (Request $request, $arquivo) 
         return response()->json(['error' => 'Backup não encontrado.'], 404)
             ->header('Access-Control-Allow-Origin', '*');
     }
-    unlink($caminho);
+    if (! @unlink($caminho)) {
+        return response()->json(['error' => 'Não foi possível excluir (permissão na pasta storage/app/backups).'], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
     \Log::info('ADMIN backup excluído', [
         'usuario_id' => (int) $userId,
         'ip' => $request->ip(),
@@ -5608,7 +5611,13 @@ Route::delete('/admin/backups/{arquivo}', function (Request $request, $arquivo) 
         'sucesso' => true,
         'mensagem' => 'Backup removido.',
     ])->header('Access-Control-Allow-Origin', '*');
-});
+};
+Route::delete('/admin/backups/{arquivo}', $excluirBackupAdminJson);
+Route::post('/admin/backups/{arquivo}/excluir', $excluirBackupAdminJson);
+Route::options('/admin/backups/{arquivo}/excluir', fn() => response('', 204)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 // Restaurar a partir de um backup
 Route::post('/admin/restaurar', function (Request $request) {

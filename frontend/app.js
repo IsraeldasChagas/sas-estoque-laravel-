@@ -2254,14 +2254,17 @@ async function excluirBackupArquivo(arquivo) {
     return;
   }
   try {
+    // POST /excluir: várias hospedagens bloqueiam HTTP DELETE no Apache/nginx
     const res = await fetch(
-      `${API_URL}/admin/backups/${encodeURIComponent(arquivo)}?chave=${encodeURIComponent('BACKUP-SABORPARAENSE-2026')}`,
+      `${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/excluir`,
       {
-        method: 'DELETE',
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
           ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
         },
+        body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026' }),
       }
     );
     const data = await res.json().catch(() => null);
