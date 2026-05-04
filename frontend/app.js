@@ -2122,6 +2122,26 @@ function abrirBackupModal() {
   const modal = document.getElementById('backupModal');
   if (!modal) return;
   modal.style.display = 'flex';
+
+  // Excluir: sem onclick inline (CSP / escopo). Registrar antes de montar a lista.
+  if (!modal._delegacaoBackupExcluir) {
+    modal._delegacaoBackupExcluir = true;
+    modal.addEventListener('click', (e) => {
+      const btn = e.target.closest('button.js-excluir-backup');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const enc = btn.getAttribute('data-arquivo');
+      if (!enc) return;
+      try {
+        excluirBackupArquivo(decodeURIComponent(enc));
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao iniciar exclusão: ' + (err && err.message ? err.message : String(err)));
+      }
+    });
+  }
+
   carregarListaBackups();
 
   const btnGerar = document.getElementById('btnGerarBackup');
@@ -2235,7 +2255,7 @@ async function carregarListaBackups() {
             style="padding:0.4rem 0.8rem;background:#e65100;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
             🔄 Restaurar
           </button>
-          <button type="button" onclick="excluirBackupArquivo(${JSON.stringify(b.arquivo)})"
+          <button type="button" class="js-excluir-backup" data-arquivo="${encodeURIComponent(b.arquivo)}"
             style="padding:0.4rem 0.8rem;background:#c62828;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
             🗑 Excluir
           </button>
@@ -2253,27 +2273,41 @@ async function excluirBackupArquivo(arquivo) {
   if (!arquivo || !confirm('Remover este backup do servidor?\n\n' + arquivo + '\n\nNão dá para desfazer.')) {
     return;
   }
+  if (currentUser?.id == null) {
+    alert('❌ Sessão sem usuário. Faça login de novo (precisa ser ADMIN).');
+    return;
+  }
   try {
-    // Sem ".json" na URL — Apache/nginx costumam interceptar e não chega no Laravel
     const res = await fetch(`${API_URL}/admin/backups/excluir`, {
       method: 'POST',
       headers: {
+        Accept: 'application/json',
         'Content-Type': 'application/json',
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
       },
       body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026', arquivo }),
     });
-    const data = await res.json().catch(() => null);
+    const raw = await res.text();
+    let data = null;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      data = null;
+    }
     if (res.ok && data?.sucesso) {
       carregarListaBackups();
     } else {
-      alert('❌ Não foi possível excluir: ' + (data?.error || ('HTTP ' + res.status)));
+      const detalhe = (data && data.error) || raw.slice(0, 200) || ('HTTP ' + res.status);
+      alert('❌ Não foi possível excluir: ' + detalhe);
     }
   } catch (e) {
     alert('❌ Falha na conexão: ' + e.message);
   }
 }
+
+// Garante que onclick / console / delegação encontrem a função
+window.excluirBackupArquivo = excluirBackupArquivo;
 
 async function previewBackup(arquivo) {
   try {
