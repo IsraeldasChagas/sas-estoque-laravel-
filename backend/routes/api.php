@@ -5422,7 +5422,7 @@ Route::post('/admin/backup', function (Request $request) {
 
     try {
         $snapshot = [
-            'versao'     => '1.0',
+            'versao'     => '1.1',
             'gerado_em'  => now()->toIso8601String(),
             'tabelas'    => [
                 'produtos'              => DB::table('produtos')->get()->toArray(),
@@ -5447,13 +5447,6 @@ Route::post('/admin/backup', function (Request $request) {
         $nomeArquivo = 'backup_' . now()->format('Y-m-d_H-i-s') . '.json';
         $caminho = $dir . '/' . $nomeArquivo;
         file_put_contents($caminho, json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        // Mantém apenas os 10 backups mais recentes
-        $arquivos = glob($dir . '/backup_*.json');
-        usort($arquivos, fn($a, $b) => filemtime($b) - filemtime($a));
-        foreach (array_slice($arquivos, 10) as $antigo) {
-            unlink($antigo);
-        }
 
         \Log::info('ADMIN backup gerado', [
             'usuario_id' => (int) $userId,
@@ -5579,7 +5572,42 @@ Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) {
         return response()->json(['error' => 'Backup não encontrado.'], 404);
     }
 
-    return response()->download($caminho, $arquivo, ['Content-Type' => 'application/json']);
+        return response()->download($caminho, $arquivo, ['Content-Type' => 'application/json']);
+});
+
+// Excluir um backup (ADMIN — não apaga mais antigos automaticamente no POST /admin/backup)
+Route::delete('/admin/backups/{arquivo}', function (Request $request, $arquivo) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem excluir backups.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $chave = $request->query('chave') ?? $request->input('chave');
+    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+        return response()->json(['error' => 'Chave inválida.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    if (! preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/', $arquivo)) {
+        return response()->json(['error' => 'Arquivo inválido.'], 400)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $caminho = storage_path('app/backups/' . $arquivo);
+    if (! file_exists($caminho)) {
+        return response()->json(['error' => 'Backup não encontrado.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    unlink($caminho);
+    \Log::info('ADMIN backup excluído', [
+        'usuario_id' => (int) $userId,
+        'ip' => $request->ip(),
+        'arquivo' => $arquivo,
+    ]);
+
+    return response()->json([
+        'sucesso' => true,
+        'mensagem' => 'Backup removido.',
+    ])->header('Access-Control-Allow-Origin', '*');
 });
 
 // Restaurar a partir de um backup
@@ -5616,8 +5644,6 @@ Route::post('/admin/restaurar', function (Request $request) {
             return response()->json(['error' => 'Arquivo de backup corrompido.'], 400);
         }
 
-        DB::statement('SET FOREIGN_KEY_CHECKS = 0');
-
         // Ordem respeitando dependências
         $ordem = [
             'unidades', 'locais', 'usuarios', 'funcionarios', 'produtos',
@@ -5627,17 +5653,45 @@ Route::post('/admin/restaurar', function (Request $request) {
         ];
 
         $restaurados = [];
-        foreach ($ordem as $tabela) {
-            if (!isset($snapshot['tabelas'][$tabela])) continue;
-            DB::table($tabela)->truncate();
-            $registros = array_map(fn($r) => (array)$r, $snapshot['tabelas'][$tabela]);
-            foreach (array_chunk($registros, 200) as $lote) {
-                DB::table($tabela)->insert($lote);
-            }
-            $restaurados[$tabela] = count($registros);
-        }
 
-        DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+        DB::beginTransaction();
+        try {
+            DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+
+            foreach ($ordem as $tabela) {
+                if (! isset($snapshot['tabelas'][$tabela]) || ! Schema::hasTable($tabela)) {
+                    continue;
+                }
+                $registrosBrutos = $snapshot['tabelas'][$tabela];
+                if (! is_array($registrosBrutos)) {
+                    continue;
+                }
+                $mapaColunas = array_flip(Schema::getColumnListing($tabela));
+                $filtrados = [];
+                foreach ($registrosBrutos as $r) {
+                    $linha = (array) $r;
+                    $linha = array_intersect_key($linha, $mapaColunas);
+                    if ($linha !== []) {
+                        $filtrados[] = $linha;
+                    }
+                }
+
+                DB::table($tabela)->delete();
+                foreach (array_chunk($filtrados, 200) as $lote) {
+                    if ($lote !== []) {
+                        DB::table($tabela)->insert($lote);
+                    }
+                }
+                $restaurados[$tabela] = count($filtrados);
+            }
+
+            DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+            throw $e;
+        }
 
         \Log::warning('ADMIN restore executado', [
             'usuario_id' => (int) $userId,
@@ -5652,12 +5706,17 @@ Route::post('/admin/restaurar', function (Request $request) {
             'mensagem'    => 'Backup restaurado com sucesso.',
             'arquivo'     => $arquivo,
             'restaurados' => $restaurados,
-        ]);
-    } catch (\Exception $e) {
-        DB::statement('SET FOREIGN_KEY_CHECKS = 1');
-        return response()->json(['error' => 'Erro ao restaurar: ' . $e->getMessage()], 500);
+        ])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Throwable $e) {
+        return response()->json(['error' => 'Erro ao restaurar: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*');
     }
 });
+
+Route::options('/admin/backups/{arquivo}', fn() => response('', 204)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 // ============================================
 // FUNCIONÁRIOS (Módulo RH)

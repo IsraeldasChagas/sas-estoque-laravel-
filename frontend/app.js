@@ -2235,6 +2235,10 @@ async function carregarListaBackups() {
             style="padding:0.4rem 0.8rem;background:#e65100;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
             🔄 Restaurar
           </button>
+          <button type="button" onclick="excluirBackupArquivo(${JSON.stringify(b.arquivo)})"
+            style="padding:0.4rem 0.8rem;background:#c62828;color:#fff;border:none;border-radius:5px;font-size:0.82rem;cursor:pointer;white-space:nowrap;">
+            🗑 Excluir
+          </button>
         </div>
       `;
     });
@@ -2242,6 +2246,32 @@ async function carregarListaBackups() {
     content.innerHTML = html;
   } catch (e) {
     content.innerHTML = `<p style="text-align:center;color:red;padding:1rem;">Erro ao carregar backups: ${e.message}</p>`;
+  }
+}
+
+async function excluirBackupArquivo(arquivo) {
+  if (!arquivo || !confirm('Remover este backup do servidor?\n\n' + arquivo + '\n\nNão dá para desfazer.')) {
+    return;
+  }
+  try {
+    const res = await fetch(
+      `${API_URL}/admin/backups/${encodeURIComponent(arquivo)}?chave=${encodeURIComponent('BACKUP-SABORPARAENSE-2026')}`,
+      {
+        method: 'DELETE',
+        headers: {
+          ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
+          ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
+        },
+      }
+    );
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.sucesso) {
+      carregarListaBackups();
+    } else {
+      alert('❌ Não foi possível excluir: ' + (data?.error || ('HTTP ' + res.status)));
+    }
+  } catch (e) {
+    alert('❌ Falha na conexão: ' + e.message);
   }
 }
 
