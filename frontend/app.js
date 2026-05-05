@@ -9167,6 +9167,7 @@ async function handleLogin(event) {
       nome: payload.nome, 
       email: payload.email, 
       perfil: payload.perfil, 
+      unidade_id: payload.unidade_id ?? null,
       permissoes_menu: payload.permissoes_menu || null,
       token: payload.token 
     });
