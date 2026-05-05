@@ -8872,6 +8872,11 @@ async function startAppSession(user) {
             var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
             var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
             var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+            if (!livre && !unidadeUsuario) {
+              uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+              uSelect.disabled = true;
+              await loadReservasMesas();
+            } else {
             var lista = (unidades || []);
             if (!livre && unidadeUsuario) {
               lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
@@ -8885,6 +8890,7 @@ async function startAppSession(user) {
             if (!livre && unidadeUsuario) {
               uSelect.value = unidadeUsuario;
               uSelect.disabled = true;
+            }
             }
           }
           await loadReservasMesas();
@@ -8898,6 +8904,11 @@ async function startAppSession(user) {
             var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
             var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
             var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+            if (!livre && !unidadeUsuario) {
+              uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+              uSelect.disabled = true;
+              await loadHistoricoReservas();
+            } else {
             var lista = (unidades || []);
             if (!livre && unidadeUsuario) {
               lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
@@ -8911,6 +8922,7 @@ async function startAppSession(user) {
             if (!livre && unidadeUsuario) {
               uSelect.value = unidadeUsuario;
               uSelect.disabled = true;
+            }
             }
           }
           var dInicio = document.getElementById('historicoDataInicio');
@@ -13119,6 +13131,11 @@ function wireSidebarSectionNavClicks() {
           var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
           var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
           var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+          if (!livre && !unidadeUsuario) {
+            uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+            uSelect.disabled = true;
+            await loadReservasMesas();
+          } else {
           var lista = (unidades || []);
           if (!livre && unidadeUsuario) {
             lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
@@ -13132,6 +13149,7 @@ function wireSidebarSectionNavClicks() {
           if (!livre && unidadeUsuario) {
             uSelect.value = unidadeUsuario;
             uSelect.disabled = true;
+          }
           }
         }
         await loadReservasMesas();
@@ -13151,6 +13169,11 @@ function wireSidebarSectionNavClicks() {
           var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
           var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
           var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+          if (!livre && !unidadeUsuario) {
+            uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+            uSelect.disabled = true;
+            await loadHistoricoReservas();
+          } else {
           var lista = (unidades || []);
           if (!livre && unidadeUsuario) {
             lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
@@ -13164,6 +13187,7 @@ function wireSidebarSectionNavClicks() {
           if (!livre && unidadeUsuario) {
             uSelect.value = unidadeUsuario;
             uSelect.disabled = true;
+          }
           }
         }
         var dInicio = document.getElementById('historicoDataInicio');
@@ -15374,6 +15398,11 @@ function setupReservasMesasModule() {
     unidadeSelect.innerHTML = '<option value="">Selecione a unidade</option>';
     var perfilLivre = isAdminOuGerente();
     var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+    if (!perfilLivre && !unidadeUsuario) {
+      unidadeSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+      unidadeSelect.disabled = true;
+      return;
+    }
     var lista = (unidades || []);
     if (!perfilLivre && unidadeUsuario) {
       lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
