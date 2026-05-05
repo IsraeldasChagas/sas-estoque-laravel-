@@ -15241,7 +15241,7 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Pessoas:</strong> <span id="detQtdPessoas">' + qtd + '</span> / ' + cap + '</p>' +
       '<p><strong>Status:</strong> ' + (r.status || '').replace(/_/g, ' ') + '</p>' +
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
-      (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(r.observacao) + '</p>' : '') +
+      (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(stripReservaMovMarkers(r.observacao)) + '</p>' : '') +
       movHtml +
       btnWhatsApp +
       acoes +
@@ -15524,25 +15524,61 @@ function addReservaMovHistory(observacao, entry) {
   try {
     e.at = new Date().toISOString().slice(0, 19).replace('T', ' ');
   } catch (_) {}
-  var token = '##MOV##' + JSON.stringify(e) + '##';
-  if (!obs) return token;
-  return obs + '\n' + token;
+  // Formato legível (não depende de JSON com caracteres que quebrem o parser)
+  var tipo = (e.type || 'mov').toString();
+  var de = (e.from || '').toString().replace(/\|/g, '/');
+  var para = (e.to || '').toString().replace(/\|/g, '/');
+  var saiu = e.moved_people != null ? String(e.moved_people) : '';
+  var ficou = e.remaining_people != null ? String(e.remaining_people) : '';
+  var dono = (e.owner || '').toString().replace(/\|/g, '/');
+  var quando = (e.at || '').toString();
+  var token = '[MOV|' + quando + '|' + tipo + '|' + de + '|' + para + '|' + saiu + '|' + ficou + '|' + dono + ']';
+
+  // Mantém compatibilidade com tokens antigos (se existirem)
+  var legacy = '##MOV##' + JSON.stringify(e) + '##';
+  if (!obs) return token + '\n' + legacy;
+  return obs + '\n' + token + '\n' + legacy;
 }
 
 function parseReservaMovHistory(observacao) {
   var text = (observacao || '').toString();
   if (!text) return [];
-  var re = /##MOV##([\s\S]*?)##/g;
   var out = [];
+
+  // Novo formato: [MOV|...|tipo|de|para|saiu|ficou|dono]
+  var reNew = /\[MOV\|([^\]|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^\]]*)\]/g;
   var m;
-  while ((m = re.exec(text))) {
+  while ((m = reNew.exec(text))) {
+    out.push({
+      at: m[1],
+      type: m[2],
+      from: m[3],
+      to: m[4],
+      moved_people: m[5] === '' ? null : Number(m[5]),
+      remaining_people: m[6] === '' ? null : Number(m[6]),
+      owner: m[7] || '',
+    });
+  }
+
+  // Formato antigo (JSON entre marcadores)
+  var reOld = /##MOV##([\s\S]*?)##/g;
+  while ((m = reOld.exec(text))) {
     try {
       var obj = JSON.parse(m[1]);
       if (obj && typeof obj === 'object') out.push(obj);
     } catch (_) {}
   }
+
   // mais recente primeiro
   return out.reverse();
+}
+
+function stripReservaMovMarkers(observacao) {
+  var s = (observacao || '').toString();
+  if (!s) return '';
+  s = s.replace(/\[MOV\|[^\]]+\]/g, '').trim();
+  s = s.replace(/##MOV##[\s\S]*?##/g, '').trim();
+  return s;
 }
 
 async function acaoLiberarMesa(reservId, data) {
