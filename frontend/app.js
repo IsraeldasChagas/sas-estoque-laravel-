@@ -15205,6 +15205,34 @@ async function abrirDetalhesReserva(id) {
         '</div>';
     }
     var btnWhatsApp = r.telefone_cliente ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp</button></p>' : '';
+    var movs = parseReservaMovHistory(r.observacao || '');
+    var movHtml = '';
+    if (movs && movs.length) {
+      movHtml =
+        '<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #eee;">' +
+          '<p style="margin:0 0 0.5rem 0;"><strong>Histórico (mesas / pessoas)</strong></p>' +
+          '<div style="display:grid;gap:0.35rem;">' +
+            movs.map(function(m) {
+              var quando = m && m.at ? (' • ' + escapeHtml(String(m.at))) : '';
+              var de = m && m.from ? escapeHtml(String(m.from)) : '-';
+              var para = m && m.to ? escapeHtml(String(m.to)) : '-';
+              var saiu = (m && m.moved_people != null) ? escapeHtml(String(m.moved_people)) : '-';
+              var ficou = (m && m.remaining_people != null) ? escapeHtml(String(m.remaining_people)) : '-';
+              var dono = m && m.owner ? (' • ' + escapeHtml(String(m.owner))) : '';
+              var tipo = m && m.type ? escapeHtml(String(m.type)) : 'mov';
+              return '<div style="color:#455a64;font-size:12.5px;">' +
+                '<strong>' + tipo + '</strong>' +
+                dono +
+                ': ' + de + ' → ' + para +
+                ' • saiu ' + saiu +
+                ' • ficou ' + ficou +
+                quando +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+    }
+
     content.innerHTML = '<div style="display:grid; gap:0.75rem;">' +
       '<p><strong>Mesa:</strong> ' + escapeHtml(mesaNome) + '</p>' +
       '<p><strong>Cliente:</strong> ' + escapeHtml(r.nome_cliente) + '</p>' +
@@ -15214,6 +15242,7 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Status:</strong> ' + (r.status || '').replace(/_/g, ' ') + '</p>' +
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
       (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(r.observacao) + '</p>' : '') +
+      movHtml +
       btnWhatsApp +
       acoes +
       '</div>';
@@ -15290,7 +15319,18 @@ async function acaoJuntarMesa(reservId, data) {
   if (!mesaNova) return;
   try {
     var r = await fetchJSON('/reservas-mesas/' + reservId);
+    var mesaAtualLabel = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || ('Mesa ' + (r.mesa_id || data.mesa_id || ''));
+    var mesaNovaLabel = (mesaNova && (mesaNova.nome_mesa || mesaNova.numero_mesa)) || ('Mesa ' + (mesaNova && mesaNova.id ? mesaNova.id : ''));
+    var nextObs = addReservaMovHistory(r.observacao || '', {
+      type: 'juntar',
+      from: mesaAtualLabel,
+      to: mesaNovaLabel,
+      moved_people: r.qtd_pessoas || data.qtd_pessoas || 1,
+      remaining_people: 0,
+      owner: r.nome_cliente || data.nome_cliente || ''
+    });
     var payload = { mesa_id: mesaNova.id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: formatDataReserva(r.data_reserva), hora_reserva: formatHora(r.hora_reserva), qtd_pessoas: r.qtd_pessoas, status: r.status, observacao: r.observacao };
+    payload.observacao = nextObs;
     await fetchJSON('/reservas-mesas/' + reservId, { method: 'PUT', body: JSON.stringify(payload) });
     showToast('Reserva movida para ' + (mesaNova.nome_mesa || mesaNova.numero_mesa) + '.', 'success');
     document.getElementById('closeReservaDetalhes').click();
@@ -15307,6 +15347,10 @@ async function acaoSepararMesa(reservId, data) {
   if (str === null || str === '') return;
   var qtdNova = parseInt(str, 10);
   if (isNaN(qtdNova) || qtdNova < 1 || qtdNova >= qtd) { showToast('Informe um valor entre 1 e ' + (qtd - 1) + '.', 'warning'); return; }
+  var nomeNovo = prompt('Nome do dono (novo grupo / nova mesa):', (data.nome_cliente || '').toString().trim());
+  if (nomeNovo === null) return;
+  nomeNovo = (nomeNovo || '').toString().trim();
+  if (!nomeNovo) nomeNovo = (data.nome_cliente || '').toString().trim();
   var unidadeId = data.unidade_id || document.getElementById('reservasUnidadeFiltro')?.value;
   if (!unidadeId) { showToast('Selecione a unidade.', 'warning'); return; }
   var mesas = await fetchJSON('/mesas?unidade_id=' + unidadeId);
@@ -15328,12 +15372,32 @@ async function acaoSepararMesa(reservId, data) {
   if (!mesaNova) return;
   try {
     var r = await fetchJSON('/reservas-mesas/' + reservId);
+    var mesaAtualLabel = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || ('Mesa ' + (r.mesa_id || data.mesa_id || ''));
+    var mesaNovaLabel = (mesaNova && (mesaNova.nome_mesa || mesaNova.numero_mesa)) || ('Mesa ' + (mesaNova && mesaNova.id ? mesaNova.id : ''));
     var dataReserva = formatDataReserva(r.data_reserva);
     var horaReserva = formatHora(r.hora_reserva);
-    var novoPayload = { unidade_id: unidadeId, mesa_id: mesaNova.id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: dataReserva, hora_reserva: horaReserva, qtd_pessoas: qtdNova, status: r.status, observacao: (r.observacao || '') + ' [Separado]' };
+    var histEntryNova = {
+      type: 'separar',
+      from: mesaAtualLabel,
+      to: mesaNovaLabel,
+      moved_people: qtdNova,
+      remaining_people: (qtd - qtdNova),
+      owner: nomeNovo || r.nome_cliente || data.nome_cliente || ''
+    };
+    var histEntryOrig = {
+      type: 'separar',
+      from: mesaAtualLabel,
+      to: mesaNovaLabel,
+      moved_people: qtdNova,
+      remaining_people: (qtd - qtdNova),
+      owner: r.nome_cliente || data.nome_cliente || ''
+    };
+    var obsNova = addReservaMovHistory((r.observacao || ''), histEntryNova);
+    var obsOrig = addReservaMovHistory((r.observacao || ''), histEntryOrig);
+    var novoPayload = { unidade_id: unidadeId, mesa_id: mesaNova.id, nome_cliente: nomeNovo || r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: dataReserva, hora_reserva: horaReserva, qtd_pessoas: qtdNova, status: r.status, observacao: obsNova };
     await fetchJSON('/reservas-mesas', { method: 'POST', body: JSON.stringify(novoPayload) });
     var qtdRestante = qtd - qtdNova;
-    var updPayload = { mesa_id: r.mesa_id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: dataReserva, hora_reserva: horaReserva, qtd_pessoas: qtdRestante, status: r.status, observacao: r.observacao };
+    var updPayload = { mesa_id: r.mesa_id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: dataReserva, hora_reserva: horaReserva, qtd_pessoas: qtdRestante, status: r.status, observacao: obsOrig };
     await fetchJSON('/reservas-mesas/' + reservId, { method: 'PUT', body: JSON.stringify(updPayload) });
     showToast('Grupo separado: ' + qtdNova + ' em nova mesa, ' + qtdRestante + ' permanecem.', 'success');
     document.getElementById('closeReservaDetalhes').click();
@@ -15452,6 +15516,33 @@ function openMesaPicker(mesas, opts) {
 
     render();
   });
+}
+
+function addReservaMovHistory(observacao, entry) {
+  var obs = (observacao || '').toString();
+  var e = entry && typeof entry === 'object' ? { ...entry } : {};
+  try {
+    e.at = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  } catch (_) {}
+  var token = '##MOV##' + JSON.stringify(e) + '##';
+  if (!obs) return token;
+  return obs + '\n' + token;
+}
+
+function parseReservaMovHistory(observacao) {
+  var text = (observacao || '').toString();
+  if (!text) return [];
+  var re = /##MOV##([\s\S]*?)##/g;
+  var out = [];
+  var m;
+  while ((m = re.exec(text))) {
+    try {
+      var obj = JSON.parse(m[1]);
+      if (obj && typeof obj === 'object') out.push(obj);
+    } catch (_) {}
+  }
+  // mais recente primeiro
+  return out.reverse();
 }
 
 async function acaoLiberarMesa(reservId, data) {
