@@ -15282,12 +15282,12 @@ async function acaoJuntarMesa(reservId, data) {
     return m.ativo !== false && m.id != data.mesa_id && m.capacidade >= qtd && mesasOcupadasNesseHorario.indexOf(m.id) === -1;
   });
   if (!opcoes.length) { showToast('Nenhuma outra mesa disponível com capacidade suficiente no mesmo horário.', 'warning'); return; }
-  var msg = 'Selecione a mesa para juntar (mover reserva):\n\n' + opcoes.map(function(m, i) { return (i + 1) + '. ' + (m.nome_mesa || m.numero_mesa) + ' (cap. ' + m.capacidade + ')'; }).join('\n');
-  var escolha = prompt(msg, '1');
-  if (escolha === null || escolha === '') return;
-  var idx = parseInt(escolha, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= opcoes.length) { showToast('Opção inválida.', 'warning'); return; }
-  var mesaNova = opcoes[idx];
+  var mesaNova = await openMesaPicker(opcoes, {
+    title: 'Juntar mesa',
+    subtitle: 'Selecione a mesa de destino (mover reserva).',
+    confirmLabel: 'Confirmar'
+  });
+  if (!mesaNova) return;
   try {
     var r = await fetchJSON('/reservas-mesas/' + reservId);
     var payload = { mesa_id: mesaNova.id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: formatDataReserva(r.data_reserva), hora_reserva: formatHora(r.hora_reserva), qtd_pessoas: r.qtd_pessoas, status: r.status, observacao: r.observacao };
@@ -15320,12 +15320,12 @@ async function acaoSepararMesa(reservId, data) {
   var opcoes = (mesas || []).filter(function(m) { return m.ativo !== false && m.id != data.mesa_id && m.capacidade >= qtdNova && mesasOcupadasHorario.indexOf(m.id) === -1; });
   if (!opcoes.length) { opcoes = (mesas || []).filter(function(m) { return m.ativo !== false && m.id != data.mesa_id && m.capacidade >= qtdNova; }); }
   if (!opcoes.length) { showToast('Nenhuma mesa disponível.', 'warning'); return; }
-  var msg = 'Selecione a mesa para as ' + qtdNova + ' pessoas:\n\n' + opcoes.map(function(m, i) { return (i + 1) + '. ' + (m.nome_mesa || m.numero_mesa) + ' (cap. ' + m.capacidade + ')'; }).join('\n');
-  var escolha = prompt(msg, '1');
-  if (escolha === null || escolha === '') return;
-  var idx = parseInt(escolha, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= opcoes.length) { showToast('Opção inválida.', 'warning'); return; }
-  var mesaNova = opcoes[idx];
+  var mesaNova = await openMesaPicker(opcoes, {
+    title: 'Separar mesa',
+    subtitle: 'Selecione a mesa para ' + qtdNova + ' pessoa(s).',
+    confirmLabel: 'Confirmar'
+  });
+  if (!mesaNova) return;
   try {
     var r = await fetchJSON('/reservas-mesas/' + reservId);
     var dataReserva = formatDataReserva(r.data_reserva);
@@ -15341,6 +15341,117 @@ async function acaoSepararMesa(reservId, data) {
   } catch (e) {
     showToast(e.message || 'Erro ao separar.', 'error');
   }
+}
+
+/**
+ * Picker simples para escolher UMA mesa por checkbox (sem digitar).
+ * Retorna a mesa escolhida ou null (cancelado).
+ */
+function openMesaPicker(mesas, opts) {
+  opts = opts || {};
+  var title = opts.title || 'Selecionar mesa';
+  var subtitle = opts.subtitle || '';
+  var confirmLabel = opts.confirmLabel || 'OK';
+  var list = Array.isArray(mesas) ? mesas.slice() : [];
+
+  return new Promise(function(resolve) {
+    var existing = document.getElementById('sasMesaPickerModal');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'sasMesaPickerModal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10050;padding:16px;';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:10px;max-width:520px;width:100%;max-height:80vh;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25);';
+
+    card.innerHTML =
+      '<div style="padding:14px 16px;border-bottom:1px solid #eee;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
+        '<div style="min-width:0;">' +
+          '<div style="font-weight:700;font-size:16px;line-height:1.2;">' + escapeHtml(title) + '</div>' +
+          (subtitle ? '<div style="margin-top:4px;color:#607d8b;font-size:12px;line-height:1.3;">' + escapeHtml(subtitle) + '</div>' : '') +
+        '</div>' +
+        '<button type="button" id="sasMesaPickerClose" style="border:0;background:#f5f5f5;border-radius:8px;padding:6px 10px;cursor:pointer;">Fechar</button>' +
+      '</div>' +
+      '<div style="padding:12px 16px;border-bottom:1px solid #eee;display:flex;gap:10px;align-items:center;">' +
+        '<input id="sasMesaPickerSearch" type="text" placeholder="Buscar mesa..." style="flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:8px;" />' +
+      '</div>' +
+      '<div id="sasMesaPickerList" style="padding:8px 16px;overflow:auto;max-height:52vh;"></div>' +
+      '<div style="padding:12px 16px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:10px;">' +
+        '<button type="button" id="sasMesaPickerCancel" class="btn neutral" style="min-width:120px;">Cancelar</button>' +
+        '<button type="button" id="sasMesaPickerOk" class="btn primary" style="min-width:120px;" disabled>' + escapeHtml(confirmLabel) + '</button>' +
+      '</div>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    var statePick = { selectedId: null, filtered: list };
+    var listEl = card.querySelector('#sasMesaPickerList');
+    var okBtn = card.querySelector('#sasMesaPickerOk');
+    var searchEl = card.querySelector('#sasMesaPickerSearch');
+
+    function mesaLabel(m) {
+      var nome = (m && (m.nome_mesa || m.numero_mesa)) ? String(m.nome_mesa || m.numero_mesa) : ('Mesa ' + (m && m.id ? m.id : ''));
+      var cap = m && m.capacidade != null ? String(m.capacidade) : '-';
+      return nome + ' (cap. ' + cap + ')';
+    }
+
+    function render() {
+      var rows = (statePick.filtered || []).map(function(m) {
+        var id = String(m.id);
+        var checked = statePick.selectedId === id ? 'checked' : '';
+        return '<label style="display:flex;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid #f2f2f2;cursor:pointer;">' +
+          '<input type="checkbox" data-mesa-pick="1" value="' + escapeHtml(id) + '" style="width:18px;height:18px;" ' + checked + ' />' +
+          '<span style="flex:1;min-width:0;">' + escapeHtml(mesaLabel(m)) + '</span>' +
+        '</label>';
+      }).join('');
+      listEl.innerHTML = rows || '<div style="padding:12px 0;color:#607d8b;">Nenhuma mesa encontrada.</div>';
+      okBtn.disabled = !statePick.selectedId;
+    }
+
+    function close(ret) {
+      try { overlay.remove(); } catch (_) {}
+      resolve(ret || null);
+    }
+
+    // Eventos
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) close(null);
+    });
+    card.querySelector('#sasMesaPickerClose').addEventListener('click', function() { close(null); });
+    card.querySelector('#sasMesaPickerCancel').addEventListener('click', function() { close(null); });
+    okBtn.addEventListener('click', function() {
+      var sel = (list || []).find(function(m) { return String(m.id) === String(statePick.selectedId); }) || null;
+      close(sel);
+    });
+    listEl.addEventListener('click', function(e) {
+      var cb = e.target && e.target.closest ? e.target.closest('input[type="checkbox"][data-mesa-pick="1"]') : null;
+      if (!cb) return;
+      // Força seleção única mesmo usando checkbox
+      statePick.selectedId = cb.value;
+      render();
+    });
+    if (searchEl) {
+      searchEl.addEventListener('input', function() {
+        var q = (searchEl.value || '').toString().trim().toLowerCase();
+        if (!q) statePick.filtered = list;
+        else {
+          statePick.filtered = list.filter(function(m) {
+            var nome = (m && (m.nome_mesa || m.numero_mesa)) ? String(m.nome_mesa || m.numero_mesa) : '';
+            return String(m.id).includes(q) || nome.toLowerCase().includes(q) || String(m.capacidade || '').includes(q);
+          });
+        }
+        // Mantém seleção se ainda existe na filtragem
+        if (statePick.selectedId && !statePick.filtered.some(function(m) { return String(m.id) === String(statePick.selectedId); })) {
+          statePick.selectedId = null;
+        }
+        render();
+      });
+      setTimeout(function() { try { searchEl.focus(); } catch (_) {} }, 50);
+    }
+
+    render();
+  });
 }
 
 async function acaoLiberarMesa(reservId, data) {
