@@ -264,6 +264,12 @@
                     </select>
                 </div>
 
+                <div class="col-12">
+                    <label class="form-label">Observações (opcional)</label>
+                    <textarea name="observacoes" class="form-control" rows="3" maxlength="500" placeholder="Se quiser, deixe uma observação rápida (ex.: disponibilidade de horário, informação importante, etc.).">{{ old('observacoes') }}</textarea>
+                    <div class="form-text">Máximo de 500 caracteres. Não é obrigatório.</div>
+                </div>
+
                 <div class="col-md-8">
                     <label class="form-label">Currículo (PDF) <span class="text-danger">*</span></label>
                     <input type="file" name="curriculo" class="form-control" accept="application/pdf" required />
