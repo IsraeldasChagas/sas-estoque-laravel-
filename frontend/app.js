@@ -3382,25 +3382,11 @@ function applyPermissions() {
   if (["ADMIN", "GERENTE"].includes(perfil) && !sections.includes("logs")) {
     sections = [...sections, "logs"];
   }
-  /**
-   * Ficha técnica: permissoes_menu salvo no servidor é uma lista fixa e não ganha
-   * seções novas automaticamente — sem isto o item some para quase todos os usuários reais.
-   */
-  if (currentUser && !sections.includes("fechaTecnica")) {
-    sections = [...sections, "fechaTecnica"];
-  }
   // Boas-vindas e Minha conta: sempre acessíveis (permissoes_menu antigas podem omitir)
   if (currentUser) {
     const sempre = ["boasVindas", "minhaConta"];
     const faltando = sempre.filter((s) => !sections.includes(s));
     if (faltando.length) sections = [...faltando, ...sections];
-  }
-  // Reserva: itens Mesa e Histórico no menu; permissão antiga só com reservaMesa inclui ambos.
-  if (sections.includes("reservaMesa") && !sections.includes("historicoReservas")) {
-    sections = [...sections, "historicoReservas"];
-  }
-  if (sections.includes("historicoReservas") && !sections.includes("reservaMesa")) {
-    sections = [...sections, "reservaMesa"];
   }
   // Despesas fixas: módulo novo no Financeiro (permissoes_menu antigas não incluem automaticamente).
   // Se o usuário já tem acesso a qualquer item financeiro, libera o acesso ao módulo também.
