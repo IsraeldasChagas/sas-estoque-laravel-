@@ -8869,14 +8869,21 @@ async function startAppSession(user) {
           if (uSelect && uSelect.options.length <= 1) {
             var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
             uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-            (unidades || []).forEach(function(u) {
+            var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
+            var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+            var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+            var lista = (unidades || []);
+            if (!livre && unidadeUsuario) {
+              lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+            }
+            lista.forEach(function(u) {
               var opt = document.createElement('option');
               opt.value = u.id;
               opt.textContent = u.nome || 'Unidade ' + u.id;
               uSelect.appendChild(opt);
             });
-            if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
-              uSelect.value = currentUser.unidade_id;
+            if (!livre && unidadeUsuario) {
+              uSelect.value = unidadeUsuario;
               uSelect.disabled = true;
             }
           }
@@ -8888,14 +8895,21 @@ async function startAppSession(user) {
             var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
             state.unidades = unidades;
             uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-            (unidades || []).forEach(function(u) {
+            var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
+            var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+            var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+            var lista = (unidades || []);
+            if (!livre && unidadeUsuario) {
+              lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+            }
+            lista.forEach(function(u) {
               var opt = document.createElement('option');
               opt.value = u.id;
               opt.textContent = u.nome || 'Unidade ' + u.id;
               uSelect.appendChild(opt);
             });
-            if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
-              uSelect.value = currentUser.unidade_id;
+            if (!livre && unidadeUsuario) {
+              uSelect.value = unidadeUsuario;
               uSelect.disabled = true;
             }
           }
@@ -13102,14 +13116,21 @@ function wireSidebarSectionNavClicks() {
         if (uSelect && uSelect.options.length <= 1) {
           var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
           uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-          (unidades || []).forEach(function(u) {
+          var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
+          var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+          var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+          var lista = (unidades || []);
+          if (!livre && unidadeUsuario) {
+            lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+          }
+          lista.forEach(function(u) {
             var opt = document.createElement('option');
             opt.value = u.id;
             opt.textContent = u.nome || 'Unidade ' + u.id;
             uSelect.appendChild(opt);
           });
-          if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
-            uSelect.value = currentUser.unidade_id;
+          if (!livre && unidadeUsuario) {
+            uSelect.value = unidadeUsuario;
             uSelect.disabled = true;
           }
         }
@@ -13127,14 +13148,21 @@ function wireSidebarSectionNavClicks() {
           var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
           state.unidades = unidades;
           uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-          (unidades || []).forEach(function(u) {
+          var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
+          var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+          var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+          var lista = (unidades || []);
+          if (!livre && unidadeUsuario) {
+            lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+          }
+          lista.forEach(function(u) {
             var opt = document.createElement('option');
             opt.value = u.id;
             opt.textContent = u.nome || 'Unidade ' + u.id;
             uSelect.appendChild(opt);
           });
-          if (currentUser && currentUser.unidade_id && (currentUser.perfil || '').toUpperCase() !== 'ADMIN') {
-            uSelect.value = currentUser.unidade_id;
+          if (!livre && unidadeUsuario) {
+            uSelect.value = unidadeUsuario;
             uSelect.disabled = true;
           }
         }
@@ -15331,7 +15359,10 @@ async function abrirEditarReserva(id) {
 }
 
 function setupReservasMesasModule() {
-  var isAdmin = function() { return currentUser && (currentUser.perfil || '').toUpperCase() === 'ADMIN'; };
+  var isAdminOuGerente = function() {
+    var p = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
+    return p === 'ADMIN' || p === 'GERENTE';
+  };
 
   var unidadeSelect = document.getElementById('reservasUnidadeFiltro');
   var dataInput = document.getElementById('reservasDataFiltro');
@@ -15341,20 +15372,28 @@ function setupReservasMesasModule() {
     var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades');
     if (!unidadeSelect) return;
     unidadeSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-    (unidades || []).forEach(function(u) {
+    var perfilLivre = isAdminOuGerente();
+    var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+    var lista = (unidades || []);
+    if (!perfilLivre && unidadeUsuario) {
+      lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+    }
+    lista.forEach(function(u) {
       var opt = document.createElement('option');
       opt.value = u.id;
       opt.textContent = u.nome || 'Unidade ' + u.id;
       unidadeSelect.appendChild(opt);
     });
-    if (currentUser && currentUser.unidade_id && !isAdmin()) {
-      unidadeSelect.value = currentUser.unidade_id;
+    if (!perfilLivre && unidadeUsuario) {
+      unidadeSelect.value = unidadeUsuario;
       unidadeSelect.disabled = true;
+    } else if (unidadeSelect.disabled) {
+      unidadeSelect.disabled = false;
     }
   }
 
   var reservaUnidadeLabel = document.getElementById('reservaUnidadeLabel');
-  if (reservaUnidadeLabel) reservaUnidadeLabel.style.display = isAdmin() ? '' : 'none';
+  if (reservaUnidadeLabel) reservaUnidadeLabel.style.display = isAdminOuGerente() ? '' : 'none';
 
   document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').addEventListener('change', function() {
     var hid = document.getElementById('reservaFormUnidadeId');
@@ -15405,7 +15444,7 @@ function setupReservasMesasModule() {
     if (unidadeInput) unidadeInput.value = unidadeId;
     var hid = document.getElementById('reservaFormUnidadeId');
     if (hid) hid.value = unidadeId;
-    if (isAdmin()) {
+    if (isAdminOuGerente()) {
       var reservaUnidadeSelect = document.getElementById('reservaUnidadeSelect');
       if (reservaUnidadeSelect) {
         reservaUnidadeSelect.innerHTML = '<option value="">Selecione</option>';

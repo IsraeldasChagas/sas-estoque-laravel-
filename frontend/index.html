@@ -3823,6 +3823,7 @@
             <h3>Acesso a módulos do menu</h3>
             <p class="form-hint" style="margin-bottom:0.5rem;">Marque os módulos que este usuário poderá acessar. Se nenhum for marcado, usam-se as permissões padrão do perfil.</p>
             <button type="button" class="btn secondary" id="usuarioPermissoesPadrao" style="margin-bottom:0.75rem;">Usar permissões padrão do perfil</button>
+            <div style="margin-top:0.25rem;"><strong>Menu (itens principais)</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boasVindas" /> Boas-vindas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="minhaConta" /> Minha conta</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="dashboard" /> Dashboard</label>
@@ -3830,6 +3831,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="unidades" /> Unidades</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="usuarios" /> Usuários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="produtos" /> Produtos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechaTecnica" /> Ficha técnica</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="estoque" /> Consulta Estoque</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="lotes" /> Lotes</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="locais" /> Locais</label>
@@ -3837,17 +3839,24 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="compras" /> Lista de Compras</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="relatorios" /> Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedores" /> Fornecedores</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reserva (mesa e histórico)</label>
-            <div style="margin-top:0.5rem;"><strong>RH</strong></div>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Reservas</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reservas — Mesa</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="historicoReservas" /> Reservas — Histórico</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhFolhaPonto" /> Folha de ponto (RH)</label>
-            <div style="margin-top:0.5rem;"><strong>Financeiro</strong></div>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Financeiro</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boletao" /> Boleto</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="alvara" /> Alvará</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="proventos" /> Proventos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="despesasFixas" /> Despesas fixas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reciboAjuda" /> Recibo (ajuda de custo)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamento" /> Auditoria fechamento caixa</label>
-            <div style="margin-top:0.5rem;"><strong>Configurações</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard — análise fechamentos</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedoresBackup" /> Backup de Fornecedores</label>
+            <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
           </section>
           <label>
             Status
