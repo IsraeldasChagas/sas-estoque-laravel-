@@ -8262,7 +8262,7 @@ function renderRhCandidatoInlineRow(payload) {
               <label>Grau de instrução
                 <input type="text" value="${esc(c.grau_instrucao_escolar || "")}" readonly placeholder="—" />
               </label>
-              <label>Etnia racial (autodeclaração)
+              <label>Cor ou raça (autodeclaração)
                 <input type="text" value="${esc(c.etnia_racial || "")}" readonly placeholder="—" />
               </label>
               <label>Consentimento LGPD

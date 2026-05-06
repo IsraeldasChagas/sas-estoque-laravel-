@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
+use App\Support\Rh\RhCorRacaIbge;
 use App\Support\Rh\RhTiposDocumento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -408,6 +409,7 @@ class RhPublicoController extends Controller
                     'rotulos' => RhTiposDocumento::rotulos(),
                     'grau_instrucao_escolar' => '',
                     'etnia_racial' => '',
+                    'cor_raca_opcoes' => RhCorRacaIbge::opcoes(),
                     'dados_complementares_disponivel' => false,
                 ], 404);
         }
@@ -438,6 +440,7 @@ class RhPublicoController extends Controller
                 Schema::hasColumn('rh_candidatos', 'etnia_racial') ? (string) ($c->etnia_racial ?? '') : ''
             ),
             'dados_complementares_disponivel' => Schema::hasColumns('rh_candidatos', ['grau_instrucao_escolar', 'etnia_racial']),
+            'cor_raca_opcoes' => RhCorRacaIbge::opcoes(),
         ]);
     }
 
@@ -455,7 +458,7 @@ class RhPublicoController extends Controller
 
             $data = $request->validate([
                 'grau_instrucao_escolar' => 'nullable|string|max:200',
-                'etnia_racial' => 'nullable|string|max:120',
+                'etnia_racial' => ['nullable', 'string', Rule::in(RhCorRacaIbge::opcoes())],
             ]);
 
             DB::table('rh_candidatos')->where('id', $c->id)->update([

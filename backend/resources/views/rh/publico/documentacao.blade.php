@@ -80,11 +80,22 @@
                                    maxlength="200" placeholder="Ex.: Ensino médio completo"
                                    value="{{ $grau_instrucao_escolar ?? '' }}" />
                         </div>
+                        @php
+                            $opcoesCor = isset($cor_raca_opcoes) && is_array($cor_raca_opcoes) ? $cor_raca_opcoes : \App\Support\Rh\RhCorRacaIbge::opcoes();
+                            $etniaAtual = old('etnia_racial', $etnia_racial ?? '');
+                        @endphp
                         <div class="col-12">
-                            <label class="form-label" for="etnia_racial">Etnia / cor (autodeclaração)</label>
-                            <input type="text" class="form-control" id="etnia_racial" name="etnia_racial"
-                                   maxlength="120" placeholder="Conforme orientação do RH"
-                                   value="{{ $etnia_racial ?? '' }}" />
+                            <span class="form-label d-block mb-2">Cor ou raça (autodeclaração)</span>
+                            <div class="d-flex flex-column gap-2">
+                                @foreach ($opcoesCor as $opcao)
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="etnia_racial" id="cor-raca-{{ $loop->index }}"
+                                               value="{{ $opcao }}" @checked($etniaAtual === $opcao) />
+                                        <label class="form-check-label" for="cor-raca-{{ $loop->index }}">{{ $opcao }}</label>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="form-text text-muted small mt-1">Marque uma opção.</div>
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-outline-primary">Salvar informações</button>
