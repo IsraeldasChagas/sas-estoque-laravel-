@@ -7855,6 +7855,26 @@ async function fetchBlob(path, options = {}) {
 // ================================
 // RH — PDF do zero (idêntico ao Alvará)
 // ================================
+function sniffMimeFromBufferAlvara(buffer) {
+  const u = new Uint8Array(buffer.slice(0, 12));
+  if (u.length >= 5 && u[0] === 0x25 && u[1] === 0x50 && u[2] === 0x44 && u[3] === 0x46 && u[4] === 0x2d) return "application/pdf";
+  if (u.length >= 3 && u[0] === 0xff && u[1] === 0xd8 && u[2] === 0xff) return "image/jpeg";
+  if (u.length >= 4 && u[0] === 0x89 && u[1] === 0x50 && u[2] === 0x4e && u[3] === 0x47) return "image/png";
+  return null;
+}
+
+/** Ajusta nome do arquivo salvo conforme o tipo real do blob (evita .pdf em JPEG). */
+function nomeDownloadAlinhadoAoBlob(nomePreferido, blob) {
+  const t = (blob.type || "").split(";")[0].trim().toLowerCase();
+  const raw = String(nomePreferido || "documento").trim() || "documento";
+  const stem = raw.replace(/\.[^.]+$/i, "") || "documento";
+  if (t === "image/png") return `${stem}.png`;
+  if (t === "image/jpeg" || t === "image/jpg") return `${stem}.jpg`;
+  if (t === "application/pdf") return `${stem}.pdf`;
+  const m = raw.match(/(\.[^.]+)$/i);
+  return m ? raw : `${stem}.bin`;
+}
+
 async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath, downloadApiPath }) {
   const modal = document.getElementById('alvaraAnexoModal');
   const frame = document.getElementById('alvaraAnexoFrame');
@@ -7914,11 +7934,22 @@ async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath,
       } catch (_) {}
       throw new Error(msg);
     }
-    const mime = mimeFromResponse(res);
+    let mime = mimeFromResponse(res);
     const buffer = await res.arrayBuffer();
-    // Mesmo padrão do Alvará: se o servidor vier com octet-stream, detecta pelo header %PDF-
-    let isPdf = mime === 'application/pdf' || possivelPdf;
-    if (!isPdf && (mime === 'application/octet-stream' || !mime)) {
+    const sniffed = sniffMimeFromBufferAlvara(buffer);
+    // Nome .pdf não pode forçar PDF se o servidor (ou bytes) indicam imagem — caso típico: foto 3×4.
+    if (sniffed && /^image\//i.test(sniffed) && (mime === "application/pdf" || possivelPdf || /^image\//i.test(mime))) {
+      mime = /^image\//i.test(mime) ? mime : sniffed;
+    } else if (sniffed && (mime === "application/octet-stream" || !mime)) {
+      mime = sniffed;
+    }
+    const isImageMime = /^image\//i.test(mime);
+    let isPdf = mime === "application/pdf" || (!isImageMime && possivelPdf);
+    if (isPdf && sniffed && sniffed !== "application/pdf") {
+      isPdf = false;
+      if (/^image\//i.test(sniffed)) mime = sniffed;
+    }
+    if (!isPdf && !isImageMime && (mime === 'application/octet-stream' || !mime)) {
       try {
         const head = new TextDecoder().decode(new Uint8Array(buffer.slice(0, 5)));
         if (head === '%PDF-') isPdf = true;
@@ -7962,7 +7993,7 @@ async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath,
         const url = URL.createObjectURL(b);
         const a = document.createElement('a');
         a.href = url;
-        a.download = nome;
+        a.download = nomeDownloadAlinhadoAoBlob(nome, b);
         a.rel = 'noopener';
         document.body.appendChild(a);
         a.click();
@@ -8086,6 +8117,18 @@ function rhWhatsAppHrefFromTelefone(telRaw) {
   return `https://wa.me/${n}`;
 }
 
+/** Nome sugerido para download/visualização a partir dos metadados do documento (API). */
+function rhNomeArquivoDocumentoParaViewer(d) {
+  const nome = String(d?.arquivo_nome_original || "").trim();
+  if (nome) return nome;
+  const id = d?.id ?? "doc";
+  const mime = String(d?.mime || "").toLowerCase();
+  if (mime.includes("png")) return `documento-${id}.png`;
+  if (mime.includes("jpeg") || mime.includes("jpg")) return `documento-${id}.jpg`;
+  if (String(d?.tipo || "") === "foto_3x4") return `documento-${id}.jpg`;
+  return `documento-${id}.pdf`;
+}
+
 /** Rótulo amigável para tipo de documento enviado pelo candidato (página pública ou RH). */
 function rhTipoDocumentoLabel(tipo) {
   const m = {
@@ -8207,12 +8250,13 @@ function renderRhCandidatoInlineRow(payload) {
             const tipoU = esc(rhTipoDocumentoLabel(d?.tipo));
             const dt = esc(String(d?.created_at || "").slice(0, 19).replace("T", " "));
             const rid = esc(String(d?.id ?? ""));
+            const nomeViewer = esc(rhNomeArquivoDocumentoParaViewer(d));
             return `<tr data-doc-id="${rid}">
     <td>${rid}</td>
     <td>${nomeCandTbl}</td>
     <td>${vagaTbl}</td>
     <td>${tipoU}</td>
-    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${rid}">Baixar</button></td>
+    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${rid}" data-nome-arquivo="${nomeViewer}">Baixar / ver</button></td>
     <td>${dt}</td>
     <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${rid}">Excluir</button></td>
   </tr>`;
@@ -13623,10 +13667,12 @@ function setupNavigation() {
       e.preventDefault();
       const docId = btnDocCand.getAttribute("data-id");
       if (!docId) return;
+      const nomeArquivo =
+        (btnDocCand.getAttribute("data-nome-arquivo") || "").trim() || `documento-${docId}.pdf`;
       try {
         await abrirModalPdfNoViewerDoAlvara({
-          nomeArquivo: `documento-${docId}.pdf`,
-          titulo: "📄 Documento RH",
+          nomeArquivo,
+          titulo: "📎 Documento RH",
           viewApiPath: `/rh/documentos/${docId}/download`,
           downloadApiPath: `/rh/documentos/${docId}/download?download=1`,
         });
