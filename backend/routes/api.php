@@ -8815,6 +8815,7 @@ $valeConsumoCors = fn () => response()->json([])
 Route::options('/financeiro/vale-consumo', $valeConsumoCors);
 Route::options('/financeiro/vale-consumo/resumo', $valeConsumoCors);
 Route::options('/financeiro/vale-consumo/relatorio.csv', $valeConsumoCors);
+Route::options('/financeiro/vale-consumo/relatorio.pdf', $valeConsumoCors);
 Route::options('/financeiro/vale-consumo/{id}', $valeConsumoCors);
 
 $valeConsumoValidarCompetencia = static function (?string $c): ?string {
@@ -8829,7 +8830,25 @@ $valeConsumoValidarCompetencia = static function (?string $c): ?string {
     return $c;
 };
 
-Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+/** @return array{0: string, 1: string, 2: int} data_inicio, data_fim, unidade_id (0 = todas) */
+$valeConsumoResolverPeriodo = static function (Request $request): array {
+    $di = trim((string) $request->query('data_inicio', ''));
+    $df = trim((string) $request->query('data_fim', ''));
+    if ($di === '' || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $di)) {
+        $di = now()->startOfMonth()->toDateString();
+    }
+    if ($df === '' || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $df)) {
+        $df = now()->endOfMonth()->toDateString();
+    }
+    if ($di > $df) {
+        [$di, $df] = [$df, $di];
+    }
+    $unidadeId = $request->filled('unidade_id') ? max(0, (int) $request->query('unidade_id')) : 0;
+
+    return [$di, $df, $unidadeId];
+};
+
+Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -8842,14 +8861,25 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
         if (! $despFixasPodeGerir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
-        $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? now()->format('Y-m');
+        [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
         $q = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->where('v.competencia', $comp)
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome')
-            ->orderBy('f.nome_completo')
-            ->orderBy('v.id');
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome');
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $q->whereBetween('v.data_lancamento', [$di, $df]);
+        } else {
+            $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
+            $q->where('v.competencia', $comp);
+        }
+        if ($unidadeId > 0) {
+            $q->where('f.unidade_id', $unidadeId);
+        }
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $q->orderByDesc('v.data_lancamento')->orderByDesc('v.id');
+        } else {
+            $q->orderBy('f.nome_completo')->orderBy('v.id');
+        }
 
         return response()->json($q->get())->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -8859,10 +8889,14 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
     }
 });
 
-Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
-            return response()->json(['competencia' => now()->format('Y-m'), 'linhas' => [], 'totais' => ['total_vale' => 0, 'total_consumo' => 0]])->header('Access-Control-Allow-Origin', '*');
+            return response()->json([
+                'periodo' => ['data_inicio' => now()->toDateString(), 'data_fim' => now()->toDateString()],
+                'linhas' => [],
+                'totais' => ['total_vale' => 0, 'total_consumo' => 0],
+            ])->header('Access-Control-Allow-Origin', '*');
         }
         $u = $proventosAuth($request);
         if (! $u) {
@@ -8872,20 +8906,28 @@ Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($
         if (! $despFixasPodeGerir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
-        $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? now()->format('Y-m');
-        $linhas = DB::table('financeiro_vale_consumo as v')
+        [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
+        $q = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->where('v.competencia', $comp)
             ->groupBy('v.funcionario_id', 'f.nome_completo', 'f.cpf', 'f.cargo', 'u.nome')
             ->selectRaw('v.funcionario_id, f.nome_completo as funcionario_nome, f.cpf as funcionario_cpf, f.cargo as funcionario_cargo, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos')
-            ->orderBy('f.nome_completo')
-            ->get();
+            ->orderBy('f.nome_completo');
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $q->whereBetween('v.data_lancamento', [$di, $df]);
+        } else {
+            $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
+            $q->where('v.competencia', $comp);
+        }
+        if ($unidadeId > 0) {
+            $q->where('f.unidade_id', $unidadeId);
+        }
+        $linhas = $q->get();
         $totVale = (float) $linhas->sum(fn ($r) => (float) ($r->total_vale ?? 0));
         $totCons = (float) $linhas->sum(fn ($r) => (float) ($r->total_consumo ?? 0));
 
         return response()->json([
-            'competencia' => $comp,
+            'periodo' => ['data_inicio' => $di, 'data_fim' => $df, 'unidade_id' => $unidadeId],
             'linhas' => $linhas,
             'totais' => ['total_vale' => $totVale, 'total_consumo' => $totCons],
         ])->header('Access-Control-Allow-Origin', '*');
@@ -8896,7 +8938,7 @@ Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($
     }
 });
 
-Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response("Sem dados (tabela não criada — rode migrate).\n", 200)
@@ -8912,18 +8954,29 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         if (! $despFixasPodeGerir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
-        $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? now()->format('Y-m');
-        $linhas = DB::table('financeiro_vale_consumo as v')
+        [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
+        $q = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->where('v.competencia', $comp)
             ->groupBy('v.funcionario_id', 'f.nome_completo', 'f.cpf', 'f.cargo', 'u.nome')
             ->selectRaw('v.funcionario_id, f.nome_completo as funcionario_nome, f.cpf as funcionario_cpf, f.cargo as funcionario_cargo, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos')
-            ->orderBy('f.nome_completo')
-            ->get();
+            ->orderBy('f.nome_completo');
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $q->whereBetween('v.data_lancamento', [$di, $df]);
+        } else {
+            $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
+            $q->where('v.competencia', $comp);
+        }
+        if ($unidadeId > 0) {
+            $q->where('f.unidade_id', $unidadeId);
+        }
+        $linhas = $q->get();
         $sep = ';';
         $rows = [];
-        $rows[] = 'Relatorio Vale/Consumo — competencia ' . $comp;
+        $uniLabel = $unidadeId > 0 && Schema::hasTable('unidades')
+            ? (string) (DB::table('unidades')->where('id', $unidadeId)->value('nome') ?? ('ID ' . $unidadeId))
+            : 'Todas';
+        $rows[] = 'Relatorio Vale/Consumo — periodo ' . $di . ' a ' . $df . ' — unidade: ' . $uniLabel;
         $rows[] = implode($sep, ['Funcionario', 'CPF', 'Cargo', 'Unidade', 'Total Vale (R$)', 'Total Consumo (R$)', 'Qtd lancamentos']);
         foreach ($linhas as $r) {
             $rows[] = implode($sep, [
@@ -8940,15 +8993,148 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         $totC = number_format((float) $linhas->sum(fn ($x) => (float) ($x->total_consumo ?? 0)), 2, ',', '');
         $rows[] = implode($sep, ['TOTAL GERAL', '', '', '', $totV, $totC, '']);
         $csv = "\xEF\xBB\xBF" . implode("\r\n", $rows) . "\r\n";
+        $fn = 'vale-consumo-' . $di . '-' . $df . ($unidadeId > 0 ? '-u' . $unidadeId : '') . '.csv';
 
         return response($csv, 200)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Content-Type', 'text/csv; charset=UTF-8')
-            ->header('Content-Disposition', 'attachment; filename="vale-consumo-' . $comp . '.csv"');
+            ->header('Content-Disposition', 'attachment; filename="' . $fn . '"');
     } catch (\Exception $e) {
         \Log::error('GET /financeiro/vale-consumo/relatorio.csv: ' . $e->getMessage());
 
         return response()->json(['error' => 'Erro ao gerar CSV'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
+        $uniLabel = $unidadeId > 0 && Schema::hasTable('unidades')
+            ? (string) (DB::table('unidades')->where('id', $unidadeId)->value('nome') ?? ('Unidade #' . $unidadeId))
+            : 'Todas as unidades';
+
+        $qDet = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome');
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $qDet->whereBetween('v.data_lancamento', [$di, $df]);
+        } else {
+            $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
+            $qDet->where('v.competencia', $comp);
+        }
+        if ($unidadeId > 0) {
+            $qDet->where('f.unidade_id', $unidadeId);
+        }
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $qDet->orderByDesc('v.data_lancamento')->orderByDesc('v.id');
+        } else {
+            $qDet->orderByDesc('v.id');
+        }
+        $detalhes = $qDet->get();
+
+        $qRes = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->groupBy('v.funcionario_id', 'f.nome_completo', 'f.cpf', 'f.cargo', 'u.nome')
+            ->selectRaw('v.funcionario_id, f.nome_completo as funcionario_nome, f.cpf as funcionario_cpf, f.cargo as funcionario_cargo, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos')
+            ->orderBy('f.nome_completo');
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $qRes->whereBetween('v.data_lancamento', [$di, $df]);
+        } else {
+            $comp2 = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
+            $qRes->where('v.competencia', $comp2);
+        }
+        if ($unidadeId > 0) {
+            $qRes->where('f.unidade_id', $unidadeId);
+        }
+        $resumo = $qRes->get();
+        $totV = (float) $resumo->sum(fn ($x) => (float) ($x->total_vale ?? 0));
+        $totC = (float) $resumo->sum(fn ($x) => (float) ($x->total_consumo ?? 0));
+
+        $fmt = static fn ($n) => number_format((float) $n, 2, ',', '.');
+        $dataCol = Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento');
+        $rowsDet = '';
+        foreach ($detalhes as $d) {
+            $dt = $dataCol && ! empty($d->data_lancamento)
+                ? \Carbon\Carbon::parse($d->data_lancamento)->format('d/m/Y')
+                : '—';
+            $rowsDet .= '<tr>'
+                . '<td>' . e($dt) . '</td>'
+                . '<td>' . e((string) ($d->funcionario_nome ?? '')) . '</td>'
+                . '<td>' . e((string) ($d->unidade_nome ?? '')) . '</td>'
+                . '<td style="text-align:right">' . e($fmt($d->valor_vale ?? 0)) . '</td>'
+                . '<td style="text-align:right">' . e($fmt($d->valor_consumo ?? 0)) . '</td>'
+                . '<td>' . e(\Illuminate\Support\Str::limit((string) ($d->observacao ?? ''), 40)) . '</td>'
+                . '</tr>';
+        }
+        if ($rowsDet === '') {
+            $rowsDet = '<tr><td colspan="6" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
+        }
+        $rowsRes = '';
+        foreach ($resumo as $r) {
+            $rowsRes .= '<tr>'
+                . '<td>' . e((string) ($r->funcionario_nome ?? '')) . '</td>'
+                . '<td>' . e((string) ($r->unidade_nome ?? '')) . '</td>'
+                . '<td style="text-align:right">' . e($fmt($r->total_vale ?? 0)) . '</td>'
+                . '<td style="text-align:right">' . e($fmt($r->total_consumo ?? 0)) . '</td>'
+                . '<td style="text-align:center">' . e((string) (int) ($r->qtd_lancamentos ?? 0)) . '</td>'
+                . '</tr>';
+        }
+        if ($rowsRes === '') {
+            $rowsRes = '<tr><td colspan="5" style="text-align:center;color:#666">—</td></tr>';
+        }
+
+        $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
+            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;font-size:11px}h1{font-size:16px}h2{font-size:13px;margin-top:16px}.meta{color:#444;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:5px 6px}th{background:#f0f0f0;text-align:left}.num{text-align:right}</style></head><body>';
+        $html .= '<h1>Vale / consumo</h1>'
+            . '<div class="meta"><strong>Período:</strong> ' . e(\Carbon\Carbon::parse($di)->format('d/m/Y')) . ' a ' . e(\Carbon\Carbon::parse($df)->format('d/m/Y'))
+            . ' &nbsp;|&nbsp; <strong>Unidade:</strong> ' . e($uniLabel)
+            . ' &nbsp;|&nbsp; <strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>';
+
+        $html .= '<h2>Lançamentos (detalhe)</h2><table><thead><tr>'
+            . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale (R$)</th><th class="num">Consumo (R$)</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody></table>';
+
+        $html .= '<h2>Resumo por funcionário</h2><table><thead><tr>'
+            . '<th>Funcionário</th><th>Unidade</th><th class="num">Total vale</th><th class="num">Total consumo</th><th>Qtd.</th></tr></thead><tbody>' . $rowsRes . '</tbody></table>';
+
+        $html .= '<p style="margin-top:14px"><strong>Totais gerais:</strong> Vale R$ ' . e($fmt($totV)) . ' &nbsp;|&nbsp; Consumo R$ ' . e($fmt($totC)) . '</p>';
+        $html .= '</body></html>';
+
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->setIsRemoteEnabled(true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+        $fn = 'vale-consumo-' . $di . '-' . $df . ($unidadeId > 0 ? '-u' . $unidadeId : '') . '.pdf';
+        $disp = $request->boolean('download', false) ? 'attachment' : 'inline';
+
+        return response($pdfOutput, 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+            ->header('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type, Content-Length')
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', $disp . '; filename="' . $fn . '"')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Exception $e) {
+        \Log::error('GET /financeiro/vale-consumo/relatorio.pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 
@@ -8968,21 +9154,33 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
         if (! Schema::hasTable('funcionarios')) {
             return response()->json(['error' => 'Cadastro de funcionários indisponível'], 503)->header('Access-Control-Allow-Origin', '*');
         }
-        $data = $request->validate([
+        $rules = [
             'funcionario_id' => 'required|integer|min:1',
-            'competencia' => 'required|string|regex:/^\d{4}-\d{2}$/',
             'valor_vale' => 'required|numeric|min:0',
             'valor_consumo' => 'required|numeric|min:0',
             'observacao' => 'nullable|string|max:500',
-        ]);
+        ];
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $rules['data_lancamento'] = 'required|date';
+        } else {
+            $rules['competencia'] = 'required|string|regex:/^\d{4}-\d{2}$/';
+        }
+        $data = $request->validate($rules);
         if (! DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->exists()) {
             return response()->json(['error' => 'Funcionário não encontrado'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        $comp = $valeConsumoValidarCompetencia($data['competencia']);
-        if (! $comp) {
-            return response()->json(['error' => 'Competência inválida (use AAAA-MM)'], 422)->header('Access-Control-Allow-Origin', '*');
+        $comp = null;
+        $dataLanc = null;
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $dataLanc = \Carbon\Carbon::parse($data['data_lancamento'])->toDateString();
+            $comp = substr($dataLanc, 0, 7);
+        } else {
+            $comp = $valeConsumoValidarCompetencia($data['competencia']);
+            if (! $comp) {
+                return response()->json(['error' => 'Competência inválida (use AAAA-MM)'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
         }
-        $id = DB::table('financeiro_vale_consumo')->insertGetId([
+        $insert = [
             'funcionario_id' => (int) $data['funcionario_id'],
             'competencia' => $comp,
             'valor_vale' => round((float) $data['valor_vale'], 2),
@@ -8990,7 +9188,11 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
             'observacao' => $data['observacao'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+        if ($dataLanc !== null) {
+            $insert['data_lancamento'] = $dataLanc;
+        }
+        $id = DB::table('financeiro_vale_consumo')->insertGetId($insert);
         $row = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
@@ -9026,13 +9228,18 @@ Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use
         if (! $ex) {
             return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
-        $data = $request->validate([
+        $rules = [
             'funcionario_id' => 'sometimes|required|integer|min:1',
-            'competencia' => 'sometimes|required|string|regex:/^\d{4}-\d{2}$/',
             'valor_vale' => 'sometimes|required|numeric|min:0',
             'valor_consumo' => 'sometimes|required|numeric|min:0',
             'observacao' => 'nullable|string|max:500',
-        ]);
+        ];
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $rules['data_lancamento'] = 'sometimes|required|date';
+        } else {
+            $rules['competencia'] = 'sometimes|required|string|regex:/^\d{4}-\d{2}$/';
+        }
+        $data = $request->validate($rules);
         if (isset($data['funcionario_id']) && ! DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->exists()) {
             return response()->json(['error' => 'Funcionário não encontrado'], 422)->header('Access-Control-Allow-Origin', '*');
         }
@@ -9040,7 +9247,11 @@ Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use
         if (isset($data['funcionario_id'])) {
             $up['funcionario_id'] = (int) $data['funcionario_id'];
         }
-        if (isset($data['competencia'])) {
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento') && isset($data['data_lancamento'])) {
+            $dl = \Carbon\Carbon::parse($data['data_lancamento'])->toDateString();
+            $up['data_lancamento'] = $dl;
+            $up['competencia'] = substr($dl, 0, 7);
+        } elseif (isset($data['competencia'])) {
             $c = $valeConsumoValidarCompetencia($data['competencia']);
             if (! $c) {
                 return response()->json(['error' => 'Competência inválida'], 422)->header('Access-Control-Allow-Origin', '*');

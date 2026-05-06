@@ -2984,30 +2984,41 @@
             <div class="boletos-header">
               <div>
                 <h2>🍽️ Vale / consumo</h2>
-                <p class="subtle-text">Lançamentos por competência (mês), vinculados ao cadastro de <strong>funcionários</strong>. Resumo com total de vale e de consumo por pessoa. Relatório em CSV para planilha.</p>
+                <p class="subtle-text">Cada lançamento tem <strong>data</strong>. Filtre por período e <strong>unidade</strong>; resumo por funcionário e relatórios em CSV ou PDF.</p>
               </div>
               <div class="boletos-actions">
                 <button type="button" class="btn secondary" id="valeConsumoAtualizar">🔄 Atualizar</button>
-                <button type="button" class="btn primary" id="valeConsumoCsv">⬇ Relatório CSV</button>
+                <button type="button" class="btn primary" id="valeConsumoCsv">⬇ CSV</button>
+                <button type="button" class="btn primary" id="valeConsumoPdf">📄 PDF</button>
               </div>
             </div>
 
             <div class="filters-panel" style="margin-bottom: 1rem;">
               <div class="filters-grid">
                 <label>
-                  Competência (mês)
-                  <input type="month" id="valeConsumoCompetencia" />
+                  Data inicial
+                  <input type="date" id="valeConsumoDataInicio" />
+                </label>
+                <label>
+                  Data final
+                  <input type="date" id="valeConsumoDataFim" />
+                </label>
+                <label>
+                  Unidade
+                  <select id="valeConsumoFiltroUnidade">
+                    <option value="">Todas</option>
+                  </select>
                 </label>
               </div>
               <div class="filters-actions">
-                <button type="button" class="btn primary" id="valeConsumoFiltrar">Aplicar</button>
+                <button type="button" class="btn primary" id="valeConsumoFiltrar">Aplicar filtro</button>
               </div>
             </div>
 
             <div class="table-card form-card--wide" style="margin-bottom: 1rem;">
               <header>
                 <h3 style="margin:0;">Resumo por funcionário</h3>
-                <p class="subtle-text" style="margin:0.35rem 0 0 0;">Soma dos lançamentos da competência selecionada.</p>
+                <p class="subtle-text" style="margin:0.35rem 0 0 0;">Soma dos lançamentos no período e unidade selecionados.</p>
               </header>
               <div id="valeConsumoResumoTotais" class="subtle-text" style="padding: 0.5rem 1rem;"></div>
               <div class="table-wrapper">
@@ -3032,11 +3043,15 @@
             <div class="form-card form-card--wide" style="margin-bottom: 1rem;">
               <header>
                 <h3 style="margin:0;">Novo lançamento</h3>
-                <p class="subtle-text" style="margin:0.35rem 0 0 0;">Valores em reais (R$). Para corrigir, use <strong>Editar</strong> ou <strong>Excluir</strong> na tabela abaixo.</p>
+                <p class="subtle-text" style="margin:0.35rem 0 0 0;">Valores em reais (R$). Informe a <strong>data</strong> do lançamento. Para corrigir, use <strong>Editar</strong> ou <strong>Excluir</strong> na tabela abaixo.</p>
               </header>
               <form id="valeConsumoForm" class="filters-panel" style="margin-top:0.75rem;">
                 <input type="hidden" id="valeConsumoLancamentoId" value="" />
                 <div class="filters-grid">
+                  <label>
+                    Data do lançamento *
+                    <input type="date" id="valeConsumoDataLancamento" required />
+                  </label>
                   <label>
                     Funcionário *
                     <select id="valeConsumoFuncionario" required>
@@ -3072,6 +3087,7 @@
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Data</th>
                       <th>Funcionário</th>
                       <th>Vale</th>
                       <th>Consumo</th>
@@ -3080,7 +3096,7 @@
                     </tr>
                   </thead>
                   <tbody id="valeConsumoTableDetalhe">
-                    <tr><td colspan="6" style="text-align:center;color:#607d8b">—</td></tr>
+                    <tr><td colspan="7" style="text-align:center;color:#607d8b">—</td></tr>
                   </tbody>
                 </table>
               </div>
