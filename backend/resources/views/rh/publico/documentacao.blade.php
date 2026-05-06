@@ -63,7 +63,7 @@
         <div class="card card-doc shadow-sm mb-3">
             <div class="card-body text-dark">
                 <h1 class="h5 mb-2">Olá, {{ $nome }}</h1>
-                <p class="mb-0 small text-muted">Telefone e e-mail já estão no seu cadastro de candidatura — não é preciso repetir aqui. Envie cada item conforme indicado: na maioria dos casos em <strong>PDF</strong> (máx. 6 MB). A <strong>foto 3×4</strong> pode ser <strong>JPG ou PNG</strong>. Você pode voltar a esta página para complementar ou atualizar até o RH concluir a contratação.</p>
+                <p class="mb-0 small text-muted">Envie cada item conforme indicado: na maioria dos casos em <strong>PDF</strong> (máx. 6 MB). A <strong>foto 3×4</strong> pode ser <strong>JPG ou PNG</strong>. Você pode voltar a esta página para complementar ou atualizar até o RH concluir a contratação.</p>
             </div>
         </div>
 
