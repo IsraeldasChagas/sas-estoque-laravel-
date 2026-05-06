@@ -5432,6 +5432,7 @@ Route::post('/admin/backup', function (Request $request) {
                 'usuarios'              => DB::table('usuarios')->get()->toArray(),
                 // RH (funcionários)
                 'funcionarios'          => Schema::hasTable('funcionarios') ? DB::table('funcionarios')->get()->toArray() : [],
+                'financeiro_vale_consumo' => Schema::hasTable('financeiro_vale_consumo') ? DB::table('financeiro_vale_consumo')->get()->toArray() : [],
                 // Recrutamento (vagas + candidatos e vínculos; usado em backup/restore e merge)
                 'rh_vagas'              => Schema::hasTable('rh_vagas') ? DB::table('rh_vagas')->get()->toArray() : [],
                 'rh_candidatos'         => Schema::hasTable('rh_candidatos') ? DB::table('rh_candidatos')->get()->toArray() : [],
@@ -5683,7 +5684,7 @@ Route::post('/admin/restaurar', function (Request $request) {
 
         // Ordem respeitando dependências (recrutamento: vagas antes de candidatos; filhos após candidatos)
         $ordem = [
-            'unidades', 'locais', 'usuarios', 'funcionarios', 'produtos',
+            'unidades', 'locais', 'usuarios', 'funcionarios', 'financeiro_vale_consumo', 'produtos',
             'lotes', 'stock_lotes', 'movimentacoes',
             'listas_compras', 'listas_itens',
             'boletos', 'estabelecimentos_compra',
@@ -8797,6 +8798,303 @@ Route::delete('/despesas-fixas/{id}', function (Request $request, $id) use ($pro
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('DELETE /despesas-fixas/{id}: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao excluir'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+// ============================================
+// VALE / CONSUMO (Financeiro — lançamentos por funcionário)
+// ============================================
+
+$valeConsumoCors = fn () => response()->json([])
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Debug, X-Device-Model, X-Device-Platform');
+
+Route::options('/financeiro/vale-consumo', $valeConsumoCors);
+Route::options('/financeiro/vale-consumo/resumo', $valeConsumoCors);
+Route::options('/financeiro/vale-consumo/relatorio.csv', $valeConsumoCors);
+Route::options('/financeiro/vale-consumo/{id}', $valeConsumoCors);
+
+$valeConsumoValidarCompetencia = static function (?string $c): ?string {
+    $c = is_string($c) ? trim($c) : '';
+    if ($c === '') {
+        return null;
+    }
+    if (! preg_match('/^\d{4}-\d{2}$/', $c)) {
+        return null;
+    }
+
+    return $c;
+};
+
+Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response()->json([])->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? now()->format('Y-m');
+        $q = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->where('v.competencia', $comp)
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome')
+            ->orderBy('f.nome_completo')
+            ->orderBy('v.id');
+
+        return response()->json($q->get())->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /financeiro/vale-consumo: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao listar'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response()->json(['competencia' => now()->format('Y-m'), 'linhas' => [], 'totais' => ['total_vale' => 0, 'total_consumo' => 0]])->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? now()->format('Y-m');
+        $linhas = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->where('v.competencia', $comp)
+            ->groupBy('v.funcionario_id', 'f.nome_completo', 'f.cpf', 'f.cargo', 'u.nome')
+            ->selectRaw('v.funcionario_id, f.nome_completo as funcionario_nome, f.cpf as funcionario_cpf, f.cargo as funcionario_cargo, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos')
+            ->orderBy('f.nome_completo')
+            ->get();
+        $totVale = (float) $linhas->sum(fn ($r) => (float) ($r->total_vale ?? 0));
+        $totCons = (float) $linhas->sum(fn ($r) => (float) ($r->total_consumo ?? 0));
+
+        return response()->json([
+            'competencia' => $comp,
+            'linhas' => $linhas,
+            'totais' => ['total_vale' => $totVale, 'total_consumo' => $totCons],
+        ])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('GET /financeiro/vale-consumo/resumo: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao montar resumo'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response("Sem dados (tabela não criada — rode migrate).\n", 200)
+                ->header('Access-Control-Allow-Origin', '*')
+                ->header('Content-Type', 'text/csv; charset=UTF-8')
+                ->header('Content-Disposition', 'attachment; filename="vale-consumo.csv"');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $comp = $valeConsumoValidarCompetencia($request->query('competencia')) ?? now()->format('Y-m');
+        $linhas = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->where('v.competencia', $comp)
+            ->groupBy('v.funcionario_id', 'f.nome_completo', 'f.cpf', 'f.cargo', 'u.nome')
+            ->selectRaw('v.funcionario_id, f.nome_completo as funcionario_nome, f.cpf as funcionario_cpf, f.cargo as funcionario_cargo, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos')
+            ->orderBy('f.nome_completo')
+            ->get();
+        $sep = ';';
+        $rows = [];
+        $rows[] = 'Relatorio Vale/Consumo — competencia ' . $comp;
+        $rows[] = implode($sep, ['Funcionario', 'CPF', 'Cargo', 'Unidade', 'Total Vale (R$)', 'Total Consumo (R$)', 'Qtd lancamentos']);
+        foreach ($linhas as $r) {
+            $rows[] = implode($sep, [
+                '"' . str_replace('"', '""', (string) ($r->funcionario_nome ?? '')) . '"',
+                '"' . str_replace('"', '""', (string) ($r->funcionario_cpf ?? '')) . '"',
+                '"' . str_replace('"', '""', (string) ($r->funcionario_cargo ?? '')) . '"',
+                '"' . str_replace('"', '""', (string) ($r->unidade_nome ?? '')) . '"',
+                number_format((float) ($r->total_vale ?? 0), 2, ',', ''),
+                number_format((float) ($r->total_consumo ?? 0), 2, ',', ''),
+                (string) (int) ($r->qtd_lancamentos ?? 0),
+            ]);
+        }
+        $totV = number_format((float) $linhas->sum(fn ($x) => (float) ($x->total_vale ?? 0)), 2, ',', '');
+        $totC = number_format((float) $linhas->sum(fn ($x) => (float) ($x->total_consumo ?? 0)), 2, ',', '');
+        $rows[] = implode($sep, ['TOTAL GERAL', '', '', '', $totV, $totC, '']);
+        $csv = "\xEF\xBB\xBF" . implode("\r\n", $rows) . "\r\n";
+
+        return response($csv, 200)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Content-Type', 'text/csv; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="vale-consumo-' . $comp . '.csv"');
+    } catch (\Exception $e) {
+        \Log::error('GET /financeiro/vale-consumo/relatorio.csv: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar CSV'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::post('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response()->json(['error' => 'Módulo não configurado (migration pendente)'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        if (! Schema::hasTable('funcionarios')) {
+            return response()->json(['error' => 'Cadastro de funcionários indisponível'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $data = $request->validate([
+            'funcionario_id' => 'required|integer|min:1',
+            'competencia' => 'required|string|regex:/^\d{4}-\d{2}$/',
+            'valor_vale' => 'required|numeric|min:0',
+            'valor_consumo' => 'required|numeric|min:0',
+            'observacao' => 'nullable|string|max:500',
+        ]);
+        if (! DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->exists()) {
+            return response()->json(['error' => 'Funcionário não encontrado'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $comp = $valeConsumoValidarCompetencia($data['competencia']);
+        if (! $comp) {
+            return response()->json(['error' => 'Competência inválida (use AAAA-MM)'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $id = DB::table('financeiro_vale_consumo')->insertGetId([
+            'funcionario_id' => (int) $data['funcionario_id'],
+            'competencia' => $comp,
+            'valor_vale' => round((float) $data['valor_vale'], 2),
+            'valor_consumo' => round((float) $data['valor_consumo'], 2),
+            'observacao' => $data['observacao'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $row = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->where('v.id', $id)
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome')
+            ->first();
+
+        return response()->json($row, 201)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Illuminate\Validation\ValidationException $ve) {
+        return response()->json(['error' => 'Dados inválidos', 'details' => $ve->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('POST /financeiro/vale-consumo: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao salvar'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $id = (int) $id;
+        $ex = DB::table('financeiro_vale_consumo')->where('id', $id)->first();
+        if (! $ex) {
+            return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+        $data = $request->validate([
+            'funcionario_id' => 'sometimes|required|integer|min:1',
+            'competencia' => 'sometimes|required|string|regex:/^\d{4}-\d{2}$/',
+            'valor_vale' => 'sometimes|required|numeric|min:0',
+            'valor_consumo' => 'sometimes|required|numeric|min:0',
+            'observacao' => 'nullable|string|max:500',
+        ]);
+        if (isset($data['funcionario_id']) && ! DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->exists()) {
+            return response()->json(['error' => 'Funcionário não encontrado'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $up = ['updated_at' => now()];
+        if (isset($data['funcionario_id'])) {
+            $up['funcionario_id'] = (int) $data['funcionario_id'];
+        }
+        if (isset($data['competencia'])) {
+            $c = $valeConsumoValidarCompetencia($data['competencia']);
+            if (! $c) {
+                return response()->json(['error' => 'Competência inválida'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+            $up['competencia'] = $c;
+        }
+        if (isset($data['valor_vale'])) {
+            $up['valor_vale'] = round((float) $data['valor_vale'], 2);
+        }
+        if (isset($data['valor_consumo'])) {
+            $up['valor_consumo'] = round((float) $data['valor_consumo'], 2);
+        }
+        if (array_key_exists('observacao', $data)) {
+            $up['observacao'] = $data['observacao'];
+        }
+        DB::table('financeiro_vale_consumo')->where('id', $id)->update($up);
+        $row = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->where('v.id', $id)
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome')
+            ->first();
+
+        return response()->json($row)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Illuminate\Validation\ValidationException $ve) {
+        return response()->json(['error' => 'Dados inválidos', 'details' => $ve->errors()], 422)->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('PUT /financeiro/vale-consumo/{id}: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao atualizar'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+Route::delete('/financeiro/vale-consumo/{id}', function (Request $request, $id) use ($proventosAuth, $despFixasPodeGerir) {
+    try {
+        if (! Schema::hasTable('financeiro_vale_consumo')) {
+            return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
+        }
+        $u = $proventosAuth($request);
+        if (! $u) {
+            return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+        }
+        $perfil = strtoupper(trim($u->perfil ?? ''));
+        if (! $despFixasPodeGerir($perfil)) {
+            return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+        $n = DB::table('financeiro_vale_consumo')->where('id', (int) $id)->delete();
+        if (! $n) {
+            return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('DELETE /financeiro/vale-consumo/{id}: ' . $e->getMessage());
 
         return response()->json(['error' => 'Erro ao excluir'], 500)->header('Access-Control-Allow-Origin', '*');
     }

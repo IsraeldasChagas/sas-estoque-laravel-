@@ -152,6 +152,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="alvara">Alvará</a>
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas">Despesas fixas</a>
+              <a href="#" class="nav-link nav-link-child" data-section="valeConsumo">Vale / consumo</a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo (ajuda de custo)</a>
               <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Registros de auditoria: lançar, editar e conferir fechamentos de caixa">Auditoria — fechamento de caixa</a>
               <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Painel só leitura: gráficos, totais por unidade e análise dos fechamentos">Dashboard — análise fechamentos</a>
@@ -2978,6 +2979,114 @@
             </div>
           </section>
 
+          <!-- Financeiro — Vale / consumo (totais por funcionário) -->
+          <section id="valeConsumoSection" class="view-section hidden">
+            <div class="boletos-header">
+              <div>
+                <h2>🍽️ Vale / consumo</h2>
+                <p class="subtle-text">Lançamentos por competência (mês), vinculados ao cadastro de <strong>funcionários</strong>. Resumo com total de vale e de consumo por pessoa. Relatório em CSV para planilha.</p>
+              </div>
+              <div class="boletos-actions">
+                <button type="button" class="btn secondary" id="valeConsumoAtualizar">🔄 Atualizar</button>
+                <button type="button" class="btn primary" id="valeConsumoCsv">⬇ Relatório CSV</button>
+              </div>
+            </div>
+
+            <div class="filters-panel" style="margin-bottom: 1rem;">
+              <div class="filters-grid">
+                <label>
+                  Competência (mês)
+                  <input type="month" id="valeConsumoCompetencia" />
+                </label>
+              </div>
+              <div class="filters-actions">
+                <button type="button" class="btn primary" id="valeConsumoFiltrar">Aplicar</button>
+              </div>
+            </div>
+
+            <div class="table-card form-card--wide" style="margin-bottom: 1rem;">
+              <header>
+                <h3 style="margin:0;">Resumo por funcionário</h3>
+                <p class="subtle-text" style="margin:0.35rem 0 0 0;">Soma dos lançamentos da competência selecionada.</p>
+              </header>
+              <div id="valeConsumoResumoTotais" class="subtle-text" style="padding: 0.5rem 1rem;"></div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Funcionário</th>
+                      <th>Unidade</th>
+                      <th>Cargo</th>
+                      <th>Total vale</th>
+                      <th>Total consumo</th>
+                      <th>Lançamentos</th>
+                    </tr>
+                  </thead>
+                  <tbody id="valeConsumoTableResumo">
+                    <tr><td colspan="6" style="text-align:center;color:#607d8b">Abra o módulo para carregar.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="form-card form-card--wide" style="margin-bottom: 1rem;">
+              <header>
+                <h3 style="margin:0;">Novo lançamento</h3>
+                <p class="subtle-text" style="margin:0.35rem 0 0 0;">Valores em reais (R$). Para corrigir, use <strong>Editar</strong> ou <strong>Excluir</strong> na tabela abaixo.</p>
+              </header>
+              <form id="valeConsumoForm" class="filters-panel" style="margin-top:0.75rem;">
+                <input type="hidden" id="valeConsumoLancamentoId" value="" />
+                <div class="filters-grid">
+                  <label>
+                    Funcionário *
+                    <select id="valeConsumoFuncionario" required>
+                      <option value="">Carregue a tela…</option>
+                    </select>
+                  </label>
+                  <label>
+                    Vale (R$) *
+                    <input type="number" id="valeConsumoValorVale" step="0.01" min="0" required placeholder="0,00" />
+                  </label>
+                  <label>
+                    Consumo (R$) *
+                    <input type="number" id="valeConsumoValorConsumo" step="0.01" min="0" required placeholder="0,00" />
+                  </label>
+                  <label style="grid-column: 1 / -1;">
+                    Observação
+                    <input type="text" id="valeConsumoObs" maxlength="500" placeholder="Opcional" />
+                  </label>
+                </div>
+                <div class="filters-actions">
+                  <button type="button" class="btn neutral" id="valeConsumoFormLimpar">Limpar</button>
+                  <button type="submit" class="btn primary" id="valeConsumoFormSalvar">Salvar</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-card form-card--wide">
+              <header>
+                <h3 style="margin:0;">Lançamentos (detalhe)</h3>
+              </header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Funcionário</th>
+                      <th>Vale</th>
+                      <th>Consumo</th>
+                      <th>Obs.</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="valeConsumoTableDetalhe">
+                    <tr><td colspan="6" style="text-align:center;color:#607d8b">—</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
           <!-- Financeiro - Auditoria fechamento caixa -->
           <section id="fechamentoSection" class="view-section hidden fechamento-audit">
             <input type="hidden" id="fechamentoEdicaoId" value="" />
@@ -3850,6 +3959,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="alvara" /> Alvará</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="proventos" /> Proventos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="despesasFixas" /> Despesas fixas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="valeConsumo" /> Vale / consumo</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reciboAjuda" /> Recibo (ajuda de custo)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamento" /> Auditoria fechamento caixa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard — análise fechamentos</label>

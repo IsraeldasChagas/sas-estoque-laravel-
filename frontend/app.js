@@ -261,6 +261,275 @@ async function loadDespesasFixas() {
   despFixasRenderTable(despesasFixasListaCache);
 }
 
+function fmtBRLValeConsumo(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return x.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+let valeConsumoDetalheCache = [];
+
+function valeConsumoMesAtualStr() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function valeConsumoCompetenciaDoInput() {
+  const el = document.getElementById("valeConsumoCompetencia");
+  const v = el && el.value ? String(el.value).trim() : "";
+  return /^\d{4}-\d{2}$/.test(v) ? v : valeConsumoMesAtualStr();
+}
+
+function valeConsumoRenderResumo(tb, payload) {
+  if (!tb) return;
+  const linhas = Array.isArray(payload?.linhas) ? payload.linhas : [];
+  const tot = payload?.totais || {};
+  const wrapTot = document.getElementById("valeConsumoResumoTotais");
+  if (wrapTot) {
+    wrapTot.innerHTML = `<strong>Totais gerais:</strong> vale ${fmtBRLValeConsumo(tot.total_vale)} · consumo ${fmtBRLValeConsumo(
+      tot.total_consumo
+    )}`;
+  }
+  if (!linhas.length) {
+    tb.innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum lançamento nesta competência.</td></tr>';
+    return;
+  }
+  tb.innerHTML = linhas
+    .map((r) => {
+      const nome = escapeHtml(String(r.funcionario_nome || "—"));
+      const un = escapeHtml(String(r.unidade_nome || "—"));
+      const cargo = escapeHtml(String(r.funcionario_cargo || "—"));
+      const nv = fmtBRLValeConsumo(r.total_vale);
+      const nc = fmtBRLValeConsumo(r.total_consumo);
+      const q = escapeHtml(String(r.qtd_lancamentos ?? "0"));
+      return `<tr>
+        <td>${nome}</td>
+        <td>${un}</td>
+        <td>${cargo}</td>
+        <td>${nv}</td>
+        <td>${nc}</td>
+        <td>${q}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
+function valeConsumoRenderDetalhe(tb, lista) {
+  if (!tb) return;
+  if (!lista.length) {
+    tb.innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum lançamento nesta competência.</td></tr>';
+    return;
+  }
+  tb.innerHTML = lista
+    .map((r) => {
+      const id = escapeHtml(String(r.id ?? ""));
+      const nome = escapeHtml(String(r.funcionario_nome || "—"));
+      const vv = fmtBRLValeConsumo(r.valor_vale);
+      const vc = fmtBRLValeConsumo(r.valor_consumo);
+      const obs = escapeHtml(String(r.observacao || "").slice(0, 80));
+      return `<tr>
+        <td>${id}</td>
+        <td>${nome}</td>
+        <td>${vv}</td>
+        <td>${vc}</td>
+        <td>${obs || "—"}</td>
+        <td>
+          <button type="button" class="btn secondary table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
+          <button type="button" class="btn danger table-action" data-valecons-action="del" data-id="${id}">Excluir</button>
+        </td>
+      </tr>`;
+    })
+    .join("");
+}
+
+async function loadValeConsumoSection() {
+  const compEl = document.getElementById("valeConsumoCompetencia");
+  const tbDet = document.getElementById("valeConsumoTableDetalhe");
+  const tbRes = document.getElementById("valeConsumoTableResumo");
+  if (!compEl || !tbDet || !tbRes) return;
+
+  if (!compEl.value) compEl.value = valeConsumoMesAtualStr();
+
+  const sel = document.getElementById("valeConsumoFuncionario");
+  try {
+    const dados = await fetchJSON("/funcionarios?status=ativo");
+    state.funcionarios = Array.isArray(dados) ? dados : [];
+    if (sel) {
+      const cur = sel.value;
+      sel.innerHTML =
+        '<option value="">Selecione o funcionário…</option>' +
+        state.funcionarios
+          .map((f) => {
+            const id = escapeHtml(String(f.id));
+            const nm = escapeHtml(String(f.nome_completo || f.nome || `#${f.id}`));
+            return `<option value="${id}">${nm}</option>`;
+          })
+          .join("");
+      if (cur) sel.value = cur;
+    }
+  } catch (_) {
+    if (sel) sel.innerHTML = '<option value="">Erro ao carregar funcionários</option>';
+  }
+
+  tbDet.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
+  tbRes.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
+
+  const comp = encodeURIComponent(valeConsumoCompetenciaDoInput());
+  try {
+    const [det, resumo] = await Promise.all([
+      fetchJSON(`/financeiro/vale-consumo?competencia=${comp}`),
+      fetchJSON(`/financeiro/vale-consumo/resumo?competencia=${comp}`),
+    ]);
+    valeConsumoDetalheCache = Array.isArray(det) ? det : [];
+    valeConsumoRenderDetalhe(tbDet, valeConsumoDetalheCache);
+    valeConsumoRenderResumo(tbRes, resumo);
+  } catch (e) {
+    const msg = escapeHtml(String(e?.message || "Erro"));
+    tbDet.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c62828">${msg}</td></tr>`;
+    tbRes.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c62828">${msg}</td></tr>`;
+  }
+}
+
+function valeConsumoLimparFormulario() {
+  const hid = document.getElementById("valeConsumoLancamentoId");
+  const fv = document.getElementById("valeConsumoValorVale");
+  const fc = document.getElementById("valeConsumoValorConsumo");
+  const ob = document.getElementById("valeConsumoObs");
+  const fn = document.getElementById("valeConsumoFuncionario");
+  if (hid) hid.value = "";
+  if (fv) fv.value = "";
+  if (fc) fc.value = "";
+  if (ob) ob.value = "";
+  if (fn) fn.value = "";
+  const btn = document.getElementById("valeConsumoFormSalvar");
+  if (btn) btn.textContent = "Salvar";
+}
+
+async function downloadValeConsumoCsv() {
+  const comp = valeConsumoCompetenciaDoInput();
+  const url = `${API_URL}/financeiro/vale-consumo/relatorio.csv?competencia=${encodeURIComponent(comp)}`;
+  const headers = { ...getDeviceHeaders() };
+  if (currentUser && currentUser.token) headers.Authorization = `Bearer ${currentUser.token}`;
+  if (currentUser && currentUser.id != null) headers["X-Usuario-Id"] = String(currentUser.id);
+  const res = await fetch(url, { method: "GET", cache: "no-store", headers });
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const j = await res.json();
+      if (j?.error) msg = j.error;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `vale-consumo-${comp}.csv`;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(a.href);
+    } catch (_) {}
+  }, 30_000);
+}
+
+function valeConsumoBindOnce() {
+  if (document.body.dataset.valeConsumoBound === "1") return;
+  document.body.dataset.valeConsumoBound = "1";
+
+  document.getElementById("valeConsumoAtualizar")?.addEventListener("click", () => {
+    loadValeConsumoSection().catch((e) => showToast(e?.message || "Erro ao atualizar.", "error"));
+  });
+  document.getElementById("valeConsumoFiltrar")?.addEventListener("click", () => {
+    loadValeConsumoSection().catch((e) => showToast(e?.message || "Erro ao filtrar.", "error"));
+  });
+  document.getElementById("valeConsumoCsv")?.addEventListener("click", () => {
+    downloadValeConsumoCsv().catch((e) => showToast(e?.message || "Erro ao baixar CSV.", "error"));
+  });
+  document.getElementById("valeConsumoFormLimpar")?.addEventListener("click", () => valeConsumoLimparFormulario());
+
+  document.getElementById("valeConsumoForm")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const comp = valeConsumoCompetenciaDoInput();
+    const fid = document.getElementById("valeConsumoFuncionario")?.value;
+    const vv = document.getElementById("valeConsumoValorVale")?.value;
+    const vc = document.getElementById("valeConsumoValorConsumo")?.value;
+    const obs = document.getElementById("valeConsumoObs")?.value?.trim() || "";
+    const lid = document.getElementById("valeConsumoLancamentoId")?.value?.trim() || "";
+    if (!fid) {
+      showToast("Selecione o funcionário.", "warning");
+      return;
+    }
+    const body = {
+      funcionario_id: Number(fid),
+      competencia: comp,
+      valor_vale: Number(String(vv).replace(",", ".")) || 0,
+      valor_consumo: Number(String(vc).replace(",", ".")) || 0,
+      observacao: obs || null,
+    };
+    try {
+      if (lid) {
+        await fetchJSON(`/financeiro/vale-consumo/${encodeURIComponent(lid)}`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        showToast("Lançamento atualizado.", "success");
+      } else {
+        await fetchJSON("/financeiro/vale-consumo", { method: "POST", body: JSON.stringify(body) });
+        showToast("Lançamento registrado.", "success");
+      }
+      valeConsumoLimparFormulario();
+      await loadValeConsumoSection();
+    } catch (e) {
+      showToast(e?.message || "Erro ao salvar.", "error");
+    }
+  });
+
+  document.getElementById("valeConsumoSection")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-valecons-action]");
+    if (!btn || !e.currentTarget.contains(btn)) return;
+    const id = btn.getAttribute("data-id");
+    const act = btn.getAttribute("data-valecons-action");
+    if (!id || !act) return;
+    if (act === "del") {
+      if (!confirm("Excluir este lançamento?")) return;
+      try {
+        await fetchJSON(`/financeiro/vale-consumo/${encodeURIComponent(id)}`, { method: "DELETE" });
+        showToast("Excluído.", "success");
+        await loadValeConsumoSection();
+      } catch (err) {
+        showToast(err?.message || "Erro ao excluir.", "error");
+      }
+      return;
+    }
+    if (act === "edit") {
+      const row = valeConsumoDetalheCache.find((x) => String(x?.id) === String(id));
+      if (!row) {
+        showToast("Registro não encontrado no cache. Atualize a lista.", "warning");
+        return;
+      }
+      const hid = document.getElementById("valeConsumoLancamentoId");
+      const fn = document.getElementById("valeConsumoFuncionario");
+      const fv = document.getElementById("valeConsumoValorVale");
+      const fc = document.getElementById("valeConsumoValorConsumo");
+      const ob = document.getElementById("valeConsumoObs");
+      if (hid) hid.value = String(row.id);
+      if (fn) fn.value = String(row.funcionario_id ?? "");
+      if (fv) fv.value = row.valor_vale != null ? String(row.valor_vale) : "";
+      if (fc) fc.value = row.valor_consumo != null ? String(row.valor_consumo) : "";
+      if (ob) ob.value = row.observacao != null ? String(row.observacao) : "";
+      const sb = document.getElementById("valeConsumoFormSalvar");
+      if (sb) sb.textContent = "Atualizar";
+      showToast("Formulário preenchido para edição.", "info");
+    }
+  });
+}
+
+valeConsumoBindOnce();
+
 function despFixasRenderFiltrosOptions() {
   const els = despFixasEls();
   if (!els.filtroCategoria || !els.filtroUnidade) return;
@@ -480,10 +749,12 @@ function despFixasBindOnce() {
 // Também é seguro chamar várias vezes: há guardas de "bound".
 document.addEventListener("DOMContentLoaded", () => {
   despFixasBindOnce();
+  valeConsumoBindOnce();
 });
 
 // Se o script for carregado após DOMContentLoaded (ex.: cache / defer), ainda assim faz bind.
 despFixasBindOnce();
+valeConsumoBindOnce();
 
 
 const storageKey = "sas-estoque-user";
@@ -788,7 +1059,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -796,7 +1067,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -828,7 +1099,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -836,7 +1107,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -3396,6 +3667,17 @@ function applyPermissions() {
   ) {
     sections = [...sections, "despesasFixas"];
   }
+  if (
+    (sections.includes("boletao") ||
+      sections.includes("alvara") ||
+      sections.includes("proventos") ||
+      sections.includes("fechamento") ||
+      sections.includes("fechamentoDash") ||
+      sections.includes("despesasFixas")) &&
+    !sections.includes("valeConsumo")
+  ) {
+    sections = [...sections, "valeConsumo"];
+  }
   // Auditoria fechamento caixa (id fechamento): permissoes_menu antigas sem o módulo novo mantêm acesso junto a Boleto/Alvará/Proventos
   if (
     (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos")) &&
@@ -3457,6 +3739,7 @@ function applyPermissions() {
       regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
       regras.sections.includes("despesasFixas") ||
+      regras.sections.includes("valeConsumo") ||
       regras.sections.includes("reciboAjuda") ||
       regras.sections.includes("fechamento") ||
       regras.sections.includes("fechamentoDash");
@@ -3618,6 +3901,7 @@ function navigateTo(section) {
       section === "alvara" ||
       section === "proventos" ||
       section === "despesasFixas" ||
+      section === "valeConsumo" ||
       section === "reciboAjuda" ||
       section === "fechamento" ||
       section === "fechamentoDash"
@@ -3643,6 +3927,8 @@ function navigateTo(section) {
   else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
   else if (section === 'logs') loadLogs();
   else if (section === 'despesasFixas') loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao carregar despesas.", "error"));
+  else if (section === "valeConsumo")
+    loadValeConsumoSection().catch((err) => showToast(err?.message || "Falha ao carregar Vale/consumo.", "error"));
 }
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.
@@ -8882,7 +9168,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
+      "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs"
     ]);
 
@@ -9047,8 +9333,10 @@ async function startAppSession(user) {
           await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
         } else if (sectionToNavigate === 'fechamento') {
           await loadFechamentoCaixaSection();
-        } else if (sectionToNavigate === "fechamentoDash") {
+        }         else if (sectionToNavigate === "fechamentoDash") {
           await loadFechamentoDashSection();
+        } else if (sectionToNavigate === "valeConsumo") {
+          await loadValeConsumoSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
           syncKanbanToolbarCollapsedFromStorage();
           await loadUnidades(false).catch(() => {});
@@ -13278,8 +13566,10 @@ function wireSidebarSectionNavClicks() {
       }
       else if (target === "fechamento") {
         await loadFechamentoCaixaSection();
-      } else if (target === "fechamentoDash") {
+      }       else if (target === "fechamentoDash") {
         await loadFechamentoDashSection();
+      } else if (target === "valeConsumo") {
+        await loadValeConsumoSection();
       } else if (target === "kanbanAdministrativo") {
         syncKanbanToolbarCollapsedFromStorage();
         await loadUnidades(false).catch(() => {});
