@@ -361,9 +361,9 @@ function valeConsumoRenderDetalhe(tb, lista) {
         <td>${vv}</td>
         <td>${vc}</td>
         <td>${obs || "—"}</td>
-        <td>
-          <button type="button" class="btn secondary table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
-          <button type="button" class="btn danger table-action" data-valecons-action="del" data-id="${id}">Excluir</button>
+        <td class="table-actions">
+          <button type="button" class="table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
+          <button type="button" class="table-action danger" data-valecons-action="del" data-id="${id}">Excluir</button>
         </td>
       </tr>`;
     })
