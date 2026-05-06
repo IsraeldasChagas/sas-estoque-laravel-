@@ -16,11 +16,17 @@
         .gsp-brand { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-bottom: 1rem; }
         .gsp-mark { width: 72px; height: 72px; object-fit: contain; }
         .card-doc { border: 1px solid rgba(0,0,0,.08); border-radius: 12px; }
-        .badge-tipo { font-weight: 600; }
+        .badge-tipo { font-weight: 600; white-space: normal; text-align: left; line-height: 1.25; }
+        .checklist-row { font-size: .88rem; }
     </style>
 </head>
 <body>
-<main class="container py-4" style="max-width: 640px;">
+@php
+    $rotulosLista = isset($rotulos) && is_array($rotulos) ? $rotulos : \App\Support\Rh\RhTiposDocumento::rotulos();
+    $tiposOrdem = array_keys($rotulosLista);
+    $tiposOk = isset($tiposOk) && is_array($tiposOk) ? $tiposOk : [];
+@endphp
+<main class="container py-4" style="max-width: 760px;">
     <div class="gsp-brand">
         <img class="gsp-mark" src="/imagens/logosemfundo.png" alt="Grupo Sabor Paraense" />
         <div>
@@ -40,6 +46,9 @@
         @if(request()->query('ok'))
             <div class="alert alert-success">Arquivo recebido. Obrigado!</div>
         @endif
+        @if(request()->query('dados_ok'))
+            <div class="alert alert-success">Informações salvas. Obrigado!</div>
+        @endif
 
         @if ($errors->any())
             <div class="alert alert-danger">
@@ -54,30 +63,50 @@
         <div class="card card-doc shadow-sm mb-3">
             <div class="card-body text-dark">
                 <h1 class="h5 mb-2">Olá, {{ $nome }}</h1>
-                <p class="mb-0 small text-muted">Envie cada documento em <strong>PDF</strong> (máx. 6 MB por arquivo). Você pode voltar a esta página para enviar ou atualizar um tipo até o RH concluir a contratação.</p>
+                <p class="mb-0 small text-muted">Telefone e e-mail já estão no seu cadastro de candidatura — não é preciso repetir aqui. Envie cada item conforme indicado: na maioria dos casos em <strong>PDF</strong> (máx. 6 MB). A <strong>foto 3×4</strong> pode ser <strong>JPG ou PNG</strong>. Você pode voltar a esta página para complementar ou atualizar até o RH concluir a contratação.</p>
             </div>
         </div>
 
-        @php
-            $rotulos = [
-                'cpf' => 'CPF',
-                'rg' => 'RG',
-                'comprovante' => 'Comprovante de residência',
-                'ctps' => 'CTPS',
-            ];
-            $tiposOk = isset($tiposOk) && is_array($tiposOk) ? $tiposOk : [];
-        @endphp
+        @if(!empty($dados_complementares_disponivel))
+            <div class="card card-doc shadow-sm mb-3">
+                <div class="card-body text-dark">
+                    <h2 class="h6 mb-3">Dados complementares</h2>
+                    <form method="POST" action="/documentacao/{{ $token }}" class="row g-3">
+                        @csrf
+                        <input type="hidden" name="salvar_dados" value="1" />
+                        <div class="col-12">
+                            <label class="form-label" for="grau_instrucao_escolar">Grau de instrução escolar</label>
+                            <input type="text" class="form-control" id="grau_instrucao_escolar" name="grau_instrucao_escolar"
+                                   maxlength="200" placeholder="Ex.: Ensino médio completo"
+                                   value="{{ $grau_instrucao_escolar ?? '' }}" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="etnia_racial">Etnia / cor (autodeclaração)</label>
+                            <input type="text" class="form-control" id="etnia_racial" name="etnia_racial"
+                                   maxlength="120" placeholder="Conforme orientação do RH"
+                                   value="{{ $etnia_racial ?? '' }}" />
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-outline-primary">Salvar informações</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
 
         <div class="card card-doc shadow-sm mb-3">
             <div class="card-body text-dark">
-                <div class="fw-semibold mb-2">Status dos envios</div>
-                <div class="d-flex flex-wrap gap-2">
-                    @foreach (['cpf', 'rg', 'comprovante', 'ctps'] as $t)
-                        @if(in_array($t, $tiposOk, true))
-                            <span class="badge text-bg-success badge-tipo">{{ $rotulos[$t] ?? $t }} ✓</span>
-                        @else
-                            <span class="badge text-bg-light text-dark border badge-tipo">{{ $rotulos[$t] ?? $t }} — pendente</span>
-                        @endif
+                <div class="fw-semibold mb-2">Checklist de envios</div>
+                <div class="d-flex flex-column gap-2">
+                    @foreach ($tiposOrdem as $t)
+                        @php $rot = $rotulosLista[$t] ?? $t; @endphp
+                        <div class="checklist-row d-flex align-items-start gap-2 flex-wrap">
+                            @if(in_array($t, $tiposOk, true))
+                                <span class="badge text-bg-success badge-tipo">✓ {{ $rot }}</span>
+                            @else
+                                <span class="badge text-bg-light text-dark border badge-tipo">Pendente — {{ $rot }}</span>
+                            @endif
+                        </div>
                     @endforeach
                 </div>
             </div>
@@ -85,22 +114,22 @@
 
         <div class="card card-doc shadow-sm">
             <div class="card-body text-dark">
-                <h2 class="h6 mb-3">Enviar documento</h2>
-                <form method="POST" action="/documentacao/{{ $token }}" enctype="multipart/form-data" class="row g-3">
+                <h2 class="h6 mb-3">Enviar ou atualizar arquivo</h2>
+                <form method="POST" action="/documentacao/{{ $token }}" enctype="multipart/form-data" class="row g-3" id="form-doc-upload">
                     @csrf
                     <div class="col-12">
-                        <label class="form-label">Tipo</label>
-                        <select name="tipo" class="form-select" required>
+                        <label class="form-label">Tipo de documento</label>
+                        <select name="tipo" id="tipo-documento" class="form-select" required>
                             <option value="" disabled @selected(!old('tipo'))>Selecione…</option>
-                            <option value="cpf" @selected(old('tipo') === 'cpf')>CPF</option>
-                            <option value="rg" @selected(old('tipo') === 'rg')>RG</option>
-                            <option value="comprovante" @selected(old('tipo') === 'comprovante')>Comprovante de residência</option>
-                            <option value="ctps" @selected(old('tipo') === 'ctps')>CTPS</option>
+                            @foreach ($tiposOrdem as $t)
+                                <option value="{{ $t }}" @selected(old('tipo') === $t)>{{ $rotulosLista[$t] ?? $t }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Arquivo (PDF)</label>
-                        <input type="file" name="arquivo" class="form-control" accept="application/pdf,.pdf" required />
+                        <label class="form-label" for="input-arquivo">Arquivo</label>
+                        <input type="file" name="arquivo" id="input-arquivo" class="form-control" required />
+                        <div class="form-text" id="hint-arquivo">Escolha o tipo acima: PDF para documentos; JPG ou PNG apenas para foto 3×4.</div>
                     </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">Enviar</button>
@@ -108,6 +137,27 @@
                 </form>
             </div>
         </div>
+        <script>
+(function () {
+    var sel = document.getElementById('tipo-documento');
+    var input = document.getElementById('input-arquivo');
+    var hint = document.getElementById('hint-arquivo');
+    function sync() {
+        var v = sel && sel.value;
+        if (v === 'foto_3x4') {
+            input.accept = 'image/jpeg,image/png,.jpg,.jpeg,.png';
+            if (hint) hint.textContent = 'Para foto 3×4 envie JPG ou PNG (máx. 6 MB).';
+        } else {
+            input.accept = 'application/pdf,.pdf';
+            if (hint) hint.textContent = 'Para este documento envie PDF (máx. 6 MB).';
+        }
+    }
+    if (sel) {
+        sel.addEventListener('change', sync);
+        sync();
+    }
+})();
+        </script>
     @endif
 </main>
 </body>

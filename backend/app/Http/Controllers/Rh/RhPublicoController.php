@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
+use App\Support\Rh\RhTiposDocumento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -403,6 +405,10 @@ class RhPublicoController extends Controller
                     'nome' => '',
                     'tiposOk' => [],
                     'token' => $token,
+                    'rotulos' => RhTiposDocumento::rotulos(),
+                    'grau_instrucao_escolar' => '',
+                    'etnia_racial' => '',
+                    'dados_complementares_disponivel' => false,
                 ], 404);
         }
 
@@ -422,6 +428,16 @@ class RhPublicoController extends Controller
             'nome' => $nomePrimeiro,
             'tiposOk' => $tiposOk,
             'token' => $token,
+            'rotulos' => RhTiposDocumento::rotulos(),
+            'grau_instrucao_escolar' => old(
+                'grau_instrucao_escolar',
+                Schema::hasColumn('rh_candidatos', 'grau_instrucao_escolar') ? (string) ($c->grau_instrucao_escolar ?? '') : ''
+            ),
+            'etnia_racial' => old(
+                'etnia_racial',
+                Schema::hasColumn('rh_candidatos', 'etnia_racial') ? (string) ($c->etnia_racial ?? '') : ''
+            ),
+            'dados_complementares_disponivel' => Schema::hasColumns('rh_candidatos', ['grau_instrucao_escolar', 'etnia_racial']),
         ]);
     }
 
@@ -432,8 +448,31 @@ class RhPublicoController extends Controller
             return back()->withErrors(['arquivo' => 'Link inválido ou indisponível.']);
         }
 
+        if ($request->boolean('salvar_dados')) {
+            if (! Schema::hasColumns('rh_candidatos', ['grau_instrucao_escolar', 'etnia_racial'])) {
+                return back()->withErrors(['grau_instrucao_escolar' => 'Sistema em atualização: rode as migrations no servidor e tente novamente.']);
+            }
+
+            $data = $request->validate([
+                'grau_instrucao_escolar' => 'nullable|string|max:200',
+                'etnia_racial' => 'nullable|string|max:120',
+            ]);
+
+            DB::table('rh_candidatos')->where('id', $c->id)->update([
+                'grau_instrucao_escolar' => $data['grau_instrucao_escolar'] !== null && $data['grau_instrucao_escolar'] !== ''
+                    ? $data['grau_instrucao_escolar']
+                    : null,
+                'etnia_racial' => $data['etnia_racial'] !== null && $data['etnia_racial'] !== ''
+                    ? $data['etnia_racial']
+                    : null,
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->to('/documentacao/' . $token . '?dados_ok=1');
+        }
+
         $data = $request->validate([
-            'tipo' => 'required|string|in:cpf,rg,comprovante,ctps',
+            'tipo' => ['required', 'string', Rule::in(RhTiposDocumento::todosTipos())],
             'arquivo' => 'required|file|max:6144',
         ]);
 
@@ -443,8 +482,13 @@ class RhPublicoController extends Controller
         }
 
         $mime = $f->getMimeType() ?: '';
-        if ($mime !== 'application/pdf') {
-            return back()->withErrors(['arquivo' => 'Envie apenas PDF.'])->withInput();
+        $mimesOk = RhTiposDocumento::mimePermitidosParaTipo($data['tipo']);
+        if (! in_array($mime, $mimesOk, true)) {
+            $msg = in_array($data['tipo'], RhTiposDocumento::IMAGE_ONLY, true)
+                ? 'Para este tipo envie apenas JPG ou PNG.'
+                : 'Para este tipo envie apenas PDF.';
+
+            return back()->withErrors(['arquivo' => $msg])->withInput();
         }
 
         $disk = Storage::disk('public');

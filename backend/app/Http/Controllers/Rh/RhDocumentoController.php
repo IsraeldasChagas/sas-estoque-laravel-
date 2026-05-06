@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
 use App\Support\Rh\RhAcesso;
+use App\Support\Rh\RhTiposDocumento;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -67,7 +69,7 @@ class RhDocumentoController extends Controller
         }
 
         $data = $request->validate([
-            'tipo' => 'required|string|in:cpf,rg,comprovante,ctps',
+            'tipo' => ['required', 'string', Rule::in(RhTiposDocumento::todosTipos())],
             'arquivo' => 'required|file|max:6144', // 6MB
         ]);
 
@@ -77,9 +79,13 @@ class RhDocumentoController extends Controller
         }
 
         $mime = $f->getMimeType() ?: '';
-        $allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+        $allowed = RhTiposDocumento::mimePermitidosParaTipo($data['tipo']);
         if (! in_array($mime, $allowed, true)) {
-            return response()->json(['error' => 'Formato não permitido. Envie PDF, JPG ou PNG.'], 422)->header('Access-Control-Allow-Origin', '*');
+            $msg = in_array($data['tipo'], RhTiposDocumento::IMAGE_ONLY, true)
+                ? 'Para este tipo envie apenas JPG ou PNG.'
+                : 'Para este tipo envie apenas PDF.';
+
+            return response()->json(['error' => $msg], 422)->header('Access-Control-Allow-Origin', '*');
         }
 
         $path = $f->store("rh/documentos/{$candidatoId}", 'public');

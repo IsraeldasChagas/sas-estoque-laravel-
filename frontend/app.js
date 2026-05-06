@@ -8086,6 +8086,26 @@ function rhWhatsAppHrefFromTelefone(telRaw) {
   return `https://wa.me/${n}`;
 }
 
+/** Rótulo amigável para tipo de documento enviado pelo candidato (página pública ou RH). */
+function rhTipoDocumentoLabel(tipo) {
+  const m = {
+    ctps: "CTPS",
+    exame_admissional: "Exame admissional",
+    rg: "RG",
+    cpf: "CPF",
+    titulo_eleitor: "Título de eleitor",
+    reservista: "Reservista",
+    cnh_motorista: "CNH (motorista)",
+    certidao_casamento: "Certidão de casamento",
+    documentos_filhos_menores: "Filhos menores (PDF)",
+    comprovante: "Comprovante de residência",
+    foto_3x4: "Foto 3×4",
+    pis: "PIS / Meu INSS",
+  };
+  const k = String(tipo || "").trim();
+  return m[k] || k.toUpperCase();
+}
+
 /** Modal simples: o RH sempre vê o link completo (clipboard nem sempre funciona em HTTP / políticas do navegador). */
 function showRhDocumentacaoLinkModal(url) {
   const wrap = document.createElement("div");
@@ -8098,7 +8118,7 @@ function showRhDocumentacaoLinkModal(url) {
   panel.style.cssText =
     "background:#1e293b;color:#f1f5f9;max-width:560px;width:100%;border-radius:12px;padding:1.25rem;box-shadow:0 12px 40px rgba(0,0,0,.45);";
   const h = document.createElement("h3");
-  h.textContent = "Link — documentos do candidato (PDF)";
+  h.textContent = "Link — documentos do candidato";
   h.style.cssText = "margin:0 0 .5rem;font-size:1.05rem;font-weight:700;";
   const p = document.createElement("p");
   p.textContent = "Copie e envie por WhatsApp ou e-mail. Cada novo link invalida o anterior.";
@@ -8184,7 +8204,7 @@ function renderRhCandidatoInlineRow(payload) {
       ? `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>`
       : docsLista
           .map((d) => {
-            const tipoU = esc(String(d?.tipo || "").toUpperCase());
+            const tipoU = esc(rhTipoDocumentoLabel(d?.tipo));
             const dt = esc(String(d?.created_at || "").slice(0, 19).replace("T", " "));
             const rid = esc(String(d?.id ?? ""));
             return `<tr data-doc-id="${rid}">
@@ -8239,6 +8259,12 @@ function renderRhCandidatoInlineRow(payload) {
               <label>Cidade / Bairro
                 <input type="text" value="${esc([c.cidade, c.bairro].filter(Boolean).join(" / ") || "-")}" readonly />
               </label>
+              <label>Grau de instrução
+                <input type="text" value="${esc(c.grau_instrucao_escolar || "")}" readonly placeholder="—" />
+              </label>
+              <label>Etnia racial (autodeclaração)
+                <input type="text" value="${esc(c.etnia_racial || "")}" readonly placeholder="—" />
+              </label>
               <label>Consentimento LGPD
                 <input type="text" value="${esc(lgpd)}" readonly />
               </label>
@@ -8274,7 +8300,7 @@ function renderRhCandidatoInlineRow(payload) {
             <div class="filters-actions" style="margin-top: .75rem; display:flex; gap:.5rem; flex-wrap:wrap;">
               <button type="button" class="btn rh-cand-cv" data-has-cv="${temCurriculo ? "1" : "0"}" ${temCurriculo ? "" : "disabled"}>Ver currículo</button>
               <button type="button" class="btn primary rh-cand-salvar">Salvar</button>
-              <button type="button" class="btn rh-cand-doc-link" title="Gera um link público para o candidato enviar CPF, RG, comprovante e CTPS em PDF" ${docLinkHabilitado ? "" : "disabled"}>Link documentos (candidato)</button>
+              <button type="button" class="btn rh-cand-doc-link" title="Gera um link público para o candidato enviar a documentação de contratação (PDF e foto 3×4)" ${docLinkHabilitado ? "" : "disabled"}>Link documentos (candidato)</button>
               <button type="button" class="btn rh-cand-fechar">Fechar</button>
               <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
             </div>
@@ -8282,7 +8308,7 @@ function renderRhCandidatoInlineRow(payload) {
               Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. <strong>WhatsApp candidato</strong> abre o chat com o telefone cadastrado.
             </div>
             <div class="subtle-text" style="margin-top:.35rem;">
-              Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia PDF pela página pública.
+              Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia os arquivos pela página pública.
             </div>
             <div class="subtle-text" style="margin-top:.5rem;">
               Exclusão definitiva: remove candidato, registros e arquivos (não pode desfazer).
