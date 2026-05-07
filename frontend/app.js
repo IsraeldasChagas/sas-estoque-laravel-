@@ -521,9 +521,6 @@ function valeConsumoBindOnce() {
   document.getElementById("valeConsumoFiltrar")?.addEventListener("click", () => {
     loadValeConsumoSection().catch((e) => showToast(e?.message || "Erro ao filtrar.", "error"));
   });
-  document.getElementById("valeConsumoCsv")?.addEventListener("click", () => {
-    downloadValeConsumoCsv().catch((e) => showToast(e?.message || "Erro ao baixar CSV.", "error"));
-  });
   document.getElementById("valeConsumoPdf")?.addEventListener("click", () => {
     abrirValeConsumoRelatorioPdf().catch((e) => showToast(e?.message || "Erro ao abrir PDF.", "error"));
   });
