@@ -313,21 +313,6 @@ function valeConsumoLinhaTotal(r) {
   return v + c;
 }
 
-function valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo) {
-  const totalGeral = totalVale + totalConsumo;
-  const tv = fmtBRLValeConsumo(totalVale);
-  const tc = fmtBRLValeConsumo(totalConsumo);
-  const tg = fmtBRLValeConsumo(totalGeral);
-  return `<tr class="vale-consumo-linha-totais">
-    <td colspan="3" style="text-align:right;vertical-align:middle;font-weight:600;border-top:2px solid #cfd8dc">Total</td>
-    <td style="text-align:right;font-weight:700;border-top:2px solid #cfd8dc;vertical-align:middle">${tv}</td>
-    <td style="text-align:right;font-weight:700;border-top:2px solid #cfd8dc;vertical-align:middle">${tc}</td>
-    <td style="text-align:right;font-weight:700;border-top:2px solid #cfd8dc;vertical-align:middle;background:rgba(21,101,192,0.06)">${tg}</td>
-    <td style="border-top:2px solid #cfd8dc"></td>
-    <td style="border-top:2px solid #cfd8dc"></td>
-  </tr>`;
-}
-
 function valeConsumoAtualizarTotaisBar(lista) {
   const ev = document.getElementById("valeConsumoTotVale");
   const ec = document.getElementById("valeConsumoTotConsumo");
@@ -359,7 +344,6 @@ function valeConsumoRenderDetalhe(tb, lista) {
       '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
     return;
   }
-  const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
   valeConsumoAtualizarTotaisBar(lista);
   const linhas = lista
     .map((r) => {
@@ -385,7 +369,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
       </tr>`;
     })
     .join("");
-  tb.innerHTML = linhas + valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo);
+  tb.innerHTML = linhas;
 }
 
 async function loadValeConsumoSection() {
