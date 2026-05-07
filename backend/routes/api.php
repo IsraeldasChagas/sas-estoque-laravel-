@@ -8865,7 +8865,8 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
         $q = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome');
+            ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome');
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $q->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -8958,7 +8959,8 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         $q = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome');
+            ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome');
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $q->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -8986,7 +8988,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         $temDataLanc = Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento');
         $rows[] = 'Relatorio Vale/Consumo — periodo ' . $di . ' a ' . $df . ' — unidade: ' . $uniLabel;
         $rows[] = implode($sep, ['Vale', $totV, 'Consumo', $totC]);
-        $rows[] = implode($sep, ['ID', 'Data', 'Funcionario', 'CPF', 'Cargo', 'Unidade', 'Vale', 'Consumo', 'Observacao']);
+        $rows[] = implode($sep, ['ID', 'Data', 'Funcionario', 'CPF', 'Cargo', 'Unidade', 'Vale', 'Consumo', 'Usuario']);
         foreach ($linhas as $r) {
             $dataStr = '';
             if ($temDataLanc && ! empty($r->data_lancamento)) {
@@ -9003,7 +9005,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
                 '"' . str_replace('"', '""', (string) ($r->unidade_nome ?? '')) . '"',
                 number_format((float) ($r->valor_vale ?? 0), 2, ',', ''),
                 number_format((float) ($r->valor_consumo ?? 0), 2, ',', ''),
-                '"' . str_replace('"', '""', (string) ($r->observacao ?? '')) . '"',
+                '"' . str_replace('"', '""', (string) ($r->usuario_nome ?? '')) . '"',
             ]);
         }
         $rows[] = implode($sep, ['Total', '', '', '', '', '', $totV, $totC, '']);
@@ -9068,7 +9070,8 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
         $qDet = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome');
+            ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome');
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $qDet->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -9105,7 +9108,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
                 . '<td class="num">' . e($fmt($vv)) . '</td>'
                 . '<td class="num">' . e($fmt($vc)) . '</td>'
                 . '<td class="num" style="background:rgba(21,101,192,0.06);font-weight:600">' . e($fmt($vt)) . '</td>'
-                . '<td>' . e(\Illuminate\Support\Str::limit((string) ($d->observacao ?? ''), 48)) . '</td>'
+                . '<td>' . e((string) ($d->usuario_nome ?? '')) . '</td>'
                 . '</tr>';
         }
         if ($rowsDet === '') {
@@ -9144,7 +9147,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             . '<p style="margin:6px 0 0;font-size:9px;color:#555">' . e((string) $nLanc) . ' lançamento(s)</p>';
 
         $html .= '<h2>Lançamentos</h2><table class="lanc"><thead><tr>'
-            . '<th>ID</th><th>Data</th><th>Funcionário</th><th class="num">Vale</th><th class="num">Consumo</th><th class="num">Total</th><th>Obs.</th>'
+            . '<th>ID</th><th>Data</th><th>Funcionário</th><th class="num">Vale</th><th class="num">Consumo</th><th class="num">Total</th><th>Usuário</th>'
             . '</tr></thead><tbody>' . $rowsDet . '</tbody></table>';
         $html .= '</body></html>';
 
@@ -9225,6 +9228,11 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
             'created_at' => now(),
             'updated_at' => now(),
         ];
+        // A autenticação retorna o usuário logado. Usamos o ID como "quem lançou".
+        $userId = (int) ($u->id ?? $u->usuario_id ?? 0);
+        if (Schema::hasColumn('financeiro_vale_consumo', 'usuario_id') && $userId > 0) {
+            $insert['usuario_id'] = $userId;
+        }
         if ($dataLanc !== null) {
             $insert['data_lancamento'] = $dataLanc;
         }
@@ -9232,8 +9240,9 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
         $row = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
             ->where('v.id', $id)
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome')
             ->first();
 
         return response()->json($row, 201)->header('Access-Control-Allow-Origin', '*');
@@ -9307,8 +9316,9 @@ Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use
         $row = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
             ->where('v.id', $id)
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome')
             ->first();
 
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');

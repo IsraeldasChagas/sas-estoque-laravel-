@@ -353,7 +353,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
       const vv = fmtBRLValeConsumo(r.valor_vale);
       const vc = fmtBRLValeConsumo(r.valor_consumo);
       const vt = fmtBRLValeConsumo(valeConsumoLinhaTotal(r));
-      const obs = escapeHtml(String(r.observacao || "").slice(0, 80));
+      const usuario = escapeHtml(String(r.usuario_nome || "—"));
       return `<tr>
         <td data-label="ID">${id}</td>
         <td data-label="Data">${dt}</td>
@@ -361,7 +361,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
         <td data-label="Vale">${vv}</td>
         <td data-label="Consumo">${vc}</td>
         <td data-label="Total" style="text-align:right;font-weight:600">${vt}</td>
-        <td data-label="Obs.">${obs || "—"}</td>
+        <td data-label="Usuário">${usuario}</td>
         <td class="table-actions" data-label="Ações">
           <button type="button" class="table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
           <button type="button" class="table-action danger" data-valecons-action="del" data-id="${id}">Excluir</button>
