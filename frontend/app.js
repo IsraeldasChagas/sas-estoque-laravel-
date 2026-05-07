@@ -19820,12 +19820,17 @@ function setupReciboAjudaCusto() {
 
   function populateReciboAjudaSelects() {
     if (funcionarioSelect) {
+      const hasUnidade = !!(unidadeSelect?.value || "").trim();
       const ativos = (state.funcionarios || []).filter((f) => (f.status || "ativo") === "ativo");
-      funcionarioSelect.innerHTML =
-        '<option value="">Selecione</option>' +
-        ativos
-          .map((f) => `<option value="${f.id}">${escapeHtml(f.nome_completo || f.nome || "")}</option>`)
-          .join("");
+      if (!hasUnidade) {
+        funcionarioSelect.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
+      } else {
+        funcionarioSelect.innerHTML =
+          '<option value="">Selecione</option>' +
+          ativos
+            .map((f) => `<option value="${f.id}">${escapeHtml(f.nome_completo || f.nome || "")}</option>`)
+            .join("");
+      }
     }
     if (unidadeSelect) {
       unidadeSelect.innerHTML =
@@ -19838,8 +19843,20 @@ function setupReciboAjudaCusto() {
 
   async function loadReciboAjudaSection() {
     await loadUnidades(false).catch(() => {});
-    await loadFuncionarios(false).catch(() => {});
     populateReciboAjudaSelects();
+
+    // Funcionários: carrega sob demanda pela unidade selecionada
+    const unidadeInicial = (unidadeSelect?.value || "").trim();
+    if (unidadeInicial) {
+      try {
+        const list = await fetchJSON(`/funcionarios?status=ativo&unidade_id=${encodeURIComponent(unidadeInicial)}`);
+        state.funcionarios = Array.isArray(list) ? list : [];
+      } catch (_) {
+        state.funcionarios = [];
+      }
+      populateReciboAjudaSelects();
+    }
+
     if (competencia && !competencia.value) competencia.value = new Date().toISOString().slice(0, 7);
     if (valor && !valor.dataset.reciboMaskBound) {
       valor.dataset.reciboMaskBound = "1";
@@ -19876,7 +19893,31 @@ function setupReciboAjudaCusto() {
   }
 
   funcionarioBusca?.addEventListener("input", filterFuncionarioSelect);
-  unidadeSelect?.addEventListener("change", setUnidadeCnpjFromSelect);
+  unidadeSelect?.addEventListener("change", async () => {
+    setUnidadeCnpjFromSelect();
+    if (funcionarioBusca) funcionarioBusca.value = "";
+    if (funcionarioCpf) funcionarioCpf.value = "";
+    if (funcionarioSelect) {
+      funcionarioSelect.value = "";
+      funcionarioSelect.innerHTML = '<option value="">Carregando funcionários…</option>';
+    }
+    const uid = (unidadeSelect?.value || "").trim();
+    if (!uid) {
+      state.funcionarios = [];
+      populateReciboAjudaSelects();
+      return;
+    }
+    try {
+      const list = await fetchJSON(`/funcionarios?status=ativo&unidade_id=${encodeURIComponent(uid)}`);
+      state.funcionarios = Array.isArray(list) ? list : [];
+    } catch (err) {
+      state.funcionarios = [];
+      if (funcionarioSelect) funcionarioSelect.innerHTML = '<option value="">Erro ao carregar funcionários</option>';
+      showToast(err?.message || "Erro ao carregar funcionários da unidade.", "error");
+      return;
+    }
+    populateReciboAjudaSelects();
+  });
   funcionarioSelect?.addEventListener("change", () => {
     setFuncionarioCpfFromSelect();
   });
