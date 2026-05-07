@@ -9086,22 +9086,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
         $detalhes = $qDet->get();
         $totV = (float) $detalhes->sum(fn ($d) => (float) ($d->valor_vale ?? 0));
         $totC = (float) $detalhes->sum(fn ($d) => (float) ($d->valor_consumo ?? 0));
-
-        $qAgg = DB::table('financeiro_vale_consumo as v')
-            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
-            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
-            ->groupBy('v.funcionario_id', 'f.nome_completo', 'u.nome')
-            ->selectRaw('f.nome_completo as funcionario_nome, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo');
-        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
-            $qAgg->whereBetween('v.data_lancamento', [$di, $df]);
-        } else {
-            $compAgg = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
-            $qAgg->where('v.competencia', $compAgg);
-        }
-        if ($unidadeId > 0) {
-            $qAgg->where('f.unidade_id', $unidadeId);
-        }
-        $porPessoaPdf = $qAgg->orderBy('f.nome_completo')->get();
+        $totGeral = $totV + $totC;
 
         $fmt = static fn ($n) => number_format((float) $n, 2, ',', '.');
         $dataCol = Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento');
@@ -9110,57 +9095,57 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             $dt = $dataCol && ! empty($d->data_lancamento)
                 ? \Carbon\Carbon::parse($d->data_lancamento)->format('d/m/Y')
                 : '—';
+            $vv = (float) ($d->valor_vale ?? 0);
+            $vc = (float) ($d->valor_consumo ?? 0);
+            $vt = $vv + $vc;
             $rowsDet .= '<tr>'
+                . '<td>' . e((string) (int) ($d->id ?? 0)) . '</td>'
                 . '<td>' . e($dt) . '</td>'
                 . '<td>' . e((string) ($d->funcionario_nome ?? '')) . '</td>'
-                . '<td>' . e((string) ($d->unidade_nome ?? '')) . '</td>'
-                . '<td style="text-align:right">' . e($fmt($d->valor_vale ?? 0)) . '</td>'
-                . '<td style="text-align:right">' . e($fmt($d->valor_consumo ?? 0)) . '</td>'
-                . '<td>' . e(\Illuminate\Support\Str::limit((string) ($d->observacao ?? ''), 40)) . '</td>'
+                . '<td class="num">' . e($fmt($vv)) . '</td>'
+                . '<td class="num">' . e($fmt($vc)) . '</td>'
+                . '<td class="num" style="background:rgba(21,101,192,0.06);font-weight:600">' . e($fmt($vt)) . '</td>'
+                . '<td>' . e(\Illuminate\Support\Str::limit((string) ($d->observacao ?? ''), 48)) . '</td>'
                 . '</tr>';
         }
         if ($rowsDet === '') {
-            $rowsDet = '<tr><td colspan="6" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
+            $rowsDet = '<tr><td colspan="7" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
         }
 
         $nLanc = $detalhes->count();
-        $footPdf = '<tfoot><tr style="background:#f5f5f5">'
-            . '<td colspan="3" style="text-align:right;font-weight:bold">Total</td>'
-            . '<td class="num" style="font-weight:bold">' . e($fmt($totV)) . '</td>'
-            . '<td class="num" style="font-weight:bold">' . e($fmt($totC)) . '</td>'
-            . '<td></td>'
-            . '</tr></tfoot>';
 
         $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
-            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;font-size:11px}h1{font-size:16px}h2{font-size:13px;margin-top:16px}.meta{color:#444;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:5px 6px}th{background:#f0f0f0;text-align:left}.num{text-align:right}tfoot td{border-top:2px solid #999}.tot-resumo{width:auto;margin-top:8px}</style></head><body>';
+            . '<style>'
+            . 'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:18px;font-size:10px}'
+            . 'h1{font-size:15px;margin:0 0 8px}'
+            . 'h2{font-size:12px;margin:14px 0 6px}'
+            . '.meta{color:#444;margin-bottom:10px;line-height:1.45}'
+            . '.tot-bar{border:1px solid rgba(0,71,171,.18);border-radius:6px;background:rgba(0,71,171,.06);padding:8px 10px;margin-top:8px;display:table;width:100%;box-sizing:border-box}'
+            . '.tot-bar-row{display:table-row}'
+            . '.tot-bar-cell{display:table-cell;padding:4px 12px 4px 0;vertical-align:bottom}'
+            . '.tot-bar-cell:last-child{padding-right:0}'
+            . '.tot-lbl{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#546e7a}'
+            . '.tot-val{font-size:11px;font-weight:700;color:#1565c0}'
+            . 'table.lanc{width:100%;border-collapse:collapse;margin-top:8px}'
+            . 'table.lanc th,table.lanc td{border:1px solid #ccc;padding:4px 5px}'
+            . 'table.lanc th{background:#f0f0f0;text-align:left;font-size:9px}'
+            . '.num{text-align:right}'
+            . '</style></head><body>';
         $html .= '<h1>Vale / consumo</h1>'
             . '<div class="meta"><strong>Período:</strong> ' . e(\Carbon\Carbon::parse($di)->format('d/m/Y')) . ' a ' . e(\Carbon\Carbon::parse($df)->format('d/m/Y'))
-            . ' &nbsp;|&nbsp; <strong>Unidade:</strong> ' . e($uniLabel)
-            . ' &nbsp;|&nbsp; <strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>'
-            . '<table class="tot-resumo"><thead><tr><th>Vale</th><th>Consumo</th></tr></thead><tbody><tr>'
-            . '<td class="num" style="font-weight:bold">R$ ' . e($fmt($totV)) . '</td>'
-            . '<td class="num" style="font-weight:bold">R$ ' . e($fmt($totC)) . '</td>'
-            . '</tr></tbody></table>'
-            . '<p style="margin:6px 0 0 0;font-size:10px;color:#555">' . e((string) $nLanc) . ' lançamento(s)</p>';
+            . '<br /><strong>Unidade:</strong> ' . e($uniLabel)
+            . '<br /><strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i'))
+            . '</div>'
+            . '<div class="tot-bar"><div class="tot-bar-row">'
+            . '<div class="tot-bar-cell"><div class="tot-lbl">Vale</div><div class="tot-val">R$ ' . e($fmt($totV)) . '</div></div>'
+            . '<div class="tot-bar-cell"><div class="tot-lbl">Consumo</div><div class="tot-val">R$ ' . e($fmt($totC)) . '</div></div>'
+            . '<div class="tot-bar-cell"><div class="tot-lbl">Total</div><div class="tot-val">R$ ' . e($fmt($totGeral)) . '</div></div>'
+            . '</div></div>'
+            . '<p style="margin:6px 0 0;font-size:9px;color:#555">' . e((string) $nLanc) . ' lançamento(s)</p>';
 
-        $html .= '<h2>Lançamentos</h2><table><thead><tr>'
-            . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale</th><th class="num">Consumo</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody>' . $footPdf . '</table>';
-
-        $rowsPorPessoa = '';
-        foreach ($porPessoaPdf as $p) {
-            $rowsPorPessoa .= '<tr>'
-                . '<td>' . e((string) ($p->funcionario_nome ?? '')) . '</td>'
-                . '<td>' . e((string) ($p->unidade_nome ?? '')) . '</td>'
-                . '<td class="num">' . e($fmt($p->total_vale ?? 0)) . '</td>'
-                . '<td class="num">' . e($fmt($p->total_consumo ?? 0)) . '</td>'
-                . '</tr>';
-        }
-        if ($rowsPorPessoa === '') {
-            $rowsPorPessoa = '<tr><td colspan="4" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
-        }
-        $html .= '<h2 style="margin-top:18px">Total por funcionário</h2><table><thead><tr>'
-            . '<th>Funcionário</th><th>Unidade</th><th class="num">Vale</th><th class="num">Consumo</th></tr></thead><tbody>'
-            . $rowsPorPessoa . '</tbody></table>';
+        $html .= '<h2>Lançamentos</h2><table class="lanc"><thead><tr>'
+            . '<th>ID</th><th>Data</th><th>Funcionário</th><th class="num">Vale</th><th class="num">Consumo</th><th class="num">Total</th><th>Obs.</th>'
+            . '</tr></thead><tbody>' . $rowsDet . '</tbody></table>';
         $html .= '</body></html>';
 
         $dompdf = new \Dompdf\Dompdf();
