@@ -297,48 +297,6 @@ function valeConsumoFormatarDataBR(iso) {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
-function valeConsumoRenderResumo(tb, payload) {
-  if (!tb) return;
-  const linhas = Array.isArray(payload?.linhas) ? payload.linhas : [];
-  const tot = payload?.totais || {};
-  const per = payload?.periodo || {};
-  const wrapTot = document.getElementById("valeConsumoResumoTotais");
-  const uNome =
-    per.unidade_id > 0 && Array.isArray(state.unidades)
-      ? state.unidades.find((x) => String(x.id) === String(per.unidade_id))?.nome || `Unidade ${per.unidade_id}`
-      : "Todas";
-  if (wrapTot) {
-    wrapTot.innerHTML = `<strong>Período:</strong> ${valeConsumoFormatarDataBR(per.data_inicio)} — ${valeConsumoFormatarDataBR(
-      per.data_fim
-    )} &nbsp;|&nbsp; <strong>Unidade:</strong> ${escapeHtml(String(uNome))}<br /><strong>Totais gerais:</strong> vale ${fmtBRLValeConsumo(
-      tot.total_vale
-    )} · consumo ${fmtBRLValeConsumo(tot.total_consumo)}`;
-  }
-  if (!linhas.length) {
-    tb.innerHTML =
-      '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
-    return;
-  }
-  tb.innerHTML = linhas
-    .map((r) => {
-      const nome = escapeHtml(String(r.funcionario_nome || "—"));
-      const un = escapeHtml(String(r.unidade_nome || "—"));
-      const cargo = escapeHtml(String(r.funcionario_cargo || "—"));
-      const nv = fmtBRLValeConsumo(r.total_vale);
-      const nc = fmtBRLValeConsumo(r.total_consumo);
-      const q = escapeHtml(String(r.qtd_lancamentos ?? "0"));
-      return `<tr>
-        <td>${nome}</td>
-        <td>${un}</td>
-        <td>${cargo}</td>
-        <td>${nv}</td>
-        <td>${nc}</td>
-        <td>${q}</td>
-      </tr>`;
-    })
-    .join("");
-}
-
 function valeConsumoRenderDetalhe(tb, lista) {
   if (!tb) return;
   if (!lista.length) {
@@ -375,8 +333,7 @@ async function loadValeConsumoSection() {
   const dfEl = document.getElementById("valeConsumoDataFim");
   const unSel = document.getElementById("valeConsumoFiltroUnidade");
   const tbDet = document.getElementById("valeConsumoTableDetalhe");
-  const tbRes = document.getElementById("valeConsumoTableResumo");
-  if (!diEl || !dfEl || !tbDet || !tbRes) return;
+  if (!diEl || !dfEl || !tbDet) return;
 
   const { di, df } = valeConsumoPrimeiroUltimoDiaMes();
   if (!diEl.value) diEl.value = di;
@@ -421,21 +378,15 @@ async function loadValeConsumoSection() {
   }
 
   tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
-  tbRes.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
 
   const qs = valeConsumoMontarQueryString();
   try {
-    const [det, resumo] = await Promise.all([
-      fetchJSON(`/financeiro/vale-consumo${qs}`),
-      fetchJSON(`/financeiro/vale-consumo/resumo${qs}`),
-    ]);
+    const det = await fetchJSON(`/financeiro/vale-consumo${qs}`);
     valeConsumoDetalheCache = Array.isArray(det) ? det : [];
     valeConsumoRenderDetalhe(tbDet, valeConsumoDetalheCache);
-    valeConsumoRenderResumo(tbRes, resumo);
   } catch (e) {
     const msg = escapeHtml(String(e?.message || "Erro"));
     tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${msg}</td></tr>`;
-    tbRes.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#c62828">${msg}</td></tr>`;
   }
 }
 
