@@ -456,6 +456,19 @@ function valeConsumoLimparFormulario() {
   if (btn) btn.textContent = "Salvar";
 }
 
+function valeConsumoMostrarFormCard() {
+  const card = document.getElementById("valeConsumoNovoCard");
+  if (!card) return;
+  card.classList.remove("hidden");
+  try {
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (_) {}
+}
+
+function valeConsumoOcultarFormCard() {
+  document.getElementById("valeConsumoNovoCard")?.classList.add("hidden");
+}
+
 async function downloadValeConsumoCsv() {
   const qs = valeConsumoMontarQueryString();
   const url = `${API_URL}/financeiro/vale-consumo/relatorio.csv${qs}`;
@@ -517,6 +530,14 @@ function valeConsumoBindOnce() {
   document.getElementById("valeConsumoPdf")?.addEventListener("click", () => {
     abrirValeConsumoRelatorioPdf().catch((e) => showToast(e?.message || "Erro ao abrir PDF.", "error"));
   });
+  document.getElementById("valeConsumoAbrirNovo")?.addEventListener("click", () => {
+    valeConsumoMostrarFormCard();
+    valeConsumoLimparFormulario();
+  });
+  document.getElementById("valeConsumoFecharForm")?.addEventListener("click", () => {
+    valeConsumoLimparFormulario();
+    valeConsumoOcultarFormCard();
+  });
   document.getElementById("valeConsumoFormLimpar")?.addEventListener("click", () => valeConsumoLimparFormulario());
 
   document.getElementById("valeConsumoForm")?.addEventListener("submit", async (ev) => {
@@ -554,6 +575,7 @@ function valeConsumoBindOnce() {
         showToast("Lançamento registrado.", "success");
       }
       valeConsumoLimparFormulario();
+      valeConsumoOcultarFormCard();
       await loadValeConsumoSection();
     } catch (e) {
       showToast(e?.message || "Erro ao salvar.", "error");
@@ -571,6 +593,8 @@ function valeConsumoBindOnce() {
       try {
         await fetchJSON(`/financeiro/vale-consumo/${encodeURIComponent(id)}`, { method: "DELETE" });
         showToast("Excluído.", "success");
+        valeConsumoLimparFormulario();
+        valeConsumoOcultarFormCard();
         await loadValeConsumoSection();
       } catch (err) {
         showToast(err?.message || "Erro ao excluir.", "error");
@@ -583,6 +607,7 @@ function valeConsumoBindOnce() {
         showToast("Registro não encontrado no cache. Atualize a lista.", "warning");
         return;
       }
+      valeConsumoMostrarFormCard();
       const hid = document.getElementById("valeConsumoLancamentoId");
       const fn = document.getElementById("valeConsumoFuncionario");
       const fv = document.getElementById("valeConsumoValorVale");
@@ -4007,8 +4032,11 @@ function navigateTo(section) {
   else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
   else if (section === 'logs') loadLogs();
   else if (section === 'despesasFixas') loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao carregar despesas.", "error"));
-  else if (section === "valeConsumo")
+  else if (section === "valeConsumo") {
+    valeConsumoLimparFormulario();
+    valeConsumoOcultarFormCard();
     loadValeConsumoSection().catch((err) => showToast(err?.message || "Falha ao carregar Vale/consumo.", "error"));
+  }
 }
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.
@@ -9416,6 +9444,8 @@ async function startAppSession(user) {
         }         else if (sectionToNavigate === "fechamentoDash") {
           await loadFechamentoDashSection();
         } else if (sectionToNavigate === "valeConsumo") {
+          valeConsumoLimparFormulario();
+          valeConsumoOcultarFormCard();
           await loadValeConsumoSection();
         } else if (sectionToNavigate === "kanbanAdministrativo") {
           syncKanbanToolbarCollapsedFromStorage();
@@ -13649,6 +13679,8 @@ function wireSidebarSectionNavClicks() {
       }       else if (target === "fechamentoDash") {
         await loadFechamentoDashSection();
       } else if (target === "valeConsumo") {
+        valeConsumoLimparFormulario();
+        valeConsumoOcultarFormCard();
         await loadValeConsumoSection();
       } else if (target === "kanbanAdministrativo") {
         syncKanbanToolbarCollapsedFromStorage();
