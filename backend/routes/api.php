@@ -9007,6 +9007,33 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
             ]);
         }
         $rows[] = implode($sep, ['TOTAIS', '', '', '', '', '', $totV, $totC, '']);
+        $porPessoaCsv = $linhas
+            ->groupBy(static fn ($x) => (string) ($x->funcionario_id ?? ''))
+            ->map(static function ($grupo) {
+                $first = $grupo->first();
+
+                return (object) [
+                    'funcionario_nome' => $first->funcionario_nome ?? '',
+                    'unidade_nome' => $first->unidade_nome ?? '',
+                    'total_vale' => (float) $grupo->sum(static fn ($x) => (float) ($x->valor_vale ?? 0)),
+                    'total_consumo' => (float) $grupo->sum(static fn ($x) => (float) ($x->valor_consumo ?? 0)),
+                    'qtd_lancamentos' => $grupo->count(),
+                ];
+            })
+            ->sortBy(static fn ($p) => \Illuminate\Support\Str::lower((string) ($p->funcionario_nome ?? '')))
+            ->values();
+        $rows[] = '';
+        $rows[] = 'TOTAL POR FUNCIONARIO';
+        $rows[] = implode($sep, ['Funcionario', 'Unidade', 'Total Vale (R$)', 'Total Consumo (R$)', 'Qtd lancamentos']);
+        foreach ($porPessoaCsv as $p) {
+            $rows[] = implode($sep, [
+                '"' . str_replace('"', '""', (string) ($p->funcionario_nome ?? '')) . '"',
+                '"' . str_replace('"', '""', (string) ($p->unidade_nome ?? '')) . '"',
+                number_format((float) ($p->total_vale ?? 0), 2, ',', ''),
+                number_format((float) ($p->total_consumo ?? 0), 2, ',', ''),
+                (string) (int) ($p->qtd_lancamentos ?? 0),
+            ]);
+        }
         $csv = "\xEF\xBB\xBF" . implode("\r\n", $rows) . "\r\n";
         $fn = 'vale-consumo-' . $di . '-' . $df . ($unidadeId > 0 ? '-u' . $unidadeId : '') . '.csv';
 
@@ -9061,6 +9088,22 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
         $totV = (float) $detalhes->sum(fn ($d) => (float) ($d->valor_vale ?? 0));
         $totC = (float) $detalhes->sum(fn ($d) => (float) ($d->valor_consumo ?? 0));
 
+        $qAgg = DB::table('financeiro_vale_consumo as v')
+            ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
+            ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+            ->groupBy('v.funcionario_id', 'f.nome_completo', 'u.nome')
+            ->selectRaw('f.nome_completo as funcionario_nome, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos');
+        if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
+            $qAgg->whereBetween('v.data_lancamento', [$di, $df]);
+        } else {
+            $compAgg = $valeConsumoValidarCompetencia($request->query('competencia')) ?? substr($di, 0, 7);
+            $qAgg->where('v.competencia', $compAgg);
+        }
+        if ($unidadeId > 0) {
+            $qAgg->where('f.unidade_id', $unidadeId);
+        }
+        $porPessoaPdf = $qAgg->orderBy('f.nome_completo')->get();
+
         $fmt = static fn ($n) => number_format((float) $n, 2, ',', '.');
         $dataCol = Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento');
         $rowsDet = '';
@@ -9100,6 +9143,23 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
 
         $html .= '<h2>Lançamentos</h2><table><thead><tr>'
             . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale (R$)</th><th class="num">Consumo (R$)</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody>' . $footPdf . '</table>';
+
+        $rowsPorPessoa = '';
+        foreach ($porPessoaPdf as $p) {
+            $rowsPorPessoa .= '<tr>'
+                . '<td>' . e((string) ($p->funcionario_nome ?? '')) . '</td>'
+                . '<td>' . e((string) ($p->unidade_nome ?? '')) . '</td>'
+                . '<td class="num">' . e($fmt($p->total_vale ?? 0)) . '</td>'
+                . '<td class="num">' . e($fmt($p->total_consumo ?? 0)) . '</td>'
+                . '<td style="text-align:center">' . e((string) (int) ($p->qtd_lancamentos ?? 0)) . '</td>'
+                . '</tr>';
+        }
+        if ($rowsPorPessoa === '') {
+            $rowsPorPessoa = '<tr><td colspan="5" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
+        }
+        $html .= '<h2 style="margin-top:18px">Totais por funcionário</h2><table><thead><tr>'
+            . '<th>Funcionário</th><th>Unidade</th><th class="num">Total vale (R$)</th><th class="num">Total consumo (R$)</th><th>Lançamentos</th></tr></thead><tbody>'
+            . $rowsPorPessoa . '</tbody></table>';
         $html .= '</body></html>';
 
         $dompdf = new \Dompdf\Dompdf();
