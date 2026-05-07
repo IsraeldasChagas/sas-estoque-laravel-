@@ -8866,7 +8866,7 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
             ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome');
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', DB::raw("COALESCE(us.nome, 'Não informado') as usuario_nome"));
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $q->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -8960,7 +8960,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
             ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome');
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', DB::raw("COALESCE(us.nome, 'Não informado') as usuario_nome"));
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $q->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -9071,7 +9071,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
             ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome');
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', DB::raw("COALESCE(us.nome, 'Não informado') as usuario_nome"));
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $qDet->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -9242,7 +9242,7 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
             ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
             ->where('v.id', $id)
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', DB::raw("COALESCE(us.nome, 'Não informado') as usuario_nome"))
             ->first();
 
         return response()->json($row, 201)->header('Access-Control-Allow-Origin', '*');
@@ -9312,13 +9312,18 @@ Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use
         if (array_key_exists('observacao', $data)) {
             $up['observacao'] = $data['observacao'];
         }
+        // Mantém rastreio de quem lançou/alterou: sempre atualiza o usuário logado.
+        $userId = (int) ($u->id ?? $u->usuario_id ?? 0);
+        if (Schema::hasColumn('financeiro_vale_consumo', 'usuario_id') && $userId > 0) {
+            $up['usuario_id'] = $userId;
+        }
         DB::table('financeiro_vale_consumo')->where('id', $id)->update($up);
         $row = DB::table('financeiro_vale_consumo as v')
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
             ->leftJoin('usuarios as us', 'v.usuario_id', '=', 'us.id')
             ->where('v.id', $id)
-            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', 'us.nome as usuario_nome')
+            ->select('v.*', 'f.nome_completo as funcionario_nome', 'f.cpf as funcionario_cpf', 'f.cargo as funcionario_cargo', 'u.nome as unidade_nome', DB::raw("COALESCE(us.nome, 'Não informado') as usuario_nome"))
             ->first();
 
         return response()->json($row)->header('Access-Control-Allow-Origin', '*');
