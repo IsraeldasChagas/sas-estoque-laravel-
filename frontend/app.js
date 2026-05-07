@@ -304,43 +304,51 @@ function valeConsumoSomarTotaisLista(lista) {
     totalVale += Number(r?.valor_vale) || 0;
     totalConsumo += Number(r?.valor_consumo) || 0;
   }
-  return { totalVale, totalConsumo };
+  return { totalVale, totalConsumo, totalGeral: totalVale + totalConsumo };
+}
+
+function valeConsumoLinhaTotal(r) {
+  const v = Number(r?.valor_vale) || 0;
+  const c = Number(r?.valor_consumo) || 0;
+  return v + c;
 }
 
 function valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo) {
+  const totalGeral = totalVale + totalConsumo;
   const tv = fmtBRLValeConsumo(totalVale);
   const tc = fmtBRLValeConsumo(totalConsumo);
+  const tg = fmtBRLValeConsumo(totalGeral);
   return `<tr class="vale-consumo-linha-totais">
     <td colspan="3" style="text-align:right;vertical-align:middle;font-weight:600;border-top:2px solid #cfd8dc">Total</td>
-    <td style="text-align:right;border-top:2px solid #cfd8dc;vertical-align:middle">
-      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#546e7a">Vale</div>
-      <div style="font-weight:700">${tv}</div>
-    </td>
-    <td style="text-align:right;border-top:2px solid #cfd8dc;vertical-align:middle">
-      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#546e7a">Consumo</div>
-      <div style="font-weight:700">${tc}</div>
-    </td>
-    <td colspan="2" style="border-top:2px solid #cfd8dc"></td>
+    <td style="text-align:right;font-weight:700;border-top:2px solid #cfd8dc;vertical-align:middle">${tv}</td>
+    <td style="text-align:right;font-weight:700;border-top:2px solid #cfd8dc;vertical-align:middle">${tc}</td>
+    <td style="text-align:right;font-weight:700;border-top:2px solid #cfd8dc;vertical-align:middle;background:rgba(21,101,192,0.06)">${tg}</td>
+    <td style="border-top:2px solid #cfd8dc"></td>
+    <td style="border-top:2px solid #cfd8dc"></td>
   </tr>`;
 }
 
 function valeConsumoAtualizarTotaisBar(lista) {
   const ev = document.getElementById("valeConsumoTotVale");
   const ec = document.getElementById("valeConsumoTotConsumo");
-  if (!ev || !ec) return;
+  const eg = document.getElementById("valeConsumoTotGeral");
+  if (!ev || !ec || !eg) return;
   if (lista === undefined) {
     ev.textContent = "—";
     ec.textContent = "—";
+    eg.textContent = "—";
     return;
   }
   if (!Array.isArray(lista) || !lista.length) {
     ev.textContent = fmtBRLValeConsumo(0);
     ec.textContent = fmtBRLValeConsumo(0);
+    eg.textContent = fmtBRLValeConsumo(0);
     return;
   }
-  const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
+  const { totalVale, totalConsumo, totalGeral } = valeConsumoSomarTotaisLista(lista);
   ev.textContent = fmtBRLValeConsumo(totalVale);
   ec.textContent = fmtBRLValeConsumo(totalConsumo);
+  eg.textContent = fmtBRLValeConsumo(totalGeral);
 }
 
 function valeConsumoRenderDetalhe(tb, lista) {
@@ -348,7 +356,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
   if (!lista.length) {
     valeConsumoAtualizarTotaisBar([]);
     tb.innerHTML =
-      '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
+      '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
     return;
   }
   const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
@@ -360,6 +368,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
       const nome = escapeHtml(String(r.funcionario_nome || "—"));
       const vv = fmtBRLValeConsumo(r.valor_vale);
       const vc = fmtBRLValeConsumo(r.valor_consumo);
+      const vt = fmtBRLValeConsumo(valeConsumoLinhaTotal(r));
       const obs = escapeHtml(String(r.observacao || "").slice(0, 80));
       return `<tr>
         <td>${id}</td>
@@ -367,6 +376,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
         <td>${nome}</td>
         <td>${vv}</td>
         <td>${vc}</td>
+        <td style="text-align:right;font-weight:600">${vt}</td>
         <td>${obs || "—"}</td>
         <td class="table-actions">
           <button type="button" class="table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
@@ -428,7 +438,7 @@ async function loadValeConsumoSection() {
   }
 
   valeConsumoAtualizarTotaisBar(undefined);
-  tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
+  tbDet.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
 
   const qs = valeConsumoMontarQueryString();
   try {
@@ -438,7 +448,7 @@ async function loadValeConsumoSection() {
   } catch (e) {
     valeConsumoAtualizarTotaisBar(undefined);
     const msg = escapeHtml(String(e?.message || "Erro"));
-    tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${msg}</td></tr>`;
+    tbDet.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${msg}</td></tr>`;
   }
 }
 
