@@ -297,14 +297,51 @@ function valeConsumoFormatarDataBR(iso) {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
+function valeConsumoSomarTotaisLista(lista) {
+  let totalVale = 0;
+  let totalConsumo = 0;
+  for (const r of lista || []) {
+    totalVale += Number(r?.valor_vale) || 0;
+    totalConsumo += Number(r?.valor_consumo) || 0;
+  }
+  return { totalVale, totalConsumo };
+}
+
+function valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo) {
+  const tv = fmtBRLValeConsumo(totalVale);
+  const tc = fmtBRLValeConsumo(totalConsumo);
+  return `<tr class="vale-consumo-linha-totais">
+    <td colspan="3" style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">Totais</td>
+    <td style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">${tv}</td>
+    <td style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">${tc}</td>
+    <td colspan="2" style="border-top:2px solid #cfd8dc"></td>
+  </tr>`;
+}
+
+function valeConsumoAtualizarHeaderTotais(lista) {
+  const el = document.getElementById("valeConsumoTotaisResumo");
+  if (!el) return;
+  if (!Array.isArray(lista) || !lista.length) {
+    el.textContent = "";
+    return;
+  }
+  const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
+  el.textContent = `Totais: ${fmtBRLValeConsumo(totalVale)} vale · ${fmtBRLValeConsumo(totalConsumo)} consumo · ${lista.length} lançamento${
+    lista.length === 1 ? "" : "s"
+  }`;
+}
+
 function valeConsumoRenderDetalhe(tb, lista) {
   if (!tb) return;
   if (!lista.length) {
+    valeConsumoAtualizarHeaderTotais([]);
     tb.innerHTML =
       '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
     return;
   }
-  tb.innerHTML = lista
+  const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
+  valeConsumoAtualizarHeaderTotais(lista);
+  const linhas = lista
     .map((r) => {
       const id = escapeHtml(String(r.id ?? ""));
       const dt = escapeHtml(valeConsumoFormatarDataBR(r.data_lancamento));
@@ -326,6 +363,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
       </tr>`;
     })
     .join("");
+  tb.innerHTML = linhas + valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo);
 }
 
 async function loadValeConsumoSection() {
@@ -377,6 +415,7 @@ async function loadValeConsumoSection() {
     dataLancEl.value = new Date().toISOString().slice(0, 10);
   }
 
+  valeConsumoAtualizarHeaderTotais([]);
   tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
 
   const qs = valeConsumoMontarQueryString();
@@ -385,6 +424,7 @@ async function loadValeConsumoSection() {
     valeConsumoDetalheCache = Array.isArray(det) ? det : [];
     valeConsumoRenderDetalhe(tbDet, valeConsumoDetalheCache);
   } catch (e) {
+    valeConsumoAtualizarHeaderTotais([]);
     const msg = escapeHtml(String(e?.message || "Erro"));
     tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${msg}</td></tr>`;
   }

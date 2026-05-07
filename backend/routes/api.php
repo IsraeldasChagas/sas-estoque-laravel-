@@ -8979,8 +8979,13 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         $uniLabel = $unidadeId > 0 && Schema::hasTable('unidades')
             ? (string) (DB::table('unidades')->where('id', $unidadeId)->value('nome') ?? ('ID ' . $unidadeId))
             : 'Todas';
+        $totVNum = (float) $linhas->sum(fn ($x) => (float) ($x->valor_vale ?? 0));
+        $totCNum = (float) $linhas->sum(fn ($x) => (float) ($x->valor_consumo ?? 0));
+        $totV = number_format($totVNum, 2, ',', '');
+        $totC = number_format($totCNum, 2, ',', '');
         $temDataLanc = Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento');
         $rows[] = 'Relatorio Vale/Consumo — periodo ' . $di . ' a ' . $df . ' — unidade: ' . $uniLabel;
+        $rows[] = 'Totais no periodo — Vale R$ ' . $totV . ' — Consumo R$ ' . $totC . ' — ' . $linhas->count() . ' lancamento(s)';
         $rows[] = implode($sep, ['ID', 'Data', 'Funcionario', 'CPF', 'Cargo', 'Unidade', 'Vale (R$)', 'Consumo (R$)', 'Observacao']);
         foreach ($linhas as $r) {
             $dataStr = '';
@@ -9001,9 +9006,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
                 '"' . str_replace('"', '""', (string) ($r->observacao ?? '')) . '"',
             ]);
         }
-        $totV = number_format((float) $linhas->sum(fn ($x) => (float) ($x->valor_vale ?? 0)), 2, ',', '');
-        $totC = number_format((float) $linhas->sum(fn ($x) => (float) ($x->valor_consumo ?? 0)), 2, ',', '');
-        $rows[] = implode($sep, ['TOTAL GERAL', '', '', '', '', '', $totV, $totC, '']);
+        $rows[] = implode($sep, ['TOTAIS', '', '', '', '', '', $totV, $totC, '']);
         $csv = "\xEF\xBB\xBF" . implode("\r\n", $rows) . "\r\n";
         $fn = 'vale-consumo-' . $di . '-' . $df . ($unidadeId > 0 ? '-u' . $unidadeId : '') . '.csv';
 
@@ -9078,17 +9081,25 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             $rowsDet = '<tr><td colspan="6" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
         }
 
+        $nLanc = $detalhes->count();
+        $footPdf = '<tfoot><tr style="background:#f5f5f5">'
+            . '<td colspan="3" style="text-align:right;font-weight:bold">Totais</td>'
+            . '<td class="num" style="font-weight:bold">' . e($fmt($totV)) . '</td>'
+            . '<td class="num" style="font-weight:bold">' . e($fmt($totC)) . '</td>'
+            . '<td></td>'
+            . '</tr></tfoot>';
+
         $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
-            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;font-size:11px}h1{font-size:16px}h2{font-size:13px;margin-top:16px}.meta{color:#444;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:5px 6px}th{background:#f0f0f0;text-align:left}.num{text-align:right}</style></head><body>';
+            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;font-size:11px}h1{font-size:16px}h2{font-size:13px;margin-top:16px}.meta{color:#444;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:5px 6px}th{background:#f0f0f0;text-align:left}.num{text-align:right}tfoot td{border-top:2px solid #999}</style></head><body>';
         $html .= '<h1>Vale / consumo</h1>'
             . '<div class="meta"><strong>Período:</strong> ' . e(\Carbon\Carbon::parse($di)->format('d/m/Y')) . ' a ' . e(\Carbon\Carbon::parse($df)->format('d/m/Y'))
             . ' &nbsp;|&nbsp; <strong>Unidade:</strong> ' . e($uniLabel)
-            . ' &nbsp;|&nbsp; <strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>';
+            . ' &nbsp;|&nbsp; <strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>'
+            . '<p style="margin:8px 0 0 0;font-size:11px"><strong>Totais no período:</strong> Vale R$ ' . e($fmt($totV)) . ' &nbsp;·&nbsp; Consumo R$ ' . e($fmt($totC))
+            . ' &nbsp;·&nbsp; ' . e((string) $nLanc) . ' lançamento(s)</p>';
 
-        $html .= '<h2>Lançamentos (detalhe)</h2><table><thead><tr>'
-            . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale (R$)</th><th class="num">Consumo (R$)</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody></table>';
-
-        $html .= '<p style="margin-top:14px"><strong>Totais gerais:</strong> Vale R$ ' . e($fmt($totV)) . ' &nbsp;|&nbsp; Consumo R$ ' . e($fmt($totC)) . '</p>';
+        $html .= '<h2>Lançamentos</h2><table><thead><tr>'
+            . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale (R$)</th><th class="num">Consumo (R$)</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody>' . $footPdf . '</table>';
         $html .= '</body></html>';
 
         $dompdf = new \Dompdf\Dompdf();
