@@ -3192,6 +3192,109 @@ textarea {
     width: 100%;
   }
 
+  /* Vale / consumo — lançamentos em cards (rótulo em cima, valor em baixo), igual Funcionários/Proventos */
+  #valeConsumoSection .vale-consumo-lancamentos-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  #valeConsumoSection .vale-consumo-tot-item {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper {
+    overflow: visible;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper thead {
+    display: none;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper tbody tr:not(.vale-consumo-tabela-msg) {
+    display: grid;
+    grid-template-columns: 1fr;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper tbody tr.vale-consumo-tabela-msg {
+    display: block;
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: none;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper tbody tr.vale-consumo-tabela-msg td {
+    display: block;
+    padding: 0;
+    border: none;
+    text-align: center !important;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper tbody tr.vale-consumo-tabela-msg td::before {
+    content: none !important;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    min-width: 0;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper td[data-label="Total"] {
+    align-items: flex-end;
+    text-align: right;
+    width: 100%;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    width: 100%;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #valeConsumoSection .table-card.form-card--wide .table-wrapper td.table-actions .table-action {
+    width: 100%;
+  }
+
   /* Célula dispositivo clicável nos logs (auditoria) */
   .log-dispositivo-clicavel {
     cursor: pointer;

@@ -341,7 +341,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
   if (!lista.length) {
     valeConsumoAtualizarTotaisBar([]);
     tb.innerHTML =
-      '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
+      '<tr class="vale-consumo-tabela-msg"><td colspan="8" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
     return;
   }
   valeConsumoAtualizarTotaisBar(lista);
@@ -355,14 +355,14 @@ function valeConsumoRenderDetalhe(tb, lista) {
       const vt = fmtBRLValeConsumo(valeConsumoLinhaTotal(r));
       const obs = escapeHtml(String(r.observacao || "").slice(0, 80));
       return `<tr>
-        <td>${id}</td>
-        <td>${dt}</td>
-        <td>${nome}</td>
-        <td>${vv}</td>
-        <td>${vc}</td>
-        <td style="text-align:right;font-weight:600">${vt}</td>
-        <td>${obs || "—"}</td>
-        <td class="table-actions">
+        <td data-label="ID">${id}</td>
+        <td data-label="Data">${dt}</td>
+        <td data-label="Funcionário">${nome}</td>
+        <td data-label="Vale">${vv}</td>
+        <td data-label="Consumo">${vc}</td>
+        <td data-label="Total" style="text-align:right;font-weight:600">${vt}</td>
+        <td data-label="Obs.">${obs || "—"}</td>
+        <td class="table-actions" data-label="Ações">
           <button type="button" class="table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
           <button type="button" class="table-action danger" data-valecons-action="del" data-id="${id}">Excluir</button>
         </td>
@@ -422,7 +422,7 @@ async function loadValeConsumoSection() {
   }
 
   valeConsumoAtualizarTotaisBar(undefined);
-  tbDet.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
+  tbDet.innerHTML = `<tr class="vale-consumo-tabela-msg"><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
 
   const qs = valeConsumoMontarQueryString();
   try {
@@ -432,7 +432,7 @@ async function loadValeConsumoSection() {
   } catch (e) {
     valeConsumoAtualizarTotaisBar(undefined);
     const msg = escapeHtml(String(e?.message || "Erro"));
-    tbDet.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${msg}</td></tr>`;
+    tbDet.innerHTML = `<tr class="vale-consumo-tabela-msg"><td colspan="8" style="text-align:center;color:#c62828">${msg}</td></tr>`;
   }
 }
 
