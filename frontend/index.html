@@ -3056,9 +3056,18 @@
             </div>
 
             <div class="table-card form-card--wide">
-              <header style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem">
+              <header class="vale-consumo-lancamentos-head">
                 <h3 style="margin: 0">Lançamentos</h3>
-                <p id="valeConsumoTotaisResumo" class="subtle-text" style="margin: 0; font-weight: 600"></p>
+                <div id="valeConsumoTotaisBar" class="vale-consumo-totais-bar" aria-live="polite">
+                  <div class="vale-consumo-tot-item">
+                    <span class="vale-consumo-tot-label">Vale</span>
+                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotVale">—</strong>
+                  </div>
+                  <div class="vale-consumo-tot-item">
+                    <span class="vale-consumo-tot-label">Consumo</span>
+                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotConsumo">—</strong>
+                  </div>
+                </div>
               </header>
               <div class="table-wrapper">
                 <table>

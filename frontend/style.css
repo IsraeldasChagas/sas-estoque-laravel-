@@ -2504,6 +2504,39 @@ textarea {
   display: none !important;
 }
 
+/* Vale / consumo — totais no card Lançamentos */
+#valeConsumoSection .vale-consumo-lancamentos-head {
+  margin-bottom: 0.75rem;
+}
+#valeConsumoSection .vale-consumo-totais-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin-top: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 71, 171, 0.06);
+  border: 1px solid rgba(0, 71, 171, 0.15);
+  border-radius: 8px;
+}
+#valeConsumoSection .vale-consumo-tot-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 10rem;
+}
+#valeConsumoSection .vale-consumo-tot-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #546e7a;
+}
+#valeConsumoSection .vale-consumo-tot-valor {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1565c0;
+}
+
 /* Tela de login com layout dividido */
 .login-overlay {
   position: fixed;

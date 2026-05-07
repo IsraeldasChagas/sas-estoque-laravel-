@@ -311,36 +311,48 @@ function valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo) {
   const tv = fmtBRLValeConsumo(totalVale);
   const tc = fmtBRLValeConsumo(totalConsumo);
   return `<tr class="vale-consumo-linha-totais">
-    <td colspan="3" style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">Total</td>
-    <td style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">${tv}</td>
-    <td style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">${tc}</td>
+    <td colspan="3" style="text-align:right;vertical-align:middle;font-weight:600;border-top:2px solid #cfd8dc">Total</td>
+    <td style="text-align:right;border-top:2px solid #cfd8dc;vertical-align:middle">
+      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#546e7a">Vale</div>
+      <div style="font-weight:700">${tv}</div>
+    </td>
+    <td style="text-align:right;border-top:2px solid #cfd8dc;vertical-align:middle">
+      <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#546e7a">Consumo</div>
+      <div style="font-weight:700">${tc}</div>
+    </td>
     <td colspan="2" style="border-top:2px solid #cfd8dc"></td>
   </tr>`;
 }
 
-function valeConsumoAtualizarHeaderTotais(lista) {
-  const el = document.getElementById("valeConsumoTotaisResumo");
-  if (!el) return;
+function valeConsumoAtualizarTotaisBar(lista) {
+  const ev = document.getElementById("valeConsumoTotVale");
+  const ec = document.getElementById("valeConsumoTotConsumo");
+  if (!ev || !ec) return;
+  if (lista === undefined) {
+    ev.textContent = "—";
+    ec.textContent = "—";
+    return;
+  }
   if (!Array.isArray(lista) || !lista.length) {
-    el.textContent = "";
+    ev.textContent = fmtBRLValeConsumo(0);
+    ec.textContent = fmtBRLValeConsumo(0);
     return;
   }
   const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
-  el.textContent = `Vale ${fmtBRLValeConsumo(totalVale)} · Consumo ${fmtBRLValeConsumo(totalConsumo)} · ${lista.length} lançamento${
-    lista.length === 1 ? "" : "s"
-  }`;
+  ev.textContent = fmtBRLValeConsumo(totalVale);
+  ec.textContent = fmtBRLValeConsumo(totalConsumo);
 }
 
 function valeConsumoRenderDetalhe(tb, lista) {
   if (!tb) return;
   if (!lista.length) {
-    valeConsumoAtualizarHeaderTotais([]);
+    valeConsumoAtualizarTotaisBar([]);
     tb.innerHTML =
       '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
     return;
   }
   const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
-  valeConsumoAtualizarHeaderTotais(lista);
+  valeConsumoAtualizarTotaisBar(lista);
   const linhas = lista
     .map((r) => {
       const id = escapeHtml(String(r.id ?? ""));
@@ -415,7 +427,7 @@ async function loadValeConsumoSection() {
     dataLancEl.value = new Date().toISOString().slice(0, 10);
   }
 
-  valeConsumoAtualizarHeaderTotais([]);
+  valeConsumoAtualizarTotaisBar(undefined);
   tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
 
   const qs = valeConsumoMontarQueryString();
@@ -424,7 +436,7 @@ async function loadValeConsumoSection() {
     valeConsumoDetalheCache = Array.isArray(det) ? det : [];
     valeConsumoRenderDetalhe(tbDet, valeConsumoDetalheCache);
   } catch (e) {
-    valeConsumoAtualizarHeaderTotais([]);
+    valeConsumoAtualizarTotaisBar(undefined);
     const msg = escapeHtml(String(e?.message || "Erro"));
     tbDet.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${msg}</td></tr>`;
   }
