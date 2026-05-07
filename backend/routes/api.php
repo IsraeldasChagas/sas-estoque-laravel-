@@ -9195,8 +9195,8 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
         }
         $rules = [
             'funcionario_id' => 'required|integer|min:1',
-            'valor_vale' => 'required|numeric|min:0',
-            'valor_consumo' => 'required|numeric|min:0',
+            'valor_vale' => 'nullable|numeric|min:0',
+            'valor_consumo' => 'nullable|numeric|min:0',
             'observacao' => 'nullable|string|max:500',
         ];
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
@@ -9222,8 +9222,8 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
         $insert = [
             'funcionario_id' => (int) $data['funcionario_id'],
             'competencia' => $comp,
-            'valor_vale' => round((float) $data['valor_vale'], 2),
-            'valor_consumo' => round((float) $data['valor_consumo'], 2),
+            'valor_vale' => round((float) ($data['valor_vale'] ?? 0), 2),
+            'valor_consumo' => round((float) ($data['valor_consumo'] ?? 0), 2),
             'observacao' => $data['observacao'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
@@ -9275,8 +9275,8 @@ Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use
         }
         $rules = [
             'funcionario_id' => 'sometimes|required|integer|min:1',
-            'valor_vale' => 'sometimes|required|numeric|min:0',
-            'valor_consumo' => 'sometimes|required|numeric|min:0',
+            'valor_vale' => 'sometimes|nullable|numeric|min:0',
+            'valor_consumo' => 'sometimes|nullable|numeric|min:0',
             'observacao' => 'nullable|string|max:500',
         ];
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
