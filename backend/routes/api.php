@@ -8985,8 +8985,8 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         $totC = number_format($totCNum, 2, ',', '');
         $temDataLanc = Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento');
         $rows[] = 'Relatorio Vale/Consumo — periodo ' . $di . ' a ' . $df . ' — unidade: ' . $uniLabel;
-        $rows[] = 'Totais no periodo — Vale R$ ' . $totV . ' — Consumo R$ ' . $totC . ' — ' . $linhas->count() . ' lancamento(s)';
-        $rows[] = implode($sep, ['ID', 'Data', 'Funcionario', 'CPF', 'Cargo', 'Unidade', 'Vale (R$)', 'Consumo (R$)', 'Observacao']);
+        $rows[] = implode($sep, ['Vale', $totV, 'Consumo', $totC]);
+        $rows[] = implode($sep, ['ID', 'Data', 'Funcionario', 'CPF', 'Cargo', 'Unidade', 'Vale', 'Consumo', 'Observacao']);
         foreach ($linhas as $r) {
             $dataStr = '';
             if ($temDataLanc && ! empty($r->data_lancamento)) {
@@ -9006,7 +9006,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
                 '"' . str_replace('"', '""', (string) ($r->observacao ?? '')) . '"',
             ]);
         }
-        $rows[] = implode($sep, ['TOTAIS', '', '', '', '', '', $totV, $totC, '']);
+        $rows[] = implode($sep, ['Total', '', '', '', '', '', $totV, $totC, '']);
         $porPessoaCsv = $linhas
             ->groupBy(static fn ($x) => (string) ($x->funcionario_id ?? ''))
             ->map(static function ($grupo) {
@@ -9024,14 +9024,13 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
             ->values();
         $rows[] = '';
         $rows[] = 'TOTAL POR FUNCIONARIO';
-        $rows[] = implode($sep, ['Funcionario', 'Unidade', 'Total Vale (R$)', 'Total Consumo (R$)', 'Qtd lancamentos']);
+        $rows[] = implode($sep, ['Funcionario', 'Unidade', 'Vale', 'Consumo']);
         foreach ($porPessoaCsv as $p) {
             $rows[] = implode($sep, [
                 '"' . str_replace('"', '""', (string) ($p->funcionario_nome ?? '')) . '"',
                 '"' . str_replace('"', '""', (string) ($p->unidade_nome ?? '')) . '"',
                 number_format((float) ($p->total_vale ?? 0), 2, ',', ''),
                 number_format((float) ($p->total_consumo ?? 0), 2, ',', ''),
-                (string) (int) ($p->qtd_lancamentos ?? 0),
             ]);
         }
         $csv = "\xEF\xBB\xBF" . implode("\r\n", $rows) . "\r\n";
@@ -9092,7 +9091,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             ->join('funcionarios as f', 'v.funcionario_id', '=', 'f.id')
             ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
             ->groupBy('v.funcionario_id', 'f.nome_completo', 'u.nome')
-            ->selectRaw('f.nome_completo as funcionario_nome, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo, COUNT(*) as qtd_lancamentos');
+            ->selectRaw('f.nome_completo as funcionario_nome, u.nome as unidade_nome, SUM(v.valor_vale) as total_vale, SUM(v.valor_consumo) as total_consumo');
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $qAgg->whereBetween('v.data_lancamento', [$di, $df]);
         } else {
@@ -9126,23 +9125,26 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
 
         $nLanc = $detalhes->count();
         $footPdf = '<tfoot><tr style="background:#f5f5f5">'
-            . '<td colspan="3" style="text-align:right;font-weight:bold">Totais</td>'
+            . '<td colspan="3" style="text-align:right;font-weight:bold">Total</td>'
             . '<td class="num" style="font-weight:bold">' . e($fmt($totV)) . '</td>'
             . '<td class="num" style="font-weight:bold">' . e($fmt($totC)) . '</td>'
             . '<td></td>'
             . '</tr></tfoot>';
 
         $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
-            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;font-size:11px}h1{font-size:16px}h2{font-size:13px;margin-top:16px}.meta{color:#444;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:5px 6px}th{background:#f0f0f0;text-align:left}.num{text-align:right}tfoot td{border-top:2px solid #999}</style></head><body>';
+            . '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:20px;font-size:11px}h1{font-size:16px}h2{font-size:13px;margin-top:16px}.meta{color:#444;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-top:6px}th,td{border:1px solid #ccc;padding:5px 6px}th{background:#f0f0f0;text-align:left}.num{text-align:right}tfoot td{border-top:2px solid #999}.tot-resumo{width:auto;margin-top:8px}</style></head><body>';
         $html .= '<h1>Vale / consumo</h1>'
             . '<div class="meta"><strong>Período:</strong> ' . e(\Carbon\Carbon::parse($di)->format('d/m/Y')) . ' a ' . e(\Carbon\Carbon::parse($df)->format('d/m/Y'))
             . ' &nbsp;|&nbsp; <strong>Unidade:</strong> ' . e($uniLabel)
             . ' &nbsp;|&nbsp; <strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i')) . '</div>'
-            . '<p style="margin:8px 0 0 0;font-size:11px"><strong>Totais no período:</strong> Vale R$ ' . e($fmt($totV)) . ' &nbsp;·&nbsp; Consumo R$ ' . e($fmt($totC))
-            . ' &nbsp;·&nbsp; ' . e((string) $nLanc) . ' lançamento(s)</p>';
+            . '<table class="tot-resumo"><thead><tr><th>Vale</th><th>Consumo</th></tr></thead><tbody><tr>'
+            . '<td class="num" style="font-weight:bold">R$ ' . e($fmt($totV)) . '</td>'
+            . '<td class="num" style="font-weight:bold">R$ ' . e($fmt($totC)) . '</td>'
+            . '</tr></tbody></table>'
+            . '<p style="margin:6px 0 0 0;font-size:10px;color:#555">' . e((string) $nLanc) . ' lançamento(s)</p>';
 
         $html .= '<h2>Lançamentos</h2><table><thead><tr>'
-            . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale (R$)</th><th class="num">Consumo (R$)</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody>' . $footPdf . '</table>';
+            . '<th>Data</th><th>Funcionário</th><th>Unidade</th><th class="num">Vale</th><th class="num">Consumo</th><th>Obs.</th></tr></thead><tbody>' . $rowsDet . '</tbody>' . $footPdf . '</table>';
 
         $rowsPorPessoa = '';
         foreach ($porPessoaPdf as $p) {
@@ -9151,14 +9153,13 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
                 . '<td>' . e((string) ($p->unidade_nome ?? '')) . '</td>'
                 . '<td class="num">' . e($fmt($p->total_vale ?? 0)) . '</td>'
                 . '<td class="num">' . e($fmt($p->total_consumo ?? 0)) . '</td>'
-                . '<td style="text-align:center">' . e((string) (int) ($p->qtd_lancamentos ?? 0)) . '</td>'
                 . '</tr>';
         }
         if ($rowsPorPessoa === '') {
-            $rowsPorPessoa = '<tr><td colspan="5" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
+            $rowsPorPessoa = '<tr><td colspan="4" style="text-align:center;color:#666">Nenhum lançamento no período.</td></tr>';
         }
-        $html .= '<h2 style="margin-top:18px">Totais por funcionário</h2><table><thead><tr>'
-            . '<th>Funcionário</th><th>Unidade</th><th class="num">Total vale (R$)</th><th class="num">Total consumo (R$)</th><th>Lançamentos</th></tr></thead><tbody>'
+        $html .= '<h2 style="margin-top:18px">Total por funcionário</h2><table><thead><tr>'
+            . '<th>Funcionário</th><th>Unidade</th><th class="num">Vale</th><th class="num">Consumo</th></tr></thead><tbody>'
             . $rowsPorPessoa . '</tbody></table>';
         $html .= '</body></html>';
 

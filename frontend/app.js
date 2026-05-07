@@ -311,7 +311,7 @@ function valeConsumoHtmlLinhaTotaisTabela(totalVale, totalConsumo) {
   const tv = fmtBRLValeConsumo(totalVale);
   const tc = fmtBRLValeConsumo(totalConsumo);
   return `<tr class="vale-consumo-linha-totais">
-    <td colspan="3" style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">Totais</td>
+    <td colspan="3" style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">Total</td>
     <td style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">${tv}</td>
     <td style="text-align:right;font-weight:600;border-top:2px solid #cfd8dc">${tc}</td>
     <td colspan="2" style="border-top:2px solid #cfd8dc"></td>
@@ -326,7 +326,7 @@ function valeConsumoAtualizarHeaderTotais(lista) {
     return;
   }
   const { totalVale, totalConsumo } = valeConsumoSomarTotaisLista(lista);
-  el.textContent = `Totais: ${fmtBRLValeConsumo(totalVale)} vale · ${fmtBRLValeConsumo(totalConsumo)} consumo · ${lista.length} lançamento${
+  el.textContent = `Vale ${fmtBRLValeConsumo(totalVale)} · Consumo ${fmtBRLValeConsumo(totalConsumo)} · ${lista.length} lançamento${
     lista.length === 1 ? "" : "s"
   }`;
 }
