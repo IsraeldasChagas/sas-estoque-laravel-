@@ -19819,8 +19819,10 @@ function setupReciboAjudaCusto() {
   }
 
   function populateReciboAjudaSelects() {
+    const unidadeAtual = (unidadeSelect?.value || "").trim();
+    const funcionarioAtual = (funcionarioSelect?.value || "").trim();
     if (funcionarioSelect) {
-      const hasUnidade = !!(unidadeSelect?.value || "").trim();
+      const hasUnidade = !!unidadeAtual;
       const ativos = (state.funcionarios || []).filter((f) => (f.status || "ativo") === "ativo");
       if (!hasUnidade) {
         funcionarioSelect.innerHTML = '<option value="">Selecione a unidade primeiro</option>';
@@ -19833,10 +19835,13 @@ function setupReciboAjudaCusto() {
       }
     }
     if (unidadeSelect) {
+      const prev = unidadeAtual;
       unidadeSelect.innerHTML =
         '<option value="">Selecione a unidade</option>' +
         (state.unidades || []).map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`).join("");
+      if (prev) unidadeSelect.value = prev;
     }
+    if (funcionarioSelect && funcionarioAtual) funcionarioSelect.value = funcionarioAtual;
     setUnidadeCnpjFromSelect();
     setFuncionarioCpfFromSelect();
   }

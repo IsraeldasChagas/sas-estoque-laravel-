@@ -2430,6 +2430,18 @@
                 </div>
               </header>
               <div class="recibo-ajuda__grid">
+                <label class="recibo-ajuda__unidade">
+                  Unidade
+                  <select id="reciboAjudaUnidadeSelect">
+                    <option value="">Selecione a unidade</option>
+                  </select>
+                </label>
+
+                <label>
+                  CNPJ (unidade)
+                  <input type="text" id="reciboAjudaUnidadeCnpj" readonly placeholder="Preenchido ao escolher a unidade" />
+                </label>
+
                 <label class="recibo-ajuda__funcionario">
                   Funcionário
                   <input type="text" id="reciboAjudaFuncionarioBusca" placeholder="Digite para filtrar..." autocomplete="off" style="border-radius: 8px 8px 0 0; border-bottom: none;" />
@@ -2441,18 +2453,6 @@
                 <label>
                   CPF (funcionário)
                   <input type="text" id="reciboAjudaFuncionarioCpf" readonly placeholder="Preenchido ao escolher o funcionário" />
-                </label>
-
-                <label class="recibo-ajuda__unidade">
-                  Unidade
-                  <select id="reciboAjudaUnidadeSelect">
-                    <option value="">Selecione a unidade</option>
-                  </select>
-                </label>
-
-                <label>
-                  CNPJ (unidade)
-                  <input type="text" id="reciboAjudaUnidadeCnpj" readonly placeholder="Preenchido ao escolher a unidade" />
                 </label>
 
                 <label>
