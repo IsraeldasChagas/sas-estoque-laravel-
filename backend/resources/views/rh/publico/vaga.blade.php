@@ -36,8 +36,6 @@
         .gsp-name { line-height: 1.05; }
         .gsp-name .title { font-weight: 800; letter-spacing: .2px; }
         .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
-        .vaga-choices { border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: .75rem; background: #fff; }
-        .vaga-choices .form-check { margin: .2rem 0; }
         body { color: rgba(255,255,255,.92); }
         .gsp-name .title { color: #ffffff; }
         .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }

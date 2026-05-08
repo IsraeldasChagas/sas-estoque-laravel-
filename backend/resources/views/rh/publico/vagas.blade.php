@@ -184,8 +184,21 @@
             line-height: 1.3;
             padding-right: 0.5rem;
         }
-        .vaga-choices { border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 0.75rem; padding: 0.75rem; background: #fff; }
-        .vaga-choices .form-check { margin: 0.2rem 0; }
+
+        #modalCandidaturaRh .candidatura-rh-form .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.35rem;
+            color: #292524;
+        }
+        #modalCandidaturaRh .candidatura-rh-form .form-control,
+        #modalCandidaturaRh .candidatura-rh-form .form-select {
+            font-size: 0.95rem;
+        }
+        #modalCandidaturaRh .candidatura-rh-form fieldset.row {
+            --bs-gutter-x: 0.9rem;
+            --bs-gutter-y: 0.65rem;
+        }
 
         /* Modo foco: uma vaga em destaque ao centro, demais recolhidas / suaves */
         .vagas-grid {
@@ -521,11 +534,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 form.action = '/vagas/' + encodeURIComponent(slug) + '/candidatar';
             }
             titleEl.textContent = titulo ? 'Candidatar-se — ' + titulo : 'Candidatar-se';
-            form.querySelectorAll('input[name="vaga_ids[]"]').forEach(function (cb) {
-                if (cb.type === 'checkbox') {
-                    cb.checked = String(cb.value) === String(vid);
-                }
-            });
+            var hid = form.querySelector('#rhCandidaturaVagaId');
+            if (hid && vid) hid.value = String(vid);
         });
     }
 

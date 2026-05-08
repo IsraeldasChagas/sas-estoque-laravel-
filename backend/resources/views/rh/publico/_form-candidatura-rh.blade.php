@@ -1,9 +1,13 @@
 {{--
-    Candidatura pública RH — requer: $vaga (objeto vaga aberta ou null), $vagasAbertas, $vagaBloqueada (bool)
+    Candidatura pública RH — uma vaga por envio.
+    Requer: $vaga (vaga aberta ou null), $vagaBloqueada (bool). $vagasAbertas é opcional (legado).
 --}}
 @php
-    $vagas = isset($vagasAbertas) ? $vagasAbertas : collect();
-    $vagasCount = is_countable($vagas) ? count($vagas) : 0;
+    $oldIds = old('vaga_ids');
+    $hiddenVagaId = $vaga ? (int) $vaga->id : 0;
+    if (is_array($oldIds) && count($oldIds)) {
+        $hiddenVagaId = (int) reset($oldIds);
+    }
 @endphp
 
 @if(!empty($vagaBloqueada) && $vagaBloqueada)
@@ -19,8 +23,9 @@
 @endif
 
 @if($vaga)
-<form id="formCandidaturaRh" method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="row g-3">
+<form id="formCandidaturaRh" method="POST" action="/vagas/{{ $vaga->slug }}/candidatar" enctype="multipart/form-data" class="candidatura-rh-form">
     @csrf
+    <input type="hidden" name="vaga_ids[]" id="rhCandidaturaVagaId" value="{{ $hiddenVagaId }}" />
     @php
         $disabled = (!empty($vagaBloqueada) && $vagaBloqueada);
         $cidadesRo = [
@@ -78,96 +83,73 @@
             'Vilhena',
         ];
     @endphp
-    <fieldset {{ $disabled ? 'disabled="disabled"' : '' }} class="row g-3 m-0 p-0" style="border:0;">
+    <fieldset {{ $disabled ? 'disabled="disabled"' : '' }} class="row g-3 m-0 p-0 border-0">
 
-    @if($vagasCount > 1)
-        <div class="col-12">
-            <div class="vaga-choices">
-                <div class="fw-semibold mb-2">Escolha a(s) vaga(s)</div>
-                @foreach($vagas as $v)
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="vaga_ids[]" id="vaga_{{ $v->id }}" value="{{ $v->id }}"
-                               @checked(old('vaga_ids') ? in_array($v->id, (array) old('vaga_ids')) : ($v->id === $vaga->id)) />
-                        <label class="form-check-label" for="vaga_{{ $v->id }}" style="display:flex; align-items:center; gap:.5rem; justify-content:space-between;">
-                            <span>
-                                {{ $v->titulo }}@if(!empty($v->unidade)) — <span class="text-muted">{{ $v->unidade }}</span>@endif
-                            </span>
-                            <a class="btn btn-sm btn-outline-primary" href="{{ url('/vagas') }}#vaga-{{ $v->slug }}">Ver na lista</a>
-                        </label>
-                    </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="rhCandNome">Nome completo <span class="text-danger">*</span></label>
+            <input id="rhCandNome" name="nome" class="form-control" value="{{ old('nome') }}" required maxlength="160" autocomplete="name" />
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="rhCandTel">WhatsApp <span class="text-danger">*</span></label>
+            <input id="rhCandTel" name="telefone" class="form-control" value="{{ old('telefone') }}" required maxlength="40" inputmode="tel" autocomplete="tel" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="rhCandEmail">E-mail <span class="text-danger">*</span></label>
+            <input id="rhCandEmail" type="email" name="email" class="form-control" value="{{ old('email') }}" required maxlength="160" autocomplete="email" />
+        </div>
+        <div class="col-12 col-md-3">
+            <label class="form-label" for="rhCandCidade">Cidade <span class="text-danger">*</span></label>
+            <select id="rhCandCidade" name="cidade" class="form-select" required>
+                <option value="">Selecione a cidade</option>
+                @foreach($cidadesRo as $cidadeNome)
+                    <option value="{{ $cidadeNome }}" @selected(old('cidade') === $cidadeNome)>{{ $cidadeNome }}</option>
                 @endforeach
-                <div class="form-text mt-2">Se marcar mais de uma, sua candidatura será enviada para cada vaga selecionada.</div>
+            </select>
+        </div>
+        <div class="col-12 col-md-3">
+            <label class="form-label" for="rhCandBairro">Bairro <span class="text-danger">*</span></label>
+            <input id="rhCandBairro" name="bairro" class="form-control" value="{{ old('bairro') }}" required maxlength="120" autocomplete="address-level3" />
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="rhCandDisp">Disponibilidade imediata? <span class="text-danger">*</span></label>
+            <select id="rhCandDisp" name="disponibilidade" class="form-select" required>
+                <option value="">Selecione…</option>
+                <option value="sim" @selected(old('disponibilidade') === 'sim')>Sim</option>
+                <option value="nao" @selected(old('disponibilidade') === 'nao')>Não</option>
+            </select>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label" for="rhCandObs">Observações <span class="text-muted fw-normal">(opcional)</span></label>
+            <textarea id="rhCandObs" name="observacoes" class="form-control" rows="3" maxlength="500" placeholder="Ex.: horários em que prefere ser contatado(a).">{{ old('observacoes') }}</textarea>
+            <div class="form-text">Até 500 caracteres.</div>
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="rhCandCv">Currículo (PDF) <span class="text-danger">*</span></label>
+            <input id="rhCandCv" type="file" name="curriculo" class="form-control" accept="application/pdf" required />
+            <div class="form-text">Máx. <strong>7,5 MB</strong>. Não envie CPF/RG na candidatura.</div>
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="form-label" for="rhCandFoto">Foto <span class="text-danger">*</span></label>
+            <input id="rhCandFoto" type="file" name="foto" class="form-control" accept="image/jpeg,image/png" required />
+            <div class="form-text">JPG ou PNG, máx. <strong>3 MB</strong>.</div>
+        </div>
+
+        <div class="col-12">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
+                <label class="form-check-label" for="lgpd">
+                    Autorizo o uso dos meus dados para recrutamento e seleção. <span class="text-danger">*</span>
+                </label>
             </div>
         </div>
-    @elseif($vagasCount === 1)
-        <input type="hidden" name="vaga_ids[]" value="{{ $vaga->id }}" />
-    @endif
 
-    <div class="col-md-8">
-        <label class="form-label">Nome <span class="text-danger">*</span></label>
-        <input name="nome" class="form-control" value="{{ old('nome') }}" required maxlength="160" />
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">WhatsApp <span class="text-danger">*</span></label>
-        <input name="telefone" class="form-control" value="{{ old('telefone') }}" required maxlength="40" />
-    </div>
-
-    <div class="col-md-6">
-        <label class="form-label">Email <span class="text-danger">*</span></label>
-        <input type="email" name="email" class="form-control" value="{{ old('email') }}" required maxlength="160" />
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Cidade <span class="text-danger">*</span></label>
-        <select name="cidade" class="form-control" required>
-            <option value="">Selecione a cidade</option>
-            @foreach($cidadesRo as $cidadeNome)
-                <option value="{{ $cidadeNome }}" @selected(old('cidade') === $cidadeNome)>{{ $cidadeNome }}</option>
-            @endforeach
-        </select>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Bairro <span class="text-danger">*</span></label>
-        <input name="bairro" class="form-control" value="{{ old('bairro') }}" required maxlength="120" />
-    </div>
-
-    <div class="col-md-6">
-        <label class="form-label">Disponibilidade <span class="text-danger">*</span></label>
-        <select name="disponibilidade" class="form-control" required>
-            <option value="">Selecione...</option>
-            <option value="sim" @selected(old('disponibilidade') === 'sim')>Sim</option>
-            <option value="nao" @selected(old('disponibilidade') === 'nao')>Não</option>
-        </select>
-    </div>
-
-    <div class="col-12">
-        <label class="form-label">Observações (opcional)</label>
-        <textarea name="observacoes" class="form-control" rows="3" maxlength="500" placeholder="Se quiser, deixe uma observação rápida (ex.: disponibilidade de horário, informação importante, etc.).">{{ old('observacoes') }}</textarea>
-        <div class="form-text">Máximo de 500 caracteres. Não é obrigatório.</div>
-    </div>
-
-    <div class="col-md-8">
-        <label class="form-label">Currículo (PDF) <span class="text-danger">*</span></label>
-        <input type="file" name="curriculo" class="form-control" accept="application/pdf" required />
-        <div class="form-text">Tamanho máximo do PDF: <strong>7,5 MB</strong>. Se der erro, comprima o arquivo antes de enviar. Não envie CPF/RG/CTPS na candidatura (documentos só após aprovação).</div>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Foto <span class="text-danger">*</span></label>
-        <input type="file" name="foto" class="form-control" accept="image/jpeg,image/png" required />
-        <div class="form-text">JPG ou PNG, até <strong>3 MB</strong>. Se necessário, reduza a qualidade da foto.</div>
-    </div>
-
-    <div class="col-12">
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
-            <label class="form-check-label" for="lgpd">
-                Autorizo o uso dos meus dados para fins de recrutamento e seleção. <span class="text-danger">*</span>
-            </label>
+        <div class="col-12 pt-1">
+            <button type="submit" id="btnCandidaturaRh" class="btn btn-primary px-4" {{ $disabled ? 'disabled="disabled"' : '' }}>Enviar candidatura</button>
         </div>
-    </div>
-
-    <div class="col-12">
-        <button type="submit" id="btnCandidaturaRh" class="btn btn-primary" {{ $disabled ? 'disabled="disabled"' : '' }}>Enviar candidatura</button>
-    </div>
     </fieldset>
 </form>
 @endif
