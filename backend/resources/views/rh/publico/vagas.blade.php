@@ -291,10 +291,11 @@
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
             <div>
                 <h2 class="section-title mb-1">Vagas disponíveis</h2>
-                <p class="text-muted-light small mb-0">Use <strong>Ver detalhes</strong> para abrir o texto completo e <strong>Esconder</strong> para fechar. O cadastro só em <strong>Candidatar-se</strong>.</p>
+                <p class="text-muted-light small mb-0">Só uma vaga abre por vez: use <strong>Ver detalhes</strong> / <strong>Esconder</strong>. O cadastro só em <strong>Candidatar-se</strong>.</p>
             </div>
         </div>
 
+        <div id="vagas-detalhe-acordeao">
         <div class="row g-4">
             @foreach($items as $v)
                 @php
@@ -335,7 +336,7 @@
                                 <p class="vaga-card-ui__excerpt mb-0">{{ $excerpt }}</p>
                             @endif
 
-                            <div class="collapse vaga-detalhe-full" id="detail-vaga-{{ $v->id }}">
+                            <div class="collapse vaga-detalhe-full" id="detail-vaga-{{ $v->id }}" data-bs-parent="#vagas-detalhe-acordeao">
                                 <h4>Descrição</h4>
                                 <div class="block-txt">{{ $v->descricao }}</div>
                                 @if(!empty($v->requisitos))
@@ -382,6 +383,7 @@
                     </article>
                 </div>
             @endforeach
+        </div>
         </div>
     @endif
 
