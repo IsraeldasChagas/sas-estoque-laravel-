@@ -51,19 +51,6 @@
         .gsp-name .sub { font-size: 0.84rem; color: rgba(255, 255, 255, 0.76); }
         .text-muted-light { color: rgba(255, 255, 255, 0.68) !important; }
 
-        .board-share {
-            background: rgba(255, 255, 255, 0.09);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: var(--gsp-card-radius);
-            padding: 1.1rem 1.25rem;
-        }
-        .board-share .form-control {
-            background: rgba(0, 0, 0, 0.22);
-            border-color: rgba(255, 255, 255, 0.22);
-            color: #fff;
-        }
-
         .section-title {
             font-weight: 800;
             letter-spacing: 0.02em;
@@ -204,7 +191,6 @@
 <body>
 @php
     $items = isset($vagas) ? $vagas : collect();
-    $boardUrl = url('/vagas');
 
     /**
      * Ícone e cor conforme palavras-chave no título, setor ou tipo de contratação (caixa, cozinha, etc.).
@@ -265,28 +251,6 @@
                     <div class="title" style="font-size: 1.02rem;">Doce Norte</div>
                     <div class="sub">Faz parte do grupo</div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="board-share mb-4">
-        <div class="d-flex align-items-center gap-2 mb-2">
-            <i class="bi bi-share fs-5"></i>
-            <span class="fw-bold">Divulgue esta página</span>
-        </div>
-        <p class="small mb-3 text-white-50">Um link e um QR Code para todas as vagas — redes sociais, cartazes ou folder.</p>
-        <div class="row g-2 align-items-center">
-            <div class="col min-w-0">
-                <label class="visually-hidden" for="boardPublicUrl">Link público</label>
-                <input id="boardPublicUrl" type="text" class="form-control form-control-sm" readonly value="{{ $boardUrl }}" />
-            </div>
-            <div class="col-auto d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-light btn-sm rounded-pill px-3" id="boardCopyLinkBtn">
-                    <i class="bi bi-clipboard me-1"></i> Copiar link
-                </button>
-                <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ url('/vagas/qrcode') }}" target="_blank" rel="noopener noreferrer">
-                    <i class="bi bi-qr-code me-1"></i> QR Code
-                </a>
             </div>
         </div>
     </div>
@@ -456,28 +420,6 @@ document.addEventListener('DOMContentLoaded', function () {
 @endif
 <script>
 (function () {
-    var btn = document.getElementById('boardCopyLinkBtn');
-    var inp = document.getElementById('boardPublicUrl');
-    if (btn && inp) {
-        btn.addEventListener('click', function () {
-            var url = inp.value || '';
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).then(function () {
-                    btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Copiado!';
-                    setTimeout(function () {
-                        btn.innerHTML = '<i class="bi bi-clipboard me-1"></i> Copiar link';
-                    }, 2000);
-                }).catch(function () {
-                    inp.select();
-                    document.execCommand('copy');
-                });
-            } else {
-                inp.select();
-                document.execCommand('copy');
-            }
-        });
-    }
-
     var modalEl = document.getElementById('modalCandidaturaRh');
     var form = document.getElementById('formCandidaturaRh');
     var titleEl = document.getElementById('modalCandidaturaRhTitle');
