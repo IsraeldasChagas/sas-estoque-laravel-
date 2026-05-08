@@ -784,9 +784,11 @@
           <!-- Fornecedores - CRUD -->
           <section id="fornecedoresSection" class="view-section hidden">
             <div class="fornecedores-container">
-              <div class="actions">
+              <div class="actions" style="flex-wrap: wrap; align-items: center; gap: 0.5rem;">
                 <button class="btn primary" id="openFornecedor">+ Novo Fornecedor</button>
-                <input type="text" id="fornecedorSearch" placeholder="Buscar por nome, CNPJ, email..." style="max-width: 280px; margin-left: 1rem;" />
+                <input type="text" id="fornecedorSearch" placeholder="Buscar por nome, CNPJ, email..." autocomplete="off" style="max-width: 280px;" />
+                <button type="button" class="btn neutral" id="btnFornecedorBuscar" title="Aplicar filtro">Buscar</button>
+                <button type="button" class="btn neutral" id="btnFornecedorLimpar" title="Limpar filtro e listar todos">Limpar</button>
               </div>
               <div class="table-card form-card--wide">
                 <header>Fornecedores cadastrados</header>
@@ -4944,7 +4946,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260505-backup-excluir-delegate"></script>
+    <script src="app.js?v=20260508-fornecedor-buscar-btn"></script>
      
   </body>
 </html>

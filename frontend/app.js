@@ -14665,7 +14665,7 @@ async function loadFornecedores() {
       }
       return `<tr><td data-label="Nome">${escapeHtml(f.nome || '-')}</td><td data-label="CNPJ / CPF">${escapeHtml(cnpjCpf)}</td><td data-label="Email">${escapeHtml(f.email || '-')}</td><td data-label="Telefone">${escapeHtml(f.telefone || '-')}</td><td data-label="Status">${f.ativo ? 'Ativo' : 'Inativo'}</td><td data-label="Acoes" class="table-actions">${acoes.join(' ')}</td></tr>`;
     });
-    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" style="text-align:center;color:#607d8b;">Nenhum fornecedor cadastrado.</td></tr>';
+    tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="6" style="text-align:center;color:#607d8b;">${search ? 'Nenhum fornecedor encontrado para esta busca. Clique em Limpar para ver todos.' : 'Nenhum fornecedor cadastrado.'}</td></tr>`;
     tbody.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
@@ -15194,8 +15194,18 @@ function setupFornecedoresModule() {
   document.getElementById('closeFornecedor')?.addEventListener('click', closeFornecedorModal);
   document.getElementById('cancelFornecedor')?.addEventListener('click', closeFornecedorModal);
   document.getElementById('fornecedorForm')?.addEventListener('submit', saveFornecedor);
-  document.getElementById('fornecedorSearch')?.addEventListener('input', () => loadFornecedores());
-  document.getElementById('fornecedorSearch')?.addEventListener('keyup', (e) => { if (e.key === 'Enter') loadFornecedores(); });
+  document.getElementById('btnFornecedorBuscar')?.addEventListener('click', () => loadFornecedores());
+  document.getElementById('btnFornecedorLimpar')?.addEventListener('click', () => {
+    const inp = document.getElementById('fornecedorSearch');
+    if (inp) inp.value = '';
+    loadFornecedores();
+  });
+  document.getElementById('fornecedorSearch')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      loadFornecedores();
+    }
+  });
 
   document.getElementById('cancelFornecedorExcluir')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirModal').style.display = 'none'; fornecedorParaExcluir = null; });
   document.getElementById('closeFornecedorExcluir')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirModal').style.display = 'none'; fornecedorParaExcluir = null; });
