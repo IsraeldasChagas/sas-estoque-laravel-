@@ -117,7 +117,17 @@ class RhPublicoController extends Controller
             ->orderBy('titulo')
             ->get();
 
-        return view('rh.publico.vagas', ['vagas' => $vagas]);
+        $vagasAbertas = DB::table('rh_vagas')
+            ->where('status', 'aberta')
+            ->orderBy('titulo')
+            ->get();
+
+        return view('rh.publico.vagas', [
+            'vagas' => $vagas,
+            'vagasAbertas' => $vagasAbertas,
+            'vaga' => $vagasAbertas->first(),
+            'vagaBloqueada' => $vagasAbertas->isEmpty(),
+        ]);
     }
 
     public function showVaga(string $slug)
@@ -127,16 +137,18 @@ class RhPublicoController extends Controller
             abort(404);
         }
 
-        $vagasAbertas = DB::table('rh_vagas')
-            ->where('status', 'aberta')
-            ->orderBy('titulo')
-            ->get();
+        return redirect()->to(url('/vagas') . '#vaga-' . $slug);
+    }
 
-        return view('rh.publico.vaga', [
-            'vaga' => $vaga,
-            'vagasAbertas' => $vagasAbertas,
-            'vagaBloqueada' => ($vaga->status !== 'aberta'),
-        ]);
+    /** QR Code único da página pública com todas as vagas (mesmo link para divulgação). */
+    public function qrcodeVagas()
+    {
+        $apiBase = rtrim((string) config('app.url'), '/');
+        $publicUrl = $apiBase . '/vagas';
+
+        $qrUrl = 'https://quickchart.io/qr?size=420&format=jpg&text=' . urlencode($publicUrl);
+
+        return redirect()->away($qrUrl);
     }
 
     public function qrcodeVaga(string $slug)
@@ -357,12 +369,12 @@ class RhPublicoController extends Controller
 
             return response()->json([
                 'ok' => true,
-                'redirect' => url("/vagas/{$slug}?ok=1"),
+                'redirect' => url('/vagas') . '?ok=1#sec-candidatura',
                 'aviso_parcial' => $aviso,
             ]);
         }
 
-        $redirect = redirect()->to("/vagas/{$slug}?ok=1");
+        $redirect = redirect()->to(url('/vagas') . '?ok=1#sec-candidatura');
         if ($jaInscritoTitulos !== []) {
             $redirect->with(
                 'candidatura_parcial',

@@ -72,6 +72,7 @@ Route::get('/imagens/logo-docenorte.jpg', function () {
 });
 
 Route::get('/vagas', [RhPublicoController::class, 'indexVagas']);
+Route::get('/vagas/qrcode', [RhPublicoController::class, 'qrcodeVagas']);
 Route::get('/vagas/{slug}', [RhPublicoController::class, 'showVaga']);
 Route::get('/vagas/{slug}/qrcode', [RhPublicoController::class, 'qrcodeVaga']);
 Route::post('/vagas/{slug}/candidatar', [RhPublicoController::class, 'candidatar']);

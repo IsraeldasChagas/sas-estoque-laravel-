@@ -192,7 +192,7 @@ class RhVagaController extends Controller
         if (! $vaga) return response()->json(['error' => 'Vaga não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
 
         $apiBase = rtrim((string) config('app.url'), '/');
-        $publicUrl = $apiBase . '/vagas/' . $vaga->slug;
+        $publicUrl = $apiBase . '/vagas';
 
         $result = Builder::create()
             ->writer(new PngWriter())

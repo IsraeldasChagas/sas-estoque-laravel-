@@ -2785,7 +2785,16 @@ async function restaurarBackup(arquivo) {
       alert('✅ Backup restaurado com sucesso!\nA página será recarregada.');
       window.location.reload();
     } else {
-      alert('❌ Erro ao restaurar: ' + (data?.error || res.status));
+      const err = data?.error != null ? String(data.error) : String(res.status);
+      let dica = '';
+      if (res.status === 404 && /desabilitad/i.test(err)) {
+        dica =
+          '\n\n— No servidor (pasta backend), no .env, ligue temporariamente:\n' +
+          'ALLOW_DESTRUCTIVE_ADMIN_ROUTES=true\n' +
+          'Depois: php artisan config:clear && php artisan cache:clear\n' +
+          'Tente restaurar de novo. Ao terminar, volte para false e rode config:clear outra vez.';
+      }
+      alert('❌ Erro ao restaurar: ' + err + dica);
     }
   } catch (e) {
     alert('❌ Falha na conexão: ' + e.message);
@@ -8171,8 +8180,13 @@ function getPublicBaseUrl() {
   return api.replace(/\/api\/?$/i, "");
 }
 
+/** Link público único do quadro de vagas (todas as vagas na mesma página). */
+function getRhVagasBoardPublicUrl() {
+  return `${getPublicBaseUrl()}/vagas`;
+}
+
 function getVagaPublicUrl(slug) {
-  return `${getPublicBaseUrl()}/vagas/${slug}`;
+  return getRhVagasBoardPublicUrl();
 }
 
 function getPublicStorageUrl(storagePath) {
@@ -8398,7 +8412,7 @@ function renderRhVagas(lista) {
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
   tb.innerHTML = lista.map((v) => {
-    const link = getVagaPublicUrl(v.slug);
+    const link = getRhVagasBoardPublicUrl();
     return `<tr data-id="${esc(v.id)}" data-slug="${esc(v.slug)}">
       <td data-label="ID">${esc(v.id)}</td>
       <td data-label="Título">${esc(v.titulo)}</td>
@@ -13887,11 +13901,8 @@ function setupNavigation() {
       e.preventDefault();
       try {
         const tr = btnQr.closest("tr");
-        const slug = tr?.dataset?.slug || "";
-        if (!slug) throw new Error("Slug da vaga não encontrado.");
-
-        // QR Code público por slug (não depende de auth).
-        const url = `${getPublicBaseUrl().replace(/\/$/, "")}/vagas/${encodeURIComponent(String(slug))}/qrcode`;
+        // QR Code único do quadro público (/vagas), mesmo para todas as linhas.
+        const url = `${getPublicBaseUrl().replace(/\/$/, "")}/vagas/qrcode`;
         // Evita bloqueio de popup: abre via <a target=_blank>.
         const a = document.createElement("a");
         a.href = url;
