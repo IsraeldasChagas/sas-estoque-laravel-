@@ -5119,13 +5119,9 @@ Route::get('/sugestoes-compras', function (Request $request) {
 // ============================================
 
 use App\Http\Controllers\FornecedorController;
-use App\Http\Controllers\FornecedorBackupController;
 
 Route::options('/fornecedores', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/fornecedores/{id}', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-Route::options('/fornecedores-backup', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-Route::options('/fornecedores-backup/{id}', fn () => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-
 Route::get('/fornecedores', fn (Request $request) => (new FornecedorController())->index($request)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::get('/fornecedores/{id}/check-historico', fn ($id) => (new FornecedorController())->checkHistorico($id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::get('/fornecedores/{id}', fn (Request $request, $id) => (new FornecedorController())->show($id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
@@ -5134,11 +5130,6 @@ Route::put('/fornecedores/{id}', fn (Request $request, $id) => (new FornecedorCo
 Route::put('/fornecedores/{id}/desativar', fn (Request $request, $id) => (new FornecedorController())->desativar($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::put('/fornecedores/{id}/ativar', fn (Request $request, $id) => (new FornecedorController())->ativar($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::delete('/fornecedores/{id}', fn (Request $request, $id) => (new FornecedorController())->destroy($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-
-Route::get('/fornecedores-backup', fn (Request $request) => (new FornecedorBackupController())->index($request)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-Route::get('/fornecedores-backup/{id}', fn (Request $request, $id) => (new FornecedorBackupController())->show($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-Route::post('/fornecedores-backup/{id}/restaurar', fn (Request $request, $id) => (new FornecedorBackupController())->restaurar($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
-Route::delete('/fornecedores-backup/{id}', fn (Request $request, $id) => (new FornecedorBackupController())->destroy($request, $id)->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 // ============================================
 // BOLETOS - CONTROLE FINANCEIRO
@@ -5380,7 +5371,7 @@ Route::post('/admin/backup', function (Request $request) use ($sasAdminBackupKey
 
     try {
         $snapshot = [
-            'versao'     => '1.2',
+            'versao'     => '1.3',
             'gerado_em'  => now()->toIso8601String(),
             'tabelas'    => [
                 'produtos'              => DB::table('produtos')->get()->toArray(),
@@ -5390,6 +5381,8 @@ Route::post('/admin/backup', function (Request $request) use ($sasAdminBackupKey
                 // RH (funcionários)
                 'funcionarios'          => Schema::hasTable('funcionarios') ? DB::table('funcionarios')->get()->toArray() : [],
                 'financeiro_vale_consumo' => Schema::hasTable('financeiro_vale_consumo') ? DB::table('financeiro_vale_consumo')->get()->toArray() : [],
+                'fornecedores'          => Schema::hasTable('fornecedores') ? DB::table('fornecedores')->get()->toArray() : [],
+                'fornecedores_backup'   => Schema::hasTable('fornecedores_backup') ? DB::table('fornecedores_backup')->get()->toArray() : [],
                 // Recrutamento (vagas + candidatos e vínculos; usado em backup/restore e merge)
                 'rh_vagas'              => Schema::hasTable('rh_vagas') ? DB::table('rh_vagas')->get()->toArray() : [],
                 'rh_candidatos'         => Schema::hasTable('rh_candidatos') ? DB::table('rh_candidatos')->get()->toArray() : [],
@@ -5647,6 +5640,7 @@ Route::post('/admin/restaurar', function (Request $request) use ($sasAdminBackup
         // Ordem respeitando dependências (recrutamento: vagas antes de candidatos; filhos após candidatos)
         $ordem = [
             'unidades', 'locais', 'usuarios', 'funcionarios', 'financeiro_vale_consumo', 'produtos',
+            'fornecedores', 'fornecedores_backup',
             'lotes', 'stock_lotes', 'movimentacoes',
             'listas_compras', 'listas_itens',
             'boletos', 'estabelecimentos_compra',

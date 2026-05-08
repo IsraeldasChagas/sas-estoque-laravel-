@@ -1167,7 +1167,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -3803,11 +3803,11 @@ function applyPermissions() {
       regras.sections.includes("fechamentoDash");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
-  // Oculta o menu pai "Configuracoes" quando nenhum filho está permitido (ex.: Backup de Fornecedores no perfil padrão = só ADMIN)
+  // Menu Configurações: apenas ADMIN vê "Backup / Restaurar" (btnAbrirBackup).
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
-    const temAcessoConfig = regras.sections.includes("fornecedoresBackup");
-    configuracoesNavSubmenu.classList.toggle("hidden", !temAcessoConfig);
+    const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    configuracoesNavSubmenu.classList.toggle("hidden", perfilCfg !== "ADMIN");
   }
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
@@ -3982,7 +3982,6 @@ function navigateTo(section) {
     if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
   }
   if (section === 'fornecedores') loadFornecedores();
-  else if (section === 'fornecedoresBackup') loadFornecedoresBackup();
   else if (section === 'logs') loadLogs();
   else if (section === 'despesasFixas') loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao carregar despesas.", "error"));
   else if (section === "valeConsumo") {
@@ -9227,7 +9226,7 @@ async function startAppSession(user) {
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "fornecedoresBackup", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
+      "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
       "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs"
     ]);
 
@@ -9277,7 +9276,6 @@ async function startAppSession(user) {
         } else if (sectionToNavigate === 'relatorios') await loadRelatorio();
         else if (sectionToNavigate === 'compras') await loadListasCompras();
         else if (sectionToNavigate === 'fornecedores') await loadFornecedores();
-        else if (sectionToNavigate === 'fornecedoresBackup') await loadFornecedoresBackup();
         else if (sectionToNavigate === 'logs') await loadLogs();
         else if (sectionToNavigate === 'reservaMesa') {
           var uSelect = document.getElementById('reservasUnidadeFiltro');
@@ -13534,7 +13532,6 @@ function wireSidebarSectionNavClicks() {
       else if (target === "relatorios") await loadRelatorio();
       else if (target === "compras") await loadListasCompras();
       else if (target === "fornecedores") await loadFornecedores();
-      else if (target === "fornecedoresBackup") await loadFornecedoresBackup();
       else if (target === "logs") {
         fetch(`${API_URL}/audit-logs/registrar`, {
           method: "POST",
@@ -14797,87 +14794,6 @@ async function confirmarExclusaoFornecedor(comBackup) {
   }
 }
 
-async function loadFornecedoresBackup() {
-  const tbody = document.getElementById('fornecedoresBackupTable');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
-  try {
-    const data = await fetchJSON('/fornecedores-backup');
-    const rows = (data || []).map(b => `
-      <tr>
-        <td data-label="ID">${b.id}</td>
-        <td data-label="Nome">${escapeHtml(b.nome_fornecedor || '-')}</td>
-        <td data-label="CNPJ / CPF">${escapeHtml(formatCnpjCpfDisplay(b.cnpj_cpf || ''))}</td>
-        <td data-label="Data exclusao">${escapeHtml(b.data_exclusao || '-')}</td>
-        <td data-label="Usuario">${escapeHtml(b.usuario_exclusao_nome || '-')}</td>
-        <td data-label="Acoes" class="table-actions">
-          <button type="button" class="btn small" data-action="detalhes" data-id="${b.id}">Ver detalhes</button>
-          <button type="button" class="btn small" data-action="restaurar" data-id="${b.id}">Restaurar</button>
-          <button type="button" class="btn small danger" data-action="excluir" data-id="${b.id}">Excluir backup</button>
-        </td>
-      </tr>
-    `);
-    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="6" style="text-align:center;color:#607d8b;">Nenhum backup de fornecedor.</td></tr>';
-    tbody.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        const id = parseInt(btn.dataset.id, 10);
-        if (action === 'detalhes') verDetalhesBackup(id);
-        else if (action === 'restaurar') restaurarFornecedor(id);
-        else if (action === 'excluir') excluirBackupFornecedor(id);
-      });
-    });
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#d32f2f;">Erro ao carregar (apenas ADMIN).</td></tr>';
-  }
-}
-
-async function verDetalhesBackup(id) {
-  const content = document.getElementById('fornecedorBackupDetalhesContent');
-  const modal = document.getElementById('fornecedorBackupDetalhesModal');
-  if (!content || !modal) return;
-  content.innerHTML = 'Carregando...';
-  modal.style.display = 'flex';
-  try {
-    const b = await fetchJSON(`/fornecedores-backup/${id}`);
-    const d = b.dados_fornecedor || {};
-    content.innerHTML = `
-      <p><strong>Nome:</strong> ${escapeHtml(d.nome || '-')}</p>
-      <p><strong>CNPJ:</strong> ${escapeHtml(formatCnpjCpfDisplay(d.cnpj || ''))}</p>
-      <p><strong>CPF:</strong> ${escapeHtml(formatCnpjCpfDisplay(d.cpf || ''))}</p>
-      <p><strong>Email:</strong> ${escapeHtml(d.email || '-')}</p>
-      <p><strong>Telefone:</strong> ${escapeHtml(d.telefone || '-')}</p>
-      <p><strong>Data exclusao:</strong> ${escapeHtml(b.data_backup || '-')}</p>
-      <p><strong>Usuario:</strong> ${escapeHtml(b.usuario_exclusao_nome || '-')}</p>
-    `;
-  } catch (e) {
-    content.innerHTML = '<p style="color:#d32f2f;">Erro ao carregar detalhes.</p>';
-  }
-}
-
-async function restaurarFornecedor(id) {
-  if (!confirm('Restaurar este fornecedor?')) return;
-  try {
-    await fetchJSON(`/fornecedores-backup/${id}/restaurar`, { method: 'POST' });
-    document.getElementById('fornecedorBackupDetalhesModal').style.display = 'none';
-    showToast('Fornecedor restaurado com sucesso.');
-    loadFornecedoresBackup();
-  } catch (e) {
-    showToast(e?.message || 'Erro ao restaurar.', 'error');
-  }
-}
-
-async function excluirBackupFornecedor(id) {
-  if (!confirm('Excluir este backup definitivamente?')) return;
-  try {
-    await fetchJSON(`/fornecedores-backup/${id}`, { method: 'DELETE' });
-    showToast('Backup excluido.');
-    loadFornecedoresBackup();
-  } catch (e) {
-    showToast('Erro ao excluir backup.', 'error');
-  }
-}
-
 // ========== LOGS E AUDITORIA ==========
 let stateLogsProventoId = null;
 let stateLogsProventosLista = [];
@@ -15277,9 +15193,6 @@ function setupFornecedoresModule() {
   document.getElementById('cancelFornecedorExcluirBackup')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirBackupModal').style.display = 'none'; fornecedorParaExcluir = null; });
   document.getElementById('closeFornecedorExcluirBackup')?.addEventListener('click', () => { document.getElementById('fornecedorExcluirBackupModal').style.display = 'none'; fornecedorParaExcluir = null; });
   document.getElementById('confirmFornecedorExcluirBackup')?.addEventListener('click', () => confirmarExclusaoFornecedor(true));
-
-  document.getElementById('closeFornecedorBackupDetalhes')?.addEventListener('click', () => { document.getElementById('fornecedorBackupDetalhesModal').style.display = 'none'; });
-  document.getElementById('fecharFornecedorBackupDetalhes')?.addEventListener('click', () => { document.getElementById('fornecedorBackupDetalhesModal').style.display = 'none'; });
 }
 
 // ========== RESERVAS DE MESAS ==========

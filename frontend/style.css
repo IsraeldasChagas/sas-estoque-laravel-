@@ -3690,26 +3690,21 @@ textarea {
   }
 
   /* Fornecedores - layout pergunta em cima, resposta em baixo (mobile) */
-  #fornecedoresSection .table-wrapper,
-  #fornecedoresBackupSection .table-wrapper {
+  #fornecedoresSection .table-wrapper {
     overflow: visible;
   }
-  #fornecedoresSection .table-wrapper table,
-  #fornecedoresBackupSection .table-wrapper table {
+  #fornecedoresSection .table-wrapper table {
     min-width: 0;
     width: 100%;
   }
-  #fornecedoresSection .table-wrapper thead,
-  #fornecedoresBackupSection .table-wrapper thead {
+  #fornecedoresSection .table-wrapper thead {
     display: none;
   }
-  #fornecedoresSection .table-wrapper tbody,
-  #fornecedoresBackupSection .table-wrapper tbody {
+  #fornecedoresSection .table-wrapper tbody {
     display: grid;
     gap: 18px;
   }
-  #fornecedoresSection .table-wrapper tr,
-  #fornecedoresBackupSection .table-wrapper tr {
+  #fornecedoresSection .table-wrapper tr {
     display: grid;
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -3717,8 +3712,7 @@ textarea {
     padding: 18px;
     box-shadow: var(--shadow);
   }
-  #fornecedoresSection .table-wrapper td,
-  #fornecedoresBackupSection .table-wrapper td {
+  #fornecedoresSection .table-wrapper td {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -3726,26 +3720,22 @@ textarea {
     padding: 8px 0;
     border-bottom: none;
   }
-  #fornecedoresSection .table-wrapper td::before,
-  #fornecedoresBackupSection .table-wrapper td::before {
+  #fornecedoresSection .table-wrapper td::before {
     content: attr(data-label);
     font-weight: 600;
     color: var(--muted);
     font-size: 0.85rem;
   }
-  #fornecedoresSection .table-wrapper td.table-actions,
-  #fornecedoresBackupSection .table-wrapper td.table-actions {
+  #fornecedoresSection .table-wrapper td.table-actions {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
     padding-top: 12px;
   }
-  #fornecedoresSection .table-wrapper td.table-actions::before,
-  #fornecedoresBackupSection .table-wrapper td.table-actions::before {
+  #fornecedoresSection .table-wrapper td.table-actions::before {
     margin-bottom: 4px;
   }
-  #fornecedoresSection .actions,
-  #fornecedoresBackupSection .actions {
+  #fornecedoresSection .actions {
     display: flex;
     flex-direction: column;
     gap: 10px;

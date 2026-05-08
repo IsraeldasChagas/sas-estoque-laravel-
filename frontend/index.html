@@ -164,7 +164,6 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="fornecedoresBackup">Backup de Fornecedores</a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
                 🗄 Backup / Restaurar
               </button>
@@ -808,31 +807,6 @@
                     </tbody>
                   </table>
                 </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Backup de Fornecedores (Admin) -->
-          <section id="fornecedoresBackupSection" class="view-section hidden">
-            <div class="form-card form-card--wide">
-              <header>Backup de Fornecedores</header>
-              <p style="padding: 1rem; color: #607d8b;">Fornecedores excluidos com historico sao salvos aqui. E possivel restaurar ou excluir o backup definitivamente.</p>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Nome</th>
-                      <th>CNPJ / CPF</th>
-                      <th>Data exclusao</th>
-                      <th>Usuario</th>
-                      <th>Acoes</th>
-                    </tr>
-                  </thead>
-                  <tbody id="fornecedoresBackupTable">
-                    <tr><td colspan="6" style="text-align: center; color: #607d8b;">Carregando...</td></tr>
-                  </tbody>
-                </table>
               </div>
             </div>
           </section>
@@ -3969,7 +3943,6 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamento" /> Auditoria fechamento caixa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard — análise fechamentos</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedoresBackup" /> Backup de Fornecedores</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
           </section>
@@ -4952,21 +4925,13 @@
         <header><h2>Excluir fornecedor com historico</h2><button type="button" class="close-btn" id="closeFornecedorExcluirBackup" aria-label="Fechar">x</button></header>
         <div style="padding:1.5rem;">
           <p>Este fornecedor possui historico no sistema (boletos, lotes ou movimentacoes).</p>
-          <p>Para excluir definitivamente sera criado um backup completo que permitira restaurar o fornecedor no futuro. Deseja continuar?</p>
+          <p>Os dados do fornecedor ficam guardados no banco para auditoria. Para recuperar depois, use <strong>Configurações → Backup / Restaurar</strong> (backup JSON inclui fornecedores e backups de exclusão).</p>
+          <p>Deseja continuar com a exclusão?</p>
         </div>
         <footer>
           <button type="button" class="btn neutral" id="cancelFornecedorExcluirBackup">Cancelar</button>
           <button type="button" class="btn danger" id="confirmFornecedorExcluirBackup">Fazer backup e excluir</button>
         </footer>
-      </div>
-    </div>
-
-    <!-- Modal Detalhes Backup Fornecedor -->
-    <div class="modal-backdrop" id="fornecedorBackupDetalhesModal" style="display:none;">
-      <div class="modal" style="max-width: 560px;">
-        <header><h2>Detalhes do backup</h2><button type="button" class="close-btn" id="closeFornecedorBackupDetalhes" aria-label="Fechar">x</button></header>
-        <div id="fornecedorBackupDetalhesContent" style="padding:1.5rem;">Carregando...</div>
-        <footer><button type="button" class="btn neutral" id="fecharFornecedorBackupDetalhes">Fechar</button></footer>
       </div>
     </div>
 
