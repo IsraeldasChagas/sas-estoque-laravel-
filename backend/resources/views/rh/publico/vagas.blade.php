@@ -202,20 +202,37 @@
             min-height: 50vh;
         }
         body.vaga-spotlight-on .vaga-col:not(.is-vaga-focus) {
-            opacity: 0.18;
-            filter: blur(5px) saturate(0.55);
-            transform: scale(0.92);
+            opacity: 0.16;
+            filter: blur(6px) saturate(0.5);
+            transform: scale(0.9);
             pointer-events: none;
+            position: relative;
+            z-index: 0;
         }
         body.vaga-spotlight-on .vaga-col:not(.is-vaga-focus) .vaga-card-ui {
             box-shadow: none;
         }
+        /* Cartão em destaque: centro horizontal e vertical da tela */
         body.vaga-spotlight-on .vaga-col.is-vaga-focus {
-            position: relative;
-            z-index: 50;
-            transform: scale(1.045);
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            right: auto;
+            bottom: auto;
+            width: min(540px, calc(100vw - 1.75rem));
+            max-width: 100%;
+            max-height: min(88vh, 900px);
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0;
+            transform: translate(-50%, -50%) scale(1.03);
+            z-index: 1040;
             filter: none;
             opacity: 1;
+            padding-left: calc(var(--bs-gutter-x, 1rem) * 0.5);
+            padding-right: calc(var(--bs-gutter-x, 1rem) * 0.5);
+            transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.33, 1.15, 0.48, 1);
         }
         body.vaga-spotlight-on .vaga-col.is-vaga-focus .vaga-card-ui {
             box-shadow:
@@ -512,28 +529,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function scrollVagaCardToCenter(el) {
-        if (!el || typeof el.getBoundingClientRect !== 'function') return;
-        var rect = el.getBoundingClientRect();
-        if (rect.width < 2 && rect.height < 2) return;
-        var viewH = window.innerHeight;
-        var scrollY = window.scrollY || window.pageYOffset;
-        var docH = Math.max(
-            document.documentElement.scrollHeight || 0,
-            document.body.scrollHeight || 0
-        );
-        var maxScroll = Math.max(0, docH - viewH);
-        if (rect.height > viewH * 0.88) {
-            var topY = scrollY + rect.top - 20;
-            window.scrollTo({ top: Math.max(0, Math.min(topY, maxScroll)), behavior: 'smooth' });
-            return;
-        }
-        var elCenterY = rect.top + scrollY + rect.height / 2;
-        var targetY = elCenterY - viewH / 2;
-        targetY = Math.max(0, Math.min(targetY, maxScroll));
-        window.scrollTo({ top: targetY, behavior: 'smooth' });
-    }
-
     function syncVagaSpotlight() {
         var open = document.querySelector('.collapse.vaga-detalhe-full.show');
         document.querySelectorAll('.vaga-col').forEach(function (cell) {
@@ -548,12 +543,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.body.classList.add('vaga-spotlight-on');
         if (cell) {
             cell.classList.add('is-vaga-focus');
-            requestAnimationFrame(function () {
-                scrollVagaCardToCenter(card || cell);
-                setTimeout(function () {
-                    scrollVagaCardToCenter(card || cell);
-                }, 200);
-            });
         }
     }
 
