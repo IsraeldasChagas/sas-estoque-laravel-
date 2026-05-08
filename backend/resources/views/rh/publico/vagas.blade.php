@@ -295,7 +295,6 @@
             </div>
         </div>
 
-        <div id="vagas-detalhe-acordeao">
         <div class="row g-4">
             @foreach($items as $v)
                 @php
@@ -336,7 +335,7 @@
                                 <p class="vaga-card-ui__excerpt mb-0">{{ $excerpt }}</p>
                             @endif
 
-                            <div class="collapse vaga-detalhe-full" id="detail-vaga-{{ $v->id }}" data-bs-parent="#vagas-detalhe-acordeao">
+                            <div class="collapse vaga-detalhe-full" id="detail-vaga-{{ $v->id }}">
                                 <h4>Descrição</h4>
                                 <div class="block-txt">{{ $v->descricao }}</div>
                                 @if(!empty($v->requisitos))
@@ -383,7 +382,6 @@
                     </article>
                 </div>
             @endforeach
-        </div>
         </div>
     @endif
 
@@ -445,6 +443,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.querySelectorAll('.collapse.vaga-detalhe-full').forEach(function (col) {
+        col.addEventListener('show.bs.collapse', function (ev) {
+            if (ev.target !== col) return;
+            document.querySelectorAll('.collapse.vaga-detalhe-full').forEach(function (other) {
+                if (other === col) return;
+                if (!other.classList.contains('show')) return;
+                var inst = bootstrap.Collapse.getInstance(other);
+                if (inst) inst.hide();
+            });
+        });
+
         var sel = '#' + col.id;
         var btn = document.querySelector('.btn-vaga-detalhe-toggle[data-bs-target="' + sel + '"]');
         if (!btn) return;
