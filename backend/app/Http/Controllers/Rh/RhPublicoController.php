@@ -369,12 +369,12 @@ class RhPublicoController extends Controller
 
             return response()->json([
                 'ok' => true,
-                'redirect' => url('/vagas') . '?ok=1#sec-candidatura',
+                'redirect' => url('/vagas') . '?ok=1',
                 'aviso_parcial' => $aviso,
             ]);
         }
 
-        $redirect = redirect()->to(url('/vagas') . '?ok=1#sec-candidatura');
+        $redirect = redirect()->to(url('/vagas') . '?ok=1');
         if ($jaInscritoTitulos !== []) {
             $redirect->with(
                 'candidatura_parcial',

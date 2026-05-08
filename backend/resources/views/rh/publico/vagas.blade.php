@@ -5,78 +5,256 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vagas — Grupo Sabor Paraense</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <style>
-        body { background: radial-gradient(900px 380px at 18% 0%, rgba(255,140,0,.55), transparent 60%), linear-gradient(180deg, #ff7a00 0%, #2b1608 35%, #0b0b0d 100%); color: rgba(255,255,255,.92); }
+        :root {
+            --gsp-orange: #ff7a00;
+            --gsp-deep: #2b1608;
+            --gsp-card-radius: 22px;
+        }
+        body {
+            background: radial-gradient(1100px 420px at 15% -5%, rgba(255, 140, 0, 0.45), transparent 55%),
+                linear-gradient(165deg, var(--gsp-orange) 0%, var(--gsp-deep) 42%, #070708 100%);
+            color: rgba(255, 255, 255, 0.94);
+            min-height: 100vh;
+        }
         .gsp-brand {
             display: flex;
             align-items: center;
-            gap: .75rem;
+            gap: 0.75rem;
             flex-wrap: nowrap;
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
+            padding-bottom: 0.25rem;
         }
         .gsp-group,
         .gsp-subbrand,
         .gsp-sep { flex: 0 0 auto; }
-        .gsp-mark { width: 88px; height: 88px; flex: 0 0 auto; object-fit: contain; }
-        .gsp-group { display: flex; align-items: center; gap: .6rem; }
+        .gsp-mark { width: 80px; height: 80px; flex: 0 0 auto; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.25)); }
+        .gsp-group { display: flex; align-items: center; gap: 0.6rem; }
         .gsp-sep {
             width: 1px;
             align-self: stretch;
             min-height: 3rem;
-            background: rgba(255,255,255,.18);
+            background: rgba(255, 255, 255, 0.2);
         }
-        .gsp-subbrand { display: flex; align-items: center; gap: .6rem; }
+        .gsp-subbrand { display: flex; align-items: center; gap: 0.6rem; }
         .gsp-submark {
-            width: 132px;
-            height: 88px;
+            width: 120px;
+            height: 78px;
             object-fit: contain;
-            filter: drop-shadow(0 6px 18px rgba(0,0,0,.22));
+            filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.22));
         }
-        .gsp-name { line-height: 1.05; }
-        .gsp-name .title { font-weight: 800; letter-spacing: .2px; color: #fff; }
-        .gsp-name .sub { font-size: .86rem; color: rgba(255,255,255,.75); }
-        .text-muted { color: rgba(255,255,255,.72) !important; }
+        .gsp-name { line-height: 1.08; }
+        .gsp-name .title { font-weight: 800; letter-spacing: 0.3px; color: #fff; }
+        .gsp-name .sub { font-size: 0.84rem; color: rgba(255, 255, 255, 0.76); }
+        .text-muted-light { color: rgba(255, 255, 255, 0.68) !important; }
+
         .board-share {
-            background: rgba(255,255,255,.1);
-            border: 1px solid rgba(255,255,255,.2);
-            border-radius: 14px;
-            padding: 1rem 1.1rem;
+            background: rgba(255, 255, 255, 0.09);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: var(--gsp-card-radius);
+            padding: 1.1rem 1.25rem;
         }
-        .board-share .form-control { background: rgba(0,0,0,.2); border-color: rgba(255,255,255,.25); color: #fff; }
-        .accordion.vagas-board .accordion-item { border-radius: 12px; overflow: hidden; margin-bottom: .65rem; border: 1px solid rgba(0,0,0,.08); }
-        .accordion.vagas-board .accordion-button:not(.collapsed) { background: rgba(255,255,255,.95); color: #1a1a1a; }
-        .accordion.vagas-board .accordion-button { font-weight: 600; }
-        .vaga-body-inner { color: rgba(0,0,0,.85); }
-        .vaga-body-inner h3 { font-size: 1rem; font-weight: 700; margin-top: 1rem; }
-        .vaga-body-inner h3:first-child { margin-top: 0; }
-        .vaga-choices { border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: .75rem; background: #fff; }
-        .vaga-choices .form-check { margin: .2rem 0; }
-        #sec-candidatura .card { border-radius: 14px; }
+        .board-share .form-control {
+            background: rgba(0, 0, 0, 0.22);
+            border-color: rgba(255, 255, 255, 0.22);
+            color: #fff;
+        }
+
+        .section-title {
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            font-size: 1.35rem;
+            color: #fff;
+            text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        .vaga-card-ui {
+            background: linear-gradient(155deg, #ffffff 0%, #f6f7f9 55%, #eef0f4 100%);
+            border-radius: var(--gsp-card-radius);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18), 0 2px 0 rgba(255, 255, 255, 0.9) inset;
+            overflow: hidden;
+            transition: transform 0.22s ease, box-shadow 0.22s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .vaga-card-ui:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 22px 52px rgba(0, 0, 0, 0.22), 0 2px 0 rgba(255, 255, 255, 0.95) inset;
+        }
+        .vaga-card-ui__head {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            padding: 1.15rem 1.15rem 0.65rem;
+        }
+        .vaga-card-ui__icon {
+            flex: 0 0 auto;
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.45rem;
+            color: #fff;
+            background: linear-gradient(135deg, #ff9a3c 0%, #ff6b18 45%, #e85d04 100%);
+            box-shadow: 0 10px 22px rgba(232, 93, 4, 0.38);
+        }
+        .vaga-card-ui__icon.vaga-tone-kitchen { background: linear-gradient(135deg, #ffb347, #ff7e28); }
+        .vaga-card-ui__icon.vaga-tone-service { background: linear-gradient(135deg, #7dd3fc, #2563eb); }
+        .vaga-card-ui__icon.vaga-tone-logistics { background: linear-gradient(135deg, #86efac, #16a34a); }
+        .vaga-card-ui__icon.vaga-tone-clean { background: linear-gradient(135deg, #a5b4fc, #6366f1); }
+        .vaga-card-ui__icon.vaga-tone-stock { background: linear-gradient(135deg, #fcd34d, #d97706); }
+        .vaga-card-ui__icon.vaga-tone-lead { background: linear-gradient(135deg, #f472b6, #be185d); }
+
+        .vaga-card-ui__title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            line-height: 1.25;
+            color: #1c1917;
+            margin: 0;
+        }
+        .vaga-card-ui__tag {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: rgba(28, 25, 23, 0.55);
+            margin-top: 0.2rem;
+        }
+        .vaga-card-ui__body {
+            padding: 0 1.15rem 1rem;
+            flex: 1 1 auto;
+            color: #44403c;
+            font-size: 0.92rem;
+            line-height: 1.45;
+        }
+        .vaga-card-ui__meta {
+            font-size: 0.8rem;
+            color: #78716c;
+            margin-bottom: 0.6rem;
+        }
+        .vaga-card-ui__meta i { opacity: 0.85; vertical-align: -0.1em; }
+        .vaga-card-ui__excerpt {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .vaga-card-ui__foot {
+            padding: 0 1rem 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .vaga-card-ui__foot .btn-candidatura-vaga {
+            border-radius: 12px;
+            font-weight: 700;
+            padding: 0.55rem 1rem;
+            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
+        }
+        .vaga-card-ui__foot .btn-outline-secondary {
+            border-radius: 12px;
+            font-weight: 600;
+            border-color: rgba(0, 0, 0, 0.15);
+            color: #44403c;
+        }
+        .vaga-detalhe-full {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed rgba(0, 0, 0, 0.1);
+        }
+        .vaga-detalhe-full h4 {
+            font-size: 0.82rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #78716c;
+            margin: 0.85rem 0 0.35rem;
+        }
+        .vaga-detalhe-full h4:first-child { margin-top: 0; }
+        .vaga-detalhe-full .block-txt { white-space: pre-wrap; color: #292524; font-size: 0.9rem; }
+
+        #modalCandidaturaRh .modal-content {
+            border-radius: 18px;
+            border: none;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        }
+        #modalCandidaturaRh .modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 1rem 1.25rem;
+        }
+        #modalCandidaturaRh .modal-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            line-height: 1.3;
+            padding-right: 0.5rem;
+        }
+        .vaga-choices { border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 0.75rem; padding: 0.75rem; background: #fff; }
+        .vaga-choices .form-check { margin: 0.2rem 0; }
     </style>
 </head>
 <body>
 @php
     $items = isset($vagas) ? $vagas : collect();
     $boardUrl = url('/vagas');
+
+    /**
+     * Ícone e cor conforme palavras-chave no título, setor ou tipo de contratação (caixa, cozinha, etc.).
+     *
+     * @param  object  $row
+     * @return array{icon: string, tag: string, tone: string}
+     */
+    $rhPublicoIconeVaga = static function ($row): array {
+        $t = mb_strtolower(
+            trim(($row->titulo ?? '') . ' ' . ($row->setor ?? '') . ' ' . ($row->tipo_contratacao ?? ''))
+        );
+        $rules = [
+            [['caixa', 'pdv', 'operador de caixa', 'operador caixa'], 'bi-shop-window', 'Caixa / loja', ''],
+            [['cozinha', 'cozinheiro', 'auxiliar de cozinha', 'chapa', 'grelha'], 'bi-egg-fried', 'Cozinha', 'kitchen'],
+            [['garçom', 'garcom', 'atendente', 'atendimento', 'salão', 'salao', 'buffet'], 'bi-cup-hot', 'Atendimento', 'service'],
+            [['entrega', 'motoboy', 'motorista', 'logística', 'logistica', 'frota'], 'bi-truck', 'Logística', 'logistics'],
+            [['limpeza', 'auxiliar de limpeza', 'zelador', 'higien'], 'bi-droplet', 'Limpeza', 'clean'],
+            [['padeiro', 'padaria', 'forno', 'confeiteiro', 'produção', 'producao'], 'bi-basket3', 'Produção / alimentos', ''],
+            [['estoque', 'reposição', 'reposicao', 'almoxarifado', 'separação', 'separacao'], 'bi-box-seam', 'Estoque', 'stock'],
+            [['administr', 'escritório', 'escritorio', 'financeiro', 'rh ', 'departamento pessoal'], 'bi-briefcase', 'Administrativo', ''],
+            [['gerente', 'supervisor', 'coordenador', 'lider', 'líder'], 'bi-person-badge', 'Liderança', 'lead'],
+        ];
+        foreach ($rules as $rule) {
+            [$keys, $icon, $tag, $tone] = $rule;
+            foreach ($keys as $k) {
+                if ($k !== '' && str_contains($t, $k)) {
+                    return ['icon' => $icon, 'tag' => $tag, 'tone' => $tone];
+                }
+            }
+        }
+
+        return ['icon' => 'bi-briefcase', 'tag' => 'Oportunidade', 'tone' => ''];
+    };
 @endphp
 
-<main class="container py-4" style="max-width: 980px;">
-    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
-        <div class="gsp-brand">
+<main class="container py-4 pb-5" style="max-width: 1140px;">
+    <div class="mb-4">
+        <div class="gsp-brand mb-3">
             <div class="gsp-group">
                 <img class="gsp-mark" src="/imagens/logosemfundo.png" alt="Grupo Sabor Paraense" />
                 <div class="gsp-name">
                     <div class="title">Grupo Sabor Paraense</div>
-                    <div class="sub">Vagas abertas e candidatura</div>
+                    <div class="sub">Trabalhe conosco</div>
                 </div>
             </div>
             <div class="gsp-sep" aria-hidden="true"></div>
             <div class="gsp-subbrand">
                 <img class="gsp-submark" src="/imagens/logo-docemango.jpg" alt="Doce Mango" />
                 <div class="gsp-name">
-                    <div class="title" style="font-size: 1.05rem;">Doce Mango</div>
+                    <div class="title" style="font-size: 1.02rem;">Doce Mango</div>
                     <div class="sub">Faz parte do grupo</div>
                 </div>
             </div>
@@ -84,7 +262,7 @@
             <div class="gsp-subbrand">
                 <img class="gsp-submark" src="/imagens/logo-docenorte.jpg" alt="Doce Norte" />
                 <div class="gsp-name">
-                    <div class="title" style="font-size: 1.05rem;">Doce Norte</div>
+                    <div class="title" style="font-size: 1.02rem;">Doce Norte</div>
                     <div class="sub">Faz parte do grupo</div>
                 </div>
             </div>
@@ -92,36 +270,47 @@
     </div>
 
     <div class="board-share mb-4">
-        <div class="fw-semibold mb-2">Divulgue esta página</div>
-        <p class="small mb-2 opacity-90">Um único link e um QR Code para todas as vagas — compartilhe em redes, outdoors ou materiais impressos.</p>
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-share fs-5"></i>
+            <span class="fw-bold">Divulgue esta página</span>
+        </div>
+        <p class="small mb-3 text-white-50">Um link e um QR Code para todas as vagas — redes sociais, cartazes ou folder.</p>
         <div class="row g-2 align-items-center">
             <div class="col min-w-0">
                 <label class="visually-hidden" for="boardPublicUrl">Link público</label>
                 <input id="boardPublicUrl" type="text" class="form-control form-control-sm" readonly value="{{ $boardUrl }}" />
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-light btn-sm" id="boardCopyLinkBtn">Copiar link</button>
-                <a class="btn btn-outline-light btn-sm" href="{{ url('/vagas/qrcode') }}" target="_blank" rel="noopener noreferrer">Abrir QR Code</a>
+                <button type="button" class="btn btn-light btn-sm rounded-pill px-3" id="boardCopyLinkBtn">
+                    <i class="bi bi-clipboard me-1"></i> Copiar link
+                </button>
+                <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ url('/vagas/qrcode') }}" target="_blank" rel="noopener noreferrer">
+                    <i class="bi bi-qr-code me-1"></i> QR Code
+                </a>
             </div>
         </div>
     </div>
 
     @if(request()->query('ok'))
-        <div class="alert alert-success">
-            Candidatura enviada com sucesso. Obrigado!
+        <div class="alert alert-success shadow-sm d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>Candidatura enviada com sucesso. Obrigado!</span>
         </div>
     @endif
 
     @if(session('candidatura_parcial'))
-        <div class="alert alert-warning">
-            {{ session('candidatura_parcial') }}
+        <div class="alert alert-warning shadow-sm d-flex align-items-start gap-2">
+            <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+            <span>{{ session('candidatura_parcial') }}</span>
         </div>
     @endif
 
     @if ($errors->any())
-        <div class="alert alert-danger">
-            <div class="fw-semibold mb-2">Verifique os campos e tente novamente.</div>
-            <ul class="mb-0">
+        <div class="alert alert-danger shadow-sm">
+            <div class="fw-semibold mb-2 d-flex align-items-center gap-2">
+                <i class="bi bi-x-circle-fill"></i> Verifique os campos e tente novamente.
+            </div>
+            <ul class="mb-0 small">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -129,77 +318,142 @@
         </div>
     @endif
 
-    <div id="candidatura-erros-ajax" class="alert alert-danger d-none" role="alert"></div>
-
     @if(!count($items))
-        <div class="alert alert-info shadow-sm">Nenhuma vaga cadastrada no momento.</div>
+        <div class="alert alert-light shadow border-0 text-dark rounded-4 py-4 text-center">
+            <i class="bi bi-inboxes fs-1 text-secondary d-block mb-2"></i>
+            Nenhuma vaga cadastrada no momento.
+        </div>
     @else
-        <h2 class="h5 text-white mb-3">Todas as vagas</h2>
-        <p class="text-muted small mb-3">Clique numa vaga para ver descrição, requisitos e benefícios.</p>
-        <div class="accordion vagas-board mb-4" id="vagasAccordion">
+        <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+            <div>
+                <h2 class="section-title mb-1">Vagas disponíveis</h2>
+                <p class="text-muted-light small mb-0">Toque em <strong>Ver detalhes</strong> para ler a vaga. O cadastro só abre em <strong>Candidatar-se</strong>.</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
             @foreach($items as $v)
                 @php
                     $status = strtolower((string) ($v->status ?? ''));
                     $isOpen = $status === 'aberta';
                     $badgeClass = $isOpen ? 'bg-success' : ($status === 'pausada' ? 'bg-warning text-dark' : 'bg-secondary');
+                    $ico = $rhPublicoIconeVaga($v);
+                    $toneClass = $ico['tone'] !== '' ? ' vaga-tone-' . $ico['tone'] : '';
+                    $excerpt = \Illuminate\Support\Str::limit((string) ($v->descricao ?? ''), 160);
                 @endphp
-                <div class="accordion-item bg-white" id="vaga-{{ $v->slug }}">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-vaga-{{ $v->id }}" aria-expanded="false" aria-controls="collapse-vaga-{{ $v->id }}">
-                            <span class="me-auto text-start">{{ $v->titulo }}</span>
-                            <span class="badge {{ $badgeClass }} ms-2">{{ strtoupper($status ?: '—') }}</span>
-                        </button>
-                    </h2>
-                    <div id="collapse-vaga-{{ $v->id }}" class="accordion-collapse collapse" data-bs-parent="#vagasAccordion">
-                        <div class="accordion-body vaga-body-inner">
-                            <div class="small text-muted mb-2">
-                                @if(!empty($v->unidade)) <span class="me-3"><strong>Unidade:</strong> {{ $v->unidade }}</span>@endif
-                                @if(!empty($v->setor)) <span class="me-3"><strong>Setor:</strong> {{ $v->setor }}</span>@endif
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="vaga-card-ui" id="vaga-{{ $v->slug }}">
+                        <div class="vaga-card-ui__head">
+                            <div class="vaga-card-ui__icon{{ $toneClass }}" title="{{ $ico['tag'] }}" aria-hidden="true">
+                                <i class="bi {{ $ico['icon'] }}"></i>
                             </div>
-                            @if(!empty($v->horarios_trabalho))
-                                <div class="small mb-3"><strong>Horários:</strong> {{ $v->horarios_trabalho }}</div>
-                            @endif
-
-                            <h3>Descrição</h3>
-                            <div class="mb-3" style="white-space: pre-wrap;">{{ $v->descricao }}</div>
-
-                            @if(!empty($v->requisitos))
-                                <h3>Requisitos</h3>
-                                <div class="mb-3" style="white-space: pre-wrap;">{{ $v->requisitos }}</div>
-                            @endif
-
-                            @if(!empty($v->beneficios))
-                                <h3>Benefícios</h3>
-                                <div class="mb-3" style="white-space: pre-wrap;">{{ $v->beneficios }}</div>
-                            @endif
-
-                            @if(!$isOpen)
-                                <div class="alert alert-warning mb-0">Esta vaga não está aberta para novas candidaturas.</div>
-                            @else
-                                <p class="small text-muted mb-0">Use o formulário <a href="#sec-candidatura">Candidatar-se</a> no final da página e marque esta vaga (ou outras abertas).</p>
-                            @endif
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="vaga-card-ui__title">{{ $v->titulo }}</p>
+                                <span class="vaga-card-ui__tag">{{ $ico['tag'] }}</span>
+                                <div class="mt-2">
+                                    <span class="badge {{ $badgeClass }} rounded-pill">{{ strtoupper($status ?: '—') }}</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        <div class="vaga-card-ui__body">
+                            <div class="vaga-card-ui__meta">
+                                @if(!empty($v->unidade))
+                                    <div><i class="bi bi-geo-alt me-1"></i>{{ $v->unidade }}</div>
+                                @endif
+                                @if(!empty($v->setor))
+                                    <div><i class="bi bi-diagram-3 me-1"></i>{{ $v->setor }}</div>
+                                @endif
+                                @if(!empty($v->horarios_trabalho))
+                                    <div><i class="bi bi-clock me-1"></i>{{ \Illuminate\Support\Str::limit($v->horarios_trabalho, 80) }}</div>
+                                @endif
+                            </div>
+                            @if($excerpt !== '')
+                                <p class="vaga-card-ui__excerpt mb-0">{{ $excerpt }}</p>
+                            @endif
+
+                            <div class="collapse vaga-detalhe-full" id="detail-vaga-{{ $v->id }}">
+                                <h4>Descrição</h4>
+                                <div class="block-txt">{{ $v->descricao }}</div>
+                                @if(!empty($v->requisitos))
+                                    <h4>Requisitos</h4>
+                                    <div class="block-txt">{{ $v->requisitos }}</div>
+                                @endif
+                                @if(!empty($v->beneficios))
+                                    <h4>Benefícios</h4>
+                                    <div class="block-txt">{{ $v->beneficios }}</div>
+                                @endif
+                                @if(!empty($v->horarios_trabalho))
+                                    <h4>Horários</h4>
+                                    <div class="block-txt">{{ $v->horarios_trabalho }}</div>
+                                @endif
+                                @if(!$isOpen)
+                                    <div class="alert alert-warning small mb-0 mt-2 py-2">Esta vaga não está aceitando novas candidaturas.</div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="vaga-card-ui__foot mt-auto">
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary btn-sm w-100"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#detail-vaga-{{ $v->id }}"
+                                aria-expanded="false"
+                                aria-controls="detail-vaga-{{ $v->id }}"
+                            >
+                                <i class="bi bi-file-text me-1"></i> Ver detalhes
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-candidatura-vaga w-100"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalCandidaturaRh"
+                                data-slug="{{ $v->slug }}"
+                                data-vaga-id="{{ $v->id }}"
+                                data-titulo="{{ $v->titulo }}"
+                                @if(!$isOpen) disabled @endif
+                            >
+                                <i class="bi bi-person-plus me-1"></i> Candidatar-se
+                            </button>
+                        </div>
+                    </article>
                 </div>
             @endforeach
         </div>
     @endif
 
-    <section id="sec-candidatura" class="card shadow-sm border-0">
-        <div class="card-body text-dark">
-            <h2 class="h5 mb-3">Candidatar-se</h2>
-            <div class="text-muted mb-3" style="font-size: .95rem;">Campos com <strong>*</strong> são obrigatórios.</div>
-
-            @include('rh.publico._form-candidatura-rh', [
-                'vaga' => $vaga ?? null,
-                'vagasAbertas' => $vagasAbertas ?? collect(),
-                'vagaBloqueada' => $vagaBloqueada ?? false,
-            ])
+    {{-- Formulário só no modal --}}
+    <div class="modal fade" id="modalCandidaturaRh" tabindex="-1" aria-labelledby="modalCandidaturaRhTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="modalCandidaturaRhTitle">Candidatar-se</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="candidatura-erros-ajax" class="alert alert-danger d-none" role="alert"></div>
+                    <p class="text-muted small mb-3">Campos com <strong>*</strong> são obrigatórios.</p>
+                    @include('rh.publico._form-candidatura-rh', [
+                        'vaga' => $vaga ?? null,
+                        'vagasAbertas' => $vagasAbertas ?? collect(),
+                        'vagaBloqueada' => $vagaBloqueada ?? false,
+                    ])
+                </div>
+            </div>
         </div>
-    </section>
+    </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@if ($errors->any())
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('modalCandidaturaRh');
+    if (el && typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+});
+</script>
+@endif
 <script>
 (function () {
     var btn = document.getElementById('boardCopyLinkBtn');
@@ -209,8 +463,10 @@
             var url = inp.value || '';
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(url).then(function () {
-                    btn.textContent = 'Copiado!';
-                    setTimeout(function () { btn.textContent = 'Copiar link'; }, 2000);
+                    btn.innerHTML = '<i class="bi bi-check2 me-1"></i> Copiado!';
+                    setTimeout(function () {
+                        btn.innerHTML = '<i class="bi bi-clipboard me-1"></i> Copiar link';
+                    }, 2000);
                 }).catch(function () {
                     inp.select();
                     document.execCommand('copy');
@@ -222,19 +478,41 @@
         });
     }
 
+    var modalEl = document.getElementById('modalCandidaturaRh');
+    var form = document.getElementById('formCandidaturaRh');
+    var titleEl = document.getElementById('modalCandidaturaRhTitle');
+    if (modalEl && form && titleEl) {
+        modalEl.addEventListener('show.bs.modal', function (ev) {
+            var trigger = ev.relatedTarget;
+            if (!trigger || !trigger.classList.contains('btn-candidatura-vaga')) return;
+            var slug = trigger.getAttribute('data-slug') || '';
+            var vid = trigger.getAttribute('data-vaga-id') || '';
+            var titulo = trigger.getAttribute('data-titulo') || '';
+            if (slug) {
+                form.action = '/vagas/' + encodeURIComponent(slug) + '/candidatar';
+            }
+            titleEl.textContent = titulo ? 'Candidatar-se — ' + titulo : 'Candidatar-se';
+            form.querySelectorAll('input[name="vaga_ids[]"]').forEach(function (cb) {
+                if (cb.type === 'checkbox') {
+                    cb.checked = String(cb.value) === String(vid);
+                }
+            });
+        });
+    }
+
     function openVagaFromHash() {
         var raw = window.location.hash.replace(/^#/, '');
         if (!raw) return;
         var id = raw.indexOf('vaga-') === 0 ? raw : ('vaga-' + raw);
-        var el = document.getElementById(id);
-        if (!el) return;
-        var collapse = el.querySelector('.accordion-collapse');
-        if (!collapse || typeof bootstrap === 'undefined') return;
-        var inst = bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false });
-        inst.show();
+        var card = document.getElementById(id);
+        if (!card) return;
+        var col = card.querySelector('.collapse.vaga-detalhe-full');
+        if (col && typeof bootstrap !== 'undefined') {
+            bootstrap.Collapse.getOrCreateInstance(col, { toggle: false }).show();
+        }
         setTimeout(function () {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 80);
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
     }
     document.addEventListener('DOMContentLoaded', openVagaFromHash);
     window.addEventListener('hashchange', openVagaFromHash);
@@ -286,6 +564,12 @@
                             boxAjax.classList.remove("d-none");
                             boxAjax.scrollIntoView({ behavior: "smooth", block: "nearest" });
                         }
+                        try {
+                            var modalEl = document.getElementById("modalCandidaturaRh");
+                            if (modalEl && typeof bootstrap !== "undefined") {
+                                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                            }
+                        } catch (_) {}
                     });
                 }
                 if (res.ok && ct.indexOf("application/json") !== -1) {
@@ -325,9 +609,10 @@
             if (msg) {
                 sessionStorage.removeItem(avisoKey);
                 var w = document.createElement("div");
-                w.className = "alert alert-warning";
+                w.className = "alert alert-warning shadow-sm d-flex align-items-start gap-2";
                 w.setAttribute("role", "alert");
-                w.textContent = msg;
+                w.innerHTML = '<i class="bi bi-exclamation-triangle-fill mt-1"></i><span></span>';
+                w.querySelector("span").textContent = msg;
                 var okEl = document.querySelector(".alert.alert-success");
                 if (okEl && okEl.parentNode) okEl.parentNode.insertBefore(w, okEl.nextSibling);
             }
