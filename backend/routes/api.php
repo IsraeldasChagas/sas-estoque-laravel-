@@ -5352,12 +5352,97 @@ $sasAdminBackupKeyValid = static function (?string $chave): bool {
     return hash_equals($expected, (string) $chave);
 };
 
+/** Todas as tabelas BASE TABLE do schema atual (MySQL/MariaDB), exceto `migrations`. */
+$sasBackupDumpTodasTabelas = static function (): array {
+    $conn = Schema::getConnection();
+    $driver = $conn->getDriverName();
+    if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+        throw new \RuntimeException('Backup completo dinâmico requer MySQL ou MariaDB.');
+    }
+    $database = $conn->getDatabaseName();
+    if ($database === '' || $database === null) {
+        throw new \RuntimeException('Database não configurado para backup.');
+    }
+
+    $rows = DB::select(
+        'SELECT TABLE_NAME AS tbl FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = ? ORDER BY TABLE_NAME',
+        [$database, 'BASE TABLE']
+    );
+
+    $out = [];
+    foreach ($rows as $row) {
+        $tbl = '';
+        if (is_object($row)) {
+            $tbl = (string) ($row->tbl ?? $row->TABLE_NAME ?? '');
+        }
+        if ($tbl === '' || strcasecmp($tbl, 'migrations') === 0) {
+            continue;
+        }
+        if (! Schema::hasTable($tbl)) {
+            continue;
+        }
+        try {
+            $out[$tbl] = DB::table($tbl)->get()->toArray();
+        } catch (\Throwable $e) {
+            \Log::warning('Backup JSON: falha ao ler tabela', ['tabela' => $tbl, 'error' => $e->getMessage()]);
+            $out[$tbl] = [];
+        }
+    }
+
+    ksort($out);
+
+    return $out;
+};
+
+/** Ordem preferencial no restore; demais tabelas presentes no snapshot seguem em ordem alfabética (FK_CHECKS=0 durante o restore). */
+$sasBackupOrdemRestorePreferencial = static function (): array {
+    return [
+        'cache', 'cache_locks', 'sessions',
+        'jobs', 'job_batches', 'failed_jobs',
+        'password_reset_tokens',
+        'users',
+        'unidades', 'locais', 'usuarios',
+        'funcionarios', 'financeiro_vale_consumo',
+        'produtos', 'fornecedores', 'fornecedores_backup',
+        'fichas_tecnicas',
+        'rh_vagas', 'rh_candidatos', 'rh_curriculos', 'rh_entrevistas', 'rh_documentos', 'rh_historico',
+        'rh_auditoria', 'rh_folhas_ponto',
+        'kanban_tasks',
+        'mesas', 'reservas_mesas',
+        'lotes', 'stock_lotes', 'movimentacoes',
+        'listas_compras', 'listas_itens',
+        'estabelecimentos_compra', 'estabelecimentos_globais',
+        'boletos', 'alvaras',
+        'proventos', 'proventos_assinaturas', 'proventos_logs',
+        'despesas_fixas_categorias', 'despesas_fixas',
+        'recibos_ajuda_custo',
+        'fechamentos_caixa',
+        'audit_logs',
+        'logs_etiquetas', 'logs_usuarios',
+    ];
+};
+
+$sasBackupListaRestore = static function (array $tabelasSnapshot) use ($sasBackupOrdemRestorePreferencial): array {
+    $keys = array_keys($tabelasSnapshot);
+    $priority = $sasBackupOrdemRestorePreferencial();
+    $ordered = [];
+    foreach ($priority as $t) {
+        if (in_array($t, $keys, true)) {
+            $ordered[] = $t;
+        }
+    }
+    $rest = array_values(array_diff($keys, $ordered));
+    sort($rest);
+
+    return array_merge($ordered, $rest);
+};
+
 // ============================================
 // ROTAS DE BACKUP E RESTAURAÇÃO
 // ============================================
 
 // Gerar backup completo
-Route::post('/admin/backup', function (Request $request) use ($sasAdminBackupKeyValid) {
+Route::post('/admin/backup', function (Request $request) use ($sasAdminBackupKeyValid, $sasBackupDumpTodasTabelas) {
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5371,33 +5456,11 @@ Route::post('/admin/backup', function (Request $request) use ($sasAdminBackupKey
 
     try {
         $snapshot = [
-            'versao'     => '1.3',
-            'gerado_em'  => now()->toIso8601String(),
-            'tabelas'    => [
-                'produtos'              => DB::table('produtos')->get()->toArray(),
-                'unidades'              => DB::table('unidades')->get()->toArray(),
-                'locais'                => DB::table('locais')->get()->toArray(),
-                'usuarios'              => DB::table('usuarios')->get()->toArray(),
-                // RH (funcionários)
-                'funcionarios'          => Schema::hasTable('funcionarios') ? DB::table('funcionarios')->get()->toArray() : [],
-                'financeiro_vale_consumo' => Schema::hasTable('financeiro_vale_consumo') ? DB::table('financeiro_vale_consumo')->get()->toArray() : [],
-                'fornecedores'          => Schema::hasTable('fornecedores') ? DB::table('fornecedores')->get()->toArray() : [],
-                'fornecedores_backup'   => Schema::hasTable('fornecedores_backup') ? DB::table('fornecedores_backup')->get()->toArray() : [],
-                // Recrutamento (vagas + candidatos e vínculos; usado em backup/restore e merge)
-                'rh_vagas'              => Schema::hasTable('rh_vagas') ? DB::table('rh_vagas')->get()->toArray() : [],
-                'rh_candidatos'         => Schema::hasTable('rh_candidatos') ? DB::table('rh_candidatos')->get()->toArray() : [],
-                'rh_curriculos'         => Schema::hasTable('rh_curriculos') ? DB::table('rh_curriculos')->get()->toArray() : [],
-                'rh_entrevistas'        => Schema::hasTable('rh_entrevistas') ? DB::table('rh_entrevistas')->get()->toArray() : [],
-                'rh_documentos'         => Schema::hasTable('rh_documentos') ? DB::table('rh_documentos')->get()->toArray() : [],
-                'rh_historico'          => Schema::hasTable('rh_historico') ? DB::table('rh_historico')->get()->toArray() : [],
-                'lotes'                 => DB::table('lotes')->get()->toArray(),
-                'stock_lotes'           => DB::table('stock_lotes')->get()->toArray(),
-                'movimentacoes'         => DB::table('movimentacoes')->get()->toArray(),
-                'listas_compras'        => DB::table('listas_compras')->get()->toArray(),
-                'listas_itens'          => DB::table('listas_itens')->get()->toArray(),
-                'boletos'               => DB::table('boletos')->get()->toArray(),
-                'estabelecimentos_compra' => DB::table('estabelecimentos_compra')->get()->toArray(),
-            ],
+            'versao'    => '2.0',
+            'gerado_em' => now()->toIso8601String(),
+            'motor'     => 'mysql_schema_all_tables',
+            'nota'      => 'Inclui todas as tabelas do banco exceto migrations.',
+            'tabelas'   => $sasBackupDumpTodasTabelas(),
         ];
 
         $dir = storage_path('app/backups');
@@ -5543,7 +5606,10 @@ Route::get('/admin/backups/{arquivo}/preview', function (Request $request, $arqu
         $totaisArquivo[$tabela] = is_array($dados) ? count($dados) : 0;
     }
 
-    $tabelasCriticas = ['usuarios', 'funcionarios', 'produtos', 'unidades', 'locais'];
+    $tabelasCriticas = [
+        'usuarios', 'funcionarios', 'produtos', 'unidades', 'locais',
+        'rh_vagas', 'rh_candidatos', 'rh_curriculos',
+    ];
     $atuais = [];
     foreach ($tabelasCriticas as $t) {
         if (!Schema::hasTable($t)) {
@@ -5599,7 +5665,7 @@ Route::options('/admin/backups/{arquivo}/excluir', fn() => response('', 204)
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 // Restaurar a partir de um backup
-Route::post('/admin/restaurar', function (Request $request) use ($sasAdminBackupKeyValid) {
+Route::post('/admin/restaurar', function (Request $request) use ($sasAdminBackupKeyValid, $sasBackupListaRestore) {
     if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
         return response()->json(['error' => 'Rota desabilitada.'], 404)
             ->header('Access-Control-Allow-Origin', '*');
@@ -5637,23 +5703,13 @@ Route::post('/admin/restaurar', function (Request $request) use ($sasAdminBackup
             return response()->json(['error' => 'Arquivo de backup corrompido.'], 400);
         }
 
-        // Ordem respeitando dependências (recrutamento: vagas antes de candidatos; filhos após candidatos)
-        $ordem = [
-            'unidades', 'locais', 'usuarios', 'funcionarios', 'financeiro_vale_consumo', 'produtos',
-            'fornecedores', 'fornecedores_backup',
-            'lotes', 'stock_lotes', 'movimentacoes',
-            'listas_compras', 'listas_itens',
-            'boletos', 'estabelecimentos_compra',
-            'rh_vagas', 'rh_candidatos', 'rh_curriculos', 'rh_entrevistas', 'rh_documentos', 'rh_historico',
-        ];
-
         $restaurados = [];
 
         DB::beginTransaction();
         try {
             DB::statement('SET FOREIGN_KEY_CHECKS = 0');
 
-            foreach ($ordem as $tabela) {
+            foreach ($sasBackupListaRestore($snapshot['tabelas']) as $tabela) {
                 if (! isset($snapshot['tabelas'][$tabela]) || ! Schema::hasTable($tabela)) {
                     continue;
                 }

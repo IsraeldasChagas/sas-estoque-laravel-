@@ -2704,12 +2704,23 @@ async function previewBackup(arquivo) {
     const tA = data?.totais_atuais || {};
     const tB = data?.totais_arquivo || {};
     const linhas = [];
-    ['usuarios','funcionarios','produtos','unidades','locais','movimentacoes','lotes','listas_compras','boletos'].forEach((k) => {
+    const destacadas = [
+      'usuarios', 'funcionarios', 'produtos', 'unidades', 'locais',
+      'movimentacoes', 'lotes', 'listas_compras', 'boletos',
+      'rh_vagas', 'rh_candidatos', 'rh_curriculos', 'rh_entrevistas', 'rh_documentos', 'rh_historico',
+      'rh_auditoria', 'rh_folhas_ponto',
+    ];
+    destacadas.forEach((k) => {
       if (tA[k] == null && tB[k] == null) return;
       const a = tA[k] == null ? '—' : String(tA[k]);
       const b = tB[k] == null ? '—' : String(tB[k]);
       linhas.push(`${k}: atual ${a} → backup ${b}`);
     });
+    const nTabelasArquivo = tB && typeof tB === 'object' ? Object.keys(tB).length : 0;
+    const versaoBk = data?.versao != null ? String(data.versao) : '—';
+    linhas.push('—');
+    linhas.push(`Versão do backup: ${versaoBk}`);
+    linhas.push(`Total de tabelas no arquivo: ${nTabelasArquivo}`);
     const alertas = data?.alertas || {};
     const warn = [
       alertas.zeraria_usuarios ? '⚠ Este backup ZERARIA usuários.' : null,
