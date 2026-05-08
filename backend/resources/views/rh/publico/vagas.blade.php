@@ -512,6 +512,28 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function scrollVagaCardToCenter(el) {
+        if (!el || typeof el.getBoundingClientRect !== 'function') return;
+        var rect = el.getBoundingClientRect();
+        if (rect.width < 2 && rect.height < 2) return;
+        var viewH = window.innerHeight;
+        var scrollY = window.scrollY || window.pageYOffset;
+        var docH = Math.max(
+            document.documentElement.scrollHeight || 0,
+            document.body.scrollHeight || 0
+        );
+        var maxScroll = Math.max(0, docH - viewH);
+        if (rect.height > viewH * 0.88) {
+            var topY = scrollY + rect.top - 20;
+            window.scrollTo({ top: Math.max(0, Math.min(topY, maxScroll)), behavior: 'smooth' });
+            return;
+        }
+        var elCenterY = rect.top + scrollY + rect.height / 2;
+        var targetY = elCenterY - viewH / 2;
+        targetY = Math.max(0, Math.min(targetY, maxScroll));
+        window.scrollTo({ top: targetY, behavior: 'smooth' });
+    }
+
     function syncVagaSpotlight() {
         var open = document.querySelector('.collapse.vaga-detalhe-full.show');
         document.querySelectorAll('.vaga-col').forEach(function (cell) {
@@ -527,9 +549,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (cell) {
             cell.classList.add('is-vaga-focus');
             requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                    (card || cell).scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-                });
+                scrollVagaCardToCenter(card || cell);
+                setTimeout(function () {
+                    scrollVagaCardToCenter(card || cell);
+                }, 200);
             });
         }
     }
@@ -584,9 +607,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (col && typeof bootstrap !== 'undefined') {
             bootstrap.Collapse.getOrCreateInstance(col, { toggle: false }).show();
         }
-        setTimeout(function () {
-            card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-        }, 200);
     }
     document.addEventListener('DOMContentLoaded', openVagaFromHash);
     window.addEventListener('hashchange', openVagaFromHash);
