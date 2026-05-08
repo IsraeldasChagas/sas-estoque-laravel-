@@ -291,7 +291,7 @@
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
             <div>
                 <h2 class="section-title mb-1">Vagas disponíveis</h2>
-                <p class="text-muted-light small mb-0">Toque em <strong>Ver detalhes</strong> para ler a vaga. O cadastro só abre em <strong>Candidatar-se</strong>.</p>
+                <p class="text-muted-light small mb-0">Use <strong>Ver detalhes</strong> para abrir o texto completo e <strong>Esconder</strong> para fechar. O cadastro só em <strong>Candidatar-se</strong>.</p>
             </div>
         </div>
 
@@ -358,13 +358,13 @@
                         <div class="vaga-card-ui__foot mt-auto">
                             <button
                                 type="button"
-                                class="btn btn-outline-secondary btn-sm w-100"
+                                class="btn btn-outline-secondary btn-sm w-100 btn-vaga-detalhe-toggle"
                                 data-bs-toggle="collapse"
                                 data-bs-target="#detail-vaga-{{ $v->id }}"
                                 aria-expanded="false"
                                 aria-controls="detail-vaga-{{ $v->id }}"
                             >
-                                <i class="bi bi-file-text me-1"></i> Ver detalhes
+                                <span class="btn-vaga-detalhe-label"><i class="bi bi-file-text me-1"></i> Ver detalhes</span>
                             </button>
                             <button
                                 type="button"
@@ -441,6 +441,22 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    document.querySelectorAll('.collapse.vaga-detalhe-full').forEach(function (col) {
+        var sel = '#' + col.id;
+        var btn = document.querySelector('.btn-vaga-detalhe-toggle[data-bs-target="' + sel + '"]');
+        if (!btn) return;
+        var label = btn.querySelector('.btn-vaga-detalhe-label');
+        if (!label) return;
+        col.addEventListener('shown.bs.collapse', function () {
+            btn.setAttribute('aria-expanded', 'true');
+            label.innerHTML = '<i class="bi bi-chevron-up me-1"></i> Esconder';
+        });
+        col.addEventListener('hidden.bs.collapse', function () {
+            btn.setAttribute('aria-expanded', 'false');
+            label.innerHTML = '<i class="bi bi-file-text me-1"></i> Ver detalhes';
+        });
+    });
 
     function openVagaFromHash() {
         var raw = window.location.hash.replace(/^#/, '');
