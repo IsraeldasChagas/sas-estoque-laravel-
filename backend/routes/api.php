@@ -5351,73 +5351,22 @@ Route::put('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaContr
 Route::post('/reservas-mesas/{id}/cancelar', fn (Request $r, $id) => (new ReservaMesaController())->cancelar($id)->withHeaders($cors));
 Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new ReservaMesaController())->alterarStatus($r, $id)->withHeaders($cors));
 
-// ============================================
-// ROTA TEMPORÁRIA — ZERAR HISTÓRICOS DE TESTE
-// Remover após uso
-// ============================================
-Route::post('/admin/zerar-historicos', function (Request $request) {
-    // Segurança: por padrão, desabilitado em qualquer ambiente.
-    // Para habilitar, defina ALLOW_DESTRUCTIVE_ADMIN_ROUTES=true (e NUNCA em produção).
-    if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
-        return response()->json(['error' => 'Rota desabilitada.'], 404)
-            ->header('Access-Control-Allow-Origin', '*');
+/** Chave esperada para backup/listar/baixar/restaurar (igual ao frontend Configurações ou ADMIN_BACKUP_KEY no .env). */
+$sasAdminBackupKeyValid = static function (?string $chave): bool {
+    $expected = trim((string) env('ADMIN_BACKUP_KEY', ''));
+    if ($expected === '') {
+        $expected = 'BACKUP-SABORPARAENSE-2026';
     }
 
-    $userId = $request->header('X-Usuario-Id');
-    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
-    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
-        return response()->json(['error' => 'Apenas administradores podem executar esta ação.'], 403)
-            ->header('Access-Control-Allow-Origin', '*');
-    }
-    $chave = $request->input('chave');
-    $chaveEsperada = (string) env('ADMIN_ZERAR_HISTORICOS_KEY', '');
-    if ($chaveEsperada === '' || ! hash_equals($chaveEsperada, (string) $chave)) {
-        return response()->json(['error' => 'Chave inválida.'], 403);
-    }
-
-    DB::statement('SET FOREIGN_KEY_CHECKS = 0');
-    DB::table('movimentacoes')->truncate();
-    DB::table('stock_lotes')->truncate();
-    DB::table('lotes')->truncate();
-    DB::table('listas_itens')->truncate();
-    DB::table('listas_compras')->truncate();
-    DB::table('logs_etiquetas')->truncate();
-    DB::table('logs_usuarios')->truncate();
-    DB::statement('SET FOREIGN_KEY_CHECKS = 1');
-
-    \Log::warning('ADMIN zerar-historicos executado', [
-        'usuario_id' => (int) $userId,
-        'ip' => $request->ip(),
-        'ua' => (string) $request->userAgent(),
-    ]);
-
-    return response()->json([
-        'sucesso' => true,
-        'mensagem' => 'Históricos zerados com sucesso.',
-        'tabelas_zeradas' => [
-            'movimentacoes'  => DB::table('movimentacoes')->count(),
-            'stock_lotes'    => DB::table('stock_lotes')->count(),
-            'lotes'          => DB::table('lotes')->count(),
-            'listas_itens'   => DB::table('listas_itens')->count(),
-            'listas_compras' => DB::table('listas_compras')->count(),
-            'logs_etiquetas' => DB::table('logs_etiquetas')->count(),
-            'logs_usuarios'  => DB::table('logs_usuarios')->count(),
-        ],
-        'preservados' => [
-            'produtos'  => DB::table('produtos')->count(),
-            'unidades'  => DB::table('unidades')->count(),
-            'locais'    => DB::table('locais')->count(),
-            'usuarios'  => DB::table('usuarios')->count(),
-        ],
-    ]);
-});
+    return hash_equals($expected, (string) $chave);
+};
 
 // ============================================
 // ROTAS DE BACKUP E RESTAURAÇÃO
 // ============================================
 
 // Gerar backup completo
-Route::post('/admin/backup', function (Request $request) {
+Route::post('/admin/backup', function (Request $request) use ($sasAdminBackupKeyValid) {
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5425,7 +5374,7 @@ Route::post('/admin/backup', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->input('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
 
@@ -5485,9 +5434,9 @@ Route::post('/admin/backup', function (Request $request) {
 });
 
 // Listar backups disponíveis
-Route::get('/admin/backups', function (Request $request) {
+Route::get('/admin/backups', function (Request $request) use ($sasAdminBackupKeyValid) {
     $chave = $request->query('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
 
@@ -5518,7 +5467,7 @@ Route::get('/admin/backups', function (Request $request) {
 });
 
 // Excluir backup (ADMIN): POST body JSON { chave, arquivo } — não use ".json" na URL (Apache trata como arquivo estático).
-$executarExclusaoBackupJson = static function (Request $request, string $arquivo) {
+$executarExclusaoBackupJson = static function (Request $request, string $arquivo) use ($sasAdminBackupKeyValid) {
     $arquivo = trim($arquivo);
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
@@ -5527,7 +5476,7 @@ $executarExclusaoBackupJson = static function (Request $request, string $arquivo
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->query('chave') ?? $request->input('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403)
             ->header('Access-Control-Allow-Origin', '*');
     }
@@ -5570,7 +5519,7 @@ Route::options('/admin/backups/excluir', fn() => response('', 204)
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 // Prévia do impacto do restore (apenas ADMIN)
-Route::get('/admin/backups/{arquivo}/preview', function (Request $request, $arquivo) {
+Route::get('/admin/backups/{arquivo}/preview', function (Request $request, $arquivo) use ($sasAdminBackupKeyValid) {
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5578,7 +5527,7 @@ Route::get('/admin/backups/{arquivo}/preview', function (Request $request, $arqu
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->query('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
     if (!preg_match('/^backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json$/', $arquivo)) {
@@ -5625,9 +5574,9 @@ Route::get('/admin/backups/{arquivo}/preview', function (Request $request, $arqu
 });
 
 // Download de um backup
-Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) {
+Route::get('/admin/backup/{arquivo}', function (Request $request, $arquivo) use ($sasAdminBackupKeyValid) {
     $chave = $request->query('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
 
@@ -5657,7 +5606,7 @@ Route::options('/admin/backups/{arquivo}/excluir', fn() => response('', 204)
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 // Restaurar a partir de um backup
-Route::post('/admin/restaurar', function (Request $request) {
+Route::post('/admin/restaurar', function (Request $request) use ($sasAdminBackupKeyValid) {
     if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
         return response()->json(['error' => 'Rota desabilitada.'], 404)
             ->header('Access-Control-Allow-Origin', '*');
@@ -5670,8 +5619,7 @@ Route::post('/admin/restaurar', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->input('chave');
-    $chaveEsperada = (string) env('ADMIN_BACKUP_KEY', '');
-    if ($chaveEsperada === '' || ! hash_equals($chaveEsperada, (string) $chave)) {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
 
@@ -5769,7 +5717,7 @@ Route::post('/admin/restaurar', function (Request $request) {
 // Reintegrar só registros de RH (recrutamento) que faltam no banco, a partir de um backup JSON (merge por id).
 // Útil para trazer de volta candidatos apagados se o arquivo de backup for anterior à exclusão.
 // Requer que o JSON contenha as chaves rh_* (backups gerados com versão >= 1.2).
-Route::post('/admin/restaurar-rh-merge', function (Request $request) {
+Route::post('/admin/restaurar-rh-merge', function (Request $request) use ($sasAdminBackupKeyValid) {
     if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
         return response()->json(['error' => 'Rota desabilitada.'], 404)
             ->header('Access-Control-Allow-Origin', '*');
@@ -5782,8 +5730,7 @@ Route::post('/admin/restaurar-rh-merge', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->input('chave');
-    $chaveEsperada = (string) env('ADMIN_BACKUP_KEY', '');
-    if ($chaveEsperada === '' || ! hash_equals($chaveEsperada, (string) $chave)) {
+    if (! $sasAdminBackupKeyValid($chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403)
             ->header('Access-Control-Allow-Origin', '*');
     }

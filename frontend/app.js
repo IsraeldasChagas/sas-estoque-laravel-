@@ -14,6 +14,13 @@ const API_URL = (() => {
 // URL base para arquivos estáticos (fotos, uploads) - sem /api
 const BASE_URL = API_URL.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
 
+/** Chave do backup (Configurações / `config.js` → deve combinar com `ADMIN_BACKUP_KEY` no `.env` do Laravel, se definida). */
+function sasAdminBackupChave() {
+  const cfg = window.APP_CONFIG || {};
+  const k = String(cfg.ADMIN_BACKUP_KEY || "").trim();
+  return k || "BACKUP-SABORPARAENSE-2026";
+}
+
 /** Monta URL completa da foto do usuário (backend salva em public/uploads/usuarios/) */
 function getUsuarioFotoUrl(path) {
   if (!path || typeof path !== "string") return null;
@@ -2540,13 +2547,13 @@ async function gerarBackupDireto() {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
       },
-      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026' }),
+      body: JSON.stringify({ chave: sasAdminBackupChave() }),
     });
     const data = await res.json().catch(() => null);
     if (res.ok && data?.sucesso) {
       // Baixa automaticamente o arquivo gerado
       const link = document.createElement('a');
-      link.href = `${API_URL}/admin/backup/${encodeURIComponent(data.arquivo)}?chave=BACKUP-SABORPARAENSE-2026`;
+      link.href = `${API_URL}/admin/backup/${encodeURIComponent(data.arquivo)}?chave=${encodeURIComponent(sasAdminBackupChave())}`;
       link.download = data.arquivo;
       document.body.appendChild(link);
       link.click();
@@ -2573,7 +2580,7 @@ async function gerarBackup() {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
       },
-      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026' }),
+      body: JSON.stringify({ chave: sasAdminBackupChave() }),
     });
     const data = await res.json().catch(() => null);
     if (res.ok && data?.sucesso) {
@@ -2594,7 +2601,7 @@ async function carregarListaBackups() {
   if (!content) return;
   content.innerHTML = '<p style="text-align:center;color:#607d8b;padding:1rem;">Carregando...</p>';
   try {
-    const res = await fetch(`${API_URL}/admin/backups?chave=BACKUP-SABORPARAENSE-2026`, {
+    const res = await fetch(`${API_URL}/admin/backups?chave=${encodeURIComponent(sasAdminBackupChave())}`, {
       headers: {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
@@ -2615,7 +2622,7 @@ async function carregarListaBackups() {
             <div style="font-weight:600;font-size:0.9rem;">📅 ${data}</div>
             <div style="font-size:0.78rem;color:#888;margin-top:0.2rem;">${b.tamanho_kb} KB · ${totais}</div>
           </div>
-          <a href="${API_URL}/admin/backup/${encodeURIComponent(b.arquivo)}?chave=BACKUP-SABORPARAENSE-2026" download="${b.arquivo}"
+          <a href="${API_URL}/admin/backup/${encodeURIComponent(b.arquivo)}?chave=${encodeURIComponent(sasAdminBackupChave())}" download="${b.arquivo}"
              style="padding:0.4rem 0.8rem;background:#1565c0;color:#fff;border-radius:5px;font-size:0.82rem;text-decoration:none;white-space:nowrap;">
             ⬇ Baixar
           </a>
@@ -2658,7 +2665,7 @@ async function excluirBackupArquivo(arquivo) {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
       },
-      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026', arquivo }),
+      body: JSON.stringify({ chave: sasAdminBackupChave(), arquivo }),
     });
     const raw = await res.text();
     let data = null;
@@ -2683,7 +2690,7 @@ window.excluirBackupArquivo = excluirBackupArquivo;
 
 async function previewBackup(arquivo) {
   try {
-    const res = await fetch(`${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/preview?chave=BACKUP-SABORPARAENSE-2026`, {
+    const res = await fetch(`${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/preview?chave=${encodeURIComponent(sasAdminBackupChave())}`, {
       headers: {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
@@ -2722,7 +2729,7 @@ async function restaurarBackup(arquivo) {
   // Prévia + proteções contra “zerar sem querer”
   let preview = null;
   try {
-    const resPrev = await fetch(`${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/preview?chave=BACKUP-SABORPARAENSE-2026`, {
+    const resPrev = await fetch(`${API_URL}/admin/backups/${encodeURIComponent(arquivo)}/preview?chave=${encodeURIComponent(sasAdminBackupChave())}`, {
       headers: {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
@@ -2760,7 +2767,7 @@ async function restaurarBackup(arquivo) {
         ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
         ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
       },
-      body: JSON.stringify({ chave: 'BACKUP-SABORPARAENSE-2026', arquivo }),
+      body: JSON.stringify({ chave: sasAdminBackupChave(), arquivo }),
     });
     const data = await res.json().catch(() => null);
     if (res.ok && data?.sucesso) {
@@ -2771,56 +2778,6 @@ async function restaurarBackup(arquivo) {
     }
   } catch (e) {
     alert('❌ Falha na conexão: ' + e.message);
-  }
-}
-
-// Botão Zerar Históricos — visível e funcional apenas para ADMIN
-async function zerarHistoricos() {
-  const btn = document.getElementById('btnZerarHistoricos');
-
-  const perfil = (currentUser?.perfil || '').toString().trim().toUpperCase();
-  if (perfil !== 'ADMIN') {
-    alert('Apenas administradores podem executar esta ação.');
-    return;
-  }
-
-  const confirmado = window.confirm(
-    '⚠ ATENÇÃO!\n\nEsta ação vai apagar PERMANENTEMENTE:\n' +
-    '• Todas as movimentações\n' +
-    '• Todo o estoque (stock_lotes)\n' +
-    '• Todos os lotes\n' +
-    '• Todas as listas de compras\n' +
-    '• Logs de etiquetas e usuários\n\n' +
-    'Cadastros (produtos, unidades, locais, usuários) serão preservados.\n\n' +
-    'Tem certeza absoluta?'
-  );
-  if (!confirmado) return;
-
-  if (btn) { btn.disabled = true; btn.textContent = 'Zerando...'; }
-
-  try {
-    const res = await fetch(API_URL + '/admin/zerar-historicos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(currentUser?.token ? { Authorization: 'Bearer ' + currentUser.token } : {}),
-        ...(currentUser?.id != null ? { 'X-Usuario-Id': String(currentUser.id) } : {}),
-      },
-      body: JSON.stringify({ chave: 'ZERAR-SABORPARAENSE-2026' }),
-    });
-
-    const data = await res.json().catch(() => null);
-
-    if (res.ok && data && data.sucesso) {
-      alert('✅ Históricos zerados com sucesso!\nSistema pronto para os testes.');
-    } else {
-      const msg = data?.error || data?.message || ('Erro HTTP ' + res.status);
-      alert('❌ Erro ao zerar: ' + msg);
-    }
-  } catch (e) {
-    alert('❌ Falha na conexão: ' + (e.message || 'Erro desconhecido'));
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⚠ Zerar Históricos'; }
   }
 }
 
@@ -9240,11 +9197,9 @@ async function startAppSession(user) {
     console.error('appShell não encontrado!');
   }
 
-  // Mostra botões de ADMIN (Backup e Zerar Históricos) apenas para ADMIN
+  // Mostra botão de ADMIN (Backup / Restaurar) apenas para ADMIN
   const perfil = (currentUser?.perfil || '').toString().trim().toUpperCase();
   const isAdminUser = perfil === 'ADMIN';
-  const btnZerar = document.getElementById('btnZerarHistoricos');
-  if (btnZerar) btnZerar.style.display = isAdminUser ? 'block' : 'none';
   const btnBackup = document.getElementById('btnAbrirBackup');
   if (btnBackup) btnBackup.style.display = isAdminUser ? 'block' : 'none';
 
