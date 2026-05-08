@@ -17,6 +17,15 @@ use Illuminate\Support\Facades\Schema;
 echo "=== Reset da tabela funcionarios ===\n";
 
 try {
+    // Segurança: nunca permita execução acidental fora de ambiente local,
+    // a menos que seja explicitamente habilitado via env.
+    $allow = filter_var((string) env('ALLOW_RESET_FUNCIONARIOS', 'false'), FILTER_VALIDATE_BOOL);
+    if (! app()->environment('local') || ! $allow) {
+        echo "ABORTADO: este script é destrutivo (DROP TABLE) e está desabilitado.\n";
+        echo "Para usar em ambiente local, defina ALLOW_RESET_FUNCIONARIOS=true no .env.\n";
+        exit(2);
+    }
+
     DB::statement('DROP TABLE IF EXISTS funcionarios');
     echo "Tabela funcionarios removida.\n";
 

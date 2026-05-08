@@ -5356,6 +5356,13 @@ Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new Reserva
 // Remover após uso
 // ============================================
 Route::post('/admin/zerar-historicos', function (Request $request) {
+    // Segurança: por padrão, desabilitado em qualquer ambiente.
+    // Para habilitar, defina ALLOW_DESTRUCTIVE_ADMIN_ROUTES=true (e NUNCA em produção).
+    if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
+        return response()->json(['error' => 'Rota desabilitada.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5363,7 +5370,8 @@ Route::post('/admin/zerar-historicos', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->input('chave');
-    if ($chave !== 'ZERAR-SABORPARAENSE-2026') {
+    $chaveEsperada = (string) env('ADMIN_ZERAR_HISTORICOS_KEY', '');
+    if ($chaveEsperada === '' || ! hash_equals($chaveEsperada, (string) $chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
 
@@ -5650,6 +5658,11 @@ Route::options('/admin/backups/{arquivo}/excluir', fn() => response('', 204)
 
 // Restaurar a partir de um backup
 Route::post('/admin/restaurar', function (Request $request) {
+    if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
+        return response()->json(['error' => 'Rota desabilitada.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5657,7 +5670,8 @@ Route::post('/admin/restaurar', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->input('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    $chaveEsperada = (string) env('ADMIN_BACKUP_KEY', '');
+    if ($chaveEsperada === '' || ! hash_equals($chaveEsperada, (string) $chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403);
     }
 
@@ -5756,6 +5770,11 @@ Route::post('/admin/restaurar', function (Request $request) {
 // Útil para trazer de volta candidatos apagados se o arquivo de backup for anterior à exclusão.
 // Requer que o JSON contenha as chaves rh_* (backups gerados com versão >= 1.2).
 Route::post('/admin/restaurar-rh-merge', function (Request $request) {
+    if (app()->environment('production') || ! filter_var((string) env('ALLOW_DESTRUCTIVE_ADMIN_ROUTES', 'false'), FILTER_VALIDATE_BOOL)) {
+        return response()->json(['error' => 'Rota desabilitada.'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
     $userId = $request->header('X-Usuario-Id');
     $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
     if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
@@ -5763,7 +5782,8 @@ Route::post('/admin/restaurar-rh-merge', function (Request $request) {
             ->header('Access-Control-Allow-Origin', '*');
     }
     $chave = $request->input('chave');
-    if ($chave !== 'BACKUP-SABORPARAENSE-2026') {
+    $chaveEsperada = (string) env('ADMIN_BACKUP_KEY', '');
+    if ($chaveEsperada === '' || ! hash_equals($chaveEsperada, (string) $chave)) {
         return response()->json(['error' => 'Chave inválida.'], 403)
             ->header('Access-Control-Allow-Origin', '*');
     }
