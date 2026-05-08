@@ -186,6 +186,65 @@
         }
         .vaga-choices { border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 0.75rem; padding: 0.75rem; background: #fff; }
         .vaga-choices .form-check { margin: 0.2rem 0; }
+
+        /* Modo foco: uma vaga em destaque ao centro, demais recolhidas / suaves */
+        .vagas-grid {
+            position: relative;
+            transition: filter 0.5s ease;
+        }
+        .vaga-col {
+            transition:
+                opacity 0.55s cubic-bezier(0.33, 1, 0.68, 1),
+                filter 0.55s cubic-bezier(0.33, 1, 0.68, 1),
+                transform 0.55s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        body.vaga-spotlight-on .vagas-grid {
+            min-height: 50vh;
+        }
+        body.vaga-spotlight-on .vaga-col:not(.is-vaga-focus) {
+            opacity: 0.18;
+            filter: blur(5px) saturate(0.55);
+            transform: scale(0.92);
+            pointer-events: none;
+        }
+        body.vaga-spotlight-on .vaga-col:not(.is-vaga-focus) .vaga-card-ui {
+            box-shadow: none;
+        }
+        body.vaga-spotlight-on .vaga-col.is-vaga-focus {
+            position: relative;
+            z-index: 50;
+            transform: scale(1.045);
+            filter: none;
+            opacity: 1;
+        }
+        body.vaga-spotlight-on .vaga-col.is-vaga-focus .vaga-card-ui {
+            box-shadow:
+                0 36px 90px rgba(0, 0, 0, 0.32),
+                0 0 0 3px rgba(255, 160, 60, 0.55),
+                0 0 48px rgba(255, 120, 0, 0.22);
+            animation: vagaCardGlow 2.4s ease-in-out infinite;
+        }
+        body.vaga-spotlight-on .vaga-col.is-vaga-focus .vaga-card-ui:hover {
+            transform: none;
+            box-shadow:
+                0 36px 90px rgba(0, 0, 0, 0.34),
+                0 0 0 3px rgba(255, 180, 80, 0.65),
+                0 0 56px rgba(255, 130, 0, 0.28);
+        }
+        @keyframes vagaCardGlow {
+            0%, 100% {
+                box-shadow:
+                    0 32px 80px rgba(0, 0, 0, 0.3),
+                    0 0 0 3px rgba(255, 160, 60, 0.5),
+                    0 0 40px rgba(255, 120, 0, 0.18);
+            }
+            50% {
+                box-shadow:
+                    0 40px 100px rgba(0, 0, 0, 0.36),
+                    0 0 0 4px rgba(255, 190, 100, 0.7),
+                    0 0 64px rgba(255, 150, 40, 0.35);
+            }
+        }
     </style>
 </head>
 <body>
@@ -291,11 +350,11 @@
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
             <div>
                 <h2 class="section-title mb-1">Vagas disponíveis</h2>
-                <p class="text-muted-light small mb-0">Só uma vaga abre por vez: use <strong>Ver detalhes</strong> / <strong>Esconder</strong>. O cadastro só em <strong>Candidatar-se</strong>.</p>
+                <p class="text-muted-light small mb-0">Ao abrir <strong>Ver detalhes</strong>, a vaga vai para o centro em destaque; as outras ficam recolhidas e suaves ao fundo. Use <strong>Esconder</strong> ou a tecla <strong>Esc</strong> para voltar ao normal.</p>
             </div>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-4 vagas-grid">
             @foreach($items as $v)
                 @php
                     $status = strtolower((string) ($v->status ?? ''));
@@ -305,7 +364,7 @@
                     $toneClass = $ico['tone'] !== '' ? ' vaga-tone-' . $ico['tone'] : '';
                     $excerpt = \Illuminate\Support\Str::limit((string) ($v->descricao ?? ''), 160);
                 @endphp
-                <div class="col-12 col-md-6 col-xl-4">
+                <div class="col-12 col-md-6 col-xl-4 vaga-col">
                     <article class="vaga-card-ui" id="vaga-{{ $v->slug }}">
                         <div class="vaga-card-ui__head">
                             <div class="vaga-card-ui__icon{{ $toneClass }}" title="{{ $ico['tag'] }}" aria-hidden="true">
@@ -423,6 +482,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var modalEl = document.getElementById('modalCandidaturaRh');
     var form = document.getElementById('formCandidaturaRh');
     var titleEl = document.getElementById('modalCandidaturaRhTitle');
+    if (modalEl) {
+        modalEl.addEventListener('show.bs.modal', function () {
+            document.body.classList.remove('vaga-spotlight-on');
+            document.querySelectorAll('.vaga-col').forEach(function (c) {
+                c.classList.remove('is-vaga-focus');
+            });
+        });
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            syncVagaSpotlight();
+        });
+    }
     if (modalEl && form && titleEl) {
         modalEl.addEventListener('show.bs.modal', function (ev) {
             var trigger = ev.relatedTarget;
@@ -442,6 +512,38 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function syncVagaSpotlight() {
+        var open = document.querySelector('.collapse.vaga-detalhe-full.show');
+        document.querySelectorAll('.vaga-col').forEach(function (cell) {
+            cell.classList.remove('is-vaga-focus');
+        });
+        if (!open) {
+            document.body.classList.remove('vaga-spotlight-on');
+            return;
+        }
+        var card = open.closest('.vaga-card-ui');
+        var cell = card ? card.closest('.vaga-col') : null;
+        document.body.classList.add('vaga-spotlight-on');
+        if (cell) {
+            cell.classList.add('is-vaga-focus');
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    (card || cell).scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                });
+            });
+        }
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (!document.body.classList.contains('vaga-spotlight-on')) return;
+        var open = document.querySelector('.collapse.vaga-detalhe-full.show');
+        if (open && typeof bootstrap !== 'undefined') {
+            var inst = bootstrap.Collapse.getInstance(open);
+            if (inst) inst.hide();
+        }
+    });
+
     document.querySelectorAll('.collapse.vaga-detalhe-full').forEach(function (col) {
         col.addEventListener('show.bs.collapse', function (ev) {
             if (ev.target !== col) return;
@@ -452,7 +554,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (inst) inst.hide();
             });
         });
+    });
 
+    document.querySelectorAll('.collapse.vaga-detalhe-full').forEach(function (col) {
         var sel = '#' + col.id;
         var btn = document.querySelector('.btn-vaga-detalhe-toggle[data-bs-target="' + sel + '"]');
         if (!btn) return;
@@ -461,10 +565,12 @@ document.addEventListener('DOMContentLoaded', function () {
         col.addEventListener('shown.bs.collapse', function () {
             btn.setAttribute('aria-expanded', 'true');
             label.innerHTML = '<i class="bi bi-chevron-up me-1"></i> Esconder';
+            syncVagaSpotlight();
         });
         col.addEventListener('hidden.bs.collapse', function () {
             btn.setAttribute('aria-expanded', 'false');
             label.innerHTML = '<i class="bi bi-file-text me-1"></i> Ver detalhes';
+            syncVagaSpotlight();
         });
     });
 
@@ -479,8 +585,8 @@ document.addEventListener('DOMContentLoaded', function () {
             bootstrap.Collapse.getOrCreateInstance(col, { toggle: false }).show();
         }
         setTimeout(function () {
-            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 120);
+            card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        }, 200);
     }
     document.addEventListener('DOMContentLoaded', openVagaFromHash);
     window.addEventListener('hashchange', openVagaFromHash);
