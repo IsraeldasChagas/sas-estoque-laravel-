@@ -144,7 +144,8 @@
                     <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
                     <label class="form-check-label" for="lgpd">
                         <span class="text-danger">*</span>
-                        Autorizo o tratamento dos meus dados pessoais exclusivamente para recrutamento e seleção, nos termos da Lei nº 13.709/2018 (LGPD).
+                        <span class="fw-semibold d-block">Marque para autorizar o tratamento dos seus dados para esta candidatura.</span>
+                        <span class="d-block mt-1 small text-body-secondary">Autorizo o uso dos meus dados pessoais exclusivamente para recrutamento e seleção, nos termos da Lei nº 13.709/2018 (LGPD).</span>
                     </label>
                 </div>
             </div>
