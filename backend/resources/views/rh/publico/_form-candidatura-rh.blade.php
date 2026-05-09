@@ -129,21 +129,23 @@
 
         <div class="col-12 col-md-6">
             <label class="form-label" for="rhCandCv">Currículo (PDF) <span class="text-danger">*</span></label>
-            <input id="rhCandCv" type="file" name="curriculo" class="form-control" accept="application/pdf" required />
+            <input id="rhCandCv" type="file" name="curriculo" class="form-control candidatura-rh-file" accept="application/pdf" required />
             <div class="form-text">Máx. <strong>7,5 MB</strong>. Não envie CPF/RG na candidatura.</div>
         </div>
         <div class="col-12 col-md-6">
             <label class="form-label" for="rhCandFoto">Foto <span class="text-danger">*</span></label>
-            <input id="rhCandFoto" type="file" name="foto" class="form-control" accept="image/jpeg,image/png" required />
+            <input id="rhCandFoto" type="file" name="foto" class="form-control candidatura-rh-file" accept="image/jpeg,image/png" required />
             <div class="form-text">JPG ou PNG, máx. <strong>3 MB</strong>.</div>
         </div>
 
         <div class="col-12">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
-                <label class="form-check-label" for="lgpd">
-                    Autorizo o uso dos meus dados para recrutamento e seleção. <span class="text-danger">*</span>
-                </label>
+            <div class="candidatura-rh-lgpd-box">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
+                    <label class="form-check-label" for="lgpd">
+                        Autorizo o uso dos meus dados para recrutamento e seleção. <span class="text-danger">*</span>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -152,4 +154,56 @@
         </div>
     </fieldset>
 </form>
+
+@once
+<style>
+    /* Campos de arquivo em destaque (azul Bootstrap) */
+    .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control {
+        border: 2px solid rgba(13, 110, 253, 0.65);
+        background: linear-gradient(180deg, rgba(13, 110, 253, 0.09) 0%, rgba(255, 255, 255, 0.98) 55%);
+        color: #052c65;
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control:hover {
+        border-color: #0d6efd;
+        background: rgba(13, 110, 253, 0.06);
+    }
+    .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.22rem rgba(13, 110, 253, 0.38);
+        background: #fff;
+        outline: 0;
+    }
+
+    /* LGPD em caixa com sombra */
+    .candidatura-rh-lgpd-box {
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        margin-top: 0.15rem;
+        background: linear-gradient(165deg, rgba(13, 110, 253, 0.07) 0%, rgba(255, 255, 255, 0.98) 45%);
+        border: 1px solid rgba(13, 110, 253, 0.32);
+        box-shadow:
+            0 12px 32px rgba(13, 110, 253, 0.18),
+            0 4px 14px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+    .candidatura-rh-lgpd-box .form-check-input {
+        width: 1.2rem;
+        height: 1.2rem;
+        margin-top: 0.15rem;
+        border-width: 2px;
+        border-color: #0d6efd;
+    }
+    .candidatura-rh-lgpd-box .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    .candidatura-rh-lgpd-box .form-check-label {
+        font-weight: 500;
+        padding-left: 0.15rem;
+        line-height: 1.45;
+    }
+</style>
+@endonce
 @endif
