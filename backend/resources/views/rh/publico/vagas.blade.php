@@ -21,32 +21,37 @@
         .gsp-brand {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            flex-wrap: nowrap;
-            overflow-x: auto;
+            justify-content: center;
+            gap: 0.75rem 1rem;
+            flex-wrap: wrap;
+            overflow-x: visible;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             padding-bottom: 0.25rem;
+            text-align: center;
         }
         .gsp-group,
-        .gsp-subbrand,
+        .gsp-subbrand {
+            flex: 0 0 auto;
+            justify-content: center;
+        }
         .gsp-sep { flex: 0 0 auto; }
         .gsp-mark { width: 80px; height: 80px; flex: 0 0 auto; object-fit: contain; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.25)); }
-        .gsp-group { display: flex; align-items: center; gap: 0.6rem; }
+        .gsp-group { display: flex; align-items: center; gap: 0.6rem; justify-content: center; }
         .gsp-sep {
             width: 1px;
             align-self: stretch;
             min-height: 3rem;
             background: rgba(255, 255, 255, 0.2);
         }
-        .gsp-subbrand { display: flex; align-items: center; gap: 0.6rem; }
+        .gsp-subbrand { display: flex; align-items: center; gap: 0.6rem; justify-content: center; }
         .gsp-submark {
             width: 120px;
             height: 78px;
             object-fit: contain;
             filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.22));
         }
-        .gsp-name { line-height: 1.08; }
+        .gsp-name { line-height: 1.08; text-align: start; }
         .gsp-name .title { font-weight: 800; letter-spacing: 0.3px; color: #fff; }
         .gsp-name .sub { font-size: 0.84rem; color: rgba(255, 255, 255, 0.76); }
         .text-muted-light { color: rgba(255, 255, 255, 0.68) !important; }
