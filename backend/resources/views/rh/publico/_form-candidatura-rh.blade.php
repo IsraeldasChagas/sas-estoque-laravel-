@@ -157,25 +157,43 @@
 
 @once
 <style>
-    /* Só os dois “Escolher arquivo”: mesma cor do botão Enviar (primary) */
+    /* Azul só no botão nativo “Escolher arquivo” (mesma cor do Enviar candidatura) */
     .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control {
-        border: 1px solid var(--bs-primary);
-        background-color: #fff;
+        cursor: pointer;
+    }
+    .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control::file-selector-button {
+        font: inherit;
+        margin-right: 0.75rem;
+        padding: 0.375rem 0.75rem;
+        border: 0;
+        border-radius: var(--bs-border-radius, 0.375rem);
+        background-color: var(--bs-primary);
+        color: #fff;
+        cursor: pointer;
+    }
+    .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control::-webkit-file-upload-button {
+        font: inherit;
+        margin-right: 0.75rem;
+        padding: 0.375rem 0.75rem;
+        border: 0;
+        border-radius: var(--bs-border-radius, 0.375rem);
+        background-color: var(--bs-primary);
+        color: #fff;
         cursor: pointer;
     }
     .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control:focus {
-        border-color: var(--bs-primary);
+        border-color: var(--bs-border-color);
         box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
         outline: 0;
     }
 
-    /* LGPD: só uma caixinha com sombra — sem azul extra */
+    /* LGPD: sem borda — só sombra bem discreta (não parece card) */
     .candidatura-rh-lgpd-box {
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 0.85rem 1rem;
         background: #fff;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        border: none;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 </style>
 @endonce
