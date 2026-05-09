@@ -157,52 +157,25 @@
 
 @once
 <style>
-    /* Campos de arquivo em destaque (azul Bootstrap) */
+    /* Só os dois “Escolher arquivo”: mesma cor do botão Enviar (primary) */
     .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control {
-        border: 2px solid rgba(13, 110, 253, 0.65);
-        background: linear-gradient(180deg, rgba(13, 110, 253, 0.09) 0%, rgba(255, 255, 255, 0.98) 55%);
-        color: #052c65;
+        border: 1px solid var(--bs-primary);
+        background-color: #fff;
         cursor: pointer;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    }
-    .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control:hover {
-        border-color: #0d6efd;
-        background: rgba(13, 110, 253, 0.06);
     }
     .candidatura-rh-form input[type="file"].candidatura-rh-file.form-control:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.22rem rgba(13, 110, 253, 0.38);
-        background: #fff;
+        border-color: var(--bs-primary);
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
         outline: 0;
     }
 
-    /* LGPD em caixa com sombra */
+    /* LGPD: só uma caixinha com sombra — sem azul extra */
     .candidatura-rh-lgpd-box {
-        border-radius: 14px;
-        padding: 1rem 1.2rem;
-        margin-top: 0.15rem;
-        background: linear-gradient(165deg, rgba(13, 110, 253, 0.07) 0%, rgba(255, 255, 255, 0.98) 45%);
-        border: 1px solid rgba(13, 110, 253, 0.32);
-        box-shadow:
-            0 12px 32px rgba(13, 110, 253, 0.18),
-            0 4px 14px rgba(0, 0, 0, 0.08),
-            inset 0 1px 0 rgba(255, 255, 255, 0.95);
-    }
-    .candidatura-rh-lgpd-box .form-check-input {
-        width: 1.2rem;
-        height: 1.2rem;
-        margin-top: 0.15rem;
-        border-width: 2px;
-        border-color: #0d6efd;
-    }
-    .candidatura-rh-lgpd-box .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-    }
-    .candidatura-rh-lgpd-box .form-check-label {
-        font-weight: 500;
-        padding-left: 0.15rem;
-        line-height: 1.45;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
     }
 </style>
 @endonce
