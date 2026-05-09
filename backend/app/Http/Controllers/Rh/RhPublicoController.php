@@ -208,7 +208,7 @@ class RhPublicoController extends Controller
             'curriculo.max' => 'O PDF do currículo é grande demais. O tamanho máximo permitido é ' . $maxCvMb . ' MB. Diminua o arquivo: comprima o PDF, reduza imagens dentro do documento ou remova páginas desnecessárias e tente novamente.',
             'foto.required' => 'Anexe sua foto.',
             'foto.max' => 'A foto é grande demais. O tamanho máximo permitido é ' . $maxFotoMb . ' MB. Use uma foto em qualidade menor ou comprima a imagem (JPG) e tente novamente.',
-            'lgpd.accepted' => 'Você precisa autorizar o uso dos seus dados para recrutamento e seleção.',
+            'lgpd.accepted' => 'Marque a autorização de dados (LGPD) para enviar a candidatura.',
         ], [
             'nome' => 'nome completo',
             'telefone' => 'WhatsApp',
