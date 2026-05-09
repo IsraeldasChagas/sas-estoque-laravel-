@@ -143,7 +143,7 @@
                 <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
                     <label class="form-check-label" for="lgpd">
-                        Autorizo o uso dos meus dados para recrutamento e seleção. <span class="text-danger">*</span>
+                        <span class="text-danger">*</span> Autorizo o uso dos meus dados para recrutamento e seleção.
                     </label>
                 </div>
             </div>
