@@ -141,13 +141,12 @@
         <div class="col-12">
             <div class="candidatura-rh-lgpd-box">
                 <p class="mb-2 small mb-md-1">
-                    <span class="text-danger">*</span>
                     <span class="fw-semibold">Marque para autorizar o tratamento dos seus dados para esta candidatura.</span>
                 </p>
                 <p class="mb-3 small text-body-secondary">Autorizo o uso dos meus dados pessoais exclusivamente para recrutamento e seleção, nos termos da Lei nº 13.709/2018 (LGPD).</p>
                 <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" value="1" id="lgpd" name="lgpd" required />
-                    <label class="form-check-label" for="lgpd">Li e autorizo conforme descrito acima.</label>
+                    <label class="form-check-label" for="lgpd"><span class="text-danger">*</span> Li e autorizo conforme descrito acima.</label>
                 </div>
             </div>
         </div>
