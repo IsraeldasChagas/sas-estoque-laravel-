@@ -21623,17 +21623,25 @@ function setupFichaTecnicaForm() {
     fecharFormularioIngrediente();
   };
 
-  /** Visualização em PDF no mesmo modal do Alvará (PDF.js + botão Baixar). */
+  /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). */
   const abrirVisualizacaoPdfFichaTecnica = async (p) => {
-    if (!p?.id) return;
-    const nomeArquivo = `ficha-tecnica-${p.id}.pdf`;
-    const titulo = `📄 ${p.nome_prato || 'Ficha técnica'}`;
-    await abrirModalPdfNoViewerDoAlvara({
-      nomeArquivo,
-      titulo,
-      viewApiPath: `/fichas-tecnicas/${encodeURIComponent(p.id)}/pdf`,
-      downloadApiPath: `/fichas-tecnicas/${encodeURIComponent(p.id)}/pdf?download=1`,
-    });
+    const id = parseInt(String(p?.id ?? ''), 10);
+    if (!Number.isFinite(id) || id < 1) {
+      showToast('Salve a ficha no servidor antes de visualizar o PDF.', 'info');
+      return;
+    }
+    const nomeArquivo = `ficha-tecnica-${id}.pdf`;
+    const titulo = `📄 ${p?.nome_prato || 'Ficha técnica'}`;
+    try {
+      await abrirModalPdfNoViewerDoAlvara({
+        nomeArquivo,
+        titulo,
+        viewApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf`,
+        downloadApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf?download=1`,
+      });
+    } catch (e) {
+      showToast(e?.message || 'Não foi possível abrir o PDF da ficha técnica.', 'error');
+    }
   };
 
   const renderListaTabela = () => {
@@ -21754,7 +21762,18 @@ function setupFichaTecnicaForm() {
       })();
       return;
     }
-    if (acao === 'ver') void abrirVisualizacaoPdfFichaTecnica(p);
+    if (acao === 'ver') {
+      void (async () => {
+        await carregarFichasDoArmazenamento();
+        const fresh = obterPratoPorId(id);
+        if (!fresh) {
+          showToast('Registro não encontrado.', 'error');
+          renderListaTabela();
+          return;
+        }
+        await abrirVisualizacaoPdfFichaTecnica(fresh);
+      })();
+    }
     else if (acao === 'editar') {
       void (async () => {
         await carregarFichasDoArmazenamento();
