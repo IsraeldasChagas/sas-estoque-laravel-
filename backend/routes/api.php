@@ -1092,7 +1092,12 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
 
     $fotoHtml = '';
     if (!empty($row->foto_base64) && str_starts_with((string) $row->foto_base64, 'data:image')) {
-        $fotoHtml = '<p><img src="' . $h($row->foto_base64) . '" alt="" style="max-width:100%;max-height:220px;"/></p>';
+        $fotoLen = strlen((string) $row->foto_base64);
+        if ($fotoLen > 0 && $fotoLen < 350000) {
+            $fotoHtml = '<p><img src="' . $h($row->foto_base64) . '" alt="" style="max-width:100%;max-height:220px;"/></p>';
+        } else {
+            $fotoHtml = '<p><em>Foto omitida no PDF (arquivo muito grande).</em></p>';
+        }
     }
 
     $titulo = $h($row->nome_prato ?: 'Ficha técnica');
@@ -1117,15 +1122,19 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         . '</body></html>';
 
     try {
+        @ini_set('memory_limit', '512M');
         $dompdf = new \Dompdf\Dompdf();
         $options = $dompdf->getOptions();
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
         $dompdf->setOptions($options);
-        $dompdf->loadHtml($html);
+        $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
         $pdfOutput = $dompdf->output();
+        if ($pdfOutput === '' || $pdfOutput === false) {
+            throw new \RuntimeException('PDF vazio');
+        }
     } catch (\Throwable $e) {
         \Log::error('GET /fichas-tecnicas/{id}/pdf: ' . $e->getMessage());
 

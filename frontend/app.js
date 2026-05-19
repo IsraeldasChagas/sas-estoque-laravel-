@@ -21632,6 +21632,8 @@ function setupFichaTecnicaForm() {
     }
     const nomeArquivo = `ficha-tecnica-${id}.pdf`;
     const titulo = `📄 ${p?.nome_prato || 'Ficha técnica'}`;
+    const modalTitle = document.getElementById('alvaraAnexoTitle');
+    if (modalTitle) modalTitle.textContent = '⏳ Gerando PDF...';
     try {
       await abrirModalPdfNoViewerDoAlvara({
         nomeArquivo,
@@ -21640,7 +21642,15 @@ function setupFichaTecnicaForm() {
         downloadApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf?download=1`,
       });
     } catch (e) {
-      showToast(e?.message || 'Não foi possível abrir o PDF da ficha técnica.', 'error');
+      document.getElementById('alvaraAnexoModal')?.classList.remove('active');
+      const msg = String(e?.message || '');
+      if (msg.includes('404') || /n[aã]o encontrad/i.test(msg)) {
+        showToast('Ficha não encontrada no servidor. Salve novamente e tente de novo.', 'error');
+      } else if (msg.includes('503')) {
+        showToast('Módulo de ficha técnica indisponível no servidor. Execute a migration.', 'error');
+      } else {
+        showToast(msg || 'Não foi possível abrir o PDF da ficha técnica.', 'error');
+      }
     }
   };
 
