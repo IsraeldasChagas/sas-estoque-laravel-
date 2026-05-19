@@ -130,6 +130,7 @@ body.sidebar-open {
 
 /* Financeiro e RH: mesma altura; itens longos ficam em submenu aninhado (como Recrutamento). */
 .nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
+.nav-submenu.nav-submenu--fechamento.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
   max-height: min(72vh, 420px);
   overflow-y: auto;

@@ -3688,9 +3688,8 @@ function updateUnidadeInlineUI(canManage) {
  */
 function ensureFinanceiroFechamentoDashNavLink() {
   const wrap =
-    document.querySelector(".nav-submenu--financeiro .nav-submenu--nested .nav-submenu-content") ||
-    document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
-    document.getElementById("financeiroMenu")?.closest(".nav-submenu")?.querySelector(".nav-submenu-content") ||
+    document.querySelector(".nav-submenu--fechamento .nav-submenu-content") ||
+    document.getElementById("fechamentoCaixaMenu")?.closest(".nav-submenu")?.querySelector(".nav-submenu-content") ||
     null;
   if (!wrap) return;
   const aud = wrap.querySelector('a.nav-link[data-section="fechamento"]');
@@ -3819,10 +3818,14 @@ function applyPermissions() {
       regras.sections.includes("proventos") ||
       regras.sections.includes("despesasFixas") ||
       regras.sections.includes("valeConsumo") ||
-      regras.sections.includes("reciboAjuda") ||
-      regras.sections.includes("fechamento") ||
-      regras.sections.includes("fechamentoDash");
+      regras.sections.includes("reciboAjuda");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
+  }
+  const fechamentoNavSubmenu = document.getElementById("fechamentoCaixaMenu")?.closest(".nav-submenu");
+  if (fechamentoNavSubmenu) {
+    const temAcessoFechamento =
+      regras.sections.includes("fechamento") || regras.sections.includes("fechamentoDash");
+    fechamentoNavSubmenu.classList.toggle("hidden", !temAcessoFechamento);
   }
   // Menu Configurações: apenas ADMIN vê "Backup / Restaurar" (btnAbrirBackup).
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
@@ -3984,21 +3987,19 @@ function navigateTo(section) {
       section === "proventos" ||
       section === "despesasFixas" ||
       section === "valeConsumo" ||
-      section === "reciboAjuda" ||
-      section === "fechamento" ||
-      section === "fechamentoDash"
+      section === "reciboAjuda"
     ) {
       financeiroNavSubmenuNav.classList.add("open");
     } else {
       financeiroNavSubmenuNav.classList.remove("open");
     }
   }
-  const financeiroFechamentoNested = document.getElementById("financeiroFechamentoMenu")?.closest(".nav-submenu--nested");
-  if (financeiroFechamentoNested) {
+  const fechamentoNavSubmenuNav = document.getElementById("fechamentoCaixaMenu")?.closest(".nav-submenu");
+  if (fechamentoNavSubmenuNav) {
     if (section === "fechamento" || section === "fechamentoDash") {
-      financeiroFechamentoNested.classList.add("open");
+      fechamentoNavSubmenuNav.classList.add("open");
     } else {
-      financeiroFechamentoNested.classList.remove("open");
+      fechamentoNavSubmenuNav.classList.remove("open");
     }
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
@@ -13716,6 +13717,18 @@ function setupNavigation() {
       }
     });
   }
+  const fechamentoCaixaMenu = document.getElementById('fechamentoCaixaMenu');
+  if (fechamentoCaixaMenu && fechamentoCaixaMenu.dataset.sasSubmenuToggleBound !== "1") {
+    fechamentoCaixaMenu.dataset.sasSubmenuToggleBound = "1";
+    fechamentoCaixaMenu.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const parent = fechamentoCaixaMenu.closest('.nav-submenu');
+      if (parent) {
+        parent.classList.toggle('open');
+      }
+    });
+  }
   // Setup submenu toggle for RH
   const rhMenu = document.getElementById('rhMenu');
   if (rhMenu && rhMenu.dataset.sasSubmenuToggleBound !== "1") {
@@ -13731,7 +13744,7 @@ function setupNavigation() {
   if (document.body && document.body.dataset.sasNestedSubmenuToggleBound !== "1") {
     document.body.dataset.sasNestedSubmenuToggleBound = "1";
     document.addEventListener('click', (event) => {
-      const el = event.target?.closest?.('#rhRecrutamentoMenu, #financeiroFechamentoMenu');
+      const el = event.target?.closest?.('#rhRecrutamentoMenu');
       if (!el) return;
       event.preventDefault();
       event.stopPropagation();
@@ -21140,14 +21153,7 @@ function setupFichaTecnicaForm() {
   const btnVoltar = document.getElementById('fichaTecnicaVoltarLista');
   const editIdEl = document.getElementById('fichaTecnicaEditId');
   const formTitulo = document.getElementById('fichaTecnicaFormTitulo');
-  const verPdfBtn = document.getElementById('fichaTecnicaVerPdfBtn');
-  const salvarVerPdfBtn = document.getElementById('fichaTecnicaSalvarVerPdfBtn');
   if (!form) return;
-
-  const syncFichaTecnicaVerPdfBtn = () => {
-    const id = parseInt(String(editIdEl?.value ?? ''), 10);
-    if (verPdfBtn) verPdfBtn.hidden = !(Number.isFinite(id) && id > 0);
-  };
 
   let pratoModalAtual = null;
   let salvandoFichaTecnica = false;
@@ -21654,7 +21660,6 @@ function setupFichaTecnicaForm() {
     renderListaIngredientesFichaTecnica();
     syncFichaTecnicaVisaoPrecos();
     fecharFormularioIngrediente();
-    syncFichaTecnicaVerPdfBtn();
   };
 
   /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). */
@@ -21776,7 +21781,6 @@ function setupFichaTecnicaForm() {
     }
     if (formTitulo) formTitulo.textContent = 'Editar ficha técnica';
     syncFichaTecnicaVisaoPrecos();
-    syncFichaTecnicaVerPdfBtn();
   };
 
   onNavigateFichaTecnicaCallback = () => {
@@ -21848,8 +21852,7 @@ function setupFichaTecnicaForm() {
     }
   });
 
-  const salvarFichaTecnica = async (opts = {}) => {
-    const abrirPdfApos = !!opts.abrirPdfApos;
+  const salvarFichaTecnica = async () => {
     if (salvandoFichaTecnica) return;
     normalizarCamposTempoAoSair();
     sincronizarModoPreparoOculto();
@@ -21934,15 +21937,11 @@ function setupFichaTecnicaForm() {
 
       if (!persistirFichas()) return;
 
-      const paraPdf = saved;
-      if (editIdEl && paraPdf?.id != null) editIdEl.value = String(paraPdf.id);
+      if (editIdEl && saved?.id != null) editIdEl.value = String(saved.id);
 
       showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
       limparFormulario();
       await mostrarVistaLista();
-      if (abrirPdfApos && paraPdf?.id) {
-        await abrirVisualizacaoPdfFichaTecnica(paraPdf);
-      }
     } finally {
       salvandoFichaTecnica = false;
     }
@@ -21962,25 +21961,6 @@ function setupFichaTecnicaForm() {
       console.error('Ficha técnica — salvar:', err);
       showToast('Não foi possível salvar a ficha técnica.', 'error');
     });
-  });
-
-  salvarVerPdfBtn?.addEventListener('click', (e) => {
-    e.preventDefault();
-    salvarFichaTecnica({ abrirPdfApos: true }).catch((err) => {
-      console.error('Ficha técnica — salvar e PDF:', err);
-      showToast(err?.message || 'Não foi possível salvar ou abrir o PDF.', 'error');
-    });
-  });
-
-  verPdfBtn?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const id = parseInt(String(editIdEl?.value ?? ''), 10);
-    if (!Number.isFinite(id) || id < 1) {
-      showToast('Salve a ficha antes de visualizar o PDF.', 'info');
-      return;
-    }
-    const p = obterPratoPorId(id) || { id, nome_prato: document.getElementById('fichaTecnicaNomePrato')?.value?.trim() };
-    void abrirVisualizacaoPdfFichaTecnica(p);
   });
 
   if (fotoInput && preview && previewWrap) {
