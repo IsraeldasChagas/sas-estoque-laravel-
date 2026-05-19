@@ -8376,7 +8376,19 @@ async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath,
       img.src = alvaraAnexoObjectUrl;
     }
   } catch (e) {
+    limparVisualizacaoPdfAlvara();
+    frame.style.display = 'none';
+    img.style.display = 'none';
+    if (pdfHost) {
+      pdfHost.style.display = 'block';
+      pdfHost.innerHTML =
+        '<p style="text-align:center;color:#ffcdd2;padding:1.5rem;margin:0;">' +
+        escapeHtml(String(e?.message || 'Não foi possível carregar o documento.')) +
+        '</p>';
+    }
     showToast('Erro ao abrir documento: ' + (e.message || 'Falha'), 'error');
+    if (baixarLink) baixarLink.style.display = 'none';
+    throw e;
   }
 
   if (baixarLink) {

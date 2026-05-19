@@ -1042,7 +1042,7 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
             ->header('Access-Control-Allow-Origin', '*');
     }
 
-    $h = static fn ($s) => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_UTF8, 'UTF-8');
+    $h = static fn ($s) => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES, 'UTF-8');
     $fmtBrl = static function ($v) {
         if ($v === null || $v === '') {
             return '—';
