@@ -8318,8 +8318,22 @@ async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath,
       } catch (_) {}
       throw new Error(msg);
     }
+    const ctHeader = (res.headers.get('content-type') || '').toLowerCase();
+    if (ctHeader.includes('text/html') && !ctHeader.includes('pdf')) {
+      throw new Error('Erro ao gerar PDF no servidor. Atualize o backend e tente de novo.');
+    }
     let mime = mimeFromResponse(res);
     const buffer = await res.arrayBuffer();
+    if (mime.includes('json') || (mime.includes('html') && !mime.includes('pdf'))) {
+      let msg = 'Erro ao gerar PDF';
+      try {
+        const t = new TextDecoder().decode(buffer.slice(0, 800));
+        const j = JSON.parse(t);
+        if (j.error) msg = j.error;
+        if (j.message) msg = j.message;
+      } catch (_) {}
+      throw new Error(msg);
+    }
     const sniffed = sniffMimeFromBufferAlvara(buffer);
     // Nome .pdf não pode forçar PDF se o servidor (ou bytes) indicam imagem — caso típico: foto 3×4.
     if (sniffed && /^image\//i.test(sniffed) && (mime === "application/pdf" || possivelPdf || /^image\//i.test(mime))) {
@@ -21114,7 +21128,14 @@ function setupFichaTecnicaForm() {
   const btnVoltar = document.getElementById('fichaTecnicaVoltarLista');
   const editIdEl = document.getElementById('fichaTecnicaEditId');
   const formTitulo = document.getElementById('fichaTecnicaFormTitulo');
+  const verPdfBtn = document.getElementById('fichaTecnicaVerPdfBtn');
+  const salvarVerPdfBtn = document.getElementById('fichaTecnicaSalvarVerPdfBtn');
   if (!form) return;
+
+  const syncFichaTecnicaVerPdfBtn = () => {
+    const id = parseInt(String(editIdEl?.value ?? ''), 10);
+    if (verPdfBtn) verPdfBtn.hidden = !(Number.isFinite(id) && id > 0);
+  };
 
   let pratoModalAtual = null;
   let salvandoFichaTecnica = false;
@@ -21621,6 +21642,7 @@ function setupFichaTecnicaForm() {
     renderListaIngredientesFichaTecnica();
     syncFichaTecnicaVisaoPrecos();
     fecharFormularioIngrediente();
+    syncFichaTecnicaVerPdfBtn();
   };
 
   /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). */
@@ -21682,7 +21704,7 @@ function setupFichaTecnicaForm() {
         <td data-label="Preço">${prec}</td>
         <td data-label="Sugestão de venda">${sug}</td>
         <td class="ficha-tecnica-acoes" data-label="Ações">
-          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="ver" data-ficha-id="${idAttr}">Ver</button>
+          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="ver" data-ficha-id="${idAttr}">PDF</button>
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="editar" data-ficha-id="${idAttr}">Editar</button>
           <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="excluir" data-ficha-id="${idAttr}">Excluir</button>
         </td>
@@ -21742,6 +21764,7 @@ function setupFichaTecnicaForm() {
     }
     if (formTitulo) formTitulo.textContent = 'Editar ficha técnica';
     syncFichaTecnicaVisaoPrecos();
+    syncFichaTecnicaVerPdfBtn();
   };
 
   onNavigateFichaTecnicaCallback = () => {
@@ -21813,7 +21836,8 @@ function setupFichaTecnicaForm() {
     }
   });
 
-  const salvarFichaTecnica = async () => {
+  const salvarFichaTecnica = async (opts = {}) => {
+    const abrirPdfApos = !!opts.abrirPdfApos;
     if (salvandoFichaTecnica) return;
     normalizarCamposTempoAoSair();
     sincronizarModoPreparoOculto();
@@ -21898,9 +21922,15 @@ function setupFichaTecnicaForm() {
 
       if (!persistirFichas()) return;
 
+      const paraPdf = saved;
+      if (editIdEl && paraPdf?.id != null) editIdEl.value = String(paraPdf.id);
+
       showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
       limparFormulario();
       await mostrarVistaLista();
+      if (abrirPdfApos && paraPdf?.id) {
+        await abrirVisualizacaoPdfFichaTecnica(paraPdf);
+      }
     } finally {
       salvandoFichaTecnica = false;
     }
@@ -21920,6 +21950,25 @@ function setupFichaTecnicaForm() {
       console.error('Ficha técnica — salvar:', err);
       showToast('Não foi possível salvar a ficha técnica.', 'error');
     });
+  });
+
+  salvarVerPdfBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    salvarFichaTecnica({ abrirPdfApos: true }).catch((err) => {
+      console.error('Ficha técnica — salvar e PDF:', err);
+      showToast(err?.message || 'Não foi possível salvar ou abrir o PDF.', 'error');
+    });
+  });
+
+  verPdfBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const id = parseInt(String(editIdEl?.value ?? ''), 10);
+    if (!Number.isFinite(id) || id < 1) {
+      showToast('Salve a ficha antes de visualizar o PDF.', 'info');
+      return;
+    }
+    const p = obterPratoPorId(id) || { id, nome_prato: document.getElementById('fichaTecnicaNomePrato')?.value?.trim() };
+    void abrirVisualizacaoPdfFichaTecnica(p);
   });
 
   if (fotoInput && preview && previewWrap) {

@@ -1086,9 +1086,25 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         : '<p>—</p>';
 
     $modoRaw = (string) ($row->modo_preparo ?? '');
-    $modoHtml = trim(strip_tags($modoRaw, '<p><br><b><strong><i><em><u><ul><ol><li><span><div>')) !== ''
-        ? strip_tags($modoRaw, '<p><br><b><strong><i><em><u><ul><ol><li><span><div>')
-        : '—';
+    $modoHtml = '—';
+    if (trim($modoRaw) !== '') {
+        $modoTexto = html_entity_decode(strip_tags($modoRaw), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $modoTexto = preg_replace("/\r\n|\r/", "\n", $modoTexto);
+        $modoTexto = preg_replace('/[ \t]+/u', ' ', $modoTexto);
+        $modoTexto = trim($modoTexto);
+        if ($modoTexto !== '') {
+            $partes = preg_split('/\n+/u', $modoTexto) ?: [$modoTexto];
+            $blocos = '';
+            foreach ($partes as $parte) {
+                $parte = trim($parte);
+                if ($parte === '') {
+                    continue;
+                }
+                $blocos .= '<p>' . $h($parte) . '</p>';
+            }
+            $modoHtml = $blocos !== '' ? '<div class="modo-html">' . $blocos . '</div>' : '—';
+        }
+    }
 
     $fotoHtml = '';
     if (!empty($row->foto_base64) && str_starts_with((string) $row->foto_base64, 'data:image')) {
@@ -1126,7 +1142,7 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         $dompdf = new \Dompdf\Dompdf();
         $options = $dompdf->getOptions();
         $options->set('isRemoteEnabled', true);
-        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isHtml5ParserEnabled', false);
         $dompdf->setOptions($options);
         $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', 'portrait');
