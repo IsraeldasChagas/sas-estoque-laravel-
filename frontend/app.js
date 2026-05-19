@@ -3950,6 +3950,9 @@ function applyPermissions() {
 function navigateTo(section) {
   if (section === "rhDocumentos") section = "rhCandidatos";
   refreshDomShellNav();
+  if (!dom.sections.length) {
+    refreshDomShellNav();
+  }
   // Salva a seção atual no localStorage para restaurar após refresh
   if (section) {
     try {
@@ -4010,6 +4013,7 @@ function navigateTo(section) {
     loadValeConsumoSection().catch((err) => showToast(err?.message || "Falha ao carregar Vale/consumo.", "error"));
   }
 }
+window.navigateTo = navigateTo;
 
 // Renderizadores auxiliares usados por várias tabelas e painéis.
 function renderTable(target, rowsHtml, emptyMessage, cols) {
@@ -9242,12 +9246,9 @@ async function startAppSession(user) {
     loadRelatorio({}).catch(err => console.error("Erro ao carregar relatório:", err)),
   ]).then(() => {});
   
-  // Navegação inicial:
-  // - Login novo (user informado): sempre vai para Boas-vindas.
-  // - Reabertura/refresh com sessão (user não informado): restaura a última seção salva.
-  // Exceção: hash QR de saída continua indo ao dashboard e abre o modal de lote.
+  // Navegação inicial: sempre Boas-vindas ao entrar (login ou reabertura com sessão).
+  // Exceção: link QR de saída (#dashboard?lote=…&saida=1) ou hash direto para outra seção.
   (() => {
-    const isFreshLogin = !!user;
     const allSections = new Set([
       "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
       "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
@@ -9257,34 +9258,29 @@ async function startAppSession(user) {
 
     let sectionToNavigate = "boasVindas";
 
-    if (!isFreshLogin) {
-      try {
-        const saved = localStorage.getItem(currentSectionKey);
-        if (saved === "rhDocumentos") {
-          try {
-            localStorage.setItem(currentSectionKey, "rhCandidatos");
-          } catch (_) {}
-          sectionToNavigate = "rhCandidatos";
-        } else if (saved && allSections.has(saved)) sectionToNavigate = saved;
-      } catch (err) {
-        console.warn("Erro ao ler seção salva:", err);
-      }
-    }
-
     const hash = window.location.hash || "";
     const m = hash.match(/[?&]lote=(\d+)/);
     const hashSaidaMatch = m && (hash.includes("saida=1") || hash.includes("saida=true")) ? m : null;
     if (hashSaidaMatch) {
       sectionToNavigate = "dashboard";
-    } else if (!isFreshLogin && hash.length > 1) {
+    } else if (hash.length > 1) {
       const raw = hash.slice(1).split(/[?&]/)[0];
       if (raw === "rhDocumentos") sectionToNavigate = "rhCandidatos";
       else if (raw && allSections.has(raw)) sectionToNavigate = raw;
     }
 
-    navigateTo(sectionToNavigate);
+    try {
+      localStorage.setItem(currentSectionKey, sectionToNavigate);
+    } catch (_) {}
 
-    requestAnimationFrame(async () => {
+    const runInitialNav = () => {
+      refreshDomShellNav();
+      navigateTo(sectionToNavigate);
+    };
+
+    requestAnimationFrame(() => {
+      runInitialNav();
+      requestAnimationFrame(async () => {
       try {
         if (sectionToNavigate === 'dashboard') await loadDashboard();
         else if (sectionToNavigate === 'produtos') await loadProdutos();
@@ -9442,6 +9438,7 @@ async function startAppSession(user) {
         }
         history.replaceState(null, '', window.location.pathname + '#dashboard');
       }
+      });
     });
   })();
   

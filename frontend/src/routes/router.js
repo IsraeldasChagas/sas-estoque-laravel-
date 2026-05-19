@@ -18,45 +18,26 @@ class Router {
     };
   }
 
+  /** App monolítico (index.html): seções já estão em .content — não substituir HTML via fetch. */
+  usesStaticSections() {
+    return !!(this.contentContainer && this.contentContainer.querySelector('.view-section'));
+  }
+
   init(containerId) {
     this.contentContainer = document.querySelector(containerId);
     if (!this.contentContainer) {
       console.error('Container não encontrado:', containerId);
       return;
     }
-    
-    // Verifica se há usuário logado E seção salva
-    let userLoggedIn = false;
-    let hasSavedSection = false;
-    
-    try {
-      const userData = localStorage.getItem('sas-estoque-user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        userLoggedIn = !!(user && user.token);
-      }
-      
-      const savedSection = localStorage.getItem('sas-estoque-current-section');
-      if (savedSection) {
-        const validSections = ['dashboard', 'produtos', 'estoque', 'unidades', 'usuarios', 'lotes', 'locais', 'movimentacoes', 'relatorios', 'compras', 'fornecedores', 'boletao', 'kanbanAdministrativo', 'fechamento', 'fechamentoDash'];
-        hasSavedSection = validSections.includes(savedSection);
-      }
-    } catch (err) {
-      // Ignora erros de parsing
-    }
-    
-    // Se o usuário está logado OU há uma seção salva, NÃO navega automaticamente
-    // Deixa o startAppSession fazer a navegação inicial para restaurar a seção salva
-    // Isso evita o "flash" para o dashboard
-    if (userLoggedIn || hasSavedSection) {
-      this.initialNavigationDone = false; // Marca que ainda não navegou
+
+    // index.html: todas as telas são .view-section no DOM. Navegação via navigateTo() no app.js.
+    // Nunca chamar navigate('dashboard') aqui — apagava o HTML e obrigava F5 após o login.
+    if (this.usesStaticSections()) {
+      this.initialNavigationDone = true;
       return;
     }
-    
-    // Só navega automaticamente se não houver usuário logado E não houver seção salva
-    // Aguarda um pouco para garantir que o DOM está pronto
+
     setTimeout(() => {
-      // Só navega se ainda não houver uma seção atual definida
       if (!this.currentSection && !this.initialNavigationDone) {
         this.navigate('dashboard');
         this.initialNavigationDone = true;
@@ -164,6 +145,15 @@ class Router {
   }
 
   async navigate(section) {
+    if (this.usesStaticSections()) {
+      if (typeof window.navigateTo === 'function') {
+        window.navigateTo(section);
+      }
+      this.currentSection = section;
+      this.initialNavigationDone = true;
+      return;
+    }
+
     if (!this.routes[section]) {
       console.error('Rota não encontrada:', section);
       return;
