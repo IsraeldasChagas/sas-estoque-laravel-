@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260519-menu-financeiro" />
+    <link rel="stylesheet" href="style.css?v=20260520-encoding-fix3" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -105,13 +105,13 @@
           <a href="#" class="nav-link" data-section="locais">Locais</a>
           <a href="#" class="nav-link" data-section="movimentacoes">Movimentacoes</a>
           <a href="#" class="nav-link" data-section="compras">Lista de Compras</a>
-          <a href="#" class="nav-link" data-section="logs">ðŸ“‹ Logs e Auditoria</a>
+          <a href="#" class="nav-link" data-section="logs">📋 Logs e Auditoria</a>
           <a href="#" class="nav-link" data-section="relatorios">Relatorios</a>
           <a href="#" class="nav-link" data-section="fornecedores">Fornecedores</a>
           <div class="nav-submenu">
             <a href="#" class="nav-link nav-link-parent" id="reservaMenu">
               Reserva
-              <span class="nav-arrow">â–¼</span>
+              <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="reservaMesa">Mesa</a>
@@ -121,7 +121,7 @@
           <div class="nav-submenu nav-submenu--rh">
             <a href="#" class="nav-link nav-link-parent" id="rhMenu">
               RH
-              <span class="nav-arrow">â–¼</span>
+              <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="funcionarios">Funcionários</a>
@@ -131,7 +131,7 @@
               <div class="nav-submenu nav-submenu--nested">
                 <a href="#" class="nav-link nav-link-parent nav-link-child" id="rhRecrutamentoMenu">
                   Recrutamento
-                  <span class="nav-arrow">â–¼</span>
+                  <span class="nav-arrow">▼</span>
                 </a>
                 <div class="nav-submenu-content">
                   <a href="#" class="nav-link nav-link-child" data-section="rhDashboard">Dashboard</a>
@@ -145,7 +145,7 @@
           <div class="nav-submenu nav-submenu--financeiro">
             <a href="#" class="nav-link nav-link-parent" id="financeiroMenu">
               Financeiro
-              <span class="nav-arrow">â–¼</span>
+              <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boleto</a>
@@ -158,7 +158,7 @@
               <div class="nav-submenu nav-submenu--nested">
                 <a href="#" class="nav-link nav-link-parent nav-link-child" id="financeiroFechamentoMenu">
                   Fechamento de caixa
-                  <span class="nav-arrow">â–¼</span>
+                  <span class="nav-arrow">▼</span>
                 </a>
                 <div class="nav-submenu-content">
                   <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Lançar, editar e conferir fechamentos de caixa">Auditoria</a>
@@ -170,11 +170,11 @@
           <div class="nav-submenu nav-submenu--config">
             <a href="#" class="nav-link nav-link-parent" id="configuracoesMenu">
               Configuracoes
-              <span class="nav-arrow">â–¼</span>
+              <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
-                ðŸ—„ Backup / Restaurar
+                🗄 Backup / Restaurar
               </button>
             </div>
           </div>
@@ -382,7 +382,7 @@
           <section id="comprasSection" class="view-section hidden">
                           <div class="actions">
               <button class="btn primary" id="openListaCompra">+ Nova lista</button>
-              <button class="btn secondary" id="openSugestoesCompras">ðŸ’¡ Sugestões de Compras</button>
+              <button class="btn secondary" id="openSugestoesCompras">💡 Sugestões de Compras</button>
               <select id="listaCompraFiltroStatus" class="lista-compras__filtro">
                 <option value="ativas">Em andamento</option>
                 <option value="todas">Todas</option>
@@ -513,7 +513,7 @@
           <!-- Gerenciamento de lotes com filtros e tabela -->
           <section id="lotesSection" class="view-section hidden">
                           <div class="actions">
-              <button class="btn primary hidden" id="openNovoLote" title="Criação manual desabilitada â€“ lotes são gerados automaticamente em entradas de estoque">+ Novo lote</button>
+              <button class="btn primary hidden" id="openNovoLote" title="Criação manual desabilitada — lotes são gerados automaticamente em entradas de estoque">+ Novo lote</button>
             </div>
 
             <form id="lotesFilterForm" class="filters-panel">
@@ -826,7 +826,7 @@
           <section id="reservaMesaSection" class="view-section hidden">
             <div class="reservas-mesas-container">
               <div class="reservas-mesas-header">
-                <h2>ðŸ½ Reservas de Mesas</h2>
+                <h2>🍽 Reservas de Mesas</h2>
                 <div class="reservas-mesas-actions">
                   <button type="button" class="btn primary" id="openNovaReservaMesa">+ Nova Reserva</button>
                   <button type="button" class="btn neutral" id="btnNovaMesaReserva" title="Criar nova mesa">+ Nova mesa</button>
@@ -835,17 +835,17 @@
 
               <div class="reservas-mesas-filtro">
                 <label>
-                  ðŸ¢ Unidade:
+                  🏢 Unidade:
                   <select id="reservasUnidadeFiltro" class="reservas-select">
                     <option value="">Selecione a unidade</option>
                   </select>
                 </label>
                 <label>
-                  ðŸ“… Data:
+                  📅 Data:
                   <input type="date" id="reservasDataFiltro" class="reservas-input" />
                 </label>
                 <label>
-                  ðŸŒ™ Turno:
+                  🌙 Turno:
                   <select id="reservasTurnoFiltro" class="reservas-select">
                     <option value="">Todos</option>
                     <option value="11">Almoço (11h+)</option>
@@ -853,7 +853,7 @@
                   </select>
                 </label>
                 <label>
-                  ðŸ“Š Status:
+                  📊 Status:
                   <select id="reservasStatusFiltro" class="reservas-select">
                     <option value="">Todos</option>
                     <option value="pendente">Pendente</option>
@@ -864,33 +864,33 @@
                     <option value="finalizada">Finalizada</option>
                   </select>
                 </label>
-                <button type="button" id="reservasAtualizar" class="btn neutral">ðŸ”„ Atualizar</button>
+                <button type="button" id="reservasAtualizar" class="btn neutral">🔄 Atualizar</button>
               </div>
 
               <div class="reservas-mesas-resumo">
                 <div class="reserva-card reserva-card--livre">
-                  <div class="reserva-card__icon">âœ…</div>
+                  <div class="reserva-card__icon">✅</div>
                   <div class="reserva-card__content">
                     <div class="reserva-card__label">Mesas livres</div>
                     <div class="reserva-card__value" id="reservasMesasLivres">0</div>
                   </div>
                 </div>
                 <div class="reserva-card reserva-card--reservada">
-                  <div class="reserva-card__icon">ðŸ“‹</div>
+                  <div class="reserva-card__icon">📋</div>
                   <div class="reserva-card__content">
                     <div class="reserva-card__label">Reservadas</div>
                     <div class="reserva-card__value" id="reservasMesasReservadas">0</div>
                   </div>
                 </div>
                 <div class="reserva-card reserva-card--ocupada">
-                  <div class="reserva-card__icon">ðŸª‘</div>
+                  <div class="reserva-card__icon">🪑</div>
                   <div class="reserva-card__content">
                     <div class="reserva-card__label">Ocupadas / Aguardando</div>
                     <div class="reserva-card__value" id="reservasMesasOcupadas">0</div>
                   </div>
                 </div>
                 <div class="reserva-card reserva-card--total">
-                  <div class="reserva-card__icon">ðŸ“…</div>
+                  <div class="reserva-card__icon">📅</div>
                   <div class="reserva-card__content">
                     <div class="reserva-card__label">Reservas do dia</div>
                     <div class="reserva-card__value" id="reservasTotalDia">0</div>
@@ -935,28 +935,28 @@
           <section id="historicoReservasSection" class="view-section hidden">
             <div class="reservas-mesas-container">
               <div class="reservas-mesas-header">
-                <h2>ðŸ“‹ Histórico de Reservas</h2>
+                <h2>📋 Histórico de Reservas</h2>
                 <div class="reservas-mesas-actions">
                   <button type="button" class="btn neutral" id="btnVoltarReservas">← Voltar</button>
                 </div>
               </div>
               <div class="reservas-mesas-filtro">
                 <label>
-                  ðŸ¢ Unidade:
+                  🏢 Unidade:
                   <select id="historicoUnidadeFiltro" class="reservas-select">
                     <option value="">Selecione a unidade</option>
                   </select>
                 </label>
                 <label>
-                  ðŸ“… Data início:
+                  📅 Data início:
                   <input type="date" id="historicoDataInicio" class="reservas-input" />
                 </label>
                 <label>
-                  ðŸ“… Data fim:
+                  📅 Data fim:
                   <input type="date" id="historicoDataFim" class="reservas-input" />
                 </label>
                 <label>
-                  ðŸ“Š Status:
+                  📊 Status:
                   <select id="historicoStatusFiltro" class="reservas-select">
                     <option value="">Todos</option>
                     <option value="pendente">Pendente</option>
@@ -967,7 +967,7 @@
                     <option value="finalizada">Finalizada</option>
                   </select>
                 </label>
-                <button type="button" id="historicoAtualizar" class="btn neutral">ðŸ”„ Atualizar</button>
+                <button type="button" id="historicoAtualizar" class="btn neutral">🔄 Atualizar</button>
               </div>
               <div class="table-wrapper" style="margin-top:1rem;">
                 <table class="reservas-table">
@@ -995,8 +995,8 @@
           <div class="modal-backdrop" id="reservaMesaModal">
             <div class="modal">
               <header>
-                <h2 id="reservaMesaModalTitle">ðŸ½ Nova Reserva</h2>
-                <button type="button" class="close-btn" id="closeReservaMesa" aria-label="Fechar">Ã—</button>
+                <h2 id="reservaMesaModalTitle">🍽 Nova Reserva</h2>
+                <button type="button" class="close-btn" id="closeReservaMesa" aria-label="Fechar">×</button>
               </header>
               <form id="reservaMesaForm">
                 <input type="hidden" name="id" />
@@ -1038,7 +1038,7 @@
                     Local
                     <select name="local">
                       <option value="">Selecione o local</option>
-                      <option value="Area externa">Ãrea externa</option>
+                      <option value="Area externa">Área externa</option>
                       <option value="Salão Principal">Salão Principal</option>
                       <option value="Climatizado Térreo">Climatizado Térreo</option>
                       <option value="Climatizado 1Âº piso">Climatizado 1Âº piso</option>
@@ -1072,8 +1072,8 @@
           <div class="modal-backdrop" id="reservaDetalhesModal">
             <div class="modal">
               <header>
-                <h2>ðŸ‘ï¸ Detalhes da Reserva</h2>
-                <button type="button" class="close-btn" id="closeReservaDetalhes" aria-label="Fechar">Ã—</button>
+                <h2>👁️ Detalhes da Reserva</h2>
+                <button type="button" class="close-btn" id="closeReservaDetalhes" aria-label="Fechar">×</button>
               </header>
               <div id="reservaDetalhesContent" style="padding: 1.5rem;"></div>
             </div>
@@ -1199,7 +1199,7 @@
             </div>
           </section>
 
-          <!-- Ficha técnica â€” lista + formulário (API + cache local) -->
+          <!-- Ficha técnica — lista + formulário (API + cache local) -->
           <section id="fechaTecnicaSection" class="view-section hidden">
             <div class="actions ficha-tecnica-barra-titulo">
               <h2>Ficha técnica</h2>
@@ -1232,7 +1232,7 @@
 
             <div id="fichaTecnicaFormView" class="ficha-tecnica-form-view hidden">
               <div class="ficha-tecnica-form-toolbar">
-                <button type="button" class="btn neutral" id="fichaTecnicaVoltarLista">← Voltar Ã  lista</button>
+                <button type="button" class="btn neutral" id="fichaTecnicaVoltarLista">← Voltar à lista</button>
               </div>
               <div class="table-card ficha-tecnica-card">
                 <header id="fichaTecnicaFormTitulo">Nova ficha técnica</header>
@@ -1273,22 +1273,22 @@
                   <input type="text" id="fichaTecnicaResponsavel" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
                 </label>
 
-                <h3 class="ficha-tecnica-form__section-title">Visualização do prato â€” preços</h3>
-                <p class="ficha-tecnica-form__section-desc">Os valores abaixo aparecem na pré-visualização Ã  medida que você preenche.</p>
+                <h3 class="ficha-tecnica-form__section-title">Visualização do prato — preços</h3>
+                <p class="ficha-tecnica-form__section-desc">Os valores abaixo aparecem na pré-visualização à medida que você preenche.</p>
                 <div class="ficha-tecnica-visao">
                   <div class="ficha-tecnica-visao__painel" aria-live="polite">
                     <div class="ficha-tecnica-visao__linha">
                       <span class="ficha-tecnica-visao__rotulo">Prato</span>
-                      <strong id="fichaTecnicaVisaoNome" class="ficha-tecnica-visao__destaque">â€”</strong>
+                      <strong id="fichaTecnicaVisaoNome" class="ficha-tecnica-visao__destaque">—</strong>
                     </div>
                     <div class="ficha-tecnica-visao__grid-precos">
                       <div class="ficha-tecnica-visao__preco-item">
                         <span class="ficha-tecnica-visao__rotulo">Preço por prato</span>
-                        <strong id="fichaTecnicaVisaoPreco">â€”</strong>
+                        <strong id="fichaTecnicaVisaoPreco">—</strong>
                       </div>
                       <div class="ficha-tecnica-visao__preco-item">
                         <span class="ficha-tecnica-visao__rotulo">Sugestão de venda</span>
-                        <strong id="fichaTecnicaVisaoSugestao">â€”</strong>
+                        <strong id="fichaTecnicaVisaoSugestao">—</strong>
                       </div>
                     </div>
                   </div>
@@ -1347,12 +1347,12 @@
                         <label class="ficha-tecnica-form__field">
                           <span>Custo total (R$)</span>
                           <input type="text" id="fichaTecnicaIngredienteCustoTotal" name="ingrediente_custo_total" readonly inputmode="decimal" />
-                          <small class="ficha-tecnica-form__hint">Quantidade Ã— custo unitário</small>
+                          <small class="ficha-tecnica-form__hint">Quantidade × custo unitário</small>
                         </label>
                       </div>
                       <footer class="ficha-tecnica-form__footer ficha-tecnica-form__footer--row">
                         <button type="button" class="btn neutral" id="fichaTecnicaCancelarIngrediente">Cancelar</button>
-                        <button type="button" class="btn primary" id="fichaTecnicaIngredienteAdicionarBtn">Adicionar Ã  lista</button>
+                        <button type="button" class="btn primary" id="fichaTecnicaIngredienteAdicionarBtn">Adicionar à lista</button>
                       </footer>
                     </div>
                   </div>
@@ -1400,7 +1400,7 @@
                         <input type="color" id="fichaTecnicaModoCor" value="#1565c0" />
                       </label>
                       <span class="ficha-tecnica-rich-sep" aria-hidden="true"></span>
-                      <button type="button" class="ficha-tecnica-rich-btn ficha-tecnica-rich-btn--emoji" id="fichaTecnicaModoEmojiBtn" title="Inserir emoji" aria-expanded="false" aria-haspopup="true">ðŸ˜Š</button>
+                      <button type="button" class="ficha-tecnica-rich-btn ficha-tecnica-rich-btn--emoji" id="fichaTecnicaModoEmojiBtn" title="Inserir emoji" aria-expanded="false" aria-haspopup="true">😊</button>
                     </div>
                     <div class="ficha-tecnica-emoji-panel" id="fichaTecnicaModoEmojiPanel" hidden role="listbox" aria-label="Emojis"></div>
                   </div>
@@ -1511,14 +1511,14 @@
           <div class="modal-backdrop" id="backupModal" style="display:none;">
             <div class="modal" style="max-width:680px;">
               <header>
-                <h2>ðŸ—„ Backup &amp; Restauração</h2>
+                <h2>🗄 Backup &amp; Restauração</h2>
                 <button type="button" class="close-btn" id="closeBackupModal" aria-label="Fechar">x</button>
               </header>
               <div style="padding:1rem 0;">
                 <button type="button" id="btnGerarBackup" style="width:100%;padding:0.75rem;background:#1565c0;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:1.5rem;">
-                  ðŸ“¦ Fazer Backup
+                  📦 Fazer Backup
                 </button>
-                <h3 style="font-size:0.95rem;color:#555;margin-bottom:0.75rem;border-top:1px solid #eee;padding-top:1rem;">ðŸ”„ Restaurar Backup</h3>
+                <h3 style="font-size:0.95rem;color:#555;margin-bottom:0.75rem;border-top:1px solid #eee;padding-top:1rem;">🔄 Restaurar Backup</h3>
                 <p style="font-size:0.82rem;color:#888;margin-bottom:0.75rem;">Escolha um backup abaixo para restaurar todos os dados do sistema. Os arquivos ficam no servidor até você <strong>excluir</strong> os mais antigos (liberar espaço).</p>
                 <div id="backupListaContent">
                   <p style="text-align:center;color:#607d8b;padding:1rem;">Carregando...</p>
@@ -1557,43 +1557,43 @@
             </div>
           </section>
 
-          <!-- RH â€” Dashboard -->
+          <!-- RH — Dashboard -->
           <section id="rhDashboardSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH â€” Dashboard</h2>
+                <h2>RH — Dashboard</h2>
                 <p class="subtle-text">Resumo do recrutamento.</p>
               </div>
             </div>
             <div class="cards-grid" id="rhDashboardCards">
               <div class="card-metric">
                 <div class="card-metric__label">Vagas abertas</div>
-                <div class="card-metric__value" id="rhDashVagasAbertas">â€”</div>
+                <div class="card-metric__value" id="rhDashVagasAbertas">—</div>
               </div>
               <div class="card-metric">
                 <div class="card-metric__label">Candidatos</div>
-                <div class="card-metric__value" id="rhDashCandidatosTotal">â€”</div>
+                <div class="card-metric__value" id="rhDashCandidatosTotal">—</div>
               </div>
               <div class="card-metric">
                 <div class="card-metric__label">Entrevistas</div>
-                <div class="card-metric__value" id="rhDashEntrevistasTotal">â€”</div>
+                <div class="card-metric__value" id="rhDashEntrevistasTotal">—</div>
               </div>
               <div class="card-metric">
                 <div class="card-metric__label">Em teste</div>
-                <div class="card-metric__value" id="rhDashCandidatosNovos">â€”</div>
+                <div class="card-metric__value" id="rhDashCandidatosNovos">—</div>
               </div>
               <div class="card-metric">
                 <div class="card-metric__label">Aprovados</div>
-                <div class="card-metric__value" id="rhDashAprovados">â€”</div>
+                <div class="card-metric__value" id="rhDashAprovados">—</div>
               </div>
             </div>
           </section>
 
-          <!-- RH â€” Recrutamento: Vagas -->
+          <!-- RH — Recrutamento: Vagas -->
           <section id="rhVagasSection" class="view-section hidden">
             <div class="funcionarios-header">
               <div>
-                <h2>RH â€” Vagas</h2>
+                <h2>RH — Vagas</h2>
                 <p class="subtle-text">Cadastro e gestão de vagas (página pública única com todas as vagas).</p>
               </div>
               <button type="button" class="btn primary" id="rhVagaNovaBtn">+ Nova vaga</button>
@@ -1646,12 +1646,12 @@
             </div>
           </section>
 
-          <!-- Modal RH â€” Nova vaga -->
+          <!-- Modal RH — Nova vaga -->
           <div class="modal-backdrop" id="rhVagaModal" role="presentation">
             <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="rhVagaModalTitle">
               <div class="modal-header">
                 <h2 id="rhVagaModalTitle">+ Nova vaga</h2>
-                <button type="button" class="close-btn" id="rhVagaModalFechar" aria-label="Fechar">Ã—</button>
+                <button type="button" class="close-btn" id="rhVagaModalFechar" aria-label="Fechar">×</button>
               </div>
               <div class="modal-body">
                 <form id="rhVagaForm" class="row g-3">
@@ -1692,7 +1692,7 @@
                   </div>
                   <div class="col-12">
                     <label class="form-label">Horários de trabalho (opcional)</label>
-                    <input id="rhVagaHorarios" class="form-control" maxlength="255" placeholder="Ex.: 08:00 Ã s 17:00, 14:00 Ã s 22:00" />
+                    <input id="rhVagaHorarios" class="form-control" maxlength="255" placeholder="Ex.: 08:00 às 17:00, 14:00 às 22:00" />
                   </div>
 
                   <div class="col-12">
@@ -1713,12 +1713,12 @@
             </div>
           </div>
 
-          <!-- RH â€” Recrutamento: Candidatos -->
+          <!-- RH — Recrutamento: Candidatos -->
           <section id="rhCandidatosSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH â€” Candidatos</h2>
-                <p class="subtle-text">LGPD: documentos de contratação só após Aprovado / Em contratação. Use <strong>Link documentos (candidato)</strong> nos detalhes para gerar o link público (checklist completa: PDF e foto 3Ã—4).</p>
+                <h2>RH — Candidatos</h2>
+                <p class="subtle-text">LGPD: documentos de contratação só após Aprovado / Em contratação. Use <strong>Link documentos (candidato)</strong> nos detalhes para gerar o link público (checklist completa: PDF e foto 3×4).</p>
               </div>
             </div>
             <form id="rhCandidatosFiltroForm" class="filters-panel">
@@ -1776,11 +1776,11 @@
             <!-- Detalhes inline do candidato: é inserido via JS logo abaixo da linha -->
           </section>
 
-          <!-- RH â€” Recrutamento: Entrevistas -->
+          <!-- RH — Recrutamento: Entrevistas -->
           <section id="rhEntrevistasSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH â€” Entrevistas</h2>
+                <h2>RH — Entrevistas</h2>
                 <p class="subtle-text">Agenda e status das entrevistas.</p>
               </div>
               <button type="button" class="btn primary" id="rhEntrevistaNovaBtn">+ Nova entrevista</button>
@@ -1808,11 +1808,11 @@
             </div>
           </section>
 
-          <!-- RH â€” Banco de Talentos -->
+          <!-- RH — Banco de Talentos -->
           <section id="rhBancoTalentosSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH â€” Banco de Talentos</h2>
+                <h2>RH — Banco de Talentos</h2>
                 <p class="subtle-text">Candidatos com status "Banco de talentos".</p>
               </div>
             </div>
@@ -1921,11 +1921,11 @@
             </div>
           </section>
 
-          <!-- RH â€” Relatórios RH (PDF contatos) -->
+          <!-- RH — Relatórios RH (PDF contatos) -->
           <section id="rhRelatoriosSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH â€” Relatórios</h2>
+                <h2>RH — Relatórios</h2>
                 <p class="subtle-text">Gera PDF com nome, WhatsApp, unidade e função (cargo). Use os filtros abaixo ou deixe em branco para listar todos conforme permissão.</p>
               </div>
             </div>
@@ -1976,12 +1976,12 @@
             </form>
           </section>
 
-          <!-- RH â€” Folha de ponto -->
+          <!-- RH — Folha de ponto -->
           <section id="rhFolhaPontoSection" class="view-section hidden">
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
-                <h2>RH â€” Folha de ponto</h2>
-                <p class="subtle-text">Monte a folha por mês (inclusive meses anteriores), preencha os horários, salve e use Ver, Editar, Excluir ou PDF para imprimir â€” no mesmo formato do modelo em papel.</p>
+                <h2>RH — Folha de ponto</h2>
+                <p class="subtle-text">Monte a folha por mês (inclusive meses anteriores), preencha os horários, salve e use Ver, Editar, Excluir ou PDF para imprimir — no mesmo formato do modelo em papel.</p>
               </div>
             </div>
             <div class="table-card form-card--wide" style="margin-bottom: 1rem;">
@@ -2050,7 +2050,7 @@
                   </label>
                   <label>Preencher a partir do cadastro
                     <select id="rhFpPreencherFuncionario">
-                      <option value="">â€” Manual â€”</option>
+                      <option value="">— Manual —</option>
                     </select>
                   </label>
                   <label>Mês *
@@ -2111,7 +2111,7 @@
               <div class="modal modal--wide">
                 <header>
                   <h2 id="rhFpVerModalTitle">Folha de ponto</h2>
-                  <button type="button" class="close-btn" id="rhFpVerFechar" aria-label="Fechar">Ã—</button>
+                  <button type="button" class="close-btn" id="rhFpVerFechar" aria-label="Fechar">×</button>
                 </header>
                 <div id="rhFpVerConteudo" style="padding:0 1rem 1rem; max-height:70vh; overflow:auto;"></div>
               </div>
@@ -2210,7 +2210,7 @@
             <div class="modal kanban-task-modal">
               <header>
                 <h2 id="kanbanTaskModalTitle">Nova tarefa</h2>
-                <button type="button" class="close-btn" id="closeKanbanTaskModal" aria-label="Fechar">Ã—</button>
+                <button type="button" class="close-btn" id="closeKanbanTaskModal" aria-label="Fechar">×</button>
               </header>
               <form id="kanbanTaskForm">
                 <input type="hidden" id="kanbanTaskEditId" value="" />
@@ -2371,7 +2371,7 @@
             <input type="hidden" id="reciboAjudaEdicaoId" value="" />
             <div class="boletos-header">
               <div>
-                <h2>ðŸ§¾ Recibo (ajuda de custo)</h2>
+                <h2>🧾 Recibo (ajuda de custo)</h2>
                 <p class="subtle-text">Preencha os dados, confirme, assine e salve. Use <strong>Ver</strong> na lista para abrir o PDF.</p>
               </div>
               <div class="boletos-actions">
@@ -2384,7 +2384,7 @@
                   aria-label="Recolher ou expandir dados do recibo e assinatura"
                   title="Recolher painel"
                 >
-                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">â–¼</span>
+                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">▼</span>
                 </button>
                 <button type="button" class="btn secondary" id="reciboAjudaSalvarBtn">Salvar</button>
                 <button type="button" class="btn neutral" id="reciboAjudaLimparBtn">Limpar</button>
@@ -2445,8 +2445,8 @@
                   Finalidade
                   <div class="multi-select" id="reciboAjudaFinalidadeWrap">
                     <button type="button" class="multi-select__btn" id="reciboAjudaFinalidadeBtn" aria-expanded="false">
-                      <span class="multi-select__label" id="reciboAjudaFinalidadeLabel">Selecioneâ€¦</span>
-                      <span class="multi-select__arrow" aria-hidden="true">â–¾</span>
+                      <span class="multi-select__label" id="reciboAjudaFinalidadeLabel">Selecione…</span>
+                      <span class="multi-select__arrow" aria-hidden="true">▾</span>
                     </button>
                     <div class="multi-select__menu hidden" id="reciboAjudaFinalidadeMenu" role="listbox" aria-multiselectable="true">
                       <label class="multi-select__item"><input type="checkbox" value="auxilio_combustivel" /> Auxílio Combustível</label>
@@ -2533,7 +2533,7 @@
           <!-- Modulo Logs e Auditoria -->
           <section id="logsSection" class="view-section hidden">
             <div class="funcionarios-header" style="margin-bottom: 1.5rem;">
-              <h2>ðŸ“‹ Logs e Auditoria</h2>
+              <h2>📋 Logs e Auditoria</h2>
               <p class="subtle-text">Rastreabilidade de ações e evidências para comprovação (perícia)</p>
             </div>
             <div class="logs-tabs" style="display:flex;gap:0.5rem;margin-bottom:1rem;">
@@ -2587,7 +2587,7 @@
                   </select>
                 </label>
                 <button type="button" class="btn primary" id="logsCarregarProvento">Carregar logs</button>
-                <button type="button" class="btn" id="logsExportarPericia" title="Exportar backup para perícia">ðŸ“¥ Exportar para perícia</button>
+                <button type="button" class="btn" id="logsExportarPericia" title="Exportar backup para perícia">📥 Exportar para perícia</button>
               </div>
               <div class="table-card form-card--wide">
                 <header>Log do provento selecionado</header>
@@ -2598,7 +2598,7 @@
                         <th>Data/Hora</th>
                         <th>Usuário</th>
                         <th>Ação</th>
-                        <th>Status anterior â†’ novo</th>
+                        <th>Status anterior → novo</th>
                         <th>Descrição</th>
                         <th>IP</th>
                         <th>Dispositivo</th>
@@ -2615,8 +2615,8 @@
           <div class="modal-backdrop" id="dispositivoDetalhesModal">
             <div class="modal" style="max-width:560px;">
               <header>
-                <h2>ðŸ“‹ Detalhes para auditoria</h2>
-                <button type="button" class="close-btn" id="closeDispositivoDetalhes" aria-label="Fechar">Ã—</button>
+                <h2>📋 Detalhes para auditoria</h2>
+                <button type="button" class="close-btn" id="closeDispositivoDetalhes" aria-label="Fechar">×</button>
               </header>
               <div id="dispositivoDetalhesContent" style="padding:1rem;line-height:1.6;"></div>
               <footer>
@@ -2628,7 +2628,7 @@
           <!-- Modulo Financeiro - Boletao -->
           <section id="boletaoSection" class="view-section hidden">
             <div class="boletos-header">
-              <h2>ðŸ’° Controle Financeiro â€“ Boletos</h2>
+              <h2>💰 Controle Financeiro — Boletos</h2>
               <div class="boletos-actions">
                 <button class="btn primary" id="openNovoBoleto">+ Novo Boleto</button>
               </div>
@@ -2637,21 +2637,21 @@
             <!-- Filtros -->
             <div class="boletos-filtro">
               <label class="boletos-filtro__field">
-                ðŸ“… Mês/Ano
+                📅 Mês/Ano
                 <select id="boletosMesAnoFiltro" class="boletos-mes-select">
-                  <option value="">ðŸ“‹ Todos os boletos</option>
+                  <option value="">📋 Todos os boletos</option>
                 </select>
               </label>
 
               <label class="boletos-filtro__field">
-                ðŸ¢ Unidade
+                🏢 Unidade
                 <select id="boletosUnidadeFiltro" class="boletos-mes-select">
                   <option value="">Todas as unidades</option>
                 </select>
               </label>
 
               <label class="boletos-filtro__field">
-                ðŸ“Š Status
+                📊 Status
                 <select id="boletosStatusFiltro" class="boletos-mes-select">
                   <option value="">Todos os status</option>
                   <option value="A_VENCER">A vencer</option>
@@ -2662,19 +2662,19 @@
               </label>
 
               <label class="boletos-filtro__field">
-                ðŸ“† Data vencimento
+                📆 Data vencimento
                 <input type="date" id="boletosDataVencimentoFiltro" class="boletos-mes-select" title="Filtra boletos com vencimento neste dia" />
               </label>
 
               <button type="button" id="limparFiltrosBoletos" class="btn neutral boletos-filtro__clear">
-                ðŸ”„ Limpar Filtros
+                🔄 Limpar Filtros
               </button>
             </div>
 
             <!-- Cards de Resumo Financeiro -->
             <div class="boletos-resumo">
               <div class="boleto-card boleto-card--total">
-                <div class="boleto-card__icon">ðŸ’³</div>
+                <div class="boleto-card__icon">💳</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Total de boletos do mês</div>
                   <div class="boleto-card__value" id="boletosTotalMes">R$ 0,00</div>
@@ -2682,7 +2682,7 @@
               </div>
 
               <div class="boleto-card boleto-card--pago">
-                <div class="boleto-card__icon">âœ…</div>
+                <div class="boleto-card__icon">✅</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Total pago em dia</div>
                   <div class="boleto-card__value" id="boletosPagoEmDia">R$ 0,00</div>
@@ -2690,7 +2690,7 @@
               </div>
 
               <div class="boleto-card boleto-card--juros">
-                <div class="boleto-card__icon">âš ï¸</div>
+                <div class="boleto-card__icon">⚠️</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Juros/multas pagos</div>
                   <div class="boleto-card__value" id="boletosJurosPagos">R$ 0,00</div>
@@ -2698,7 +2698,7 @@
               </div>
 
               <div class="boleto-card boleto-card--atrasados">
-                <div class="boleto-card__icon">âš ï¸</div>
+                <div class="boleto-card__icon">⚠️</div>
                 <div class="boleto-card__content">
                   <div class="boleto-card__label">Boletos pagos com atraso</div>
                   <div class="boleto-card__value" id="boletosAtrasados">0</div>
@@ -2714,7 +2714,7 @@
                   <p class="subtle-text">Gerencie todos os boletos e pagamentos</p>
                 </div>
                 <button class="btn secondary" id="recarregarTabelaBoletos" style="margin-left: auto;">
-                  ðŸ”„ Atualizar
+                  🔄 Atualizar
                 </button>
               </header>
               <div class="table-wrapper">
@@ -2746,7 +2746,7 @@
           <!-- Modulo Financeiro - Alvarás -->
           <section id="alvaraSection" class="view-section hidden">
             <div class="boletos-header">
-              <h2>ðŸ§¾ Controle Financeiro â€“ Alvarás</h2>
+              <h2>🧾 Controle Financeiro — Alvarás</h2>
               <div class="boletos-actions">
                 <button class="btn primary" id="openNovoAlvara">+ Novo Alvará</button>
               </div>
@@ -2755,21 +2755,21 @@
             <!-- Filtros -->
             <div class="boletos-filtro">
               <label class="boletos-filtro__field">
-                ðŸ“… Mês/Ano (vencimento)
+                📅 Mês/Ano (vencimento)
                 <select id="alvarasMesAnoFiltro" class="boletos-mes-select">
-                  <option value="">ðŸ“‹ Todos os alvarás</option>
+                  <option value="">📋 Todos os alvarás</option>
                 </select>
               </label>
 
               <label class="boletos-filtro__field">
-                ðŸ¢ Unidade
+                🏢 Unidade
                 <select id="alvarasUnidadeFiltro" class="boletos-mes-select">
                   <option value="">Todas as unidades</option>
                 </select>
               </label>
 
               <button type="button" id="limparFiltrosAlvaras" class="btn neutral boletos-filtro__clear">
-                ðŸ”„ Limpar Filtros
+                🔄 Limpar Filtros
               </button>
             </div>
 
@@ -2781,7 +2781,7 @@
                   <p class="subtle-text">Gerencie alvarás, vencimentos e anexos</p>
                 </div>
                 <button class="btn secondary" id="recarregarTabelaAlvaras" style="margin-left: auto;">
-                  ðŸ”„ Atualizar
+                  🔄 Atualizar
                 </button>
               </header>
               <div class="table-wrapper">
@@ -2809,12 +2809,12 @@
           <section id="despesasFixasSection" class="view-section hidden">
             <div class="boletos-header">
               <div>
-                <h2>ðŸ“Œ Despesas fixas</h2>
-                <p class="subtle-text">Cadastre despesas recorrentes e vincule Ã s unidades (ou marque para todas).</p>
+                <h2>📌 Despesas fixas</h2>
+                <p class="subtle-text">Cadastre despesas recorrentes e vincule às unidades (ou marque para todas).</p>
               </div>
               <div class="boletos-actions">
                 <button type="button" class="btn primary" id="despFixasOpenNovo">+ Cadastrar despesa</button>
-                <button type="button" class="btn secondary" id="despFixasAtualizar">ðŸ”„ Atualizar</button>
+                <button type="button" class="btn secondary" id="despFixasAtualizar">🔄 Atualizar</button>
               </div>
             </div>
 
@@ -2950,16 +2950,16 @@
             </div>
           </section>
 
-          <!-- Financeiro â€” Vale / consumo -->
+          <!-- Financeiro — Vale / consumo -->
           <section id="valeConsumoSection" class="view-section hidden">
             <div class="boletos-header">
               <div>
-                <h2>ðŸ½ï¸ Vale / consumo</h2>
+                <h2>🍽️ Vale / consumo</h2>
               </div>
               <div class="boletos-actions">
                 <button type="button" class="btn secondary" id="valeConsumoAbrirNovo">+ Lançar</button>
-                <button type="button" class="btn secondary" id="valeConsumoAtualizar">ðŸ”„ Atualizar</button>
-                <button type="button" class="btn primary" id="valeConsumoPdf">ðŸ“„ PDF</button>
+                <button type="button" class="btn secondary" id="valeConsumoAtualizar">🔄 Atualizar</button>
+                <button type="button" class="btn primary" id="valeConsumoPdf">📄 PDF</button>
               </div>
             </div>
 
@@ -3002,7 +3002,7 @@
                   <label>
                     Funcionário *
                     <select id="valeConsumoFuncionario" required>
-                      <option value="">Carregue a telaâ€¦</option>
+                      <option value="">Carregue a tela…</option>
                     </select>
                   </label>
                   <label>
@@ -3031,15 +3031,15 @@
                 <div id="valeConsumoTotaisBar" class="vale-consumo-totais-bar" aria-live="polite">
                   <div class="vale-consumo-tot-item">
                     <span class="vale-consumo-tot-label">Vale</span>
-                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotVale">â€”</strong>
+                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotVale">—</strong>
                   </div>
                   <div class="vale-consumo-tot-item">
                     <span class="vale-consumo-tot-label">Consumo</span>
-                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotConsumo">â€”</strong>
+                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotConsumo">—</strong>
                   </div>
                   <div class="vale-consumo-tot-item">
                     <span class="vale-consumo-tot-label">Total</span>
-                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotGeral">â€”</strong>
+                    <strong class="vale-consumo-tot-valor" id="valeConsumoTotGeral">—</strong>
                   </div>
                 </div>
               </header>
@@ -3059,7 +3059,7 @@
                     </tr>
                   </thead>
                   <tbody id="valeConsumoTableDetalhe">
-                    <tr class="vale-consumo-tabela-msg"><td colspan="9" style="text-align:center;color:#607d8b">â€”</td></tr>
+                    <tr class="vale-consumo-tabela-msg"><td colspan="9" style="text-align:center;color:#607d8b">—</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -3070,7 +3070,7 @@
           <section id="fechamentoSection" class="view-section hidden fechamento-audit">
             <input type="hidden" id="fechamentoEdicaoId" value="" />
             <div class="boletos-header">
-              <h2>ðŸ“‹ Auditoria fechamento caixa</h2>
+              <h2>📋 Auditoria fechamento caixa</h2>
               <div class="boletos-actions">
                 <button
                   type="button"
@@ -3081,7 +3081,7 @@
                   aria-label="Recolher ou expandir dados do fechamento e resumo do mês"
                   title="Recolher painel"
                 >
-                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">â–¼</span>
+                  <span class="fechamento-audit__toggle-icon" aria-hidden="true">▼</span>
                 </button>
                 <button type="button" class="btn primary" id="fechamentoSalvarBtn">Salvar registro</button>
                 <button type="button" class="btn secondary" id="fechamentoAtualizarHistoricoBtn">Atualizar lista</button>
@@ -3090,7 +3090,7 @@
             </div>
 
             <p class="subtle-text fechamento-audit__intro">
-              Em cada linha, <strong>Diferença</strong> = <strong>maquinha âˆ’ PDV</strong> (referência da maquinha). A <strong>soma</strong> das diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra â€” <strong>sem quebra</strong>. Caso contrário, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
+              Em cada linha, <strong>Diferença</strong> = <strong>maquinha − PDV</strong> (referência da maquinha). A <strong>soma</strong> das diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra — <strong>sem quebra</strong>. Caso contrário, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
             </p>
 
             <div id="fechamentoPrincipalPainel" class="fechamento-audit__principal-painel">
@@ -3128,7 +3128,7 @@
                   />
                   <datalist id="fechamentoCaixaOperadorDatalist"></datalist>
                   <input type="hidden" id="fechamentoCaixaUsuarioId" value="" />
-                  <span class="fechamento-audit__field-hint">Sugestões: <strong>Atendente Caixa</strong>; e <strong>Atendente</strong> apenas se no cadastro de usuário estiver marcado <strong>“Atende caixa”</strong>. Caso contrário, digite o nome Ã  mão.</span>
+                  <span class="fechamento-audit__field-hint">Sugestões: <strong>Atendente Caixa</strong>; e <strong>Atendente</strong> apenas se no cadastro de usuário estiver marcado <strong>“Atende caixa”</strong>. Caso contrário, digite o nome à mão.</span>
                 </label>
                 <label>
                   Sistema do fechamento (ex.: PDV)
@@ -3151,7 +3151,7 @@
               </div>
               <label class="fechamento-audit__obs">
                 Observações
-                <textarea id="fechamentoObservacoes" rows="2" maxlength="2000" placeholder="Detalhes do caixa, segunda maquinha, ocorrênciasâ€¦"></textarea>
+                <textarea id="fechamentoObservacoes" rows="2" maxlength="2000" placeholder="Detalhes do caixa, segunda maquinha, ocorrências…"></textarea>
               </label>
             </div>
 
@@ -3172,7 +3172,7 @@
                       <th>Forma de pagamento</th>
                       <th>PDV (R$)</th>
                       <th>Maquinha (R$)</th>
-                      <th title="Maquinha âˆ’ PDV nesta forma">Diferença (R$)</th>
+                      <th title="Maquinha − PDV nesta forma">Diferença (R$)</th>
                     </tr>
                   </thead>
                   <tbody id="fechamentoTbodyValores">
@@ -3212,7 +3212,7 @@
                       <th style="text-align:right">Totais</th>
                       <th id="fechamentoFootPdv">R$ 0,00</th>
                       <th id="fechamentoFootMaq">R$ 0,00</th>
-                      <th id="fechamentoFootDiff" title="Soma (maquinhaâˆ’PDV) por linha â€” zero = compensado entre formas">R$ 0,00</th>
+                      <th id="fechamentoFootDiff" title="Soma (maquinha−PDV) por linha — zero = compensado entre formas">R$ 0,00</th>
                     </tr>
                   </tfoot>
                 </table>
@@ -3231,7 +3231,7 @@
               <div class="fechamento-audit__card fechamento-audit__card--status fechamento-audit__card--destaque">
                 <span class="fechamento-audit__card-label">Fechamento</span>
                 <span class="fechamento-audit__status" id="fechamentoStatusBadge">Preencha PDV e maquinha</span>
-                <span class="fechamento-audit__sit-valor" id="fechamentoStatusValor">Valor: â€”</span>
+                <span class="fechamento-audit__sit-valor" id="fechamentoStatusValor">Valor: —</span>
               </div>
             </div>
 
@@ -3239,7 +3239,7 @@
               <header>
                 <div>
                   <h3>Resumo do mês por unidade</h3>
-                  <p class="subtle-text">Lista dos fechamentos do mês e total de maquinha â€” use <strong>Limpar</strong> para esconder o resultado</p>
+                  <p class="subtle-text">Lista dos fechamentos do mês e total de maquinha — use <strong>Limpar</strong> para esconder o resultado</p>
                 </div>
               </header>
               <div class="fechamento-audit__resumo-mes-bar">
@@ -3268,7 +3268,7 @@
               <header>
                 <div>
                   <h3>Registros salvos</h3>
-                  <p class="subtle-text">Histórico armazenado no servidor â€” baixe o PDF para arquivo</p>
+                  <p class="subtle-text">Histórico armazenado no servidor — baixe o PDF para arquivo</p>
                 </div>
               </header>
               <div class="table-wrapper">
@@ -3286,17 +3286,17 @@
                     </tr>
                   </thead>
                   <tbody id="fechamentosCaixaHistoricoBody">
-                    <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregandoâ€¦</td></tr>
+                    <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
           </section>
 
-          <!-- Financeiro â€” Dashboard análise fechamentos de caixa -->
+          <!-- Financeiro — Dashboard análise fechamentos de caixa -->
           <section id="fechamentoDashSection" class="view-section hidden fechamento-dash">
             <div class="fechamento-dash__head">
-              <h2>ðŸ“Š Dashboard â€” fechamentos de caixa</h2>
+              <h2>📊 Dashboard — fechamentos de caixa</h2>
               <p class="subtle-text">
                 Volume referente aos totais informados nos registros de auditoria (soma <strong>PDV</strong> e <strong>maquinha</strong> nas linhas de pagamento).
                 Quebras e sobras usam o <strong>saldo líquido</strong> do fechamento.
@@ -3351,27 +3351,27 @@
             <div class="fechamento-dash__cards" id="fechamentoDashCards">
               <div class="fechamento-dash__card">
                 <span class="fechamento-dash__card-label">Fechamentos no filtro</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardRegs">â€”</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardRegs">—</span>
               </div>
               <div class="fechamento-dash__card">
                 <span class="fechamento-dash__card-label">Total maquinha (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardMaq">â€”</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardMaq">—</span>
               </div>
               <div class="fechamento-dash__card">
                 <span class="fechamento-dash__card-label">Total PDV (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardPdv">â€”</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardPdv">—</span>
               </div>
               <div class="fechamento-dash__card fechamento-dash__card--alert">
                 <span class="fechamento-dash__card-label">Soma quebras (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardQuebra">â€”</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardQuebra">—</span>
               </div>
               <div class="fechamento-dash__card fechamento-dash__card--ok">
                 <span class="fechamento-dash__card-label">Soma sobras (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardSobra">â€”</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardSobra">—</span>
               </div>
               <div class="fechamento-dash__card">
                 <span class="fechamento-dash__card-label">Sem diferença líquida</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardPctSem">â€”</span>
+                <span class="fechamento-dash__card-value" id="fechamentoDashCardPctSem">—</span>
               </div>
             </div>
 
@@ -3380,7 +3380,7 @@
             <div class="fechamento-dash__charts">
               <div class="table-card fechamento-dash__chart-card">
                 <header>
-                  <h3>Top 3 unidades â€” vendas (PDV)</h3>
+                  <h3>Top 3 unidades — vendas (PDV)</h3>
                   <p class="subtle-text">As três <strong>unidades</strong> com maior soma de <strong>PDV</strong> nos fechamentos (após filtros).</p>
                 </header>
                 <div class="fechamento-dash__canvas-wrap">
@@ -3389,7 +3389,7 @@
               </div>
               <div class="table-card fechamento-dash__chart-card fechamento-dash__chart-card--wide">
                 <header>
-                  <h3>Evolução diária â€” maquinha</h3>
+                  <h3>Evolução diária — maquinha</h3>
                   <p class="subtle-text">Soma por dia no período; nas datas aparece o <strong>dia da semana</strong> abreviado.</p>
                 </header>
                 <div class="fechamento-dash__canvas-wrap fechamento-dash__canvas-wrap--tall">
@@ -3398,7 +3398,7 @@
               </div>
               <div class="table-card fechamento-dash__chart-card">
                 <header>
-                  <h3>Distribuição â€” % por situação</h3>
+                  <h3>Distribuição — % por situação</h3>
                   <p class="subtle-text">Proporção de registros: sem diferença líquida, quebra ou sobra.</p>
                 </header>
                 <div class="fechamento-dash__canvas-wrap">
@@ -3409,7 +3409,7 @@
 
             <div class="table-card fechamento-dash__top3">
               <header>
-                <h3>Ranking â€” 3 dias com maior venda (PDV)</h3>
+                <h3>Ranking — 3 dias com maior venda (PDV)</h3>
               </header>
               <ol class="fechamento-dash__top3-list" id="fechamentoDashTop3List">
                 <li class="subtle-text">Atualize os dados para ver o ranking.</li>
@@ -3424,7 +3424,7 @@
       <div class="modal modal--wide fechamento-ver-modal" role="dialog" aria-modal="true" aria-labelledby="fechamentoVerModalTitulo">
         <header>
           <h2 id="fechamentoVerModalTitulo">Fechamento de caixa</h2>
-          <button type="button" class="close-btn" id="fechamentoVerModalFechar" aria-label="Fechar">Ã—</button>
+          <button type="button" class="close-btn" id="fechamentoVerModalFechar" aria-label="Fechar">×</button>
         </header>
         <div class="fechamento-ver-modal__body" id="fechamentoVerModalBody"></div>
       </div>
@@ -3516,7 +3516,7 @@
             <select name="produto_id" id="entradaProdutoSelect" required style="border-radius: 0 0 8px 8px; border-top: none; margin-top: 0;"></select>
           </label>
           <label>
-            Numero do lote (opcional â€“ gerado automaticamente se vazio)
+            Numero do lote (opcional — gerado automaticamente se vazio)
             <input name="numero_lote" id="entradaNumeroLote" list="entradaLoteOptions" placeholder="Deixe vazio para gerar automaticamente" />
             <datalist id="entradaLoteOptions"></datalist>
           </label>
@@ -3591,10 +3591,10 @@
           </label>
           <div id="saidaLoteWrapper" class="hidden">
             <label>
-              Lote (opcional â€“ deixe em branco para FIFO automático)
+              Lote (opcional — deixe em branco para FIFO automático)
               <select id="saidaLoteSelect">
-                <option value="">Selecionar lote disponívelâ€¦</option>
-                <option value="__manual__">âœï¸ Digitar código manualmente</option>
+                <option value="">Selecionar lote disponível…</option>
+                <option value="__manual__">✏️ Digitar código manualmente</option>
               </select>
             </label>
             <label id="saidaLoteManualWrapper" class="hidden">
@@ -3928,8 +3928,8 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="relatorios" /> Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedores" /> Fornecedores</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Reservas</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reservas â€” Mesa</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="historicoReservas" /> Reservas â€” Histórico</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reservas — Mesa</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="historicoReservas" /> Reservas — Histórico</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhFolhaPonto" /> Folha de ponto (RH)</label>
@@ -3941,7 +3941,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="valeConsumo" /> Vale / consumo</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reciboAjuda" /> Recibo (ajuda de custo)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamento" /> Auditoria fechamento caixa</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard â€” análise fechamentos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard — análise fechamentos</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
@@ -4083,7 +4083,7 @@
             <template id="funcionarioFormacaoLinhaTpl">
               <div class="formacao-linha">
                 <div class="formacao-linha__head">
-                  <span class="formacao-linha__status" hidden>Incluída neste cadastro â€” finalize com <strong>Salvar funcionário</strong> abaixo</span>
+                  <span class="formacao-linha__status" hidden>Incluída neste cadastro — finalize com <strong>Salvar funcionário</strong> abaixo</span>
                   <div class="formacao-linha__actions">
                     <button type="button" class="btn primary btn-formacao-salvar-linha">Salvar esta formação</button>
                     <button type="button" class="btn neutral btn-formacao-editar-linha" hidden>Editar</button>
@@ -4091,7 +4091,7 @@
                   </div>
                 </div>
                 <div class="formacao-linha__campos">
-                  <label>Nome do curso <input type="text" data-f="curso" maxlength="255" placeholder="Ex: Administração, Informáticaâ€¦" /></label>
+                  <label>Nome do curso <input type="text" data-f="curso" maxlength="255" placeholder="Ex: Administração, Informática…" /></label>
                   <label>Instituição <input type="text" data-f="instituicao" maxlength="255" /></label>
                   <label>Local (cidade / UF) <input type="text" data-f="local" maxlength="500" /></label>
                   <div class="grid-two">
@@ -4181,7 +4181,7 @@
           </div>
           <div id="funcionarioUsuarioModoNovo">
             <label>E-mail ou login (obrigatório) <input type="text" id="funcUsuarioEmail" placeholder="usuario@empresa.com" /></label>
-            <label>Senha inicial (mín. 6 caracteres) <input type="password" id="funcUsuarioSenha" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢" /></label>
+            <label>Senha inicial (mín. 6 caracteres) <input type="password" id="funcUsuarioSenha" placeholder="••••••" /></label>
             <label>Perfil de acesso
               <select id="funcUsuarioPerfil">
                 <option value="FUNCIONARIO">Funcionário</option>
@@ -4280,7 +4280,7 @@
           <div id="proventoAssinaturaEtapa2" class="hidden" style="margin-top:1rem;">
             <div id="proventoAssinaturaWhatsappBtnWrap" class="hidden" style="margin-bottom:1rem;">
               <a id="proventoAssinaturaWhatsappLink" href="#" target="_blank" rel="noopener" class="btn primary" style="display:inline-flex;align-items:center;gap:0.5rem;text-decoration:none;">
-                <span>ðŸ“± Abrir WhatsApp para enviar o código</span>
+                <span>📱 Abrir WhatsApp para enviar o código</span>
               </a>
               <p class="form-hint" style="margin-top:0.5rem;font-size:0.9rem;">O WhatsApp abrirá com a mensagem pronta. Envie para você mesmo e use o código.</p>
             </div>
@@ -4384,7 +4384,7 @@
     <div class="modal-backdrop" id="sugestoesComprasModal">
       <div class="modal modal-sugestoes">
         <header>
-          <h2>ðŸ’¡ Sugestões de Compras</h2>
+          <h2>💡 Sugestões de Compras</h2>
           <button type="button" class="close-btn" id="closeSugestoesCompras" aria-label="Fechar modal">x</button>
         </header>
         <div class="modal-sugestoes-body" style="padding: 1rem;">
@@ -4500,7 +4500,7 @@
       <div class="modal" style="max-width: 500px;">
         <header>
           <h2 style="color: #d32f2f; display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-size: 1.5rem;">âš ï¸</span>
+            <span style="font-size: 1.5rem;">⚠️</span>
             Movimentação não realizada
           </h2>
           <button type="button" class="close-btn" id="closeErroMovimentacao" aria-label="Fechar modal">x</button>
@@ -4526,7 +4526,7 @@
     <div class="modal-backdrop" id="boletoModal">
       <div class="modal">
         <header>
-          <h2 id="boletoModalTitle">ðŸ’° Novo Boleto</h2>
+          <h2 id="boletoModalTitle">💰 Novo Boleto</h2>
           <button type="button" class="close-btn" id="closeBoleto" aria-label="Fechar modal">x</button>
         </header>
         <form id="boletoForm" novalidate enctype="multipart/form-data">
@@ -4629,7 +4629,7 @@
           <div class="boleto-recorrente-section" style="border: 2px solid #e3f2fd; background: #f5f9ff; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
               <input type="checkbox" name="is_recorrente" id="boletoRecorrente" value="1" style="width: auto; cursor: pointer;" />
-              ðŸ”„ Boleto Recorrente
+              🔄 Boleto Recorrente
             </label>
             
             <div id="recorrenteFields" style="display: none; margin-top: 1rem; padding-left: 1.5rem;">
@@ -4644,7 +4644,7 @@
           </div>
 
           <label>
-            ðŸ“Ž Anexar Arquivo (Boleto, Comprovante, etc)
+            📎 Anexar Arquivo (Boleto, Comprovante, etc)
             <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png" id="boletoAnexoInput" />
             <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
               Formatos aceitos: PDF, JPG, PNG (máximo 5MB)
@@ -4656,7 +4656,7 @@
               <div style="min-width: 0;">
                 <strong style="color: #1b5e20;">Anexo atual</strong>
                 <div style="margin-top: 0.35rem;">
-                  <a id="boletoAnexoAtualLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #1565c0; word-break: break-all;">â€”</a>
+                  <a id="boletoAnexoAtualLink" href="#" target="_blank" rel="noopener noreferrer" style="color: #1565c0; word-break: break-all;">—</a>
                 </div>
               </div>
               <button type="button" class="btn secondary" id="boletoRemoverAnexoAtual" style="white-space: nowrap;">Remover anexo</button>
@@ -4666,13 +4666,13 @@
           <div id="boletoAnexoPreview" style="display: none; margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 8px; border-left: 3px solid #4caf50;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.5rem;">ðŸ“„</span>
+                <span style="font-size: 1.5rem;">📄</span>
                 <div>
                   <strong id="boletoAnexoNome" style="display: block; color: #263238;"></strong>
                   <small id="boletoAnexoTamanho" style="color: #607d8b;"></small>
                 </div>
               </div>
-              <button type="button" id="boletoRemoverAnexo" style="background: none; border: none; cursor: pointer; font-size: 1.5rem; color: #d32f2f;">Ã—</button>
+              <button type="button" id="boletoRemoverAnexo" style="background: none; border: none; cursor: pointer; font-size: 1.5rem; color: #d32f2f;">×</button>
             </div>
           </div>
 
@@ -4688,7 +4688,7 @@
     <div class="modal-backdrop" id="alvaraModal">
       <div class="modal">
         <header>
-          <h2 id="alvaraModalTitle">ðŸ§¾ Novo Alvará</h2>
+          <h2 id="alvaraModalTitle">🧾 Novo Alvará</h2>
           <button type="button" class="close-btn" id="closeAlvara" aria-label="Fechar modal">x</button>
         </header>
         <form id="alvaraForm" novalidate>
@@ -4724,7 +4724,7 @@
           </label>
 
           <label>
-            ðŸ“Ž Anexar Arquivo (Alvará, comprovante, etc)
+            📎 Anexar Arquivo (Alvará, comprovante, etc)
             <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png" id="alvaraAnexoInput" />
             <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
               Formatos aceitos: PDF, JPG, PNG (máximo 5MB)
@@ -4737,7 +4737,7 @@
                 <strong id="alvaraAnexoNome" style="display:block;color:#263238;"></strong>
                 <small id="alvaraAnexoTamanho" style="color:#607d8b;"></small>
               </div>
-              <button type="button" id="alvaraRemoverAnexo" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#d32f2f;">Ã—</button>
+              <button type="button" id="alvaraRemoverAnexo" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#d32f2f;">×</button>
             </div>
           </div>
 
@@ -4753,14 +4753,14 @@
     <div class="modal-backdrop" id="alvaraDetalhesModal">
       <div class="modal">
         <header>
-          <h2>ðŸ‘ï¸ Detalhes do Alvará</h2>
+          <h2>👁️ Detalhes do Alvará</h2>
           <button type="button" class="close-btn" id="closeAlvaraDetalhes" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 20px;" id="alvaraDetalhesContent">
           <p style="text-align:center;color:#999;">Carregando...</p>
         </div>
         <footer>
-          <button type="button" class="btn secondary" id="verAlvaraAnexo" style="display:none;">ðŸ“Ž Ver anexo</button>
+          <button type="button" class="btn secondary" id="verAlvaraAnexo" style="display:none;">📎 Ver anexo</button>
           <button type="button" class="btn neutral" id="fecharAlvaraDetalhes">Fechar</button>
         </footer>
       </div>
@@ -4770,11 +4770,11 @@
     <div class="modal-backdrop" id="alvaraAnexoModal">
       <div class="modal" style="width: min(920px, 96vw);">
         <header>
-          <h2 id="alvaraAnexoTitle">ðŸ“Ž Anexo do Alvará</h2>
+          <h2 id="alvaraAnexoTitle">📎 Anexo do Alvará</h2>
           <button type="button" class="close-btn" id="closeAlvaraAnexo" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
-          <!-- PDF: renderizado com PDF.js (canvas) â€” iframe+blob falha em muitos celulares -->
+          <!-- PDF: renderizado com PDF.js (canvas) — iframe+blob falha em muitos celulares -->
           <div
             id="alvaraAnexoPdfHost"
             class="alvara-anexo-pdf-host"
@@ -4796,11 +4796,11 @@
     <div class="modal-backdrop" id="reciboAjudaPdfModal">
       <div class="modal" style="width: min(920px, 96vw);">
         <header>
-          <h2 id="reciboAjudaPdfTitle">ðŸ§¾ Recibo (PDF)</h2>
+          <h2 id="reciboAjudaPdfTitle">🧾 Recibo (PDF)</h2>
           <button type="button" class="close-btn" id="closeReciboAjudaPdf" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
-          <!-- PDF: renderizado com PDF.js (canvas) â€” iframe+blob falha em muitos celulares -->
+          <!-- PDF: renderizado com PDF.js (canvas) — iframe+blob falha em muitos celulares -->
           <div
             id="reciboAjudaPdfHost"
             class="recibo-ajuda-pdf-host"
@@ -4822,7 +4822,7 @@
     <div class="modal-backdrop" id="boletoDetalhesModal">
       <div class="modal">
         <header>
-          <h2>ðŸ‘ï¸ Detalhes do Boleto</h2>
+          <h2>👁️ Detalhes do Boleto</h2>
           <button type="button" class="close-btn" id="closeBoletoDetalhes" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 20px;" id="boletoDetalhesContent">
@@ -4838,7 +4838,7 @@
     <div class="modal-backdrop" id="boletoPagamentoModal">
       <div class="modal">
         <header>
-          <h2>ðŸ’³ Registrar Pagamento</h2>
+          <h2>💳 Registrar Pagamento</h2>
           <button type="button" class="close-btn" id="closeBoletoPagamento" aria-label="Fechar modal">x</button>
         </header>
         <form id="boletoPagamentoForm">
@@ -4865,7 +4865,7 @@
             Juros/Multa (Calculado automaticamente)
             <input name="juros_multa" type="number" step="0.01" min="0" id="pagamentoJuros" placeholder="0.00" value="0" />
             <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
-              ðŸ’¡ Calculado automaticamente: Valor Pago - Valor Original. Pode editar se necessário.
+              💡 Calculado automaticamente: Valor Pago - Valor Original. Pode editar se necessário.
             </small>
           </label>
 
@@ -4876,7 +4876,7 @@
 
           <footer>
             <button type="button" class="btn neutral" id="cancelPagamento">Cancelar</button>
-            <button type="submit" class="btn primary">ðŸ’³ Confirmar Pagamento</button>
+            <button type="submit" class="btn primary">💳 Confirmar Pagamento</button>
           </footer>
         </form>
       </div>
@@ -4925,7 +4925,7 @@
         <header><h2>Excluir fornecedor com historico</h2><button type="button" class="close-btn" id="closeFornecedorExcluirBackup" aria-label="Fechar">x</button></header>
         <div style="padding:1.5rem;">
           <p>Este fornecedor possui historico no sistema (boletos, lotes ou movimentacoes).</p>
-          <p>Os dados do fornecedor ficam guardados no banco para auditoria. Para recuperar depois, use <strong>Configurações â†’ Backup / Restaurar</strong> (backup JSON inclui fornecedores e backups de exclusão).</p>
+          <p>Os dados do fornecedor ficam guardados no banco para auditoria. Para recuperar depois, use <strong>Configurações → Backup / Restaurar</strong> (backup JSON inclui fornecedores e backups de exclusão).</p>
           <p>Deseja continuar com a exclusão?</p>
         </div>
         <footer>
@@ -4944,7 +4944,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260519-ficha-pdf-v5"></script>
+    <script src="app.js?v=20260520-encoding-fix3"></script>
      
   </body>
 </html>
