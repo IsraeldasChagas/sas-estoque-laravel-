@@ -34,6 +34,22 @@ $usuariosSemFuncionario = DB::table('usuarios as u')
     ->where('u.ativo', 1)
     ->whereIn(DB::raw('UPPER(u.perfil)'), $perfisOperacionais)
     ->whereNull('f.id')
+    // Não criar se já existir funcionário com o mesmo e-mail (cadastro manual sem usuario_id)
+    ->whereNotExists(function ($q) {
+        $q->select(DB::raw(1))
+            ->from('funcionarios as f2')
+            ->whereNotNull('f2.email')
+            ->where('f2.email', '!=', '')
+            ->whereNotNull('u.email')
+            ->where('u.email', '!=', '')
+            ->whereRaw('LOWER(TRIM(f2.email)) = LOWER(TRIM(u.email))');
+    })
+    // Nem com o mesmo nome (evita duplicata quando e-mail difere ou está vazio)
+    ->whereNotExists(function ($q) {
+        $q->select(DB::raw(1))
+            ->from('funcionarios as f3')
+            ->whereRaw('LOWER(TRIM(f3.nome_completo)) = LOWER(TRIM(u.nome))');
+    })
     ->select('u.id', 'u.nome', 'u.email', 'u.perfil', 'u.unidade_id')
     ->orderBy('u.id')
     ->get();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
+use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Http\Controllers\Api\EntradaEstoqueController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhCandidatoController;
@@ -6218,10 +6219,15 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     if (strlen($cpfLimpo) !== 11) {
         return response()->json(['error' => 'CPF inválido'], 422)->header('Access-Control-Allow-Origin', '*');
     }
-    $cpfFormatado = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $cpfLimpo);
+    $cpfFormatado = RhFuncionarioUnicidade::cpfFormatado($cpfLimpo);
 
-    if (DB::table('funcionarios')->where('cpf', $cpfFormatado)->exists()) {
-        return response()->json(['error' => 'CPF já cadastrado'], 422)->header('Access-Control-Allow-Origin', '*');
+    if (RhFuncionarioUnicidade::existePorCpf($cpfLimpo)) {
+        return response()->json(['error' => 'CPF já cadastrado para outro funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $emailNovo = trim((string) ($data['email'] ?? ''));
+    if ($emailNovo !== '' && RhFuncionarioUnicidade::existePorEmail($emailNovo)) {
+        return response()->json(['error' => 'Já existe funcionário cadastrado com este e-mail'], 422)->header('Access-Control-Allow-Origin', '*');
     }
 
     $possuiAcesso = !empty($data['possui_acesso']) && !in_array($data['possui_acesso'], [false, 'false', '0', 0, ''], true);
@@ -6306,6 +6312,9 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             ? mb_substr(trim((string) $data['ctps']), 0, 80)
             : null;
     }
+    if ($funcionariosTableHasColumn('cpf_limpo')) {
+        $insert['cpf_limpo'] = $cpfLimpo;
+    }
     if ($request->hasFile('foto')) {
         $foto = $request->file('foto');
         $uploadDir = public_path('uploads/funcionarios');
@@ -6350,13 +6359,16 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
         if (strlen($cpfLimpo) !== 11) {
             return response()->json(['error' => 'CPF inválido'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        $cpfFormatado = preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $cpfLimpo);
-        $exists = DB::table('funcionarios')
-            ->where('cpf', $cpfFormatado)
-            ->where('id', '!=', $id)
-            ->exists();
-        if ($exists) {
-            return response()->json(['error' => 'CPF já cadastrado'], 422)->header('Access-Control-Allow-Origin', '*');
+        $cpfFormatado = RhFuncionarioUnicidade::cpfFormatado($cpfLimpo);
+        if (RhFuncionarioUnicidade::existePorCpf($cpfLimpo, (int) $id)) {
+            return response()->json(['error' => 'CPF já cadastrado para outro funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+    }
+
+    if (array_key_exists('email', $data)) {
+        $emailEdit = trim((string) ($data['email'] ?? ''));
+        if ($emailEdit !== '' && RhFuncionarioUnicidade::existePorEmail($emailEdit, (int) $id)) {
+            return response()->json(['error' => 'Já existe funcionário cadastrado com este e-mail'], 422)->header('Access-Control-Allow-Origin', '*');
         }
     }
     // RH: acesso ao sistema (persistir vínculo usuário/email)
@@ -6433,6 +6445,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     ];
     if ($cpfFormatado !== null) {
         $update['cpf'] = $cpfFormatado;
+        if ($funcionariosTableHasColumn('cpf_limpo')) {
+            $update['cpf_limpo'] = RhFuncionarioUnicidade::cpfSoDigitos($cpfFormatado);
+        }
     }
     foreach (['banco', 'agencia', 'conta', 'conta_digito', 'pix'] as $colBancario) {
         if ($funcionariosTableHasColumn($colBancario)) {
@@ -6470,6 +6485,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
             @unlink(public_path($existente->foto));
         }
         $update['foto'] = null;
+    }
+    if (! $funcionariosTableHasColumn('cpf_limpo')) {
+        unset($update['cpf_limpo']);
     }
     DB::table('funcionarios')->where('id', $id)->update($update);
     return response()->json(DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first())
