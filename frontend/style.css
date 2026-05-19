@@ -128,18 +128,17 @@ body.sidebar-open {
   max-height: 320px;
 }
 
-/* Financeiro tem 6+ itens (Boleto…Auditoria…Dashboard); 280px cortava o último com overflow:hidden */
-.nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content {
-  max-height: min(72vh, 520px);
+/* Financeiro e RH: mesma altura; itens longos ficam em submenu aninhado (como Recrutamento). */
+.nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
+.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
+  max-height: min(72vh, 420px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* RH tem muitos itens + nested submenu (Recrutamento). */
-.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
-  max-height: min(72vh, 520px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+.nav-submenu.nav-submenu--financeiro .nav-submenu--nested > .nav-link-parent.nav-link-child,
+.nav-submenu.nav-submenu--rh .nav-submenu--nested > .nav-link-parent.nav-link-child {
+  margin-top: 4px;
 }
 
 /* Submenu aninhado (usado em RH -> Recrutamento). */

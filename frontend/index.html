@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260419dash" />
+    <link rel="stylesheet" href="style.css?v=20260519-menu-financeiro" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -153,9 +153,18 @@
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas">Despesas fixas</a>
               <a href="#" class="nav-link nav-link-child" data-section="valeConsumo">Vale / consumo</a>
-              <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo (ajuda de custo)</a>
-              <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Registros de auditoria: lançar, editar e conferir fechamentos de caixa">Auditoria — fechamento de caixa</a>
-              <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Painel só leitura: gráficos, totais por unidade e análise dos fechamentos">Dashboard — análise fechamentos</a>
+              <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo ajuda de custo</a>
+
+              <div class="nav-submenu nav-submenu--nested">
+                <a href="#" class="nav-link nav-link-parent nav-link-child" id="financeiroFechamentoMenu">
+                  Fechamento de caixa
+                  <span class="nav-arrow">▼</span>
+                </a>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Lançar, editar e conferir fechamentos de caixa">Auditoria</a>
+                  <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos">Dashboard</a>
+                </div>
+              </div>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--config">

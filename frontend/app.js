@@ -3688,6 +3688,7 @@ function updateUnidadeInlineUI(canManage) {
  */
 function ensureFinanceiroFechamentoDashNavLink() {
   const wrap =
+    document.querySelector(".nav-submenu--financeiro .nav-submenu--nested .nav-submenu-content") ||
     document.querySelector(".nav-submenu--financeiro .nav-submenu-content") ||
     document.getElementById("financeiroMenu")?.closest(".nav-submenu")?.querySelector(".nav-submenu-content") ||
     null;
@@ -3707,7 +3708,7 @@ function ensureFinanceiroFechamentoDashNavLink() {
     dash.id = "navFinanceiroFechamentoDash";
     dash.dataset.section = "fechamentoDash";
     dash.title = "Painel só leitura: gráficos, totais por unidade e análise dos fechamentos";
-    dash.textContent = "Dashboard — análise fechamentos";
+    dash.textContent = "Dashboard";
     ref.insertAdjacentElement("afterend", dash);
     return;
   }
@@ -3990,6 +3991,14 @@ function navigateTo(section) {
       financeiroNavSubmenuNav.classList.add("open");
     } else {
       financeiroNavSubmenuNav.classList.remove("open");
+    }
+  }
+  const financeiroFechamentoNested = document.getElementById("financeiroFechamentoMenu")?.closest(".nav-submenu--nested");
+  if (financeiroFechamentoNested) {
+    if (section === "fechamento" || section === "fechamentoDash") {
+      financeiroFechamentoNested.classList.add("open");
+    } else {
+      financeiroFechamentoNested.classList.remove("open");
     }
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
@@ -13692,12 +13701,11 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
-  // Setup nested submenu toggle for RH -> Recrutamento (delegado para não falhar se o menu for recriado)
-  if (document.body && document.body.dataset.sasRhRecrutamentoToggleBound !== "1") {
-    document.body.dataset.sasRhRecrutamentoToggleBound = "1";
-    // Usa capture=true para funcionar mesmo se algum handler fizer stopPropagation no bubble.
+  // Submenu aninhado: RH → Recrutamento e Financeiro → Fechamento de caixa
+  if (document.body && document.body.dataset.sasNestedSubmenuToggleBound !== "1") {
+    document.body.dataset.sasNestedSubmenuToggleBound = "1";
     document.addEventListener('click', (event) => {
-      const el = event.target?.closest?.('#rhRecrutamentoMenu');
+      const el = event.target?.closest?.('#rhRecrutamentoMenu, #financeiroFechamentoMenu');
       if (!el) return;
       event.preventDefault();
       event.stopPropagation();
