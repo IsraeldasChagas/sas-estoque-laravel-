@@ -21114,12 +21114,6 @@ function setupFichaTecnicaForm() {
   const btnVoltar = document.getElementById('fichaTecnicaVoltarLista');
   const editIdEl = document.getElementById('fichaTecnicaEditId');
   const formTitulo = document.getElementById('fichaTecnicaFormTitulo');
-  const verModal = document.getElementById('fichaTecnicaVerModal');
-  const verModalBody = document.getElementById('fichaTecnicaVerModalBody');
-  const verModalTitulo = document.getElementById('fichaTecnicaVerModalTitulo');
-  const verModalFechar = document.getElementById('fichaTecnicaVerModalFechar');
-  const verModalPdf = document.getElementById('fichaTecnicaVerModalPdf');
-
   if (!form) return;
 
   let pratoModalAtual = null;
@@ -21629,139 +21623,17 @@ function setupFichaTecnicaForm() {
     fecharFormularioIngrediente();
   };
 
-  /** HTML completo da ficha para impressão / PDF (mesmo conteúdo em ambos os fluxos). */
-  const montarHtmlDocumentoFichaTecnica = (p) => {
-    const titulo = escapeHtml(p.nome_prato || 'Ficha técnica');
-    const ingBody =
-      (p.ingredientes || []).length > 0
-        ? `<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${(p.ingredientes || [])
-            .map(
-              (it) =>
-                `<tr><td>${escapeHtml(it.nome)}</td><td>${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td>${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td><td>${fmtIngBRLCell(it.custo_unitario)}</td><td>${fmtIngBRLCell(it.custo_total)}</td></tr>`
-            )
-            .join('')}</tbody></table>`
-        : '<p>—</p>';
-    const modoHtml = sanitizeFichaTecnicaModoPreparoHtml(p.modo_preparo || '') || '—';
-    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${titulo}</title>
-      <style>
-        body{font-family:system-ui,Arial,sans-serif;padding:1.2rem;color:#111;max-width:720px;margin:0 auto;}
-        h1{font-size:1.25rem;margin:0 0 1rem;}
-        img{max-width:100%;max-height:220px;object-fit:contain;}
-        table{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
-        th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
-        th{background:#eceff1;font-weight:700;}
-        h2{font-size:1rem;margin-top:1rem;margin-bottom:0.35rem;}
-        .modo-html{white-space:normal;line-height:1.55;}
-      </style></head><body>
-      <h1>${titulo}</h1>
-      ${p.foto_base64 ? `<p><img src="${p.foto_base64}" alt=""/></p>` : ''}
-      <p><strong>Tempo:</strong> ${escapeHtml(p.tempo_preparo || '—')}</p>
-      <p><strong>Responsável:</strong> ${escapeHtml(p.responsavel_tecnico || '—')}</p>
-      <p><strong>Preço por prato:</strong> ${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}</p>
-      <p><strong>Sugestão de venda:</strong> ${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}</p>
-      <h2>Ingredientes</h2>
-      ${ingBody}
-      <h2>Modo de preparo</h2>
-      <div class="modo-html">${modoHtml}</div>
-      </body></html>`;
-  };
-
-  const montarHtmlDetalhe = (p) => {
-    const ings = Array.isArray(p.ingredientes) ? p.ingredientes : [];
-    const ingRows = ings
-      .map(
-        (it) =>
-          `<tr><td data-label="Ingrediente">${escapeHtml(it.nome)}</td><td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td><td data-label="Un.">${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td><td data-label="Custo unitário">${fmtIngBRLCell(it.custo_unitario)}</td><td data-label="Custo total">${fmtIngBRLCell(it.custo_total)}</td></tr>`
-      )
-      .join('');
-    const fotoBlock =
-      p.foto_base64 && String(p.foto_base64).trim()
-        ? `<div class="ficha-tecnica-ver-foto"><img src="${p.foto_base64}" alt="" /></div>`
-        : '';
-    return `
-      ${fotoBlock}
-      <dl class="ficha-tecnica-ver-dl">
-        <dt>Tempo de preparo</dt><dd>${escapeHtml(p.tempo_preparo || '—')}</dd>
-        <dt>Responsável técnico</dt><dd>${escapeHtml(p.responsavel_tecnico || '—')}</dd>
-        <dt>Preço por prato</dt><dd>${p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—'}</dd>
-        <dt>Sugestão de venda</dt><dd>${p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—'}</dd>
-      </dl>
-      <h4 class="ficha-tecnica-ver-subtitulo">Ingredientes</h4>
-      ${
-        ings.length
-          ? `<table class="ficha-tecnica-ver-ing-table"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>${ingRows}</tbody></table>`
-          : '<p class="ficha-tecnica-ver-vazio">Nenhum ingrediente cadastrado.</p>'
-      }
-      <h4 class="ficha-tecnica-ver-subtitulo">Modo de preparo</h4>
-      <div class="ficha-tecnica-ver-modo ficha-tecnica-ver-modo--html">${sanitizeFichaTecnicaModoPreparoHtml(p.modo_preparo || '') || '<span class="ficha-tecnica-ver-vazio">—</span>'}</div>
-    `;
-  };
-
-  /** PDF via diálogo de impressão do navegador (Destino: Salvar como PDF ou impressora), igual à lista de compras. */
-  const gerarPdfFichaTecnica = (p) => {
-    if (!p) return;
-    const conteudo = montarHtmlDocumentoFichaTecnica(p);
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText =
-      'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
-    document.body.appendChild(iframe);
-    let timeoutId = null;
-    const cleanup = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      try {
-        if (iframe.contentWindow) iframe.contentWindow.onafterprint = null;
-      } catch (_) {}
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-    };
-    iframe.onload = () => {
-      const win = iframe.contentWindow;
-      if (!win) {
-        cleanup();
-        showToast('Não foi possível preparar o PDF.', 'error');
-        return;
-      }
-      win.onafterprint = cleanup;
-      win.focus();
-      try {
-        if (typeof win.print === 'function') win.print();
-        else {
-          cleanup();
-          showToast('Seu navegador não suportou a impressão.', 'error');
-        }
-      } catch (_) {
-        cleanup();
-        showToast('Falha ao acionar a impressão.', 'error');
-      }
-    };
-    iframe.onerror = () => {
-      cleanup();
-      showToast('Não foi possível gerar o PDF.', 'error');
-    };
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      cleanup();
-      showToast('Não foi possível gerar o PDF.', 'error');
-      return;
-    }
-    doc.open();
-    doc.write(conteudo);
-    doc.close();
-    timeoutId = setTimeout(() => {
-      if (!document.body.contains(iframe)) return;
-      cleanup();
-      showToast('Falha ao gerar PDF. Verifique o navegador.', 'error');
-    }, 60000);
-    showToast('Abra “Salvar como PDF” na janela de impressão.', 'success');
-  };
-
-  const abrirModalVer = (p) => {
-    pratoModalAtual = p;
-    if (verModalTitulo) verModalTitulo.textContent = p.nome_prato || 'Ficha técnica';
-    if (verModalBody) verModalBody.innerHTML = montarHtmlDetalhe(p);
-    toggleModal(verModal, true);
+  /** Visualização em PDF no mesmo modal do Alvará (PDF.js + botão Baixar). */
+  const abrirVisualizacaoPdfFichaTecnica = async (p) => {
+    if (!p?.id) return;
+    const nomeArquivo = `ficha-tecnica-${p.id}.pdf`;
+    const titulo = `📄 ${p.nome_prato || 'Ficha técnica'}`;
+    await abrirModalPdfNoViewerDoAlvara({
+      nomeArquivo,
+      titulo,
+      viewApiPath: `/fichas-tecnicas/${encodeURIComponent(p.id)}/pdf`,
+      downloadApiPath: `/fichas-tecnicas/${encodeURIComponent(p.id)}/pdf?download=1`,
+    });
   };
 
   const renderListaTabela = () => {
@@ -21882,7 +21754,7 @@ function setupFichaTecnicaForm() {
       })();
       return;
     }
-    if (acao === 'ver') abrirModalVer(p);
+    if (acao === 'ver') void abrirVisualizacaoPdfFichaTecnica(p);
     else if (acao === 'editar') {
       void (async () => {
         await carregarFichasDoArmazenamento();
@@ -21910,14 +21782,6 @@ function setupFichaTecnicaForm() {
         }
       })();
     }
-  });
-
-  verModalFechar?.addEventListener('click', () => toggleModal(verModal, false));
-  verModal?.addEventListener('click', (e) => {
-    if (e.target === verModal) toggleModal(verModal, false);
-  });
-  verModalPdf?.addEventListener('click', () => {
-    if (pratoModalAtual) gerarPdfFichaTecnica(pratoModalAtual);
   });
 
   const salvarFichaTecnica = async () => {

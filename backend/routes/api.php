@@ -1025,6 +1025,128 @@ Route::delete('/fichas-tecnicas/{id}', function ($id) {
     return response()->json(['success' => true, 'message' => 'Ficha excluída.']);
 });
 
+Route::options('/fichas-tecnicas/{id}/pdf', fn () => response('', 204)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+
+Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
+    if (!Schema::hasTable('fichas_tecnicas')) {
+        return response()->json(['error' => 'Módulo de fichas técnicas indisponível'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $id = (int) $id;
+    $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
+    if (!$row) {
+        return response()->json(['error' => 'Ficha não encontrada'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $h = static fn ($s) => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_UTF8, 'UTF-8');
+    $fmtBrl = static function ($v) {
+        if ($v === null || $v === '') {
+            return '—';
+        }
+
+        return 'R$ ' . number_format((float) $v, 2, ',', '.');
+    };
+    $fmtQtd = static function ($q) {
+        if ($q === null || $q === '') {
+            return '—';
+        }
+        $n = (float) $q;
+
+        return rtrim(rtrim(number_format($n, 3, ',', '.'), '0'), ',') ?: '0';
+    };
+
+    $ingredientes = [];
+    if (!empty($row->ingredientes_json)) {
+        $decoded = json_decode($row->ingredientes_json, true);
+        $ingredientes = is_array($decoded) ? $decoded : [];
+    }
+
+    $ingRows = '';
+    if ($ingredientes !== []) {
+        foreach ($ingredientes as $it) {
+            if (!is_array($it)) {
+                continue;
+            }
+            $ingRows .= '<tr>'
+                . '<td>' . $h($it['nome'] ?? '') . '</td>'
+                . '<td>' . $h($fmtQtd($it['quantidade'] ?? null)) . '</td>'
+                . '<td>' . $h($it['unidade_medida'] ?? '') . '</td>'
+                . '<td>' . $h($fmtBrl($it['custo_unitario'] ?? null)) . '</td>'
+                . '<td>' . $h($fmtBrl($it['custo_total'] ?? null)) . '</td>'
+                . '</tr>';
+        }
+    }
+    $ingBody = $ingRows !== ''
+        ? '<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>'
+            . $ingRows . '</tbody></table>'
+        : '<p>—</p>';
+
+    $modoRaw = (string) ($row->modo_preparo ?? '');
+    $modoHtml = trim(strip_tags($modoRaw, '<p><br><b><strong><i><em><u><ul><ol><li><span><div>')) !== ''
+        ? strip_tags($modoRaw, '<p><br><b><strong><i><em><u><ul><ol><li><span><div>')
+        : '—';
+
+    $fotoHtml = '';
+    if (!empty($row->foto_base64) && str_starts_with((string) $row->foto_base64, 'data:image')) {
+        $fotoHtml = '<p><img src="' . $h($row->foto_base64) . '" alt="" style="max-width:100%;max-height:220px;"/></p>';
+    }
+
+    $titulo = $h($row->nome_prato ?: 'Ficha técnica');
+    $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>' . $titulo . '</title>'
+        . '<style>
+        body{font-family:DejaVu Sans,Arial,sans-serif;padding:1.2rem;color:#111;}
+        h1{font-size:1.25rem;margin:0 0 1rem;}
+        table{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
+        th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
+        th{background:#eceff1;font-weight:700;}
+        h2{font-size:1rem;margin-top:1rem;margin-bottom:0.35rem;}
+        .modo-html{line-height:1.55;}
+        </style></head><body>'
+        . '<h1>' . $titulo . '</h1>'
+        . $fotoHtml
+        . '<p><strong>Tempo:</strong> ' . $h($row->tempo_preparo ?: '—') . '</p>'
+        . '<p><strong>Responsável:</strong> ' . $h($row->responsavel_tecnico ?: '—') . '</p>'
+        . '<p><strong>Preço por prato:</strong> ' . $h($fmtBrl($row->preco_prato)) . '</p>'
+        . '<p><strong>Sugestão de venda:</strong> ' . $h($fmtBrl($row->sugestao_venda)) . '</p>'
+        . '<h2>Ingredientes</h2>' . $ingBody
+        . '<h2>Modo de preparo</h2><div class="modo-html">' . $modoHtml . '</div>'
+        . '</body></html>';
+
+    try {
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+    } catch (\Throwable $e) {
+        \Log::error('GET /fichas-tecnicas/{id}/pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF da ficha técnica'], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $slug = preg_replace('/[^a-zA-Z0-9_-]+/', '-', (string) mb_substr((string) ($row->nome_prato ?? 'ficha'), 0, 60));
+    $slug = trim($slug, '-') ?: 'ficha';
+    $filename = 'ficha-tecnica-' . $slug . '.pdf';
+    $disposition = $request->query('download') == '1' ? 'attachment' : 'inline';
+
+    return response($pdfOutput, 200)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', $disposition . '; filename="' . $filename . '"')
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id')
+        ->header('Content-Length', (string) strlen($pdfOutput));
+});
+
 // ============================================
 // UNIDADES
 // ============================================
