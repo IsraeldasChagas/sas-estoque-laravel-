@@ -10323,6 +10323,11 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
 });
 
 // ============================================
+// MANUTENÇÃO — ENERGIA
+// ============================================
+require __DIR__ . '/energia_routes.php';
+
+// ============================================
 // DEPLOY - Atualiza o servidor via git pull
 // ============================================
 Route::get('/deploy', function (Request $request) {

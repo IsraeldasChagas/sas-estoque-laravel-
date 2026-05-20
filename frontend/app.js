@@ -873,6 +873,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash",
   "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas",
   "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs",
+  "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios",
 ]);
 
 function syncUrlSectionHash(section) {
@@ -1213,7 +1214,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1221,7 +1222,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -1261,7 +1262,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2491,6 +2492,7 @@ function getUser() {
     return null;
   }
 }
+window.getUser = getUser;
 
 function clearUser() {
   localStorage.removeItem(storageKey);
@@ -3865,6 +3867,24 @@ function applyPermissions() {
       regras.sections.includes("rhBancoTalentos");
     rhRecrutamentoNavSubmenu.classList.toggle("hidden", !temAcessoRecrutamento);
   }
+  const manutencaoNavSubmenu = document.getElementById("manutencaoMenu")?.closest(".nav-submenu");
+  if (manutencaoNavSubmenu) {
+    const temAcessoManutencao =
+      regras.sections.includes("energiaDashboard") ||
+      regras.sections.includes("energiaEquipamentos") ||
+      regras.sections.includes("energiaProjecao") ||
+      regras.sections.includes("energiaRelatorios");
+    manutencaoNavSubmenu.classList.toggle("hidden", !temAcessoManutencao);
+  }
+  const energiaNavSubmenu = document.getElementById("energiaMenu")?.closest(".nav-submenu");
+  if (energiaNavSubmenu) {
+    const temAcessoEnergia =
+      regras.sections.includes("energiaDashboard") ||
+      regras.sections.includes("energiaEquipamentos") ||
+      regras.sections.includes("energiaProjecao") ||
+      regras.sections.includes("energiaRelatorios");
+    energiaNavSubmenu.classList.toggle("hidden", !temAcessoEnergia);
+  }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
@@ -4074,6 +4094,32 @@ function navigateTo(section) {
     } else {
       rhRecrutamentoNavSubmenuNav.classList.remove("open");
     }
+  }
+  const manutencaoNavSubmenuNav = document.getElementById("manutencaoMenu")?.closest(".nav-submenu");
+  if (manutencaoNavSubmenuNav) {
+    if (section === "energiaDashboard" || section === "energiaEquipamentos" || section === "energiaProjecao" || section === "energiaRelatorios") {
+      manutencaoNavSubmenuNav.classList.add("open");
+    } else {
+      manutencaoNavSubmenuNav.classList.remove("open");
+    }
+  }
+  const energiaNavSubmenuNav = document.getElementById("energiaMenu")?.closest(".nav-submenu");
+  if (energiaNavSubmenuNav) {
+    if (section === "energiaDashboard" || section === "energiaEquipamentos" || section === "energiaProjecao" || section === "energiaRelatorios") {
+      energiaNavSubmenuNav.classList.add("open");
+    } else {
+      energiaNavSubmenuNav.classList.remove("open");
+    }
+  }
+  if (section === "energiaDashboard") {
+    window.destroyEnergiaCharts?.();
+    loadEnergiaDashboardSection?.().catch(() => {});
+  } else if (section === "energiaEquipamentos") {
+    loadEnergiaEquipamentosSection?.().catch(() => {});
+  } else if (section === "energiaProjecao") {
+    loadEnergiaProjecaoSection?.().catch(() => {});
+  } else if (section === "energiaRelatorios") {
+    loadEnergiaRelatoriosSection?.().catch(() => {});
   }
   if (section === 'boasVindas') {
     const el = document.getElementById('boasVindasNome');
@@ -9494,8 +9540,16 @@ async function startAppSession(user) {
           await loadAlvaras(collectAlvarasListFiltersFromDOM()).catch(() => {});
         } else if (sectionToNavigate === 'fechamento') {
           await loadFechamentoCaixaSection();
-        }         else if (sectionToNavigate === "fechamentoDash") {
+        } else if (sectionToNavigate === "fechamentoDash") {
           await loadFechamentoDashSection();
+        } else if (sectionToNavigate === "energiaDashboard") {
+          await loadEnergiaDashboardSection?.();
+        } else if (sectionToNavigate === "energiaEquipamentos") {
+          await loadEnergiaEquipamentosSection?.();
+        } else if (sectionToNavigate === "energiaProjecao") {
+          await loadEnergiaProjecaoSection?.();
+        } else if (sectionToNavigate === "energiaRelatorios") {
+          await loadEnergiaRelatoriosSection?.();
         } else if (sectionToNavigate === "valeConsumo") {
           valeConsumoLimparFormulario();
           valeConsumoOcultarFormCard();
@@ -13729,8 +13783,16 @@ function wireSidebarSectionNavClicks() {
       }
       else if (target === "fechamento") {
         await loadFechamentoCaixaSection();
-      }       else if (target === "fechamentoDash") {
+      } else if (target === "fechamentoDash") {
         await loadFechamentoDashSection();
+      } else if (target === "energiaDashboard") {
+        await loadEnergiaDashboardSection?.();
+      } else if (target === "energiaEquipamentos") {
+        await loadEnergiaEquipamentosSection?.();
+      } else if (target === "energiaProjecao") {
+        await loadEnergiaProjecaoSection?.();
+      } else if (target === "energiaRelatorios") {
+        await loadEnergiaRelatoriosSection?.();
       } else if (target === "valeConsumo") {
         valeConsumoLimparFormulario();
         valeConsumoOcultarFormCard();
@@ -22218,6 +22280,7 @@ async function init() {
   setupReciboAjudaCusto();
   setupFichaTecnicaForm();
   setupKanbanAdministrativoModule();
+  if (typeof setupEnergiaModule === "function") setupEnergiaModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
