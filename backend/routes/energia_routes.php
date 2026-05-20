@@ -124,6 +124,13 @@ $energiaAplicarFiltros = function ($q, Request $request) {
 };
 
 $energiaValidarPayload = function (array $d, bool $isUpdate = false) {
+    // Horas/dia e dias no mês são opcionais no cadastro (podem ser definidos depois em Projeção de Consumo).
+    if (! isset($d['horas_por_dia']) || $d['horas_por_dia'] === '' || $d['horas_por_dia'] === null) {
+        $d['horas_por_dia'] = 0;
+    }
+    if (! isset($d['dias_uso_mes']) || $d['dias_uso_mes'] === '' || $d['dias_uso_mes'] === null) {
+        $d['dias_uso_mes'] = 0;
+    }
     $rules = [
         'unidade_id' => 'required|integer',
         'setor' => 'required|string|max:120',
@@ -132,8 +139,8 @@ $energiaValidarPayload = function (array $d, bool $isUpdate = false) {
         'potencia_watts' => 'required|numeric|min:0',
         'tensao' => 'required|integer',
         'quantidade' => 'required|integer|min:1',
-        'horas_por_dia' => 'required|numeric|min:0|max:24',
-        'dias_uso_mes' => 'required|integer|min:0|max:31',
+        'horas_por_dia' => 'nullable|numeric|min:0|max:24',
+        'dias_uso_mes' => 'nullable|integer|min:0|max:31',
         'valor_kwh' => 'required|numeric|min:0',
         'observacoes' => 'nullable|string|max:5000',
     ];

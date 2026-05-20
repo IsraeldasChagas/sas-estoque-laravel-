@@ -237,8 +237,8 @@
       <td data-label="Potência">${fmtNum(r.potencia_watts, 0)} W</td>
       <td data-label="Tensão">${r.tensao}V</td>
       <td data-label="Qtd">${r.quantidade}</td>
-      <td data-label="Horas/dia">${fmtNum(r.horas_por_dia, 1)}</td>
-      <td data-label="Dias/mês">${r.dias_uso_mes}</td>
+      <td data-label="Horas/dia">${Number(r.horas_por_dia) > 0 ? fmtNum(r.horas_por_dia, 1) : "—"}</td>
+      <td data-label="Dias/mês">${Number(r.dias_uso_mes) > 0 ? r.dias_uso_mes : "—"}</td>
       <td data-label="Consumo kWh">${fmtNum(r.consumo_kwh, 4)}</td>
       <td data-label="Custo">${fmtMoeda(r.custo_estimado)}</td>
       <td data-label="Ações" class="table-actions">
@@ -286,7 +286,8 @@
     } else {
       form.tensao.value = "220";
       form.quantidade.value = "1";
-      form.dias_uso_mes.value = "26";
+      if (form.horas_por_dia) form.horas_por_dia.value = "";
+      if (form.dias_uso_mes) form.dias_uso_mes.value = "";
       form.valor_kwh.value = "0.75";
       const user = typeof window.getUser === "function" ? window.getUser() : null;
       if (unidadeSelect && user?.unidade_id) {
@@ -315,8 +316,8 @@
       potencia_watts: form.potencia_watts.value,
       tensao: form.tensao.value,
       quantidade: form.quantidade.value,
-      horas_por_dia: form.horas_por_dia.value,
-      dias_uso_mes: form.dias_uso_mes.value,
+      horas_por_dia: form.horas_por_dia.value === "" ? 0 : form.horas_por_dia.value,
+      dias_uso_mes: form.dias_uso_mes.value === "" ? 0 : form.dias_uso_mes.value,
       valor_kwh: form.valor_kwh.value,
       observacoes: form.observacoes.value.trim() || null,
     };

@@ -4566,8 +4566,8 @@
             <label>Potência (Watts)<input type="number" name="potencia_watts" min="0" step="1" required /></label>
             <label>Tensão<select name="tensao" required><option value="110">110V</option><option value="220" selected>220V</option><option value="380">380V</option></select></label>
             <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required /></label>
-            <label>Horas ligado por dia<input type="number" name="horas_por_dia" min="0" max="24" step="0.5" required /></label>
-            <label>Dias de uso no mês<input type="number" name="dias_uso_mes" min="0" max="31" required /></label>
+            <label>Horas ligado por dia <span class="subtle-text">(opcional)</span><input type="number" name="horas_por_dia" min="0" max="24" step="0.5" placeholder="Defina depois na Projeção" /></label>
+            <label>Dias de uso no mês <span class="subtle-text">(opcional)</span><input type="number" name="dias_uso_mes" min="0" max="31" placeholder="Defina depois na Projeção" /></label>
             <label>Valor do kWh (R$)<input type="number" name="valor_kwh" min="0" step="0.0001" required /></label>
             <label style="grid-column:1/-1;">Observações<textarea name="observacoes" rows="2" maxlength="5000"></textarea></label>
           </div>
@@ -5146,7 +5146,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="energia.js?v=20260521-energia-unidade"></script>
+    <script src="energia.js?v=20260521-energia-opcional"></script>
     <script src="app.js?v=20260521-energia-unidade"></script>
      
   </body>
