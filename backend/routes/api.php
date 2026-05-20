@@ -889,9 +889,15 @@ $mapFichaTecnicaRow = static function ($row) {
         $decoded = json_decode($row->ingredientes_json, true);
         $ing = is_array($decoded) ? $decoded : [];
     }
+    $dataFicha = null;
+    if (Schema::hasColumn('fichas_tecnicas', 'data_ficha') && ! empty($row->data_ficha)) {
+        $dataFicha = substr((string) $row->data_ficha, 0, 10);
+    }
+
     return [
         'id' => (int) $row->id,
         'nome_prato' => $row->nome_prato,
+        'data_ficha' => $dataFicha,
         'tempo_preparo' => $row->tempo_preparo,
         'responsavel_tecnico' => $row->responsavel_tecnico,
         'foto_base64' => $row->foto_base64,
@@ -928,7 +934,7 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
         ], 503);
     }
     try {
-        $data = $request->validate([
+        $rules = [
             'nome_prato' => 'required|string|max:500',
             'tempo_preparo' => 'nullable|string|max:255',
             'responsavel_tecnico' => 'nullable|string|max:500',
@@ -937,11 +943,15 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
             'preco_prato' => 'nullable|numeric',
             'sugestao_venda' => 'nullable|numeric',
             'ingredientes' => 'nullable|array',
-        ]);
+        ];
+        if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
+            $rules['data_ficha'] = 'nullable|date';
+        }
+        $data = $request->validate($rules);
         $ingredientes = $data['ingredientes'] ?? [];
         $ingJson = json_encode($ingredientes, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         $now = now();
-        $id = DB::table('fichas_tecnicas')->insertGetId([
+        $insertRow = [
             'nome_prato' => $data['nome_prato'],
             'tempo_preparo' => $data['tempo_preparo'] ?? null,
             'responsavel_tecnico' => $data['responsavel_tecnico'] ?? null,
@@ -952,7 +962,11 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
             'ingredientes_json' => $ingJson,
             'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+        if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
+            $insertRow['data_ficha'] = ! empty($data['data_ficha']) ? $data['data_ficha'] : null;
+        }
+        $id = DB::table('fichas_tecnicas')->insertGetId($insertRow);
         $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
         return response()->json($mapFichaTecnicaRow($row), 201);
     } catch (\Illuminate\Validation\ValidationException $e) {
@@ -978,7 +992,7 @@ Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFi
         return response()->json(['error' => 'Ficha não encontrada', 'message' => 'Ficha não encontrada'], 404);
     }
     try {
-        $data = $request->validate([
+        $rules = [
             'nome_prato' => 'required|string|max:500',
             'tempo_preparo' => 'nullable|string|max:255',
             'responsavel_tecnico' => 'nullable|string|max:500',
@@ -987,10 +1001,14 @@ Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFi
             'preco_prato' => 'nullable|numeric',
             'sugestao_venda' => 'nullable|numeric',
             'ingredientes' => 'nullable|array',
-        ]);
+        ];
+        if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
+            $rules['data_ficha'] = 'nullable|date';
+        }
+        $data = $request->validate($rules);
         $ingredientes = $data['ingredientes'] ?? [];
         $ingJson = json_encode($ingredientes, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        DB::table('fichas_tecnicas')->where('id', $id)->update([
+        $updateRow = [
             'nome_prato' => $data['nome_prato'],
             'tempo_preparo' => $data['tempo_preparo'] ?? null,
             'responsavel_tecnico' => $data['responsavel_tecnico'] ?? null,
@@ -1000,7 +1018,11 @@ Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFi
             'modo_preparo' => $data['modo_preparo'] ?? null,
             'ingredientes_json' => $ingJson,
             'updated_at' => now(),
-        ]);
+        ];
+        if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
+            $updateRow['data_ficha'] = ! empty($data['data_ficha']) ? $data['data_ficha'] : null;
+        }
+        DB::table('fichas_tecnicas')->where('id', $id)->update($updateRow);
         $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
         return response()->json($mapFichaTecnicaRow($row));
     } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1162,7 +1184,16 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         . '</td>'
         . '<td class="pdf-meta">Emitido em<br/>' . $h($emitidoEm) . '</td>'
         . '</tr></table>'
-        . $fotoHtml
+        . $fotoHtml;
+    $dataFichaPdf = '—';
+    if (Schema::hasColumn('fichas_tecnicas', 'data_ficha') && ! empty($row->data_ficha)) {
+        try {
+            $dataFichaPdf = \Illuminate\Support\Carbon::parse($row->data_ficha)->timezone('America/Belem')->format('d/m/Y');
+        } catch (\Throwable $e) {
+            $dataFichaPdf = $h(substr((string) $row->data_ficha, 0, 10));
+        }
+    }
+    $html .= '<p><strong>Data da ficha:</strong> ' . $h($dataFichaPdf) . '</p>'
         . '<p><strong>Tempo:</strong> ' . $h($row->tempo_preparo ?: '—') . '</p>'
         . '<p><strong>Responsável:</strong> ' . $h($row->responsavel_tecnico ?: '—') . '</p>'
         . '<p><strong>Preço por prato:</strong> ' . $h($fmtBrl($row->preco_prato)) . '</p>'

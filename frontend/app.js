@@ -21075,6 +21075,27 @@ function parseFichaTecnicaTempoPreparo(str) {
   return normalizarFichaTecnicaHorasMinutos(h, m);
 }
 
+/** Data local no formato YYYY-MM-DD (input type="date"). */
+function dataHojeIsoLocalFichaTecnica() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatFichaTecnicaDataBr(iso) {
+  const s = String(iso ?? '').trim();
+  if (!s) return '—';
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString('pt-BR', { timeZone: 'America/Belem' });
+  }
+  return s;
+}
+
 /** Sanitiza HTML do modo de preparo (ficha técnica). */
 function sanitizeFichaTecnicaModoPreparoHtml(html) {
   const s = String(html ?? '').trim();
@@ -21660,6 +21681,8 @@ function setupFichaTecnicaForm() {
     renderListaIngredientesFichaTecnica();
     syncFichaTecnicaVisaoPrecos();
     fecharFormularioIngrediente();
+    const dataEl = document.getElementById('fichaTecnicaData');
+    if (dataEl) dataEl.value = dataHojeIsoLocalFichaTecnica();
   };
 
   /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). */
@@ -21695,6 +21718,11 @@ function setupFichaTecnicaForm() {
 
   const renderListaTabela = () => {
     const list = [...state.fichaTecnicaPratos].sort((a, b) => {
+      const da = String(a.data_ficha || '');
+      const db = String(b.data_ficha || '');
+      if (da && db && da !== db) return db.localeCompare(da);
+      if (da && !db) return -1;
+      if (!da && db) return 1;
       const ta = new Date(a.updatedAt || 0).getTime();
       const tb = new Date(b.updatedAt || 0).getTime();
       return tb - ta;
@@ -21716,6 +21744,7 @@ function setupFichaTecnicaForm() {
         const sug = p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—';
         return `<tr>
         <td data-label="Prato">${escapeHtml(p.nome_prato || '')}</td>
+        <td data-label="Data">${escapeHtml(formatFichaTecnicaDataBr(p.data_ficha))}</td>
         <td data-label="Tempo de preparo">${escapeHtml(p.tempo_preparo || '')}</td>
         <td data-label="Responsável">${escapeHtml(p.responsavel_tecnico || '')}</td>
         <td data-label="Preço">${prec}</td>
@@ -21754,6 +21783,11 @@ function setupFichaTecnicaForm() {
     const preco = document.getElementById('fichaTecnicaPrecoPrato');
     const sug = document.getElementById('fichaTecnicaSugestaoVenda');
     if (nome) nome.value = p.nome_prato || '';
+    const dataEl = document.getElementById('fichaTecnicaData');
+    if (dataEl) {
+      const raw = String(p.data_ficha || '').trim();
+      dataEl.value = /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : dataHojeIsoLocalFichaTecnica();
+    }
     const tp = parseFichaTecnicaTempoPreparo(p.tempo_preparo);
     if (th) th.value = tp.h > 0 ? String(tp.h) : '';
     if (tm) tm.value = tp.m > 0 ? String(tp.m) : '';
@@ -21897,6 +21931,7 @@ function setupFichaTecnicaForm() {
       }
 
       const nome_prato = document.getElementById('fichaTecnicaNomePrato')?.value.trim() ?? '';
+      const data_ficha = document.getElementById('fichaTecnicaData')?.value?.trim() || null;
       const tempo_preparo = document.getElementById('fichaTecnicaTempoPreparo')?.value.trim() ?? '';
       const responsavel_tecnico = document.getElementById('fichaTecnicaResponsavel')?.value.trim() ?? '';
       const modo_preparo =
@@ -21909,6 +21944,7 @@ function setupFichaTecnicaForm() {
 
       const apiPayload = {
         nome_prato,
+        data_ficha,
         tempo_preparo,
         responsavel_tecnico,
         foto_base64: fotoBase64,

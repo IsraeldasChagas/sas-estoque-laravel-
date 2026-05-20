@@ -1216,6 +1216,7 @@
                     <thead>
                       <tr>
                         <th>Prato</th>
+                        <th>Data</th>
                         <th>Tempo prep.</th>
                         <th>Responsável</th>
                         <th>Preço</th>
@@ -1252,6 +1253,11 @@
                 <label class="ficha-tecnica-form__field">
                   <span>Nome do prato *</span>
                   <input type="text" id="fichaTecnicaNomePrato" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
+                </label>
+                <label class="ficha-tecnica-form__field">
+                  <span>Data da ficha</span>
+                  <input type="date" id="fichaTecnicaData" name="data_ficha" />
+                  <small class="ficha-tecnica-form__hint">Data de referência da ficha (padrão: hoje).</small>
                 </label>
                 <div class="ficha-tecnica-form__field ficha-tecnica-tempo-field">
                   <span>Tempo de preparo *</span>
@@ -4942,7 +4948,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
-    <script src="app.js?v=20260520-ficha-pdf-fix"></script>
+    <script src="app.js?v=20260520-ficha-data"></script>
      
   </body>
 </html>
