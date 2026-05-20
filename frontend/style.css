@@ -982,15 +982,26 @@ table {
 }
 
 /* Botão Adicionar à Lista na tabela de sugestões */
+#sugestoesComprasModal .sugestoes-compras-table th:last-child,
+#sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
+  min-width: 12.5rem;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
 #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes .btn {
   width: auto;
-  max-width: 140px;
+  max-width: none;
   white-space: nowrap;
-  margin: 0 auto;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
-  align-items: center;
+  overflow: visible;
 }
 
 /* Estilos para vínculos de estabelecimentos */
@@ -1243,25 +1254,26 @@ table tbody tr:hover {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  overflow-x: hidden;
 }
 
 .modal-sugestoes .modal-sugestoes-body {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
 }
 
 #sugestoesComprasModal .sugestoes-compras-table,
 #sugestoesComprasModal .table-wrapper {
-  overflow-x: hidden !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 #sugestoesComprasModal .sugestoes-compras-table table,
 #sugestoesComprasModal .table-wrapper table {
-  min-width: 0 !important;
+  min-width: 980px;
   width: 100%;
+  table-layout: auto;
 }
 
 .modal-sugestoes header {
@@ -4445,9 +4457,15 @@ textarea {
 
   #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
     padding-top: 12px;
+    min-width: 0;
+  }
+
+  #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes .btn {
+    width: 100%;
+    max-width: none;
   }
 
   .modal footer {
@@ -4679,9 +4697,15 @@ textarea {
 
   #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
     padding-top: 12px;
+    min-width: 0;
+  }
+
+  #sugestoesComprasModal .sugestoes-compras-table td.sugestoes-acoes .btn {
+    width: 100%;
+    max-width: none;
   }
 
   .table-wrapper td.table-actions {
