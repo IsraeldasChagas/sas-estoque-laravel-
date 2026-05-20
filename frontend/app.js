@@ -17673,6 +17673,15 @@ function clearFechamentoCaixaModoEdicao() {
   if (hid) hid.value = "";
   const btn = document.getElementById("fechamentoSalvarBtn");
   if (btn) btn.textContent = "Salvar registro";
+  populateFechamentoUnidadeSelectsFromState();
+}
+
+/** Mesmo critério do admin: escolher unidade ao editar ou perfis com visão multi-unidade. */
+function fechamentoPodeEscolherUnidadeLivre() {
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  if (["ADMIN", "GERENTE", "FINANCEIRO", "ASSISTENTE_ADMINISTRATIVO"].includes(perfil)) return true;
+  const editId = document.getElementById("fechamentoEdicaoId")?.value?.trim();
+  return !!editId;
 }
 
 function applyFechamentoValorInput(inp, num) {
@@ -18392,20 +18401,24 @@ function resetFechamentoCaixaForm() {
   if (sis) sis.value = "";
   const obs = document.getElementById("fechamentoObservacoes");
   if (obs) obs.value = "";
-  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const uSel = document.getElementById("fechamentoUnidade");
-  if (uSel && perfil !== "ADMIN") {
+  if (uSel && !fechamentoPodeEscolherUnidadeLivre()) {
     if (currentUser?.unidade_id) uSel.value = String(currentUser.unidade_id);
   } else if (uSel) uSel.value = "";
+  populateFechamentoUnidadeSelectsFromState();
   scheduleRecalcFechamentoCaixa();
 }
 
 function populateFechamentoUnidadeSelectsFromState() {
   const uSel = document.getElementById("fechamentoUnidade");
   const rSel = document.getElementById("fechamentoResumoUnidade");
+  const valorFormulario = uSel?.value?.trim() || "";
+  const livreFormulario = fechamentoPodeEscolherUnidadeLivre();
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const fixedUnidade = currentUser?.unidade_id && perfil !== "ADMIN";
-  const apply = (sel) => {
+  const livreResumo = ["ADMIN", "GERENTE", "FINANCEIRO", "ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+  const fixedUnidadeForm = currentUser?.unidade_id && !livreFormulario;
+  const fixedUnidadeResumo = currentUser?.unidade_id && !livreResumo;
+  const apply = (sel, { fixed, preserveValue }) => {
     if (!sel) return;
     if (!Array.isArray(state.unidades) || !state.unidades.length) {
       populateSelect(sel, "", "Selecione a unidade");
@@ -18416,15 +18429,18 @@ function populateFechamentoUnidadeSelectsFromState() {
       .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
       .join("");
     populateSelect(sel, options, "Selecione a unidade");
-    if (fixedUnidade) {
+    if (fixed) {
       sel.value = String(currentUser.unidade_id);
       sel.disabled = true;
     } else {
       sel.disabled = false;
+      if (preserveValue && Array.from(sel.options).some((o) => o.value === preserveValue)) {
+        sel.value = preserveValue;
+      }
     }
   };
-  apply(uSel);
-  apply(rSel);
+  apply(uSel, { fixed: fixedUnidadeForm, preserveValue: valorFormulario });
+  apply(rSel, { fixed: fixedUnidadeResumo, preserveValue: "" });
 }
 
 async function loadFechamentoCaixaSection() {
@@ -18535,9 +18551,12 @@ function setupFechamentoCaixaAuditoria() {
       if (!id || !currentUser?.id) return;
       try {
         const row = await fetchFechamentoCaixaById(id);
-        popularFechamentoCaixaFormulario(row);
         const hid = document.getElementById("fechamentoEdicaoId");
         if (hid) hid.value = String(id);
+        populateFechamentoUnidadeSelectsFromState();
+        popularFechamentoCaixaFormulario(row);
+        const uSel = document.getElementById("fechamentoUnidade");
+        if (uSel && row.unidade_id != null) uSel.value = String(row.unidade_id);
         const sBtn = document.getElementById("fechamentoSalvarBtn");
         if (sBtn) sBtn.textContent = "Atualizar registro";
         document.getElementById("fechamentoSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
