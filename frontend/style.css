@@ -106,12 +106,16 @@ body.sidebar-open {
 }
 
 .nav-arrow {
+  display: inline-block;
   font-size: 0.7rem;
+  line-height: 1;
   transition: transform 0.3s ease;
+  transform: rotate(-90deg); /* recolhido: ▼ vira seta para a direita */
 }
 
-.nav-submenu.open .nav-arrow {
-  transform: rotate(-180deg);
+/* Só a seta do item que abriu/fechou (não afeta submenus aninhados ainda fechados). */
+.nav-submenu.open > .nav-link-parent > .nav-arrow {
+  transform: rotate(0deg); /* expandido: para baixo */
 }
 
 .nav-submenu-content {
