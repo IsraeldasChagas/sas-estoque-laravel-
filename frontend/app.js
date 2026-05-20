@@ -5823,7 +5823,7 @@ function renderSugestoesTabela(dados) {
   const diasProj = dados.dias_projecao || 0;
   const temProjecao = diasProj > 0;
   const resumo = document.createElement('div');
-  resumo.style.cssText = 'margin-bottom:1rem;padding:1rem;background:#f5f5f5;border-radius:4px;';
+  resumo.className = 'sugestoes-compras-resumo';
   resumo.innerHTML = `<strong>Pendentes:</strong> ${pendentes.length} de ${dados.total_sugestoes} | <strong>Análise:</strong> últimos ${dados.dias_analise} dias` + (temProjecao ? ` | <strong>Projeção:</strong> próximos ${diasProj} dias` : '');
   container.appendChild(resumo);
 
@@ -5885,7 +5885,7 @@ function renderSugestoesTabela(dados) {
   container.appendChild(tableWrapper);
 
   const dica = document.createElement('div');
-  dica.style.cssText = 'margin-top:1rem;padding:1rem;background:#e3f2fd;border-radius:4px;';
+  dica.className = 'sugestoes-compras-dica';
   dica.innerHTML = '<strong>💡 Dica:</strong> <strong>Qtd. p/ Completar</strong> = quanto comprar para atingir o estoque mínimo. ' + (temProjecao ? '<strong>Qtd. Sugerida</strong> inclui consumo projetado nos próximos ' + diasProj + ' dias. ' : '<strong>Qtd. Sugerida</strong> = Qtd. p/ Completar (sem projeção). ') + 'Produtos abaixo do mínimo aparecem mesmo sem consumo recente.';
   container.appendChild(dica);
 
