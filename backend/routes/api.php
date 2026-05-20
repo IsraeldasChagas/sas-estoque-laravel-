@@ -1081,7 +1081,7 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         }
     }
     $ingBody = $ingRows !== ''
-        ? '<table><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>'
+        ? '<table class="data"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>'
             . $ingRows . '</tbody></table>'
         : '<p>—</p>';
 
@@ -1117,17 +1117,51 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
     }
 
     $titulo = $h($row->nome_prato ?: 'Ficha técnica');
+    $logoDataUri = '';
+    foreach ([
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png',
+        base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png'),
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
+        base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png'),
+    ] as $_logoPath) {
+        if (is_string($_logoPath) && is_readable($_logoPath)) {
+            $rawLogo = @file_get_contents($_logoPath);
+            if ($rawLogo !== false && strlen($rawLogo) > 20) {
+                $extLogo = strtolower((string) pathinfo($_logoPath, PATHINFO_EXTENSION));
+                $mimeLogo = ($extLogo === 'jpg' || $extLogo === 'jpeg') ? 'image/jpeg' : 'image/png';
+                $logoDataUri = 'data:' . $mimeLogo . ';base64,' . base64_encode($rawLogo);
+                break;
+            }
+        }
+    }
+    $logoImgHtml = $logoDataUri !== ''
+        ? '<img src="' . $logoDataUri . '" alt="Grupo Sabor Paraense" style="max-height:56px;max-width:140px;display:block;" />'
+        : '';
+    $emitidoEm = now()->timezone('America/Belem')->format('d/m/Y H:i');
+
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>' . $titulo . '</title>'
         . '<style>
-        body{font-family:DejaVu Sans,Arial,sans-serif;padding:1.2rem;color:#111;}
-        h1{font-size:1.25rem;margin:0 0 1rem;}
-        table{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
-        th,td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
-        th{background:#eceff1;font-weight:700;}
-        h2{font-size:1rem;margin-top:1rem;margin-bottom:0.35rem;}
+        body{font-family:DejaVu Sans,Arial,sans-serif;padding:1rem 1.2rem;color:#111;}
+        .pdf-header{width:100%;border-collapse:collapse;margin-bottom:14px;border-bottom:2px solid #de4309;padding-bottom:10px;}
+        .pdf-header td{vertical-align:middle;}
+        .pdf-brand{font-size:15pt;font-weight:bold;color:#b71c1c;letter-spacing:0.02em;}
+        .pdf-doc-title{font-size:11pt;color:#37474f;margin-top:4px;}
+        .pdf-meta{font-size:7.5pt;color:#546e7a;text-align:right;line-height:1.35;}
+        h2{font-size:1rem;margin-top:1rem;margin-bottom:0.35rem;color:#37474f;border-bottom:1px solid #eceff1;padding-bottom:3px;}
+        table.data{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
+        table.data th,table.data td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
+        table.data th{background:#eceff1;font-weight:700;}
         .modo-html{line-height:1.55;}
+        .pdf-rod{margin-top:14px;font-size:7pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:6px;text-align:center;}
         </style></head><body>'
-        . '<h1>' . $titulo . '</h1>'
+        . '<table class="pdf-header"><tr>'
+        . '<td style="width:130px;text-align:left;">' . $logoImgHtml . '</td>'
+        . '<td style="padding-left:10px;">'
+        . '<div class="pdf-brand">Grupo Sabor Paraense</div>'
+        . '<div class="pdf-doc-title">Ficha técnica — ' . $titulo . '</div>'
+        . '</td>'
+        . '<td class="pdf-meta">Emitido em<br/>' . $h($emitidoEm) . '</td>'
+        . '</tr></table>'
         . $fotoHtml
         . '<p><strong>Tempo:</strong> ' . $h($row->tempo_preparo ?: '—') . '</p>'
         . '<p><strong>Responsável:</strong> ' . $h($row->responsavel_tecnico ?: '—') . '</p>'
@@ -1135,6 +1169,7 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         . '<p><strong>Sugestão de venda:</strong> ' . $h($fmtBrl($row->sugestao_venda)) . '</p>'
         . '<h2>Ingredientes</h2>' . $ingBody
         . '<h2>Modo de preparo</h2><div class="modo-html">' . $modoHtml . '</div>'
+        . '<div class="pdf-rod">Grupo Sabor Paraense — ficha técnica gerada pelo sistema.</div>'
         . '</body></html>';
 
     try {
