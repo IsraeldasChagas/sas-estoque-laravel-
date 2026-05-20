@@ -3855,6 +3855,16 @@ function applyPermissions() {
       regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
+  const rhRecrutamentoNavSubmenu = document.getElementById("rhRecrutamentoMenu")?.closest(".nav-submenu");
+  if (rhRecrutamentoNavSubmenu) {
+    const temAcessoRecrutamento =
+      regras.sections.includes("rhDashboard") ||
+      regras.sections.includes("rhVagas") ||
+      regras.sections.includes("rhCandidatos") ||
+      regras.sections.includes("rhEntrevistas") ||
+      regras.sections.includes("rhBancoTalentos");
+    rhRecrutamentoNavSubmenu.classList.toggle("hidden", !temAcessoRecrutamento);
+  }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
@@ -4055,6 +4065,14 @@ function navigateTo(section) {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
+    }
+  }
+  const rhRecrutamentoNavSubmenuNav = document.getElementById("rhRecrutamentoMenu")?.closest(".nav-submenu");
+  if (rhRecrutamentoNavSubmenuNav) {
+    if (section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
+      rhRecrutamentoNavSubmenuNav.classList.add("open");
+    } else {
+      rhRecrutamentoNavSubmenuNav.classList.remove("open");
     }
   }
   if (section === 'boasVindas') {
