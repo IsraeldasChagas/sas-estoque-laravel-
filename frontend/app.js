@@ -1359,6 +1359,7 @@ const state = {
   /** Cache do GET /fechamentos-caixa para o dashboard (antes do filtro por operador). */
   fechamentoDashRows: [],
 };
+window.state = state;
 
 const FECHAMENTO_DASH_UNIDADES_CARDS_KEY = "sas-fechamento-dash-unidades-cards";
 
@@ -7248,6 +7249,11 @@ function refreshUnidadeSelects() {
   const proventoFormUnidade = document.getElementById("proventoForm")?.elements?.unidade_id;
   if (proventoFormUnidade) populateSelect(proventoFormUnidade, options, "Selecione");
   populateSelect(document.getElementById("fechamentoUnidade"), options, "Selecione a unidade");
+  populateSelect(document.getElementById("energiaFormUnidade"), options, "Selecione a unidade");
+  populateSelect(document.getElementById("energiaFiltroUnidade"), options, "Todas as unidades");
+  populateSelect(document.getElementById("energiaDashFiltroUnidade"), options, "Todas as unidades");
+  populateSelect(document.getElementById("energiaProjUnidade"), options, "Todas as unidades");
+  populateSelect(document.getElementById("energiaRelFiltroUnidade"), options, "Todas as unidades");
   
   // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -7737,6 +7743,7 @@ async function loadUnidades(refresh = true) {
   renderUnidades(state.unidades);
   refreshUnidadeSelects();
 }
+window.loadUnidades = loadUnidades;
 
 async function loadLocais(force = false) {
   if (!force && Array.isArray(state.locais) && state.locais.length) {

@@ -68,9 +68,23 @@
     return qs.toString() ? "?" + qs.toString() : "";
   }
 
-  function populateEnergiaUnidadeSelects() {
-    const unidades = window.state?.unidades || [];
-    const opts = unidades.map((u) => `<option value="${u.id}">${esc(u.nome)}</option>`).join("");
+  /** Carrega unidades na API e preenche todos os selects do módulo Energia. */
+  async function populateEnergiaUnidadeSelects() {
+    if (typeof window.loadUnidades === "function") {
+      await window.loadUnidades(false).catch(() => {});
+    }
+    let unidades = window.state?.unidades || [];
+    if (!unidades.length && typeof window.fetchJSON === "function") {
+      try {
+        unidades = await window.fetchJSON("/unidades?todas=1");
+        if (window.state) window.state.unidades = Array.isArray(unidades) ? unidades : [];
+      } catch (_) {
+        unidades = [];
+      }
+    }
+    const opts = unidades
+      .map((u) => `<option value="${u.id}">${esc(u.nome || `Unidade ${u.id}`)}</option>`)
+      .join("");
     const ids = [
       "energiaFiltroUnidade", "energiaDashFiltroUnidade", "energiaFormUnidade",
       "energiaProjUnidade", "energiaRelFiltroUnidade",
@@ -78,11 +92,11 @@
     ids.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      const first = el.querySelector("option")?.outerHTML || '<option value="">Todas</option>';
-      const placeholder = id === "energiaFormUnidade" ? "Selecione a unidade" : (first.includes("Todas") ? "Todas" : "");
-      el.innerHTML = id === "energiaFormUnidade"
-        ? `<option value="">${placeholder}</option>${opts}`
-        : `<option value="">Todas as unidades</option>${opts}`;
+      if (id === "energiaFormUnidade") {
+        el.innerHTML = `<option value="">Selecione a unidade</option>${opts}`;
+      } else {
+        el.innerHTML = `<option value="">Todas as unidades</option>${opts}`;
+      }
     });
   }
 
@@ -197,8 +211,7 @@
   }
 
   async function loadEnergiaDashboardSection() {
-    await window.loadUnidades?.(false).catch(() => {});
-    populateEnergiaUnidadeSelects();
+    await populateEnergiaUnidadeSelects();
     const qs = energiaQueryFromFiltros("energiaDashFiltro");
     try {
       const data = await window.fetchJSON("/energia/dashboard" + qs);
@@ -237,8 +250,7 @@
   }
 
   async function loadEnergiaEquipamentosSection() {
-    await window.loadUnidades?.(false).catch(() => {});
-    populateEnergiaUnidadeSelects();
+    await populateEnergiaUnidadeSelects();
     const qs = energiaQueryFromFiltros("energiaFiltro");
     try {
       const list = await window.fetchJSON("/energia/equipamentos" + qs);
@@ -249,15 +261,18 @@
     }
   }
 
-  function abrirEnergiaFormModal(row) {
+  async function abrirEnergiaFormModal(row) {
     energiaState.edicaoId = row?.id ?? null;
     const title = document.getElementById("energiaEquipamentoModalTitle");
     const form = document.getElementById("energiaEquipamentoForm");
     if (!form) return;
+    await populateEnergiaUnidadeSelects();
     form.reset();
+    await populateEnergiaUnidadeSelects();
     if (title) title.textContent = row ? "Editar equipamento" : "Novo equipamento";
+    const unidadeSelect = form.elements.unidade_id || document.getElementById("energiaFormUnidade");
     if (row) {
-      form.unidade_id.value = String(row.unidade_id);
+      if (unidadeSelect) unidadeSelect.value = String(row.unidade_id);
       form.setor.value = row.setor || "";
       form.equipamento_nome.value = row.equipamento_nome || "";
       form.equipamento_tipo.value = row.equipamento_tipo || "";
@@ -273,6 +288,10 @@
       form.quantidade.value = "1";
       form.dias_uso_mes.value = "26";
       form.valor_kwh.value = "0.75";
+      const user = typeof window.getUser === "function" ? window.getUser() : null;
+      if (unidadeSelect && user?.unidade_id) {
+        unidadeSelect.value = String(user.unidade_id);
+      }
     }
     atualizarEnergiaCalcPreview();
     window.toggleModal?.(document.getElementById("energiaEquipamentoModal"), true);
@@ -282,8 +301,14 @@
     e.preventDefault();
     const form = document.getElementById("energiaEquipamentoForm");
     if (!form) return;
+    const unidadeEl = form.elements.unidade_id || document.getElementById("energiaFormUnidade");
+    const unidadeId = unidadeEl?.value?.trim();
+    if (!unidadeId) {
+      window.showToast?.("Selecione a unidade.", "warning");
+      return;
+    }
     const payload = {
-      unidade_id: form.unidade_id.value,
+      unidade_id: unidadeId,
       setor: form.setor.value.trim(),
       equipamento_nome: form.equipamento_nome.value.trim(),
       equipamento_tipo: form.equipamento_tipo.value.trim() || null,
@@ -385,8 +410,7 @@
   }
 
   async function loadEnergiaRelatoriosSection() {
-    await window.loadUnidades?.(false).catch(() => {});
-    populateEnergiaUnidadeSelects();
+    await populateEnergiaUnidadeSelects();
     const host = document.getElementById("energiaRelatorioPreview");
     if (!host) return;
     const qs = energiaQueryFromFiltros("energiaRelFiltro");
@@ -419,7 +443,9 @@
       document.getElementById("energiaFiltroMaiorCusto").checked = false;
       loadEnergiaEquipamentosSection();
     });
-    document.getElementById("energiaNovoEquipamento")?.addEventListener("click", () => abrirEnergiaFormModal(null));
+    document.getElementById("energiaNovoEquipamento")?.addEventListener("click", () => {
+      abrirEnergiaFormModal(null).catch((err) => window.showToast?.(err?.message || "Erro ao abrir formulário.", "error"));
+    });
     document.getElementById("energiaEquipamentoForm")?.addEventListener("submit", salvarEnergiaEquipamento);
     document.getElementById("energiaEquipamentoForm")?.addEventListener("input", atualizarEnergiaCalcPreview);
     document.getElementById("closeEnergiaEquipamentoModal")?.addEventListener("click", () => window.toggleModal?.(document.getElementById("energiaEquipamentoModal"), false));
@@ -435,7 +461,7 @@
       }
       if (edit) {
         const row = energiaState.equipamentos.find((x) => String(x.id) === edit.getAttribute("data-energia-edit"));
-        if (row) abrirEnergiaFormModal(row);
+        if (row) abrirEnergiaFormModal(row).catch(() => {});
       }
       if (del) {
         const id = del.getAttribute("data-energia-del");
