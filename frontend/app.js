@@ -867,6 +867,52 @@ valeConsumoBindOnce();
 
 const storageKey = "sas-estoque-user";
 const currentSectionKey = "sas-estoque-current-section";
+const ALL_NAV_SECTION_IDS = new Set([
+  "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
+  "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
+  "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash",
+  "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas",
+  "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs",
+]);
+
+function syncUrlSectionHash(section) {
+  if (!section) return;
+  try {
+    const base = window.location.pathname + window.location.search;
+    const desired = `#${section}`;
+    if (window.location.hash !== desired) {
+      history.replaceState(null, "", base + desired);
+    }
+  } catch (_) {}
+}
+
+/** Seção inicial após login/F5: hash na URL > localStorage > Boas-vindas. */
+function resolveInitialSection() {
+  const hash = window.location.hash || "";
+  const m = hash.match(/[?&]lote=(\d+)/);
+  const hashSaidaMatch = m && (hash.includes("saida=1") || hash.includes("saida=true")) ? m : null;
+  if (hashSaidaMatch) {
+    return { section: "dashboard", hashSaidaMatch };
+  }
+  if (hash.length > 1) {
+    const raw = hash.slice(1).split(/[?&]/)[0];
+    if (raw === "rhDocumentos") return { section: "rhCandidatos", hashSaidaMatch: null };
+    if (raw && ALL_NAV_SECTION_IDS.has(raw)) return { section: raw, hashSaidaMatch: null };
+  }
+  try {
+    const saved = localStorage.getItem(currentSectionKey);
+    if (saved) {
+      const normalized = saved === "rhDocumentos" ? "rhCandidatos" : saved;
+      if (ALL_NAV_SECTION_IDS.has(normalized)) {
+        const regras = applyPermissions();
+        if (regras.sections.includes(normalized)) {
+          return { section: normalized, hashSaidaMatch: null };
+        }
+      }
+    }
+  } catch (_) {}
+  return { section: "boasVindas", hashSaidaMatch: null };
+}
 
 // Cache para marca/modelo do dispositivo (User-Agent Client Hints - Chrome/Edge)
 let cachedDeviceInfo = null;
@@ -3957,15 +4003,16 @@ function navigateTo(section) {
   if (!dom.sections.length) {
     refreshDomShellNav();
   }
-  // Salva a seção atual no localStorage para restaurar após refresh
+  // Salva a seção atual no localStorage e na URL para restaurar após refresh (F5)
   if (section) {
     try {
       localStorage.setItem(currentSectionKey, section);
     } catch (err) {
       console.warn('Erro ao salvar seção atual:', err);
     }
+    syncUrlSectionHash(section);
   }
-  
+
   // Usa alternância de seções (conteúdo no index.html) - evita fetch que pode falhar em produção
   dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
   dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
@@ -9282,32 +9329,14 @@ async function startAppSession(user) {
     loadRelatorio({}).catch(err => console.error("Erro ao carregar relatório:", err)),
   ]).then(() => {});
   
-  // Navegação inicial: sempre Boas-vindas ao entrar (login ou reabertura com sessão).
-  // Exceção: link QR de saída (#dashboard?lote=…&saida=1) ou hash direto para outra seção.
+  // Navegação inicial: restaura última seção (F5) ou hash na URL; exceção QR de saída de lote.
   (() => {
-    const allSections = new Set([
-      "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
-      "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
-      "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas",
-      "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas", "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs"
-    ]);
-
-    let sectionToNavigate = "boasVindas";
-
-    const hash = window.location.hash || "";
-    const m = hash.match(/[?&]lote=(\d+)/);
-    const hashSaidaMatch = m && (hash.includes("saida=1") || hash.includes("saida=true")) ? m : null;
-    if (hashSaidaMatch) {
-      sectionToNavigate = "dashboard";
-    } else if (hash.length > 1) {
-      const raw = hash.slice(1).split(/[?&]/)[0];
-      if (raw === "rhDocumentos") sectionToNavigate = "rhCandidatos";
-      else if (raw && allSections.has(raw)) sectionToNavigate = raw;
-    }
+    const { section: sectionToNavigate, hashSaidaMatch } = resolveInitialSection();
 
     try {
       localStorage.setItem(currentSectionKey, sectionToNavigate);
     } catch (_) {}
+    syncUrlSectionHash(sectionToNavigate);
 
     const runInitialNav = () => {
       refreshDomShellNav();
