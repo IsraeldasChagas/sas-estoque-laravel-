@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260520-nav-arrows" />
+    <link rel="stylesheet" href="style.css?v=20260520-ficha-form-layout" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -1239,46 +1239,52 @@
                 <header id="fichaTecnicaFormTitulo">Nova ficha técnica</header>
                 <form id="fichaTecnicaForm" class="ficha-tecnica-form" novalidate>
                 <input type="hidden" id="fichaTecnicaEditId" value="" />
-                <h3 class="ficha-tecnica-form__section-title ficha-tecnica-form__section-title--top">Foto do prato</h3>
-                <div class="ficha-tecnica-form__field">
-                  <span>Imagem do prato (opcional)</span>
-                  <input type="file" id="fichaTecnicaFoto" name="foto_prato" accept="image/jpeg,image/png,image/webp,image/gif" />
-                  <small class="ficha-tecnica-form__hint">JPEG, PNG, WebP ou GIF.</small>
-                  <div id="fichaTecnicaFotoPreviewWrap" class="ficha-tecnica-form__preview-wrap" hidden>
-                    <img id="fichaTecnicaFotoPreview" alt="Pré-visualização da foto do prato" width="320" height="240" />
+                <div class="ficha-tecnica-form__block ficha-tecnica-form__block--foto">
+                  <h3 class="ficha-tecnica-form__section-title ficha-tecnica-form__section-title--top">Foto do prato</h3>
+                  <div class="ficha-tecnica-form__field">
+                    <span>Imagem do prato (opcional)</span>
+                    <input type="file" id="fichaTecnicaFoto" name="foto_prato" accept="image/jpeg,image/png,image/webp,image/gif" />
+                    <small class="ficha-tecnica-form__hint">JPEG, PNG, WebP ou GIF.</small>
+                    <div id="fichaTecnicaFotoPreviewWrap" class="ficha-tecnica-form__preview-wrap" hidden>
+                      <img id="fichaTecnicaFotoPreview" alt="Pré-visualização da foto do prato" width="320" height="240" />
+                    </div>
                   </div>
                 </div>
 
-                <h3 class="ficha-tecnica-form__section-title">Dados do prato</h3>
-                <label class="ficha-tecnica-form__field">
-                  <span>Nome do prato *</span>
-                  <input type="text" id="fichaTecnicaNomePrato" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
-                </label>
-                <label class="ficha-tecnica-form__field">
-                  <span>Data da ficha</span>
-                  <input type="date" id="fichaTecnicaData" name="data_ficha" />
-                  <small class="ficha-tecnica-form__hint">Data de referência da ficha (padrão: hoje).</small>
-                </label>
-                <div class="ficha-tecnica-form__field ficha-tecnica-tempo-field">
-                  <span>Tempo de preparo *</span>
-                  <div class="ficha-tecnica-tempo-inputs">
-                    <label class="ficha-tecnica-tempo-part">
-                      <span class="ficha-tecnica-tempo-part__lbl">Horas</span>
-                      <input type="number" id="fichaTecnicaTempoHoras" min="0" max="999" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                <div class="ficha-tecnica-form__block">
+                  <h3 class="ficha-tecnica-form__section-title">Dados do prato</h3>
+                  <div class="ficha-tecnica-form__grid">
+                    <label class="ficha-tecnica-form__field ficha-tecnica-form__field--full">
+                      <span>Nome do prato *</span>
+                      <input type="text" id="fichaTecnicaNomePrato" name="nome_prato" required maxlength="255" placeholder="Ex.: Filé ao molho madeira" autocomplete="off" />
                     </label>
-                    <label class="ficha-tecnica-tempo-part">
-                      <span class="ficha-tecnica-tempo-part__lbl">Minutos</span>
-                      <input type="number" id="fichaTecnicaTempoMinutos" min="0" max="59" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                    <label class="ficha-tecnica-form__field ficha-tecnica-form__field--data">
+                      <span>Data da ficha</span>
+                      <input type="date" id="fichaTecnicaData" name="data_ficha" />
+                      <small class="ficha-tecnica-form__hint">Padrão: hoje.</small>
+                    </label>
+                    <div class="ficha-tecnica-form__field ficha-tecnica-form__field--tempo ficha-tecnica-tempo-field">
+                      <span>Tempo de preparo *</span>
+                      <div class="ficha-tecnica-tempo-inputs">
+                        <label class="ficha-tecnica-tempo-part">
+                          <span class="ficha-tecnica-tempo-part__lbl">Horas</span>
+                          <input type="number" id="fichaTecnicaTempoHoras" min="0" max="999" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                        </label>
+                        <label class="ficha-tecnica-tempo-part">
+                          <span class="ficha-tecnica-tempo-part__lbl">Minutos</span>
+                          <input type="number" id="fichaTecnicaTempoMinutos" min="0" max="59" step="1" inputmode="numeric" placeholder="0" autocomplete="off" />
+                        </label>
+                      </div>
+                      <input type="hidden" id="fichaTecnicaTempoPreparo" name="tempo_preparo" value="" required />
+                    </div>
+                    <label class="ficha-tecnica-form__field ficha-tecnica-form__field--full">
+                      <span>Responsável técnico *</span>
+                      <input type="text" id="fichaTecnicaResponsavel" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
                     </label>
                   </div>
-                  <small class="ficha-tecnica-form__hint">Informe em horas e minutos (ex.: 1 hora e 30 minutos ou só 45 minutos).</small>
-                  <input type="hidden" id="fichaTecnicaTempoPreparo" name="tempo_preparo" value="" required />
                 </div>
-                <label class="ficha-tecnica-form__field">
-                  <span>Responsável técnico *</span>
-                  <input type="text" id="fichaTecnicaResponsavel" name="responsavel_tecnico" required maxlength="255" placeholder="Nome completo do responsável" autocomplete="off" />
-                </label>
 
+                <div class="ficha-tecnica-form__block">
                 <h3 class="ficha-tecnica-form__section-title">Visualização do prato — preços</h3>
                 <p class="ficha-tecnica-form__section-desc">Os valores abaixo aparecem na pré-visualização à medida que você preenche.</p>
                 <div class="ficha-tecnica-visao">
@@ -1309,8 +1315,9 @@
                     </label>
                   </div>
                 </div>
+                </div>
 
-                <div class="ficha-tecnica-ingredientes-dentro-ficha">
+                <div class="ficha-tecnica-form__block ficha-tecnica-ingredientes-dentro-ficha">
                   <h3 class="ficha-tecnica-form__section-title">Ingredientes</h3>
                   <div class="ficha-tecnica-ingredientes-toolbar">
                     <button type="button" class="btn primary" id="fichaTecnicaAbrirIngrediente">+ Cadastrar ingrediente</button>
@@ -1382,6 +1389,7 @@
                   </div>
                 </div>
 
+                <div class="ficha-tecnica-form__block ficha-tecnica-form__block--modo">
                 <h3 class="ficha-tecnica-form__section-title">Modo de preparo</h3>
                 <div class="ficha-tecnica-form__field ficha-tecnica-rich-field">
                   <span>Passo a passo, temperaturas e observações</span>
@@ -1419,6 +1427,7 @@
                     data-placeholder="Descreva o modo de preparo: ordem dos ingredientes, cortes, fogo, tempo em cada etapa, finalização, etc."
                   ></div>
                   <input type="hidden" id="fichaTecnicaModoPreparo" name="modo_preparo" value="" />
+                </div>
                 </div>
 
                 <footer class="ficha-tecnica-form__footer ficha-tecnica-form__footer--row">

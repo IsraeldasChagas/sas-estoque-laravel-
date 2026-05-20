@@ -1468,9 +1468,45 @@ textarea {
 .ficha-tecnica-form {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  padding: 1.25rem 1.5rem 1.5rem;
+  gap: 0;
+  padding: 1.25rem clamp(1rem, 3vw, 1.75rem) 1.5rem;
   box-sizing: border-box;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.ficha-tecnica-form__block {
+  padding: 1.15rem 0 1.35rem;
+  border-bottom: 1px solid #eceff1;
+}
+.ficha-tecnica-form__block:last-of-type {
+  border-bottom: none;
+}
+.ficha-tecnica-form__block--foto {
+  max-width: 28rem;
+}
+.ficha-tecnica-form__block--modo {
+  max-width: 100%;
+}
+.ficha-tecnica-form__grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+.ficha-tecnica-form__field--full {
+  grid-column: 1 / -1;
+}
+.ficha-tecnica-form__field--data {
+  grid-column: span 4;
+}
+.ficha-tecnica-form__field--tempo {
+  grid-column: span 8;
+}
+@media (max-width: 720px) {
+  .ficha-tecnica-form__field--data,
+  .ficha-tecnica-form__field--tempo {
+    grid-column: 1 / -1;
+  }
 }
 .ficha-tecnica-form__section-title {
   margin: 1.25rem 0 0;
@@ -1516,9 +1552,15 @@ textarea {
   font-family: inherit;
 }
 .ficha-tecnica-visao {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.15rem 1.5rem;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .ficha-tecnica-visao {
+    grid-template-columns: 1fr;
+  }
 }
 .ficha-tecnica-visao__painel {
   background: linear-gradient(135deg, #f5f9ff 0%, #e8f4fc 100%);
@@ -1576,6 +1618,8 @@ textarea {
   color: #000;
 }
 .ficha-tecnica-form__field input[type="text"],
+.ficha-tecnica-form__field input[type="date"],
+.ficha-tecnica-form__field input[type="number"],
 .ficha-tecnica-form__field input[type="file"] {
   font-weight: 500;
   width: 100%;
@@ -1585,6 +1629,18 @@ textarea {
   border-radius: 8px;
   border: 1px solid var(--border, #ddd);
   font-size: 0.95rem;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ficha-tecnica-form__field input[type="text"]:focus,
+.ficha-tecnica-form__field input[type="date"]:focus,
+.ficha-tecnica-form__field input[type="number"]:focus {
+  border-color: #1976d2;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+.ficha-tecnica-form__field--data input[type="date"] {
+  max-width: 14rem;
 }
 .ficha-tecnica-form__hint {
   font-weight: 500;
@@ -1607,9 +1663,10 @@ textarea {
 .ficha-tecnica-form__preview-wrap img {
   display: block;
   width: 100%;
-  max-width: 320px;
+  max-width: min(100%, 320px);
   height: auto;
   object-fit: cover;
+  margin: 0 auto;
 }
 .ficha-tecnica-form__footer {
   margin-top: 0.5rem;
@@ -1623,17 +1680,22 @@ textarea {
   align-items: center;
 }
 .ficha-tecnica-ingredientes-toolbar {
-  padding: 0 1.5rem 0.75rem;
+  padding: 0 0 0.75rem;
 }
 .ficha-tecnica-ingrediente-form-wrap {
   border-top: 1px solid var(--border, #e8e8e8);
   background: #fafafa;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+  overflow: hidden;
 }
 .ficha-tecnica-form--compact {
-  padding-top: 1rem;
+  padding: 1rem 1.15rem 1.15rem;
+  max-width: none;
+  margin: 0;
 }
 .ficha-tecnica-ingredientes-lista {
-  padding: 0 1.5rem 1.25rem;
+  padding: 0 0 0.25rem;
 }
 .ficha-tecnica-ingredientes-empty {
   margin: 0;
@@ -1745,8 +1807,8 @@ textarea {
 
 .ficha-tecnica-form__grid-two {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
   align-items: end;
 }
 @media (max-width: 600px) {
@@ -1754,19 +1816,21 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+.ficha-tecnica-visao__inputs.ficha-tecnica-form__grid-two {
+  margin-top: 0;
+}
 
 .ficha-tecnica-tempo-field .ficha-tecnica-tempo-inputs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 1rem;
-  margin-top: 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(5.5rem, 7.5rem));
+  gap: 0.75rem 1rem;
+  margin-top: 0.15rem;
 }
 .ficha-tecnica-tempo-part {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  min-width: 6.5rem;
+  min-width: 0;
 }
 .ficha-tecnica-tempo-part__lbl {
   font-size: 0.82rem;
@@ -1775,13 +1839,14 @@ textarea {
 }
 .ficha-tecnica-tempo-part input[type="number"] {
   width: 100%;
-  max-width: 8rem;
+  max-width: 100%;
   padding: 0.55rem 0.65rem;
   border-radius: 8px;
   border: 1px solid var(--border, #ddd);
   font-size: 1rem;
   font-weight: 600;
   box-sizing: border-box;
+  background: #fff;
 }
 
 /* Modo de preparo — mini editor rico */
