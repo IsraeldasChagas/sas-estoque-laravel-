@@ -1115,16 +1115,8 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         $modoTexto = preg_replace('/[ \t]+/u', ' ', $modoTexto);
         $modoTexto = trim($modoTexto);
         if ($modoTexto !== '') {
-            $partes = preg_split('/\n+/u', $modoTexto) ?: [$modoTexto];
-            $blocos = '';
-            foreach ($partes as $parte) {
-                $parte = trim($parte);
-                if ($parte === '') {
-                    continue;
-                }
-                $blocos .= '<p>' . $h($parte) . '</p>';
-            }
-            $modoHtml = $blocos !== '' ? '<div class="modo-html">' . $blocos . '</div>' : '—';
+            $modoTexto = preg_replace("/\n{3,}/u", "\n\n", $modoTexto);
+            $modoHtml = '<div class="modo-html">' . nl2br($h($modoTexto), false) . '</div>';
         }
     }
 
@@ -1173,7 +1165,8 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         table.data{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
         table.data th,table.data td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
         table.data th{background:#eceff1;font-weight:700;}
-        .modo-html{line-height:1.55;}
+        .modo-html{margin:0;padding:0;line-height:1.4;font-size:9.5pt;}
+        .modo-html br{line-height:1.4;}
         .pdf-rod{margin-top:14px;font-size:7pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:6px;text-align:center;}
         </style></head><body>';
     $dataFichaPdf = '—';
@@ -1205,7 +1198,7 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         . '<p><strong>Sugestão de venda:</strong> ' . $h($fmtBrl($row->sugestao_venda)) . '</p>';
 
     $blocoIngredientesModo = '<h2>Ingredientes</h2>' . $ingBody
-        . '<h2>Modo de preparo</h2><div class="modo-html">' . $modoHtml . '</div>';
+        . '<h2>Modo de preparo</h2>' . $modoHtml;
 
     if ($tipoPdf === 'ingredientes') {
         $corpo = '<p class="pdf-prato-nome" style="font-size:13pt;font-weight:bold;margin:14px 0 10px;color:#263238;">'

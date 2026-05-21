@@ -2132,14 +2132,35 @@ textarea {
   min-height: 220px;
   max-height: min(50vh, 520px);
   overflow-y: auto;
-  padding: 0.9rem 1rem;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--border, #cfd8dc);
   border-radius: 0 0 10px 10px;
   background: #fff;
   font-size: 0.95rem;
-  line-height: 1.55;
+  line-height: 1.4;
   outline: none;
   color: #263238;
+}
+.ficha-tecnica-rich-editor p,
+.ficha-tecnica-rich-editor div,
+.ficha-tecnica-rich-editor h3,
+.ficha-tecnica-rich-editor h4,
+.ficha-tecnica-rich-editor blockquote {
+  margin: 0 0 0.35rem;
+  padding: 0;
+}
+.ficha-tecnica-rich-editor p:last-child,
+.ficha-tecnica-rich-editor div:last-child {
+  margin-bottom: 0;
+}
+.ficha-tecnica-rich-editor ul,
+.ficha-tecnica-rich-editor ol {
+  margin: 0 0 0.35rem 1.1rem;
+  padding: 0;
+}
+.ficha-tecnica-rich-editor li {
+  margin: 0 0 0.2rem;
+  padding: 0;
 }
 .ficha-tecnica-rich-editor:focus {
   border-color: #1976d2;
@@ -2177,11 +2198,23 @@ textarea {
 }
 .ficha-tecnica-ver-modo--html {
   font-size: 0.92rem;
-  line-height: 1.55;
+  line-height: 1.4;
+}
+.ficha-tecnica-ver-modo--html p,
+.ficha-tecnica-ver-modo--html div,
+.ficha-tecnica-ver-modo--html h3,
+.ficha-tecnica-ver-modo--html h4,
+.ficha-tecnica-ver-modo--html blockquote {
+  margin: 0 0 0.35rem;
+  padding: 0;
 }
 .ficha-tecnica-ver-modo--html ul,
 .ficha-tecnica-ver-modo--html ol {
-  margin: 0.5rem 0 0.5rem 1.25rem;
+  margin: 0 0 0.35rem 1.1rem;
+  padding: 0;
+}
+.ficha-tecnica-ver-modo--html li {
+  margin: 0 0 0.2rem;
   padding: 0;
 }
 
