@@ -1151,22 +1151,32 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         : '';
     $emitidoEm = now()->timezone('America/Belem')->format('d/m/Y H:i');
 
+    $tipoPdf = strtolower(trim((string) $request->query('tipo', 'completa')));
+    if (! in_array($tipoPdf, ['completa', 'ingredientes'], true)) {
+        $tipoPdf = 'completa';
+    }
+
+    $bodyClass = $tipoPdf === 'ingredientes' ? 'pdf-tipo-ingredientes' : '';
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>' . $titulo . '</title>'
         . '<style>
-        body{font-family:DejaVu Sans,Arial,sans-serif;padding:1rem 1.2rem;color:#111;}
-        .pdf-header{width:100%;border-collapse:collapse;margin-bottom:14px;border-bottom:2px solid #de4309;padding-bottom:10px;}
+        body{font-family:DejaVu Sans,Arial,sans-serif;padding:0.75rem 1rem;color:#111;font-size:10pt;line-height:1.2;}
+        p{margin:0.12rem 0;font-size:10pt;}
+        .pdf-header{width:100%;border-collapse:collapse;margin-bottom:8px;border-bottom:2px solid #de4309;padding-bottom:6px;}
         .pdf-header td{vertical-align:middle;}
         .pdf-brand{font-size:15pt;font-weight:bold;color:#b71c1c;letter-spacing:0.02em;}
-        .pdf-doc-title{font-size:11pt;color:#37474f;margin-top:4px;}
-        .pdf-meta{font-size:7.5pt;color:#546e7a;text-align:right;line-height:1.35;}
-        h2{font-size:1rem;margin-top:1rem;margin-bottom:0.35rem;color:#37474f;border-bottom:1px solid #eceff1;padding-bottom:3px;}
-        table.data{border-collapse:collapse;width:100%;margin:0.5rem 0;font-size:0.9rem;}
-        table.data th,table.data td{border:1px solid #cfd8dc;padding:6px 8px;text-align:left;}
+        .pdf-doc-title{font-size:10pt;color:#37474f;margin-top:3px;}
+        .pdf-meta{font-size:8pt;color:#546e7a;text-align:right;line-height:1.25;}
+        h2{font-size:10pt;margin-top:0.6rem;margin-bottom:0.2rem;color:#37474f;border-bottom:1px solid #eceff1;padding-bottom:2px;}
+        table.data{border-collapse:collapse;width:100%;margin:0.15rem 0;font-size:10pt;}
+        table.data th,table.data td{border:1px solid #cfd8dc;padding:1px 3px;text-align:left;line-height:1.1;vertical-align:middle;font-size:10pt;}
         table.data th{background:#eceff1;font-weight:700;}
-        .modo-html{margin:0;padding:0;line-height:1.4;font-size:9.5pt;}
-        .modo-html br{line-height:1.4;}
-        .pdf-rod{margin-top:14px;font-size:7pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:6px;text-align:center;}
-        </style></head><body>';
+        .modo-html{margin:0;padding:0;line-height:1.25;font-size:10pt;}
+        .modo-html br{line-height:1.25;}
+        .pdf-secao-label{font-size:10pt;font-weight:bold;margin:0.45rem 0 0.15rem;}
+        body.pdf-tipo-ingredientes .pdf-header{margin-bottom:4px;padding-bottom:4px;}
+        body.pdf-tipo-ingredientes table.data{margin-top:0.1rem;}
+        .pdf-rod{margin-top:10px;font-size:8pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:5px;text-align:center;}
+        </style></head><body class="' . trim($bodyClass) . '">';
     $dataFichaPdf = '—';
     if (Schema::hasColumn('fichas_tecnicas', 'data_ficha') && ! empty($row->data_ficha)) {
         try {
@@ -1175,11 +1185,6 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
             $dataFichaPdf = $h(substr((string) $row->data_ficha, 0, 10));
         }
     }
-    $tipoPdf = strtolower(trim((string) $request->query('tipo', 'completa')));
-    if (! in_array($tipoPdf, ['completa', 'ingredientes'], true)) {
-        $tipoPdf = 'completa';
-    }
-
     $pdfHeader = '<table class="pdf-header"><tr>'
         . '<td style="width:130px;text-align:left;">' . $logoImgHtml . '</td>'
         . '<td style="padding-left:10px;">'
@@ -1199,9 +1204,10 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         . '<h2>Modo de preparo</h2>' . $modoHtml;
 
     if ($tipoPdf === 'ingredientes') {
-        $corpo = '<p class="pdf-prato-nome" style="font-size:13pt;font-weight:bold;margin:14px 0 10px;color:#263238;">'
-            . $titulo . '</p>'
-            . $blocoIngredientesModo;
+        $corpo = $ingBody;
+        if ($modoHtml !== '—') {
+            $corpo .= '<p class="pdf-secao-label"><strong>Modo de preparo</strong></p>' . $modoHtml;
+        }
     } else {
         $corpo = $fotoHtml . $blocoMeta . $blocoIngredientesModo;
     }
