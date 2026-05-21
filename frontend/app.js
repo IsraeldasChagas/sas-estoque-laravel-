@@ -21719,6 +21719,8 @@ function setupFichaTecnicaForm() {
 
   aplicarUnidadesMedidaExtrasNoSelect();
 
+  const ingCu = document.getElementById('fichaTecnicaIngredienteCustoUnitario');
+  const ingTot = document.getElementById('fichaTecnicaIngredienteCustoTotal');
   const ingEmpty = document.getElementById('fichaTecnicaIngredientesEmpty');
   const ingTableWrap = document.getElementById('fichaTecnicaIngredientesTableWrap');
   const ingTbody = document.getElementById('fichaTecnicaIngredientesTbody');
@@ -21749,11 +21751,34 @@ function setupFichaTecnicaForm() {
     return Number.isFinite(n) ? n : null;
   };
   const fmtIngQtdCell = (q) => (q != null && q !== '' ? formatQuantityDisplay(q) : '—');
+  const fmtIngBRLCell = (v) =>
+    v != null && v !== '' && Number.isFinite(Number(v)) ? formatCurrencyBRL(v) : '—';
   /** Legado: fichas antigas gravavam "un"; padronizar para "und". */
   const normalizarUnidadeMedidaFichaTecnica = (u) => {
     const s = String(u ?? '').trim();
     return s.toLowerCase() === 'un' ? 'und' : s;
   };
+  const recalcIngredienteCustoTotal = () => {
+    if (!ingTot) return;
+    const qs = String(ingQ?.value ?? '').trim();
+    const cus = String(ingCu?.value ?? '').trim();
+    if (qs === '' || cus === '') {
+      ingTot.value = '';
+      return;
+    }
+    const q = parseFloat(qs.replace(',', '.'));
+    const cu = parseFloat(cus.replace(',', '.'));
+    if (!Number.isFinite(q) || !Number.isFinite(cu)) {
+      ingTot.value = '';
+      return;
+    }
+    const t = Math.round(q * cu * 100) / 100;
+    ingTot.value = t.toFixed(2).replace('.', ',');
+  };
+  ingQ?.addEventListener('input', recalcIngredienteCustoTotal);
+  ingCu?.addEventListener('input', recalcIngredienteCustoTotal);
+  recalcIngredienteCustoTotal();
+
   ingBtnAddUnidade?.addEventListener('click', adicionarUnidadeMedidaExtra);
   ingNovaUnidade?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -21786,6 +21811,8 @@ function setupFichaTecnicaForm() {
         <td data-label="Ingrediente">${escapeHtml(it.nome)}</td>
         <td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td>
         <td data-label="Un.">${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td>
+        <td data-label="Custo unitário">${escapeHtml(fmtIngBRLCell(it.custo_unitario))}</td>
+        <td data-label="Custo total">${escapeHtml(fmtIngBRLCell(it.custo_total))}</td>
         <td class="ficha-tecnica-ingredientes-td-acoes" data-label="Ações">
           <span class="ficha-tecnica-ingredientes-acoes-btns">
             <button type="button" class="btn-icon ficha-tecnica-ingrediente-editar" title="Editar" data-editar-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Editar ingrediente">✎</button>
@@ -21802,6 +21829,9 @@ function setupFichaTecnicaForm() {
     if (ingQ) ingQ.value = '';
     if (ingUn) ingUn.value = '';
     if (ingNovaUnidade) ingNovaUnidade.value = '';
+    if (ingCu) ingCu.value = '';
+    if (ingTot) ingTot.value = '';
+    recalcIngredienteCustoTotal();
   };
 
   const revogarPreviewUrl = () => {
@@ -21961,6 +21991,8 @@ function setupFichaTecnicaForm() {
           nome: it.nome,
           quantidade: it.quantidade,
           unidade_medida: normalizarUnidadeMedidaFichaTecnica(it.unidade_medida),
+          custo_unitario: it.custo_unitario,
+          custo_total: it.custo_total,
         }))
       : [];
     renderListaIngredientesFichaTecnica();
@@ -22210,6 +22242,8 @@ function setupFichaTecnicaForm() {
       if (ingNome) ingNome.value = it.nome || '';
       if (ingQ) ingQ.value = it.quantidade != null && it.quantidade !== '' ? String(it.quantidade) : '';
       if (ingUn) ingUn.value = normalizarUnidadeMedidaFichaTecnica(it.unidade_medida || '');
+      if (ingCu) ingCu.value = it.custo_unitario != null && it.custo_unitario !== '' ? String(it.custo_unitario) : '';
+      recalcIngredienteCustoTotal();
       atualizarRotuloBotaoIngrediente();
       ingNome?.focus();
       return;
@@ -22241,9 +22275,15 @@ function setupFichaTecnicaForm() {
       ingUn?.focus();
       return;
     }
+    recalcIngredienteCustoTotal();
     const nome = (ingNome?.value || '').trim();
     const quantidade = parseOptionalIngNum(ingQ?.value);
     const unidade_medida = normalizarUnidadeMedidaFichaTecnica((ingUn?.value || '').trim());
+    const custo_unitario = parseOptionalIngNum(ingCu?.value);
+    const custo_total =
+      quantidade != null && custo_unitario != null
+        ? Math.round(quantidade * custo_unitario * 100) / 100
+        : null;
     if (fichaTecnicaIngredienteEditId != null) {
       const ix = state.fichaTecnicaIngredientes.findIndex(
         (x) => String(x.id) === String(fichaTecnicaIngredienteEditId)
@@ -22255,6 +22295,8 @@ function setupFichaTecnicaForm() {
           nome,
           quantidade,
           unidade_medida,
+          custo_unitario,
+          custo_total,
         };
       }
       renderListaIngredientesFichaTecnica();
@@ -22266,6 +22308,8 @@ function setupFichaTecnicaForm() {
         nome,
         quantidade,
         unidade_medida,
+        custo_unitario,
+        custo_total,
       });
       renderListaIngredientesFichaTecnica();
       fecharFormularioIngrediente();

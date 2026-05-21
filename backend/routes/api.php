@@ -1087,23 +1087,41 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         $ingredientes = is_array($decoded) ? $decoded : [];
     }
 
-    $ingRows = '';
+    $tipoPdf = strtolower(trim((string) $request->query('tipo', 'completa')));
+    if (! in_array($tipoPdf, ['completa', 'ingredientes'], true)) {
+        $tipoPdf = 'completa';
+    }
+
+    $ingRowsCompleta = '';
+    $ingRowsIngredientes = '';
     if ($ingredientes !== []) {
         foreach ($ingredientes as $it) {
             if (!is_array($it)) {
                 continue;
             }
-            $ingRows .= '<tr>'
+            $ingRowsCompleta .= '<tr>'
+                . '<td>' . $h($it['nome'] ?? '') . '</td>'
+                . '<td>' . $h($fmtQtd($it['quantidade'] ?? null)) . '</td>'
+                . '<td>' . $h($it['unidade_medida'] ?? '') . '</td>'
+                . '<td>' . $h($fmtBrl($it['custo_unitario'] ?? null)) . '</td>'
+                . '<td>' . $h($fmtBrl($it['custo_total'] ?? null)) . '</td>'
+                . '</tr>';
+            $ingRowsIngredientes .= '<tr>'
                 . '<td>' . $h($it['nome'] ?? '') . '</td>'
                 . '<td>' . $h($fmtQtd($it['quantidade'] ?? null)) . '</td>'
                 . '<td>' . $h($it['unidade_medida'] ?? '') . '</td>'
                 . '</tr>';
         }
     }
-    $ingBody = $ingRows !== ''
-        ? '<table class="data"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th></tr></thead><tbody>'
-            . $ingRows . '</tbody></table>'
+    $ingBodyCompleta = $ingRowsCompleta !== ''
+        ? '<table class="data"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>'
+            . $ingRowsCompleta . '</tbody></table>'
         : '<p>—</p>';
+    $ingBodyIngredientes = $ingRowsIngredientes !== ''
+        ? '<table class="data"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th></tr></thead><tbody>'
+            . $ingRowsIngredientes . '</tbody></table>'
+        : '<p>—</p>';
+    $ingBody = $tipoPdf === 'ingredientes' ? $ingBodyIngredientes : $ingBodyCompleta;
 
     $modoRaw = (string) ($row->modo_preparo ?? '');
     $modoHtml = '—';
@@ -1150,11 +1168,6 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         ? '<img src="' . $logoDataUri . '" alt="Grupo Sabor Paraense" style="max-height:56px;max-width:140px;display:block;" />'
         : '';
     $emitidoEm = now()->timezone('America/Belem')->format('d/m/Y H:i');
-
-    $tipoPdf = strtolower(trim((string) $request->query('tipo', 'completa')));
-    if (! in_array($tipoPdf, ['completa', 'ingredientes'], true)) {
-        $tipoPdf = 'completa';
-    }
 
     $bodyClass = $tipoPdf === 'ingredientes' ? 'pdf-tipo-ingredientes' : '';
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>' . $titulo . '</title>'
