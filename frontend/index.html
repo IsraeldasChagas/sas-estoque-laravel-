@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260521-modo-preparo-espaco" />
+    <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
@@ -1373,17 +1373,6 @@
                           </div>
                         </div>
                       </div>
-                      <div class="ficha-tecnica-form__grid-two">
-                        <label class="ficha-tecnica-form__field">
-                          <span>Custo unitário (R$) <small class="ficha-tecnica-form__hint-inline">(opcional)</small></span>
-                          <input type="number" id="fichaTecnicaIngredienteCustoUnitario" name="ingrediente_custo_unitario" min="0" step="0.01" placeholder="0,00" />
-                        </label>
-                        <label class="ficha-tecnica-form__field">
-                          <span>Custo total (R$)</span>
-                          <input type="text" id="fichaTecnicaIngredienteCustoTotal" name="ingrediente_custo_total" readonly inputmode="decimal" />
-                          <small class="ficha-tecnica-form__hint">Quantidade × custo unitário</small>
-                        </label>
-                      </div>
                       <footer class="ficha-tecnica-form__footer ficha-tecnica-form__footer--row">
                         <button type="button" class="btn neutral" id="fichaTecnicaCancelarIngrediente">Cancelar</button>
                         <button type="button" class="btn primary" id="fichaTecnicaIngredienteAdicionarBtn">Adicionar à lista</button>
@@ -1399,8 +1388,6 @@
                             <th>Ingrediente</th>
                             <th>Qtd</th>
                             <th>Un.</th>
-                            <th>Custo un.</th>
-                            <th>Custo tot.</th>
                             <th class="ficha-tecnica-ingredientes-th-acoes">Ações</th>
                           </tr>
                         </thead>
@@ -5159,7 +5146,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
     <script src="energia.js?v=20260521-energia-opcional"></script>
-    <script src="app.js?v=20260521-modo-preparo-espaco"></script>
+    <script src="app.js?v=20260521-ingredientes-compacto"></script>
      
   </body>
 </html>

@@ -1916,11 +1916,13 @@ textarea {
 }
 .ficha-tecnica-ingredientes-table {
   width: 100%;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
+  line-height: 1.2;
 }
 .ficha-tecnica-ingredientes-table thead th {
   font-weight: 700;
   color: #000;
+  line-height: 1.2;
 }
 .ficha-tecnica-lista-table thead th {
   font-weight: 700;
@@ -1928,17 +1930,48 @@ textarea {
 }
 .ficha-tecnica-ingredientes-table th,
 .ficha-tecnica-ingredientes-table td {
-  padding: 0.45rem 0.5rem;
+  padding: 0.1rem 0.35rem;
   text-align: left;
   border-bottom: 1px solid var(--border, #eee);
+  vertical-align: middle;
+  line-height: 1.2;
 }
 .ficha-tecnica-ingredientes-table th.ficha-tecnica-ingredientes-th-acoes,
 .ficha-tecnica-ingredientes-table td.ficha-tecnica-ingredientes-td-acoes {
   width: auto;
-  min-width: 5.5rem;
+  min-width: 4.25rem;
   text-align: center;
-  padding-inline: 0.35rem;
+  padding-inline: 0.2rem;
   vertical-align: middle;
+}
+.ficha-tecnica-form--compact .ficha-tecnica-form__field > span {
+  font-size: 0.86rem;
+  margin-bottom: 0.1rem;
+}
+.ficha-tecnica-form--compact .ficha-tecnica-form__field input[type="text"],
+.ficha-tecnica-form--compact .ficha-tecnica-form__field input[type="number"],
+.ficha-tecnica-form--compact .ficha-tecnica-form__field select {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  min-height: 0;
+  border-radius: 4px;
+}
+.ficha-tecnica-form--compact .ficha-tecnica-unidade-medida-select {
+  padding: 0.2rem 0.35rem;
+  font-size: 0.86rem;
+}
+.ficha-tecnica-form--compact .ficha-tecnica-nova-unidade-input {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.86rem;
+}
+.ficha-tecnica-form--compact .ficha-tecnica-unidade-add-btn {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+.ficha-tecnica-form--compact {
+  padding: 0.65rem 0.85rem 0.75rem;
 }
 .ficha-tecnica-ingredientes-table .ficha-tecnica-ingredientes-acoes-btns {
   display: inline-flex;
@@ -1948,8 +1981,8 @@ textarea {
   flex-wrap: wrap;
 }
 .ficha-tecnica-ingredientes-table .btn-icon {
-  padding: 0.25rem 0.4rem;
-  font-size: 0.85rem;
+  padding: 0.08rem 0.22rem;
+  font-size: 0.78rem;
   line-height: 1;
 }
 .ficha-tecnica-ingredientes-table .btn-icon.danger {

@@ -1097,13 +1097,11 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
                 . '<td>' . $h($it['nome'] ?? '') . '</td>'
                 . '<td>' . $h($fmtQtd($it['quantidade'] ?? null)) . '</td>'
                 . '<td>' . $h($it['unidade_medida'] ?? '') . '</td>'
-                . '<td>' . $h($fmtBrl($it['custo_unitario'] ?? null)) . '</td>'
-                . '<td>' . $h($fmtBrl($it['custo_total'] ?? null)) . '</td>'
                 . '</tr>';
         }
     }
     $ingBody = $ingRows !== ''
-        ? '<table class="data"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th><th>Custo un.</th><th>Custo tot.</th></tr></thead><tbody>'
+        ? '<table class="data"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Un.</th></tr></thead><tbody>'
             . $ingRows . '</tbody></table>'
         : '<p>—</p>';
 
