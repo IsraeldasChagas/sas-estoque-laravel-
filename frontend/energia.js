@@ -70,6 +70,16 @@
 
   /** Carrega unidades na API e preenche todos os selects do módulo Energia. */
   async function populateEnergiaUnidadeSelects() {
+    const ids = [
+      "energiaFiltroUnidade", "energiaDashFiltroUnidade", "energiaFormUnidade",
+      "energiaProjUnidade", "energiaRelFiltroUnidade",
+    ];
+    const valoresSalvos = {};
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) valoresSalvos[id] = el.value;
+    });
+
     if (typeof window.loadUnidades === "function") {
       await window.loadUnidades(false).catch(() => {});
     }
@@ -85,10 +95,6 @@
     const opts = unidades
       .map((u) => `<option value="${u.id}">${esc(u.nome || `Unidade ${u.id}`)}</option>`)
       .join("");
-    const ids = [
-      "energiaFiltroUnidade", "energiaDashFiltroUnidade", "energiaFormUnidade",
-      "energiaProjUnidade", "energiaRelFiltroUnidade",
-    ];
     ids.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -96,6 +102,10 @@
         el.innerHTML = `<option value="">Selecione a unidade</option>${opts}`;
       } else {
         el.innerHTML = `<option value="">Todas as unidades</option>${opts}`;
+      }
+      const prev = valoresSalvos[id];
+      if (prev && [...el.options].some((o) => o.value === prev)) {
+        el.value = prev;
       }
     });
   }
