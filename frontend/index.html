@@ -1459,6 +1459,18 @@
             </div>
           </section>
 
+          <div class="modal-backdrop" id="fichaTecnicaPdfOpcaoModal" role="dialog" aria-modal="true" aria-labelledby="fichaTecnicaPdfOpcaoTitulo">
+            <div class="modal" style="max-width:420px;">
+              <header><h2 id="fichaTecnicaPdfOpcaoTitulo">Imprimir ficha técnica</h2></header>
+              <p style="margin:0 0 1rem;color:#546e7a;">Escolha o formato do PDF:</p>
+              <footer style="display:flex;flex-direction:column;gap:0.5rem;">
+                <button type="button" class="btn primary" id="fichaTecnicaPdfCompleto">Ficha completa</button>
+                <button type="button" class="btn secondary" id="fichaTecnicaPdfIngredientes">A partir dos ingredientes</button>
+                <button type="button" class="btn neutral" id="fichaTecnicaPdfOpcaoCancelar">Cancelar</button>
+              </footer>
+            </div>
+          </div>
+
           <!-- Consulta de Estoque por Produto -->
           <section id="estoqueSection" class="view-section hidden">
             <div class="actions">
@@ -5147,7 +5159,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
     <script src="energia.js?v=20260521-energia-opcional"></script>
-    <script src="app.js?v=20260521-energia-unidade"></script>
+    <script src="app.js?v=20260521-ficha-pdf-opcoes"></script>
      
   </body>
 </html>

@@ -21312,7 +21312,23 @@ function setupFichaTecnicaForm() {
   if (!form) return;
 
   let pratoModalAtual = null;
+  let fichaTecnicaPdfPendente = null;
   let salvandoFichaTecnica = false;
+
+  const pdfOpcaoModal = document.getElementById('fichaTecnicaPdfOpcaoModal');
+  const pdfOpcaoBtnCompleto = document.getElementById('fichaTecnicaPdfCompleto');
+  const pdfOpcaoBtnIngredientes = document.getElementById('fichaTecnicaPdfIngredientes');
+  const pdfOpcaoBtnCancelar = document.getElementById('fichaTecnicaPdfOpcaoCancelar');
+
+  const fecharModalPdfOpcaoFicha = () => {
+    pdfOpcaoModal?.classList.remove('active');
+    fichaTecnicaPdfPendente = null;
+  };
+
+  const abrirModalPdfOpcaoFicha = (p) => {
+    fichaTecnicaPdfPendente = p;
+    pdfOpcaoModal?.classList.add('active');
+  };
 
   const readFileAsDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -21820,23 +21836,28 @@ function setupFichaTecnicaForm() {
     if (dataEl) dataEl.value = dataHojeIsoLocalFichaTecnica();
   };
 
-  /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). */
-  const abrirVisualizacaoPdfFichaTecnica = async (p) => {
+  /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). tipo: completa | ingredientes */
+  const abrirVisualizacaoPdfFichaTecnica = async (p, tipo = 'completa') => {
     const id = parseInt(String(p?.id ?? ''), 10);
     if (!Number.isFinite(id) || id < 1) {
       showToast('Salve a ficha no servidor antes de visualizar o PDF.', 'info');
       return;
     }
-    const nomeArquivo = `ficha-tecnica-${id}.pdf`;
-    const titulo = `📄 ${p?.nome_prato || 'Ficha técnica'}`;
+    const tipoPdf = tipo === 'ingredientes' ? 'ingredientes' : 'completa';
+    const sufixoArquivo = tipoPdf === 'ingredientes' ? '-ingredientes' : '';
+    const nomeArquivo = `ficha-tecnica-${id}${sufixoArquivo}.pdf`;
+    const nomePrato = p?.nome_prato || 'Ficha técnica';
+    const titulo =
+      tipoPdf === 'ingredientes' ? `📄 ${nomePrato} (ingredientes)` : `📄 ${nomePrato}`;
+    const tipoQuery = `tipo=${encodeURIComponent(tipoPdf)}`;
     const modalTitle = document.getElementById('alvaraAnexoTitle');
     if (modalTitle) modalTitle.textContent = '⏳ Gerando PDF...';
     try {
       await abrirModalPdfNoViewerDoAlvara({
         nomeArquivo,
         titulo,
-        viewApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf`,
-        downloadApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf?download=1`,
+        viewApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf?${tipoQuery}`,
+        downloadApiPath: `/fichas-tecnicas/${encodeURIComponent(String(id))}/pdf?${tipoQuery}&download=1`,
       });
     } catch (e) {
       document.getElementById('alvaraAnexoModal')?.classList.remove('active');
@@ -21966,6 +21987,21 @@ function setupFichaTecnicaForm() {
     void mostrarVistaLista();
   });
 
+  pdfOpcaoBtnCompleto?.addEventListener('click', () => {
+    const p = fichaTecnicaPdfPendente;
+    fecharModalPdfOpcaoFicha();
+    if (p) void abrirVisualizacaoPdfFichaTecnica(p, 'completa');
+  });
+  pdfOpcaoBtnIngredientes?.addEventListener('click', () => {
+    const p = fichaTecnicaPdfPendente;
+    fecharModalPdfOpcaoFicha();
+    if (p) void abrirVisualizacaoPdfFichaTecnica(p, 'ingredientes');
+  });
+  pdfOpcaoBtnCancelar?.addEventListener('click', fecharModalPdfOpcaoFicha);
+  pdfOpcaoModal?.addEventListener('click', (e) => {
+    if (e.target === pdfOpcaoModal) fecharModalPdfOpcaoFicha();
+  });
+
   listaTbody?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-ficha-acao][data-ficha-id]');
     if (!btn) return;
@@ -21989,7 +22025,7 @@ function setupFichaTecnicaForm() {
           renderListaTabela();
           return;
         }
-        await abrirVisualizacaoPdfFichaTecnica(fresh);
+        abrirModalPdfOpcaoFicha(fresh);
       })();
     }
     else if (acao === 'editar') {

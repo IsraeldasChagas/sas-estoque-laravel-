@@ -1175,16 +1175,7 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
         table.data th{background:#eceff1;font-weight:700;}
         .modo-html{line-height:1.55;}
         .pdf-rod{margin-top:14px;font-size:7pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:6px;text-align:center;}
-        </style></head><body>'
-        . '<table class="pdf-header"><tr>'
-        . '<td style="width:130px;text-align:left;">' . $logoImgHtml . '</td>'
-        . '<td style="padding-left:10px;">'
-        . '<div class="pdf-brand">Grupo Sabor Paraense</div>'
-        . '<div class="pdf-doc-title">Ficha técnica — ' . $titulo . '</div>'
-        . '</td>'
-        . '<td class="pdf-meta">Emitido em<br/>' . $h($emitidoEm) . '</td>'
-        . '</tr></table>'
-        . $fotoHtml;
+        </style></head><body>';
     $dataFichaPdf = '—';
     if (Schema::hasColumn('fichas_tecnicas', 'data_ficha') && ! empty($row->data_ficha)) {
         try {
@@ -1193,13 +1184,38 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
             $dataFichaPdf = $h(substr((string) $row->data_ficha, 0, 10));
         }
     }
-    $html .= '<p><strong>Data da ficha:</strong> ' . $h($dataFichaPdf) . '</p>'
+    $tipoPdf = strtolower(trim((string) $request->query('tipo', 'completa')));
+    if (! in_array($tipoPdf, ['completa', 'ingredientes'], true)) {
+        $tipoPdf = 'completa';
+    }
+
+    $pdfHeader = '<table class="pdf-header"><tr>'
+        . '<td style="width:130px;text-align:left;">' . $logoImgHtml . '</td>'
+        . '<td style="padding-left:10px;">'
+        . '<div class="pdf-brand">Grupo Sabor Paraense</div>'
+        . '<div class="pdf-doc-title">Ficha técnica — ' . $titulo . '</div>'
+        . '</td>'
+        . '<td class="pdf-meta">Emitido em<br/>' . $h($emitidoEm) . '</td>'
+        . '</tr></table>';
+
+    $blocoMeta = '<p><strong>Data da ficha:</strong> ' . $h($dataFichaPdf) . '</p>'
         . '<p><strong>Tempo:</strong> ' . $h($row->tempo_preparo ?: '—') . '</p>'
         . '<p><strong>Responsável:</strong> ' . $h($row->responsavel_tecnico ?: '—') . '</p>'
         . '<p><strong>Preço por prato:</strong> ' . $h($fmtBrl($row->preco_prato)) . '</p>'
-        . '<p><strong>Sugestão de venda:</strong> ' . $h($fmtBrl($row->sugestao_venda)) . '</p>'
-        . '<h2>Ingredientes</h2>' . $ingBody
-        . '<h2>Modo de preparo</h2><div class="modo-html">' . $modoHtml . '</div>'
+        . '<p><strong>Sugestão de venda:</strong> ' . $h($fmtBrl($row->sugestao_venda)) . '</p>';
+
+    $blocoIngredientesModo = '<h2>Ingredientes</h2>' . $ingBody
+        . '<h2>Modo de preparo</h2><div class="modo-html">' . $modoHtml . '</div>';
+
+    if ($tipoPdf === 'ingredientes') {
+        $corpo = '<p class="pdf-prato-nome" style="font-size:13pt;font-weight:bold;margin:14px 0 10px;color:#263238;">'
+            . $titulo . '</p>'
+            . $blocoIngredientesModo;
+    } else {
+        $corpo = $fotoHtml . $blocoMeta . $blocoIngredientesModo;
+    }
+
+    $html .= $pdfHeader . $corpo
         . '<div class="pdf-rod">Grupo Sabor Paraense — ficha técnica gerada pelo sistema.</div>'
         . '</body></html>';
 
@@ -1226,7 +1242,8 @@ Route::get('/fichas-tecnicas/{id}/pdf', function (Request $request, $id) {
 
     $slug = preg_replace('/[^a-zA-Z0-9_-]+/', '-', (string) mb_substr((string) ($row->nome_prato ?? 'ficha'), 0, 60));
     $slug = trim($slug, '-') ?: 'ficha';
-    $filename = 'ficha-tecnica-' . $slug . '.pdf';
+    $sufixoTipo = $tipoPdf === 'ingredientes' ? '-ingredientes' : '';
+    $filename = 'ficha-tecnica-' . $slug . $sufixoTipo . '.pdf';
     $disposition = $request->query('download') == '1' ? 'attachment' : 'inline';
 
     return response($pdfOutput, 200)
