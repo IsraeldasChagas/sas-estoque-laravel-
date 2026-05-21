@@ -1999,6 +1999,17 @@ textarea {
 .ficha-tecnica-ingredientes-table .btn-icon.ficha-tecnica-ingrediente-editar:hover {
   opacity: 0.85;
 }
+.ficha-tecnica-ingredientes-table .btn-icon.ficha-tecnica-ingrediente-mover {
+  color: var(--text-muted, #607d8b);
+  opacity: 1;
+}
+.ficha-tecnica-ingredientes-table .btn-icon.ficha-tecnica-ingrediente-mover:hover:not(:disabled) {
+  color: var(--primary, #1565c0);
+}
+.ficha-tecnica-ingredientes-table .btn-icon.ficha-tecnica-ingrediente-mover:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 .ficha-tecnica-form__field select {
   width: 100%;
   max-width: 100%;

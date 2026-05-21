@@ -21793,6 +21793,15 @@ function setupFichaTecnicaForm() {
     limparCamposIngrediente();
   };
 
+  const moverIngredienteFichaTecnica = (id, dir) => {
+    const list = state.fichaTecnicaIngredientes;
+    const i = list.findIndex((x) => String(x.id) === String(id));
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    renderListaIngredientesFichaTecnica();
+  };
+
   const renderListaIngredientesFichaTecnica = () => {
     const list = state.fichaTecnicaIngredientes;
     if (!ingEmpty || !ingTableWrap || !ingTbody) return;
@@ -21805,8 +21814,11 @@ function setupFichaTecnicaForm() {
     ingEmpty.hidden = true;
     ingTableWrap.hidden = false;
     ingTbody.innerHTML = list
-      .map(
-        (it) => `
+      .map((it, idx) => {
+        const idAttr = escapeHtml(String(it.id));
+        const desabilitarSubir = idx === 0;
+        const desabilitarDescer = idx === list.length - 1;
+        return `
       <tr>
         <td data-label="Ingrediente">${escapeHtml(it.nome)}</td>
         <td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td>
@@ -21815,12 +21827,14 @@ function setupFichaTecnicaForm() {
         <td data-label="Custo total">${escapeHtml(fmtIngBRLCell(it.custo_total))}</td>
         <td class="ficha-tecnica-ingredientes-td-acoes" data-label="Ações">
           <span class="ficha-tecnica-ingredientes-acoes-btns">
-            <button type="button" class="btn-icon ficha-tecnica-ingrediente-editar" title="Editar" data-editar-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Editar ingrediente">✎</button>
-            <button type="button" class="btn-icon danger" title="Remover" data-remover-ingrediente-id="${escapeHtml(String(it.id))}" aria-label="Remover ingrediente">✕</button>
+            <button type="button" class="btn-icon ficha-tecnica-ingrediente-mover" title="Subir" data-mover-ingrediente-id="${idAttr}" data-mover-ingrediente-dir="-1" aria-label="Subir ingrediente"${desabilitarSubir ? ' disabled' : ''}>↑</button>
+            <button type="button" class="btn-icon ficha-tecnica-ingrediente-mover" title="Descer" data-mover-ingrediente-id="${idAttr}" data-mover-ingrediente-dir="1" aria-label="Descer ingrediente"${desabilitarDescer ? ' disabled' : ''}>↓</button>
+            <button type="button" class="btn-icon ficha-tecnica-ingrediente-editar" title="Editar" data-editar-ingrediente-id="${idAttr}" aria-label="Editar ingrediente">✎</button>
+            <button type="button" class="btn-icon danger" title="Remover" data-remover-ingrediente-id="${idAttr}" aria-label="Remover ingrediente">✕</button>
           </span>
         </td>
-      </tr>`
-      )
+      </tr>`;
+      })
       .join('');
   };
 
@@ -22232,6 +22246,13 @@ function setupFichaTecnicaForm() {
   });
 
   ingTbody?.addEventListener('click', (e) => {
+    const moverBtn = e.target.closest('[data-mover-ingrediente-id]');
+    if (moverBtn && !moverBtn.disabled) {
+      const idRaw = moverBtn.getAttribute('data-mover-ingrediente-id');
+      const dir = parseInt(moverBtn.getAttribute('data-mover-ingrediente-dir'), 10);
+      if (dir === -1 || dir === 1) moverIngredienteFichaTecnica(idRaw, dir);
+      return;
+    }
     const editBtn = e.target.closest('[data-editar-ingrediente-id]');
     if (editBtn) {
       const idRaw = editBtn.getAttribute('data-editar-ingrediente-id');
