@@ -21793,6 +21793,57 @@ function setupFichaTecnicaForm() {
     limparCamposIngrediente();
   };
 
+  let fichaTecnicaIngredientesSortable = null;
+
+  const destroyFichaTecnicaIngredientesSortable = () => {
+    if (!fichaTecnicaIngredientesSortable) return;
+    try {
+      fichaTecnicaIngredientesSortable.destroy();
+    } catch (_) {}
+    fichaTecnicaIngredientesSortable = null;
+  };
+
+  const syncIngredientesOrdemFromDom = () => {
+    if (!ingTbody) return;
+    const rows = [...ingTbody.querySelectorAll('tr[data-ingrediente-id]')];
+    const ids = rows.map((r) => r.getAttribute('data-ingrediente-id'));
+    const list = state.fichaTecnicaIngredientes;
+    const byId = new Map(list.map((x) => [String(x.id), x]));
+    const reordered = ids.map((id) => byId.get(String(id))).filter(Boolean);
+    if (reordered.length === list.length) state.fichaTecnicaIngredientes = reordered;
+  };
+
+  const atualizarBotoesOrdemIngredientes = () => {
+    if (!ingTbody) return;
+    const rows = [...ingTbody.querySelectorAll('tr[data-ingrediente-id]')];
+    rows.forEach((row, idx) => {
+      const subir = row.querySelector('[data-mover-ingrediente-dir="-1"]');
+      const descer = row.querySelector('[data-mover-ingrediente-dir="1"]');
+      if (subir) subir.disabled = idx === 0;
+      if (descer) descer.disabled = idx === rows.length - 1;
+    });
+  };
+
+  const initFichaTecnicaIngredientesSortable = () => {
+    destroyFichaTecnicaIngredientesSortable();
+    if (!ingTbody || typeof Sortable === 'undefined') return;
+    if (!state.fichaTecnicaIngredientes.length) return;
+    fichaTecnicaIngredientesSortable = Sortable.create(ingTbody, {
+      animation: 150,
+      draggable: 'tr[data-ingrediente-id]',
+      handle: '.ficha-tecnica-ingrediente-drag-handle',
+      filter: '.btn-icon',
+      preventOnFilter: true,
+      ghostClass: 'ficha-tecnica-ingrediente-sortable-ghost',
+      chosenClass: 'ficha-tecnica-ingrediente-sortable-chosen',
+      dragClass: 'ficha-tecnica-ingrediente-sortable-drag',
+      onEnd: () => {
+        syncIngredientesOrdemFromDom();
+        atualizarBotoesOrdemIngredientes();
+      },
+    });
+  };
+
   const moverIngredienteFichaTecnica = (id, dir) => {
     const list = state.fichaTecnicaIngredientes;
     const i = list.findIndex((x) => String(x.id) === String(id));
@@ -21806,6 +21857,7 @@ function setupFichaTecnicaForm() {
     const list = state.fichaTecnicaIngredientes;
     if (!ingEmpty || !ingTableWrap || !ingTbody) return;
     if (!list.length) {
+      destroyFichaTecnicaIngredientesSortable();
       ingEmpty.hidden = false;
       ingTableWrap.hidden = true;
       ingTbody.innerHTML = '';
@@ -21819,7 +21871,10 @@ function setupFichaTecnicaForm() {
         const desabilitarSubir = idx === 0;
         const desabilitarDescer = idx === list.length - 1;
         return `
-      <tr>
+      <tr data-ingrediente-id="${idAttr}">
+        <td class="ficha-tecnica-ingredientes-td-ordem" data-label="">
+          <span class="ficha-tecnica-ingrediente-drag-handle" title="Arrastar para reordenar" aria-label="Arrastar ingrediente" role="button" tabindex="0">⠿</span>
+        </td>
         <td data-label="Ingrediente">${escapeHtml(it.nome)}</td>
         <td data-label="Quantidade">${escapeHtml(fmtIngQtdCell(it.quantidade))}</td>
         <td data-label="Un.">${escapeHtml(normalizarUnidadeMedidaFichaTecnica(it.unidade_medida))}</td>
@@ -21836,6 +21891,7 @@ function setupFichaTecnicaForm() {
       </tr>`;
       })
       .join('');
+    initFichaTecnicaIngredientesSortable();
   };
 
   const limparCamposIngrediente = () => {
