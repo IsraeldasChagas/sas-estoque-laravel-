@@ -8386,7 +8386,7 @@ async function abrirModalPdfNoViewerDoAlvara({ nomeArquivo, titulo, viewApiPath,
   const title = document.getElementById('alvaraAnexoTitle');
   const baixarLink = document.getElementById('baixarAlvaraAnexo');
   if (!modal || !frame || !img || !title || !baixarLink) {
-    throw new Error('Visualizador do Alvará não encontrado.');
+    throw new Error('Visualizador de documentos não encontrado.');
   }
 
   const nome = (nomeArquivo || 'Documento.pdf').toString();
@@ -14459,7 +14459,7 @@ function populateAlvarasMesAnoFiltro() {
   const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const valorAtual = select.value;
-  select.innerHTML = '<option value="">📋 Todos os alvarás</option>';
+  select.innerHTML = '<option value="">📋 Todos os documentos empresa</option>';
   const anoInicio = Math.max(2026, anoAtual - 1);
   const anoFim = Math.max(anoAtual + 1, 2027);
   for (let ano = anoInicio; ano <= anoFim; ano++) {
@@ -17000,7 +17000,7 @@ function setupBoletosModule() {
   });
 }
 
-// ===== Módulo de Alvarás =====
+// ===== Módulo Documentos empresa =====
 async function populateAlvarasUnidades() {
   const selectModal = document.querySelector('#alvaraForm select[name="unidade_id"]');
   const selectFiltro = document.getElementById('alvarasUnidadeFiltro');
@@ -17034,18 +17034,18 @@ function collectAlvarasListFiltersFromDOM() {
 async function loadAlvaras(filtros = {}) {
   const tbody = document.getElementById('alvarasTable');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#2196F3;padding:30px;">⏳ Carregando alvarás...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#2196F3;padding:30px;">⏳ Carregando documentos empresa...</td></tr>';
   try {
     const params = new URLSearchParams();
     if (filtros.mes_ano) params.append('mes_ano', filtros.mes_ano);
     if (filtros.unidade_id) params.append('unidade_id', filtros.unidade_id);
     const url = `${API_URL}/alvaras?${params.toString()}`;
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'X-Usuario-Id': currentUser?.id || '' } });
-    if (!res.ok) throw new Error('Erro ao carregar alvarás');
+    if (!res.ok) throw new Error('Erro ao carregar documentos empresa');
     const alvaras = await res.json();
     renderAlvaras(Array.isArray(alvaras) ? alvaras : []);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#d32f2f;padding:30px;">❌ Erro ao carregar alvarás</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#d32f2f;padding:30px;">❌ Erro ao carregar documentos empresa</td></tr>';
   }
 }
 
@@ -17053,7 +17053,7 @@ function renderAlvaras(alvaras) {
   const tbody = document.getElementById('alvarasTable');
   if (!tbody) return;
   if (!alvaras.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;padding:20px;">Nenhum alvará encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;padding:20px;">Nenhum documento empresa encontrado.</td></tr>';
     return;
   }
   const unidadesPorId = new Map((state.unidades || []).map(u => [String(u.id), u]));
@@ -17085,11 +17085,11 @@ function renderAlvaras(alvaras) {
   tbody.querySelectorAll('.btn-deletar-alvara').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      if (!confirm('Tem certeza que deseja excluir este alvará?')) return;
+      if (!confirm('Tem certeza que deseja excluir este documento empresa?')) return;
       btn.disabled = true;
       try {
         await fetchJSON(`/alvaras/${id}`, { method: 'DELETE' });
-        showToast('Alvará excluído com sucesso.', 'success');
+        showToast('Documento empresa excluído com sucesso.', 'success');
         const f = collectAlvarasListFiltersFromDOM();
         await loadAlvaras(f);
       } catch (e) {
@@ -17461,10 +17461,10 @@ async function editarAlvara(id) {
       vInput.dataset.value = String(a.valor_pago || 0);
       vInput.value = a.valor_pago ? formatCurrencyBRL(parseFloat(a.valor_pago)) : '';
     }
-    document.getElementById('alvaraModalTitle').textContent = '✏️ Editar Alvará';
+    document.getElementById('alvaraModalTitle').textContent = '✏️ Editar documento empresa';
     modal.classList.add('active');
   } catch (e) {
-    showToast('Erro ao carregar alvará para edição', 'error');
+    showToast('Erro ao carregar documento empresa para edição', 'error');
   }
 }
 
@@ -17491,7 +17491,7 @@ function setupAlvarasModule() {
     if (anexoPreview) anexoPreview.style.display = 'none';
     if (anexoInput) anexoInput.value = '';
     const title = document.getElementById('alvaraModalTitle');
-    if (title) title.textContent = '🧾 Novo Alvará';
+    if (title) title.textContent = '🧾 Novo documento empresa';
   };
 
   if (anexoInput) {
@@ -17555,7 +17555,7 @@ function setupAlvarasModule() {
       const tipo = form.querySelector('[name="tipo"]')?.value?.trim();
       const dataInicio = form.querySelector('[name="data_inicio"]')?.value;
       const dataVenc = form.querySelector('[name="data_vencimento"]')?.value;
-      if (!tipo) return showToast('Preencha o tipo de alvará.', 'error');
+      if (!tipo) return showToast('Preencha o tipo de documento empresa.', 'error');
       if (!dataInicio) return showToast('Preencha a data de início.', 'error');
       if (!dataVenc) return showToast('Preencha a data de vencimento.', 'error');
 
@@ -17591,9 +17591,9 @@ function setupAlvarasModule() {
         }
         if (!res.ok) {
           const t = await res.text();
-          throw new Error(t || 'Erro ao salvar alvará');
+          throw new Error(t || 'Erro ao salvar documento empresa');
         }
-        showToast('✅ Alvará salvo com sucesso!', 'success');
+        showToast('✅ Documento empresa salvo com sucesso!', 'success');
         if (modal) modal.classList.remove('active');
         form.reset();
         resetToCreate();

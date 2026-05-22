@@ -180,7 +180,7 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="boletao">Boleto</a>
-              <a href="#" class="nav-link nav-link-child" data-section="alvara">Alvará</a>
+              <a href="#" class="nav-link nav-link-child" data-section="alvara">Documentos empresa</a>
               <a href="#" class="nav-link nav-link-child" data-section="proventos">Proventos</a>
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas">Despesas fixas</a>
               <a href="#" class="nav-link nav-link-child" data-section="valeConsumo">Vale / consumo</a>
@@ -2790,12 +2790,12 @@
             </div>
           </section>
 
-          <!-- Modulo Financeiro - Alvarás -->
+          <!-- Modulo Financeiro - Documentos empresa -->
           <section id="alvaraSection" class="view-section hidden">
             <div class="boletos-header">
-              <h2>🧾 Controle Financeiro — Alvarás</h2>
+              <h2>🧾 Controle Financeiro — Documentos empresa</h2>
               <div class="boletos-actions">
-                <button class="btn primary" id="openNovoAlvara">+ Novo Alvará</button>
+                <button class="btn primary" id="openNovoAlvara">+ Novo documento empresa</button>
               </div>
             </div>
 
@@ -2804,7 +2804,7 @@
               <label class="boletos-filtro__field">
                 📅 Mês/Ano (vencimento)
                 <select id="alvarasMesAnoFiltro" class="boletos-mes-select">
-                  <option value="">📋 Todos os alvarás</option>
+                  <option value="">📋 Todos os documentos empresa</option>
                 </select>
               </label>
 
@@ -2820,12 +2820,12 @@
               </button>
             </div>
 
-            <!-- Tabela de Alvarás -->
+            <!-- Tabela de Documentos empresa -->
             <div class="table-card form-card--wide">
               <header>
                 <div>
-                  <h3>Alvarás</h3>
-                  <p class="subtle-text">Gerencie alvarás, vencimentos e anexos</p>
+                  <h3>Documentos empresa</h3>
+                  <p class="subtle-text">Gerencie documentos empresa, vencimentos e anexos</p>
                 </div>
                 <button class="btn secondary" id="recarregarTabelaAlvaras" style="margin-left: auto;">
                   🔄 Atualizar
@@ -4118,7 +4118,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="energiaRelatorios" /> Energia — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Financeiro</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boletao" /> Boleto</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="alvara" /> Alvará</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="alvara" /> Documentos empresa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="proventos" /> Proventos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="despesasFixas" /> Despesas fixas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="valeConsumo" /> Vale / consumo</label>
@@ -4899,11 +4899,11 @@
       </div>
     </div>
 
-    <!-- Modal de Novo/Editar Alvará -->
+    <!-- Modal de Novo/Editar Documento empresa -->
     <div class="modal-backdrop" id="alvaraModal">
       <div class="modal">
         <header>
-          <h2 id="alvaraModalTitle">🧾 Novo Alvará</h2>
+          <h2 id="alvaraModalTitle">🧾 Novo documento empresa</h2>
           <button type="button" class="close-btn" id="closeAlvara" aria-label="Fechar modal">x</button>
         </header>
         <form id="alvaraForm" novalidate>
@@ -4917,7 +4917,7 @@
               </select>
             </label>
             <label style="min-width: 0;">
-              Tipo de Alvará *
+              Tipo de documento empresa *
               <input name="tipo" placeholder="Ex: Vigilância Sanitária, Bombeiros..." required />
             </label>
           </div>
@@ -4939,7 +4939,7 @@
           </label>
 
           <label>
-            📎 Anexar Arquivo (Alvará, comprovante, etc)
+            📎 Anexar arquivo (documento, comprovante, etc)
             <input type="file" name="anexo" accept=".pdf,.jpg,.jpeg,.png" id="alvaraAnexoInput" />
             <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
               Formatos aceitos: PDF, JPG, PNG (máximo 5MB)
@@ -4958,17 +4958,17 @@
 
           <footer>
             <button type="button" class="btn neutral" id="cancelAlvara">Limpar</button>
-            <button type="submit" class="btn primary">Salvar Alvará</button>
+            <button type="submit" class="btn primary">Salvar documento empresa</button>
           </footer>
         </form>
       </div>
     </div>
 
-    <!-- Modal de Detalhes do Alvará -->
+    <!-- Modal de Detalhes do Documento empresa -->
     <div class="modal-backdrop" id="alvaraDetalhesModal">
       <div class="modal">
         <header>
-          <h2>👁️ Detalhes do Alvará</h2>
+          <h2>👁️ Detalhes do documento empresa</h2>
           <button type="button" class="close-btn" id="closeAlvaraDetalhes" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 20px;" id="alvaraDetalhesContent">
@@ -4981,11 +4981,11 @@
       </div>
     </div>
 
-    <!-- Modal de Visualização do Anexo do Alvará (sem sair da página) -->
+    <!-- Modal de Visualização do Anexo do Documento empresa (sem sair da página) -->
     <div class="modal-backdrop" id="alvaraAnexoModal">
       <div class="modal" style="width: min(920px, 96vw);">
         <header>
-          <h2 id="alvaraAnexoTitle">📎 Anexo do Alvará</h2>
+          <h2 id="alvaraAnexoTitle">📎 Anexo do documento empresa</h2>
           <button type="button" class="close-btn" id="closeAlvaraAnexo" aria-label="Fechar modal">x</button>
         </header>
         <div style="padding: 0; background: #111; border-radius: 10px; overflow: hidden;">
@@ -4997,8 +4997,8 @@
             style="display: none"
           ></div>
           <!-- Fallback desktop (se PDF.js não carregar) -->
-          <iframe id="alvaraAnexoFrame" title="Anexo do Alvará" style="display:none;width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
-          <img id="alvaraAnexoImg" alt="Anexo do Alvará" style="display:none;width:100%; height: min(70vh, 720px); object-fit: contain; background:#fff;" />
+          <iframe id="alvaraAnexoFrame" title="Anexo do documento empresa" style="display:none;width:100%; height: min(70vh, 720px); border:0; background:#fff;"></iframe>
+          <img id="alvaraAnexoImg" alt="Anexo do documento empresa" style="display:none;width:100%; height: min(70vh, 720px); object-fit: contain; background:#fff;" />
         </div>
         <footer style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
           <a class="btn secondary" id="baixarAlvaraAnexo" href="#" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:none;">⬇️ Baixar</a>

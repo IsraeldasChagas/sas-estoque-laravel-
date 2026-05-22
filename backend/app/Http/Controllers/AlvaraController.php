@@ -55,7 +55,7 @@ class AlvaraController extends Controller
             return response()->json($alvaras);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Erro ao buscar alvarás',
+                'message' => 'Erro ao buscar documentos empresa',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -108,12 +108,12 @@ class AlvaraController extends Controller
             $alvara = Alvara::create($data);
 
             return response()->json([
-                'message' => 'Alvará criado com sucesso',
+                'message' => 'Documento empresa criado com sucesso',
                 'alvara' => $alvara
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Erro ao criar alvará',
+                'message' => 'Erro ao criar documento empresa',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -126,7 +126,7 @@ class AlvaraController extends Controller
             return response()->json($alvara);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Alvará não encontrado',
+                'message' => 'Documento empresa não encontrado',
                 'error' => $e->getMessage()
             ], 404);
         }
@@ -179,17 +179,17 @@ class AlvaraController extends Controller
             $alvara->update($data);
 
             return response()->json([
-                'message' => 'Alvará atualizado com sucesso',
+                'message' => 'Documento empresa atualizado com sucesso',
                 'alvara' => $alvara
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
-                'message' => 'Alvará não encontrado (pode ter sido excluído)',
-                'error' => 'Alvará não encontrado'
+                'message' => 'Documento empresa não encontrado (pode ter sido excluído)',
+                'error' => 'Documento empresa não encontrado'
             ], 404);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Erro ao atualizar alvará',
+                'message' => 'Erro ao atualizar documento empresa',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -204,10 +204,10 @@ class AlvaraController extends Controller
             }
             $alvara->delete();
 
-            return response()->json(['message' => 'Alvará excluído com sucesso']);
+            return response()->json(['message' => 'Documento empresa excluído com sucesso']);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Erro ao excluir alvará',
+                'message' => 'Erro ao excluir documento empresa',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -218,7 +218,7 @@ class AlvaraController extends Controller
         try {
             $alvara = Alvara::findOrFail($id);
             if (!$alvara->anexo_path) {
-                return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Este alvará não possui anexo'], 404));
+                return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Este documento empresa não possui anexo'], 404));
             }
             // Mesma lógica do BoletoController (storage/app/public + response()->download)
             $path = storage_path('app/public/' . $alvara->anexo_path);
@@ -258,7 +258,7 @@ class AlvaraController extends Controller
                 'X-Frame-Options' => 'ALLOWALL',
             ]));
         } catch (ModelNotFoundException $e) {
-            return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Alvará não encontrado'], 404));
+            return $this->aplicarCorsRespostaAnexo(response()->json(['message' => 'Documento empresa não encontrado'], 404));
         } catch (\Exception $e) {
             return $this->aplicarCorsRespostaAnexo(response()->json([
                 'message' => 'Erro ao baixar anexo',
