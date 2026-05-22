@@ -7,6 +7,7 @@
     <title>Grupo Sabor Paraense</title>
     <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
+    <link rel="stylesheet" href="style-patrimonio.css?v=20260522-patrimonio-completo" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -186,6 +187,22 @@
               <a href="#" class="nav-link nav-link-child" data-section="valeConsumo">Vale / consumo</a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo ajuda de custo</a>
 
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--patrimonio">
+            <a href="#" class="nav-link nav-link-parent" id="patrimonioMenu">
+              Patrimônio
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioDashboard">Dashboard</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonios">Patrimônios</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioCategorias">Categorias</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioMovimentacoes">Movimentações</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioManutencoes">Manutenções</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioInventario">Inventário Patrimonial</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioRelatorios">Relatórios</a>
+              <a href="#" class="nav-link nav-link-child" data-section="patrimonioConfiguracoes">Configurações</a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--config">
@@ -3113,6 +3130,124 @@
             </div>
           </section>
 
+          <!-- Módulo Patrimônio -->
+          <section id="patrimonioDashboardSection" class="view-section hidden">
+            <div class="patrimonio-section-head">
+              <h2>📌 Dashboard Patrimônio</h2>
+              <p class="subtle-text">Visão consolidada dos ativos por unidade e categoria.</p>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Unidade<select id="patDashFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="patDashAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="patrimonio-cards" id="patDashCards"></div>
+            <div class="patrimonio-charts-grid">
+              <div class="patrimonio-chart-box"><h4>Por categoria</h4><canvas id="patChartCategoria"></canvas></div>
+              <div class="patrimonio-chart-box"><h4>Por unidade</h4><canvas id="patChartUnidade"></canvas></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Últimas movimentações</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>Obs.</th></tr></thead><tbody id="patDashMovTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide patrimonio-alertas">
+              <header><h3>Alertas de manutenção</h3></header>
+              <div id="patDashAlertas"></div>
+            </div>
+            <div class="table-card form-card--wide patrimonio-alertas">
+              <header><h3>Garantias e vencimentos (60 dias)</h3></header>
+              <div id="patDashGarantias"></div>
+            </div>
+          </section>
+
+          <section id="patrimoniosSection" class="view-section hidden">
+            <div class="patrimonio-section-head">
+              <h2>📦 Patrimônios</h2>
+              <button type="button" class="btn primary" id="patBtnNovo">+ Novo patrimônio</button>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Busca<input type="search" id="patFiltroBusca" placeholder="Nome, código, serial..." /></label>
+                <label>Unidade<select id="patFiltroUnidade"><option value="">Todas</option></select></label>
+                <label>Categoria<select id="patFiltroCategoria"><option value="">Todas</option></select></label>
+                <label>Situação<select id="patFiltroSituacao"><option value="">Todas</option><option value="ativo">Ativo</option><option value="manutencao">Em manutenção</option><option value="baixado">Baixado</option><option value="vendido">Vendido</option><option value="quebrado">Quebrado</option></select></label>
+                <label><button type="button" class="btn primary" id="patFiltroAplicar">Filtrar</button></label>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Situação</th><th>Valor atual</th><th>QR</th><th>Ações</th></tr></thead><tbody id="patListaTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="patrimonioCategoriasSection" class="view-section hidden">
+            <div class="patrimonio-section-head"><h2>🏷️ Categorias</h2><button type="button" class="btn primary" id="patCatBtnNova">+ Nova categoria</button></div>
+            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Ícone</th><th>Nome</th><th>Campos específicos</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="patCatTbody"></tbody></table></div></div>
+          </section>
+
+          <section id="patrimonioMovimentacoesSection" class="view-section hidden">
+            <div class="patrimonio-section-head"><h2>🔄 Movimentações</h2><button type="button" class="btn primary" id="patMovBtnNova">+ Nova movimentação</button></div>
+            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>De → Para</th><th>Responsável</th><th>Obs.</th></tr></thead><tbody id="patMovTbody"></tbody></table></div></div>
+          </section>
+
+          <section id="patrimonioManutencoesSection" class="view-section hidden">
+            <div class="patrimonio-section-head"><h2>🔧 Manutenções</h2><button type="button" class="btn primary" id="patManBtnNova">+ Nova manutenção</button></div>
+            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>Técnico</th><th>Custo</th><th>Próxima</th></tr></thead><tbody id="patManTbody"></tbody></table></div></div>
+          </section>
+
+          <section id="patrimonioInventarioSection" class="view-section hidden">
+            <div class="patrimonio-section-head"><h2>📋 Inventário patrimonial</h2><button type="button" class="btn primary" id="patInvBtnNovo">+ Novo inventário</button></div>
+            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Título</th><th>Unidade</th><th>Status</th><th>Início</th><th>Ações</th></tr></thead><tbody id="patInvListaTbody"></tbody></table></div></div>
+            <div class="table-card form-card--wide hidden" id="patInvItensCard">
+              <header style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;justify-content:space-between">
+                <h3 id="patInvItensTitulo">Itens do inventário</h3>
+                <span>
+                  <button type="button" class="btn secondary" id="patInvRelPdf">Relatório PDF</button>
+                  <button type="button" class="btn secondary" id="patInvRelCsv">Relatório CSV</button>
+                  <button type="button" class="btn primary" id="patInvFechar">Encerrar inventário</button>
+                </span>
+              </header>
+              <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Patrimônio</th><th>Qtd sistema</th><th>Qtd encontrada</th><th>Diferença</th><th>Obs.</th><th></th></tr></thead><tbody id="patInvItensTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="patrimonioRelatoriosSection" class="view-section hidden">
+            <div class="patrimonio-section-head"><h2>📊 Relatórios Patrimônio</h2></div>
+            <div class="table-card form-card--wide">
+              <p class="subtle-text">Exportações em PDF (visualizar/imprimir) ou CSV (abre no Excel). Ficha patrimonial: informe o ID na listagem de patrimônios.</p>
+              <div class="patrimonio-relatorios-grid">
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="resumo" data-formato="csv">Resumo geral (CSV)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="pdf">Movimentações (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="csv">Movimentações (CSV)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="pdf">Manutenções (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="csv">Manutenções (CSV)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="pdf">Depreciação (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="csv">Depreciação (CSV)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="pdf">Ativos por unidade (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="csv">Ativos por unidade (CSV)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="pdf">Por categoria (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="csv">Por categoria (CSV)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="ficha" data-formato="pdf">Ficha patrimonial (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="pdf">Inventário aberto (PDF)</button>
+                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="csv">Inventário aberto (CSV)</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="patrimonioConfiguracoesSection" class="view-section hidden">
+            <div class="patrimonio-section-head"><h2>⚙️ Configurações Patrimônio</h2></div>
+            <div class="table-card form-card--wide">
+              <h3>Padrões do módulo</h3>
+              <ul class="subtle-text" style="line-height:1.6">
+                <li>Categorias padrão criadas na instalação (Veículos, Informática, Refrigeração, etc.) — edite em <strong>Categorias</strong>.</li>
+                <li>Código automático: <code>PAT-UNI-ANO-SEQ</code> por patrimônio.</li>
+                <li>Depreciação linear calculada com base em valor de compra, data e vida útil (meses).</li>
+                <li>QR Code único por item — escaneie ou use o botão 📱 na listagem.</li>
+                <li>Multiempresa / multiunidade via campo Unidade em cada patrimônio.</li>
+              </ul>
+            </div>
+          </section>
+
           <!-- Manutenção — Energia -->
           <section id="energiaDashboardSection" class="view-section hidden">
             <div class="energia-section-head">
@@ -4116,6 +4251,15 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="energiaEquipamentos" /> Energia — Controle de equipamentos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="energiaProjecao" /> Energia — Projeção de consumo</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="energiaRelatorios" /> Energia — Relatórios</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Patrimônio</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioDashboard" /> Patrimônio — Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonios" /> Patrimônio — Patrimônios</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioCategorias" /> Patrimônio — Categorias</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioMovimentacoes" /> Patrimônio — Movimentações</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioManutencoes" /> Patrimônio — Manutenções</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioInventario" /> Patrimônio — Inventário</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioRelatorios" /> Patrimônio — Relatórios</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioConfiguracoes" /> Patrimônio — Configurações</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Financeiro</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boletao" /> Boleto</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="alvara" /> Documentos empresa</label>
@@ -4899,6 +5043,214 @@
       </div>
     </div>
 
+    <!-- Modal Patrimônio -->
+    <div class="modal-backdrop" id="patrimonioModal">
+      <div class="modal" style="width:min(920px,96vw);max-height:92vh;overflow:auto">
+        <header>
+          <h2 id="patModalTitle">📦 Novo patrimônio</h2>
+          <button type="button" class="close-btn" id="closePatrimonioModal" aria-label="Fechar">×</button>
+        </header>
+        <form id="patrimonioForm" enctype="multipart/form-data" novalidate>
+          <input type="hidden" id="patFormId" name="patFormId" value="" />
+          <div class="grid-two">
+            <label>Nome do patrimônio *<input name="nome" required /></label>
+            <label>Nº serial<input name="numero_serial" /></label>
+          </div>
+          <div class="grid-two">
+            <label>Categoria<select name="categoria_id" id="patFormCategoria"><option value="">Selecione</option></select></label>
+            <label>Unidade / filial<select name="unidade_id" id="patFormUnidade"><option value="">Selecione</option></select></label>
+          </div>
+          <div class="grid-two">
+            <label>Marca<input name="marca" /></label>
+            <label>Modelo<input name="modelo" /></label>
+          </div>
+          <div class="grid-two">
+            <label>Cor<input name="cor" /></label>
+            <label>Quantidade<input name="quantidade" type="number" min="1" value="1" /></label>
+          </div>
+          <div class="grid-two">
+            <label>Setor<input name="setor" /></label>
+            <label>Responsável<input name="responsavel" /></label>
+          </div>
+          <label>Situação
+            <select name="situacao">
+              <option value="ativo">Ativo</option>
+              <option value="manutencao">Em manutenção</option>
+              <option value="baixado">Baixado</option>
+              <option value="vendido">Vendido</option>
+              <option value="quebrado">Quebrado</option>
+            </select>
+          </label>
+          <h3 style="margin:1rem 0 0.5rem">Dados financeiros</h3>
+          <div class="grid-two">
+            <label>Valor de compra<input name="valor_compra" id="patFormValorCompra" type="number" step="0.01" min="0" /></label>
+            <label>Data da compra<input name="data_compra" id="patFormDataCompra" type="date" /></label>
+          </div>
+          <div class="grid-two">
+            <label>Vida útil (meses)<input name="vida_util_meses" id="patFormVidaUtil" type="number" min="0" /></label>
+            <label>Valor atual<input name="valor_atual" id="patFormValorAtual" type="number" step="0.01" min="0" /></label>
+          </div>
+          <div class="grid-two">
+            <label>Depreciação acum.<input name="depreciacao" id="patFormDepreciacao" type="number" step="0.01" min="0" /></label>
+            <label>Fornecedor<input name="fornecedor" /></label>
+          </div>
+          <label>Nº nota fiscal<input name="numero_nf" /></label>
+          <p><button type="button" class="btn neutral" id="patFormCalcDeprec">↻ Calcular depreciação automaticamente</button></p>
+          <div class="patrimonio-campos-especificos" data-tipo="veiculo">
+            <h4>🚗 Dados do veículo</h4>
+            <div class="grid-two">
+              <label>Placa<input data-campo="placa" /></label>
+              <label>RENAVAM<input data-campo="renavam" /></label>
+            </div>
+            <div class="grid-two">
+              <label>Chassi<input data-campo="chassi" /></label>
+              <label>Combustível<input data-campo="combustivel" /></label>
+            </div>
+            <div class="grid-two">
+              <label>KM atual<input data-campo="km_atual" type="number" /></label>
+              <label>Seguro<input data-campo="seguro" /></label>
+            </div>
+            <label>Vencimento IPVA<input data-campo="vencimento_ipva" type="date" /></label>
+          </div>
+          <div class="patrimonio-campos-especificos" data-tipo="informatica">
+            <h4>💻 Informática</h4>
+            <div class="grid-two">
+              <label>Processador<input data-campo="processador" /></label>
+              <label>Memória RAM<input data-campo="memoria_ram" /></label>
+            </div>
+            <div class="grid-two">
+              <label>HD/SSD<input data-campo="armazenamento" /></label>
+              <label>Sistema operacional<input data-campo="sistema_operacional" /></label>
+            </div>
+            <label>Usuário responsável<input data-campo="usuario_so" /></label>
+          </div>
+          <div class="patrimonio-campos-especificos" data-tipo="refrigeracao">
+            <h4>❄️ Refrigeração / ar</h4>
+            <div class="grid-two">
+              <label>BTUs<input data-campo="btus" /></label>
+              <label>Voltagem<input data-campo="voltagem" /></label>
+            </div>
+            <label>Consumo energético<input data-campo="consumo_energetico" /></label>
+          </div>
+          <label>📷 Fotos (várias)<input type="file" name="fotos" accept="image/*" multiple /></label>
+          <label>Tipo do documento
+            <select name="documento_tipo" id="patFormDocTipo">
+              <option value="nf">Nota fiscal</option>
+              <option value="garantia">Garantia</option>
+              <option value="crlv">CRLV</option>
+              <option value="contrato">Contrato</option>
+              <option value="outro">Outro</option>
+            </select>
+          </label>
+          <label>📎 Anexar documentos<input type="file" name="documentos" accept=".pdf,.jpg,.jpeg,.png" multiple /></label>
+          <div id="patFormAnexosLista" class="pat-anexos-lista"></div>
+          <footer>
+            <button type="submit" class="btn primary">Salvar patrimônio</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="patQrModal">
+      <div class="modal" style="width:min(480px,96vw)">
+        <header>
+          <h2>📱 QR Code — Patrimônio</h2>
+          <button type="button" class="close-btn" id="closePatQrModal">×</button>
+        </header>
+        <div id="patQrHost" style="text-align:center;padding:1rem"></div>
+        <div id="patQrFicha" style="padding:0 1rem 1rem;font-size:0.9rem"></div>
+        <footer><button type="button" class="btn secondary" id="patQrImprimir">Imprimir QR</button></footer>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="patFichaModal">
+      <div class="modal" style="width:min(920px,96vw);max-height:92vh;overflow:auto">
+        <header>
+          <h2 id="patFichaTitulo">Ficha do patrimônio</h2>
+          <button type="button" class="close-btn" id="closePatFichaModal">×</button>
+        </header>
+        <div id="patFichaContent" style="padding:1rem"></div>
+        <footer>
+          <button type="button" class="btn secondary" id="patFichaPdf">PDF da ficha</button>
+          <button type="button" class="btn neutral" id="closePatFichaModal2">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="patCatModal">
+      <div class="modal" style="width:min(480px,96vw)">
+        <header><h2 id="patCatModalTitle">Nova categoria</h2><button type="button" class="close-btn" id="closePatCatModal">×</button></header>
+        <form id="patCatForm">
+          <input type="hidden" id="patCatId" />
+          <label>Nome *<input id="patCatNome" required /></label>
+          <label>Ícone (emoji)<input id="patCatIcone" placeholder="📦" /></label>
+          <label>Campos específicos
+            <select id="patCatTipo">
+              <option value="geral">Geral</option>
+              <option value="veiculo">Veículo</option>
+              <option value="informatica">Informática</option>
+              <option value="refrigeracao">Refrigeração</option>
+            </select>
+          </label>
+          <label>Ordem<input type="number" id="patCatOrdem" value="50" /></label>
+          <footer><button type="submit" class="btn primary">Salvar</button></footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="patMovModal">
+      <div class="modal" style="width:min(560px,96vw)">
+        <header><h2>Nova movimentação</h2><button type="button" class="close-btn" id="closePatMovModal">×</button></header>
+        <form id="patMovForm">
+          <label>Patrimônio *
+            <select id="patMovPatrimonio" required><option value="">Selecione</option></select>
+          </label>
+          <label>Tipo *
+            <select id="patMovTipo" required>
+              <option value="transferencia">Transferência</option>
+              <option value="troca_unidade">Troca de unidade</option>
+              <option value="troca_responsavel">Troca de responsável</option>
+              <option value="emprestimo">Empréstimo</option>
+              <option value="devolucao">Devolução</option>
+              <option value="baixa">Baixa</option>
+            </select>
+          </label>
+          <label>Unidade destino<select id="patMovUnidadeDest"><option value="">—</option></select></label>
+          <label>Responsável anterior<input id="patMovRespAnt" /></label>
+          <label>Responsável novo<input id="patMovRespNovo" /></label>
+          <label>Observação<textarea id="patMovObs" rows="3"></textarea></label>
+          <footer><button type="submit" class="btn primary">Registrar movimentação</button></footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="patManModal">
+      <div class="modal" style="width:min(560px,96vw)">
+        <header><h2>Nova manutenção</h2><button type="button" class="close-btn" id="closePatManModal">×</button></header>
+        <form id="patManForm" enctype="multipart/form-data">
+          <label>Patrimônio *<select id="patManPatrimonio" required><option value="">Selecione</option></select></label>
+          <label>Tipo *<select id="patManTipo" required><option value="preventiva">Preventiva</option><option value="corretiva">Corretiva</option></select></label>
+          <label>Data *<input type="date" id="patManData" required /></label>
+          <label>Próxima manutenção<input type="date" id="patManProxima" /></label>
+          <label>Técnico responsável<input id="patManTecnico" /></label>
+          <label>Custo (R$)<input type="number" id="patManCusto" step="0.01" min="0" /></label>
+          <label>Descrição<textarea id="patManDesc" rows="3"></textarea></label>
+          <label>Anexo<input type="file" name="anexo" id="patManAnexo" accept=".pdf,.jpg,.jpeg,.png" /></label>
+          <footer><button type="submit" class="btn primary">Salvar manutenção</button></footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="patInvModal">
+      <div class="modal" style="width:min(480px,96vw)">
+        <header><h2>Novo inventário patrimonial</h2><button type="button" class="close-btn" id="closePatInvModal">×</button></header>
+        <form id="patInvForm">
+          <label>Título *<input id="patInvTitulo" required /></label>
+          <label>Unidade (opcional)<select id="patInvUnidade"><option value="">Todas as unidades</option></select></label>
+          <footer><button type="submit" class="btn primary">Iniciar inventário</button></footer>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal de Novo/Editar Documento empresa -->
     <div class="modal-backdrop" id="alvaraModal">
       <div class="modal">
@@ -5159,7 +5511,9 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
+    <script src="patrimonio.js?v=20260522-patrimonio-completo"></script>
     <script src="app.js?v=20260521-custos-ingredientes"></script>
      
   </body>

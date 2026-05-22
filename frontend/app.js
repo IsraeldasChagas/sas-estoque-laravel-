@@ -874,6 +874,8 @@ const ALL_NAV_SECTION_IDS = new Set([
   "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas",
   "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs",
   "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios",
+  "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes",
+  "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
 ]);
 
 function syncUrlSectionHash(section) {
@@ -1214,7 +1216,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1222,7 +1224,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -1254,7 +1256,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -1262,7 +1264,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -3886,6 +3888,19 @@ function applyPermissions() {
       regras.sections.includes("energiaRelatorios");
     energiaNavSubmenu.classList.toggle("hidden", !temAcessoEnergia);
   }
+  const patrimonioNavSubmenu = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
+  if (patrimonioNavSubmenu) {
+    const temAcessoPatrimonio =
+      regras.sections.includes("patrimonioDashboard") ||
+      regras.sections.includes("patrimonios") ||
+      regras.sections.includes("patrimonioCategorias") ||
+      regras.sections.includes("patrimonioMovimentacoes") ||
+      regras.sections.includes("patrimonioManutencoes") ||
+      regras.sections.includes("patrimonioInventario") ||
+      regras.sections.includes("patrimonioRelatorios") ||
+      regras.sections.includes("patrimonioConfiguracoes");
+    patrimonioNavSubmenu.classList.toggle("hidden", !temAcessoPatrimonio);
+  }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
@@ -4119,9 +4134,21 @@ function navigateTo(section) {
     loadEnergiaEquipamentosSection?.().catch(() => {});
   } else if (section === "energiaProjecao") {
     loadEnergiaProjecaoSection?.().catch(() => {});
-  } else if (section === "energiaRelatorios") {
+  } else   if (section === "energiaRelatorios") {
     loadEnergiaRelatoriosSection?.().catch(() => {});
   }
+  const patrimonioNavSubmenuNav = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
+  if (patrimonioNavSubmenuNav) {
+    const patSections = ["patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"];
+    if (patSections.includes(section)) patrimonioNavSubmenuNav.classList.add("open");
+    else patrimonioNavSubmenuNav.classList.remove("open");
+  }
+  if (section === "patrimonioDashboard") loadPatrimonioDashboard?.().catch(() => {});
+  else if (section === "patrimonios") loadPatrimonios?.().catch(() => {});
+  else if (section === "patrimonioCategorias") loadPatrimonioCategorias?.().catch(() => {});
+  else if (section === "patrimonioMovimentacoes") loadPatrimonioMovimentacoes?.().catch(() => {});
+  else if (section === "patrimonioManutencoes") loadPatrimonioManutencoes?.().catch(() => {});
+  else if (section === "patrimonioInventario") loadPatrimonioInventario?.().catch(() => {});
   if (section === 'boasVindas') {
     const el = document.getElementById('boasVindasNome');
     if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
@@ -13800,6 +13827,18 @@ function wireSidebarSectionNavClicks() {
         await loadEnergiaProjecaoSection?.();
       } else if (target === "energiaRelatorios") {
         await loadEnergiaRelatoriosSection?.();
+      } else if (target === "patrimonioDashboard") {
+        await loadPatrimonioDashboard?.();
+      } else if (target === "patrimonios") {
+        await loadPatrimonios?.();
+      } else if (target === "patrimonioCategorias") {
+        await loadPatrimonioCategorias?.();
+      } else if (target === "patrimonioMovimentacoes") {
+        await loadPatrimonioMovimentacoes?.();
+      } else if (target === "patrimonioManutencoes") {
+        await loadPatrimonioManutencoes?.();
+      } else if (target === "patrimonioInventario") {
+        await loadPatrimonioInventario?.();
       } else if (target === "valeConsumo") {
         valeConsumoLimparFormulario();
         valeConsumoOcultarFormCard();
@@ -22433,6 +22472,7 @@ async function init() {
   setupFichaTecnicaForm();
   setupKanbanAdministrativoModule();
   if (typeof setupEnergiaModule === "function") setupEnergiaModule();
+  if (typeof setupPatrimonioModule === "function") setupPatrimonioModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
