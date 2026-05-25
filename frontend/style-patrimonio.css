@@ -123,6 +123,99 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.65rem;
 }
+
+/* Configurações — cards arredondados */
+.pat-config-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+}
+.pat-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.pat-config-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.15rem 1.2rem;
+  background: linear-gradient(160deg, #fff 0%, #f3f7fc 100%);
+  border: 1px solid #e3eaf2;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(21, 101, 192, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  min-height: 100%;
+}
+.pat-config-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(21, 101, 192, 0.12);
+}
+.pat-config-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.35rem;
+  background: #e3f2fd;
+  border-radius: 50%;
+  line-height: 1;
+}
+.pat-config-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1565c0;
+}
+.pat-config-card__text {
+  margin: 0;
+  flex: 1;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #546e7a;
+}
+.pat-config-card__text strong {
+  color: #37474f;
+}
+.pat-config-code {
+  padding: 0.12rem 0.45rem;
+  background: #eceff1;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+.pat-config-card .pat-config-go {
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  width: 100%;
+  justify-content: center;
+}
+.pat-config-panel {
+  padding: 1.25rem 1.4rem;
+  background: #fff;
+  border: 1px solid #e3eaf2;
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.pat-config-panel__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #1565c0;
+}
+.pat-config-panel__list {
+  margin: 0;
+  padding: 0 0 0 1.15rem;
+  line-height: 1.65;
+  color: #607d8b;
+  font-size: 0.9rem;
+}
+.pat-config-panel__list li {
+  margin-bottom: 0.35rem;
+}
+.pat-config-panel__list li:last-child {
+  margin-bottom: 0;
+}
 .pat-form-feedback {
   margin: 0.75rem 0 0;
   padding: 0.65rem 0.85rem;

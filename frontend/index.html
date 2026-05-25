@@ -7,7 +7,7 @@
     <title>Grupo Sabor Paraense</title>
     <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
-    <link rel="stylesheet" href="style-patrimonio.css?v=20260522-patrimonio-completo" />
+    <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-config" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -3235,15 +3235,53 @@
           </section>
 
           <section id="patrimonioConfiguracoesSection" class="view-section hidden">
-            <div class="patrimonio-section-head"><h2>⚙️ Configurações Patrimônio</h2></div>
-            <div class="table-card form-card--wide">
-              <h3>Padrões do módulo</h3>
-              <ul class="subtle-text" style="line-height:1.6">
-                <li>Categorias padrão criadas na instalação (Veículos, Informática, Refrigeração, etc.) — edite em <strong>Categorias</strong>.</li>
-                <li>Código automático: <code>PAT-UNI-ANO-SEQ</code> por patrimônio.</li>
-                <li>Depreciação linear calculada com base em valor de compra, data e vida útil (meses).</li>
-                <li>QR Code único por item — escaneie ou use o botão 📱 na listagem.</li>
-                <li>Multiempresa / multiunidade via campo Unidade em cada patrimônio.</li>
+            <div class="patrimonio-section-head">
+              <div>
+                <h2>⚙️ Configurações Patrimônio</h2>
+                <p class="subtle-text pat-config-subtitle">Atalhos e regras do módulo de bens patrimoniais</p>
+              </div>
+            </div>
+            <div class="pat-config-grid">
+              <article class="pat-config-card">
+                <span class="pat-config-card__icon" aria-hidden="true">🏷️</span>
+                <h3 class="pat-config-card__title">Categorias</h3>
+                <p class="pat-config-card__text">Veículos, Informática, Refrigeração e demais tipos com campos específicos.</p>
+                <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioCategorias">Abrir categorias</button>
+              </article>
+              <article class="pat-config-card">
+                <span class="pat-config-card__icon" aria-hidden="true">📦</span>
+                <h3 class="pat-config-card__title">Patrimônios</h3>
+                <p class="pat-config-card__text">Cadastro, edição, fotos, documentos e valores em <strong>R$</strong>.</p>
+                <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonios">Ver patrimônios</button>
+              </article>
+              <article class="pat-config-card">
+                <span class="pat-config-card__icon" aria-hidden="true">🔢</span>
+                <h3 class="pat-config-card__title">Código automático</h3>
+                <p class="pat-config-card__text">Formato <code class="pat-config-code">PAT-UNI-ANO-SEQ</code> gerado ao salvar cada item.</p>
+              </article>
+              <article class="pat-config-card">
+                <span class="pat-config-card__icon" aria-hidden="true">📉</span>
+                <h3 class="pat-config-card__title">Depreciação</h3>
+                <p class="pat-config-card__text">Cálculo linear por valor de compra, data da compra e vida útil em meses.</p>
+              </article>
+              <article class="pat-config-card">
+                <span class="pat-config-card__icon" aria-hidden="true">📱</span>
+                <h3 class="pat-config-card__title">QR Code</h3>
+                <p class="pat-config-card__text">Código único por patrimônio — botão 📱 na listagem para imprimir ou abrir a ficha.</p>
+              </article>
+              <article class="pat-config-card">
+                <span class="pat-config-card__icon" aria-hidden="true">🏢</span>
+                <h3 class="pat-config-card__title">Multiunidade</h3>
+                <p class="pat-config-card__text">Cada bem vinculado à unidade/filial; filtros por unidade no dashboard e na lista.</p>
+                <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioDashboard">Abrir dashboard</button>
+              </article>
+            </div>
+            <div class="pat-config-panel">
+              <h3 class="pat-config-panel__title">Resumo rápido</h3>
+              <ul class="pat-config-panel__list">
+                <li>Inventário e movimentações registram histórico por item.</li>
+                <li>Relatórios em CSV/PDF disponíveis no menu Relatórios.</li>
+                <li>Permissões do módulo são definidas por perfil em Usuários.</li>
               </ul>
             </div>
           </section>
@@ -5516,7 +5554,7 @@
     <!-- Script principal da aplicacao -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
-    <script src="patrimonio.js?v=20260525-patrimonio-brl"></script>
+    <script src="patrimonio.js?v=20260525-patrimonio-config"></script>
     <script src="app.js?v=20260525-patrimonio-brl"></script>
      
   </body>

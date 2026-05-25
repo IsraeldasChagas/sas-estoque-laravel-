@@ -916,6 +916,18 @@
       patDownloadRelatorio(`inventario/${patState.inventarioId}`, "csv").catch((e) => patToast(e.message, "error"));
     });
 
+    document.getElementById("patrimonioConfiguracoesSection")?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".pat-config-go");
+      if (!btn?.dataset?.patSection) return;
+      const sec = btn.dataset.patSection;
+      if (typeof navigateTo === "function") {
+        navigateTo(sec);
+        if (sec === "patrimonioDashboard") loadPatrimonioDashboard?.().catch(() => {});
+        else if (sec === "patrimonios") loadPatrimonios?.().catch(() => {});
+        else if (sec === "patrimonioCategorias") loadPatrimonioCategorias?.().catch(() => {});
+      }
+    });
+
     document.querySelectorAll(".pat-relatorio-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const rel = btn.dataset.relatorio;
