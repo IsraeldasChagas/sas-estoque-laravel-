@@ -83,6 +83,16 @@ $patRelatorioAuth = static function (Request $request) use ($patrimonioAuth, $po
     return [$u, null];
 };
 
+/** Relatório filtrado: quem vê patrimônios ou relatórios pode exportar. */
+$patRelatorioAuthFlex = static function (Request $request) use ($patrimonioAuth, $podePatrimonio) {
+    $u = $patrimonioAuth($request);
+    if (! $podePatrimonio($u, 'patrimonioRelatorios') && ! $podePatrimonio($u, 'patrimonios')) {
+        return [null, response('Sem permissão', 403)->header('Access-Control-Allow-Origin', '*')];
+    }
+
+    return [$u, null];
+};
+
 $patSituacaoLabel = static function (?string $s): string {
     return match ($s) {
         'ativo' => 'Ativo',
@@ -501,8 +511,8 @@ Route::get('/patrimonio/relatorios/setores', function (Request $request) use ($p
     return $patJson($setores->values());
 });
 
-Route::get('/patrimonio/relatorios/filtrado', function (Request $request) use ($patRelatorioAuth, $patJson, $patRelatorioFiltradoDados, $patFiltrosDescricao) {
-    [, $err] = $patRelatorioAuth($request);
+Route::get('/patrimonio/relatorios/filtrado', function (Request $request) use ($patRelatorioAuthFlex, $patJson, $patRelatorioFiltradoDados, $patFiltrosDescricao) {
+    [, $err] = $patRelatorioAuthFlex($request);
     if ($err) {
         return $err;
     }
@@ -512,18 +522,18 @@ Route::get('/patrimonio/relatorios/filtrado', function (Request $request) use ($
         'filtros' => $patFiltrosDescricao($request),
         'emitido_em' => now()->format('d/m/Y H:i'),
         'totais' => $dados['totais'],
-        'resumo_por_categoria' => $dados['resumoPorCategoria'],
-        'resumo_por_unidade' => $dados['resumoPorUnidade'],
-        'resumo_por_situacao' => $dados['resumoPorSituacao'],
-        'resumo_por_setor' => $dados['resumoPorSetor'],
-        'itens' => $dados['itens'],
+        'resumo_por_categoria' => $dados['resumoPorCategoria']->values()->all(),
+        'resumo_por_unidade' => $dados['resumoPorUnidade']->values()->all(),
+        'resumo_por_situacao' => $dados['resumoPorSituacao']->values()->all(),
+        'resumo_por_setor' => $dados['resumoPorSetor']->values()->all(),
+        'itens' => $dados['itens']->values()->all(),
     ]);
 });
 
 Route::get('/patrimonio/relatorios/filtrado.pdf', function (Request $request) use (
-    $patRelatorioAuth, $patRelatorioFiltradoDados, $patFiltrosDescricao, $patH, $patFmtBrl, $patTableStyle, $patPdfFromHtml
+    $patRelatorioAuthFlex, $patRelatorioFiltradoDados, $patFiltrosDescricao, $patH, $patFmtBrl, $patTableStyle, $patPdfFromHtml
 ) {
-    [, $err] = $patRelatorioAuth($request);
+    [, $err] = $patRelatorioAuthFlex($request);
     if ($err) {
         return $err;
     }
@@ -576,8 +586,8 @@ Route::get('/patrimonio/relatorios/filtrado.pdf', function (Request $request) us
     return $patPdfFromHtml($html, 'patrimonio-filtrado.pdf', $request->query('download') === '1');
 });
 
-Route::get('/patrimonio/relatorios/filtrado.csv', function (Request $request) use ($patRelatorioAuth, $patRelatorioFiltradoDados, $patCsvDownload, $patSituacaoLabel) {
-    [, $err] = $patRelatorioAuth($request);
+Route::get('/patrimonio/relatorios/filtrado.csv', function (Request $request) use ($patRelatorioAuthFlex, $patRelatorioFiltradoDados, $patCsvDownload, $patSituacaoLabel) {
+    [, $err] = $patRelatorioAuthFlex($request);
     if ($err) {
         return $err;
     }

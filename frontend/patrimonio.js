@@ -5,7 +5,14 @@
   "use strict";
 
   const PAT_CHARTS = {};
-  const patState = { categorias: [], patrimonios: [], inventarioId: null, unidadesOk: false };
+  const patState = { categorias: [], patrimonios: [], inventarioId: null, unidadesOk: false, lastRelatorio: null };
+  const PAT_SIT_LABEL = {
+    ativo: "Ativo",
+    manutencao: "Em manutenção",
+    baixado: "Baixado",
+    vendido: "Vendido",
+    quebrado: "Quebrado",
+  };
 
   function esc(s) {
     return (s ?? "").toString()
@@ -471,6 +478,76 @@
       : '<tr><td colspan="6" style="text-align:center">Nenhuma manutenção</td></tr>';
   };
 
+  function patRelDescricaoFiltros(f) {
+    const parts = [];
+    const unEl = document.getElementById("patRelFiltroUnidade");
+    const catEl = document.getElementById("patRelFiltroCategoria");
+    parts.push(f.unidade_id
+      ? `Unidade: ${unEl?.selectedOptions?.[0]?.textContent?.trim() || f.unidade_id}`
+      : "Unidade: Todas");
+    parts.push(f.categoria_id
+      ? `Categoria: ${catEl?.selectedOptions?.[0]?.textContent?.trim() || f.categoria_id}`
+      : "Categoria: Todas");
+    parts.push(f.situacao ? `Situação: ${PAT_SIT_LABEL[f.situacao] || f.situacao}` : "Situação: Todas");
+    parts.push(f.setor ? `Setor: ${f.setor}` : "Setor: Todos");
+    if (f.busca) parts.push(`Busca: ${f.busca}`);
+    return parts;
+  }
+
+  function patRelAgrupar(itens, campo, labelFn) {
+    const map = new Map();
+    itens.forEach((p) => {
+      const label = labelFn ? labelFn(p) : String(p[campo] || "—");
+      const cur = map.get(label) || { label, quantidade: 0, valor_atual: 0 };
+      cur.quantidade += 1;
+      cur.valor_atual += Number(p.valor_atual) || 0;
+      map.set(label, cur);
+    });
+    return [...map.values()].sort((a, b) => b.quantidade - a.quantidade);
+  }
+
+  function patRelMontarRelatorioLocal(itens, filtrosObj) {
+    const arr = Array.isArray(itens) ? itens : [];
+    return {
+      filtros: patRelDescricaoFiltros(filtrosObj),
+      emitido_em: new Date().toLocaleString("pt-BR"),
+      totais: {
+        quantidade: arr.length,
+        valor_compra: Math.round(arr.reduce((s, p) => s + (Number(p.valor_compra) || 0), 0) * 100) / 100,
+        valor_atual: Math.round(arr.reduce((s, p) => s + (Number(p.valor_atual) || 0), 0) * 100) / 100,
+        depreciacao: Math.round(arr.reduce((s, p) => s + (Number(p.depreciacao) || 0), 0) * 100) / 100,
+      },
+      resumo_por_categoria: patRelAgrupar(arr, "categoria_nome"),
+      resumo_por_unidade: patRelAgrupar(arr, "unidade_nome"),
+      resumo_por_situacao: patRelAgrupar(arr, "situacao", (p) => PAT_SIT_LABEL[p.situacao] || p.situacao || "—"),
+      resumo_por_setor: patRelAgrupar(arr, "setor", (p) => (p.setor && String(p.setor).trim()) || "Sem setor"),
+      itens: arr,
+    };
+  }
+
+  function patRelExportarCsvLocal() {
+    const data = patState.lastRelatorio;
+    if (!data?.itens?.length) {
+      patToast("Gere o relatório antes de exportar CSV.", "error");
+      return;
+    }
+    const header = ["Código", "Nome", "Categoria", "Unidade", "Setor", "Situação", "Responsável", "Valor compra", "Valor atual", "Depreciação"];
+    const lines = [header.join(";")];
+    data.itens.forEach((p) => {
+      lines.push([
+        p.codigo, p.nome, p.categoria_nome || "", p.unidade_nome || "", p.setor || "",
+        PAT_SIT_LABEL[p.situacao] || p.situacao || "",
+        p.responsavel || "", p.valor_compra ?? "", p.valor_atual ?? "", p.depreciacao ?? "",
+      ].map((c) => String(c ?? "").replace(/;/g, ",").replace(/\n/g, " ")).join(";"));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "patrimonio-filtrado.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function patRelColetarFiltros() {
     const f = {};
     const un = document.getElementById("patRelFiltroUnidade")?.value;
@@ -520,7 +597,8 @@
     }
     const meta = document.getElementById("patRelResultadoMeta");
     if (meta) {
-      meta.textContent = (data.filtros || []).join(" · ") + (data.emitido_em ? ` · Emitido ${data.emitido_em}` : "");
+      const filtrosTxt = Array.isArray(data.filtros) ? data.filtros.join(" · ") : String(data.filtros || "");
+      meta.textContent = filtrosTxt + (data.emitido_em ? ` · Emitido ${data.emitido_em}` : "");
     }
     const tb = document.getElementById("patRelTbody");
     const card = document.getElementById("patRelResultadoCard");
@@ -545,31 +623,58 @@
       </tr>`).join("");
   }
 
+  async function patRelCarregarSetores() {
+    const dl = document.getElementById("patRelSetoresList");
+    if (!dl) return;
+    let setores = [];
+    try {
+      setores = await patFetch("/patrimonio/relatorios/setores");
+    } catch (_) {
+      let lista = patState.patrimonios;
+      if (!lista.length) {
+        try {
+          lista = await patFetch("/patrimonio/patrimonios");
+          patState.patrimonios = lista;
+        } catch (e2) {
+          return;
+        }
+      }
+      setores = [...new Set(lista.map((p) => String(p.setor || "").trim()).filter(Boolean))].sort();
+    }
+    if (Array.isArray(setores)) {
+      dl.innerHTML = setores.map((s) => `<option value="${esc(s)}"></option>`).join("");
+    }
+  }
+
   window.loadPatrimonioRelatorios = async function loadPatrimonioRelatorios() {
     await Promise.all([
       populatePatUnidades(["patRelFiltroUnidade"]),
       loadPatCategorias(),
     ]);
-    try {
-      const setores = await patFetch("/patrimonio/relatorios/setores");
-      const dl = document.getElementById("patRelSetoresList");
-      if (dl && Array.isArray(setores)) {
-        dl.innerHTML = setores.map((s) => `<option value="${esc(s)}"></option>`).join("");
-      }
-    } catch (_) {
-      /* setores opcionais */
-    }
+    await patRelCarregarSetores();
   };
 
   async function patRelGerarPreview() {
-    const qs = new URLSearchParams(patRelColetarFiltros());
-    const path = `/patrimonio/relatorios/filtrado${qs.toString() ? `?${qs}` : ""}`;
+    const filtros = patRelColetarFiltros();
+    const qs = new URLSearchParams(filtros);
     const tb = document.getElementById("patRelTbody");
     if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Gerando relatório…</td></tr>';
     document.getElementById("patRelResultadoCard")?.classList.remove("hidden");
-    const data = await patFetch(path);
+    document.getElementById("patRelTotais")?.classList.add("hidden");
+    document.getElementById("patRelGrupos")?.classList.add("hidden");
+
+    let data = null;
+    try {
+      data = await patFetch(`/patrimonio/relatorios/filtrado${qs.toString() ? `?${qs}` : ""}`);
+      if (!data || !Array.isArray(data.itens)) throw new Error("Resposta inválida do servidor");
+    } catch (err) {
+      console.warn("[Patrimônio] API filtrado indisponível, usando lista:", err.message);
+      const itens = await patFetch(`/patrimonio/patrimonios${qs.toString() ? `?${qs}` : ""}`);
+      data = patRelMontarRelatorioLocal(itens, filtros);
+    }
+    patState.lastRelatorio = data;
     patRelRenderResultado(data);
-    patToast(`Relatório gerado: ${data.totais?.quantidade ?? 0} item(ns).`, "success");
+    patToast(`Relatório: ${data.totais?.quantidade ?? 0} item(ns).`, "success");
   }
 
   window.loadPatrimonioInventario = async function loadPatrimonioInventario() {
@@ -1029,11 +1134,28 @@
     });
 
     document.getElementById("patRelGerar")?.addEventListener("click", () => patRelGerarPreview().catch((e) => patToast(e.message, "error")));
-    document.getElementById("patRelPdf")?.addEventListener("click", () => {
-      patDownloadRelatorio("filtrado", "pdf", patRelColetarFiltros()).catch((e) => patToast(e.message, "error"));
+    document.getElementById("patRelPdf")?.addEventListener("click", async () => {
+      try {
+        await patDownloadRelatorio("filtrado", "pdf", patRelColetarFiltros());
+      } catch (e) {
+        if (!patState.lastRelatorio?.itens?.length) {
+          patToast("Clique em Visualizar relatório antes, ou atualize o servidor (rota filtrado.pdf).", "error");
+          return;
+        }
+        patToast(e.message || "PDF indisponível no servidor. Use CSV ou atualize o backend.", "error");
+      }
     });
-    document.getElementById("patRelCsv")?.addEventListener("click", () => {
-      patDownloadRelatorio("filtrado", "csv", patRelColetarFiltros()).catch((e) => patToast(e.message, "error"));
+    document.getElementById("patRelCsv")?.addEventListener("click", async () => {
+      try {
+        await patDownloadRelatorio("filtrado", "csv", patRelColetarFiltros());
+      } catch (e) {
+        if (patState.lastRelatorio?.itens?.length) {
+          patRelExportarCsvLocal();
+          patToast("CSV gerado localmente.", "success");
+        } else {
+          patToast(e.message || "Gere o relatório antes de exportar.", "error");
+        }
+      }
     });
     document.getElementById("patRelLimpar")?.addEventListener("click", () => {
       ["patRelFiltroUnidade", "patRelFiltroCategoria", "patRelFiltroSituacao", "patRelFiltroSetor", "patRelFiltroBusca"].forEach((id) => {
