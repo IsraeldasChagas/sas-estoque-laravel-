@@ -404,7 +404,7 @@ Route::get('/patrimonio/patrimonios/{id}', function (Request $request, $id) use 
 });
 
 Route::post('/patrimonio/patrimonios', function (Request $request) use (
-    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioGerarCodigo, $patrimonioRegistrarHistorico
+    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioGerarCodigo, $patrimonioRegistrarHistorico, $patCalcularDepreciacao
 ) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonios')) {
