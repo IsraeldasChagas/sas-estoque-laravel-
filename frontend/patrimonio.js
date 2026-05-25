@@ -30,15 +30,40 @@
     return (window.APP_CONFIG && window.APP_CONFIG.API_URL) || "";
   }
 
+  /** ID do usuário logado (mesma fonte que fetchJSON em app.js). */
+  function patUsuarioId() {
+    const u =
+      (typeof window.getUser === "function" ? window.getUser() : null) ||
+      window.currentUser ||
+      null;
+    const id = u?.id;
+    return id != null && id !== "" ? String(id) : null;
+  }
+
+  function patParseApiError(text, status) {
+    if (!text) return status >= 500 ? "Erro no servidor. Tente novamente." : "Erro ao salvar.";
+    try {
+      const j = JSON.parse(text);
+      if (j?.message) return j.message;
+      if (j?.error) return j.error;
+    } catch (_) {
+      /* não é JSON */
+    }
+    if (text.length > 500 || text.trim().startsWith("<")) {
+      return status >= 500 ? "Erro no servidor. Tente novamente." : `Erro ${status}`;
+    }
+    return text;
+  }
+
   async function patFetch(path, opts = {}) {
     if (typeof window.fetchJSON === "function") {
       return window.fetchJSON(path, opts);
     }
     const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
-    const uid = window.currentUser?.id;
-    if (uid) headers["X-Usuario-Id"] = String(uid);
+    const uid = patUsuarioId();
+    if (uid) headers["X-Usuario-Id"] = uid;
     const res = await fetch(`${patApiUrl()}${path}`, { ...opts, headers });
-    if (!res.ok) throw new Error(await res.text() || res.statusText);
+    if (!res.ok) throw new Error(patParseApiError(await res.text(), res.status));
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("application/json")) return res.json();
     return res.text();
@@ -46,10 +71,10 @@
 
   async function patFetchForm(path, fd, method = "POST") {
     const headers = {};
-    const uid = window.currentUser?.id;
-    if (uid) headers["X-Usuario-Id"] = String(uid);
+    const uid = patUsuarioId();
+    if (uid) headers["X-Usuario-Id"] = uid;
     const res = await fetch(`${patApiUrl()}${path}`, { method, headers, body: fd });
-    if (!res.ok) throw new Error(await res.text() || "Erro");
+    if (!res.ok) throw new Error(patParseApiError(await res.text(), res.status));
     return res.json();
   }
 
@@ -61,8 +86,8 @@
     else path = `/patrimonio/relatorios/${relatorio}.${formato}`;
     const url = `${patApiUrl()}${path}${qs.toString() ? `?${qs}` : ""}`;
     const headers = {};
-    const uid = window.currentUser?.id;
-    if (uid) headers["X-Usuario-Id"] = String(uid);
+    const uid = patUsuarioId();
+    if (uid) headers["X-Usuario-Id"] = uid;
     const res = await fetch(url, { headers });
     if (!res.ok) throw new Error(await res.text() || "Falha no relatório");
     const blob = await res.blob();
@@ -544,7 +569,17 @@
 
     document.getElementById("patrimonioForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!patUsuarioId()) {
+        window.showToast?.("Sessão expirada. Faça login novamente.", "error");
+        return;
+      }
       const form = e.target;
+      const nome = (form.nome?.value || "").trim();
+      if (!nome) {
+        window.showToast?.("Informe o nome do patrimônio.", "error");
+        form.nome?.focus();
+        return;
+      }
       const id = document.getElementById("patFormId")?.value;
       const fd = new FormData(form);
       fd.set("dados_especificos", JSON.stringify(coletarDadosEspecificos()));
