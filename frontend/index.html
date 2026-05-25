@@ -5144,8 +5144,9 @@
           </label>
           <label>📎 Anexar documentos<input type="file" name="documentos" accept=".pdf,.jpg,.jpeg,.png" multiple /></label>
           <div id="patFormAnexosLista" class="pat-anexos-lista"></div>
+          <div id="patFormFeedback" class="pat-form-feedback hidden" role="alert" aria-live="polite"></div>
           <footer>
-            <button type="submit" class="btn primary">Salvar patrimônio</button>
+            <button type="submit" class="btn primary" id="patFormSubmitBtn">Salvar patrimônio</button>
           </footer>
         </form>
       </div>
@@ -5513,8 +5514,8 @@
     <!-- Script principal da aplicacao -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
-    <script src="patrimonio.js?v=20260522-patrimonio-completo"></script>
-    <script src="app.js?v=20260521-custos-ingredientes"></script>
+    <script src="patrimonio.js?v=20260525-patrimonio-salvar"></script>
+    <script src="app.js?v=20260525-patrimonio-salvar"></script>
      
   </body>
 </html>

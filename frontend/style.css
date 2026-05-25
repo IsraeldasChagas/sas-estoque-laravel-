@@ -3169,6 +3169,18 @@ textarea {
   transform: translateY(0);
 }
 
+.toast--error.show {
+  background: #c62828;
+}
+
+.toast--success.show {
+  background: #2e7d32;
+}
+
+.toast--warning.show {
+  background: #ef6c00;
+}
+
 @media (max-width: 1200px) {
   .content {
     padding: 24px;

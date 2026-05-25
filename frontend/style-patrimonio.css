@@ -123,6 +123,31 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.65rem;
 }
+.pat-form-feedback {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.pat-form-feedback.hidden {
+  display: none;
+}
+.pat-form-feedback--error {
+  background: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #ef9a9a;
+}
+.pat-form-feedback--success {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+}
+.pat-form-feedback--info {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border: 1px solid #90caf9;
+}
 @media (max-width: 768px) {
   .patrimonio-section-head {
     flex-direction: column;

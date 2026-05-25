@@ -40,6 +40,24 @@
     return id != null && id !== "" ? String(id) : null;
   }
 
+  function patToast(message, type = "info") {
+    const fn = typeof showToast === "function" ? showToast : window.showToast;
+    if (typeof fn === "function") fn(message, type);
+  }
+
+  function patFormFeedback(message, type = "error") {
+    const box = document.getElementById("patFormFeedback");
+    if (!box) return;
+    if (!message) {
+      box.textContent = "";
+      box.className = "pat-form-feedback hidden";
+      return;
+    }
+    box.textContent = message;
+    box.className = `pat-form-feedback pat-form-feedback--${type === "success" ? "success" : type === "info" ? "info" : "error"}`;
+    box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
   function patParseApiError(text, status) {
     if (!text) return status >= 500 ? "Erro no servidor. Tente novamente." : "Erro ao salvar.";
     try {
@@ -106,7 +124,7 @@
     const meses = parseInt(document.getElementById("patFormVidaUtil")?.value || "0", 10);
     const dataCompra = document.getElementById("patFormDataCompra")?.value || "";
     if (!compra || !meses) {
-      window.showToast?.("Informe valor de compra e vida útil (meses).", "info");
+      patToast("Informe valor de compra e vida útil (meses).", "info");
       return;
     }
     let mesesUso = 0;
@@ -122,7 +140,7 @@
     const atEl = document.getElementById("patFormValorAtual");
     if (depEl) depEl.value = String(Math.round(depAcum * 100) / 100);
     if (atEl) atEl.value = String(atual);
-    window.showToast?.("Depreciação calculada.", "success");
+    patToast("Depreciação calculada.", "success");
   }
 
   async function populatePatUnidades(extraIds = []) {
@@ -462,6 +480,7 @@
     document.getElementById("patFormId").value = editId ? String(editId) : "";
     document.getElementById("patModalTitle").textContent = editId ? "✏️ Editar patrimônio" : "📦 Novo patrimônio";
     renderAnexosLista([], []);
+    patFormFeedback("");
     toggleCamposEspecificos();
     modal.classList.add("active");
     populatePatUnidades().then(loadPatCategorias);
@@ -489,7 +508,7 @@
         if (f.numero_nf) f.numero_nf.value = p.numero_nf || "";
         preencherDadosEspecificos(p.dados_especificos);
         renderAnexosLista(res.fotos, res.documentos);
-      }).catch((e) => window.showToast?.(e.message, "error"));
+      }).catch((e) => patToast(e.message, "error"));
     }
   }
 
@@ -527,8 +546,8 @@
     if (document.body.dataset.patrimonioBound === "1") return;
     document.body.dataset.patrimonioBound = "1";
 
-    document.getElementById("patDashAtualizar")?.addEventListener("click", () => loadPatrimonioDashboard().catch((e) => window.showToast?.(e.message, "error")));
-    document.getElementById("patFiltroAplicar")?.addEventListener("click", () => loadPatrimonios().catch((e) => window.showToast?.(e.message, "error")));
+    document.getElementById("patDashAtualizar")?.addEventListener("click", () => loadPatrimonioDashboard().catch((e) => patToast(e.message, "error")));
+    document.getElementById("patFiltroAplicar")?.addEventListener("click", () => loadPatrimonios().catch((e) => patToast(e.message, "error")));
     document.getElementById("patBtnNovo")?.addEventListener("click", () => abrirModalPatrimonio(null));
     document.getElementById("patFormCategoria")?.addEventListener("change", toggleCamposEspecificos);
     document.getElementById("patFormCalcDeprec")?.addEventListener("click", calcDepreciacaoLocal);
@@ -544,10 +563,10 @@
       if (ex && confirm("Excluir este patrimônio permanentemente?")) {
         try {
           await patFetch(`/patrimonio/patrimonios/${ex.dataset.id}`, { method: "DELETE" });
-          window.showToast?.("Patrimônio excluído.", "success");
+          patToast("Patrimônio excluído.", "success");
           loadPatrimonios();
         } catch (err) {
-          window.showToast?.(err.message, "error");
+          patToast(err.message, "error");
         }
       }
     });
@@ -563,25 +582,32 @@
           renderAnexosLista(res.fotos, res.documentos);
         }
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
     document.getElementById("patrimonioForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      patFormFeedback("");
       if (!patUsuarioId()) {
-        window.showToast?.("Sessão expirada. Faça login novamente.", "error");
+        const msg = "Sessão expirada. Faça login novamente.";
+        patFormFeedback(msg, "error");
+        patToast(msg, "error");
         return;
       }
       const form = e.target;
       const nome = (form.nome?.value || "").trim();
       if (!nome) {
-        window.showToast?.("Informe o nome do patrimônio.", "error");
+        const msg = "Informe o nome do patrimônio (campo no topo do formulário).";
+        patFormFeedback(msg, "error");
+        patToast(msg, "error");
         form.nome?.focus();
         return;
       }
+      const submitBtn = document.getElementById("patFormSubmitBtn");
       const id = document.getElementById("patFormId")?.value;
       const fd = new FormData(form);
+      fd.delete("patFormId");
       fd.set("dados_especificos", JSON.stringify(coletarDadosEspecificos()));
       const docs = form.querySelector('input[name="documentos"]');
       if (docs?.files?.length) {
@@ -590,14 +616,27 @@
         });
         fd.set("documento_tipo", document.getElementById("patFormDocTipo")?.value || "outro");
       }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Salvando…";
+      }
       try {
         if (id) await patFetchForm(`/patrimonio/patrimonios/${id}`, fd, "POST");
         else await patFetchForm("/patrimonio/patrimonios", fd, "POST");
-        window.showToast?.("Patrimônio salvo com sucesso.", "success");
+        patFormFeedback("");
+        patToast("Patrimônio salvo com sucesso.", "success");
         document.getElementById("patrimonioModal")?.classList.remove("active");
         loadPatrimonios();
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        const msg = err?.message || "Não foi possível salvar o patrimônio.";
+        patFormFeedback(msg, "error");
+        patToast(msg, "error");
+        console.error("[Patrimônio] salvar:", err);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Salvar patrimônio";
+        }
       }
     });
 
@@ -611,7 +650,7 @@
     document.getElementById("closePatFichaModal")?.addEventListener("click", () => document.getElementById("patFichaModal")?.classList.remove("active"));
     document.getElementById("closePatFichaModal2")?.addEventListener("click", () => document.getElementById("patFichaModal")?.classList.remove("active"));
     document.getElementById("patFichaPdf")?.addEventListener("click", () => {
-      if (patState.fichaId) patDownloadRelatorio(`ficha/${patState.fichaId}`, "pdf").catch((e) => window.showToast?.(e.message, "error"));
+      if (patState.fichaId) patDownloadRelatorio(`ficha/${patState.fichaId}`, "pdf").catch((e) => patToast(e.message, "error"));
     });
 
     document.getElementById("patCatBtnNova")?.addEventListener("click", () => {
@@ -636,9 +675,9 @@
         else await patFetch("/patrimonio/categorias", { method: "POST", body: JSON.stringify(body) });
         document.getElementById("patCatModal")?.classList.remove("active");
         loadPatrimonioCategorias();
-        window.showToast?.("Categoria salva.", "success");
+        patToast("Categoria salva.", "success");
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
     document.getElementById("patCatTbody")?.addEventListener("click", async (e) => {
@@ -659,7 +698,7 @@
         await patFetch(`/patrimonio/categorias/${btn.dataset.id}`, { method: "DELETE" });
         loadPatrimonioCategorias();
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
@@ -674,7 +713,7 @@
     document.getElementById("patMovForm")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const pid = document.getElementById("patMovPatrimonio")?.value;
-      if (!pid) return window.showToast?.("Selecione o patrimônio.", "error");
+      if (!pid) return patToast("Selecione o patrimônio.", "error");
       try {
         await patFetch(`/patrimonio/patrimonios/${pid}/movimentacoes`, {
           method: "POST",
@@ -688,9 +727,9 @@
         });
         document.getElementById("patMovModal")?.classList.remove("active");
         loadPatrimonioMovimentacoes();
-        window.showToast?.("Movimentação registrada.", "success");
+        patToast("Movimentação registrada.", "success");
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
@@ -718,9 +757,9 @@
         await patFetchForm("/patrimonio/manutencoes", fd);
         document.getElementById("patManModal")?.classList.remove("active");
         loadPatrimonioManutencoes();
-        window.showToast?.("Manutenção registrada.", "success");
+        patToast("Manutenção registrada.", "success");
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
@@ -743,9 +782,9 @@
         document.getElementById("patInvModal")?.classList.remove("active");
         loadPatrimonioInventario();
         if (res.id) abrirInventarioItens(res.id, document.getElementById("patInvTitulo")?.value, "aberto");
-        window.showToast?.("Inventário iniciado.", "success");
+        patToast("Inventário iniciado.", "success");
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
@@ -769,9 +808,9 @@
           const diffEl = document.querySelector(`.pat-inv-diff[data-item="${itemId}"]`);
           const qtdSis = parseInt(document.querySelector(`.pat-inv-qtd[data-item="${itemId}"]`)?.closest("tr")?.children[2]?.textContent || "0", 10);
           if (diffEl && qtd !== "") diffEl.textContent = String(parseInt(qtd, 10) - qtdSis);
-          window.showToast?.("Item conferido.", "success");
+          patToast("Item conferido.", "success");
         } catch (err) {
-          window.showToast?.(err.message, "error");
+          patToast(err.message, "error");
         }
         return;
       }
@@ -784,9 +823,9 @@
       fd.append("foto", inp.files[0]);
       try {
         await patFetchForm(`/patrimonio/inventario/itens/${inp.dataset.item}/foto`, fd);
-        window.showToast?.("Foto do item salva.", "success");
+        patToast("Foto do item salva.", "success");
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
@@ -796,19 +835,19 @@
         await patFetch(`/patrimonio/inventario/${patState.inventarioId}/fechar`, { method: "POST" });
         loadPatrimonioInventario();
         document.getElementById("patInvItensCard")?.classList.add("hidden");
-        window.showToast?.("Inventário encerrado.", "success");
+        patToast("Inventário encerrado.", "success");
       } catch (err) {
-        window.showToast?.(err.message, "error");
+        patToast(err.message, "error");
       }
     });
 
     document.getElementById("patInvRelPdf")?.addEventListener("click", () => {
       if (!patState.inventarioId) return;
-      patDownloadRelatorio(`inventario/${patState.inventarioId}`, "pdf").catch((e) => window.showToast?.(e.message, "error"));
+      patDownloadRelatorio(`inventario/${patState.inventarioId}`, "pdf").catch((e) => patToast(e.message, "error"));
     });
     document.getElementById("patInvRelCsv")?.addEventListener("click", () => {
       if (!patState.inventarioId) return;
-      patDownloadRelatorio(`inventario/${patState.inventarioId}`, "csv").catch((e) => window.showToast?.(e.message, "error"));
+      patDownloadRelatorio(`inventario/${patState.inventarioId}`, "csv").catch((e) => patToast(e.message, "error"));
     });
 
     document.querySelectorAll(".pat-relatorio-btn").forEach((btn) => {
@@ -830,7 +869,7 @@
             await patDownloadRelatorio(rel, fmt);
           }
         } catch (e) {
-          window.showToast?.(e.message, "error");
+          patToast(e.message, "error");
         }
       });
     });

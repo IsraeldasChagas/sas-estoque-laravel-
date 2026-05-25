@@ -1408,11 +1408,13 @@ const INACTIVITY_TIMEOUT = 6 * 60 * 1000; // 6 minutos em milissegundos
 function showToast(message, type = "info", durationMs = 3200) {
   if (!dom.toast) return;
   dom.toast.textContent = message;
-  dom.toast.className = `toast toast--${type}`;
-  setTimeout(() => {
+  dom.toast.className = `toast toast--${type} show`;
+  if (dom.toast._hideTimer) clearTimeout(dom.toast._hideTimer);
+  dom.toast._hideTimer = setTimeout(() => {
     dom.toast.className = "toast";
   }, durationMs);
 }
+window.showToast = showToast;
 
 /**
  * Exibe um modal de erro detalhado para movimentações
