@@ -4151,6 +4151,7 @@ function navigateTo(section) {
   else if (section === "patrimonioMovimentacoes") loadPatrimonioMovimentacoes?.().catch(() => {});
   else if (section === "patrimonioManutencoes") loadPatrimonioManutencoes?.().catch(() => {});
   else if (section === "patrimonioInventario") loadPatrimonioInventario?.().catch(() => {});
+  else if (section === "patrimonioRelatorios") loadPatrimonioRelatorios?.().catch(() => {});
   if (section === 'boasVindas') {
     const el = document.getElementById('boasVindasNome');
     if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
@@ -13841,6 +13842,8 @@ function wireSidebarSectionNavClicks() {
         await loadPatrimonioManutencoes?.();
       } else if (target === "patrimonioInventario") {
         await loadPatrimonioInventario?.();
+      } else if (target === "patrimonioRelatorios") {
+        await loadPatrimonioRelatorios?.();
       } else if (target === "valeConsumo") {
         valeConsumoLimparFormulario();
         valeConsumoOcultarFormCard();

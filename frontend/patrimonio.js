@@ -234,11 +234,13 @@
     patState.categorias = await patFetch("/patrimonio/categorias");
     const sel = document.getElementById("patFiltroCategoria");
     const formSel = document.getElementById("patFormCategoria");
+    const relSel = document.getElementById("patRelFiltroCategoria");
     const opts = patState.categorias
       .filter((c) => c.ativo !== 0 && c.ativo !== false)
       .map((c) => `<option value="${c.id}" data-tipo="${esc(c.tipo_campos || "geral")}">${esc(c.icone || "")} ${esc(c.nome)}</option>`)
       .join("");
     if (sel) sel.innerHTML = '<option value="">Todas</option>' + opts;
+    if (relSel) relSel.innerHTML = '<option value="">Todas</option>' + opts;
     if (formSel) formSel.innerHTML = '<option value="">Selecione</option>' + opts;
     return patState.categorias;
   }
@@ -335,7 +337,9 @@
     const un = document.getElementById("patFiltroUnidade")?.value;
     const cat = document.getElementById("patFiltroCategoria")?.value;
     const sit = document.getElementById("patFiltroSituacao")?.value;
+    const setor = document.getElementById("patFiltroSetor")?.value?.trim();
     if (busca) qs.set("busca", busca);
+    if (setor) qs.set("setor", setor);
     if (un) qs.set("unidade_id", un);
     if (cat) qs.set("categoria_id", cat);
     if (sit) qs.set("situacao", sit);
@@ -346,6 +350,13 @@
       patFetch(`/patrimonio/patrimonios${q}`),
     ]);
     patState.patrimonios = lista;
+    try {
+      const setores = await patFetch("/patrimonio/relatorios/setores");
+      const dl = document.getElementById("patListaSetoresList");
+      if (dl && Array.isArray(setores)) {
+        dl.innerHTML = setores.map((s) => `<option value="${esc(s)}"></option>`).join("");
+      }
+    } catch (_) { /* opcional */ }
     if (!tb) return;
     if (!patState.patrimonios.length) {
       tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado</td></tr>';
@@ -459,6 +470,107 @@
         </tr>`).join("")
       : '<tr><td colspan="6" style="text-align:center">Nenhuma manutenção</td></tr>';
   };
+
+  function patRelColetarFiltros() {
+    const f = {};
+    const un = document.getElementById("patRelFiltroUnidade")?.value;
+    const cat = document.getElementById("patRelFiltroCategoria")?.value;
+    const sit = document.getElementById("patRelFiltroSituacao")?.value;
+    const setor = document.getElementById("patRelFiltroSetor")?.value?.trim();
+    const busca = document.getElementById("patRelFiltroBusca")?.value?.trim();
+    if (un) f.unidade_id = un;
+    if (cat) f.categoria_id = cat;
+    if (sit) f.situacao = sit;
+    if (setor) f.setor = setor;
+    if (busca) f.busca = busca;
+    return f;
+  }
+
+  function patRelRenderGrupo(titulo, grupos) {
+    if (!grupos?.length) return "";
+    const rows = grupos.map((g) => `
+      <tr><td>${esc(g.label)}</td><td>${g.quantidade ?? 0}</td><td>${fmtMoeda(g.valor_atual)}</td></tr>`).join("");
+    return `<div class="pat-rel-grupo-box">
+      <h4>${esc(titulo)}</h4>
+      <table><thead><tr><th>Grupo</th><th>Qtd</th><th>Valor atual</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  }
+
+  function patRelRenderResultado(data) {
+    const tot = data.totais || {};
+    const totaisEl = document.getElementById("patRelTotais");
+    if (totaisEl) {
+      totaisEl.classList.remove("hidden");
+      totaisEl.innerHTML = `
+        <div class="patrimonio-card"><span class="patrimonio-card__label">Itens</span><span class="patrimonio-card__value">${tot.quantidade ?? 0}</span></div>
+        <div class="patrimonio-card"><span class="patrimonio-card__label">Valor compra</span><span class="patrimonio-card__value">${fmtMoeda(tot.valor_compra)}</span></div>
+        <div class="patrimonio-card"><span class="patrimonio-card__label">Valor atual</span><span class="patrimonio-card__value">${fmtMoeda(tot.valor_atual)}</span></div>
+        <div class="patrimonio-card"><span class="patrimonio-card__label">Depreciação</span><span class="patrimonio-card__value">${fmtMoeda(tot.depreciacao)}</span></div>`;
+    }
+    const gruposEl = document.getElementById("patRelGrupos");
+    if (gruposEl) {
+      gruposEl.classList.remove("hidden");
+      gruposEl.innerHTML = `
+        <div class="pat-rel-grupos-grid">
+          ${patRelRenderGrupo("Por categoria", data.resumo_por_categoria)}
+          ${patRelRenderGrupo("Por unidade", data.resumo_por_unidade)}
+          ${patRelRenderGrupo("Por situação", data.resumo_por_situacao)}
+          ${patRelRenderGrupo("Por setor", data.resumo_por_setor)}
+        </div>`;
+    }
+    const meta = document.getElementById("patRelResultadoMeta");
+    if (meta) {
+      meta.textContent = (data.filtros || []).join(" · ") + (data.emitido_em ? ` · Emitido ${data.emitido_em}` : "");
+    }
+    const tb = document.getElementById("patRelTbody");
+    const card = document.getElementById("patRelResultadoCard");
+    if (card) card.classList.remove("hidden");
+    const itens = data.itens || [];
+    if (!tb) return;
+    if (!itens.length) {
+      tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado com os filtros informados.</td></tr>';
+      return;
+    }
+    tb.innerHTML = itens.map((p) => `
+      <tr>
+        <td data-label="Código">${esc(p.codigo)}</td>
+        <td data-label="Nome">${esc(p.nome)}</td>
+        <td data-label="Categoria">${esc(p.categoria_nome || "—")}</td>
+        <td data-label="Unidade">${esc(p.unidade_nome || "—")}</td>
+        <td data-label="Setor">${esc(p.setor || "—")}</td>
+        <td data-label="Situação">${situacaoBadge(p.situacao)}</td>
+        <td data-label="Responsável">${esc(p.responsavel || "—")}</td>
+        <td data-label="Valor compra">${fmtMoeda(p.valor_compra)}</td>
+        <td data-label="Valor atual">${fmtMoeda(p.valor_atual)}</td>
+      </tr>`).join("");
+  }
+
+  window.loadPatrimonioRelatorios = async function loadPatrimonioRelatorios() {
+    await Promise.all([
+      populatePatUnidades(["patRelFiltroUnidade"]),
+      loadPatCategorias(),
+    ]);
+    try {
+      const setores = await patFetch("/patrimonio/relatorios/setores");
+      const dl = document.getElementById("patRelSetoresList");
+      if (dl && Array.isArray(setores)) {
+        dl.innerHTML = setores.map((s) => `<option value="${esc(s)}"></option>`).join("");
+      }
+    } catch (_) {
+      /* setores opcionais */
+    }
+  };
+
+  async function patRelGerarPreview() {
+    const qs = new URLSearchParams(patRelColetarFiltros());
+    const path = `/patrimonio/relatorios/filtrado${qs.toString() ? `?${qs}` : ""}`;
+    const tb = document.getElementById("patRelTbody");
+    if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Gerando relatório…</td></tr>';
+    document.getElementById("patRelResultadoCard")?.classList.remove("hidden");
+    const data = await patFetch(path);
+    patRelRenderResultado(data);
+    patToast(`Relatório gerado: ${data.totais?.quantidade ?? 0} item(ns).`, "success");
+  }
 
   window.loadPatrimonioInventario = async function loadPatrimonioInventario() {
     await populatePatUnidades();
@@ -914,6 +1026,23 @@
     document.getElementById("patInvRelCsv")?.addEventListener("click", () => {
       if (!patState.inventarioId) return;
       patDownloadRelatorio(`inventario/${patState.inventarioId}`, "csv").catch((e) => patToast(e.message, "error"));
+    });
+
+    document.getElementById("patRelGerar")?.addEventListener("click", () => patRelGerarPreview().catch((e) => patToast(e.message, "error")));
+    document.getElementById("patRelPdf")?.addEventListener("click", () => {
+      patDownloadRelatorio("filtrado", "pdf", patRelColetarFiltros()).catch((e) => patToast(e.message, "error"));
+    });
+    document.getElementById("patRelCsv")?.addEventListener("click", () => {
+      patDownloadRelatorio("filtrado", "csv", patRelColetarFiltros()).catch((e) => patToast(e.message, "error"));
+    });
+    document.getElementById("patRelLimpar")?.addEventListener("click", () => {
+      ["patRelFiltroUnidade", "patRelFiltroCategoria", "patRelFiltroSituacao", "patRelFiltroSetor", "patRelFiltroBusca"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+      });
+      document.getElementById("patRelTotais")?.classList.add("hidden");
+      document.getElementById("patRelGrupos")?.classList.add("hidden");
+      document.getElementById("patRelResultadoCard")?.classList.add("hidden");
     });
 
     document.getElementById("patrimonioConfiguracoesSection")?.addEventListener("click", (e) => {

@@ -83,6 +83,123 @@ $patRelatorioAuth = static function (Request $request) use ($patrimonioAuth, $po
     return [$u, null];
 };
 
+$patSituacaoLabel = static function (?string $s): string {
+    return match ($s) {
+        'ativo' => 'Ativo',
+        'manutencao' => 'Em manutenção',
+        'baixado' => 'Baixado',
+        'vendido' => 'Vendido',
+        'quebrado' => 'Quebrado',
+        default => $s ? (string) $s : '—',
+    };
+};
+
+$patAplicarFiltrosPatrimonio = static function ($q, Request $request) {
+    if ($request->filled('unidade_id')) {
+        $q->where('p.unidade_id', (int) $request->query('unidade_id'));
+    }
+    if ($request->filled('categoria_id')) {
+        $q->where('p.categoria_id', (int) $request->query('categoria_id'));
+    }
+    if ($request->filled('situacao')) {
+        $q->where('p.situacao', $request->query('situacao'));
+    }
+    if ($request->filled('setor')) {
+        $setor = trim((string) $request->query('setor'));
+        if ($setor !== '') {
+            $q->where('p.setor', 'like', '%' . $setor . '%');
+        }
+    }
+    if ($request->filled('busca')) {
+        $b = '%' . $request->query('busca') . '%';
+        $q->where(function ($qq) use ($b) {
+            $qq->where('p.nome', 'like', $b)
+                ->orWhere('p.codigo', 'like', $b)
+                ->orWhere('p.numero_serial', 'like', $b);
+        });
+    }
+
+    return $q;
+};
+
+$patFiltrosDescricao = static function (Request $request) use ($patSituacaoLabel): array {
+    $parts = [];
+    if ($request->filled('unidade_id')) {
+        $nome = DB::table('unidades')->where('id', (int) $request->query('unidade_id'))->value('nome');
+        $parts[] = 'Unidade: ' . ($nome ?: $request->query('unidade_id'));
+    } else {
+        $parts[] = 'Unidade: Todas';
+    }
+    if ($request->filled('categoria_id')) {
+        $nome = DB::table('patrimonio_categorias')->where('id', (int) $request->query('categoria_id'))->value('nome');
+        $parts[] = 'Categoria: ' . ($nome ?: $request->query('categoria_id'));
+    } else {
+        $parts[] = 'Categoria: Todas';
+    }
+    if ($request->filled('situacao')) {
+        $parts[] = 'Situação: ' . $patSituacaoLabel($request->query('situacao'));
+    } else {
+        $parts[] = 'Situação: Todas';
+    }
+    if ($request->filled('setor') && trim((string) $request->query('setor')) !== '') {
+        $parts[] = 'Setor: ' . trim((string) $request->query('setor'));
+    } else {
+        $parts[] = 'Setor: Todos';
+    }
+    if ($request->filled('busca') && trim((string) $request->query('busca')) !== '') {
+        $parts[] = 'Busca: ' . trim((string) $request->query('busca'));
+    }
+
+    return $parts;
+};
+
+$patRelatorioFiltradoDados = static function (Request $request) use ($patrimonioQueryBase, $patrimonioMapPatrimonio, $patAplicarFiltrosPatrimonio, $patSituacaoLabel) {
+    $q = $patAplicarFiltrosPatrimonio($patrimonioQueryBase(), $request);
+    $rows = $q->orderBy('p.codigo')->limit(2000)->get();
+    $itens = $rows->map(function ($r) use ($patrimonioMapPatrimonio, $patSituacaoLabel) {
+        $p = $patrimonioMapPatrimonio($r);
+
+        return array_merge($p, ['situacao_label' => $patSituacaoLabel($p['situacao'] ?? null)]);
+    })->values();
+
+    $totais = [
+        'quantidade' => $itens->count(),
+        'valor_compra' => round((float) $rows->sum('valor_compra'), 2),
+        'valor_atual' => round((float) $rows->sum('valor_atual'), 2),
+        'depreciacao' => round((float) $rows->sum('depreciacao'), 2),
+    ];
+
+    $resumoPorCategoria = $rows->groupBy(fn ($r) => $r->categoria_nome ?: 'Sem categoria')
+        ->map(fn ($g, $label) => [
+            'label' => $label,
+            'quantidade' => $g->count(),
+            'valor_atual' => round((float) $g->sum('valor_atual'), 2),
+        ])->values()->sortByDesc('quantidade')->values();
+
+    $resumoPorUnidade = $rows->groupBy(fn ($r) => $r->unidade_nome ?: 'Sem unidade')
+        ->map(fn ($g, $label) => [
+            'label' => $label,
+            'quantidade' => $g->count(),
+            'valor_atual' => round((float) $g->sum('valor_atual'), 2),
+        ])->values()->sortByDesc('quantidade')->values();
+
+    $resumoPorSituacao = $rows->groupBy('situacao')
+        ->map(fn ($g, $sit) => [
+            'label' => $patSituacaoLabel($sit),
+            'quantidade' => $g->count(),
+            'valor_atual' => round((float) $g->sum('valor_atual'), 2),
+        ])->values()->sortByDesc('quantidade')->values();
+
+    $resumoPorSetor = $rows->groupBy(fn ($r) => trim((string) ($r->setor ?? '')) ?: 'Sem setor')
+        ->map(fn ($g, $label) => [
+            'label' => $label,
+            'quantidade' => $g->count(),
+            'valor_atual' => round((float) $g->sum('valor_atual'), 2),
+        ])->values()->sortByDesc('quantidade')->values();
+
+    return compact('itens', 'totais', 'resumoPorCategoria', 'resumoPorUnidade', 'resumoPorSituacao', 'resumoPorSetor');
+};
+
 foreach ([
     '/patrimonio/relatorios/ficha/{id}.pdf',
     '/patrimonio/relatorios/movimentacoes.pdf',
@@ -97,6 +214,10 @@ foreach ([
     '/patrimonio/relatorios/por-categoria.csv',
     '/patrimonio/relatorios/inventario/{id}.pdf',
     '/patrimonio/relatorios/inventario/{id}.csv',
+    '/patrimonio/relatorios/filtrado',
+    '/patrimonio/relatorios/filtrado.pdf',
+    '/patrimonio/relatorios/filtrado.csv',
+    '/patrimonio/relatorios/setores',
 ] as $p) {
     Route::options($p, $patrimonioCors);
 }
@@ -363,4 +484,123 @@ Route::get('/patrimonio/relatorios/inventario/{id}.csv', function (Request $requ
     }
 
     return $patCsvDownload(['Código', 'Patrimônio', 'Qtd sistema', 'Qtd encontrada', 'Diferença', 'Observação'], $data, 'inventario-' . $id . '.csv');
+});
+
+Route::get('/patrimonio/relatorios/setores', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+    $u = $patrimonioAuth($request);
+    if (! $podePatrimonio($u)) {
+        return $patJson(['message' => 'Sem permissão'], 403);
+    }
+    $setores = DB::table('patrimonios')
+        ->whereNotNull('setor')
+        ->where('setor', '!=', '')
+        ->distinct()
+        ->orderBy('setor')
+        ->pluck('setor');
+
+    return $patJson($setores->values());
+});
+
+Route::get('/patrimonio/relatorios/filtrado', function (Request $request) use ($patRelatorioAuth, $patJson, $patRelatorioFiltradoDados, $patFiltrosDescricao) {
+    [, $err] = $patRelatorioAuth($request);
+    if ($err) {
+        return $err;
+    }
+    $dados = $patRelatorioFiltradoDados($request);
+
+    return $patJson([
+        'filtros' => $patFiltrosDescricao($request),
+        'emitido_em' => now()->format('d/m/Y H:i'),
+        'totais' => $dados['totais'],
+        'resumo_por_categoria' => $dados['resumoPorCategoria'],
+        'resumo_por_unidade' => $dados['resumoPorUnidade'],
+        'resumo_por_situacao' => $dados['resumoPorSituacao'],
+        'resumo_por_setor' => $dados['resumoPorSetor'],
+        'itens' => $dados['itens'],
+    ]);
+});
+
+Route::get('/patrimonio/relatorios/filtrado.pdf', function (Request $request) use (
+    $patRelatorioAuth, $patRelatorioFiltradoDados, $patFiltrosDescricao, $patH, $patFmtBrl, $patTableStyle, $patPdfFromHtml
+) {
+    [, $err] = $patRelatorioAuth($request);
+    if ($err) {
+        return $err;
+    }
+    $dados = $patRelatorioFiltradoDados($request);
+    $filtros = implode(' · ', $patFiltrosDescricao($request));
+    $tot = $dados['totais'];
+
+    $mkResumo = static function (string $titulo, $grupos) use ($patH) {
+        if (! $grupos || ! count($grupos)) {
+            return '';
+        }
+        $rows = '';
+        foreach ($grupos as $g) {
+            $rows .= '<tr><td>' . $patH($g['label'] ?? '') . '</td><td>' . (int) ($g['quantidade'] ?? 0) . '</td><td>R$ ' . number_format((float) ($g['valor_atual'] ?? 0), 2, ',', '.') . '</td></tr>';
+        }
+
+        return '<h2 style="font-size:10pt;margin:14px 0 6px">' . $patH($titulo) . '</h2>
+        <table><thead><tr><th>Grupo</th><th>Qtd</th><th>Valor atual</th></tr></thead><tbody>' . $rows . '</tbody></table>';
+    };
+
+    $body = '';
+    foreach ($dados['itens'] as $p) {
+        $body .= '<tr>
+            <td>' . $patH($p['codigo'] ?? '') . '</td>
+            <td>' . $patH($p['nome'] ?? '') . '</td>
+            <td>' . $patH($p['categoria_nome'] ?? '—') . '</td>
+            <td>' . $patH($p['unidade_nome'] ?? '—') . '</td>
+            <td>' . $patH($p['setor'] ?? '—') . '</td>
+            <td>' . $patH($p['situacao_label'] ?? $p['situacao'] ?? '') . '</td>
+            <td>' . $patH($p['responsavel'] ?? '—') . '</td>
+            <td>' . $patFmtBrl($p['valor_compra'] ?? null) . '</td>
+            <td>' . $patFmtBrl($p['valor_atual'] ?? null) . '</td>
+        </tr>';
+    }
+
+    $html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' . $patTableStyle . '</head><body>
+    <h1>Relatório de patrimônio (filtros)</h1>
+    <p class="meta">' . $patH($filtros) . '<br>Emitido em ' . $patH(now()->format('d/m/Y H:i')) . '
+    · ' . (int) $tot['quantidade'] . ' item(ns) · Valor atual total: ' . $patFmtBrl($tot['valor_atual'] ?? 0) . '</p>
+    ' . $mkResumo('Resumo por categoria', $dados['resumoPorCategoria']) . '
+    ' . $mkResumo('Resumo por unidade', $dados['resumoPorUnidade']) . '
+    ' . $mkResumo('Resumo por situação', $dados['resumoPorSituacao']) . '
+    ' . $mkResumo('Resumo por setor', $dados['resumoPorSetor']) . '
+    <h2 style="font-size:10pt;margin:14px 0 6px">Detalhamento</h2>
+    <table><thead><tr>
+        <th>Código</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Setor</th><th>Situação</th><th>Responsável</th><th>Compra</th><th>Valor atual</th>
+    </tr></thead><tbody>' . ($body ?: '<tr><td colspan="9">Nenhum patrimônio encontrado com os filtros informados.</td></tr>') . '</tbody></table>
+    </body></html>';
+
+    return $patPdfFromHtml($html, 'patrimonio-filtrado.pdf', $request->query('download') === '1');
+});
+
+Route::get('/patrimonio/relatorios/filtrado.csv', function (Request $request) use ($patRelatorioAuth, $patRelatorioFiltradoDados, $patCsvDownload, $patSituacaoLabel) {
+    [, $err] = $patRelatorioAuth($request);
+    if ($err) {
+        return $err;
+    }
+    $dados = $patRelatorioFiltradoDados($request);
+    $data = [];
+    foreach ($dados['itens'] as $p) {
+        $data[] = [
+            $p['codigo'] ?? '',
+            $p['nome'] ?? '',
+            $p['categoria_nome'] ?? '',
+            $p['unidade_nome'] ?? '',
+            $p['setor'] ?? '',
+            $p['situacao_label'] ?? $patSituacaoLabel($p['situacao'] ?? null),
+            $p['responsavel'] ?? '',
+            $p['valor_compra'] ?? '',
+            $p['valor_atual'] ?? '',
+            $p['depreciacao'] ?? '',
+        ];
+    }
+
+    return $patCsvDownload(
+        ['Código', 'Nome', 'Categoria', 'Unidade', 'Setor', 'Situação', 'Responsável', 'Valor compra', 'Valor atual', 'Depreciação'],
+        $data,
+        'patrimonio-filtrado.csv'
+    );
 });

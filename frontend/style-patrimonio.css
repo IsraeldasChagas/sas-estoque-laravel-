@@ -216,6 +216,74 @@
 .pat-config-panel__list li:last-child {
   margin-bottom: 0;
 }
+
+/* Relatório com filtros */
+.pat-rel-filtros-card {
+  border-radius: 20px;
+  margin-bottom: 1rem;
+}
+.pat-rel-filtros-head h3 {
+  margin: 0 0 0.35rem;
+}
+.pat-rel-filtros-grid {
+  margin-bottom: 1rem;
+}
+.pat-rel-filtros-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pat-rel-totais {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.pat-rel-grupos {
+  margin-bottom: 1rem;
+}
+.pat-rel-grupos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+}
+.pat-rel-grupo-box {
+  background: #fff;
+  border: 1px solid #e3eaf2;
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.pat-rel-grupo-box h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: #1565c0;
+}
+.pat-rel-grupo-box table {
+  width: 100%;
+  font-size: 0.82rem;
+  border-collapse: collapse;
+}
+.pat-rel-grupo-box th,
+.pat-rel-grupo-box td {
+  padding: 0.3rem 0.35rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+.pat-rel-grupo-box th {
+  color: #607d8b;
+  font-weight: 600;
+}
+.pat-rel-outros {
+  border-radius: 16px;
+  padding: 0.75rem 1rem 1rem;
+}
+.pat-rel-outros summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #1565c0;
+  margin-bottom: 0.5rem;
+}
 .pat-form-feedback {
   margin: 0.75rem 0 0;
   padding: 0.65rem 0.85rem;

@@ -352,6 +352,12 @@ Route::get('/patrimonio/patrimonios', function (Request $request) use ($patrimon
     if ($request->filled('situacao')) {
         $q->where('p.situacao', $request->query('situacao'));
     }
+    if ($request->filled('setor')) {
+        $setor = trim((string) $request->query('setor'));
+        if ($setor !== '') {
+            $q->where('p.setor', 'like', '%' . $setor . '%');
+        }
+    }
     if ($request->filled('busca')) {
         $b = '%' . $request->query('busca') . '%';
         $q->where(function ($qq) use ($b) {
