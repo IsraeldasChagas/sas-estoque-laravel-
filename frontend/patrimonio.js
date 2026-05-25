@@ -5,7 +5,7 @@
   "use strict";
 
   const PAT_CHARTS = {};
-  const patState = { categorias: [], patrimonios: [], inventarioId: null };
+  const patState = { categorias: [], patrimonios: [], inventarioId: null, unidadesOk: false };
 
   function esc(s) {
     return (s ?? "").toString()
@@ -13,9 +13,51 @@
   }
 
   function fmtMoeda(n) {
+    if (typeof formatCurrencyBRL === "function") return formatCurrencyBRL(n);
     const v = Number(n);
     if (!Number.isFinite(v)) return "—";
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  function patLerMoeda(el) {
+    if (!el) return null;
+    if (typeof parseCurrencyInput === "function") {
+      const n = parseCurrencyInput(el);
+      return Number.isFinite(n) ? n : null;
+    }
+    const n = Number(String(el.value || el.dataset.value || "").replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function patEscreverMoeda(el, valor) {
+    if (!el) return;
+    const n = Number(valor);
+    const num = Number.isFinite(n) ? n : 0;
+    if (typeof applyFechamentoValorInput === "function") {
+      applyFechamentoValorInput(el, num);
+      return;
+    }
+    el.dataset.value = String(num);
+    el.value = num > 0 ? fmtMoeda(num) : "";
+  }
+
+  function patSetupMoedaInputs(root) {
+    const scope = root || document.getElementById("patrimonioModal");
+    if (!scope) return;
+    scope.querySelectorAll("[data-pat-moeda]").forEach((inp) => {
+      if (inp.dataset.patMoedaBound === "1") return;
+      inp.dataset.patMoedaBound = "1";
+      if (typeof attachCurrencyMask === "function") attachCurrencyMask(inp);
+    });
+  }
+
+  function patAplicarMoedasNoFormData(form, fd) {
+    ["valor_compra", "valor_atual", "depreciacao"].forEach((campo) => {
+      const el = form.elements[campo];
+      if (!el) return;
+      const v = patLerMoeda(el);
+      fd.set(campo, v != null && v > 0 ? String(v) : "");
+    });
   }
 
   function fmtData(d) {
@@ -120,7 +162,7 @@
   }
 
   function calcDepreciacaoLocal() {
-    const compra = parseFloat(document.getElementById("patFormValorCompra")?.value || "0");
+    const compra = patLerMoeda(document.getElementById("patFormValorCompra")) || 0;
     const meses = parseInt(document.getElementById("patFormVidaUtil")?.value || "0", 10);
     const dataCompra = document.getElementById("patFormDataCompra")?.value || "";
     if (!compra || !meses) {
@@ -136,24 +178,30 @@
     const depMensal = compra / meses;
     const depAcum = Math.min(compra, depMensal * mesesUso);
     const atual = Math.max(0, Math.round((compra - depAcum) * 100) / 100);
-    const depEl = document.getElementById("patFormDepreciacao");
-    const atEl = document.getElementById("patFormValorAtual");
-    if (depEl) depEl.value = String(Math.round(depAcum * 100) / 100);
-    if (atEl) atEl.value = String(atual);
+    patEscreverMoeda(document.getElementById("patFormDepreciacao"), Math.round(depAcum * 100) / 100);
+    patEscreverMoeda(document.getElementById("patFormValorAtual"), atual);
     patToast("Depreciação calculada.", "success");
   }
 
   async function populatePatUnidades(extraIds = []) {
     const ids = ["patDashFiltroUnidade", "patFiltroUnidade", "patFormUnidade", "patMovUnidadeDest", "patInvUnidade", ...extraIds];
-    if (typeof window.loadUnidades === "function") await window.loadUnidades(false).catch(() => {});
     let unidades = window.state?.unidades || [];
-    if (!unidades.length) {
-      try {
-        unidades = await patFetch("/unidades?todas=1");
-        if (window.state) window.state.unidades = unidades;
-      } catch (_) {
-        unidades = [];
+    if (!unidades.length && !patState.unidadesOk) {
+      if (typeof window.loadUnidades === "function") {
+        await window.loadUnidades(false).catch(() => {});
+        unidades = window.state?.unidades || [];
       }
+      if (!unidades.length) {
+        try {
+          unidades = await patFetch("/unidades?todas=1");
+          if (window.state) window.state.unidades = unidades;
+        } catch (_) {
+          unidades = [];
+        }
+      }
+      patState.unidadesOk = unidades.length > 0;
+    } else if (!unidades.length) {
+      unidades = window.state?.unidades || [];
     }
     const opts = unidades.map((u) => `<option value="${u.id}">${esc(u.nome)}</option>`).join("");
     ids.forEach((id) => {
@@ -181,7 +229,8 @@
     });
   }
 
-  async function loadPatCategorias() {
+  async function loadPatCategorias(force = false) {
+    if (!force && patState.categorias.length) return patState.categorias;
     patState.categorias = await patFetch("/patrimonio/categorias");
     const sel = document.getElementById("patFiltroCategoria");
     const formSel = document.getElementById("patFormCategoria");
@@ -223,10 +272,12 @@
   }
 
   window.loadPatrimonioDashboard = async function loadPatrimonioDashboard() {
-    await populatePatUnidades();
     const u = document.getElementById("patDashFiltroUnidade")?.value;
     const qs = u ? `?unidade_id=${encodeURIComponent(u)}` : "";
-    const data = await patFetch(`/patrimonio/dashboard${qs}`);
+    const [, data] = await Promise.all([
+      populatePatUnidades(),
+      patFetch(`/patrimonio/dashboard${qs}`),
+    ]);
     const cards = document.getElementById("patDashCards");
     if (cards) {
       cards.innerHTML = `
@@ -275,8 +326,10 @@
   };
 
   window.loadPatrimonios = async function loadPatrimonios() {
-    await populatePatUnidades();
-    await loadPatCategorias();
+    const tb = document.getElementById("patListaTbody");
+    if (tb) {
+      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Carregando patrimônios…</td></tr>';
+    }
     const qs = new URLSearchParams();
     const busca = document.getElementById("patFiltroBusca")?.value?.trim();
     const un = document.getElementById("patFiltroUnidade")?.value;
@@ -287,8 +340,12 @@
     if (cat) qs.set("categoria_id", cat);
     if (sit) qs.set("situacao", sit);
     const q = qs.toString() ? `?${qs}` : "";
-    patState.patrimonios = await patFetch(`/patrimonio/patrimonios${q}`);
-    const tb = document.getElementById("patListaTbody");
+    const [, , lista] = await Promise.all([
+      populatePatUnidades(),
+      loadPatCategorias(),
+      patFetch(`/patrimonio/patrimonios${q}`),
+    ]);
+    patState.patrimonios = lista;
     if (!tb) return;
     if (!patState.patrimonios.length) {
       tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado</td></tr>';
@@ -477,13 +534,15 @@
     const form = document.getElementById("patrimonioForm");
     if (!modal || !form) return;
     form.reset();
+    ["patFormValorCompra", "patFormValorAtual", "patFormDepreciacao"].forEach((id) => patEscreverMoeda(document.getElementById(id), 0));
     document.getElementById("patFormId").value = editId ? String(editId) : "";
     document.getElementById("patModalTitle").textContent = editId ? "✏️ Editar patrimônio" : "📦 Novo patrimônio";
     renderAnexosLista([], []);
     patFormFeedback("");
     toggleCamposEspecificos();
+    patSetupMoedaInputs(form);
     modal.classList.add("active");
-    populatePatUnidades().then(loadPatCategorias);
+    Promise.all([populatePatUnidades(), loadPatCategorias()]).catch(() => {});
     if (editId) {
       patFetch(`/patrimonio/patrimonios/${editId}`).then((res) => {
         const p = res.patrimonio;
@@ -499,11 +558,11 @@
         if (f.setor) f.setor.value = p.setor || "";
         if (f.responsavel) f.responsavel.value = p.responsavel || "";
         if (f.situacao) f.situacao.value = p.situacao || "ativo";
-        if (f.valor_compra) f.valor_compra.value = p.valor_compra ?? "";
+        patEscreverMoeda(f.valor_compra, p.valor_compra);
         if (f.data_compra) f.data_compra.value = (p.data_compra || "").slice(0, 10);
         if (f.vida_util_meses) f.vida_util_meses.value = p.vida_util_meses ?? "";
-        if (f.valor_atual) f.valor_atual.value = p.valor_atual ?? "";
-        if (f.depreciacao) f.depreciacao.value = p.depreciacao ?? "";
+        patEscreverMoeda(f.valor_atual, p.valor_atual);
+        patEscreverMoeda(f.depreciacao, p.depreciacao);
         if (f.fornecedor) f.fornecedor.value = p.fornecedor || "";
         if (f.numero_nf) f.numero_nf.value = p.numero_nf || "";
         preencherDadosEspecificos(p.dados_especificos);
@@ -596,18 +655,20 @@
         return;
       }
       const form = e.target;
-      const nome = (form.nome?.value || "").trim();
+      const nomeEl = document.getElementById("patFormNome") || form.nome;
+      const nome = (nomeEl?.value || "").trim();
       if (!nome) {
         const msg = "Informe o nome do patrimônio (campo no topo do formulário).";
         patFormFeedback(msg, "error");
         patToast(msg, "error");
-        form.nome?.focus();
+        nomeEl?.focus();
         return;
       }
       const submitBtn = document.getElementById("patFormSubmitBtn");
       const id = document.getElementById("patFormId")?.value;
       const fd = new FormData(form);
       fd.delete("patFormId");
+      patAplicarMoedasNoFormData(form, fd);
       fd.set("dados_especificos", JSON.stringify(coletarDadosEspecificos()));
       const docs = form.querySelector('input[name="documentos"]');
       if (docs?.files?.length) {
@@ -703,9 +764,10 @@
     });
 
     document.getElementById("patMovBtnNova")?.addEventListener("click", async () => {
-      await loadPatrimonios();
-      await populatePatUnidades(["patMovUnidadeDest"]);
-      await populatePatSelectPatrimonios(["patMovPatrimonio"]);
+      await Promise.all([
+        populatePatUnidades(["patMovUnidadeDest"]),
+        populatePatSelectPatrimonios(["patMovPatrimonio"]),
+      ]);
       document.getElementById("patMovForm")?.reset();
       document.getElementById("patMovModal")?.classList.add("active");
     });
@@ -735,7 +797,9 @@
 
     document.getElementById("patManBtnNova")?.addEventListener("click", async () => {
       await populatePatSelectPatrimonios(["patManPatrimonio"]);
-      document.getElementById("patManForm")?.reset();
+      const manForm = document.getElementById("patManForm");
+      manForm?.reset();
+      patSetupMoedaInputs(document.getElementById("patManModal"));
       const d = document.getElementById("patManData");
       if (d) d.value = new Date().toISOString().slice(0, 10);
       document.getElementById("patManModal")?.classList.add("active");
@@ -749,7 +813,9 @@
       fd.set("data_manutencao", document.getElementById("patManData")?.value || "");
       fd.set("proxima_manutencao", document.getElementById("patManProxima")?.value || "");
       fd.set("tecnico", document.getElementById("patManTecnico")?.value || "");
-      fd.set("custo", document.getElementById("patManCusto")?.value || "");
+      const custoEl = document.getElementById("patManCusto");
+      const custo = patLerMoeda(custoEl);
+      fd.set("custo", custo != null && custo > 0 ? String(custo) : "");
       fd.set("descricao", document.getElementById("patManDesc")?.value || "");
       const anexo = document.getElementById("patManAnexo");
       if (anexo?.files?.[0]) fd.set("anexo", anexo.files[0]);
@@ -881,6 +947,8 @@
 
   window.setupPatrimonioModule = function setupPatrimonioModule() {
     patrimonioBindOnce();
+    patSetupMoedaInputs(document.getElementById("patrimonioModal"));
+    patSetupMoedaInputs(document.getElementById("patManModal"));
     const menu = document.getElementById("patrimonioMenu");
     if (menu && menu.dataset.sasSubmenuToggleBound !== "1") {
       menu.dataset.sasSubmenuToggleBound = "1";

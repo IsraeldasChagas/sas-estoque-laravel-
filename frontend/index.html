@@ -5050,11 +5050,13 @@
           <h2 id="patModalTitle">📦 Novo patrimônio</h2>
           <button type="button" class="close-btn" id="closePatrimonioModal" aria-label="Fechar">×</button>
         </header>
-        <form id="patrimonioForm" enctype="multipart/form-data" novalidate>
+        <form id="patrimonioForm" enctype="multipart/form-data" novalidate autocomplete="off">
           <input type="hidden" id="patFormId" name="patFormId" value="" />
           <div class="grid-two">
-            <label>Nome do patrimônio *<input name="nome" required /></label>
-            <label>Nº serial<input name="numero_serial" /></label>
+            <label>Nome do patrimônio *
+              <input type="text" id="patFormNome" name="nome" required autocomplete="off" autocapitalize="words" spellcheck="false" data-lpignore="true" data-1p-ignore placeholder="Ex.: Notebook Dell, Geladeira 2 portas" />
+            </label>
+            <label>Nº serial<input name="numero_serial" autocomplete="off" /></label>
           </div>
           <div class="grid-two">
             <label>Categoria<select name="categoria_id" id="patFormCategoria"><option value="">Selecione</option></select></label>
@@ -5070,7 +5072,7 @@
           </div>
           <div class="grid-two">
             <label>Setor<input name="setor" /></label>
-            <label>Responsável<input name="responsavel" /></label>
+            <label>Responsável<input name="responsavel" autocomplete="off" placeholder="Nome do responsável pelo bem" /></label>
           </div>
           <label>Situação
             <select name="situacao">
@@ -5081,18 +5083,18 @@
               <option value="quebrado">Quebrado</option>
             </select>
           </label>
-          <h3 style="margin:1rem 0 0.5rem">Dados financeiros</h3>
+          <h3 style="margin:1rem 0 0.5rem">Dados financeiros (valores em R$)</h3>
           <div class="grid-two">
-            <label>Valor de compra<input name="valor_compra" id="patFormValorCompra" type="number" step="0.01" min="0" /></label>
-            <label>Data da compra<input name="data_compra" id="patFormDataCompra" type="date" /></label>
+            <label>Valor de compra (R$)<input name="valor_compra" id="patFormValorCompra" type="text" data-pat-moeda="1" data-currency="1" inputmode="decimal" placeholder="R$ 0,00" autocomplete="off" /></label>
+            <label>Data da compra<input name="data_compra" id="patFormDataCompra" type="date" autocomplete="off" /></label>
           </div>
           <div class="grid-two">
-            <label>Vida útil (meses)<input name="vida_util_meses" id="patFormVidaUtil" type="number" min="0" /></label>
-            <label>Valor atual<input name="valor_atual" id="patFormValorAtual" type="number" step="0.01" min="0" /></label>
+            <label>Vida útil (meses)<input name="vida_util_meses" id="patFormVidaUtil" type="number" min="0" inputmode="numeric" /></label>
+            <label>Valor atual (R$)<input name="valor_atual" id="patFormValorAtual" type="text" data-pat-moeda="1" data-currency="1" inputmode="decimal" placeholder="R$ 0,00" autocomplete="off" /></label>
           </div>
           <div class="grid-two">
-            <label>Depreciação acum.<input name="depreciacao" id="patFormDepreciacao" type="number" step="0.01" min="0" /></label>
-            <label>Fornecedor<input name="fornecedor" /></label>
+            <label>Depreciação acum. (R$)<input name="depreciacao" id="patFormDepreciacao" type="text" data-pat-moeda="1" data-currency="1" inputmode="decimal" placeholder="R$ 0,00" autocomplete="off" /></label>
+            <label>Fornecedor<input name="fornecedor" autocomplete="off" /></label>
           </div>
           <label>Nº nota fiscal<input name="numero_nf" /></label>
           <p><button type="button" class="btn neutral" id="patFormCalcDeprec">↻ Calcular depreciação automaticamente</button></p>
@@ -5122,7 +5124,7 @@
               <label>HD/SSD<input data-campo="armazenamento" /></label>
               <label>Sistema operacional<input data-campo="sistema_operacional" /></label>
             </div>
-            <label>Usuário responsável<input data-campo="usuario_so" /></label>
+            <label>Usuário do equipamento<input data-campo="usuario_so" autocomplete="off" placeholder="Login ou usuário no Windows" /></label>
           </div>
           <div class="patrimonio-campos-especificos" data-tipo="refrigeracao">
             <h4>❄️ Refrigeração / ar</h4>
@@ -5233,7 +5235,7 @@
           <label>Data *<input type="date" id="patManData" required /></label>
           <label>Próxima manutenção<input type="date" id="patManProxima" /></label>
           <label>Técnico responsável<input id="patManTecnico" /></label>
-          <label>Custo (R$)<input type="number" id="patManCusto" step="0.01" min="0" /></label>
+          <label>Custo (R$)<input type="text" id="patManCusto" data-pat-moeda="1" data-currency="1" inputmode="decimal" placeholder="R$ 0,00" autocomplete="off" /></label>
           <label>Descrição<textarea id="patManDesc" rows="3"></textarea></label>
           <label>Anexo<input type="file" name="anexo" id="patManAnexo" accept=".pdf,.jpg,.jpeg,.png" /></label>
           <footer><button type="submit" class="btn primary">Salvar manutenção</button></footer>
@@ -5514,8 +5516,8 @@
     <!-- Script principal da aplicacao -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
-    <script src="patrimonio.js?v=20260525-patrimonio-salvar"></script>
-    <script src="app.js?v=20260525-patrimonio-salvar"></script>
+    <script src="patrimonio.js?v=20260525-patrimonio-brl"></script>
+    <script src="app.js?v=20260525-patrimonio-brl"></script>
      
   </body>
 </html>

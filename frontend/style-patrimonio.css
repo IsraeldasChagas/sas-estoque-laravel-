@@ -133,6 +133,12 @@
 .pat-form-feedback.hidden {
   display: none;
 }
+
+#patrimonioForm input[data-pat-moeda],
+#patManModal input[data-pat-moeda] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .pat-form-feedback--error {
   background: #ffebee;
   color: #b71c1c;

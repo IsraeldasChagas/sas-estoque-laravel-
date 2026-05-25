@@ -231,11 +231,14 @@ Route::get('/patrimonio/dashboard', function (Request $request) use ($patrimonio
 
     $garantiasVencendo = collect();
     $limiteGarantia = now()->addDays(60)->toDateString();
-    $qGarant = DB::table('patrimonios');
+    $qGarant = DB::table('patrimonios')
+        ->select('codigo', 'nome', 'dados_especificos')
+        ->where('situacao', 'ativo')
+        ->whereNotNull('dados_especificos');
     if ($request->filled('unidade_id')) {
         $qGarant->where('unidade_id', (int) $request->query('unidade_id'));
     }
-    foreach ($qGarant->get() as $patRow) {
+    foreach ($qGarant->orderByDesc('id')->limit(300)->get() as $patRow) {
         $dados = $patRow->dados_especificos ?? null;
         if (is_string($dados)) {
             $dados = json_decode($dados, true);
