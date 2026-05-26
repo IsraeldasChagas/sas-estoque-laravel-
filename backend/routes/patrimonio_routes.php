@@ -173,6 +173,36 @@ $patrimonioQueryBase = function () {
         );
 };
 
+/** Busca por palavras em vários campos (nome, código, serial, setor, responsável, etc.). */
+$patAplicarBuscaInteligente = static function ($q, ?string $term) {
+    $term = trim((string) $term);
+    if ($term === '') {
+        return $q;
+    }
+    $words = preg_split('/\s+/u', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    if (! $words) {
+        return $q;
+    }
+    foreach ($words as $word) {
+        $b = '%' . addcslashes($word, '%_\\') . '%';
+        $q->where(function ($qq) use ($b) {
+            $qq->where('p.nome', 'like', $b)
+                ->orWhere('p.codigo', 'like', $b)
+                ->orWhere('p.numero_serial', 'like', $b)
+                ->orWhere('p.responsavel', 'like', $b)
+                ->orWhere('p.setor', 'like', $b)
+                ->orWhere('p.marca', 'like', $b)
+                ->orWhere('p.modelo', 'like', $b)
+                ->orWhere('p.fornecedor', 'like', $b)
+                ->orWhere('p.numero_nf', 'like', $b)
+                ->orWhere('c.nome', 'like', $b)
+                ->orWhere('u.nome', 'like', $b);
+        });
+    }
+
+    return $q;
+};
+
 foreach ([
     '/patrimonio/dashboard',
     '/patrimonio/categorias',
@@ -464,13 +494,10 @@ Route::get('/patrimonio/patrimonios', function (Request $request) use ($patrimon
             $q->where('p.setor', 'like', '%' . $setor . '%');
         }
     }
-    if ($request->filled('busca')) {
-        $b = '%' . $request->query('busca') . '%';
-        $q->where(function ($qq) use ($b) {
-            $qq->where('p.nome', 'like', $b)
-                ->orWhere('p.codigo', 'like', $b)
-                ->orWhere('p.numero_serial', 'like', $b);
-        });
+    if ($request->filled('patrimonio_id')) {
+        $q->where('p.id', (int) $request->query('patrimonio_id'));
+    } elseif ($request->filled('busca')) {
+        $patAplicarBuscaInteligente($q, $request->query('busca'));
     }
     $rows = $q->orderByDesc('p.updated_at')->limit(500)->get();
 

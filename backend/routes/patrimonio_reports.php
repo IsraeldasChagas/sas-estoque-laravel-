@@ -123,7 +123,11 @@ $patAplicarFiltrosPatrimonio = static function ($q, Request $request) {
             $q->where('p.setor', 'like', '%' . $setor . '%');
         }
     }
-    if ($request->filled('busca')) {
+    if ($request->filled('patrimonio_id')) {
+        $q->where('p.id', (int) $request->query('patrimonio_id'));
+    } elseif ($request->filled('busca') && isset($patAplicarBuscaInteligente)) {
+        $patAplicarBuscaInteligente($q, $request->query('busca'));
+    } elseif ($request->filled('busca')) {
         $b = '%' . $request->query('busca') . '%';
         $q->where(function ($qq) use ($b) {
             $qq->where('p.nome', 'like', $b)

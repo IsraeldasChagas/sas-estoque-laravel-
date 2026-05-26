@@ -218,6 +218,35 @@
   opacity: 1;
 }
 
+.pat-filtro-busca-label {
+  grid-column: 1 / -1;
+}
+@media (min-width: 720px) {
+  .pat-filtro-busca-label {
+    grid-column: span 2;
+  }
+}
+.pat-filtro-busca {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.pat-filtro-busca input[type="search"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.pat-filtro-busca select {
+  flex: 0 1 auto;
+  min-width: 10rem;
+  max-width: 100%;
+}
+.pat-filtro-busca-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
+
 .pat-config-panel {
   padding: 1.25rem 1.4rem;
   background: #fff;

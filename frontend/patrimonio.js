@@ -5,7 +5,15 @@
   "use strict";
 
   const PAT_CHARTS = {};
-  const patState = { categorias: [], setores: [], patrimonios: [], inventarioId: null, unidadesOk: false, lastRelatorio: null };
+  const patState = { categorias: [], setores: [], patrimonios: [], catalogoBusca: null, inventarioId: null, unidadesOk: false, lastRelatorio: null };
+
+  function patDebounce(fn, delay = 400) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
   const PAT_SIT_LABEL = {
     ativo: "Ativo",
     manutencao: "Em manutenção",
@@ -277,6 +285,91 @@
     return patState.setores;
   }
 
+  async function ensurePatCatalogoBusca(force = false) {
+    if (!force && patState.catalogoBusca?.length) {
+      populatePatBuscaUI();
+      return patState.catalogoBusca;
+    }
+    try {
+      patState.catalogoBusca = await patFetch("/patrimonio/patrimonios");
+      populatePatBuscaUI();
+    } catch (e) {
+      patState.catalogoBusca = patState.patrimonios?.length ? patState.patrimonios : [];
+      populatePatBuscaUI();
+    }
+    return patState.catalogoBusca;
+  }
+
+  function populatePatBuscaUI() {
+    const list = patState.catalogoBusca || [];
+    const sel = document.getElementById("patFiltroPatrimonioSel");
+    const dl = document.getElementById("patBuscaDatalist");
+    if (sel) {
+      const cur = sel.value;
+      const opts = list
+        .map((p) => {
+          const label = `${p.codigo || ""} — ${p.nome || ""}${p.setor ? ` (${p.setor})` : ""}`.trim();
+          return `<option value="${p.id}">${esc(label)}</option>`;
+        })
+        .join("");
+      sel.innerHTML = `<option value="">— Lista —</option>${opts}`;
+      if (cur) sel.value = cur;
+    }
+    if (dl) {
+      const seen = new Set();
+      const options = [];
+      list.forEach((p) => {
+        const full = `${p.codigo || ""} — ${p.nome || ""}`.replace(/^ — /, "").trim();
+        if (full && !seen.has(full)) {
+          seen.add(full);
+          options.push(`<option value="${esc(full)}"></option>`);
+        }
+        if (p.nome && !seen.has(p.nome)) {
+          seen.add(p.nome);
+          options.push(`<option value="${esc(p.nome)}"></option>`);
+        }
+        if (p.codigo && !seen.has(p.codigo)) {
+          seen.add(p.codigo);
+          options.push(`<option value="${esc(p.codigo)}"></option>`);
+        }
+      });
+      dl.innerHTML = options.join("");
+    }
+  }
+
+  function patColetarFiltrosLista() {
+    const qs = new URLSearchParams();
+    const selId = document.getElementById("patFiltroPatrimonioSel")?.value;
+    let busca = document.getElementById("patFiltroBusca")?.value?.trim() || "";
+    const un = document.getElementById("patFiltroUnidade")?.value;
+    const cat = document.getElementById("patFiltroCategoria")?.value;
+    const sit = document.getElementById("patFiltroSituacao")?.value;
+    const setorId = document.getElementById("patFiltroSetor")?.value;
+
+    if (selId) {
+      qs.set("patrimonio_id", selId);
+    } else if (busca) {
+      const catalogo = patState.catalogoBusca || [];
+      const matchLista = catalogo.find((p) => {
+        const label = `${p.codigo || ""} — ${p.nome || ""}`.replace(/^ — /, "").trim();
+        return label === busca || p.codigo === busca;
+      });
+      if (matchLista) {
+        qs.set("patrimonio_id", String(matchLista.id));
+      } else {
+        if (busca.includes(" — ")) {
+          busca = busca.split(" — ")[0].trim() || busca;
+        }
+        qs.set("busca", busca);
+      }
+    }
+    if (un) qs.set("unidade_id", un);
+    if (cat) qs.set("categoria_id", cat);
+    if (sit) qs.set("situacao", sit);
+    if (setorId) qs.set("setor_id", setorId);
+    return qs;
+  }
+
   function populatePatSetorSelects() {
     const opts = patState.setores
       .filter((s) => s.id && s.ativo !== false && s.ativo !== 0)
@@ -386,22 +479,13 @@
     if (tb) {
       tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Carregando patrimônios…</td></tr>';
     }
-    const qs = new URLSearchParams();
-    const busca = document.getElementById("patFiltroBusca")?.value?.trim();
-    const un = document.getElementById("patFiltroUnidade")?.value;
-    const cat = document.getElementById("patFiltroCategoria")?.value;
-    const sit = document.getElementById("patFiltroSituacao")?.value;
-    const setorId = document.getElementById("patFiltroSetor")?.value;
-    if (busca) qs.set("busca", busca);
-    if (setorId) qs.set("setor_id", setorId);
-    if (un) qs.set("unidade_id", un);
-    if (cat) qs.set("categoria_id", cat);
-    if (sit) qs.set("situacao", sit);
+    const qs = patColetarFiltrosLista();
     const q = qs.toString() ? `?${qs}` : "";
-    const [, , , lista] = await Promise.all([
+    const [, , , , lista] = await Promise.all([
       populatePatUnidades(),
       loadPatCategorias(),
       loadPatSetores().then(() => populatePatSetorSelects()),
+      ensurePatCatalogoBusca(),
       patFetch(`/patrimonio/patrimonios${q}`),
     ]);
     patState.patrimonios = lista;
@@ -884,6 +968,39 @@
 
     document.getElementById("patDashAtualizar")?.addEventListener("click", () => loadPatrimonioDashboard().catch((e) => patToast(e.message, "error")));
     document.getElementById("patFiltroAplicar")?.addEventListener("click", () => loadPatrimonios().catch((e) => patToast(e.message, "error")));
+    const patBuscaDebounced = patDebounce(() => {
+      loadPatrimonios().catch((e) => patToast(e.message, "error"));
+    }, 420);
+    const patFiltroBusca = document.getElementById("patFiltroBusca");
+    patFiltroBusca?.addEventListener("input", () => {
+      const sel = document.getElementById("patFiltroPatrimonioSel");
+      if (sel) sel.value = "";
+      patBuscaDebounced();
+    });
+    patFiltroBusca?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        loadPatrimonios().catch((err) => patToast(err.message, "error"));
+      }
+    });
+    document.getElementById("patFiltroPatrimonioSel")?.addEventListener("change", (e) => {
+      const id = e.target.value;
+      const inp = document.getElementById("patFiltroBusca");
+      if (id && inp) {
+        const p = (patState.catalogoBusca || []).find((x) => String(x.id) === String(id));
+        if (p) {
+          inp.value = `${p.codigo || ""} — ${p.nome || ""}`.replace(/^ — /, "").trim();
+        }
+      } else if (inp && !id) {
+        inp.value = "";
+      }
+      loadPatrimonios().catch((err) => patToast(err.message, "error"));
+    });
+    ["patFiltroUnidade", "patFiltroCategoria", "patFiltroSituacao", "patFiltroSetor"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("change", () => {
+        loadPatrimonios().catch((e) => patToast(e.message, "error"));
+      });
+    });
     document.getElementById("patBtnNovo")?.addEventListener("click", () => abrirModalPatrimonio(null));
     document.getElementById("patFormCategoria")?.addEventListener("change", toggleCamposEspecificos);
     document.getElementById("patFormCalcDeprec")?.addEventListener("click", calcDepreciacaoLocal);
@@ -902,6 +1019,7 @@
       if (ex && confirm("Excluir este patrimônio permanentemente?")) {
         try {
           await patFetch(`/patrimonio/patrimonios/${ex.dataset.id}`, { method: "DELETE" });
+          patState.catalogoBusca = null;
           patToast("Patrimônio excluído.", "success");
           loadPatrimonios();
         } catch (err) {
@@ -966,6 +1084,7 @@
         else await patFetchForm("/patrimonio/patrimonios", fd, "POST");
         patFormFeedback("");
         patToast("Patrimônio salvo com sucesso.", "success");
+        patState.catalogoBusca = null;
         document.getElementById("patrimonioModal")?.classList.remove("active");
         loadPatrimonios();
       } catch (err) {

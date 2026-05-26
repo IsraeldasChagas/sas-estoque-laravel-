@@ -32,7 +32,13 @@
             </div>
             <div class="table-card form-card--wide">
               <div class="filters-grid">
-                <label>Busca<input type="search" id="patFiltroBusca" placeholder="Nome, código, serial..." /></label>
+                <label class="pat-filtro-busca-label">Busca / patrimônio
+                  <div class="pat-filtro-busca">
+                    <input type="search" id="patFiltroBusca" list="patBuscaDatalist" placeholder="Digite para filtrar…" autocomplete="off" />
+                    <select id="patFiltroPatrimonioSel"><option value="">— Lista —</option></select>
+                  </div>
+                  <datalist id="patBuscaDatalist"></datalist>
+                </label>
                 <label>Unidade<select id="patFiltroUnidade"><option value="">Todas</option></select></label>
                 <label>Categoria<select id="patFiltroCategoria"><option value="">Todas</option></select></label>
                 <label>Situação<select id="patFiltroSituacao"><option value="">Todas</option><option value="ativo">Ativo</option><option value="manutencao">Em manutenção</option><option value="baixado">Baixado</option><option value="vendido">Vendido</option><option value="quebrado">Quebrado</option></select></label>

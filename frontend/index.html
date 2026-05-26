@@ -7,7 +7,7 @@
     <title>Grupo Sabor Paraense</title>
     <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
-    <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-setores" />
+    <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -3168,7 +3168,16 @@
             </div>
             <div class="table-card form-card--wide">
               <div class="filters-grid">
-                <label>Busca<input type="search" id="patFiltroBusca" placeholder="Nome, código, serial..." /></label>
+                <label class="pat-filtro-busca-label">Busca / patrimônio
+                  <div class="pat-filtro-busca">
+                    <input type="search" id="patFiltroBusca" list="patBuscaDatalist" placeholder="Digite para filtrar…" autocomplete="off" />
+                    <select id="patFiltroPatrimonioSel" title="Escolher patrimônio na lista">
+                      <option value="">— Lista —</option>
+                    </select>
+                  </div>
+                  <datalist id="patBuscaDatalist"></datalist>
+                  <small class="subtle-text pat-filtro-busca-hint">Filtra ao digitar: nome, código, serial, setor, responsável, marca…</small>
+                </label>
                 <label>Unidade<select id="patFiltroUnidade"><option value="">Todas</option></select></label>
                 <label>Categoria<select id="patFiltroCategoria"><option value="">Todas</option></select></label>
                 <label>Situação<select id="patFiltroSituacao"><option value="">Todas</option><option value="ativo">Ativo</option><option value="manutencao">Em manutenção</option><option value="baixado">Baixado</option><option value="vendido">Vendido</option><option value="quebrado">Quebrado</option></select></label>
@@ -5638,7 +5647,7 @@
     <!-- Script principal da aplicacao -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
-    <script src="patrimonio.js?v=20260525-patrimonio-fix-boleto"></script>
+    <script src="patrimonio.js?v=20260525-patrimonio-busca"></script>
     <script src="app.js?v=20260525-patrimonio-brl"></script>
      
   </body>
