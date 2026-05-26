@@ -479,16 +479,24 @@
     if (tb) {
       tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Carregando patrimônios…</td></tr>';
     }
-    const qs = patColetarFiltrosLista();
-    const q = qs.toString() ? `?${qs}` : "";
-    const [, , , , lista] = await Promise.all([
-      populatePatUnidades(),
-      loadPatCategorias(),
-      loadPatSetores().then(() => populatePatSetorSelects()),
-      ensurePatCatalogoBusca(),
-      patFetch(`/patrimonio/patrimonios${q}`),
-    ]);
-    patState.patrimonios = lista;
+    try {
+      await Promise.all([
+        populatePatUnidades(),
+        loadPatCategorias(),
+        loadPatSetores().then(() => populatePatSetorSelects()),
+        ensurePatCatalogoBusca().catch(() => {}),
+      ]);
+      const qs = patColetarFiltrosLista();
+      const q = qs.toString() ? `?${qs}` : "";
+      patState.patrimonios = await patFetch(`/patrimonio/patrimonios${q}`);
+    } catch (e) {
+      patState.patrimonios = [];
+      if (tb) {
+        tb.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${esc(e.message || "Erro ao carregar patrimônios")}</td></tr>`;
+      }
+      patToast(e.message || "Erro ao buscar patrimônios.", "error");
+      return;
+    }
     if (!tb) return;
     if (!patState.patrimonios.length) {
       tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado</td></tr>';

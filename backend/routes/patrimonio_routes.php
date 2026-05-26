@@ -471,7 +471,9 @@ Route::delete('/patrimonio/setores/{id}', function (Request $request, $id) use (
 });
 
 // ——— Patrimônios ———
-Route::get('/patrimonio/patrimonios', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson, $patrimonioQueryBase, $patrimonioMapPatrimonio) {
+Route::get('/patrimonio/patrimonios', function (Request $request) use (
+    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioQueryBase, $patrimonioMapPatrimonio, $patAplicarBuscaInteligente
+) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonios')) {
         return $patJson(['message' => 'Sem permissão'], 403);
