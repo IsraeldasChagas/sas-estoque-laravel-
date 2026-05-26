@@ -9423,43 +9423,91 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
 
         $nLanc = $detalhes->count();
 
-        $html = '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" />'
-            . '<style>'
-            . 'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:18px;font-size:10px}'
-            . 'h1{font-size:15px;margin:0 0 8px}'
-            . 'h2{font-size:12px;margin:14px 0 6px}'
-            . '.meta{color:#444;margin-bottom:10px;line-height:1.45}'
-            . '.tot-bar{border:1px solid rgba(0,71,171,.18);border-radius:6px;background:rgba(0,71,171,.06);padding:8px 10px;margin-top:8px;display:table;width:100%;box-sizing:border-box}'
-            . '.tot-bar-row{display:table-row}'
-            . '.tot-bar-cell{display:table-cell;padding:4px 12px 4px 0;vertical-align:bottom}'
-            . '.tot-bar-cell:last-child{padding-right:0}'
-            . '.tot-lbl{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#546e7a}'
-            . '.tot-val{font-size:11px;font-weight:700;color:#1565c0}'
-            . 'table.lanc{width:100%;border-collapse:collapse;margin-top:8px}'
-            . 'table.lanc th,table.lanc td{border:1px solid #ccc;padding:4px 5px}'
-            . 'table.lanc th{background:#f0f0f0;text-align:left;font-size:9px}'
-            . '.num{text-align:right}'
-            . '</style></head><body>';
-        $html .= '<h1>Vale / consumo</h1>'
-            . '<div class="meta"><strong>Período:</strong> ' . e(\Carbon\Carbon::parse($di)->format('d/m/Y')) . ' a ' . e(\Carbon\Carbon::parse($df)->format('d/m/Y'))
-            . '<br /><strong>Unidade:</strong> ' . e($uniLabel)
-            . '<br /><strong>Gerado em:</strong> ' . e(now()->format('d/m/Y H:i'))
-            . '</div>'
-            . '<div class="tot-bar"><div class="tot-bar-row">'
+        $diBr = \Carbon\Carbon::parse($di)->format('d/m/Y');
+        $dfBr = \Carbon\Carbon::parse($df)->format('d/m/Y');
+        $emitido = now()->timezone('America/Belem')->format('d/m/Y H:i');
+
+        $funcLabel = 'Todos os funcionários';
+        if ($request->filled('funcionario_id')) {
+            $nomeFunc = DB::table('funcionarios')->where('id', (int) $request->query('funcionario_id'))->value('nome_completo');
+            $funcLabel = $nomeFunc ? (string) $nomeFunc : ('ID ' . (int) $request->query('funcionario_id'));
+        } elseif ($request->filled('busca') && trim((string) $request->query('busca')) !== '') {
+            $funcLabel = 'Busca: ' . trim((string) $request->query('busca'));
+        }
+
+        $logoDataUri = '';
+        foreach ([
+            dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png',
+            base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png',
+            dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
+            base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
+        ] as $_logoPath) {
+            if (is_string($_logoPath) && is_readable($_logoPath)) {
+                $rawLogo = @file_get_contents($_logoPath);
+                if ($rawLogo !== false && strlen($rawLogo) > 20) {
+                    $extLogo = strtolower((string) pathinfo($_logoPath, PATHINFO_EXTENSION));
+                    $mimeLogo = ($extLogo === 'jpg' || $extLogo === 'jpeg') ? 'image/jpeg' : 'image/png';
+                    $logoDataUri = 'data:' . $mimeLogo . ';base64,' . base64_encode($rawLogo);
+                    break;
+                }
+            }
+        }
+        $logoImgHtml = $logoDataUri !== ''
+            ? '<img src="' . $logoDataUri . '" alt="Grupo Sabor Paraense" style="max-height:54px;max-width:130px;display:block;" />'
+            : '';
+
+        $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
+        body{font-family:DejaVu Sans,Arial,sans-serif;font-size:9pt;color:#222;margin:12px 14px;line-height:1.25;}
+        .pdf-header{width:100%;border-collapse:collapse;margin-bottom:12px;border-bottom:2px solid #1565c0;padding-bottom:10px;}
+        .pdf-header td{vertical-align:middle;}
+        .pdf-brand{font-size:15pt;font-weight:bold;color:#0d47a1;letter-spacing:0.02em;}
+        .pdf-title{font-size:11pt;color:#1565c0;margin-top:3px;}
+        .pdf-meta{font-size:7.5pt;color:#546e7a;text-align:right;line-height:1.35;}
+        .meta-filtros{font-size:8.5pt;color:#455a64;margin:0 0 10px;line-height:1.45;}
+        h2{font-size:10.5pt;margin:12px 0 6px;color:#37474f;border-bottom:1px solid #e3f2fd;padding-bottom:3px;}
+        .tot-bar{border:1px solid rgba(21,101,192,.2);border-radius:8px;background:rgba(21,101,192,.06);padding:8px 10px;margin:8px 0;display:table;width:100%;box-sizing:border-box;}
+        .tot-bar-row{display:table-row;}
+        .tot-bar-cell{display:table-cell;padding:4px 14px 4px 0;vertical-align:bottom;}
+        .tot-lbl{font-size:7pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#546e7a;}
+        .tot-val{font-size:11pt;font-weight:700;color:#1565c0;}
+        table.lanc{width:100%;border-collapse:collapse;margin-top:6px;font-size:8.5pt;}
+        table.lanc th,table.lanc td{border:1px solid #cfd8dc;padding:4px 5px;}
+        table.lanc th{background:#eceff1;text-align:left;font-size:8pt;font-weight:700;}
+        .num{text-align:right;}
+        .pdf-rod{margin-top:14px;font-size:7.5pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:6px;text-align:center;}
+        </style></head><body>';
+
+        $html .= '<table class="pdf-header"><tr>'
+            . '<td style="width:120px;text-align:left;">' . $logoImgHtml . '</td>'
+            . '<td style="padding-left:10px;">'
+            . '<div class="pdf-brand">Grupo Sabor Paraense</div>'
+            . '<div class="pdf-title">Relatório Vale / consumo</div>'
+            . '</td>'
+            . '<td class="pdf-meta">Emitido em<br/>' . e($emitido) . '<br/>Período: ' . e($diBr) . ' a ' . e($dfBr) . '</td>'
+            . '</tr></table>';
+
+        $html .= '<div class="meta-filtros">'
+            . '<strong>Unidade:</strong> ' . e($uniLabel)
+            . ' &nbsp;|&nbsp; <strong>Funcionário:</strong> ' . e($funcLabel)
+            . '<br/><strong>Lançamentos:</strong> ' . e((string) $nLanc)
+            . '</div>';
+
+        $html .= '<div class="tot-bar"><div class="tot-bar-row">'
             . '<div class="tot-bar-cell"><div class="tot-lbl">Vale</div><div class="tot-val">R$ ' . e($fmt($totV)) . '</div></div>'
             . '<div class="tot-bar-cell"><div class="tot-lbl">Consumo</div><div class="tot-val">R$ ' . e($fmt($totC)) . '</div></div>'
             . '<div class="tot-bar-cell"><div class="tot-lbl">Total</div><div class="tot-val">R$ ' . e($fmt($totGeral)) . '</div></div>'
-            . '</div></div>'
-            . '<p style="margin:6px 0 0;font-size:9px;color:#555">' . e((string) $nLanc) . ' lançamento(s)</p>';
+            . '</div></div>';
 
         $html .= '<h2>Lançamentos</h2><table class="lanc"><thead><tr>'
             . '<th>ID</th><th>Data</th><th>Funcionário</th><th class="num">Vale</th><th class="num">Consumo</th><th class="num">Total</th><th>Usuário</th>'
             . '</tr></thead><tbody>' . $rowsDet . '</tbody></table>';
-        $html .= '</body></html>';
+
+        $html .= '<div class="pdf-rod">Grupo Sabor Paraense — relatório gerado pelo sistema.</div></body></html>';
 
         $dompdf = new \Dompdf\Dompdf();
         $options = $dompdf->getOptions();
-        $options->setIsRemoteEnabled(true);
+        $options->setIsRemoteEnabled(false);
+        $options->setIsHtml5ParserEnabled(true);
         $dompdf->setOptions($options);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
