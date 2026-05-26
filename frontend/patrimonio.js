@@ -412,7 +412,7 @@
     }
     tb.innerHTML = patState.patrimonios.map((p) => `
       <tr>
-        <td data-label="Código">${esc(p.codigo)}</td>
+        <td data-label="Setor">${esc(p.setor || "—")}</td>
         <td data-label="Nome">${esc(p.nome)}</td>
         <td data-label="Categoria">${esc(p.categoria_nome || "—")}</td>
         <td data-label="Unidade">${esc(p.unidade_nome || "—")}</td>
