@@ -191,6 +191,11 @@
   width: 100%;
   justify-content: center;
 }
+.pat-config-setores-card {
+  margin-top: 1.25rem;
+  border-radius: 16px;
+}
+
 .pat-config-panel {
   padding: 1.25rem 1.4rem;
   background: #fff;

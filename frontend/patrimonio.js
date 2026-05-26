@@ -5,7 +5,7 @@
   "use strict";
 
   const PAT_CHARTS = {};
-  const patState = { categorias: [], patrimonios: [], inventarioId: null, unidadesOk: false, lastRelatorio: null };
+  const patState = { categorias: [], setores: [], patrimonios: [], inventarioId: null, unidadesOk: false, lastRelatorio: null };
   const PAT_SIT_LABEL = {
     ativo: "Ativo",
     manutencao: "Em manutenção",
@@ -252,6 +252,53 @@
     return patState.categorias;
   }
 
+  async function loadPatSetores(force = false, todos = false) {
+    if (!force && patState.setores.length && !todos) return patState.setores;
+    const q = todos ? "?todos=1" : "";
+    try {
+      patState.setores = await patFetch(`/patrimonio/setores${q}`);
+    } catch (e) {
+      if (!todos) {
+        try {
+          const raw = await patFetch("/patrimonio/relatorios/setores");
+          patState.setores = (raw || []).map((s) => (
+            typeof s === "object" && s != null && s.id != null
+              ? s
+              : { id: null, nome: typeof s === "string" ? s : String(s?.nome || ""), ativo: true }
+          )).filter((s) => s.nome);
+        } catch (_) {
+          patState.setores = [];
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    }
+    return patState.setores;
+  }
+
+  function populatePatSetorSelects() {
+    const opts = patState.setores
+      .filter((s) => s.id && s.ativo !== false && s.ativo !== 0)
+      .map((s) => `<option value="${s.id}">${esc(s.nome)}</option>`)
+      .join("");
+    const html = `<option value="">Todos</option>${opts}`;
+    const formHtml = `<option value="">Selecione</option>${opts}`;
+    ["patFiltroSetor", "patRelFiltroSetor"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const cur = el.value;
+      el.innerHTML = html;
+      if (cur) el.value = cur;
+    });
+    const formSel = document.getElementById("patFormSetor");
+    if (formSel) {
+      const cur = formSel.value;
+      formSel.innerHTML = formHtml;
+      if (cur) formSel.value = cur;
+    }
+  }
+
   function situacaoBadge(s) {
     const map = { ativo: "Ativo", manutencao: "Em manutenção", baixado: "Baixado", vendido: "Vendido", quebrado: "Quebrado" };
     const cls = ["ativo", "manutencao"].includes(s) ? s : "baixado";
@@ -344,26 +391,20 @@
     const un = document.getElementById("patFiltroUnidade")?.value;
     const cat = document.getElementById("patFiltroCategoria")?.value;
     const sit = document.getElementById("patFiltroSituacao")?.value;
-    const setor = document.getElementById("patFiltroSetor")?.value?.trim();
+    const setorId = document.getElementById("patFiltroSetor")?.value;
     if (busca) qs.set("busca", busca);
-    if (setor) qs.set("setor", setor);
+    if (setorId) qs.set("setor_id", setorId);
     if (un) qs.set("unidade_id", un);
     if (cat) qs.set("categoria_id", cat);
     if (sit) qs.set("situacao", sit);
     const q = qs.toString() ? `?${qs}` : "";
-    const [, , lista] = await Promise.all([
+    const [, , , lista] = await Promise.all([
       populatePatUnidades(),
       loadPatCategorias(),
+      loadPatSetores().then(() => populatePatSetorSelects()),
       patFetch(`/patrimonio/patrimonios${q}`),
     ]);
     patState.patrimonios = lista;
-    try {
-      const setores = await patFetch("/patrimonio/relatorios/setores");
-      const dl = document.getElementById("patListaSetoresList");
-      if (dl && Array.isArray(setores)) {
-        dl.innerHTML = setores.map((s) => `<option value="${esc(s)}"></option>`).join("");
-      }
-    } catch (_) { /* opcional */ }
     if (!tb) return;
     if (!patState.patrimonios.length) {
       tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado</td></tr>';
@@ -408,6 +449,7 @@
         <div class="pat-ficha-grid">
           <div><strong>Categoria:</strong> ${esc(p.categoria_nome)}</div>
           <div><strong>Unidade:</strong> ${esc(p.unidade_nome)}</div>
+          <div><strong>Setor:</strong> ${esc(p.setor || "—")}</div>
           <div><strong>Responsável:</strong> ${esc(p.responsavel)}</div>
           <div><strong>Situação:</strong> ${esc(p.situacao)}</div>
           <div><strong>Valor compra:</strong> ${fmtMoeda(p.valor_compra)}</div>
@@ -416,6 +458,7 @@
           <div><strong>Serial:</strong> ${esc(p.numero_serial || "—")}</div>
         </div>
         ${espec ? `<h4>Dados específicos</h4><table><tbody>${espec}</tbody></table>` : ""}
+        ${p.observacoes ? `<h4>Observações</h4><p class="pat-ficha-obs">${esc(p.observacoes)}</p>` : ""}
         <h4>Movimentações</h4><ul>${(mov || []).slice(0, 8).map((m) => `<li>${fmtData(m.created_at)} — ${esc(m.tipo)}</li>`).join("") || "<li>Nenhuma</li>"}</ul>
         <h4>Manutenções</h4><ul>${(man || []).slice(0, 8).map((m) => `<li>${fmtData(m.data_manutencao)} — ${esc(m.tipo_manutencao)}</li>`).join("") || "<li>Nenhuma</li>"}</ul>
         <h4>Anexos</h4><div id="patFichaAnexos"></div>`;
@@ -489,7 +532,10 @@
       ? `Categoria: ${catEl?.selectedOptions?.[0]?.textContent?.trim() || f.categoria_id}`
       : "Categoria: Todas");
     parts.push(f.situacao ? `Situação: ${PAT_SIT_LABEL[f.situacao] || f.situacao}` : "Situação: Todas");
-    parts.push(f.setor ? `Setor: ${f.setor}` : "Setor: Todos");
+    const setorEl = document.getElementById("patRelFiltroSetor");
+    parts.push(f.setor_id
+      ? `Setor: ${setorEl?.selectedOptions?.[0]?.textContent?.trim() || f.setor_id}`
+      : "Setor: Todos");
     if (f.busca) parts.push(`Busca: ${f.busca}`);
     return parts;
   }
@@ -553,12 +599,12 @@
     const un = document.getElementById("patRelFiltroUnidade")?.value;
     const cat = document.getElementById("patRelFiltroCategoria")?.value;
     const sit = document.getElementById("patRelFiltroSituacao")?.value;
-    const setor = document.getElementById("patRelFiltroSetor")?.value?.trim();
+    const setorId = document.getElementById("patRelFiltroSetor")?.value;
     const busca = document.getElementById("patRelFiltroBusca")?.value?.trim();
     if (un) f.unidade_id = un;
     if (cat) f.categoria_id = cat;
     if (sit) f.situacao = sit;
-    if (setor) f.setor = setor;
+    if (setorId) f.setor_id = setorId;
     if (busca) f.busca = busca;
     return f;
   }
@@ -623,35 +669,12 @@
       </tr>`).join("");
   }
 
-  async function patRelCarregarSetores() {
-    const dl = document.getElementById("patRelSetoresList");
-    if (!dl) return;
-    let setores = [];
-    try {
-      setores = await patFetch("/patrimonio/relatorios/setores");
-    } catch (_) {
-      let lista = patState.patrimonios;
-      if (!lista.length) {
-        try {
-          lista = await patFetch("/patrimonio/patrimonios");
-          patState.patrimonios = lista;
-        } catch (e2) {
-          return;
-        }
-      }
-      setores = [...new Set(lista.map((p) => String(p.setor || "").trim()).filter(Boolean))].sort();
-    }
-    if (Array.isArray(setores)) {
-      dl.innerHTML = setores.map((s) => `<option value="${esc(s)}"></option>`).join("");
-    }
-  }
-
   window.loadPatrimonioRelatorios = async function loadPatrimonioRelatorios() {
     await Promise.all([
       populatePatUnidades(["patRelFiltroUnidade"]),
       loadPatCategorias(),
+      loadPatSetores().then(() => populatePatSetorSelects()),
     ]);
-    await patRelCarregarSetores();
   };
 
   async function patRelGerarPreview() {
@@ -676,6 +699,34 @@
     patRelRenderResultado(data);
     patToast(`Relatório: ${data.totais?.quantidade ?? 0} item(ns).`, "success");
   }
+
+  window.loadPatrimonioConfiguracoes = async function loadPatrimonioConfiguracoes() {
+    try {
+      const setores = await loadPatSetores(true, true);
+      const tb = document.getElementById("patSetorTbody");
+      if (!tb) return;
+      if (!setores.length) {
+        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#90a4ae">Nenhum setor cadastrado. Clique em + Novo setor.</td></tr>';
+        return;
+      }
+      tb.innerHTML = setores.map((s) => `
+        <tr>
+          <td>${esc(s.nome)}</td>
+          <td>${esc(s.descricao || "—")}</td>
+          <td>${s.ordem ?? 0}</td>
+          <td>${s.ativo ? "Sim" : "Não"}</td>
+          <td>
+            <button type="button" class="btn-icon pat-setor-editar" data-id="${s.id}" data-nome="${esc(s.nome)}" data-descricao="${esc(s.descricao || "")}" data-ordem="${s.ordem ?? 50}" data-ativo="${s.ativo ? "1" : "0"}">✎</button>
+            <button type="button" class="btn-icon danger pat-setor-excluir" data-id="${s.id}">✕</button>
+          </td>
+        </tr>`).join("");
+    } catch (e) {
+      const tb = document.getElementById("patSetorTbody");
+      if (tb) {
+        tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c62828">${esc(e.message)}</td></tr>`;
+      }
+    }
+  };
 
   window.loadPatrimonioInventario = async function loadPatrimonioInventario() {
     await populatePatUnidades();
@@ -759,7 +810,7 @@
     toggleCamposEspecificos();
     patSetupMoedaInputs(form);
     modal.classList.add("active");
-    Promise.all([populatePatUnidades(), loadPatCategorias()]).catch(() => {});
+    Promise.all([populatePatUnidades(), loadPatCategorias(), loadPatSetores().then(() => populatePatSetorSelects())]).catch(() => {});
     if (editId) {
       patFetch(`/patrimonio/patrimonios/${editId}`).then((res) => {
         const p = res.patrimonio;
@@ -772,7 +823,16 @@
         if (f.cor) f.cor.value = p.cor || "";
         if (f.quantidade) f.quantidade.value = p.quantidade || 1;
         if (f.unidade_id) f.unidade_id.value = p.unidade_id || "";
-        if (f.setor) f.setor.value = p.setor || "";
+        const setorSel = document.getElementById("patFormSetor");
+        if (setorSel) {
+          if (p.setor_id) setorSel.value = String(p.setor_id);
+          else if (p.setor && patState.setores.length) {
+            const match = patState.setores.find((s) => s.nome === p.setor);
+            if (match) setorSel.value = String(match.id);
+          }
+        }
+        const obs = document.getElementById("patFormObservacoes");
+        if (obs) obs.value = p.observacoes || "";
         if (f.responsavel) f.responsavel.value = p.responsavel || "";
         if (f.situacao) f.situacao.value = p.situacao || "ativo";
         patEscreverMoeda(f.valor_compra, p.valor_compra);
@@ -958,6 +1018,65 @@
         patToast(err.message, "error");
       }
     });
+    document.getElementById("patSetorBtnNova")?.addEventListener("click", () => {
+      document.getElementById("patSetorId").value = "";
+      document.getElementById("patSetorModalTitle").textContent = "Novo setor";
+      document.getElementById("patSetorForm")?.reset();
+      const ativo = document.getElementById("patSetorAtivo");
+      if (ativo) ativo.checked = true;
+      document.getElementById("patSetorModal")?.classList.add("active");
+    });
+    document.getElementById("closePatSetorModal")?.addEventListener("click", () => document.getElementById("patSetorModal")?.classList.remove("active"));
+    document.getElementById("patSetorForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("patSetorId")?.value;
+      const body = {
+        nome: document.getElementById("patSetorNome")?.value?.trim(),
+        descricao: document.getElementById("patSetorDescricao")?.value?.trim() || null,
+        ordem: parseInt(document.getElementById("patSetorOrdem")?.value || "50", 10),
+        ativo: document.getElementById("patSetorAtivo")?.checked ?? true,
+      };
+      try {
+        if (id) await patFetch(`/patrimonio/setores/${id}`, { method: "PUT", body: JSON.stringify(body) });
+        else await patFetch("/patrimonio/setores", { method: "POST", body: JSON.stringify(body) });
+        document.getElementById("patSetorModal")?.classList.remove("active");
+        patState.setores = [];
+        await loadPatSetores(true, true);
+        populatePatSetorSelects();
+        loadPatrimonioConfiguracoes();
+        patToast("Setor salvo.", "success");
+      } catch (err) {
+        patToast(err.message, "error");
+      }
+    });
+    document.getElementById("patSetorTbody")?.addEventListener("click", async (e) => {
+      const edit = e.target.closest(".pat-setor-editar");
+      if (edit) {
+        document.getElementById("patSetorId").value = edit.dataset.id;
+        document.getElementById("patSetorNome").value = edit.dataset.nome || "";
+        document.getElementById("patSetorDescricao").value = edit.dataset.descricao || "";
+        document.getElementById("patSetorOrdem").value = edit.dataset.ordem || "50";
+        const ativo = document.getElementById("patSetorAtivo");
+        if (ativo) ativo.checked = edit.dataset.ativo !== "0";
+        document.getElementById("patSetorModalTitle").textContent = "Editar setor";
+        document.getElementById("patSetorModal").classList.add("active");
+        return;
+      }
+      const del = e.target.closest(".pat-setor-excluir");
+      if (del && confirm("Excluir este setor?")) {
+        try {
+          await patFetch(`/patrimonio/setores/${del.dataset.id}`, { method: "DELETE" });
+          patState.setores = [];
+          await loadPatSetores(true, true);
+          populatePatSetorSelects();
+          loadPatrimonioConfiguracoes();
+          patToast("Setor excluído.", "success");
+        } catch (err) {
+          patToast(err.message, "error");
+        }
+      }
+    });
+
     document.getElementById("patCatTbody")?.addEventListener("click", async (e) => {
       const edit = e.target.closest(".pat-cat-editar");
       if (edit) {

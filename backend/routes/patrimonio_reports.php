@@ -6,6 +6,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 $patH = static fn (?string $s): string => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -114,7 +115,9 @@ $patAplicarFiltrosPatrimonio = static function ($q, Request $request) {
     if ($request->filled('situacao')) {
         $q->where('p.situacao', $request->query('situacao'));
     }
-    if ($request->filled('setor')) {
+    if ($request->filled('setor_id')) {
+        $q->where('p.setor_id', (int) $request->query('setor_id'));
+    } elseif ($request->filled('setor')) {
         $setor = trim((string) $request->query('setor'));
         if ($setor !== '') {
             $q->where('p.setor', 'like', '%' . $setor . '%');
@@ -151,7 +154,12 @@ $patFiltrosDescricao = static function (Request $request) use ($patSituacaoLabel
     } else {
         $parts[] = 'Situação: Todas';
     }
-    if ($request->filled('setor') && trim((string) $request->query('setor')) !== '') {
+    if ($request->filled('setor_id')) {
+        $nome = Schema::hasTable('patrimonio_setores')
+            ? DB::table('patrimonio_setores')->where('id', (int) $request->query('setor_id'))->value('nome')
+            : null;
+        $parts[] = 'Setor: ' . ($nome ?: $request->query('setor_id'));
+    } elseif ($request->filled('setor') && trim((string) $request->query('setor')) !== '') {
         $parts[] = 'Setor: ' . trim((string) $request->query('setor'));
     } else {
         $parts[] = 'Setor: Todos';
@@ -501,6 +509,14 @@ Route::get('/patrimonio/relatorios/setores', function (Request $request) use ($p
     if (! $podePatrimonio($u)) {
         return $patJson(['message' => 'Sem permissão'], 403);
     }
+    if (Schema::hasTable('patrimonio_setores')) {
+        $q = DB::table('patrimonio_setores')->orderBy('ordem')->orderBy('nome');
+        if ($request->boolean('ativos', true) && ! $request->boolean('todos')) {
+            $q->where('ativo', 1);
+        }
+
+        return $patJson($q->get(['id', 'nome'])->values()->all());
+    }
     $setores = DB::table('patrimonios')
         ->whereNotNull('setor')
         ->where('setor', '!=', '')
@@ -508,7 +524,7 @@ Route::get('/patrimonio/relatorios/setores', function (Request $request) use ($p
         ->orderBy('setor')
         ->pluck('setor');
 
-    return $patJson($setores->values());
+    return $patJson($setores->values()->all());
 });
 
 Route::get('/patrimonio/relatorios/filtrado', function (Request $request) use ($patRelatorioAuthFlex, $patJson, $patRelatorioFiltradoDados, $patFiltrosDescricao) {

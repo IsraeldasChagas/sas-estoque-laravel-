@@ -104,6 +104,22 @@ $patrimonioGerarCodigo = function (?int $unidadeId) {
     return $prefix . str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
 };
 
+$patrimonioResolverSetor = static function (Request $request): array {
+    $setorId = $request->input('setor_id');
+    $setorNome = trim((string) $request->input('setor', ''));
+    if ($setorId && Schema::hasTable('patrimonio_setores')) {
+        $row = DB::table('patrimonio_setores')->where('id', (int) $setorId)->first();
+        if ($row) {
+            return [(int) $row->id, $row->nome];
+        }
+    }
+    if ($setorNome !== '') {
+        return [null, $setorNome];
+    }
+
+    return [null, null];
+};
+
 $patrimonioMapPatrimonio = function ($r) {
     $dados = $r->dados_especificos ?? null;
     if (is_string($dados)) {
@@ -126,6 +142,7 @@ $patrimonioMapPatrimonio = function ($r) {
         'quantidade' => (int) ($r->quantidade ?? 1),
         'unidade_id' => $r->unidade_id ? (int) $r->unidade_id : null,
         'unidade_nome' => $r->unidade_nome ?? null,
+        'setor_id' => isset($r->setor_id) && $r->setor_id ? (int) $r->setor_id : null,
         'setor' => $r->setor,
         'responsavel' => $r->responsavel,
         'funcionario_id' => $r->funcionario_id ? (int) $r->funcionario_id : null,
@@ -137,6 +154,7 @@ $patrimonioMapPatrimonio = function ($r) {
         'depreciacao' => $r->depreciacao !== null ? (float) $r->depreciacao : null,
         'fornecedor' => $r->fornecedor,
         'numero_nf' => $r->numero_nf,
+        'observacoes' => $r->observacoes ?? null,
         'dados_especificos' => $dados,
         'created_at' => $r->created_at,
         'updated_at' => $r->updated_at,
@@ -159,6 +177,8 @@ foreach ([
     '/patrimonio/dashboard',
     '/patrimonio/categorias',
     '/patrimonio/categorias/{id}',
+    '/patrimonio/setores',
+    '/patrimonio/setores/{id}',
     '/patrimonio/patrimonios',
     '/patrimonio/patrimonios/{id}',
     '/patrimonio/patrimonios/qr/{token}',
@@ -336,6 +356,90 @@ Route::delete('/patrimonio/categorias/{id}', function (Request $request, $id) us
     return $patJson(['message' => 'Categoria excluída']);
 });
 
+// ——— Setores (cadastro em Configurações) ———
+Route::get('/patrimonio/setores', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+    $u = $patrimonioAuth($request);
+    if (! $podePatrimonio($u, 'patrimonioConfiguracoes') && ! $podePatrimonio($u, 'patrimonios')) {
+        return $patJson(['message' => 'Sem permissão'], 403);
+    }
+    if (! Schema::hasTable('patrimonio_setores')) {
+        return $patJson(['message' => 'Execute a migration de setores do patrimônio.'], 503);
+    }
+    $q = DB::table('patrimonio_setores')->orderBy('ordem')->orderBy('nome');
+    if ($request->boolean('ativos', true) && ! $request->boolean('todos')) {
+        $q->where('ativo', 1);
+    }
+
+    return $patJson($q->get());
+});
+
+Route::post('/patrimonio/setores', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+    $u = $patrimonioAuth($request);
+    if (! $podePatrimonio($u, 'patrimonioConfiguracoes')) {
+        return $patJson(['message' => 'Sem permissão'], 403);
+    }
+    if (! Schema::hasTable('patrimonio_setores')) {
+        return $patJson(['message' => 'Tabela de setores não instalada.'], 503);
+    }
+    $nome = trim((string) $request->input('nome', ''));
+    if ($nome === '') {
+        return $patJson(['message' => 'Nome do setor obrigatório'], 422);
+    }
+    $dup = DB::table('patrimonio_setores')->where('nome', $nome)->exists();
+    if ($dup) {
+        return $patJson(['message' => 'Já existe um setor com este nome'], 409);
+    }
+    $id = DB::table('patrimonio_setores')->insertGetId([
+        'nome' => $nome,
+        'descricao' => $request->input('descricao'),
+        'ordem' => (int) $request->input('ordem', 50),
+        'ativo' => $request->boolean('ativo', true),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return $patJson(['message' => 'Setor cadastrado', 'id' => $id], 201);
+});
+
+Route::put('/patrimonio/setores/{id}', function (Request $request, $id) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+    $u = $patrimonioAuth($request);
+    if (! $podePatrimonio($u, 'patrimonioConfiguracoes')) {
+        return $patJson(['message' => 'Sem permissão'], 403);
+    }
+    $nome = trim((string) $request->input('nome', ''));
+    if ($nome === '') {
+        return $patJson(['message' => 'Nome do setor obrigatório'], 422);
+    }
+    $dup = DB::table('patrimonio_setores')->where('nome', $nome)->where('id', '!=', $id)->exists();
+    if ($dup) {
+        return $patJson(['message' => 'Já existe um setor com este nome'], 409);
+    }
+    DB::table('patrimonio_setores')->where('id', $id)->update([
+        'nome' => $nome,
+        'descricao' => $request->input('descricao'),
+        'ordem' => $request->input('ordem'),
+        'ativo' => $request->boolean('ativo', true),
+        'updated_at' => now(),
+    ]);
+    DB::table('patrimonios')->where('setor_id', $id)->update(['setor' => $nome, 'updated_at' => now()]);
+
+    return $patJson(['message' => 'Setor atualizado']);
+});
+
+Route::delete('/patrimonio/setores/{id}', function (Request $request, $id) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+    $u = $patrimonioAuth($request);
+    if (! $podePatrimonio($u, 'patrimonioConfiguracoes')) {
+        return $patJson(['message' => 'Sem permissão'], 403);
+    }
+    $emUso = DB::table('patrimonios')->where('setor_id', $id)->exists();
+    if ($emUso) {
+        return $patJson(['message' => 'Setor em uso por patrimônios'], 409);
+    }
+    DB::table('patrimonio_setores')->where('id', $id)->delete();
+
+    return $patJson(['message' => 'Setor excluído']);
+});
+
 // ——— Patrimônios ———
 Route::get('/patrimonio/patrimonios', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson, $patrimonioQueryBase, $patrimonioMapPatrimonio) {
     $u = $patrimonioAuth($request);
@@ -352,7 +456,9 @@ Route::get('/patrimonio/patrimonios', function (Request $request) use ($patrimon
     if ($request->filled('situacao')) {
         $q->where('p.situacao', $request->query('situacao'));
     }
-    if ($request->filled('setor')) {
+    if ($request->filled('setor_id')) {
+        $q->where('p.setor_id', (int) $request->query('setor_id'));
+    } elseif ($request->filled('setor')) {
         $setor = trim((string) $request->query('setor'));
         if ($setor !== '') {
             $q->where('p.setor', 'like', '%' . $setor . '%');
@@ -413,7 +519,7 @@ Route::get('/patrimonio/patrimonios/{id}', function (Request $request, $id) use 
 });
 
 Route::post('/patrimonio/patrimonios', function (Request $request) use (
-    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioGerarCodigo, $patrimonioRegistrarHistorico, $patCalcularDepreciacao
+    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioGerarCodigo, $patrimonioRegistrarHistorico, $patCalcularDepreciacao, $patrimonioResolverSetor
 ) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonios')) {
@@ -435,6 +541,7 @@ Route::post('/patrimonio/patrimonios', function (Request $request) use (
     $dep = $patCalcularDepreciacao($valorCompra, $dataCompra, $vidaUtil);
     $valorAtual = $request->input('valor_atual') !== null && $request->input('valor_atual') !== ''
         ? (float) $request->input('valor_atual') : $dep['valor_atual'];
+    [$setorId, $setorNome] = $patrimonioResolverSetor($request);
 
     $id = DB::table('patrimonios')->insertGetId([
         'codigo' => $patrimonioGerarCodigo($unidadeId),
@@ -447,7 +554,8 @@ Route::post('/patrimonio/patrimonios', function (Request $request) use (
         'cor' => $request->input('cor'),
         'quantidade' => max(1, (int) $request->input('quantidade', 1)),
         'unidade_id' => $unidadeId,
-        'setor' => $request->input('setor'),
+        'setor_id' => $setorId,
+        'setor' => $setorNome,
         'responsavel' => $request->input('responsavel'),
         'funcionario_id' => $request->input('funcionario_id') ?: null,
         'situacao' => $request->input('situacao', 'ativo'),
@@ -459,6 +567,7 @@ Route::post('/patrimonio/patrimonios', function (Request $request) use (
             ? (float) $request->input('depreciacao') : $dep['depreciacao'],
         'fornecedor' => $request->input('fornecedor'),
         'numero_nf' => $request->input('numero_nf'),
+        'observacoes' => $request->input('observacoes'),
         'dados_especificos' => $dadosEsp ? json_encode($dadosEsp, JSON_UNESCAPED_UNICODE) : null,
         'usuario_id' => $u->id ?? null,
         'created_at' => now(),
@@ -530,7 +639,7 @@ Route::post('/patrimonio/patrimonios', function (Request $request) use (
 });
 
 Route::post('/patrimonio/patrimonios/{id}', function (Request $request, $id) use (
-    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioRegistrarHistorico, $patCalcularDepreciacao
+    $patrimonioAuth, $podePatrimonio, $patJson, $patrimonioRegistrarHistorico, $patCalcularDepreciacao, $patrimonioResolverSetor
 ) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonios')) {
@@ -548,6 +657,7 @@ Route::post('/patrimonio/patrimonios/{id}', function (Request $request, $id) use
     $vidaUtil = $request->has('vida_util_meses') ? (int) $request->input('vida_util_meses') : (int) ($row->vida_util_meses ?? 0);
     $dataCompra = $request->input('data_compra') ?: $row->data_compra;
     $dep = $patCalcularDepreciacao($valorCompra ?: null, $dataCompra, $vidaUtil ?: null);
+    [$setorId, $setorNome] = $patrimonioResolverSetor($request);
     $data = array_filter([
         'nome' => $request->input('nome'),
         'numero_serial' => $request->input('numero_serial'),
@@ -557,7 +667,8 @@ Route::post('/patrimonio/patrimonios/{id}', function (Request $request, $id) use
         'cor' => $request->input('cor'),
         'quantidade' => $request->input('quantidade'),
         'unidade_id' => $request->input('unidade_id'),
-        'setor' => $request->input('setor'),
+        'setor_id' => $setorId,
+        'setor' => $setorNome,
         'responsavel' => $request->input('responsavel'),
         'situacao' => $request->input('situacao'),
         'valor_compra' => $request->has('valor_compra') ? $request->input('valor_compra') : null,
@@ -567,6 +678,7 @@ Route::post('/patrimonio/patrimonios/{id}', function (Request $request, $id) use
         'depreciacao' => $request->has('depreciacao') ? $request->input('depreciacao') : $dep['depreciacao'],
         'fornecedor' => $request->input('fornecedor'),
         'numero_nf' => $request->input('numero_nf'),
+        'observacoes' => $request->input('observacoes'),
         'dados_especificos' => $dadosEsp ? json_encode($dadosEsp, JSON_UNESCAPED_UNICODE) : null,
         'updated_at' => now(),
     ], fn ($v) => $v !== null && $v !== '');

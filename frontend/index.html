@@ -7,7 +7,7 @@
     <title>Grupo Sabor Paraense</title>
     <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
-    <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-relatorio" />
+    <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-setores" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -3172,8 +3172,7 @@
                 <label>Unidade<select id="patFiltroUnidade"><option value="">Todas</option></select></label>
                 <label>Categoria<select id="patFiltroCategoria"><option value="">Todas</option></select></label>
                 <label>Situação<select id="patFiltroSituacao"><option value="">Todas</option><option value="ativo">Ativo</option><option value="manutencao">Em manutenção</option><option value="baixado">Baixado</option><option value="vendido">Vendido</option><option value="quebrado">Quebrado</option></select></label>
-                <label>Setor<input type="text" id="patFiltroSetor" list="patListaSetoresList" placeholder="Todos" autocomplete="off" /></label>
-                <datalist id="patListaSetoresList"></datalist>
+                <label>Setor<select id="patFiltroSetor"><option value="">Todos</option></select></label>
                 <label><button type="button" class="btn primary" id="patFiltroAplicar">Filtrar</button></label>
               </div>
             </div>
@@ -3234,8 +3233,7 @@
                     <option value="quebrado">Quebrado</option>
                   </select>
                 </label>
-                <label>Setor<input type="text" id="patRelFiltroSetor" list="patRelSetoresList" placeholder="Todos os setores" autocomplete="off" /></label>
-                <datalist id="patRelSetoresList"></datalist>
+                <label>Setor<select id="patRelFiltroSetor"><option value="">Todos</option></select></label>
                 <label>Busca<input type="search" id="patRelFiltroBusca" placeholder="Nome, código, serial..." autocomplete="off" /></label>
               </div>
               <div class="pat-rel-filtros-actions">
@@ -3328,6 +3326,21 @@
                 <p class="pat-config-card__text">Cada bem vinculado à unidade/filial; filtros por unidade no dashboard e na lista.</p>
                 <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioDashboard">Abrir dashboard</button>
               </article>
+            </div>
+            <div class="table-card form-card--wide pat-config-setores-card">
+              <header class="patrimonio-section-head" style="margin-bottom:0.75rem">
+                <div>
+                  <h3 class="pat-config-panel__title" style="margin:0">Setores</h3>
+                  <p class="subtle-text">Cadastre os setores usados no formulário de patrimônio (Cozinha, Salão, Depósito…).</p>
+                </div>
+                <button type="button" class="btn primary" id="patSetorBtnNova">+ Novo setor</button>
+              </header>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Nome</th><th>Descrição</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead>
+                  <tbody id="patSetorTbody"></tbody>
+                </table>
+              </div>
             </div>
             <div class="pat-config-panel">
               <h3 class="pat-config-panel__title">Resumo rápido</h3>
@@ -5162,9 +5175,13 @@
             <label>Quantidade<input name="quantidade" type="number" min="1" value="1" /></label>
           </div>
           <div class="grid-two">
-            <label>Setor<input name="setor" /></label>
+            <label>Setor / local
+              <select name="setor_id" id="patFormSetor"><option value="">Selecione</option></select>
+              <small class="subtle-text">Cadastre setores em Patrimônio → Configurações</small>
+            </label>
             <label>Responsável<input name="responsavel" autocomplete="off" placeholder="Nome do responsável pelo bem" /></label>
           </div>
+          <label>Observações<textarea name="observacoes" id="patFormObservacoes" rows="3" placeholder="Anotações gerais sobre o bem"></textarea></label>
           <label>Situação
             <select name="situacao">
               <option value="ativo">Ativo</option>
@@ -5287,6 +5304,20 @@
           </label>
           <label>Ordem<input type="number" id="patCatOrdem" value="50" /></label>
           <footer><button type="submit" class="btn primary">Salvar</button></footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="patSetorModal">
+      <div class="modal" style="width:min(480px,96vw)">
+        <header><h2 id="patSetorModalTitle">Novo setor</h2><button type="button" class="close-btn" id="closePatSetorModal">×</button></header>
+        <form id="patSetorForm">
+          <input type="hidden" id="patSetorId" />
+          <label>Nome *<input id="patSetorNome" required maxlength="120" autocomplete="off" /></label>
+          <label>Descrição<textarea id="patSetorDescricao" rows="2" placeholder="Opcional"></textarea></label>
+          <label>Ordem<input type="number" id="patSetorOrdem" value="50" min="0" /></label>
+          <label class="checkbox-label"><input type="checkbox" id="patSetorAtivo" checked /> Ativo</label>
+          <footer><button type="submit" class="btn primary">Salvar setor</button></footer>
         </form>
       </div>
     </div>
@@ -5607,7 +5638,7 @@
     <!-- Script principal da aplicacao -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
-    <script src="patrimonio.js?v=20260525-patrimonio-relatorio2"></script>
+    <script src="patrimonio.js?v=20260525-patrimonio-setores"></script>
     <script src="app.js?v=20260525-patrimonio-brl"></script>
      
   </body>
