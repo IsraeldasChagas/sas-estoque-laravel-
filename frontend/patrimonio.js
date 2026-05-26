@@ -418,11 +418,11 @@
         <td data-label="Unidade">${esc(p.unidade_nome || "—")}</td>
         <td data-label="Situação">${situacaoBadge(p.situacao)}</td>
         <td data-label="Valor">${fmtMoeda(p.valor_atual)}</td>
-        <td data-label="QR"><button type="button" class="btn-icon pat-btn-qr" data-token="${esc(p.qr_token)}" title="QR Code">📱</button></td>
+        <td data-label="QR"><button type="button" class="pat-action-btn pat-btn-qr" data-token="${esc(p.qr_token)}" title="QR Code">📱</button></td>
         <td data-label="Ações">
-          <button type="button" class="btn-icon pat-btn-ver" data-id="${p.id}" title="Ficha">👁</button>
-          <button type="button" class="btn-icon pat-btn-editar" data-id="${p.id}" title="Editar">✎</button>
-          <button type="button" class="btn-icon danger pat-btn-excluir" data-id="${p.id}" title="Excluir">✕</button>
+          <button type="button" class="pat-action-btn pat-btn-ver" data-id="${p.id}" title="Ver ficha patrimônio">👁</button>
+          <button type="button" class="pat-action-btn pat-btn-editar" data-id="${p.id}" title="Editar patrimônio">✎</button>
+          <button type="button" class="pat-action-btn pat-action-btn--danger pat-btn-excluir" data-id="${p.id}" title="Excluir patrimônio">✕</button>
         </td>
       </tr>`).join("");
   };
@@ -890,12 +890,15 @@
 
     document.getElementById("patListaTbody")?.addEventListener("click", async (e) => {
       const qr = e.target.closest(".pat-btn-qr");
-      if (qr) return abrirQrPatrimonio(qr.dataset.token);
       const ver = e.target.closest(".pat-btn-ver");
-      if (ver) return abrirFichaPatrimonio(ver.dataset.id);
       const ed = e.target.closest(".pat-btn-editar");
-      if (ed) return abrirModalPatrimonio(ed.dataset.id);
       const ex = e.target.closest(".pat-btn-excluir");
+      if (!qr && !ver && !ed && !ex) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (qr) return abrirQrPatrimonio(qr.dataset.token);
+      if (ver) return abrirFichaPatrimonio(ver.dataset.id);
+      if (ed) return abrirModalPatrimonio(ed.dataset.id);
       if (ex && confirm("Excluir este patrimônio permanentemente?")) {
         try {
           await patFetch(`/patrimonio/patrimonios/${ex.dataset.id}`, { method: "DELETE" });

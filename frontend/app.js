@@ -17029,13 +17029,18 @@ function setupBoletosModule() {
     });
   }
 
-  // Adiciona eventos aos botoes de acao na tabela
-  document.addEventListener('click', async (e) => {
-    if (e.target.closest('.btn-icon')) {
+  // Ações só na tabela de boletos (evita conflito com Patrimônio e outros módulos)
+  const boletosTable = document.getElementById('boletosTable');
+  if (boletosTable) {
+    boletosTable.addEventListener('click', async (e) => {
+      if (e.target.closest('.btn-deletar-boleto')) return;
       const btn = e.target.closest('.btn-icon');
+      if (!btn || !boletosTable.contains(btn)) return;
       const title = btn.getAttribute('title');
       const id = btn.getAttribute('data-id');
-      
+      if (!id) return;
+      e.preventDefault();
+      e.stopPropagation();
       if (title === 'Editar') {
         await editarBoleto(id);
       } else if (title === 'Detalhes') {
@@ -17043,8 +17048,8 @@ function setupBoletosModule() {
       } else if (title === 'Pagar') {
         await abrirModalPagamento(id);
       }
-    }
-  });
+    });
+  }
 }
 
 // ===== Módulo Documentos empresa =====
@@ -17651,16 +17656,22 @@ function setupAlvarasModule() {
     });
   }
 
-  // Delegação de cliques nas ações
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.btn-icon');
-    if (!btn) return;
-    const id = btn.getAttribute('data-id');
-    const title = btn.getAttribute('title');
-    if (!id) return;
-    if (title === 'Editar') await editarAlvara(id);
-    if (title === 'Visualizar') await mostrarDetalhesAlvara(id);
-  });
+  // Delegação de cliques nas ações (somente tabela de documentos empresa)
+  const alvarasTable = document.getElementById('alvarasTable');
+  if (alvarasTable) {
+    alvarasTable.addEventListener('click', async (e) => {
+      if (e.target.closest('.btn-deletar-alvara')) return;
+      const btn = e.target.closest('.btn-icon');
+      if (!btn || !alvarasTable.contains(btn)) return;
+      const id = btn.getAttribute('data-id');
+      const title = btn.getAttribute('title');
+      if (!id) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (title === 'Editar') await editarAlvara(id);
+      else if (title === 'Visualizar') await mostrarDetalhesAlvara(id);
+    });
+  }
 
   document.getElementById('closeAlvaraDetalhes')?.addEventListener('click', () => document.getElementById('alvaraDetalhesModal')?.classList.remove('active'));
   document.getElementById('fecharAlvaraDetalhes')?.addEventListener('click', () => document.getElementById('alvaraDetalhesModal')?.classList.remove('active'));
