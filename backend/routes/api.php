@@ -9125,7 +9125,32 @@ $valeConsumoResolverPeriodo = static function (Request $request): array {
     return [$di, $df, $unidadeId];
 };
 
-Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
+$valeConsumoAplicarFiltroFuncionario = static function ($q, Request $request) {
+    if ($request->filled('funcionario_id')) {
+        $q->where('v.funcionario_id', (int) $request->query('funcionario_id'));
+
+        return $q;
+    }
+    $busca = trim((string) $request->query('busca', ''));
+    if ($busca === '') {
+        return $q;
+    }
+    $b = '%' . addcslashes($busca, '%_\\') . '%';
+    $cpf = preg_replace('/\D/', '', $busca);
+    $q->where(function ($qq) use ($b, $cpf) {
+        $qq->where('f.nome_completo', 'like', $b)
+            ->orWhere('f.cargo', 'like', $b);
+        if (strlen($cpf) >= 3) {
+            $qq->orWhereRaw('REPLACE(REPLACE(REPLACE(f.cpf, ".", ""), "-", ""), " ", "") LIKE ?', ['%' . $cpf . '%']);
+        } else {
+            $qq->orWhere('f.cpf', 'like', $b);
+        }
+    });
+
+    return $q;
+};
+
+Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -9153,6 +9178,7 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
         if ($unidadeId > 0) {
             $q->where('f.unidade_id', $unidadeId);
         }
+        $valeConsumoAplicarFiltroFuncionario($q, $request);
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $q->orderByDesc('v.data_lancamento')->orderByDesc('v.id');
         } else {
@@ -9167,7 +9193,7 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
     }
 });
 
-Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
+Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json([
@@ -9200,6 +9226,7 @@ Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($
         if ($unidadeId > 0) {
             $q->where('f.unidade_id', $unidadeId);
         }
+        $valeConsumoAplicarFiltroFuncionario($q, $request);
         $linhas = $q->get();
         $totVale = (float) $linhas->sum(fn ($r) => (float) ($r->total_vale ?? 0));
         $totCons = (float) $linhas->sum(fn ($r) => (float) ($r->total_consumo ?? 0));
@@ -9216,7 +9243,7 @@ Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($
     }
 });
 
-Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
+Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response("Sem dados (tabela não criada — rode migrate).\n", 200)
@@ -9247,6 +9274,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
         if ($unidadeId > 0) {
             $q->where('f.unidade_id', $unidadeId);
         }
+        $valeConsumoAplicarFiltroFuncionario($q, $request);
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $q->orderByDesc('v.data_lancamento')->orderByDesc('v.id');
         } else {
@@ -9326,7 +9354,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
     }
 });
 
-Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia) {
+Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
@@ -9358,6 +9386,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
         if ($unidadeId > 0) {
             $qDet->where('f.unidade_id', $unidadeId);
         }
+        $valeConsumoAplicarFiltroFuncionario($qDet, $request);
         if (Schema::hasColumn('financeiro_vale_consumo', 'data_lancamento')) {
             $qDet->orderByDesc('v.data_lancamento')->orderByDesc('v.id');
         } else {

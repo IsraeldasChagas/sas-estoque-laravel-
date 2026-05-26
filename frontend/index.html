@@ -3043,6 +3043,17 @@
                     <option value="">Todas</option>
                   </select>
                 </label>
+                <label class="vale-consumo-func-busca-label">
+                  Funcionário
+                  <div class="vale-consumo-func-busca">
+                    <input type="search" id="valeConsumoFiltroFuncionarioBusca" list="valeConsumoFuncDatalist" placeholder="Digite nome, CPF ou cargo…" autocomplete="off" />
+                    <select id="valeConsumoFiltroFuncionario" title="Escolher funcionário">
+                      <option value="">— Lista —</option>
+                    </select>
+                  </div>
+                  <datalist id="valeConsumoFuncDatalist"></datalist>
+                  <small class="subtle-text">Filtra ao digitar ou escolha na lista</small>
+                </label>
               </div>
               <div class="filters-actions">
                 <button type="button" class="btn primary" id="valeConsumoFiltrar">Aplicar filtro</button>
@@ -3063,11 +3074,15 @@
                     Data do lançamento *
                     <input type="date" id="valeConsumoDataLancamento" required />
                   </label>
-                  <label>
+                  <label class="vale-consumo-func-busca-label">
                     Funcionário *
-                    <select id="valeConsumoFuncionario" required>
-                      <option value="">Carregue a tela…</option>
-                    </select>
+                    <div class="vale-consumo-func-busca">
+                      <input type="search" id="valeConsumoFuncionarioBusca" list="valeConsumoFuncDatalistForm" placeholder="Digite para localizar…" autocomplete="off" />
+                      <select id="valeConsumoFuncionario" required>
+                        <option value="">— Lista —</option>
+                      </select>
+                    </div>
+                    <datalist id="valeConsumoFuncDatalistForm"></datalist>
                   </label>
                   <label>
                     Vale (R$)

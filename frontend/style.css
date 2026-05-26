@@ -2896,6 +2896,31 @@ textarea {
   display: none !important;
 }
 
+/* Vale / consumo — busca de funcionário (digitar + lista) */
+#valeConsumoSection .vale-consumo-func-busca-label {
+  grid-column: 1 / -1;
+}
+@media (min-width: 720px) {
+  #valeConsumoSection .vale-consumo-func-busca-label {
+    grid-column: span 2;
+  }
+}
+#valeConsumoSection .vale-consumo-func-busca {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+#valeConsumoSection .vale-consumo-func-busca input[type="search"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+#valeConsumoSection .vale-consumo-func-busca select {
+  flex: 0 1 auto;
+  min-width: 10rem;
+  max-width: 100%;
+}
+
 /* Vale / consumo — totais no card Lançamentos */
 #valeConsumoSection .vale-consumo-lancamentos-head {
   margin-bottom: 0.75rem;

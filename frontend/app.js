@@ -276,6 +276,90 @@ function fmtBRLValeConsumo(n) {
 
 let valeConsumoDetalheCache = [];
 
+function valeConsumoFuncLabel(f) {
+  if (!f) return "";
+  const nome = String(f.nome_completo || f.nome || `#${f.id}`);
+  const cargo = f.cargo ? ` — ${f.cargo}` : "";
+  const un = f.unidade_nome ? ` (${f.unidade_nome})` : "";
+  return `${nome}${cargo}${un}`;
+}
+
+function valeConsumoFuncionariosLista(unidadeIdFiltro) {
+  let list = Array.isArray(state.funcionarios) ? [...state.funcionarios] : [];
+  if (unidadeIdFiltro) {
+    list = list.filter((f) => String(f.unidade_id) === String(unidadeIdFiltro));
+  }
+  return list.sort((a, b) =>
+    String(a.nome_completo || a.nome || "").localeCompare(String(b.nome_completo || b.nome || ""), "pt-BR")
+  );
+}
+
+function valeConsumoPopularFuncionarioUI() {
+  const un = document.getElementById("valeConsumoFiltroUnidade")?.value?.trim() || "";
+  const lista = valeConsumoFuncionariosLista(un);
+  const opts = lista
+    .map((f) => {
+      const id = escapeHtml(String(f.id));
+      return `<option value="${id}">${escapeHtml(valeConsumoFuncLabel(f))}</option>`;
+    })
+    .join("");
+  const selFiltro = document.getElementById("valeConsumoFiltroFuncionario");
+  const selForm = document.getElementById("valeConsumoFuncionario");
+  if (selFiltro) {
+    const cur = selFiltro.value;
+    selFiltro.innerHTML = `<option value="">— Lista —</option>${opts}`;
+    if (cur && lista.some((f) => String(f.id) === String(cur))) selFiltro.value = cur;
+  }
+  if (selForm) {
+    const cur = selForm.value;
+    selForm.innerHTML = `<option value="">— Lista —</option>${opts}`;
+    if (cur && lista.some((f) => String(f.id) === String(cur))) selForm.value = cur;
+  }
+  const seen = new Set();
+  const dlOpts = [];
+  lista.forEach((f) => {
+    const full = valeConsumoFuncLabel(f);
+    if (full && !seen.has(full)) {
+      seen.add(full);
+      dlOpts.push(`<option value="${escapeHtml(full)}"></option>`);
+    }
+    const nome = String(f.nome_completo || f.nome || "").trim();
+    if (nome && !seen.has(nome)) {
+      seen.add(nome);
+      dlOpts.push(`<option value="${escapeHtml(nome)}"></option>`);
+    }
+  });
+  const dlHtml = dlOpts.join("");
+  ["valeConsumoFuncDatalist", "valeConsumoFuncDatalistForm"].forEach((id) => {
+    const dl = document.getElementById(id);
+    if (dl) dl.innerHTML = dlHtml;
+  });
+}
+
+function valeConsumoResolverFuncionarioId(buscaInputId, selectId) {
+  const selId = document.getElementById(selectId)?.value?.trim();
+  if (selId) return selId;
+  const busca = document.getElementById(buscaInputId)?.value?.trim();
+  if (!busca) return "";
+  const un = document.getElementById("valeConsumoFiltroUnidade")?.value?.trim() || "";
+  const lista = valeConsumoFuncionariosLista(un);
+  const match = lista.find((f) => valeConsumoFuncLabel(f) === busca || String(f.nome_completo || f.nome || "") === busca);
+  return match ? String(match.id) : "";
+}
+
+function valeConsumoAplicarFiltroFuncionarioQuery(p) {
+  const selId = document.getElementById("valeConsumoFiltroFuncionario")?.value?.trim();
+  const busca = document.getElementById("valeConsumoFiltroFuncionarioBusca")?.value?.trim();
+  if (selId) {
+    p.set("funcionario_id", selId);
+    return;
+  }
+  if (!busca) return;
+  const fid = valeConsumoResolverFuncionarioId("valeConsumoFiltroFuncionarioBusca", "valeConsumoFiltroFuncionario");
+  if (fid) p.set("funcionario_id", fid);
+  else p.set("busca", busca);
+}
+
 function valeConsumoPrimeiroUltimoDiaMes(d = new Date()) {
   const y = d.getFullYear();
   const m = d.getMonth();
@@ -292,6 +376,7 @@ function valeConsumoMontarQueryString() {
   if (di) p.set("data_inicio", di);
   if (df) p.set("data_fim", df);
   if (un) p.set("unidade_id", un);
+  valeConsumoAplicarFiltroFuncionarioQuery(p);
   const s = p.toString();
   return s ? `?${s}` : "";
 }
@@ -404,24 +489,12 @@ async function loadValeConsumoSection() {
     if (curU) unSel.value = curU;
   }
 
-  const sel = document.getElementById("valeConsumoFuncionario");
   try {
     const dados = await fetchJSON("/funcionarios?status=ativo");
     state.funcionarios = Array.isArray(dados) ? dados : [];
-    if (sel) {
-      const cur = sel.value;
-      sel.innerHTML =
-        '<option value="">Selecione o funcionário…</option>' +
-        state.funcionarios
-          .map((f) => {
-            const id = escapeHtml(String(f.id));
-            const nm = escapeHtml(String(f.nome_completo || f.nome || `#${f.id}`));
-            return `<option value="${id}">${nm}</option>`;
-          })
-          .join("");
-      if (cur) sel.value = cur;
-    }
+    valeConsumoPopularFuncionarioUI();
   } catch (_) {
+    const sel = document.getElementById("valeConsumoFuncionario");
     if (sel) sel.innerHTML = '<option value="">Erro ao carregar funcionários</option>';
   }
 
@@ -451,12 +524,14 @@ function valeConsumoLimparFormulario() {
   const fc = document.getElementById("valeConsumoValorConsumo");
   const ob = document.getElementById("valeConsumoObs");
   const fn = document.getElementById("valeConsumoFuncionario");
+  const fnBusca = document.getElementById("valeConsumoFuncionarioBusca");
   const dl = document.getElementById("valeConsumoDataLancamento");
   if (hid) hid.value = "";
   if (fv) fv.value = "";
   if (fc) fc.value = "";
   if (ob) ob.value = "";
   if (fn) fn.value = "";
+  if (fnBusca) fnBusca.value = "";
   if (dl) dl.value = new Date().toISOString().slice(0, 10);
   const btn = document.getElementById("valeConsumoFormSalvar");
   if (btn) btn.textContent = "Salvar";
@@ -530,6 +605,47 @@ function valeConsumoBindOnce() {
   document.getElementById("valeConsumoFiltrar")?.addEventListener("click", () => {
     loadValeConsumoSection().catch((e) => showToast(e?.message || "Erro ao filtrar.", "error"));
   });
+  const valeConsumoRecarregarDebounced = debounce(() => {
+    loadValeConsumoSection().catch((e) => showToast(e?.message || "Erro ao filtrar.", "error"));
+  }, 420);
+  document.getElementById("valeConsumoFiltroFuncionarioBusca")?.addEventListener("input", () => {
+    const sel = document.getElementById("valeConsumoFiltroFuncionario");
+    if (sel) sel.value = "";
+    valeConsumoRecarregarDebounced();
+  });
+  document.getElementById("valeConsumoFiltroFuncionarioBusca")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      loadValeConsumoSection().catch((err) => showToast(err?.message || "Erro ao filtrar.", "error"));
+    }
+  });
+  document.getElementById("valeConsumoFiltroFuncionario")?.addEventListener("change", (e) => {
+    const id = e.target.value;
+    const inp = document.getElementById("valeConsumoFiltroFuncionarioBusca");
+    if (id && inp) {
+      const f = valeConsumoFuncionariosLista(document.getElementById("valeConsumoFiltroUnidade")?.value).find(
+        (x) => String(x.id) === String(id)
+      );
+      if (f) inp.value = valeConsumoFuncLabel(f);
+    } else if (inp && !id) inp.value = "";
+    loadValeConsumoSection().catch((err) => showToast(err?.message || "Erro ao filtrar.", "error"));
+  });
+  document.getElementById("valeConsumoFiltroUnidade")?.addEventListener("change", () => {
+    valeConsumoPopularFuncionarioUI();
+    loadValeConsumoSection().catch((e) => showToast(e?.message || "Erro ao filtrar.", "error"));
+  });
+  document.getElementById("valeConsumoFuncionario")?.addEventListener("change", (e) => {
+    const id = e.target.value;
+    const inp = document.getElementById("valeConsumoFuncionarioBusca");
+    if (id && inp) {
+      const f = (state.funcionarios || []).find((x) => String(x.id) === String(id));
+      if (f) inp.value = valeConsumoFuncLabel(f);
+    } else if (inp && !id) inp.value = "";
+  });
+  document.getElementById("valeConsumoFuncionarioBusca")?.addEventListener("input", () => {
+    const sel = document.getElementById("valeConsumoFuncionario");
+    if (sel) sel.value = "";
+  });
   document.getElementById("valeConsumoPdf")?.addEventListener("click", () => {
     abrirValeConsumoRelatorioPdf().catch((e) => showToast(e?.message || "Erro ao abrir PDF.", "error"));
   });
@@ -545,7 +661,7 @@ function valeConsumoBindOnce() {
 
   document.getElementById("valeConsumoForm")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const fid = document.getElementById("valeConsumoFuncionario")?.value;
+    const fid = valeConsumoResolverFuncionarioId("valeConsumoFuncionarioBusca", "valeConsumoFuncionario");
     const vv = document.getElementById("valeConsumoValorVale")?.value;
     const vc = document.getElementById("valeConsumoValorConsumo")?.value;
     const obs = document.getElementById("valeConsumoObs")?.value?.trim() || "";
@@ -619,6 +735,11 @@ function valeConsumoBindOnce() {
       const dle = document.getElementById("valeConsumoDataLancamento");
       if (hid) hid.value = String(row.id);
       if (fn) fn.value = String(row.funcionario_id ?? "");
+      const fnBusca = document.getElementById("valeConsumoFuncionarioBusca");
+      if (fnBusca && row.funcionario_nome) {
+        const f = (state.funcionarios || []).find((x) => String(x.id) === String(row.funcionario_id));
+        fnBusca.value = f ? valeConsumoFuncLabel(f) : String(row.funcionario_nome);
+      }
       if (fv) fv.value = row.valor_vale != null ? String(row.valor_vale) : "";
       if (fc) fc.value = row.valor_consumo != null ? String(row.valor_consumo) : "";
       if (ob) ob.value = row.observacao != null ? String(row.observacao) : "";
