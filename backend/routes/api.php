@@ -8607,6 +8607,17 @@ $despFixasPodeGerir = function ($perfil) {
     return in_array($p, ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO'], true);
 };
 
+// Vale/Consumo: permitir consulta para perfis de caixa, sem dar permissão de gestão.
+$valeConsumoPodeVer = function ($perfil) use ($despFixasPodeGerir) {
+    $p = strtoupper(trim($perfil ?? ''));
+    if ($despFixasPodeGerir($p)) {
+        return true;
+    }
+    $pNorm = str_replace(['_', '-'], ' ', $p);
+
+    return in_array($pNorm, ['CAIXA', 'ATENDENTE CAIXA'], true);
+};
+
 $despFixasParseUnidadeIds = function ($raw) {
     if ($raw === null || $raw === '') {
         return [];
@@ -9150,7 +9161,7 @@ $valeConsumoAplicarFiltroFuncionario = static function ($q, Request $request) {
     return $q;
 };
 
-Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
+Route::get('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $valeConsumoPodeVer, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json([])->header('Access-Control-Allow-Origin', '*');
@@ -9160,7 +9171,7 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
             return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         }
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (! $despFixasPodeGerir($perfil)) {
+        if (! $valeConsumoPodeVer($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
@@ -9193,7 +9204,7 @@ Route::get('/financeiro/vale-consumo', function (Request $request) use ($provent
     }
 });
 
-Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
+Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($proventosAuth, $valeConsumoPodeVer, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json([
@@ -9207,7 +9218,7 @@ Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($
             return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         }
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (! $despFixasPodeGerir($perfil)) {
+        if (! $valeConsumoPodeVer($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
@@ -9243,7 +9254,7 @@ Route::get('/financeiro/vale-consumo/resumo', function (Request $request) use ($
     }
 });
 
-Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
+Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request) use ($proventosAuth, $valeConsumoPodeVer, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response("Sem dados (tabela não criada — rode migrate).\n", 200)
@@ -9256,7 +9267,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
             return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         }
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (! $despFixasPodeGerir($perfil)) {
+        if (! $valeConsumoPodeVer($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
@@ -9354,7 +9365,7 @@ Route::get('/financeiro/vale-consumo/relatorio.csv', function (Request $request)
     }
 });
 
-Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
+Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request) use ($proventosAuth, $valeConsumoPodeVer, $valeConsumoResolverPeriodo, $valeConsumoValidarCompetencia, $valeConsumoAplicarFiltroFuncionario) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json(['error' => 'Módulo não configurado'], 503)->header('Access-Control-Allow-Origin', '*');
@@ -9364,7 +9375,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         }
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (! $despFixasPodeGerir($perfil)) {
+        if (! $valeConsumoPodeVer($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         [$di, $df, $unidadeId] = $valeConsumoResolverPeriodo($request);
