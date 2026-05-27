@@ -430,10 +430,15 @@ function valeConsumoAtualizarTotaisBar(lista) {
 
 function valeConsumoRenderDetalhe(tb, lista) {
   if (!tb) return;
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isAtendenteCaixa = perfilAtual === "ATENDENTE_CAIXA";
+  const thAcoes = document.getElementById("valeConsumoAcoesHeader");
+  if (thAcoes) thAcoes.style.display = isAtendenteCaixa ? "none" : "";
+  const cols = isAtendenteCaixa ? 8 : 9;
   if (!lista.length) {
     valeConsumoAtualizarTotaisBar([]);
     tb.innerHTML =
-      '<tr class="vale-consumo-tabela-msg"><td colspan="9" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>';
+      `<tr class="vale-consumo-tabela-msg"><td colspan="${cols}" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>`;
     return;
   }
   valeConsumoAtualizarTotaisBar(lista);
@@ -447,6 +452,12 @@ function valeConsumoRenderDetalhe(tb, lista) {
       const vt = fmtBRLValeConsumo(valeConsumoLinhaTotal(r));
       const usuario = escapeHtml(String(r.usuario_nome || "—"));
       const obs = escapeHtml(String(r.observacao || "").slice(0, 80));
+      const acoes = isAtendenteCaixa
+        ? ""
+        : `<td class="table-actions" data-label="Ações">
+          <button type="button" class="table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
+          <button type="button" class="table-action danger" data-valecons-action="del" data-id="${id}">Excluir</button>
+        </td>`;
       return `<tr>
         <td data-label="ID">${id}</td>
         <td data-label="Data">${dt}</td>
@@ -456,10 +467,7 @@ function valeConsumoRenderDetalhe(tb, lista) {
         <td data-label="Total" style="text-align:right;font-weight:600">${vt}</td>
         <td data-label="Usuário">${usuario}</td>
         <td data-label="Obs.">${obs || "—"}</td>
-        <td class="table-actions" data-label="Ações">
-          <button type="button" class="table-action" data-valecons-action="edit" data-id="${id}">Editar</button>
-          <button type="button" class="table-action danger" data-valecons-action="del" data-id="${id}">Excluir</button>
-        </td>
+        ${acoes}
       </tr>`;
     })
     .join("");
