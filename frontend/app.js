@@ -2258,6 +2258,41 @@ function attachCpfMask(input) {
   if (input.value) input.value = formatCpfMask(input.value);
 }
 
+/** Linha digitável do boleto (47 dígitos) — mesmo padrão de digitação do CPF: só números e máscara automática. */
+function formatNumeroBoletoMask(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return "";
+  const suffixMatch = raw.match(/^(.+?)(-\d{4}-\d{2}-\d{2})$/);
+  const suffix = suffixMatch ? suffixMatch[2] : "";
+  const base = (suffixMatch ? suffixMatch[1] : raw).trim();
+  if (/[A-Za-z]/.test(base.replace(/[\s.\-]/g, ""))) return raw;
+
+  const digits = base.replace(/\D/g, "").slice(0, 47);
+  if (!digits.length) return suffix;
+
+  let formatted;
+  const len = digits.length;
+  if (len <= 5) formatted = digits;
+  else if (len <= 10) formatted = `${digits.slice(0, 5)}.${digits.slice(5)}`;
+  else if (len <= 15) formatted = `${digits.slice(0, 5)}.${digits.slice(5, 10)} ${digits.slice(10)}`;
+  else if (len <= 21) formatted = `${digits.slice(0, 5)}.${digits.slice(5, 10)} ${digits.slice(10, 15)}.${digits.slice(15)}`;
+  else if (len <= 26) formatted = `${digits.slice(0, 5)}.${digits.slice(5, 10)} ${digits.slice(10, 15)}.${digits.slice(15, 21)} ${digits.slice(21)}`;
+  else if (len <= 32) formatted = `${digits.slice(0, 5)}.${digits.slice(5, 10)} ${digits.slice(10, 15)}.${digits.slice(15, 21)} ${digits.slice(21, 26)}.${digits.slice(26)}`;
+  else if (len <= 33) formatted = `${digits.slice(0, 5)}.${digits.slice(5, 10)} ${digits.slice(10, 15)}.${digits.slice(15, 21)} ${digits.slice(21, 26)}.${digits.slice(26, 32)} ${digits.slice(32)}`;
+  else formatted = `${digits.slice(0, 5)}.${digits.slice(5, 10)} ${digits.slice(10, 15)}.${digits.slice(15, 21)} ${digits.slice(21, 26)}.${digits.slice(26, 32)} ${digits.slice(32, 33)} ${digits.slice(33)}`;
+
+  return formatted + suffix;
+}
+
+function attachNumeroBoletoMask(input) {
+  if (!input || input._numeroBoletoMaskBound) return;
+  input._numeroBoletoMaskBound = true;
+  input.addEventListener("input", () => {
+    input.value = formatNumeroBoletoMask(input.value);
+  });
+  if (input.value) input.value = formatNumeroBoletoMask(input.value);
+}
+
 function updateSaidaDestinoVisibility() {
   const motivo = (dom.saidaMotivo?.value || "").toUpperCase();
   const isTransferencia = motivo === "TRANSFERENCIA";
@@ -16955,6 +16990,9 @@ function setupBoletosModule() {
 
   // Submit do formulario de boleto
   if (boletoForm) {
+    const numeroBoletoInput = boletoForm.querySelector('[name="numero_boleto"]');
+    if (numeroBoletoInput) attachNumeroBoletoMask(numeroBoletoInput);
+
     // Máscara para WhatsApp
     const whatsappInput = document.getElementById('whatsapp_pagador');
     if (whatsappInput) {
@@ -16994,7 +17032,7 @@ function setupBoletosModule() {
         showToast('Preencha a descrição.', 'error');
         return;
       }
-      if (!numeroBoleto) {
+      if (!numeroBoleto.replace(/\D/g, "")) {
         showToast('Preencha o número do boleto.', 'error');
         return;
       }
@@ -20748,7 +20786,10 @@ async function editarBoleto(id) {
     valorInput.dataset.value = String(boleto.valor || 0);
     valorInput.value = boleto.valor ? formatCurrencyBRL(parseFloat(boleto.valor)) : '';
     form.querySelector('[name="categoria"]').value = boleto.categoria || '';
-    form.querySelector('[name="numero_boleto"]').value = boleto.numero_boleto || '';
+    const numeroBoletoEl = form.querySelector('[name="numero_boleto"]');
+    if (numeroBoletoEl) {
+      numeroBoletoEl.value = formatNumeroBoletoMask(boleto.numero_boleto || '');
+    }
     form.querySelector('[name="nome_pagador"]').value = boleto.nome_pagador || '';
     form.querySelector('[name="whatsapp_pagador"]').value = boleto.whatsapp_pagador || '';
     form.querySelector('[name="status"]').value = boleto.status;
@@ -20848,7 +20889,7 @@ async function mostrarDetalhesBoleto(id) {
           <p style="margin: 0.5rem 0;"><strong>Fornecedor:</strong> ${boleto.fornecedor}</p>
           <p style="margin: 0.5rem 0;"><strong>Descrição:</strong> ${boleto.descricao || '-'}</p>
           <p style="margin: 0.5rem 0;"><strong>Categoria:</strong> ${boleto.categoria || '-'}</p>
-          <p style="margin: 0.5rem 0;"><strong>Número do Boleto:</strong> ${boleto.numero_boleto || '-'}</p>
+          <p style="margin: 0.5rem 0;"><strong>Número do Boleto:</strong> ${escapeHtml(formatNumeroBoletoMask(boleto.numero_boleto || '') || '-')}</p>
           <p style="margin: 0.5rem 0;"><strong>Nome do Pagador:</strong> ${boleto.nome_pagador || '-'}</p>
           <p style="margin: 0.5rem 0;"><strong>WhatsApp:</strong> ${boleto.whatsapp_pagador || '-'}</p>
           <p style="margin: 0.5rem 0;">
@@ -21183,6 +21224,7 @@ function setupForms() {
   attachCurrencyMask(dom.loteForm?.elements.custo_unitario);
   const boletoFormEl = document.getElementById('boletoForm');
   if (boletoFormEl) {
+    attachNumeroBoletoMask(boletoFormEl.querySelector('[name="numero_boleto"]'));
     attachCurrencyMask(boletoFormEl.querySelector('[name="valor"]'));
     attachCurrencyMask(boletoFormEl.querySelector('[name="valor_pago"]'));
   }
