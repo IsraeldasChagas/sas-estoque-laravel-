@@ -14814,15 +14814,18 @@ function renderBoletos(boletos) {
         }
       }
       
-      // Determina o ícone do anexo baseado no tipo
+      // Determina os ícones dos anexos
+      const anexos = boletoObterAnexos(boleto);
       let anexoIcon = '';
-      if (boleto.anexo_path) {
-        const tipo = (boleto.anexo_tipo || '').toLowerCase();
-        if (tipo === 'pdf') {
-          anexoIcon = `<a href="${API_URL}/boletos/${boleto.id}/anexo" target="_blank" title="Baixar ${boleto.anexo_nome}" style="font-size: 1.5rem; text-decoration: none;">📄</a>`;
-        } else {
-          anexoIcon = `<a href="${API_URL}/boletos/${boleto.id}/anexo" target="_blank" title="Baixar ${boleto.anexo_nome}" style="font-size: 1.5rem; text-decoration: none;">🖼️</a>`;
-        }
+      if (anexos.length) {
+        anexoIcon = anexos
+          .map((a) => {
+            const href = boletoAnexoDownloadUrl(a, boleto.id);
+            const icon = boletoAnexoIcon(a.tipo, a.tipo_arquivo);
+            const title = escapeHtml(a.nome || 'Anexo');
+            return `<a href="${href}" target="_blank" title="${title}" style="font-size:1.3rem;text-decoration:none;margin:0 2px;">${icon}</a>`;
+          })
+          .join('');
       } else {
         anexoIcon = '<span style="color: #ccc;">-</span>';
       }
@@ -16550,6 +16553,115 @@ function setupReservasMesasModule() {
   }
 }
 
+const BOLETO_ANEXO_MAX_BYTES = 5 * 1024 * 1024;
+
+function boletoAnexoIcon(tipo, ext) {
+  const e = String(ext || "").toLowerCase();
+  if (tipo === "nota") return e === "pdf" ? "🧾" : "📄";
+  return e === "pdf" ? "📄" : "🖼️";
+}
+
+function boletoObterAnexos(boleto) {
+  if (Array.isArray(boleto?.anexos) && boleto.anexos.length) return boleto.anexos;
+  if (boleto?.anexo_path) {
+    return [{
+      id: null,
+      tipo: "boleto",
+      nome: boleto.anexo_nome || "Anexo",
+      tipo_arquivo: boleto.anexo_tipo || "",
+      legacy: true,
+      boleto_id: boleto.id,
+    }];
+  }
+  return [];
+}
+
+function boletoAnexoDownloadUrl(anexo, boletoId) {
+  if (anexo?.id) return `${API_URL}/boletos/anexos/${anexo.id}`;
+  if (anexo?.legacy && boletoId) return `${API_URL}/boletos/${boletoId}/anexo`;
+  return "#";
+}
+
+function renderBoletoAnexosPreview(inputEl, previewEl) {
+  if (!previewEl) return;
+  if (!inputEl?.files?.length) {
+    previewEl.innerHTML = "";
+    previewEl.style.display = "none";
+    return;
+  }
+  const invalido = Array.from(inputEl.files).find((file) => file.size > BOLETO_ANEXO_MAX_BYTES);
+  if (invalido) {
+    showToast(`Arquivo "${invalido.name}" excede 5MB`, "error");
+    inputEl.value = "";
+    previewEl.innerHTML = "";
+    previewEl.style.display = "none";
+    return;
+  }
+  previewEl.innerHTML = Array.from(inputEl.files)
+    .map((file) => {
+      const icon = file.type.includes("pdf") ? "📄" : "🖼️";
+      return `<div class="boleto-anexo-preview-item" style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;padding:0.65rem 0.85rem;background:#f5f5f5;border-radius:8px;border-left:3px solid #4caf50;">
+        <span style="font-size:1.3rem;">${icon}</span>
+        <div><strong style="display:block;color:#263238;">${escapeHtml(file.name)}</strong><small style="color:#607d8b;">${escapeHtml(formatFileSize(file.size))}</small></div>
+      </div>`;
+    })
+    .join("");
+  previewEl.style.display = "block";
+}
+
+function renderBoletoAnexosAtual(anexos, containerEl, boletoId, tipo) {
+  if (!containerEl) return;
+  const lista = (anexos || []).filter((a) => String(a?.tipo || "boleto") === tipo);
+  if (!lista.length) {
+    containerEl.innerHTML = "";
+    containerEl.style.display = "none";
+    return;
+  }
+  const tipoLabel = tipo === "nota" ? "Nota(s) anexada(s)" : "Boleto(s) anexado(s)";
+  containerEl.innerHTML =
+    `<div style="margin-top:0.75rem;padding:0.85rem 1rem;background:#e8f5e9;border-radius:8px;border:1px solid #a5d6a7;">
+      <strong style="color:#1b5e20;display:block;margin-bottom:0.5rem;">${tipoLabel}</strong>` +
+    lista
+      .map((anexo) => {
+        const aid = anexo.id ? String(anexo.id) : "";
+        const href = boletoAnexoDownloadUrl(anexo, boletoId);
+        const icon = boletoAnexoIcon(anexo.tipo, anexo.tipo_arquivo);
+        const btn = aid
+          ? `<button type="button" class="btn secondary boleto-remover-anexo-item" data-anexo-id="${escapeHtml(aid)}" style="white-space:nowrap;">Remover</button>`
+          : `<button type="button" class="btn secondary boleto-remover-anexo-item" data-boleto-id="${escapeHtml(String(boletoId))}" data-legacy="1" style="white-space:nowrap;">Remover</button>`;
+        return `<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.5rem;margin-top:0.35rem;">
+          <div style="min-width:0;"><span>${icon}</span> <a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#1565c0;word-break:break-all;">${escapeHtml(anexo.nome || "Anexo")}</a></div>
+          ${btn}
+        </div>`;
+      })
+      .join("") +
+    `</div>`;
+  containerEl.style.display = "block";
+}
+
+function limparBoletoAnexosUI() {
+  ["boletoAnexosBoletoInput", "boletoAnexosNotaInput"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  ["boletoAnexosBoletoPreview", "boletoAnexosNotaPreview", "boletoAnexosBoletoAtual", "boletoAnexosNotaAtual"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = "";
+      el.style.display = "none";
+    }
+  });
+}
+
+function appendBoletoAnexosFormData(formData, inputEl, fieldName) {
+  if (!inputEl?.files?.length) return;
+  formData.delete(fieldName);
+  formData.delete(`${fieldName}[]`);
+  Array.from(inputEl.files).forEach((file) => {
+    formData.append(`${fieldName}[]`, file);
+  });
+}
+
 function setupBoletosModule() {
   const openNovoBoletoBtn = document.getElementById('openNovoBoleto');
   const recarregarTabelaBoletos = document.getElementById('recarregarTabelaBoletos');
@@ -16561,9 +16673,10 @@ function setupBoletosModule() {
   const boletosUnidadeFiltro = document.getElementById('boletosUnidadeFiltro');
   const boletosStatusFiltro = document.getElementById('boletosStatusFiltro');
   const limparFiltrosBoletos = document.getElementById('limparFiltrosBoletos');
-  const boletoAnexoInput = document.getElementById('boletoAnexoInput');
-  const boletoAnexoPreview = document.getElementById('boletoAnexoPreview');
-  const boletoRemoverAnexo = document.getElementById('boletoRemoverAnexo');
+  const boletoAnexosBoletoInput = document.getElementById('boletoAnexosBoletoInput');
+  const boletoAnexosNotaInput = document.getElementById('boletoAnexosNotaInput');
+  const boletoAnexosBoletoPreview = document.getElementById('boletoAnexosBoletoPreview');
+  const boletoAnexosNotaPreview = document.getElementById('boletoAnexosNotaPreview');
   const boletoRecorrente = document.getElementById('boletoRecorrente');
   const recorrenteFields = document.getElementById('recorrenteFields');
   
@@ -16628,54 +16741,40 @@ function setupBoletosModule() {
     });
   }
 
-  // Preview do anexo
-  if (boletoAnexoInput) {
-    boletoAnexoInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        // Verifica tamanho (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          showToast('Arquivo muito grande! Máximo 5MB', 'error');
-          boletoAnexoInput.value = '';
-          return;
-        }
-
-        // Mostra preview
-        const nomeEl = document.getElementById('boletoAnexoNome');
-        const tamanhoEl = document.getElementById('boletoAnexoTamanho');
-        if (nomeEl) nomeEl.textContent = file.name;
-        if (tamanhoEl) tamanhoEl.textContent = formatFileSize(file.size);
-        if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'block';
-      }
+  if (boletoAnexosBoletoInput) {
+    boletoAnexosBoletoInput.addEventListener('change', () => {
+      renderBoletoAnexosPreview(boletoAnexosBoletoInput, boletoAnexosBoletoPreview);
     });
   }
 
-  // Remove anexo antes de enviar
-  if (boletoRemoverAnexo) {
-    boletoRemoverAnexo.addEventListener('click', () => {
-      if (boletoAnexoInput) boletoAnexoInput.value = '';
-      if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+  if (boletoAnexosNotaInput) {
+    boletoAnexosNotaInput.addEventListener('change', () => {
+      renderBoletoAnexosPreview(boletoAnexosNotaInput, boletoAnexosNotaPreview);
     });
   }
 
-  const boletoRemoverAnexoAtual = document.getElementById('boletoRemoverAnexoAtual');
-  if (boletoRemoverAnexoAtual && boletoForm) {
-    boletoRemoverAnexoAtual.addEventListener('click', async () => {
-      const id = boletoForm.querySelector('input[name="id"]')?.value?.trim();
-      if (!id) return;
+  if (boletoForm) {
+    boletoForm.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.boleto-remover-anexo-item');
+      if (!btn || !boletoForm.contains(btn)) return;
       if (!currentUser?.id) {
         showToast('Sessão expirada. Faça login novamente.', 'error');
         return;
       }
-      if (!confirm('Remover o anexo deste boleto? O ficheiro será apagado do servidor.')) return;
+      if (!confirm('Remover este anexo? O ficheiro será apagado do servidor.')) return;
       try {
-        boletoRemoverAnexoAtual.disabled = true;
-        const res = await fetch(`${API_URL}/boletos/${id}/anexo`, {
+        btn.disabled = true;
+        const anexoId = btn.getAttribute('data-anexo-id');
+        const boletoId = btn.getAttribute('data-boleto-id');
+        const url = anexoId
+          ? `${API_URL}/boletos/anexos/${encodeURIComponent(anexoId)}`
+          : `${API_URL}/boletos/${encodeURIComponent(boletoId)}/anexo`;
+        const res = await fetch(url, {
           method: 'DELETE',
           headers: {
             Accept: 'application/json',
-            'X-Usuario-Id': String(currentUser.id)
-          }
+            'X-Usuario-Id': String(currentUser.id),
+          },
         });
         if (!res.ok) {
           const t = await res.text();
@@ -16686,18 +16785,19 @@ function setupBoletosModule() {
           } catch (_) {}
           throw new Error(msg || `Erro ${res.status}`);
         }
-        const wrap = document.getElementById('boletoAnexoAtualWrap');
-        if (wrap) wrap.style.display = 'none';
-        const link = document.getElementById('boletoAnexoAtualLink');
-        if (link) {
-          link.href = '#';
-          link.textContent = '—';
-        }
         showToast('Anexo removido.', 'success');
-      } catch (e) {
-        showToast('Erro ao remover anexo: ' + (e.message || ''), 'error');
+        const id = boletoForm.querySelector('input[name="id"]')?.value?.trim();
+        if (id) {
+          const boleto = await fetchJSON(`/boletos/${encodeURIComponent(id)}`);
+          renderBoletoAnexosAtual(boletoObterAnexos(boleto), document.getElementById('boletoAnexosBoletoAtual'), boleto.id, 'boleto');
+          renderBoletoAnexosAtual(boletoObterAnexos(boleto), document.getElementById('boletoAnexosNotaAtual'), boleto.id, 'nota');
+        } else {
+          btn.closest('.boleto-anexos-atual-list, div')?.remove();
+        }
+      } catch (err) {
+        showToast('Erro ao remover anexo: ' + (err.message || ''), 'error');
       } finally {
-        boletoRemoverAnexoAtual.disabled = false;
+        btn.disabled = false;
       }
     });
   }
@@ -16710,14 +16810,7 @@ function setupBoletosModule() {
     if (idEl) idEl.value = '';
     const pagamentoFields = document.getElementById('pagamentoFields');
     if (pagamentoFields) pagamentoFields.style.display = 'none';
-    if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
-    const anexoAtualWrap = document.getElementById('boletoAnexoAtualWrap');
-    if (anexoAtualWrap) anexoAtualWrap.style.display = 'none';
-    const anexoAtualLink = document.getElementById('boletoAnexoAtualLink');
-    if (anexoAtualLink) {
-      anexoAtualLink.href = '#';
-      anexoAtualLink.textContent = '—';
-    }
+    limparBoletoAnexosUI();
     const recorrenteFields = document.getElementById('recorrenteFields');
     if (recorrenteFields) recorrenteFields.style.display = 'none';
     const boletoRecorrente = document.getElementById('boletoRecorrente');
@@ -16946,11 +17039,11 @@ function setupBoletosModule() {
           console.log(`  ${key}:`, value instanceof File ? `[Arquivo: ${value.name}]` : value);
         }
         
-        // Se não houver arquivo, remove do FormData
-        if (!boletoAnexoInput?.files[0]) {
-          formData.delete('anexo');
-          console.log('ℹ️ Nenhum anexo selecionado');
-        }
+        formData.delete('anexo');
+        formData.delete('anexos_boleto[]');
+        formData.delete('anexos_nota[]');
+        appendBoletoAnexosFormData(formData, boletoAnexosBoletoInput, 'anexos_boleto');
+        appendBoletoAnexosFormData(formData, boletoAnexosNotaInput, 'anexos_nota');
 
         // Verifica se é recorrente
         const isRecorrente = formData.get('is_recorrente') === '1';
@@ -16971,7 +17064,7 @@ function setupBoletosModule() {
               
               // Copia todos os campos exceto recorrência
               for (let [key, value] of formData.entries()) {
-                if (key !== 'is_recorrente' && key !== 'meses_recorrencia' && key !== 'anexo') {
+                if (key !== 'is_recorrente' && key !== 'meses_recorrencia' && !key.startsWith('anexos_boleto') && !key.startsWith('anexos_nota') && key !== 'anexo') {
                   formDataCopy.append(key, value);
                 }
               }
@@ -16986,9 +17079,9 @@ function setupBoletosModule() {
                 String(dataVencimento.getDate()).padStart(2, '0');
               formDataCopy.set('data_vencimento', novaDataStr);
               
-              // Adiciona anexo apenas no primeiro boleto
-              if (i === 0 && boletoAnexoInput?.files[0]) {
-                formDataCopy.append('anexo', boletoAnexoInput.files[0]);
+              if (i === 0) {
+                appendBoletoAnexosFormData(formDataCopy, boletoAnexosBoletoInput, 'anexos_boleto');
+                appendBoletoAnexosFormData(formDataCopy, boletoAnexosNotaInput, 'anexos_nota');
               }
 
               console.log(`📤 Enviando boleto ${i + 1}/${mesesRecorrencia}...`);
@@ -17118,15 +17211,8 @@ function setupBoletosModule() {
         boletoForm.dataset.mode = 'create';
         const idReset = boletoForm.querySelector('input[name="id"]');
         if (idReset) idReset.value = '';
-        if (boletoAnexoPreview) boletoAnexoPreview.style.display = 'none';
+        limparBoletoAnexosUI();
         if (recorrenteFields) recorrenteFields.style.display = 'none';
-        const anexoAtualW = document.getElementById('boletoAnexoAtualWrap');
-        if (anexoAtualW) anexoAtualW.style.display = 'none';
-        const anexoAtualL = document.getElementById('boletoAnexoAtualLink');
-        if (anexoAtualL) {
-          anexoAtualL.href = '#';
-          anexoAtualL.textContent = '—';
-        }
         
         // Reabilita o botão
         if (submitBtn) {
@@ -20668,24 +20754,10 @@ async function editarBoleto(id) {
     if (recorrenteFields) recorrenteFields.style.display = 'none';
     if (boletoRecorrente) boletoRecorrente.checked = false;
 
-    const anexoEl = document.getElementById('boletoAnexoInput');
-    if (anexoEl) anexoEl.value = '';
-    const anexoPreview = document.getElementById('boletoAnexoPreview');
-    if (anexoPreview) anexoPreview.style.display = 'none';
-
-    const anexoAtualWrap = document.getElementById('boletoAnexoAtualWrap');
-    const anexoAtualLink = document.getElementById('boletoAnexoAtualLink');
-    if (boleto.anexo_path && anexoAtualWrap && anexoAtualLink) {
-      anexoAtualWrap.style.display = 'block';
-      anexoAtualLink.href = `${API_URL}/boletos/${boleto.id}/anexo`;
-      anexoAtualLink.textContent = boleto.anexo_nome || 'Baixar anexo';
-    } else if (anexoAtualWrap) {
-      anexoAtualWrap.style.display = 'none';
-      if (anexoAtualLink) {
-        anexoAtualLink.href = '#';
-        anexoAtualLink.textContent = '—';
-      }
-    }
+    limparBoletoAnexosUI();
+    const anexos = boletoObterAnexos(boleto);
+    renderBoletoAnexosAtual(anexos, document.getElementById('boletoAnexosBoletoAtual'), boleto.id, 'boleto');
+    renderBoletoAnexosAtual(anexos, document.getElementById('boletoAnexosNotaAtual'), boleto.id, 'nota');
     
     // Atualiza título e abre modal
     document.getElementById('boletoModalTitle').textContent = '✏️ Editar Boleto';
@@ -20793,15 +20865,21 @@ async function mostrarDetalhesBoleto(id) {
       `;
     }
     
-    if (boleto.anexo_path) {
+    const anexosDetalhe = boletoObterAnexos(boleto);
+    if (anexosDetalhe.length) {
+      const boletosHtml = anexosDetalhe
+        .filter((a) => String(a.tipo || 'boleto') === 'boleto')
+        .map((a) => `<li><a href="${boletoAnexoDownloadUrl(a, boleto.id)}" target="_blank" style="color:#388e3c;text-decoration:underline;">${escapeHtml(a.nome || 'Download')}</a></li>`)
+        .join('');
+      const notasHtml = anexosDetalhe
+        .filter((a) => String(a.tipo) === 'nota')
+        .map((a) => `<li><a href="${boletoAnexoDownloadUrl(a, boleto.id)}" target="_blank" style="color:#388e3c;text-decoration:underline;">${escapeHtml(a.nome || 'Download')}</a></li>`)
+        .join('');
       html += `
         <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px;">
-          <h3 style="margin: 0 0 0.5rem 0; color: #388e3c;">📎 Anexo</h3>
-          <p style="margin: 0;">
-            <a href="${API_URL}/boletos/${boleto.id}/anexo" target="_blank" style="color: #388e3c; text-decoration: underline;">
-              ${boleto.anexo_nome || 'Download'}
-            </a>
-          </p>
+          <h3 style="margin: 0 0 0.5rem 0; color: #388e3c;">📎 Anexos</h3>
+          ${boletosHtml ? `<p style="margin:0.35rem 0;"><strong>Boletos:</strong></p><ul style="margin:0 0 0.75rem 1rem;">${boletosHtml}</ul>` : ''}
+          ${notasHtml ? `<p style="margin:0.35rem 0;"><strong>Notas:</strong></p><ul style="margin:0 0 0 1rem;">${notasHtml}</ul>` : ''}
         </div>
       `;
     }
@@ -20824,10 +20902,13 @@ async function mostrarDetalhesBoleto(id) {
     if (boleto.numero_boleto) textZap += `🔢 *Número do Boleto:*\n${boleto.numero_boleto}\n\n`;
     textZap += `📅 *Vencimento:* ${formatDate(boleto.data_vencimento)}\n`;
     textZap += `💰 *Valor:* R$ ${parseFloat(boleto.valor).toFixed(2)}\n\n`;
-    if (boleto.anexo_path) {
-      // Usa exatamente a mesma lógica que o botão de anexo que funciona na tela usa (API_URL)
+    if (anexosDetalhe.some((a) => String(a.tipo || 'boleto') === 'boleto')) {
       const baseUrl = API_URL.startsWith('http') ? API_URL : window.location.origin + API_URL;
-      textZap += `⬇️ *Baixar PDF do Boleto:*\n${baseUrl}/boletos/${boleto.id}/anexo\n\n`;
+      const links = anexosDetalhe
+        .filter((a) => String(a.tipo || 'boleto') === 'boleto')
+        .map((a) => boletoAnexoDownloadUrl(a, boleto.id).replace(API_URL, baseUrl))
+        .join('\n');
+      textZap += `⬇️ *Baixar PDF do Boleto:*\n${links}\n\n`;
     }
     
     textZap += `Após o pagamento, por favor, nos envie o comprovante por aqui para que possamos dar baixa no sistema. Obrigado! 🤝`;

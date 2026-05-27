@@ -5493,6 +5493,11 @@ Route::get('/boletos/{id}/anexo', function (Request $request, $id) {
     return $controller->downloadAnexo($id);
 });
 
+Route::get('/boletos/anexos/{anexoId}', function (Request $request, $anexoId) {
+    $controller = new BoletoController();
+    return $controller->downloadAnexoPorId($anexoId);
+});
+
 // Remover anexo
 Route::delete('/boletos/{id}/anexo', function (Request $request, $id) {
     $controller = new BoletoController();
@@ -5503,7 +5508,23 @@ Route::delete('/boletos/{id}/anexo', function (Request $request, $id) {
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
 
+Route::delete('/boletos/anexos/{anexoId}', function (Request $request, $anexoId) {
+    $controller = new BoletoController();
+    $response = $controller->removerAnexoPorId($anexoId);
+    return $response
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
 Route::options('/boletos/{id}/anexo', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::options('/boletos/anexos/{anexoId}', function () {
     return response()->json([])
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS')
@@ -5653,7 +5674,7 @@ $sasBackupOrdemRestorePreferencial = static function (): array {
         'lotes', 'stock_lotes', 'movimentacoes',
         'listas_compras', 'listas_itens',
         'estabelecimentos_compra', 'estabelecimentos_globais',
-        'boletos', 'alvaras',
+        'boletos', 'boleto_anexos', 'alvaras',
         'patrimonio_categorias', 'patrimonios', 'patrimonio_movimentacoes', 'patrimonio_manutencoes',
         'patrimonio_documentos', 'patrimonio_fotos', 'patrimonio_historico', 'patrimonio_inventario', 'patrimonio_inventario_itens',
         'proventos', 'proventos_assinaturas', 'proventos_logs',

@@ -56,4 +56,9 @@ class Boleto extends Model
     {
         return $this->belongsTo(Usuario::class);
     }
+
+    public function anexos()
+    {
+        return $this->hasMany(BoletoAnexo::class)->orderBy('id');
+    }
 }
