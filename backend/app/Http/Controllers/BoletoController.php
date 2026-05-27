@@ -17,6 +17,53 @@ class BoletoController extends Controller
         return Schema::hasTable('boleto_anexos');
     }
 
+    private function normalizarNumeroBoleto(?string $numero): string
+    {
+        $s = strtoupper(trim((string) $numero));
+
+        return preg_replace('/[\s.\-\/]/', '', $s) ?? '';
+    }
+
+    private function buscarBoletoDuplicado(string $numero, ?int $ignorarId = null): ?Boleto
+    {
+        $norm = $this->normalizarNumeroBoleto($numero);
+        if ($norm === '') {
+            return null;
+        }
+
+        $query = Boleto::query()
+            ->whereNotNull('numero_boleto')
+            ->where('numero_boleto', '!=', '');
+
+        if ($ignorarId) {
+            $query->where('id', '!=', $ignorarId);
+        }
+
+        foreach ($query->get(['id', 'numero_boleto', 'fornecedor', 'data_vencimento']) as $boleto) {
+            if ($this->normalizarNumeroBoleto($boleto->numero_boleto) === $norm) {
+                return $boleto;
+            }
+        }
+
+        return null;
+    }
+
+    private function respostaNumeroBoletoDuplicado(Boleto $existente)
+    {
+        $venc = $existente->data_vencimento
+            ? \Carbon\Carbon::parse($existente->data_vencimento)->format('d/m/Y')
+            : '—';
+
+        return response()->json([
+            'message' => 'Este número de boleto já está cadastrado.',
+            'errors' => [
+                'numero_boleto' => [
+                    "Boleto #{$existente->id} ({$existente->fornecedor}, venc. {$venc}) já usa este número.",
+                ],
+            ],
+        ], 422);
+    }
+
     private function salvarArquivoAnexo(UploadedFile $file, string $tipo): array
     {
         $nomeOriginal = $file->getClientOriginalName();
@@ -212,7 +259,7 @@ class BoletoController extends Controller
             'valor_pago' => 'nullable|numeric|min:0',
             'juros_multa' => 'nullable|numeric|min:0',
             'observacoes' => 'nullable|string',
-            'numero_boleto' => 'nullable|string|max:255',
+            'numero_boleto' => 'required|string|max:255',
             'nome_pagador' => 'nullable|string|max:255',
             'whatsapp_pagador' => 'nullable|string|max:20',
             'is_recorrente' => 'nullable|boolean',
@@ -231,6 +278,12 @@ class BoletoController extends Controller
 
         try {
             $data = $request->except(['anexo', 'anexos_boleto', 'anexos_nota']);
+            $data['numero_boleto'] = trim((string) ($data['numero_boleto'] ?? ''));
+
+            $duplicado = $this->buscarBoletoDuplicado($data['numero_boleto']);
+            if ($duplicado) {
+                return $this->respostaNumeroBoletoDuplicado($duplicado);
+            }
 
             $usuarioId = $request->header('X-Usuario-Id');
             if ($usuarioId) {
@@ -312,7 +365,7 @@ class BoletoController extends Controller
             'valor_pago' => 'nullable|numeric|min:0',
             'juros_multa' => 'nullable|numeric|min:0',
             'observacoes' => 'nullable|string',
-            'numero_boleto' => 'nullable|string|max:255',
+            'numero_boleto' => 'required|string|max:255',
             'nome_pagador' => 'nullable|string|max:255',
             'whatsapp_pagador' => 'nullable|string|max:20',
         ], $this->regrasAnexos()));
@@ -330,6 +383,17 @@ class BoletoController extends Controller
 
             $allowed = array_flip((new Boleto)->getFillable());
             $data = array_intersect_key($data, $allowed);
+
+            if (isset($data['numero_boleto'])) {
+                $data['numero_boleto'] = trim((string) $data['numero_boleto']);
+            } else {
+                $data['numero_boleto'] = trim((string) $boleto->numero_boleto);
+            }
+
+            $duplicado = $this->buscarBoletoDuplicado($data['numero_boleto'], (int) $boleto->id);
+            if ($duplicado) {
+                return $this->respostaNumeroBoletoDuplicado($duplicado);
+            }
 
             $boleto->update($data);
             $this->processarAnexosRequest($request, $boleto);

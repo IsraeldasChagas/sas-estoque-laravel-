@@ -16982,6 +16982,7 @@ function setupBoletosModule() {
       const fornecedor = boletoForm.querySelector('[name="fornecedor"]')?.value?.trim();
       const descricao = boletoForm.querySelector('[name="descricao"]')?.value?.trim();
       const dataVenc = boletoForm.querySelector('[name="data_vencimento"]')?.value;
+      const numeroBoleto = boletoForm.querySelector('[name="numero_boleto"]')?.value?.trim();
       let valorStr = boletoForm.querySelector('[name="valor"]')?.value;
       
       if (!fornecedor) {
@@ -16990,6 +16991,10 @@ function setupBoletosModule() {
       }
       if (!descricao) {
         showToast('Preencha a descrição.', 'error');
+        return;
+      }
+      if (!numeroBoleto) {
+        showToast('Preencha o número do boleto.', 'error');
         return;
       }
       if (!dataVenc) {
@@ -17022,6 +17027,7 @@ function setupBoletosModule() {
         const formData = new FormData(boletoForm);
         formData.set('valor', valor.toFixed(2));
         formData.set('valor_pago', valorPago.toFixed(2));
+        formData.set('numero_boleto', numeroBoleto);
         // Multipart envia "" nos number hidden; JSON antigo mandava número — evita 422 em juros_multa / meses
         const jurosEl = boletoForm.querySelector('[name="juros_multa"]');
         if (jurosEl) {
@@ -17078,6 +17084,11 @@ function setupBoletosModule() {
                 String(dataVencimento.getMonth() + 1).padStart(2, '0') + '-' +
                 String(dataVencimento.getDate()).padStart(2, '0');
               formDataCopy.set('data_vencimento', novaDataStr);
+
+              const numeroBase = String(formData.get('numero_boleto') || '').trim();
+              if (i > 0 && numeroBase) {
+                formDataCopy.set('numero_boleto', `${numeroBase}-${novaDataStr}`);
+              }
               
               if (i === 0) {
                 appendBoletoAnexosFormData(formDataCopy, boletoAnexosBoletoInput, 'anexos_boleto');
@@ -17100,7 +17111,16 @@ function setupBoletosModule() {
               } else {
                 erros++;
                 const errorText = await response.text();
-                console.error(`❌ Erro no boleto ${i + 1}:`, errorText);
+                let msg = errorText;
+                try {
+                  const j = JSON.parse(errorText);
+                  msg = j.message || j.errors?.numero_boleto?.[0] || j.error || errorText;
+                } catch (_) {}
+                console.error(`❌ Erro no boleto ${i + 1}:`, msg);
+                if (response.status === 422) {
+                  showToast(msg, 'error');
+                  break;
+                }
               }
             } catch (err) {
               erros++;
