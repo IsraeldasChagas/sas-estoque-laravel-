@@ -8615,7 +8615,17 @@ $valeConsumoPodeVer = function ($perfil) use ($despFixasPodeGerir) {
     }
     $pNorm = str_replace(['_', '-'], ' ', $p);
 
-    return in_array($pNorm, ['CAIXA', 'ATENDENTE CAIXA'], true);
+    // Aceita variações como "ATENDENTE_CAIXA" / "ATENDENTE-CAIXA".
+    if (in_array($pNorm, ['CAIXA', 'ATENDENTE CAIXA'], true)) {
+        return true;
+    }
+
+    return str_contains($pNorm, 'CAIXA');
+};
+
+// Vale/Consumo: permitir inclusão (Salvar) para caixa, sem liberar edição/exclusão.
+$valeConsumoPodeIncluir = function ($perfil) use ($valeConsumoPodeVer) {
+    return $valeConsumoPodeVer($perfil);
 };
 
 $despFixasParseUnidadeIds = function ($raw) {
@@ -9542,7 +9552,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
     }
 });
 
-Route::post('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $despFixasPodeGerir, $valeConsumoValidarCompetencia) {
+Route::post('/financeiro/vale-consumo', function (Request $request) use ($proventosAuth, $valeConsumoPodeIncluir, $valeConsumoValidarCompetencia) {
     try {
         if (! Schema::hasTable('financeiro_vale_consumo')) {
             return response()->json(['error' => 'Módulo não configurado (migration pendente)'], 503)->header('Access-Control-Allow-Origin', '*');
@@ -9552,7 +9562,7 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
             return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         }
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (! $despFixasPodeGerir($perfil)) {
+        if (! $valeConsumoPodeIncluir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
         if (! Schema::hasTable('funcionarios')) {
