@@ -9972,53 +9972,48 @@ let submittingProduto = false;
 async function submitProduto(event) {
   event.preventDefault();
   if (submittingProduto) return;
-  submittingProduto = true;
-  console.log('🚀 === SUBMIT PRODUTO INICIADO ===');
-  
+
   const form = dom.produtosForm || document.getElementById('produtoForm');
-  
   if (!form) {
-    console.error('❌ Formulário não encontrado!');
     showToast("Erro: Formulário não encontrado.", "error");
     return;
   }
-  
-  console.log('📝 Coletando dados do formulário...');
-  
-  // Coleta codigo_barras e verifica se não é o texto placeholder
+
   const codigoBarrasValue = form.elements.codigo_barras.value.trim();
-  const codigoBarras = (codigoBarrasValue && codigoBarrasValue !== 'Gerado automaticamente') 
-    ? codigoBarrasValue 
+  const codigoBarras = (codigoBarrasValue && codigoBarrasValue !== 'Gerado automaticamente')
+    ? codigoBarrasValue
     : null;
-  
+
   const custoVal = Number(form.elements.custo_medio?.value || 0);
   const estoqueVal = Number(form.elements.estoque_minimo?.value || 0);
   const payload = {
     nome: form.elements.nome.value.trim(),
     categoria: form.elements.categoria.value,
     unidade_base: form.elements.unidade_base.value,
-    codigo_barras: codigoBarras,
     descricao: form.elements.descricao.value.trim() || null,
     custo_medio: isNaN(custoVal) ? 0 : custoVal,
     estoque_minimo: isNaN(estoqueVal) ? 0 : estoqueVal,
     unidade_id: form.elements.unidade_id?.value || null,
     ativo: Number(form.elements.ativo?.value || 1) || 1,
   };
-  
-  console.log('📊 Payload preparado:', payload);
-  
+
+  const id = form.elements.id.value;
+  // Novo: null para o servidor gerar. Edição: não envia vazio para não apagar o código existente.
+  if (!id) {
+    payload.codigo_barras = codigoBarras;
+  } else if (codigoBarras) {
+    payload.codigo_barras = codigoBarras;
+  }
+
   if (!payload.nome || !payload.categoria || !payload.unidade_base) {
-    console.warn('⚠️ Validação falhou - campos obrigatórios vazios');
     showToast("Preencha os campos obrigatorios.", "error");
     return;
   }
-  
-  const id = form.elements.id.value;
-  console.log('🔍 ID do produto:', id || 'NOVO PRODUTO');
-  
+
+  submittingProduto = true;
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn?.textContent || 'Salvar';
-  
+
   try {
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -10030,12 +10025,14 @@ async function submitProduto(event) {
     const method = id ? "PUT" : "POST";
     console.log(`📍 ${method} ${url}`);
     
-    const result = await fetchJSON(url, { 
-      method: method, 
-      body: JSON.stringify(payload) 
+    const result = await fetchJSON(url, {
+      method: method,
+      body: JSON.stringify(payload)
     });
-    
-    console.log('✅ Resposta da API:', result);
+
+    if (result?.codigo_barras && form.elements.codigo_barras) {
+      form.elements.codigo_barras.value = result.codigo_barras;
+    }
     showToast("Produto salvo com sucesso!", "success");
     toggleModal(dom.produtosModal, false);
     form.reset();
@@ -11618,7 +11615,11 @@ function setupModals() {
     let produtoSearchTimeout;
     produtoSearchEl.addEventListener("input", () => {
       clearTimeout(produtoSearchTimeout);
-      produtoSearchTimeout = setTimeout(() => loadProdutos(produtoSearchEl.value.trim()).catch(() => {}), 300);
+      produtoSearchTimeout = setTimeout(() => {
+        loadProdutos(produtoSearchEl.value.trim()).catch((err) => {
+          showToast(err?.message || "Erro ao pesquisar produtos.", "error");
+        });
+      }, 300);
     });
   }
 

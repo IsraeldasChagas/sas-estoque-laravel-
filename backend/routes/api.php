@@ -215,10 +215,13 @@ Route::get('/produtos', function (Request $request) {
             // Retorna todos os produtos
         }
         
-        // Filtro de pesquisa por nome
+        // Filtro de pesquisa por nome ou código interno (codigo_barras)
         if ($request->has('search') && trim((string)$request->search) !== '') {
             $termo = '%' . trim((string)$request->search) . '%';
-            $query->where('produtos.nome', 'like', $termo);
+            $query->where(function ($q) use ($termo) {
+                $q->where('produtos.nome', 'like', $termo)
+                  ->orWhere('produtos.codigo_barras', 'like', $termo);
+            });
         }
         
         $produtos = $query->orderBy('produtos.nome')->get();
@@ -438,8 +441,9 @@ Route::post('/produtos', function (Request $request) {
             ], 422);
         }
         
-        // Gera código_barras automaticamente se não fornecido
-        if (empty(trim((string)($data['codigo_barras'] ?? '')))) {
+        // Gera código interno (codigo_barras) se não fornecido ou placeholder legado
+        $codigoInformado = trim((string)($data['codigo_barras'] ?? ''));
+        if ($codigoInformado === '' || strcasecmp($codigoInformado, 'Gerado automaticamente') === 0) {
             $data['codigo_barras'] = 'PROD-' . date('YmdHis') . '-' . rand(1000, 9999);
             \Log::info('🔢 Código de barras gerado:', ['codigo' => $data['codigo_barras']]);
         }
@@ -479,22 +483,72 @@ Route::post('/produtos', function (Request $request) {
 });
 
 Route::put('/produtos/{id}', function (Request $request, $id) {
-    $data = $request->all();
-    if (!empty($data['nome'])) {
-        $nomeNorm = strtolower(trim($data['nome']));
-        $existe = DB::table('produtos')
-            ->whereRaw('LOWER(TRIM(nome)) = ?', [$nomeNorm])
-            ->where('id', '!=', $id)
-            ->exists();
-        if ($existe) {
-            return response()->json([
-                'error' => 'Já existe um produto com este nome.',
-                'message' => 'Já existe um produto com este nome.',
-            ], 422);
+    try {
+        $produto = DB::table('produtos')->where('id', $id)->first();
+        if (!$produto) {
+            return response()->json(['error' => 'Produto não encontrado', 'message' => 'Produto não encontrado'], 404);
         }
+
+        $data = $request->validate([
+            'nome' => 'sometimes|required|string',
+            'categoria' => 'sometimes|required|string',
+            'unidade_base' => 'sometimes|required|string',
+            'unidade_id' => 'nullable|integer',
+            'codigo_barras' => 'nullable|string',
+            'descricao' => 'nullable|string',
+            'custo_medio' => 'nullable|numeric',
+            'estoque_minimo' => 'nullable|numeric',
+            'ativo' => 'nullable|integer',
+        ]);
+
+        if (!empty($data['nome'])) {
+            $nomeNorm = strtolower(trim($data['nome']));
+            $existe = DB::table('produtos')
+                ->whereRaw('LOWER(TRIM(nome)) = ?', [$nomeNorm])
+                ->where('id', '!=', $id)
+                ->exists();
+            if ($existe) {
+                return response()->json([
+                    'error' => 'Já existe um produto com este nome.',
+                    'message' => 'Já existe um produto com este nome.',
+                ], 422);
+            }
+        }
+
+        // Não apaga código interno quando o front envia null/vazio/placeholder
+        if (array_key_exists('codigo_barras', $data)) {
+            $codigoInformado = trim((string)($data['codigo_barras'] ?? ''));
+            if ($codigoInformado === '' || strcasecmp($codigoInformado, 'Gerado automaticamente') === 0) {
+                unset($data['codigo_barras']);
+            }
+        }
+
+        $codigoAtual = trim((string)($produto->codigo_barras ?? ''));
+        $codigoInvalido = $codigoAtual === '' || strcasecmp($codigoAtual, 'Gerado automaticamente') === 0;
+        if ($codigoInvalido && !isset($data['codigo_barras'])) {
+            $data['codigo_barras'] = 'PROD-' . date('YmdHis') . '-' . rand(1000, 9999);
+        }
+
+        $data['custo_medio'] = $data['custo_medio'] ?? $produto->custo_medio ?? 0;
+        $data['estoque_minimo'] = $data['estoque_minimo'] ?? $produto->estoque_minimo ?? 0;
+
+        if (!empty($data)) {
+            DB::table('produtos')->where('id', $id)->update($data);
+        }
+
+        return response()->json(DB::table('produtos')->where('id', $id)->first());
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'error' => 'Erro de validação',
+            'details' => $e->errors(),
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar produto: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao atualizar produto',
+            'message' => $e->getMessage(),
+        ], 500);
     }
-    DB::table('produtos')->where('id', $id)->update($data);
-    return response()->json(DB::table('produtos')->where('id', $id)->first());
 });
 
 // Rota para desativar/ativar produto (solução recomendada ao invés de excluir)
