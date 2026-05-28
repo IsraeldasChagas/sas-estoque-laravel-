@@ -24,11 +24,20 @@ class BoletoController extends Controller
         return preg_replace('/[\s.\-\/]/', '', $s) ?? '';
     }
 
-    private function buscarBoletoDuplicado(string $numero, ?int $ignorarId = null): ?Boleto
+    private function buscarBoletoDuplicado(string $numero, ?int $ignorarId = null, ?string $dataVencimento = null): ?Boleto
     {
         $norm = $this->normalizarNumeroBoleto($numero);
         if ($norm === '') {
             return null;
+        }
+
+        $vencNovo = null;
+        if ($dataVencimento) {
+            try {
+                $vencNovo = \Carbon\Carbon::parse($dataVencimento)->format('Y-m-d');
+            } catch (\Exception $e) {
+                $vencNovo = null;
+            }
         }
 
         $query = Boleto::query()
@@ -40,9 +49,17 @@ class BoletoController extends Controller
         }
 
         foreach ($query->get(['id', 'numero_boleto', 'fornecedor', 'data_vencimento']) as $boleto) {
-            if ($this->normalizarNumeroBoleto($boleto->numero_boleto) === $norm) {
-                return $boleto;
+            if ($this->normalizarNumeroBoleto($boleto->numero_boleto) !== $norm) {
+                continue;
             }
+            if ($vencNovo && $boleto->data_vencimento) {
+                $vencExistente = \Carbon\Carbon::parse($boleto->data_vencimento)->format('Y-m-d');
+                if ($vencExistente !== $vencNovo) {
+                    continue;
+                }
+            }
+
+            return $boleto;
         }
 
         return null;
@@ -280,7 +297,11 @@ class BoletoController extends Controller
             $data = $request->except(['anexo', 'anexos_boleto', 'anexos_nota']);
             $data['numero_boleto'] = trim((string) ($data['numero_boleto'] ?? ''));
 
-            $duplicado = $this->buscarBoletoDuplicado($data['numero_boleto']);
+            $duplicado = $this->buscarBoletoDuplicado(
+                $data['numero_boleto'],
+                null,
+                $data['data_vencimento'] ?? null
+            );
             if ($duplicado) {
                 return $this->respostaNumeroBoletoDuplicado($duplicado);
             }
@@ -365,7 +386,7 @@ class BoletoController extends Controller
             'valor_pago' => 'nullable|numeric|min:0',
             'juros_multa' => 'nullable|numeric|min:0',
             'observacoes' => 'nullable|string',
-            'numero_boleto' => 'required|string|max:255',
+            'numero_boleto' => 'sometimes|required|string|max:255',
             'nome_pagador' => 'nullable|string|max:255',
             'whatsapp_pagador' => 'nullable|string|max:20',
         ], $this->regrasAnexos()));
@@ -384,15 +405,22 @@ class BoletoController extends Controller
             $allowed = array_flip((new Boleto)->getFillable());
             $data = array_intersect_key($data, $allowed);
 
+            $numeroAtual = trim((string) $boleto->numero_boleto);
             if (isset($data['numero_boleto'])) {
                 $data['numero_boleto'] = trim((string) $data['numero_boleto']);
             } else {
-                $data['numero_boleto'] = trim((string) $boleto->numero_boleto);
+                unset($data['numero_boleto']);
             }
 
-            $duplicado = $this->buscarBoletoDuplicado($data['numero_boleto'], (int) $boleto->id);
-            if ($duplicado) {
-                return $this->respostaNumeroBoletoDuplicado($duplicado);
+            $numeroNovo = $data['numero_boleto'] ?? $numeroAtual;
+            $numeroMudou = $this->normalizarNumeroBoleto($numeroNovo) !== $this->normalizarNumeroBoleto($numeroAtual);
+
+            if ($numeroMudou) {
+                $dataVenc = $data['data_vencimento'] ?? ($boleto->data_vencimento ? $boleto->data_vencimento->format('Y-m-d') : null);
+                $duplicado = $this->buscarBoletoDuplicado($numeroNovo, (int) $boleto->id, $dataVenc);
+                if ($duplicado) {
+                    return $this->respostaNumeroBoletoDuplicado($duplicado);
+                }
             }
 
             $boleto->update($data);

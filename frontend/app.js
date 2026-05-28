@@ -2293,6 +2293,29 @@ function attachNumeroBoletoMask(input) {
   if (input.value) input.value = formatNumeroBoletoMask(input.value);
 }
 
+function parseBoletoDuplicadoId(msg) {
+  const m = String(msg || "").match(/Boleto\s*#(\d+)/i);
+  return m ? m[1] : null;
+}
+
+async function tratarErroNumeroBoletoDuplicado(msg) {
+  const texto = String(msg || "Este número de boleto já está cadastrado.");
+  const id = parseBoletoDuplicadoId(texto);
+  if (!id) {
+    showToast(texto, "error");
+    return;
+  }
+  const abrir = confirm(
+    `${texto}\n\nEste boleto já existe no sistema.\nDeseja abrir o boleto #${id} para registrar o pagamento?`
+  );
+  if (abrir) {
+    document.getElementById("boletoModal")?.classList.remove("active");
+    await abrirModalPagamento(id);
+  } else {
+    showToast(texto, "error");
+  }
+}
+
 function updateSaidaDestinoVisibility() {
   const motivo = (dom.saidaMotivo?.value || "").toUpperCase();
   const isTransferencia = motivo === "TRANSFERENCIA";
@@ -17138,7 +17161,7 @@ function setupBoletosModule() {
               formDataCopy.set('data_vencimento', novaDataStr);
 
               const numeroBase = String(formData.get('numero_boleto') || '').trim();
-              if (i > 0 && numeroBase) {
+              if (numeroBase) {
                 formDataCopy.set('numero_boleto', `${numeroBase}-${novaDataStr}`);
               }
               
@@ -17170,7 +17193,7 @@ function setupBoletosModule() {
                 } catch (_) {}
                 console.error(`❌ Erro no boleto ${i + 1}:`, msg);
                 if (response.status === 422) {
-                  showToast(msg, 'error');
+                  await tratarErroNumeroBoletoDuplicado(msg);
                   break;
                 }
               }
@@ -17267,6 +17290,14 @@ function setupBoletosModule() {
               } catch {
                 errorMessage += ': ' + errorText;
               }
+              if (response.status === 422 && parseBoletoDuplicadoId(errorMessage)) {
+                await tratarErroNumeroBoletoDuplicado(errorMessage);
+                if (submitBtn) {
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Salvar Boleto';
+                }
+                return;
+              }
               throw new Error(errorMessage);
             }
 
@@ -17302,11 +17333,15 @@ function setupBoletosModule() {
       } catch (error) {
         console.error('❌ ERRO ao salvar boleto:', error);
         const msg = error.message || 'Erro ao salvar. Verifique a conexão e tente novamente.';
-        const dica = msg.includes('fetch') || msg.includes('Failed') || msg.includes('Network')
-          ? ' (Verifique se a API está online e CORS está configurado)'
-          : '';
-        showToast('❌ ' + msg + dica, 'error');
-        
+        if (parseBoletoDuplicadoId(msg)) {
+          await tratarErroNumeroBoletoDuplicado(msg);
+        } else {
+          const dica = msg.includes('fetch') || msg.includes('Failed') || msg.includes('Network')
+            ? ' (Verifique se a API está online e CORS está configurado)'
+            : '';
+          showToast('❌ ' + msg + dica, 'error');
+        }
+
         const submitBtn = boletoForm.querySelector('button[type="submit"]');
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -21156,12 +21191,21 @@ document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Erro ao registrar pagamento: ${errorText}`);
+      let errMsg = errorText;
+      try {
+        const errJson = JSON.parse(errorText);
+        errMsg = errJson.message || errJson.error || (errJson.errors ? Object.values(errJson.errors).flat().join(', ') : errorText);
+      } catch (_) {}
+      if (response.status === 422 && parseBoletoDuplicadoId(errMsg)) {
+        await tratarErroNumeroBoletoDuplicado(errMsg);
+        return;
+      }
+      throw new Error(errMsg || `Erro ao registrar pagamento (${response.status})`);
     }
-    
+
     const result = await response.json();
     console.log('✅ Pagamento registrado:', result);
-    
+
     showToast('✅ Pagamento registrado com sucesso!', 'success');
     
     // Fecha modal
