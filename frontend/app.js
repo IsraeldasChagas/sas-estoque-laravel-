@@ -14966,7 +14966,7 @@ function renderBoletos(boletos) {
           showToast('Boleto excluído com sucesso.', 'success');
           const filtros = getActiveBoletosTableFilters();
           await loadBoletos(filtros);
-          await loadBoletosResumo(filtros.mes_ano);
+          await loadBoletosResumo(filtros);
         } catch (e) {
           showToast('Erro ao excluir: ' + (e.message || 'Falha na operação.'), 'error');
           btn.disabled = false;
@@ -14983,8 +14983,11 @@ function renderBoletos(boletos) {
 }
 
 // Carrega resumo financeiro
-async function loadBoletosResumo(mesAno) {
-  console.log('💰 Carregando resumo financeiro para:', mesAno || 'todos os boletos');
+async function loadBoletosResumo(filtros = {}) {
+  if (typeof filtros === 'string') {
+    filtros = filtros ? { mes_ano: filtros } : {};
+  }
+  console.log('💰 Carregando resumo financeiro com filtros:', filtros);
   
   // Primeiro, verifica se os elementos existem no DOM
   const totalMesEl = document.getElementById('boletosTotalMes');
@@ -15000,7 +15003,10 @@ async function loadBoletosResumo(mesAno) {
   
   try {
     const params = new URLSearchParams();
-    if (mesAno) params.append('mes_ano', mesAno);
+    if (filtros.mes_ano) params.append('mes_ano', filtros.mes_ano);
+    if (filtros.unidade_id) params.append('unidade_id', filtros.unidade_id);
+    if (filtros.status) params.append('status', filtros.status);
+    if (filtros.data_vencimento) params.append('data_vencimento', filtros.data_vencimento);
 
     const url = `${API_URL}/boletos/resumo?${params.toString()}`;
     console.log('📤 Buscando resumo em:', url);
@@ -16803,7 +16809,7 @@ function setupBoletosModule() {
 
         const filtros = getActiveBoletosTableFilters();
         await loadBoletos(filtros);
-        await loadBoletosResumo(filtros.mes_ano);
+        await loadBoletosResumo(filtros);
         
         showToast('✅ Boletos atualizados!', 'success');
       } catch (error) {
@@ -16991,9 +16997,14 @@ function setupBoletosModule() {
       console.log('🔍 Aplicando filtros:', filtros);
       
       await loadBoletos(filtros);
-      await loadBoletosResumo(filtros.mes_ano);
-      
-      showToast('✅ Filtros aplicados', 'success');
+      await loadBoletosResumo(filtros);
+
+      const statusLabel = boletosStatusFiltro?.selectedOptions?.[0]?.textContent?.trim();
+      if (filtros.status && statusLabel) {
+        showToast(`Filtro: ${statusLabel}`, 'success');
+      } else {
+        showToast('Filtros aplicados', 'success');
+      }
     } catch (error) {
       console.error('❌ Erro ao filtrar boletos:', error);
       showToast('Erro ao filtrar boletos', 'error');
@@ -17261,7 +17272,7 @@ function setupBoletosModule() {
                 showToast('Boleto não encontrado (pode ter sido excluído). Lista atualizada.', 'warning');
                 const f404 = getActiveBoletosTableFilters();
                 await loadBoletos(f404);
-                await loadBoletosResumo(f404.mes_ano);
+                await loadBoletosResumo(f404);
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Salvar Boleto'; }
                 return;
               }
@@ -17344,7 +17355,7 @@ function setupBoletosModule() {
         console.log('🔄 Recarregando lista e cards...');
         const filtrosPosSave = getActiveBoletosTableFilters();
         await loadBoletos(filtrosPosSave);
-        await loadBoletosResumo(filtrosPosSave.mes_ano);
+        await loadBoletosResumo(filtrosPosSave);
         
         console.log('✅ Processo concluído!');
       } catch (error) {
@@ -21249,7 +21260,7 @@ document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async
     // Recarrega boletos
     const filtrosPosPag = getActiveBoletosTableFilters ? getActiveBoletosTableFilters() : {};
     await loadBoletos(filtrosPosPag);
-    await loadBoletosResumo(filtrosPosPag?.mes_ano);
+    await loadBoletosResumo(filtrosPosPag);
 
   } catch (error) {
     console.error('❌ Erro ao registrar pagamento:', error);

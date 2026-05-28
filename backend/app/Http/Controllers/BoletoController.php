@@ -65,6 +65,48 @@ class BoletoController extends Controller
         return null;
     }
 
+    /**
+     * Filtra pelo status exibido na tela (alinha com o frontend).
+     * A_VENCER / VENCIDO consideram data de vencimento para boletos ainda não pagos/cancelados.
+     */
+    private function aplicarFiltroStatus($query, ?string $status): void
+    {
+        if ($status === null || trim($status) === '') {
+            return;
+        }
+
+        $status = strtoupper(trim($status));
+        $hoje = now()->startOfDay();
+
+        if ($status === 'PAGO') {
+            $query->where('status', 'PAGO');
+
+            return;
+        }
+
+        if ($status === 'CANCELADO') {
+            $query->where('status', 'CANCELADO');
+
+            return;
+        }
+
+        if ($status === 'A_VENCER') {
+            $query->whereNotIn('status', ['PAGO', 'CANCELADO'])
+                ->whereDate('data_vencimento', '>=', $hoje);
+
+            return;
+        }
+
+        if ($status === 'VENCIDO') {
+            $query->whereNotIn('status', ['PAGO', 'CANCELADO'])
+                ->whereDate('data_vencimento', '<', $hoje);
+
+            return;
+        }
+
+        $query->where('status', $status);
+    }
+
     private function respostaNumeroBoletoDuplicado(Boleto $existente)
     {
         $venc = $existente->data_vencimento
@@ -204,9 +246,9 @@ class BoletoController extends Controller
                 \Log::info('🏢 Filtrando por unidade: '.$request->unidade_id);
             }
 
-            if ($request->has('status') && $request->status) {
-                $query->where('status', $request->status);
-                \Log::info('📌 Filtrando por status: '.$request->status);
+            if ($request->filled('status')) {
+                $this->aplicarFiltroStatus($query, $request->status);
+                \Log::info('📌 Filtrando por status (efetivo): '.$request->status);
             }
 
             if ($request->has('mes_ano') && $request->mes_ano) {
@@ -492,6 +534,14 @@ class BoletoController extends Controller
         try {
             $query = Boleto::query();
 
+            if ($request->has('unidade_id') && $request->unidade_id) {
+                $query->where('unidade_id', $request->unidade_id);
+            }
+
+            if ($request->filled('status')) {
+                $this->aplicarFiltroStatus($query, $request->status);
+            }
+
             if ($request->has('mes_ano') && $request->mes_ano) {
                 $mesAno = explode('-', $request->mes_ano);
                 if (count($mesAno) == 2) {
@@ -502,7 +552,11 @@ class BoletoController extends Controller
                     \Log::info("📅 Filtrando resumo por: {$mes}/{$ano}");
                 }
             } else {
-                \Log::info('📅 Resumo SEM filtro (todos os boletos)');
+                \Log::info('📅 Resumo SEM filtro de mês (demais filtros podem estar ativos)');
+            }
+
+            if ($request->filled('data_vencimento')) {
+                $query->whereDate('data_vencimento', $request->data_vencimento);
             }
 
             $boletos = $query->get();
