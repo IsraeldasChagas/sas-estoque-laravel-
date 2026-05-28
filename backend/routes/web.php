@@ -35,6 +35,18 @@ Route::middleware(['web', 'sas.usuario'])->prefix('kanban-administrativo')->grou
 // ============================================
 // RH (Recrutamento) - Link público de vagas
 // ============================================
+Route::get('/imagens/favicon.png', function () {
+    $path = base_path('../frontend/imagens/favicon.png');
+    if (! is_file($path)) {
+        abort(404);
+    }
+
+    return Response::file($path, [
+        'Content-Type' => 'image/png',
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+});
+
 Route::get('/imagens/logosemfundo.png', function () {
     $path = base_path('../frontend/imagens/logosemfundo.png');
     if (! is_file($path)) {
