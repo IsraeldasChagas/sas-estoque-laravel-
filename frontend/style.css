@@ -5849,6 +5849,21 @@ select[size]:not([size="1"]) {
   border-left-color: #f44336;
 }
 
+.boleto-card--hoje {
+  border-left-color: #9c27b0;
+}
+
+.boleto-card__hint {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.boleto-card--hoje .boleto-card__value {
+  color: #9c27b0;
+}
+
 .boleto-card__icon {
   font-size: 2.5rem;
   line-height: 1;

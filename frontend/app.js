@@ -1195,6 +1195,8 @@ const dom = {
   boletosPagoEmDia: document.getElementById("boletosPagoEmDia"),
   boletosJurosPagos: document.getElementById("boletosJurosPagos"),
   boletosAtrasados: document.getElementById("boletosAtrasados"),
+  boletosParaPagarHoje: document.getElementById("boletosParaPagarHoje"),
+  boletosParaPagarHojeValor: document.getElementById("boletosParaPagarHojeValor"),
   passwordToggles: Array.from(document.querySelectorAll(".password-toggle")),
   listaCompraItensResumo: document.getElementById("listaCompraItensResumo"),
   listaCompraStatusRascunho: document.getElementById("listaCompraStatusRascunho"),
@@ -14994,6 +14996,8 @@ async function loadBoletosResumo(filtros = {}) {
   const pagoEmDiaEl = document.getElementById('boletosPagoEmDia');
   const jurosPagosEl = document.getElementById('boletosJurosPagos');
   const atrasadosEl = document.getElementById('boletosAtrasados');
+  const paraPagarHojeEl = document.getElementById('boletosParaPagarHoje');
+  const paraPagarHojeValorEl = document.getElementById('boletosParaPagarHojeValor');
   
   console.log('🔍 Verificando elementos no DOM:');
   console.log('  boletosTotalMes:', totalMesEl ? '✅ Encontrado' : '❌ NÃO encontrado');
@@ -15061,6 +15065,19 @@ async function loadBoletosResumo(filtros = {}) {
       console.log('⚠️ Boletos pagos com atraso atualizado:', quantidade);
     } else {
       console.warn('⚠️ Elemento boletosAtrasados não encontrado, não foi possível atualizar');
+    }
+
+    const qtdHoje = parseInt(resumo.para_pagar_hoje || 0, 10);
+    if (paraPagarHojeEl) {
+      paraPagarHojeEl.textContent = String(qtdHoje);
+      paraPagarHojeEl.title = qtdHoje === 1
+        ? '1 boleto vence hoje e ainda não foi pago'
+        : `${qtdHoje} boletos vencem hoje e ainda não foram pagos`;
+    }
+    if (paraPagarHojeValorEl) {
+      paraPagarHojeValorEl.textContent = qtdHoje > 0
+        ? formatCurrencyBRL(resumo.valor_para_pagar_hoje || 0)
+        : 'Nenhum vencimento hoje';
     }
     
     console.log('🎉 Resumo financeiro atualizado com sucesso!');

@@ -584,6 +584,15 @@ class BoletoController extends Controller
             $valorPotencialJuros = $boletos->where('status', 'PAGO')->sum('valor') * 0.1;
             $economia = $valorPotencialJuros - $jurosPagos;
 
+            $hoje = now()->startOfDay();
+            $queryParaPagarHoje = Boleto::query()
+                ->whereNotIn('status', ['PAGO', 'CANCELADO'])
+                ->whereDate('data_vencimento', $hoje);
+            if ($request->has('unidade_id') && $request->unidade_id) {
+                $queryParaPagarHoje->where('unidade_id', $request->unidade_id);
+            }
+            $boletosParaPagarHoje = $queryParaPagarHoje->get();
+
             $resumo = [
                 'total_mes' => $totalMes,
                 'pago_em_dia' => $pagoEmDia,
@@ -594,6 +603,8 @@ class BoletoController extends Controller
                 'boletos_pagos' => $boletos->where('status', 'PAGO')->count(),
                 'boletos_vencidos' => $boletos->where('status', 'VENCIDO')->count(),
                 'boletos_a_vencer' => $boletos->where('status', 'A_VENCER')->count(),
+                'para_pagar_hoje' => $boletosParaPagarHoje->count(),
+                'valor_para_pagar_hoje' => $boletosParaPagarHoje->sum('valor'),
             ];
 
             \Log::info('✅ Resumo gerado:', $resumo);
