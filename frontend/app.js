@@ -16630,6 +16630,7 @@ const BOLETO_ANEXO_MAX_BYTES = 5 * 1024 * 1024;
 function boletoAnexoIcon(tipo, ext) {
   const e = String(ext || "").toLowerCase();
   if (tipo === "nota") return e === "pdf" ? "🧾" : "📄";
+  if (tipo === "comprovante") return e === "pdf" ? "✅" : "🧾";
   return e === "pdf" ? "📄" : "🖼️";
 }
 
@@ -16689,7 +16690,11 @@ function renderBoletoAnexosAtual(anexos, containerEl, boletoId, tipo) {
     containerEl.style.display = "none";
     return;
   }
-  const tipoLabel = tipo === "nota" ? "Nota(s) anexada(s)" : "Boleto(s) anexado(s)";
+  const tipoLabel = tipo === "nota"
+    ? "Nota(s) anexada(s)"
+    : tipo === "comprovante"
+      ? "Comprovante(s) de pagamento"
+      : "Boleto(s) anexado(s)";
   containerEl.innerHTML =
     `<div style="margin-top:0.75rem;padding:0.85rem 1rem;background:#e8f5e9;border-radius:8px;border:1px solid #a5d6a7;">
       <strong style="color:#1b5e20;display:block;margin-bottom:0.5rem;">${tipoLabel}</strong>` +
@@ -16731,6 +16736,18 @@ function appendBoletoAnexosFormData(formData, inputEl, fieldName) {
   formData.delete(`${fieldName}[]`);
   Array.from(inputEl.files).forEach((file) => {
     formData.append(`${fieldName}[]`, file);
+  });
+}
+
+function limparPagamentoComprovanteUI() {
+  const input = document.getElementById("pagamentoComprovanteInput");
+  if (input) input.value = "";
+  ["pagamentoComprovantePreview", "pagamentoComprovanteAtual"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = "";
+      el.style.display = "none";
+    }
   });
 }
 
@@ -20985,11 +21002,16 @@ async function mostrarDetalhesBoleto(id) {
         .filter((a) => String(a.tipo) === 'nota')
         .map((a) => `<li><a href="${boletoAnexoDownloadUrl(a, boleto.id)}" target="_blank" style="color:#388e3c;text-decoration:underline;">${escapeHtml(a.nome || 'Download')}</a></li>`)
         .join('');
+      const comprovantesHtml = anexosDetalhe
+        .filter((a) => String(a.tipo) === 'comprovante')
+        .map((a) => `<li><a href="${boletoAnexoDownloadUrl(a, boleto.id)}" target="_blank" style="color:#388e3c;text-decoration:underline;">${escapeHtml(a.nome || 'Download')}</a></li>`)
+        .join('');
       html += `
         <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px;">
           <h3 style="margin: 0 0 0.5rem 0; color: #388e3c;">📎 Anexos</h3>
           ${boletosHtml ? `<p style="margin:0.35rem 0;"><strong>Boletos:</strong></p><ul style="margin:0 0 0.75rem 1rem;">${boletosHtml}</ul>` : ''}
-          ${notasHtml ? `<p style="margin:0.35rem 0;"><strong>Notas:</strong></p><ul style="margin:0 0 0 1rem;">${notasHtml}</ul>` : ''}
+          ${notasHtml ? `<p style="margin:0.35rem 0;"><strong>Notas:</strong></p><ul style="margin:0 0 0.75rem 1rem;">${notasHtml}</ul>` : ''}
+          ${comprovantesHtml ? `<p style="margin:0.35rem 0;"><strong>Comprovantes:</strong></p><ul style="margin:0 0 0 1rem;">${comprovantesHtml}</ul>` : ''}
         </div>
       `;
     }
@@ -21086,8 +21108,11 @@ async function abrirModalPagamento(id) {
     document.getElementById('pagamentoData').value = new Date().toISOString().split('T')[0];
     document.getElementById('pagamentoValor').value = boleto.valor;
     document.getElementById('pagamentoJuros').value = '0.00';
-    document.getElementById('pagamentoObs').value = '';
-    
+    document.getElementById('pagamentoObs').value = boleto.observacoes || '';
+    limparPagamentoComprovanteUI();
+    const comprovantes = (boletoObterAnexos(boleto) || []).filter((a) => String(a.tipo) === "comprovante");
+    renderBoletoAnexosAtual(comprovantes, document.getElementById("pagamentoComprovanteAtual"), boleto.id, "comprovante");
+
     // Guarda o valor original para cálculo automático de juros
     const pagamentoValorInput = document.getElementById('pagamentoValor');
     const pagamentoJurosInput = document.getElementById('pagamentoJuros');
@@ -21135,11 +21160,21 @@ document.getElementById('fecharDetalhes')?.addEventListener('click', () => {
 
 document.getElementById('closeBoletoPagamento')?.addEventListener('click', () => {
   document.getElementById('boletoPagamentoModal').classList.remove('active');
+  limparPagamentoComprovanteUI();
 });
 
 document.getElementById('cancelPagamento')?.addEventListener('click', () => {
   document.getElementById('boletoPagamentoModal').classList.remove('active');
+  limparPagamentoComprovanteUI();
 });
+
+const pagamentoComprovanteInput = document.getElementById("pagamentoComprovanteInput");
+const pagamentoComprovantePreview = document.getElementById("pagamentoComprovantePreview");
+if (pagamentoComprovanteInput) {
+  pagamentoComprovanteInput.addEventListener("change", () => {
+    renderBoletoAnexosPreview(pagamentoComprovanteInput, pagamentoComprovantePreview);
+  });
+}
 
 // Fechar modal ao clicar fora
 document.getElementById('boletoDetalhesModal')?.addEventListener('click', (e) => {
@@ -21151,6 +21186,7 @@ document.getElementById('boletoDetalhesModal')?.addEventListener('click', (e) =>
 document.getElementById('boletoPagamentoModal')?.addEventListener('click', (e) => {
   if (e.target.id === 'boletoPagamentoModal') {
     e.target.classList.remove('active');
+    limparPagamentoComprovanteUI();
   }
 });
 
@@ -21166,27 +21202,24 @@ document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async
     submitBtn.disabled = true;
     submitBtn.textContent = 'Processando...';
     
-    const formData = new FormData(e.target);
-    const id = formData.get('id');
-    
-    // Prepara dados
-    const data = {
-      status: 'PAGO',
-      data_pagamento: formData.get('data_pagamento'),
-      valor_pago: formData.get('valor_pago'),
-      juros_multa: formData.get('juros_multa') || '0',
-      observacoes: formData.get('observacoes') || ''
-    };
-    
-    console.log('Dados do pagamento:', data);
-    
+    const id = document.getElementById('pagamentoBoletoId')?.value;
+    if (!id) throw new Error('Boleto não identificado.');
+
+    const formData = new FormData();
+    formData.append('status', 'PAGO');
+    formData.append('data_pagamento', document.getElementById('pagamentoData')?.value || '');
+    formData.append('valor_pago', document.getElementById('pagamentoValor')?.value || '0');
+    formData.append('juros_multa', document.getElementById('pagamentoJuros')?.value || '0');
+    formData.append('observacoes', document.getElementById('pagamentoObs')?.value || '');
+    appendBoletoAnexosFormData(formData, pagamentoComprovanteInput, 'anexos_comprovante');
+
     const response = await fetch(`${API_URL}/boletos/${id}`, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        Accept: 'application/json',
         'X-Usuario-Id': currentUser?.id || '1'
       },
-      body: JSON.stringify(data)
+      body: formData
     });
     
     if (!response.ok) {
@@ -21211,11 +21244,13 @@ document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async
     // Fecha modal
     document.getElementById('boletoPagamentoModal').classList.remove('active');
     e.target.reset();
-    
+    limparPagamentoComprovanteUI();
+
     // Recarrega boletos
-    await loadBoletos({});
-    await loadBoletosResumo();
-    
+    const filtrosPosPag = getActiveBoletosTableFilters ? getActiveBoletosTableFilters() : {};
+    await loadBoletos(filtrosPosPag);
+    await loadBoletosResumo(filtrosPosPag?.mes_ano);
+
   } catch (error) {
     console.error('❌ Erro ao registrar pagamento:', error);
     showToast('Erro ao registrar pagamento: ' + error.message, 'error');

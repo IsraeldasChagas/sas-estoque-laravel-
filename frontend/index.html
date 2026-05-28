@@ -5544,7 +5544,7 @@
           <h2>💳 Registrar Pagamento</h2>
           <button type="button" class="close-btn" id="closeBoletoPagamento" aria-label="Fechar modal">x</button>
         </header>
-        <form id="boletoPagamentoForm">
+        <form id="boletoPagamentoForm" enctype="multipart/form-data">
           <input type="hidden" name="id" id="pagamentoBoletoId" />
           
           <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
@@ -5576,6 +5576,16 @@
             Observações
             <textarea name="observacoes" id="pagamentoObs" rows="3" placeholder="Informações sobre o pagamento (opcional)"></textarea>
           </label>
+
+          <label>
+            📎 Anexar comprovante(s) de pagamento
+            <input type="file" name="anexos_comprovante[]" accept=".pdf,.jpg,.jpeg,.png" id="pagamentoComprovanteInput" multiple />
+            <small style="color: #607d8b; display: block; margin-top: 0.5rem;">
+              PDF, JPG ou PNG — até 5MB por arquivo. Opcional.
+            </small>
+          </label>
+          <div id="pagamentoComprovantePreview" class="boleto-anexos-preview-list" style="display:none;"></div>
+          <div id="pagamentoComprovanteAtual" class="boleto-anexos-atual-list" style="display:none;"></div>
 
           <footer>
             <button type="button" class="btn neutral" id="cancelPagamento">Cancelar</button>

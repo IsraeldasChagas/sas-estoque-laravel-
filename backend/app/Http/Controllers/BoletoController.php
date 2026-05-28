@@ -86,7 +86,11 @@ class BoletoController extends Controller
         $nomeOriginal = $file->getClientOriginalName();
         $extensao = $file->getClientOriginalExtension();
         $nomeArquivo = time().'_'.uniqid().'.'.$extensao;
-        $pasta = $tipo === 'nota' ? 'boletos/notas' : 'boletos';
+        $pasta = match ($tipo) {
+            'nota' => 'boletos/notas',
+            'comprovante' => 'boletos/comprovantes',
+            default => 'boletos',
+        };
         $path = $file->storeAs($pasta, $nomeArquivo, 'public');
 
         return [
@@ -124,7 +128,7 @@ class BoletoController extends Controller
             return;
         }
 
-        foreach (['anexos_boleto' => 'boleto', 'anexos_nota' => 'nota'] as $campo => $tipo) {
+        foreach (['anexos_boleto' => 'boleto', 'anexos_nota' => 'nota', 'anexos_comprovante' => 'comprovante'] as $campo => $tipo) {
             if (! $request->hasFile($campo)) {
                 continue;
             }
@@ -165,6 +169,8 @@ class BoletoController extends Controller
             $regras['anexos_boleto.*'] = 'file|mimes:pdf,jpg,jpeg,png|max:5120';
             $regras['anexos_nota'] = 'nullable|array';
             $regras['anexos_nota.*'] = 'file|mimes:pdf,jpg,jpeg,png|max:5120';
+            $regras['anexos_comprovante'] = 'nullable|array';
+            $regras['anexos_comprovante.*'] = 'file|mimes:pdf,jpg,jpeg,png|max:5120';
         }
 
         return $regras;
@@ -294,7 +300,7 @@ class BoletoController extends Controller
         }
 
         try {
-            $data = $request->except(['anexo', 'anexos_boleto', 'anexos_nota']);
+            $data = $request->except(['anexo', 'anexos_boleto', 'anexos_nota', 'anexos_comprovante']);
             $data['numero_boleto'] = trim((string) ($data['numero_boleto'] ?? ''));
 
             $duplicado = $this->buscarBoletoDuplicado(
@@ -400,7 +406,7 @@ class BoletoController extends Controller
 
         try {
             $boleto = Boleto::findOrFail($id);
-            $data = $request->except(['anexo', 'anexos_boleto', 'anexos_nota']);
+            $data = $request->except(['anexo', 'anexos_boleto', 'anexos_nota', 'anexos_comprovante']);
 
             $allowed = array_flip((new Boleto)->getFillable());
             $data = array_intersect_key($data, $allowed);
