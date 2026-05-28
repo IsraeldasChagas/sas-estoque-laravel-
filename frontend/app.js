@@ -2704,6 +2704,20 @@ function isAdminOrGerente() {
   return perfil === "ADMIN" || perfil === "GERENTE";
 }
 
+/** Seções efetivas do usuário (permissoes_menu personalizado ou padrão do perfil). */
+function getSectionsUsuarioAtual() {
+  const perfil = currentUser?.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
+  const regrasBase = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
+  const pmLista = normalizarPermissoesMenuLista(currentUser?.permissoes_menu);
+  return pmLista?.length ? [...pmLista] : [...(regrasBase.sections || [])];
+}
+
+/** Reserva de Mesa: quem tem o módulo liberado opera em todas as unidades (como ADMIN). */
+function canEscolherUnidadeReservaMesa() {
+  const sections = getSectionsUsuarioAtual();
+  return sections.includes("reservaMesa") || sections.includes("historicoReservas");
+}
+
 // Verifica se é ADMIN (apenas administrador)
 function isAdmin() {
   if (!currentUser) return false;
@@ -9634,8 +9648,7 @@ async function startAppSession(user) {
           if (uSelect && uSelect.options.length <= 1) {
             var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
             uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-            var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
-            var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+            var livre = canEscolherUnidadeReservaMesa();
             var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
             if (!livre && !unidadeUsuario) {
               uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
@@ -9655,6 +9668,8 @@ async function startAppSession(user) {
             if (!livre && unidadeUsuario) {
               uSelect.value = unidadeUsuario;
               uSelect.disabled = true;
+            } else if (livre && uSelect.disabled) {
+              uSelect.disabled = false;
             }
             }
           }
@@ -9666,8 +9681,7 @@ async function startAppSession(user) {
             var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
             state.unidades = unidades;
             uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-            var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
-            var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+            var livre = canEscolherUnidadeReservaMesa();
             var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
             if (!livre && !unidadeUsuario) {
               uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
@@ -9687,6 +9701,8 @@ async function startAppSession(user) {
             if (!livre && unidadeUsuario) {
               uSelect.value = unidadeUsuario;
               uSelect.disabled = true;
+            } else if (livre && uSelect.disabled) {
+              uSelect.disabled = false;
             }
             }
           }
@@ -13907,8 +13923,7 @@ function wireSidebarSectionNavClicks() {
         if (uSelect && uSelect.options.length <= 1) {
           var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
           uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-          var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
-          var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+          var livre = canEscolherUnidadeReservaMesa();
           var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
           if (!livre && !unidadeUsuario) {
             uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
@@ -13928,6 +13943,8 @@ function wireSidebarSectionNavClicks() {
           if (!livre && unidadeUsuario) {
             uSelect.value = unidadeUsuario;
             uSelect.disabled = true;
+          } else if (livre && uSelect.disabled) {
+            uSelect.disabled = false;
           }
           }
         }
@@ -13945,8 +13962,7 @@ function wireSidebarSectionNavClicks() {
           var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
           state.unidades = unidades;
           uSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-          var perfil = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
-          var livre = perfil === 'ADMIN' || perfil === 'GERENTE';
+          var livre = canEscolherUnidadeReservaMesa();
           var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
           if (!livre && !unidadeUsuario) {
             uSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
@@ -13966,6 +13982,8 @@ function wireSidebarSectionNavClicks() {
           if (!livre && unidadeUsuario) {
             uSelect.value = unidadeUsuario;
             uSelect.disabled = true;
+          } else if (livre && uSelect.disabled) {
+            uSelect.disabled = false;
           }
           }
         }
@@ -16367,11 +16385,6 @@ async function abrirEditarReserva(id) {
 }
 
 function setupReservasMesasModule() {
-  var isAdminOuGerente = function() {
-    var p = currentUser && (currentUser.perfil || '') ? String(currentUser.perfil).toUpperCase() : '';
-    return p === 'ADMIN' || p === 'GERENTE';
-  };
-
   var unidadeSelect = document.getElementById('reservasUnidadeFiltro');
   var dataInput = document.getElementById('reservasDataFiltro');
   if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
@@ -16380,7 +16393,7 @@ function setupReservasMesasModule() {
     var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades');
     if (!unidadeSelect) return;
     unidadeSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-    var perfilLivre = isAdminOuGerente();
+    var perfilLivre = canEscolherUnidadeReservaMesa();
     var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
     if (!perfilLivre && !unidadeUsuario) {
       unidadeSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
@@ -16406,7 +16419,7 @@ function setupReservasMesasModule() {
   }
 
   var reservaUnidadeLabel = document.getElementById('reservaUnidadeLabel');
-  if (reservaUnidadeLabel) reservaUnidadeLabel.style.display = isAdminOuGerente() ? '' : 'none';
+  if (reservaUnidadeLabel) reservaUnidadeLabel.style.display = canEscolherUnidadeReservaMesa() ? '' : 'none';
 
   document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').addEventListener('change', function() {
     var hid = document.getElementById('reservaFormUnidadeId');
@@ -16457,7 +16470,7 @@ function setupReservasMesasModule() {
     if (unidadeInput) unidadeInput.value = unidadeId;
     var hid = document.getElementById('reservaFormUnidadeId');
     if (hid) hid.value = unidadeId;
-    if (isAdminOuGerente()) {
+    if (canEscolherUnidadeReservaMesa()) {
       var reservaUnidadeSelect = document.getElementById('reservaUnidadeSelect');
       if (reservaUnidadeSelect) {
         reservaUnidadeSelect.innerHTML = '<option value="">Selecione</option>';

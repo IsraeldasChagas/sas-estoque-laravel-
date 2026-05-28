@@ -4,33 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\Mesa;
 use App\Models\ReservaMesa;
+use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class MesaController extends Controller
 {
-    protected function isAdminOuGerente(?string $perfil): bool
+    protected function podeGerenciarTodasUnidades(?object $usuario): bool
     {
-        $p = strtoupper(trim((string) $perfil));
-        return in_array($p, ['ADMIN', 'GERENTE'], true);
+        return ReservaMesaAcesso::podeGerenciarTodasUnidades($usuario);
     }
 
     public function index(Request $request)
     {
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
         $query = Mesa::query()->where('ativo', true);
 
-        // Isolar mesas por unidade, mesma regra das reservas:
-        // - ADMIN/GERENTE: se vier unidade_id no request, usamos essa; senão usa a do usuário;
-        // - demais perfis: sempre usa a unidade cadastrada do usuário (ignora unidade_id do request);
-        // - se mesmo assim não tiver unidade, não retornamos mesas.
         $unidadeId = null;
-        if (! $this->isAdminOuGerente($perfil)) {
+        if (! $this->podeGerenciarTodasUnidades($usuario)) {
             $unidadeId = $unidadeIdUsuario > 0 ? $unidadeIdUsuario : null;
         } else {
             if ($request->filled('unidade_id')) {
@@ -52,15 +47,10 @@ class MesaController extends Controller
     {
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
-        // Definição da unidade da mesa:
-        // - ADMIN/GERENTE: Se vier unidade_id no request, usamos essa; senão usa a do usuário;
-        // - Demais perfis: usa somente a unidade do usuário (ignora unidade_id do request);
-        // - Se não houver unidade válida, não permitimos criar.
         $unidadeId = null;
-        if (! $this->isAdminOuGerente($perfil)) {
+        if (! $this->podeGerenciarTodasUnidades($usuario)) {
             if ($unidadeIdUsuario <= 0) {
                 return response()->json(['message' => 'Usuário sem unidade cadastrada.'], 403);
             }
@@ -121,9 +111,8 @@ class MesaController extends Controller
         $mesa = Mesa::with('unidade:id,nome')->findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $mesa->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $mesa->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para acessar esta mesa.'], 403);
         }
         return response()->json($mesa);
@@ -134,9 +123,8 @@ class MesaController extends Controller
         $mesa = Mesa::findOrFail($id);
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $mesa->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $mesa->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para editar mesa de outra unidade.'], 403);
         }
 
@@ -182,9 +170,8 @@ class MesaController extends Controller
         $mesa = Mesa::findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $mesa->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $mesa->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para excluir mesa de outra unidade.'], 403);
         }
         $estaOcupada = ($mesa->status ?? '') === Mesa::STATUS_OCUPADA;

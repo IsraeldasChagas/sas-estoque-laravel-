@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Mesa;
 use App\Models\ReservaMesa;
+use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -11,23 +12,21 @@ use Carbon\Carbon;
 
 class ReservaMesaController extends Controller
 {
-    protected function isAdminOuGerente(?string $perfil): bool
+    protected function podeGerenciarTodasUnidades(?object $usuario): bool
     {
-        $p = strtoupper(trim((string) $perfil));
-        return in_array($p, ['ADMIN', 'GERENTE'], true);
+        return ReservaMesaAcesso::podeGerenciarTodasUnidades($usuario);
     }
 
     /**
      * Resolve a unidade efetiva para a requisição.
-     * - ADMIN/GERENTE: pode usar unidade_id do request; se não vier, usa unidade do usuário (se houver).
-     * - Demais perfis: obrigatoriamente a unidade cadastrada do usuário; ignora unidade_id do request.
+     * - Quem tem acesso ao módulo Reserva de Mesa: pode usar unidade_id do request.
+     * - Sem acesso: unidade cadastrada do usuário.
      */
     protected function resolveUnidadeId(Request $request, ?object $usuario): ?int
     {
-        $perfil = $usuario ? ($usuario->perfil ?? '') : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
-        if (! $this->isAdminOuGerente($perfil)) {
+        if (! $this->podeGerenciarTodasUnidades($usuario)) {
             return $unidadeIdUsuario > 0 ? $unidadeIdUsuario : null;
         }
 
@@ -42,8 +41,7 @@ class ReservaMesaController extends Controller
     /** Retorna 403 se usuário comum tentar operar fora da unidade cadastrada. */
     protected function assertUnidadeDoUsuarioOu403(Request $request, ?object $usuario): ?\Illuminate\Http\JsonResponse
     {
-        $perfil = $usuario ? ($usuario->perfil ?? '') : '';
-        if ($this->isAdminOuGerente($perfil)) {
+        if ($this->podeGerenciarTodasUnidades($usuario)) {
             return null;
         }
 
@@ -166,7 +164,6 @@ class ReservaMesaController extends Controller
         if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
             return $resp;
         }
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
         // Carregar mesa antecipadamente para fallback de unidade (funciona em todas as unidades)
@@ -175,8 +172,7 @@ class ReservaMesaController extends Controller
             return response()->json(['message' => 'Mesa é obrigatória e deve existir.'], 422);
         }
 
-        // Usuário não ADMIN/GERENTE só pode operar na própria unidade
-        if (! $this->isAdminOuGerente($perfil)) {
+        if (! $this->podeGerenciarTodasUnidades($usuario)) {
             if ($unidadeIdUsuario <= 0) {
                 return response()->json(['message' => 'Usuário sem unidade cadastrada.'], 403);
             }
@@ -268,9 +264,8 @@ class ReservaMesaController extends Controller
             ->findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para acessar esta reserva.'], 403);
         }
         return response()->json($reserva);
@@ -281,13 +276,12 @@ class ReservaMesaController extends Controller
         $reserva = ReservaMesa::findOrFail($id);
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
             return $resp;
         }
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para editar esta reserva.'], 403);
         }
 
@@ -376,10 +370,9 @@ class ReservaMesaController extends Controller
         $reserva = ReservaMesa::findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para cancelar esta reserva.'], 403);
         }
 
@@ -409,13 +402,12 @@ class ReservaMesaController extends Controller
         $reserva = ReservaMesa::findOrFail($id);
         $usuarioId = $request->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
-        $perfil = $usuario ? strtoupper(trim($usuario->perfil ?? '')) : '';
         if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
             return $resp;
         }
         $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
 
-        if (! $this->isAdminOuGerente($perfil) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para alterar esta reserva.'], 403);
         }
 
