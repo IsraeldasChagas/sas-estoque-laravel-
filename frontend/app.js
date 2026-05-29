@@ -1205,6 +1205,7 @@ const dom = {
   listaCompraAdicionarItem: document.getElementById("listaCompraAdicionarItem"),
   listaCompraAdicionarEstabelecimento: document.getElementById("listaCompraAdicionarEstabelecimento"),
   listaCompraFinalizar: document.getElementById("listaCompraFinalizar"),
+  listaCompraExcluir: document.getElementById("listaCompraExcluir"),
   listaCompraGerarPdf: document.getElementById("listaCompraGerarPdf"),
   listaCompraPdf: document.getElementById("listaCompraPdf"),
   listaCompraLancarEstoque: document.getElementById("listaCompraLancarEstoque"),
@@ -3845,6 +3846,14 @@ function listaPermiteAdicionarItens(lista = state.listaCompraAtual) {
   return isListaOwner(lista);
 }
 
+function listaPermiteExcluir(lista = state.listaCompraAtual) {
+  if (!canManageCompras() || !lista) return false;
+  if (lista.estoque_lancado_em) return false;
+  if (isAdminOrGerente()) return true;
+  if (canOnlyCreateAndAddItems()) return isListaOwner(lista);
+  return isListaOwner(lista);
+}
+
 function canCreateLista() {
   if (!canManageCompras() || !currentUser) return false;
   const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
@@ -5384,6 +5393,10 @@ function renderListasCompras(listas) {
   const rows = (listas || []).map((lista) => {
     const selecionada = state.listaCompraAtual && Number(state.listaCompraAtual.id) === Number(lista.id);
     const classe = selecionada ? "selected" : "";
+    const podeExcluir = listaPermiteExcluir(lista);
+    const btnExcluir = podeExcluir
+      ? `<button type="button" class="table-action danger" data-action="delete-lista" data-id="${lista.id}" title="Excluir lista">Excluir</button>`
+      : `<span class="subtle-text">—</span>`;
     return `<tr data-id="${lista.id}" class="${classe}">
       <td data-label="Lista">${escapeHtml(lista.nome)}</td>
       <td data-label="Unidade">${escapeHtml(lista.unidade_nome || "--")}</td>
@@ -5391,9 +5404,10 @@ function renderListasCompras(listas) {
       <td data-label="Planejado">${formatCurrency(lista.total_planejado || 0)}</td>
       <td data-label="Realizado">${formatCurrency(lista.total_realizado || 0)}</td>
       <td data-label="Itens">${Number(lista.itens_comprados || 0)} / ${Number(lista.itens_total || 0)}</td>
+      <td data-label="Ações" class="table-actions">${btnExcluir}</td>
     </tr>`;
   }).join("");
-  renderTable(dom.listasComprasTable, rows, "Nenhuma lista de compras cadastrada.", 6);
+  renderTable(dom.listasComprasTable, rows, "Nenhuma lista de compras cadastrada.", 7);
 }
 
 function renderListaCompraDetalhes(lista) {
@@ -5422,6 +5436,7 @@ function renderListaCompraDetalhes(lista) {
     if (dom.listaCompraAdicionarItem) dom.listaCompraAdicionarItem.disabled = true;
     if (dom.listaCompraAdicionarEstabelecimento) dom.listaCompraAdicionarEstabelecimento.disabled = true;
     if (dom.listaCompraFinalizar) dom.listaCompraFinalizar.disabled = true;
+    if (dom.listaCompraExcluir) dom.listaCompraExcluir.disabled = true;
     if (dom.listaCompraObservacoes) dom.listaCompraObservacoes.disabled = true;
     renderListaCompraItens([]);
     renderListaCompraEstabelecimentos([]);
@@ -5472,6 +5487,12 @@ function renderListaCompraDetalhes(lista) {
     const status = (lista.status || "").toUpperCase();
     dom.listaCompraFinalizar.disabled = status === "FINALIZADA" || !podeFinalizar;
     dom.listaCompraFinalizar.textContent = status === "FINALIZADA" ? "Lista finalizada" : "Finalizar lista";
+  }
+  if (dom.listaCompraExcluir) {
+    dom.listaCompraExcluir.disabled = !listaPermiteExcluir(lista);
+    dom.listaCompraExcluir.title = lista.estoque_lancado_em
+      ? "Lista já lançada no estoque — não pode ser excluída"
+      : "";
   }
   // Estoquista e Cozinha podem adicionar itens, mas não editar lista
   const podeAdicionarItens = listaPermiteAdicionarItens(lista);
@@ -6511,6 +6532,49 @@ async function removerItemLista(itemId) {
     await selecionarListaCompra(state.listaCompraAtual.id, true);
   } catch (error) {
     showToast(error.message, "error");
+  }
+}
+
+async function excluirListaCompra(listaId) {
+  const id = Number(listaId);
+  if (!id) return;
+  const lista =
+    state.listaCompraAtual && Number(state.listaCompraAtual.id) === id
+      ? state.listaCompraAtual
+      : (state.listasCompras || []).find((l) => Number(l.id) === id);
+  if (!lista) {
+    showToast("Lista não encontrada.", "warning");
+    return;
+  }
+  if (!listaPermiteExcluir(lista)) {
+    showToast(
+      lista.estoque_lancado_em
+        ? "Esta lista já foi lançada no estoque e não pode ser excluída."
+        : "Sem permissão para excluir esta lista.",
+      "warning"
+    );
+    return;
+  }
+  const nome = (lista.nome || `Lista #${id}`).toString();
+  if (
+    !window.confirm(
+      `Excluir a lista "${nome}"?\n\nTodos os itens e estabelecimentos vinculados serão removidos. Esta ação não pode ser desfeita.`
+    )
+  ) {
+    return;
+  }
+  try {
+    await fetchJSON(`/listas/${id}`, { method: "DELETE" });
+    showToast("Lista excluída.", "success");
+    if (state.listaCompraAtual && Number(state.listaCompraAtual.id) === id) {
+      state.listaCompraAtual = null;
+      renderListaCompraDetalhes(null);
+    }
+    state.listasCompras = (state.listasCompras || []).filter((l) => Number(l.id) !== id);
+    renderListasCompras(state.listasCompras);
+    await loadListasCompras();
+  } catch (error) {
+    showToast(error.message || "Erro ao excluir lista.", "error");
   }
 }
 
@@ -11398,6 +11462,13 @@ function setupTables() {
   dom.usuariosTable?.addEventListener("click", handleUsuarioTableClick);
 
   dom.listasComprasTable?.addEventListener("click", async (event) => {
+    const btnExcluir = event.target.closest("button[data-action='delete-lista']");
+    if (btnExcluir) {
+      event.preventDefault();
+      event.stopPropagation();
+      await excluirListaCompra(btnExcluir.dataset.id);
+      return;
+    }
     const row = event.target.closest("tr[data-id]");
     if (!row) return;
     if (event.target.closest("button")) return;
@@ -13435,6 +13506,11 @@ function setupModals() {
   });
   dom.closeEstabelecimentoCompraBtn?.addEventListener("click", () => toggleModal(dom.estabelecimentoCompraModal, false));
   dom.cancelEstabelecimentoCompraBtn?.addEventListener("click", () => toggleModal(dom.estabelecimentoCompraModal, false));
+
+  dom.listaCompraExcluir?.addEventListener("click", () => {
+    if (!state.listaCompraAtual?.id) return;
+    excluirListaCompra(state.listaCompraAtual.id);
+  });
 
   dom.listaCompraFinalizar?.addEventListener("click", () => {
     if (dom.listaCompraFinalizar.disabled) return;

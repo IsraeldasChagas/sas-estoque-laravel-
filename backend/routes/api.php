@@ -4354,6 +4354,45 @@ Route::put('/listas/{id}', function (Request $request, $id) {
     }
 });
 
+Route::options('/listas/{id}', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::delete('/listas/{id}', function ($id) {
+    try {
+        $lista = DB::table('listas_compras')->where('id', $id)->first();
+        if (! $lista) {
+            return response()->json(['error' => 'Lista não encontrada'], 404)
+                ->header('Access-Control-Allow-Origin', '*');
+        }
+
+        if (! empty($lista->estoque_lancado_em)) {
+            return response()->json([
+                'error' => 'Esta lista já foi lançada no estoque e não pode ser excluída.',
+            ], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        DB::transaction(function () use ($id) {
+            DB::table('listas_itens')->where('lista_id', $id)->delete();
+            DB::table('estabelecimentos_compra')->where('lista_id', $id)->delete();
+            DB::table('listas_compras')->where('id', $id)->delete();
+        });
+
+        \Log::info("Lista de compras excluída: {$id}");
+
+        return response()->json(['message' => 'Lista excluída com sucesso'])
+            ->header('Access-Control-Allow-Origin', '*');
+    } catch (\Exception $e) {
+        \Log::error('DELETE /listas/{id} - Erro: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao excluir lista: ' . $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
 Route::options('/listas/{id}/finalizar', function () {
     return response()->json([])
         ->header('Access-Control-Allow-Origin', '*')
