@@ -320,8 +320,10 @@ class RhPublicoController extends Controller
             ]);
         }
 
+        $inscricaoEm = now();
+
         foreach ($vagasParaInserir as $vagaEscolhida) {
-            $candidatoId = DB::table('rh_candidatos')->insertGetId([
+            $insert = [
                 'vaga_id' => $vagaEscolhida->id,
                 'nome' => $data['nome'],
                 'telefone' => $data['telefone'] ?? null,
@@ -332,13 +334,18 @@ class RhPublicoController extends Controller
                 'observacoes_candidato' => $data['observacoes'] ?? null,
                 'unidade' => $vagaEscolhida->unidade ?? null,
                 'consentimento_lgpd' => true,
-                'consentimento_em' => now(),
+                'consentimento_em' => $inscricaoEm,
                 'consentimento_ip' => $request->ip(),
                 'consentimento_user_agent' => Str::limit((string) $request->userAgent(), 255, ''),
                 'status' => 'novo',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                'created_at' => $inscricaoEm,
+                'updated_at' => $inscricaoEm,
+            ];
+            if (Schema::hasColumn('rh_candidatos', 'data_inscricao')) {
+                $insert['data_inscricao'] = $inscricaoEm->toDateString();
+            }
+
+            $candidatoId = DB::table('rh_candidatos')->insertGetId($insert);
 
             $cvPath = "rh/curriculos/{$candidatoId}/" . (time() . '-' . Str::random(10) . '.pdf');
             \Storage::disk('public')->put($cvPath, $cvBytes);

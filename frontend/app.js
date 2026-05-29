@@ -8860,6 +8860,14 @@ function getRhCandidatosFiltrosForm() {
   };
 }
 
+/** Data em que o candidato se inscreveu na vaga (campo data_inscricao ou created_at). */
+function rhFormatDataInscricao(c) {
+  const raw = c?.data_inscricao || c?.created_at;
+  if (!raw) return "-";
+  const fmt = formatDate(raw);
+  return fmt ? fmt.split(" ")[0] : String(raw).slice(0, 10);
+}
+
 async function loadRhCandidatos(filtros = {}, opts = {}) {
   const qs = new URLSearchParams();
   ["status", "nome", "vaga_id"].forEach((k) => {
@@ -8876,7 +8884,7 @@ function renderRhCandidatos(lista) {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
     return;
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
@@ -8891,6 +8899,7 @@ function renderRhCandidatos(lista) {
       <td data-label="ID">${esc(c.id)}</td>
       <td data-label="Nome">${esc(c.nome)}${badgeCurriculo}${badgeFoto}</td>
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
+      <td data-label="Inscrição">${esc(rhFormatDataInscricao(c))}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
       <td data-label="WhatsApp">${waLabel ? `<span>${esc(waLabel)}</span>` : "-"}</td>
       <td data-label="Ações" class="table-actions">
@@ -9065,7 +9074,7 @@ function renderRhCandidatoInlineRow(payload) {
           .join("");
 
   return `
-    <td colspan="6" style="padding: 0;">
+    <td colspan="7" style="padding: 0;">
       <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
@@ -9097,6 +9106,9 @@ function renderRhCandidatoInlineRow(payload) {
               </label>
               <label>Vaga
                 <input type="text" value="${esc(vagaTitulo || "-")}" readonly />
+              </label>
+              <label>Data da inscrição
+                <input type="text" value="${esc(rhFormatDataInscricao(c))}" readonly />
               </label>
               <label>Unidade
                 <input type="text" value="${esc(c.unidade || "-")}" readonly />
