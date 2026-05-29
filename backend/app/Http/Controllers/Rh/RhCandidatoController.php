@@ -65,13 +65,6 @@ class RhCandidatoController extends Controller
         if ($request->filled('nome')) {
             $q->where('rh_candidatos.nome', 'like', '%' . $request->nome . '%');
         }
-        if ($request->filled('vaga')) {
-            $term = '%' . $request->vaga . '%';
-            $q->where(function ($sub) use ($term) {
-                $sub->where('rh_vagas.titulo', 'like', $term)
-                    ->orWhere('rh_vagas.slug', 'like', $term);
-            });
-        }
 
         $rows = $q->get();
         // Garante flags corretas (arquivo pode ter sido removido/anônimo/LGPD).

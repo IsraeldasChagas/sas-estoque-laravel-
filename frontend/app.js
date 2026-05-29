@@ -8822,18 +8822,47 @@ function renderRhVagas(lista) {
   }).join("");
 }
 
-/** Filtros ativos no formulário RH → Candidatos (status, nome, vaga). */
+/** Atualiza o select de vagas em Candidatos (todas cadastradas, sem filtro da tela Vagas). */
+async function refreshRhCandidatosFiltroVagas() {
+  const sel = document.getElementById("rhCandidatosFiltroVagaId");
+  if (!sel) return;
+  const prev = sel.value;
+  try {
+    const lista = await fetchJSON("/rh/vagas");
+    const vagas = (Array.isArray(lista) ? lista : []).slice().sort((a, b) => {
+      const cmp = String(a.titulo || "").localeCompare(String(b.titulo || ""), "pt-BR", { sensitivity: "base" });
+      return cmp !== 0 ? cmp : Number(b.id) - Number(a.id);
+    });
+    const statusRotulo = { aberta: "", pausada: " (pausada)", encerrada: " (encerrada)" };
+    const opts = ['<option value="">Todas as vagas</option>'];
+    vagas.forEach((v) => {
+      const id = Number(v.id);
+      if (!id) return;
+      const st = String(v.status || "aberta").toLowerCase();
+      const sufixo = statusRotulo[st] ?? (st ? ` (${st})` : "");
+      opts.push(
+        `<option value="${id}">${escapeHtml(String(v.titulo || `Vaga #${id}`))}${escapeHtml(sufixo)}</option>`
+      );
+    });
+    sel.innerHTML = opts.join("");
+    sel.value = prev && vagas.some((v) => String(v.id) === prev) ? prev : "";
+  } catch (err) {
+    console.warn("Não foi possível carregar vagas para o filtro de candidatos:", err);
+  }
+}
+
+/** Filtros ativos no formulário RH → Candidatos (status, nome, vaga_id). */
 function getRhCandidatosFiltrosForm() {
   return {
     status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
     nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-    vaga: document.getElementById("rhCandidatosFiltroVaga")?.value?.trim() || "",
+    vaga_id: document.getElementById("rhCandidatosFiltroVagaId")?.value || "",
   };
 }
 
 async function loadRhCandidatos(filtros = {}, opts = {}) {
   const qs = new URLSearchParams();
-  ["status", "nome", "vaga"].forEach((k) => {
+  ["status", "nome", "vaga_id"].forEach((k) => {
     if (filtros[k]) qs.append(k, filtros[k]);
   });
   if (opts.bustCache) qs.append("_t", String(Date.now()));
@@ -9780,7 +9809,10 @@ async function startAppSession(user) {
         else if (sectionToNavigate === 'funcionarios') await loadFuncionarios();
         else if (sectionToNavigate === "rhDashboard") await loadRhDashboard();
         else if (sectionToNavigate === "rhVagas") await loadRhVagas();
-        else if (sectionToNavigate === "rhCandidatos") await loadRhCandidatos();
+        else if (sectionToNavigate === "rhCandidatos") {
+          await refreshRhCandidatosFiltroVagas();
+          await loadRhCandidatos(getRhCandidatosFiltrosForm());
+        }
         else if (sectionToNavigate === "rhEntrevistas") await loadRhEntrevistas();
         else if (sectionToNavigate === "rhBancoTalentos") await loadRhBancoTalentos();
         else if (sectionToNavigate === "rhRelatorios") await loadRhRelatorioSection();
@@ -13887,7 +13919,10 @@ function wireSidebarSectionNavClicks() {
       else if (target === "funcionarios") await loadFuncionarios();
       else if (target === "rhDashboard") await loadRhDashboard();
       else if (target === "rhVagas") await loadRhVagas();
-      else if (target === "rhCandidatos") await loadRhCandidatos();
+      else if (target === "rhCandidatos") {
+        await refreshRhCandidatosFiltroVagas();
+        await loadRhCandidatos(getRhCandidatosFiltrosForm());
+      }
       else if (target === "rhEntrevistas") await loadRhEntrevistas();
       else if (target === "rhBancoTalentos") await loadRhBancoTalentos();
       else if (target === "rhRelatorios") await loadRhRelatorioSection();
@@ -14272,6 +14307,7 @@ function setupNavigation() {
         unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
         setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
       });
+      await refreshRhCandidatosFiltroVagas();
     } catch (err) {
       showToast(err?.message || (window.__rhVagaEditId ? "Erro ao editar vaga." : "Erro ao criar vaga."), "error");
     }
@@ -14414,6 +14450,7 @@ function setupNavigation() {
           unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
           setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
         });
+        await refreshRhCandidatosFiltroVagas();
       } catch (err) {
         showToast(err?.message || "Erro ao excluir vaga.", "error");
       }
@@ -14427,7 +14464,7 @@ function setupNavigation() {
     loadRhCandidatos(getRhCandidatosFiltrosForm()).catch((err) => showToast(err?.message || "Erro ao carregar candidatos.", "error"));
   });
   document.getElementById("rhCandidatosLimparFiltros")?.addEventListener("click", () => {
-    ["rhCandidatosFiltroStatus", "rhCandidatosFiltroNome", "rhCandidatosFiltroVaga"].forEach((id) => {
+    ["rhCandidatosFiltroStatus", "rhCandidatosFiltroNome", "rhCandidatosFiltroVagaId"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });

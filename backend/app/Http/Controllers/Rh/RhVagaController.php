@@ -16,7 +16,8 @@ class RhVagaController extends Controller
 {
     public function index(Request $request)
     {
-        if (! RhAcesso::pode($request, 'rh.vagas')) {
+        // Listagem também para quem filtra candidatos (select de vagas no RH).
+        if (! RhAcesso::pode($request, 'rh.vagas') && ! RhAcesso::pode($request, 'rh.candidatos')) {
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
