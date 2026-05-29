@@ -8884,11 +8884,12 @@ function renderRhCandidatos(lista) {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
     return;
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
-  tb.innerHTML = lista.map((c) => {
+  tb.innerHTML = lista.map((c, idx) => {
+    const num = idx + 1;
     const tel = (c.telefone || "").toString().replace(/\D+/g, "");
     const waLabel = tel ? `+55 ${tel}` : "";
     const temCurriculo = c.tem_curriculo === true || c.tem_curriculo === 1 || String(c.tem_curriculo ?? "").toLowerCase() === "1";
@@ -8896,6 +8897,7 @@ function renderRhCandidatos(lista) {
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
     const badgeFoto = temFoto ? ' <span title="Tem foto anexada" aria-label="Tem foto anexada">🖼️</span>' : "";
     return `<tr data-id="${esc(c.id)}">
+      <td data-label="#">${num}</td>
       <td data-label="ID">${esc(c.id)}</td>
       <td data-label="Nome">${esc(c.nome)}${badgeCurriculo}${badgeFoto}</td>
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
@@ -9074,7 +9076,7 @@ function renderRhCandidatoInlineRow(payload) {
           .join("");
 
   return `
-    <td colspan="7" style="padding: 0;">
+    <td colspan="8" style="padding: 0;">
       <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
