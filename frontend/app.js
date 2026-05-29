@@ -8822,9 +8822,18 @@ function renderRhVagas(lista) {
   }).join("");
 }
 
+/** Filtros ativos no formulário RH → Candidatos (status, nome, vaga). */
+function getRhCandidatosFiltrosForm() {
+  return {
+    status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
+    nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
+    vaga: document.getElementById("rhCandidatosFiltroVaga")?.value?.trim() || "",
+  };
+}
+
 async function loadRhCandidatos(filtros = {}, opts = {}) {
   const qs = new URLSearchParams();
-  ["status", "nome", "email", "telefone"].forEach((k) => {
+  ["status", "nome", "vaga"].forEach((k) => {
     if (filtros[k]) qs.append(k, filtros[k]);
   });
   if (opts.bustCache) qs.append("_t", String(Date.now()));
@@ -14415,15 +14424,10 @@ function setupNavigation() {
   // RH — Candidatos
   document.getElementById("rhCandidatosFiltroForm")?.addEventListener("submit", (e) => {
     e.preventDefault();
-    loadRhCandidatos({
-      status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
-      nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-      email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
-      telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
-    }).catch((err) => showToast(err?.message || "Erro ao carregar candidatos.", "error"));
+    loadRhCandidatos(getRhCandidatosFiltrosForm()).catch((err) => showToast(err?.message || "Erro ao carregar candidatos.", "error"));
   });
   document.getElementById("rhCandidatosLimparFiltros")?.addEventListener("click", () => {
-    ["rhCandidatosFiltroStatus", "rhCandidatosFiltroNome", "rhCandidatosFiltroEmail", "rhCandidatosFiltroTelefone"].forEach((id) => {
+    ["rhCandidatosFiltroStatus", "rhCandidatosFiltroNome", "rhCandidatosFiltroVaga"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
@@ -14570,12 +14574,7 @@ function setupNavigation() {
             await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
             await fetchJSON(`/rh/candidatos/${id}/observacoes`, { method: "PUT", body: JSON.stringify({ observacoes_internas: obs }) });
             showToast("Candidato atualizado.", "success");
-            await loadRhCandidatos({
-              status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
-              nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-              email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
-              telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
-            });
+            await loadRhCandidatos(getRhCandidatosFiltrosForm());
             // Reabre os detalhes (já com dados atualizados) opcionalmente
             rhCandidatoInlineOpenId = null;
           } catch (err) {
@@ -14618,10 +14617,7 @@ function setupNavigation() {
           mainCandRow?.remove();
           showToast("Candidato excluído definitivamente.", "success");
           const filtrosCand = {
-            status: document.getElementById("rhCandidatosFiltroStatus")?.value || "",
-            nome: document.getElementById("rhCandidatosFiltroNome")?.value?.trim() || "",
-            email: document.getElementById("rhCandidatosFiltroEmail")?.value?.trim() || "",
-            telefone: document.getElementById("rhCandidatosFiltroTelefone")?.value?.trim() || "",
+            ...getRhCandidatosFiltrosForm(),
           };
           try {
             await fetchJSON(`/rh/candidatos/${id}`, { method: "DELETE" });

@@ -62,9 +62,16 @@ class RhCandidatoController extends Controller
 
         if ($request->filled('status')) $q->where('rh_candidatos.status', $request->status);
         if ($request->filled('vaga_id')) $q->where('rh_candidatos.vaga_id', (int) $request->vaga_id);
-        if ($request->filled('nome')) $q->where('rh_candidatos.nome', 'like', '%' . $request->nome . '%');
-        if ($request->filled('email')) $q->where('rh_candidatos.email', 'like', '%' . $request->email . '%');
-        if ($request->filled('telefone')) $q->where('rh_candidatos.telefone', 'like', '%' . $request->telefone . '%');
+        if ($request->filled('nome')) {
+            $q->where('rh_candidatos.nome', 'like', '%' . $request->nome . '%');
+        }
+        if ($request->filled('vaga')) {
+            $term = '%' . $request->vaga . '%';
+            $q->where(function ($sub) use ($term) {
+                $sub->where('rh_vagas.titulo', 'like', $term)
+                    ->orWhere('rh_vagas.slug', 'like', $term);
+            });
+        }
 
         $rows = $q->get();
         // Garante flags corretas (arquivo pode ter sido removido/anônimo/LGPD).
