@@ -3971,7 +3971,7 @@ function ensureFinanceiroFechamentoDashNavLink() {
     dash.className = "nav-link nav-link-child";
     dash.id = "navFinanceiroFechamentoDash";
     dash.dataset.section = "fechamentoDash";
-    dash.title = "Painel só leitura: gráficos, totais por unidade e análise dos fechamentos";
+    dash.title = "Gráficos, totais por unidade e análise dos fechamentos";
     dash.textContent = "Dashboard";
     ref.insertAdjacentElement("afterend", dash);
     return;
@@ -3995,6 +3995,11 @@ function applyPermissions() {
   // ADMIN e GERENTE sempre têm acesso a Logs (mesmo com permissões personalizadas)
   if (["ADMIN", "GERENTE"].includes(perfil) && !sections.includes("logs")) {
     sections = [...sections, "logs"];
+  }
+  // Auxiliar administrativo: auditoria + dashboard de fechamento (mesmo nível que ADMIN)
+  if (perfil === "ASSISTENTE_ADMINISTRATIVO") {
+    if (!sections.includes("fechamento")) sections = [...sections, "fechamento"];
+    if (!sections.includes("fechamentoDash")) sections = [...sections, "fechamentoDash"];
   }
   // Boas-vindas e Minha conta: sempre acessíveis (permissoes_menu antigas podem omitir)
   if (currentUser) {
@@ -18311,10 +18316,18 @@ function clearFechamentoCaixaModoEdicao() {
   populateFechamentoUnidadeSelectsFromState();
 }
 
-/** Mesmo critério do admin: escolher unidade ao editar ou perfis com visão multi-unidade. */
+/** ADMIN e Auxiliar Administrativo: mesmas permissões no módulo fechamento de caixa. */
+function fechamentoPrivilegioComoAdmin() {
+  if (!currentUser) return false;
+  const perfil = (currentUser.perfil || "").toString().trim().toUpperCase();
+  return perfil === "ADMIN" || perfil === "ASSISTENTE_ADMINISTRATIVO";
+}
+
+/** Escolher qualquer unidade ao lançar/editar ou perfis com visão multi-unidade. */
 function fechamentoPodeEscolherUnidadeLivre() {
+  if (fechamentoPrivilegioComoAdmin()) return true;
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  if (["ADMIN", "GERENTE", "FINANCEIRO", "ASSISTENTE_ADMINISTRATIVO"].includes(perfil)) return true;
+  if (["GERENTE", "FINANCEIRO"].includes(perfil)) return true;
   const editId = document.getElementById("fechamentoEdicaoId")?.value?.trim();
   return !!editId;
 }
@@ -18801,8 +18814,7 @@ function limparFechamentoResumoMes() {
   const out = document.getElementById("fechamentoResumoMesResultado");
   if (out) out.innerHTML = FECHAMENTO_RESUMO_MES_PLACEHOLDER;
   const uSel = document.getElementById("fechamentoResumoUnidade");
-  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  if (uSel && perfil === "ADMIN") uSel.value = "";
+  if (uSel && fechamentoPrivilegioComoAdmin()) uSel.value = "";
   showToast("Resumo limpo.", "info");
 }
 
@@ -19049,8 +19061,9 @@ function populateFechamentoUnidadeSelectsFromState() {
   const rSel = document.getElementById("fechamentoResumoUnidade");
   const valorFormulario = uSel?.value?.trim() || "";
   const livreFormulario = fechamentoPodeEscolherUnidadeLivre();
-  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const livreResumo = ["ADMIN", "GERENTE", "FINANCEIRO", "ASSISTENTE_ADMINISTRATIVO"].includes(perfil);
+  const livreResumo =
+    fechamentoPrivilegioComoAdmin() ||
+    ["GERENTE", "FINANCEIRO"].includes((currentUser?.perfil || "").toString().trim().toUpperCase());
   const fixedUnidadeForm = currentUser?.unidade_id && !livreFormulario;
   const fixedUnidadeResumo = currentUser?.unidade_id && !livreResumo;
   const apply = (sel, { fixed, preserveValue }) => {
@@ -19482,8 +19495,7 @@ function fechamentoDashLabelDiaSemanaCurto(isoYmd) {
 function populateFechamentoDashUnidadeSelect() {
   const sel = document.getElementById("fechamentoDashUnidade");
   if (!sel) return;
-  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const fixed = currentUser?.unidade_id && perfil !== "ADMIN";
+  const fixed = currentUser?.unidade_id && !fechamentoPrivilegioComoAdmin();
   const opts = (state.unidades || [])
     .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
     .join("");

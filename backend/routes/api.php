@@ -7003,7 +7003,8 @@ $podeAcessarFechamentoCaixa = function ($u) {
         return false;
     }
     $p = strtoupper(trim($u->perfil ?? ''));
-    $perfis = ['ADMIN', 'GERENTE', 'FINANCEIRO', 'ASSISTENTE_ADMINISTRATIVO', 'ATENDENTE_CAIXA', 'FUNCIONARIO'];
+    // ADMIN e Auxiliar Administrativo: acesso completo (auditoria, edição, exclusão, dashboard, PDF).
+    $perfis = ['ADMIN', 'ASSISTENTE_ADMINISTRATIVO', 'GERENTE', 'FINANCEIRO', 'ATENDENTE_CAIXA', 'FUNCIONARIO'];
     if (in_array($p, $perfis, true)) {
         return true;
     }
@@ -7011,7 +7012,7 @@ $podeAcessarFechamentoCaixa = function ($u) {
     if (is_string($pm)) {
         $dec = json_decode($pm, true);
 
-        return is_array($dec) && in_array('fechamento', $dec, true);
+        return is_array($dec) && (in_array('fechamento', $dec, true) || in_array('fechamentoDash', $dec, true));
     }
 
     return false;
