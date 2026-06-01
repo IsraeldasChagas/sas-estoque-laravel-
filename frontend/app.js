@@ -4963,13 +4963,87 @@ function renderUnidades(lista) {
   renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", 9);
 }
 
-function renderUsuarios(lista) {
+function parseUsuarioPermissoesMenu(usuario) {
+  if (!usuario) return [];
+  if (Array.isArray(usuario.permissoes_menu)) return usuario.permissoes_menu;
+  if (typeof usuario.permissoes_menu === "string") {
+    try {
+      const a = JSON.parse(usuario.permissoes_menu);
+      return Array.isArray(a) ? a : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function usuarioPodeSerGerenciadoNaLista(usuario) {
   const isAdminUser = isAdmin();
   const podeGerenciarBar = canManageUsuariosBar();
+  if (isAdminUser) return true;
+  return (
+    canManageUsuario(usuario) ||
+    (podeGerenciarBar && (usuario.perfil || "").toString().trim().toUpperCase() === "BAR")
+  );
+}
 
-  // Ocultar coluna de Ações no cabeçalho para não-ADMIN
+function renderUsuarioVerHtml(usuario) {
+  const ativo = Number(usuario.ativo) === 1;
+  const perfilKey = (usuario.perfil || "").toString().trim().toUpperCase();
+  const perfilLabel = PERFIL_LABELS[perfilKey] || usuario.perfil || "—";
+  const atendeCaixa =
+    Number(usuario.atende_caixa) === 1 ||
+    usuario.atende_caixa === true ||
+    String(usuario.atende_caixa) === "1";
+  const pm = parseUsuarioPermissoesMenu(usuario);
+  const permissoesTxt = pm.length ? pm.join(", ") : "Padrão do perfil";
+  const fotoUrl = getUsuarioFotoUrl(usuario.foto || usuario.foto_path);
+  const fotoBlock = fotoUrl
+    ? `<div class="usuario-ver-foto"><img src="${escapeHtml(fotoUrl)}" alt="" class="usuarios-foto" /></div>`
+    : '<div class="usuario-ver-foto"><div class="usuarios-foto usuarios-foto--placeholder" aria-hidden="true"></div></div>';
+  const field = (label, val) => {
+    const v = val == null || String(val).trim() === "" ? "—" : String(val);
+    return `<div class="view-field"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+  };
+  const extras =
+    perfilKey === "ATENDENTE"
+      ? field("Atende caixa (fechamento)", atendeCaixa ? "Sim" : "Não")
+      : "";
+  return `${fotoBlock}<div class="view-fields-grid">
+    ${field("Nome", usuario.nome)}
+    ${field("E-mail", usuario.email)}
+    ${field("Perfil", perfilLabel)}
+    ${field("Unidade", usuario.unidade_nome)}
+    ${field("Status", ativo ? "Ativo" : "Inativo")}
+    ${extras}
+    ${field("Módulos do menu", permissoesTxt)}
+  </div>`;
+}
+
+function openUsuarioVerModal(usuario) {
+  const body = document.getElementById("usuarioVerModalBody");
+  const title = document.getElementById("usuarioVerModalTitulo");
+  const editBtn = document.getElementById("usuarioVerEditar");
+  if (!body || !usuario) return;
+  if (title) title.textContent = usuario.nome ? `Usuário — ${usuario.nome}` : "Usuário";
+  body.innerHTML = renderUsuarioVerHtml(usuario);
+  if (editBtn) {
+    const podeEditar = usuarioPodeSerGerenciadoNaLista(usuario);
+    editBtn.classList.toggle("hidden", !podeEditar);
+    editBtn.dataset.id = podeEditar ? String(usuario.id) : "";
+  }
+  toggleModal(document.getElementById("usuarioVerModal"), true);
+}
+
+function closeUsuarioVerModal() {
+  toggleModal(document.getElementById("usuarioVerModal"), false);
+}
+
+function renderUsuarios(lista) {
+  const isAdminUser = isAdmin();
+
   const usuariosAcoesHeaderEl = document.getElementById("usuariosAcoesHeader");
-  if (usuariosAcoesHeaderEl) usuariosAcoesHeaderEl.style.display = isAdminUser ? "" : "none";
+  if (usuariosAcoesHeaderEl) usuariosAcoesHeaderEl.style.display = "";
 
   const rows = (lista || []).map((usuario) => {
     const ativo = Number(usuario.ativo) === 1;
@@ -4979,19 +5053,22 @@ function renderUsuarios(lista) {
       ? `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto" loading="lazy" />`
       : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
 
-    const podeGerenciar = isAdminUser
-      ? true
-      : canManageUsuario(usuario) || (podeGerenciarBar && (usuario.perfil || "").toString().trim().toUpperCase() === "BAR");
+    const podeGerenciar = usuarioPodeSerGerenciadoNaLista(usuario);
 
-    const acoes = podeGerenciar ? [
-      '<button class="table-action" data-action="edit">Editar</button>',
-      ativo
-        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
-        : '<button class="table-action" data-action="enable">Ativar</button>',
-      isAdminUser ? '<button class="table-action danger" data-action="delete">Excluir</button>' : '',
-    ].join("") : "--";
+    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+    if (podeGerenciar) {
+      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
+      botoes.push(
+        ativo
+          ? '<button type="button" class="table-action danger" data-action="disable">Desativar</button>'
+          : '<button type="button" class="table-action" data-action="enable">Ativar</button>'
+      );
+      if (isAdminUser) {
+        botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+      }
+    }
 
-    const colunaAcoes = isAdminUser ? `<td data-label="Acoes" class="table-actions">${acoes}</td>` : "";
+    const colunaAcoes = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
 
     return `<tr data-id="${usuario.id}"${!ativo ? ' class="usuario-inativo"' : ''}>
       <td data-label="Foto">${foto}</td>
@@ -5004,7 +5081,7 @@ function renderUsuarios(lista) {
     </tr>`;
   }).join("");
 
-  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", isAdminUser ? 7 : 6);
+  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", 7);
 }
 
 function renderRelatorioResumo(lista, label) {
@@ -11153,6 +11230,10 @@ async function handleUsuarioTableClick(event) {
     const usuario = state.usuarios.find((item) => String(item.id) === String(id));
     if (!usuario) return;
     const action = button.dataset.action;
+    if (action === "view") {
+      openUsuarioVerModal(usuario);
+      return;
+    }
     if (action === "edit") {
       const form = dom.usuarioForm;
       const modal = dom.usuarioModal;
@@ -11929,6 +12010,18 @@ function setupModals() {
   });
   document.getElementById("usuarioPerfilSelect")?.addEventListener("change", updateUsuarioAtendeCaixaVisibility);
   dom.closeUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
+
+  document.getElementById("closeUsuarioVer")?.addEventListener("click", () => closeUsuarioVerModal());
+  document.getElementById("closeUsuarioVerBtn")?.addEventListener("click", () => closeUsuarioVerModal());
+  document.getElementById("usuarioVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "usuarioVerModal") closeUsuarioVerModal();
+  });
+  document.getElementById("usuarioVerEditar")?.addEventListener("click", () => {
+    const id = document.getElementById("usuarioVerEditar")?.dataset?.id;
+    if (!id) return;
+    closeUsuarioVerModal();
+    dom.usuariosTable?.querySelector(`tr[data-id="${id}"]`)?.querySelector('button[data-action="edit"]')?.click();
+  });
   dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   document.getElementById("usuarioPermissoesPadrao")?.addEventListener("click", () => {
     const perfil = dom.usuarioForm?.elements?.perfil?.value?.toUpperCase();

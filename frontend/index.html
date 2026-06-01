@@ -1615,7 +1615,7 @@
                   </thead>
                   <tbody id="usuariosTable">
                     <tr>
-                      <td colspan="6" style="text-align: center; color: #607d8b">Carregando...</td>
+                      <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -4297,6 +4297,20 @@
             <button type="submit" class="btn primary">Salvar</button>
           </footer>
         </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="usuarioVerModal" role="presentation">
+      <div class="modal usuario-ver-modal" role="dialog" aria-modal="true" aria-labelledby="usuarioVerModalTitulo">
+        <header>
+          <h2 id="usuarioVerModalTitulo">Usuário</h2>
+          <button type="button" class="close-btn" id="closeUsuarioVer" aria-label="Fechar">×</button>
+        </header>
+        <div id="usuarioVerModalBody" class="usuario-ver-modal__body"></div>
+        <footer>
+          <button type="button" class="btn primary hidden" id="usuarioVerEditar">Editar</button>
+          <button type="button" class="btn neutral" id="closeUsuarioVerBtn">Fechar</button>
+        </footer>
       </div>
     </div>
 

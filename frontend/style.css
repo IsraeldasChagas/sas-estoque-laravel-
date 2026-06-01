@@ -701,6 +701,31 @@ body.sidebar-open {
   margin-top: 4px;
 }
 
+/* Usuários — card e modal com borda preta (igual Boas-vindas) */
+#usuariosSection .table-card {
+  border: 2px solid #000;
+}
+
+#usuarioVerModal .modal {
+  border: 2px solid #000;
+}
+
+.usuario-ver-modal__body {
+  margin-top: 4px;
+}
+
+.usuario-ver-foto {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.usuario-ver-foto .usuarios-foto,
+.usuario-ver-foto .usuarios-foto--placeholder {
+  width: 96px;
+  height: 96px;
+}
+
 .unidades-container .actions {
   margin-bottom: 0;
   justify-content: flex-start;
