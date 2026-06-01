@@ -18818,6 +18818,62 @@ function limparFechamentoResumoMes() {
   showToast("Resumo limpo.", "info");
 }
 
+/** PDF do resumo mensal por unidade (mesmos filtros: mês + unidade). */
+async function downloadFechamentoResumoMesPdf() {
+  const uSel = document.getElementById("fechamentoResumoUnidade");
+  const mesInp = document.getElementById("fechamentoResumoMes");
+  if (!uSel || !mesInp) return;
+  const unidadeId = uSel.value?.trim();
+  const ym = mesInp.value?.trim();
+  if (!unidadeId) {
+    showToast("Selecione a unidade.", "error");
+    return;
+  }
+  if (!ym || ym.length < 7) {
+    showToast("Selecione o mês.", "error");
+    return;
+  }
+  const qs = new URLSearchParams({ mes: ym, unidade_id: unidadeId });
+  const headers = {
+    ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
+    ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
+    ...getDeviceHeaders(),
+  };
+  let res;
+  try {
+    res = await fetch(`${API_URL}/fechamentos-caixa/resumo-mes-pdf?${qs.toString()}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+  } catch (e) {
+    showToast(e?.message || "Falha de rede ao gerar PDF.", "error");
+    return;
+  }
+  if (!res.ok) {
+    let msg = "Erro ao gerar PDF";
+    try {
+      const t = await res.text();
+      const j = JSON.parse(t);
+      if (j.error) msg = j.error;
+    } catch (_) {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeYm = ym.replace(/\D/g, "");
+  a.download = `resumo-fechamento-caixa-${safeYm}-unidade-${unidadeId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast("PDF do resumo mensal baixado.", "success");
+}
+
 async function carregarFechamentoResumoMensal() {
   const out = document.getElementById("fechamentoResumoMesResultado");
   const uSel = document.getElementById("fechamentoResumoUnidade");
@@ -19161,6 +19217,11 @@ function setupFechamentoCaixaAuditoria() {
 
   document.getElementById("fechamentoResumoMesBtn")?.addEventListener("click", () => {
     carregarFechamentoResumoMensal();
+  });
+  document.getElementById("fechamentoResumoMesPdfBtn")?.addEventListener("click", () => {
+    downloadFechamentoResumoMesPdf().catch((err) => {
+      showToast(err?.message || "Erro ao baixar PDF.", "error");
+    });
   });
   document.getElementById("fechamentoResumoMesLimparBtn")?.addEventListener("click", () => {
     limparFechamentoResumoMes();

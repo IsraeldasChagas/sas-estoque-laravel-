@@ -6989,6 +6989,7 @@ $fechamentoCaixaCors = fn () => response()->json([])
 
 Route::options('/fechamentos-caixa', $fechamentoCaixaCors);
 Route::options('/fechamentos-caixa/relatorio-dashboard-pdf', $fechamentoCaixaCors);
+Route::options('/fechamentos-caixa/resumo-mes-pdf', $fechamentoCaixaCors);
 Route::options('/fechamentos-caixa/{id}', $fechamentoCaixaCors);
 Route::options('/fechamentos-caixa/{id}/pdf', $fechamentoCaixaCors);
 
@@ -7541,6 +7542,191 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
             ->header('Content-Length', (string) strlen($pdfOutput));
     } catch (\Exception $e) {
         \Log::error('GET /fechamentos-caixa/relatorio-dashboard-pdf: ' . $e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
+    }
+});
+
+/**
+ * PDF do resumo do mês por unidade (lista de fechamentos + total maquinha).
+ */
+Route::get('/fechamentos-caixa/resumo-mes-pdf', function (Request $request) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
+    if (!Schema::hasTable('fechamentos_caixa')) {
+        return response()->json(['error' => 'Tabela de fechamentos não disponível. Execute as migrations.'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $u = $fechamentoCaixaAuth($request);
+    if (!$u) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (!$podeAcessarFechamentoCaixa($u)) {
+        return response()->json(['error' => 'Sem permissão para auditoria de fechamento'], 403)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    $mes = trim((string) $request->query('mes', ''));
+    if (!preg_match('/^\d{4}-\d{2}$/', $mes)) {
+        return response()->json(['error' => 'Informe o mês no formato AAAA-MM.'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+    $unidadeId = (int) $request->query('unidade_id', 0);
+    if ($unidadeId < 1) {
+        return response()->json(['error' => 'Informe a unidade.'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    [$anoStr, $mesStr] = explode('-', $mes);
+    $ano = (int) $anoStr;
+    $mo = (int) $mesStr;
+    if ($mo < 1 || $mo > 12) {
+        return response()->json(['error' => 'Mês inválido.'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
+    $de = sprintf('%04d-%02d-01', $ano, $mo);
+    $ate = \Carbon\Carbon::create($ano, $mo, 1)->endOfMonth()->format('Y-m-d');
+
+    $unidade = DB::table('unidades')->where('id', $unidadeId)->value('nome');
+    $unidadeNome = $unidade ? (string) $unidade : ('Unidade ' . $unidadeId);
+
+    $rows = DB::table('fechamentos_caixa')
+        ->leftJoin('unidades', 'fechamentos_caixa.unidade_id', '=', 'unidades.id')
+        ->select('fechamentos_caixa.*', 'unidades.nome as unidade_nome')
+        ->where('fechamentos_caixa.unidade_id', $unidadeId)
+        ->whereDate('fechamentos_caixa.data_fechamento', '>=', $de)
+        ->whereDate('fechamentos_caixa.data_fechamento', '<=', $ate)
+        ->orderBy('fechamentos_caixa.data_fechamento')
+        ->orderBy('fechamentos_caixa.id')
+        ->limit(500)
+        ->get();
+
+    $h = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $fmt = fn ($n) => 'R$ ' . number_format((float) $n, 2, ',', '.');
+
+    $totMaqLinha = function ($row) {
+        try {
+            $linhas = json_decode($row->linhas_json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            return 0.0;
+        }
+        if (!is_array($linhas)) {
+            return 0.0;
+        }
+        $s = 0.0;
+        foreach ($linhas as $L) {
+            if (!is_array($L)) {
+                continue;
+            }
+            $s += (float) ($L['maq'] ?? 0);
+        }
+
+        return round($s, 2);
+    };
+
+    $diasSemPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    $fmtDataDia = function ($dataIso) use ($h, $diasSemPt) {
+        if (!$dataIso) {
+            return '—';
+        }
+        $c = \Carbon\Carbon::parse($dataIso);
+
+        return $h($diasSemPt[$c->dayOfWeek] . ' ' . $c->format('d/m/Y'));
+    };
+
+    $sumMaq = 0.0;
+    $bodyHtml = '';
+    foreach ($rows as $r) {
+        $maq = $totMaqLinha($r);
+        $sumMaq = round($sumMaq + $maq, 2);
+        $hora = trim((string) ($r->hora_fechamento ?? ''));
+        $horaHtml = $hora !== '' ? ' <span style="font-size:8pt;color:#607d8b;">' . $h($hora) . '</span>' : '';
+        $maqStyle = $maq < -0.005 ? ' style="text-align:right;color:#c62828;font-weight:bold;"' : ' style="text-align:right;"';
+        $bodyHtml .= '<tr>'
+            . '<td>' . $h((string) ($r->id ?? '')) . '</td>'
+            . '<td>' . $fmtDataDia($r->data_fechamento) . $horaHtml . '</td>'
+            . '<td>' . $h($r->operador_nome ?? '—') . '</td>'
+            . '<td' . $maqStyle . '>' . $h($fmt($maq)) . '</td>'
+            . '</tr>';
+    }
+
+    if ($bodyHtml === '') {
+        $bodyHtml = '<tr><td colspan="4" style="text-align:center;color:#607d8b;padding:12px;">Nenhum fechamento neste período.</td></tr>';
+    }
+
+    $mesBr = sprintf('%02d/%04d', $mo, $ano);
+    $emitido = \Carbon\Carbon::now()->format('d/m/Y H:i');
+    $nRegs = $rows->count();
+    $totStyle = $sumMaq < -0.005 ? 'color:#c62828;' : 'color:#1a237e;';
+
+    $logoDataUri = '';
+    foreach ([
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png',
+        base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logosemfundo.png'),
+        dirname(base_path()) . DIRECTORY_SEPARATOR . 'frontend' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png',
+        base_path('public' . DIRECTORY_SEPARATOR . 'imagens' . DIRECTORY_SEPARATOR . 'logo.png'),
+        base_path('public' . DIRECTORY_SEPARATOR . 'logo.png'),
+    ] as $_lp) {
+        if (is_string($_lp) && is_readable($_lp)) {
+            $raw = @file_get_contents($_lp);
+            if ($raw !== false && strlen($raw) > 20) {
+                $ext = strtolower((string) pathinfo($_lp, PATHINFO_EXTENSION));
+                $mime = ($ext === 'jpg' || $ext === 'jpeg') ? 'image/jpeg' : 'image/png';
+                $logoDataUri = 'data:' . $mime . ';base64,' . base64_encode($raw);
+                break;
+            }
+        }
+    }
+    $logoImgHtml = $logoDataUri !== ''
+        ? '<img src="' . $logoDataUri . '" alt="" style="max-height:54px;max-width:130px;display:block;" />'
+        : '<div style="width:64px;height:50px;border:1px solid #cfd8dc;border-radius:8px;text-align:center;line-height:50px;font-size:7pt;color:#78909c;">Logo</div>';
+
+    $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 14px 16px; }
+        .pdf-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-bottom: 2px solid #1565c0; padding-bottom: 10px; }
+        .pdf-header td { vertical-align: middle; }
+        .pdf-brand { font-size: 15pt; font-weight: bold; color: #0d47a1; }
+        .pdf-title { font-size: 11pt; color: #1565c0; margin-top: 3px; }
+        .pdf-meta { font-size: 7.5pt; color: #546e7a; text-align: right; line-height: 1.35; }
+        .sub { font-size: 9pt; color: #455a64; margin: 0 0 10px; }
+        table.data { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        table.data th, table.data td { border: 1px solid #cfd8dc; padding: 6px 8px; }
+        table.data th { background: #eceff1; font-size: 8.5pt; }
+        .tot-box { margin-top: 12px; padding: 10px 12px; background: #eef4f9; border: 1px solid #b0bec5; border-radius: 8px; font-size: 10pt; }
+        .tot-box strong { font-size: 11pt; ' . $totStyle . ' }
+        .rod { margin-top: 14px; font-size: 7pt; color: #555; border-top: 1px solid #ddd; padding-top: 6px; }
+    </style></head><body>
+    <table class="pdf-header"><tr>
+        <td style="width:120px;">' . $logoImgHtml . '</td>
+        <td style="padding-left:10px;">
+            <div class="pdf-brand">Grupo Sabor Paraense</div>
+            <div class="pdf-title">Resumo do mês por unidade</div>
+        </td>
+        <td class="pdf-meta">Emitido em ' . $h($emitido) . '<br/>Referência: ' . $h($mesBr) . '</td>
+    </tr></table>
+    <p class="sub"><strong>' . $h($unidadeNome) . '</strong> — ' . $h($mes) . ' · ' . $h((string) $nRegs) . ' registro(s)</p>
+    <table class="data"><thead><tr>
+        <th>Nº</th><th>Data</th><th>Operador</th><th style="text-align:right">Total maquinha</th>
+    </tr></thead><tbody>' . $bodyHtml . '</tbody></table>
+    <div class="tot-box">Total maquinha no mês: <strong>' . $h($fmt($sumMaq)) . '</strong></div>
+    <div class="rod">Grupo Sabor Paraense — relatório gerado pelo sistema.</div>
+    </body></html>';
+
+    try {
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdfOutput = $dompdf->output();
+        $fn = 'resumo-fechamento-caixa-' . preg_replace('/[^0-9]/', '', $mes) . '-unidade-' . $unidadeId . '.pdf';
+
+        return response($pdfOutput, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="' . $fn . '"')
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
+            ->header('Content-Length', (string) strlen($pdfOutput));
+    } catch (\Exception $e) {
+        \Log::error('GET /fechamentos-caixa/resumo-mes-pdf: ' . $e->getMessage());
 
         return response()->json(['error' => 'Erro ao gerar PDF'], 500)->header('Access-Control-Allow-Origin', '*');
     }
