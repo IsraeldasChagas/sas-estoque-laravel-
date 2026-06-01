@@ -4895,18 +4895,59 @@ function renderLocais(lista) {
   renderTable(dom.locaisTable, rows, "Nenhum local cadastrado.", podeEditar ? 10 : 9);
 }
 
+function renderUnidadeVerHtml(unidade) {
+  const ativo = Number(unidade.ativo) === 1;
+  const statusLabel = ativo ? "Ativa" : "Desativada";
+  const field = (label, val) => {
+    const v = val == null || String(val).trim() === "" ? "—" : String(val);
+    return `<div class="view-field"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+  };
+  return `<div class="view-fields-grid">
+    ${field("Nome", unidade.nome)}
+    ${field("Endereço", unidade.endereco)}
+    ${field("CNPJ", unidade.cnpj)}
+    ${field("Gerente responsável", unidade.gerente_nome)}
+    ${field("Telefone", unidade.telefone)}
+    ${field("E-mail", unidade.email)}
+    ${field("Status", statusLabel)}
+    ${field("Observações", unidade.observacoes)}
+  </div>`;
+}
+
+function openUnidadeVerModal(unidade) {
+  const body = document.getElementById("unidadeVerModalBody");
+  const title = document.getElementById("unidadeVerModalTitulo");
+  const editBtn = document.getElementById("unidadeVerEditar");
+  if (!body || !unidade) return;
+  if (title) title.textContent = unidade.nome ? `Unidade — ${unidade.nome}` : "Unidade";
+  body.innerHTML = renderUnidadeVerHtml(unidade);
+  if (editBtn) {
+    const podeEditar = canManageUnidades();
+    editBtn.classList.toggle("hidden", !podeEditar);
+    editBtn.dataset.id = podeEditar ? String(unidade.id) : "";
+  }
+  toggleModal(document.getElementById("unidadeVerModal"), true);
+}
+
+function closeUnidadeVerModal() {
+  toggleModal(document.getElementById("unidadeVerModal"), false);
+}
+
 function renderUnidades(lista) {
   const podeEditar = isAdmin();
   const header = document.getElementById("unidadesAcoesHeader");
-  if (header) header.style.display = podeEditar ? "" : "none";
+  if (header) header.style.display = "";
   const rows = (lista || []).map((unidade) => {
     const ativo = Number(unidade.ativo) === 1;
     const statusLabel = ativo ? "Ativa" : "Desativada";
-    const acoesCell = podeEditar ? `<td data-label="Acoes" class="table-actions">${[
-      '<button class="table-action" data-action="edit">Editar</button>',
-      ...(ativo ? ['<button class="table-action danger" data-action="disable">Desativar</button>'] : []),
-      '<button class="table-action danger" data-action="delete">Excluir</button>',
-    ].join("")}</td>` : "";
+    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+    if (podeEditar) {
+      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
+      if (ativo) botoes.push('<button type="button" class="table-action danger" data-action="disable">Desativar</button>');
+      else botoes.push('<button type="button" class="table-action" data-action="enable">Ativar</button>');
+      botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+    }
+    const acoesCell = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
     return `<tr data-id="${unidade.id}">
       <td data-label="Nome">${escapeHtml(unidade.nome)}</td>
       <td data-label="Endereco">${escapeHtml(unidade.endereco || "--")}</td>
@@ -4919,7 +4960,7 @@ function renderUnidades(lista) {
       ${acoesCell}
     </tr>`;
   }).join("");
-  renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", podeEditar ? 9 : 8);
+  renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", 9);
 }
 
 function renderUsuarios(lista) {
@@ -11325,6 +11366,10 @@ function setupTables() {
     const unidade = state.unidades.find((item) => String(item.id) === String(id));
     if (!unidade) return;
     const action = button.dataset.action;
+    if (action === "view") {
+      openUnidadeVerModal(unidade);
+      return;
+    }
     if (action === "edit") {
       if (!canManageUnidades()) {
         showToast("Sem permissao para gerenciar unidades.", "warning");
@@ -13220,6 +13265,19 @@ function setupModals() {
   });
   dom.closeUnidadeBtn?.addEventListener("click", () => toggleModal(dom.unidadeModal, false));
   dom.cancelUnidadeBtn?.addEventListener("click", () => toggleModal(dom.unidadeModal, false));
+
+  document.getElementById("closeUnidadeVer")?.addEventListener("click", () => closeUnidadeVerModal());
+  document.getElementById("closeUnidadeVerBtn")?.addEventListener("click", () => closeUnidadeVerModal());
+  document.getElementById("unidadeVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "unidadeVerModal") closeUnidadeVerModal();
+  });
+  document.getElementById("unidadeVerEditar")?.addEventListener("click", () => {
+    const id = document.getElementById("unidadeVerEditar")?.dataset?.id;
+    if (!id) return;
+    closeUnidadeVerModal();
+    const row = dom.unidadesTable?.querySelector(`tr[data-id="${id}"]`);
+    row?.querySelector('button[data-action="edit"]')?.click();
+  });
   dom.cancelInlineUnidadeBtn?.addEventListener("click", () => {
     state.unidadeInlineVisivel = false;
     dom.unidadeInlineForm?.reset();
