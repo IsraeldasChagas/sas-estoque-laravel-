@@ -693,37 +693,180 @@ body.sidebar-open {
   border: 2px solid #000;
 }
 
-#unidadeVerModal .modal {
-  border: 2px solid #000;
-}
-
-.unidade-ver-modal__body {
-  margin-top: 4px;
-}
-
-/* Usuários — card e modal com borda preta (igual Boas-vindas) */
+/* Usuários — card com borda preta (igual Boas-vindas) */
 #usuariosSection .table-card {
   border: 2px solid #000;
 }
 
-#usuarioVerModal .modal {
-  border: 2px solid #000;
+/* Modais Ver (unidade / usuário): sem rolagem interna, layout adaptável ao celular */
+#unidadeVerModal.modal-backdrop,
+#usuarioVerModal.modal-backdrop {
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
+#unidadeVerModal .modal-ver-leitura,
+#usuarioVerModal .modal-ver-leitura {
+  border: 2px solid #000;
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 100%);
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+  padding: 18px 20px 14px;
+  box-sizing: border-box;
+}
+
+#unidadeVerModal .modal-ver-leitura > header,
+#usuarioVerModal .modal-ver-leitura > header {
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+#unidadeVerModal .modal-ver-leitura > header h2,
+#usuarioVerModal .modal-ver-leitura > header h2 {
+  font-size: clamp(1rem, 4.2vw, 1.2rem);
+  line-height: 1.3;
+  margin: 0;
+  padding-right: 2rem;
+}
+
+.unidade-ver-modal__body,
 .usuario-ver-modal__body {
-  margin-top: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: visible;
+  margin-top: 0;
+}
+
+#unidadeVerModal .modal-ver-leitura > footer,
+#usuarioVerModal .modal-ver-leitura > footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+#unidadeVerModal .view-fields-grid,
+#usuarioVerModal .view-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+#unidadeVerModal .view-field,
+#usuarioVerModal .view-field {
+  margin-bottom: 0;
+}
+
+#unidadeVerModal .view-field--full,
+#usuarioVerModal .view-field--full {
+  grid-column: 1 / -1;
+}
+
+#unidadeVerModal .view-field-label,
+#usuarioVerModal .view-field-label {
+  font-size: 0.78rem;
+}
+
+#unidadeVerModal .view-field-value,
+#usuarioVerModal .view-field-value {
+  font-size: 0.95rem;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.usuario-ver-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 .usuario-ver-foto {
   display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .usuario-ver-foto .usuarios-foto,
 .usuario-ver-foto .usuarios-foto--placeholder {
-  width: 96px;
-  height: 96px;
+  width: 80px;
+  height: 80px;
+}
+
+.usuario-ver-top-fields {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  #unidadeVerModal.modal-backdrop,
+  #usuarioVerModal.modal-backdrop {
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+    align-items: center;
+  }
+
+  #unidadeVerModal .modal-ver-leitura,
+  #usuarioVerModal .modal-ver-leitura {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+    padding: 14px 12px 12px;
+    border-radius: 12px;
+  }
+
+  #unidadeVerModal .view-fields-grid,
+  #usuarioVerModal .view-fields-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  #unidadeVerModal .view-field-label,
+  #usuarioVerModal .view-field-label {
+    font-size: 0.72rem;
+  }
+
+  #unidadeVerModal .view-field-value,
+  #usuarioVerModal .view-field-value {
+    font-size: 0.88rem;
+  }
+
+  .usuario-ver-top {
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+
+  .usuario-ver-foto .usuarios-foto,
+  .usuario-ver-foto .usuarios-foto--placeholder {
+    width: 64px;
+    height: 64px;
+  }
+
+  #unidadeVerModal .modal-ver-leitura > footer,
+  #usuarioVerModal .modal-ver-leitura > footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  #unidadeVerModal .modal-ver-leitura > footer .btn,
+  #usuarioVerModal .modal-ver-leitura > footer .btn {
+    width: 100%;
+    justify-content: center;
+    margin: 0;
+  }
 }
 
 .unidades-container .actions {

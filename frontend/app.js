@@ -4898,19 +4898,20 @@ function renderLocais(lista) {
 function renderUnidadeVerHtml(unidade) {
   const ativo = Number(unidade.ativo) === 1;
   const statusLabel = ativo ? "Ativa" : "Desativada";
-  const field = (label, val) => {
+  const field = (label, val, fullWidth = false) => {
     const v = val == null || String(val).trim() === "" ? "—" : String(val);
-    return `<div class="view-field"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+    const cls = fullWidth ? " view-field--full" : "";
+    return `<div class="view-field${cls}"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
   };
   return `<div class="view-fields-grid">
     ${field("Nome", unidade.nome)}
-    ${field("Endereço", unidade.endereco)}
+    ${field("Endereço", unidade.endereco, true)}
     ${field("CNPJ", unidade.cnpj)}
     ${field("Gerente responsável", unidade.gerente_nome)}
     ${field("Telefone", unidade.telefone)}
     ${field("E-mail", unidade.email)}
     ${field("Status", statusLabel)}
-    ${field("Observações", unidade.observacoes)}
+    ${field("Observações", unidade.observacoes, true)}
   </div>`;
 }
 
@@ -5001,22 +5002,25 @@ function renderUsuarioVerHtml(usuario) {
   const fotoBlock = fotoUrl
     ? `<div class="usuario-ver-foto"><img src="${escapeHtml(fotoUrl)}" alt="" class="usuarios-foto" /></div>`
     : '<div class="usuario-ver-foto"><div class="usuarios-foto usuarios-foto--placeholder" aria-hidden="true"></div></div>';
-  const field = (label, val) => {
+  const field = (label, val, fullWidth = false) => {
     const v = val == null || String(val).trim() === "" ? "—" : String(val);
-    return `<div class="view-field"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+    const cls = fullWidth ? " view-field--full" : "";
+    return `<div class="view-field${cls}"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
   };
   const extras =
     perfilKey === "ATENDENTE"
       ? field("Atende caixa (fechamento)", atendeCaixa ? "Sim" : "Não")
       : "";
-  return `${fotoBlock}<div class="view-fields-grid">
-    ${field("Nome", usuario.nome)}
-    ${field("E-mail", usuario.email)}
+  return `<div class="usuario-ver-top">${fotoBlock}<div class="usuario-ver-top-fields">
+    ${field("Nome", usuario.nome, true)}
+    ${field("E-mail", usuario.email, true)}
+  </div></div>
+  <div class="view-fields-grid">
     ${field("Perfil", perfilLabel)}
     ${field("Unidade", usuario.unidade_nome)}
     ${field("Status", ativo ? "Ativo" : "Inativo")}
     ${extras}
-    ${field("Módulos do menu", permissoesTxt)}
+    ${field("Módulos do menu", permissoesTxt, true)}
   </div>`;
 }
 
