@@ -537,6 +537,7 @@ body.sidebar-open {
 .boas-vindas-card {
   background: var(--card-bg);
   border-radius: var(--radius);
+  border: 2px solid #000;
   box-shadow: var(--shadow);
   padding: 48px;
   max-width: 560px;
