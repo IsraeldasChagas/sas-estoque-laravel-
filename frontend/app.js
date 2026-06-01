@@ -7938,9 +7938,62 @@ async function loadDashboard() {
   }
 }
 
+/** Evita que o navegador preencha e-mail de login no campo de busca de produtos. */
+function isValorAutofillEmail(val) {
+  const s = String(val || "").trim();
+  if (!s.includes("@")) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
+}
+
+function limparProdutoSearchSeEmailAutofill(el) {
+  if (!el) return false;
+  if (isValorAutofillEmail(el.value)) {
+    el.value = "";
+    return true;
+  }
+  return false;
+}
+
+function setupProdutoSearchAntiAutofill() {
+  const el = document.getElementById("produtoSearch");
+  if (!el || el.dataset.antiAutofillReady === "1") return;
+  el.dataset.antiAutofillReady = "1";
+  el.setAttribute("autocomplete", "off");
+  el.setAttribute("autocorrect", "off");
+  el.setAttribute("data-lpignore", "true");
+  el.setAttribute("data-1p-ignore", "true");
+  el.setAttribute("data-form-type", "other");
+
+  const unlock = () => {
+    el.readOnly = false;
+    limparProdutoSearchSeEmailAutofill(el);
+  };
+  el.readOnly = true;
+  el.addEventListener("focus", unlock);
+  el.addEventListener("pointerdown", unlock, { once: true });
+
+  const sweep = () => limparProdutoSearchSeEmailAutofill(el);
+  sweep();
+  requestAnimationFrame(sweep);
+  setTimeout(sweep, 80);
+  setTimeout(sweep, 400);
+
+  if (typeof MutationObserver !== "undefined") {
+    const obs = new MutationObserver(sweep);
+    obs.observe(el, { attributes: true, attributeFilter: ["value"] });
+    el.addEventListener("input", sweep);
+  }
+}
+
 async function loadProdutos(search) {
-  const searchEl = document.getElementById('produtoSearch');
-  const termo = search !== undefined ? String(search || '').trim() : (searchEl ? (searchEl.value || '').trim() : '');
+  const searchEl = document.getElementById("produtoSearch");
+  setupProdutoSearchAntiAutofill();
+  limparProdutoSearchSeEmailAutofill(searchEl);
+  let termo = search !== undefined ? String(search || "").trim() : searchEl ? (searchEl.value || "").trim() : "";
+  if (isValorAutofillEmail(termo)) {
+    termo = "";
+    if (searchEl) searchEl.value = "";
+  }
   try {
     const params = new URLSearchParams();
     params.set('todas', '1');
@@ -12019,13 +12072,23 @@ function setupFilters() {
 
 // Organiza abertura, fechamento e estados default das modais do sistema.
 function setupModals() {
+  setupProdutoSearchAntiAutofill();
   const produtoSearchEl = document.getElementById("produtoSearch");
   if (produtoSearchEl) {
     let produtoSearchTimeout;
     produtoSearchEl.addEventListener("input", () => {
+      if (limparProdutoSearchSeEmailAutofill(produtoSearchEl)) return;
       clearTimeout(produtoSearchTimeout);
       produtoSearchTimeout = setTimeout(() => {
-        loadProdutos(produtoSearchEl.value.trim()).catch((err) => {
+        const q = produtoSearchEl.value.trim();
+        if (isValorAutofillEmail(q)) {
+          produtoSearchEl.value = "";
+          loadProdutos("").catch((err) => {
+            showToast(err?.message || "Erro ao pesquisar produtos.", "error");
+          });
+          return;
+        }
+        loadProdutos(q).catch((err) => {
           showToast(err?.message || "Erro ao pesquisar produtos.", "error");
         });
       }, 300);

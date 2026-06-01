@@ -31,12 +31,12 @@
           <form id="loginForm" class="login-form">
             <label class="login-field">
               <span>Email</span>
-              <input type="email" id="loginEmail" placeholder="exemplo@empresa.com" required />
+              <input type="email" id="loginEmail" name="username" placeholder="exemplo@empresa.com" autocomplete="username" required />
             </label>
             <label class="login-field">
               <span>Senha</span>
               <div class="login-field__input-wrapper">
-                <input type="password" id="loginPassword" placeholder="Digite sua senha" required />
+                <input type="password" id="loginPassword" name="password" placeholder="Digite sua senha" autocomplete="current-password" required />
                 <button
                   type="button"
                   class="password-toggle"
@@ -1210,7 +1210,26 @@
           <section id="produtosSection" class="view-section hidden">
             <div class="actions">
               <button class="btn primary" id="openProduto">+ Novo produto</button>
-              <input type="search" id="produtoSearch" name="produto-busca" placeholder="Pesquisar por nome ou código interno..." autocomplete="off" autocapitalize="off" spellcheck="false" style="max-width: 280px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem;" />
+              <form class="produto-search-form" role="search" autocomplete="off" onsubmit="return false;">
+                <input
+                  type="text"
+                  id="produtoSearch"
+                  name="filtro_produto_nome_codigo"
+                  class="produto-search-input"
+                  placeholder="Pesquisar por nome ou código interno..."
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  inputmode="search"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  aria-label="Pesquisar produto por nome ou código interno"
+                  value=""
+                  style="max-width: 280px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem;"
+                />
+              </form>
             </div>
             <div class="table-card">
               <header>Produtos cadastrados</header>

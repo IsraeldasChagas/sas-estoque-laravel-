@@ -703,6 +703,17 @@ body.sidebar-open {
   border: 2px solid #000;
 }
 
+#produtosSection .produto-search-form {
+  display: inline-block;
+  margin: 0;
+  max-width: 280px;
+}
+
+#produtosSection .produto-search-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Modais Ver (unidade / usuário / produto): sem rolagem interna, layout adaptável ao celular */
 :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal).modal-backdrop {
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
