@@ -698,6 +698,11 @@ body.sidebar-open {
   border: 2px solid #000;
 }
 
+/* Produtos — card com borda preta (igual Boas-vindas) */
+#produtosSection .table-card {
+  border: 2px solid #000;
+}
+
 /* Modais Ver (unidade / usuário): sem rolagem interna, layout adaptável ao celular */
 #unidadeVerModal.modal-backdrop,
 #usuarioVerModal.modal-backdrop {
