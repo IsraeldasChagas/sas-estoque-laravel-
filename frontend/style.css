@@ -703,17 +703,15 @@ body.sidebar-open {
   border: 2px solid #000;
 }
 
-/* Modais Ver (unidade / usuário): sem rolagem interna, layout adaptável ao celular */
-#unidadeVerModal.modal-backdrop,
-#usuarioVerModal.modal-backdrop {
+/* Modais Ver (unidade / usuário / produto): sem rolagem interna, layout adaptável ao celular */
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal).modal-backdrop {
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-#unidadeVerModal .modal-ver-leitura,
-#usuarioVerModal .modal-ver-leitura {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura {
   border: 2px solid #000;
   display: flex;
   flex-direction: column;
@@ -725,14 +723,12 @@ body.sidebar-open {
   box-sizing: border-box;
 }
 
-#unidadeVerModal .modal-ver-leitura > header,
-#usuarioVerModal .modal-ver-leitura > header {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > header {
   flex-shrink: 0;
   margin-bottom: 6px;
 }
 
-#unidadeVerModal .modal-ver-leitura > header h2,
-#usuarioVerModal .modal-ver-leitura > header h2 {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > header h2 {
   font-size: clamp(1rem, 4.2vw, 1.2rem);
   line-height: 1.3;
   margin: 0;
@@ -740,15 +736,15 @@ body.sidebar-open {
 }
 
 .unidade-ver-modal__body,
-.usuario-ver-modal__body {
+.usuario-ver-modal__body,
+.produto-ver-modal__body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: visible;
   margin-top: 0;
 }
 
-#unidadeVerModal .modal-ver-leitura > footer,
-#usuarioVerModal .modal-ver-leitura > footer {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > footer {
   flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
@@ -759,30 +755,25 @@ body.sidebar-open {
   border-top: 1px solid var(--border);
 }
 
-#unidadeVerModal .view-fields-grid,
-#usuarioVerModal .view-fields-grid {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-fields-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 14px;
 }
 
-#unidadeVerModal .view-field,
-#usuarioVerModal .view-field {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field {
   margin-bottom: 0;
 }
 
-#unidadeVerModal .view-field--full,
-#usuarioVerModal .view-field--full {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field--full {
   grid-column: 1 / -1;
 }
 
-#unidadeVerModal .view-field-label,
-#usuarioVerModal .view-field-label {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-label {
   font-size: 0.78rem;
 }
 
-#unidadeVerModal .view-field-value,
-#usuarioVerModal .view-field-value {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-value {
   font-size: 0.95rem;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -817,14 +808,12 @@ body.sidebar-open {
 }
 
 @media (max-width: 600px) {
-  #unidadeVerModal.modal-backdrop,
-  #usuarioVerModal.modal-backdrop {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal).modal-backdrop {
     padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
     align-items: center;
   }
 
-  #unidadeVerModal .modal-ver-leitura,
-  #usuarioVerModal .modal-ver-leitura {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura {
     width: 100%;
     max-width: 100%;
     max-height: calc(100dvh - 16px);
@@ -832,19 +821,16 @@ body.sidebar-open {
     border-radius: 12px;
   }
 
-  #unidadeVerModal .view-fields-grid,
-  #usuarioVerModal .view-fields-grid {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-fields-grid {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  #unidadeVerModal .view-field-label,
-  #usuarioVerModal .view-field-label {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-label {
     font-size: 0.72rem;
   }
 
-  #unidadeVerModal .view-field-value,
-  #usuarioVerModal .view-field-value {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-value {
     font-size: 0.88rem;
   }
 
@@ -860,14 +846,12 @@ body.sidebar-open {
     height: 64px;
   }
 
-  #unidadeVerModal .modal-ver-leitura > footer,
-  #usuarioVerModal .modal-ver-leitura > footer {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > footer {
     flex-direction: column-reverse;
     gap: 8px;
   }
 
-  #unidadeVerModal .modal-ver-leitura > footer .btn,
-  #usuarioVerModal .modal-ver-leitura > footer .btn {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > footer .btn {
     width: 100%;
     justify-content: center;
     margin: 0;

@@ -4160,6 +4160,20 @@
     <!-- Area para mensagens toast -->
     <div id="toast" class="toast"></div>
 
+    <div class="modal-backdrop" id="produtoVerModal" role="presentation">
+      <div class="modal modal-ver-leitura produto-ver-modal" role="dialog" aria-modal="true" aria-labelledby="produtoVerModalTitulo">
+        <header>
+          <h2 id="produtoVerModalTitulo">Produto</h2>
+          <button type="button" class="close-btn" id="closeProdutoVer" aria-label="Fechar">×</button>
+        </header>
+        <div id="produtoVerModalBody" class="produto-ver-modal__body"></div>
+        <footer>
+          <button type="button" class="btn primary hidden" id="produtoVerEditar">Editar</button>
+          <button type="button" class="btn neutral" id="closeProdutoVerBtn">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
     <div class="modal-backdrop" id="produtoModal">
       <div class="modal">
         <header>

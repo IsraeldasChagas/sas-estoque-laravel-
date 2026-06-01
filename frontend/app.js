@@ -4777,22 +4777,91 @@ function renderLotesGerenciamento(lista) {
   renderTable(dom.lotesManageTable, rows, "Nenhum lote para os filtros.", 9);
 }
 
+const CATEGORIA_PRODUTO_LABELS = {
+  CARNES: "Carnes",
+  HORTIFRUTI: "Hortifruti",
+  SECOS: "Secos",
+  BEBIDAS: "Bebidas",
+  FRUTOS_DO_MAR: "Frutos do mar",
+  LIMPEZA: "Limpeza",
+  EMBALAGENS: "Embalagens",
+  CONGELADOS: "Congelados",
+  OUTROS: "Outros",
+};
+
+function labelCategoriaProduto(cat) {
+  const k = (cat || "").toString().trim().toUpperCase();
+  return CATEGORIA_PRODUTO_LABELS[k] || (cat ? String(cat) : "—");
+}
+
+function produtoPodeSerGerenciadoNaLista() {
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
+  return !isCozinhaOuBar && canManageProdutos();
+}
+
+function renderProdutoVerHtml(produto) {
+  const ativo = Number(produto.ativo) === 1;
+  const infoMinimo = (state.produtosAbaixoMinimo || []).find(
+    (item) => String(item.produto_id) === String(produto.id)
+  );
+  const field = (label, val, fullWidth = false) => {
+    const v = val == null || String(val).trim() === "" ? "—" : String(val);
+    const cls = fullWidth ? " view-field--full" : "";
+    return `<div class="view-field${cls}"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+  };
+  const estoqueAtual = infoMinimo
+    ? field(
+        "Estoque atual",
+        `${formatNumber(infoMinimo.estoque_atual, 3)} ${normalizarUnidadeBase(produto.unidade_base)}`,
+        true
+      )
+    : "";
+  return `<div class="view-fields-grid">
+    ${field("Nome", produto.nome, true)}
+    ${field("Categoria", labelCategoriaProduto(produto.categoria))}
+    ${field("Unidade base", normalizarUnidadeBase(produto.unidade_base))}
+    ${field("Código interno", produto.codigo_barras)}
+    ${field("Custo médio", `R$ ${formatNumber(produto.custo_medio, 2)}`)}
+    ${field("Estoque mínimo", formatNumber(produto.estoque_minimo, 3))}
+    ${estoqueAtual}
+    ${field("Unidade responsável", produto.unidade_nome)}
+    ${field("Status", ativo ? "Ativo" : "Inativo")}
+    ${field("Descrição", produto.descricao, true)}
+  </div>`;
+}
+
+function openProdutoVerModal(produto) {
+  const body = document.getElementById("produtoVerModalBody");
+  const title = document.getElementById("produtoVerModalTitulo");
+  const editBtn = document.getElementById("produtoVerEditar");
+  if (!body || !produto) return;
+  if (title) title.textContent = produto.nome ? `Produto — ${produto.nome}` : "Produto";
+  body.innerHTML = renderProdutoVerHtml(produto);
+  if (editBtn) {
+    const podeEditar = produtoPodeSerGerenciadoNaLista();
+    editBtn.classList.toggle("hidden", !podeEditar);
+    editBtn.dataset.id = podeEditar ? String(produto.id) : "";
+  }
+  toggleModal(document.getElementById("produtoVerModal"), true);
+}
+
+function closeProdutoVerModal() {
+  toggleModal(document.getElementById("produtoVerModal"), false);
+}
+
 function renderProdutos(lista) {
   const abaixoMinimoMap = new Map((state.produtosAbaixoMinimo || []).map((item) => [String(item.produto_id), item]));
   
-  // Verifica se é COZINHA ou BAR (não podem gerenciar produtos)
-  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
-  const podeGerenciar = canManageProdutos();
+  const podeGerenciar = produtoPodeSerGerenciadoNaLista();
   
-  // Ocultar coluna de Ações no cabeçalho se for BAR ou COZINHA
   const produtosTable = dom.produtosTable;
   if (produtosTable) {
-    const thead = produtosTable.closest('table')?.querySelector('thead');
+    const thead = produtosTable.closest("table")?.querySelector("thead");
     if (thead) {
-      const thAcoes = thead.querySelector('th:last-child');
-      if (thAcoes && thAcoes.textContent.trim() === 'Acoes') {
-        thAcoes.style.display = isCozinhaOuBar ? 'none' : '';
+      const thAcoes = thead.querySelector("th:last-child");
+      if (thAcoes && thAcoes.textContent.trim() === "Acoes") {
+        thAcoes.style.display = "";
       }
     }
   }
@@ -4808,17 +4877,18 @@ function renderProdutos(lista) {
         )}</span>`
       : "";
     
-    // COZINHA e BAR não vêem ações
-    const acoes = (!isCozinhaOuBar && podeGerenciar) ? [
-      '<button class="table-action" data-action="edit">Editar</button>',
-      ativo
-        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
-        : '<button class="table-action" data-action="enable">Ativar</button>',
-      '<button class="table-action danger" data-action="delete">Excluir</button>',
-    ].join("") : "--";
+    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+    if (podeGerenciar) {
+      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
+      botoes.push(
+        ativo
+          ? '<button type="button" class="table-action danger" data-action="disable">Desativar</button>'
+          : '<button type="button" class="table-action" data-action="enable">Ativar</button>'
+      );
+      botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+    }
     
-    // Se for BAR ou COZINHA, não renderiza a coluna de Ações
-    const colunaAcoes = isCozinhaOuBar ? '' : `<td data-label="Acoes" class="table-actions">${acoes}</td>`;
+    const colunaAcoes = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
     
     return `<tr data-id="${produto.id}"${rowClass}>
         <td data-label="Nome">${escapeHtml(produto.nome)}</td>
@@ -4833,9 +4903,7 @@ function renderProdutos(lista) {
       </tr>`;
   }).join("");
   
-  // Ajusta o número de colunas baseado se BAR/COZINHA veem ações ou não
-  const numColunas = isCozinhaOuBar ? 8 : 9;
-  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", numColunas);
+  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", 9);
 }
 
 function renderProdutosDashboard(lista) {
@@ -11308,6 +11376,10 @@ function setupTables() {
     const produto = state.produtos.find((item) => String(item.id) === String(id));
     if (!produto) return;
     const action = button.dataset.action;
+    if (action === "view") {
+      openProdutoVerModal(produto);
+      return;
+    }
     if (action === "edit") {
       await loadUnidades(false);
       dom.produtoModalTitle.textContent = "Editar produto";
@@ -11967,6 +12039,18 @@ function setupModals() {
     toggleModal(dom.produtosModal, true);
   });
   dom.closeProdutoBtn?.addEventListener("click", () => toggleModal(dom.produtosModal, false));
+
+  document.getElementById("closeProdutoVer")?.addEventListener("click", () => closeProdutoVerModal());
+  document.getElementById("closeProdutoVerBtn")?.addEventListener("click", () => closeProdutoVerModal());
+  document.getElementById("produtoVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "produtoVerModal") closeProdutoVerModal();
+  });
+  document.getElementById("produtoVerEditar")?.addEventListener("click", () => {
+    const id = document.getElementById("produtoVerEditar")?.dataset?.id;
+    if (!id) return;
+    closeProdutoVerModal();
+    dom.produtosTable?.querySelector(`tr[data-id="${id}"]`)?.querySelector('button[data-action="edit"]')?.click();
+  });
   dom.cancelProdutoBtn?.addEventListener("click", () => toggleModal(dom.produtosModal, false));
 
   dom.openUsuarioBtn?.addEventListener("click", () => {
