@@ -256,8 +256,11 @@ Route::get('/produtos', function (Request $request) {
         
         return response()->json($produtos);
     } catch (\Exception $e) {
-        \Log::error('Erro ao buscar produtos: ' . $e->getMessage());
-        return response()->json([], 200); // Retorna array vazio em caso de erro
+        \Log::error('Erro ao buscar produtos: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return response()->json([
+            'error' => 'Erro ao buscar produtos',
+            'message' => 'Erro ao buscar produtos. Tente novamente.',
+        ], 500);
     }
 });
 
@@ -452,7 +455,10 @@ Route::post('/produtos', function (Request $request) {
         $data['custo_medio'] = $data['custo_medio'] ?? 0;
         $data['estoque_minimo'] = $data['estoque_minimo'] ?? 0;
         $data['ativo'] = $data['ativo'] ?? 1;
-        
+        if (array_key_exists('unidade_id', $data) && ($data['unidade_id'] === '' || $data['unidade_id'] === null)) {
+            $data['unidade_id'] = null;
+        }
+
         $id = DB::table('produtos')->insertGetId($data);
         \Log::info('💾 Produto salvo no banco', ['id' => $id]);
         

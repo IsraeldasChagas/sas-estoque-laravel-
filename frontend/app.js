@@ -7933,7 +7933,14 @@ async function loadDashboard() {
     ]);
     
     const lotesStats = lotesStatsRaw && typeof lotesStatsRaw === "object" ? lotesStatsRaw : {};
-    state.produtos = produtos;
+    const produtosSection = document.getElementById("produtosSection");
+    const onProdutosPage = produtosSection && !produtosSection.classList.contains("hidden");
+    if (!onProdutosPage) {
+      state.produtos = Array.isArray(produtos) ? produtos : [];
+    } else {
+      // Evita sobrescrever a lista com resposta antiga (ex.: cadastro acabou de salvar)
+      loadProdutos("").catch((err) => console.error("loadProdutos após dashboard:", err));
+    }
     state.produtosAbaixoMinimo = Array.isArray(minimos?.produtos) ? minimos.produtos : [];
     state.perdasResumo = {
       total_registros: Number(perdas?.total_registros || 0),
@@ -8043,6 +8050,9 @@ async function loadProdutos(search) {
   const searchEl = document.getElementById("produtoSearch");
   setupProdutoSearchAntiAutofill();
   limparProdutoSearchSeEmailAutofill(searchEl);
+  if (search !== undefined && searchEl) {
+    searchEl.value = String(search || "").trim();
+  }
   let termo = search !== undefined ? String(search || "").trim() : searchEl ? (searchEl.value || "").trim() : "";
   if (isValorAutofillEmail(termo)) {
     termo = "";
@@ -10483,6 +10493,7 @@ async function submitProduto(event) {
 
   const custoVal = Number(form.elements.custo_medio?.value || 0);
   const estoqueVal = Number(form.elements.estoque_minimo?.value || 0);
+  const unidadeIdRaw = (form.elements.unidade_id?.value || "").toString().trim();
   const payload = {
     nome: form.elements.nome.value.trim(),
     categoria: form.elements.categoria.value,
@@ -10490,7 +10501,7 @@ async function submitProduto(event) {
     descricao: form.elements.descricao.value.trim() || null,
     custo_medio: isNaN(custoVal) ? 0 : custoVal,
     estoque_minimo: isNaN(estoqueVal) ? 0 : estoqueVal,
-    unidade_id: form.elements.unidade_id?.value || null,
+    unidade_id: unidadeIdRaw ? Number(unidadeIdRaw) : null,
     ativo: Number(form.elements.ativo?.value || 1) || 1,
   };
 
@@ -10530,13 +10541,23 @@ async function submitProduto(event) {
     if (result?.codigo_barras && form.elements.codigo_barras) {
       form.elements.codigo_barras.value = result.codigo_barras;
     }
+    if (!id && result?.id) {
+      const jaNaLista = (state.produtos || []).some((p) => String(p.id) === String(result.id));
+      if (!jaNaLista) {
+        state.produtos = [...(state.produtos || []), result];
+        renderProdutos(state.produtos);
+      }
+    }
     showToast("Produto salvo com sucesso!", "success");
     toggleModal(dom.produtosModal, false);
     form.reset();
-    
-    console.log('🔄 Recarregando lista de produtos...');
-    await loadProdutos();
-    console.log('✅ Produto salvo e lista atualizada!');
+
+    const searchEl = document.getElementById("produtoSearch");
+    if (searchEl) searchEl.value = "";
+
+    console.log("🔄 Recarregando lista de produtos (sem filtro de pesquisa)...");
+    await loadProdutos("");
+    console.log("✅ Produto salvo e lista atualizada!");
     
   } catch (err) {
     console.error('❌ Erro ao salvar produto:', err);
