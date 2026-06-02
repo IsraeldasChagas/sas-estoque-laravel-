@@ -8167,7 +8167,7 @@ async function loadEstoqueProduto(produtoId) {
           <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
           ${valorTotalCell}
           <td data-label="Lotes (código)">${item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—")}</td>
-          <td data-label="Detalhes" class="table-actions"><button type="button" class="btn secondary btn-sm btn-estoque-detalhe">Detalhes</button></td>
+          <td data-label="Detalhes" class="table-actions"><button type="button" class="table-action btn-estoque-detalhe">Ver</button></td>
         `;
 
         // Listener direto no botão

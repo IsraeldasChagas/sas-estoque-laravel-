@@ -703,6 +703,15 @@ body.sidebar-open {
   border: 2px solid #000;
 }
 
+/* Estoque — cards com borda preta (igual Boas-vindas/Locais) */
+#estoqueSection .estoque-resumo-card {
+  border: 2px solid #000 !important;
+}
+
+#estoqueSection .table-card {
+  border: 2px solid #000;
+}
+
 #produtosSection .produto-search-form {
   display: inline-block;
   margin: 0;
