@@ -4926,10 +4926,60 @@ function renderProdutosDashboard(lista) {
   renderTable(dom.produtosDashboardTable, rows, "Nenhum produto.", 4);
 }
 
+function renderLocalVerHtml(local) {
+  const ativo = Number(local.ativo ?? 1) === 1;
+  const temperatura =
+    local.temperatura_media !== null && local.temperatura_media !== undefined
+      ? `${formatNumber(Number(local.temperatura_media), 1)} °C`
+      : "—";
+  const tipoLabel = LOCAL_TIPOS_LABELS[local.tipo] || local.tipo || "—";
+  const acessoLabel = local.nivel_acesso
+    ? LOCAL_NIVEL_ACESSO_LABELS[local.nivel_acesso] || local.nivel_acesso
+    : "—";
+  const cadastro = local.data_cadastro ? formatDate(local.data_cadastro) : "—";
+  const field = (label, val, fullWidth = false) => {
+    const v = val == null || String(val).trim() === "" ? "—" : String(val);
+    const cls = fullWidth ? " view-field--full" : "";
+    return `<div class="view-field${cls}"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+  };
+  return `<div class="view-fields-grid">
+    ${field("ID", local.id)}
+    ${field("Nome", local.nome, true)}
+    ${field("Unidade", local.unidade_nome)}
+    ${field("Tipo", tipoLabel)}
+    ${field("Temperatura média", temperatura)}
+    ${field("Nível de acesso", acessoLabel)}
+    ${field("Localização / descrição", local.descricao, true)}
+    ${field("Responsável", local.responsavel)}
+    ${field("Data de cadastro", cadastro)}
+    ${field("Status", ativo ? "Ativo" : "Inativo")}
+    ${field("Observações", local.observacoes, true)}
+  </div>`;
+}
+
+function openLocalVerModal(local) {
+  const body = document.getElementById("localVerModalBody");
+  const title = document.getElementById("localVerModalTitulo");
+  const editBtn = document.getElementById("localVerEditar");
+  if (!body || !local) return;
+  if (title) title.textContent = local.nome ? `Local — ${local.nome}` : "Local";
+  body.innerHTML = renderLocalVerHtml(local);
+  if (editBtn) {
+    const podeEditar = isAdmin();
+    editBtn.classList.toggle("hidden", !podeEditar);
+    editBtn.dataset.id = podeEditar ? String(local.id) : "";
+  }
+  toggleModal(document.getElementById("localVerModal"), true);
+}
+
+function closeLocalVerModal() {
+  toggleModal(document.getElementById("localVerModal"), false);
+}
+
 function renderLocais(lista) {
   const podeEditar = isAdmin();
   const header = document.getElementById("locaisAcoesHeader");
-  if (header) header.style.display = podeEditar ? "" : "none";
+  if (header) header.style.display = "";
   const rows = (lista || []).map((local) => {
     const ativo = Number(local.ativo ?? 1) === 1;
     const temperatura = local.temperatura_media !== null && local.temperatura_media !== undefined
@@ -4940,13 +4990,17 @@ function renderLocais(lista) {
     const tipoLabel = LOCAL_TIPOS_LABELS[local.tipo] || local.tipo || "--";
     const observacoes = local.observacoes || local.descricao || "--";
     const statusPill = buildStatusPill(ativo ? "Ativo" : "Inativo");
-    const acoesCell = podeEditar ? `<td data-label="Acoes" class="table-actions">${[
-      '<button class="table-action" data-action="edit">Editar</button>',
-      ativo
-        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
-        : '<button class="table-action" data-action="enable">Ativar</button>',
-      '<button class="table-action danger" data-action="delete">Excluir</button>',
-    ].join("")}</td>` : "";
+    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+    if (podeEditar) {
+      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
+      botoes.push(
+        ativo
+          ? '<button type="button" class="table-action danger" data-action="disable">Desativar</button>'
+          : '<button type="button" class="table-action" data-action="enable">Ativar</button>'
+      );
+      botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+    }
+    const acoesCell = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
     return `<tr data-id="${escapeHtml(String(local.id))}">
       <td data-label="ID">${escapeHtml(String(local.id))}</td>
       <td data-label="Nome">${escapeHtml(local.nome || "--")}</td>
@@ -4960,7 +5014,7 @@ function renderLocais(lista) {
       ${acoesCell}
     </tr>`;
   }).join("");
-  renderTable(dom.locaisTable, rows, "Nenhum local cadastrado.", podeEditar ? 10 : 9);
+  renderTable(dom.locaisTable, rows, "Nenhum local cadastrado.", 10);
 }
 
 function renderUnidadeVerHtml(unidade) {
@@ -11650,10 +11704,6 @@ function setupTables() {
   dom.locaisTable?.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    if (!isAdmin()) {
-      showToast("Apenas administradores podem gerenciar locais.", "warning");
-      return;
-    }
     const row = button.closest("tr");
     const id = row?.dataset.id;
     if (!id) return;
@@ -11667,6 +11717,14 @@ function setupTables() {
       }
     }
     const action = button.dataset.action;
+    if (action === "view") {
+      openLocalVerModal(local);
+      return;
+    }
+    if (!isAdmin()) {
+      showToast("Apenas administradores podem gerenciar locais.", "warning");
+      return;
+    }
     if (action === "edit") {
       try {
         await loadUnidades(false);
@@ -13528,6 +13586,19 @@ function setupModals() {
     if (dom.unidadeInlineForm?.elements.id) dom.unidadeInlineForm.elements.id.value = "";
     dom.unidadeInlineForm?.elements.nome?.blur();
     applyPermissions();
+  });
+
+  document.getElementById("closeLocalVer")?.addEventListener("click", () => closeLocalVerModal());
+  document.getElementById("closeLocalVerBtn")?.addEventListener("click", () => closeLocalVerModal());
+  document.getElementById("localVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "localVerModal") closeLocalVerModal();
+  });
+  document.getElementById("localVerEditar")?.addEventListener("click", () => {
+    const id = document.getElementById("localVerEditar")?.dataset?.id;
+    if (!id) return;
+    closeLocalVerModal();
+    const row = dom.locaisTable?.querySelector(`tr[data-id="${id}"]`);
+    row?.querySelector('button[data-action="edit"]')?.click();
   });
 
   dom.openLocalModalBtn?.addEventListener("click", async () => {

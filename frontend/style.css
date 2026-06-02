@@ -712,6 +712,11 @@ body.sidebar-open {
   border: 2px solid #000;
 }
 
+/* Locais — card com borda preta (igual Boas-vindas) */
+#locaisSection .table-card {
+  border: 2px solid #000;
+}
+
 #produtosSection .produto-search-form {
   display: inline-block;
   margin: 0;
@@ -724,14 +729,14 @@ body.sidebar-open {
 }
 
 /* Modais Ver (unidade / usuário / produto): sem rolagem interna, layout adaptável ao celular */
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal).modal-backdrop {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal).modal-backdrop {
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura {
   border: 2px solid #000;
   display: flex;
   flex-direction: column;
@@ -743,12 +748,12 @@ body.sidebar-open {
   box-sizing: border-box;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > header {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura > header {
   flex-shrink: 0;
   margin-bottom: 6px;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > header h2 {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura > header h2 {
   font-size: clamp(1rem, 4.2vw, 1.2rem);
   line-height: 1.3;
   margin: 0;
@@ -757,14 +762,15 @@ body.sidebar-open {
 
 .unidade-ver-modal__body,
 .usuario-ver-modal__body,
-.produto-ver-modal__body {
+.produto-ver-modal__body,
+.local-ver-modal__body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: visible;
   margin-top: 0;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > footer {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura > footer {
   flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
@@ -775,25 +781,25 @@ body.sidebar-open {
   border-top: 1px solid var(--border);
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-fields-grid {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-fields-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 14px;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-field {
   margin-bottom: 0;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field--full {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-field--full {
   grid-column: 1 / -1;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-label {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-field-label {
   font-size: 0.78rem;
 }
 
-:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-value {
+:is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-field-value {
   font-size: 0.95rem;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -828,12 +834,12 @@ body.sidebar-open {
 }
 
 @media (max-width: 600px) {
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal).modal-backdrop {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal).modal-backdrop {
     padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
     align-items: center;
   }
 
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura {
     width: 100%;
     max-width: 100%;
     max-height: calc(100dvh - 16px);
@@ -841,16 +847,16 @@ body.sidebar-open {
     border-radius: 12px;
   }
 
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-fields-grid {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-fields-grid {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-label {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-field-label {
     font-size: 0.72rem;
   }
 
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .view-field-value {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .view-field-value {
     font-size: 0.88rem;
   }
 
@@ -866,12 +872,12 @@ body.sidebar-open {
     height: 64px;
   }
 
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > footer {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura > footer {
     flex-direction: column-reverse;
     gap: 8px;
   }
 
-  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal) .modal-ver-leitura > footer .btn {
+  :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura > footer .btn {
     width: 100%;
     justify-content: center;
     margin: 0;
