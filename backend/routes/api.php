@@ -3613,12 +3613,74 @@ Route::post('/entrada', function (Request $request) {
  * Esta rota reduz estoque usando FIFO, atualiza lotes e cria movimentações.
  * Suporta transferências entre unidades. Implementação completa com transações.
  */
-/**
- * ⚠️ ROTA DE SAÍDA DE ESTOQUE ⚠️
- * ⚠️ CÓDIGO IMPLEMENTADO E TESTADO - MODIFICAR COM CUIDADO ⚠️
- * Esta rota reduz estoque usando FIFO, atualiza lotes e cria movimentações.
- * Suporta transferências entre unidades. Implementação completa com transações.
- */
+if (!function_exists('normalizarUnidadeMedidaSaida')) {
+    function normalizarUnidadeMedidaSaida($value): string
+    {
+        $u = strtoupper(trim((string) ($value ?? '')));
+        if ($u === '' || in_array($u, ['UN', 'UNID', 'UNIDADE', 'UNIDADES'], true)) {
+            return 'UND';
+        }
+        if ($u === 'K') {
+            return 'KG';
+        }
+        return $u;
+    }
+
+    function grupoUnidadeMedidaSaida(string $unidade): string
+    {
+        $u = normalizarUnidadeMedidaSaida($unidade);
+        if (in_array($u, ['G', 'KG'], true)) {
+            return 'massa';
+        }
+        if (in_array($u, ['ML', 'L', 'KL'], true)) {
+            return 'volume';
+        }
+        if ($u === 'UND') {
+            return 'unidade';
+        }
+        return 'outro';
+    }
+
+    function converterQuantidadeParaUnidadeBaseSaida(float $qtd, string $deUnidade, string $paraUnidade): float
+    {
+        $de = normalizarUnidadeMedidaSaida($deUnidade);
+        $para = normalizarUnidadeMedidaSaida($paraUnidade);
+        if ($de === $para) {
+            return $qtd;
+        }
+        $gd = grupoUnidadeMedidaSaida($de);
+        $gp = grupoUnidadeMedidaSaida($para);
+        if ($gd !== $gp) {
+            throw new \InvalidArgumentException(
+                "Unidade \"{$de}\" não é compatível com a unidade base do produto ({$para})."
+            );
+        }
+        if ($gd === 'massa') {
+            $emMenor = $de === 'KG' ? $qtd * 1000 : $qtd;
+            if ($para === 'KG') {
+                return $emMenor / 1000;
+            }
+            return $emMenor;
+        }
+        if ($gd === 'volume') {
+            $emMenor = $qtd;
+            if ($de === 'L') {
+                $emMenor = $qtd * 1000;
+            } elseif ($de === 'KL') {
+                $emMenor = $qtd * 1000000;
+            }
+            if ($para === 'L') {
+                return $emMenor / 1000;
+            }
+            if ($para === 'KL') {
+                return $emMenor / 1000000;
+            }
+            return $emMenor;
+        }
+        throw new \InvalidArgumentException("Não é possível converter {$de} para {$para}.");
+    }
+}
+
 Route::post('/saida', function (Request $request) {
     try {
         DB::beginTransaction();
@@ -3633,19 +3695,17 @@ Route::post('/saida', function (Request $request) {
             'usuario_id' => 'required|integer|exists:usuarios,id',
             'forcar' => 'nullable|boolean',
             'codigo_lote' => 'nullable|string|max:255',
+            'unidade_informada' => 'nullable|string|in:UND,UN,UNID,G,KG,K,ML,L,KL',
         ]);
         
         $produtoId = $data['produto_id'];
         $unidadeId = $data['de_unidade_id'];
-        $quantidadeSolicitada = floatval($data['qtd']);
         $motivo = $data['motivo'];
-        $usuarioId = $data['usuario_id'];
-        $forcar = $data['forcar'] ?? false;
-        $isTransferencia = $motivo === 'TRANSFERENCIA';
-        $paraUnidadeId = $isTransferencia ? $data['para_unidade_id'] : null;
-        $codigoLoteFiltro = isset($data['codigo_lote']) ? trim($data['codigo_lote']) : null;
-        
-        // Verifica se o produto existe e está ativo
+        $qtdInformada = floatval($data['qtd']);
+        $quantidadeSolicitada = $qtdInformada;
+        $unidadeInformada = null;
+        $notaProducao = null;
+
         $produto = DB::table('produtos')->where('id', $produtoId)->first();
         if (!$produto) {
             DB::rollBack();
@@ -3654,6 +3714,37 @@ Route::post('/saida', function (Request $request) {
                 'message' => 'O produto selecionado não existe no sistema.'
             ], 404);
         }
+
+        $unidadeBaseProduto = normalizarUnidadeMedidaSaida($produto->unidade_base ?? 'UND');
+        if ($motivo === 'PRODUCAO') {
+            $unidadeInformada = normalizarUnidadeMedidaSaida($data['unidade_informada'] ?? $unidadeBaseProduto);
+            try {
+                $quantidadeSolicitada = converterQuantidadeParaUnidadeBaseSaida(
+                    $qtdInformada,
+                    $unidadeInformada,
+                    $unidadeBaseProduto
+                );
+            } catch (\InvalidArgumentException $e) {
+                DB::rollBack();
+                return response()->json([
+                    'error' => 'Unidade incompatível',
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+            $qtdInformadaFmt = rtrim(rtrim(number_format($qtdInformada, 3, '.', ''), '0'), '.');
+            $qtdConvertidaFmt = rtrim(rtrim(number_format($quantidadeSolicitada, 3, '.', ''), '0'), '.');
+            if ($unidadeInformada !== $unidadeBaseProduto || abs($qtdInformada - $quantidadeSolicitada) > 0.0005) {
+                $notaProducao = "Produção: informado {$qtdInformadaFmt} {$unidadeInformada} (estoque: {$qtdConvertidaFmt} {$unidadeBaseProduto})";
+            } else {
+                $notaProducao = "Produção: {$qtdInformadaFmt} {$unidadeInformada}";
+            }
+        }
+
+        $usuarioId = $data['usuario_id'];
+        $forcar = $data['forcar'] ?? false;
+        $isTransferencia = $motivo === 'TRANSFERENCIA';
+        $paraUnidadeId = $isTransferencia ? $data['para_unidade_id'] : null;
+        $codigoLoteFiltro = isset($data['codigo_lote']) ? trim($data['codigo_lote']) : null;
         
         // Verifica se o produto está ativo
         $produtoAtivo = isset($produto->ativo) ? (int)$produto->ativo : 1;
@@ -3987,9 +4078,8 @@ Route::post('/saida', function (Request $request) {
         }
         
         // Busca unidade_base do produto para o enum
-        $produto = DB::table('produtos')->where('id', $produtoId)->first();
-        $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
-        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        $unidadeBase = $unidadeBaseProduto;
+        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX', 'KL'];
         if (!in_array($unidadeBase, $unidadesValidas)) {
             $unidadeBase = 'UND';
         }
@@ -3998,16 +4088,22 @@ Route::post('/saida', function (Request $request) {
         $observacoes = "Lotes: " . implode(', ', array_map(function($l) {
             return $l['codigo_lote'] . " (" . $l['quantidade'] . ")";
         }, $lotesUsados));
+        if ($notaProducao) {
+            $observacoes = $notaProducao . ". " . $observacoes;
+        }
         
         $loteIdUsado = !empty($lotesUsados) && isset($lotesUsados[0]['lote_id']) ? $lotesUsados[0]['lote_id'] : null;
+
+        $qtdMovimentacao = $motivo === 'PRODUCAO' && $unidadeInformada ? $qtdInformada : $quantidadeSolicitada;
+        $unidadeMovimentacao = $motivo === 'PRODUCAO' && $unidadeInformada ? $unidadeInformada : $unidadeBase;
         
         $movimentacaoId = DB::table('movimentacoes')->insertGetId([
             'produto_id' => $produtoId,
             'lote_id' => $loteIdUsado,
             'usuario_id' => $usuarioId,
             'tipo' => $isTransferencia ? 'TRANSFERENCIA' : 'SAIDA',
-            'qtd' => $quantidadeSolicitada,
-            'unidade' => $unidadeBase,
+            'qtd' => $qtdMovimentacao,
+            'unidade' => $unidadeMovimentacao,
             'custo_unitario' => $custoMedio,
             'data_mov' => now(),
             'motivo' => $motivo,

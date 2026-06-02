@@ -1261,6 +1261,8 @@ const dom = {
   saidaOrigemSelect: document.getElementById("saidaOrigemUnidade"),
   saidaMotivo: document.getElementById("saidaMotivo"),
   saidaDestinoWrapper: document.getElementById("saidaDestinoWrapper"),
+  saidaProducaoUnidadeWrapper: document.getElementById("saidaProducaoUnidadeWrapper"),
+  saidaProducaoUnidadeSelect: document.getElementById("saidaProducaoUnidade"),
   saidaLoteWrapper: document.getElementById("saidaLoteWrapper"),
   saidaLoteSelect: document.getElementById("saidaLoteSelect"),
   saidaLoteManualWrapper: document.getElementById("saidaLoteManualWrapper"),
@@ -2319,12 +2321,87 @@ async function tratarErroNumeroBoletoDuplicado(msg) {
   }
 }
 
+function normalizarUnidadeMedida(value) {
+  if (!value) return "UND";
+  const u = String(value).trim().toUpperCase();
+  if (u === "UN" || u === "UNID" || u === "UNIDADE" || u === "UNIDADES") return "UND";
+  if (u === "K") return "KG";
+  return u;
+}
+
+function grupoUnidadeMedida(unidade) {
+  const u = normalizarUnidadeMedida(unidade);
+  if (u === "G" || u === "KG") return "massa";
+  if (u === "ML" || u === "L" || u === "KL") return "volume";
+  if (u === "UND") return "unidade";
+  return "outro";
+}
+
+function converterQuantidadeParaUnidadeBase(qtd, deUnidade, paraUnidade) {
+  const de = normalizarUnidadeMedida(deUnidade);
+  const para = normalizarUnidadeMedida(paraUnidade);
+  const q = Number(qtd);
+  if (!Number.isFinite(q) || q <= 0) {
+    throw new Error("Quantidade inválida.");
+  }
+  if (de === para) return q;
+
+  const gd = grupoUnidadeMedida(de);
+  const gp = grupoUnidadeMedida(para);
+  if (gd !== gp) {
+    throw new Error(
+      `Unidade "${de}" não é compatível com a unidade base do produto (${para}). Use unidade, gramas/quilos ou mililitros/litros conforme o produto.`
+    );
+  }
+
+  let emMenor = q;
+  if (gd === "massa") {
+    emMenor = de === "KG" ? q * 1000 : q;
+    if (para === "KG") return emMenor / 1000;
+    return emMenor;
+  }
+  if (gd === "volume") {
+    if (de === "L") emMenor = q * 1000;
+    else if (de === "KL") emMenor = q * 1000000;
+    if (para === "L") return emMenor / 1000;
+    if (para === "KL") return emMenor / 1000000;
+    return emMenor;
+  }
+  throw new Error(`Não é possível converter ${de} para ${para}.`);
+}
+
 function updateSaidaDestinoVisibility() {
   const motivo = (dom.saidaMotivo?.value || "").toUpperCase();
   const isTransferencia = motivo === "TRANSFERENCIA";
+  const isProducao = motivo === "PRODUCAO";
   if (dom.saidaDestinoWrapper) dom.saidaDestinoWrapper.classList.toggle("hidden", !isTransferencia);
   if (!isTransferencia && dom.saidaDestinoSelect) {
     dom.saidaDestinoSelect.value = "";
+  }
+  if (dom.saidaProducaoUnidadeWrapper) {
+    dom.saidaProducaoUnidadeWrapper.classList.toggle("hidden", !isProducao);
+  }
+  if (isProducao) {
+    syncSaidaProducaoUnidadeComProduto();
+  } else if (dom.saidaProducaoUnidadeSelect) {
+    dom.saidaProducaoUnidadeSelect.value = "UND";
+  }
+}
+
+function syncSaidaProducaoUnidadeComProduto() {
+  if (!dom.saidaProducaoUnidadeSelect) return;
+  const produtoId = dom.saidaProdutoSelect?.value;
+  if (!produtoId) return;
+  const produto = (state.produtos || []).find((p) => String(p.id) === String(produtoId));
+  if (!produto) return;
+  const base = normalizarUnidadeMedida(produto.unidade_base);
+  const opcoes = Array.from(dom.saidaProducaoUnidadeSelect.options).map((o) => o.value);
+  if (opcoes.includes(base)) {
+    dom.saidaProducaoUnidadeSelect.value = base;
+  }
+  const hint = document.getElementById("saidaProducaoUnidadeHint");
+  if (hint) {
+    hint.textContent = `Unidade base do produto: ${base}. Informe a quantidade na unidade desejada; o estoque será baixado após conversão.`;
   }
 }
 
@@ -11265,6 +11342,29 @@ async function submitSaida(event) {
     submittingSaida = false;
     showToast("Erro: Informe uma quantidade válida.", "error");
     return;
+  }
+  if (data.motivo === "PRODUCAO") {
+    const unidadeInformada = normalizarUnidadeMedida(
+      dom.saidaProducaoUnidadeSelect?.value || data.unidade_informada || ""
+    );
+    if (!unidadeInformada) {
+      submittingSaida = false;
+      showToast("Erro: Selecione a unidade da quantidade para produção.", "error");
+      return;
+    }
+    data.unidade_informada = unidadeInformada;
+    const produtoRef = (state.produtos || []).find((p) => String(p.id) === String(data.produto_id));
+    if (produtoRef?.unidade_base) {
+      try {
+        converterQuantidadeParaUnidadeBase(data.qtd, unidadeInformada, produtoRef.unidade_base);
+      } catch (convErr) {
+        submittingSaida = false;
+        showToast(convErr.message || "Unidade incompatível com o produto.", "error");
+        return;
+      }
+    }
+  } else {
+    delete data.unidade_informada;
   }
   data.produto_id = Number(data.produto_id);
   if (!Number.isFinite(data.produto_id) || data.produto_id <= 0) {
@@ -22115,6 +22215,7 @@ function setupForms() {
   dom.saidaForm?.addEventListener("reset", () => {
     updateSaidaDestinoVisibility();
     resetSaidaProdutoSelect();
+    if (dom.saidaProducaoUnidadeSelect) dom.saidaProducaoUnidadeSelect.value = "UND";
     if (dom.saidaLoteWrapper) dom.saidaLoteWrapper.classList.add("hidden");
     if (dom.saidaLoteManualWrapper) dom.saidaLoteManualWrapper.classList.add("hidden");
     if (dom.saidaLoteManualInput) dom.saidaLoteManualInput.value = "";
@@ -22133,6 +22234,7 @@ function setupForms() {
   // Ao trocar produto, carrega lotes disponíveis
   dom.saidaProdutoSelect?.addEventListener("change", () => {
     handleSaidaProdutoChange();
+    syncSaidaProducaoUnidadeComProduto();
   });
 
   // Ao trocar opção no select de lote, mostra/esconde input manual
