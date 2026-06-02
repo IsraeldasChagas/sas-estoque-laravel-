@@ -2381,6 +2381,10 @@ function updateSaidaDestinoVisibility() {
   if (dom.saidaProducaoUnidadeWrapper) {
     dom.saidaProducaoUnidadeWrapper.classList.toggle("hidden", !isProducao);
   }
+  if (dom.saidaProducaoUnidadeSelect) {
+    dom.saidaProducaoUnidadeSelect.disabled = !isProducao;
+    dom.saidaProducaoUnidadeSelect.required = isProducao;
+  }
   if (isProducao) {
     syncSaidaProducaoUnidadeComProduto();
   } else if (dom.saidaProducaoUnidadeSelect) {
@@ -4495,7 +4499,16 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       if (["UN", "UND", "UNID", "UNIDADE", "UNIDADES"].includes(unidadeBruta)) return "UND";
       return unidadeBruta;
     })();
-    const quantidade = `${formatNumber(quantidadeValor, 3)} ${escapeHtml(unidadeLabel)}`.trim();
+    let quantidade = `${formatNumber(quantidadeValor, 3)} ${escapeHtml(unidadeLabel)}`.trim();
+    if ((item.motivo || "").toString().trim().toUpperCase() === "PRODUCAO") {
+      const obs = String(item.observacao || item.observacoes || "");
+      const matchInformado = obs.match(/Produ[cç][aã]o:\s*informado\s+([\d.,]+)\s+(\w+)/i);
+      const matchSimples = obs.match(/Produ[cç][aã]o:\s+([\d.,]+)\s+(\w+)/i);
+      const m = matchInformado || matchSimples;
+      if (m) {
+        quantidade = `${escapeHtml(m[1])} ${escapeHtml(m[2].toUpperCase())}`;
+      }
+    }
     // ✅ Formata motivo: se for "COMPRA" e tiver "Lista de compras" na observação, mostra "Lista de compras"
     let motivo = item.motivo || item.observacao || "--";
     if ((motivo === "COMPRA" || motivo.toUpperCase() === "COMPRA") && 

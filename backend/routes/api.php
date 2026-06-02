@@ -3679,10 +3679,29 @@ if (!function_exists('normalizarUnidadeMedidaSaida')) {
         }
         throw new \InvalidArgumentException("Não é possível converter {$de} para {$para}.");
     }
+
+    /** Compatível com ENUM legado (UN) e VARCHAR (UND). */
+    function unidadeGravacaoMovimentacao(string $unidade): string
+    {
+        $u = normalizarUnidadeMedidaSaida($unidade);
+        if ($u === 'UND') {
+            return 'UN';
+        }
+        if ($u === 'KL') {
+            return 'L';
+        }
+        return $u;
+    }
 }
 
 Route::post('/saida', function (Request $request) {
     try {
+        if ($request->has('forcar')) {
+            $request->merge([
+                'forcar' => filter_var($request->input('forcar'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+            ]);
+        }
+
         DB::beginTransaction();
         
         // Validação dos dados
@@ -3934,10 +3953,10 @@ Route::post('/saida', function (Request $request) {
             
             // Busca unidade_base do produto
             $produto = DB::table('produtos')->where('id', $produtoId)->first();
-            $unidadeBase = strtoupper(trim($produto->unidade_base ?? 'UND'));
-            $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
-            if (!in_array($unidadeBase, $unidadesValidas)) {
-                $unidadeBase = 'UND';
+            $unidadeBase = unidadeGravacaoMovimentacao($produto->unidade_base ?? 'UND');
+            $unidadesValidas = ['UN', 'UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+            if (!in_array($unidadeBase, $unidadesValidas, true)) {
+                $unidadeBase = 'UN';
             }
             
             // Busca data de validade do lote original se existir
@@ -4077,11 +4096,11 @@ Route::post('/saida', function (Request $request) {
             }
         }
         
-        // Busca unidade_base do produto para o enum
-        $unidadeBase = $unidadeBaseProduto;
-        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX', 'KL'];
-        if (!in_array($unidadeBase, $unidadesValidas)) {
-            $unidadeBase = 'UND';
+        // Busca unidade_base do produto para gravação compatível com o banco
+        $unidadeBase = unidadeGravacaoMovimentacao($unidadeBaseProduto);
+        $unidadesValidas = ['UN', 'UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        if (!in_array($unidadeBase, $unidadesValidas, true)) {
+            $unidadeBase = 'UN';
         }
         
         // Cria movimentação de saída
@@ -4094,8 +4113,9 @@ Route::post('/saida', function (Request $request) {
         
         $loteIdUsado = !empty($lotesUsados) && isset($lotesUsados[0]['lote_id']) ? $lotesUsados[0]['lote_id'] : null;
 
-        $qtdMovimentacao = $motivo === 'PRODUCAO' && $unidadeInformada ? $qtdInformada : $quantidadeSolicitada;
-        $unidadeMovimentacao = $motivo === 'PRODUCAO' && $unidadeInformada ? $unidadeInformada : $unidadeBase;
+        // Sempre grava qtd/unidade na base do produto (evita erro ENUM no servidor)
+        $qtdMovimentacao = $quantidadeSolicitada;
+        $unidadeMovimentacao = $unidadeBase;
         
         $movimentacaoId = DB::table('movimentacoes')->insertGetId([
             'produto_id' => $produtoId,
@@ -4130,8 +4150,11 @@ Route::post('/saida', function (Request $request) {
         return response()->json(['error' => 'Dados inválidos', 'details' => $e->errors()], 422);
     } catch (\Exception $e) {
         DB::rollBack();
-        \Log::error('Erro ao registrar saída: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao registrar saída: ' . $e->getMessage()], 500);
+        \Log::error('Erro ao registrar saída: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return response()->json([
+            'error' => 'Erro ao registrar saída',
+            'message' => $e->getMessage() ?: 'Não foi possível registrar a saída. Tente novamente.',
+        ], 500);
     }
 });
 
