@@ -3149,6 +3149,10 @@ Route::get('/movimentacoes', function (Request $request) {
             ->leftJoin('unidades as unidades_origem', 'movimentacoes.de_unidade_id', '=', 'unidades_origem.id')
             ->leftJoin('unidades as unidades_destino', 'movimentacoes.para_unidade_id', '=', 'unidades_destino.id')
             ->leftJoin('usuarios', 'movimentacoes.usuario_id', '=', 'usuarios.id')
+            ->where(function ($q) {
+                $q->whereNull('movimentacoes.motivo')
+                  ->orWhere('movimentacoes.motivo', '<>', 'REVERSAO');
+            })
             ->select(
                 'movimentacoes.*',
                 'produtos.nome as produto_nome',
@@ -3269,6 +3273,11 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
         return response()->json(['error' => 'Movimentação não encontrada'], 404);
     }
 
+    $motivoMov = strtoupper(trim($mov->motivo ?? ''));
+    if ($motivoMov === 'REVERSAO') {
+        return response()->json(['error' => 'Registro inválido'], 400);
+    }
+
     $tipo = strtoupper(trim($mov->tipo ?? ''));
     $qtd = (float) ($mov->qtd ?? 0);
     $produtoId = (int) $mov->produto_id;
@@ -3281,6 +3290,7 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
 
     try {
         DB::beginTransaction();
+        require_once __DIR__ . '/saida_unidade_helpers.php';
 
         if ($tipo === 'ENTRADA') {
             $loteId = $mov->lote_id ?? null;
@@ -3321,70 +3331,18 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
                 ->sum('quantidade');
             DB::table('lotes')->where('id', $loteId)->update(['qtd_atual' => $totalLote]);
         } elseif ($tipo === 'SAIDA') {
-            $loteId = $mov->lote_id ?? null;
-            $custoUnitario = (float) ($mov->custo_unitario ?? 0);
-            $unidadeId = $deUnidadeId;
-            $codigoLote = null;
-            if ($loteId) {
-                $lote = DB::table('lotes')->where('id', $loteId)->first();
-                if ($lote) {
-                    $codigoLote = $lote->numero_lote ?? null;
-                }
+            if (!$deUnidadeId) {
+                DB::rollBack();
+                return response()->json(['error' => 'Saída sem unidade de origem'], 400);
             }
-            if (!$codigoLote) {
-                $codigoLote = 'REV-' . $produtoId . '-' . $unidadeId . '-' . now()->format('YmdHis');
-                $localPadrao = DB::table('locais')->where('unidade_id', $unidadeId)->first();
-                $localId = $localPadrao ? $localPadrao->id : null;
-                $loteId = DB::table('lotes')->insertGetId([
-                    'produto_id' => $produtoId,
-                    'unidade_id' => $unidadeId,
-                    'numero_lote' => $codigoLote,
-                    'local_id' => $localId,
-                    'qtd_atual' => $qtd,
-                    'custo_unitario' => $custoUnitario,
-                    'data_fabricacao' => null,
-                    'data_validade' => null,
-                    'ativo' => 1,
-                    'criado_em' => now(),
-                ]);
-                DB::table('stock_lotes')->insert([
-                    'produto_id' => $produtoId,
-                    'unidade_id' => $unidadeId,
-                    'codigo_lote' => $codigoLote,
-                    'quantidade' => $qtd,
-                    'custo_unitario' => $custoUnitario,
-                    'data_fabricacao' => null,
-                    'data_validade' => null,
-                ]);
-            } else {
-                $stock = DB::table('stock_lotes')
-                    ->where('produto_id', $produtoId)
-                    ->where('unidade_id', $unidadeId)
-                    ->where('codigo_lote', $codigoLote)
-                    ->first();
-                if ($stock) {
-                    $novaQtd = (float) $stock->quantidade + $qtd;
-                    DB::table('stock_lotes')->where('id', $stock->id)->update(['quantidade' => $novaQtd]);
-                } else {
-                    DB::table('stock_lotes')->insert([
-                        'produto_id' => $produtoId,
-                        'unidade_id' => $unidadeId,
-                        'codigo_lote' => $codigoLote,
-                        'quantidade' => $qtd,
-                        'custo_unitario' => $custoUnitario,
-                        'data_fabricacao' => null,
-                        'data_validade' => null,
-                    ]);
-                }
-                $totalLote = DB::table('stock_lotes')
-                    ->where('codigo_lote', $codigoLote)
-                    ->where('produto_id', $produtoId)
-                    ->where('unidade_id', $unidadeId)
-                    ->sum('quantidade');
-                if ($loteId) {
-                    DB::table('lotes')->where('id', $loteId)->update(['qtd_atual' => $totalLote]);
-                }
-            }
+            restaurarEstoqueAposExcluirSaida(
+                $produtoId,
+                $deUnidadeId,
+                $qtd,
+                (float) ($mov->custo_unitario ?? 0),
+                $mov->observacao ?? null,
+                $mov->lote_id ? (int) $mov->lote_id : null
+            );
         } elseif ($tipo === 'TRANSFERENCIA') {
             if (!$paraUnidadeId || !$deUnidadeId) {
                 DB::rollBack();
@@ -3476,58 +3434,14 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
             return response()->json(['error' => 'Tipo de movimentação não suportado para exclusão'], 400);
         }
 
-        // Registra a reversão no histórico de movimentações (antes de deletar a original)
-        require_once __DIR__ . '/saida_unidade_helpers.php';
-
-        $produto = DB::table('produtos')->where('id', $produtoId)->first();
-        $unidadeBase = $produto ? unidadeGravacaoMovimentacao($produto->unidade_base ?? 'UND') : 'UN';
-        $unidadesValidas = ['UN', 'UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
-        if (!in_array($unidadeBase, $unidadesValidas, true)) {
-            $unidadeBase = 'UN';
-        }
-        $revDe = $deUnidadeId;
-        $revPara = null;
-        $descTipo = $tipo;
-        $tipoReversao = match ($tipo) {
-            'SAIDA' => 'ENTRADA',
-            'ENTRADA' => 'SAIDA',
-            'TRANSFERENCIA' => 'TRANSFERENCIA',
-            default => 'AJUSTE',
-        };
-        if ($tipo === 'TRANSFERENCIA') {
-            $revDe = $paraUnidadeId;
-            $revPara = $deUnidadeId;
-            $descTipo = 'transferência';
-        } elseif ($tipo === 'ENTRADA') {
-            $loteRev = $mov->lote_id ? DB::table('lotes')->where('id', $mov->lote_id)->first() : null;
-            $revDe = $loteRev ? (int) ($loteRev->unidade_id ?? $deUnidadeId) : $deUnidadeId;
-            $descTipo = 'entrada';
-        } else {
-            $descTipo = 'saída';
-        }
-        DB::table('movimentacoes')->insert([
-            'produto_id' => $produtoId,
-            'lote_id' => $mov->lote_id,
-            'usuario_id' => $usuarioId,
-            'tipo' => $tipoReversao,
-            'qtd' => $qtd,
-            'unidade' => $unidadeBase,
-            'custo_unitario' => (float) ($mov->custo_unitario ?? 0),
-            'data_mov' => now(),
-            'motivo' => 'REVERSAO',
-            'observacao' => "Reversão da {$descTipo} #{$id}",
-            'de_unidade_id' => $revDe ?: null,
-            'para_unidade_id' => $revPara,
-        ]);
-
         DB::table('movimentacoes')->where('id', $id)->delete();
         DB::commit();
 
         return response()->json([
-            'message' => 'Movimentação excluída e estoque revertido com sucesso',
+            'message' => 'Movimentação excluída e estoque restaurado',
             'movimentacao_id' => (int) $id,
         ]);
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
         DB::rollBack();
         \Log::error('Erro ao excluir movimentação: ' . $e->getMessage());
         return response()->json([
@@ -10833,6 +10747,14 @@ Route::get('/deploy', function (Request $request) {
     $output = array_merge($output, $cacheOutput);
     exec("cd " . escapeshellarg($artisanDir) . " && php artisan cache:clear 2>&1", $cacheOutput, $cacheCode);
     $output = array_merge($output, $cacheOutput);
+
+    // Remove registros fantasma de reversão (não são movimentações reais)
+    try {
+        $lixoReversao = DB::table('movimentacoes')->where('motivo', 'REVERSAO')->delete();
+        $output[] = "Limpeza: {$lixoReversao} registro(s) REVERSAO removido(s).";
+    } catch (\Throwable $e) {
+        $output[] = 'Limpeza REVERSAO: ' . $e->getMessage();
+    }
 
     return response()->json([
         'sucesso' => $returnCode === 0,

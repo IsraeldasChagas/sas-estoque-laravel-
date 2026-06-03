@@ -83,4 +83,99 @@ if (!function_exists('normalizarUnidadeMedidaSaida')) {
         }
         return $u;
     }
+
+    /** Extrai lotes e quantidades da observação gerada em POST /saida. */
+    function parseLotesObservacaoSaida(?string $observacao): array
+    {
+        if (!$observacao || !preg_match('/Lotes:\s*(.+)$/u', $observacao, $match)) {
+            return [];
+        }
+        $lotes = [];
+        foreach (preg_split('/,\s*/', $match[1]) as $parte) {
+            $parte = trim($parte);
+            if ($parte === '') {
+                continue;
+            }
+            if (preg_match('/^(.+?)\s*\(([\d.]+)\)$/', $parte, $item)) {
+                $lotes[] = [
+                    'codigo_lote' => trim($item[1]),
+                    'quantidade' => (float) $item[2],
+                ];
+            }
+        }
+        return $lotes;
+    }
+
+    /**
+     * Devolve ao estoque as quantidades de uma SAÍDA excluída (mesmos lotes da movimentação).
+     */
+    function restaurarEstoqueAposExcluirSaida(
+        int $produtoId,
+        int $unidadeId,
+        float $qtdTotal,
+        float $custoUnitario,
+        ?string $observacao,
+        ?int $loteIdFallback = null
+    ): void {
+        $lotesObs = parseLotesObservacaoSaida($observacao);
+        if (empty($lotesObs)) {
+            $codigoLote = null;
+            if ($loteIdFallback) {
+                $lote = DB::table('lotes')->where('id', $loteIdFallback)->first();
+                if ($lote && (int) $lote->produto_id === $produtoId) {
+                    $codigoLote = $lote->numero_lote ?? null;
+                }
+            }
+            if (!$codigoLote) {
+                throw new \RuntimeException('Não foi possível identificar o lote desta saída para restaurar o estoque.');
+            }
+            $lotesObs = [['codigo_lote' => $codigoLote, 'quantidade' => $qtdTotal]];
+        }
+
+        foreach ($lotesObs as $info) {
+            $codigoLote = $info['codigo_lote'];
+            $qtd = (float) $info['quantidade'];
+            if ($qtd <= 0 || $codigoLote === '') {
+                continue;
+            }
+
+            $stock = DB::table('stock_lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $unidadeId)
+                ->where('codigo_lote', $codigoLote)
+                ->first();
+
+            if ($stock) {
+                DB::table('stock_lotes')
+                    ->where('id', $stock->id)
+                    ->update(['quantidade' => (float) $stock->quantidade + $qtd]);
+            } else {
+                DB::table('stock_lotes')->insert([
+                    'produto_id' => $produtoId,
+                    'unidade_id' => $unidadeId,
+                    'codigo_lote' => $codigoLote,
+                    'quantidade' => $qtd,
+                    'custo_unitario' => $custoUnitario,
+                    'data_fabricacao' => null,
+                    'data_validade' => null,
+                ]);
+            }
+
+            $totalLote = DB::table('stock_lotes')
+                ->where('codigo_lote', $codigoLote)
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $unidadeId)
+                ->sum('quantidade');
+
+            $loteRow = DB::table('lotes')
+                ->where('produto_id', $produtoId)
+                ->where('unidade_id', $unidadeId)
+                ->where('numero_lote', $codigoLote)
+                ->first();
+
+            if ($loteRow) {
+                DB::table('lotes')->where('id', $loteRow->id)->update(['qtd_atual' => $totalLote]);
+            }
+        }
+    }
 }

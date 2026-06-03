@@ -4515,32 +4515,18 @@ function renderMovimentacoes(lista, target, emptyMessage) {
         (item.observacao && item.observacao.includes("Lista de compras"))) {
       motivo = "Lista de compras";
     }
-    if ((motivo || "").toString().trim().toUpperCase() === "REVERSAO") {
-      motivo = "Reversão";
-    }
     motivo = escapeHtml(motivo);
     const tipo = (item.tipo || "").trim().toUpperCase();
-    const motivoBruto = (item.motivo || "").toString().trim().toUpperCase();
-    const isReversao = motivoBruto === "REVERSAO" || tipo === "REVERSAO";
-    const tipoDisplay = isReversao ? "REVERSÃO" : tipo;
     
     // Formata unidade para transferências - forma simples
     let unidadeDisplay = item.unidade_nome || "N/A";
     
     // Se for transferência, mostra origem → destino
-    if (tipo === "TRANSFERENCIA" && item.para_unidade_id && !isReversao) {
+    if (tipo === "TRANSFERENCIA" && item.para_unidade_id) {
       const origemNome = item.unidade_origem_nome || item.unidade_nome || "N/A";
       const destinoNome = item.unidade_destino_nome || "N/A";
       if (destinoNome !== "N/A") {
         unidadeDisplay = `${origemNome} → ${destinoNome}`;
-      }
-    }
-    // Se for reversão com destino, mostra origem → destino (ex: reversão de transferência)
-    else if (isReversao && item.para_unidade_id) {
-      const origemNome = item.unidade_origem_nome || item.unidade_nome || "N/A";
-      const destinoNome = item.unidade_destino_nome || "N/A";
-      if (destinoNome !== "N/A") {
-        unidadeDisplay = `↩ ${origemNome} → ${destinoNome}`;
       }
     }
     // Se for entrada de transferência, mostra unidade que recebeu
@@ -4549,16 +4535,16 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       unidadeDisplay = destinoNome;
     }
     
-    const isTransferencia = tipo === "TRANSFERENCIA" && !isReversao;
+    const isTransferencia = tipo === "TRANSFERENCIA";
     const btnAcao = isTransferencia
-      ? { title: "Reverter transferência (retorna produto ao local de origem)", icon: "↩️" }
-      : { title: "Excluir (reverte estoque)", icon: "🗑️" };
-    const acoesCell = isAdmin && !isReversao
-      ? `<td data-label="Acoes"><button type="button" class="btn-icon btn-icon--danger btn-excluir-movimentacao" title="${btnAcao.title}" data-id="${item.id}" data-tipo="${tipo}">${btnAcao.icon}</button></td>`
+      ? { title: "Desfazer transferência (restaura estoque)", icon: "↩️" }
+      : { title: "Excluir movimentação (restaura estoque deste produto)", icon: "🗑️" };
+    const acoesCell = isAdmin
+      ? `<td data-label="Acoes"><button type="button" class="btn-icon btn-icon--danger btn-excluir-movimentacao" title="${btnAcao.title}" data-id="${item.id}" data-tipo="${tipo}" data-produto="${escapeHtml(item.produto_nome || "")}" data-motivo="${escapeHtml(item.motivo || "")}" data-qtd="${escapeHtml(String(quantidadeValor))}">${btnAcao.icon}</button></td>`
       : `<td data-label="Acoes"></td>`;
     return `<tr data-id="${item.id ?? ""}">
       <td data-label="Data">${formatDate(item.data_mov)}</td>
-      <td data-label="Tipo">${buildStatusPill(tipoDisplay || "--")}</td>
+      <td data-label="Tipo">${buildStatusPill(tipo || "--")}</td>
       <td data-label="Produto">${escapeHtml(item.produto_nome || "--")}</td>
       <td data-label="Unidade">${escapeHtml(unidadeDisplay)}</td>
       <td data-label="Qtd">${quantidade}</td>
@@ -12240,11 +12226,14 @@ function setupFilters() {
       showToast("Apenas administradores podem excluir movimentações.", "warning");
       return;
     }
-    if (!confirm("Excluir esta movimentação? O estoque será revertido automaticamente.")) return;
+    const produtoLabel = btn.dataset.produto || "produto";
+    const motivoLabel = btn.dataset.motivo || btn.dataset.tipo || "";
+    const qtdLabel = btn.dataset.qtd || "?";
+    if (!confirm(`Excluir movimentação de ${produtoLabel} (${motivoLabel}, qtd ${qtdLabel})?\n\nO estoque deste produto será restaurado. Outros produtos não serão afetados.`)) return;
     btn.disabled = true;
     try {
       await fetchJSON(`/movimentacoes/${id}`, { method: "DELETE" });
-      showToast("Movimentação excluída e estoque revertido.", "success");
+      showToast("Movimentação excluída. Estoque restaurado.", "success");
       const filtros = typeof collectMovimentacoesFiltros === "function" ? collectMovimentacoesFiltros() : {};
       await loadMovimentacoesDetalhadas(filtros, { refreshDashboard: true });
     } catch (err) {
