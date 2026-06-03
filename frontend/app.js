@@ -7593,6 +7593,7 @@ function bindBuscaSelect(inputId, selectId) {
   }
 
   input.addEventListener("input", () => {
+    if (limparSearchSeEmailAutofill(input)) return;
     const termo = input.value.trim().toLowerCase();
     const valorAtual = select.value;
     const opcaoVazia = select.options[0]; // "Todos" ou "Selecione..."
@@ -7639,6 +7640,7 @@ function bindBuscaSelect(inputId, selectId) {
 function limparEstoqueProdutoBusca() {
   const input = document.getElementById("estoqueProdutoBusca");
   const select = document.getElementById("estoqueProdutoSelect");
+  setupSearchInputAntiAutofill(input);
   if (input) {
     input.value = "";
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -8094,14 +8096,14 @@ async function loadDashboard() {
   }
 }
 
-/** Evita que o navegador preencha e-mail de login no campo de busca de produtos. */
+/** Evita que o navegador preencha e-mail de login em campos de busca/filtro. */
 function isValorAutofillEmail(val) {
   const s = String(val || "").trim();
   if (!s.includes("@")) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
 }
 
-function limparProdutoSearchSeEmailAutofill(el) {
+function limparSearchSeEmailAutofill(el) {
   if (!el) return false;
   if (isValorAutofillEmail(el.value)) {
     el.value = "";
@@ -8110,35 +8112,66 @@ function limparProdutoSearchSeEmailAutofill(el) {
   return false;
 }
 
-function setupProdutoSearchAntiAutofill() {
-  const el = document.getElementById("produtoSearch");
+/** @deprecated use limparSearchSeEmailAutofill */
+function limparProdutoSearchSeEmailAutofill(el) {
+  return limparSearchSeEmailAutofill(el);
+}
+
+function setupSearchInputAntiAutofill(el) {
   if (!el || el.dataset.antiAutofillReady === "1") return;
   el.dataset.antiAutofillReady = "1";
   el.setAttribute("autocomplete", "off");
   el.setAttribute("autocorrect", "off");
+  el.setAttribute("autocapitalize", "off");
+  el.setAttribute("spellcheck", "false");
+  el.setAttribute("inputmode", "search");
   el.setAttribute("data-lpignore", "true");
   el.setAttribute("data-1p-ignore", "true");
   el.setAttribute("data-form-type", "other");
 
   const unlock = () => {
     el.readOnly = false;
-    limparProdutoSearchSeEmailAutofill(el);
+    limparSearchSeEmailAutofill(el);
   };
   el.readOnly = true;
   el.addEventListener("focus", unlock);
   el.addEventListener("pointerdown", unlock, { once: true });
 
-  const sweep = () => limparProdutoSearchSeEmailAutofill(el);
+  const sweep = () => limparSearchSeEmailAutofill(el);
   sweep();
   requestAnimationFrame(sweep);
   setTimeout(sweep, 80);
   setTimeout(sweep, 400);
+  setTimeout(sweep, 1200);
 
+  el.addEventListener("input", sweep);
   if (typeof MutationObserver !== "undefined") {
     const obs = new MutationObserver(sweep);
     obs.observe(el, { attributes: true, attributeFilter: ["value"] });
-    el.addEventListener("input", sweep);
   }
+}
+
+const SEARCH_ANTI_AUTOFILL_IDS = [
+  "estoqueProdutoBusca",
+  "produtoSearch",
+  "lotesFiltroProdutoBusca",
+  "entradaProdutoBusca",
+  "saidaProdutoBusca",
+  "itemCompraProdutoBusca",
+  "funcionariosFiltroNomeBusca",
+  "proventosFiltroFuncionarioBusca",
+  "reciboAjudaFuncionarioBusca",
+  "fornecedorSearch",
+];
+
+function setupAllSearchInputsAntiAutofill() {
+  SEARCH_ANTI_AUTOFILL_IDS.forEach((id) => {
+    setupSearchInputAntiAutofill(document.getElementById(id));
+  });
+}
+
+function setupProdutoSearchAntiAutofill() {
+  setupSearchInputAntiAutofill(document.getElementById("produtoSearch"));
 }
 
 async function loadProdutos(search) {
@@ -8199,6 +8232,8 @@ async function loadEstoqueResumo() {
 
 async function loadEstoqueProdutos() {
   try {
+    setupSearchInputAntiAutofill(document.getElementById("estoqueProdutoBusca"));
+    limparSearchSeEmailAutofill(document.getElementById("estoqueProdutoBusca"));
     if (!state.produtos || state.produtos.length === 0) {
       state.produtos = await fetchJSON("/produtos?todas=1");
     }
@@ -12272,6 +12307,7 @@ function setupFilters() {
 
 // Organiza abertura, fechamento e estados default das modais do sistema.
 function setupModals() {
+  setupAllSearchInputsAntiAutofill();
   setupProdutoSearchAntiAutofill();
   const produtoSearchEl = document.getElementById("produtoSearch");
   if (produtoSearchEl) {

@@ -741,6 +741,14 @@ body.sidebar-open {
   margin: 0;
 }
 
+#estoqueSection .estoque-produto-busca-row input:-webkit-autofill,
+#estoqueSection .estoque-produto-busca-row input:-webkit-autofill:hover,
+#estoqueSection .estoque-produto-busca-row input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+  box-shadow: 0 0 0 1000px #fff inset;
+  -webkit-text-fill-color: #333;
+}
+
 #estoqueSection .estoque-produto-form select {
   margin-top: 0.5rem;
 }

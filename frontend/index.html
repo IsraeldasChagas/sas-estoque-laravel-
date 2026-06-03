@@ -1528,16 +1528,30 @@
             </div>
             <div class="table-card">
               <header>Selecione um produto para consultar o estoque</header>
-              <div class="estoque-produto-form">
+              <form class="estoque-produto-form" role="search" autocomplete="off" onsubmit="return false;">
                 <span class="estoque-produto-form__label">Produto</span>
                 <div class="estoque-produto-busca-row">
-                  <input type="text" id="estoqueProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" />
+                  <input
+                    type="search"
+                    id="estoqueProdutoBusca"
+                    name="filtro_produto_estoque"
+                    placeholder="Digite para filtrar..."
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    inputmode="search"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    aria-label="Filtrar produto para consulta de estoque"
+                  />
                   <button type="button" class="btn primary" id="estoqueProdutoBuscaLimpar">Limpar pesquisa</button>
                 </div>
                 <select id="estoqueProdutoSelect">
                   <option value="">Selecione um produto</option>
                 </select>
-              </div>
+              </form>
               <div id="estoqueInfo" style="display: none;">
                 <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
                   <h3 id="estoqueProdutoNome" style="margin: 0 0 1rem 0; color: #1976d2;"></h3>
