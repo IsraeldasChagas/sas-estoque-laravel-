@@ -3477,15 +3477,23 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
         }
 
         // Registra a reversão no histórico de movimentações (antes de deletar a original)
+        require_once __DIR__ . '/saida_unidade_helpers.php';
+
         $produto = DB::table('produtos')->where('id', $produtoId)->first();
-        $unidadeBase = $produto ? strtoupper(trim($produto->unidade_base ?? 'UND')) : 'UND';
-        $unidadesValidas = ['UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
-        if (!in_array($unidadeBase, $unidadesValidas)) {
-            $unidadeBase = 'UND';
+        $unidadeBase = $produto ? unidadeGravacaoMovimentacao($produto->unidade_base ?? 'UND') : 'UN';
+        $unidadesValidas = ['UN', 'UND', 'G', 'KG', 'ML', 'L', 'PCT', 'CX'];
+        if (!in_array($unidadeBase, $unidadesValidas, true)) {
+            $unidadeBase = 'UN';
         }
         $revDe = $deUnidadeId;
         $revPara = null;
         $descTipo = $tipo;
+        $tipoReversao = match ($tipo) {
+            'SAIDA' => 'ENTRADA',
+            'ENTRADA' => 'SAIDA',
+            'TRANSFERENCIA' => 'TRANSFERENCIA',
+            default => 'AJUSTE',
+        };
         if ($tipo === 'TRANSFERENCIA') {
             $revDe = $paraUnidadeId;
             $revPara = $deUnidadeId;
@@ -3501,7 +3509,7 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
             'produto_id' => $produtoId,
             'lote_id' => $mov->lote_id,
             'usuario_id' => $usuarioId,
-            'tipo' => 'REVERSAO',
+            'tipo' => $tipoReversao,
             'qtd' => $qtd,
             'unidade' => $unidadeBase,
             'custo_unitario' => (float) ($mov->custo_unitario ?? 0),

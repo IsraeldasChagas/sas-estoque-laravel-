@@ -4515,14 +4515,20 @@ function renderMovimentacoes(lista, target, emptyMessage) {
         (item.observacao && item.observacao.includes("Lista de compras"))) {
       motivo = "Lista de compras";
     }
+    if ((motivo || "").toString().trim().toUpperCase() === "REVERSAO") {
+      motivo = "Reversão";
+    }
     motivo = escapeHtml(motivo);
     const tipo = (item.tipo || "").trim().toUpperCase();
+    const motivoBruto = (item.motivo || "").toString().trim().toUpperCase();
+    const isReversao = motivoBruto === "REVERSAO" || tipo === "REVERSAO";
+    const tipoDisplay = isReversao ? "REVERSÃO" : tipo;
     
     // Formata unidade para transferências - forma simples
     let unidadeDisplay = item.unidade_nome || "N/A";
     
     // Se for transferência, mostra origem → destino
-    if (tipo === "TRANSFERENCIA" && item.para_unidade_id) {
+    if (tipo === "TRANSFERENCIA" && item.para_unidade_id && !isReversao) {
       const origemNome = item.unidade_origem_nome || item.unidade_nome || "N/A";
       const destinoNome = item.unidade_destino_nome || "N/A";
       if (destinoNome !== "N/A") {
@@ -4530,7 +4536,7 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       }
     }
     // Se for reversão com destino, mostra origem → destino (ex: reversão de transferência)
-    else if (tipo === "REVERSAO" && item.para_unidade_id) {
+    else if (isReversao && item.para_unidade_id) {
       const origemNome = item.unidade_origem_nome || item.unidade_nome || "N/A";
       const destinoNome = item.unidade_destino_nome || "N/A";
       if (destinoNome !== "N/A") {
@@ -4543,8 +4549,7 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       unidadeDisplay = destinoNome;
     }
     
-    const isTransferencia = tipo === "TRANSFERENCIA";
-    const isReversao = tipo === "REVERSAO";
+    const isTransferencia = tipo === "TRANSFERENCIA" && !isReversao;
     const btnAcao = isTransferencia
       ? { title: "Reverter transferência (retorna produto ao local de origem)", icon: "↩️" }
       : { title: "Excluir (reverte estoque)", icon: "🗑️" };
@@ -4553,7 +4558,7 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       : `<td data-label="Acoes"></td>`;
     return `<tr data-id="${item.id ?? ""}">
       <td data-label="Data">${formatDate(item.data_mov)}</td>
-      <td data-label="Tipo">${buildStatusPill(tipo || "--")}</td>
+      <td data-label="Tipo">${buildStatusPill(tipoDisplay || "--")}</td>
       <td data-label="Produto">${escapeHtml(item.produto_nome || "--")}</td>
       <td data-label="Unidade">${escapeHtml(unidadeDisplay)}</td>
       <td data-label="Qtd">${quantidade}</td>
