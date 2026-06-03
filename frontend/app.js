@@ -7637,6 +7637,15 @@ function bindBuscaSelect(inputId, selectId) {
   });
 }
 
+function syncBuscaSelectOpcoes(inputId, selectId) {
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  if (!input || !select) return;
+  input._todasOpcoes = Array.from(select.options)
+    .filter((o) => o.value)
+    .map((o) => ({ value: o.value, text: o.text }));
+}
+
 function limparEstoqueProdutoBusca() {
   const input = document.getElementById("estoqueProdutoBusca");
   const select = document.getElementById("estoqueProdutoSelect");
@@ -8230,29 +8239,71 @@ async function loadEstoqueResumo() {
   }
 }
 
+async function loadEstoqueProdutosLista() {
+  const unidadeSelect = document.getElementById("estoqueResumoUnidade");
+  const unidadeId = unidadeSelect?.value || "";
+  const params = new URLSearchParams();
+  if (unidadeId) {
+    params.set("unidade_id", unidadeId);
+    params.set("com_estoque", "1");
+  } else {
+    params.set("todas", "1");
+  }
+
+  const produtos = await fetchJSON(`/produtos?${params.toString()}`);
+  const ativos = (produtos || []).filter((p) => Number(p.ativo ?? 1) === 1);
+  const select = dom.estoqueProdutoSelect || document.getElementById("estoqueProdutoSelect");
+  const valorAnterior = select?.value || "";
+  const placeholder = unidadeId
+    ? (ativos.length ? "Selecione um produto" : "Nenhum produto com estoque nesta unidade")
+    : "Selecione um produto";
+  const options = ativos
+    .map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`)
+    .join("");
+
+  if (select) {
+    populateSelect(select, options, placeholder);
+  }
+
+  const buscaInput = document.getElementById("estoqueProdutoBusca");
+  if (buscaInput) {
+    buscaInput.value = "";
+    buscaInput._todasOpcoes = null;
+  }
+  bindBuscaSelect("estoqueProdutoBusca", "estoqueProdutoSelect");
+  syncBuscaSelectOpcoes("estoqueProdutoBusca", "estoqueProdutoSelect");
+
+  if (select) {
+    if (valorAnterior && ativos.some((p) => String(p.id) === String(valorAnterior))) {
+      select.value = valorAnterior;
+    } else {
+      select.value = "";
+      const estoqueInfo = document.getElementById("estoqueInfo");
+      if (estoqueInfo) estoqueInfo.style.display = "none";
+    }
+  }
+}
+
 async function loadEstoqueProdutos() {
   try {
     setupSearchInputAntiAutofill(document.getElementById("estoqueProdutoBusca"));
     limparSearchSeEmailAutofill(document.getElementById("estoqueProdutoBusca"));
-    if (!state.produtos || state.produtos.length === 0) {
-      state.produtos = await fetchJSON("/produtos?todas=1");
-    }
-    
-    const ativos = (state.produtos || []).filter((p) => Number(p.ativo ?? 1) === 1);
-    const options = ativos.map((p) => `<option value="${p.id}">${escapeHtml(p.nome || `Produto ${p.id}`)}</option>`).join("");
-    if (dom.estoqueProdutoSelect) {
-      populateSelect(dom.estoqueProdutoSelect, options, "Selecione um produto");
-    }
-    bindBuscaSelect("estoqueProdutoBusca", "estoqueProdutoSelect");
 
-    // Popula select de unidades no resumo e carrega valor total
     const unidades = state.unidades && state.unidades.length > 0 ? state.unidades : await fetchJSON("/unidades?todas=1");
     state.unidades = unidades;
     const selectResumoUnidade = document.getElementById("estoqueResumoUnidade");
+    const unidadeValorAnterior = selectResumoUnidade?.value ?? "";
     if (selectResumoUnidade) {
-      const optHtml = (unidades || []).map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`).join("");
+      const optHtml = (unidades || [])
+        .map((u) => `<option value="${u.id}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
+        .join("");
       selectResumoUnidade.innerHTML = '<option value="">Todas as unidades</option>' + optHtml;
+      if (unidadeValorAnterior && [...selectResumoUnidade.options].some((o) => o.value === unidadeValorAnterior)) {
+        selectResumoUnidade.value = unidadeValorAnterior;
+      }
     }
+
+    await loadEstoqueProdutosLista();
     await loadEstoqueResumo();
   } catch (err) {
     console.error("Erro ao carregar produtos para estoque:", err);
@@ -22355,7 +22406,14 @@ function setupForms() {
   // Select de unidade no resumo de estoque
   const estoqueResumoUnidadeEl = document.getElementById("estoqueResumoUnidade");
   if (estoqueResumoUnidadeEl) {
-    estoqueResumoUnidadeEl.addEventListener("change", () => loadEstoqueResumo());
+    estoqueResumoUnidadeEl.addEventListener("change", async () => {
+      try {
+        await loadEstoqueProdutosLista();
+        await loadEstoqueResumo();
+      } catch (err) {
+        showToast(err?.message || "Erro ao filtrar produtos por unidade.", "error");
+      }
+    });
   }
 
   // Fechar modal de detalhes de lotes
