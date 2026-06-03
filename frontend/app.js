@@ -7636,6 +7636,20 @@ function bindBuscaSelect(inputId, selectId) {
   });
 }
 
+function limparEstoqueProdutoBusca() {
+  const input = document.getElementById("estoqueProdutoBusca");
+  const select = document.getElementById("estoqueProdutoSelect");
+  if (input) {
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  if (select) {
+    select.value = "";
+    select.size = 1;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+}
+
 function refreshProdutoSelects() {
   if (!state.produtos || !Array.isArray(state.produtos) || state.produtos.length === 0) {
     console.warn("refreshProdutoSelects: Nenhum produto disponível no state");
@@ -22297,6 +22311,10 @@ function setupForms() {
       }
     });
   }
+
+  document.getElementById("estoqueProdutoBuscaLimpar")?.addEventListener("click", () => {
+    limparEstoqueProdutoBusca();
+  });
 
   // Select de unidade no resumo de estoque
   const estoqueResumoUnidadeEl = document.getElementById("estoqueResumoUnidade");

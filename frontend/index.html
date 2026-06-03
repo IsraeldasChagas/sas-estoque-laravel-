@@ -1531,8 +1531,11 @@
               <div style="margin-bottom: 1.5rem;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
                   Produto
-                  <input type="text" id="estoqueProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" style="width: 100%; padding: 0.6rem 0.75rem; font-size: 0.95rem; border: 1px solid #ddd; border-radius: 4px 4px 0 0; box-sizing: border-box; margin-top: 0.4rem; border-bottom: none;" />
-                  <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 0 0 4px 4px; box-sizing: border-box; border-top: none;">
+                  <div class="estoque-produto-busca-row">
+                    <input type="text" id="estoqueProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" />
+                    <button type="button" class="btn" id="estoqueProdutoBuscaLimpar">Limpar pesquisa</button>
+                  </div>
+                  <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 0 0 4px 4px; box-sizing: border-box; margin-top: 0.5rem;">
                     <option value="">Selecione um produto</option>
                   </select>
                 </label>

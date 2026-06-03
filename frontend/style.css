@@ -708,6 +708,28 @@ body.sidebar-open {
   border: 2px solid #000 !important;
 }
 
+#estoqueSection .estoque-produto-busca-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 0.4rem;
+}
+
+#estoqueSection .estoque-produto-busca-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#estoqueSection .estoque-produto-busca-row .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 #estoqueSection .table-card {
   border: 2px solid #000;
 }
