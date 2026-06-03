@@ -708,26 +708,55 @@ body.sidebar-open {
   border: 2px solid #000 !important;
 }
 
+#estoqueSection .estoque-produto-form {
+  margin-bottom: 1.5rem;
+}
+
+#estoqueSection .estoque-produto-form__label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
 #estoqueSection .estoque-produto-busca-row {
   display: flex;
-  gap: 8px;
-  align-items: stretch;
-  margin-top: 0.4rem;
+  gap: 10px;
+  align-items: center;
+}
+
+#estoqueSection .estoque-produto-busca-row input,
+#estoqueSection .estoque-produto-form select {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: #fff;
 }
 
 #estoqueSection .estoque-produto-busca-row input {
   flex: 1;
   min-width: 0;
-  padding: 0.6rem 0.75rem;
-  font-size: 0.95rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
+  margin: 0;
+}
+
+#estoqueSection .estoque-produto-form select {
+  margin-top: 0.5rem;
 }
 
 #estoqueSection .estoque-produto-busca-row .btn {
   flex-shrink: 0;
+  height: 48px;
+  padding: 0 1.15rem;
+  margin: 0;
+  border-radius: 6px;
+  box-shadow: none;
   white-space: nowrap;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #estoqueSection .table-card {

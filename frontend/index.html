@@ -1528,17 +1528,15 @@
             </div>
             <div class="table-card">
               <header>Selecione um produto para consultar o estoque</header>
-              <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                  Produto
-                  <div class="estoque-produto-busca-row">
-                    <input type="text" id="estoqueProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" />
-                    <button type="button" class="btn" id="estoqueProdutoBuscaLimpar">Limpar pesquisa</button>
-                  </div>
-                  <select id="estoqueProdutoSelect" style="width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 0 0 4px 4px; box-sizing: border-box; margin-top: 0.5rem;">
-                    <option value="">Selecione um produto</option>
-                  </select>
-                </label>
+              <div class="estoque-produto-form">
+                <span class="estoque-produto-form__label">Produto</span>
+                <div class="estoque-produto-busca-row">
+                  <input type="text" id="estoqueProdutoBusca" placeholder="Digite para filtrar..." autocomplete="off" />
+                  <button type="button" class="btn primary" id="estoqueProdutoBuscaLimpar">Limpar pesquisa</button>
+                </div>
+                <select id="estoqueProdutoSelect">
+                  <option value="">Selecione um produto</option>
+                </select>
               </div>
               <div id="estoqueInfo" style="display: none;">
                 <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
