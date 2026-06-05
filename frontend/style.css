@@ -3126,8 +3126,8 @@ textarea {
 }
 
 .produto-ver-foto .usuarios-foto {
-  width: 120px;
-  height: 120px;
+  width: 220px;
+  height: 220px;
   border-radius: 10px;
   object-fit: cover;
 }
@@ -3161,7 +3161,7 @@ body.image-lightbox-open {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 8px;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.22s ease;
@@ -3176,7 +3176,7 @@ body.image-lightbox-open {
   position: absolute;
   inset: 0;
   border: none;
-  background: rgba(8, 16, 32, 0.82);
+  background: rgba(8, 16, 32, 0.9);
   cursor: zoom-out;
   padding: 0;
 }
@@ -3184,12 +3184,14 @@ body.image-lightbox-open {
 .image-lightbox__stage {
   position: relative;
   z-index: 1;
-  max-width: min(92vw, 960px);
-  max-height: 88vh;
+  width: 98vw;
+  max-width: 98vw;
+  max-height: 96vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: scale(0.88);
+  justify-content: center;
+  transform: scale(0.92);
   opacity: 0;
   transition: transform 0.24s ease, opacity 0.24s ease;
 }
@@ -3201,30 +3203,31 @@ body.image-lightbox-open {
 
 .image-lightbox__img {
   display: block;
-  max-width: min(92vw, 960px);
-  max-height: calc(88vh - 48px);
   width: auto;
   height: auto;
+  max-width: 96vw;
+  max-height: 92vh;
   object-fit: contain;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
   background: #fff;
 }
 
 .image-lightbox__close {
-  position: absolute;
-  top: -12px;
-  right: -12px;
-  width: 36px;
-  height: 36px;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
   background: #fff;
   color: #1a237e;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  z-index: 2;
 }
 
 .image-lightbox__hint {
