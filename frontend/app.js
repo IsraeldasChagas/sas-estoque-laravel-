@@ -1142,6 +1142,10 @@ const dom = {
   produtosForm: document.getElementById("produtoForm"),
   produtoModalTitle: document.getElementById("produtoModalTitle"),
   produtoFormFeedback: document.getElementById("produtoFormFeedback"),
+  produtoFotoInput: document.getElementById("produtoFotoInput"),
+  produtoFotoTrocar: document.getElementById("produtoFotoTrocar"),
+  produtoFotoRemover: document.getElementById("produtoFotoRemover"),
+  produtoFotoPreview: document.getElementById("produtoFotoPreview"),
   openProdutoBtn: document.getElementById("openProduto"),
   closeProdutoBtn: document.getElementById("closeProduto"),
   cancelProdutoBtn: document.getElementById("cancelProduto"),
@@ -1506,6 +1510,8 @@ const FECHAMENTO_DASH_UNIDADES_CARDS_KEY = "sas-fechamento-dash-unidades-cards";
 let currentUser = null;
 let usuarioFotoFile = null;
 let usuarioFotoRemovida = false;
+let produtoFotoFile = null;
+let produtoFotoRemovida = false;
 let funcionarioFotoFile = null;
 let funcionarioFotoRemovida = false;
 let logoDataUrl = null;
@@ -4884,6 +4890,15 @@ function produtoPodeSerGerenciadoNaLista() {
   return !isCozinhaOuBar && canManageProdutos();
 }
 
+function resetProdutoFotoForm() {
+  produtoFotoFile = null;
+  produtoFotoRemovida = false;
+  if (dom.produtoFotoInput) dom.produtoFotoInput.value = "";
+  if (dom.produtoFotoPreview) {
+    dom.produtoFotoPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+  }
+}
+
 function renderProdutoVerHtml(produto) {
   const ativo = Number(produto.ativo) === 1;
   const infoMinimo = (state.produtosAbaixoMinimo || []).find(
@@ -4901,7 +4916,11 @@ function renderProdutoVerHtml(produto) {
         true
       )
     : "";
-  return `<div class="view-fields-grid">
+  const fotoUrl = getUsuarioFotoUrl(produto.foto);
+  const fotoBlock = fotoUrl
+    ? `<div class="produto-ver-foto"><img src="${escapeHtml(fotoUrl)}" alt="" class="usuarios-foto" /></div>`
+    : "";
+  return `${fotoBlock}<div class="view-fields-grid">
     ${field("Nome", produto.nome, true)}
     ${field("Categoria", labelCategoriaProduto(produto.categoria))}
     ${field("Unidade base", normalizarUnidadeBase(produto.unidade_base))}
@@ -4973,8 +4992,13 @@ function renderProdutos(lista) {
     }
     
     const colunaAcoes = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
+    const fotoUrl = getUsuarioFotoUrl(produto.foto);
+    const fotoCell = fotoUrl
+      ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto" loading="lazy" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
     
     return `<tr data-id="${produto.id}"${rowClass}>
+        <td data-label="Foto">${fotoCell}</td>
         <td data-label="Nome">${escapeHtml(produto.nome)}</td>
         <td data-label="Categoria">${escapeHtml(produto.categoria)}</td>
         <td data-label="Unidade base">${escapeHtml(normalizarUnidadeBase(produto.unidade_base))}</td>
@@ -4987,7 +5011,7 @@ function renderProdutos(lista) {
       </tr>`;
   }).join("");
   
-  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", 9);
+  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", 10);
 }
 
 function renderProdutosDashboard(lista) {
@@ -10513,6 +10537,7 @@ function resetForms() {
   [dom.produtosForm, dom.unidadeForm, dom.unidadeInlineForm, dom.usuarioForm, dom.entradaForm, dom.loteForm, dom.saidaForm, dom.listaCompraForm, dom.itemCompraForm, dom.estabelecimentoCompraForm, dom.finalizarListaForm].forEach((form) => form && form.reset());
   usuarioFotoFile = null;
   usuarioFotoRemovida = false;
+  resetProdutoFotoForm();
   if (dom.unidadeForm?.elements.gerente_usuario_id) dom.unidadeForm.elements.gerente_usuario_id.value = "";
   if (dom.unidadeInlineForm?.elements.gerente_usuario_id) dom.unidadeInlineForm.elements.gerente_usuario_id.value = "";
   state.produtos = [];
@@ -10702,6 +10727,9 @@ async function submitProduto(event) {
     return;
   }
 
+  const temFoto = !!produtoFotoFile;
+  const temRemoverFoto = !!produtoFotoRemovida;
+
   submittingProduto = true;
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn?.textContent || 'Salvar';
@@ -10712,15 +10740,33 @@ async function submitProduto(event) {
       submitBtn.textContent = 'Salvando...';
     }
     
-    console.log('📤 Enviando para API...');
-    const url = id ? `/produtos/${id}` : "/produtos";
-    const method = id ? "PUT" : "POST";
-    console.log(`📍 ${method} ${url}`);
-    
-    const result = await fetchJSON(url, {
-      method: method,
-      body: JSON.stringify(payload)
-    });
+    let result;
+    if (temFoto || temRemoverFoto) {
+      const formData = new FormData();
+      formData.append("nome", payload.nome);
+      formData.append("categoria", payload.categoria);
+      formData.append("unidade_base", payload.unidade_base);
+      formData.append("descricao", payload.descricao || "");
+      formData.append("custo_medio", String(payload.custo_medio));
+      formData.append("estoque_minimo", String(payload.estoque_minimo));
+      formData.append("ativo", String(payload.ativo));
+      if (payload.unidade_id != null) formData.append("unidade_id", String(payload.unidade_id));
+      if (payload.codigo_barras) formData.append("codigo_barras", payload.codigo_barras);
+      if (produtoFotoRemovida) formData.append("remove_foto", "1");
+      if (produtoFotoFile) formData.append("foto", produtoFotoFile);
+      result = await fetchForm(
+        id ? `/produtos/${id}/atualizar` : "/produtos",
+        "POST",
+        formData
+      );
+    } else {
+      const url = id ? `/produtos/${id}` : "/produtos";
+      const method = id ? "PUT" : "POST";
+      result = await fetchJSON(url, {
+        method,
+        body: JSON.stringify(payload),
+      });
+    }
 
     if (result?.codigo_barras && form.elements.codigo_barras) {
       form.elements.codigo_barras.value = result.codigo_barras;
@@ -10735,6 +10781,7 @@ async function submitProduto(event) {
     showToast("Produto salvo com sucesso!", "success");
     toggleModal(dom.produtosModal, false);
     form.reset();
+    resetProdutoFotoForm();
 
     const searchEl = document.getElementById("produtoSearch");
     if (searchEl) searchEl.value = "";
@@ -11729,6 +11776,13 @@ function setupTables() {
       dom.produtosForm.elements.estoque_minimo.value = produto.estoque_minimo || "";
       dom.produtosForm.elements.unidade_id.value = produto.unidade_id || "";
       dom.produtosForm.elements.ativo.value = Number(produto.ativo) === 1 ? "1" : "0";
+      resetProdutoFotoForm();
+      if (dom.produtoFotoPreview) {
+        const fotoUrl = getUsuarioFotoUrl(produto.foto);
+        dom.produtoFotoPreview.innerHTML = fotoUrl
+          ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`
+          : '<span class="avatar-placeholder">?</span>';
+      }
       toggleModal(dom.produtosModal, true);
     } else if (action === "disable" || action === "enable") {
       try {
@@ -12389,6 +12443,7 @@ function setupModals() {
   dom.openProdutoBtn?.addEventListener("click", async () => {
     dom.produtoModalTitle.textContent = "Cadastrar produto";
     dom.produtosForm?.reset();
+    resetProdutoFotoForm();
     await loadUnidades(false);
     toggleModal(dom.produtosModal, true);
   });
@@ -22388,6 +22443,38 @@ function setupForms() {
     usuarioFotoRemovida = true;
     if (dom.usuarioFotoInput) dom.usuarioFotoInput.value = "";
     if (dom.usuarioAvatarPreview) dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
+  });
+
+  dom.produtoFotoInput?.addEventListener("change", (event) => {
+    const [file] = event.target.files || [];
+    if (!file) return;
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      showToast("Formato invalido. Use JPG ou PNG.", "error");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Arquivo ultrapassa 2MB.", "error");
+      event.target.value = "";
+      return;
+    }
+    produtoFotoFile = file;
+    produtoFotoRemovida = false;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (dom.produtoFotoPreview) {
+        dom.produtoFotoPreview.innerHTML = `<img src="${reader.result}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+
+  dom.produtoFotoTrocar?.addEventListener("click", () => dom.produtoFotoInput?.click());
+  dom.produtoFotoRemover?.addEventListener("click", () => {
+    produtoFotoFile = null;
+    produtoFotoRemovida = true;
+    if (dom.produtoFotoInput) dom.produtoFotoInput.value = "";
+    if (dom.produtoFotoPreview) dom.produtoFotoPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
   });
 
   // Configura event listener do select de estoque

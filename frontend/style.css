@@ -3117,6 +3117,28 @@ textarea {
   object-fit: cover;
 }
 
+.produto-foto-preview {
+  border-radius: 10px;
+}
+
+.produto-ver-foto {
+  margin-bottom: 12px;
+}
+
+.produto-ver-foto .usuarios-foto {
+  width: 120px;
+  height: 120px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+#produtosSection .table-wrapper td .usuarios-foto,
+#produtosSection .table-wrapper td .usuarios-foto--placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+}
+
 .avatar-placeholder {
   font-size: 2rem;
 }

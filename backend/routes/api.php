@@ -170,6 +170,40 @@ Route::get('/ping', function () {
 // PRODUTOS
 // ============================================
 
+$salvarFotoProduto = function (Request $request, $produtoExistente = null): array {
+    if (!Schema::hasColumn('produtos', 'foto')) {
+        return [];
+    }
+
+    $data = [];
+    $fotoAntiga = $produtoExistente->foto ?? null;
+
+    if ($request->hasFile('foto')) {
+        if ($fotoAntiga && str_starts_with($fotoAntiga, 'uploads/') && file_exists(public_path($fotoAntiga))) {
+            @unlink(public_path($fotoAntiga));
+        }
+        $foto = $request->file('foto');
+        $uploadDir = public_path('uploads/produtos');
+        if (!File::exists($uploadDir)) {
+            File::makeDirectory($uploadDir, 0755, true);
+        }
+        $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
+        $foto->move($uploadDir, $nomeArquivo);
+        $data['foto'] = 'uploads/produtos/' . $nomeArquivo;
+        return $data;
+    }
+
+    $allData = $request->all();
+    if (isset($allData['remove_foto']) && $allData['remove_foto'] == '1') {
+        if ($fotoAntiga && str_starts_with($fotoAntiga, 'uploads/') && file_exists(public_path($fotoAntiga))) {
+            @unlink(public_path($fotoAntiga));
+        }
+        $data['foto'] = null;
+    }
+
+    return $data;
+};
+
 Route::get('/produtos', function (Request $request) {
     try {
         // Faz join com unidades para trazer o nome da unidade responsável
@@ -412,12 +446,14 @@ Route::get('/produtos/{id}/estoque', function ($id) {
     }
 });
 
-Route::post('/produtos', function (Request $request) {
+Route::post('/produtos', function (Request $request) use ($salvarFotoProduto) {
     \Log::info('📦 POST /produtos - Requisição recebida', [
-        'payload' => $request->all()
+        'payload' => $request->except(['foto']),
+        'has_foto' => $request->hasFile('foto'),
     ]);
     
     try {
+        $input = $request->all();
         $data = $request->validate([
             'nome' => 'required|string',
             'categoria' => 'required|string',
@@ -459,6 +495,8 @@ Route::post('/produtos', function (Request $request) {
             $data['unidade_id'] = null;
         }
 
+        $data = array_merge($data, $salvarFotoProduto($request, null));
+
         $id = DB::table('produtos')->insertGetId($data);
         \Log::info('💾 Produto salvo no banco', ['id' => $id]);
         
@@ -488,7 +526,7 @@ Route::post('/produtos', function (Request $request) {
     }
 });
 
-Route::put('/produtos/{id}', function (Request $request, $id) {
+$atualizarProduto = function (Request $request, $id, bool $permitirFoto = false) use ($salvarFotoProduto) {
     try {
         $produto = DB::table('produtos')->where('id', $id)->first();
         if (!$produto) {
@@ -538,6 +576,10 @@ Route::put('/produtos/{id}', function (Request $request, $id) {
         $data['custo_medio'] = $data['custo_medio'] ?? $produto->custo_medio ?? 0;
         $data['estoque_minimo'] = $data['estoque_minimo'] ?? $produto->estoque_minimo ?? 0;
 
+        if ($permitirFoto) {
+            $data = array_merge($data, $salvarFotoProduto($request, $produto));
+        }
+
         if (!empty($data)) {
             DB::table('produtos')->where('id', $id)->update($data);
         }
@@ -555,9 +597,23 @@ Route::put('/produtos/{id}', function (Request $request, $id) {
             'message' => $e->getMessage(),
         ], 500);
     }
+};
+
+Route::put('/produtos/{id}', function (Request $request, $id) use ($atualizarProduto) {
+    return $atualizarProduto($request, $id, false);
 });
 
-// Rota para desativar/ativar produto (solução recomendada ao invés de excluir)
+Route::options('/produtos/{id}/atualizar', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+});
+
+Route::post('/produtos/{id}/atualizar', function (Request $request, $id) use ($atualizarProduto) {
+    return $atualizarProduto($request, $id, true);
+});
+
 Route::put('/produtos/{id}/desativar', function (Request $request, $id) {
     try {
         $produto = DB::table('produtos')->where('id', $id)->first();

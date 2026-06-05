@@ -1236,6 +1236,7 @@
                 <table>
                   <thead>
                     <tr>
+                      <th>Foto</th>
                       <th>Nome</th>
                       <th>Categoria</th>
                       <th>Unidade base</th>
@@ -1249,7 +1250,7 @@
                   </thead>
                   <tbody id="produtosTable">
                     <tr>
-                      <td colspan="9" style="text-align: center; color: #607d8b">Carregando...</td>
+                      <td colspan="10" style="text-align: center; color: #607d8b">Carregando...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -4246,6 +4247,18 @@
         <form id="produtoForm">
           <input type="hidden" name="id" />
           <div id="produtoFormFeedback" class="form-feedback hidden"></div>
+          <div class="avatar-upload produto-foto-upload">
+            <div class="avatar-preview produto-foto-preview" id="produtoFotoPreview">
+              <span class="avatar-placeholder">?</span>
+            </div>
+            <div class="avatar-actions">
+              <label class="btn secondary" for="produtoFotoInput">Escolher foto</label>
+              <input type="file" id="produtoFotoInput" name="foto" accept=".png,.jpg,.jpeg" hidden />
+              <button type="button" class="btn secondary" id="produtoFotoTrocar">Trocar</button>
+              <button type="button" class="btn danger" id="produtoFotoRemover">Remover</button>
+            </div>
+            <small class="avatar-hint">Formatos: JPG ou PNG ate 2 MB.</small>
+          </div>
           <label>
             Nome
             <input name="nome" required />
