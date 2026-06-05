@@ -1797,7 +1797,7 @@ Route::options('/usuarios/me/senha', function () {
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
 
-Route::put('/usuarios/{id}', function (Request $request, $id) {
+$atualizarUsuario = function (Request $request, $id) {
     try {
         // Log para debug
         \Log::info("PUT /usuarios/{$id} - Dados recebidos:", $request->all());
@@ -1950,9 +1950,14 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
 
         // Processa foto se fornecida
         if ($request->hasFile('foto')) {
-            // Remove foto antiga se existir
-            if ($usuarioExistente->foto && file_exists(public_path($usuarioExistente->foto))) {
-                unlink(public_path($usuarioExistente->foto));
+            // Remove foto antiga se existir (coluna foto ou foto_path legado)
+            $fotoAntiga = $usuarioExistente->foto ?? $usuarioExistente->foto_path ?? null;
+            if ($fotoAntiga) {
+                if (str_starts_with($fotoAntiga, 'uploads/') && file_exists(public_path($fotoAntiga))) {
+                    unlink(public_path($fotoAntiga));
+                } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($fotoAntiga)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($fotoAntiga);
+                }
             }
             $foto = $request->file('foto');
             $uploadDir = public_path('uploads/usuarios');
@@ -1963,14 +1968,25 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
             $nomeArquivo = time() . '_' . $foto->getClientOriginalName();
             $foto->move($uploadDir, $nomeArquivo);
             $data['foto'] = 'uploads/usuarios/' . $nomeArquivo;
+            if (Schema::hasColumn('usuarios', 'foto_path')) {
+                $data['foto_path'] = null;
+            }
         }
 
         // Remove foto se solicitado
         if (isset($allData['remove_foto']) && $allData['remove_foto'] == '1') {
-            if ($usuarioExistente->foto && file_exists(public_path($usuarioExistente->foto))) {
-                unlink(public_path($usuarioExistente->foto));
+            $fotoAntiga = $usuarioExistente->foto ?? $usuarioExistente->foto_path ?? null;
+            if ($fotoAntiga) {
+                if (str_starts_with($fotoAntiga, 'uploads/') && file_exists(public_path($fotoAntiga))) {
+                    unlink(public_path($fotoAntiga));
+                } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($fotoAntiga)) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($fotoAntiga);
+                }
             }
             $data['foto'] = null;
+            if (Schema::hasColumn('usuarios', 'foto_path')) {
+                $data['foto_path'] = null;
+            }
         }
 
         // Remove campos que não devem ser atualizados
@@ -2038,7 +2054,19 @@ Route::put('/usuarios/{id}', function (Request $request, $id) {
         ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
     }
+};
+
+Route::put('/usuarios/{id}', $atualizarUsuario);
+
+// POST com multipart (foto): PHP não processa upload em PUT — mesmo padrão de /funcionarios/{id}/atualizar
+Route::options('/usuarios/{id}/atualizar', function () {
+    return response()->json([])
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
+
+Route::post('/usuarios/{id}/atualizar', $atualizarUsuario);
 
 Route::delete('/usuarios/{id}', function (Request $request, $id) {
     try {

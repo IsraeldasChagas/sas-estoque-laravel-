@@ -21,11 +21,14 @@ function sasAdminBackupChave() {
   return k || "BACKUP-SABORPARAENSE-2026";
 }
 
-/** Monta URL completa da foto do usuário (backend salva em public/uploads/usuarios/) */
+/** Monta URL completa da foto do usuário (public/uploads/usuarios/ ou storage/app/public/) */
 function getUsuarioFotoUrl(path) {
   if (!path || typeof path !== "string") return null;
   const p = path.replace(/^\//, "");
-  return p ? `${BASE_URL}/${p}` : null;
+  if (!p) return null;
+  if (p.startsWith("storage/")) return `${BASE_URL}/${p}`;
+  if (p.startsWith("usuarios/") && !p.startsWith("uploads/")) return `${BASE_URL}/storage/${p}`;
+  return `${BASE_URL}/${p}`;
 }
 
 // ==========================================================
@@ -10895,7 +10898,8 @@ async function submitUsuario(event) {
       if (perfil === "ATENDENTE") {
         formData.append("atende_caixa", form.elements.atende_caixa?.checked ? "1" : "0");
       }
-      resultado = await fetchForm(id ? `/usuarios/${id}` : "/usuarios", id ? "PUT" : "POST", formData);
+      // Edição com foto: POST (PHP não recebe arquivos em PUT multipart)
+      resultado = await fetchForm(id ? `/usuarios/${id}/atualizar` : "/usuarios", "POST", formData);
     } else {
       resultado = await fetchJSON(id ? `/usuarios/${id}` : "/usuarios", {
         method: id ? "PUT" : "POST",
@@ -22382,6 +22386,7 @@ function setupForms() {
   dom.usuarioFotoRemover?.addEventListener("click", () => {
     usuarioFotoFile = null;
     usuarioFotoRemovida = true;
+    if (dom.usuarioFotoInput) dom.usuarioFotoInput.value = "";
     if (dom.usuarioAvatarPreview) dom.usuarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
   });
 
