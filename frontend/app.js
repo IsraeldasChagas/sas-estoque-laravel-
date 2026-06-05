@@ -31,6 +31,73 @@ function getUsuarioFotoUrl(path) {
   return `${BASE_URL}/${p}`;
 }
 
+/** Lightbox — amplia imagem ao clicar (produtos, etc.) */
+let imageLightboxBound = false;
+
+function ensureImageLightboxEl() {
+  let lb = document.getElementById("imageLightbox");
+  if (lb) return lb;
+  lb = document.createElement("div");
+  lb.id = "imageLightbox";
+  lb.className = "image-lightbox";
+  lb.hidden = true;
+  lb.innerHTML = `
+    <button type="button" class="image-lightbox__backdrop" aria-label="Fechar imagem ampliada"></button>
+    <div class="image-lightbox__stage" role="dialog" aria-modal="true" aria-label="Imagem ampliada">
+      <button type="button" class="image-lightbox__close" aria-label="Fechar">×</button>
+      <img class="image-lightbox__img" alt="" />
+      <p class="image-lightbox__hint">Clique fora ou pressione Esc para fechar</p>
+    </div>
+  `;
+  document.body.appendChild(lb);
+  lb.querySelector(".image-lightbox__backdrop")?.addEventListener("click", closeImageLightbox);
+  lb.querySelector(".image-lightbox__close")?.addEventListener("click", closeImageLightbox);
+  return lb;
+}
+
+function openImageLightbox(src, alt = "") {
+  if (!src) return;
+  const lb = ensureImageLightboxEl();
+  const img = lb.querySelector(".image-lightbox__img");
+  if (!img) return;
+  img.src = src;
+  img.alt = alt;
+  lb.hidden = false;
+  document.body.classList.add("image-lightbox-open");
+  requestAnimationFrame(() => lb.classList.add("image-lightbox--visible"));
+}
+
+function closeImageLightbox() {
+  const lb = document.getElementById("imageLightbox");
+  if (!lb || lb.hidden) return;
+  lb.classList.remove("image-lightbox--visible");
+  document.body.classList.remove("image-lightbox-open");
+  window.setTimeout(() => {
+    if (lb.classList.contains("image-lightbox--visible")) return;
+    lb.hidden = true;
+    const img = lb.querySelector(".image-lightbox__img");
+    if (img) {
+      img.removeAttribute("src");
+      img.alt = "";
+    }
+  }, 220);
+}
+
+function setupImageLightbox() {
+  if (imageLightboxBound) return;
+  imageLightboxBound = true;
+  document.addEventListener("click", (e) => {
+    const img = e.target.closest("img.img-lightbox-trigger");
+    if (!img?.src) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openImageLightbox(img.src, img.alt || "");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeImageLightbox();
+  });
+}
+
 // ==========================================================
 // DESPESAS FIXAS (Financeiro) — UI completa (listar/cadastrar/ver/editar/excluir)
 // ==========================================================
@@ -4918,7 +4985,7 @@ function renderProdutoVerHtml(produto) {
     : "";
   const fotoUrl = getUsuarioFotoUrl(produto.foto);
   const fotoBlock = fotoUrl
-    ? `<div class="produto-ver-foto"><img src="${escapeHtml(fotoUrl)}" alt="" class="usuarios-foto" /></div>`
+    ? `<div class="produto-ver-foto"><img src="${escapeHtml(fotoUrl)}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto img-lightbox-trigger" title="Clique para ampliar" /></div>`
     : "";
   return `${fotoBlock}<div class="view-fields-grid">
     ${field("Nome", produto.nome, true)}
@@ -4994,7 +5061,7 @@ function renderProdutos(lista) {
     const colunaAcoes = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
     const fotoUrl = getUsuarioFotoUrl(produto.foto);
     const fotoCell = fotoUrl
-      ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto" loading="lazy" />`
+      ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto img-lightbox-trigger" loading="lazy" title="Clique para ampliar" />`
       : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
     
     return `<tr data-id="${produto.id}"${rowClass}>
@@ -11780,7 +11847,7 @@ function setupTables() {
       if (dom.produtoFotoPreview) {
         const fotoUrl = getUsuarioFotoUrl(produto.foto);
         dom.produtoFotoPreview.innerHTML = fotoUrl
-          ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`
+          ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="img-lightbox-trigger" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" title="Clique para ampliar" />`
           : '<span class="avatar-placeholder">?</span>';
       }
       toggleModal(dom.produtosModal, true);
@@ -22463,7 +22530,7 @@ function setupForms() {
     const reader = new FileReader();
     reader.onload = () => {
       if (dom.produtoFotoPreview) {
-        dom.produtoFotoPreview.innerHTML = `<img src="${reader.result}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
+        dom.produtoFotoPreview.innerHTML = `<img src="${reader.result}" alt="preview" class="img-lightbox-trigger" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" title="Clique para ampliar" />`;
       }
     };
     reader.readAsDataURL(file);
@@ -23768,6 +23835,7 @@ async function init() {
 
   applyPermissions();
   setupModals();
+  setupImageLightbox();
   setupNavigation();
   setupResponsiveSidebar();
   setupTables();
