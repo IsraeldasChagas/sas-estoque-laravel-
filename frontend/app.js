@@ -9971,12 +9971,11 @@ async function abrirRhRelatorioContatosPdf() {
   const cpf = document.getElementById("rhRelatorioFiltroCpf")?.value?.trim();
   const cargo = document.getElementById("rhRelatorioFiltroCargo")?.value;
   const unidadeId = document.getElementById("rhRelatorioFiltroUnidade")?.value;
-  const status = document.getElementById("rhRelatorioFiltroStatus")?.value;
   if (nome) params.append("nome", nome);
   if (cpf) params.append("cpf", cpf);
   if (cargo) params.append("cargo", cargo);
   if (unidadeId) params.append("unidade_id", unidadeId);
-  if (status) params.append("status", status);
+  params.append("status", "ativo");
   const qs = params.toString();
   const url = `${API_URL}/funcionarios/relatorio/contatos.pdf${qs ? `?${qs}` : ""}`;
   const headers = {
@@ -15107,10 +15106,12 @@ function setupNavigation() {
     abrirRhRelatorioContatosPdf().catch((err) => showToast(err?.message || "Erro ao gerar PDF.", "error"));
   });
   document.getElementById("rhRelatorioLimparFiltros")?.addEventListener("click", () => {
-    ["rhRelatorioFiltroNome", "rhRelatorioFiltroCpf", "rhRelatorioFiltroCargo", "rhRelatorioFiltroUnidade", "rhRelatorioFiltroStatus"].forEach((id) => {
+    ["rhRelatorioFiltroNome", "rhRelatorioFiltroCpf", "rhRelatorioFiltroCargo", "rhRelatorioFiltroUnidade"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
+    const st = document.getElementById("rhRelatorioFiltroStatus");
+    if (st) st.value = "ativo";
   });
 
   setupRhFolhaPontoHandlers();

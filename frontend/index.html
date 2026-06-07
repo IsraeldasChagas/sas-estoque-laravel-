@@ -2041,7 +2041,7 @@
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
                 <h2>RH — Relatórios</h2>
-                <p class="subtle-text">Gera PDF com nome, WhatsApp, unidade e função (cargo). Use os filtros abaixo ou deixe em branco para listar todos conforme permissão.</p>
+                <p class="subtle-text">Gera PDF com contagem por unidade e lista de funcionários <strong>ativos</strong> (nome, WhatsApp, unidade e cargo).</p>
               </div>
             </div>
             <form id="rhRelatorioFiltroForm" class="filters-panel">
@@ -2077,10 +2077,8 @@
                 </label>
                 <label>
                   Status
-                  <select id="rhRelatorioFiltroStatus" name="status">
-                    <option value="">Todos</option>
-                    <option value="ativo">Ativo</option>
-                    <option value="inativo">Inativo</option>
+                  <select id="rhRelatorioFiltroStatus" name="status" disabled title="Este relatório lista apenas funcionários ativos">
+                    <option value="ativo" selected>Ativos</option>
                   </select>
                 </label>
               </div>

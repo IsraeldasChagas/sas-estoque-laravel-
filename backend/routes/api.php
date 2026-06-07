@@ -6391,12 +6391,14 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
         $query = DB::table('funcionarios')
             ->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')
             ->select(
+                'funcionarios.unidade_id',
                 'funcionarios.nome_completo',
                 'funcionarios.whatsapp',
                 'funcionarios.cargo',
                 'unidades.nome as unidade_nome',
                 'funcionarios.status'
-            );
+            )
+            ->where('funcionarios.status', 'ativo');
 
         if ($nome = trim($request->query('nome', ''))) {
             $query->where('funcionarios.nome_completo', 'like', '%' . $nome . '%');
@@ -6410,15 +6412,59 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
         if ($unidadeId = $request->query('unidade_id')) {
             $query->where('funcionarios.unidade_id', $unidadeId);
         }
-        if (in_array($request->query('status'), ['ativo', 'inativo'], true)) {
-            $query->where('funcionarios.status', $request->query('status'));
-        }
 
         RhFuncionarioUnicidade::aplicarFiltroSomenteCadastrosReais($query);
 
-        $funcionarios = $query->orderBy('funcionarios.nome_completo')->get();
+        $funcionarios = $query
+            ->orderBy('unidades.id')
+            ->orderBy('funcionarios.nome_completo')
+            ->get();
 
         $h = static fn (?string $s): string => htmlspecialchars((string) ($s ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        $contagemPorUnidade = [];
+        $semUnidade = 0;
+        foreach ($funcionarios as $f) {
+            $uid = $f->unidade_id ?? null;
+            if ($uid === null || $uid === '' || (int) $uid < 1) {
+                $semUnidade++;
+                continue;
+            }
+            $uid = (int) $uid;
+            if (! isset($contagemPorUnidade[$uid])) {
+                $contagemPorUnidade[$uid] = [
+                    'nome' => trim((string) ($f->unidade_nome ?? '')) !== '' ? (string) $f->unidade_nome : ('Unidade ' . $uid),
+                    'total' => 0,
+                ];
+            }
+            $contagemPorUnidade[$uid]['total']++;
+        }
+
+        $resumoUnidadesHtml = '';
+        if (Schema::hasTable('unidades')) {
+            $unidadesDb = DB::table('unidades')->orderBy('id')->get(['id', 'nome']);
+            foreach ($unidadesDb as $u) {
+                $uid = (int) $u->id;
+                if ($unidadeId && (int) $unidadeId !== $uid) {
+                    continue;
+                }
+                $nomeUni = trim((string) ($u->nome ?? '')) !== '' ? (string) $u->nome : ('Unidade ' . $uid);
+                $qtd = $contagemPorUnidade[$uid]['total'] ?? 0;
+                $resumoUnidadesHtml .= '<tr><td>' . $h($nomeUni) . '</td><td style="text-align:center;font-weight:bold;">' . $qtd . '</td></tr>';
+            }
+        } else {
+            foreach ($contagemPorUnidade as $item) {
+                $resumoUnidadesHtml .= '<tr><td>' . $h($item['nome']) . '</td><td style="text-align:center;font-weight:bold;">' . (int) $item['total'] . '</td></tr>';
+            }
+        }
+        if ($semUnidade > 0 && ! $unidadeId) {
+            $resumoUnidadesHtml .= '<tr><td>' . $h('Sem unidade') . '</td><td style="text-align:center;font-weight:bold;">' . $semUnidade . '</td></tr>';
+        }
+        if ($resumoUnidadesHtml === '') {
+            $resumoUnidadesHtml = '<tr><td colspan="2" style="text-align:center;color:#607d8b;">Nenhum funcionário ativo nos filtros.</td></tr>';
+        }
+
+        $totalAtivos = $funcionarios->count();
 
         $rowsHtml = '';
         foreach ($funcionarios as $f) {
@@ -6426,11 +6472,10 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
             $wa = $h(trim((string) ($f->whatsapp ?? '')) !== '' ? (string) $f->whatsapp : '—');
             $uni = $h(trim((string) ($f->unidade_nome ?? '')) !== '' ? (string) $f->unidade_nome : '—');
             $cargo = $h(trim((string) ($f->cargo ?? '')) !== '' ? (string) $f->cargo : '—');
-            $st = ($f->status ?? '') === 'inativo' ? ' <span style="color:#757575;font-size:8pt;">(inativo)</span>' : '';
-            $rowsHtml .= '<tr><td>' . $nome . $st . '</td><td>' . $wa . '</td><td>' . $uni . '</td><td>' . $cargo . '</td></tr>';
+            $rowsHtml .= '<tr><td>' . $nome . '</td><td>' . $wa . '</td><td>' . $uni . '</td><td>' . $cargo . '</td></tr>';
         }
         if ($rowsHtml === '') {
-            $rowsHtml = '<tr><td colspan="4" style="text-align:center;color:#607d8b;padding:12px;">Nenhum funcionário encontrado com os filtros atuais.</td></tr>';
+            $rowsHtml = '<tr><td colspan="4" style="text-align:center;color:#607d8b;padding:12px;">Nenhum funcionário ativo encontrado com os filtros atuais.</td></tr>';
         }
 
         $emitido = now()->format('d/m/Y H:i');
@@ -6438,14 +6483,26 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
 <style>
 body { font-family: DejaVu Sans, sans-serif; font-size: 10pt; color: #212121; }
 h1 { font-size: 15pt; margin: 0 0 4px 0; color: #0d47a1; }
+h2 { font-size: 11pt; margin: 18px 0 8px 0; color: #1565c0; }
 .meta { font-size: 9pt; color: #616161; margin-bottom: 14px; }
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
 th { background: #1565c0; color: #fff; text-align: left; padding: 8px 6px; font-size: 9pt; }
 td { border-bottom: 1px solid #e0e0e0; padding: 7px 6px; vertical-align: top; }
 tr:nth-child(even) td { background: #fafafa; }
+.resumo-box { margin-bottom: 16px; }
+.resumo-total { font-size: 10pt; font-weight: bold; color: #0d47a1; margin: 8px 0 0 0; }
+.resumo-table { max-width: 420px; }
+.resumo-table th:last-child, .resumo-table td:last-child { width: 90px; }
 </style></head><body>
 <h1>Relatório de funcionários — contato</h1>
-<p class="meta">Colunas: nome, WhatsApp, unidade e função (cargo). Emitido em ' . $h($emitido) . '.</p>
+<p class="meta">Somente funcionários <strong>ativos</strong>. Emitido em ' . $h($emitido) . '.</p>
+<div class="resumo-box">
+<h2>Contagem por unidade</h2>
+<table class="resumo-table"><thead><tr><th>Unidade</th><th style="text-align:center;">Qtd.</th></tr></thead><tbody>'
+. $resumoUnidadesHtml . '</tbody></table>
+<p class="resumo-total">Total geral de ativos: ' . (int) $totalAtivos . '</p>
+</div>
+<h2>Lista detalhada</h2>
 <table><thead><tr>
 <th>Nome</th><th>WhatsApp</th><th>Unidade</th><th>Função</th>
 </tr></thead><tbody>' . $rowsHtml . '</tbody></table>
