@@ -4146,7 +4146,7 @@ function ensureFinanceiroFechamentoDashNavLink() {
     dash.id = "navFinanceiroFechamentoDash";
     dash.dataset.section = "fechamentoDash";
     dash.title = "Gráficos, totais por unidade e análise dos fechamentos";
-    dash.textContent = "Dashboard";
+    dash.innerHTML = '<span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span>';
     ref.insertAdjacentElement("afterend", dash);
     return;
   }
