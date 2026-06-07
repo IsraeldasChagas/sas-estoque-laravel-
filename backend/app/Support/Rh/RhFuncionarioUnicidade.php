@@ -32,6 +32,58 @@ final class RhFuncionarioUnicidade
     return (bool) preg_match(self::CPF_PROVISORIO_REGEX, trim((string) $cpf));
   }
 
+  /** Cadastro gerado por script de recuperação/reconciliação, não pelo RH. */
+  public static function isCadastroProvisorio(object|array $row): bool
+  {
+    $nome = is_array($row) ? ($row['nome_completo'] ?? null) : ($row->nome_completo ?? null);
+    if (preg_match('/^RECUPERAR FUNCIONARIO\b/i', trim((string) $nome))) {
+      return true;
+    }
+
+    $cpf = is_array($row) ? ($row['cpf'] ?? null) : ($row->cpf ?? null);
+
+    return self::isCpfProvisorio($cpf);
+  }
+
+  /** Exclui placeholders de scripts (000.000 / 999.999 / RECUPERAR…). */
+  public static function aplicarFiltroSomenteCadastrosReais($query, string $prefix = 'funcionarios'): void
+  {
+    $query->where("{$prefix}.nome_completo", 'not like', 'RECUPERAR FUNCIONARIO%')
+      ->where(function ($q) use ($prefix) {
+        $q->whereNull("{$prefix}.cpf")
+          ->orWhere(function ($q2) use ($prefix) {
+            $q2->where("{$prefix}.cpf", 'not like', '000.000.%')
+              ->where("{$prefix}.cpf", 'not like', '999.999.%')
+              ->where("{$prefix}.cpf", 'not like', '998.998.%');
+          });
+      });
+  }
+
+  /**
+   * Remove do banco cadastros provisórios (não apaga proventos históricos).
+   *
+   * @return array{removidos: int, ids: list<int>}
+   */
+  public static function limparCadastrosProvisorios(): array
+  {
+    if (! Schema::hasTable('funcionarios')) {
+      return ['removidos' => 0, 'ids' => []];
+    }
+
+    $ids = [];
+    foreach (DB::table('funcionarios')->get(['id', 'cpf', 'nome_completo']) as $row) {
+      if (self::isCadastroProvisorio($row)) {
+        $ids[] = (int) $row->id;
+      }
+    }
+
+    if ($ids !== []) {
+      DB::table('funcionarios')->whereIn('id', $ids)->delete();
+    }
+
+    return ['removidos' => count($ids), 'ids' => $ids];
+  }
+
   public static function emailNormalizado(?string $email): string
   {
     return mb_strtolower(trim((string) $email));

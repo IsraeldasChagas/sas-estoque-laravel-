@@ -22,6 +22,14 @@ use Illuminate\Support\Facades\Schema;
 
 echo "=== Reconciliacao usuarios -> funcionarios ===\n";
 
+$allow = filter_var((string) env('ALLOW_RECONCILE_FUNCIONARIOS', 'false'), FILTER_VALIDATE_BOOL);
+if (! $allow) {
+    echo "ABORTADO: script desabilitado por padrao.\n";
+    echo "Ele cria funcionarios automaticamente a partir de usuarios (CPF 999.999...).\n";
+    echo "Cadastre funcionarios manualmente no RH. Para forcar: ALLOW_RECONCILE_FUNCIONARIOS=true no .env\n";
+    exit(2);
+}
+
 if (!Schema::hasTable('usuarios') || !Schema::hasTable('funcionarios')) {
     echo "ERRO: tabelas obrigatorias nao encontradas.\n";
     exit(1);

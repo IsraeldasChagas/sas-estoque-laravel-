@@ -6302,6 +6302,13 @@ Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
             $out['db_name'] = is_object($dbRow) ? ($dbRow->db ?? null) : ($dbRow['db'] ?? null);
         }
         $out['funcionarios_total'] = (int) (DB::table('funcionarios')->count());
+        $out['funcionarios_provisorios'] = 0;
+        foreach (DB::table('funcionarios')->get(['id', 'cpf', 'nome_completo']) as $row) {
+            if (RhFuncionarioUnicidade::isCadastroProvisorio($row)) {
+                $out['funcionarios_provisorios']++;
+            }
+        }
+        $out['funcionarios_reais'] = max(0, $out['funcionarios_total'] - $out['funcionarios_provisorios']);
         $out['funcionarios_ultimo_created_at'] = DB::table('funcionarios')->max('created_at');
 
         if ($driver === 'mysql') {
@@ -6330,6 +6337,38 @@ Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
 
     return response()->json($out)->header('Access-Control-Allow-Origin', '*');
 });
+
+/** Remove cadastros provisórios (RECUPERAR / CPF 000.000 / 999.999) — só ADMIN. */
+Route::post('/funcionarios/limpar-provisorios', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario || strtoupper((string) ($usuario->perfil ?? '')) !== 'ADMIN') {
+        return response()->json(['error' => 'Apenas administradores podem limpar cadastros provisórios.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $resultado = RhFuncionarioUnicidade::limparCadastrosProvisorios();
+    if ($resultado['removidos'] > 0) {
+        \Log::warning('ADMIN limpou cadastros provisórios de funcionários', [
+            'usuario_id' => (int) $userId,
+            'ids' => $resultado['ids'],
+            'total' => $resultado['removidos'],
+            'ip' => $request->ip(),
+        ]);
+    }
+
+    return response()->json([
+        'sucesso' => true,
+        'removidos' => $resultado['removidos'],
+        'ids' => $resultado['ids'],
+        'mensagem' => $resultado['removidos'] > 0
+            ? "Removidos {$resultado['removidos']} cadastro(s) provisório(s)."
+            : 'Nenhum cadastro provisório encontrado.',
+    ])->header('Access-Control-Allow-Origin', '*');
+});
+Route::options('/funcionarios/limpar-provisorios', fn () => response('', 204)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 /** Relatório PDF: nome, WhatsApp, unidade e função (cargo). Respeita os mesmos filtros de GET /funcionarios. */
 Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
@@ -6374,6 +6413,8 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
         if (in_array($request->query('status'), ['ativo', 'inativo'], true)) {
             $query->where('funcionarios.status', $request->query('status'));
         }
+
+        RhFuncionarioUnicidade::aplicarFiltroSomenteCadastrosReais($query);
 
         $funcionarios = $query->orderBy('funcionarios.nome_completo')->get();
 
@@ -6468,6 +6509,8 @@ Route::get('/funcionarios', function (Request $request) {
         $query->where('funcionarios.status', $request->query('status'));
     }
 
+    RhFuncionarioUnicidade::aplicarFiltroSomenteCadastrosReais($query);
+
     $funcionarios = $query->orderBy('funcionarios.nome_completo')->get();
     return response()->json($funcionarios)
         ->header('Access-Control-Allow-Origin', '*');
@@ -6486,6 +6529,10 @@ Route::get('/funcionarios/{id}', function ($id) {
         ->where('funcionarios.id', $id)
         ->first();
     if (!$f) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    if (RhFuncionarioUnicidade::isCadastroProvisorio($f)) {
         return response()->json(['error' => 'Funcionário não encontrado'], 404)
             ->header('Access-Control-Allow-Origin', '*');
     }
@@ -6633,6 +6680,9 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     if (RhFuncionarioUnicidade::existePorCpf($cpfLimpo)) {
         return response()->json(['error' => 'CPF já cadastrado para outro funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
     }
+    if (RhFuncionarioUnicidade::isCpfProvisorio($cpfFormatado)) {
+        return response()->json(['error' => 'Informe o CPF real do funcionário. CPF provisório não é permitido.'], 422)->header('Access-Control-Allow-Origin', '*');
+    }
 
     $emailNovo = trim((string) ($data['email'] ?? ''));
     if ($emailNovo !== '' && RhFuncionarioUnicidade::existePorEmail($emailNovo)) {
@@ -6771,6 +6821,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
         $cpfFormatado = RhFuncionarioUnicidade::cpfFormatado($cpfLimpo);
         if (RhFuncionarioUnicidade::existePorCpf($cpfLimpo, (int) $id)) {
             return response()->json(['error' => 'CPF já cadastrado para outro funcionário'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        if (RhFuncionarioUnicidade::isCpfProvisorio($cpfFormatado)) {
+            return response()->json(['error' => 'Informe o CPF real do funcionário. CPF provisório não é permitido.'], 422)->header('Access-Control-Allow-Origin', '*');
         }
     }
 
@@ -9934,8 +9987,9 @@ Route::post('/financeiro/vale-consumo', function (Request $request) use ($proven
             $rules['competencia'] = 'required|string|regex:/^\d{4}-\d{2}$/';
         }
         $data = $request->validate($rules);
-        if (! DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->exists()) {
-            return response()->json(['error' => 'Funcionário não encontrado'], 422)->header('Access-Control-Allow-Origin', '*');
+        $funcVale = DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->first();
+        if (! $funcVale || RhFuncionarioUnicidade::isCadastroProvisorio($funcVale)) {
+            return response()->json(['error' => 'Selecione um funcionário cadastrado no RH'], 422)->header('Access-Control-Allow-Origin', '*');
         }
         $comp = null;
         $dataLanc = null;
@@ -10014,8 +10068,11 @@ Route::put('/financeiro/vale-consumo/{id}', function (Request $request, $id) use
             $rules['competencia'] = 'sometimes|required|string|regex:/^\d{4}-\d{2}$/';
         }
         $data = $request->validate($rules);
-        if (isset($data['funcionario_id']) && ! DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->exists()) {
-            return response()->json(['error' => 'Funcionário não encontrado'], 422)->header('Access-Control-Allow-Origin', '*');
+        if (isset($data['funcionario_id'])) {
+            $funcVale = DB::table('funcionarios')->where('id', (int) $data['funcionario_id'])->first();
+            if (! $funcVale || RhFuncionarioUnicidade::isCadastroProvisorio($funcVale)) {
+                return response()->json(['error' => 'Selecione um funcionário cadastrado no RH'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
         }
         $up = ['updated_at' => now()];
         if (isset($data['funcionario_id'])) {
@@ -10286,8 +10343,16 @@ Route::post('/proventos', function (Request $request) use ($proventosAuth, $prov
         if (!$podeCriarProvento($u->perfil)) return response()->json(['error' => 'Sem permissão para criar proventos'], 403)->header('Access-Control-Allow-Origin', '*');
 
         $d = $request->all();
+        $funcionarioId = (int) ($d['funcionario_id'] ?? 0);
+        if ($funcionarioId < 1) {
+            return response()->json(['error' => 'Funcionário é obrigatório'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
+        $funcionarioReal = DB::table('funcionarios')->where('id', $funcionarioId)->first();
+        if (! $funcionarioReal || RhFuncionarioUnicidade::isCadastroProvisorio($funcionarioReal)) {
+            return response()->json(['error' => 'Selecione um funcionário cadastrado no RH'], 422)->header('Access-Control-Allow-Origin', '*');
+        }
         $rules = [
-            'funcionario_id' => 'required|integer|exists:funcionarios,id',
+            'funcionario_id' => 'required|integer',
             'unidade_id' => 'required|integer|exists:unidades,id',
             'tipo' => 'required|in:vale,adiantamento,consumo_interno,ajuda_custo,outro',
             'verba' => 'nullable|string|max:255',

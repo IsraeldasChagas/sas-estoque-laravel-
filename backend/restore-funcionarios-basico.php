@@ -19,6 +19,14 @@ use Illuminate\Support\Facades\Schema;
 
 echo "=== Restauracao basica de funcionarios ===\n";
 
+$allow = filter_var((string) env('ALLOW_RESTORE_FUNCIONARIOS', 'false'), FILTER_VALIDATE_BOOL);
+if (! $allow) {
+    echo "ABORTADO: script desabilitado por padrao.\n";
+    echo "Ele cria cadastros 'RECUPERAR FUNCIONARIO' que nao devem aparecer no RH.\n";
+    echo "Se realmente precisar, defina ALLOW_RESTORE_FUNCIONARIOS=true no .env e execute de novo.\n";
+    exit(2);
+}
+
 if (!Schema::hasTable('funcionarios')) {
     echo "ERRO: tabela funcionarios nao existe.\n";
     exit(1);

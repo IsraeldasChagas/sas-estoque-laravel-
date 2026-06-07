@@ -8743,6 +8743,17 @@ async function loadUsuarios(force = false) {
 }
 
 async function loadFuncionarios(filtros = {}) {
+  if (isAdmin() && sessionStorage.getItem("rhLimparProvisoriosFeito") !== "1") {
+    try {
+      const limpeza = await fetchJSON("/funcionarios/limpar-provisorios", { method: "POST", body: "{}" });
+      sessionStorage.setItem("rhLimparProvisoriosFeito", "1");
+      if (limpeza?.removidos > 0) {
+        showToast(limpeza.mensagem || `Removidos ${limpeza.removidos} cadastro(s) provisório(s).`, "warning");
+      }
+    } catch (_) {
+      sessionStorage.setItem("rhLimparProvisoriosFeito", "1");
+    }
+  }
   const params = new URLSearchParams();
   ["nome", "cpf", "cargo", "unidade_id", "status"].forEach(k => {
     if (filtros[k]) params.append(k, filtros[k]);
