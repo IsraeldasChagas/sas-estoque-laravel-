@@ -3260,18 +3260,20 @@
               <button type="button" class="btn secondary" id="invSimBuscarOficial">↻ Atualizar cotações</button>
             </div>
 
-            <!-- Passo 1: Vitrine visual -->
-            <div class="table-card form-card--wide inv-vitrine-card" id="invSimVitrineCard">
+            <!-- Passo 1: Vitrine visual (recolhida ao abrir) -->
+            <div class="table-card form-card--wide inv-vitrine-card inv-vitrine-card--collapsed" id="invSimVitrineCard">
               <header class="inv-vitrine-head">
-                <div>
+                <button type="button" class="inv-vitrine-toggle" id="invSimVitrineToggle" aria-expanded="false" title="Mostrar ou recolher vitrine">
+                  <span class="inv-vitrine-arrow" aria-hidden="true">▼</span>
+                </button>
+                <div class="inv-vitrine-head-text">
                   <h3>1. Escolha o investimento</h3>
                   <p class="subtle-text" id="invSimMercadoAtualizado">Carregando cotações oficiais…</p>
                 </div>
                 <a href="https://www.tesourodireto.com.br/" target="_blank" rel="noopener" class="btn secondary btn-sm">Site Tesouro Direto ↗</a>
               </header>
 
-              <div class="inv-vitrine-ref" id="invSimReferenciasRapidas"></div>
-
+              <div class="inv-vitrine-body" id="invSimVitrineBody">
               <div class="inv-vitrine-filtros" id="invSimFiltrosCategoria" role="tablist">
                 <button type="button" class="inv-filtro-btn active" data-cat="todos">Todos</button>
                 <button type="button" class="inv-filtro-btn" data-cat="tesouro_selic">Tesouro Selic</button>
@@ -3293,6 +3295,7 @@
                 <div class="inv-ir-cards" id="invSimIrCards"></div>
               </div>
               <div id="invSimMercadoAvisos"></div>
+              </div>
             </div>
 
             <!-- Prévia do selecionado -->

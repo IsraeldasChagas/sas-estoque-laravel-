@@ -496,9 +496,34 @@
     }
   }
 
+  function invVitrineRecolher() {
+    const card = document.getElementById("invSimVitrineCard");
+    const btn = document.getElementById("invSimVitrineToggle");
+    if (card) card.classList.add("inv-vitrine-card--collapsed");
+    if (btn) {
+      btn.setAttribute("aria-expanded", "false");
+      btn.title = "Mostrar vitrine";
+    }
+  }
+
+  function invVitrineToggle() {
+    const card = document.getElementById("invSimVitrineCard");
+    const btn = document.getElementById("invSimVitrineToggle");
+    if (!card || !btn) return;
+    const aberto = card.classList.toggle("inv-vitrine-card--collapsed") === false;
+    btn.setAttribute("aria-expanded", aberto ? "true" : "false");
+    btn.title = aberto ? "Recolher vitrine" : "Mostrar vitrine";
+  }
+
   function invBindVitrineEvents() {
     if (document.body?.dataset.invVitrineBound === "1") return;
     document.body.dataset.invVitrineBound = "1";
+
+    document.getElementById("invSimVitrineToggle")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      invVitrineToggle();
+    });
+    document.querySelector(".inv-vitrine-head-text")?.addEventListener("click", () => invVitrineToggle());
 
     document.getElementById("invSimFiltrosCategoria")?.addEventListener("click", (e) => {
       const btn = e.target.closest(".inv-filtro-btn");
@@ -526,6 +551,7 @@
   }
 
   async function loadInvestimentoSimulador() {
+    invVitrineRecolher();
     await invCarregarCatalogos();
     const selObj = document.getElementById("invSimObjetivo");
     const selTipo = document.getElementById("invSimTipo");
