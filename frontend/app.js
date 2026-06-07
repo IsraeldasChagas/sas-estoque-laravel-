@@ -4310,6 +4310,17 @@ function applyPermissions() {
       regras.sections.includes("patrimonioConfiguracoes");
     patrimonioNavSubmenu.classList.toggle("hidden", !temAcessoPatrimonio);
   }
+  const investimentoNavSubmenu = document.getElementById("investimentoMenu")?.closest(".nav-submenu");
+  if (investimentoNavSubmenu) {
+    const temAcessoInvestimento =
+      regras.sections.includes("investimentoDashboard") ||
+      regras.sections.includes("investimentoReservas") ||
+      regras.sections.includes("investimentoSimulador") ||
+      regras.sections.includes("investimentoCarteira") ||
+      regras.sections.includes("investimentoResgates") ||
+      regras.sections.includes("investimentoRelatorios");
+    investimentoNavSubmenu.classList.toggle("hidden", !temAcessoInvestimento);
+  }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
@@ -4319,13 +4330,7 @@ function applyPermissions() {
       regras.sections.includes("proventos") ||
       regras.sections.includes("despesasFixas") ||
       regras.sections.includes("valeConsumo") ||
-      regras.sections.includes("reciboAjuda") ||
-      regras.sections.includes("investimentoDashboard") ||
-      regras.sections.includes("investimentoReservas") ||
-      regras.sections.includes("investimentoSimulador") ||
-      regras.sections.includes("investimentoCarteira") ||
-      regras.sections.includes("investimentoResgates") ||
-      regras.sections.includes("investimentoRelatorios");
+      regras.sections.includes("reciboAjuda");
     financeiroNavSubmenu.classList.toggle("hidden", !temAcessoFinanceiro);
   }
   const fechamentoNavSubmenu = document.getElementById("fechamentoCaixaMenu")?.closest(".nav-submenu");
@@ -4489,15 +4494,13 @@ function navigateTo(section) {
   }
   const financeiroNavSubmenuNav = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenuNav) {
-    const invNavSections = ["investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios"];
     if (
       section === "boletao" ||
       section === "alvara" ||
       section === "proventos" ||
       section === "despesasFixas" ||
       section === "valeConsumo" ||
-      section === "reciboAjuda" ||
-      invNavSections.includes(section)
+      section === "reciboAjuda"
     ) {
       financeiroNavSubmenuNav.classList.add("open");
     } else {
@@ -15031,23 +15034,15 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
-  // Submenu aninhado: RH → Recrutamento, Financeiro → Investimento
+  // Submenu aninhado: RH → Recrutamento
   if (document.body && document.body.dataset.sasNestedSubmenuToggleBound !== "1") {
     document.body.dataset.sasNestedSubmenuToggleBound = "1";
     document.addEventListener('click', (event) => {
       const elRh = event.target?.closest?.('#rhRecrutamentoMenu');
-      if (elRh) {
-        event.preventDefault();
-        event.stopPropagation();
-        elRh.closest('.nav-submenu')?.classList.toggle('open');
-        return;
-      }
-      const elInv = event.target?.closest?.('#investimentoMenu');
-      if (elInv) {
-        event.preventDefault();
-        event.stopPropagation();
-        elInv.closest('.nav-submenu')?.classList.toggle('open');
-      }
+      if (!elRh) return;
+      event.preventDefault();
+      event.stopPropagation();
+      elRh.closest('.nav-submenu')?.classList.toggle('open');
     }, true);
   }
   // Setup submenu toggle for Configuracoes

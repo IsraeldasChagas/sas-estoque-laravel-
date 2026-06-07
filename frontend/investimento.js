@@ -599,7 +599,6 @@
       menu.dataset.sasSubmenuToggleBound = "1";
       menu.addEventListener("click", (ev) => {
         ev.preventDefault();
-        ev.stopPropagation();
         menu.closest(".nav-submenu")?.classList.toggle("open");
       });
     }

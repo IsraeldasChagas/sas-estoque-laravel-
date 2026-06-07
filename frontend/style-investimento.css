@@ -127,7 +127,3 @@
   font-size: 1.2rem;
   color: #283593;
 }
-
-.nav-submenu--financeiro .nav-submenu--nested > .nav-link-parent.nav-link-child {
-  padding-left: 1.25rem;
-}
