@@ -7154,6 +7154,20 @@ select[size]:not([size="1"]) {
   width: 18px;
   height: 18px;
 }
+.multi-select__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 4px 4px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+#rhRelatoriosSection .filters-panel {
+  overflow: visible;
+}
+#rhRelatoriosSection .multi-select__menu {
+  z-index: 80;
+}
 .recibo-ajuda__funcionario select,
 .recibo-ajuda__funcionario input,
 .recibo-ajuda__unidade select {

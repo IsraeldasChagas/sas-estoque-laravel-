@@ -2041,7 +2041,7 @@
             <div class="kanban-page-header" style="margin-bottom: 1rem;">
               <div>
                 <h2>RH — Relatórios</h2>
-                <p class="subtle-text">Marque as unidades desejadas, gere o PDF com contagem por unidade e lista de funcionários <strong>ativos</strong> (nome, WhatsApp, unidade e cargo).</p>
+                <p class="subtle-text">Clique em <strong>Unidades</strong>, marque na lista e gere o PDF com contagem e funcionários <strong>ativos</strong>.</p>
               </div>
             </div>
             <form id="rhRelatorioFiltroForm" class="filters-panel">
@@ -2069,14 +2069,14 @@
                     <option value="estoquista">Estoquista</option>
                   </select>
                 </label>
-                <label class="filters-field--full" style="grid-column: 1 / -1;">
-                  Unidades no relatório
-                  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin:0.35rem 0 0.5rem;">
-                    <button type="button" class="btn btn-sm" id="rhRelatorioUnidadesMarcarTodas">Marcar todas</button>
-                    <button type="button" class="btn btn-sm" id="rhRelatorioUnidadesLimpar">Desmarcar todas</button>
-                  </div>
-                  <div id="rhRelatorioFiltroUnidades" class="filters-panel" style="margin:0;padding:0.75rem;border-radius:10px;max-height:200px;overflow-y:auto;">
-                    <div id="rhRelatorioFiltroUnidadesList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.35rem 0.75rem;"></div>
+                <label>
+                  Unidades
+                  <div class="multi-select" id="rhRelatorioUnidadesWrap">
+                    <button type="button" class="multi-select__btn" id="rhRelatorioUnidadesBtn" aria-expanded="false">
+                      <span class="multi-select__label" id="rhRelatorioUnidadesLabel">Todas as unidades</span>
+                      <span class="multi-select__arrow" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="multi-select__menu hidden" id="rhRelatorioUnidadesMenu" role="listbox" aria-multiselectable="true"></div>
                   </div>
                 </label>
                 <label>

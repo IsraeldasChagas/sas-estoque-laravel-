@@ -8768,34 +8768,121 @@ async function loadFuncionarios(filtros = {}) {
 }
 
 function rhRelatorioRenderUnidadesChecklist(marcarTodas = true) {
-  const list = document.getElementById("rhRelatorioFiltroUnidadesList");
-  if (!list) return;
+  const menu = document.getElementById("rhRelatorioUnidadesMenu");
+  if (!menu) return;
   const unidades = Array.isArray(state.unidades) ? state.unidades : [];
-  const html = unidades
+  const items = unidades
     .filter((u) => u && u.id != null)
     .map((u) => {
       const id = String(u.id);
       const checked = marcarTodas ? "checked" : "";
-      return `<label class="checkbox-label"><input type="checkbox" data-rh-rel-unidade="1" value="${escapeHtml(id)}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}</label>`;
+      return `<label class="multi-select__item"><input type="checkbox" data-rh-rel-unidade="1" value="${escapeHtml(id)}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}</label>`;
     })
     .join("");
-  list.innerHTML = html || '<p class="subtle-text">Nenhuma unidade cadastrada.</p>';
+  menu.innerHTML = items
+    ? `<div class="multi-select__toolbar"><button type="button" class="btn btn-sm" data-rh-rel-unidade-acao="all">Marcar todas</button><button type="button" class="btn btn-sm" data-rh-rel-unidade-acao="none">Desmarcar</button></div>${items}`
+    : '<p class="subtle-text" style="padding:8px;">Nenhuma unidade cadastrada.</p>';
+  rhRelatorioUpdateUnidadesLabel();
 }
 
 function rhRelatorioUnidadesSelecionadas() {
-  return [...document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]:checked')]
+  return [...document.querySelectorAll('#rhRelatorioUnidadesMenu input[type="checkbox"][data-rh-rel-unidade="1"]:checked')]
     .map((el) => parseInt(el.value, 10))
     .filter((id) => Number.isFinite(id) && id > 0);
 }
 
 function rhRelatorioTodasUnidadesMarcadas() {
-  const boxes = document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]');
+  const boxes = document.querySelectorAll('#rhRelatorioUnidadesMenu input[type="checkbox"][data-rh-rel-unidade="1"]');
   if (!boxes.length) return true;
   return [...boxes].every((el) => el.checked);
 }
 
+function rhRelatorioUpdateUnidadesLabel() {
+  const label = document.getElementById("rhRelatorioUnidadesLabel");
+  if (!label) return;
+  const ids = rhRelatorioUnidadesSelecionadas();
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  if (!unidades.length) {
+    label.textContent = "Nenhuma unidade";
+    return;
+  }
+  if (!ids.length) {
+    label.textContent = "Selecione…";
+    return;
+  }
+  if (rhRelatorioTodasUnidadesMarcadas()) {
+    label.textContent = "Todas as unidades";
+    return;
+  }
+  if (ids.length === 1) {
+    const u = unidades.find((x) => String(x.id) === String(ids[0]));
+    label.textContent = u?.nome || `Unidade ${ids[0]}`;
+    return;
+  }
+  label.textContent = `${ids.length} unidades selecionadas`;
+}
+
+function rhRelatorioUnidadesMenuOpen() {
+  const menu = document.getElementById("rhRelatorioUnidadesMenu");
+  return !!menu && !menu.classList.contains("hidden");
+}
+
+function rhRelatorioToggleUnidadesMenu() {
+  const menu = document.getElementById("rhRelatorioUnidadesMenu");
+  const btn = document.getElementById("rhRelatorioUnidadesBtn");
+  if (!menu || !btn) return;
+  const abrir = menu.classList.contains("hidden");
+  menu.classList.toggle("hidden", !abrir);
+  btn.setAttribute("aria-expanded", abrir ? "true" : "false");
+}
+
+function rhRelatorioFecharUnidadesMenu() {
+  const menu = document.getElementById("rhRelatorioUnidadesMenu");
+  const btn = document.getElementById("rhRelatorioUnidadesBtn");
+  if (!menu || !btn) return;
+  menu.classList.add("hidden");
+  btn.setAttribute("aria-expanded", "false");
+}
+
+function rhRelatorioSetupUnidadesMultiSelect() {
+  if (document.body?.dataset.rhRelUnidadesMultiBound === "1") return;
+  document.body.dataset.rhRelUnidadesMultiBound = "1";
+
+  document.getElementById("rhRelatorioUnidadesBtn")?.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    rhRelatorioToggleUnidadesMenu();
+  });
+
+  document.getElementById("rhRelatorioUnidadesMenu")?.addEventListener("click", (ev) => {
+    const acao = ev.target.closest("[data-rh-rel-unidade-acao]");
+    if (acao) {
+      ev.preventDefault();
+      const marcar = acao.dataset.rhRelUnidadeAcao === "all";
+      document.querySelectorAll('#rhRelatorioUnidadesMenu input[type="checkbox"][data-rh-rel-unidade="1"]').forEach((el) => {
+        el.checked = marcar;
+      });
+      rhRelatorioUpdateUnidadesLabel();
+      return;
+    }
+  });
+
+  document.getElementById("rhRelatorioUnidadesMenu")?.addEventListener("change", (ev) => {
+    if (ev.target?.matches?.('input[type="checkbox"][data-rh-rel-unidade="1"]')) {
+      rhRelatorioUpdateUnidadesLabel();
+    }
+  });
+
+  document.addEventListener("click", (ev) => {
+    if (!rhRelatorioUnidadesMenuOpen()) return;
+    const wrap = document.getElementById("rhRelatorioUnidadesWrap");
+    if (wrap && ev.target instanceof Node && wrap.contains(ev.target)) return;
+    rhRelatorioFecharUnidadesMenu();
+  });
+}
+
 /** Preenche unidades no filtro da tela RH — Relatórios. */
 async function loadRhRelatorioSection() {
+  rhRelatorioSetupUnidadesMultiSelect();
   await loadUnidades(false).catch(() => {});
   rhRelatorioRenderUnidadesChecklist(true);
 }
@@ -15132,22 +15219,13 @@ function setupNavigation() {
     e.preventDefault();
     abrirRhRelatorioContatosPdf().catch((err) => showToast(err?.message || "Erro ao gerar PDF.", "error"));
   });
-  document.getElementById("rhRelatorioUnidadesMarcarTodas")?.addEventListener("click", () => {
-    document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]').forEach((el) => {
-      el.checked = true;
-    });
-  });
-  document.getElementById("rhRelatorioUnidadesLimpar")?.addEventListener("click", () => {
-    document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]').forEach((el) => {
-      el.checked = false;
-    });
-  });
   document.getElementById("rhRelatorioLimparFiltros")?.addEventListener("click", () => {
     ["rhRelatorioFiltroNome", "rhRelatorioFiltroCpf", "rhRelatorioFiltroCargo"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
     rhRelatorioRenderUnidadesChecklist(true);
+    rhRelatorioFecharUnidadesMenu();
     const st = document.getElementById("rhRelatorioFiltroStatus");
     if (st) st.value = "ativo";
   });
