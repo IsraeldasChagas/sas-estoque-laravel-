@@ -498,8 +498,10 @@
 
   function invVitrineRecolher() {
     const card = document.getElementById("invSimVitrineCard");
+    const body = document.getElementById("invSimVitrineBody");
     const btn = document.getElementById("invSimVitrineToggle");
     if (card) card.classList.add("inv-vitrine-card--collapsed");
+    if (body) body.hidden = true;
     if (btn) {
       btn.setAttribute("aria-expanded", "false");
       btn.title = "Mostrar vitrine";
@@ -508,58 +510,28 @@
 
   function invVitrineToggle() {
     const card = document.getElementById("invSimVitrineCard");
+    const body = document.getElementById("invSimVitrineBody");
     const btn = document.getElementById("invSimVitrineToggle");
     if (!card || !btn) return;
-    const aberto = card.classList.toggle("inv-vitrine-card--collapsed") === false;
-    btn.setAttribute("aria-expanded", aberto ? "true" : "false");
-    btn.title = aberto ? "Recolher vitrine" : "Mostrar vitrine";
-  }
-
-  function invBindVitrineEvents() {
-    if (document.body?.dataset.invVitrineBound === "1") return;
-    document.body.dataset.invVitrineBound = "1";
-
-    document.getElementById("invSimVitrineToggle")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      invVitrineToggle();
-    });
-    document.querySelector(".inv-vitrine-head-text")?.addEventListener("click", () => invVitrineToggle());
-
-    document.getElementById("invSimFiltrosCategoria")?.addEventListener("click", (e) => {
-      const btn = e.target.closest(".inv-filtro-btn");
-      if (!btn?.dataset?.cat) return;
-      invState.filtroCategoria = btn.dataset.cat;
-      document.querySelectorAll(".inv-filtro-btn").forEach((b) => b.classList.toggle("active", b === btn));
-      invRenderVitrineTitulos();
-    });
-
-    document.getElementById("invSimBuscaTitulo")?.addEventListener("input", (e) => {
-      invState.buscaTitulo = e.target.value || "";
-      invRenderVitrineTitulos();
-    });
-
-    document.getElementById("invSimTitulosGrid")?.addEventListener("click", (e) => {
-      const usar = e.target.closest("[data-usar-id]");
-      if (!usar) return;
-      const item = invResolverItemPorId(usar.dataset.usarId);
-      if (item) invAplicarItemNaSimulacao(item);
-    });
-
-    document.getElementById("invSimIrParaForm")?.addEventListener("click", () => {
-      document.getElementById("invSimFormCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    const recolhido = card.classList.toggle("inv-vitrine-card--collapsed");
+    if (body) body.hidden = recolhido;
+    btn.setAttribute("aria-expanded", recolhido ? "false" : "true");
+    btn.title = recolhido ? "Mostrar vitrine" : "Recolher vitrine";
   }
 
   async function loadInvestimentoSimulador() {
     invVitrineRecolher();
-    await invCarregarCatalogos();
-    const selObj = document.getElementById("invSimObjetivo");
-    const selTipo = document.getElementById("invSimTipo");
-    if (selObj) selObj.innerHTML = `<option value="">— Opcional —</option>${invOptsObjetivos()}`;
-    if (selTipo) selTipo.innerHTML = `<option value="">Selecione</option>${invOptsTipos()}`;
     invSetupMoedaInputs(document.getElementById("investimentoSimuladorSection"));
     document.getElementById("invSimResultado")?.classList.add("hidden");
-    invBindVitrineEvents();
+    try {
+      await invCarregarCatalogos();
+      const selObj = document.getElementById("invSimObjetivo");
+      const selTipo = document.getElementById("invSimTipo");
+      if (selObj) selObj.innerHTML = `<option value="">— Opcional —</option>${invOptsObjetivos()}`;
+      if (selTipo) selTipo.innerHTML = `<option value="">Selecione</option>${invOptsTipos()}`;
+    } catch (err) {
+      invToast(err.message || "Erro ao carregar catálogos.", "error");
+    }
     if (invState.mercado) invRenderMercado(invState.mercado);
     else invCarregarMercadoOficial(false).catch(() => {});
   }
@@ -803,6 +775,36 @@
       if (el) el.value = "";
     });
     document.getElementById("invSimCalcular")?.addEventListener("click", () => invExecutarSimulacao().catch((e) => invToast(e.message, "error")));
+
+    document.getElementById("investimentoSimuladorSection")?.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      if (e.target.closest("#invSimVitrineToggle") || e.target.closest(".inv-vitrine-head-text")) {
+        e.preventDefault();
+        invVitrineToggle();
+        return;
+      }
+      const filtroBtn = e.target.closest(".inv-filtro-btn");
+      if (filtroBtn?.dataset?.cat) {
+        invState.filtroCategoria = filtroBtn.dataset.cat;
+        document.querySelectorAll("#invSimFiltrosCategoria .inv-filtro-btn").forEach((b) => {
+          b.classList.toggle("active", b === filtroBtn);
+        });
+        invRenderVitrineTitulos();
+        return;
+      }
+      const usar = e.target.closest("[data-usar-id]");
+      if (usar) {
+        const item = invResolverItemPorId(usar.dataset.usarId);
+        if (item) invAplicarItemNaSimulacao(item);
+      }
+    });
+    document.getElementById("invSimBuscaTitulo")?.addEventListener("input", (e) => {
+      invState.buscaTitulo = e.target.value || "";
+      invRenderVitrineTitulos();
+    });
+    document.getElementById("invSimIrParaForm")?.addEventListener("click", () => {
+      document.getElementById("invSimFormCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 
     document.getElementById("invCartBtnNova")?.addEventListener("click", () => invAbrirModalCarteira(null).catch((e) => invToast(e.message, "error")));
     document.getElementById("invCartFiltroAplicar")?.addEventListener("click", () => loadInvestimentoCarteira().catch((e) => invToast(e.message, "error")));
