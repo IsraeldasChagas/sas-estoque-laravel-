@@ -8767,16 +8767,37 @@ async function loadFuncionarios(filtros = {}) {
   return state.funcionarios;
 }
 
+function rhRelatorioRenderUnidadesChecklist(marcarTodas = true) {
+  const list = document.getElementById("rhRelatorioFiltroUnidadesList");
+  if (!list) return;
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  const html = unidades
+    .filter((u) => u && u.id != null)
+    .map((u) => {
+      const id = String(u.id);
+      const checked = marcarTodas ? "checked" : "";
+      return `<label class="checkbox-label"><input type="checkbox" data-rh-rel-unidade="1" value="${escapeHtml(id)}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}</label>`;
+    })
+    .join("");
+  list.innerHTML = html || '<p class="subtle-text">Nenhuma unidade cadastrada.</p>';
+}
+
+function rhRelatorioUnidadesSelecionadas() {
+  return [...document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]:checked')]
+    .map((el) => parseInt(el.value, 10))
+    .filter((id) => Number.isFinite(id) && id > 0);
+}
+
+function rhRelatorioTodasUnidadesMarcadas() {
+  const boxes = document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]');
+  if (!boxes.length) return true;
+  return [...boxes].every((el) => el.checked);
+}
+
 /** Preenche unidades no filtro da tela RH — Relatórios. */
 async function loadRhRelatorioSection() {
   await loadUnidades(false).catch(() => {});
-  const sel = document.getElementById("rhRelatorioFiltroUnidade");
-  if (sel) {
-    const opts = (state.unidades || [])
-      .map((u) => `<option value="${escapeHtml(String(u.id))}">${escapeHtml(u.nome || "")}</option>`)
-      .join("");
-    sel.innerHTML = '<option value="">Todas</option>' + opts;
-  }
+  rhRelatorioRenderUnidadesChecklist(true);
 }
 
 // --- RH — Folha de ponto ---
@@ -9970,11 +9991,17 @@ async function abrirRhRelatorioContatosPdf() {
   const nome = document.getElementById("rhRelatorioFiltroNome")?.value?.trim();
   const cpf = document.getElementById("rhRelatorioFiltroCpf")?.value?.trim();
   const cargo = document.getElementById("rhRelatorioFiltroCargo")?.value;
-  const unidadeId = document.getElementById("rhRelatorioFiltroUnidade")?.value;
+  const unidadeIds = rhRelatorioUnidadesSelecionadas();
+  if (!unidadeIds.length) {
+    showToast("Marque ao menos uma unidade no relatório.", "error");
+    return;
+  }
   if (nome) params.append("nome", nome);
   if (cpf) params.append("cpf", cpf);
   if (cargo) params.append("cargo", cargo);
-  if (unidadeId) params.append("unidade_id", unidadeId);
+  if (!rhRelatorioTodasUnidadesMarcadas()) {
+    params.append("unidade_ids", unidadeIds.join(","));
+  }
   params.append("status", "ativo");
   const qs = params.toString();
   const url = `${API_URL}/funcionarios/relatorio/contatos.pdf${qs ? `?${qs}` : ""}`;
@@ -15105,11 +15132,22 @@ function setupNavigation() {
     e.preventDefault();
     abrirRhRelatorioContatosPdf().catch((err) => showToast(err?.message || "Erro ao gerar PDF.", "error"));
   });
+  document.getElementById("rhRelatorioUnidadesMarcarTodas")?.addEventListener("click", () => {
+    document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]').forEach((el) => {
+      el.checked = true;
+    });
+  });
+  document.getElementById("rhRelatorioUnidadesLimpar")?.addEventListener("click", () => {
+    document.querySelectorAll('#rhRelatorioFiltroUnidadesList input[type="checkbox"][data-rh-rel-unidade="1"]').forEach((el) => {
+      el.checked = false;
+    });
+  });
   document.getElementById("rhRelatorioLimparFiltros")?.addEventListener("click", () => {
-    ["rhRelatorioFiltroNome", "rhRelatorioFiltroCpf", "rhRelatorioFiltroCargo", "rhRelatorioFiltroUnidade"].forEach((id) => {
+    ["rhRelatorioFiltroNome", "rhRelatorioFiltroCpf", "rhRelatorioFiltroCargo"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.value = "";
     });
+    rhRelatorioRenderUnidadesChecklist(true);
     const st = document.getElementById("rhRelatorioFiltroStatus");
     if (st) st.value = "ativo";
   });

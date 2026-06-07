@@ -6409,8 +6409,18 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
         if ($cargo = trim($request->query('cargo', ''))) {
             $query->where('funcionarios.cargo', $cargo);
         }
-        if ($unidadeId = $request->query('unidade_id')) {
-            $query->where('funcionarios.unidade_id', $unidadeId);
+
+        $unidadeIdsFiltro = [];
+        if ($request->filled('unidade_ids')) {
+            $unidadeIdsFiltro = array_values(array_unique(array_filter(array_map(
+                'intval',
+                preg_split('/\s*,\s*/', (string) $request->query('unidade_ids'), -1, PREG_SPLIT_NO_EMPTY)
+            ), static fn (int $id) => $id > 0)));
+        } elseif ($request->query('unidade_id')) {
+            $unidadeIdsFiltro = [(int) $request->query('unidade_id')];
+        }
+        if ($unidadeIdsFiltro !== []) {
+            $query->whereIn('funcionarios.unidade_id', $unidadeIdsFiltro);
         }
 
         RhFuncionarioUnicidade::aplicarFiltroSomenteCadastrosReais($query);
@@ -6445,7 +6455,7 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
             $unidadesDb = DB::table('unidades')->orderBy('id')->get(['id', 'nome']);
             foreach ($unidadesDb as $u) {
                 $uid = (int) $u->id;
-                if ($unidadeId && (int) $unidadeId !== $uid) {
+                if ($unidadeIdsFiltro !== [] && ! in_array($uid, $unidadeIdsFiltro, true)) {
                     continue;
                 }
                 $nomeUni = trim((string) ($u->nome ?? '')) !== '' ? (string) $u->nome : ('Unidade ' . $uid);
@@ -6457,7 +6467,7 @@ Route::get('/funcionarios/relatorio/contatos.pdf', function (Request $request) {
                 $resumoUnidadesHtml .= '<tr><td>' . $h($item['nome']) . '</td><td style="text-align:center;font-weight:bold;">' . (int) $item['total'] . '</td></tr>';
             }
         }
-        if ($semUnidade > 0 && ! $unidadeId) {
+        if ($semUnidade > 0 && $unidadeIdsFiltro === []) {
             $resumoUnidadesHtml .= '<tr><td>' . $h('Sem unidade') . '</td><td style="text-align:center;font-weight:bold;">' . $semUnidade . '</td></tr>';
         }
         if ($resumoUnidadesHtml === '') {
