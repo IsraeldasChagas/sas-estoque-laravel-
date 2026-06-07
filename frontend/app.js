@@ -8076,6 +8076,10 @@ function refreshUnidadeSelects() {
   populateSelect(document.getElementById("energiaDashFiltroUnidade"), options, "Todas as unidades");
   populateSelect(document.getElementById("energiaProjUnidade"), options, "Todas as unidades");
   populateSelect(document.getElementById("energiaRelFiltroUnidade"), options, "Todas as unidades");
+  populateSelect(dom.funcionariosFiltroUnidade, options, "Todas");
+  if (dom.funcionarioForm?.elements?.unidade_id) {
+    populateSelect(dom.funcionarioForm.elements.unidade_id, options, "Sem unidade");
+  }
   
   // Não sobrescreve o select da lista de compras se for COZINHA ou BAR criando nova lista
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
@@ -8754,6 +8758,7 @@ async function loadFuncionarios(filtros = {}) {
       sessionStorage.setItem("rhLimparProvisoriosFeito", "1");
     }
   }
+  await loadUnidades(false).catch(() => {});
   const params = new URLSearchParams();
   ["nome", "cpf", "cargo", "unidade_id", "status"].forEach(k => {
     if (filtros[k]) params.append(k, filtros[k]);
