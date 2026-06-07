@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
-    <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento" />
+    <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento-vitrine" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -3253,32 +3253,58 @@
 
           <section id="investimentoSimuladorSection" class="view-section hidden">
             <div class="inv-section-head">
-              <h2>🧮 Simulador de Investimentos</h2>
-              <button type="button" class="btn secondary" id="invSimBuscarOficial" title="Busca taxas do Tesouro Transparente e Bacen">↻ Cotações oficiais</button>
+              <div>
+                <h2>🧮 Simulador de Investimentos</h2>
+                <p class="subtle-text">Escolha um título na vitrine, veja taxa e preço, e replique na simulação abaixo.</p>
+              </div>
+              <button type="button" class="btn secondary" id="invSimBuscarOficial">↻ Atualizar cotações</button>
             </div>
-            <div class="table-card form-card--wide inv-mercado-card hidden" id="invSimMercadoCard">
-              <header class="inv-mercado-head">
+
+            <!-- Passo 1: Vitrine visual -->
+            <div class="table-card form-card--wide inv-vitrine-card" id="invSimVitrineCard">
+              <header class="inv-vitrine-head">
                 <div>
-                  <h3>Dados oficiais</h3>
-                  <p class="subtle-text" id="invSimMercadoAtualizado">—</p>
+                  <h3>1. Escolha o investimento</h3>
+                  <p class="subtle-text" id="invSimMercadoAtualizado">Carregando cotações oficiais…</p>
                 </div>
-                <a href="https://www.tesourodireto.com.br/" target="_blank" rel="noopener" class="btn secondary btn-sm">Abrir Tesouro Direto</a>
+                <a href="https://www.tesourodireto.com.br/" target="_blank" rel="noopener" class="btn secondary btn-sm">Site Tesouro Direto ↗</a>
               </header>
-              <div class="inv-mercado-resumo" id="invSimMercadoResumo"></div>
-              <div class="inv-mercado-grid">
-                <div>
-                  <h4>Título do Tesouro (cotação do dia)</h4>
-                  <label>Título<select id="invSimTituloOficial"><option value="">— Selecione para preencher taxa —</option></select></label>
-                  <p class="subtle-text inv-mercado-detalhe" id="invSimTituloDetalhe"></p>
-                </div>
-                <div>
-                  <h4>Tabela IR regressiva (renda fixa)</h4>
-                  <div class="table-wrapper"><table class="inv-ir-table"><thead><tr><th>Prazo</th><th>Alíquota</th></tr></thead><tbody id="invSimIrTbody"></tbody></table></div>
-                </div>
+
+              <div class="inv-vitrine-ref" id="invSimReferenciasRapidas"></div>
+
+              <div class="inv-vitrine-filtros" id="invSimFiltrosCategoria" role="tablist">
+                <button type="button" class="inv-filtro-btn active" data-cat="todos">Todos</button>
+                <button type="button" class="inv-filtro-btn" data-cat="tesouro_selic">Tesouro Selic</button>
+                <button type="button" class="inv-filtro-btn" data-cat="tesouro_ipca">Tesouro IPCA+</button>
+                <button type="button" class="inv-filtro-btn" data-cat="tesouro_prefixado">Tesouro Prefixado</button>
+                <button type="button" class="inv-filtro-btn" data-cat="renda_fixa">CDB / Fundo DI</button>
+              </div>
+
+              <div class="inv-vitrine-busca">
+                <input type="search" id="invSimBuscaTitulo" placeholder="Buscar título ou vencimento…" autocomplete="off" />
+              </div>
+
+              <div class="inv-titulos-grid" id="invSimTitulosGrid">
+                <p class="subtle-text inv-vitrine-loading">Carregando títulos do Tesouro Transparente…</p>
+              </div>
+
+              <div class="inv-vitrine-ir">
+                <h4>IR regressivo (renda fixa)</h4>
+                <div class="inv-ir-cards" id="invSimIrCards"></div>
               </div>
               <div id="invSimMercadoAvisos"></div>
             </div>
-            <div class="table-card form-card--wide">
+
+            <!-- Prévia do selecionado -->
+            <div class="inv-selecionado-bar hidden" id="invSimSelecionadoBar">
+              <div class="inv-selecionado-info" id="invSimSelecionadoInfo"></div>
+              <button type="button" class="btn primary" id="invSimIrParaForm">Ir para simulação ↓</button>
+            </div>
+
+            <!-- Passo 2: Formulário -->
+            <div class="table-card form-card--wide inv-sim-form-card" id="invSimFormCard">
+              <h3>2. Monte a simulação</h3>
+              <p class="subtle-text" id="invSimFormHint">Selecione um card acima ou preencha manualmente.</p>
               <div class="filters-grid">
                 <label>Valor aplicado<input type="text" id="invSimValor" data-inv-moeda placeholder="R$ 0,00" /></label>
                 <label>Aporte mensal<input type="text" id="invSimAporte" data-inv-moeda placeholder="R$ 0,00" /></label>
@@ -3287,9 +3313,8 @@
                 <label>Taxa mensal (%)<input type="number" id="invSimTaxaMensal" min="0" step="0.01" placeholder="Ex: 0,95" /></label>
                 <label>Objetivo (opcional)<select id="invSimObjetivo"><option value="">— Opcional —</option></select></label>
                 <label>Tipo de investimento<select id="invSimTipo"><option value="">Selecione</option></select></label>
-                <label><button type="button" class="btn primary" id="invSimCalcular">Simular</button></label>
+                <label class="inv-sim-calc-label"><button type="button" class="btn primary inv-sim-calc-btn" id="invSimCalcular">Calcular simulação</button></label>
               </div>
-              <p class="subtle-text">Use <strong>Cotações oficiais</strong> para preencher taxas do Tesouro (CSV diário do Tesouro Transparente) e Selic/CDI (Bacen). Imposto estimado pela tabela regressiva de IR sobre renda fixa.</p>
             </div>
             <div class="table-card form-card--wide hidden" id="invSimResultado"></div>
           </section>
@@ -6029,7 +6054,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
-    <script src="investimento.js?v=20260607-investimento"></script>
+    <script src="investimento.js?v=20260607-investimento-vitrine"></script>
     <script src="app.js?v=20260525-patrimonio-brl"></script>
      
   </body>
