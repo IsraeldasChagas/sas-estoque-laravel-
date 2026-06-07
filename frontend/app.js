@@ -8780,7 +8780,7 @@ function rhRelatorioRenderUnidadesChecklist(marcarTodas = true) {
     })
     .join("");
   menu.innerHTML = items
-    ? `<div class="multi-select__toolbar"><button type="button" class="btn btn-sm" data-rh-rel-unidade-acao="all">Marcar todas</button><button type="button" class="btn btn-sm" data-rh-rel-unidade-acao="none">Desmarcar</button></div>${items}`
+    ? items
     : '<p class="subtle-text" style="padding:8px;">Nenhuma unidade cadastrada.</p>';
   rhRelatorioUpdateUnidadesLabel();
 }
@@ -8851,19 +8851,6 @@ function rhRelatorioSetupUnidadesMultiSelect() {
   document.getElementById("rhRelatorioUnidadesBtn")?.addEventListener("click", (ev) => {
     ev.preventDefault();
     rhRelatorioToggleUnidadesMenu();
-  });
-
-  document.getElementById("rhRelatorioUnidadesMenu")?.addEventListener("click", (ev) => {
-    const acao = ev.target.closest("[data-rh-rel-unidade-acao]");
-    if (acao) {
-      ev.preventDefault();
-      const marcar = acao.dataset.rhRelUnidadeAcao === "all";
-      document.querySelectorAll('#rhRelatorioUnidadesMenu input[type="checkbox"][data-rh-rel-unidade="1"]').forEach((el) => {
-        el.checked = marcar;
-      });
-      rhRelatorioUpdateUnidadesLabel();
-      return;
-    }
   });
 
   document.getElementById("rhRelatorioUnidadesMenu")?.addEventListener("change", (ev) => {
