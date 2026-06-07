@@ -4,7 +4,7 @@
 (function () {
   "use strict";
 
-  const invState = { catalogos: null, reservas: [], carteira: [], resgates: [], unidades: [] };
+  const invState = { catalogos: null, reservas: [], carteira: [], resgates: [], unidades: [], mercado: null, titulosOficiais: [] };
 
   function esc(s) {
     return (s ?? "").toString()
@@ -241,6 +241,123 @@
   }
 
   // ——— Simulador ———
+  function invRenderTabelaIr(tabela) {
+    const tbody = document.getElementById("invSimIrTbody");
+    if (!tbody) return;
+    tbody.innerHTML = (tabela || []).map((r) =>
+      `<tr><td>${esc(r.faixa)}</td><td>${Number(r.aliquota_percent).toFixed(1).replace(".", ",")}%</td></tr>`
+    ).join("");
+  }
+
+  function invAplicarTaxaSugeridaPorTipo(tipo) {
+    if (!tipo || !invState.mercado?.sugestoes_por_tipo) return;
+    const sug = invState.mercado.sugestoes_por_tipo[tipo];
+    if (!sug?.taxa_anual) return;
+    const elAnual = document.getElementById("invSimTaxaAnual");
+    const elMensal = document.getElementById("invSimTaxaMensal");
+    if (elAnual) elAnual.value = Number(sug.taxa_anual).toFixed(4);
+    if (elMensal) elMensal.value = "";
+    invToast(`Taxa ${Number(sug.taxa_anual).toFixed(2)}% a.a. (${sug.fonte || "oficial"})`, "success");
+  }
+
+  function invRenderMercado(data) {
+    invState.mercado = data;
+    invState.titulosOficiais = data?.tesouro?.titulos || [];
+    const card = document.getElementById("invSimMercadoCard");
+    card?.classList.remove("hidden");
+
+    const atualizado = document.getElementById("invSimMercadoAtualizado");
+    if (atualizado) {
+      const parts = [];
+      if (data?.tesouro?.data_base) parts.push(`Tesouro: base ${data.tesouro.data_base}`);
+      if (data?.selic?.data) parts.push(`Selic: ${data.selic.data}`);
+      if (data?.cdi?.data) parts.push(`CDI: ${data.cdi.data}`);
+      atualizado.textContent = parts.length ? parts.join(" · ") : "Referências carregadas";
+    }
+
+    const resumo = document.getElementById("invSimMercadoResumo");
+    if (resumo) {
+      const chips = [];
+      if (data?.selic?.valor != null) chips.push(`<span class="inv-mercado-chip">Selic ${Number(data.selic.valor).toFixed(2)}% a.a.</span>`);
+      if (data?.cdi?.valor != null) chips.push(`<span class="inv-mercado-chip">CDI ref. ${Number(data.cdi.valor).toFixed(2)}% a.a.</span>`);
+      if (data?.tesouro?.ok) chips.push(`<span class="inv-mercado-chip">${invState.titulosOficiais.length} títulos Tesouro</span>`);
+      resumo.innerHTML = chips.join("") || '<span class="subtle-text">Sem cotações no momento.</span>';
+    }
+
+    invRenderTabelaIr(data?.tabela_ir_regressiva);
+
+    const selTitulo = document.getElementById("invSimTituloOficial");
+    if (selTitulo) {
+      const cur = selTitulo.value;
+      const opts = invState.titulosOficiais.map((t) => {
+        const label = `${t.nome} — venc. ${t.data_vencimento} — ${Number(t.taxa_compra_aa).toFixed(2)}% a.a. — PU ${fmtMoeda(t.pu_compra)}`;
+        return `<option value="${esc(t.id)}" data-tipo="${esc(t.tipo_sistema)}">${esc(label)}</option>`;
+      }).join("");
+      selTitulo.innerHTML = `<option value="">— Selecione para preencher taxa —</option>${opts}`;
+      if (cur) selTitulo.value = cur;
+    }
+
+    const avisos = document.getElementById("invSimMercadoAvisos");
+    if (avisos) {
+      avisos.innerHTML = (data?.avisos || []).map((a) => `<div class="inv-aviso inv-aviso--info">${esc(a)}</div>`).join("");
+    }
+  }
+
+  async function invCarregarMercadoOficial(force = false) {
+    const btn = document.getElementById("invSimBuscarOficial");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = force ? "Atualizando…" : "Carregando…";
+    }
+    try {
+      const qs = force ? "?force=1" : "";
+      invToast(force ? "Atualizando cotações (pode levar até 1 min)…" : "Carregando cotações oficiais…", "info");
+      const data = await invFetch(`/investimento/mercado/referencias${qs}`);
+      invRenderMercado(data);
+      invToast("Cotações oficiais carregadas.", "success");
+    } catch (e) {
+      invToast(e.message || "Falha ao buscar cotações.", "error");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "↻ Cotações oficiais";
+      }
+    }
+  }
+
+  function invOnTituloOficialChange() {
+    const sel = document.getElementById("invSimTituloOficial");
+    const det = document.getElementById("invSimTituloDetalhe");
+    if (!sel?.value) {
+      if (det) det.textContent = "";
+      return;
+    }
+    const titulo = invState.titulosOficiais.find((t) => String(t.id) === String(sel.value));
+    if (!titulo) return;
+
+    const selTipo = document.getElementById("invSimTipo");
+    if (selTipo && titulo.tipo_sistema) {
+      selTipo.value = titulo.tipo_sistema;
+    }
+
+    const elAnual = document.getElementById("invSimTaxaAnual");
+    const elMensal = document.getElementById("invSimTaxaMensal");
+    let taxa = titulo.taxa_compra_aa;
+    let fonte = `Tesouro Transparente — ${titulo.nome}`;
+
+    // Tesouro Selic: taxa do CSV é spread; usar Selic do Bacen
+    if (titulo.tipo_sistema === "tesouro_selic" && invState.mercado?.selic?.valor != null) {
+      taxa = invState.mercado.selic.valor;
+      fonte = "Bacen — Meta Selic (título acompanha a Selic)";
+    }
+
+    if (elAnual) elAnual.value = Number(taxa).toFixed(4);
+    if (elMensal) elMensal.value = "";
+    if (det) {
+      det.textContent = `${fonte} · PU compra ${fmtMoeda(titulo.pu_compra)} · Liquidez ${titulo.liquidez || "—"}`;
+    }
+  }
+
   async function loadInvestimentoSimulador() {
     await invCarregarCatalogos();
     const selObj = document.getElementById("invSimObjetivo");
@@ -249,6 +366,11 @@
     if (selTipo) selTipo.innerHTML = `<option value="">Selecione</option>${invOptsTipos()}`;
     invSetupMoedaInputs(document.getElementById("investimentoSimuladorSection"));
     document.getElementById("invSimResultado")?.classList.add("hidden");
+    if (invState.mercado) {
+      invRenderMercado(invState.mercado);
+    } else {
+      invCarregarMercadoOficial(false).catch(() => {});
+    }
   }
 
   async function invExecutarSimulacao() {
@@ -480,6 +602,9 @@
     });
 
     document.getElementById("invSimObjetivo")?.addEventListener("change", invFiltrarTiposSimulador);
+    document.getElementById("invSimTipo")?.addEventListener("change", () => invAplicarTaxaSugeridaPorTipo(document.getElementById("invSimTipo")?.value));
+    document.getElementById("invSimBuscarOficial")?.addEventListener("click", () => invCarregarMercadoOficial(true).catch((e) => invToast(e.message, "error")));
+    document.getElementById("invSimTituloOficial")?.addEventListener("change", invOnTituloOficialChange);
     document.getElementById("invSimTaxaAnual")?.addEventListener("input", () => {
       const el = document.getElementById("invSimTaxaMensal");
       if (el) el.value = "";

@@ -3252,7 +3252,32 @@
           </section>
 
           <section id="investimentoSimuladorSection" class="view-section hidden">
-            <div class="inv-section-head"><h2>🧮 Simulador de Investimentos</h2></div>
+            <div class="inv-section-head">
+              <h2>🧮 Simulador de Investimentos</h2>
+              <button type="button" class="btn secondary" id="invSimBuscarOficial" title="Busca taxas do Tesouro Transparente e Bacen">↻ Cotações oficiais</button>
+            </div>
+            <div class="table-card form-card--wide inv-mercado-card hidden" id="invSimMercadoCard">
+              <header class="inv-mercado-head">
+                <div>
+                  <h3>Dados oficiais</h3>
+                  <p class="subtle-text" id="invSimMercadoAtualizado">—</p>
+                </div>
+                <a href="https://www.tesourodireto.com.br/" target="_blank" rel="noopener" class="btn secondary btn-sm">Abrir Tesouro Direto</a>
+              </header>
+              <div class="inv-mercado-resumo" id="invSimMercadoResumo"></div>
+              <div class="inv-mercado-grid">
+                <div>
+                  <h4>Título do Tesouro (cotação do dia)</h4>
+                  <label>Título<select id="invSimTituloOficial"><option value="">— Selecione para preencher taxa —</option></select></label>
+                  <p class="subtle-text inv-mercado-detalhe" id="invSimTituloDetalhe"></p>
+                </div>
+                <div>
+                  <h4>Tabela IR regressiva (renda fixa)</h4>
+                  <div class="table-wrapper"><table class="inv-ir-table"><thead><tr><th>Prazo</th><th>Alíquota</th></tr></thead><tbody id="invSimIrTbody"></tbody></table></div>
+                </div>
+              </div>
+              <div id="invSimMercadoAvisos"></div>
+            </div>
             <div class="table-card form-card--wide">
               <div class="filters-grid">
                 <label>Valor aplicado<input type="text" id="invSimValor" data-inv-moeda placeholder="R$ 0,00" /></label>
@@ -3264,7 +3289,7 @@
                 <label>Tipo de investimento<select id="invSimTipo"><option value="">Selecione</option></select></label>
                 <label><button type="button" class="btn primary" id="invSimCalcular">Simular</button></label>
               </div>
-              <p class="subtle-text">Informe taxa anual <strong>ou</strong> taxa mensal. Imposto estimado pela tabela regressiva de renda fixa.</p>
+              <p class="subtle-text">Use <strong>Cotações oficiais</strong> para preencher taxas do Tesouro (CSV diário do Tesouro Transparente) e Selic/CDI (Bacen). Imposto estimado pela tabela regressiva de IR sobre renda fixa.</p>
             </div>
             <div class="table-card form-card--wide hidden" id="invSimResultado"></div>
           </section>

@@ -6,6 +6,7 @@
  */
 
 use App\Support\Investimento\InvestimentoCalculo;
+use App\Support\Investimento\InvestimentoMercado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -148,6 +149,7 @@ $invResolverLiquidez = function (string $tipo): string {
 // CORS
 foreach ([
     '/investimento/catalogos', '/investimento/dashboard', '/investimento/simular',
+    '/investimento/mercado/referencias',
     '/investimento/reservas', '/investimento/reservas/{id}',
     '/investimento/carteira', '/investimento/carteira/{id}',
     '/investimento/resgates', '/investimento/resgates/{id}',
@@ -168,7 +170,26 @@ Route::get('/investimento/catalogos', function (Request $request) use ($invAuth,
         'tipos' => InvestimentoCalculo::TIPOS,
         'tipos_alta_liquidez' => InvestimentoCalculo::TIPOS_ALTA_LIQUIDEZ,
         'objetivos_alerta_data' => InvestimentoCalculo::OBJETIVOS_ALERTA_DATA,
+        'tabela_ir_regressiva' => InvestimentoMercado::tabelaIrRegressiva(),
     ]);
+});
+
+// Cotações oficiais (Tesouro Transparente + Bacen)
+Route::get('/investimento/mercado/referencias', function (Request $request) use ($invAuth, $podeInvestimento, $invJson) {
+    $u = $invAuth($request);
+    if (! $podeInvestimento($u, 'investimentoSimulador')) {
+        return $invJson(['error' => 'Acesso negado'], 403);
+    }
+
+    $force = $request->query('force') === '1' || $request->query('atualizar') === '1';
+
+    try {
+        return $invJson(InvestimentoMercado::referencias($force));
+    } catch (\Throwable $e) {
+        \Log::error('GET /investimento/mercado/referencias: ' . $e->getMessage());
+
+        return $invJson(['error' => 'Falha ao obter cotações oficiais.'], 500);
+    }
 });
 
 // Dashboard
