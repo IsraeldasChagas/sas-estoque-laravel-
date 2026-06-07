@@ -277,7 +277,9 @@ body.sidebar-open {
   .sidebar.is-collapsed {
     width: 56px;
     min-width: 56px;
-    padding: 16px 10px;
+    padding: 16px 8px;
+    overflow: visible;
+    z-index: 40;
   }
 
   .sidebar.is-collapsed .sidebar-logo {
@@ -289,11 +291,100 @@ body.sidebar-open {
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll {
-    overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-    max-height: 0;
+    overflow-x: visible;
+    overflow-y: auto;
+    opacity: 1;
+    pointer-events: auto;
+    max-height: none;
     min-height: 0;
+  }
+
+  .sidebar.is-collapsed .nav-label,
+  .sidebar.is-collapsed .nav-arrow {
+    display: none !important;
+  }
+
+  .sidebar.is-collapsed nav > .nav-link,
+  .sidebar.is-collapsed nav > .nav-submenu > .nav-link-parent {
+    justify-content: center;
+    padding: 10px 8px;
+    gap: 0;
+  }
+
+  .sidebar.is-collapsed .nav-link-inner {
+    justify-content: center;
+    flex: 0;
+    gap: 0;
+  }
+
+  .sidebar.is-collapsed .nav-icon {
+    width: 1.35rem;
+    font-size: 1.15rem;
+  }
+
+  .sidebar.is-collapsed .nav-submenu-content {
+    max-height: 0 !important;
+    overflow: hidden;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu {
+    position: relative;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content {
+    position: absolute;
+    left: calc(100% + 6px);
+    top: 0;
+    min-width: 230px;
+    max-height: min(72vh, 420px) !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #1a1510, #070403);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    box-shadow: 4px 6px 20px rgba(0, 0, 0, 0.45);
+    z-index: 50;
+    padding: 8px;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content .nav-link {
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 12px !important;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content .nav-label {
+    display: block !important;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content .nav-arrow {
+    display: inline-block !important;
+  }
+
+  .sidebar.is-collapsed .nav-submenu--nested.open > .nav-submenu-content {
+    position: static;
+    left: auto;
+    top: auto;
+    min-width: 0;
+    max-height: 260px !important;
+    box-shadow: none;
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    margin-top: 4px;
+    padding: 4px 4px 4px 8px;
+  }
+
+  .sidebar.is-collapsed .nav-submenu--nested > .nav-link-parent {
+    justify-content: space-between;
+    padding: 10px 12px !important;
+  }
+
+  .sidebar.is-collapsed .nav-submenu--nested > .nav-link-parent .nav-label {
+    display: block !important;
+  }
+
+  .sidebar.is-collapsed .nav-submenu--nested > .nav-link-parent .nav-arrow {
+    display: inline-block !important;
   }
 
   /* Botão está fora do aside: seta segue estado #sidebar no DOM (~ .main-content) */

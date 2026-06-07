@@ -1832,10 +1832,22 @@ function setSidebarOpen(open) {
   document.body.classList.toggle("sidebar-open", open);
 }
 
+function syncSidebarNavTitles() {
+  document.querySelectorAll("#sidebar .nav-link").forEach((link) => {
+    const label = link.querySelector(".nav-label")?.textContent?.trim();
+    if (label) link.title = label;
+  });
+}
+
+function closeSidebarFlyouts() {
+  document.querySelectorAll("#sidebar .nav-submenu.open").forEach((sm) => sm.classList.remove("open"));
+}
+
 function setSidebarCollapsed(collapsed) {
   if (!dom.sidebar) return;
   const apply = collapsed && !isMobileViewport();
   dom.sidebar.classList.toggle("is-collapsed", apply);
+  if (!apply) closeSidebarFlyouts();
   try {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, apply ? "1" : "0");
   } catch (_) {}
@@ -1893,7 +1905,14 @@ function setupResponsiveSidebar() {
   if (!isMobileViewport() && isSidebarCollapsed()) {
     dom.sidebar?.classList.add("is-collapsed");
   }
+  syncSidebarNavTitles();
   updateCollapseBtnLabel();
+
+  document.addEventListener("click", (event) => {
+    if (!dom.sidebar?.classList.contains("is-collapsed") || isMobileViewport()) return;
+    if (event.target.closest("#sidebar")) return;
+    closeSidebarFlyouts();
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && dom.sidebar?.classList.contains("is-open")) {
@@ -14789,6 +14808,9 @@ function wireSidebarSectionNavClicks() {
       }
       navigateTo(target);
       if (isMobileViewport()) setSidebarOpen(false);
+      else if (document.getElementById("sidebar")?.classList.contains("is-collapsed")) {
+        closeSidebarFlyouts();
+      }
       try {
       if (target === "dashboard") await loadDashboard();
       else if (target === "produtos") await loadProdutos();
