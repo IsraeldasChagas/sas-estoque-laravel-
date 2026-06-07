@@ -275,19 +275,19 @@ body.sidebar-open {
   }
 
   .sidebar.is-collapsed {
-    width: 56px;
-    min-width: 56px;
-    padding: 16px 8px;
+    width: 80px;
+    min-width: 80px;
+    padding: 22px 12px;
     overflow: visible;
     z-index: 40;
   }
 
   .sidebar.is-collapsed .sidebar-logo {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
 
   .sidebar.is-collapsed .sidebar-logo img {
-    max-width: 36px;
+    max-width: 46px;
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll {
@@ -297,6 +297,7 @@ body.sidebar-open {
     pointer-events: auto;
     max-height: none;
     min-height: 0;
+    padding: 0 2px;
   }
 
   .sidebar.is-collapsed .nav-label,
@@ -307,19 +308,26 @@ body.sidebar-open {
   .sidebar.is-collapsed nav > .nav-link,
   .sidebar.is-collapsed nav > .nav-submenu > .nav-link-parent {
     justify-content: center;
-    padding: 10px 8px;
+    align-items: center;
+    padding: 12px 10px;
+    margin-bottom: 10px;
+    min-height: 46px;
+    border-radius: 10px;
     gap: 0;
   }
 
   .sidebar.is-collapsed .nav-link-inner {
     justify-content: center;
+    align-items: center;
     flex: 0;
     gap: 0;
   }
 
   .sidebar.is-collapsed .nav-icon {
-    width: 1.35rem;
-    font-size: 1.15rem;
+    width: auto;
+    min-width: 1.5rem;
+    font-size: 1.3rem;
+    line-height: 1.2;
   }
 
   .sidebar.is-collapsed .nav-submenu-content {
@@ -333,9 +341,9 @@ body.sidebar-open {
 
   .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content {
     position: absolute;
-    left: calc(100% + 6px);
+    left: calc(100% + 10px);
     top: 0;
-    min-width: 230px;
+    min-width: 240px;
     max-height: min(72vh, 420px) !important;
     overflow-x: hidden;
     overflow-y: auto;
