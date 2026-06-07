@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css?v=20260521-ingredientes-compacto" />
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
+    <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -186,7 +187,20 @@
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas">Despesas fixas</a>
               <a href="#" class="nav-link nav-link-child" data-section="valeConsumo">Vale / consumo</a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda">Recibo ajuda de custo</a>
-
+              <div class="nav-submenu nav-submenu--nested">
+                <a href="#" class="nav-link nav-link-parent nav-link-child" id="investimentoMenu">
+                  Investimento
+                  <span class="nav-arrow">▼</span>
+                </a>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoDashboard">Dashboard</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoReservas">Reservas</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoSimulador">Simulador de Investimentos</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoCarteira">Carteira da Empresa</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoResgates">Resgates</a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoRelatorios">Relatórios</a>
+                </div>
+              </div>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--patrimonio">
@@ -3191,6 +3205,130 @@
             </div>
           </section>
 
+          <!-- Módulo Investimento — Tesouraria e Reservas Empresariais -->
+          <section id="investimentoDashboardSection" class="view-section hidden">
+            <div class="inv-section-head">
+              <div>
+                <h2>📊 Dashboard — Investimento</h2>
+                <p class="subtle-text">Visão consolidada de reservas, aplicações e alertas por unidade.</p>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Unidade<select id="invDashFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="invDashAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="inv-cards" id="invDashCards"></div>
+            <div class="table-card form-card--wide">
+              <header><h3>Reserva por objetivo</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Objetivo</th><th>Qtd.</th><th>Total</th></tr></thead><tbody id="invDashObjetivoTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Próximos vencimentos</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Vencimento</th><th>Instituição</th><th>Unidade</th><th>Valor</th></tr></thead><tbody id="invDashVencTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Alertas de data alvo</h3></header>
+              <div id="invDashAlertas"></div>
+            </div>
+          </section>
+
+          <section id="investimentoReservasSection" class="view-section hidden">
+            <div class="inv-section-head">
+              <h2>🏦 Reservas Empresariais</h2>
+              <button type="button" class="btn primary" id="invResBtnNova">+ Nova reserva</button>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Unidade<select id="invResFiltroUnidade"><option value="">Todas</option></select></label>
+                <label>Objetivo<select id="invResFiltroObjetivo"><option value="">Todos</option></select></label>
+                <label><button type="button" class="btn primary" id="invResFiltroAplicar">Filtrar</button></label>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Objetivo</th><th>Valor inicial</th><th>Aporte mensal</th><th>Prazo (meses)</th><th>Data alvo</th><th>Ações</th></tr></thead><tbody id="invResTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="investimentoSimuladorSection" class="view-section hidden">
+            <div class="inv-section-head"><h2>🧮 Simulador de Investimentos</h2></div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Valor aplicado<input type="text" id="invSimValor" data-inv-moeda placeholder="R$ 0,00" /></label>
+                <label>Aporte mensal<input type="text" id="invSimAporte" data-inv-moeda placeholder="R$ 0,00" /></label>
+                <label>Prazo (meses)<input type="number" id="invSimPrazo" min="0" step="1" /></label>
+                <label>Taxa anual (%)<input type="number" id="invSimTaxaAnual" min="0" step="0.01" placeholder="Ex: 12" /></label>
+                <label>Taxa mensal (%)<input type="number" id="invSimTaxaMensal" min="0" step="0.01" placeholder="Ex: 0,95" /></label>
+                <label>Objetivo (opcional)<select id="invSimObjetivo"><option value="">— Opcional —</option></select></label>
+                <label>Tipo de investimento<select id="invSimTipo"><option value="">Selecione</option></select></label>
+                <label><button type="button" class="btn primary" id="invSimCalcular">Simular</button></label>
+              </div>
+              <p class="subtle-text">Informe taxa anual <strong>ou</strong> taxa mensal. Imposto estimado pela tabela regressiva de renda fixa.</p>
+            </div>
+            <div class="table-card form-card--wide hidden" id="invSimResultado"></div>
+          </section>
+
+          <section id="investimentoCarteiraSection" class="view-section hidden">
+            <div class="inv-section-head">
+              <h2>💼 Carteira da Empresa</h2>
+              <button type="button" class="btn primary" id="invCartBtnNova">+ Nova aplicação</button>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Unidade<select id="invCartFiltroUnidade"><option value="">Todas</option></select></label>
+                <label>Status<select id="invCartFiltroStatus"><option value="">Todos</option><option value="ativo">Ativo</option><option value="resgatado">Resgatado</option><option value="vencido">Vencido</option></select></label>
+                <label><button type="button" class="btn primary" id="invCartFiltroAplicar">Filtrar</button></label>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>Compra</th><th>Instituição</th><th>Tipo</th><th>Aplicado</th><th>Taxa</th><th>Vencimento</th><th>Objetivo</th><th>Status</th><th>Rend. est.</th><th>Ações</th></tr></thead><tbody id="invCartTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="investimentoResgatesSection" class="view-section hidden">
+            <div class="inv-section-head">
+              <h2>↩ Resgates</h2>
+              <button type="button" class="btn primary" id="invResgBtnNova">+ Registrar resgate</button>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Unidade<select id="invResgFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="invResgFiltroAplicar">Filtrar</button></label>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Instituição</th><th>Tipo</th><th>Unidade</th><th>Bruto</th><th>Imposto</th><th>Líquido</th><th>Ações</th></tr></thead><tbody id="invResgTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="investimentoRelatoriosSection" class="view-section hidden">
+            <div class="inv-section-head"><h2>📈 Relatórios — Investimento</h2></div>
+            <div class="table-card form-card--wide">
+              <div class="filters-grid">
+                <label>Unidade<select id="invRelFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="invRelAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="inv-rel-cards">
+              <div class="inv-rel-card"><span>Total reservado</span><strong id="invRelTotalReservado">—</strong></div>
+              <div class="inv-rel-card"><span>Total aplicado</span><strong id="invRelTotalAplicado">—</strong></div>
+              <div class="inv-rel-card"><span>Rendimento estimado</span><strong id="invRelRendimento">—</strong></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Reserva por objetivo</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Objetivo</th><th>Total</th></tr></thead><tbody id="invRelObjetivoTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Próximos vencimentos</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Vencimento</th><th>Instituição</th><th>Unidade</th><th>Valor</th></tr></thead><tbody id="invRelVencTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Resgates realizados</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Instituição</th><th>Unidade</th><th>Imposto</th><th>Líquido</th></tr></thead><tbody id="invRelResgTbody"></tbody></table></div>
+            </div>
+          </section>
+
           <!-- Módulo Patrimônio -->
           <section id="patrimonioDashboardSection" class="view-section hidden">
             <div class="patrimonio-section-head">
@@ -4528,6 +4666,13 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reciboAjuda" /> Recibo (ajuda de custo)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamento" /> Auditoria fechamento caixa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard — análise fechamentos</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Investimento</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoDashboard" /> Investimento — Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoReservas" /> Investimento — Reservas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoSimulador" /> Investimento — Simulador</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoCarteira" /> Investimento — Carteira</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoResgates" /> Investimento — Resgates</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
@@ -5289,6 +5434,74 @@
       </div>
     </div>
 
+    <!-- Modais Investimento -->
+    <div class="modal-backdrop" id="invReservaModal">
+      <div class="modal modal--wide">
+        <header>
+          <h2 id="invReservaModalTitle">Nova reserva</h2>
+          <button type="button" class="close-btn" aria-label="Fechar">×</button>
+        </header>
+        <form id="invReservaForm">
+          <input type="hidden" id="invReservaId" />
+          <div id="invResAvisoObjetivo" class="inv-aviso hidden"></div>
+          <div class="grid-two">
+            <label>Unidade<select id="invResUnidade" required><option value="">Selecione</option></select></label>
+            <label>Objetivo<select id="invResObjetivo" required><option value="">Selecione</option></select></label>
+            <label>Valor inicial<input type="text" id="invResValorInicial" data-inv-moeda required /></label>
+            <label>Aporte mensal<input type="text" id="invResAporteMensal" data-inv-moeda /></label>
+            <label>Prazo (meses)<input type="number" id="invResPrazo" min="0" /></label>
+            <label>Data alvo<input type="date" id="invResDataAlvo" /></label>
+          </div>
+          <label>Observações<textarea id="invResObs" rows="3"></textarea></label>
+          <footer><button type="submit" class="btn primary">Salvar</button></footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="invCarteiraModal">
+      <div class="modal modal--wide">
+        <header>
+          <h2 id="invCartModalTitle">Nova aplicação</h2>
+          <button type="button" class="close-btn" aria-label="Fechar">×</button>
+        </header>
+        <form id="invCarteiraForm">
+          <input type="hidden" id="invCartId" />
+          <div class="grid-two">
+            <label>Unidade<select id="invCartUnidade"><option value="">Selecione</option></select></label>
+            <label>Data da compra<input type="date" id="invCartDataCompra" required /></label>
+            <label>Instituição / corretora<input type="text" id="invCartInstituicao" required /></label>
+            <label>Tipo de investimento<select id="invCartTipo" required><option value="">Selecione</option></select></label>
+            <label>Valor aplicado<input type="text" id="invCartValor" data-inv-moeda required /></label>
+            <label>Taxa contratada (% a.a.)<input type="number" id="invCartTaxaAnual" min="0" step="0.01" /></label>
+            <label>Vencimento<input type="date" id="invCartVencimento" /></label>
+            <label>Objetivo vinculado<select id="invCartReserva"><option value="">— Sem vínculo —</option></select></label>
+            <label>Status<select id="invCartStatus"><option value="ativo">Ativo</option><option value="resgatado">Resgatado</option><option value="vencido">Vencido</option></select></label>
+          </div>
+          <label>Observações<textarea id="invCartObs" rows="2"></textarea></label>
+          <footer><button type="submit" class="btn primary">Salvar</button></footer>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="invResgateModal">
+      <div class="modal">
+        <header>
+          <h2>Registrar resgate</h2>
+          <button type="button" class="close-btn" aria-label="Fechar">×</button>
+        </header>
+        <form id="invResgateForm">
+          <label>Investimento<select id="invResgCarteira" required><option value="">Selecione</option></select></label>
+          <label>Data do resgate<input type="date" id="invResgData" required /></label>
+          <label>Valor resgatado<input type="text" id="invResgValor" data-inv-moeda required /></label>
+          <label>Valor bruto<input type="text" id="invResgBruto" data-inv-moeda /></label>
+          <label>Imposto<input type="text" id="invResgImposto" data-inv-moeda /></label>
+          <label>Valor líquido<input type="text" id="invResgLiquido" data-inv-moeda /></label>
+          <label>Observações<textarea id="invResgObs" rows="2"></textarea></label>
+          <footer><button type="submit" class="btn primary">Salvar</button></footer>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal Patrimônio -->
     <div class="modal-backdrop" id="patrimonioModal">
       <div class="modal" style="width:min(920px,96vw);max-height:92vh;overflow:auto">
@@ -5791,6 +6004,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
+    <script src="investimento.js?v=20260607-investimento"></script>
     <script src="app.js?v=20260525-patrimonio-brl"></script>
      
   </body>
