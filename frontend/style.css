@@ -162,14 +162,19 @@ body.sidebar-open {
   max-height: 320px;
 }
 
-/* Financeiro e RH: mesma altura; itens longos ficam em submenu aninhado (como Recrutamento). */
+/* Financeiro / Investimento: painel com scroll próprio quando necessário. */
 .nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--fechamento.open > .nav-submenu-content,
-.nav-submenu.nav-submenu--investimento.open > .nav-submenu-content,
-.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
+.nav-submenu.nav-submenu--investimento.open > .nav-submenu-content {
   max-height: min(80vh, 520px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* RH: sem scroll interno — Recrutamento/Rescisão expandem no mesmo fluxo (evita scroll dentro de scroll). */
+.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
+  max-height: none;
+  overflow: visible;
 }
 
 .nav-submenu.nav-submenu--financeiro .nav-submenu--nested > .nav-link-parent.nav-link-child,
@@ -187,15 +192,11 @@ body.sidebar-open {
   transition: max-height 0.3s ease;
 }
 .nav-submenu.nav-submenu--nested.open > .nav-submenu-content {
-  max-height: 260px;
+  max-height: none;
+  overflow: visible;
 }
 
-/* RH → Rescisão: 6 itens — altura maior que Recrutamento. */
-.nav-submenu.nav-submenu--nested.nav-submenu--nested-rescisao.open > .nav-submenu-content {
-  max-height: 340px;
-}
-
-.nav-submenu.nav-submenu--rh .nav-submenu--nested-rescisao .nav-submenu-content .nav-link-child {
+.nav-submenu.nav-submenu--rh .nav-submenu--nested .nav-submenu-content .nav-link-child {
   padding-left: 44px !important;
 }
 
@@ -383,7 +384,8 @@ body.sidebar-open {
     left: auto;
     top: auto;
     min-width: 0;
-    max-height: 260px !important;
+    max-height: none !important;
+    overflow: visible !important;
     box-shadow: none;
     border: none;
     background: rgba(255, 255, 255, 0.06);
