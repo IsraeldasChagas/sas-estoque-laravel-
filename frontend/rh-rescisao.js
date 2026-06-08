@@ -478,6 +478,46 @@
     document.getElementById(prefix + "BtnPdfVia")?.removeAttribute("disabled");
   }
 
+  /** Exemplo TRCT — ALINE FREIRE DA SILVA (caso de validação). */
+  function rrPreencherExemploAline(prefix) {
+    const set = (id, val) => {
+      const el = document.getElementById(prefix + id);
+      if (el && val != null && val !== "") el.value = val;
+    };
+    const hid = document.getElementById(prefix + "SalarioCadastro");
+    if (hid) hid.value = "1706.50";
+
+    set("Cargo", "Atendente");
+    set("Admissao", "2026-01-09");
+    set("Demissao", "2026-05-25");
+    set("DataAviso", "2026-05-25");
+    set("TipoContrato", "prazo_indeterminado");
+    set("TipoRescisao", "dispensa_sem_justa_causa");
+    set("AvisoPrevio", "indenizado");
+    set("DiasMes", "25");
+    set("Avos13", "5");
+    set("AvosFerias", "5");
+    set("Obs", "Exemplo TRCT — ALINE FREIRE DA SILVA (validação contador).");
+
+    rrSetMoeda(prefix + "Salario", 1706.5);
+    rrSetMoeda(prefix + "RemunMesAnt", 1706.5);
+    rrSetMoeda(prefix + "He60", 147.38);
+    rrSetMoeda(prefix + "ReflexoDsr", 36.85);
+    rrSetMoeda(prefix + "Decimo", 797.6);
+    rrSetMoeda(prefix + "FeriasProp", 797.6);
+    rrSetMoeda(prefix + "DecimoAviso", 159.51);
+    rrSetMoeda(prefix + "FeriasAviso", 159.51);
+    rrSetMoeda(prefix + "Adiantamentos", 177.96);
+    rrSetMoeda(prefix + "Faltas", 110.92);
+    rrSetMoeda(prefix + "DsrFaltas", 110.92);
+    rrSetMoeda(prefix + "InssSalario", 103.83);
+    rrSetMoeda(prefix + "Inss13", 61.11);
+    rrSetMoeda(prefix + "Irrf", 0);
+
+    rrExecutarCalculoLive();
+    rrToast("Formulário preenchido com o exemplo ALINE FREIRE — confira a prévia abaixo.", "success");
+  }
+
   function rrSugerirAvosCampos(prefix) {
     const adm = document.getElementById(prefix + "Admissao")?.value;
     const dem = document.getElementById(prefix + "Demissao")?.value;
@@ -869,6 +909,9 @@
         if (e.target.closest("form")) rrAgendarCalculo();
       });
     });
+
+    document.getElementById("rrSimBtnExemplo")?.addEventListener("click", () => rrPreencherExemploAline("rrSim"));
+    document.getElementById("rrCalBtnExemplo")?.addEventListener("click", () => rrPreencherExemploAline("rrCal"));
 
     document.getElementById("rrSimBtnSalvar")?.addEventListener("click", () => rrSalvarSimulacao("simulacao", "rrSim").catch((e) => rrToast(e.message, "error")));
     document.getElementById("rrSimBtnConfirmar")?.addEventListener("click", () => rrSalvarSimulacao("confirmada", "rrSim").catch((e) => rrToast(e.message, "error")));
