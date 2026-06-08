@@ -437,11 +437,15 @@
     if (rrBound) return;
     rrBound = true;
 
-    document.getElementById("rhRescisaoMenu")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      document.getElementById("rhRescisaoMenu")?.closest(".nav-submenu")?.classList.toggle("open");
-    });
+    const rrMenu = document.getElementById("rhRescisaoMenu");
+    if (rrMenu && rrMenu.dataset.sasSubmenuToggleBound !== "1") {
+      rrMenu.dataset.sasSubmenuToggleBound = "1";
+      rrMenu.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        rrMenu.closest(".nav-submenu")?.classList.toggle("open");
+      });
+    }
 
     function rrBindFuncionarioChange(unidadeId, funcId, cargoId, admId) {
       document.getElementById(unidadeId)?.addEventListener("change", async (e) => {

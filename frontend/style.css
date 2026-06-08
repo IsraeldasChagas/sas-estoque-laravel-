@@ -166,8 +166,14 @@ body.sidebar-open {
 .nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--fechamento.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--investimento.open > .nav-submenu-content,
-.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
+.nav-submenu.nav-submenu--rescisao.open > .nav-submenu-content {
   max-height: min(80vh, 520px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
+  max-height: min(80vh, 360px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

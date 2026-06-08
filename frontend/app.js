@@ -4291,7 +4291,7 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || regras.sections.includes("rhRescisaoDashboard") || regras.sections.includes("rhRescisaoSimulador") || regras.sections.includes("rhRescisaoCalculo") || regras.sections.includes("rhRescisaoComparativo") || regras.sections.includes("rhRescisaoHistorico") || regras.sections.includes("rhRescisaoRelatorios");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   const rhRescisaoNavSubmenu = document.getElementById("rhRescisaoMenu")?.closest(".nav-submenu");
@@ -4553,8 +4553,7 @@ function navigateTo(section) {
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    const rrSectionsNav = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
-    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || rrSectionsNav.includes(section)) {
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
