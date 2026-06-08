@@ -4291,7 +4291,7 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || rrSectionsAuto.some((s) => regras.sections.includes(s));
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
   }
   const rhRescisaoNavSubmenu = document.getElementById("rhRescisaoMenu")?.closest(".nav-submenu");
@@ -4551,9 +4551,10 @@ function navigateTo(section) {
       fechamentoNavSubmenuNav.classList.remove("open");
     }
   }
+  const rrSectionsNav = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || rrSectionsNav.includes(section)) {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
@@ -4561,7 +4562,6 @@ function navigateTo(section) {
   }
   const rhRescisaoNavSubmenuNav = document.getElementById("rhRescisaoMenu")?.closest(".nav-submenu");
   if (rhRescisaoNavSubmenuNav) {
-    const rrSectionsNav = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
     if (rrSectionsNav.includes(section)) rhRescisaoNavSubmenuNav.classList.add("open");
     else rhRescisaoNavSubmenuNav.classList.remove("open");
   }
@@ -15201,11 +15201,11 @@ function setupNavigation() {
       if (parent) parent.classList.toggle('open');
     });
   }
-  // Submenu aninhado: RH → Recrutamento
+  // Submenu aninhado: RH → Recrutamento / Rescisão
   if (document.body && document.body.dataset.sasNestedSubmenuToggleBound !== "1") {
     document.body.dataset.sasNestedSubmenuToggleBound = "1";
     document.addEventListener('click', (event) => {
-      const elRh = event.target?.closest?.('#rhRecrutamentoMenu');
+      const elRh = event.target?.closest?.('#rhRecrutamentoMenu, #rhRescisaoMenu');
       if (!elRh) return;
       event.preventDefault();
       event.stopPropagation();

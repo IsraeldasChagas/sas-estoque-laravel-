@@ -166,14 +166,8 @@ body.sidebar-open {
 .nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--fechamento.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--investimento.open > .nav-submenu-content,
-.nav-submenu.nav-submenu--rescisao.open > .nav-submenu-content {
-  max-height: min(80vh, 520px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
 .nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
-  max-height: min(80vh, 360px);
+  max-height: min(80vh, 520px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -194,6 +188,15 @@ body.sidebar-open {
 }
 .nav-submenu.nav-submenu--nested.open > .nav-submenu-content {
   max-height: 260px;
+}
+
+/* RH → Rescisão: 6 itens — altura maior que Recrutamento. */
+.nav-submenu.nav-submenu--nested.nav-submenu--nested-rescisao.open > .nav-submenu-content {
+  max-height: 340px;
+}
+
+.nav-submenu.nav-submenu--rh .nav-submenu--nested-rescisao .nav-submenu-content .nav-link-child {
+  padding-left: 44px !important;
 }
 
 .nav-submenu-btn--backup.nav-link-child {
