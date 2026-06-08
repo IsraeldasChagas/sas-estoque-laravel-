@@ -276,6 +276,10 @@
     return body;
   }
 
+  function rrAvisoEhIndenizado(tipo) {
+    return String(tipo || "").toLowerCase().trim() === "indenizado";
+  }
+
   function rrValidarEntrada(body) {
     const erros = [];
     if (!body.salario_base || body.salario_base <= 0) erros.push("Salário base é obrigatório e deve ser maior que zero.");
@@ -291,6 +295,9 @@
     if (body.salario_cadastro > 0 && body.salario_base >= body.salario_cadastro * 9.5) {
       alertas.push("Atenção: salário informado parece incompatível com o cadastro do funcionário.");
     }
+    if ((body._manual_decimo_aviso || body._manual_ferias_aviso) && !rrAvisoEhIndenizado(body.aviso_previo_tipo)) {
+      alertas.push("Aviso prévio não está como Indenizado — o valor de R$ 1.706,50 do aviso indenizado não entra no total bruto. Selecione Indenizado no campo Aviso prévio.");
+    }
     return { erros, alertas };
   }
 
@@ -301,7 +308,7 @@
     }
     const e = body;
     const sal = e.salario_base;
-    const avisoInd = e.aviso_previo_tipo === "indenizado" ? rrRound(sal) : 0;
+    const avisoInd = rrAvisoEhIndenizado(e.aviso_previo_tipo) ? rrRound(sal) : 0;
 
     const verbasAuto = {
       saldo_salario: rrRound(sal / 30 * e.dias_trabalhados_mes),
@@ -474,8 +481,7 @@
       ? `<div class="rr-alerta-salario">${calc.alertas.map((a) => rrEsc(a)).join("<br/>")}</div>` : "";
     el.innerHTML = rrAvisoHtml() + alertasHtml
       + `<div class="rr-previa-grid">`
-      + rrRenderBlocoValores("Verbas automáticas (referência)", calc.verbas_automaticas, RR_LABELS_VERBAS, "rr-bloco-auto")
-      + rrRenderBlocoValores("Verbas manuais (override)", calc.verbas_manuais, RR_LABELS_VERBAS, "rr-bloco-manual")
+      + rrRenderBlocoValores("Verbas finais (entram no bruto)", calc.verbas_finais, RR_LABELS_VERBAS, "rr-bloco-final")
       + rrRenderBlocoValores("Deduções aplicadas (finais)", calc.descontos_finais, RR_LABELS_DESC, "rr-bloco-final")
       + `</div>`
       + `<div class="rr-resultado-box"><h4>TRCT — Verbas rescisórias</h4>`
@@ -544,6 +550,7 @@
 
   /** Exemplo TRCT — ALINE FREIRE DA SILVA (caso de validação). */
   function rrPreencherExemploAline(prefix) {
+    clearTimeout(rrState.calcTimer);
     const set = (id, val) => {
       const el = document.getElementById(prefix + id);
       if (el && val != null && val !== "") el.value = val;
@@ -588,10 +595,16 @@
     rrSetMoeda(prefix + "Inss13", 61.11);
     rrSetMoeda(prefix + "Irrf", 0);
 
-    const calc = rrCalcularLocal(rrCorpoExemploAline());
+    const apEl = document.getElementById(prefix + "AvisoPrevio");
+    if (apEl) apEl.value = "indenizado";
+
+    const calc = rrCalcularLocal(rrLerFormulario(prefix));
     rrState.ultimoCalculo = calc;
     rrRenderResultado(rrResultadoId(prefix), calc);
-    rrToast("Exemplo ALINE FREIRE — Total deduções R$ 564,74 · Líquido R$ 4.928,16", "success");
+    const liq = calc.total_liquido ?? 0;
+    const desc = calc.total_descontos ?? 0;
+    const bru = calc.total_bruto ?? 0;
+    rrToast(`Exemplo ALINE — Bruto ${rrMoeda(bru)} · Deduções ${rrMoeda(desc)} · Líquido ${rrMoeda(liq)}`, liq >= 4928 ? "success" : "error");
   }
 
   function rrSugerirAvosCampos(prefix) {
@@ -771,9 +784,9 @@
     const tc = document.getElementById("rrSimTipoContrato");
     const tr = document.getElementById("rrSimTipoRescisao");
     const ap = document.getElementById("rrSimAvisoPrevio");
-    if (tc) tc.innerHTML = rrOpts(cat.tipos_contrato);
-    if (tr) tr.innerHTML = rrOpts(cat.tipos_rescisao);
-    if (ap) ap.innerHTML = rrOpts(cat.aviso_previo);
+    if (tc) tc.innerHTML = rrOpts(cat.tipos_contrato, tc.value || "prazo_indeterminado");
+    if (tr) tr.innerHTML = rrOpts(cat.tipos_rescisao, tr.value || "dispensa_sem_justa_causa");
+    if (ap) ap.innerHTML = rrOpts(cat.aviso_previo, ap.value || "indenizado");
     rrSetupMoeda(document.getElementById("rhRescisaoSimuladorSection"));
     const simRes = document.getElementById("rrSimResultado");
     if (simRes) simRes.innerHTML = rrAvisoHtml();
@@ -787,9 +800,9 @@
     const tc = document.getElementById("rrCalTipoContrato");
     const tr = document.getElementById("rrCalTipoRescisao");
     const ap = document.getElementById("rrCalAvisoPrevio");
-    if (tc) tc.innerHTML = rrOpts(cat.tipos_contrato);
-    if (tr) tr.innerHTML = rrOpts(cat.tipos_rescisao);
-    if (ap) ap.innerHTML = rrOpts(cat.aviso_previo);
+    if (tc) tc.innerHTML = rrOpts(cat.tipos_contrato, tc.value || "prazo_indeterminado");
+    if (tr) tr.innerHTML = rrOpts(cat.tipos_rescisao, tr.value || "dispensa_sem_justa_causa");
+    if (ap) ap.innerHTML = rrOpts(cat.aviso_previo, ap.value || "indenizado");
     rrSetupMoeda(document.getElementById("rhRescisaoCalculoSection"));
     const res = document.getElementById("rrCalResultado");
     if (res) res.innerHTML = rrAvisoHtml();
