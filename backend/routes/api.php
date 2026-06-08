@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
 use App\Support\Rh\RhFuncionarioUnicidade;
+use App\Support\Rh\RhRescisaoCalculo;
 use App\Http\Controllers\Api\EntradaEstoqueController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhCandidatoController;
@@ -6266,6 +6267,7 @@ Route::options('/funcionarios/relatorio/contatos.pdf', fn() => response('', 200)
     ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 Route::options('/funcionarios/{id}/excluir', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'DELETE, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::options('/funcionarios/{id}/salarios', fn() => response()->json([])->header('Access-Control-Allow-Origin', '*')->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
 
 /** Diagnóstico RH: lista colunas reais da tabela (precisa estar logado). Deve vir ANTES de /funcionarios/{id}. */
 Route::get('/funcionarios/rh-diagnostico', function (Request $request) {
@@ -6606,6 +6608,70 @@ Route::get('/funcionarios/{id}', function ($id) {
     return response()->json($f)->header('Access-Control-Allow-Origin', '*');
 });
 
+Route::get('/funcionarios/{id}/salarios', function (Request $request, $id) {
+    $userId = $request->header('X-Usuario-Id');
+    if (! $userId || ! DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (! Schema::hasTable('funcionarios_salarios')) {
+        return response()->json([])->header('Access-Control-Allow-Origin', '*');
+    }
+    if (! DB::table('funcionarios')->where('id', (int) $id)->exists()) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+    $rows = DB::table('funcionarios_salarios')
+        ->where('funcionario_id', (int) $id)
+        ->orderByDesc('vigencia_inicio')
+        ->orderByDesc('id')
+        ->get();
+
+    return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
+});
+
+Route::post('/funcionarios/{id}/salarios', function (Request $request, $id) {
+    $userId = $request->header('X-Usuario-Id');
+    if (! $userId || ! DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (! Schema::hasTable('funcionarios_salarios')) {
+        return response()->json(['error' => 'Histórico de salários não configurado. Execute migration.'], 503)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $func = DB::table('funcionarios')->where('id', (int) $id)->first();
+    if (! $func) {
+        return response()->json(['error' => 'Funcionário não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
+    }
+    $valor = RhRescisaoCalculo::parseMoeda($request->input('valor'));
+    if ($valor <= 0) {
+        return response()->json(['error' => 'Informe um valor de salário maior que zero.'], 422)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $vigencia = $request->input('vigencia_inicio') ?: now()->toDateString();
+    $motivo = trim((string) ($request->input('motivo') ?? ''));
+    $histId = DB::table('funcionarios_salarios')->insertGetId([
+        'funcionario_id' => (int) $id,
+        'valor' => $valor,
+        'vigencia_inicio' => $vigencia,
+        'motivo' => $motivo !== '' ? mb_substr($motivo, 0, 255) : null,
+        'criado_por' => (int) $userId,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    if (Schema::hasColumn('funcionarios', 'salario_base')) {
+        DB::table('funcionarios')->where('id', (int) $id)->update(['salario_base' => $valor, 'updated_at' => now()]);
+    }
+    $row = DB::table('funcionarios_salarios')->where('id', $histId)->first();
+    $ultimo = Schema::hasColumn('funcionarios', 'salario_base')
+        ? (float) DB::table('funcionarios')->where('id', (int) $id)->value('salario_base')
+        : $valor;
+
+    return response()->json([
+        'registro' => $row,
+        'salario_base' => $ultimo,
+        'historico' => DB::table('funcionarios_salarios')->where('funcionario_id', (int) $id)->orderByDesc('vigencia_inicio')->orderByDesc('id')->get(),
+    ], 201)->header('Access-Control-Allow-Origin', '*');
+});
+
 /**
  * Colunas reais da tabela `funcionarios` (escolaridade, formacao_json, banco…).
  * Usa SHOW COLUMNS no MySQL + cache só no $GLOBALS da requisição atual (cada HTTP limpa o GLOBALS),
@@ -6841,6 +6907,14 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     if ($funcionariosTableHasColumn('cpf_limpo')) {
         $insert['cpf_limpo'] = $cpfLimpo;
     }
+    $salarioInicial = null;
+    if ($funcionariosTableHasColumn('salario_base') && ($request->exists('salario_base') || array_key_exists('salario_base', $data))) {
+        $sal = RhRescisaoCalculo::parseMoeda($data['salario_base'] ?? 0);
+        if ($sal > 0) {
+            $salarioInicial = $sal;
+            $insert['salario_base'] = $sal;
+        }
+    }
     if ($request->hasFile('foto')) {
         $foto = $request->file('foto');
         $uploadDir = public_path('uploads/funcionarios');
@@ -6852,6 +6926,18 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
         $insert['foto'] = 'uploads/funcionarios/' . $nomeArquivo;
     }
     $id = DB::table('funcionarios')->insertGetId($insert);
+    if ($salarioInicial > 0 && Schema::hasTable('funcionarios_salarios')) {
+        $vig = ! empty($data['data_admissao']) ? $data['data_admissao'] : now()->toDateString();
+        DB::table('funcionarios_salarios')->insert([
+            'funcionario_id' => (int) $id,
+            'valor' => $salarioInicial,
+            'vigencia_inicio' => $vig,
+            'motivo' => 'Salário inicial',
+            'criado_por' => (int) $userId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
     $funcionario = DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first();
     return response()->json($funcionario, 201)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {

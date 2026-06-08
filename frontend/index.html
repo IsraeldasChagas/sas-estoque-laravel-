@@ -2037,6 +2037,7 @@
                       <th>CPF</th>
                       <th>Cargo</th>
                       <th>Unidade</th>
+                      <th>Salário</th>
                       <th>WhatsApp</th>
                       <th>E-mail</th>
                       <th>Status</th>
@@ -2045,7 +2046,7 @@
                     </tr>
                   </thead>
                   <tbody id="funcionariosTable">
-                    <tr><td colspan="11" style="text-align:center;color:#607d8b">Carregando...</td></tr>
+                    <tr><td colspan="12" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -5026,6 +5027,35 @@
             <label>CTPS
               <input name="ctps" maxlength="80" placeholder="Número, série, UF (opcional)" autocomplete="off" />
             </label>
+          </section>
+          <section class="form-section" id="funcionarioSalarioSecao">
+            <h3>Salário</h3>
+            <label id="funcionarioSalarioInicialWrap">Salário inicial
+              <input type="text" id="funcionarioSalarioBase" name="salario_base" data-func-moeda placeholder="R$ 0,00" autocomplete="off" />
+            </label>
+            <div id="funcionarioSalarioEditWrap" class="hidden">
+              <div class="funcionario-ultimo-salario">
+                <span class="funcionario-ultimo-salario__label">Último salário</span>
+                <strong id="funcionarioUltimoSalario">—</strong>
+              </div>
+              <div id="funcionarioSalariosHistorico" class="funcionario-salarios-historico"></div>
+              <div class="funcionario-salario-aumento">
+                <h4>Registrar aumento / novo salário</h4>
+                <p class="form-hint">Informe o novo valor; o histórico é acumulado e o último salário é atualizado automaticamente.</p>
+                <label>Novo salário
+                  <input type="text" id="funcionarioNovoSalario" data-func-moeda placeholder="R$ 0,00" autocomplete="off" />
+                </label>
+                <div class="grid-two">
+                  <label>Vigência (início)
+                    <input type="date" id="funcionarioSalarioVigencia" />
+                  </label>
+                  <label>Motivo
+                    <input type="text" id="funcionarioSalarioMotivo" maxlength="255" placeholder="Ex: dissídio, mérito, promoção…" />
+                  </label>
+                </div>
+                <button type="button" class="btn primary" id="funcionarioBtnSalarioAumento">Adicionar salário</button>
+              </div>
+            </div>
           </section>
           <section class="form-section" id="funcionarioEducacaoSecao">
             <h3>Educação</h3>

@@ -2152,6 +2152,77 @@ function formatCurrencyBRL(value) {
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function lerMoedaFuncionario(el) {
+  if (!el) return 0;
+  if (el.dataset?.value != null && el.dataset.value !== "") {
+    const dv = parseFloat(el.dataset.value);
+    if (Number.isFinite(dv)) return Math.max(0, Math.round(dv * 100) / 100);
+  }
+  const raw = String(el.value ?? "").trim();
+  if (!raw) return 0;
+  let s = raw.replace(/[R$\s]/g, "");
+  if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (s.includes(",")) s = s.replace(",", ".");
+  const n = parseFloat(s.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? Math.max(0, Math.round(n * 100) / 100) : 0;
+}
+
+function setMoedaFuncionario(el, val) {
+  if (!el || val == null) return;
+  const n = Math.max(0, Math.round(Number(val) * 100) / 100);
+  el.dataset.value = String(n);
+  el.value = formatCurrencyBRL(n);
+}
+
+function setupFuncionarioMoedaInputs(root) {
+  (root || document).querySelectorAll("[data-func-moeda]").forEach((inp) => {
+    if (inp.dataset.funcMoedaBound === "1") return;
+    inp.dataset.funcMoedaBound = "1";
+    inp.addEventListener("input", () => {
+      const digits = (inp.value || "").replace(/\D/g, "");
+      const n = digits ? parseInt(digits, 10) / 100 : 0;
+      inp.dataset.value = String(n);
+      inp.value = formatCurrencyBRL(n);
+    });
+  });
+}
+
+function renderFuncionarioSalariosHistoricoHtml(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return '<p class="subtle-text">Nenhum registro de salário ainda.</p>';
+  }
+  const esc = (s) => (s == null ? "" : String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"));
+  const trs = rows.map((r) => `<tr>
+    <td>${esc(r.vigencia_inicio || "—")}</td>
+    <td><strong>${formatCurrencyBRL(r.valor)}</strong></td>
+    <td>${esc(r.motivo || "—")}</td>
+  </tr>`).join("");
+  return `<table class="salario-hist-table"><thead><tr><th>Vigência</th><th>Valor</th><th>Motivo</th></tr></thead><tbody>${trs}</tbody></table>`;
+}
+
+function toggleFuncionarioSalarioModo(editId) {
+  const ini = document.getElementById("funcionarioSalarioInicialWrap");
+  const edit = document.getElementById("funcionarioSalarioEditWrap");
+  if (ini) ini.classList.toggle("hidden", !!editId);
+  if (edit) edit.classList.toggle("hidden", !editId);
+}
+
+async function loadFuncionarioSalariosHistorico(funcionarioId) {
+  const box = document.getElementById("funcionarioSalariosHistorico");
+  if (!box) return;
+  if (!funcionarioId) {
+    box.innerHTML = "";
+    return;
+  }
+  box.innerHTML = '<p class="subtle-text">Carregando histórico…</p>';
+  try {
+    const rows = await fetchJSON(`/funcionarios/${funcionarioId}/salarios`);
+    box.innerHTML = renderFuncionarioSalariosHistoricoHtml(rows);
+  } catch {
+    box.innerHTML = '<p class="subtle-text">Não foi possível carregar o histórico.</p>';
+  }
+}
+
 function roundToQuantity(value) {
   const num = Number(value ?? 0);
   if (!Number.isFinite(num)) return 0;
@@ -10205,15 +10276,16 @@ function renderFuncionarios(lista) {
   const target = dom.funcionariosTable;
   if (!target) return;
   if (!Array.isArray(lista) || lista.length === 0) {
-    target.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#607d8b">Nenhum funcionário encontrado.</td></tr>';
+    target.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#607d8b">Nenhum funcionário encontrado.</td></tr>';
     return;
   }
   const escape = (s) => (s == null || s === undefined ? "" : String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const rows = lista.map(f => {
-    const statusCls = (f.status || "ativo") === "ativo" ? "status-pill status-pill--success" : "status-pill status-pill--muted";
-    const statusLabel = (f.status || "ativo") === "ativo" ? "Ativo" : "Inativo";
-    const acessoLabel = f.possui_acesso ? "Sim" : "Não";
     const isAtivo = (f.status || "ativo") === "ativo";
+    const statusCls = isAtivo ? "status-pill status-pill--success" : "status-pill status-pill--inactive";
+    const statusLabel = isAtivo ? "Ativo" : "Inativo";
+    const acessoLabel = f.possui_acesso ? "Sim" : "Não";
+    const salarioLabel = f.salario_base != null && Number(f.salario_base) > 0 ? formatCurrencyBRL(f.salario_base) : "—";
     const btnInativar = isAtivo ? `<button type="button" class="table-action btn-inativar-funcionario" data-id="${f.id}" title="Inativar">Inativar</button>` : "";
     const btnExcluir = isAdmin()
       ? `<button type="button" class="table-action btn-excluir-funcionario" data-id="${f.id}" title="Excluir" style="background:#b71c1c;color:#fff;">Excluir</button>`
@@ -10222,13 +10294,14 @@ function renderFuncionarios(lista) {
     const fotoCell = fotoUrl
       ? `<img src="${fotoUrl}" alt="${escape(f.nome_completo)}" class="usuarios-foto" loading="lazy" />`
       : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
-    return `<tr data-id="${f.id}">
+    return `<tr data-id="${f.id}"${!isAtivo ? ' class="funcionario-inativo"' : ""}>
       <td data-label="Foto">${fotoCell}</td>
       <td data-label="ID">${escape(f.id)}</td>
       <td data-label="Nome">${escape(f.nome_completo)}</td>
       <td data-label="CPF">${escape(f.cpf)}</td>
       <td data-label="Cargo">${escape(f.cargo)}</td>
       <td data-label="Unidade">${escape(f.unidade_nome || "-")}</td>
+      <td data-label="Salário">${salarioLabel}</td>
       <td data-label="WhatsApp">${escape(f.whatsapp || "-")}</td>
       <td data-label="E-mail">${escape(f.email || "-")}</td>
       <td data-label="Status"><span class="${statusCls}">${statusLabel}</span></td>
@@ -13166,6 +13239,14 @@ function setupModals() {
 
     funcionarioFotoFile = null;
     funcionarioFotoRemovida = false;
+    setupFuncionarioMoedaInputs(dom.funcionarioForm);
+    toggleFuncionarioSalarioModo(editId);
+    const novoSalEl = document.getElementById("funcionarioNovoSalario");
+    const vigEl = document.getElementById("funcionarioSalarioVigencia");
+    const motEl = document.getElementById("funcionarioSalarioMotivo");
+    if (novoSalEl) { novoSalEl.value = ""; novoSalEl.dataset.value = ""; }
+    if (vigEl) vigEl.value = new Date().toISOString().slice(0, 10);
+    if (motEl) motEl.value = "";
     if (editId) {
       const f = await fetchJSON(`/funcionarios/${editId}`);
       ["nome_completo","cpf","data_nascimento","sexo","estado_civil","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix","ctps"].forEach(k => {
@@ -13205,10 +13286,17 @@ function setupModals() {
           ? `<img src="${url}" alt="Foto" class="usuarios-foto" style="max-width:96px;border-radius:8px;" />`
           : '<span class="avatar-placeholder">?</span>';
       }
+      const ultSal = document.getElementById("funcionarioUltimoSalario");
+      if (ultSal) ultSal.textContent = f.salario_base != null && Number(f.salario_base) > 0 ? formatCurrencyBRL(f.salario_base) : "—";
+      await loadFuncionarioSalariosHistorico(editId);
     } else {
       if (dom.funcionarioForm?.elements.cpf) dom.funcionarioForm.elements.cpf.readOnly = false;
       if (dom.funcionarioAvatarPreview) dom.funcionarioAvatarPreview.innerHTML = '<span class="avatar-placeholder">?</span>';
       fillFuncionarioFormacaoFields(dom.funcionarioForm, "", null);
+      const salIni = document.getElementById("funcionarioSalarioBase");
+      if (salIni) { salIni.value = ""; salIni.dataset.value = ""; }
+      const histBox = document.getElementById("funcionarioSalariosHistorico");
+      if (histBox) histBox.innerHTML = "";
     }
     // RH: cursos/formação devem iniciar recolhidos (mesmo ao editar)
     dom.funcionarioForm?.querySelectorAll('#funcionarioFormacaoBlocos details.formacao-bloco')
@@ -13221,9 +13309,15 @@ function setupModals() {
     }
   }
   function viewFuncionario(id) {
-    fetchJSON(`/funcionarios/${id}`).then(f => {
+    Promise.all([
+      fetchJSON(`/funcionarios/${id}`),
+      fetchJSON(`/funcionarios/${id}/salarios`).catch(() => []),
+    ]).then(([f, salarios]) => {
       const esc = s => (s == null || s === "" ? "-" : String(s).replace(/</g, "&lt;"));
-      const statusLabel = (f.status || "ativo") === "ativo" ? "Ativo" : "Inativo";
+      const isAtivo = (f.status || "ativo") === "ativo";
+      const statusLabel = isAtivo ? "Ativo" : "Inativo";
+      const statusPill = `<span class="status-pill ${isAtivo ? "status-pill--success" : "status-pill--inactive"}">${statusLabel}</span>`;
+      const salarioAtual = f.salario_base != null && Number(f.salario_base) > 0 ? formatCurrencyBRL(f.salario_base) : "—";
       const acessoLabel = f.possui_acesso ? "Sim" : "Não";
       const viewFotoUrl = f.foto ? getUsuarioFotoUrl(f.foto) : null;
       const viewFotoHtml = viewFotoUrl
@@ -13247,9 +13341,14 @@ function setupModals() {
             ${field("Cargo", f.cargo)}
             ${field("Unidade", f.unidade_nome)}
             ${field("Data de admissão", f.data_admissao)}
-            ${field("Status", statusLabel)}
+            <div class="view-field"><div class="view-field-label">Status</div><div class="view-field-value">${statusPill}</div></div>
+            ${field("Último salário", salarioAtual)}
             ${field("CTPS", f.ctps)}
           </div>
+        </div>
+        <div class="form-section">
+          <h3>Histórico de salários</h3>
+          ${renderFuncionarioSalariosHistoricoHtml(salarios)}
         </div>
         ${renderFuncionarioFormacaoViewHtml(f, esc, field)}
         <div class="form-section">
@@ -13719,6 +13818,8 @@ function setupModals() {
         fd.append("ctps", payload.ctps != null ? String(payload.ctps) : "");
         fd.append("escolaridade", payload.escolaridade != null ? String(payload.escolaridade) : "");
         fd.append("formacao_json", formacaoJsonStr);
+        const salIni = lerMoedaFuncionario(document.getElementById("funcionarioSalarioBase"));
+        if (salIni > 0) fd.append("salario_base", String(salIni));
         if (payload.possui_acesso) {
           if (payload.usuario_id) fd.append("usuario_id", payload.usuario_id);
           else {
@@ -13785,6 +13886,39 @@ function setupModals() {
   dom.closeFuncionarioViewBtn?.addEventListener("click", () => toggleModal(dom.funcionarioViewModal, false));
   dom.funcionarioViewEditar?.addEventListener("click", () => { const id = dom.funcionarioViewEditar.dataset.id; if (id) editFuncionario(id); });
   dom.funcionarioViewInativar?.addEventListener("click", () => { const id = dom.funcionarioViewInativar.dataset.id; if (id) { toggleModal(dom.funcionarioViewModal, false); inativarFuncionario(id); } });
+  document.getElementById("funcionarioBtnSalarioAumento")?.addEventListener("click", async () => {
+    const form = dom.funcionarioForm;
+    const fid = getFuncionarioFormRecordId(form);
+    if (!fid) {
+      showToast("Salve o funcionário antes de registrar aumentos de salário.", "warning");
+      return;
+    }
+    const valor = lerMoedaFuncionario(document.getElementById("funcionarioNovoSalario"));
+    if (valor <= 0) {
+      showToast("Informe o novo salário maior que zero.", "error");
+      return;
+    }
+    const vigencia = document.getElementById("funcionarioSalarioVigencia")?.value || new Date().toISOString().slice(0, 10);
+    const motivo = (document.getElementById("funcionarioSalarioMotivo")?.value || "").trim();
+    try {
+      const res = await fetchJSON(`/funcionarios/${fid}/salarios`, {
+        method: "POST",
+        body: JSON.stringify({ valor, vigencia_inicio: vigencia, motivo }),
+      });
+      const ultSal = document.getElementById("funcionarioUltimoSalario");
+      if (ultSal) ultSal.textContent = formatCurrencyBRL(res.salario_base ?? valor);
+      const box = document.getElementById("funcionarioSalariosHistorico");
+      if (box && res.historico) box.innerHTML = renderFuncionarioSalariosHistoricoHtml(res.historico);
+      const novoEl = document.getElementById("funcionarioNovoSalario");
+      const motEl = document.getElementById("funcionarioSalarioMotivo");
+      if (novoEl) { novoEl.value = ""; novoEl.dataset.value = ""; }
+      if (motEl) motEl.value = "";
+      showToast("Salário registrado no histórico.", "success");
+      await loadFuncionarios(getFuncionariosFiltros());
+    } catch (e) {
+      showToast(e?.message || "Erro ao registrar salário.", "error");
+    }
+  });
 
   function getProventosFiltros() {
     return {
