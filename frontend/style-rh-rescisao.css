@@ -9,6 +9,40 @@
   margin-bottom: 1rem;
 }
 
+.rr-alerta-salario {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  border-radius: var(--radius, 12px);
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: #b71c1c;
+  margin-bottom: 1rem;
+}
+
+.rr-erros-validacao {
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  border-radius: var(--radius, 12px);
+  padding: 0.75rem 1rem;
+  color: #b71c1c;
+  margin-bottom: 1rem;
+}
+
+.rr-previa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.rr-bloco-auto {
+  border-left: 3px solid #3949ab;
+}
+
+.rr-bloco-manual {
+  border-left: 3px solid #ff7043;
+}
+
 .rr-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

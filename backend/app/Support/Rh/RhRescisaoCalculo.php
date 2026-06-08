@@ -3,8 +3,8 @@
 namespace App\Support\Rh;
 
 /**
- * Motor de cálculo estimativo de rescisão trabalhista (CLT simplificada).
- * Valores são referência — conferência contábil obrigatória.
+ * Motor de cálculo de rescisão no padrão TRCT.
+ * Verbas automáticas + overrides manuais (contador).
  */
 final class RhRescisaoCalculo
 {
@@ -51,45 +51,90 @@ final class RhRescisaoCalculo
         'acordo' => 'AC1',
     ];
 
+    /** Converte valor monetário sem multiplicar por 10 indevidamente. */
+    public static function parseMoeda(mixed $v): float
+    {
+        if ($v === null || $v === '') {
+            return 0.0;
+        }
+        if (is_int($v) || is_float($v)) {
+            return max(0, round((float) $v, 2));
+        }
+        $s = trim((string) $v);
+        $s = preg_replace('/[R$\s]/u', '', $s) ?? $s;
+        if (preg_match('/^\d+$/', $s)) {
+            $digits = (int) $s;
+
+            return $digits >= 1000 ? round($digits / 100, 2) : round($digits, 2);
+        }
+        if (str_contains($s, ',') && str_contains($s, '.')) {
+            $s = str_replace('.', '', $s);
+            $s = str_replace(',', '.', $s);
+        } elseif (str_contains($s, ',')) {
+            $s = str_replace(',', '.', $s);
+        }
+        $n = (float) preg_replace('/[^\d.-]/', '', $s);
+
+        return max(0, round($n, 2));
+    }
+
     public static function normalizarEntrada(array $d): array
     {
+        $salario = self::parseMoeda($d['salario_base'] ?? 0);
+        $avos13 = isset($d['avos_13']) ? (int) $d['avos_13'] : null;
+        $avosFer = isset($d['avos_ferias']) ? (int) $d['avos_ferias'] : null;
+
+        if ($avos13 === null && ! empty($d['data_demissao'])) {
+            $avos13 = self::sugerirAvos13($d['data_demissao']);
+        }
+        if ($avosFer === null && ! empty($d['data_admissao']) && ! empty($d['data_demissao'])) {
+            $avosFer = self::sugerirAvosFerias($d['data_admissao'], $d['data_demissao']);
+        }
+
         return [
             'empresa_id' => ! empty($d['empresa_id']) ? (int) $d['empresa_id'] : null,
             'unidade_id' => ! empty($d['unidade_id']) ? (int) $d['unidade_id'] : null,
             'funcionario_id' => ! empty($d['funcionario_id']) ? (int) $d['funcionario_id'] : null,
             'cargo' => trim((string) ($d['cargo'] ?? '')),
-            'salario_base' => max(0, (float) ($d['salario_base'] ?? 0)),
+            'salario_base' => $salario,
+            'salario_cadastro' => self::parseMoeda($d['salario_cadastro'] ?? 0),
             'data_admissao' => $d['data_admissao'] ?? null,
             'data_demissao' => $d['data_demissao'] ?? null,
+            'data_aviso_previo' => $d['data_aviso_previo'] ?? ($d['data_demissao'] ?? null),
             'tipo_contrato' => (string) ($d['tipo_contrato'] ?? 'prazo_indeterminado'),
             'tipo_rescisao' => (string) ($d['tipo_rescisao'] ?? 'dispensa_sem_justa_causa'),
             'aviso_previo_tipo' => (string) ($d['aviso_previo_tipo'] ?? 'indenizado'),
             'dias_trabalhados_mes' => max(0, min(31, (int) ($d['dias_trabalhados_mes'] ?? 0))),
-            'ferias_vencidas' => max(0, (float) ($d['ferias_vencidas'] ?? 0)),
-            'ferias_proporcionais' => max(0, (float) ($d['ferias_proporcionais'] ?? 0)),
-            'decimo_terceiro_proporcional' => max(0, (float) ($d['decimo_terceiro_proporcional'] ?? 0)),
-            'horas_extras' => max(0, (float) ($d['horas_extras'] ?? 0)),
-            'adicionais' => max(0, (float) ($d['adicionais'] ?? 0)),
-            'descontos' => max(0, (float) ($d['descontos'] ?? 0)),
-            'faltas' => max(0, (float) ($d['faltas'] ?? 0)),
-            'adiantamentos' => max(0, (float) ($d['adiantamentos'] ?? 0)),
-            'vale_transporte' => max(0, (float) ($d['vale_transporte'] ?? 0)),
-            'vale_alimentacao' => max(0, (float) ($d['vale_alimentacao'] ?? 0)),
-            'fgts_mensal' => max(0, (float) ($d['fgts_mensal'] ?? 0)),
+            'avos_13' => max(0, min(12, (int) ($avos13 ?? 0))),
+            'avos_ferias' => max(0, min(12, (int) ($avosFer ?? 0))),
+            'ferias_vencidas' => self::parseMoeda($d['ferias_vencidas'] ?? 0),
+            'ferias_proporcionais_manual' => self::parseMoeda($d['ferias_proporcionais'] ?? 0),
+            'decimo_terceiro_manual' => self::parseMoeda($d['decimo_terceiro_proporcional'] ?? 0),
+            'horas_extras_50' => self::parseMoeda($d['horas_extras_50'] ?? 0),
+            'horas_extras_60' => self::parseMoeda($d['horas_extras_60'] ?? ($d['horas_extras'] ?? 0)),
+            'reflexo_dsr' => self::parseMoeda($d['reflexo_dsr'] ?? 0),
+            'gratificacao' => self::parseMoeda($d['gratificacao'] ?? 0),
+            'comissoes' => self::parseMoeda($d['comissoes'] ?? 0),
+            'outras_verbas' => self::parseMoeda($d['outras_verbas'] ?? ($d['adicionais'] ?? 0)),
+            'decimo_aviso_manual' => self::parseMoeda($d['decimo_aviso_previo'] ?? 0),
+            'ferias_aviso_manual' => self::parseMoeda($d['ferias_aviso_previo'] ?? 0),
+            'adiantamentos' => self::parseMoeda($d['adiantamentos'] ?? 0),
+            'adiantamento_13' => self::parseMoeda($d['adiantamento_13'] ?? 0),
+            'aviso_previo_descontado' => self::parseMoeda($d['aviso_previo_descontado'] ?? ($d['aviso_previo_desconto'] ?? 0)),
+            'faltas' => self::parseMoeda($d['faltas'] ?? 0),
+            'dsr_faltas' => self::parseMoeda($d['dsr_faltas'] ?? 0),
+            'faltas_dias' => max(0, (int) ($d['faltas_dias'] ?? 0)),
+            'inss_salario_manual' => self::parseMoeda($d['inss_salario'] ?? ($d['inss_estimado'] ?? 0)),
+            'inss_13_manual' => self::parseMoeda($d['inss_13'] ?? ($d['inss_13_estimado'] ?? 0)),
+            'irrf_manual' => self::parseMoeda($d['irrf'] ?? ($d['irrf_estimado'] ?? 0)),
+            'irrf_13_manual' => self::parseMoeda($d['irrf_13'] ?? ($d['irrf_13_estimado'] ?? 0)),
+            'outros_descontos' => self::parseMoeda($d['outros_descontos'] ?? ($d['descontos'] ?? 0)),
+            'vale_transporte' => self::parseMoeda($d['vale_transporte'] ?? 0),
+            'vale_alimentacao' => self::parseMoeda($d['vale_alimentacao'] ?? 0),
+            'fgts_mensal' => self::parseMoeda($d['fgts_mensal'] ?? 0),
             'multa_fgts_percentual' => max(0, min(40, (int) ($d['multa_fgts_percentual'] ?? 0))),
             'observacoes' => trim((string) ($d['observacoes'] ?? '')),
-            'data_aviso_previo' => $d['data_aviso_previo'] ?? ($d['data_demissao'] ?? null),
-            'remuneracao_mes_anterior' => max(0, (float) ($d['remuneracao_mes_anterior'] ?? $d['salario_base'] ?? 0)),
-            'faltas_dias' => max(0, (int) ($d['faltas_dias'] ?? 0)),
-            'dsr_faltas' => max(0, (float) ($d['dsr_faltas'] ?? 0)),
-            'horas_extras_50' => max(0, (float) ($d['horas_extras_50'] ?? 0)),
-            'horas_extras_60' => max(0, (float) ($d['horas_extras_60'] ?? 0)),
-            'gratificacao' => max(0, (float) ($d['gratificacao'] ?? 0)),
-            'comissoes' => max(0, (float) ($d['comissoes'] ?? 0)),
-            'reflexo_dsr' => max(0, (float) ($d['reflexo_dsr'] ?? 0)),
-            'adiantamento_13' => max(0, (float) ($d['adiantamento_13'] ?? 0)),
-            'decimo_aviso_previo' => max(0, (float) ($d['decimo_aviso_previo'] ?? 0)),
-            'ferias_aviso_previo' => max(0, (float) ($d['ferias_aviso_previo'] ?? 0)),
+            'remuneracao_mes_anterior' => self::parseMoeda($d['remuneracao_mes_anterior'] ?? $salario),
             'codigo_afastamento' => trim((string) ($d['codigo_afastamento'] ?? '')),
             'categoria_trabalhador' => trim((string) ($d['categoria_trabalhador'] ?? '01 - Empregado')),
             'pensao_trct_pct' => max(0, (float) ($d['pensao_trct_pct'] ?? 0)),
@@ -117,140 +162,211 @@ final class RhRescisaoCalculo
         ];
     }
 
+    /** Validação obrigatória antes do cálculo (18 itens). */
+    public static function validarEntrada(array $d): array
+    {
+        $e = self::normalizarEntrada($d);
+        $erros = [];
+
+        if ($e['salario_base'] <= 0) {
+            $erros[] = 'Salário base é obrigatório e deve ser maior que zero.';
+        }
+        if (empty($e['data_admissao'])) {
+            $erros[] = 'Data de admissão é obrigatória.';
+        }
+        if (empty($e['data_aviso_previo'])) {
+            $erros[] = 'Data do aviso prévio é obrigatória.';
+        }
+        if (empty($e['data_demissao'])) {
+            $erros[] = 'Data do afastamento (demissão) é obrigatória.';
+        }
+        if (empty($e['tipo_rescisao'])) {
+            $erros[] = 'Tipo de rescisão é obrigatório.';
+        }
+        if (empty($e['aviso_previo_tipo'])) {
+            $erros[] = 'Tipo de aviso prévio é obrigatório.';
+        }
+        if ($e['dias_trabalhados_mes'] < 0 || $e['dias_trabalhados_mes'] > 31) {
+            $erros[] = 'Dias trabalhados no mês deve estar entre 0 e 31.';
+        }
+        if ($e['avos_13'] < 0 || $e['avos_13'] > 12) {
+            $erros[] = 'Avos de 13º salário deve estar entre 0 e 12.';
+        }
+        if ($e['avos_ferias'] < 0 || $e['avos_ferias'] > 12) {
+            $erros[] = 'Avos de férias proporcionais deve estar entre 0 e 12.';
+        }
+
+        $alertas = [];
+        if ($e['salario_cadastro'] > 0 && $e['salario_base'] >= $e['salario_cadastro'] * 9.5) {
+            $alertas[] = 'Atenção: salário informado parece incompatível com o cadastro do funcionário.';
+        }
+
+        return ['erros' => $erros, 'alertas' => $alertas, 'entrada' => $e];
+    }
+
     public static function calcular(array $entradaBruta): array
     {
-        $e = self::normalizarEntrada($entradaBruta);
+        $val = self::validarEntrada($entradaBruta);
+        if (count($val['erros'])) {
+            return [
+                'ok' => false,
+                'erros' => $val['erros'],
+                'alertas' => $val['alertas'],
+                'aviso' => self::AVISO,
+            ];
+        }
+
+        $e = $val['entrada'];
         $sal = $e['salario_base'];
         $tipo = $e['tipo_rescisao'];
-        $avisoTipo = $e['aviso_previo_tipo'];
-        $salDia = $sal > 0 ? $sal / 30 : 0;
+        $avisoIndenizado = $e['aviso_previo_tipo'] === 'indenizado' ? round($sal, 2) : 0.0;
 
-        $saldoSalario = round($salDia * $e['dias_trabalhados_mes'], 2);
-
-        $diasAviso = self::diasAvisoPrevio($e['data_admissao'], $e['data_demissao']);
-        $avisoIndenizado = 0.0;
-        $avisoDesconto = 0.0;
-
-        if (in_array($tipo, ['dispensa_sem_justa_causa', 'rescisao_antecipada_empregador'], true)) {
-            if (in_array($avisoTipo, ['indenizado', 'dispensado'], true)) {
-                $avisoIndenizado = round($salDia * $diasAviso, 2);
-            }
-        } elseif ($tipo === 'acordo') {
-            if (in_array($avisoTipo, ['indenizado', 'dispensado'], true)) {
-                $avisoIndenizado = round($salDia * $diasAviso * 0.5, 2);
-            }
-        } elseif (in_array($tipo, ['pedido_demissao', 'rescisao_antecipada_empregado'], true)) {
-            if ($avisoTipo === 'nao_cumprido') {
-                $avisoDesconto = round($salDia * min(30, $diasAviso), 2);
-            }
+        // —— Verbas automáticas (fórmulas TRCT) ——
+        $verbasAuto = [
+            'saldo_salario' => round($sal / 30 * $e['dias_trabalhados_mes'], 2),
+            'horas_extras_50' => round($e['horas_extras_50'], 2),
+            'horas_extras_60' => round($e['horas_extras_60'], 2),
+            'reflexo_dsr' => round($e['reflexo_dsr'], 2),
+            'decimo_terceiro_proporcional' => round($sal / 12 * $e['avos_13'], 2),
+            'ferias_proporcionais' => round($sal / 12 * $e['avos_ferias'], 2),
+            'terco_constitucional' => 0.0,
+            'aviso_previo_indenizado' => $avisoIndenizado,
+            'decimo_terceiro_aviso_previo' => $avisoIndenizado > 0 ? round($sal / 12, 2) : 0.0,
+            'ferias_aviso_previo' => $avisoIndenizado > 0 ? round($sal / 12, 2) : 0.0,
+            'ferias_vencidas' => round($e['ferias_vencidas'], 2),
+            'gratificacao' => round($e['gratificacao'], 2),
+            'comissoes' => round($e['comissoes'], 2),
+            'outras_verbas' => round($e['outras_verbas'], 2),
+        ];
+        $verbasAuto['terco_constitucional'] = round($verbasAuto['ferias_proporcionais'] / 3, 2);
+        if ($verbasAuto['ferias_vencidas'] > 0) {
+            $verbasAuto['terco_constitucional'] += round($verbasAuto['ferias_vencidas'] / 3, 2);
         }
 
-        $decimo = $e['decimo_terceiro_proporcional'];
-        if ($decimo <= 0 && $sal > 0 && $e['data_demissao']) {
-            $meses13 = self::meses13Proporcional($e['data_demissao']);
-            $decimo = round(($sal / 12) * $meses13, 2);
+        // —— Verbas manuais (override do contador) ——
+        $verbasManual = [];
+        if ($e['decimo_terceiro_manual'] > 0) {
+            $verbasManual['decimo_terceiro_proporcional'] = $e['decimo_terceiro_manual'];
+        }
+        if ($e['ferias_proporcionais_manual'] > 0) {
+            $verbasManual['ferias_proporcionais'] = $e['ferias_proporcionais_manual'];
+            $verbasManual['terco_constitucional'] = round($e['ferias_proporcionais_manual'] / 3, 2)
+                + ($verbasAuto['ferias_vencidas'] > 0 ? round($verbasAuto['ferias_vencidas'] / 3, 2) : 0);
+        }
+        if ($e['decimo_aviso_manual'] > 0) {
+            $verbasManual['decimo_terceiro_aviso_previo'] = $e['decimo_aviso_manual'];
+        }
+        if ($e['ferias_aviso_manual'] > 0) {
+            $verbasManual['ferias_aviso_previo'] = $e['ferias_aviso_manual'];
         }
 
-        $feriasVenc = $e['ferias_vencidas'];
-        $feriasProp = $e['ferias_proporcionais'];
-        if ($feriasProp <= 0 && $sal > 0 && $e['data_admissao'] && $e['data_demissao']) {
-            $mesesFerias = self::mesesFeriasProporcionais($e['data_admissao'], $e['data_demissao']);
-            $feriasProp = round(($sal / 12) * $mesesFerias, 2);
+        $verbasFinais = array_merge($verbasAuto, $verbasManual);
+        $horasExtras = $verbasFinais['horas_extras_50'] + $verbasFinais['horas_extras_60'];
+
+        $totalBruto = round(
+            $verbasFinais['saldo_salario']
+            + $horasExtras
+            + $verbasFinais['reflexo_dsr']
+            + $verbasFinais['decimo_terceiro_proporcional']
+            + $verbasFinais['ferias_proporcionais']
+            + $verbasFinais['terco_constitucional']
+            + $verbasFinais['aviso_previo_indenizado']
+            + $verbasFinais['decimo_terceiro_aviso_previo']
+            + $verbasFinais['ferias_aviso_previo']
+            + $verbasFinais['ferias_vencidas']
+            + $verbasFinais['gratificacao']
+            + $verbasFinais['comissoes']
+            + $verbasFinais['outras_verbas'],
+            2
+        );
+
+        // —— Descontos automáticos ——
+        $baseInssSal = max(0, $verbasFinais['saldo_salario'] + $horasExtras + $verbasFinais['reflexo_dsr']
+            + $verbasFinais['aviso_previo_indenizado'] + $verbasFinais['ferias_vencidas']
+            + $verbasFinais['ferias_proporcionais'] + $verbasFinais['terco_constitucional']);
+        $baseInss13 = $verbasFinais['decimo_terceiro_proporcional'] + $verbasFinais['decimo_terceiro_aviso_previo'];
+
+        $descontosAuto = [
+            'adiantamento_salarial' => round($e['adiantamentos'], 2),
+            'aviso_previo_descontado' => round($e['aviso_previo_descontado'], 2),
+            'inss_salario' => self::estimarInss($baseInssSal),
+            'inss_13' => self::estimarInss($baseInss13),
+            'irrf' => self::estimarIrrf(max(0, $totalBruto - self::estimarInss($baseInssSal) - self::estimarInss($baseInss13))),
+            'irrf_13' => 0.0,
+            'faltas' => round($e['faltas'], 2),
+            'dsr_faltas' => round($e['dsr_faltas'], 2),
+            'outros_descontos' => round($e['outros_descontos'] + $e['vale_transporte'] + $e['vale_alimentacao'] + $e['adiantamento_13'], 2),
+        ];
+
+        // —— Descontos manuais ——
+        $descontosManual = [];
+        if ($e['inss_salario_manual'] > 0) {
+            $descontosManual['inss_salario'] = $e['inss_salario_manual'];
+        }
+        if ($e['inss_13_manual'] > 0) {
+            $descontosManual['inss_13'] = $e['inss_13_manual'];
+        }
+        if (array_key_exists('irrf', $entradaBruta) || array_key_exists('irrf_estimado', $entradaBruta)) {
+            $descontosManual['irrf'] = $e['irrf_manual'];
+        }
+        if ($e['irrf_13_manual'] > 0) {
+            $descontosManual['irrf_13'] = $e['irrf_13_manual'];
         }
 
-        $tercoFerias = round(($feriasVenc + $feriasProp) / 3, 2);
-
-        $he50 = $e['horas_extras_50'] > 0 ? $e['horas_extras_50'] : 0;
-        $he60 = $e['horas_extras_60'] > 0 ? $e['horas_extras_60'] : ($e['horas_extras'] > 0 ? $e['horas_extras'] : 0);
-        $reflexoDsr = $e['reflexo_dsr'] > 0 ? $e['reflexo_dsr'] : round(($he50 + $he60) * 0.25, 2);
-
-        $decimoAviso = $e['decimo_aviso_previo'];
-        if ($decimoAviso <= 0 && $avisoIndenizado > 0 && $sal > 0) {
-            $decimoAviso = round($sal / 12, 2);
-        }
-        $feriasAviso = $e['ferias_aviso_previo'];
-        if ($feriasAviso <= 0 && $avisoIndenizado > 0 && $sal > 0) {
-            $feriasAviso = round($sal / 12, 2);
-        }
-
-        $proventos = $saldoSalario + $avisoIndenizado + $decimo + $feriasVenc + $feriasProp + $tercoFerias
-            + $he50 + $he60 + $reflexoDsr + $e['gratificacao'] + $e['comissoes'] + $decimoAviso + $feriasAviso
-            + $e['adicionais'];
-
-        $dsrFaltas = $e['dsr_faltas'] > 0 ? $e['dsr_faltas'] : round($e['faltas'] * 0.5, 2);
-        $faltasValor = $e['faltas'] > 0 && $e['dsr_faltas'] <= 0 ? round($e['faltas'] * 0.5, 2) : max(0, $e['faltas'] - $dsrFaltas);
-
-        $descontosFixos = $e['descontos'] + $faltasValor + $dsrFaltas + $e['adiantamentos'] + $e['adiantamento_13']
-            + $avisoDesconto + $e['vale_transporte'] + $e['vale_alimentacao'];
-
-        $baseInss = max(0, $proventos - ($he50 + $he60) * 0.2);
-        $inssTotal = self::estimarInss($baseInss);
-        $inss13 = $decimo > 0 ? round($inssTotal * ($decimo / max(0.01, $proventos)), 2) : 0;
-        $inss = round(max(0, $inssTotal - $inss13), 2);
-        $baseIrrf = max(0, $proventos - $inssTotal);
-        $irrf = self::estimarIrrf($baseIrrf);
-        $irrf13 = 0.0;
-
-        $totalDescontos = round($descontosFixos + $inss + $inss13 + $irrf + $irrf13, 2);
-        $totalBruto = round($proventos, 2);
+        $descontosFinais = array_merge($descontosAuto, $descontosManual);
+        $totalDescontos = round(array_sum($descontosFinais), 2);
         $totalLiquido = round(max(0, $totalBruto - $totalDescontos), 2);
 
-        $multaPct = $e['multa_fgts_percentual'];
-        if ($multaPct <= 0) {
-            $multaPct = self::multaFgtsPadrao($tipo);
-        }
-        $fgtsSaldo = $e['fgts_mensal'] > 0
-            ? $e['fgts_mensal'] * max(1, self::mesesTrabalhados($e['data_admissao'], $e['data_demissao']))
+        $multaPct = $e['multa_fgts_percentual'] > 0 ? $e['multa_fgts_percentual'] : self::multaFgtsPadrao($tipo);
+        $fgtsEst = $e['fgts_mensal'] > 0
+            ? round($e['fgts_mensal'] * max(1, self::mesesTrabalhados($e['data_admissao'], $e['data_demissao'])), 2)
             : round($sal * 0.08 * max(1, self::mesesTrabalhados($e['data_admissao'], $e['data_demissao'])), 2);
-        $fgtsEst = round($fgtsSaldo, 2);
         $multaFgts = round($fgtsEst * ($multaPct / 100), 2);
-
         $custoEmpresa = round($totalLiquido + $multaFgts + ($tipo !== 'pedido_demissao' ? $fgtsEst * 0.08 : 0), 2);
 
-        $meses13 = self::meses13Proporcional($e['data_demissao']);
-        $mesesFerias = self::mesesFeriasProporcionais($e['data_admissao'], $e['data_demissao']);
-
         $resultado = [
+            'ok' => true,
             'aviso' => self::AVISO,
-            'saldo_salario' => $saldoSalario,
-            'aviso_previo_indenizado' => $avisoIndenizado,
-            'aviso_previo_desconto' => $avisoDesconto,
-            'dias_aviso_previo' => $diasAviso,
-            'decimo_terceiro_proporcional' => $decimo,
-            'decimo_aviso_previo' => $decimoAviso,
-            'ferias_aviso_previo' => $feriasAviso,
-            'ferias_vencidas' => $feriasVenc,
-            'ferias_proporcionais' => $feriasProp,
-            'terco_ferias' => $tercoFerias,
-            'horas_extras' => $he50 + $he60,
-            'horas_extras_50' => $he50,
-            'horas_extras_60' => $he60,
-            'reflexo_dsr' => $reflexoDsr,
-            'gratificacao' => $e['gratificacao'],
-            'comissoes' => $e['comissoes'],
-            'adicionais' => $e['adicionais'],
-            'descontos_informados' => $e['descontos'],
-            'faltas' => $faltasValor,
-            'dsr_faltas' => $dsrFaltas,
-            'faltas_dias' => $e['faltas_dias'],
-            'adiantamentos' => $e['adiantamentos'],
-            'adiantamento_13' => $e['adiantamento_13'],
-            'vale_transporte' => $e['vale_transporte'],
-            'vale_alimentacao' => $e['vale_alimentacao'],
-            'inss_estimado' => $inss,
-            'inss_13_estimado' => $inss13,
-            'irrf_estimado' => $irrf,
-            'irrf_13_estimado' => $irrf13,
-            'fgts_estimado' => $fgtsEst,
-            'multa_fgts_percentual' => $multaPct,
-            'multa_fgts_valor' => $multaFgts,
+            'alertas' => $val['alertas'],
+            'erros' => [],
+            'verbas_automaticas' => $verbasAuto,
+            'verbas_manuais' => $verbasManual,
+            'verbas_finais' => $verbasFinais,
+            'descontos_automaticos' => $descontosAuto,
+            'descontos_manuais' => $descontosManual,
+            'descontos_finais' => $descontosFinais,
+            'saldo_salario' => $verbasFinais['saldo_salario'],
+            'aviso_previo_indenizado' => $verbasFinais['aviso_previo_indenizado'],
+            'aviso_previo_desconto' => $descontosFinais['aviso_previo_descontado'],
+            'decimo_terceiro_proporcional' => $verbasFinais['decimo_terceiro_proporcional'],
+            'decimo_aviso_previo' => $verbasFinais['decimo_terceiro_aviso_previo'],
+            'ferias_aviso_previo' => $verbasFinais['ferias_aviso_previo'],
+            'ferias_vencidas' => $verbasFinais['ferias_vencidas'],
+            'ferias_proporcionais' => $verbasFinais['ferias_proporcionais'],
+            'terco_ferias' => $verbasFinais['terco_constitucional'],
+            'horas_extras' => $horasExtras,
+            'horas_extras_50' => $verbasFinais['horas_extras_50'],
+            'horas_extras_60' => $verbasFinais['horas_extras_60'],
+            'reflexo_dsr' => $verbasFinais['reflexo_dsr'],
+            'inss_estimado' => $descontosFinais['inss_salario'],
+            'inss_13_estimado' => $descontosFinais['inss_13'],
+            'irrf_estimado' => $descontosFinais['irrf'],
+            'irrf_13_estimado' => $descontosFinais['irrf_13'],
+            'faltas' => $descontosFinais['faltas'],
+            'dsr_faltas' => $descontosFinais['dsr_faltas'],
+            'adiantamentos' => $descontosFinais['adiantamento_salarial'],
             'total_bruto' => $totalBruto,
             'total_descontos' => $totalDescontos,
             'total_liquido' => $totalLiquido,
+            'fgts_estimado' => $fgtsEst,
+            'multa_fgts_percentual' => $multaPct,
+            'multa_fgts_valor' => $multaFgts,
             'custo_empresa' => $custoEmpresa,
+            'avos_13' => $e['avos_13'],
+            'avos_ferias' => $e['avos_ferias'],
+            'meses_13_avos' => $e['avos_13'],
+            'meses_ferias_avos' => $e['avos_ferias'],
             'necessita_aviso_previo' => self::necessitaAvisoPrevio($tipo),
-            'meses_13_avos' => $meses13,
-            'meses_ferias_avos' => $mesesFerias,
             'entrada' => $e,
         ];
 
@@ -263,10 +379,11 @@ final class RhRescisaoCalculo
     public static function montarRubricasTrct(array $calc): array
     {
         $e = $calc['entrada'] ?? [];
+        $v = $calc['verbas_finais'] ?? $calc;
         $dias = (int) ($e['dias_trabalhados_mes'] ?? 0);
         $faltasD = (int) ($e['faltas_dias'] ?? 0);
-        $m13 = (int) ($calc['meses_13_avos'] ?? 0);
-        $mFer = (int) ($calc['meses_ferias_avos'] ?? 0);
+        $m13 = (int) ($calc['avos_13'] ?? 0);
+        $mFer = (int) ($calc['avos_ferias'] ?? 0);
 
         $rub = [];
         $add = function (string $cod, string $desc, float $val) use (&$rub) {
@@ -275,26 +392,27 @@ final class RhRescisaoCalculo
             }
         };
 
-        $add('50', "Saldo de {$dias} /dias Salário (líquido de {$faltasD} /faltas e DSR)", (float) ($calc['saldo_salario'] ?? 0));
-        $add('51', 'Comissões', (float) ($calc['comissoes'] ?? 0));
-        $add('52', 'Gratificação', (float) ($calc['gratificacao'] ?? 0));
-        $add('56.1', 'Horas Extras 50%', (float) ($calc['horas_extras_50'] ?? 0));
-        $add('56.2', 'Horas Extras a 60%', (float) ($calc['horas_extras_60'] ?? 0));
-        $add('59', 'Reflexo do DSR sobre salário variável', (float) ($calc['reflexo_dsr'] ?? 0));
-        $add('63', "13º Salário proporcional {$m13}/12 avos", (float) ($calc['decimo_terceiro_proporcional'] ?? 0));
-        $add('65', "Férias proporc. {$mFer}/12 avos", (float) ($calc['ferias_proporcionais'] ?? 0));
-        $add('66.1', 'Férias venc. período aquisitivo', (float) ($calc['ferias_vencidas'] ?? 0));
-        $add('68', 'Terço constituc. de férias', (float) ($calc['terco_ferias'] ?? 0));
-        $add('69', 'Aviso prévio indenizado de '.(int) ($calc['dias_aviso_previo'] ?? 0).' dias', (float) ($calc['aviso_previo_indenizado'] ?? 0));
-        $add('70', '13º Salário (aviso prévio indenizado)', (float) ($calc['decimo_aviso_previo'] ?? 0));
-        $add('71', 'Férias (aviso prévio indenizado)', (float) ($calc['ferias_aviso_previo'] ?? 0));
-        $add('95', 'Outras verbas / adicionais', (float) ($calc['adicionais'] ?? 0));
+        $add('50', "Saldo de {$dias} /dias Salário (líquido de {$faltasD} /faltas e DSR)", (float) ($v['saldo_salario'] ?? 0));
+        $add('51', 'Comissões', (float) ($v['comissoes'] ?? 0));
+        $add('52', 'Gratificação', (float) ($v['gratificacao'] ?? 0));
+        $add('56.1', 'Horas Extras 50%', (float) ($v['horas_extras_50'] ?? 0));
+        $add('56.2', 'Horas Extras a 60%', (float) ($v['horas_extras_60'] ?? 0));
+        $add('59', 'Reflexo do DSR sobre salário variável', (float) ($v['reflexo_dsr'] ?? 0));
+        $add('63', "13º Salário proporcional {$m13}/12 avos", (float) ($v['decimo_terceiro_proporcional'] ?? 0));
+        $add('65', "Férias proporc. {$mFer}/12 avos", (float) ($v['ferias_proporcionais'] ?? 0));
+        $add('66.1', 'Férias venc. período aquisitivo', (float) ($v['ferias_vencidas'] ?? 0));
+        $add('68', 'Terço constituc. de férias', (float) ($v['terco_constitucional'] ?? $calc['terco_ferias'] ?? 0));
+        $add('69', 'Aviso prévio indenizado', (float) ($v['aviso_previo_indenizado'] ?? 0));
+        $add('70', '13º Salário (aviso prévio indenizado)', (float) ($v['decimo_terceiro_aviso_previo'] ?? 0));
+        $add('71', 'Férias (aviso prévio indenizado)', (float) ($v['ferias_aviso_previo'] ?? 0));
+        $add('95', 'Outras verbas', (float) ($v['outras_verbas'] ?? 0));
 
         return $rub;
     }
 
     public static function montarDescontosTrct(array $calc): array
     {
+        $d = $calc['descontos_finais'] ?? $calc;
         $desc = [];
         $add = function (string $cod, string $lbl, float $val) use (&$desc) {
             if (abs($val) >= 0.005) {
@@ -302,17 +420,15 @@ final class RhRescisaoCalculo
             }
         };
 
-        $add('101', 'Adiantamento salarial', (float) ($calc['adiantamentos'] ?? 0));
-        $add('102', 'Adiantamento de 13º salário', (float) ($calc['adiantamento_13'] ?? 0));
-        $add('103', 'Aviso prévio indenizado (desconto)', (float) ($calc['aviso_previo_desconto'] ?? 0));
-        $add('112.1', 'Previdência social', (float) ($calc['inss_estimado'] ?? 0));
-        $add('112.2', 'Prev. social — 13º salário', (float) ($calc['inss_13_estimado'] ?? 0));
-        $add('114.1', 'IRRF', (float) ($calc['irrf_estimado'] ?? 0));
-        $add('114.2', 'IRRF sobre 13º salário', (float) ($calc['irrf_13_estimado'] ?? 0));
-        $add('115.1', 'Faltas não justificadas', (float) ($calc['faltas'] ?? 0));
-        $add('115.2', 'D.S.R. s/ faltas', (float) ($calc['dsr_faltas'] ?? 0));
-        $add('99', 'Outros descontos informados', (float) ($calc['descontos_informados'] ?? 0)
-            + (float) ($calc['vale_transporte'] ?? 0) + (float) ($calc['vale_alimentacao'] ?? 0));
+        $add('101', 'Adiantamento salarial', (float) ($d['adiantamento_salarial'] ?? $calc['adiantamentos'] ?? 0));
+        $add('103', 'Aviso prévio descontado', (float) ($d['aviso_previo_descontado'] ?? 0));
+        $add('112.1', 'Previdência social', (float) ($d['inss_salario'] ?? $calc['inss_estimado'] ?? 0));
+        $add('112.2', 'Prev. social — 13º salário', (float) ($d['inss_13'] ?? $calc['inss_13_estimado'] ?? 0));
+        $add('114.1', 'IRRF', (float) ($d['irrf'] ?? $calc['irrf_estimado'] ?? 0));
+        $add('114.2', 'IRRF sobre 13º salário', (float) ($d['irrf_13'] ?? $calc['irrf_13_estimado'] ?? 0));
+        $add('115.1', 'Faltas não justificadas', (float) ($d['faltas'] ?? 0));
+        $add('115.2', 'D.S.R. s/ faltas', (float) ($d['dsr_faltas'] ?? 0));
+        $add('99', 'Outros descontos', (float) ($d['outros_descontos'] ?? 0));
 
         return $desc;
     }
@@ -351,6 +467,9 @@ final class RhRescisaoCalculo
         foreach (self::CENARIOS_COMPARATIVO as $tipo) {
             $entrada = array_merge($entradaBase, ['tipo_rescisao' => $tipo]);
             $calc = self::calcular($entrada);
+            if (! ($calc['ok'] ?? true)) {
+                continue;
+            }
             $cenarios[] = [
                 'tipo_cenario' => $tipo,
                 'tipo_label' => self::TIPOS_RESCISAO[$tipo] ?? $tipo,
@@ -389,13 +508,6 @@ final class RhRescisaoCalculo
         ];
     }
 
-    public static function diasAvisoPrevio(?string $admissao, ?string $demissao): int
-    {
-        $anos = self::anosCompletos($admissao, $demissao);
-
-        return min(90, 30 + ($anos * 3));
-    }
-
     public static function necessitaAvisoPrevio(string $tipo): bool
     {
         return in_array($tipo, [
@@ -407,16 +519,19 @@ final class RhRescisaoCalculo
         ], true);
     }
 
-    private static function multaFgtsPadrao(string $tipo): int
+    public static function sugerirAvos13(?string $demissao): int
     {
-        return match ($tipo) {
-            'dispensa_sem_justa_causa', 'rescisao_antecipada_empregador' => 40,
-            'acordo' => 20,
-            default => 0,
-        };
+        if (! $demissao) {
+            return 0;
+        }
+        try {
+            return (int) (new \DateTimeImmutable($demissao))->format('n');
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
-    private static function anosCompletos(?string $admissao, ?string $demissao): int
+    public static function sugerirAvosFerias(?string $admissao, ?string $demissao): int
     {
         if (! $admissao || ! $demissao) {
             return 0;
@@ -424,11 +539,27 @@ final class RhRescisaoCalculo
         try {
             $a = new \DateTimeImmutable($admissao);
             $d = new \DateTimeImmutable($demissao);
+            $meses = 0;
+            $cur = $a->modify('first day of this month');
+            $fim = $d->modify('first day of this month');
+            while ($cur <= $fim) {
+                $meses++;
+                $cur = $cur->modify('+1 month');
+            }
 
-            return max(0, (int) $a->diff($d)->y);
+            return max(0, min(12, $meses % 12 ?: ($meses > 0 ? 12 : 0)));
         } catch (\Throwable) {
             return 0;
         }
+    }
+
+    private static function multaFgtsPadrao(string $tipo): int
+    {
+        return match ($tipo) {
+            'dispensa_sem_justa_causa', 'rescisao_antecipada_empregador' => 40,
+            'acordo' => 20,
+            default => 0,
+        };
     }
 
     private static function mesesTrabalhados(?string $admissao, ?string $demissao): int
@@ -445,25 +576,6 @@ final class RhRescisaoCalculo
         } catch (\Throwable) {
             return 1;
         }
-    }
-
-    private static function meses13Proporcional(?string $demissao): int
-    {
-        if (! $demissao) {
-            return 0;
-        }
-        try {
-            return (int) (new \DateTimeImmutable($demissao))->format('n');
-        } catch (\Throwable) {
-            return 0;
-        }
-    }
-
-    private static function mesesFeriasProporcionais(?string $admissao, ?string $demissao): int
-    {
-        $total = self::mesesTrabalhados($admissao, $demissao);
-
-        return min(12, $total % 12 ?: 12);
     }
 
     private static function estimarInss(float $base): float
@@ -501,13 +613,13 @@ final class RhRescisaoCalculo
             return 0;
         }
         if ($base <= 2826.65) {
-            return round($base * 0.075 - 158.40, 2);
+            return round(max(0, $base * 0.075 - 158.40), 2);
         }
         if ($base <= 3751.05) {
-            return round($base * 0.15 - 370.40, 2);
+            return round(max(0, $base * 0.15 - 370.40), 2);
         }
         if ($base <= 4664.68) {
-            return round($base * 0.225 - 651.73, 2);
+            return round(max(0, $base * 0.225 - 651.73), 2);
         }
 
         return round(max(0, $base * 0.275 - 884.96), 2);

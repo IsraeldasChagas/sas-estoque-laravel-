@@ -2129,29 +2129,41 @@
                 <label>Tipo rescisão<select id="rrSimTipoRescisao"></select></label>
                 <label>Aviso prévio<select id="rrSimAvisoPrevio"></select></label>
                 <label>Dias trabalhados no mês<input type="number" id="rrSimDiasMes" min="0" max="31" value="0" /></label>
+                <label>Avos 13º (0–12)<input type="number" id="rrSimAvos13" min="0" max="12" value="0" title="Informe conforme regra do contador" /></label>
+                <label>Avos férias (0–12)<input type="number" id="rrSimAvosFerias" min="0" max="12" value="0" title="Informe conforme regra do contador" /></label>
+                <input type="hidden" id="rrSimSalarioCadastro" value="0" />
+                <label class="rr-span-2 rr-secao-titulo">Verbas variáveis</label>
                 <label>Férias vencidas<input type="text" id="rrSimFeriasVenc" data-rr-moeda /></label>
-                <label>Férias proporcionais<input type="text" id="rrSimFeriasProp" data-rr-moeda /></label>
-                <label>13º proporcional<input type="text" id="rrSimDecimo" data-rr-moeda /></label>
-                <label>Horas extras<input type="text" id="rrSimHorasExtras" data-rr-moeda /></label>
-                <label>Adicionais<input type="text" id="rrSimAdicionais" data-rr-moeda /></label>
-                <label>Descontos<input type="text" id="rrSimDescontos" data-rr-moeda /></label>
+                <label>Horas extras 50%<input type="text" id="rrSimHe50" data-rr-moeda /></label>
+                <label>Horas extras 60%<input type="text" id="rrSimHe60" data-rr-moeda /></label>
+                <label>Reflexo DSR<input type="text" id="rrSimReflexoDsr" data-rr-moeda /></label>
+                <label>Gratificação<input type="text" id="rrSimGratificacao" data-rr-moeda /></label>
+                <label>Comissões<input type="text" id="rrSimComissoes" data-rr-moeda /></label>
+                <label>Outras verbas<input type="text" id="rrSimOutrasVerbas" data-rr-moeda /></label>
+                <label class="rr-span-2 rr-secao-titulo">Ajustes manuais (contador)</label>
+                <label>13º proporcional (manual)<input type="text" id="rrSimDecimo" data-rr-moeda placeholder="Sobrescreve cálculo automático" /></label>
+                <label>Férias proporcionais (manual)<input type="text" id="rrSimFeriasProp" data-rr-moeda placeholder="Sobrescreve cálculo automático" /></label>
+                <label>13º aviso prévio (manual)<input type="text" id="rrSimDecimoAviso" data-rr-moeda /></label>
+                <label>Férias aviso prévio (manual)<input type="text" id="rrSimFeriasAviso" data-rr-moeda /></label>
+                <label class="rr-span-2 rr-secao-titulo">Descontos</label>
+                <label>Adiantamento salarial<input type="text" id="rrSimAdiantamentos" data-rr-moeda /></label>
+                <label>Aviso prévio descontado<input type="text" id="rrSimAvisoDescontado" data-rr-moeda /></label>
                 <label>Faltas<input type="text" id="rrSimFaltas" data-rr-moeda /></label>
-                <label>Adiantamentos<input type="text" id="rrSimAdiantamentos" data-rr-moeda /></label>
-                <label>Vale transporte<input type="text" id="rrSimValeTransp" data-rr-moeda /></label>
-                <label>Vale alimentação<input type="text" id="rrSimValeAlim" data-rr-moeda /></label>
+                <label>DSR s/ faltas<input type="text" id="rrSimDsrFaltas" data-rr-moeda /></label>
+                <label>INSS salário<input type="text" id="rrSimInssSalario" data-rr-moeda /></label>
+                <label>INSS 13º<input type="text" id="rrSimInss13" data-rr-moeda /></label>
+                <label>IRRF<input type="text" id="rrSimIrrf" data-rr-moeda /></label>
+                <label>IRRF 13º<input type="text" id="rrSimIrrf13" data-rr-moeda /></label>
+                <label>Outros descontos<input type="text" id="rrSimOutrosDescontos" data-rr-moeda /></label>
                 <label>FGTS mensal<input type="text" id="rrSimFgtsMensal" data-rr-moeda /></label>
                 <label>Multa FGTS %<select id="rrSimMultaFgts"><option value="0">Sem multa / automático</option><option value="20">20%</option><option value="40">40%</option></select></label>
                 <label class="rr-span-2 rr-secao-titulo">Dados TRCT (PDF)</label>
                 <label>Data aviso prévio<input type="date" id="rrSimDataAviso" /></label>
                 <label>Remuneração mês anterior<input type="text" id="rrSimRemunMesAnt" data-rr-moeda /></label>
                 <label>Faltas (dias)<input type="number" id="rrSimFaltasDias" min="0" max="31" value="0" /></label>
-                <label>DSR s/ faltas<input type="text" id="rrSimDsrFaltas" data-rr-moeda /></label>
-                <label>Horas extras 50%<input type="text" id="rrSimHe50" data-rr-moeda /></label>
-                <label>Horas extras 60%<input type="text" id="rrSimHe60" data-rr-moeda /></label>
-                <label>Gratificação<input type="text" id="rrSimGratificacao" data-rr-moeda /></label>
-                <label>Comissões<input type="text" id="rrSimComissoes" data-rr-moeda /></label>
-                <label>Reflexo DSR<input type="text" id="rrSimReflexoDsr" data-rr-moeda /></label>
                 <label>Adiantamento 13º<input type="text" id="rrSimAdiant13" data-rr-moeda /></label>
+                <label>Vale transporte<input type="text" id="rrSimValeTransp" data-rr-moeda /></label>
+                <label>Vale alimentação<input type="text" id="rrSimValeAlim" data-rr-moeda /></label>
                 <label>PIS/PASEP<input type="text" id="rrSimPis" placeholder="000.00000.00-0" /></label>
                 <label>CTPS<input type="text" id="rrSimCtps" placeholder="nº-série/UF" /></label>
                 <label>Nome da mãe<input type="text" id="rrSimNomeMae" /></label>
@@ -2183,29 +2195,41 @@
                 <label>Tipo rescisão<select id="rrCalTipoRescisao"></select></label>
                 <label>Aviso prévio<select id="rrCalAvisoPrevio"></select></label>
                 <label>Dias trabalhados no mês<input type="number" id="rrCalDiasMes" min="0" max="31" value="0" /></label>
+                <label>Avos 13º (0–12)<input type="number" id="rrCalAvos13" min="0" max="12" value="0" title="Informe conforme regra do contador" /></label>
+                <label>Avos férias (0–12)<input type="number" id="rrCalAvosFerias" min="0" max="12" value="0" title="Informe conforme regra do contador" /></label>
+                <input type="hidden" id="rrCalSalarioCadastro" value="0" />
+                <label class="rr-span-2 rr-secao-titulo">Verbas variáveis</label>
                 <label>Férias vencidas<input type="text" id="rrCalFeriasVenc" data-rr-moeda /></label>
-                <label>Férias proporcionais<input type="text" id="rrCalFeriasProp" data-rr-moeda /></label>
-                <label>13º proporcional<input type="text" id="rrCalDecimo" data-rr-moeda /></label>
-                <label>Horas extras<input type="text" id="rrCalHorasExtras" data-rr-moeda /></label>
-                <label>Adicionais<input type="text" id="rrCalAdicionais" data-rr-moeda /></label>
-                <label>Descontos<input type="text" id="rrCalDescontos" data-rr-moeda /></label>
+                <label>Horas extras 50%<input type="text" id="rrCalHe50" data-rr-moeda /></label>
+                <label>Horas extras 60%<input type="text" id="rrCalHe60" data-rr-moeda /></label>
+                <label>Reflexo DSR<input type="text" id="rrCalReflexoDsr" data-rr-moeda /></label>
+                <label>Gratificação<input type="text" id="rrCalGratificacao" data-rr-moeda /></label>
+                <label>Comissões<input type="text" id="rrCalComissoes" data-rr-moeda /></label>
+                <label>Outras verbas<input type="text" id="rrCalOutrasVerbas" data-rr-moeda /></label>
+                <label class="rr-span-2 rr-secao-titulo">Ajustes manuais (contador)</label>
+                <label>13º proporcional (manual)<input type="text" id="rrCalDecimo" data-rr-moeda placeholder="Sobrescreve cálculo automático" /></label>
+                <label>Férias proporcionais (manual)<input type="text" id="rrCalFeriasProp" data-rr-moeda placeholder="Sobrescreve cálculo automático" /></label>
+                <label>13º aviso prévio (manual)<input type="text" id="rrCalDecimoAviso" data-rr-moeda /></label>
+                <label>Férias aviso prévio (manual)<input type="text" id="rrCalFeriasAviso" data-rr-moeda /></label>
+                <label class="rr-span-2 rr-secao-titulo">Descontos</label>
+                <label>Adiantamento salarial<input type="text" id="rrCalAdiantamentos" data-rr-moeda /></label>
+                <label>Aviso prévio descontado<input type="text" id="rrCalAvisoDescontado" data-rr-moeda /></label>
                 <label>Faltas<input type="text" id="rrCalFaltas" data-rr-moeda /></label>
-                <label>Adiantamentos<input type="text" id="rrCalAdiantamentos" data-rr-moeda /></label>
-                <label>Vale transporte<input type="text" id="rrCalValeTransp" data-rr-moeda /></label>
-                <label>Vale alimentação<input type="text" id="rrCalValeAlim" data-rr-moeda /></label>
+                <label>DSR s/ faltas<input type="text" id="rrCalDsrFaltas" data-rr-moeda /></label>
+                <label>INSS salário<input type="text" id="rrCalInssSalario" data-rr-moeda /></label>
+                <label>INSS 13º<input type="text" id="rrCalInss13" data-rr-moeda /></label>
+                <label>IRRF<input type="text" id="rrCalIrrf" data-rr-moeda /></label>
+                <label>IRRF 13º<input type="text" id="rrCalIrrf13" data-rr-moeda /></label>
+                <label>Outros descontos<input type="text" id="rrCalOutrosDescontos" data-rr-moeda /></label>
                 <label>FGTS mensal<input type="text" id="rrCalFgtsMensal" data-rr-moeda /></label>
                 <label>Multa FGTS %<select id="rrCalMultaFgts"><option value="0">Sem multa / automático</option><option value="20">20%</option><option value="40">40%</option></select></label>
                 <label class="rr-span-2 rr-secao-titulo">Dados TRCT (PDF)</label>
                 <label>Data aviso prévio<input type="date" id="rrCalDataAviso" /></label>
                 <label>Remuneração mês anterior<input type="text" id="rrCalRemunMesAnt" data-rr-moeda /></label>
                 <label>Faltas (dias)<input type="number" id="rrCalFaltasDias" min="0" max="31" value="0" /></label>
-                <label>DSR s/ faltas<input type="text" id="rrCalDsrFaltas" data-rr-moeda /></label>
-                <label>Horas extras 50%<input type="text" id="rrCalHe50" data-rr-moeda /></label>
-                <label>Horas extras 60%<input type="text" id="rrCalHe60" data-rr-moeda /></label>
-                <label>Gratificação<input type="text" id="rrCalGratificacao" data-rr-moeda /></label>
-                <label>Comissões<input type="text" id="rrCalComissoes" data-rr-moeda /></label>
-                <label>Reflexo DSR<input type="text" id="rrCalReflexoDsr" data-rr-moeda /></label>
                 <label>Adiantamento 13º<input type="text" id="rrCalAdiant13" data-rr-moeda /></label>
+                <label>Vale transporte<input type="text" id="rrCalValeTransp" data-rr-moeda /></label>
+                <label>Vale alimentação<input type="text" id="rrCalValeAlim" data-rr-moeda /></label>
                 <label>PIS/PASEP<input type="text" id="rrCalPis" /></label>
                 <label>CTPS<input type="text" id="rrCalCtps" /></label>
                 <label>Nome da mãe<input type="text" id="rrCalNomeMae" /></label>

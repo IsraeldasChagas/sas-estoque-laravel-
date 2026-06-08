@@ -133,12 +133,12 @@ $rrSalvarCalculo = function (array $entrada, array $calc, string $status = 'simu
         'aviso_previo_tipo' => $e['aviso_previo_tipo'],
         'dias_trabalhados_mes' => $e['dias_trabalhados_mes'],
         'ferias_vencidas' => $e['ferias_vencidas'],
-        'ferias_proporcionais' => $e['ferias_proporcionais'],
-        'decimo_terceiro_proporcional' => $calc['decimo_terceiro_proporcional'] ?? $e['decimo_terceiro_proporcional'],
-        'horas_extras' => $e['horas_extras'],
-        'adicionais' => $e['adicionais'],
-        'descontos' => $e['descontos'],
-        'faltas' => $e['faltas'],
+        'ferias_proporcionais' => $calc['ferias_proporcionais'] ?? 0,
+        'decimo_terceiro_proporcional' => $calc['decimo_terceiro_proporcional'] ?? 0,
+        'horas_extras' => $calc['horas_extras'] ?? 0,
+        'adicionais' => $e['outras_verbas'] ?? 0,
+        'descontos' => $e['outros_descontos'] ?? 0,
+        'faltas' => $calc['faltas'] ?? 0,
         'adiantamentos' => $e['adiantamentos'],
         'vale_transporte' => $e['vale_transporte'],
         'vale_alimentacao' => $e['vale_alimentacao'],
@@ -190,6 +190,9 @@ Route::post('/rh/rescisoes/calcular', function (Request $request) use ($rrAuth, 
         return $rrJson(['error' => 'Sem permissão'], 403);
     }
     $calc = RhRescisaoCalculo::calcular($rrPayloadFromRequest($request));
+    if (! ($calc['ok'] ?? false)) {
+        return $rrJson($calc, 422);
+    }
 
     return $rrJson($calc);
 });
@@ -386,6 +389,9 @@ Route::post('/rh/rescisoes', function (Request $request) use ($rrAuth, $podeRhRe
 
     $entrada = $rrPayloadFromRequest($request);
     $calc = RhRescisaoCalculo::calcular($entrada);
+    if (! ($calc['ok'] ?? false)) {
+        return $rrJson($calc, 422);
+    }
     $status = in_array($request->input('status'), ['simulacao', 'calculada', 'confirmada'], true)
         ? $request->input('status') : 'simulacao';
 
@@ -429,6 +435,9 @@ Route::put('/rh/rescisoes/{id}', function (Request $request, $id) use ($rrAuth, 
 
     $entrada = $rrPayloadFromRequest($request);
     $calc = RhRescisaoCalculo::calcular($entrada);
+    if (! ($calc['ok'] ?? false)) {
+        return $rrJson($calc, 422);
+    }
     $status = $request->input('status');
     if (! in_array($status, ['simulacao', 'calculada', 'confirmada', 'paga', 'cancelada'], true)) {
         $status = DB::table('rh_rescisoes')->where('id', (int) $id)->value('status') ?: 'simulacao';
