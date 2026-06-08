@@ -160,8 +160,60 @@
   grid-column: span 2;
 }
 
+.rr-secao-titulo {
+  font-weight: 700;
+  color: var(--primary, #0047ab);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border, #e0e6ef);
+}
+
+.rr-trct-tabela {
+  margin-bottom: 0.75rem;
+}
+
+.rr-trct-tabela h5 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text, #263238);
+}
+
+.rr-trct-tabela table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.rr-trct-tabela td {
+  border: 1px solid var(--border, #e0e6ef);
+  padding: 6px 8px;
+  vertical-align: top;
+  width: 33%;
+}
+
+.rr-rub-cod {
+  font-weight: 700;
+  color: var(--primary, #0047ab);
+}
+
+.rr-resultado-linha.rr-total {
+  border-top: 2px solid var(--border, #e0e6ef);
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+}
+
+.rr-liquido-final {
+  background: #f0f4ff;
+}
+
 @media (max-width: 640px) {
   .rr-form-grid .rr-span-2 {
     grid-column: span 1;
+  }
+
+  .rr-trct-tabela td {
+    display: block;
+    width: 100%;
   }
 }

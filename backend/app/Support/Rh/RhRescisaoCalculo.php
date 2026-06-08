@@ -41,6 +41,16 @@ final class RhRescisaoCalculo
         'dispensa_justa_causa',
     ];
 
+    public const CODIGOS_AFASTAMENTO = [
+        'dispensa_sem_justa_causa' => 'SJ2',
+        'dispensa_justa_causa' => 'JC2',
+        'pedido_demissao' => 'SJ1',
+        'termino_experiencia' => 'E1',
+        'rescisao_antecipada_empregador' => 'RA1',
+        'rescisao_antecipada_empregado' => 'RA2',
+        'acordo' => 'AC1',
+    ];
+
     public static function normalizarEntrada(array $d): array
     {
         return [
@@ -68,6 +78,42 @@ final class RhRescisaoCalculo
             'fgts_mensal' => max(0, (float) ($d['fgts_mensal'] ?? 0)),
             'multa_fgts_percentual' => max(0, min(40, (int) ($d['multa_fgts_percentual'] ?? 0))),
             'observacoes' => trim((string) ($d['observacoes'] ?? '')),
+            'data_aviso_previo' => $d['data_aviso_previo'] ?? ($d['data_demissao'] ?? null),
+            'remuneracao_mes_anterior' => max(0, (float) ($d['remuneracao_mes_anterior'] ?? $d['salario_base'] ?? 0)),
+            'faltas_dias' => max(0, (int) ($d['faltas_dias'] ?? 0)),
+            'dsr_faltas' => max(0, (float) ($d['dsr_faltas'] ?? 0)),
+            'horas_extras_50' => max(0, (float) ($d['horas_extras_50'] ?? 0)),
+            'horas_extras_60' => max(0, (float) ($d['horas_extras_60'] ?? 0)),
+            'gratificacao' => max(0, (float) ($d['gratificacao'] ?? 0)),
+            'comissoes' => max(0, (float) ($d['comissoes'] ?? 0)),
+            'reflexo_dsr' => max(0, (float) ($d['reflexo_dsr'] ?? 0)),
+            'adiantamento_13' => max(0, (float) ($d['adiantamento_13'] ?? 0)),
+            'decimo_aviso_previo' => max(0, (float) ($d['decimo_aviso_previo'] ?? 0)),
+            'ferias_aviso_previo' => max(0, (float) ($d['ferias_aviso_previo'] ?? 0)),
+            'codigo_afastamento' => trim((string) ($d['codigo_afastamento'] ?? '')),
+            'categoria_trabalhador' => trim((string) ($d['categoria_trabalhador'] ?? '01 - Empregado')),
+            'pensao_trct_pct' => max(0, (float) ($d['pensao_trct_pct'] ?? 0)),
+            'pensao_fgts_pct' => max(0, (float) ($d['pensao_fgts_pct'] ?? 0)),
+            'funcionario_pis' => trim((string) ($d['funcionario_pis'] ?? '')),
+            'funcionario_ctps' => trim((string) ($d['funcionario_ctps'] ?? '')),
+            'funcionario_cpf' => trim((string) ($d['funcionario_cpf'] ?? '')),
+            'funcionario_nascimento' => $d['funcionario_nascimento'] ?? null,
+            'funcionario_nome_mae' => trim((string) ($d['funcionario_nome_mae'] ?? '')),
+            'funcionario_endereco' => trim((string) ($d['funcionario_endereco'] ?? '')),
+            'funcionario_bairro' => trim((string) ($d['funcionario_bairro'] ?? '')),
+            'funcionario_municipio' => trim((string) ($d['funcionario_municipio'] ?? '')),
+            'funcionario_uf' => trim((string) ($d['funcionario_uf'] ?? '')),
+            'funcionario_cep' => trim((string) ($d['funcionario_cep'] ?? '')),
+            'empresa_cnpj' => trim((string) ($d['empresa_cnpj'] ?? '')),
+            'empresa_razao' => trim((string) ($d['empresa_razao'] ?? '')),
+            'empresa_endereco' => trim((string) ($d['empresa_endereco'] ?? '')),
+            'empresa_bairro' => trim((string) ($d['empresa_bairro'] ?? '')),
+            'empresa_municipio' => trim((string) ($d['empresa_municipio'] ?? '')),
+            'empresa_uf' => trim((string) ($d['empresa_uf'] ?? '')),
+            'empresa_cep' => trim((string) ($d['empresa_cep'] ?? '')),
+            'empresa_cnae' => trim((string) ($d['empresa_cnae'] ?? '')),
+            'codigo_sindical' => trim((string) ($d['codigo_sindical'] ?? '')),
+            'entidade_sindical' => trim((string) ($d['entidade_sindical'] ?? '')),
         ];
     }
 
@@ -114,18 +160,38 @@ final class RhRescisaoCalculo
 
         $tercoFerias = round(($feriasVenc + $feriasProp) / 3, 2);
 
+        $he50 = $e['horas_extras_50'] > 0 ? $e['horas_extras_50'] : 0;
+        $he60 = $e['horas_extras_60'] > 0 ? $e['horas_extras_60'] : ($e['horas_extras'] > 0 ? $e['horas_extras'] : 0);
+        $reflexoDsr = $e['reflexo_dsr'] > 0 ? $e['reflexo_dsr'] : round(($he50 + $he60) * 0.25, 2);
+
+        $decimoAviso = $e['decimo_aviso_previo'];
+        if ($decimoAviso <= 0 && $avisoIndenizado > 0 && $sal > 0) {
+            $decimoAviso = round($sal / 12, 2);
+        }
+        $feriasAviso = $e['ferias_aviso_previo'];
+        if ($feriasAviso <= 0 && $avisoIndenizado > 0 && $sal > 0) {
+            $feriasAviso = round($sal / 12, 2);
+        }
+
         $proventos = $saldoSalario + $avisoIndenizado + $decimo + $feriasVenc + $feriasProp + $tercoFerias
-            + $e['horas_extras'] + $e['adicionais'];
+            + $he50 + $he60 + $reflexoDsr + $e['gratificacao'] + $e['comissoes'] + $decimoAviso + $feriasAviso
+            + $e['adicionais'];
 
-        $descontosFixos = $e['descontos'] + $e['faltas'] + $e['adiantamentos'] + $avisoDesconto
-            + $e['vale_transporte'] + $e['vale_alimentacao'];
+        $dsrFaltas = $e['dsr_faltas'] > 0 ? $e['dsr_faltas'] : round($e['faltas'] * 0.5, 2);
+        $faltasValor = $e['faltas'] > 0 && $e['dsr_faltas'] <= 0 ? round($e['faltas'] * 0.5, 2) : max(0, $e['faltas'] - $dsrFaltas);
 
-        $baseInss = max(0, $proventos - $e['horas_extras'] * 0.2);
-        $inss = self::estimarInss($baseInss);
-        $baseIrrf = max(0, $proventos - $inss);
+        $descontosFixos = $e['descontos'] + $faltasValor + $dsrFaltas + $e['adiantamentos'] + $e['adiantamento_13']
+            + $avisoDesconto + $e['vale_transporte'] + $e['vale_alimentacao'];
+
+        $baseInss = max(0, $proventos - ($he50 + $he60) * 0.2);
+        $inssTotal = self::estimarInss($baseInss);
+        $inss13 = $decimo > 0 ? round($inssTotal * ($decimo / max(0.01, $proventos)), 2) : 0;
+        $inss = round(max(0, $inssTotal - $inss13), 2);
+        $baseIrrf = max(0, $proventos - $inssTotal);
         $irrf = self::estimarIrrf($baseIrrf);
+        $irrf13 = 0.0;
 
-        $totalDescontos = round($descontosFixos + $inss + $irrf, 2);
+        $totalDescontos = round($descontosFixos + $inss + $inss13 + $irrf + $irrf13, 2);
         $totalBruto = round($proventos, 2);
         $totalLiquido = round(max(0, $totalBruto - $totalDescontos), 2);
 
@@ -141,25 +207,40 @@ final class RhRescisaoCalculo
 
         $custoEmpresa = round($totalLiquido + $multaFgts + ($tipo !== 'pedido_demissao' ? $fgtsEst * 0.08 : 0), 2);
 
-        return [
+        $meses13 = self::meses13Proporcional($e['data_demissao']);
+        $mesesFerias = self::mesesFeriasProporcionais($e['data_admissao'], $e['data_demissao']);
+
+        $resultado = [
             'aviso' => self::AVISO,
             'saldo_salario' => $saldoSalario,
             'aviso_previo_indenizado' => $avisoIndenizado,
             'aviso_previo_desconto' => $avisoDesconto,
             'dias_aviso_previo' => $diasAviso,
             'decimo_terceiro_proporcional' => $decimo,
+            'decimo_aviso_previo' => $decimoAviso,
+            'ferias_aviso_previo' => $feriasAviso,
             'ferias_vencidas' => $feriasVenc,
             'ferias_proporcionais' => $feriasProp,
             'terco_ferias' => $tercoFerias,
-            'horas_extras' => $e['horas_extras'],
+            'horas_extras' => $he50 + $he60,
+            'horas_extras_50' => $he50,
+            'horas_extras_60' => $he60,
+            'reflexo_dsr' => $reflexoDsr,
+            'gratificacao' => $e['gratificacao'],
+            'comissoes' => $e['comissoes'],
             'adicionais' => $e['adicionais'],
             'descontos_informados' => $e['descontos'],
-            'faltas' => $e['faltas'],
+            'faltas' => $faltasValor,
+            'dsr_faltas' => $dsrFaltas,
+            'faltas_dias' => $e['faltas_dias'],
             'adiantamentos' => $e['adiantamentos'],
+            'adiantamento_13' => $e['adiantamento_13'],
             'vale_transporte' => $e['vale_transporte'],
             'vale_alimentacao' => $e['vale_alimentacao'],
             'inss_estimado' => $inss,
+            'inss_13_estimado' => $inss13,
             'irrf_estimado' => $irrf,
+            'irrf_13_estimado' => $irrf13,
             'fgts_estimado' => $fgtsEst,
             'multa_fgts_percentual' => $multaPct,
             'multa_fgts_valor' => $multaFgts,
@@ -168,8 +249,100 @@ final class RhRescisaoCalculo
             'total_liquido' => $totalLiquido,
             'custo_empresa' => $custoEmpresa,
             'necessita_aviso_previo' => self::necessitaAvisoPrevio($tipo),
+            'meses_13_avos' => $meses13,
+            'meses_ferias_avos' => $mesesFerias,
             'entrada' => $e,
         ];
+
+        $resultado['rubricas_trct'] = self::montarRubricasTrct($resultado);
+        $resultado['descontos_trct'] = self::montarDescontosTrct($resultado);
+
+        return $resultado;
+    }
+
+    public static function montarRubricasTrct(array $calc): array
+    {
+        $e = $calc['entrada'] ?? [];
+        $dias = (int) ($e['dias_trabalhados_mes'] ?? 0);
+        $faltasD = (int) ($e['faltas_dias'] ?? 0);
+        $m13 = (int) ($calc['meses_13_avos'] ?? 0);
+        $mFer = (int) ($calc['meses_ferias_avos'] ?? 0);
+
+        $rub = [];
+        $add = function (string $cod, string $desc, float $val) use (&$rub) {
+            if (abs($val) >= 0.005) {
+                $rub[] = ['codigo' => $cod, 'descricao' => $desc, 'valor' => round($val, 2)];
+            }
+        };
+
+        $add('50', "Saldo de {$dias} /dias Salário (líquido de {$faltasD} /faltas e DSR)", (float) ($calc['saldo_salario'] ?? 0));
+        $add('51', 'Comissões', (float) ($calc['comissoes'] ?? 0));
+        $add('52', 'Gratificação', (float) ($calc['gratificacao'] ?? 0));
+        $add('56.1', 'Horas Extras 50%', (float) ($calc['horas_extras_50'] ?? 0));
+        $add('56.2', 'Horas Extras a 60%', (float) ($calc['horas_extras_60'] ?? 0));
+        $add('59', 'Reflexo do DSR sobre salário variável', (float) ($calc['reflexo_dsr'] ?? 0));
+        $add('63', "13º Salário proporcional {$m13}/12 avos", (float) ($calc['decimo_terceiro_proporcional'] ?? 0));
+        $add('65', "Férias proporc. {$mFer}/12 avos", (float) ($calc['ferias_proporcionais'] ?? 0));
+        $add('66.1', 'Férias venc. período aquisitivo', (float) ($calc['ferias_vencidas'] ?? 0));
+        $add('68', 'Terço constituc. de férias', (float) ($calc['terco_ferias'] ?? 0));
+        $add('69', 'Aviso prévio indenizado de '.(int) ($calc['dias_aviso_previo'] ?? 0).' dias', (float) ($calc['aviso_previo_indenizado'] ?? 0));
+        $add('70', '13º Salário (aviso prévio indenizado)', (float) ($calc['decimo_aviso_previo'] ?? 0));
+        $add('71', 'Férias (aviso prévio indenizado)', (float) ($calc['ferias_aviso_previo'] ?? 0));
+        $add('95', 'Outras verbas / adicionais', (float) ($calc['adicionais'] ?? 0));
+
+        return $rub;
+    }
+
+    public static function montarDescontosTrct(array $calc): array
+    {
+        $desc = [];
+        $add = function (string $cod, string $lbl, float $val) use (&$desc) {
+            if (abs($val) >= 0.005) {
+                $desc[] = ['codigo' => $cod, 'descricao' => $lbl, 'valor' => round($val, 2)];
+            }
+        };
+
+        $add('101', 'Adiantamento salarial', (float) ($calc['adiantamentos'] ?? 0));
+        $add('102', 'Adiantamento de 13º salário', (float) ($calc['adiantamento_13'] ?? 0));
+        $add('103', 'Aviso prévio indenizado (desconto)', (float) ($calc['aviso_previo_desconto'] ?? 0));
+        $add('112.1', 'Previdência social', (float) ($calc['inss_estimado'] ?? 0));
+        $add('112.2', 'Prev. social — 13º salário', (float) ($calc['inss_13_estimado'] ?? 0));
+        $add('114.1', 'IRRF', (float) ($calc['irrf_estimado'] ?? 0));
+        $add('114.2', 'IRRF sobre 13º salário', (float) ($calc['irrf_13_estimado'] ?? 0));
+        $add('115.1', 'Faltas não justificadas', (float) ($calc['faltas'] ?? 0));
+        $add('115.2', 'D.S.R. s/ faltas', (float) ($calc['dsr_faltas'] ?? 0));
+        $add('99', 'Outros descontos informados', (float) ($calc['descontos_informados'] ?? 0)
+            + (float) ($calc['vale_transporte'] ?? 0) + (float) ($calc['vale_alimentacao'] ?? 0));
+
+        return $desc;
+    }
+
+    public static function codigoAfastamento(string $tipo): string
+    {
+        return self::CODIGOS_AFASTAMENTO[$tipo] ?? 'SJ2';
+    }
+
+    public static function labelCausaAfastamento(string $tipo): string
+    {
+        return match ($tipo) {
+            'dispensa_sem_justa_causa' => 'Despedida sem justa causa, pelo empregador',
+            'dispensa_justa_causa' => 'Despedida por justa causa, pelo empregador',
+            'pedido_demissao' => 'Pedido de demissão, pelo empregado',
+            'termino_experiencia' => 'Término de contrato de experiência',
+            'rescisao_antecipada_empregador' => 'Rescisão antecipada pelo empregador',
+            'rescisao_antecipada_empregado' => 'Rescisão antecipada pelo empregado',
+            'acordo' => 'Rescisão por acordo entre as partes',
+            default => self::TIPOS_RESCISAO[$tipo] ?? $tipo,
+        };
+    }
+
+    public static function labelTipoContratoTrct(string $tipo): string
+    {
+        return match ($tipo) {
+            'experiencia' => '2 - Contrato de trabalho por prazo determinado (experiência)',
+            'temporario' => '3 - Contrato de trabalho temporário',
+            default => '1 - Contrato de trabalho por prazo indeterminado',
+        };
     }
 
     public static function compararCenarios(array $entradaBase): array

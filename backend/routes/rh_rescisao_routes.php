@@ -6,6 +6,7 @@
  */
 
 use App\Support\Rh\RhRescisaoCalculo;
+use App\Support\Rh\RhRescisaoTrctPdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -473,33 +474,46 @@ Route::get('/rh/rescisoes/{id}/pdf', function (Request $request, $id) use ($rrAu
     if (! $r) {
         return response()->json(['error' => 'Não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
     }
-    $m = $rrMapRescisao($r);
-    $h = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
-    $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-    body{font-family:DejaVu Sans,sans-serif;font-size:10pt}h1{color:#0d47a1;font-size:14pt}
-    table{width:100%;border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ddd;padding:6px}
-    .aviso{background:#fff3e0;padding:8px;border-radius:6px;font-size:9pt}
-    </style></head><body>
-    <h1>Rescisão Trabalhista — '.$h($m['funcionario_nome'] ?? 'Funcionário').'</h1>
-    <p class="aviso">'.RhRescisaoCalculo::AVISO.'</p>
-    <table><tr><th>Campo</th><th>Valor</th></tr>
-    <tr><td>Unidade</td><td>'.$h($m['unidade_nome']).'</td></tr>
-    <tr><td>Cargo</td><td>'.$h($m['cargo']).'</td></tr>
-    <tr><td>Tipo rescisão</td><td>'.$h($m['tipo_rescisao_label']).'</td></tr>
-    <tr><td>Total bruto</td><td>R$ '.number_format($m['total_bruto'], 2, ',', '.').'</td></tr>
-    <tr><td>Total descontos</td><td>R$ '.number_format($m['total_descontos'], 2, ',', '.').'</td></tr>
-    <tr><td>Total líquido</td><td><strong>R$ '.number_format($m['total_liquido'], 2, ',', '.').'</strong></td></tr>
-    <tr><td>Custo empresa</td><td>R$ '.number_format($m['custo_empresa'], 2, ',', '.').'</td></tr>
-    </table></body></html>';
 
-    $dompdf = new \Dompdf\Dompdf();
-    $dompdf->loadHtml($html);
-    $dompdf->setPaper('A4', 'portrait');
-    $dompdf->render();
-    $pdf = $dompdf->output();
+    $calc = $r->detalhes_calculo ? json_decode($r->detalhes_calculo, true) : null;
+    if (! is_array($calc) || empty($calc['rubricas_trct'])) {
+        $entrada = json_decode(json_encode($r), true) ?: [];
+        $calc = RhRescisaoCalculo::calcular($entrada);
+    }
 
-    return response($pdf, 200)
-        ->header('Content-Type', 'application/pdf')
-        ->header('Content-Disposition', 'inline; filename="rescisao-'.$id.'.pdf"')
-        ->header('Access-Control-Allow-Origin', '*');
+    $funcionario = $r->funcionario_id
+        ? DB::table('funcionarios')->where('id', (int) $r->funcionario_id)->first()
+        : null;
+    $unidade = $r->unidade_id
+        ? DB::table('unidades')->where('id', (int) $r->unidade_id)->first()
+        : null;
+
+    $via = in_array($request->query('via'), ['completo', 'funcionario', 'quitacao'], true)
+        ? $request->query('via') : 'completo';
+
+    $html = RhRescisaoTrctPdf::render($r, $calc, $funcionario, $unidade, $via);
+
+    try {
+        $dompdf = new \Dompdf\Dompdf();
+        $options = $dompdf->getOptions();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $dompdf->setOptions($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $pdf = $dompdf->output();
+        $nome = preg_replace('/[^a-zA-Z0-9_-]+/', '_', (string) ($r->funcionario_nome ?? 'rescisao'));
+        $fn = 'TRCT-'.$nome.'-'.$id.'.pdf';
+
+        return response($pdf, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="'.$fn.'"')
+            ->header('Access-Control-Allow-Origin', '*');
+    } catch (\Throwable $e) {
+        \Log::error('rh_rescisao pdf: '.$e->getMessage());
+
+        return response()->json(['error' => 'Erro ao gerar PDF TRCT'], 500)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
 });

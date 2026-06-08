@@ -6,6 +6,7 @@
     catalogos: null,
     ultimoCalculo: null,
     ultimoComparativo: null,
+    ultimaRescisaoId: null,
     charts: {},
     calcTimer: null,
   };
@@ -96,13 +97,16 @@
 
   function rrLerFormulario(prefix) {
     const g = (id) => document.getElementById(prefix + id);
+    const sal = rrLerMoeda(g("Salario"));
     return {
       unidade_id: g("Unidade")?.value || null,
       funcionario_id: g("Funcionario")?.value || null,
       cargo: g("Cargo")?.value || "",
-      salario_base: rrLerMoeda(g("Salario")),
+      salario_base: sal,
       data_admissao: g("Admissao")?.value || "",
       data_demissao: g("Demissao")?.value || "",
+      data_aviso_previo: g("DataAviso")?.value || g("Demissao")?.value || "",
+      remuneracao_mes_anterior: rrLerMoeda(g("RemunMesAnt")) || sal,
       tipo_contrato: g("TipoContrato")?.value || "prazo_indeterminado",
       tipo_rescisao: g("TipoRescisao")?.value || "dispensa_sem_justa_causa",
       aviso_previo_tipo: g("AvisoPrevio")?.value || "indenizado",
@@ -111,43 +115,83 @@
       ferias_proporcionais: rrLerMoeda(g("FeriasProp")),
       decimo_terceiro_proporcional: rrLerMoeda(g("Decimo")),
       horas_extras: rrLerMoeda(g("HorasExtras")),
+      horas_extras_50: rrLerMoeda(g("He50")),
+      horas_extras_60: rrLerMoeda(g("He60")) || rrLerMoeda(g("HorasExtras")),
+      gratificacao: rrLerMoeda(g("Gratificacao")),
+      comissoes: rrLerMoeda(g("Comissoes")),
+      reflexo_dsr: rrLerMoeda(g("ReflexoDsr")),
       adicionais: rrLerMoeda(g("Adicionais")),
       descontos: rrLerMoeda(g("Descontos")),
       faltas: rrLerMoeda(g("Faltas")),
+      faltas_dias: parseInt(g("FaltasDias")?.value || "0", 10) || 0,
+      dsr_faltas: rrLerMoeda(g("DsrFaltas")),
       adiantamentos: rrLerMoeda(g("Adiantamentos")),
+      adiantamento_13: rrLerMoeda(g("Adiant13")),
       vale_transporte: rrLerMoeda(g("ValeTransp")),
       vale_alimentacao: rrLerMoeda(g("ValeAlim")),
       fgts_mensal: rrLerMoeda(g("FgtsMensal")),
       multa_fgts_percentual: parseInt(g("MultaFgts")?.value || "0", 10) || 0,
+      funcionario_pis: g("Pis")?.value || "",
+      funcionario_ctps: g("Ctps")?.value || "",
+      funcionario_nome_mae: g("NomeMae")?.value || "",
+      empresa_cnpj: g("EmpresaCnpj")?.value || "",
+      empresa_razao: g("EmpresaRazao")?.value || "",
       observacoes: g("Obs")?.value || "",
     };
+  }
+
+  function rrTabelaTrct(itens, titulo) {
+    if (!itens?.length) return "";
+    const rows = [];
+    for (let i = 0; i < itens.length; i += 3) {
+      rows.push(`<tr>${[0, 1, 2].map((j) => {
+        const r = itens[i + j];
+        return r ? `<td><span class="rr-rub-cod">${rrEsc(r.codigo)}</span> ${rrEsc(r.descricao)}<br/><strong>${rrMoeda(r.valor)}</strong></td>` : "<td></td>";
+      }).join("")}</tr>`);
+    }
+    return `<div class="rr-trct-tabela"><h5>${rrEsc(titulo)}</h5><table><tbody>${rows.join("")}</tbody></table></div>`;
   }
 
   function rrRenderResultado(containerId, calc) {
     const el = document.getElementById(containerId);
     if (!el || !calc) return;
-    const linhas = [
-      ["Saldo de salário", calc.saldo_salario],
-      ["Aviso prévio indenizado", calc.aviso_previo_indenizado],
-      ["Desconto aviso prévio", calc.aviso_previo_desconto],
-      ["13º proporcional", calc.decimo_terceiro_proporcional],
-      ["Férias vencidas", calc.ferias_vencidas],
-      ["Férias proporcionais", calc.ferias_proporcionais],
-      ["1/3 de férias", calc.terco_ferias],
-      ["Horas extras", calc.horas_extras],
-      ["Adicionais", calc.adicionais],
-      ["INSS estimado", calc.inss_estimado],
-      ["IRRF estimado", calc.irrf_estimado],
-      ["FGTS estimado", calc.fgts_estimado],
-      ["Multa FGTS", calc.multa_fgts_valor],
-      ["Total bruto", calc.total_bruto],
-      ["Total descontos", calc.total_descontos],
-      ["Total líquido", calc.total_liquido],
-      ["Custo empresa", calc.custo_empresa],
-    ];
-    el.innerHTML = rrAvisoHtml() + `<div class="rr-resultado-box"><h4>Resultado estimado</h4>`
-      + linhas.map(([lbl, val]) => `<div class="rr-resultado-linha"><span>${rrEsc(lbl)}</span><strong>${rrMoeda(val)}</strong></div>`).join("")
-      + `</div>`;
+    const rub = calc.rubricas_trct || [];
+    const desc = calc.descontos_trct || [];
+    el.innerHTML = rrAvisoHtml()
+      + `<div class="rr-resultado-box"><h4>TRCT — Verbas rescisórias (estimativa)</h4>`
+      + rrTabelaTrct(rub, "VERBAS RESCISÓRIAS")
+      + `<div class="rr-resultado-linha rr-total"><span>Total bruto</span><strong>${rrMoeda(calc.total_bruto)}</strong></div>`
+      + `</div>`
+      + `<div class="rr-resultado-box"><h4>Deduções</h4>`
+      + rrTabelaTrct(desc, "DEDUÇÕES")
+      + `<div class="rr-resultado-linha rr-total"><span>Total descontos</span><strong>${rrMoeda(calc.total_descontos)}</strong></div>`
+      + `</div>`
+      + `<div class="rr-resultado-box rr-liquido-final"><div class="rr-resultado-linha"><span>Valor líquido estimado</span><strong>${rrMoeda(calc.total_liquido)}</strong></div>`
+      + `<div class="rr-resultado-linha subtle-text"><span>Custo empresa (estim.)</span><strong>${rrMoeda(calc.custo_empresa)}</strong></div></div>`;
+    rrState.ultimoCalculo = calc;
+    const prefix = containerId === "rrCalResultado" ? "rrCal" : "rrSim";
+    document.getElementById(prefix + "BtnPdfTrct")?.removeAttribute("disabled");
+    document.getElementById(prefix + "BtnPdfVia")?.removeAttribute("disabled");
+  }
+
+  async function rrPreencherDadosTrct(prefix, funcionarioId, unidadeId) {
+    const set = (id, val) => { const el = document.getElementById(prefix + id); if (el && val != null && val !== "") el.value = val; };
+    if (funcionarioId) {
+      const f = await rrFetch(`/funcionarios/${funcionarioId}`).catch(() => null);
+      if (f) {
+        set("Cargo", f.cargo);
+        set("Admissao", f.data_admissao || "");
+        set("Ctps", f.ctps || "");
+        if (f.data_nascimento) set("Nascimento", f.data_nascimento);
+      }
+    }
+    if (unidadeId) {
+      const u = await rrFetch(`/unidades/${unidadeId}`).catch(() => null);
+      if (u) {
+        set("EmpresaCnpj", u.cnpj || "");
+        set("EmpresaRazao", u.nome || "");
+      }
+    }
   }
 
   function rrFormPrefixAtivo() {
@@ -177,17 +221,18 @@
     rrRenderResultado(rrResultadoId(prefix), calc);
   }
 
-  async function rrAbrirPdfRescisao(id) {
+  async function rrAbrirPdfRescisao(id, via) {
     if (!id || !currentUser) {
       rrToast("Sessão inválida. Faça login novamente.", "error");
       return;
     }
+    const qs = via ? `?via=${encodeURIComponent(via)}` : "";
     const headers = {
       ...(typeof getDeviceHeaders === "function" ? getDeviceHeaders() : {}),
       ...(currentUser.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
       ...(currentUser.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
     };
-    const res = await fetch(`${API_URL}/rh/rescisoes/${id}/pdf`, { method: "GET", headers, cache: "no-store" });
+    const res = await fetch(`${API_URL}/rh/rescisoes/${id}/pdf${qs}`, { method: "GET", headers, cache: "no-store" });
     if (!res.ok) {
       let msg = `Erro ${res.status}`;
       try {
@@ -400,7 +445,7 @@
     const tb = document.getElementById("rrHistTable");
     if (!tb) return;
     if (!lista.length) {
-      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum registro.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#607d8b">Nenhum registro.</td></tr>';
       return;
     }
     tb.innerHTML = lista.map((r) => `<tr>
@@ -412,7 +457,8 @@
       <td>${rrMoeda(r.custo_empresa)}</td>
       <td>${rrEsc(r.status)}</td>
       <td class="table-actions">
-        <button type="button" class="table-action rr-btn-pdf" data-id="${r.id}">PDF</button>
+        <button type="button" class="table-action rr-btn-pdf" data-id="${r.id}" data-via="completo">TRCT</button>
+        <button type="button" class="table-action rr-btn-pdf-via" data-id="${r.id}" data-via="funcionario">Via func.</button>
         ${r.status === "simulacao" ? `<button type="button" class="table-action rr-btn-confirm" data-id="${r.id}">Confirmar</button>` : ""}
       </td>
     </tr>`).join("");
@@ -428,8 +474,22 @@
     const body = rrLerFormulario(p);
     body.status = status || "simulacao";
     const salvo = await rrFetch("/rh/rescisoes", { method: "POST", body: JSON.stringify({ ...body, status: body.status, salvar_cenarios: true }) });
+    rrState.ultimaRescisaoId = salvo?.id;
     rrToast(status === "confirmada" ? "Rescisão confirmada." : "Simulação salva.", "success");
     return salvo;
+  }
+
+  async function rrGerarPdfTrct(prefix, via) {
+    let id = rrState.ultimaRescisaoId;
+    if (!id) {
+      const salvo = await rrSalvarSimulacao("simulacao", prefix);
+      id = salvo?.id;
+    }
+    if (!id) {
+      rrToast("Salve a simulação antes de gerar o PDF.", "error");
+      return;
+    }
+    await rrAbrirPdfRescisao(id, via || "completo");
   }
 
   let rrBound = false;
@@ -437,24 +497,33 @@
     if (rrBound) return;
     rrBound = true;
 
-    function rrBindFuncionarioChange(unidadeId, funcId, cargoId, admId) {
+    function rrBindFuncionarioChange(prefix) {
+      const unidadeId = prefix + "Unidade";
+      const funcId = prefix + "Funcionario";
       document.getElementById(unidadeId)?.addEventListener("change", async (e) => {
         await rrPreencherFuncionarios(funcId, e.target.value);
+        await rrPreencherDadosTrct(prefix, null, e.target.value);
         rrAgendarCalculo();
       });
-      document.getElementById(funcId)?.addEventListener("change", (e) => {
+      document.getElementById(funcId)?.addEventListener("change", async (e) => {
         const opt = e.target.selectedOptions?.[0];
+        const uni = document.getElementById(unidadeId)?.value;
         if (opt) {
-          const cargo = document.getElementById(cargoId);
-          const adm = document.getElementById(admId);
+          const cargo = document.getElementById(prefix + "Cargo");
+          const adm = document.getElementById(prefix + "Admissao");
           if (cargo && opt.dataset.cargo) cargo.value = opt.dataset.cargo;
           if (adm && opt.dataset.adm) adm.value = opt.dataset.adm;
         }
+        await rrPreencherDadosTrct(prefix, e.target.value, uni);
         rrAgendarCalculo();
       });
+      document.getElementById(prefix + "Demissao")?.addEventListener("change", (e) => {
+        const av = document.getElementById(prefix + "DataAviso");
+        if (av && !av.value) av.value = e.target.value;
+      });
     }
-    rrBindFuncionarioChange("rrSimUnidade", "rrSimFuncionario", "rrSimCargo", "rrSimAdmissao");
-    rrBindFuncionarioChange("rrCalUnidade", "rrCalFuncionario", "rrCalCargo", "rrCalAdmissao");
+    rrBindFuncionarioChange("rrSim");
+    rrBindFuncionarioChange("rrCal");
 
     document.getElementById("rrHistUnidade")?.addEventListener("change", async (e) => {
       await rrPreencherFuncionarios("rrHistFuncionario", e.target.value || null);
@@ -473,14 +542,18 @@
     document.getElementById("rrSimBtnConfirmar")?.addEventListener("click", () => rrSalvarSimulacao("confirmada", "rrSim").catch((e) => rrToast(e.message, "error")));
     document.getElementById("rrCalBtnSalvar")?.addEventListener("click", () => rrSalvarSimulacao("simulacao", "rrCal").catch((e) => rrToast(e.message, "error")));
     document.getElementById("rrCalBtnConfirmar")?.addEventListener("click", () => rrSalvarSimulacao("confirmada", "rrCal").catch((e) => rrToast(e.message, "error")));
+    document.getElementById("rrSimBtnPdfTrct")?.addEventListener("click", () => rrGerarPdfTrct("rrSim", "completo").catch((e) => rrToast(e.message, "error")));
+    document.getElementById("rrSimBtnPdfVia")?.addEventListener("click", () => rrGerarPdfTrct("rrSim", "funcionario").catch((e) => rrToast(e.message, "error")));
+    document.getElementById("rrCalBtnPdfTrct")?.addEventListener("click", () => rrGerarPdfTrct("rrCal", "completo").catch((e) => rrToast(e.message, "error")));
+    document.getElementById("rrCalBtnPdfVia")?.addEventListener("click", () => rrGerarPdfTrct("rrCal", "funcionario").catch((e) => rrToast(e.message, "error")));
 
     document.getElementById("rrCompBtnComparar")?.addEventListener("click", () => rrExecutarComparativo().catch((e) => rrToast(e.message, "error")));
     document.getElementById("rrHistFiltrar")?.addEventListener("click", () => loadRhRescisaoHistorico().catch((e) => rrToast(e.message, "error")));
 
     document.getElementById("rhRescisaoHistoricoSection")?.addEventListener("click", async (e) => {
-      const pdf = e.target.closest(".rr-btn-pdf");
+      const pdf = e.target.closest(".rr-btn-pdf, .rr-btn-pdf-via");
       const conf = e.target.closest(".rr-btn-confirm");
-      if (pdf) rrAbrirPdfRescisao(pdf.dataset.id).catch((e) => rrToast(e.message, "error"));
+      if (pdf) rrAbrirPdfRescisao(pdf.dataset.id, pdf.dataset.via || "completo").catch((e) => rrToast(e.message, "error"));
       if (conf) {
         await rrFetch(`/rh/rescisoes/${conf.dataset.id}/confirmar`, { method: "POST", body: "{}" });
         rrToast("Confirmada.", "success");

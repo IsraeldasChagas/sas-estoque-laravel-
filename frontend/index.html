@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
     <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento-collapse" />
-    <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-rh-rescisao-cards" />
+    <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -2141,11 +2141,29 @@
                 <label>Vale alimentação<input type="text" id="rrSimValeAlim" data-rr-moeda /></label>
                 <label>FGTS mensal<input type="text" id="rrSimFgtsMensal" data-rr-moeda /></label>
                 <label>Multa FGTS %<select id="rrSimMultaFgts"><option value="0">Sem multa / automático</option><option value="20">20%</option><option value="40">40%</option></select></label>
+                <label class="rr-span-2 rr-secao-titulo">Dados TRCT (PDF)</label>
+                <label>Data aviso prévio<input type="date" id="rrSimDataAviso" /></label>
+                <label>Remuneração mês anterior<input type="text" id="rrSimRemunMesAnt" data-rr-moeda /></label>
+                <label>Faltas (dias)<input type="number" id="rrSimFaltasDias" min="0" max="31" value="0" /></label>
+                <label>DSR s/ faltas<input type="text" id="rrSimDsrFaltas" data-rr-moeda /></label>
+                <label>Horas extras 50%<input type="text" id="rrSimHe50" data-rr-moeda /></label>
+                <label>Horas extras 60%<input type="text" id="rrSimHe60" data-rr-moeda /></label>
+                <label>Gratificação<input type="text" id="rrSimGratificacao" data-rr-moeda /></label>
+                <label>Comissões<input type="text" id="rrSimComissoes" data-rr-moeda /></label>
+                <label>Reflexo DSR<input type="text" id="rrSimReflexoDsr" data-rr-moeda /></label>
+                <label>Adiantamento 13º<input type="text" id="rrSimAdiant13" data-rr-moeda /></label>
+                <label>PIS/PASEP<input type="text" id="rrSimPis" placeholder="000.00000.00-0" /></label>
+                <label>CTPS<input type="text" id="rrSimCtps" placeholder="nº-série/UF" /></label>
+                <label>Nome da mãe<input type="text" id="rrSimNomeMae" /></label>
+                <label>CNPJ empresa<input type="text" id="rrSimEmpresaCnpj" placeholder="00.000.000/0000-00" /></label>
+                <label>Razão social<input type="text" id="rrSimEmpresaRazao" /></label>
                 <label class="rr-span-2">Observações<textarea id="rrSimObs" rows="2"></textarea></label>
               </form>
               <div class="filters-actions" style="padding:0 1rem 1rem;">
                 <button type="button" class="btn" id="rrSimBtnSalvar">Salvar simulação</button>
                 <button type="button" class="btn primary" id="rrSimBtnConfirmar">Confirmar rescisão</button>
+                <button type="button" class="btn" id="rrSimBtnPdfTrct" disabled>PDF TRCT</button>
+                <button type="button" class="btn" id="rrSimBtnPdfVia" disabled>PDF via funcionário</button>
               </div>
             </div>
             <div id="rrSimResultado" style="margin-top:1rem;"></div>
@@ -2177,11 +2195,29 @@
                 <label>Vale alimentação<input type="text" id="rrCalValeAlim" data-rr-moeda /></label>
                 <label>FGTS mensal<input type="text" id="rrCalFgtsMensal" data-rr-moeda /></label>
                 <label>Multa FGTS %<select id="rrCalMultaFgts"><option value="0">Sem multa / automático</option><option value="20">20%</option><option value="40">40%</option></select></label>
+                <label class="rr-span-2 rr-secao-titulo">Dados TRCT (PDF)</label>
+                <label>Data aviso prévio<input type="date" id="rrCalDataAviso" /></label>
+                <label>Remuneração mês anterior<input type="text" id="rrCalRemunMesAnt" data-rr-moeda /></label>
+                <label>Faltas (dias)<input type="number" id="rrCalFaltasDias" min="0" max="31" value="0" /></label>
+                <label>DSR s/ faltas<input type="text" id="rrCalDsrFaltas" data-rr-moeda /></label>
+                <label>Horas extras 50%<input type="text" id="rrCalHe50" data-rr-moeda /></label>
+                <label>Horas extras 60%<input type="text" id="rrCalHe60" data-rr-moeda /></label>
+                <label>Gratificação<input type="text" id="rrCalGratificacao" data-rr-moeda /></label>
+                <label>Comissões<input type="text" id="rrCalComissoes" data-rr-moeda /></label>
+                <label>Reflexo DSR<input type="text" id="rrCalReflexoDsr" data-rr-moeda /></label>
+                <label>Adiantamento 13º<input type="text" id="rrCalAdiant13" data-rr-moeda /></label>
+                <label>PIS/PASEP<input type="text" id="rrCalPis" /></label>
+                <label>CTPS<input type="text" id="rrCalCtps" /></label>
+                <label>Nome da mãe<input type="text" id="rrCalNomeMae" /></label>
+                <label>CNPJ empresa<input type="text" id="rrCalEmpresaCnpj" /></label>
+                <label>Razão social<input type="text" id="rrCalEmpresaRazao" /></label>
                 <label class="rr-span-2">Observações<textarea id="rrCalObs" rows="2"></textarea></label>
               </form>
               <div class="filters-actions" style="padding:0 1rem 1rem;">
                 <button type="button" class="btn" id="rrCalBtnSalvar">Salvar simulação</button>
                 <button type="button" class="btn primary" id="rrCalBtnConfirmar">Confirmar rescisão</button>
+                <button type="button" class="btn" id="rrCalBtnPdfTrct" disabled>PDF TRCT</button>
+                <button type="button" class="btn" id="rrCalBtnPdfVia" disabled>PDF via funcionário</button>
               </div>
             </div>
             <div id="rrCalResultado" style="margin-top:1rem;"></div>
@@ -2224,7 +2260,7 @@
           </section>
 
           <section id="rhRescisaoRelatoriosSection" class="view-section hidden">
-            <div class="kanban-page-header"><div><h2>Relatórios de Rescisão</h2><p class="subtle-text">Exporte PDF individual pelo histórico. Valores são estimativas.</p></div></div>
+            <div class="kanban-page-header"><div><h2>Relatórios de Rescisão</h2><p class="subtle-text">PDF no formato TRCT (3 páginas) ou via do funcionário — pelo histórico ou após salvar simulação.</p></div></div>
             <div id="rrRelResumo"></div>
             <form class="filters-panel" onsubmit="return false;">
               <label>Unidade<select id="rrRelUnidade"><option value="">Todas</option></select></label>
@@ -6206,8 +6242,8 @@
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
-    <script src="rh-rescisao.js?v=20260608-rh-rescisao-nested"></script>
-    <script src="app.js?v=20260608-rh-rescisao-nested"></script>
+    <script src="rh-rescisao.js?v=20260608-trct"></script>
+    <script src="app.js?v=20260608-trct"></script>
      
   </body>
 </html>
