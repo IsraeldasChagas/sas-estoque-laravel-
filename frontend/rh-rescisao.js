@@ -42,8 +42,10 @@
     if (!el || val == null || val === "") return;
     const n = Math.max(0, Math.round(Number(val) * 100) / 100);
     el.dataset.value = String(n);
+    el.dataset.rrManual = "1";
     el.value = rrMoeda(n);
   };
+  const rrCampoManual = (el) => !!(el && (el.dataset?.rrManual === "1" || (el.dataset?.value != null && el.dataset.value !== "")));
   const rrRound = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
   const RR_LABELS_VERBAS = {
@@ -126,6 +128,7 @@
         const digits = (inp.value || "").replace(/\D/g, "");
         const n = digits ? parseInt(digits, 10) / 100 : 0;
         inp.dataset.value = String(n);
+        inp.dataset.rrManual = "1";
         inp.value = rrMoeda(n);
         rrAgendarCalculo();
       });
@@ -205,7 +208,14 @@
     let avosFer = parseInt(g("AvosFerias")?.value ?? "", 10);
     if (!Number.isFinite(avos13) && dem) avos13 = rrSugerirAvos13(dem);
     if (!Number.isFinite(avosFer) && adm && dem) avosFer = rrSugerirAvosFerias(adm, dem);
+    const inssSalEl = g("InssSalario");
+    const inss13El = g("Inss13");
     const irrfEl = g("Irrf");
+    const irrf13El = g("Irrf13");
+    const decimoEl = g("Decimo");
+    const feriasPropEl = g("FeriasProp");
+    const decimoAvisoEl = g("DecimoAviso");
+    const feriasAvisoEl = g("FeriasAviso");
     const body = {
       unidade_id: g("Unidade")?.value || null,
       funcionario_id: g("Funcionario")?.value || null,
@@ -253,6 +263,14 @@
       empresa_cnpj: g("EmpresaCnpj")?.value || "",
       empresa_razao: g("EmpresaRazao")?.value || "",
       observacoes: g("Obs")?.value || "",
+      _manual_decimo: rrCampoManual(decimoEl),
+      _manual_ferias_prop: rrCampoManual(feriasPropEl),
+      _manual_decimo_aviso: rrCampoManual(decimoAvisoEl),
+      _manual_ferias_aviso: rrCampoManual(feriasAvisoEl),
+      _manual_inss_salario: rrCampoManual(inssSalEl),
+      _manual_inss_13: rrCampoManual(inss13El),
+      _manual_irrf: rrCampoManual(irrfEl),
+      _manual_irrf_13: rrCampoManual(irrf13El),
     };
     if (irrfEl) body.irrf = rrLerMoeda(irrfEl);
     return body;
@@ -305,14 +323,14 @@
     if (verbasAuto.ferias_vencidas > 0) verbasAuto.terco_constitucional += rrRound(verbasAuto.ferias_vencidas / 3);
 
     const verbasManual = {};
-    if (e.decimo_terceiro_proporcional > 0) verbasManual.decimo_terceiro_proporcional = e.decimo_terceiro_proporcional;
-    if (e.ferias_proporcionais > 0) {
+    if (e._manual_decimo) verbasManual.decimo_terceiro_proporcional = e.decimo_terceiro_proporcional;
+    if (e._manual_ferias_prop) {
       verbasManual.ferias_proporcionais = e.ferias_proporcionais;
       verbasManual.terco_constitucional = rrRound(e.ferias_proporcionais / 3)
         + (verbasAuto.ferias_vencidas > 0 ? rrRound(verbasAuto.ferias_vencidas / 3) : 0);
     }
-    if (e.decimo_aviso_previo > 0) verbasManual.decimo_terceiro_aviso_previo = e.decimo_aviso_previo;
-    if (e.ferias_aviso_previo > 0) verbasManual.ferias_aviso_previo = e.ferias_aviso_previo;
+    if (e._manual_decimo_aviso) verbasManual.decimo_terceiro_aviso_previo = e.decimo_aviso_previo;
+    if (e._manual_ferias_aviso) verbasManual.ferias_aviso_previo = e.ferias_aviso_previo;
 
     const verbasFinais = { ...verbasAuto, ...verbasManual };
     const horasExtras = verbasFinais.horas_extras_50 + verbasFinais.horas_extras_60;
@@ -342,10 +360,10 @@
     };
 
     const descontosManual = {};
-    if (e.inss_salario > 0) descontosManual.inss_salario = e.inss_salario;
-    if (e.inss_13 > 0) descontosManual.inss_13 = e.inss_13;
-    if (Object.prototype.hasOwnProperty.call(e, "irrf")) descontosManual.irrf = e.irrf;
-    if (e.irrf_13 > 0) descontosManual.irrf_13 = e.irrf_13;
+    if (e._manual_inss_salario) descontosManual.inss_salario = e.inss_salario;
+    if (e._manual_inss_13) descontosManual.inss_13 = e.inss_13;
+    if (e._manual_irrf) descontosManual.irrf = e.irrf ?? 0;
+    if (e._manual_irrf_13) descontosManual.irrf_13 = e.irrf_13;
 
     const descontosFinais = { ...descontosAuto, ...descontosManual };
     const totalDescontos = rrRound(Object.values(descontosFinais).reduce((s, v) => s + (Number(v) || 0), 0));
@@ -456,10 +474,9 @@
       ? `<div class="rr-alerta-salario">${calc.alertas.map((a) => rrEsc(a)).join("<br/>")}</div>` : "";
     el.innerHTML = rrAvisoHtml() + alertasHtml
       + `<div class="rr-previa-grid">`
-      + rrRenderBlocoValores("Verbas automáticas", calc.verbas_automaticas, RR_LABELS_VERBAS, "rr-bloco-auto")
+      + rrRenderBlocoValores("Verbas automáticas (referência)", calc.verbas_automaticas, RR_LABELS_VERBAS, "rr-bloco-auto")
       + rrRenderBlocoValores("Verbas manuais (override)", calc.verbas_manuais, RR_LABELS_VERBAS, "rr-bloco-manual")
-      + rrRenderBlocoValores("Descontos automáticos", calc.descontos_automaticos, RR_LABELS_DESC, "rr-bloco-auto")
-      + rrRenderBlocoValores("Descontos manuais (override)", calc.descontos_manuais, RR_LABELS_DESC, "rr-bloco-manual")
+      + rrRenderBlocoValores("Deduções aplicadas (finais)", calc.descontos_finais, RR_LABELS_DESC, "rr-bloco-final")
       + `</div>`
       + `<div class="rr-resultado-box"><h4>TRCT — Verbas rescisórias</h4>`
       + rrTabelaTrct(rub, "VERBAS RESCISÓRIAS")
@@ -478,14 +495,71 @@
     document.getElementById(prefix + "BtnPdfVia")?.removeAttribute("disabled");
   }
 
+  function rrCorpoExemploAline() {
+    return {
+      salario_base: 1706.5,
+      salario_cadastro: 1706.5,
+      data_admissao: "2026-01-09",
+      data_demissao: "2026-05-25",
+      data_aviso_previo: "2026-05-25",
+      tipo_contrato: "prazo_indeterminado",
+      tipo_rescisao: "dispensa_sem_justa_causa",
+      aviso_previo_tipo: "indenizado",
+      dias_trabalhados_mes: 25,
+      avos_13: 5,
+      avos_ferias: 5,
+      horas_extras_50: 0,
+      horas_extras_60: 147.38,
+      reflexo_dsr: 36.85,
+      ferias_vencidas: 0,
+      gratificacao: 0,
+      comissoes: 0,
+      outras_verbas: 0,
+      decimo_terceiro_proporcional: 797.6,
+      ferias_proporcionais: 797.6,
+      decimo_aviso_previo: 159.51,
+      ferias_aviso_previo: 159.51,
+      adiantamentos: 177.96,
+      aviso_previo_descontado: 0,
+      faltas: 110.92,
+      dsr_faltas: 110.92,
+      inss_salario: 103.83,
+      inss_13: 61.11,
+      irrf: 0,
+      irrf_13: 0,
+      outros_descontos: 0,
+      vale_transporte: 0,
+      vale_alimentacao: 0,
+      adiantamento_13: 0,
+      _manual_decimo: true,
+      _manual_ferias_prop: true,
+      _manual_decimo_aviso: true,
+      _manual_ferias_aviso: true,
+      _manual_inss_salario: true,
+      _manual_inss_13: true,
+      _manual_irrf: true,
+      _manual_irrf_13: false,
+    };
+  }
+
   /** Exemplo TRCT — ALINE FREIRE DA SILVA (caso de validação). */
   function rrPreencherExemploAline(prefix) {
     const set = (id, val) => {
       const el = document.getElementById(prefix + id);
       if (el && val != null && val !== "") el.value = val;
     };
+    const zeroMoeda = (id) => {
+      const el = document.getElementById(prefix + id);
+      if (!el) return;
+      el.dataset.value = "0";
+      el.dataset.rrManual = "";
+      el.value = "";
+    };
     const hid = document.getElementById(prefix + "SalarioCadastro");
     if (hid) hid.value = "1706.50";
+
+    ["He50", "FeriasVenc", "Gratificacao", "Comissoes", "OutrasVerbas", "AvisoDescontado",
+      "Irrf13", "OutrosDescontos", "Adiant13", "ValeTransp", "ValeAlim", "FgtsMensal"].forEach(zeroMoeda);
 
     set("Cargo", "Atendente");
     set("Admissao", "2026-01-09");
@@ -514,8 +588,10 @@
     rrSetMoeda(prefix + "Inss13", 61.11);
     rrSetMoeda(prefix + "Irrf", 0);
 
-    rrExecutarCalculoLive();
-    rrToast("Formulário preenchido com o exemplo ALINE FREIRE — confira a prévia abaixo.", "success");
+    const calc = rrCalcularLocal(rrCorpoExemploAline());
+    rrState.ultimoCalculo = calc;
+    rrRenderResultado(rrResultadoId(prefix), calc);
+    rrToast("Exemplo ALINE FREIRE — Total deduções R$ 564,74 · Líquido R$ 4.928,16", "success");
   }
 
   function rrSugerirAvosCampos(prefix) {
@@ -579,6 +655,7 @@
     const calc = rrCalcularLocal(body);
     rrState.ultimoCalculo = calc;
     rrRenderResultado(rrResultadoId(prefix), calc);
+    return calc;
   }
 
   async function rrAbrirPdfRescisao(id, via) {
@@ -829,6 +906,21 @@
     document.getElementById("rrRelResumo").innerHTML = rrAvisoHtml();
   }
 
+  function rrBodyParaApi(body) {
+    const b = { ...body };
+    ["_manual_decimo", "_manual_ferias_prop", "_manual_decimo_aviso", "_manual_ferias_aviso",
+      "_manual_inss_salario", "_manual_inss_13", "_manual_irrf", "_manual_irrf_13"].forEach((k) => delete b[k]);
+    if (!body._manual_inss_salario) delete b.inss_salario;
+    if (!body._manual_inss_13) delete b.inss_13;
+    if (!body._manual_irrf) delete b.irrf;
+    if (!body._manual_irrf_13) delete b.irrf_13;
+    if (!body._manual_decimo) delete b.decimo_terceiro_proporcional;
+    if (!body._manual_ferias_prop) delete b.ferias_proporcionais;
+    if (!body._manual_decimo_aviso) delete b.decimo_aviso_previo;
+    if (!body._manual_ferias_aviso) delete b.ferias_aviso_previo;
+    return b;
+  }
+
   async function rrSalvarSimulacao(status, prefix) {
     const p = prefix || rrFormPrefixAtivo() || "rrSim";
     const body = rrLerFormulario(p);
@@ -838,7 +930,10 @@
       throw new Error((local.erros || []).join(" ") || "Preencha os campos obrigatórios.");
     }
     body.status = status || "simulacao";
-    const salvo = await rrFetch("/rh/rescisoes", { method: "POST", body: JSON.stringify({ ...body, status: body.status, salvar_cenarios: true }) });
+    const payload = rrBodyParaApi(body);
+    payload.status = body.status;
+    payload.salvar_cenarios = true;
+    const salvo = await rrFetch("/rh/rescisoes", { method: "POST", body: JSON.stringify(payload) });
     rrState.ultimaRescisaoId = salvo?.id;
     rrState.ultimoCalculo = local;
     rrToast(status === "confirmada" ? "Rescisão confirmada." : "Simulação salva.", "success");

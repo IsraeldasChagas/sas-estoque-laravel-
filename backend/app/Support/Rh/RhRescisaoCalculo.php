@@ -298,18 +298,20 @@ final class RhRescisaoCalculo
             'outros_descontos' => round($e['outros_descontos'] + $e['vale_transporte'] + $e['vale_alimentacao'] + $e['adiantamento_13'], 2),
         ];
 
-        // —— Descontos manuais ——
+        // —— Descontos manuais (informados no formulário / contador) ——
         $descontosManual = [];
-        if ($e['inss_salario_manual'] > 0) {
+        if ((array_key_exists('inss_salario', $entradaBruta) || array_key_exists('inss_estimado', $entradaBruta))
+            && $e['inss_salario_manual'] > 0) {
             $descontosManual['inss_salario'] = $e['inss_salario_manual'];
         }
-        if ($e['inss_13_manual'] > 0) {
+        if ((array_key_exists('inss_13', $entradaBruta) || array_key_exists('inss_13_estimado', $entradaBruta))
+            && $e['inss_13_manual'] > 0) {
             $descontosManual['inss_13'] = $e['inss_13_manual'];
         }
         if (array_key_exists('irrf', $entradaBruta) || array_key_exists('irrf_estimado', $entradaBruta)) {
             $descontosManual['irrf'] = $e['irrf_manual'];
         }
-        if ($e['irrf_13_manual'] > 0) {
+        if (array_key_exists('irrf_13', $entradaBruta) || array_key_exists('irrf_13_estimado', $entradaBruta)) {
             $descontosManual['irrf_13'] = $e['irrf_13_manual'];
         }
 

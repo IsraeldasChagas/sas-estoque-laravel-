@@ -43,6 +43,10 @@
   border-left: 3px solid #ff7043;
 }
 
+.rr-bloco-final {
+  border-left: 3px solid #2e7d32;
+}
+
 .rr-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
