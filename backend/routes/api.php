@@ -5813,7 +5813,7 @@ $sasBackupOrdemRestorePreferencial = static function (): array {
         'produtos', 'fornecedores', 'fornecedores_backup',
         'fichas_tecnicas',
         'rh_vagas', 'rh_candidatos', 'rh_curriculos', 'rh_entrevistas', 'rh_documentos', 'rh_historico',
-        'rh_auditoria', 'rh_folhas_ponto',
+        'rh_auditoria', 'rh_folhas_ponto', 'rh_rescisoes', 'rh_rescisao_cenarios',
         'kanban_tasks',
         'mesas', 'reservas_mesas',
         'lotes', 'stock_lotes', 'movimentacoes',
@@ -10941,6 +10941,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
 require __DIR__ . '/energia_routes.php';
 require __DIR__ . '/patrimonio_routes.php';
 require __DIR__ . '/investimento_routes.php';
+require __DIR__ . '/rh_rescisao_routes.php';
 
 // ============================================
 // DEPLOY - Atualiza o servidor via git pull

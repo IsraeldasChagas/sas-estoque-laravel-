@@ -1,0 +1,148 @@
+/* RH — Rescisão Trabalhista */
+.rr-aviso-legal {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: #5d4037;
+  margin-bottom: 1rem;
+}
+
+.rr-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rr-card {
+  background: var(--card-bg, #fff);
+  border-radius: var(--radius, 10px);
+  box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,.08));
+  padding: 1rem;
+}
+
+.rr-card span {
+  display: block;
+  font-size: 0.78rem;
+  color: #607d8b;
+}
+
+.rr-card strong {
+  font-size: 1.35rem;
+  color: #283593;
+}
+
+.rr-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.rr-resultado-box {
+  background: #e8eaf6;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.rr-resultado-box h4 {
+  margin: 0 0 0.5rem;
+  color: #3949ab;
+}
+
+.rr-resultado-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(57, 73, 171, 0.12);
+}
+
+.rr-resultado-linha:last-child {
+  border-bottom: none;
+  font-weight: 700;
+  font-size: 1rem;
+  padding-top: 0.5rem;
+}
+
+.rr-cenario-card {
+  border: 1px solid #c5cae9;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fff;
+}
+
+.rr-cenario-card--destaque {
+  border-color: #3949ab;
+  box-shadow: 0 0 0 2px rgba(57, 73, 171, 0.15);
+}
+
+.rr-cenario-card h4 {
+  margin: 0 0 0.5rem;
+  color: #1a237e;
+  font-size: 0.95rem;
+}
+
+.rr-cenario-metric {
+  font-size: 0.85rem;
+  color: #455a64;
+  margin: 0.2rem 0;
+}
+
+.rr-chart-wrap {
+  background: var(--card-bg, #fff);
+  border-radius: var(--radius, 10px);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  min-height: 220px;
+}
+
+.rr-chart-wrap h4 {
+  margin: 0 0 0.75rem;
+  color: #3949ab;
+}
+
+.rr-alertas {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.rr-alerta {
+  background: #fff3e0;
+  border-left: 4px solid #ff9800;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.88rem;
+}
+
+.rr-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.rr-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.88rem;
+}
+
+.rr-form-grid input,
+.rr-form-grid select,
+.rr-form-grid textarea {
+  width: 100%;
+}
+
+.rr-form-grid .rr-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 640px) {
+  .rr-form-grid .rr-span-2 {
+    grid-column: span 1;
+  }
+}

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
     <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento-collapse" />
+    <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-rh-rescisao" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -150,6 +151,21 @@
                   <a href="#" class="nav-link nav-link-child" data-section="rhDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
                   <a href="#" class="nav-link nav-link-child" data-section="rhVagas"><span class="nav-icon" aria-hidden="true">💼</span><span class="nav-label">Vagas</span></a>
                   <a href="#" class="nav-link nav-link-child" data-section="rhCandidatos"><span class="nav-icon" aria-hidden="true">🧑‍💼</span><span class="nav-label">Candidatos</span></a>
+                </div>
+              </div>
+
+              <div class="nav-submenu nav-submenu--nested">
+                <a href="#" class="nav-link nav-link-parent nav-link-child" id="rhRescisaoMenu">
+                  <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Rescisão Trabalhista</span></span>
+                  <span class="nav-arrow">▼</span>
+                </a>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="rhRescisaoDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhRescisaoSimulador"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Simulador de Demissão</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhRescisaoCalculo"><span class="nav-icon" aria-hidden="true">🔢</span><span class="nav-label">Cálculo de Rescisão</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhRescisaoComparativo"><span class="nav-icon" aria-hidden="true">⚖️</span><span class="nav-label">Comparativo de Cenários</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhRescisaoHistorico"><span class="nav-icon" aria-hidden="true">🕐</span><span class="nav-label">Histórico</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="rhRescisaoRelatorios"><span class="nav-icon" aria-hidden="true">📑</span><span class="nav-label">Relatórios</span></a>
                 </div>
               </div>
 
@@ -2090,6 +2106,129 @@
                 <button type="submit" class="btn primary" id="rhRelatorioGerarPdf">Gerar PDF</button>
                 <button type="button" class="btn" id="rhRelatorioLimparFiltros">Limpar filtros</button>
               </div>
+            </form>
+          </section>
+
+          <!-- RH — Rescisão Trabalhista -->
+          <section id="rhRescisaoDashboardSection" class="view-section hidden">
+            <div class="kanban-page-header"><div><h2>Rescisão Trabalhista — Dashboard</h2><p class="subtle-text">Indicadores, alertas e gráficos de rescisões por unidade.</p></div></div>
+            <div id="rrDashConteudo"></div>
+          </section>
+
+          <section id="rhRescisaoSimuladorSection" class="view-section hidden">
+            <div class="kanban-page-header"><div><h2>Simulador de Demissão</h2><p class="subtle-text">Preencha os dados — o cálculo atualiza em tempo real.</p></div></div>
+            <div class="table-card form-card--wide">
+              <form id="rrSimForm" class="rr-form-grid" style="padding:1rem;" onsubmit="return false;">
+                <label>Unidade<select id="rrSimUnidade" required></select></label>
+                <label>Funcionário<select id="rrSimFuncionario"></select></label>
+                <label>Cargo<input type="text" id="rrSimCargo" /></label>
+                <label>Salário base<input type="text" id="rrSimSalario" data-rr-moeda placeholder="R$ 0,00" /></label>
+                <label>Data admissão<input type="date" id="rrSimAdmissao" /></label>
+                <label>Data demissão<input type="date" id="rrSimDemissao" /></label>
+                <label>Tipo contrato<select id="rrSimTipoContrato"></select></label>
+                <label>Tipo rescisão<select id="rrSimTipoRescisao"></select></label>
+                <label>Aviso prévio<select id="rrSimAvisoPrevio"></select></label>
+                <label>Dias trabalhados no mês<input type="number" id="rrSimDiasMes" min="0" max="31" value="0" /></label>
+                <label>Férias vencidas<input type="text" id="rrSimFeriasVenc" data-rr-moeda /></label>
+                <label>Férias proporcionais<input type="text" id="rrSimFeriasProp" data-rr-moeda /></label>
+                <label>13º proporcional<input type="text" id="rrSimDecimo" data-rr-moeda /></label>
+                <label>Horas extras<input type="text" id="rrSimHorasExtras" data-rr-moeda /></label>
+                <label>Adicionais<input type="text" id="rrSimAdicionais" data-rr-moeda /></label>
+                <label>Descontos<input type="text" id="rrSimDescontos" data-rr-moeda /></label>
+                <label>Faltas<input type="text" id="rrSimFaltas" data-rr-moeda /></label>
+                <label>Adiantamentos<input type="text" id="rrSimAdiantamentos" data-rr-moeda /></label>
+                <label>Vale transporte<input type="text" id="rrSimValeTransp" data-rr-moeda /></label>
+                <label>Vale alimentação<input type="text" id="rrSimValeAlim" data-rr-moeda /></label>
+                <label>FGTS mensal<input type="text" id="rrSimFgtsMensal" data-rr-moeda /></label>
+                <label>Multa FGTS %<select id="rrSimMultaFgts"><option value="0">Sem multa / automático</option><option value="20">20%</option><option value="40">40%</option></select></label>
+                <label class="rr-span-2">Observações<textarea id="rrSimObs" rows="2"></textarea></label>
+              </form>
+              <div class="filters-actions" style="padding:0 1rem 1rem;">
+                <button type="button" class="btn" id="rrSimBtnSalvar">Salvar simulação</button>
+                <button type="button" class="btn primary" id="rrSimBtnConfirmar">Confirmar rescisão</button>
+              </div>
+            </div>
+            <div id="rrSimResultado" style="margin-top:1rem;"></div>
+          </section>
+
+          <section id="rhRescisaoCalculoSection" class="view-section hidden">
+            <div class="kanban-page-header"><div><h2>Cálculo de Rescisão</h2><p class="subtle-text">Formulário completo com resultado detalhado em tempo real.</p></div></div>
+            <div class="table-card form-card--wide">
+              <form id="rrCalForm" class="rr-form-grid" style="padding:1rem;" onsubmit="return false;">
+                <label>Unidade<select id="rrCalUnidade" required></select></label>
+                <label>Funcionário<select id="rrCalFuncionario"></select></label>
+                <label>Cargo<input type="text" id="rrCalCargo" /></label>
+                <label>Salário base<input type="text" id="rrCalSalario" data-rr-moeda placeholder="R$ 0,00" /></label>
+                <label>Data admissão<input type="date" id="rrCalAdmissao" /></label>
+                <label>Data demissão<input type="date" id="rrCalDemissao" /></label>
+                <label>Tipo contrato<select id="rrCalTipoContrato"></select></label>
+                <label>Tipo rescisão<select id="rrCalTipoRescisao"></select></label>
+                <label>Aviso prévio<select id="rrCalAvisoPrevio"></select></label>
+                <label>Dias trabalhados no mês<input type="number" id="rrCalDiasMes" min="0" max="31" value="0" /></label>
+                <label>Férias vencidas<input type="text" id="rrCalFeriasVenc" data-rr-moeda /></label>
+                <label>Férias proporcionais<input type="text" id="rrCalFeriasProp" data-rr-moeda /></label>
+                <label>13º proporcional<input type="text" id="rrCalDecimo" data-rr-moeda /></label>
+                <label>Horas extras<input type="text" id="rrCalHorasExtras" data-rr-moeda /></label>
+                <label>Adicionais<input type="text" id="rrCalAdicionais" data-rr-moeda /></label>
+                <label>Descontos<input type="text" id="rrCalDescontos" data-rr-moeda /></label>
+                <label>Faltas<input type="text" id="rrCalFaltas" data-rr-moeda /></label>
+                <label>Adiantamentos<input type="text" id="rrCalAdiantamentos" data-rr-moeda /></label>
+                <label>Vale transporte<input type="text" id="rrCalValeTransp" data-rr-moeda /></label>
+                <label>Vale alimentação<input type="text" id="rrCalValeAlim" data-rr-moeda /></label>
+                <label>FGTS mensal<input type="text" id="rrCalFgtsMensal" data-rr-moeda /></label>
+                <label>Multa FGTS %<select id="rrCalMultaFgts"><option value="0">Sem multa / automático</option><option value="20">20%</option><option value="40">40%</option></select></label>
+                <label class="rr-span-2">Observações<textarea id="rrCalObs" rows="2"></textarea></label>
+              </form>
+              <div class="filters-actions" style="padding:0 1rem 1rem;">
+                <button type="button" class="btn" id="rrCalBtnSalvar">Salvar simulação</button>
+                <button type="button" class="btn primary" id="rrCalBtnConfirmar">Confirmar rescisão</button>
+              </div>
+            </div>
+            <div id="rrCalResultado" style="margin-top:1rem;"></div>
+          </section>
+
+          <section id="rhRescisaoComparativoSection" class="view-section hidden">
+            <div class="kanban-page-header"><div><h2>Comparativo de Cenários</h2><p class="subtle-text">Compare pedido de demissão, dispensa, acordo, experiência e justa causa.</p></div></div>
+            <div class="table-card form-card--wide" style="padding:1rem;">
+              <div class="rr-form-grid">
+                <label>Unidade<select id="rrCompUnidade"></select></label>
+                <label>Funcionário<select id="rrCompFuncionario"></select></label>
+                <label>Salário base<input type="text" id="rrCompSalario" data-rr-moeda /></label>
+                <label>Admissão<input type="date" id="rrCompAdmissao" /></label>
+                <label>Demissão<input type="date" id="rrCompDemissao" /></label>
+                <label>Dias no mês<input type="number" id="rrCompDiasMes" min="0" max="31" /></label>
+                <label>Férias vencidas<input type="text" id="rrCompFeriasVenc" data-rr-moeda /></label>
+                <label>FGTS mensal<input type="text" id="rrCompFgtsMensal" data-rr-moeda /></label>
+              </div>
+              <button type="button" class="btn primary" id="rrCompBtnComparar" style="margin-top:0.75rem;">Comparar cenários</button>
+            </div>
+            <div id="rrCompResultado" style="margin-top:1rem;"></div>
+          </section>
+
+          <section id="rhRescisaoHistoricoSection" class="view-section hidden">
+            <div class="kanban-page-header"><div><h2>Histórico de Rescisões</h2></div></div>
+            <form class="filters-panel" onsubmit="return false;">
+              <div class="filters-grid">
+                <label>Unidade<select id="rrHistUnidade"><option value="">Todas</option></select></label>
+                <label>Funcionário<select id="rrHistFuncionario"><option value="">Todos</option></select></label>
+                <label>Tipo rescisão<select id="rrHistTipoRescisao"><option value="">Todos</option></select></label>
+                <label>Status<select id="rrHistStatus"><option value="">Todos</option><option value="simulacao">Simulação</option><option value="calculada">Calculada</option><option value="confirmada">Confirmada</option><option value="paga">Paga</option><option value="cancelada">Cancelada</option></select></label>
+                <label>De<input type="date" id="rrHistDataIni" /></label>
+                <label>Até<input type="date" id="rrHistDataFim" /></label>
+              </div>
+              <div class="filters-actions"><button type="button" class="btn primary" id="rrHistFiltrar">Filtrar</button></div>
+            </form>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>ID</th><th>Funcionário</th><th>Unidade</th><th>Tipo</th><th>Líquido</th><th>Custo</th><th>Status</th><th>Ações</th></tr></thead><tbody id="rrHistTable"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="rhRescisaoRelatoriosSection" class="view-section hidden">
+            <div class="kanban-page-header"><div><h2>Relatórios de Rescisão</h2><p class="subtle-text">Exporte PDF individual pelo histórico. Valores são estimativas.</p></div></div>
+            <div id="rrRelResumo"></div>
+            <form class="filters-panel" onsubmit="return false;">
+              <label>Unidade<select id="rrRelUnidade"><option value="">Todas</option></select></label>
+              <button type="button" class="btn primary" id="rrRelGerarPdf">Orientações de exportação</button>
             </form>
           </section>
 
@@ -4698,6 +4837,13 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhCandidatos" /> Recrutamento — Candidatos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhEntrevistas" /> Recrutamento — Entrevistas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhBancoTalentos" /> Recrutamento — Banco de talentos</label>
+            <div style="margin-top:0.35rem;margin-left:0.5rem;"><strong>Rescisão Trabalhista</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRescisaoDashboard" /> Rescisão — Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRescisaoSimulador" /> Rescisão — Simulador</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRescisaoCalculo" /> Rescisão — Cálculo</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRescisaoComparativo" /> Rescisão — Comparativo</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRescisaoHistorico" /> Rescisão — Histórico</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRescisaoRelatorios" /> Rescisão — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Manutenção — Energia</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="energiaDashboard" /> Energia — Dashboard</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="energiaEquipamentos" /> Energia — Controle de equipamentos</label>
@@ -6060,7 +6206,8 @@
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
-    <script src="app.js?v=20260525-patrimonio-brl"></script>
+    <script src="rh-rescisao.js?v=20260608-rh-rescisao"></script>
+    <script src="app.js?v=20260608-rh-rescisao"></script>
      
   </body>
 </html>

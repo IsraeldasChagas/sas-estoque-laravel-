@@ -31,12 +31,13 @@ class RhAcesso
         }
 
         $map = [
-            'rh.ver' => ['rhDashboard', 'rhVagas', 'rhCandidatos', 'rhEntrevistas', 'rhBancoTalentos', 'rhRelatorios', 'rhFolhaPonto', 'rhConfig'],
+            'rh.ver' => ['rhDashboard', 'rhVagas', 'rhCandidatos', 'rhEntrevistas', 'rhBancoTalentos', 'rhRelatorios', 'rhFolhaPonto', 'rhRescisaoDashboard', 'rhRescisaoSimulador', 'rhRescisaoCalculo', 'rhRescisaoComparativo', 'rhRescisaoHistorico', 'rhRescisaoRelatorios', 'rhConfig'],
             'rh.vagas' => ['rhVagas'],
             'rh.candidatos' => ['rhCandidatos', 'rhBancoTalentos'],
             'rh.documentos' => ['rhCandidatos'],
             'rh.config' => ['rhConfig'],
             'rh.folha_ponto' => ['rhFolhaPonto', 'funcionarios', 'rhRelatorios'],
+            'rh.rescisao' => ['rhRescisaoDashboard', 'rhRescisaoSimulador', 'rhRescisaoCalculo', 'rhRescisaoComparativo', 'rhRescisaoHistorico', 'rhRescisaoRelatorios', 'funcionarios'],
         ];
         $needAny = $map[$perm] ?? $map['rh.ver'];
 

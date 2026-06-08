@@ -1085,7 +1085,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
   "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
   "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash",
-  "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhDashboard", "rhVagas",
+  "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "rhDashboard", "rhVagas",
   "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs",
   "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios",
   "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes",
@@ -1441,7 +1441,7 @@ const PERFIL_LABELS = {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1449,7 +1449,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -1489,7 +1489,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -4258,6 +4258,12 @@ function applyPermissions() {
   if ((sections.includes("funcionarios") || sections.includes("rhRelatorios")) && !sections.includes("rhFolhaPonto")) {
     sections = [...sections, "rhFolhaPonto"];
   }
+  const rrSectionsAuto = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
+  if (sections.includes("funcionarios") || sections.includes("rhRelatorios") || sections.includes("rhFolhaPonto")) {
+    rrSectionsAuto.forEach((s) => {
+      if (!sections.includes(s)) sections = [...sections, s];
+    });
+  }
   const regras = { ...regrasBase, sections };
   updateUserHeader();
 
@@ -4285,8 +4291,13 @@ function applyPermissions() {
   const rhNavSubmenu = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenu) {
     const temAcessoRH =
-      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos");
+      regras.sections.includes("funcionarios") || regras.sections.includes("rhRelatorios") || regras.sections.includes("rhFolhaPonto") || regras.sections.includes("rhDashboard") || regras.sections.includes("rhVagas") || regras.sections.includes("rhCandidatos") || regras.sections.includes("rhEntrevistas") || regras.sections.includes("rhBancoTalentos") || regras.sections.includes("rhRescisaoDashboard") || regras.sections.includes("rhRescisaoSimulador") || regras.sections.includes("rhRescisaoCalculo") || regras.sections.includes("rhRescisaoComparativo") || regras.sections.includes("rhRescisaoHistorico") || regras.sections.includes("rhRescisaoRelatorios");
     rhNavSubmenu.classList.toggle("hidden", !temAcessoRH);
+  }
+  const rhRescisaoNavSubmenu = document.getElementById("rhRescisaoMenu")?.closest(".nav-submenu");
+  if (rhRescisaoNavSubmenu) {
+    const temAcessoRescisao = rrSectionsAuto.some((s) => regras.sections.includes(s));
+    rhRescisaoNavSubmenu.classList.toggle("hidden", !temAcessoRescisao);
   }
   const rhRecrutamentoNavSubmenu = document.getElementById("rhRecrutamentoMenu")?.closest(".nav-submenu");
   if (rhRecrutamentoNavSubmenu) {
@@ -4542,11 +4553,18 @@ function navigateTo(section) {
   }
   const rhNavSubmenuNav = document.getElementById("rhMenu")?.closest(".nav-submenu");
   if (rhNavSubmenuNav) {
-    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos") {
+    const rrSectionsNav = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
+    if (section === "funcionarios" || section === "rhRelatorios" || section === "rhFolhaPonto" || section === "rhDashboard" || section === "rhVagas" || section === "rhCandidatos" || section === "rhEntrevistas" || section === "rhBancoTalentos" || rrSectionsNav.includes(section)) {
       rhNavSubmenuNav.classList.add("open");
     } else {
       rhNavSubmenuNav.classList.remove("open");
     }
+  }
+  const rhRescisaoNavSubmenuNav = document.getElementById("rhRescisaoMenu")?.closest(".nav-submenu");
+  if (rhRescisaoNavSubmenuNav) {
+    const rrSectionsNav = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
+    if (rrSectionsNav.includes(section)) rhRescisaoNavSubmenuNav.classList.add("open");
+    else rhRescisaoNavSubmenuNav.classList.remove("open");
   }
   const rhRecrutamentoNavSubmenuNav = document.getElementById("rhRecrutamentoMenu")?.closest(".nav-submenu");
   if (rhRecrutamentoNavSubmenuNav) {
@@ -4602,6 +4620,12 @@ function navigateTo(section) {
   else if (section === "investimentoCarteira") loadInvestimentoCarteira?.().catch(() => {});
   else if (section === "investimentoResgates") loadInvestimentoResgates?.().catch(() => {});
   else if (section === "investimentoRelatorios") loadInvestimentoRelatorios?.().catch(() => {});
+  else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
+  else if (section === "rhRescisaoSimulador") loadRhRescisaoSimulador?.().catch(() => {});
+  else if (section === "rhRescisaoCalculo") loadRhRescisaoCalculo?.().catch(() => {});
+  else if (section === "rhRescisaoComparativo") loadRhRescisaoComparativo?.().catch(() => {});
+  else if (section === "rhRescisaoHistorico") loadRhRescisaoHistorico?.().catch(() => {});
+  else if (section === "rhRescisaoRelatorios") loadRhRescisaoRelatorios?.().catch(() => {});
   if (section === 'boasVindas') {
     const el = document.getElementById('boasVindasNome');
     if (el && currentUser && currentUser.nome) el.textContent = currentUser.nome;
@@ -14944,6 +14968,12 @@ function wireSidebarSectionNavClicks() {
       else if (target === "rhBancoTalentos") await loadRhBancoTalentos();
       else if (target === "rhRelatorios") await loadRhRelatorioSection();
       else if (target === "rhFolhaPonto") await loadRhFolhaPontoSection();
+      else if (target === "rhRescisaoDashboard") await loadRhRescisaoDashboard?.();
+      else if (target === "rhRescisaoSimulador") await loadRhRescisaoSimulador?.();
+      else if (target === "rhRescisaoCalculo") await loadRhRescisaoCalculo?.();
+      else if (target === "rhRescisaoComparativo") await loadRhRescisaoComparativo?.();
+      else if (target === "rhRescisaoHistorico") await loadRhRescisaoHistorico?.();
+      else if (target === "rhRescisaoRelatorios") await loadRhRescisaoRelatorios?.();
       else if (target === "reciboAjuda") {
         if (typeof window.loadReciboAjudaSection === "function") {
           await window.loadReciboAjudaSection();
@@ -24054,6 +24084,7 @@ async function init() {
   if (typeof setupEnergiaModule === "function") setupEnergiaModule();
   if (typeof setupPatrimonioModule === "function") setupPatrimonioModule();
   if (typeof setupInvestimentoModule === "function") setupInvestimentoModule();
+  if (typeof setupRhRescisaoModule === "function") setupRhRescisaoModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
