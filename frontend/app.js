@@ -2309,6 +2309,8 @@ function setupResponsiveSidebar() {
 
   if (!isMobileViewport() && isSidebarCollapsed()) {
     dom.sidebar?.classList.add("is-collapsed");
+  } else if (isMobileViewport()) {
+    dom.sidebar?.classList.remove("is-collapsed");
   }
   syncSidebarNavTitles();
   updateCollapseBtnLabel();
