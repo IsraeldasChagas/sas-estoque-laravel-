@@ -37,13 +37,16 @@ body.sidebar-open {
 /* Sidebar com menu principal */
 .sidebar {
   width: var(--sidebar-width);
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
+  align-self: flex-start;
   background: linear-gradient(180deg, #070403, #070403);
   color: #fff;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
+  overflow: visible;
 }
 
 .sidebar-logo {
@@ -55,9 +58,8 @@ body.sidebar-open {
 }
 
 .sidebar-nav-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  overflow: visible;
 }
 
 .sidebar-logo img {
@@ -154,25 +156,8 @@ body.sidebar-open {
   transition: max-height 0.3s ease;
 }
 
+/* Submenus abertos: expandem no fluxo do menu, sem scroll interno. */
 .nav-submenu.open > .nav-submenu-content {
-  max-height: 200px;
-}
-
-.nav-submenu.nav-submenu--config.open > .nav-submenu-content {
-  max-height: 320px;
-}
-
-/* Fechamento / Investimento: painel com scroll próprio quando necessário. */
-.nav-submenu.nav-submenu--fechamento.open > .nav-submenu-content,
-.nav-submenu.nav-submenu--investimento.open > .nav-submenu-content {
-  max-height: min(80vh, 520px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Financeiro e RH: sem scroll interno — itens expandem no fluxo da sidebar (um scroll só). */
-.nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
-.nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
   max-height: none;
   overflow: visible;
 }
@@ -301,8 +286,7 @@ body.sidebar-open {
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll {
-    overflow-x: visible;
-    overflow-y: auto;
+    overflow: visible;
     opacity: 1;
     pointer-events: auto;
     max-height: none;
@@ -354,9 +338,8 @@ body.sidebar-open {
     left: calc(100% + 10px);
     top: 0;
     min-width: 240px;
-    max-height: min(72vh, 420px) !important;
-    overflow-x: hidden;
-    overflow-y: auto;
+    max-height: none !important;
+    overflow: visible !important;
     background: linear-gradient(180deg, #1a1510, #070403);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
@@ -429,7 +412,7 @@ body.sidebar-open {
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll {
-    overflow-y: auto !important;
+    overflow: visible !important;
     opacity: 1 !important;
     pointer-events: auto !important;
     max-height: none !important;
@@ -3804,12 +3787,17 @@ body.image-lightbox-open {
     padding: 28px 22px;
     transform: translateX(-106%);
     box-shadow: 12px 0 28px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
     z-index: 2100;
   }
 
   .sidebar.is-open {
     transform: translateX(0);
+  }
+
+  .sidebar .sidebar-nav-scroll {
+    overflow: visible;
   }
 
   .sidebar nav a,
