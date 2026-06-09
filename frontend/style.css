@@ -162,8 +162,7 @@ body.sidebar-open {
   max-height: 320px;
 }
 
-/* Financeiro / Investimento: painel com scroll próprio quando necessário. */
-.nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
+/* Fechamento / Investimento: painel com scroll próprio quando necessário. */
 .nav-submenu.nav-submenu--fechamento.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--investimento.open > .nav-submenu-content {
   max-height: min(80vh, 520px);
@@ -171,7 +170,8 @@ body.sidebar-open {
   -webkit-overflow-scrolling: touch;
 }
 
-/* RH: sem scroll interno — Recrutamento/Rescisão expandem no mesmo fluxo (evita scroll dentro de scroll). */
+/* Financeiro e RH: sem scroll interno — itens expandem no fluxo da sidebar (um scroll só). */
+.nav-submenu.nav-submenu--financeiro.open > .nav-submenu-content,
 .nav-submenu.nav-submenu--rh.open > .nav-submenu-content {
   max-height: none;
   overflow: visible;
