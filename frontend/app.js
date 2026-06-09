@@ -134,6 +134,32 @@ const DESP_FIXAS_PDF_COL_DEF = {
   observacoes: { th: "Observações", dataLabel: "Observações" },
 };
 
+function despFixasParseUnidadeIds(raw) {
+  if (Array.isArray(raw)) {
+    return raw.map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
+  }
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0);
+      }
+    } catch (_) {}
+  }
+  return [];
+}
+
+function despFixasDespesaVinculadaUnidades(d, unidadeIds) {
+  const set = new Set(
+    (Array.isArray(unidadeIds) ? unidadeIds : [])
+      .map((x) => Number(x))
+      .filter((x) => Number.isFinite(x) && x > 0),
+  );
+  if (!set.size) return false;
+  const uids = despFixasParseUnidadeIds(d?.unidade_ids);
+  return uids.some((id) => set.has(id));
+}
+
 function despFixasFiltrarLista(lista, opts = {}) {
   const skipUnidadeFiltroLista = !!opts.skipUnidadeFiltroLista;
   const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
@@ -149,12 +175,8 @@ function despFixasFiltrarLista(lista, opts = {}) {
     }
     if (!skipUnidadeFiltroLista && filtros.unidadeId) {
       const uid = Number(filtros.unidadeId);
-      if (Number.isFinite(uid) && uid > 0) {
-        const aplicaTodas = !!d?.aplica_todas_unidades;
-        if (aplicaTodas) return true;
-        const uids = Array.isArray(d?.unidade_ids) ? d.unidade_ids : [];
-        const has = uids.map((x) => Number(x)).some((x) => Number.isFinite(x) && x === uid);
-        if (!has) return false;
+      if (Number.isFinite(uid) && uid > 0 && !despFixasDespesaVinculadaUnidades(d, [uid])) {
+        return false;
       }
     }
     return true;
@@ -166,12 +188,7 @@ function despFixasFiltrarListaPorUnidadesPdf(lista, unidadeIds) {
     .map((x) => Number(x))
     .filter((x) => Number.isFinite(x) && x > 0);
   if (!ids.length) return [];
-  const set = new Set(ids);
-  return lista.filter((d) => {
-    if (d?.aplica_todas_unidades) return true;
-    const uids = Array.isArray(d?.unidade_ids) ? d.unidade_ids : [];
-    return uids.map((x) => Number(x)).some((x) => Number.isFinite(x) && set.has(x));
-  });
+  return lista.filter((d) => despFixasDespesaVinculadaUnidades(d, ids));
 }
 
 function despFixasCellHtml(colKey, d) {
@@ -289,6 +306,14 @@ function despFixasMontarFiltrosPdfResumo(unidadeIds) {
   return partes.join(" · ");
 }
 
+async function despFixasFetchListaParaPdf() {
+  const params = new URLSearchParams();
+  if (despesasFixasFiltros?.categoriaId) params.set("categoria_id", String(despesasFixasFiltros.categoriaId));
+  const url = params.toString() ? `/despesas-fixas?${params}` : "/despesas-fixas";
+  const lista = await fetchJSON(url);
+  return Array.isArray(lista) ? lista : [];
+}
+
 async function despFixasGerarRelatorioPdf() {
   const colKeys = despFixasGetPdfColKeys();
   if (!colKeys.length) {
@@ -302,7 +327,8 @@ async function despFixasGerarRelatorioPdf() {
     return;
   }
 
-  const base = despFixasFiltrarLista(despesasFixasListaCache, { skipUnidadeFiltroLista: true });
+  const fonte = await despFixasFetchListaParaPdf();
+  const base = despFixasFiltrarLista(fonte, { skipUnidadeFiltroLista: true });
   const lista = despFixasFiltrarListaPorUnidadesPdf(base, pdfUnidadeIds);
   if (!lista.length) {
     showToast("Nenhuma despesa para gerar o relatório.", "warning");

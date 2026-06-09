@@ -9467,10 +9467,7 @@ Route::get('/despesas-fixas', function (Request $request) use ($proventosAuth, $
         $uF = trim((string) $request->query('unidade_id', ''));
         if ($uF !== '' && is_numeric($uF)) {
             $uid = (int) $uF;
-            $q->where(function ($sub) use ($uid) {
-                $sub->where('d.aplica_todas_unidades', 1)
-                    ->orWhereJsonContains('d.unidade_ids', $uid);
-            });
+            $q->whereJsonContains('d.unidade_ids', $uid);
         }
 
         $lista = $q->orderByDesc('d.id')->get();
