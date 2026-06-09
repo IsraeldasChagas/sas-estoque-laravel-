@@ -205,6 +205,16 @@ Route::post('/financeiro/fluxo-caixa', function (Request $request) use ($fgAuth,
     if (! Schema::hasTable('financeiro_lancamentos')) {
         return $fgJson(['error' => 'Módulo não configurado. Execute as migrations.'], 503);
     }
+    $input = $request->all();
+    foreach (['unidade_id', 'categoria_id', 'centro_custo_id'] as $campoId) {
+        if (array_key_exists($campoId, $input) && ($input[$campoId] === '' || $input[$campoId] === null)) {
+            $input[$campoId] = null;
+        }
+    }
+    if (array_key_exists('data_pagamento', $input) && $input['data_pagamento'] === '') {
+        $input['data_pagamento'] = null;
+    }
+    $request->merge($input);
     $v = Validator::make($request->all(), [
         'tipo' => 'required|in:entrada,saida',
         'valor' => 'required|numeric|min:0.01',
@@ -249,6 +259,16 @@ Route::put('/financeiro/fluxo-caixa/{id}', function (Request $request, $id) use 
     if (! $row) {
         return $fgJson(['error' => 'Não encontrado'], 404);
     }
+    $input = $request->all();
+    foreach (['unidade_id', 'categoria_id', 'centro_custo_id'] as $campoId) {
+        if (array_key_exists($campoId, $input) && ($input[$campoId] === '' || $input[$campoId] === null)) {
+            $input[$campoId] = null;
+        }
+    }
+    if (array_key_exists('data_pagamento', $input) && $input['data_pagamento'] === '') {
+        $input['data_pagamento'] = null;
+    }
+    $request->merge($input);
     $upd = array_filter([
         'unidade_id' => $request->input('unidade_id'),
         'categoria_id' => $request->input('categoria_id'),

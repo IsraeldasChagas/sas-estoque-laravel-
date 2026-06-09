@@ -105,17 +105,38 @@
   background: #fee2e2;
   color: #991b1b;
 }
-.btn.info {
+.fg-acoes .btn {
+  min-width: 72px;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.fg-acoes .btn.fg-btn-edit,
+#financeiroFluxoCaixaSection .fg-acoes .btn.fg-btn-edit {
   background: #1565c0;
   border-color: #1565c0;
   color: #fff;
 }
-.btn.info:hover {
+.fg-acoes .btn.fg-btn-edit:hover,
+#financeiroFluxoCaixaSection .fg-acoes .btn.fg-btn-edit:hover {
   background: #0d47a1;
   border-color: #0d47a1;
+  color: #fff;
 }
-.btn.btn-sm {
-  padding: 6px 12px;
+.fg-acoes .btn.fg-btn-del,
+#financeiroFluxoCaixaSection .fg-acoes .btn.fg-btn-del {
+  background: #e53935;
+  border-color: #e53935;
+  color: #fff;
+}
+.fg-acoes .btn.fg-btn-del:hover,
+#financeiroFluxoCaixaSection .fg-acoes .btn.fg-btn-del:hover {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+}
+.btn.btn-sm,
+.fg-acoes .btn.btn-sm {
+  padding: 6px 14px;
   font-size: 0.82rem;
   border-radius: 18px;
 }

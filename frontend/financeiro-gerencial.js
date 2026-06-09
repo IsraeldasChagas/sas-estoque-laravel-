@@ -144,6 +144,54 @@
     if (ateEl && !ateEl.value) ateEl.value = p.ate;
   }
 
+  function fgHojeIso() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function fgNullableId(val) {
+    const s = val != null ? String(val).trim() : "";
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function fgAjustarFiltroParaCompetencia(isoDate) {
+    const d = String(isoDate || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const [y, m] = d.split("-");
+    const deEl = document.getElementById("fgFluxoFiltroDe");
+    const ateEl = document.getElementById("fgFluxoFiltroAte");
+    if (!deEl || !ateEl) return;
+    deEl.value = `${y}-${m}-01`;
+    const ultimoDia = new Date(Number(y), Number(m), 0).getDate();
+    ateEl.value = `${y}-${m}-${String(ultimoDia).padStart(2, "0")}`;
+  }
+
+  function fgInitFormFluxoDatas() {
+    if (fgState.fluxoEditId) return;
+    const hoje = fgHojeIso();
+    const comp = document.getElementById("fgFluxoCompetencia");
+    const pgto = document.getElementById("fgFluxoPagamento");
+    if (comp && !comp.value) comp.value = hoje;
+    if (pgto && !pgto.value) pgto.value = hoje;
+  }
+
+  function fgLerValorFluxo() {
+    const el = document.getElementById("fgFluxoValor");
+    if (!el) return 0;
+    if (typeof parseCurrencyInput === "function") {
+      const v = parseCurrencyInput(el);
+      if (Number.isFinite(v) && v > 0) return v;
+    }
+    const bruto = (el.value || el.dataset.value || "").toString();
+    if (typeof parseCurrencyFromString === "function") {
+      const v = parseCurrencyFromString(bruto);
+      if (Number.isFinite(v) && v > 0) return v;
+    }
+    const n = Number(String(bruto).replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  }
+
   // ——— Dashboard Executivo ———
   async function loadFinanceiroDashboard() {
     fgInitFiltrosDatas("fgDash");
@@ -226,6 +274,7 @@
     }
     fgState.fluxoEditId = null;
     fgSetFluxoFormModo(false);
+    fgInitFormFluxoDatas();
   }
 
   function fgPreencherFormFluxo(l) {
@@ -287,6 +336,8 @@
 
   async function loadFinanceiroFluxoCaixa() {
     fgInitFiltrosDatas("fgFluxo");
+    fgInitFormFluxoDatas();
+    fgSetupMoeda();
     await Promise.all([fgCarregarUnidades(["fgFluxoFiltroUnidade", "fgFluxoUnidade"]), fgCarregarAuxFluxo()]);
     const { q } = fgQueryFiltros("fgFluxo");
     const data = await fgFetch(`/financeiro/fluxo-caixa${q}`);
@@ -325,8 +376,8 @@
             <td>${esc(fmtMoeda(l.valor))}</td>
             <td>${esc(l.status)}</td>
             <td class="fg-acoes">
-              <button type="button" class="btn btn-sm info" data-fg-fluxo-edit="${l.id}" title="Editar">Editar</button>
-              <button type="button" class="btn btn-sm danger" data-fg-fluxo-del="${l.id}" title="Excluir">Excluir</button>
+              <button type="button" class="btn btn-sm fg-btn-edit" data-fg-fluxo-edit="${l.id}" title="Editar">Editar</button>
+              <button type="button" class="btn btn-sm fg-btn-del" data-fg-fluxo-del="${l.id}" title="Excluir">Excluir</button>
             </td>
           </tr>`;
           }).join("")
@@ -338,40 +389,55 @@
     e?.preventDefault();
     const form = document.getElementById("fgFluxoForm");
     if (!form) return;
-    const valorRaw = document.getElementById("fgFluxoValor")?.value || "0";
-    const valor = typeof parseCurrencyInput === "function"
-      ? parseCurrencyInput(document.getElementById("fgFluxoValor"))
-      : Number(String(valorRaw).replace(/\./g, "").replace(",", "."));
+
+    const valor = fgLerValorFluxo();
     if (!Number.isFinite(valor) || valor <= 0) {
       fgToast("Informe um valor válido.", "error");
+      document.getElementById("fgFluxoValor")?.focus();
       return;
     }
+
+    const dataCompetencia = document.getElementById("fgFluxoCompetencia")?.value || "";
+    if (!dataCompetencia) {
+      fgToast("Informe a data de competência.", "error");
+      document.getElementById("fgFluxoCompetencia")?.focus();
+      return;
+    }
+
+    const dataPagamento = document.getElementById("fgFluxoPagamento")?.value || null;
     const payload = {
       tipo: document.getElementById("fgFluxoTipo")?.value || "saida",
       valor,
-      descricao: document.getElementById("fgFluxoDescricao")?.value,
-      unidade_id: document.getElementById("fgFluxoUnidade")?.value || null,
-      categoria_id: document.getElementById("fgFluxoCategoria")?.value || null,
-      centro_custo_id: document.getElementById("fgFluxoCentroCusto")?.value || null,
-      forma_pagamento: document.getElementById("fgFluxoFormaPgto")?.value,
-      data_competencia: document.getElementById("fgFluxoCompetencia")?.value,
-      data_pagamento: document.getElementById("fgFluxoPagamento")?.value || null,
+      descricao: document.getElementById("fgFluxoDescricao")?.value || null,
+      unidade_id: fgNullableId(document.getElementById("fgFluxoUnidade")?.value),
+      categoria_id: fgNullableId(document.getElementById("fgFluxoCategoria")?.value),
+      centro_custo_id: fgNullableId(document.getElementById("fgFluxoCentroCusto")?.value),
+      forma_pagamento: document.getElementById("fgFluxoFormaPgto")?.value || null,
+      data_competencia: dataCompetencia,
+      data_pagamento: dataPagamento || null,
       status: document.getElementById("fgFluxoStatus")?.value || "previsto",
-      observacao: document.getElementById("fgFluxoObs")?.value,
+      observacao: document.getElementById("fgFluxoObs")?.value || null,
     };
+
+    const submitBtn = document.getElementById("fgFluxoSubmitBtn");
+    if (submitBtn) submitBtn.disabled = true;
+
     try {
       const editId = fgState.fluxoEditId;
       if (editId) {
         await fgFetch(`/financeiro/fluxo-caixa/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
-        fgToast("Lançamento atualizado.", "success");
+        fgToast(`Lançamento atualizado (${fmtData(dataCompetencia)}).`, "success");
       } else {
         await fgFetch("/financeiro/fluxo-caixa", { method: "POST", body: JSON.stringify(payload) });
-        fgToast("Lançamento salvo.", "success");
+        fgToast(`Lançamento salvo (${fmtData(dataCompetencia)}).`, "success");
       }
+      fgAjustarFiltroParaCompetencia(dataCompetencia);
       fgLimparFormFluxo();
-      loadFinanceiroFluxoCaixa().catch(() => {});
+      await loadFinanceiroFluxoCaixa();
     } catch (err) {
       fgToast(err?.message || "Erro ao salvar.", "error");
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   }
 
