@@ -348,7 +348,8 @@ function despFixasRenderTable(lista) {
     const valor = Number.isFinite(valorNum) && valorNum > 0
       ? (typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valorNum) : formatCurrency(valorNum))
       : "—";
-    const dia = escapeHtml(String(d.dia_vencimento ?? "—"));
+    const diaNum = Number(d?.dia_vencimento ?? 0);
+    const dia = Number.isFinite(diaNum) && diaNum > 0 ? `Dia ${diaNum}` : "—";
     const status = escapeHtml(String(d.status ?? "—"));
     const unidadesLabel = escapeHtml(String(d.unidades_label ?? "—"));
 
@@ -358,7 +359,7 @@ function despFixasRenderTable(lista) {
         <td data-label="Nome">${nome}</td>
         <td data-label="Categoria">${cat}</td>
         <td data-label="Valor">${escapeHtml(valor)}</td>
-        <td data-label="Vencimento">Dia ${dia}</td>
+        <td data-label="Vencimento">${escapeHtml(dia)}</td>
         <td data-label="Status">${status}</td>
         <td data-label="Unidades">${unidadesLabel}</td>
         <td data-label="Ações" class="table-actions">
@@ -943,7 +944,8 @@ function renderDespFixasVerHtml(d) {
     : "—";
   const statusRaw = String(d?.status || "ativo").toLowerCase();
   const statusFmt = statusRaw === "pausado" ? "Pausado" : statusRaw === "ativo" ? "Ativo" : String(d?.status ?? "—");
-  const dia = d?.dia_vencimento != null ? `Dia ${d.dia_vencimento}` : "—";
+  const diaNum = Number(d?.dia_vencimento ?? 0);
+  const dia = Number.isFinite(diaNum) && diaNum > 0 ? `Dia ${diaNum}` : "—";
   const cat = d?.categoria_nome || d?.categoria?.nome || "—";
   return `<div class="view-fields-grid">
     ${field("ID", d?.id)}
@@ -992,7 +994,10 @@ async function despFixasOpenForId(id, mode) {
   if (els.id) els.id.value = d?.id != null ? String(d.id) : "";
   if (els.nome) els.nome.value = d?.nome ?? "";
   if (els.valor) despFixasSetValorInput(els.valor, d?.valor);
-  if (els.dia) els.dia.value = d?.dia_vencimento != null ? String(d.dia_vencimento) : "";
+  if (els.dia) {
+    const dVenc = Number(d?.dia_vencimento ?? 0);
+    els.dia.value = Number.isFinite(dVenc) && dVenc > 0 ? String(dVenc) : "";
+  }
   if (els.fornecedor) els.fornecedor.value = d?.fornecedor ?? "";
   if (els.status) els.status.value = (d?.status || "ativo").toString();
   if (els.obs) els.obs.value = d?.observacoes ?? "";
@@ -1122,7 +1127,7 @@ function despFixasBindOnce() {
     const valor = typeof parseCurrencyInput === "function"
       ? parseCurrencyInput(els.valor)
       : Number((els.valor?.value || "").replace(/\./g, "").replace(",", ".")) || 0;
-    const dia = Number(els.dia?.value || 0);
+    const diaStr = (els.dia?.value ?? "").toString().trim();
     const status = (els.status?.value || "ativo").toString();
     const fornecedor = (els.fornecedor?.value || "").trim() || null;
     const observacoes = (els.obs?.value || "").trim() || null;
@@ -1132,7 +1137,14 @@ function despFixasBindOnce() {
     let valorFinal = 0;
     if (Number.isFinite(valor) && valor > 0) valorFinal = valor;
     else if (Number.isFinite(valor) && valor < 0) return despFixasSetFeedback("Informe um valor válido ou deixe em branco.");
-    if (!Number.isFinite(dia) || dia < 1 || dia > 31) return despFixasSetFeedback("Informe um dia de vencimento entre 1 e 31.");
+    let diaFinal = 0;
+    if (diaStr !== "") {
+      const diaParsed = Number(diaStr);
+      if (!Number.isFinite(diaParsed) || diaParsed < 1 || diaParsed > 31) {
+        return despFixasSetFeedback("Informe um dia de vencimento entre 1 e 31 ou deixe em branco.");
+      }
+      diaFinal = diaParsed;
+    }
 
     const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
     const unidadeIds = Array.from(checks).map((c) => Number(c.value)).filter((n) => Number.isFinite(n) && n > 0);
@@ -1142,7 +1154,7 @@ function despFixasBindOnce() {
       nome,
       categoria_id: categoriaId,
       valor: valorFinal,
-      dia_vencimento: dia,
+      dia_vencimento: diaFinal,
       fornecedor,
       observacoes,
       status,

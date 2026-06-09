@@ -9547,7 +9547,15 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
                 return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
             }
         }
-        $dia = (int) ($body['dia_vencimento'] ?? 0);
+        $diaRaw = $body['dia_vencimento'] ?? null;
+        if ($diaRaw === null || $diaRaw === '') {
+            $dia = 0;
+        } else {
+            $dia = (int) $diaRaw;
+            if ($dia < 1 || $dia > 31) {
+                return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 31'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+        }
         $fornecedor = trim((string) ($body['fornecedor'] ?? ''));
         $obs = trim((string) ($body['observacoes'] ?? $body['obs'] ?? ''));
         $status = strtolower(trim((string) ($body['status'] ?? 'ativo')));
@@ -9561,9 +9569,6 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
         }
         if ($catId <= 0 || !DB::table('despesas_fixas_categorias')->where('id', $catId)->where('ativo', 1)->exists()) {
             return response()->json(['error' => 'Categoria inválida'], 422)->header('Access-Control-Allow-Origin', '*');
-        }
-        if ($dia < 1 || $dia > 28) {
-            return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 28'], 422)->header('Access-Control-Allow-Origin', '*');
         }
         if ($uids === []) {
             return response()->json(['error' => 'Selecione ao menos uma unidade'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -9627,7 +9632,9 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         $valor = array_key_exists('valor', $body)
             ? (($body['valor'] === null || $body['valor'] === '') ? 0 : (float) $body['valor'])
             : (float) $r->valor;
-        $dia = array_key_exists('dia_vencimento', $body) ? (int) $body['dia_vencimento'] : (int) $r->dia_vencimento;
+        $dia = array_key_exists('dia_vencimento', $body)
+            ? (($body['dia_vencimento'] === null || $body['dia_vencimento'] === '') ? 0 : (int) $body['dia_vencimento'])
+            : (int) $r->dia_vencimento;
         $fornecedor = array_key_exists('fornecedor', $body) ? trim((string) $body['fornecedor']) : (string) ($r->fornecedor ?? '');
         $obs = array_key_exists('observacoes', $body) ? trim((string) $body['observacoes']) : (string) ($r->observacoes ?? '');
         $status = array_key_exists('status', $body) ? strtolower(trim((string) $body['status'])) : strtolower((string) ($r->status ?? 'ativo'));
@@ -9645,8 +9652,8 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         if ($valor < 0) {
             return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if ($dia < 1 || $dia > 28) {
-            return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 28'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($dia !== 0 && ($dia < 1 || $dia > 31)) {
+            return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 31'], 422)->header('Access-Control-Allow-Origin', '*');
         }
         if ($uids === []) {
             return response()->json(['error' => 'Selecione ao menos uma unidade'], 422)->header('Access-Control-Allow-Origin', '*');
