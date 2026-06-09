@@ -476,15 +476,19 @@ Route::get('/financeiro/cmv', function (Request $request) use ($fgAuth, $fgPode,
 // GET/POST /financeiro/centros-custo
 Route::get('/financeiro/centros-custo', function (Request $request) use ($fgAuth, $fgPode, $fgJson) {
     $u = $fgAuth($request);
-    if (! $u || ! $fgPode($u, 'financeiroCentrosCusto')) {
+    if (! $u || ! ($fgPode($u, 'financeiroCentrosCusto') || $fgPode($u, 'financeiroFluxoCaixa'))) {
         return $fgJson(['error' => 'Não autorizado'], 401);
     }
     if (! Schema::hasTable('financeiro_centros_custo')) {
         return $fgJson([]);
     }
+    $centrosPadrao = ['Administrativo', 'Manutenção', 'Estoque', 'Outros'];
     $q = DB::table('financeiro_centros_custo');
     if ($request->query('ativos') !== '0') {
         $q->where('ativo', true);
+    }
+    if ($request->query('padrao') === '1') {
+        $q->whereIn('nome', $centrosPadrao);
     }
 
     return $fgJson($q->orderBy('nome')->get());

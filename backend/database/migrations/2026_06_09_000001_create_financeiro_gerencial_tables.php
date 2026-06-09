@@ -130,7 +130,7 @@ return new class extends Migration
             return;
         }
         $now = now();
-        foreach (['Cozinha', 'Caixa', 'Delivery', 'Administrativo', 'Manutenção', 'RH', 'Outros'] as $nome) {
+        foreach (['Administrativo', 'Manutenção', 'Estoque', 'Outros'] as $nome) {
             DB::table('financeiro_centros_custo')->insert([
                 'nome' => $nome,
                 'codigo' => strtoupper(substr(preg_replace('/[^a-z]/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nome) ?: $nome), 0, 6)),

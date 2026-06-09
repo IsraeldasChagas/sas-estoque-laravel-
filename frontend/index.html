@@ -3570,7 +3570,7 @@
             <div class="fg-cards" id="fgFluxoResumo"></div>
             <div class="table-card form-card--wide"><header><h3>Projeção</h3></header><div class="fg-projecoes" id="fgFluxoProjecoes"></div></div>
             <div class="table-card form-card--wide">
-              <header><h3>Novo lançamento</h3></header>
+              <header><h3 id="fgFluxoFormTitle">Novo lançamento</h3></header>
               <form id="fgFluxoForm" class="fg-form-grid">
                 <label>Tipo<select id="fgFluxoTipo" required><option value="entrada">Entrada</option><option value="saida">Saída</option></select></label>
                 <label>Valor<input type="text" id="fgFluxoValor" data-fg-moeda required placeholder="R$ 0,00" /></label>
@@ -3583,12 +3583,15 @@
                 <label>Forma pgto<input type="text" id="fgFluxoFormaPgto" placeholder="PIX, dinheiro…" /></label>
                 <label class="fg-form-grid--full">Descrição<input type="text" id="fgFluxoDescricao" /></label>
                 <label class="fg-form-grid--full">Observação<textarea id="fgFluxoObs" rows="2"></textarea></label>
-                <label><button type="submit" class="btn primary">Salvar lançamento</button></label>
+                <div class="fg-form-grid--full fg-form-actions">
+                  <button type="submit" class="btn primary" id="fgFluxoSubmitBtn">Salvar lançamento</button>
+                  <button type="button" class="btn neutral hidden" id="fgFluxoCancelBtn">Cancelar edição</button>
+                </div>
               </form>
             </div>
             <div class="table-card form-card--wide">
-              <header><h3>Lançamentos</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th>Unidade</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="fgFluxoTbody"></tbody></table></div>
+              <header><h3>Histórico de lançamentos</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th>Unidade</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="fgFluxoTbody"></tbody></table></div>
             </div>
           </section>
 
@@ -3659,8 +3662,8 @@
           </section>
 
           <section id="financeiroCentrosCustoSection" class="view-section hidden">
-            <div class="fg-section-head"><div><h2>🏷️ Centro de Custos</h2><p class="subtle-text">Cozinha, caixa, delivery, administrativo e demais áreas.</p></div></div>
-            <div class="table-card form-card--wide">
+            <div class="fg-section-head"><div><h2>🏷️ Centro de Custos</h2><p class="subtle-text">Administrativo, Manutenção, Estoque e Outros.</p></div></div>
+            <div class="table-card form-card--wide hidden" id="fgCcFormCard" aria-hidden="true">
               <form id="fgCcForm" class="fg-form-grid">
                 <label>Nome<input type="text" id="fgCcNome" required /></label>
                 <label>Código<input type="text" id="fgCcCodigo" /></label>

@@ -4,7 +4,8 @@
 (function () {
   "use strict";
 
-  const fgState = { unidades: [], categorias: [], centros: [], clientes: [] };
+  const FG_CENTROS_PADRAO = ["Administrativo", "Manutenção", "Estoque", "Outros"];
+  const fgState = { unidades: [], categorias: [], centros: [], clientes: [], fluxoLancamentos: [], fluxoEditId: null };
 
   function esc(s) {
     return (s ?? "").toString()
@@ -143,17 +144,91 @@
     }
   }
 
+  function fgFiltrarCentrosPadrao(lista) {
+    const porNome = new Map();
+    (lista || []).forEach((c) => {
+      if (FG_CENTROS_PADRAO.includes(c.nome) && c.ativo !== false && c.ativo !== 0) {
+        porNome.set(c.nome, c);
+      }
+    });
+    return FG_CENTROS_PADRAO.map((nome) => porNome.get(nome)).filter(Boolean);
+  }
+
+  function fgPopularCentroCustoSelect(sel, centros, valorAtual) {
+    if (!sel) return;
+    const cur = valorAtual != null ? String(valorAtual) : sel.value;
+    sel.innerHTML = '<option value="">—</option>';
+    centros.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.nome;
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  }
+
+  function fgSetFluxoFormModo(edicao) {
+    const titulo = document.getElementById("fgFluxoFormTitle");
+    const submitBtn = document.getElementById("fgFluxoSubmitBtn");
+    const cancelBtn = document.getElementById("fgFluxoCancelBtn");
+    if (titulo) titulo.textContent = edicao ? "Editar lançamento" : "Novo lançamento";
+    if (submitBtn) submitBtn.textContent = edicao ? "Salvar alterações" : "Salvar lançamento";
+    if (cancelBtn) cancelBtn.classList.toggle("hidden", !edicao);
+  }
+
+  function fgLimparFormFluxo() {
+    const form = document.getElementById("fgFluxoForm");
+    form?.reset();
+    const valorEl = document.getElementById("fgFluxoValor");
+    if (valorEl) {
+      valorEl.value = "";
+      valorEl.dataset.value = "0";
+    }
+    fgState.fluxoEditId = null;
+    fgSetFluxoFormModo(false);
+  }
+
+  function fgPreencherFormFluxo(l) {
+    if (!l) return;
+    fgState.fluxoEditId = l.id;
+    fgSetFluxoFormModo(true);
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val ?? "";
+    };
+    setVal("fgFluxoTipo", l.tipo || "saida");
+    setVal("fgFluxoCompetencia", l.data_competencia ? String(l.data_competencia).slice(0, 10) : "");
+    setVal("fgFluxoPagamento", l.data_pagamento ? String(l.data_pagamento).slice(0, 10) : "");
+    setVal("fgFluxoStatus", l.status || "previsto");
+    setVal("fgFluxoUnidade", l.unidade_id || "");
+    setVal("fgFluxoCategoria", l.categoria_id || "");
+    setVal("fgFluxoCentroCusto", l.centro_custo_id || "");
+    setVal("fgFluxoFormaPgto", l.forma_pagamento || "");
+    setVal("fgFluxoDescricao", l.descricao || "");
+    setVal("fgFluxoObs", l.observacao || "");
+    const valorEl = document.getElementById("fgFluxoValor");
+    if (valorEl) {
+      const valor = Number(l.valor) || 0;
+      valorEl.dataset.value = String(valor);
+      valorEl.value = valor > 0 && typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valor) : (valor > 0 ? String(valor) : "");
+    }
+    document.getElementById("fgFluxoForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   // ——— Fluxo de Caixa ———
-  async function fgCarregarAuxFluxo() {
+  async function fgCarregarAuxFluxo(valorCentroAtual) {
     try {
       const [cats, cc] = await Promise.all([
         fgFetch("/financeiro/categorias"),
-        fgFetch("/financeiro/centros-custo"),
+        fgFetch("/financeiro/centros-custo?padrao=1"),
       ]);
       fgState.categorias = Array.isArray(cats) ? cats : [];
-      fgState.centros = Array.isArray(cc) ? cc : [];
+      fgState.centros = fgFiltrarCentrosPadrao(Array.isArray(cc) ? cc : []);
       const catSel = document.getElementById("fgFluxoCategoria");
       const ccSel = document.getElementById("fgFluxoCentroCusto");
+      const curCat = fgState.fluxoEditId
+        ? document.getElementById("fgFluxoCategoria")?.value
+        : null;
       if (catSel) {
         catSel.innerHTML = '<option value="">—</option>';
         fgState.categorias.forEach((c) => {
@@ -162,16 +237,9 @@
           o.textContent = `${c.nome} (${c.tipo})`;
           catSel.appendChild(o);
         });
+        if (curCat) catSel.value = curCat;
       }
-      if (ccSel) {
-        ccSel.innerHTML = '<option value="">—</option>';
-        fgState.centros.forEach((c) => {
-          const o = document.createElement("option");
-          o.value = c.id;
-          o.textContent = c.nome;
-          ccSel.appendChild(o);
-        });
-      }
+      fgPopularCentroCustoSelect(ccSel, fgState.centros, valorCentroAtual);
     } catch (e) {
       fgToast(e?.message || "Falha ao carregar catálogos.", "error");
     }
@@ -203,17 +271,25 @@
     }
 
     const lista = data.lancamentos || [];
+    fgState.fluxoLancamentos = lista;
     if (tbody) {
       tbody.innerHTML = lista.length
-        ? lista.map((l) => `<tr>
+        ? lista.map((l) => {
+            const tipoCls = l.tipo === "entrada" ? "fg-pill--entrada" : "fg-pill--saida";
+            const tipoLabel = l.tipo === "entrada" ? "Entrada" : "Saída";
+            return `<tr>
             <td>${esc(fmtData(l.data_competencia))}</td>
-            <td><span class="status-pill">${esc(l.tipo)}</span></td>
+            <td><span class="status-pill ${tipoCls}">${esc(tipoLabel)}</span></td>
             <td>${esc(l.descricao || l.categoria_nome || "—")}</td>
             <td>${esc(l.unidade_nome || "—")}</td>
             <td>${esc(fmtMoeda(l.valor))}</td>
             <td>${esc(l.status)}</td>
-            <td><button type="button" class="btn btn-sm" data-fg-fluxo-del="${l.id}">Excluir</button></td>
-          </tr>`).join("")
+            <td class="fg-acoes">
+              <button type="button" class="btn btn-sm info" data-fg-fluxo-edit="${l.id}" title="Editar">Editar</button>
+              <button type="button" class="btn btn-sm danger" data-fg-fluxo-del="${l.id}" title="Excluir">Excluir</button>
+            </td>
+          </tr>`;
+          }).join("")
         : `<tr><td colspan="7" class="empty-row">Nenhum lançamento no período.</td></tr>`;
     }
   }
@@ -244,9 +320,15 @@
       observacao: document.getElementById("fgFluxoObs")?.value,
     };
     try {
-      await fgFetch("/financeiro/fluxo-caixa", { method: "POST", body: JSON.stringify(payload) });
-      fgToast("Lançamento salvo.", "success");
-      form.reset();
+      const editId = fgState.fluxoEditId;
+      if (editId) {
+        await fgFetch(`/financeiro/fluxo-caixa/${editId}`, { method: "PUT", body: JSON.stringify(payload) });
+        fgToast("Lançamento atualizado.", "success");
+      } else {
+        await fgFetch("/financeiro/fluxo-caixa", { method: "POST", body: JSON.stringify(payload) });
+        fgToast("Lançamento salvo.", "success");
+      }
+      fgLimparFormFluxo();
       loadFinanceiroFluxoCaixa().catch(() => {});
     } catch (err) {
       fgToast(err?.message || "Erro ao salvar.", "error");
@@ -394,12 +476,12 @@
 
   // ——— Centros de Custo ———
   async function loadFinanceiroCentrosCusto() {
-    const lista = await fgFetch("/financeiro/centros-custo?ativos=0");
+    const lista = await fgFetch("/financeiro/centros-custo?padrao=1");
     const tbody = document.getElementById("fgCcTbody");
-    const rows = Array.isArray(lista) ? lista : [];
+    const rows = fgFiltrarCentrosPadrao(Array.isArray(lista) ? lista : []);
     if (tbody) {
       tbody.innerHTML = rows.length
-        ? rows.map((c) => `<tr><td>${esc(c.codigo || "—")}</td><td>${esc(c.nome)}</td><td>${c.ativo ? "Ativo" : "Inativo"}</td></tr>`).join("")
+        ? rows.map((c) => `<tr><td>${esc(c.codigo || "—")}</td><td>${esc(c.nome)}</td><td>Ativo</td></tr>`).join("")
         : `<tr><td colspan="3" class="empty-row">Nenhum centro cadastrado.</td></tr>`;
     }
   }
@@ -523,6 +605,7 @@
     document.getElementById("fgDashAtualizar")?.addEventListener("click", () => loadFinanceiroDashboard().catch((e) => fgToast(e?.message, "error")));
     document.getElementById("fgFluxoAtualizar")?.addEventListener("click", () => loadFinanceiroFluxoCaixa().catch((e) => fgToast(e?.message, "error")));
     document.getElementById("fgFluxoForm")?.addEventListener("submit", fgSalvarFluxo);
+    document.getElementById("fgFluxoCancelBtn")?.addEventListener("click", () => fgLimparFormFluxo());
     document.getElementById("fgCrAtualizar")?.addEventListener("click", () => loadFinanceiroContasReceber().catch((e) => fgToast(e?.message, "error")));
     document.getElementById("fgCrForm")?.addEventListener("submit", fgSalvarContaReceber);
     document.getElementById("fgDreAtualizar")?.addEventListener("click", () => loadFinanceiroDre().catch((e) => fgToast(e?.message, "error")));
@@ -545,12 +628,25 @@
     });
 
     document.addEventListener("click", async (ev) => {
+      const edit = ev.target.closest("[data-fg-fluxo-edit]");
+      if (edit) {
+        const id = Number(edit.getAttribute("data-fg-fluxo-edit"));
+        const lanc = fgState.fluxoLancamentos.find((l) => Number(l.id) === id);
+        if (!lanc) {
+          fgToast("Lançamento não encontrado.", "error");
+          return;
+        }
+        await fgCarregarAuxFluxo(lanc.centro_custo_id);
+        fgPreencherFormFluxo(lanc);
+        return;
+      }
       const del = ev.target.closest("[data-fg-fluxo-del]");
       if (del) {
         const id = del.getAttribute("data-fg-fluxo-del");
         if (!id || !confirm("Excluir lançamento? (registro mantido em auditoria)")) return;
         try {
           await fgFetch(`/financeiro/fluxo-caixa/${id}`, { method: "DELETE" });
+          if (Number(fgState.fluxoEditId) === Number(id)) fgLimparFormFluxo();
           loadFinanceiroFluxoCaixa().catch(() => {});
         } catch (e) {
           fgToast(e?.message, "error");

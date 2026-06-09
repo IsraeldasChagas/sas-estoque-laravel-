@@ -84,6 +84,41 @@
   gap: 0.75rem;
 }
 .fg-form-grid--full { grid-column: 1 / -1; }
+.fg-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+.fg-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  white-space: nowrap;
+}
+.fg-pill--entrada {
+  background: #dcfce7;
+  color: #166534;
+}
+.fg-pill--saida {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.btn.info {
+  background: #1565c0;
+  border-color: #1565c0;
+  color: #fff;
+}
+.btn.info:hover {
+  background: #0d47a1;
+  border-color: #0d47a1;
+}
+.btn.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: 18px;
+}
 .fg-chart-bar {
   display: flex;
   align-items: flex-end;
