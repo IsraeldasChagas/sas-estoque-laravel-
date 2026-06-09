@@ -962,11 +962,9 @@ function renderDespFixasVerHtml(d) {
 function openDespFixasVerModal(d) {
   const body = document.getElementById("despFixasVerModalBody");
   const title = document.getElementById("despFixasVerModalTitulo");
-  const editBtn = document.getElementById("despFixasVerEditar");
   if (!body || !d) return;
   if (title) title.textContent = d.nome ? `Despesa — ${d.nome}` : "Despesa fixa";
   body.innerHTML = renderDespFixasVerHtml(d);
-  if (editBtn) editBtn.dataset.id = d.id != null ? String(d.id) : "";
   toggleModal(document.getElementById("despFixasVerModal"), true);
 }
 
@@ -1078,12 +1076,6 @@ function despFixasBindOnce() {
   document.getElementById("closeDespFixasVerBtn")?.addEventListener("click", () => closeDespFixasVerModal());
   document.getElementById("despFixasVerModal")?.addEventListener("click", (ev) => {
     if (ev.target && ev.target.id === "despFixasVerModal") closeDespFixasVerModal();
-  });
-  document.getElementById("despFixasVerEditar")?.addEventListener("click", () => {
-    const id = document.getElementById("despFixasVerEditar")?.dataset?.id;
-    if (!id) return;
-    closeDespFixasVerModal();
-    despFixasOpenForId(id, "edit").catch((err) => showToast(err?.message || "Falha ao abrir edição.", "error"));
   });
 
   // Delegação na seção (recolher filtros, ver/editar/excluir).

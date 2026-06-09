@@ -1248,6 +1248,12 @@ body.sidebar-open {
   font-size: 0.78rem;
 }
 
+#despFixasVerModal .view-field-label {
+  font-weight: 800;
+  color: var(--text, #263238);
+  letter-spacing: 0.01em;
+}
+
 :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal, #despFixasVerModal) .view-field-value {
   font-size: 0.95rem;
   word-break: break-word;
@@ -1303,6 +1309,10 @@ body.sidebar-open {
 
   :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal, #despFixasVerModal) .view-field-label {
     font-size: 0.72rem;
+  }
+
+  #despFixasVerModal .view-field-label {
+    font-weight: 800;
   }
 
   :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal, #despFixasVerModal) .view-field-value {
@@ -2127,6 +2137,14 @@ tr.tem-vinculo:hover {
 
 #despesasFixasSection #despFixasListaCard.desp-fixas-filtros--collapsed .desp-fixas-lista-head {
   border-bottom: 1px solid var(--border);
+}
+
+/* Despesas fixas — rótulos/perguntas em negrito forte */
+#despesasFixasSection #despFixasForm label,
+#despesasFixasSection #despFixasFiltrosForm label,
+#despesasFixasSection .table-wrapper thead th {
+  font-weight: 800;
+  color: var(--text, #263238);
 }
 
 table {
