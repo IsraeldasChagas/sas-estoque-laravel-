@@ -22,7 +22,7 @@
 }
 .fg-card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: var(--card-border, 2px solid #000);
   border-radius: 10px;
   padding: 1rem 1.1rem;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
@@ -73,7 +73,7 @@
   gap: 0.75rem;
 }
 .fg-proj-card {
-  border: 1px dashed var(--border-color, #cbd5e1);
+  border: var(--card-border, 2px solid #000);
   border-radius: 8px;
   padding: 0.75rem;
   text-align: center;

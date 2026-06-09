@@ -9,6 +9,7 @@
   --border: #e0e6ef;
   --radius: 12px;
   --shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+  --card-border: 2px solid #000;
   --sidebar-width: 240px;
   font-family: "Segoe UI", Tahoma, sans-serif;
 }
@@ -639,6 +640,7 @@ body.sidebar-open {
 /* Aparencia base dos cartoes de KPI */
 .card {
   background: var(--card-bg);
+  border: var(--card-border);
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow);
@@ -661,7 +663,7 @@ body.sidebar-open {
 .boas-vindas-card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  border: 2px solid #000;
+  border: var(--card-border);
   box-shadow: var(--shadow);
   padding: 48px;
   max-width: 560px;
@@ -702,6 +704,7 @@ body.sidebar-open {
 
 .form-card {
   background: var(--card-bg);
+  border: var(--card-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 24px;
@@ -775,11 +778,9 @@ body.sidebar-open {
   margin-top: 8px;
 }
 
-/* Minha conta — card e campos com borda preta e mais visível */
+/* Minha conta — campos com borda preta e mais visível */
 .minha-conta__card {
   max-width: 420px;
-  border: 2px solid #000;
-  box-shadow: var(--shadow);
 }
 
 .minha-conta__card .form-card__field input {
@@ -809,27 +810,6 @@ body.sidebar-open {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-/* Unidades — cards com borda preta (igual Boas-vindas) */
-#unidadesSection #unidadeInlineCard,
-#unidadesSection .table-card {
-  border: 2px solid #000;
-}
-
-/* Usuários — card com borda preta (igual Boas-vindas) */
-#usuariosSection .table-card {
-  border: 2px solid #000;
-}
-
-/* Produtos — card com borda preta (igual Boas-vindas) */
-#produtosSection .table-card {
-  border: 2px solid #000;
-}
-
-/* Estoque — cards com borda preta (igual Boas-vindas/Locais) */
-#estoqueSection .estoque-resumo-card {
-  border: 2px solid #000 !important;
 }
 
 #estoqueSection .estoque-produto-form {
@@ -891,15 +871,6 @@ body.sidebar-open {
   justify-content: center;
 }
 
-#estoqueSection .table-card {
-  border: 2px solid #000;
-}
-
-/* Locais — card com borda preta (igual Boas-vindas) */
-#locaisSection .table-card {
-  border: 2px solid #000;
-}
-
 #produtosSection .produto-search-form {
   display: inline-block;
   margin: 0;
@@ -920,7 +891,7 @@ body.sidebar-open {
 }
 
 :is(#unidadeVerModal, #usuarioVerModal, #produtoVerModal, #localVerModal) .modal-ver-leitura {
-  border: 2px solid #000;
+  border: var(--card-border);
   display: flex;
   flex-direction: column;
   width: min(480px, 100%);
@@ -1751,9 +1722,37 @@ tr.tem-vinculo:hover {
 /* Cartoes que encapsulam tabelas */
 .table-card {
   background: var(--card-bg);
+  border: var(--card-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+/* Borda padrão em todos os cards do sistema (igual Boas-vindas) */
+:is(
+  .boleto-card,
+  .boletos-grafico-card,
+  .reserva-card,
+  .ficha-tecnica-card,
+  .estoque-resumo-card,
+  .compras-card,
+  .kanban-card,
+  .modal,
+  .modal-sugestoes,
+  .fg-card,
+  .fg-proj-card,
+  .inv-card,
+  .patrimonio-card,
+  .patrimonio-chart-box,
+  .pat-config-card,
+  .pat-rel-filtros-card,
+  .energia-card,
+  .energia-chart-box,
+  .rr-card,
+  .rr-resultado-box,
+  .rr-cenario-card
+) {
+  border: var(--card-border);
 }
 
 .table-card header {
@@ -6404,7 +6403,8 @@ select[size]:not([size="1"]) {
   align-items: center;
   gap: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
-  border-left: 4px solid transparent;
+  border-left-width: 4px;
+  border-left-color: transparent;
 }
 
 .boleto-card:hover {
@@ -6779,7 +6779,8 @@ select[size]:not([size="1"]) {
   display: flex;
   align-items: center;
   gap: 1rem;
-  border-left: 4px solid transparent;
+  border-left-width: 4px;
+  border-left-color: transparent;
   text-align: left;
 }
 
@@ -8064,7 +8065,6 @@ select[size]:not([size="1"]) {
 .kanban-card {
   background: #fff;
   border-radius: 10px;
-  border: 1px solid #e0e0e0;
   padding: 0.55rem 0.65rem;
   margin-bottom: 0.45rem;
   cursor: grab;
@@ -8075,13 +8075,16 @@ select[size]:not([size="1"]) {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 .kanban-card--prior-baixa {
-  border-left: 3px solid #90a4ae;
+  border-left-width: 4px;
+  border-left-color: #90a4ae;
 }
 .kanban-card--prior-media {
-  border-left: 3px solid #fb8c00;
+  border-left-width: 4px;
+  border-left-color: #fb8c00;
 }
 .kanban-card--prior-alta {
-  border-left: 3px solid #c62828;
+  border-left-width: 4px;
+  border-left-color: #c62828;
 }
 
 /* Cartão inteiro por prioridade alta (quando não é finalizado/em execução — ver lógica no JS) */

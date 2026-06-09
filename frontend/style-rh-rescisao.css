@@ -56,7 +56,7 @@
 
 .rr-card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #e0e6ef);
+  border: var(--card-border, 2px solid #000);
   border-radius: var(--radius, 12px);
   padding: 14px 16px;
   box-shadow: var(--shadow, 0 12px 24px rgba(0, 0, 0, 0.06));
@@ -83,7 +83,7 @@
 
 .rr-resultado-box {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #e0e6ef);
+  border: var(--card-border, 2px solid #000);
   border-radius: var(--radius, 12px);
   box-shadow: var(--shadow, 0 12px 24px rgba(0, 0, 0, 0.06));
   padding: 1rem;
@@ -113,14 +113,16 @@
 
 .rr-cenario-card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #e0e6ef);
+  border: var(--card-border, 2px solid #000);
   border-radius: var(--radius, 12px);
   padding: 1rem;
   box-shadow: var(--shadow, 0 12px 24px rgba(0, 0, 0, 0.06));
 }
 
 .rr-cenario-card--destaque {
-  border-color: var(--primary, #0047ab);
+  border: var(--card-border, 2px solid #000);
+  border-left-width: 4px;
+  border-left-color: var(--primary, #0047ab);
 }
 
 .rr-cenario-card h4 {

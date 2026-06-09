@@ -20,7 +20,7 @@
 
 .energia-card {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #e0e0e0);
+  border: var(--card-border, 2px solid #000);
   border-radius: var(--radius, 12px);
   padding: 14px 16px;
   box-shadow: var(--shadow, 0 2px 8px rgba(0, 0, 0, 0.06));
@@ -41,12 +41,16 @@
 }
 
 .energia-card--alert {
-  border-color: #ffcdd2;
+  border: var(--card-border, 2px solid #000);
+  border-left-width: 4px;
+  border-left-color: #e53935;
   background: #ffebee;
 }
 
 .energia-card--ok {
-  border-color: #c8e6c9;
+  border: var(--card-border, 2px solid #000);
+  border-left-width: 4px;
+  border-left-color: #43a047;
   background: #e8f5e9;
 }
 
@@ -59,7 +63,7 @@
 
 .energia-chart-box {
   background: var(--card-bg, #fff);
-  border: 1px solid var(--border);
+  border: var(--card-border, 2px solid #000);
   border-radius: var(--radius);
   padding: 14px;
   min-height: 260px;
