@@ -1832,20 +1832,22 @@ const APP_THEME_KEY = "sas-app-theme";
 const APP_THEME_DEFAULT = {
   menuBg: "#070403",
   menuAccent: "#de4309",
+  topbarBg: "#ffffff",
   pageBg: "#f6f7fb",
   pagePrimary: "#0047ab",
 };
 const THEME_SWATCHES = {
   menuBg: ["#070403", "#071428", "#1a0a04", "#1b3a1b", "#1a237e", "#263238", "#37474f"],
   menuAccent: ["#de4309", "#1565c0", "#e53935", "#2e7d32", "#6a1b9a", "#ff6d00", "#00897b"],
+  topbarBg: ["#ffffff", "#f6f7fb", "#e3f2fd", "#fff8e1", "#eceff1", "#263238", "#071428", "#0047ab"],
   pageBg: ["#f6f7fb", "#e3f2fd", "#fff8e1", "#f3e5f5", "#e8f5e9", "#ffffff", "#eceff1"],
   pagePrimary: ["#0047ab", "#1565c0", "#c62828", "#2e7d32", "#6a1b9a", "#ef6c00", "#00695c"],
 };
 const THEME_PRESETS = [
   { id: "padrao", label: "Padrão", ...APP_THEME_DEFAULT },
-  { id: "azul", label: "Azul", menuBg: "#071428", menuAccent: "#1565c0", pageBg: "#e8f1fb", pagePrimary: "#0d47a1" },
-  { id: "laranja", label: "Laranja", menuBg: "#2d1408", menuAccent: "#ff6d00", pageBg: "#fff8f1", pagePrimary: "#e65100" },
-  { id: "verde", label: "Verde", menuBg: "#1b3a1b", menuAccent: "#2e7d32", pageBg: "#e8f5e9", pagePrimary: "#1b5e20" },
+  { id: "azul", label: "Azul", menuBg: "#071428", menuAccent: "#1565c0", topbarBg: "#e3f2fd", pageBg: "#e8f1fb", pagePrimary: "#0d47a1" },
+  { id: "laranja", label: "Laranja", menuBg: "#2d1408", menuAccent: "#ff6d00", topbarBg: "#fff3e0", pageBg: "#fff8f1", pagePrimary: "#e65100" },
+  { id: "verde", label: "Verde", menuBg: "#1b3a1b", menuAccent: "#2e7d32", topbarBg: "#e8f5e9", pageBg: "#e8f5e9", pagePrimary: "#1b5e20" },
 ];
 
 function themeHexToRgb(hex) {
@@ -1865,6 +1867,11 @@ function themeLightenHex(hex, pct) {
   const { r, g, b } = themeHexToRgb(hex);
   const f = (c) => Math.min(255, Math.round(c + (255 - c) * pct / 100));
   return `#${[f(r), f(g), f(b)].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function themeIsDarkBg(hex) {
+  const { r, g, b } = themeHexToRgb(hex);
+  return (r * 0.299 + g * 0.587 + b * 0.114) < 140;
 }
 
 function themeNormalizeConfig(raw) {
@@ -1889,7 +1896,7 @@ function themeLoadSavedConfig() {
 function applyAppTheme(config, { save = true } = {}) {
   const cfg = themeNormalizeConfig(config);
   const root = document.documentElement;
-  const { menuBg, menuAccent, pageBg, pagePrimary } = cfg;
+  const { menuBg, menuAccent, topbarBg, pageBg, pagePrimary } = cfg;
 
   root.style.setProperty("--sidebar-bg", `linear-gradient(180deg, ${menuBg}, ${menuBg})`);
   root.style.setProperty("--sidebar-bg-mid", themeLightenHex(menuBg, 10));
@@ -1900,12 +1907,16 @@ function applyAppTheme(config, { save = true } = {}) {
   root.style.setProperty("--sidebar-collapse-border", themeHexToRgba(menuBg, 0.45));
   root.style.setProperty("--sidebar-focus", menuAccent);
   root.style.setProperty("--sidebar-nested-bg", "rgba(255, 255, 255, 0.06)");
+  root.style.setProperty("--topbar-bg", topbarBg);
+  root.style.setProperty("--topbar-text", themeIsDarkBg(topbarBg) ? "#ffffff" : "#263238");
+  root.style.setProperty("--topbar-muted", themeIsDarkBg(topbarBg) ? "rgba(255, 255, 255, 0.78)" : "#607d8b");
   root.style.setProperty("--bg", pageBg);
   root.style.setProperty("--primary", pagePrimary);
 
   const fields = {
     menuBg: { input: "themeMenuBg", preview: "themePreviewMenuBg", hex: "themeHexMenuBg" },
     menuAccent: { input: "themeMenuAccent", preview: "themePreviewMenuAccent", hex: "themeHexMenuAccent" },
+    topbarBg: { input: "themeTopbarBg", preview: "themePreviewTopbarBg", hex: "themeHexTopbarBg" },
     pageBg: { input: "themePageBg", preview: "themePreviewPageBg", hex: "themeHexPageBg" },
     pagePrimary: { input: "themePagePrimary", preview: "themePreviewPagePrimary", hex: "themeHexPagePrimary" },
   };
@@ -1948,6 +1959,7 @@ function themeRenderSwatches() {
   const map = {
     menuBg: "themeSwatchesMenuBg",
     menuAccent: "themeSwatchesMenuAccent",
+    topbarBg: "themeSwatchesTopbarBg",
     pageBg: "themeSwatchesPageBg",
     pagePrimary: "themeSwatchesPagePrimary",
   };
@@ -2012,6 +2024,7 @@ function setupThemePanel() {
   const themeInputMap = {
     themeMenuBg: "menuBg",
     themeMenuAccent: "menuAccent",
+    themeTopbarBg: "topbarBg",
     themePageBg: "pageBg",
     themePagePrimary: "pagePrimary",
   };

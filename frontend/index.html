@@ -38,6 +38,12 @@
           r.style.setProperty("--sidebar-focus", ma);
           r.style.setProperty("--bg", c.pageBg || "#f6f7fb");
           r.style.setProperty("--primary", c.pagePrimary || "#0047ab");
+          var tb = c.topbarBg || "#ffffff";
+          r.style.setProperty("--topbar-bg", tb);
+          var tn = parseInt(tb.replace("#", ""), 16);
+          var lum = ((tn >> 16) & 255) * 0.299 + ((tn >> 8) & 255) * 0.587 + (tn & 255) * 0.114;
+          r.style.setProperty("--topbar-text", lum < 140 ? "#ffffff" : "#263238");
+          r.style.setProperty("--topbar-muted", lum < 140 ? "rgba(255,255,255,0.78)" : "#607d8b");
         } catch (e) {}
       })();
     </script>
@@ -359,6 +365,18 @@
                       <span class="theme-color-bar__preview" id="themePreviewMenuAccent"></span>
                       <input type="color" id="themeMenuAccent" value="#de4309" />
                       <span class="theme-color-bar__hex" id="themeHexMenuAccent">#de4309</span>
+                    </label>
+                  </div>
+                </section>
+                <section class="theme-panel__block">
+                  <h5>Barra superior (topo)</h5>
+                  <div class="theme-color-row" data-theme-field="topbarBg">
+                    <span class="theme-color-row__label">Fundo do topo</span>
+                    <div class="theme-swatches" id="themeSwatchesTopbarBg"></div>
+                    <label class="theme-color-bar">
+                      <span class="theme-color-bar__preview" id="themePreviewTopbarBg"></span>
+                      <input type="color" id="themeTopbarBg" value="#ffffff" />
+                      <span class="theme-color-bar__hex" id="themeHexTopbarBg">#ffffff</span>
                     </label>
                   </div>
                 </section>

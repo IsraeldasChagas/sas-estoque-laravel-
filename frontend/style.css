@@ -20,6 +20,9 @@
   --sidebar-collapse-border: rgba(7, 4, 3, 0.28);
   --sidebar-focus: #de4309;
   --sidebar-nested-bg: rgba(255, 255, 255, 0.06);
+  --topbar-bg: #ffffff;
+  --topbar-text: #263238;
+  --topbar-muted: #607d8b;
   font-family: "Segoe UI", Tahoma, sans-serif;
 }
 
@@ -446,9 +449,18 @@ body.sidebar-open {
   justify-content: space-between;
   align-items: center;
   padding: 18px 28px;
-  background: #fff;
+  background: var(--topbar-bg);
+  color: var(--topbar-text);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.topbar .user-info strong {
+  color: var(--topbar-text);
+}
+
+.topbar .user-info__meta {
+  color: var(--topbar-muted);
 }
 
 .topbar .user-info {
