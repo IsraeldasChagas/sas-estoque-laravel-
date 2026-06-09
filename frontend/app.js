@@ -1828,7 +1828,7 @@ function isMobileViewport() {
 }
 
 const SIDEBAR_COLLAPSED_KEY = "sas-sidebar-collapsed";
-const APP_THEME_KEY = "sas-app-theme";
+const APP_THEME_CACHE_KEY = "sas-app-theme-cache";
 const APP_THEME_DEFAULT = {
   menuBg: "#070403",
   menuAccent: "#de4309",
@@ -1849,6 +1849,10 @@ const THEME_PRESETS = [
   { id: "laranja", label: "Laranja", menuBg: "#2d1408", menuAccent: "#ff6d00", topbarBg: "#fff3e0", pageBg: "#fff8f1", pagePrimary: "#e65100" },
   { id: "verde", label: "Verde", menuBg: "#1b3a1b", menuAccent: "#2e7d32", topbarBg: "#e8f5e9", pageBg: "#e8f5e9", pagePrimary: "#1b5e20" },
 ];
+
+let themeCurrentConfig = { ...APP_THEME_DEFAULT };
+let themeMeta = { fonte: "padrao", global: { ...APP_THEME_DEFAULT }, pode_editar_global: false };
+let themePersistTimer = null;
 
 function themeHexToRgb(hex) {
   const h = (hex || "").replace("#", "");
@@ -1882,19 +1886,131 @@ function themeNormalizeConfig(raw) {
   return cfg;
 }
 
-function themeLoadSavedConfig() {
+function themeGetCurrentConfig() {
+  return { ...themeCurrentConfig };
+}
+
+function themeCacheLocal(cfg, meta = {}) {
   try {
-    const raw = localStorage.getItem(APP_THEME_KEY);
-    if (raw) return themeNormalizeConfig(JSON.parse(raw));
-    const old = localStorage.getItem("sas-sidebar-theme");
-    const preset = THEME_PRESETS.find((p) => p.id === old);
-    if (preset) return themeNormalizeConfig(preset);
+    localStorage.setItem(APP_THEME_CACHE_KEY, JSON.stringify({
+      efetivo: cfg,
+      fonte: meta.fonte || themeMeta.fonte,
+      userId: currentUser?.id ?? null,
+      savedAt: Date.now(),
+    }));
   } catch (_) {}
-  return { ...APP_THEME_DEFAULT };
+}
+
+function themeLoadLocalCache() {
+  try {
+    const raw = localStorage.getItem(APP_THEME_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return themeNormalizeConfig(parsed?.efetivo || parsed);
+  } catch (_) {
+    return null;
+  }
+}
+
+function themeUpdatePanelMeta() {
+  const hint = document.getElementById("themePanelHint");
+  const saveGlobalBtn = document.getElementById("themePanelSaveGlobal");
+  if (hint) {
+    hint.textContent = themeMeta.fonte === "usuario"
+      ? "Tema pessoal salvo na sua conta — vale em qualquer dispositivo ao fazer login."
+      : "Usando o tema padrão do sistema. Personalize e ficará salvo só para você.";
+  }
+  if (saveGlobalBtn) {
+    const isAdmin = (currentUser?.perfil || "").toString().trim().toUpperCase() === "ADMIN" || themeMeta.pode_editar_global;
+    saveGlobalBtn.classList.toggle("hidden", !isAdmin);
+  }
+}
+
+function themeSchedulePersist(cfg) {
+  if (!currentUser?.id || typeof fetchJSON !== "function") return;
+  if (themePersistTimer) clearTimeout(themePersistTimer);
+  themePersistTimer = setTimeout(async () => {
+    try {
+      await fetchJSON("/usuarios/me/tema-cores", {
+        method: "PUT",
+        body: JSON.stringify({ tema: cfg }),
+      });
+      themeMeta.fonte = "usuario";
+      themeUpdatePanelMeta();
+    } catch (e) {
+      console.warn("Falha ao salvar tema do usuário:", e);
+    }
+  }, 700);
+}
+
+async function themeFetchAndApply() {
+  try {
+    if (typeof fetchJSON === "function") {
+      const data = await fetchJSON("/tema-cores");
+      themeMeta = {
+        fonte: data?.fonte || "global",
+        global: themeNormalizeConfig(data?.global),
+        pode_editar_global: !!data?.pode_editar_global,
+      };
+      const cfg = themeNormalizeConfig(data?.efetivo);
+      themeCurrentConfig = cfg;
+      applyAppTheme(cfg, { save: false });
+      themeCacheLocal(cfg, themeMeta);
+      themeUpdatePanelMeta();
+      return cfg;
+    }
+  } catch (e) {
+    console.warn("Falha ao carregar tema do servidor:", e);
+  }
+  const cached = themeLoadLocalCache();
+  const cfg = cached || { ...APP_THEME_DEFAULT };
+  themeCurrentConfig = cfg;
+  applyAppTheme(cfg, { save: false });
+  themeUpdatePanelMeta();
+  return cfg;
+}
+
+async function themeResetToGlobal() {
+  try {
+    if (currentUser?.id && typeof fetchJSON === "function") {
+      const data = await fetchJSON("/usuarios/me/tema-cores", { method: "DELETE" });
+      const cfg = themeNormalizeConfig(data?.efetivo || themeMeta.global);
+      themeMeta.fonte = "global";
+      themeCurrentConfig = cfg;
+      applyAppTheme(cfg, { save: false });
+      themeCacheLocal(cfg, themeMeta);
+      themeUpdatePanelMeta();
+      if (typeof showToast === "function") showToast("Tema pessoal removido. Usando padrão do sistema.", "success");
+      return;
+    }
+  } catch (e) {
+    if (typeof showToast === "function") showToast(e?.message || "Erro ao restaurar tema", "error");
+    return;
+  }
+  themeMeta.fonte = "global";
+  themeCurrentConfig = { ...themeMeta.global };
+  applyAppTheme(themeCurrentConfig, { save: false });
+  themeCacheLocal(themeCurrentConfig, themeMeta);
+  themeUpdatePanelMeta();
+}
+
+async function themeSaveAsGlobal() {
+  const cfg = themeGetCurrentConfig();
+  try {
+    await fetchJSON("/configuracoes-sistema/tema-global", {
+      method: "POST",
+      body: JSON.stringify({ tema: cfg }),
+    });
+    themeMeta.global = { ...cfg };
+    if (typeof showToast === "function") showToast("Tema salvo como padrão global do sistema.", "success");
+  } catch (e) {
+    if (typeof showToast === "function") showToast(e?.message || "Erro ao salvar tema global", "error");
+  }
 }
 
 function applyAppTheme(config, { save = true } = {}) {
   const cfg = themeNormalizeConfig(config);
+  themeCurrentConfig = cfg;
   const root = document.documentElement;
   const { menuBg, menuAccent, topbarBg, pageBg, pagePrimary } = cfg;
 
@@ -1941,16 +2057,13 @@ function applyAppTheme(config, { save = true } = {}) {
     btn.classList.toggle("is-active", activePreset && btn.dataset.preset === activePreset.id);
   });
 
-  if (save) {
-    try {
-      localStorage.setItem(APP_THEME_KEY, JSON.stringify(cfg));
-    } catch (_) {}
-  }
+  themeCacheLocal(cfg, themeMeta);
+  if (save) themeSchedulePersist(cfg);
   return cfg;
 }
 
 function themeSetField(field, color) {
-  const cfg = themeLoadSavedConfig();
+  const cfg = themeGetCurrentConfig();
   cfg[field] = color;
   applyAppTheme(cfg);
 }
@@ -2005,12 +2118,13 @@ function themeSetPanelOpen(open) {
 function setupThemePanel() {
   themeRenderPresets();
   themeRenderSwatches();
-  applyAppTheme(themeLoadSavedConfig(), { save: false });
+  themeFetchAndApply().catch(() => {});
 
   const toggle = document.getElementById("themePanelToggle");
   const panel = document.getElementById("themePanel");
   const closeBtn = document.getElementById("themePanelClose");
   const resetBtn = document.getElementById("themePanelReset");
+  const saveGlobalBtn = document.getElementById("themePanelSaveGlobal");
 
   toggle?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -2019,7 +2133,8 @@ function setupThemePanel() {
   });
 
   closeBtn?.addEventListener("click", () => themeSetPanelOpen(false));
-  resetBtn?.addEventListener("click", () => applyAppTheme({ ...APP_THEME_DEFAULT }));
+  resetBtn?.addEventListener("click", () => themeResetToGlobal());
+  saveGlobalBtn?.addEventListener("click", () => themeSaveAsGlobal());
 
   const themeInputMap = {
     themeMenuBg: "menuBg",
@@ -10876,6 +10991,16 @@ async function startAppSession(user) {
   refreshDomShellNav();
   wireSidebarSectionNavClicks();
   refreshCurrentUserFoto().catch(() => {});
+  if (currentUser?.tema_cores) {
+    themeMeta.fonte = "usuario";
+    themeCurrentConfig = themeNormalizeConfig(currentUser.tema_cores);
+    applyAppTheme(themeCurrentConfig, { save: false });
+    themeCacheLocal(themeCurrentConfig, themeMeta);
+    themeUpdatePanelMeta();
+    themeFetchAndApply().catch(() => {});
+  } else {
+    themeFetchAndApply().catch(() => {});
+  }
 
   if (typeof stopMatrixAnimation === "function") {
     stopMatrixAnimation();
@@ -11274,6 +11399,8 @@ async function handleLogin(event) {
       perfil: payload.perfil, 
       unidade_id: payload.unidade_id ?? null,
       permissoes_menu: payload.permissoes_menu || null,
+      foto: payload.foto || null,
+      tema_cores: payload.tema_cores || null,
       token: payload.token 
     });
     
@@ -11324,6 +11451,7 @@ function handleLogout() {
   dom.appShell.classList.add("hidden");
   dom.loginOverlay.classList.remove("hidden");
   setSidebarOpen(false);
+  themeFetchAndApply().catch(() => {});
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }

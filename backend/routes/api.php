@@ -110,6 +110,14 @@ Route::post('/login', function (Request $request) {
             $foto = $usuario->foto_path;
         }
 
+        $temaCores = null;
+        if (Schema::hasColumn('usuarios', 'tema_cores') && ! empty($usuario->tema_cores)) {
+            $decodedTema = json_decode($usuario->tema_cores, true);
+            if (is_array($decodedTema)) {
+                $temaCores = $decodedTema;
+            }
+        }
+
         return response()->json([
             'id' => $usuario->id,                                    // ID do usuário
             'nome' => $usuario->nome,                                // Nome completo
@@ -118,6 +126,7 @@ Route::post('/login', function (Request $request) {
             'unidade_id' => $usuario->unidade_id ?? null,            // Unidade do usuário
             'permissoes_menu' => $permissoesMenu,                    // Módulos permitidos (null = usa padrão do perfil)
             'foto' => $foto,                                         // Foto do perfil (topbar)
+            'tema_cores' => $temaCores,                              // Tema pessoal (null = usa global)
             'token' => $token,                                       // Token de sessão
         ])->header('Access-Control-Allow-Origin', '*')              // Permite requisições de qualquer origem
           ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')   // Métodos permitidos
@@ -11065,6 +11074,7 @@ require __DIR__ . '/patrimonio_routes.php';
 require __DIR__ . '/investimento_routes.php';
 require __DIR__ . '/financeiro_routes.php';
 require __DIR__ . '/configuracoes_routes.php';
+require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';
 
 // ============================================

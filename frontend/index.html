@@ -9,14 +9,10 @@
     <script>
       (function () {
         try {
-          var raw = localStorage.getItem("sas-app-theme");
-          if (!raw) {
-            var old = localStorage.getItem("sas-sidebar-theme");
-            if (old === "azul") raw = JSON.stringify({ menuBg: "#071428", menuAccent: "#1565c0", pageBg: "#e8f1fb", pagePrimary: "#0d47a1" });
-            else if (old === "laranja") raw = JSON.stringify({ menuBg: "#2d1408", menuAccent: "#ff6d00", pageBg: "#fff8f1", pagePrimary: "#e65100" });
-          }
+          var raw = localStorage.getItem("sas-app-theme-cache");
           if (!raw) return;
-          var c = JSON.parse(raw);
+          var parsed = JSON.parse(raw);
+          var c = parsed.efetivo || parsed;
           var r = document.documentElement;
           function hx(h, a) {
             var n = parseInt(h.replace("#", ""), 16);
@@ -401,8 +397,10 @@
                     </label>
                   </div>
                 </section>
+                <p class="theme-panel__hint" id="themePanelHint">Suas cores são salvas na sua conta.</p>
                 <footer class="theme-panel__foot">
-                  <button type="button" class="btn secondary" id="themePanelReset">Restaurar padrão</button>
+                  <button type="button" class="btn secondary" id="themePanelReset">Usar padrão do sistema</button>
+                  <button type="button" class="btn primary hidden" id="themePanelSaveGlobal">Salvar como padrão global</button>
                 </footer>
               </div>
             </div>

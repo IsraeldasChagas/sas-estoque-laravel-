@@ -681,9 +681,18 @@ body.sidebar-open {
   text-align: right;
 }
 
+.theme-panel__hint {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 .theme-panel__foot {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
   padding-top: 4px;
   border-top: 1px solid var(--border);
 }
@@ -691,6 +700,10 @@ body.sidebar-open {
 .theme-panel__foot .btn {
   padding: 7px 14px;
   font-size: 0.85rem;
+}
+
+.theme-panel__foot .btn.hidden {
+  display: none;
 }
 
 .topbar button {
