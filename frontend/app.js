@@ -332,6 +332,8 @@ async function loadDespesasFixas() {
   const els = despFixasEls();
   if (!els.table) return; // Seção ainda não existe no DOM (segurança)
 
+  despFixasBindOnce();
+
   // Garante dados base: unidades e categorias (para o formulário).
   await loadUnidades(false).catch(() => {});
   await despFixasLoadCategorias().catch(() => {
@@ -883,9 +885,12 @@ async function despFixasOpenForId(id, mode) {
   // Sem isso, o checklist pode aparecer vazio em perfis que não entram na tela "Unidades".
   await loadUnidades(false).catch(() => {});
 
-  // Busca registro no cache primeiro; se não existir, chama endpoint /despesas-fixas/{id}
+  // Em "ver", sempre busca no backend para garantir dados completos; em editar usa cache se disponível.
   const cached = despesasFixasListaCache.find((x) => String(x?.id) === String(id)) || null;
-  const d = cached || await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`);
+  const d =
+    mode === "view" || !cached
+      ? await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`)
+      : cached;
 
   despFixasShowForm(true);
   despFixasSetFeedback("");
@@ -921,6 +926,7 @@ async function despFixasOpenForId(id, mode) {
   // Se NÃO aplica a todas, a seleção acima permite escolher unidades específicas.
 
   despFixasFormSetMode(mode);
+  els.formCard.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function despFixasHandleDelete(id) {
@@ -935,11 +941,12 @@ async function despFixasHandleDelete(id) {
 }
 
 function despFixasBindOnce() {
-  const els = despFixasEls();
-  if (!els.btnNovo || els.btnNovo.dataset.bound === "1") return;
-  els.btnNovo.dataset.bound = "1";
+  if (document.body.dataset.despFixasBound === "1") return;
+  document.body.dataset.despFixasBound = "1";
 
-  els.btnNovo.addEventListener("click", async () => {
+  const els = despFixasEls();
+
+  els.btnNovo?.addEventListener("click", async () => {
     try {
       await loadUnidades(false).catch(() => {});
       await despFixasLoadCategorias().catch(() => {});
@@ -979,10 +986,11 @@ function despFixasBindOnce() {
     despFixasSetAplicaTodasUI(!!e.target.checked);
   });
 
-  // Delegação de eventos da tabela (ver/editar/excluir)
-  els.table?.addEventListener("click", (e) => {
+  // Delegação na seção (ver/editar/excluir) — mesmo padrão de Proventos.
+  document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
     const btn = e.target?.closest?.("button[data-despfixas-action]");
     if (!btn) return;
+    e.preventDefault();
     const action = btn.dataset.despfixasAction;
     const id = btn.dataset.id;
     if (!id) return;
