@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260610-theme-panel" />
+    <link rel="stylesheet" href="style.css?v=20260610-despfixas-seta" />
     <script>
       (function () {
         try {
@@ -3348,26 +3348,26 @@
             </div>
 
             <!-- Lista -->
-            <div class="table-card form-card--wide fg-lancamento-card" id="despFixasListaCard">
-              <header class="fg-lancamento-card__header">
+            <div class="table-card form-card--wide" id="despFixasListaCard">
+              <header class="desp-fixas-lista-head">
+                <div class="desp-fixas-lista-head__text">
+                  <h3>Despesas cadastradas</h3>
+                  <p class="subtle-text">Filtre e consulte as despesas fixas cadastradas.</p>
+                </div>
                 <button
                   type="button"
-                  class="fg-collapse-btn"
+                  class="desp-fixas-lista-toggle btn secondary"
                   id="despFixasToggleLista"
                   aria-expanded="true"
                   aria-controls="despFixasListaBody"
-                  title="Recolher ou expandir lista"
+                  title="Recolher filtros e lista"
                   aria-label="Recolher ou expandir despesas cadastradas"
                 >
-                  <span class="fg-collapse-btn__icon" aria-hidden="true"></span>
+                  <span class="desp-fixas-lista-toggle__icon" aria-hidden="true">▼</span>
                 </button>
-                <div class="desp-fixas-lista-card__titles">
-                  <h3>Despesas cadastradas</h3>
-                  <p class="subtle-text">Ver, editar e excluir despesas fixas.</p>
-                </div>
               </header>
 
-              <div id="despFixasListaBody" class="fg-lancamento-card__body">
+              <div id="despFixasListaBody" class="desp-fixas-lista-body">
               <!-- Filtros (somente para a lista abaixo) -->
               <form id="despFixasFiltrosForm" class="filters-panel" style="margin: 0.75rem 1rem 0 1rem;">
                 <div class="filters-grid">
@@ -6672,7 +6672,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260610-despfixas-collapse"></script>
+    <script src="app.js?v=20260610-despfixas-seta"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>

@@ -127,10 +127,10 @@ function despFixasSetListaCollapsed(collapsed, persist = true) {
   const card = document.getElementById("despFixasListaCard");
   const btn = document.getElementById("despFixasToggleLista");
   if (!card) return;
-  card.classList.toggle("fg-lancamento-card--collapsed", collapsed);
+  card.classList.toggle("desp-fixas-lista-card--collapsed", collapsed);
   if (btn) {
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    btn.title = collapsed ? "Expandir lista" : "Recolher lista";
+    btn.title = collapsed ? "Expandir filtros e lista" : "Recolher filtros e lista";
   }
   if (persist) {
     try {
@@ -141,16 +141,13 @@ function despFixasSetListaCollapsed(collapsed, persist = true) {
 
 function despFixasInitListaCollapse() {
   const card = document.getElementById("despFixasListaCard");
-  if (!card || card.dataset.collapseBound === "1") return;
-  card.dataset.collapseBound = "1";
+  if (!card || card.dataset.collapseInited === "1") return;
+  card.dataset.collapseInited = "1";
   let collapsed = false;
   try {
     collapsed = localStorage.getItem(DESP_FIXAS_LISTA_COLLAPSED_KEY) === "1";
   } catch (_) {}
   despFixasSetListaCollapsed(collapsed, false);
-  document.getElementById("despFixasToggleLista")?.addEventListener("click", () => {
-    despFixasSetListaCollapsed(card.classList.contains("fg-lancamento-card--collapsed") ? false : true);
-  });
 }
 
 function despFixasEls() {
@@ -364,6 +361,7 @@ async function loadDespesasFixas() {
   if (!els.table) return; // Seção ainda não existe no DOM (segurança)
 
   despFixasBindOnce();
+  despFixasInitListaCollapse();
 
   // Garante dados base: unidades e categorias (para o formulário).
   await loadUnidades(false).catch(() => {});
@@ -1019,8 +1017,17 @@ function despFixasBindOnce() {
     despFixasSetAplicaTodasUI(!!e.target.checked);
   });
 
-  // Delegação na seção (ver/editar/excluir) — mesmo padrão de Proventos.
+  // Delegação na seção (recolher lista, ver/editar/excluir).
   document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
+    const toggleBtn = e.target?.closest?.("#despFixasToggleLista");
+    if (toggleBtn) {
+      e.preventDefault();
+      const card = document.getElementById("despFixasListaCard");
+      if (!card) return;
+      despFixasSetListaCollapsed(!card.classList.contains("desp-fixas-lista-card--collapsed"));
+      return;
+    }
+
     const btn = e.target?.closest?.("button[data-despfixas-action]");
     if (!btn) return;
     e.preventDefault();

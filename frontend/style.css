@@ -2056,6 +2056,61 @@ tr.tem-vinculo:hover {
   font-weight: 600;
 }
 
+/* Despesas fixas — cabeçalho "Despesas cadastradas" com seta para recolher filtros/lista */
+#despesasFixasSection .desp-fixas-lista-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 71, 171, 0.06);
+}
+
+#despesasFixasSection .desp-fixas-lista-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+#despesasFixasSection .desp-fixas-lista-head h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+#despesasFixasSection .desp-fixas-lista-head .subtle-text {
+  margin: 0.35rem 0 0 0;
+  font-weight: 400;
+}
+
+#despesasFixasSection .desp-fixas-lista-toggle {
+  flex-shrink: 0;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#despesasFixasSection .desp-fixas-lista-toggle__icon {
+  display: inline-block;
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+#despesasFixasSection .desp-fixas-lista-toggle[aria-expanded="false"] .desp-fixas-lista-toggle__icon {
+  transform: rotate(-90deg);
+}
+
+#despesasFixasSection #despFixasListaCard.desp-fixas-lista-card--collapsed .desp-fixas-lista-head {
+  border-bottom: none;
+}
+
+#despesasFixasSection #despFixasListaCard.desp-fixas-lista-card--collapsed .desp-fixas-lista-body {
+  display: none;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -4538,19 +4593,6 @@ body.image-lightbox-open {
   #despesasFixasSection .table-wrapper td.table-actions .btn {
     width: 100%;
     justify-content: center;
-  }
-
-  #despesasFixasSection .desp-fixas-lista-card__titles {
-    flex: 1;
-    min-width: 0;
-  }
-
-  #despesasFixasSection .desp-fixas-lista-card__titles h3 {
-    margin: 0;
-  }
-
-  #despesasFixasSection .desp-fixas-lista-card__titles .subtle-text {
-    margin: 0.35rem 0 0 0;
   }
 
   /* Vale / consumo — lançamentos em cards (rótulo em cima, valor em baixo), igual Funcionários/Proventos */
