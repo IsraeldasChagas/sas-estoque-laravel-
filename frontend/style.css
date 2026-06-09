@@ -50,24 +50,9 @@ body.sidebar-open {
   overflow: visible;
 }
 
-.sidebar-logo {
-  flex-shrink: 0;
-  margin: 0 0 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .sidebar-nav-scroll {
   flex: 1 1 auto;
   overflow: visible;
-}
-
-.sidebar-logo img {
-  max-width: 140px;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
 .sidebar nav a,
@@ -276,14 +261,6 @@ body.sidebar-open {
     padding: 22px 12px;
     overflow: visible;
     z-index: 40;
-  }
-
-  .sidebar.is-collapsed .sidebar-logo {
-    margin-bottom: 24px;
-  }
-
-  .sidebar.is-collapsed .sidebar-logo img {
-    max-width: 46px;
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll {
@@ -517,6 +494,39 @@ body.sidebar-open {
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.topbar__logo {
+  height: 40px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  display: block;
+}
+
+.topbar__user-photo {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 2px solid #000;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.topbar__user-photo-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
 .topbar__menu-btn {
@@ -3834,6 +3844,16 @@ body.image-lightbox-open {
     line-height: 1.3;
   }
   .topbar #userName { word-break: break-word; max-width: 100%; }
+
+  .topbar__logo {
+    height: 32px;
+    max-width: 120px;
+  }
+
+  .topbar__user-photo {
+    width: 38px;
+    height: 38px;
+  }
 
   .topbar__menu-btn {
     display: inline-flex;

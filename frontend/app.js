@@ -1167,6 +1167,7 @@ const dom = {
   userName: document.getElementById("userName"),
   userRole: document.getElementById("userRole"),
   userEmail: document.getElementById("userEmail"),
+  topbarUserPhoto: document.getElementById("topbarUserPhoto"),
   loginForm: document.getElementById("loginForm"),
   logoutBtn: document.getElementById("logoutBtn"),
   matrixCanvas: document.getElementById("matrixCanvas"),
@@ -2961,17 +2962,56 @@ function clearUser() {
   stopInactivityTimer();
 }
 
+function updateTopbarUserPhoto() {
+  const el = dom.topbarUserPhoto;
+  if (!el) return;
+  if (!currentUser) {
+    el.innerHTML = "";
+    el.className = "topbar__user-photo usuarios-foto usuarios-foto--placeholder";
+    el.setAttribute("aria-hidden", "true");
+    return;
+  }
+  const fotoUrl = getUsuarioFotoUrl(currentUser.foto || currentUser.foto_path);
+  const nome = currentUser.nome || currentUser.email || "Usuário";
+  if (fotoUrl) {
+    el.className = "topbar__user-photo usuarios-foto";
+    el.removeAttribute("aria-hidden");
+    el.innerHTML = `<img src="${escapeHtml(fotoUrl)}" alt="Foto de ${escapeHtml(nome)}" class="topbar__user-photo-img" />`;
+  } else {
+    el.innerHTML = "";
+    el.className = "topbar__user-photo usuarios-foto usuarios-foto--placeholder";
+    el.setAttribute("aria-label", `Sem foto — ${nome}`);
+    el.removeAttribute("aria-hidden");
+  }
+}
+
 function updateUserHeader() {
   if (!currentUser) {
     if (dom.userName) dom.userName.textContent = "Visitante";
     if (dom.userRole) dom.userRole.textContent = "Responsavel";
     if (dom.userEmail) dom.userEmail.textContent = "";
+    updateTopbarUserPhoto();
     return;
   }
   if (dom.userName) dom.userName.textContent = currentUser.nome || currentUser.email;
   const perfilKey = (currentUser.perfil || "").toString().trim().toUpperCase();
   if (dom.userRole) dom.userRole.textContent = PERFIL_LABELS[perfilKey] || currentUser.perfil || "";
   if (dom.userEmail) dom.userEmail.textContent = currentUser.email || "";
+  updateTopbarUserPhoto();
+}
+
+async function refreshCurrentUserFoto() {
+  if (!currentUser?.id || typeof fetchJSON !== "function") return;
+  try {
+    const u = await fetchJSON(`/usuarios/${currentUser.id}`);
+    if (!u) return;
+    const foto = u.foto || u.foto_path || null;
+    if (foto !== (currentUser.foto || currentUser.foto_path)) {
+      setUser({ ...currentUser, foto, foto_path: u.foto_path || null });
+      currentUser = getUser();
+      updateUserHeader();
+    }
+  } catch (_) {}
 }
 
 function canManageCompras() {
@@ -10604,6 +10644,7 @@ async function startAppSession(user) {
   applyPermissions();
   refreshDomShellNav();
   wireSidebarSectionNavClicks();
+  refreshCurrentUserFoto().catch(() => {});
 
   if (typeof stopMatrixAnimation === "function") {
     stopMatrixAnimation();
@@ -11329,6 +11370,18 @@ async function submitUsuario(event) {
     }
 
     showToast("Usuario salvo com sucesso!", "success");
+    if (id && currentUser && String(currentUser.id) === String(id) && resultado) {
+      setUser({
+        ...currentUser,
+        nome: resultado.nome ?? nome,
+        email: resultado.email ?? email,
+        perfil: resultado.perfil ?? perfil,
+        foto: resultado.foto ?? resultado.foto_path ?? null,
+        foto_path: resultado.foto_path ?? null,
+      });
+      currentUser = getUser();
+      updateUserHeader();
+    }
     toggleModal(dom.usuarioModal, false);
     form.reset();
     usuarioFotoFile = null;

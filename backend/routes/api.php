@@ -103,6 +103,13 @@ Route::post('/login', function (Request $request) {
             $decoded = json_decode($permissoesMenu, true);
             $permissoesMenu = is_array($decoded) ? $decoded : null;
         }
+        $foto = null;
+        if (Schema::hasColumn('usuarios', 'foto') && ! empty($usuario->foto)) {
+            $foto = $usuario->foto;
+        } elseif (Schema::hasColumn('usuarios', 'foto_path') && ! empty($usuario->foto_path)) {
+            $foto = $usuario->foto_path;
+        }
+
         return response()->json([
             'id' => $usuario->id,                                    // ID do usuário
             'nome' => $usuario->nome,                                // Nome completo
@@ -110,6 +117,7 @@ Route::post('/login', function (Request $request) {
             'perfil' => $usuario->perfil ?? 'VISUALIZADOR',         // Perfil (padrão: VISUALIZADOR)
             'unidade_id' => $usuario->unidade_id ?? null,            // Unidade do usuário
             'permissoes_menu' => $permissoesMenu,                    // Módulos permitidos (null = usa padrão do perfil)
+            'foto' => $foto,                                         // Foto do perfil (topbar)
             'token' => $token,                                       // Token de sessão
         ])->header('Access-Control-Allow-Origin', '*')              // Permite requisições de qualquer origem
           ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')   // Métodos permitidos
