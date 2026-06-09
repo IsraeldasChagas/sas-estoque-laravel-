@@ -2056,12 +2056,12 @@ tr.tem-vinculo:hover {
   font-weight: 600;
 }
 
-/* Despesas fixas — cabeçalho "Despesas cadastradas" com seta para recolher filtros/lista */
+/* Despesas fixas — seta recolhe só os filtros; a lista de despesas fica sempre visível */
 #despesasFixasSection .desp-fixas-lista-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 18px 24px;
   border-bottom: 1px solid var(--border);
   background: rgba(0, 71, 171, 0.06);
@@ -2082,33 +2082,50 @@ tr.tem-vinculo:hover {
   font-weight: 400;
 }
 
-#despesasFixasSection .desp-fixas-lista-toggle {
+#despesasFixasSection .desp-fixas-filtros-toggle {
   flex-shrink: 0;
-  min-width: 2.5rem;
-  min-height: 2.5rem;
-  padding: 0.4rem 0.65rem;
+  width: 2.125rem;
+  height: 2.125rem;
+  padding: 0;
+  margin: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--primary, #0047ab);
+  background: var(--primary, #0047ab);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 71, 171, 0.22);
+  transition: filter 0.2s, transform 0.2s;
 }
 
-#despesasFixasSection .desp-fixas-lista-toggle__icon {
+#despesasFixasSection .desp-fixas-filtros-toggle:hover {
+  filter: brightness(1.08);
+}
+
+#despesasFixasSection .desp-fixas-filtros-toggle:focus-visible {
+  outline: 2px solid #ffeb3b;
+  outline-offset: 2px;
+}
+
+#despesasFixasSection .desp-fixas-filtros-toggle__icon {
   display: inline-block;
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   line-height: 1;
   transition: transform 0.2s ease;
 }
 
-#despesasFixasSection .desp-fixas-lista-toggle[aria-expanded="false"] .desp-fixas-lista-toggle__icon {
+#despesasFixasSection .desp-fixas-filtros-toggle[aria-expanded="false"] .desp-fixas-filtros-toggle__icon {
   transform: rotate(-90deg);
 }
 
-#despesasFixasSection #despFixasListaCard.desp-fixas-lista-card--collapsed .desp-fixas-lista-head {
-  border-bottom: none;
+#despesasFixasSection #despFixasListaCard.desp-fixas-filtros--collapsed .desp-fixas-filtros-painel {
+  display: none;
 }
 
-#despesasFixasSection #despFixasListaCard.desp-fixas-lista-card--collapsed .desp-fixas-lista-body {
-  display: none;
+#despesasFixasSection #despFixasListaCard.desp-fixas-filtros--collapsed .desp-fixas-lista-head {
+  border-bottom: 1px solid var(--border);
 }
 
 table {
@@ -4532,6 +4549,24 @@ body.image-lightbox-open {
   }
 
   /* Despesas fixas — cadastradas: pergunta em cima, resposta embaixo (celular/tablet) */
+  #despesasFixasSection .desp-fixas-lista-head {
+    align-items: flex-start;
+    padding: 14px 16px;
+    gap: 0.5rem;
+  }
+
+  #despesasFixasSection .desp-fixas-filtros-toggle {
+    width: 1.875rem;
+    height: 1.875rem;
+    margin-top: 2px;
+    border-width: 1.5px;
+    box-shadow: 0 1px 4px rgba(0, 71, 171, 0.2);
+  }
+
+  #despesasFixasSection .desp-fixas-filtros-toggle__icon {
+    font-size: 0.62rem;
+  }
+
   #despesasFixasSection .table-wrapper {
     overflow: visible;
   }

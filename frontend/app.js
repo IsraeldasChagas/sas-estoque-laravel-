@@ -121,33 +121,33 @@ function setupImageLightbox() {
 let despesasFixasListaCache = [];
 let despesasFixasCategoriasCache = [];
 let despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
-const DESP_FIXAS_LISTA_COLLAPSED_KEY = "desp-fixas-lista-collapsed";
+const DESP_FIXAS_FILTROS_COLLAPSED_KEY = "desp-fixas-filtros-collapsed";
 
-function despFixasSetListaCollapsed(collapsed, persist = true) {
+function despFixasSetFiltrosCollapsed(collapsed, persist = true) {
   const card = document.getElementById("despFixasListaCard");
-  const btn = document.getElementById("despFixasToggleLista");
+  const btn = document.getElementById("despFixasToggleFiltros");
   if (!card) return;
-  card.classList.toggle("desp-fixas-lista-card--collapsed", collapsed);
+  card.classList.toggle("desp-fixas-filtros--collapsed", collapsed);
   if (btn) {
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    btn.title = collapsed ? "Expandir filtros e lista" : "Recolher filtros e lista";
+    btn.title = collapsed ? "Mostrar filtros" : "Recolher filtros";
   }
   if (persist) {
     try {
-      localStorage.setItem(DESP_FIXAS_LISTA_COLLAPSED_KEY, collapsed ? "1" : "0");
+      localStorage.setItem(DESP_FIXAS_FILTROS_COLLAPSED_KEY, collapsed ? "1" : "0");
     } catch (_) {}
   }
 }
 
-function despFixasInitListaCollapse() {
+function despFixasInitFiltrosCollapse() {
   const card = document.getElementById("despFixasListaCard");
-  if (!card || card.dataset.collapseInited === "1") return;
-  card.dataset.collapseInited = "1";
+  if (!card || card.dataset.filtrosCollapseInited === "1") return;
+  card.dataset.filtrosCollapseInited = "1";
   let collapsed = false;
   try {
-    collapsed = localStorage.getItem(DESP_FIXAS_LISTA_COLLAPSED_KEY) === "1";
+    collapsed = localStorage.getItem(DESP_FIXAS_FILTROS_COLLAPSED_KEY) === "1";
   } catch (_) {}
-  despFixasSetListaCollapsed(collapsed, false);
+  despFixasSetFiltrosCollapsed(collapsed, false);
 }
 
 function despFixasEls() {
@@ -361,7 +361,7 @@ async function loadDespesasFixas() {
   if (!els.table) return; // Seção ainda não existe no DOM (segurança)
 
   despFixasBindOnce();
-  despFixasInitListaCollapse();
+  despFixasInitFiltrosCollapse();
 
   // Garante dados base: unidades e categorias (para o formulário).
   await loadUnidades(false).catch(() => {});
@@ -973,7 +973,7 @@ function despFixasBindOnce() {
   if (document.body.dataset.despFixasBound === "1") return;
   document.body.dataset.despFixasBound = "1";
 
-  despFixasInitListaCollapse();
+  despFixasInitFiltrosCollapse();
 
   const els = despFixasEls();
 
@@ -1017,14 +1017,14 @@ function despFixasBindOnce() {
     despFixasSetAplicaTodasUI(!!e.target.checked);
   });
 
-  // Delegação na seção (recolher lista, ver/editar/excluir).
+  // Delegação na seção (recolher filtros, ver/editar/excluir).
   document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
-    const toggleBtn = e.target?.closest?.("#despFixasToggleLista");
+    const toggleBtn = e.target?.closest?.("#despFixasToggleFiltros");
     if (toggleBtn) {
       e.preventDefault();
       const card = document.getElementById("despFixasListaCard");
       if (!card) return;
-      despFixasSetListaCollapsed(!card.classList.contains("desp-fixas-lista-card--collapsed"));
+      despFixasSetFiltrosCollapsed(!card.classList.contains("desp-fixas-filtros--collapsed"));
       return;
     }
 

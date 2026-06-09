@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260610-despfixas-seta" />
+    <link rel="stylesheet" href="style.css?v=20260610-despfixas-filtros" />
     <script>
       (function () {
         try {
@@ -3352,23 +3352,22 @@
               <header class="desp-fixas-lista-head">
                 <div class="desp-fixas-lista-head__text">
                   <h3>Despesas cadastradas</h3>
-                  <p class="subtle-text">Filtre e consulte as despesas fixas cadastradas.</p>
+                  <p class="subtle-text">Use os filtros para buscar; a lista de despesas fica sempre visível abaixo.</p>
                 </div>
                 <button
                   type="button"
-                  class="desp-fixas-lista-toggle btn secondary"
-                  id="despFixasToggleLista"
+                  class="desp-fixas-filtros-toggle"
+                  id="despFixasToggleFiltros"
                   aria-expanded="true"
-                  aria-controls="despFixasListaBody"
-                  title="Recolher filtros e lista"
-                  aria-label="Recolher ou expandir despesas cadastradas"
+                  aria-controls="despFixasFiltrosPainel"
+                  title="Recolher filtros"
+                  aria-label="Recolher ou expandir filtros"
                 >
-                  <span class="desp-fixas-lista-toggle__icon" aria-hidden="true">▼</span>
+                  <span class="desp-fixas-filtros-toggle__icon" aria-hidden="true">▼</span>
                 </button>
               </header>
 
-              <div id="despFixasListaBody" class="desp-fixas-lista-body">
-              <!-- Filtros (somente para a lista abaixo) -->
+              <div id="despFixasFiltrosPainel" class="desp-fixas-filtros-painel">
               <form id="despFixasFiltrosForm" class="filters-panel" style="margin: 0.75rem 1rem 0 1rem;">
                 <div class="filters-grid">
                   <label>
@@ -3393,6 +3392,7 @@
                   <button type="button" class="btn" id="despFixasFiltroLimpar">Limpar</button>
                 </div>
               </form>
+              </div>
 
               <div class="table-wrapper">
                 <table>
@@ -3412,7 +3412,6 @@
                     <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
-              </div>
               </div>
             </div>
           </section>
@@ -6672,7 +6671,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260610-despfixas-seta"></script>
+    <script src="app.js?v=20260610-despfixas-filtros"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>
