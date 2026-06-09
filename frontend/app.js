@@ -150,6 +150,28 @@ function despFixasInitFiltrosCollapse() {
   despFixasSetFiltrosCollapsed(collapsed, false);
 }
 
+function despFixasSetupMoeda(root) {
+  const scope = root || document.getElementById("despFixasFormCard");
+  if (!scope) return;
+  scope.querySelectorAll("[data-despfixas-moeda]").forEach((inp) => {
+    if (inp.dataset.despfixasMoedaBound === "1") return;
+    inp.dataset.despfixasMoedaBound = "1";
+    if (typeof attachCurrencyMask === "function") attachCurrencyMask(inp);
+  });
+}
+
+function despFixasSetValorInput(el, val) {
+  if (!el) return;
+  const n = Number(val ?? 0);
+  if (Number.isFinite(n) && n > 0) {
+    el.dataset.value = String(n);
+    el.value = typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(n) : String(n);
+  } else {
+    el.dataset.value = "0";
+    el.value = "";
+  }
+}
+
 function despFixasEls() {
   return {
     table: document.getElementById("despFixasTable"),
@@ -229,6 +251,7 @@ function despFixasShowForm(show) {
   const els = despFixasEls();
   if (!els.formCard) return;
   els.formCard.classList.toggle("hidden", !show);
+  if (show) despFixasSetupMoeda(els.formCard);
   if (!show) {
     despFixasSetFeedback("");
     if (els.form) els.form.reset();
@@ -265,6 +288,7 @@ function despFixasResetForm() {
   if (els.form) els.form.reset();
   if (els.id) els.id.value = "";
   if (els.status) els.status.value = "ativo";
+  despFixasSetValorInput(els.valor, 0);
   despFixasRenderUnidadesChecklist([]);
   despFixasSetFeedback("");
 }
@@ -321,7 +345,9 @@ function despFixasRenderTable(lista) {
     const nome = escapeHtml(String(d.nome ?? "—"));
     const cat = escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
     const valorNum = Number(d.valor ?? 0);
-    const valor = Number.isFinite(valorNum) && valorNum > 0 ? formatCurrency(valorNum) : "—";
+    const valor = Number.isFinite(valorNum) && valorNum > 0
+      ? (typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valorNum) : formatCurrency(valorNum))
+      : "—";
     const dia = escapeHtml(String(d.dia_vencimento ?? "—"));
     const status = escapeHtml(String(d.status ?? "—"));
     const unidadesLabel = escapeHtml(String(d.unidades_label ?? "—"));
@@ -917,7 +943,7 @@ async function despFixasOpenForId(id, mode) {
 
   if (els.id) els.id.value = d?.id != null ? String(d.id) : "";
   if (els.nome) els.nome.value = d?.nome ?? "";
-  if (els.valor) els.valor.value = d?.valor != null && Number(d.valor) !== 0 ? String(d.valor) : "";
+  if (els.valor) despFixasSetValorInput(els.valor, d?.valor);
   if (els.dia) els.dia.value = d?.dia_vencimento != null ? String(d.dia_vencimento) : "";
   if (els.fornecedor) els.fornecedor.value = d?.fornecedor ?? "";
   if (els.status) els.status.value = (d?.status || "ativo").toString();
@@ -958,6 +984,7 @@ function despFixasBindOnce() {
   document.body.dataset.despFixasBound = "1";
 
   despFixasInitFiltrosCollapse();
+  despFixasSetupMoeda();
 
   const els = despFixasEls();
 
@@ -1038,7 +1065,9 @@ function despFixasBindOnce() {
     // Validações rápidas no frontend (backend também valida).
     const nome = (els.nome?.value || "").trim();
     const categoriaId = Number(els.categoria?.value || 0);
-    const valorStr = (els.valor?.value ?? "").toString().trim();
+    const valor = typeof parseCurrencyInput === "function"
+      ? parseCurrencyInput(els.valor)
+      : Number((els.valor?.value || "").replace(/\./g, "").replace(",", ".")) || 0;
     const dia = Number(els.dia?.value || 0);
     const status = (els.status?.value || "ativo").toString();
     const fornecedor = (els.fornecedor?.value || "").trim() || null;
@@ -1046,11 +1075,9 @@ function despFixasBindOnce() {
 
     if (!nome) return despFixasSetFeedback("Informe o nome da despesa.");
     if (!Number.isFinite(categoriaId) || categoriaId <= 0) return despFixasSetFeedback("Selecione uma categoria válida.");
-    let valor = 0;
-    if (valorStr !== "") {
-      valor = Number(valorStr);
-      if (!Number.isFinite(valor) || valor < 0) return despFixasSetFeedback("Informe um valor válido ou deixe em branco.");
-    }
+    let valorFinal = 0;
+    if (Number.isFinite(valor) && valor > 0) valorFinal = valor;
+    else if (Number.isFinite(valor) && valor < 0) return despFixasSetFeedback("Informe um valor válido ou deixe em branco.");
     if (!Number.isFinite(dia) || dia < 1 || dia > 31) return despFixasSetFeedback("Informe um dia de vencimento entre 1 e 31.");
 
     const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
@@ -1060,7 +1087,7 @@ function despFixasBindOnce() {
     const payload = {
       nome,
       categoria_id: categoriaId,
-      valor,
+      valor: valorFinal,
       dia_vencimento: dia,
       fornecedor,
       observacoes,
