@@ -2184,22 +2184,47 @@ function closeSidebarFlyouts() {
 function resetCollapsedSubmenuFlyouts() {
   document.querySelectorAll("#sidebar .nav-submenu > .nav-submenu-content").forEach((flyout) => {
     flyout.style.removeProperty("--collapsed-flyout-top");
+    flyout.style.removeProperty("--collapsed-flyout-left");
     flyout.style.removeProperty("--collapsed-flyout-max-height");
   });
 }
 
+function isCollapsedSidebarDesktop() {
+  const sidebar = document.getElementById("sidebar");
+  return !!sidebar?.classList.contains("is-collapsed") && !isMobileViewport();
+}
+
+function toggleNavSubmenu(submenu) {
+  if (!submenu) return;
+  const willOpen = !submenu.classList.contains("open");
+  const isTopLevel = submenu.parentElement?.tagName === "NAV";
+
+  if (isCollapsedSidebarDesktop() && isTopLevel) {
+    document.querySelectorAll("#sidebar .sidebar-nav-scroll > nav > .nav-submenu.open").forEach((sm) => {
+      sm.classList.remove("open");
+    });
+    if (willOpen) submenu.classList.add("open");
+  } else {
+    submenu.classList.toggle("open");
+  }
+
+  requestAnimationFrame(positionCollapsedSubmenuFlyouts);
+}
+
 function positionCollapsedSubmenuFlyouts() {
   const sidebar = document.getElementById("sidebar");
-  if (!sidebar?.classList.contains("is-collapsed") || isMobileViewport()) {
+  if (!isCollapsedSidebarDesktop()) {
     resetCollapsedSubmenuFlyouts();
     return;
   }
+  const sidebarRect = sidebar.getBoundingClientRect();
   document.querySelectorAll("#sidebar .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content").forEach((flyout) => {
     const submenu = flyout.closest(".nav-submenu");
-    const trigger = submenu?.querySelector(":scope > .nav-link-parent");
+    const trigger = Array.from(submenu?.children || []).find((el) => el.classList.contains("nav-link-parent"));
     if (!trigger) return;
     const rect = trigger.getBoundingClientRect();
     const maxHeight = Math.max(120, window.innerHeight - rect.top - 16);
+    flyout.style.setProperty("--collapsed-flyout-left", `${sidebarRect.right + 10}px`);
     flyout.style.setProperty("--collapsed-flyout-top", `${rect.top}px`);
     flyout.style.setProperty("--collapsed-flyout-max-height", `${maxHeight}px`);
   });
@@ -15779,74 +15804,15 @@ function wireSidebarSectionNavClicks() {
 function setupNavigation() {
   wireSidebarSectionNavClicks();
 
-  // Setup submenu toggle for Financeiro
-  const financeiroMenu = document.getElementById('financeiroMenu');
-  if (financeiroMenu && financeiroMenu.dataset.sasSubmenuToggleBound !== "1") {
-    financeiroMenu.dataset.sasSubmenuToggleBound = "1";
-    financeiroMenu.addEventListener('click', (event) => {
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar && sidebar.dataset.sasSubmenuToggleBound !== "1") {
+    sidebar.dataset.sasSubmenuToggleBound = "1";
+    sidebar.addEventListener("click", (event) => {
+      const parentLink = event.target.closest(".nav-link-parent");
+      if (!parentLink) return;
       event.preventDefault();
       event.stopPropagation();
-      const parent = financeiroMenu.closest('.nav-submenu');
-      if (parent) {
-        parent.classList.toggle('open');
-      }
-    });
-  }
-  const fechamentoCaixaMenu = document.getElementById('fechamentoCaixaMenu');
-  if (fechamentoCaixaMenu && fechamentoCaixaMenu.dataset.sasSubmenuToggleBound !== "1") {
-    fechamentoCaixaMenu.dataset.sasSubmenuToggleBound = "1";
-    fechamentoCaixaMenu.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const parent = fechamentoCaixaMenu.closest('.nav-submenu');
-      if (parent) {
-        parent.classList.toggle('open');
-      }
-    });
-  }
-  // Setup submenu toggle for RH
-  const rhMenu = document.getElementById('rhMenu');
-  if (rhMenu && rhMenu.dataset.sasSubmenuToggleBound !== "1") {
-    rhMenu.dataset.sasSubmenuToggleBound = "1";
-    rhMenu.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const parent = rhMenu.closest('.nav-submenu');
-      if (parent) parent.classList.toggle('open');
-    });
-  }
-  // Submenu aninhado: RH → Recrutamento / Rescisão
-  if (document.body && document.body.dataset.sasNestedSubmenuToggleBound !== "1") {
-    document.body.dataset.sasNestedSubmenuToggleBound = "1";
-    document.addEventListener('click', (event) => {
-      const elRh = event.target?.closest?.('#rhRecrutamentoMenu, #rhRescisaoMenu');
-      if (!elRh) return;
-      event.preventDefault();
-      event.stopPropagation();
-      elRh.closest('.nav-submenu')?.classList.toggle('open');
-    }, true);
-  }
-  // Setup submenu toggle for Configuracoes
-  const configuracoesMenu = document.getElementById('configuracoesMenu');
-  if (configuracoesMenu && configuracoesMenu.dataset.sasSubmenuToggleBound !== "1") {
-    configuracoesMenu.dataset.sasSubmenuToggleBound = "1";
-    configuracoesMenu.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const parent = configuracoesMenu.closest('.nav-submenu');
-      if (parent) {
-        parent.classList.toggle('open');
-      }
-    });
-  }
-  const reservaMenu = document.getElementById('reservaMenu');
-  if (reservaMenu && reservaMenu.dataset.sasSubmenuToggleBound !== "1") {
-    reservaMenu.dataset.sasSubmenuToggleBound = "1";
-    reservaMenu.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const parent = reservaMenu.closest('.nav-submenu');
-      if (parent) parent.classList.toggle('open');
+      toggleNavSubmenu(parentLink.closest(".nav-submenu"));
     });
   }
 

@@ -325,9 +325,9 @@ body.sidebar-open {
     line-height: 1.2;
   }
 
-  .sidebar.is-collapsed .nav-submenu-content {
+  .sidebar.is-collapsed .nav-submenu:not(.open) > .nav-submenu-content {
     max-height: 0 !important;
-    overflow: hidden;
+    overflow: hidden !important;
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu {
@@ -336,10 +336,10 @@ body.sidebar-open {
 
   .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content {
     position: fixed;
-    left: calc(80px + 10px);
+    left: var(--collapsed-flyout-left, calc(80px + 10px));
     top: var(--collapsed-flyout-top, 0);
     min-width: 240px;
-    max-height: var(--collapsed-flyout-max-height, calc(100vh - 24px));
+    max-height: var(--collapsed-flyout-max-height, calc(100vh - 24px)) !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     scrollbar-width: none;
@@ -370,7 +370,7 @@ body.sidebar-open {
     display: inline-block !important;
   }
 
-  .sidebar.is-collapsed .nav-submenu--nested.open > .nav-submenu-content {
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open .nav-submenu--nested.open > .nav-submenu-content {
     position: static;
     left: auto;
     top: auto;
