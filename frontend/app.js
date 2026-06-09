@@ -4973,10 +4973,13 @@ function navigateTo(section) {
   }
 
   // Usa alternância de seções (conteúdo no index.html) - evita fetch que pode falhar em produção
+  const sidebarNavScroll = document.querySelector(".sidebar-nav-scroll");
+  const sidebarScrollTop = sidebarNavScroll ? sidebarNavScroll.scrollTop : 0;
   dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
   dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
-  const mainScroll = document.querySelector(".main-content");
-  if (mainScroll) mainScroll.scrollTop = 0;
+  const contentScroll = document.querySelector(".content");
+  if (contentScroll) contentScroll.scrollTop = 0;
+  if (sidebarNavScroll) sidebarNavScroll.scrollTop = sidebarScrollTop;
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
     if (section === "reservaMesa" || section === "historicoReservas") {

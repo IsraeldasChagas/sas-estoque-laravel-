@@ -59,12 +59,14 @@ body.sidebar-open {
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .sidebar-nav-scroll {
   flex: 1 1 auto;
-  overflow: visible;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .sidebar nav a,
@@ -258,8 +260,11 @@ body.sidebar-open {
 /* Desktop: botao visivel e sidebar recolhivel */
 @media (min-width: 1025px) {
   .sidebar {
-    position: relative;
+    position: sticky;
+    top: 0;
     flex-shrink: 0;
+    height: 100vh;
+    max-height: 100vh;
     transition: width 0.25s ease, padding 0.25s ease;
   }
 
@@ -4039,8 +4044,7 @@ body.image-lightbox-open {
     padding: 28px 22px;
     transform: translateX(-106%);
     box-shadow: 12px 0 28px rgba(0, 0, 0, 0.18);
-    overflow-x: hidden;
-    overflow-y: visible;
+    overflow: hidden;
     z-index: 2100;
   }
 
@@ -4049,7 +4053,8 @@ body.image-lightbox-open {
   }
 
   .sidebar .sidebar-nav-scroll {
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .sidebar nav a,
