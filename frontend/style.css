@@ -4517,9 +4517,10 @@ body.image-lightbox-open {
 
   #despesasFixasSection .table-wrapper td::before {
     content: attr(data-label);
-    font-weight: 600;
-    color: var(--muted);
-    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text, #263238);
+    font-size: 0.88rem;
+    letter-spacing: 0.01em;
   }
 
   #despesasFixasSection .table-wrapper td.table-actions {
