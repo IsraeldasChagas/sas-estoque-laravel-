@@ -4476,6 +4476,69 @@ body.image-lightbox-open {
     width: 100%;
   }
 
+  /* Despesas fixas — cadastradas: pergunta em cima, resposta embaixo (celular/tablet) */
+  #despesasFixasSection .table-wrapper {
+    overflow: visible;
+  }
+
+  #despesasFixasSection .table-wrapper table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #despesasFixasSection .table-wrapper thead {
+    display: none;
+  }
+
+  #despesasFixasSection .table-wrapper tbody {
+    display: grid;
+    gap: 18px;
+  }
+
+  #despesasFixasSection .table-wrapper tr {
+    display: grid;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  #despesasFixasSection .table-wrapper td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 0;
+    border-bottom: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  #despesasFixasSection .table-wrapper td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #despesasFixasSection .table-wrapper td.table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  #despesasFixasSection .table-wrapper td.table-actions::before {
+    margin-bottom: 4px;
+  }
+
+  #despesasFixasSection .table-wrapper td.table-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   /* Vale / consumo — lançamentos em cards (rótulo em cima, valor em baixo), igual Funcionários/Proventos */
   #valeConsumoSection .vale-consumo-lancamentos-head {
     flex-direction: column;

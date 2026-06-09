@@ -313,10 +313,10 @@ function despFixasRenderTable(lista) {
         <td data-label="Nome">${nome}</td>
         <td data-label="Categoria">${cat}</td>
         <td data-label="Valor">${escapeHtml(valor)}</td>
-        <td data-label="Venc.">Dia ${dia}</td>
+        <td data-label="Vencimento">Dia ${dia}</td>
         <td data-label="Status">${status}</td>
         <td data-label="Unidades">${unidadesLabel}</td>
-        <td data-label="Ações">
+        <td data-label="Ações" class="table-actions">
           <button type="button" class="btn secondary" data-despfixas-action="view" data-id="${id}">Ver</button>
           <button type="button" class="btn primary" data-despfixas-action="edit" data-id="${id}">Editar</button>
           <button type="button" class="btn danger" data-despfixas-action="delete" data-id="${id}">Excluir</button>
