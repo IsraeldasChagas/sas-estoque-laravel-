@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260610-despfixas-filtros" />
+    <link rel="stylesheet" href="style.css?v=20260611-despfixas-ver-modal" />
     <script>
       (function () {
         try {
@@ -4973,6 +4973,20 @@
       </div>
     </div>
 
+    <div class="modal-backdrop" id="despFixasVerModal" role="presentation">
+      <div class="modal modal-ver-leitura desp-fixas-ver-modal" role="dialog" aria-modal="true" aria-labelledby="despFixasVerModalTitulo">
+        <header>
+          <h2 id="despFixasVerModalTitulo">Despesa fixa</h2>
+          <button type="button" class="close-btn" id="closeDespFixasVer" aria-label="Fechar">×</button>
+        </header>
+        <div id="despFixasVerModalBody" class="desp-fixas-ver-modal__body"></div>
+        <footer>
+          <button type="button" class="btn primary" id="despFixasVerEditar">Editar</button>
+          <button type="button" class="btn neutral" id="closeDespFixasVerBtn">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
     <!-- Area para mensagens toast -->
     <div id="toast" class="toast"></div>
 
@@ -6667,7 +6681,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260611-despfixas-moeda"></script>
+    <script src="app.js?v=20260611-despfixas-ver-modal"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>

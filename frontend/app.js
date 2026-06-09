@@ -921,6 +921,59 @@ function despFixasRenderFiltrosOptions() {
   els.filtroUnidade.value = despesasFixasFiltros?.unidadeId || "";
 }
 
+async function despFixasViewById(id) {
+  try {
+    const cached = despesasFixasListaCache.find((x) => String(x?.id) === String(id)) || null;
+    const d = cached || await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`);
+    openDespFixasVerModal(d);
+  } catch (err) {
+    showToast(err?.message || "Falha ao abrir despesa.", "error");
+  }
+}
+
+function renderDespFixasVerHtml(d) {
+  const field = (label, val, fullWidth = false) => {
+    const v = val == null || String(val).trim() === "" ? "—" : String(val);
+    const cls = fullWidth ? " view-field--full" : "";
+    return `<div class="view-field${cls}"><div class="view-field-label">${escapeHtml(label)}</div><div class="view-field-value">${escapeHtml(v)}</div></div>`;
+  };
+  const valorNum = Number(d?.valor ?? 0);
+  const valorFmt = Number.isFinite(valorNum) && valorNum > 0
+    ? (typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valorNum) : formatCurrency(valorNum))
+    : "—";
+  const statusRaw = String(d?.status || "ativo").toLowerCase();
+  const statusFmt = statusRaw === "pausado" ? "Pausado" : statusRaw === "ativo" ? "Ativo" : String(d?.status ?? "—");
+  const dia = d?.dia_vencimento != null ? `Dia ${d.dia_vencimento}` : "—";
+  const cat = d?.categoria_nome || d?.categoria?.nome || "—";
+  return `<div class="view-fields-grid">
+    ${field("ID", d?.id)}
+    ${field("Nome", d?.nome, true)}
+    ${field("Categoria", cat)}
+    ${field("Valor", valorFmt)}
+    ${field("Vencimento", dia)}
+    ${field("Fornecedor", d?.fornecedor)}
+    ${field("Status", statusFmt)}
+    ${field("Unidades", d?.unidades_label, true)}
+    ${field("Observações", d?.observacoes, true)}
+    ${field("Cadastrado por", d?.criado_por_nome)}
+  </div>`;
+}
+
+function openDespFixasVerModal(d) {
+  const body = document.getElementById("despFixasVerModalBody");
+  const title = document.getElementById("despFixasVerModalTitulo");
+  const editBtn = document.getElementById("despFixasVerEditar");
+  if (!body || !d) return;
+  if (title) title.textContent = d.nome ? `Despesa — ${d.nome}` : "Despesa fixa";
+  body.innerHTML = renderDespFixasVerHtml(d);
+  if (editBtn) editBtn.dataset.id = d.id != null ? String(d.id) : "";
+  toggleModal(document.getElementById("despFixasVerModal"), true);
+}
+
+function closeDespFixasVerModal() {
+  toggleModal(document.getElementById("despFixasVerModal"), false);
+}
+
 async function despFixasOpenForId(id, mode) {
   const els = despFixasEls();
   if (!els.formCard) return;
@@ -931,12 +984,9 @@ async function despFixasOpenForId(id, mode) {
   // Sem isso, o checklist pode aparecer vazio em perfis que não entram na tela "Unidades".
   await loadUnidades(false).catch(() => {});
 
-  // Em "ver", sempre busca no backend para garantir dados completos; em editar usa cache se disponível.
+  // Busca registro no cache primeiro; se não existir, chama endpoint /despesas-fixas/{id}
   const cached = despesasFixasListaCache.find((x) => String(x?.id) === String(id)) || null;
-  const d =
-    mode === "view" || !cached
-      ? await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`)
-      : cached;
+  const d = cached || await fetchJSON(`/despesas-fixas/${encodeURIComponent(String(id))}`);
 
   despFixasShowForm(true);
   despFixasSetFeedback("");
@@ -1024,6 +1074,18 @@ function despFixasBindOnce() {
   els.closeForm?.addEventListener("click", () => despFixasShowForm(false));
   els.cancelar?.addEventListener("click", () => despFixasShowForm(false));
 
+  document.getElementById("closeDespFixasVer")?.addEventListener("click", () => closeDespFixasVerModal());
+  document.getElementById("closeDespFixasVerBtn")?.addEventListener("click", () => closeDespFixasVerModal());
+  document.getElementById("despFixasVerModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "despFixasVerModal") closeDespFixasVerModal();
+  });
+  document.getElementById("despFixasVerEditar")?.addEventListener("click", () => {
+    const id = document.getElementById("despFixasVerEditar")?.dataset?.id;
+    if (!id) return;
+    closeDespFixasVerModal();
+    despFixasOpenForId(id, "edit").catch((err) => showToast(err?.message || "Falha ao abrir edição.", "error"));
+  });
+
   // Delegação na seção (recolher filtros, ver/editar/excluir).
   document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
     const toggleBtn = e.target?.closest?.("#despFixasToggleFiltros");
@@ -1043,7 +1105,7 @@ function despFixasBindOnce() {
     if (!id) return;
 
     if (action === "view") {
-      despFixasOpenForId(id, "view").catch((err) => showToast(err?.message || "Falha ao abrir.", "error"));
+      despFixasViewById(id);
     } else if (action === "edit") {
       despFixasOpenForId(id, "edit").catch((err) => showToast(err?.message || "Falha ao abrir.", "error"));
     } else if (action === "delete") {
