@@ -121,7 +121,93 @@ function setupImageLightbox() {
 let despesasFixasListaCache = [];
 let despesasFixasCategoriasCache = [];
 let despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
+let despesasFixasExibirPreset = "todas";
 const DESP_FIXAS_FILTROS_COLLAPSED_KEY = "desp-fixas-filtros-collapsed";
+const DESP_FIXAS_EXIBIR_KEY = "desp-fixas-exibir-preset";
+const DESP_FIXAS_EXIBIR_PRESETS = {
+  todas: ["id", "nome", "categoria", "valor", "vencimento", "status", "unidades"],
+  essencial: ["nome", "categoria", "valor"],
+  financeiro: ["nome", "valor", "vencimento", "status"],
+  operacional: ["nome", "categoria", "vencimento", "unidades"],
+  sem_id: ["nome", "categoria", "valor", "vencimento", "status", "unidades"],
+};
+const DESP_FIXAS_COL_DEF = {
+  id: { th: "ID", dataLabel: "ID" },
+  nome: { th: "Nome", dataLabel: "Nome" },
+  categoria: { th: "Categoria", dataLabel: "Categoria" },
+  valor: { th: "Valor", dataLabel: "Valor" },
+  vencimento: { th: "Venc.", dataLabel: "Vencimento" },
+  status: { th: "Status", dataLabel: "Status" },
+  unidades: { th: "Unidades", dataLabel: "Unidades" },
+};
+
+function despFixasGetExibirColKeys() {
+  return DESP_FIXAS_EXIBIR_PRESETS[despesasFixasExibirPreset] || DESP_FIXAS_EXIBIR_PRESETS.todas;
+}
+
+function despFixasInitExibirPreset() {
+  try {
+    const saved = localStorage.getItem(DESP_FIXAS_EXIBIR_KEY);
+    if (saved && DESP_FIXAS_EXIBIR_PRESETS[saved]) despesasFixasExibirPreset = saved;
+  } catch (_) {}
+  const sel = document.getElementById("despFixasExibirPreset");
+  if (sel) sel.value = despesasFixasExibirPreset;
+}
+
+function despFixasSetExibirPreset(preset, persist = true) {
+  if (!DESP_FIXAS_EXIBIR_PRESETS[preset]) preset = "todas";
+  despesasFixasExibirPreset = preset;
+  const sel = document.getElementById("despFixasExibirPreset");
+  if (sel && sel.value !== preset) sel.value = preset;
+  if (persist) {
+    try {
+      localStorage.setItem(DESP_FIXAS_EXIBIR_KEY, preset);
+    } catch (_) {}
+  }
+}
+
+function despFixasUpdateTableHead(colKeys) {
+  const thead = document.getElementById("despFixasTableHead");
+  if (!thead) return;
+  const ths = colKeys
+    .map((key) => {
+      const def = DESP_FIXAS_COL_DEF[key];
+      return def ? `<th>${def.th}</th>` : "";
+    })
+    .filter(Boolean)
+    .join("");
+  thead.innerHTML = `<tr>${ths}<th>Ações</th></tr>`;
+}
+
+function despFixasCellHtml(colKey, d) {
+  const id = escapeHtml(String(d.id ?? ""));
+  switch (colKey) {
+    case "id":
+      return id;
+    case "nome":
+      return escapeHtml(String(d.nome ?? "—"));
+    case "categoria":
+      return escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
+    case "valor": {
+      const valorNum = Number(d.valor ?? 0);
+      const valor = Number.isFinite(valorNum) && valorNum > 0
+        ? (typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valorNum) : formatCurrency(valorNum))
+        : "—";
+      return escapeHtml(valor);
+    }
+    case "vencimento": {
+      const diaNum = Number(d?.dia_vencimento ?? 0);
+      const dia = Number.isFinite(diaNum) && diaNum > 0 ? `Dia ${diaNum}` : "—";
+      return escapeHtml(dia);
+    }
+    case "status":
+      return escapeHtml(String(d.status ?? "—"));
+    case "unidades":
+      return escapeHtml(String(d.unidades_label ?? "—"));
+    default:
+      return "—";
+  }
+}
 
 function despFixasSetFiltrosCollapsed(collapsed, persist = true) {
   const card = document.getElementById("despFixasListaCard");
@@ -183,6 +269,7 @@ function despFixasEls() {
     filtroCategoria: document.getElementById("despFixasFiltroCategoria"),
     filtroUnidade: document.getElementById("despFixasFiltroUnidade"),
     filtroLimpar: document.getElementById("despFixasFiltroLimpar"),
+    exibirPreset: document.getElementById("despFixasExibirPreset"),
 
     formCard: document.getElementById("despFixasFormCard"),
     form: document.getElementById("despFixasForm"),
@@ -335,33 +422,26 @@ function despFixasRenderTable(lista) {
     return true;
   });
 
+  const colKeys = despFixasGetExibirColKeys();
+  despFixasUpdateTableHead(colKeys);
+  const colCount = colKeys.length + 1;
+
   if (!Array.isArray(listaFiltrada) || listaFiltrada.length === 0) {
-    renderTable(els.table, "", "Sem despesas fixas cadastradas.", 8);
+    renderTable(els.table, "", "Sem despesas fixas cadastradas.", colCount);
     return;
   }
 
   const rows = listaFiltrada.map((d) => {
     const id = escapeHtml(String(d.id ?? ""));
-    const nome = escapeHtml(String(d.nome ?? "—"));
-    const cat = escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
-    const valorNum = Number(d.valor ?? 0);
-    const valor = Number.isFinite(valorNum) && valorNum > 0
-      ? (typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valorNum) : formatCurrency(valorNum))
-      : "—";
-    const diaNum = Number(d?.dia_vencimento ?? 0);
-    const dia = Number.isFinite(diaNum) && diaNum > 0 ? `Dia ${diaNum}` : "—";
-    const status = escapeHtml(String(d.status ?? "—"));
-    const unidadesLabel = escapeHtml(String(d.unidades_label ?? "—"));
+    const cells = colKeys.map((key) => {
+      const def = DESP_FIXAS_COL_DEF[key];
+      const label = def?.dataLabel || key;
+      return `<td data-label="${escapeHtml(label)}">${despFixasCellHtml(key, d)}</td>`;
+    }).join("");
 
     return `
       <tr>
-        <td data-label="ID">${id}</td>
-        <td data-label="Nome">${nome}</td>
-        <td data-label="Categoria">${cat}</td>
-        <td data-label="Valor">${escapeHtml(valor)}</td>
-        <td data-label="Vencimento">${escapeHtml(dia)}</td>
-        <td data-label="Status">${status}</td>
-        <td data-label="Unidades">${unidadesLabel}</td>
+        ${cells}
         <td data-label="Ações" class="table-actions">
           <button type="button" class="btn secondary" data-despfixas-action="view" data-id="${id}">Ver</button>
           <button type="button" class="btn primary" data-despfixas-action="edit" data-id="${id}">Editar</button>
@@ -380,6 +460,7 @@ async function loadDespesasFixas() {
 
   despFixasBindOnce();
   despFixasInitFiltrosCollapse();
+  despFixasInitExibirPreset();
 
   // Garante dados base: unidades e categorias (para o formulário).
   await loadUnidades(false).catch(() => {});
@@ -1072,6 +1153,11 @@ function despFixasBindOnce() {
     if (els.filtroCategoria) els.filtroCategoria.value = "";
     if (els.filtroUnidade) els.filtroUnidade.value = "";
     loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao limpar filtros.", "error"));
+  });
+
+  els.exibirPreset?.addEventListener("change", () => {
+    despFixasSetExibirPreset(els.exibirPreset.value || "todas");
+    despFixasRenderTable(despesasFixasListaCache);
   });
 
   els.closeForm?.addEventListener("click", () => despFixasShowForm(false));

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260611-despfixas-labels" />
+    <link rel="stylesheet" href="style.css?v=20260611-despfixas-exibir" />
     <script>
       (function () {
         try {
@@ -3390,9 +3390,22 @@
               </form>
               </div>
 
+              <div class="desp-fixas-exibir-panel">
+                <label class="desp-fixas-exibir-pergunta" for="despFixasExibirPreset">
+                  O que deseja exibir na lista?
+                  <select id="despFixasExibirPreset" aria-label="O que deseja exibir na lista">
+                    <option value="todas">Todas as informações</option>
+                    <option value="essencial">Nome, categoria e valor</option>
+                    <option value="financeiro">Nome, valor, vencimento e status</option>
+                    <option value="operacional">Nome, categoria, vencimento e unidades</option>
+                    <option value="sem_id">Tudo, exceto ID</option>
+                  </select>
+                </label>
+              </div>
+
               <div class="table-wrapper">
                 <table>
-                  <thead>
+                  <thead id="despFixasTableHead">
                     <tr>
                       <th>ID</th>
                       <th>Nome</th>
@@ -6680,7 +6693,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260611-despfixas-venc-opc"></script>
+    <script src="app.js?v=20260611-despfixas-exibir"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>

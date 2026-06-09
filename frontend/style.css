@@ -2139,6 +2139,29 @@ tr.tem-vinculo:hover {
   border-bottom: 1px solid var(--border);
 }
 
+#despesasFixasSection .desp-fixas-exibir-panel {
+  margin: 0.75rem 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+#despesasFixasSection .desp-fixas-exibir-pergunta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  font-weight: 800;
+  color: var(--text, #1a1a1a);
+}
+
+#despesasFixasSection .desp-fixas-exibir-pergunta select {
+  font-weight: 500;
+  width: 100%;
+  max-width: 420px;
+}
+
 /* Despesas fixas — rótulos/perguntas em negrito forte */
 #despesasFixasSection #despFixasForm label,
 #despesasFixasSection #despFixasFiltrosForm label,
