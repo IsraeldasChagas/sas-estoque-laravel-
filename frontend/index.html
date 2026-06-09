@@ -3300,8 +3300,8 @@
                   </label>
 
                   <label>
-                    Valor (R$) *
-                    <input type="number" id="despFixasValor" required step="0.01" min="0" inputmode="decimal" placeholder="0,00" />
+                    Valor (R$)
+                    <input type="number" id="despFixasValor" step="0.01" min="0" inputmode="decimal" placeholder="Opcional" />
                   </label>
 
                   <label>
@@ -3328,10 +3328,6 @@
                   </label>
 
                   <div style="grid-column: 1 / -1;">
-                    <label class="checkbox-label" style="margin-bottom:0.5rem;">
-                      <input type="checkbox" id="despFixasAplicaTodas" />
-                      Aplicar em <strong>todas</strong> as unidades
-                    </label>
                     <div id="despFixasUnidadesWrap" class="filters-panel" style="margin:0;padding:0.75rem;border-radius:10px;">
                       <div class="subtle-text" style="margin-bottom:0.5rem;">Selecione as unidades:</div>
                       <div id="despFixasUnidadesList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.35rem 0.75rem;"></div>
@@ -6671,7 +6667,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260610-despfixas-filtros"></script>
+    <script src="app.js?v=20260610-despfixas-valor"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>

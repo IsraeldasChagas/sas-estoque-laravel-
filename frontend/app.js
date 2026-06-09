@@ -181,7 +181,6 @@ function despFixasEls() {
     fornecedor: document.getElementById("despFixasFornecedor"),
     status: document.getElementById("despFixasStatus"),
     obs: document.getElementById("despFixasObservacoes"),
-    aplicaTodas: document.getElementById("despFixasAplicaTodas"),
     unidadesWrap: document.getElementById("despFixasUnidadesWrap"),
     unidadesList: document.getElementById("despFixasUnidadesList"),
   };
@@ -218,7 +217,7 @@ function despFixasFormSetMode(mode) {
   }
 
   // Em modo "ver", desabilita campos e esconde ações de escrita.
-  const fields = [els.nome, els.categoria, els.valor, els.dia, els.fornecedor, els.status, els.obs, els.aplicaTodas];
+  const fields = [els.nome, els.categoria, els.valor, els.dia, els.fornecedor, els.status, els.obs];
   fields.forEach((f) => { if (f) f.disabled = isView; });
   els.unidadesList?.querySelectorAll("input[type=checkbox]")?.forEach((c) => { c.disabled = isView; });
 
@@ -235,7 +234,6 @@ function despFixasShowForm(show) {
     if (els.form) els.form.reset();
     if (els.id) els.id.value = "";
     if (els.unidadesList) els.unidadesList.innerHTML = "";
-    if (els.unidadesWrap) els.unidadesWrap.classList.remove("hidden");
   }
 }
 
@@ -262,19 +260,11 @@ function despFixasRenderUnidadesChecklist(selectedIds = []) {
   els.unidadesList.innerHTML = html || `<div class="subtle-text">Nenhuma unidade disponível.</div>`;
 }
 
-function despFixasSetAplicaTodasUI(aplicaTodas) {
-  const els = despFixasEls();
-  if (!els.unidadesWrap) return;
-  els.unidadesWrap.classList.toggle("hidden", !!aplicaTodas);
-}
-
 function despFixasResetForm() {
   const els = despFixasEls();
   if (els.form) els.form.reset();
   if (els.id) els.id.value = "";
   if (els.status) els.status.value = "ativo";
-  if (els.aplicaTodas) els.aplicaTodas.checked = false;
-  despFixasSetAplicaTodasUI(false);
   despFixasRenderUnidadesChecklist([]);
   despFixasSetFeedback("");
 }
@@ -330,7 +320,8 @@ function despFixasRenderTable(lista) {
     const id = escapeHtml(String(d.id ?? ""));
     const nome = escapeHtml(String(d.nome ?? "—"));
     const cat = escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
-    const valor = formatCurrency(Number(d.valor ?? 0));
+    const valorNum = Number(d.valor ?? 0);
+    const valor = Number.isFinite(valorNum) && valorNum > 0 ? formatCurrency(valorNum) : "—";
     const dia = escapeHtml(String(d.dia_vencimento ?? "—"));
     const status = escapeHtml(String(d.status ?? "—"));
     const unidadesLabel = escapeHtml(String(d.unidades_label ?? "—"));
@@ -926,7 +917,7 @@ async function despFixasOpenForId(id, mode) {
 
   if (els.id) els.id.value = d?.id != null ? String(d.id) : "";
   if (els.nome) els.nome.value = d?.nome ?? "";
-  if (els.valor) els.valor.value = d?.valor != null ? String(d.valor) : "";
+  if (els.valor) els.valor.value = d?.valor != null && Number(d.valor) !== 0 ? String(d.valor) : "";
   if (els.dia) els.dia.value = d?.dia_vencimento != null ? String(d.dia_vencimento) : "";
   if (els.fornecedor) els.fornecedor.value = d?.fornecedor ?? "";
   if (els.status) els.status.value = (d?.status || "ativo").toString();
@@ -940,19 +931,12 @@ async function despFixasOpenForId(id, mode) {
     els.categoria.value = d?.categoria_id != null ? String(d.categoria_id) : "";
   }
 
-  const aplicaTodas = !!d?.aplica_todas_unidades;
-  if (els.aplicaTodas) els.aplicaTodas.checked = aplicaTodas;
-  despFixasSetAplicaTodasUI(aplicaTodas);
-
-  // Unidade IDs podem vir como array (API) ou string JSON (segurança)
   let uids = [];
   if (Array.isArray(d?.unidade_ids)) uids = d.unidade_ids;
   else if (typeof d?.unidade_ids === "string") {
     try { uids = JSON.parse(d.unidade_ids) || []; } catch { uids = []; }
   }
   despFixasRenderUnidadesChecklist(uids);
-  // Se aplica a todas, não força seleção no checklist.
-  // Se NÃO aplica a todas, a seleção acima permite escolher unidades específicas.
 
   despFixasFormSetMode(mode);
   els.formCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1013,10 +997,6 @@ function despFixasBindOnce() {
   els.closeForm?.addEventListener("click", () => despFixasShowForm(false));
   els.cancelar?.addEventListener("click", () => despFixasShowForm(false));
 
-  els.aplicaTodas?.addEventListener("change", (e) => {
-    despFixasSetAplicaTodasUI(!!e.target.checked);
-  });
-
   // Delegação na seção (recolher filtros, ver/editar/excluir).
   document.getElementById("despesasFixasSection")?.addEventListener("click", (e) => {
     const toggleBtn = e.target?.closest?.("#despFixasToggleFiltros");
@@ -1058,24 +1038,24 @@ function despFixasBindOnce() {
     // Validações rápidas no frontend (backend também valida).
     const nome = (els.nome?.value || "").trim();
     const categoriaId = Number(els.categoria?.value || 0);
-    const valor = Number(els.valor?.value || 0);
+    const valorStr = (els.valor?.value ?? "").toString().trim();
     const dia = Number(els.dia?.value || 0);
     const status = (els.status?.value || "ativo").toString();
-    const aplicaTodas = !!els.aplicaTodas?.checked;
     const fornecedor = (els.fornecedor?.value || "").trim() || null;
     const observacoes = (els.obs?.value || "").trim() || null;
 
     if (!nome) return despFixasSetFeedback("Informe o nome da despesa.");
     if (!Number.isFinite(categoriaId) || categoriaId <= 0) return despFixasSetFeedback("Selecione uma categoria válida.");
-    if (!Number.isFinite(valor) || valor <= 0) return despFixasSetFeedback("Informe um valor válido.");
+    let valor = 0;
+    if (valorStr !== "") {
+      valor = Number(valorStr);
+      if (!Number.isFinite(valor) || valor < 0) return despFixasSetFeedback("Informe um valor válido ou deixe em branco.");
+    }
     if (!Number.isFinite(dia) || dia < 1 || dia > 31) return despFixasSetFeedback("Informe um dia de vencimento entre 1 e 31.");
 
-    let unidadeIds = [];
-    if (!aplicaTodas) {
-      const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
-      unidadeIds = Array.from(checks).map((c) => Number(c.value)).filter((n) => Number.isFinite(n) && n > 0);
-      if (!unidadeIds.length) return despFixasSetFeedback("Selecione ao menos 1 unidade ou marque 'todas as unidades'.", "warn");
-    }
+    const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
+    const unidadeIds = Array.from(checks).map((c) => Number(c.value)).filter((n) => Number.isFinite(n) && n > 0);
+    if (!unidadeIds.length) return despFixasSetFeedback("Selecione ao menos 1 unidade.", "warn");
 
     const payload = {
       nome,
@@ -1085,8 +1065,8 @@ function despFixasBindOnce() {
       fornecedor,
       observacoes,
       status,
-      aplica_todas_unidades: aplicaTodas ? 1 : 0,
-      unidade_ids: aplicaTodas ? [] : unidadeIds,
+      aplica_todas_unidades: 0,
+      unidade_ids: unidadeIds,
     };
 
     try {

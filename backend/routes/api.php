@@ -9538,7 +9538,15 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
         $body = $request->json()->all() ?: [];
         $nome = trim((string) ($body['nome'] ?? ''));
         $catId = (int) ($body['categoria_id'] ?? 0);
-        $valor = (float) ($body['valor'] ?? 0);
+        $valorRaw = $body['valor'] ?? null;
+        if ($valorRaw === null || $valorRaw === '') {
+            $valor = 0;
+        } else {
+            $valor = (float) $valorRaw;
+            if ($valor < 0) {
+                return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
+            }
+        }
         $dia = (int) ($body['dia_vencimento'] ?? 0);
         $fornecedor = trim((string) ($body['fornecedor'] ?? ''));
         $obs = trim((string) ($body['observacoes'] ?? $body['obs'] ?? ''));
@@ -9546,7 +9554,6 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
         if (!in_array($status, ['ativo', 'pausado'], true)) {
             $status = 'ativo';
         }
-        $aplicaTodas = !empty($body['aplica_todas_unidades']);
         $uids = $despFixasParseUnidadeIds($body['unidade_ids'] ?? []);
 
         if ($nome === '' || mb_strlen($nome) > 180) {
@@ -9555,16 +9562,13 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
         if ($catId <= 0 || !DB::table('despesas_fixas_categorias')->where('id', $catId)->where('ativo', 1)->exists()) {
             return response()->json(['error' => 'Categoria inválida'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if ($valor <= 0) {
-            return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
-        }
         if ($dia < 1 || $dia > 28) {
             return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 28'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if (!$aplicaTodas && $uids === []) {
-            return response()->json(['error' => 'Selecione ao menos uma unidade ou marque todas'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($uids === []) {
+            return response()->json(['error' => 'Selecione ao menos uma unidade'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if (!$aplicaTodas && Schema::hasTable('unidades')) {
+        if (Schema::hasTable('unidades')) {
             $n = DB::table('unidades')->whereIn('id', $uids)->count();
             if ($n !== count(array_unique($uids))) {
                 return response()->json(['error' => 'Unidade inválida na lista'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -9579,8 +9583,8 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
             'fornecedor' => $fornecedor !== '' ? mb_substr($fornecedor, 0, 160) : null,
             'observacoes' => $obs !== '' ? mb_substr($obs, 0, 2000) : null,
             'status' => $status,
-            'aplica_todas_unidades' => $aplicaTodas ? 1 : 0,
-            'unidade_ids' => json_encode($aplicaTodas ? [] : array_values($uids), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'aplica_todas_unidades' => 0,
+            'unidade_ids' => json_encode(array_values($uids), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'criado_por' => $u->id,
             'created_at' => now(),
             'updated_at' => now(),
@@ -9620,7 +9624,9 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         $body = $request->json()->all() ?: [];
         $nome = array_key_exists('nome', $body) ? trim((string) $body['nome']) : $r->nome;
         $catId = array_key_exists('categoria_id', $body) ? (int) $body['categoria_id'] : (int) $r->categoria_id;
-        $valor = array_key_exists('valor', $body) ? (float) $body['valor'] : (float) $r->valor;
+        $valor = array_key_exists('valor', $body)
+            ? (($body['valor'] === null || $body['valor'] === '') ? 0 : (float) $body['valor'])
+            : (float) $r->valor;
         $dia = array_key_exists('dia_vencimento', $body) ? (int) $body['dia_vencimento'] : (int) $r->dia_vencimento;
         $fornecedor = array_key_exists('fornecedor', $body) ? trim((string) $body['fornecedor']) : (string) ($r->fornecedor ?? '');
         $obs = array_key_exists('observacoes', $body) ? trim((string) $body['observacoes']) : (string) ($r->observacoes ?? '');
@@ -9628,7 +9634,6 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         if (!in_array($status, ['ativo', 'pausado'], true)) {
             $status = 'ativo';
         }
-        $aplicaTodas = array_key_exists('aplica_todas_unidades', $body) ? !empty($body['aplica_todas_unidades']) : (bool) $r->aplica_todas_unidades;
         $uids = array_key_exists('unidade_ids', $body) ? $despFixasParseUnidadeIds($body['unidade_ids']) : $despFixasParseUnidadeIds($r->unidade_ids ?? []);
 
         if ($nome === '' || mb_strlen($nome) > 180) {
@@ -9637,16 +9642,16 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         if ($catId <= 0 || !DB::table('despesas_fixas_categorias')->where('id', $catId)->where('ativo', 1)->exists()) {
             return response()->json(['error' => 'Categoria inválida'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if ($valor <= 0) {
+        if ($valor < 0) {
             return response()->json(['error' => 'Valor inválido'], 422)->header('Access-Control-Allow-Origin', '*');
         }
         if ($dia < 1 || $dia > 28) {
             return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 28'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if (!$aplicaTodas && $uids === []) {
-            return response()->json(['error' => 'Selecione ao menos uma unidade ou marque todas'], 422)->header('Access-Control-Allow-Origin', '*');
+        if ($uids === []) {
+            return response()->json(['error' => 'Selecione ao menos uma unidade'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if (!$aplicaTodas && Schema::hasTable('unidades')) {
+        if (Schema::hasTable('unidades')) {
             $n = DB::table('unidades')->whereIn('id', $uids)->count();
             if ($n !== count(array_unique($uids))) {
                 return response()->json(['error' => 'Unidade inválida na lista'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -9661,8 +9666,8 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
             'fornecedor' => $fornecedor !== '' ? mb_substr($fornecedor, 0, 160) : null,
             'observacoes' => $obs !== '' ? mb_substr($obs, 0, 2000) : null,
             'status' => $status,
-            'aplica_todas_unidades' => $aplicaTodas ? 1 : 0,
-            'unidade_ids' => json_encode($aplicaTodas ? [] : array_values($uids), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'aplica_todas_unidades' => 0,
+            'unidade_ids' => json_encode(array_values($uids), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'updated_at' => now(),
         ]);
         $row = DB::table('despesas_fixas as d')
