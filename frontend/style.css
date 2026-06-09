@@ -499,9 +499,9 @@ body.sidebar-open {
 }
 
 .topbar__logo {
-  height: 88px;
+  height: 44px;
   width: auto;
-  max-width: 280px;
+  max-width: 140px;
   object-fit: contain;
   display: block;
   flex-shrink: 0;
@@ -3840,8 +3840,8 @@ body.image-lightbox-open {
   .topbar #userName { word-break: break-word; max-width: 100%; }
 
   .topbar__logo {
-    height: 64px;
-    max-width: 240px;
+    height: 32px;
+    max-width: 120px;
   }
 
   .topbar__user-photo {
