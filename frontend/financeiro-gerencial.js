@@ -5,7 +5,46 @@
   "use strict";
 
   const FG_CENTROS_PADRAO = ["Administrativo", "Manutenção", "Estoque", "Outros"];
+  const FG_FORMAS_PGTO = ["Pix", "Dinheiro", "Credito", "Debito"];
   const fgState = { unidades: [], categorias: [], centros: [], clientes: [], fluxoLancamentos: [], fluxoEditId: null };
+
+  function fgNormalizarFormaPgto(valor) {
+    const raw = (valor ?? "").toString().trim();
+    if (!raw) return "";
+    const map = {
+      pix: "Pix",
+      dinheiro: "Dinheiro",
+      credito: "Credito",
+      crédito: "Credito",
+      debito: "Debito",
+      débito: "Debito",
+      cartao: "Credito",
+      cartão: "Credito",
+      "cartao de credito": "Credito",
+      "cartão de crédito": "Credito",
+      "cartao de debito": "Debito",
+      "cartão de débito": "Debito",
+    };
+    const key = raw.toLowerCase();
+    if (map[key]) return map[key];
+    if (FG_FORMAS_PGTO.includes(raw)) return raw;
+    return raw;
+  }
+
+  function fgSetFormaPgtoSelect(valor) {
+    const sel = document.getElementById("fgFluxoFormaPgto");
+    if (!sel) return;
+    const normalizado = fgNormalizarFormaPgto(valor);
+    Array.from(sel.querySelectorAll("option[data-fg-legado]")).forEach((o) => o.remove());
+    if (normalizado && !FG_FORMAS_PGTO.includes(normalizado)) {
+      const legado = document.createElement("option");
+      legado.value = normalizado;
+      legado.textContent = normalizado;
+      legado.dataset.fgLegado = "1";
+      sel.appendChild(legado);
+    }
+    sel.value = normalizado || "";
+  }
 
   function esc(s) {
     return (s ?? "").toString()
@@ -179,6 +218,7 @@
   function fgLimparFormFluxo() {
     const form = document.getElementById("fgFluxoForm");
     form?.reset();
+    fgSetFormaPgtoSelect("");
     const valorEl = document.getElementById("fgFluxoValor");
     if (valorEl) {
       valorEl.value = "";
@@ -203,7 +243,7 @@
     setVal("fgFluxoUnidade", l.unidade_id || "");
     setVal("fgFluxoCategoria", l.categoria_id || "");
     setVal("fgFluxoCentroCusto", l.centro_custo_id || "");
-    setVal("fgFluxoFormaPgto", l.forma_pagamento || "");
+    fgSetFormaPgtoSelect(l.forma_pagamento || "");
     setVal("fgFluxoDescricao", l.descricao || "");
     setVal("fgFluxoObs", l.observacao || "");
     const valorEl = document.getElementById("fgFluxoValor");

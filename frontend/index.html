@@ -3580,7 +3580,13 @@
                 <label>Unidade<select id="fgFluxoUnidade"><option value="">—</option></select></label>
                 <label>Categoria<select id="fgFluxoCategoria"><option value="">—</option></select></label>
                 <label>Centro de custo<select id="fgFluxoCentroCusto"><option value="">—</option></select></label>
-                <label>Forma pgto<input type="text" id="fgFluxoFormaPgto" placeholder="PIX, dinheiro…" /></label>
+                <label>Forma pgto<select id="fgFluxoFormaPgto">
+                  <option value="">Selecione</option>
+                  <option value="Pix">Pix</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Credito">Crédito</option>
+                  <option value="Debito">Débito</option>
+                </select></label>
                 <label class="fg-form-grid--full">Descrição<input type="text" id="fgFluxoDescricao" /></label>
                 <label class="fg-form-grid--full">Observação<textarea id="fgFluxoObs" rows="2"></textarea></label>
                 <div class="fg-form-grid--full fg-form-actions">
