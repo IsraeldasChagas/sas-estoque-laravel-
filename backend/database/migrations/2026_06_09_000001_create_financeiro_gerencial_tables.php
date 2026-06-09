@@ -151,6 +151,7 @@ return new class extends Migration
             ['Vendas / faturamento', 'entrada'],
             ['Recebimentos diversos', 'entrada'],
             ['Fornecedores', 'saida'],
+            ['Compra de mercado', 'saida'],
             ['Folha e proventos', 'saida'],
             ['Despesas fixas', 'saida'],
             ['Impostos', 'saida'],

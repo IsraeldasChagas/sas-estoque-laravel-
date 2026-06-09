@@ -328,7 +328,7 @@
     setVal("fgFluxoPagamento", l.data_pagamento ? String(l.data_pagamento).slice(0, 10) : "");
     setVal("fgFluxoStatus", l.status || "previsto");
     setVal("fgFluxoUnidade", l.unidade_id || "");
-    setVal("fgFluxoCategoria", l.categoria_id || "");
+    fgPopularCategoriasFluxo(l.categoria_id || "");
     setVal("fgFluxoCentroCusto", l.centro_custo_id || "");
     fgSetFormaPgtoSelect(l.forma_pagamento || "");
     setVal("fgFluxoDescricao", l.descricao || "");
@@ -343,6 +343,25 @@
   }
 
   // ——— Fluxo de Caixa ———
+  function fgPopularCategoriasFluxo(valorAtual) {
+    const catSel = document.getElementById("fgFluxoCategoria");
+    const tipoSel = document.getElementById("fgFluxoTipo");
+    if (!catSel) return;
+    const tipo = tipoSel?.value || "saida";
+    const cur = valorAtual != null ? String(valorAtual) : catSel.value;
+    const lista = (fgState.categorias || []).filter((c) => c.tipo === tipo && c.ativo !== false);
+    catSel.innerHTML = '<option value="">Selecione</option>';
+    lista.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.nome;
+      catSel.appendChild(o);
+    });
+    if (cur && Array.from(catSel.options).some((o) => o.value === cur)) {
+      catSel.value = cur;
+    }
+  }
+
   async function fgCarregarAuxFluxo(valorCentroAtual) {
     try {
       const [cats, cc] = await Promise.all([
@@ -357,14 +376,7 @@
         ? document.getElementById("fgFluxoCategoria")?.value
         : null;
       if (catSel) {
-        catSel.innerHTML = '<option value="">—</option>';
-        fgState.categorias.forEach((c) => {
-          const o = document.createElement("option");
-          o.value = c.id;
-          o.textContent = `${c.nome} (${c.tipo})`;
-          catSel.appendChild(o);
-        });
-        if (curCat) catSel.value = curCat;
+        fgPopularCategoriasFluxo(curCat);
       }
       fgPopularCentroCustoSelect(ccSel, fgState.centros, valorCentroAtual);
     } catch (e) {
@@ -751,6 +763,7 @@
     document.getElementById("fgFluxoAtualizar")?.addEventListener("click", () => loadFinanceiroFluxoCaixa().catch((e) => fgToast(e?.message, "error")));
     document.getElementById("fgFluxoForm")?.addEventListener("submit", fgSalvarFluxo);
     document.getElementById("fgFluxoCancelBtn")?.addEventListener("click", () => fgLimparFormFluxo());
+    document.getElementById("fgFluxoTipo")?.addEventListener("change", () => fgPopularCategoriasFluxo());
     document.getElementById("fgCrAtualizar")?.addEventListener("click", () => loadFinanceiroContasReceber().catch((e) => fgToast(e?.message, "error")));
     document.getElementById("fgCrForm")?.addEventListener("submit", fgSalvarContaReceber);
     document.getElementById("fgDreAtualizar")?.addEventListener("click", () => loadFinanceiroDre().catch((e) => fgToast(e?.message, "error")));
