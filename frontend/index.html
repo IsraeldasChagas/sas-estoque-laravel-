@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260609-topbar-logo-lg" />
+    <link rel="stylesheet" href="style.css?v=20260610-sidebar-theme" />
+    <script>
+      try {
+        var _st = localStorage.getItem("sas-sidebar-theme");
+        if (_st && _st !== "padrao") document.documentElement.setAttribute("data-sidebar-theme", _st);
+      } catch (e) {}
+    </script>
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
     <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento-collapse" />
@@ -295,7 +301,15 @@
               </div>
             </div>
           </div>
-          <button type="button" id="logoutBtn">Sair</button>
+          <div class="topbar__actions">
+            <div class="sidebar-theme-picker" role="group" aria-label="Cor do menu lateral">
+              <span class="sidebar-theme-picker__label">Menu</span>
+              <button type="button" class="sidebar-theme-btn is-active" data-sidebar-theme="padrao" title="Menu padrão" aria-label="Menu padrão (preto)"></button>
+              <button type="button" class="sidebar-theme-btn" data-sidebar-theme="azul" title="Menu azul" aria-label="Menu azul"></button>
+              <button type="button" class="sidebar-theme-btn" data-sidebar-theme="laranja" title="Menu laranja" aria-label="Menu laranja"></button>
+            </div>
+            <button type="button" id="logoutBtn">Sair</button>
+          </div>
         </header>
 
         <!-- Container com as secoes funcionais -->

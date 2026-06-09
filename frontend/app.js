@@ -1828,6 +1828,36 @@ function isMobileViewport() {
 }
 
 const SIDEBAR_COLLAPSED_KEY = "sas-sidebar-collapsed";
+const SIDEBAR_THEME_KEY = "sas-sidebar-theme";
+const SIDEBAR_THEMES = ["padrao", "azul", "laranja"];
+
+function applySidebarTheme(theme) {
+  const t = SIDEBAR_THEMES.includes(theme) ? theme : "padrao";
+  if (t === "padrao") {
+    document.documentElement.removeAttribute("data-sidebar-theme");
+  } else {
+    document.documentElement.setAttribute("data-sidebar-theme", t);
+  }
+  document.querySelectorAll(".sidebar-theme-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.sidebarTheme === t);
+  });
+  try {
+    localStorage.setItem(SIDEBAR_THEME_KEY, t);
+  } catch (_) {}
+}
+
+function setupSidebarThemePicker() {
+  let saved = "padrao";
+  try {
+    saved = localStorage.getItem(SIDEBAR_THEME_KEY) || "padrao";
+  } catch (_) {}
+  applySidebarTheme(saved);
+  document.querySelectorAll(".sidebar-theme-btn").forEach((btn) => {
+    if (btn.dataset.sidebarThemePickerBound === "1") return;
+    btn.dataset.sidebarThemePickerBound = "1";
+    btn.addEventListener("click", () => applySidebarTheme(btn.dataset.sidebarTheme));
+  });
+}
 
 function setSidebarOpen(open) {
   if (!dom.sidebar) return;
@@ -24284,6 +24314,7 @@ async function init() {
   setupImageLightbox();
   setupNavigation();
   setupResponsiveSidebar();
+  setupSidebarThemePicker();
   setupTables();
   setupFilters();
   setupForms();
