@@ -121,69 +121,49 @@ function setupImageLightbox() {
 let despesasFixasListaCache = [];
 let despesasFixasCategoriasCache = [];
 let despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
-let despesasFixasExibirPreset = "todas";
 const DESP_FIXAS_FILTROS_COLLAPSED_KEY = "desp-fixas-filtros-collapsed";
-const DESP_FIXAS_EXIBIR_KEY = "desp-fixas-exibir-preset";
-const DESP_FIXAS_EXIBIR_PRESETS = {
-  todas: ["id", "nome", "categoria", "valor", "vencimento", "status", "unidades"],
-  essencial: ["nome", "categoria", "valor"],
-  financeiro: ["nome", "valor", "vencimento", "status"],
-  operacional: ["nome", "categoria", "vencimento", "unidades"],
-  sem_id: ["nome", "categoria", "valor", "vencimento", "status", "unidades"],
-};
-const DESP_FIXAS_COL_DEF = {
+const DESP_FIXAS_PDF_COL_DEF = {
   id: { th: "ID", dataLabel: "ID" },
   nome: { th: "Nome", dataLabel: "Nome" },
   categoria: { th: "Categoria", dataLabel: "Categoria" },
   valor: { th: "Valor", dataLabel: "Valor" },
-  vencimento: { th: "Venc.", dataLabel: "Vencimento" },
+  vencimento: { th: "Vencimento", dataLabel: "Vencimento" },
   status: { th: "Status", dataLabel: "Status" },
   unidades: { th: "Unidades", dataLabel: "Unidades" },
+  fornecedor: { th: "Fornecedor", dataLabel: "Fornecedor" },
+  observacoes: { th: "Observações", dataLabel: "Observações" },
 };
 
-function despFixasGetExibirColKeys() {
-  return DESP_FIXAS_EXIBIR_PRESETS[despesasFixasExibirPreset] || DESP_FIXAS_EXIBIR_PRESETS.todas;
-}
-
-function despFixasInitExibirPreset() {
-  try {
-    const saved = localStorage.getItem(DESP_FIXAS_EXIBIR_KEY);
-    if (saved && DESP_FIXAS_EXIBIR_PRESETS[saved]) despesasFixasExibirPreset = saved;
-  } catch (_) {}
-  const sel = document.getElementById("despFixasExibirPreset");
-  if (sel) sel.value = despesasFixasExibirPreset;
-}
-
-function despFixasSetExibirPreset(preset, persist = true) {
-  if (!DESP_FIXAS_EXIBIR_PRESETS[preset]) preset = "todas";
-  despesasFixasExibirPreset = preset;
-  const sel = document.getElementById("despFixasExibirPreset");
-  if (sel && sel.value !== preset) sel.value = preset;
-  if (persist) {
-    try {
-      localStorage.setItem(DESP_FIXAS_EXIBIR_KEY, preset);
-    } catch (_) {}
-  }
-}
-
-function despFixasUpdateTableHead(colKeys) {
-  const thead = document.getElementById("despFixasTableHead");
-  if (!thead) return;
-  const ths = colKeys
-    .map((key) => {
-      const def = DESP_FIXAS_COL_DEF[key];
-      return def ? `<th>${def.th}</th>` : "";
-    })
-    .filter(Boolean)
-    .join("");
-  thead.innerHTML = `<tr>${ths}<th>Ações</th></tr>`;
+function despFixasFiltrarLista(lista) {
+  const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
+  const diaFiltro = Number(filtros.dia || 0);
+  return (Array.isArray(lista) ? lista : []).filter((d) => {
+    if (Number.isFinite(diaFiltro) && diaFiltro > 0) {
+      const dia = Number(d?.dia_vencimento ?? 0);
+      if (!Number.isFinite(dia) || dia !== diaFiltro) return false;
+    }
+    if (filtros.categoriaId) {
+      const cid = String(d?.categoria_id ?? "");
+      if (cid !== String(filtros.categoriaId)) return false;
+    }
+    if (filtros.unidadeId) {
+      const uid = Number(filtros.unidadeId);
+      if (Number.isFinite(uid) && uid > 0) {
+        const aplicaTodas = !!d?.aplica_todas_unidades;
+        if (aplicaTodas) return true;
+        const uids = Array.isArray(d?.unidade_ids) ? d.unidade_ids : [];
+        const has = uids.map((x) => Number(x)).some((x) => Number.isFinite(x) && x === uid);
+        if (!has) return false;
+      }
+    }
+    return true;
+  });
 }
 
 function despFixasCellHtml(colKey, d) {
-  const id = escapeHtml(String(d.id ?? ""));
   switch (colKey) {
     case "id":
-      return id;
+      return escapeHtml(String(d.id ?? "—"));
     case "nome":
       return escapeHtml(String(d.nome ?? "—"));
     case "categoria":
@@ -204,9 +184,195 @@ function despFixasCellHtml(colKey, d) {
       return escapeHtml(String(d.status ?? "—"));
     case "unidades":
       return escapeHtml(String(d.unidades_label ?? "—"));
+    case "fornecedor":
+      return escapeHtml(String(d.fornecedor ?? "—"));
+    case "observacoes":
+      return escapeHtml(String(d.observacoes ?? "—"));
     default:
       return "—";
   }
+}
+
+function despFixasOpenPdfModal() {
+  const modal = document.getElementById("despFixasPdfModal");
+  if (!modal) return;
+  modal.classList.add("active");
+}
+
+function despFixasClosePdfModal() {
+  document.getElementById("despFixasPdfModal")?.classList.remove("active");
+}
+
+function despFixasGetPdfColKeys() {
+  const wrap = document.getElementById("despFixasPdfCampos");
+  if (!wrap) return [];
+  return [...wrap.querySelectorAll("input[data-desp-pdf-col]:checked")]
+    .map((inp) => inp.getAttribute("data-desp-pdf-col"))
+    .filter(Boolean);
+}
+
+function despFixasMontarFiltrosPdfResumo() {
+  const els = despFixasEls();
+  const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
+  const partes = [];
+  if (filtros.dia) partes.push(`Vencimento dia ${escapeHtml(String(filtros.dia))}`);
+  if (filtros.categoriaId && els.filtroCategoria) {
+    const opt = [...els.filtroCategoria.options].find((o) => o.value === String(filtros.categoriaId));
+    partes.push(`Categoria: ${escapeHtml(opt?.textContent?.trim() || filtros.categoriaId)}`);
+  }
+  if (filtros.unidadeId && els.filtroUnidade) {
+    const opt = [...els.filtroUnidade.options].find((o) => o.value === String(filtros.unidadeId));
+    partes.push(`Unidade: ${escapeHtml(opt?.textContent?.trim() || filtros.unidadeId)}`);
+  }
+  return partes.length ? partes.join(" · ") : "Todos os registros (sem filtros)";
+}
+
+async function despFixasGerarRelatorioPdf() {
+  const colKeys = despFixasGetPdfColKeys();
+  if (!colKeys.length) {
+    showToast("Marque ao menos uma informação para o PDF.", "warning");
+    return;
+  }
+
+  const lista = despFixasFiltrarLista(despesasFixasListaCache);
+  if (!lista.length) {
+    showToast("Nenhuma despesa para gerar o relatório.", "warning");
+    return;
+  }
+
+  const agora = new Date();
+  const titulo = "Despesas fixas";
+  const logoMarkup = await getReportLogoMarkup();
+  const ths = colKeys
+    .map((key) => {
+      const def = DESP_FIXAS_PDF_COL_DEF[key];
+      return def ? `<th>${def.th}</th>` : "";
+    })
+    .filter(Boolean)
+    .join("");
+  const rows = lista.map((d) => {
+    const cells = colKeys
+      .map((key) => `<td>${despFixasCellHtml(key, d)}</td>`)
+      .join("");
+    return `<tr>${cells}</tr>`;
+  }).join("");
+
+  const estilo = `
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+      .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+      .report-header img, .report-header object { height: 64px; width: auto; max-width: 120px; }
+      .report-header object { border: none; }
+      .report-header h1 { margin: 0; font-size: 22px; }
+      .meta { margin-bottom: 20px; line-height: 1.55; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+      th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; text-align: left; vertical-align: top; }
+      th { background: #f0f4f8; font-weight: bold; }
+      .report-footer {
+        margin-top: 32px;
+        padding-top: 12px;
+        border-top: 1px solid #ddd;
+        text-align: center;
+        font-size: 12px;
+        color: #333;
+        font-weight: 600;
+      }
+    </style>
+  `;
+
+  const conteudo = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>${titulo}</title>
+        ${estilo}
+      </head>
+      <body>
+        <div class="report-header">
+          ${logoMarkup}
+          <h1>${titulo}</h1>
+        </div>
+        <div class="meta">
+          <strong>Gerado em:</strong> ${agora.toLocaleString("pt-BR")}<br />
+          <strong>Filtros:</strong> ${despFixasMontarFiltrosPdfResumo()}<br />
+          <strong>Registros:</strong> ${lista.length}
+        </div>
+        <table>
+          <thead><tr>${ths}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <footer class="report-footer">Grupo Sabor Paraense</footer>
+      </body>
+    </html>
+  `;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+  document.body.appendChild(iframe);
+
+  let timeoutId = null;
+  const cleanup = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    try {
+      if (iframe.contentWindow) iframe.contentWindow.onafterprint = null;
+    } catch (_) {}
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win) {
+      cleanup();
+      showToast("Não foi possível preparar o PDF.", "error");
+      return;
+    }
+    win.onafterprint = cleanup;
+    win.focus();
+    try {
+      if (typeof win.print === "function") {
+        win.print();
+        despFixasClosePdfModal();
+        showToast("Relatório enviado para impressão / PDF.", "success");
+      } else {
+        cleanup();
+        showToast("Seu navegador não suportou a impressão.", "error");
+      }
+    } catch (_) {
+      cleanup();
+      showToast("Falha ao acionar a impressão.", "error");
+    }
+  };
+
+  iframe.onerror = () => {
+    cleanup();
+    showToast("Não foi possível gerar o relatório.", "error");
+  };
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    cleanup();
+    showToast("Não foi possível gerar o relatório.", "error");
+    return;
+  }
+  doc.open();
+  doc.write(conteudo);
+  doc.close();
+
+  timeoutId = setTimeout(() => {
+    if (!document.body.contains(iframe)) return;
+    cleanup();
+    showToast("Falha ao imprimir. Verifique as configurações do navegador.", "error");
+  }, 15000);
 }
 
 function despFixasSetFiltrosCollapsed(collapsed, persist = true) {
@@ -269,7 +435,6 @@ function despFixasEls() {
     filtroCategoria: document.getElementById("despFixasFiltroCategoria"),
     filtroUnidade: document.getElementById("despFixasFiltroUnidade"),
     filtroLimpar: document.getElementById("despFixasFiltroLimpar"),
-    exibirPreset: document.getElementById("despFixasExibirPreset"),
 
     formCard: document.getElementById("despFixasFormCard"),
     form: document.getElementById("despFixasForm"),
@@ -397,51 +562,35 @@ function despFixasRenderTable(lista) {
   const els = despFixasEls();
   if (!els.table) return;
 
-  const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
-  const diaFiltro = Number(filtros.dia || 0);
-  const listaFiltrada = (Array.isArray(lista) ? lista : []).filter((d) => {
-    if (Number.isFinite(diaFiltro) && diaFiltro > 0) {
-      const dia = Number(d?.dia_vencimento ?? 0);
-      if (!Number.isFinite(dia) || dia !== diaFiltro) return false;
-    }
-    // Categoria e Unidade já podem ser filtradas no backend; aqui só garantimos caso venha do cache antigo.
-    if (filtros.categoriaId) {
-      const cid = String(d?.categoria_id ?? "");
-      if (cid !== String(filtros.categoriaId)) return false;
-    }
-    if (filtros.unidadeId) {
-      const uid = Number(filtros.unidadeId);
-      if (Number.isFinite(uid) && uid > 0) {
-        const aplicaTodas = !!d?.aplica_todas_unidades;
-        if (aplicaTodas) return true;
-        const uids = Array.isArray(d?.unidade_ids) ? d.unidade_ids : [];
-        const has = uids.map((x) => Number(x)).some((x) => Number.isFinite(x) && x === uid);
-        if (!has) return false;
-      }
-    }
-    return true;
-  });
-
-  const colKeys = despFixasGetExibirColKeys();
-  despFixasUpdateTableHead(colKeys);
-  const colCount = colKeys.length + 1;
+  const listaFiltrada = despFixasFiltrarLista(lista);
 
   if (!Array.isArray(listaFiltrada) || listaFiltrada.length === 0) {
-    renderTable(els.table, "", "Sem despesas fixas cadastradas.", colCount);
+    renderTable(els.table, "", "Sem despesas fixas cadastradas.", 8);
     return;
   }
 
   const rows = listaFiltrada.map((d) => {
     const id = escapeHtml(String(d.id ?? ""));
-    const cells = colKeys.map((key) => {
-      const def = DESP_FIXAS_COL_DEF[key];
-      const label = def?.dataLabel || key;
-      return `<td data-label="${escapeHtml(label)}">${despFixasCellHtml(key, d)}</td>`;
-    }).join("");
+    const nome = escapeHtml(String(d.nome ?? "—"));
+    const cat = escapeHtml(String(d.categoria_nome ?? d.categoria?.nome ?? "—"));
+    const valorNum = Number(d.valor ?? 0);
+    const valor = Number.isFinite(valorNum) && valorNum > 0
+      ? (typeof formatCurrencyBRL === "function" ? formatCurrencyBRL(valorNum) : formatCurrency(valorNum))
+      : "—";
+    const diaNum = Number(d?.dia_vencimento ?? 0);
+    const dia = Number.isFinite(diaNum) && diaNum > 0 ? `Dia ${diaNum}` : "—";
+    const status = escapeHtml(String(d.status ?? "—"));
+    const unidadesLabel = escapeHtml(String(d.unidades_label ?? "—"));
 
     return `
       <tr>
-        ${cells}
+        <td data-label="ID">${id}</td>
+        <td data-label="Nome">${nome}</td>
+        <td data-label="Categoria">${cat}</td>
+        <td data-label="Valor">${escapeHtml(valor)}</td>
+        <td data-label="Vencimento">${escapeHtml(dia)}</td>
+        <td data-label="Status">${status}</td>
+        <td data-label="Unidades">${unidadesLabel}</td>
         <td data-label="Ações" class="table-actions">
           <button type="button" class="btn secondary" data-despfixas-action="view" data-id="${id}">Ver</button>
           <button type="button" class="btn primary" data-despfixas-action="edit" data-id="${id}">Editar</button>
@@ -460,7 +609,6 @@ async function loadDespesasFixas() {
 
   despFixasBindOnce();
   despFixasInitFiltrosCollapse();
-  despFixasInitExibirPreset();
 
   // Garante dados base: unidades e categorias (para o formulário).
   await loadUnidades(false).catch(() => {});
@@ -1138,6 +1286,16 @@ function despFixasBindOnce() {
     loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao atualizar despesas.", "error"));
   });
 
+  document.getElementById("despFixasPdf")?.addEventListener("click", () => despFixasOpenPdfModal());
+  document.getElementById("closeDespFixasPdf")?.addEventListener("click", () => despFixasClosePdfModal());
+  document.getElementById("despFixasPdfCancelar")?.addEventListener("click", () => despFixasClosePdfModal());
+  document.getElementById("despFixasPdfGerar")?.addEventListener("click", () => {
+    despFixasGerarRelatorioPdf().catch((err) => showToast(err?.message || "Falha ao gerar PDF.", "error"));
+  });
+  document.getElementById("despFixasPdfModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "despFixasPdfModal") despFixasClosePdfModal();
+  });
+
   // Filtros da lista
   els.filtrosForm?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -1153,11 +1311,6 @@ function despFixasBindOnce() {
     if (els.filtroCategoria) els.filtroCategoria.value = "";
     if (els.filtroUnidade) els.filtroUnidade.value = "";
     loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao limpar filtros.", "error"));
-  });
-
-  els.exibirPreset?.addEventListener("change", () => {
-    despFixasSetExibirPreset(els.exibirPreset.value || "todas");
-    despFixasRenderTable(despesasFixasListaCache);
   });
 
   els.closeForm?.addEventListener("click", () => despFixasShowForm(false));

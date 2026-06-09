@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260611-despfixas-exibir" />
+    <link rel="stylesheet" href="style.css?v=20260611-despfixas-pdf" />
     <script>
       (function () {
         try {
@@ -3269,6 +3269,7 @@
               <div class="boletos-actions">
                 <button type="button" class="btn primary" id="despFixasOpenNovo">+ Cadastrar despesa</button>
                 <button type="button" class="btn secondary" id="despFixasAtualizar">🔄 Atualizar</button>
+                <button type="button" class="btn secondary" id="despFixasPdf">📄 PDF</button>
               </div>
             </div>
 
@@ -3390,22 +3391,9 @@
               </form>
               </div>
 
-              <div class="desp-fixas-exibir-panel">
-                <label class="desp-fixas-exibir-pergunta" for="despFixasExibirPreset">
-                  O que deseja exibir na lista?
-                  <select id="despFixasExibirPreset" aria-label="O que deseja exibir na lista">
-                    <option value="todas">Todas as informações</option>
-                    <option value="essencial">Nome, categoria e valor</option>
-                    <option value="financeiro">Nome, valor, vencimento e status</option>
-                    <option value="operacional">Nome, categoria, vencimento e unidades</option>
-                    <option value="sem_id">Tudo, exceto ID</option>
-                  </select>
-                </label>
-              </div>
-
               <div class="table-wrapper">
                 <table>
-                  <thead id="despFixasTableHead">
+                  <thead>
                     <tr>
                       <th>ID</th>
                       <th>Nome</th>
@@ -4982,6 +4970,33 @@
         <footer>
           <button type="button" class="btn primary hidden" id="localVerEditar">Editar</button>
           <button type="button" class="btn neutral" id="closeLocalVerBtn">Fechar</button>
+        </footer>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="despFixasPdfModal" role="presentation">
+      <div class="modal desp-fixas-pdf-modal" role="dialog" aria-modal="true" aria-labelledby="despFixasPdfModalTitulo">
+        <header>
+          <h2 id="despFixasPdfModalTitulo">Relatório PDF — Despesas fixas</h2>
+          <button type="button" class="close-btn" id="closeDespFixasPdf" aria-label="Fechar">×</button>
+        </header>
+        <div class="desp-fixas-pdf-modal__body">
+          <p class="subtle-text" style="margin:0 0 1rem;">Marque as informações que deseja incluir no PDF (usa os filtros atuais da lista):</p>
+          <div class="desp-fixas-pdf-campos" id="despFixasPdfCampos">
+            <label><input type="checkbox" data-desp-pdf-col="id" checked /> ID</label>
+            <label><input type="checkbox" data-desp-pdf-col="nome" checked /> Nome</label>
+            <label><input type="checkbox" data-desp-pdf-col="categoria" checked /> Categoria</label>
+            <label><input type="checkbox" data-desp-pdf-col="valor" checked /> Valor</label>
+            <label><input type="checkbox" data-desp-pdf-col="vencimento" checked /> Vencimento</label>
+            <label><input type="checkbox" data-desp-pdf-col="status" checked /> Status</label>
+            <label><input type="checkbox" data-desp-pdf-col="unidades" checked /> Unidades</label>
+            <label><input type="checkbox" data-desp-pdf-col="fornecedor" /> Fornecedor</label>
+            <label><input type="checkbox" data-desp-pdf-col="observacoes" /> Observações</label>
+          </div>
+        </div>
+        <footer>
+          <button type="button" class="btn neutral" id="despFixasPdfCancelar">Cancelar</button>
+          <button type="button" class="btn primary" id="despFixasPdfGerar">Gerar PDF</button>
         </footer>
       </div>
     </div>
@@ -6693,7 +6708,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260611-despfixas-exibir"></script>
+    <script src="app.js?v=20260611-despfixas-pdf"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>
