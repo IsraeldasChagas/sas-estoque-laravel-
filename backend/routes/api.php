@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
 use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Support\Rh\RhRescisaoCalculo;
+use App\Support\SasMapaSistemaPdf;
 use App\Http\Controllers\Api\EntradaEstoqueController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhCandidatoController;
@@ -5848,6 +5849,33 @@ $sasBackupListaRestore = static function (array $tabelasSnapshot) use ($sasBacku
     return array_merge($ordered, $rest);
 };
 
+// Mapa UML do sistema (PDF)
+Route::options('/admin/mapa-sistema.pdf', fn () => response('', 204)
+    ->header('Access-Control-Allow-Origin', '*')
+    ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id'));
+Route::get('/admin/mapa-sistema.pdf', function (Request $request) {
+    $userId = $request->header('X-Usuario-Id');
+    $usuario = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (! $usuario) {
+        return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    $html = SasMapaSistemaPdf::renderHtml();
+    $dompdf = new \Dompdf\Dompdf();
+    $opts = $dompdf->getOptions();
+    $opts->set('defaultFont', 'DejaVu Sans');
+    $dompdf->setOptions($opts);
+    $dompdf->loadHtml($html, 'UTF-8');
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+    $nome = 'SAS-Estoque-Mapa-UML-'.date('Y-m-d').'.pdf';
+
+    return response($dompdf->output(), 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="'.$nome.'"',
+    ])->header('Access-Control-Allow-Origin', '*');
+});
+
 // ============================================
 // ROTAS DE BACKUP E RESTAURAÇÃO
 // ============================================
@@ -11027,6 +11055,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
 require __DIR__ . '/energia_routes.php';
 require __DIR__ . '/patrimonio_routes.php';
 require __DIR__ . '/investimento_routes.php';
+require __DIR__ . '/financeiro_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';
 
 // ============================================

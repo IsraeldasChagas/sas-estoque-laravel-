@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
     <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento-collapse" />
+    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260609-fg" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
@@ -197,12 +198,23 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="boletao"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Boleto</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard Executivo</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroFluxoCaixa"><span class="nav-icon" aria-hidden="true">💧</span><span class="nav-label">Fluxo de Caixa</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="boletao"><span class="nav-icon" aria-hidden="true">📤</span><span class="nav-label">Contas a Pagar</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroContasReceber"><span class="nav-icon" aria-hidden="true">📥</span><span class="nav-label">Contas a Receber</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroDre"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">DRE Gerencial</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroCmv"><span class="nav-icon" aria-hidden="true">🍽️</span><span class="nav-label">CMV</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroCentrosCusto"><span class="nav-icon" aria-hidden="true">🏷️</span><span class="nav-label">Centro de Custos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroOrcamento"><span class="nav-icon" aria-hidden="true">🎯</span><span class="nav-label">Orçamento Empresarial</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroIndicadores"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Indicadores Financeiros</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fechamento"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="boletao"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Boletos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="alvara"><span class="nav-icon" aria-hidden="true">📁</span><span class="nav-label">Documentos empresa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="proventos"><span class="nav-icon" aria-hidden="true">💵</span><span class="nav-label">Proventos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas"><span class="nav-icon" aria-hidden="true">📆</span><span class="nav-label">Despesas fixas</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="valeConsumo"><span class="nav-icon" aria-hidden="true">🎫</span><span class="nav-label">Vale / consumo</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Recibo ajuda de custo</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="investimentoDashboard"><span class="nav-icon" aria-hidden="true">💹</span><span class="nav-label">Investimentos</span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--investimento">
@@ -3410,6 +3422,179 @@
           </section>
 
           <!-- Módulo Investimento — Tesouraria e Reservas Empresariais -->
+          <!-- Financeiro Gerencial -->
+          <section id="financeiroDashboardSection" class="view-section hidden">
+            <div class="fg-section-head">
+              <div><h2>📊 Dashboard Executivo Financeiro</h2><p class="subtle-text">Saúde real da empresa — faturamento, fluxo, CMV e indicadores consolidados.</p></div>
+              <div id="fgDashSaude"></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>De<input type="date" id="fgDashFiltroDe" /></label>
+                <label>Até<input type="date" id="fgDashFiltroAte" /></label>
+                <label>Unidade<select id="fgDashFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="fgDashAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="fg-cards" id="fgDashCards"></div>
+            <div class="table-card form-card--wide">
+              <header><h3>Faturamento por unidade</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Faturamento</th></tr></thead><tbody id="fgDashUnidadeTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="financeiroFluxoCaixaSection" class="view-section hidden">
+            <div class="fg-section-head"><div><h2>💧 Fluxo de Caixa</h2><p class="subtle-text">Lançamentos, saldo e projeção 30/60/90 dias.</p></div></div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>De<input type="date" id="fgFluxoFiltroDe" /></label>
+                <label>Até<input type="date" id="fgFluxoFiltroAte" /></label>
+                <label>Unidade<select id="fgFluxoFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="fgFluxoAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="fg-cards" id="fgFluxoResumo"></div>
+            <div class="table-card form-card--wide"><header><h3>Projeção</h3></header><div class="fg-projecoes" id="fgFluxoProjecoes"></div></div>
+            <div class="table-card form-card--wide">
+              <header><h3>Novo lançamento</h3></header>
+              <form id="fgFluxoForm" class="fg-form-grid">
+                <label>Tipo<select id="fgFluxoTipo" required><option value="entrada">Entrada</option><option value="saida">Saída</option></select></label>
+                <label>Valor<input type="text" id="fgFluxoValor" data-fg-moeda required placeholder="R$ 0,00" /></label>
+                <label>Competência<input type="date" id="fgFluxoCompetencia" required /></label>
+                <label>Pagamento<input type="date" id="fgFluxoPagamento" /></label>
+                <label>Status<select id="fgFluxoStatus"><option value="previsto">Previsto</option><option value="realizado">Realizado</option><option value="atrasado">Atrasado</option><option value="cancelado">Cancelado</option></select></label>
+                <label>Unidade<select id="fgFluxoUnidade"><option value="">—</option></select></label>
+                <label>Categoria<select id="fgFluxoCategoria"><option value="">—</option></select></label>
+                <label>Centro de custo<select id="fgFluxoCentroCusto"><option value="">—</option></select></label>
+                <label>Forma pgto<input type="text" id="fgFluxoFormaPgto" placeholder="PIX, dinheiro…" /></label>
+                <label class="fg-form-grid--full">Descrição<input type="text" id="fgFluxoDescricao" /></label>
+                <label class="fg-form-grid--full">Observação<textarea id="fgFluxoObs" rows="2"></textarea></label>
+                <label><button type="submit" class="btn primary">Salvar lançamento</button></label>
+              </form>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Lançamentos</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th>Unidade</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="fgFluxoTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="financeiroContasReceberSection" class="view-section hidden">
+            <div class="fg-section-head"><div><h2>📥 Contas a Receber</h2><p class="subtle-text">Clientes, parcelas, inadimplência e recebimentos previstos.</p></div></div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>De<input type="date" id="fgCrFiltroDe" /></label>
+                <label>Até<input type="date" id="fgCrFiltroAte" /></label>
+                <label>Unidade<select id="fgCrFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="fgCrAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="fg-cards" id="fgCrInadimplencia"></div>
+            <div class="table-card form-card--wide">
+              <header><h3>Novo recebimento</h3><button type="button" class="btn btn-sm" id="fgCrNovoCliente">+ Cliente</button></header>
+              <form id="fgCrForm" class="fg-form-grid">
+                <label>Cliente<select id="fgCrCliente"><option value="">—</option></select></label>
+                <label>Unidade<select id="fgCrUnidade"><option value="">—</option></select></label>
+                <label>Valor<input type="text" id="fgCrValor" data-fg-moeda required /></label>
+                <label>Vencimento<input type="date" id="fgCrVencimento" required /></label>
+                <label>Parcelas<input type="number" id="fgCrParcelas" min="1" max="60" value="1" /></label>
+                <label>Forma<input type="text" id="fgCrForma" placeholder="PIX, boleto…" /></label>
+                <label class="fg-form-grid--full">Descrição<input type="text" id="fgCrDescricao" /></label>
+                <label class="fg-form-grid--full">Observação<textarea id="fgCrObs" rows="2"></textarea></label>
+                <label><button type="submit" class="btn primary">Lançar</button></label>
+              </form>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="fgCrTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="financeiroDreSection" class="view-section hidden">
+            <div class="fg-section-head"><div><h2>📋 DRE Gerencial</h2><p class="subtle-text">Demonstração do resultado consolidada com dados do sistema.</p></div></div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>De<input type="date" id="fgDreFiltroDe" /></label>
+                <label>Até<input type="date" id="fgDreFiltroAte" /></label>
+                <label>Unidade<select id="fgDreFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="fgDreAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table class="fg-dre-table"><thead><tr><th>Conta</th><th>Valor</th></tr></thead><tbody id="fgDreTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="financeiroCmvSection" class="view-section hidden">
+            <div class="fg-section-head"><div><h2>🍽️ CMV — Custo da Mercadoria Vendida</h2><p class="subtle-text">Estimativa a partir de saídas de estoque e custo médio dos lotes.</p></div></div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>De<input type="date" id="fgCmvFiltroDe" /></label>
+                <label>Até<input type="date" id="fgCmvFiltroAte" /></label>
+                <label>Unidade<select id="fgCmvFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="fgCmvAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="fg-cards" id="fgCmvCards"></div>
+            <div class="table-card form-card--wide">
+              <header><h3>CMV por produto (top 50)</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Produto</th><th>CMV</th></tr></thead><tbody id="fgCmvProdutoTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>CMV por unidade</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>CMV</th></tr></thead><tbody id="fgCmvUnidadeTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="financeiroCentrosCustoSection" class="view-section hidden">
+            <div class="fg-section-head"><div><h2>🏷️ Centro de Custos</h2><p class="subtle-text">Cozinha, caixa, delivery, administrativo e demais áreas.</p></div></div>
+            <div class="table-card form-card--wide">
+              <form id="fgCcForm" class="fg-form-grid">
+                <label>Nome<input type="text" id="fgCcNome" required /></label>
+                <label>Código<input type="text" id="fgCcCodigo" /></label>
+                <label><button type="submit" class="btn primary">Adicionar</button></label>
+              </form>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Nome</th><th>Status</th></tr></thead><tbody id="fgCcTbody"></tbody></table></div>
+            </div>
+          </section>
+
+          <section id="financeiroOrcamentoSection" class="view-section hidden">
+            <div class="fg-section-head"><div><h2>🎯 Orçamento Empresarial</h2><p class="subtle-text">Metas mensais vs. realizado por unidade.</p></div></div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>Competência<input type="month" id="fgOrcCompetencia" /></label>
+                <label>Unidade<select id="fgOrcFiltroUnidade"><option value="">Consolidado</option></select></label>
+                <label><button type="button" class="btn primary" id="fgOrcAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="fg-cards" id="fgOrcCards"></div>
+            <div class="table-card form-card--wide"><header><h3>Evolução mensal (faturamento)</h3></header><div id="fgOrcChart"></div></div>
+            <div class="table-card form-card--wide">
+              <form id="fgOrcForm" class="fg-form-grid">
+                <label>Meta faturamento<input type="number" id="fgOrcMetaFat" min="0" step="0.01" /></label>
+                <label>Meta despesa<input type="number" id="fgOrcMetaDesp" min="0" step="0.01" /></label>
+                <label>Meta lucro<input type="number" id="fgOrcMetaLucro" min="0" step="0.01" /></label>
+                <label><button type="submit" class="btn primary">Salvar metas</button></label>
+              </form>
+            </div>
+          </section>
+
+          <section id="financeiroIndicadoresSection" class="view-section hidden">
+            <div class="fg-section-head">
+              <div><h2>📈 Indicadores Financeiros</h2><p class="subtle-text">Liquidez, margens, endividamento e saúde geral.</p></div>
+              <div id="fgIndSaude"></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="fg-filters">
+                <label>De<input type="date" id="fgIndFiltroDe" /></label>
+                <label>Até<input type="date" id="fgIndFiltroAte" /></label>
+                <label>Unidade<select id="fgIndFiltroUnidade"><option value="">Todas</option></select></label>
+                <label><button type="button" class="btn primary" id="fgIndAtualizar">Atualizar</button></label>
+              </div>
+            </div>
+            <div class="fg-cards" id="fgIndCards"></div>
+          </section>
+
           <section id="investimentoDashboardSection" class="view-section hidden">
             <div class="inv-section-head">
               <div>
@@ -4930,6 +5115,15 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reciboAjuda" /> Recibo (ajuda de custo)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamento" /> Auditoria fechamento caixa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fechamentoDash" /> Dashboard — análise fechamentos</label>
+            <div style="margin-top:0.5rem;"><strong>Financeiro Gerencial</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroDashboard" /> Dashboard Executivo</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroFluxoCaixa" /> Fluxo de Caixa</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroContasReceber" /> Contas a Receber</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroDre" /> DRE Gerencial</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroCmv" /> CMV</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroCentrosCusto" /> Centro de Custos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroOrcamento" /> Orçamento Empresarial</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroIndicadores" /> Indicadores Financeiros</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Investimento</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoDashboard" /> Investimento — Dashboard</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoReservas" /> Investimento — Reservas</label>
@@ -6298,6 +6492,7 @@
     <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
+    <script src="financeiro-gerencial.js?v=20260609-fg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260608-trct"></script>
      

@@ -1,0 +1,116 @@
+/* Financeiro Gerencial — Grupo Sabor Paraense */
+.fg-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.fg-section-head h2 { margin: 0 0 0.25rem; }
+.fg-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+.fg-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+.fg-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.fg-card__label {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.35rem;
+}
+.fg-card__value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.fg-card__value--neg { color: #dc2626; }
+.fg-card__value--pos { color: #059669; }
+.fg-saude {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.fg-saude--saudavel { background: #dcfce7; color: #166534; }
+.fg-saude--atencao { background: #fef9c3; color: #854d0e; }
+.fg-saude--critico { background: #fee2e2; color: #991b1b; }
+.fg-saude-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  border: 4px solid currentColor;
+}
+.fg-dre-table td:last-child,
+.fg-dre-table th:last-child { text-align: right; }
+.fg-dre-table tr.fg-dre-total td { font-weight: 700; border-top: 2px solid var(--border-color, #cbd5e1); }
+.fg-projecoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+.fg-proj-card {
+  border: 1px dashed var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+}
+.fg-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+.fg-form-grid--full { grid-column: 1 / -1; }
+.fg-chart-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  padding: 0.5rem 0;
+}
+.fg-chart-bar__col {
+  flex: 1;
+  min-width: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.fg-chart-bar__fill {
+  width: 100%;
+  max-width: 48px;
+  background: linear-gradient(180deg, #0d9488, #14b8a6);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+}
+.fg-chart-bar__lbl { font-size: 0.65rem; color: var(--text-muted, #64748b); }
+@media (max-width: 768px) {
+  .fg-cards { grid-template-columns: 1fr 1fr; }
+  .fg-card__value { font-size: 1.1rem; }
+}
+@media (max-width: 480px) {
+  .fg-cards { grid-template-columns: 1fr; }
+}
