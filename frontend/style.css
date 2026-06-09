@@ -67,6 +67,12 @@ body.sidebar-open {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebar nav a,
@@ -336,12 +342,18 @@ body.sidebar-open {
     max-height: var(--collapsed-flyout-max-height, calc(100vh - 24px));
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     background: linear-gradient(180deg, var(--sidebar-bg-mid), var(--sidebar-bg-mid));
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 10px;
     box-shadow: 4px 6px 20px rgba(0, 0, 0, 0.45);
     z-index: 50;
     padding: 8px;
+  }
+
+  .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content::-webkit-scrollbar {
+    display: none;
   }
 
   .sidebar.is-collapsed .sidebar-nav-scroll > nav > .nav-submenu.open > .nav-submenu-content .nav-link {
