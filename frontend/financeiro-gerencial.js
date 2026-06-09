@@ -254,6 +254,43 @@
     if (cur) sel.value = cur;
   }
 
+  const FG_FLUXO_FORM_COLLAPSED_KEY = "fg-fluxo-form-collapsed";
+
+  function fgSetFluxoFormCollapsed(collapsed, persist = true) {
+    const card = document.getElementById("fgFluxoLancamentoCard");
+    const btn = document.getElementById("fgFluxoToggleForm");
+    if (!card) return;
+    card.classList.toggle("fg-lancamento-card--collapsed", collapsed);
+    if (btn) {
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.title = collapsed ? "Expandir formulário" : "Recolher formulário";
+    }
+    if (persist) {
+      try {
+        localStorage.setItem(FG_FLUXO_FORM_COLLAPSED_KEY, collapsed ? "1" : "0");
+      } catch (_) {}
+    }
+  }
+
+  function fgExpandirFormFluxo() {
+    fgSetFluxoFormCollapsed(false);
+  }
+
+  function fgInitFluxoFormCollapse() {
+    const card = document.getElementById("fgFluxoLancamentoCard");
+    if (!card || card.dataset.fgCollapseBound === "1") return;
+    card.dataset.fgCollapseBound = "1";
+    let collapsed = false;
+    try {
+      collapsed = localStorage.getItem(FG_FLUXO_FORM_COLLAPSED_KEY) === "1";
+    } catch (_) {}
+    fgSetFluxoFormCollapsed(collapsed, false);
+    document.getElementById("fgFluxoToggleForm")?.addEventListener("click", () => {
+      const isCollapsed = card.classList.contains("fg-lancamento-card--collapsed");
+      fgSetFluxoFormCollapsed(!isCollapsed);
+    });
+  }
+
   function fgSetFluxoFormModo(edicao) {
     const titulo = document.getElementById("fgFluxoFormTitle");
     const submitBtn = document.getElementById("fgFluxoSubmitBtn");
@@ -261,6 +298,7 @@
     if (titulo) titulo.textContent = edicao ? "Editar lançamento" : "Novo lançamento";
     if (submitBtn) submitBtn.textContent = edicao ? "Salvar alterações" : "Salvar lançamento";
     if (cancelBtn) cancelBtn.classList.toggle("hidden", !edicao);
+    if (edicao) fgExpandirFormFluxo();
   }
 
   function fgLimparFormFluxo() {
@@ -337,6 +375,7 @@
   async function loadFinanceiroFluxoCaixa() {
     fgInitFiltrosDatas("fgFluxo");
     fgInitFormFluxoDatas();
+    fgInitFluxoFormCollapse();
     fgSetupMoeda();
     await Promise.all([fgCarregarUnidades(["fgFluxoFiltroUnidade", "fgFluxoUnidade"]), fgCarregarAuxFluxo()]);
     const { q } = fgQueryFiltros("fgFluxo");

@@ -78,6 +78,63 @@
   padding: 0.75rem;
   text-align: center;
 }
+.fg-lancamento-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0;
+}
+.fg-lancamento-card__header h3 {
+  margin: 0;
+  flex: 1;
+}
+.fg-collapse-btn {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--primary, #0047ab);
+  background: var(--primary, #0047ab);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 71, 171, 0.25);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.fg-collapse-btn:hover {
+  filter: brightness(1.08);
+}
+.fg-collapse-btn:focus-visible {
+  outline: 2px solid #ffeb3b;
+  outline-offset: 2px;
+}
+.fg-collapse-btn__icon {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #ffffff;
+  transition: transform 0.2s ease;
+  margin-top: 3px;
+}
+.fg-lancamento-card--collapsed .fg-collapse-btn__icon {
+  transform: rotate(-90deg);
+  margin-top: 0;
+  margin-left: 2px;
+}
+.fg-lancamento-card__body {
+  margin-top: 1rem;
+}
+.fg-lancamento-card--collapsed .fg-lancamento-card__body {
+  display: none;
+}
+.fg-lancamento-card.fg-lancamento-card--collapsed > header {
+  border-bottom: none;
+}
 .fg-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

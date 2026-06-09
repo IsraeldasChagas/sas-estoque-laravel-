@@ -46,7 +46,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
     <link rel="stylesheet" href="style-investimento.css?v=20260607-investimento-collapse" />
-    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-btns" />
+    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
@@ -3569,8 +3569,22 @@
             </div>
             <div class="fg-cards" id="fgFluxoResumo"></div>
             <div class="table-card form-card--wide"><header><h3>Projeção</h3></header><div class="fg-projecoes" id="fgFluxoProjecoes"></div></div>
-            <div class="table-card form-card--wide">
-              <header><h3 id="fgFluxoFormTitle">Novo lançamento</h3></header>
+            <div class="table-card form-card--wide fg-lancamento-card" id="fgFluxoLancamentoCard">
+              <header class="fg-lancamento-card__header">
+                <button
+                  type="button"
+                  class="fg-collapse-btn"
+                  id="fgFluxoToggleForm"
+                  aria-expanded="true"
+                  aria-controls="fgFluxoFormBody"
+                  title="Recolher ou expandir formulário"
+                  aria-label="Recolher ou expandir formulário de lançamento"
+                >
+                  <span class="fg-collapse-btn__icon" aria-hidden="true"></span>
+                </button>
+                <h3 id="fgFluxoFormTitle">Novo lançamento</h3>
+              </header>
+              <div id="fgFluxoFormBody" class="fg-lancamento-card__body">
               <form id="fgFluxoForm" class="fg-form-grid">
                 <label>Tipo<select id="fgFluxoTipo" required><option value="entrada">Entrada</option><option value="saida">Saída</option></select></label>
                 <label>Valor<input type="text" id="fgFluxoValor" data-fg-moeda required placeholder="R$ 0,00" /></label>
@@ -3594,6 +3608,7 @@
                   <button type="button" class="btn neutral hidden" id="fgFluxoCancelBtn">Cancelar edição</button>
                 </div>
               </form>
+              </div>
             </div>
             <div class="table-card form-card--wide">
               <header><h3>Histórico de lançamentos</h3></header>
@@ -6645,7 +6660,7 @@
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260608-trct"></script>
-    <script src="financeiro-gerencial.js?v=20260610-fg-btns"></script>
+    <script src="financeiro-gerencial.js?v=20260610-fg-collapse"></script>
      
   </body>
 </html>
