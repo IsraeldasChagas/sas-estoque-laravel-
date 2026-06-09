@@ -134,7 +134,8 @@ const DESP_FIXAS_PDF_COL_DEF = {
   observacoes: { th: "Observações", dataLabel: "Observações" },
 };
 
-function despFixasFiltrarLista(lista) {
+function despFixasFiltrarLista(lista, opts = {}) {
+  const skipUnidadeFiltroLista = !!opts.skipUnidadeFiltroLista;
   const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
   const diaFiltro = Number(filtros.dia || 0);
   return (Array.isArray(lista) ? lista : []).filter((d) => {
@@ -146,7 +147,7 @@ function despFixasFiltrarLista(lista) {
       const cid = String(d?.categoria_id ?? "");
       if (cid !== String(filtros.categoriaId)) return false;
     }
-    if (filtros.unidadeId) {
+    if (!skipUnidadeFiltroLista && filtros.unidadeId) {
       const uid = Number(filtros.unidadeId);
       if (Number.isFinite(uid) && uid > 0) {
         const aplicaTodas = !!d?.aplica_todas_unidades;
@@ -157,6 +158,19 @@ function despFixasFiltrarLista(lista) {
       }
     }
     return true;
+  });
+}
+
+function despFixasFiltrarListaPorUnidadesPdf(lista, unidadeIds) {
+  const ids = (Array.isArray(unidadeIds) ? unidadeIds : [])
+    .map((x) => Number(x))
+    .filter((x) => Number.isFinite(x) && x > 0);
+  if (!ids.length) return [];
+  const set = new Set(ids);
+  return lista.filter((d) => {
+    if (d?.aplica_todas_unidades) return true;
+    const uids = Array.isArray(d?.unidade_ids) ? d.unidade_ids : [];
+    return uids.map((x) => Number(x)).some((x) => Number.isFinite(x) && set.has(x));
   });
 }
 
@@ -193,9 +207,60 @@ function despFixasCellHtml(colKey, d) {
   }
 }
 
-function despFixasOpenPdfModal() {
+function despFixasRenderPdfUnidadesChecklist(selectedIds = []) {
+  const wrap = document.getElementById("despFixasPdfUnidadesList");
+  if (!wrap) return;
+  const ids = new Set((selectedIds || []).map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0));
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  const html = unidades
+    .filter((u) => !!u)
+    .map((u) => {
+      const id = Number(u.id);
+      if (!Number.isFinite(id) || id <= 0) return "";
+      const checked = ids.has(id) ? "checked" : "";
+      const ativoNum = u.ativo == null ? 1 : Number(u.ativo);
+      const isInativa = Number.isFinite(ativoNum) ? ativoNum === 0 : (u.ativo === false);
+      const suffix = isInativa ? ` <span class="subtle-text">(inativa)</span>` : "";
+      return `<label class="checkbox-label"><input type="checkbox" data-desp-pdf-unidade="1" value="${escapeHtml(String(id))}" ${checked} /> ${escapeHtml(u.nome || `Unidade ${id}`)}${suffix}</label>`;
+    })
+    .filter(Boolean)
+    .join("");
+  wrap.innerHTML = html || `<div class="subtle-text">Nenhuma unidade disponível.</div>`;
+}
+
+function despFixasGetPdfUnidadeIds() {
+  const wrap = document.getElementById("despFixasPdfUnidadesList");
+  if (!wrap) return [];
+  return [...wrap.querySelectorAll("input[data-desp-pdf-unidade]:checked")]
+    .map((inp) => Number(inp.value))
+    .filter((id) => Number.isFinite(id) && id > 0);
+}
+
+function despFixasPdfUnidadesResumo(unidadeIds) {
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  const nomes = unidadeIds
+    .map((id) => {
+      const u = unidades.find((x) => Number(x.id) === Number(id));
+      return u?.nome || `Unidade ${id}`;
+    })
+    .filter(Boolean);
+  return nomes.length ? nomes.join(", ") : "—";
+}
+
+async function despFixasOpenPdfModal() {
   const modal = document.getElementById("despFixasPdfModal");
   if (!modal) return;
+  await loadUnidades(false).catch(() => {});
+  const filtros = despesasFixasFiltros || {};
+  let preselect = [];
+  if (filtros.unidadeId) {
+    preselect = [Number(filtros.unidadeId)];
+  } else {
+    preselect = (state.unidades || [])
+      .map((u) => Number(u.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+  }
+  despFixasRenderPdfUnidadesChecklist(preselect);
   modal.classList.add("active");
 }
 
@@ -211,7 +276,7 @@ function despFixasGetPdfColKeys() {
     .filter(Boolean);
 }
 
-function despFixasMontarFiltrosPdfResumo() {
+function despFixasMontarFiltrosPdfResumo(unidadeIds) {
   const els = despFixasEls();
   const filtros = despesasFixasFiltros || { dia: "", categoriaId: "", unidadeId: "" };
   const partes = [];
@@ -220,11 +285,8 @@ function despFixasMontarFiltrosPdfResumo() {
     const opt = [...els.filtroCategoria.options].find((o) => o.value === String(filtros.categoriaId));
     partes.push(`Categoria: ${escapeHtml(opt?.textContent?.trim() || filtros.categoriaId)}`);
   }
-  if (filtros.unidadeId && els.filtroUnidade) {
-    const opt = [...els.filtroUnidade.options].find((o) => o.value === String(filtros.unidadeId));
-    partes.push(`Unidade: ${escapeHtml(opt?.textContent?.trim() || filtros.unidadeId)}`);
-  }
-  return partes.length ? partes.join(" · ") : "Todos os registros (sem filtros)";
+  partes.push(`Unidades: ${escapeHtml(despFixasPdfUnidadesResumo(unidadeIds))}`);
+  return partes.join(" · ");
 }
 
 async function despFixasGerarRelatorioPdf() {
@@ -234,7 +296,14 @@ async function despFixasGerarRelatorioPdf() {
     return;
   }
 
-  const lista = despFixasFiltrarLista(despesasFixasListaCache);
+  const pdfUnidadeIds = despFixasGetPdfUnidadeIds();
+  if (!pdfUnidadeIds.length) {
+    showToast("Selecione ao menos uma unidade para o PDF.", "warning");
+    return;
+  }
+
+  const base = despFixasFiltrarLista(despesasFixasListaCache, { skipUnidadeFiltroLista: true });
+  const lista = despFixasFiltrarListaPorUnidadesPdf(base, pdfUnidadeIds);
   if (!lista.length) {
     showToast("Nenhuma despesa para gerar o relatório.", "warning");
     return;
@@ -295,7 +364,7 @@ async function despFixasGerarRelatorioPdf() {
         </div>
         <div class="meta">
           <strong>Gerado em:</strong> ${agora.toLocaleString("pt-BR")}<br />
-          <strong>Filtros:</strong> ${despFixasMontarFiltrosPdfResumo()}<br />
+          <strong>Filtros:</strong> ${despFixasMontarFiltrosPdfResumo(pdfUnidadeIds)}<br />
           <strong>Registros:</strong> ${lista.length}
         </div>
         <table>
@@ -1286,7 +1355,9 @@ function despFixasBindOnce() {
     loadDespesasFixas().catch((err) => showToast(err?.message || "Falha ao atualizar despesas.", "error"));
   });
 
-  document.getElementById("despFixasPdf")?.addEventListener("click", () => despFixasOpenPdfModal());
+  document.getElementById("despFixasPdf")?.addEventListener("click", () => {
+    despFixasOpenPdfModal().catch((err) => showToast(err?.message || "Falha ao abrir PDF.", "error"));
+  });
   document.getElementById("closeDespFixasPdf")?.addEventListener("click", () => despFixasClosePdfModal());
   document.getElementById("despFixasPdfCancelar")?.addEventListener("click", () => despFixasClosePdfModal());
   document.getElementById("despFixasPdfGerar")?.addEventListener("click", () => {

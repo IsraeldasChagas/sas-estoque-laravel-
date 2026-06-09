@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260611-despfixas-pdf" />
+    <link rel="stylesheet" href="style.css?v=20260611-despfixas-pdf-unidades" />
     <script>
       (function () {
         try {
@@ -4981,7 +4981,8 @@
           <button type="button" class="close-btn" id="closeDespFixasPdf" aria-label="Fechar">×</button>
         </header>
         <div class="desp-fixas-pdf-modal__body">
-          <p class="subtle-text" style="margin:0 0 1rem;">Marque as informações que deseja incluir no PDF (usa os filtros atuais da lista):</p>
+          <p class="subtle-text" style="margin:0 0 1rem;">Escolha as informações e as unidades que entram no PDF (respeita dia e categoria da lista):</p>
+          <p class="desp-fixas-pdf-secao-titulo">Informações no relatório</p>
           <div class="desp-fixas-pdf-campos" id="despFixasPdfCampos">
             <label><input type="checkbox" data-desp-pdf-col="id" checked /> ID</label>
             <label><input type="checkbox" data-desp-pdf-col="nome" checked /> Nome</label>
@@ -4993,6 +4994,9 @@
             <label><input type="checkbox" data-desp-pdf-col="fornecedor" /> Fornecedor</label>
             <label><input type="checkbox" data-desp-pdf-col="observacoes" /> Observações</label>
           </div>
+          <p class="desp-fixas-pdf-secao-titulo">Unidades no relatório</p>
+          <p class="subtle-text" style="margin:0 0 0.5rem;">Marque as unidades que deseja incluir:</p>
+          <div id="despFixasPdfUnidadesList" class="desp-fixas-pdf-unidades-list"></div>
         </div>
         <footer>
           <button type="button" class="btn neutral" id="despFixasPdfCancelar">Cancelar</button>
@@ -6708,7 +6712,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260611-despfixas-pdf"></script>
+    <script src="app.js?v=20260611-despfixas-pdf-unidades"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>
