@@ -23,30 +23,6 @@
   font-family: "Segoe UI", Tahoma, sans-serif;
 }
 
-html[data-sidebar-theme="azul"] {
-  --sidebar-bg: linear-gradient(180deg, #071428, #0a2040);
-  --sidebar-bg-mid: #0d2a52;
-  --sidebar-link-bg: rgba(0, 71, 171, 0.28);
-  --sidebar-link-hover: #1565c0;
-  --sidebar-child-bg: rgba(33, 150, 243, 0.14);
-  --sidebar-child-hover: rgba(21, 101, 192, 0.78);
-  --sidebar-collapse-border: rgba(7, 40, 90, 0.45);
-  --sidebar-focus: #42a5f5;
-  --sidebar-nested-bg: rgba(66, 165, 245, 0.12);
-}
-
-html[data-sidebar-theme="laranja"] {
-  --sidebar-bg: linear-gradient(180deg, #1a0a04, #2d1408);
-  --sidebar-bg-mid: #3d1c0a;
-  --sidebar-link-bg: rgba(255, 111, 0, 0.22);
-  --sidebar-link-hover: #ff6d00;
-  --sidebar-child-bg: rgba(255, 152, 0, 0.16);
-  --sidebar-child-hover: rgba(222, 67, 9, 0.82);
-  --sidebar-collapse-border: rgba(80, 30, 8, 0.45);
-  --sidebar-focus: #ff8f00;
-  --sidebar-nested-bg: rgba(255, 183, 77, 0.12);
-}
-
 /* Reset padrao e base tipografica */
 * {
   box-sizing: border-box;
@@ -502,49 +478,207 @@ body.sidebar-open {
   flex-shrink: 0;
 }
 
-.sidebar-theme-picker {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.theme-panel-wrap {
+  position: relative;
 }
 
-.sidebar-theme-picker__label {
+.theme-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.theme-panel-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.theme-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(320px, 92vw);
+  max-height: min(78vh, 560px);
+  overflow-y: auto;
+  background: #fff;
+  border: var(--card-border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  z-index: 300;
+  padding: 14px 14px 12px;
+}
+
+.theme-panel.hidden {
+  display: none;
+}
+
+.theme-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.theme-panel__head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.theme-panel__close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: #f0f3f8;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.theme-panel__close:hover {
+  background: #e2e8f0;
+}
+
+.theme-panel__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.theme-preset-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-preset-btn.is-active,
+.theme-preset-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(0, 71, 171, 0.08);
+}
+
+.theme-panel__block {
+  margin-bottom: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.theme-panel__block h5 {
+  margin: 8px 0 10px;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.theme-color-row {
+  margin-bottom: 12px;
+}
+
+.theme-color-row__label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.theme-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.theme-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.theme-swatch:hover {
+  transform: scale(1.1);
+}
+
+.theme-swatch.is-active {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.theme-color-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.theme-color-bar__preview {
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.theme-color-bar {
+  position: relative;
+}
+
+.theme-color-bar input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.theme-color-bar__hex {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--muted);
-  margin-right: 2px;
+  font-family: Consolas, monospace;
+  min-width: 62px;
+  text-align: right;
 }
 
-.sidebar-theme-btn {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+.theme-panel__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
 }
 
-.sidebar-theme-btn:hover {
-  transform: scale(1.08);
-}
-
-.sidebar-theme-btn.is-active {
-  border-color: #263238;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #263238;
-}
-
-.sidebar-theme-btn[data-sidebar-theme="padrao"] {
-  background: linear-gradient(135deg, #070403 55%, #de4309 55%);
-}
-
-.sidebar-theme-btn[data-sidebar-theme="azul"] {
-  background: linear-gradient(135deg, #071428 55%, #1565c0 55%);
-}
-
-.sidebar-theme-btn[data-sidebar-theme="laranja"] {
-  background: linear-gradient(135deg, #2d1408 55%, #ff6d00 55%);
+.theme-panel__foot .btn {
+  padding: 7px 14px;
+  font-size: 0.85rem;
 }
 
 .topbar button {
@@ -557,8 +691,9 @@ body.sidebar-open {
   cursor: pointer;
 }
 
-.topbar .sidebar-theme-btn {
-  background-clip: padding-box;
+.topbar .theme-panel-toggle {
+  background: #fff;
+  color: var(--text);
 }
 
 /* Recolher menu (desktop): não usar estilo pill do Sair — fica à esquerda da topbar, junto ao menu */
@@ -3915,12 +4050,13 @@ body.image-lightbox-open {
     justify-content: flex-end;
     gap: 10px;
   }
-  .sidebar-theme-picker__label {
-    display: none;
+  .theme-panel {
+    right: 0;
+    left: auto;
+    width: min(300px, calc(100vw - 24px));
   }
-  .sidebar-theme-btn {
-    width: 24px;
-    height: 24px;
+  .theme-panel-toggle span:first-child {
+    font-size: 1rem;
   }
   .topbar__left {
     width: 100%;

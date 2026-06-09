@@ -5,12 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260610-sidebar-theme" />
+    <link rel="stylesheet" href="style.css?v=20260610-theme-panel" />
     <script>
-      try {
-        var _st = localStorage.getItem("sas-sidebar-theme");
-        if (_st && _st !== "padrao") document.documentElement.setAttribute("data-sidebar-theme", _st);
-      } catch (e) {}
+      (function () {
+        try {
+          var raw = localStorage.getItem("sas-app-theme");
+          if (!raw) {
+            var old = localStorage.getItem("sas-sidebar-theme");
+            if (old === "azul") raw = JSON.stringify({ menuBg: "#071428", menuAccent: "#1565c0", pageBg: "#e8f1fb", pagePrimary: "#0d47a1" });
+            else if (old === "laranja") raw = JSON.stringify({ menuBg: "#2d1408", menuAccent: "#ff6d00", pageBg: "#fff8f1", pagePrimary: "#e65100" });
+          }
+          if (!raw) return;
+          var c = JSON.parse(raw);
+          var r = document.documentElement;
+          function hx(h, a) {
+            var n = parseInt(h.replace("#", ""), 16);
+            return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+          }
+          function lt(h, p) {
+            var n = parseInt(h.replace("#", ""), 16);
+            var R = (n >> 16) & 255, G = (n >> 8) & 255, B = n & 255;
+            function f(c) { return Math.min(255, Math.round(c + (255 - c) * p / 100)); }
+            return "#" + [f(R), f(G), f(B)].map(function (x) { return x.toString(16).padStart(2, "0"); }).join("");
+          }
+          var mb = c.menuBg || "#070403", ma = c.menuAccent || "#de4309";
+          r.style.setProperty("--sidebar-bg", "linear-gradient(180deg," + mb + "," + mb + ")");
+          r.style.setProperty("--sidebar-bg-mid", lt(mb, 10));
+          r.style.setProperty("--sidebar-link-bg", hx(ma, 0.22));
+          r.style.setProperty("--sidebar-link-hover", ma);
+          r.style.setProperty("--sidebar-child-bg", hx(ma, 0.12));
+          r.style.setProperty("--sidebar-child-hover", hx(ma, 0.75));
+          r.style.setProperty("--sidebar-focus", ma);
+          r.style.setProperty("--bg", c.pageBg || "#f6f7fb");
+          r.style.setProperty("--primary", c.pagePrimary || "#0047ab");
+        } catch (e) {}
+      })();
     </script>
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260525-patrimonio-busca" />
@@ -302,11 +331,62 @@
             </div>
           </div>
           <div class="topbar__actions">
-            <div class="sidebar-theme-picker" role="group" aria-label="Cor do menu lateral">
-              <span class="sidebar-theme-picker__label">Menu</span>
-              <button type="button" class="sidebar-theme-btn is-active" data-sidebar-theme="padrao" title="Menu padrão" aria-label="Menu padrão (preto)"></button>
-              <button type="button" class="sidebar-theme-btn" data-sidebar-theme="azul" title="Menu azul" aria-label="Menu azul"></button>
-              <button type="button" class="sidebar-theme-btn" data-sidebar-theme="laranja" title="Menu laranja" aria-label="Menu laranja"></button>
+            <div class="theme-panel-wrap">
+              <button type="button" id="themePanelToggle" class="theme-panel-toggle" aria-expanded="false" aria-controls="themePanel" title="Personalizar cores">
+                <span aria-hidden="true">🎨</span> Cores
+              </button>
+              <div id="themePanel" class="theme-panel hidden" role="dialog" aria-label="Personalizar cores do sistema" aria-hidden="true">
+                <header class="theme-panel__head">
+                  <h4>Personalizar cores</h4>
+                  <button type="button" class="theme-panel__close" id="themePanelClose" aria-label="Fechar">×</button>
+                </header>
+                <div class="theme-panel__presets" id="themePresets"></div>
+                <section class="theme-panel__block">
+                  <h5>Menu lateral</h5>
+                  <div class="theme-color-row" data-theme-field="menuBg">
+                    <span class="theme-color-row__label">Fundo do menu</span>
+                    <div class="theme-swatches" id="themeSwatchesMenuBg"></div>
+                    <label class="theme-color-bar">
+                      <span class="theme-color-bar__preview" id="themePreviewMenuBg"></span>
+                      <input type="color" id="themeMenuBg" value="#070403" />
+                      <span class="theme-color-bar__hex" id="themeHexMenuBg">#070403</span>
+                    </label>
+                  </div>
+                  <div class="theme-color-row" data-theme-field="menuAccent">
+                    <span class="theme-color-row__label">Cor de destaque</span>
+                    <div class="theme-swatches" id="themeSwatchesMenuAccent"></div>
+                    <label class="theme-color-bar">
+                      <span class="theme-color-bar__preview" id="themePreviewMenuAccent"></span>
+                      <input type="color" id="themeMenuAccent" value="#de4309" />
+                      <span class="theme-color-bar__hex" id="themeHexMenuAccent">#de4309</span>
+                    </label>
+                  </div>
+                </section>
+                <section class="theme-panel__block">
+                  <h5>Página</h5>
+                  <div class="theme-color-row" data-theme-field="pageBg">
+                    <span class="theme-color-row__label">Fundo da página</span>
+                    <div class="theme-swatches" id="themeSwatchesPageBg"></div>
+                    <label class="theme-color-bar">
+                      <span class="theme-color-bar__preview" id="themePreviewPageBg"></span>
+                      <input type="color" id="themePageBg" value="#f6f7fb" />
+                      <span class="theme-color-bar__hex" id="themeHexPageBg">#f6f7fb</span>
+                    </label>
+                  </div>
+                  <div class="theme-color-row" data-theme-field="pagePrimary">
+                    <span class="theme-color-row__label">Cor principal</span>
+                    <div class="theme-swatches" id="themeSwatchesPagePrimary"></div>
+                    <label class="theme-color-bar">
+                      <span class="theme-color-bar__preview" id="themePreviewPagePrimary"></span>
+                      <input type="color" id="themePagePrimary" value="#0047ab" />
+                      <span class="theme-color-bar__hex" id="themeHexPagePrimary">#0047ab</span>
+                    </label>
+                  </div>
+                </section>
+                <footer class="theme-panel__foot">
+                  <button type="button" class="btn secondary" id="themePanelReset">Restaurar padrão</button>
+                </footer>
+              </div>
             </div>
             <button type="button" id="logoutBtn">Sair</button>
           </div>

@@ -1828,34 +1828,209 @@ function isMobileViewport() {
 }
 
 const SIDEBAR_COLLAPSED_KEY = "sas-sidebar-collapsed";
-const SIDEBAR_THEME_KEY = "sas-sidebar-theme";
-const SIDEBAR_THEMES = ["padrao", "azul", "laranja"];
+const APP_THEME_KEY = "sas-app-theme";
+const APP_THEME_DEFAULT = {
+  menuBg: "#070403",
+  menuAccent: "#de4309",
+  pageBg: "#f6f7fb",
+  pagePrimary: "#0047ab",
+};
+const THEME_SWATCHES = {
+  menuBg: ["#070403", "#071428", "#1a0a04", "#1b3a1b", "#1a237e", "#263238", "#37474f"],
+  menuAccent: ["#de4309", "#1565c0", "#e53935", "#2e7d32", "#6a1b9a", "#ff6d00", "#00897b"],
+  pageBg: ["#f6f7fb", "#e3f2fd", "#fff8e1", "#f3e5f5", "#e8f5e9", "#ffffff", "#eceff1"],
+  pagePrimary: ["#0047ab", "#1565c0", "#c62828", "#2e7d32", "#6a1b9a", "#ef6c00", "#00695c"],
+};
+const THEME_PRESETS = [
+  { id: "padrao", label: "Padrão", ...APP_THEME_DEFAULT },
+  { id: "azul", label: "Azul", menuBg: "#071428", menuAccent: "#1565c0", pageBg: "#e8f1fb", pagePrimary: "#0d47a1" },
+  { id: "laranja", label: "Laranja", menuBg: "#2d1408", menuAccent: "#ff6d00", pageBg: "#fff8f1", pagePrimary: "#e65100" },
+  { id: "verde", label: "Verde", menuBg: "#1b3a1b", menuAccent: "#2e7d32", pageBg: "#e8f5e9", pagePrimary: "#1b5e20" },
+];
 
-function applySidebarTheme(theme) {
-  const t = SIDEBAR_THEMES.includes(theme) ? theme : "padrao";
-  if (t === "padrao") {
-    document.documentElement.removeAttribute("data-sidebar-theme");
-  } else {
-    document.documentElement.setAttribute("data-sidebar-theme", t);
-  }
-  document.querySelectorAll(".sidebar-theme-btn").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.sidebarTheme === t);
-  });
-  try {
-    localStorage.setItem(SIDEBAR_THEME_KEY, t);
-  } catch (_) {}
+function themeHexToRgb(hex) {
+  const h = (hex || "").replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return { r: 0, g: 0, b: 0 };
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-function setupSidebarThemePicker() {
-  let saved = "padrao";
+function themeHexToRgba(hex, alpha) {
+  const { r, g, b } = themeHexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function themeLightenHex(hex, pct) {
+  const { r, g, b } = themeHexToRgb(hex);
+  const f = (c) => Math.min(255, Math.round(c + (255 - c) * pct / 100));
+  return `#${[f(r), f(g), f(b)].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function themeNormalizeConfig(raw) {
+  const cfg = { ...APP_THEME_DEFAULT, ...(raw || {}) };
+  Object.keys(APP_THEME_DEFAULT).forEach((k) => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(cfg[k] || "")) cfg[k] = APP_THEME_DEFAULT[k];
+  });
+  return cfg;
+}
+
+function themeLoadSavedConfig() {
   try {
-    saved = localStorage.getItem(SIDEBAR_THEME_KEY) || "padrao";
+    const raw = localStorage.getItem(APP_THEME_KEY);
+    if (raw) return themeNormalizeConfig(JSON.parse(raw));
+    const old = localStorage.getItem("sas-sidebar-theme");
+    const preset = THEME_PRESETS.find((p) => p.id === old);
+    if (preset) return themeNormalizeConfig(preset);
   } catch (_) {}
-  applySidebarTheme(saved);
-  document.querySelectorAll(".sidebar-theme-btn").forEach((btn) => {
-    if (btn.dataset.sidebarThemePickerBound === "1") return;
-    btn.dataset.sidebarThemePickerBound = "1";
-    btn.addEventListener("click", () => applySidebarTheme(btn.dataset.sidebarTheme));
+  return { ...APP_THEME_DEFAULT };
+}
+
+function applyAppTheme(config, { save = true } = {}) {
+  const cfg = themeNormalizeConfig(config);
+  const root = document.documentElement;
+  const { menuBg, menuAccent, pageBg, pagePrimary } = cfg;
+
+  root.style.setProperty("--sidebar-bg", `linear-gradient(180deg, ${menuBg}, ${menuBg})`);
+  root.style.setProperty("--sidebar-bg-mid", themeLightenHex(menuBg, 10));
+  root.style.setProperty("--sidebar-link-bg", themeHexToRgba(menuAccent, 0.22));
+  root.style.setProperty("--sidebar-link-hover", menuAccent);
+  root.style.setProperty("--sidebar-child-bg", themeHexToRgba(menuAccent, 0.12));
+  root.style.setProperty("--sidebar-child-hover", themeHexToRgba(menuAccent, 0.75));
+  root.style.setProperty("--sidebar-collapse-border", themeHexToRgba(menuBg, 0.45));
+  root.style.setProperty("--sidebar-focus", menuAccent);
+  root.style.setProperty("--sidebar-nested-bg", "rgba(255, 255, 255, 0.06)");
+  root.style.setProperty("--bg", pageBg);
+  root.style.setProperty("--primary", pagePrimary);
+
+  const fields = {
+    menuBg: { input: "themeMenuBg", preview: "themePreviewMenuBg", hex: "themeHexMenuBg" },
+    menuAccent: { input: "themeMenuAccent", preview: "themePreviewMenuAccent", hex: "themeHexMenuAccent" },
+    pageBg: { input: "themePageBg", preview: "themePreviewPageBg", hex: "themeHexPageBg" },
+    pagePrimary: { input: "themePagePrimary", preview: "themePreviewPagePrimary", hex: "themeHexPagePrimary" },
+  };
+  Object.entries(fields).forEach(([key, ids]) => {
+    const val = cfg[key];
+    document.getElementById(ids.input)?.setAttribute("value", val);
+    const input = document.getElementById(ids.input);
+    if (input) input.value = val;
+    document.getElementById(ids.preview)?.style.setProperty("background", val);
+    const hexEl = document.getElementById(ids.hex);
+    if (hexEl) hexEl.textContent = val.toUpperCase();
+  });
+
+  document.querySelectorAll(".theme-swatch").forEach((sw) => {
+    sw.classList.toggle("is-active", sw.dataset.color?.toLowerCase() === cfg[sw.dataset.field]?.toLowerCase());
+  });
+
+  const activePreset = THEME_PRESETS.find((p) =>
+    Object.keys(APP_THEME_DEFAULT).every((k) => p[k]?.toLowerCase() === cfg[k]?.toLowerCase())
+  );
+  document.querySelectorAll(".theme-preset-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", activePreset && btn.dataset.preset === activePreset.id);
+  });
+
+  if (save) {
+    try {
+      localStorage.setItem(APP_THEME_KEY, JSON.stringify(cfg));
+    } catch (_) {}
+  }
+  return cfg;
+}
+
+function themeSetField(field, color) {
+  const cfg = themeLoadSavedConfig();
+  cfg[field] = color;
+  applyAppTheme(cfg);
+}
+
+function themeRenderSwatches() {
+  const map = {
+    menuBg: "themeSwatchesMenuBg",
+    menuAccent: "themeSwatchesMenuAccent",
+    pageBg: "themeSwatchesPageBg",
+    pagePrimary: "themeSwatchesPagePrimary",
+  };
+  Object.entries(map).forEach(([field, containerId]) => {
+    const el = document.getElementById(containerId);
+    if (!el || el.dataset.rendered === "1") return;
+    el.dataset.rendered = "1";
+    el.innerHTML = (THEME_SWATCHES[field] || []).map((color) =>
+      `<button type="button" class="theme-swatch" data-field="${field}" data-color="${color}" style="background:${color}" title="${color}" aria-label="Cor ${color}"></button>`
+    ).join("");
+    el.addEventListener("click", (ev) => {
+      const sw = ev.target.closest(".theme-swatch");
+      if (!sw) return;
+      themeSetField(sw.dataset.field, sw.dataset.color);
+    });
+  });
+}
+
+function themeRenderPresets() {
+  const el = document.getElementById("themePresets");
+  if (!el || el.dataset.rendered === "1") return;
+  el.dataset.rendered = "1";
+  el.innerHTML = THEME_PRESETS.map((p) =>
+    `<button type="button" class="theme-preset-btn" data-preset="${p.id}">${p.label}</button>`
+  ).join("");
+  el.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".theme-preset-btn");
+    if (!btn) return;
+    const preset = THEME_PRESETS.find((p) => p.id === btn.dataset.preset);
+    if (preset) applyAppTheme(preset);
+  });
+}
+
+function themeSetPanelOpen(open) {
+  const panel = document.getElementById("themePanel");
+  const toggle = document.getElementById("themePanelToggle");
+  if (!panel || !toggle) return;
+  panel.classList.toggle("hidden", !open);
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function setupThemePanel() {
+  themeRenderPresets();
+  themeRenderSwatches();
+  applyAppTheme(themeLoadSavedConfig(), { save: false });
+
+  const toggle = document.getElementById("themePanelToggle");
+  const panel = document.getElementById("themePanel");
+  const closeBtn = document.getElementById("themePanelClose");
+  const resetBtn = document.getElementById("themePanelReset");
+
+  toggle?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = panel?.classList.contains("hidden");
+    themeSetPanelOpen(!!open);
+  });
+
+  closeBtn?.addEventListener("click", () => themeSetPanelOpen(false));
+  resetBtn?.addEventListener("click", () => applyAppTheme({ ...APP_THEME_DEFAULT }));
+
+  const themeInputMap = {
+    themeMenuBg: "menuBg",
+    themeMenuAccent: "menuAccent",
+    themePageBg: "pageBg",
+    themePagePrimary: "pagePrimary",
+  };
+  Object.entries(themeInputMap).forEach(([id, key]) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener("input", () => themeSetField(key, input.value));
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!panel || panel.classList.contains("hidden")) return;
+    if (e.target.closest(".theme-panel-wrap")) return;
+    themeSetPanelOpen(false);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && panel && !panel.classList.contains("hidden")) {
+      themeSetPanelOpen(false);
+    }
   });
 }
 
@@ -24314,7 +24489,7 @@ async function init() {
   setupImageLightbox();
   setupNavigation();
   setupResponsiveSidebar();
-  setupSidebarThemePicker();
+  setupThemePanel();
   setupTables();
   setupFilters();
   setupForms();
