@@ -498,19 +498,13 @@ body.sidebar-open {
   flex: 1;
 }
 
-.topbar__brand {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  margin-right: 4px;
-}
-
 .topbar__logo {
-  height: 40px;
+  height: 44px;
   width: auto;
-  max-width: 160px;
+  max-width: 140px;
   object-fit: contain;
   display: block;
+  flex-shrink: 0;
 }
 
 .topbar__user-photo {
