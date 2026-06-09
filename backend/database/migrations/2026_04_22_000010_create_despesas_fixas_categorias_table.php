@@ -27,7 +27,8 @@ return new class extends Migration
         $seed = [
             ['nome' => 'Aluguel', 'ordem' => 10],
             ['nome' => 'Energia', 'ordem' => 20],
-            ['nome' => 'Água / esgoto', 'ordem' => 30],
+            ['nome' => 'Água', 'ordem' => 30],
+            ['nome' => 'Gás', 'ordem' => 35],
             ['nome' => 'Internet / telefonia', 'ordem' => 40],
             ['nome' => 'Salários e encargos', 'ordem' => 50],
             ['nome' => 'Impostos e taxas', 'ordem' => 60],
