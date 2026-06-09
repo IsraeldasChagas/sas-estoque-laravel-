@@ -121,6 +121,37 @@ function setupImageLightbox() {
 let despesasFixasListaCache = [];
 let despesasFixasCategoriasCache = [];
 let despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
+const DESP_FIXAS_LISTA_COLLAPSED_KEY = "desp-fixas-lista-collapsed";
+
+function despFixasSetListaCollapsed(collapsed, persist = true) {
+  const card = document.getElementById("despFixasListaCard");
+  const btn = document.getElementById("despFixasToggleLista");
+  if (!card) return;
+  card.classList.toggle("fg-lancamento-card--collapsed", collapsed);
+  if (btn) {
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    btn.title = collapsed ? "Expandir lista" : "Recolher lista";
+  }
+  if (persist) {
+    try {
+      localStorage.setItem(DESP_FIXAS_LISTA_COLLAPSED_KEY, collapsed ? "1" : "0");
+    } catch (_) {}
+  }
+}
+
+function despFixasInitListaCollapse() {
+  const card = document.getElementById("despFixasListaCard");
+  if (!card || card.dataset.collapseBound === "1") return;
+  card.dataset.collapseBound = "1";
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(DESP_FIXAS_LISTA_COLLAPSED_KEY) === "1";
+  } catch (_) {}
+  despFixasSetListaCollapsed(collapsed, false);
+  document.getElementById("despFixasToggleLista")?.addEventListener("click", () => {
+    despFixasSetListaCollapsed(card.classList.contains("fg-lancamento-card--collapsed") ? false : true);
+  });
+}
 
 function despFixasEls() {
   return {
@@ -943,6 +974,8 @@ async function despFixasHandleDelete(id) {
 function despFixasBindOnce() {
   if (document.body.dataset.despFixasBound === "1") return;
   document.body.dataset.despFixasBound = "1";
+
+  despFixasInitListaCollapse();
 
   const els = despFixasEls();
 

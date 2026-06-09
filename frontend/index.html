@@ -3348,14 +3348,26 @@
             </div>
 
             <!-- Lista -->
-            <div class="table-card form-card--wide">
-              <header>
-                <div>
+            <div class="table-card form-card--wide fg-lancamento-card" id="despFixasListaCard">
+              <header class="fg-lancamento-card__header">
+                <button
+                  type="button"
+                  class="fg-collapse-btn"
+                  id="despFixasToggleLista"
+                  aria-expanded="true"
+                  aria-controls="despFixasListaBody"
+                  title="Recolher ou expandir lista"
+                  aria-label="Recolher ou expandir despesas cadastradas"
+                >
+                  <span class="fg-collapse-btn__icon" aria-hidden="true"></span>
+                </button>
+                <div class="desp-fixas-lista-card__titles">
                   <h3>Despesas cadastradas</h3>
                   <p class="subtle-text">Ver, editar e excluir despesas fixas.</p>
                 </div>
               </header>
 
+              <div id="despFixasListaBody" class="fg-lancamento-card__body">
               <!-- Filtros (somente para a lista abaixo) -->
               <form id="despFixasFiltrosForm" class="filters-panel" style="margin: 0.75rem 1rem 0 1rem;">
                 <div class="filters-grid">
@@ -3400,6 +3412,7 @@
                     <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando...</td></tr>
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
           </section>
@@ -6659,7 +6672,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260610-despfixas-ver"></script>
+    <script src="app.js?v=20260610-despfixas-collapse"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>

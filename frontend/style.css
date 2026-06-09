@@ -4540,6 +4540,19 @@ body.image-lightbox-open {
     justify-content: center;
   }
 
+  #despesasFixasSection .desp-fixas-lista-card__titles {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #despesasFixasSection .desp-fixas-lista-card__titles h3 {
+    margin: 0;
+  }
+
+  #despesasFixasSection .desp-fixas-lista-card__titles .subtle-text {
+    margin: 0.35rem 0 0 0;
+  }
+
   /* Vale / consumo — lançamentos em cards (rótulo em cima, valor em baixo), igual Funcionários/Proventos */
   #valeConsumoSection .vale-consumo-lancamentos-head {
     flex-direction: column;
