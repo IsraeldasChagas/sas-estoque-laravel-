@@ -570,6 +570,19 @@ function despFixasSetFeedback(message, type = "error") {
   el.textContent = message;
 }
 
+function despFixasFailValidation(message, type = "error") {
+  despFixasSetFeedback(message, type);
+  showToast(message, type === "warn" ? "warning" : type);
+}
+
+function despFixasLimparFiltrosLista() {
+  despesasFixasFiltros = { dia: "", categoriaId: "", unidadeId: "" };
+  const els = despFixasEls();
+  if (els.filtroDia) els.filtroDia.value = "";
+  if (els.filtroCategoria) els.filtroCategoria.value = "";
+  if (els.filtroUnidade) els.filtroUnidade.value = "";
+}
+
 function despFixasFormSetMode(mode) {
   // mode: "create" | "edit" | "view"
   const els = despFixasEls();
@@ -598,12 +611,21 @@ function despFixasShowForm(show) {
   const els = despFixasEls();
   if (!els.formCard) return;
   els.formCard.classList.toggle("hidden", !show);
-  if (show) despFixasSetupMoeda(els.formCard);
+  if (show) {
+    despFixasSetupMoeda(els.formCard);
+    if (els.unidadesList && !els.unidadesList.querySelector('input[data-unidade-check="1"]')) {
+      despFixasRenderUnidadesChecklist([]);
+    }
+  }
   if (!show) {
     despFixasSetFeedback("");
     if (els.form) els.form.reset();
     if (els.id) els.id.value = "";
     if (els.unidadesList) els.unidadesList.innerHTML = "";
+    if (els.salvar) {
+      els.salvar.disabled = false;
+      els.salvar.textContent = "Salvar";
+    }
   }
 }
 
@@ -1468,23 +1490,29 @@ function despFixasBindOnce() {
     const fornecedor = (els.fornecedor?.value || "").trim() || null;
     const observacoes = (els.obs?.value || "").trim() || null;
 
-    if (!nome) return despFixasSetFeedback("Informe o nome da despesa.");
-    if (!Number.isFinite(categoriaId) || categoriaId <= 0) return despFixasSetFeedback("Selecione uma categoria válida.");
+    if (!nome) return despFixasFailValidation("Informe o nome da despesa.");
+    if (!Number.isFinite(categoriaId) || categoriaId <= 0) {
+      return despFixasFailValidation("Selecione uma categoria válida.");
+    }
     let valorFinal = 0;
     if (Number.isFinite(valor) && valor > 0) valorFinal = valor;
-    else if (Number.isFinite(valor) && valor < 0) return despFixasSetFeedback("Informe um valor válido ou deixe em branco.");
+    else if (Number.isFinite(valor) && valor < 0) {
+      return despFixasFailValidation("Informe um valor válido ou deixe em branco.");
+    }
     let diaFinal = 0;
     if (diaStr !== "") {
       const diaParsed = Number(diaStr);
       if (!Number.isFinite(diaParsed) || diaParsed < 1 || diaParsed > 31) {
-        return despFixasSetFeedback("Informe um dia de vencimento entre 1 e 31 ou deixe em branco.");
+        return despFixasFailValidation("Informe um dia de vencimento entre 1 e 31 ou deixe em branco.");
       }
       diaFinal = diaParsed;
     }
 
     const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
     const unidadeIds = Array.from(checks).map((c) => Number(c.value)).filter((n) => Number.isFinite(n) && n > 0);
-    if (!unidadeIds.length) return despFixasSetFeedback("Selecione ao menos 1 unidade.", "warn");
+    if (!unidadeIds.length) {
+      return despFixasFailValidation("Selecione ao menos 1 unidade.", "warn");
+    }
 
     const payload = {
       nome,
@@ -1498,6 +1526,11 @@ function despFixasBindOnce() {
       unidade_ids: unidadeIds,
     };
 
+    if (els.salvar) {
+      els.salvar.disabled = true;
+      els.salvar.textContent = "Salvando...";
+    }
+
     try {
       despFixasSetFeedback("Salvando...", "success");
       const res = await fetchJSON(id ? `/despesas-fixas/${encodeURIComponent(id)}` : "/despesas-fixas", {
@@ -1505,21 +1538,19 @@ function despFixasBindOnce() {
         body: JSON.stringify(payload),
       });
 
-      // Atualiza cache sem precisar recarregar tudo; depois recarrega para refletir labels/unidades.
-      if (id) {
-        despesasFixasListaCache = despesasFixasListaCache.map((x) => (String(x?.id) === String(id) ? res : x));
-      } else {
-        despesasFixasListaCache = [res, ...despesasFixasListaCache];
-      }
-      despFixasRenderTable(despesasFixasListaCache);
+      despFixasLimparFiltrosLista();
       despFixasShowForm(false);
       showToast("Despesa salva com sucesso.", "success");
 
-      // Recarrega lista do backend (garante consistência com joins/labels)
-      loadDespesasFixas().catch(() => {});
+      await loadDespesasFixas();
     } catch (err) {
       const msg = err?.responseData?.error || err?.message || "Falha ao salvar despesa.";
-      despFixasSetFeedback(msg);
+      despFixasFailValidation(msg);
+    } finally {
+      if (els.salvar) {
+        els.salvar.disabled = false;
+        els.salvar.textContent = "Salvar";
+      }
     }
   });
 }
