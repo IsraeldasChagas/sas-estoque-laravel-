@@ -9545,7 +9545,7 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
             }
         }
         $diaRaw = $body['dia_vencimento'] ?? null;
-        if ($diaRaw === null || $diaRaw === '') {
+        if ($diaRaw === null || $diaRaw === '' || (int) $diaRaw === 0) {
             $dia = 0;
         } else {
             $dia = (int) $diaRaw;
@@ -9627,7 +9627,7 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
             ? (($body['valor'] === null || $body['valor'] === '') ? 0 : (float) $body['valor'])
             : (float) $r->valor;
         $dia = array_key_exists('dia_vencimento', $body)
-            ? (($body['dia_vencimento'] === null || $body['dia_vencimento'] === '') ? 0 : (int) $body['dia_vencimento'])
+            ? (((int) ($body['dia_vencimento'] ?? 0)) === 0 ? 0 : (int) $body['dia_vencimento'])
             : (int) $r->dia_vencimento;
         $fornecedor = array_key_exists('fornecedor', $body) ? trim((string) $body['fornecedor']) : (string) ($r->fornecedor ?? '');
         $obs = array_key_exists('observacoes', $body) ? trim((string) $body['observacoes']) : (string) ($r->observacoes ?? '');
