@@ -29,7 +29,7 @@ return new class extends Migration
             ['nome' => 'Energia', 'ordem' => 20],
             ['nome' => 'Água', 'ordem' => 30],
             ['nome' => 'Gás', 'ordem' => 35],
-            ['nome' => 'Internet / telefonia', 'ordem' => 40],
+            ['nome' => 'Internet', 'ordem' => 40],
             ['nome' => 'Salários e encargos', 'ordem' => 50],
             ['nome' => 'Impostos e taxas', 'ordem' => 60],
             ['nome' => 'Manutenção', 'ordem' => 70],
