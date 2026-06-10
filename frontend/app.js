@@ -1510,9 +1510,6 @@ function despFixasBindOnce() {
 
     const checks = els.unidadesList?.querySelectorAll?.('input[type="checkbox"][data-unidade-check="1"]:checked') || [];
     const unidadeIds = Array.from(checks).map((c) => Number(c.value)).filter((n) => Number.isFinite(n) && n > 0);
-    if (!unidadeIds.length) {
-      return despFixasFailValidation("Selecione ao menos 1 unidade.", "warn");
-    }
 
     const payload = {
       nome,

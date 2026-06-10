@@ -9567,10 +9567,7 @@ Route::post('/despesas-fixas', function (Request $request) use ($proventosAuth, 
         if ($catId <= 0 || !DB::table('despesas_fixas_categorias')->where('id', $catId)->where('ativo', 1)->exists()) {
             return response()->json(['error' => 'Categoria inválida'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if ($uids === []) {
-            return response()->json(['error' => 'Selecione ao menos uma unidade'], 422)->header('Access-Control-Allow-Origin', '*');
-        }
-        if (Schema::hasTable('unidades')) {
+        if ($uids !== [] && Schema::hasTable('unidades')) {
             $n = DB::table('unidades')->whereIn('id', $uids)->count();
             if ($n !== count(array_unique($uids))) {
                 return response()->json(['error' => 'Unidade inválida na lista'], 422)->header('Access-Control-Allow-Origin', '*');
@@ -9652,10 +9649,7 @@ Route::put('/despesas-fixas/{id}', function (Request $request, $id) use ($proven
         if ($dia !== 0 && ($dia < 1 || $dia > 31)) {
             return response()->json(['error' => 'Dia de vencimento deve ser entre 1 e 31'], 422)->header('Access-Control-Allow-Origin', '*');
         }
-        if ($uids === []) {
-            return response()->json(['error' => 'Selecione ao menos uma unidade'], 422)->header('Access-Control-Allow-Origin', '*');
-        }
-        if (Schema::hasTable('unidades')) {
+        if ($uids !== [] && Schema::hasTable('unidades')) {
             $n = DB::table('unidades')->whereIn('id', $uids)->count();
             if ($n !== count(array_unique($uids))) {
                 return response()->json(['error' => 'Unidade inválida na lista'], 422)->header('Access-Control-Allow-Origin', '*');
