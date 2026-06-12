@@ -5550,8 +5550,7 @@ function navigateTo(section) {
       "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre",
       "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
       "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda",
-      "fechamento", "fechamentoDash", "investimentoDashboard", "investimentoReservas",
-      "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
+      "fechamento", "fechamentoDash",
     ];
     if (fgFinanceiroSections.includes(section)) {
       financeiroNavSubmenuNav.classList.add("open");

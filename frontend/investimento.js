@@ -910,14 +910,6 @@
   window.setupInvestimentoModule = function setupInvestimentoModule() {
     investimentoBindOnce();
     invSetupMoedaInputs(document);
-    const menu = document.getElementById("investimentoMenu");
-    if (menu && menu.dataset.sasSubmenuToggleBound !== "1") {
-      menu.dataset.sasSubmenuToggleBound = "1";
-      menu.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        menu.closest(".nav-submenu")?.classList.toggle("open");
-      });
-    }
     invCarregarCatalogos().then(() => {
       const filtroObj = document.getElementById("invResFiltroObjetivo");
       if (filtroObj) filtroObj.innerHTML = `<option value="">Todos</option>${invOptsObjetivos()}`;

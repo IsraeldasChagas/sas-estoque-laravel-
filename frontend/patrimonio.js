@@ -1461,13 +1461,5 @@
     patrimonioBindOnce();
     patSetupMoedaInputs(document.getElementById("patrimonioModal"));
     patSetupMoedaInputs(document.getElementById("patManModal"));
-    const menu = document.getElementById("patrimonioMenu");
-    if (menu && menu.dataset.sasSubmenuToggleBound !== "1") {
-      menu.dataset.sasSubmenuToggleBound = "1";
-      menu.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        menu.closest(".nav-submenu")?.classList.toggle("open");
-      });
-    }
   };
 })();
