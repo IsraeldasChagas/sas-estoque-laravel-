@@ -200,10 +200,6 @@ body.sidebar-open {
   padding-left: 44px !important;
 }
 
-.nav-submenu.nav-submenu--financeiro .nav-submenu--nested .nav-submenu-content .nav-link-child {
-  padding-left: 44px !important;
-}
-
 .nav-submenu-btn--backup.nav-link-child {
   background: rgba(21, 101, 192, 0.35) !important;
 }
