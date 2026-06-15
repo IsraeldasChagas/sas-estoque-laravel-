@@ -1,5 +1,13 @@
 /* Módulo Investimento — Tesouraria e Reservas Empresariais */
 
+/* Submenu lateral (altura em style.css; reforço mobile) */
+@media (max-width: 1024px) {
+  .nav-submenu.nav-submenu--investimento.open > .nav-submenu-content {
+    max-height: min(68vh, 480px) !important;
+    overflow-y: auto !important;
+  }
+}
+
 .inv-section-head {
   display: flex;
   flex-wrap: wrap;

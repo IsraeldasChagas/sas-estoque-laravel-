@@ -1,7 +1,9 @@
-/* Módulo Patrimônio */
-.nav-submenu.nav-submenu--patrimonio.open > .nav-submenu-content {
-  max-height: min(72vh, 480px);
-  overflow-y: auto;
+/* Módulo Patrimônio — submenu lateral (altura em style.css; reforço mobile) */
+@media (max-width: 1024px) {
+  .nav-submenu.nav-submenu--patrimonio.open > .nav-submenu-content {
+    max-height: min(72vh, 560px) !important;
+    overflow-y: auto !important;
+  }
 }
 .patrimonio-section-head {
   display: flex;

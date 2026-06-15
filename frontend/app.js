@@ -2659,6 +2659,9 @@ function syncSidebarNavTitles() {
     const label = link.querySelector(".nav-label")?.textContent?.trim();
     if (label) link.title = label;
   });
+  document.querySelectorAll("#sidebar .nav-submenu > .nav-link-parent").forEach((link) => {
+    syncNavSubmenuAria(link.closest(".nav-submenu"));
+  });
 }
 
 function closeSidebarFlyouts() {
@@ -2679,20 +2682,43 @@ function isCollapsedSidebarDesktop() {
   return !!sidebar?.classList.contains("is-collapsed") && !isMobileViewport();
 }
 
+let submenuToggleLockUntil = 0;
+
+function syncNavSubmenuAria(submenu) {
+  if (!submenu) return;
+  const parentLink = submenu.querySelector(":scope > .nav-link-parent");
+  if (!parentLink) return;
+  parentLink.setAttribute("aria-expanded", submenu.classList.contains("open") ? "true" : "false");
+}
+
 function toggleNavSubmenu(submenu) {
   if (!submenu) return;
+  const now = Date.now();
+  if (now < submenuToggleLockUntil) return;
+  submenuToggleLockUntil = now + 320;
+
   const willOpen = !submenu.classList.contains("open");
   const isTopLevel = submenu.parentElement?.tagName === "NAV";
 
   if (isCollapsedSidebarDesktop() && isTopLevel) {
     document.querySelectorAll("#sidebar .sidebar-nav-scroll > nav > .nav-submenu.open").forEach((sm) => {
       sm.classList.remove("open");
+      syncNavSubmenuAria(sm);
     });
     if (willOpen) submenu.classList.add("open");
+  } else if (isMobileViewport() && isTopLevel && willOpen) {
+    document.querySelectorAll("#sidebar .sidebar-nav-scroll > nav > .nav-submenu.open").forEach((sm) => {
+      if (sm !== submenu) {
+        sm.classList.remove("open");
+        syncNavSubmenuAria(sm);
+      }
+    });
+    submenu.classList.add("open");
   } else {
     submenu.classList.toggle("open");
   }
 
+  syncNavSubmenuAria(submenu);
   requestAnimationFrame(positionCollapsedSubmenuFlyouts);
 }
 
@@ -5563,6 +5589,7 @@ function navigateTo(section) {
     const invSections = ["investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios"];
     if (invSections.includes(section)) investimentoNavSubmenuNav.classList.add("open");
     else investimentoNavSubmenuNav.classList.remove("open");
+    syncNavSubmenuAria(investimentoNavSubmenuNav);
   }
   const fechamentoNavSubmenuNav = document.getElementById("fechamentoCaixaMenu")?.closest(".nav-submenu");
   if (fechamentoNavSubmenuNav) {
@@ -5630,6 +5657,7 @@ function navigateTo(section) {
     const patSections = ["patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"];
     if (patSections.includes(section)) patrimonioNavSubmenuNav.classList.add("open");
     else patrimonioNavSubmenuNav.classList.remove("open");
+    syncNavSubmenuAria(patrimonioNavSubmenuNav);
   }
   if (section === "patrimonioDashboard") loadPatrimonioDashboard?.().catch(() => {});
   else if (section === "patrimonios") loadPatrimonios?.().catch(() => {});
@@ -16293,13 +16321,14 @@ function setupNavigation() {
   const sidebar = document.getElementById("sidebar");
   if (sidebar && sidebar.dataset.sasSubmenuToggleBound !== "1") {
     sidebar.dataset.sasSubmenuToggleBound = "1";
-    sidebar.addEventListener("click", (event) => {
+    const handleSubmenuParentActivate = (event) => {
       const parentLink = event.target.closest(".nav-link-parent");
-      if (!parentLink) return;
+      if (!parentLink || !event.currentTarget.contains(parentLink)) return;
       event.preventDefault();
       event.stopPropagation();
       toggleNavSubmenu(parentLink.closest(".nav-submenu"));
-    });
+    };
+    sidebar.addEventListener("click", handleSubmenuParentActivate);
   }
 
   document.getElementById("rhRelatorioFiltroForm")?.addEventListener("submit", (e) => {
