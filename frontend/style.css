@@ -177,19 +177,6 @@ body.sidebar-open {
   overflow: visible;
 }
 
-/* Investimento e Patrimônio: altura explícita (max-height:none falha em Safari mobile). */
-.nav-submenu.nav-submenu--investimento.open > .nav-submenu-content {
-  max-height: 420px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.nav-submenu.nav-submenu--patrimonio.open > .nav-submenu-content {
-  max-height: 560px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
 .nav-submenu.nav-submenu--financeiro .nav-submenu--nested > .nav-link-parent.nav-link-child,
 .nav-submenu.nav-submenu--rh .nav-submenu--nested > .nav-link-parent.nav-link-child {
   margin-top: 4px;
@@ -210,6 +197,10 @@ body.sidebar-open {
 }
 
 .nav-submenu.nav-submenu--rh .nav-submenu--nested .nav-submenu-content .nav-link-child {
+  padding-left: 44px !important;
+}
+
+.nav-submenu.nav-submenu--financeiro .nav-submenu--nested .nav-submenu-content .nav-link-child {
   padding-left: 44px !important;
 }
 
@@ -4310,14 +4301,6 @@ body.image-lightbox-open {
 
   #sidebar .nav-submenu-content {
     transition: none;
-  }
-
-  #sidebar .nav-submenu.nav-submenu--investimento.open > .nav-submenu-content {
-    max-height: min(68vh, 480px);
-  }
-
-  #sidebar .nav-submenu.nav-submenu--patrimonio.open > .nav-submenu-content {
-    max-height: min(72vh, 560px);
   }
 
   .sidebar-backdrop {

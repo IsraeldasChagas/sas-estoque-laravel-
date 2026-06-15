@@ -1,10 +1,4 @@
-/* Módulo Patrimônio — submenu lateral (altura em style.css; reforço mobile) */
-@media (max-width: 1024px) {
-  .nav-submenu.nav-submenu--patrimonio.open > .nav-submenu-content {
-    max-height: min(72vh, 560px) !important;
-    overflow-y: auto !important;
-  }
-}
+/* Módulo Patrimônio — submenu lateral (display toggle em style.css) */
 .patrimonio-section-head {
   display: flex;
   flex-wrap: wrap;

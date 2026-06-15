@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260615-submenu-mobile" />
+    <link rel="stylesheet" href="style.css?v=20260615-submenu-fix3" />
     <script>
       (function () {
         try {
@@ -44,8 +44,8 @@
       })();
     </script>
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
-    <link rel="stylesheet" href="style-patrimonio.css?v=20260615-submenu-mobile" />
-    <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-mobile" />
+    <link rel="stylesheet" href="style-patrimonio.css?v=20260615-submenu-fix2" />
+    <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
@@ -248,36 +248,38 @@
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas"><span class="nav-icon" aria-hidden="true">📆</span><span class="nav-label">Despesas fixas</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="valeConsumo"><span class="nav-icon" aria-hidden="true">🎫</span><span class="nav-label">Vale / consumo</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="reciboAjuda"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Recibo ajuda de custo</span></a>
-            </div>
-          </div>
-          <div class="nav-submenu nav-submenu--investimento">
-            <a href="#" class="nav-link nav-link-parent" id="investimentoMenu" aria-expanded="false" aria-haspopup="true">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Investimento</span></span>
-              <span class="nav-arrow" aria-hidden="true">▼</span>
-            </a>
-            <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="investimentoDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="investimentoReservas"><span class="nav-icon" aria-hidden="true">🏦</span><span class="nav-label">Reservas</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="investimentoSimulador"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Simulador de Investimentos</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="investimentoCarteira"><span class="nav-icon" aria-hidden="true">💼</span><span class="nav-label">Carteira da Empresa</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="investimentoResgates"><span class="nav-icon" aria-hidden="true">💸</span><span class="nav-label">Resgates</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="investimentoRelatorios"><span class="nav-icon" aria-hidden="true">📑</span><span class="nav-label">Relatórios</span></a>
-            </div>
-          </div>
-          <div class="nav-submenu nav-submenu--patrimonio">
-            <a href="#" class="nav-link nav-link-parent" id="patrimonioMenu" aria-expanded="false" aria-haspopup="true">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Patrimônio</span></span>
-              <span class="nav-arrow" aria-hidden="true">▼</span>
-            </a>
-            <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonios"><span class="nav-icon" aria-hidden="true">🖥️</span><span class="nav-label">Patrimônios</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioCategorias"><span class="nav-icon" aria-hidden="true">🗂️</span><span class="nav-label">Categorias</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioMovimentacoes"><span class="nav-icon" aria-hidden="true">🔄</span><span class="nav-label">Movimentações</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioManutencoes"><span class="nav-icon" aria-hidden="true">🛠️</span><span class="nav-label">Manutenções</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioInventario"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Inventário Patrimonial</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="patrimonioConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
+
+              <div class="nav-submenu nav-submenu--nested nav-submenu--investimento">
+                <button type="button" class="nav-link nav-link-parent nav-link-child" id="investimentoMenu" aria-expanded="false" aria-haspopup="true">
+                  <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Investimento</span></span>
+                  <span class="nav-arrow" aria-hidden="true">▼</span>
+                </button>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoReservas"><span class="nav-icon" aria-hidden="true">🏦</span><span class="nav-label">Reservas</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoSimulador"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Simulador de Investimentos</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoCarteira"><span class="nav-icon" aria-hidden="true">💼</span><span class="nav-label">Carteira da Empresa</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoResgates"><span class="nav-icon" aria-hidden="true">💸</span><span class="nav-label">Resgates</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="investimentoRelatorios"><span class="nav-icon" aria-hidden="true">📑</span><span class="nav-label">Relatórios</span></a>
+                </div>
+              </div>
+
+              <div class="nav-submenu nav-submenu--nested nav-submenu--patrimonio">
+                <button type="button" class="nav-link nav-link-parent nav-link-child" id="patrimonioMenu" aria-expanded="false" aria-haspopup="true">
+                  <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Patrimônio</span></span>
+                  <span class="nav-arrow" aria-hidden="true">▼</span>
+                </button>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonios"><span class="nav-icon" aria-hidden="true">🖥️</span><span class="nav-label">Patrimônios</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioCategorias"><span class="nav-icon" aria-hidden="true">🗂️</span><span class="nav-label">Categorias</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioMovimentacoes"><span class="nav-icon" aria-hidden="true">🔄</span><span class="nav-label">Movimentações</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioManutencoes"><span class="nav-icon" aria-hidden="true">🛠️</span><span class="nav-label">Manutenções</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioInventario"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Inventário Patrimonial</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="patrimonioConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
+                </div>
+              </div>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--config">
@@ -6707,12 +6709,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <!-- Script principal da aplicacao -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
-    <script src="energia.js?v=20260521-energia-filtro-unidade"></script>
+    <script src="energia.js?v=20260615-submenu-fix2"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260615-submenu-mobile"></script>
+    <script src="app.js?v=20260615-submenu-fix3"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>

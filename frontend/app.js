@@ -2682,20 +2682,41 @@ function isCollapsedSidebarDesktop() {
   return !!sidebar?.classList.contains("is-collapsed") && !isMobileViewport();
 }
 
-let submenuToggleLockUntil = 0;
+function bindNavSubmenuParents() {
+  document.querySelectorAll("#sidebar .nav-link-parent").forEach((parent) => {
+    if (parent.dataset.sasSubmenuBound === "1") return;
+    parent.dataset.sasSubmenuBound = "1";
+    const onActivate = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleNavSubmenu(parent.closest(".nav-submenu"));
+    };
+    parent.addEventListener("click", onActivate);
+    parent.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      onActivate(event);
+    });
+  });
+}
+
+function forceRebindInvPatSubmenuParents() {
+  ["investimentoMenu", "patrimonioMenu"].forEach((id) => {
+    const parent = document.getElementById(id);
+    if (!parent) return;
+    delete parent.dataset.sasSubmenuBound;
+  });
+  bindNavSubmenuParents();
+}
 
 function syncNavSubmenuAria(submenu) {
   if (!submenu) return;
-  const parentLink = submenu.querySelector(":scope > .nav-link-parent");
+  const parentLink = Array.from(submenu.children || []).find((el) => el.classList?.contains("nav-link-parent"));
   if (!parentLink) return;
   parentLink.setAttribute("aria-expanded", submenu.classList.contains("open") ? "true" : "false");
 }
 
 function toggleNavSubmenu(submenu) {
   if (!submenu) return;
-  const now = Date.now();
-  if (now < submenuToggleLockUntil) return;
-  submenuToggleLockUntil = now + 320;
 
   const willOpen = !submenu.classList.contains("open");
   const isTopLevel = submenu.parentElement?.tagName === "NAV";
@@ -2706,14 +2727,6 @@ function toggleNavSubmenu(submenu) {
       syncNavSubmenuAria(sm);
     });
     if (willOpen) submenu.classList.add("open");
-  } else if (isMobileViewport() && isTopLevel && willOpen) {
-    document.querySelectorAll("#sidebar .sidebar-nav-scroll > nav > .nav-submenu.open").forEach((sm) => {
-      if (sm !== submenu) {
-        sm.classList.remove("open");
-        syncNavSubmenuAria(sm);
-      }
-    });
-    submenu.classList.add("open");
   } else {
     submenu.classList.toggle("open");
   }
@@ -2721,6 +2734,16 @@ function toggleNavSubmenu(submenu) {
   syncNavSubmenuAria(submenu);
   requestAnimationFrame(positionCollapsedSubmenuFlyouts);
 }
+
+window.sasToggleSubmenu = function sasToggleSubmenu(event, menuId) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const parent = document.getElementById(menuId);
+  toggleNavSubmenu(parent?.closest(".nav-submenu"));
+  return false;
+};
 
 function positionCollapsedSubmenuFlyouts() {
   const sidebar = document.getElementById("sidebar");
@@ -5577,6 +5600,10 @@ function navigateTo(section) {
       "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
       "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda",
       "fechamento", "fechamentoDash",
+      "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
+      "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
+      "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes",
+      "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
     ];
     if (fgFinanceiroSections.includes(section)) {
       financeiroNavSubmenuNav.classList.add("open");
@@ -5587,8 +5614,12 @@ function navigateTo(section) {
   const investimentoNavSubmenuNav = document.getElementById("investimentoMenu")?.closest(".nav-submenu");
   if (investimentoNavSubmenuNav) {
     const invSections = ["investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios"];
-    if (invSections.includes(section)) investimentoNavSubmenuNav.classList.add("open");
-    else investimentoNavSubmenuNav.classList.remove("open");
+    if (invSections.includes(section)) {
+      financeiroNavSubmenuNav?.classList.add("open");
+      investimentoNavSubmenuNav.classList.add("open");
+    } else {
+      investimentoNavSubmenuNav.classList.remove("open");
+    }
     syncNavSubmenuAria(investimentoNavSubmenuNav);
   }
   const fechamentoNavSubmenuNav = document.getElementById("fechamentoCaixaMenu")?.closest(".nav-submenu");
@@ -5655,8 +5686,12 @@ function navigateTo(section) {
   const patrimonioNavSubmenuNav = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
   if (patrimonioNavSubmenuNav) {
     const patSections = ["patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"];
-    if (patSections.includes(section)) patrimonioNavSubmenuNav.classList.add("open");
-    else patrimonioNavSubmenuNav.classList.remove("open");
+    if (patSections.includes(section)) {
+      financeiroNavSubmenuNav?.classList.add("open");
+      patrimonioNavSubmenuNav.classList.add("open");
+    } else {
+      patrimonioNavSubmenuNav.classList.remove("open");
+    }
     syncNavSubmenuAria(patrimonioNavSubmenuNav);
   }
   if (section === "patrimonioDashboard") loadPatrimonioDashboard?.().catch(() => {});
@@ -11577,6 +11612,7 @@ async function startAppSession(user) {
   applyPermissions();
   refreshDomShellNav();
   wireSidebarSectionNavClicks();
+  forceRebindInvPatSubmenuParents();
   refreshCurrentUserFoto().catch(() => {});
   if (currentUser?.tema_cores) {
     themeMeta.fonte = "usuario";
@@ -16317,19 +16353,7 @@ function wireSidebarSectionNavClicks() {
 
 function setupNavigation() {
   wireSidebarSectionNavClicks();
-
-  const sidebar = document.getElementById("sidebar");
-  if (sidebar && sidebar.dataset.sasSubmenuToggleBound !== "1") {
-    sidebar.dataset.sasSubmenuToggleBound = "1";
-    const handleSubmenuParentActivate = (event) => {
-      const parentLink = event.target.closest(".nav-link-parent");
-      if (!parentLink || !event.currentTarget.contains(parentLink)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      toggleNavSubmenu(parentLink.closest(".nav-submenu"));
-    };
-    sidebar.addEventListener("click", handleSubmenuParentActivate);
-  }
+  bindNavSubmenuParents();
 
   document.getElementById("rhRelatorioFiltroForm")?.addEventListener("submit", (e) => {
     e.preventDefault();

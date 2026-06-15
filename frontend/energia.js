@@ -493,25 +493,6 @@
     document.getElementById("energiaRelAtualizar")?.addEventListener("click", loadEnergiaRelatoriosSection);
     document.getElementById("energiaRelPdf")?.addEventListener("click", () => downloadEnergiaRelatorio("pdf").then(() => window.showToast?.("PDF baixado.", "success")).catch((e) => window.showToast?.(e.message, "error")));
     document.getElementById("energiaRelCsv")?.addEventListener("click", () => downloadEnergiaRelatorio("csv").then(() => window.showToast?.("Planilha CSV baixada (abra no Excel).", "success")).catch((e) => window.showToast?.(e.message, "error")));
-
-    const manutMenu = document.getElementById("manutencaoMenu");
-    if (manutMenu && manutMenu.dataset.sasBound !== "1") {
-      manutMenu.dataset.sasBound = "1";
-      manutMenu.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        manutMenu.closest(".nav-submenu")?.classList.toggle("open");
-      });
-    }
-    const energiaMenu = document.getElementById("energiaMenu");
-    if (energiaMenu && energiaMenu.dataset.sasBound !== "1") {
-      energiaMenu.dataset.sasBound = "1";
-      energiaMenu.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        energiaMenu.closest(".nav-submenu")?.classList.toggle("open");
-      });
-    }
   }
 
   window.ENERGIA_MODULOS = ENERGIA_MODULOS;
