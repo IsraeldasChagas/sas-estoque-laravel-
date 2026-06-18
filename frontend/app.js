@@ -17878,9 +17878,6 @@ function getMensagemReservaWhatsApp(r) {
   return linhas.join('\n');
 }
 
-  return linhas.join('\n');
-}
-
 /** Mensagem interna para avisar a empresa/unidade sobre a reserva. */
 function getMensagemReservaWhatsAppEmpresa(r) {
   var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + (r.mesa_id || '');
