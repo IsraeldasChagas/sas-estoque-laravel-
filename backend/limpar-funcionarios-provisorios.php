@@ -2,9 +2,12 @@
 
 /**
  * Remove cadastros provisórios de funcionários (RECUPERAR / CPF 000.000 / 999.999).
+ * Não remove cadastros reais do RH.
  *
  * Uso:
  *   php limpar-funcionarios-provisorios.php
+ *
+ * Preferível: POST /funcionarios/limpar-provisorios (ADMIN) — grava auditoria.
  */
 
 require __DIR__ . '/vendor/autoload.php';

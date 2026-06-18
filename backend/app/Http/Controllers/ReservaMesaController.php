@@ -254,13 +254,13 @@ class ReservaMesaController extends Controller
 
         $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
 
-        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade', 'usuario:id,nome', 'unidade:id,nome,endereco']);
+        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone']);
         return response()->json(['message' => 'Reserva criada com sucesso', 'reserva' => $reserva], 201);
     }
 
     public function show($id)
     {
-        $reserva = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,localizacao,unidade_id', 'usuario:id,nome', 'unidade:id,nome,endereco'])
+        $reserva = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,localizacao,unidade_id', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone'])
             ->findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;

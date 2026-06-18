@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
+use App\Support\AuditLog;
 use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Support\Rh\RhRescisaoCalculo;
 use App\Support\SasMapaSistemaPdf;
@@ -6395,6 +6396,15 @@ Route::post('/funcionarios/limpar-provisorios', function (Request $request) {
     }
     $resultado = RhFuncionarioUnicidade::limparCadastrosProvisorios();
     if ($resultado['removidos'] > 0) {
+        AuditLog::registrar(
+            (int) $userId,
+            'excluir',
+            'funcionarios_provisorios',
+            null,
+            'Limpeza de cadastros provisórios (scripts antigos)',
+            ['ids' => $resultado['ids'], 'total' => $resultado['removidos']],
+            $request
+        );
         \Log::warning('ADMIN limpou cadastros provisórios de funcionários', [
             'usuario_id' => (int) $userId,
             'ids' => $resultado['ids'],
@@ -7258,16 +7268,34 @@ Route::delete('/funcionarios/{id}/excluir', function (Request $request, $id) {
             ->header('Access-Control-Allow-Origin', '*');
     }
 
+    $id = (int) $id;
     $f = DB::table('funcionarios')->where('id', $id)->first();
-    if (!$f) {
+    if (! $f) {
         return response()->json(['error' => 'Funcionário não encontrado'], 404)
             ->header('Access-Control-Allow-Origin', '*');
     }
 
+    // Bloqueia exclusão se houver proventos, vale/consumo ou recibos vinculados.
+    $msgBloqueio = RhFuncionarioUnicidade::mensagemBloqueioExclusao($id);
+    if ($msgBloqueio !== '') {
+        return response()->json(['error' => $msgBloqueio], 409)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
     // Remove foto do disco (se existir)
-    if (!empty($f->foto) && is_string($f->foto) && file_exists(public_path($f->foto))) {
+    if (! empty($f->foto) && is_string($f->foto) && file_exists(public_path($f->foto))) {
         @unlink(public_path($f->foto));
     }
+
+    AuditLog::registrar(
+        (int) $userId,
+        'excluir',
+        'funcionarios',
+        $id,
+        'Exclusão definitiva de funcionário',
+        (array) $f,
+        $request
+    );
 
     DB::table('funcionarios')->where('id', $id)->delete();
 
@@ -9076,6 +9104,15 @@ Route::delete('/recibos-ajuda/{id}', function (Request $request, $id) use ($prov
             if (!$funcId || (int) $r->funcionario_id !== $funcId) return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
+        AuditLog::registrar(
+            (int) $u->id,
+            'excluir',
+            'recibos_ajuda_custo',
+            (int) $id,
+            'Exclusão de recibo de ajuda de custo',
+            (array) $r,
+            $request
+        );
         DB::table('recibos_ajuda_custo')->where('id', $id)->delete();
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -9693,13 +9730,23 @@ Route::delete('/despesas-fixas/{id}', function (Request $request, $id) use ($pro
             return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
         }
         $perfil = strtoupper(trim($u->perfil ?? ''));
-        if (!$despFixasPodeGerir($perfil)) {
+        if (! $despFixasPodeGerir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
-        $n = DB::table('despesas_fixas')->where('id', $id)->delete();
-        if (!$n) {
+        $ex = DB::table('despesas_fixas')->where('id', $id)->first();
+        if (! $ex) {
             return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
+        AuditLog::registrar(
+            (int) $u->id,
+            'excluir',
+            'despesas_fixas',
+            (int) $id,
+            'Exclusão de despesa fixa',
+            (array) $ex,
+            $request
+        );
+        DB::table('despesas_fixas')->where('id', $id)->delete();
 
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
@@ -10336,10 +10383,21 @@ Route::delete('/financeiro/vale-consumo/{id}', function (Request $request, $id) 
         if (! $despFixasPodeGerir($perfil)) {
             return response()->json(['error' => 'Não autorizado'], 403)->header('Access-Control-Allow-Origin', '*');
         }
-        $n = DB::table('financeiro_vale_consumo')->where('id', (int) $id)->delete();
-        if (! $n) {
+        $ex = DB::table('financeiro_vale_consumo')->where('id', (int) $id)->first();
+        if (! $ex) {
             return response()->json(['error' => 'Registro não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
         }
+        // Guarda cópia na auditoria antes do delete definitivo (não há lixeira).
+        AuditLog::registrar(
+            (int) $u->id,
+            'excluir',
+            'financeiro_vale_consumo',
+            (int) $id,
+            'Exclusão de lançamento vale/consumo',
+            (array) $ex,
+            $request
+        );
+        DB::table('financeiro_vale_consumo')->where('id', (int) $id)->delete();
 
         return response()->json(['ok' => true])->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {

@@ -45,7 +45,7 @@ final class RhFuncionarioUnicidade
     return self::isCpfProvisorio($cpf);
   }
 
-  /** Exclui placeholders de scripts (000.000 / 999.999 / RECUPERAR…). */
+  /** Exclui placeholders de scripts (000.000 / 999.999 / RECUPERAR…). Use o mesmo prefixo/alias da query (ex.: "funcionarios" ou "f"). */
   public static function aplicarFiltroSomenteCadastrosReais($query, string $prefix = 'funcionarios'): void
   {
     $query->where("{$prefix}.nome_completo", 'not like', 'RECUPERAR FUNCIONARIO%')
@@ -60,7 +60,46 @@ final class RhFuncionarioUnicidade
   }
 
   /**
-   * Remove do banco cadastros provisórios (não apaga proventos históricos).
+   * Conta vínculos financeiros/RH que impedem exclusão do funcionário.
+   *
+   * @return array<string, int> ex.: ['proventos' => 2, 'financeiro_vale_consumo' => 5]
+   */
+  public static function contagemReferencias(int $funcionarioId): array
+  {
+    $tabelas = [
+      'proventos' => 'funcionario_id',
+      'proventos_logs' => 'funcionario_id',
+      'financeiro_vale_consumo' => 'funcionario_id',
+      'recibos_ajuda_custo' => 'funcionario_id',
+    ];
+    $out = [];
+    foreach ($tabelas as $tabela => $coluna) {
+      if (! Schema::hasTable($tabela) || ! Schema::hasColumn($tabela, $coluna)) {
+        continue;
+      }
+      $n = (int) DB::table($tabela)->where($coluna, $funcionarioId)->count();
+      if ($n > 0) {
+        $out[$tabela] = $n;
+      }
+    }
+
+    return $out;
+  }
+
+  /** Rótulos amigáveis para mensagens de bloqueio de exclusão. */
+  public static function rotuloReferencia(string $tabela): string
+  {
+    return match ($tabela) {
+      'proventos' => 'provento(s)',
+      'proventos_logs' => 'histórico de provento(s)',
+      'financeiro_vale_consumo' => 'lançamento(s) de vale/consumo',
+      'recibos_ajuda_custo' => 'recibo(s) de ajuda de custo',
+      default => $tabela,
+    };
+  }
+
+  /**
+   * Remove cadastros provisórios criados por scripts antigos (não apaga proventos/vale).
    *
    * @return array{removidos: int, ids: list<int>}
    */
@@ -205,21 +244,22 @@ final class RhFuncionarioUnicidade
 
   public static function temReferencias(int $funcionarioId): bool
   {
-    $tabelas = [
-      'proventos' => 'funcionario_id',
-      'proventos_logs' => 'funcionario_id',
-      'financeiro_vale_consumo' => 'funcionario_id',
-      'recibos_ajuda_custo' => 'funcionario_id',
-    ];
-    foreach ($tabelas as $tabela => $coluna) {
-      if (! Schema::hasTable($tabela) || ! Schema::hasColumn($tabela, $coluna)) {
-        continue;
-      }
-      if (DB::table($tabela)->where($coluna, $funcionarioId)->exists()) {
-        return true;
-      }
+    return self::contagemReferencias($funcionarioId) !== [];
+  }
+
+  /** Mensagem para API quando exclusão de funcionário é bloqueada. */
+  public static function mensagemBloqueioExclusao(int $funcionarioId): string
+  {
+    $refs = self::contagemReferencias($funcionarioId);
+    if ($refs === []) {
+      return '';
+    }
+    $partes = [];
+    foreach ($refs as $tabela => $qtd) {
+      $partes[] = $qtd . ' ' . self::rotuloReferencia($tabela);
     }
 
-    return false;
+    return 'Não é possível excluir: existem ' . implode(', ', $partes)
+      . '. Inative o funcionário ou remova os lançamentos vinculados antes.';
   }
 }

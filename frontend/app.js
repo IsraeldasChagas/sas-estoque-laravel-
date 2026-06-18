@@ -9836,17 +9836,7 @@ async function loadUsuarios(force = false) {
 }
 
 async function loadFuncionarios(filtros = {}) {
-  if (isAdmin() && sessionStorage.getItem("rhLimparProvisoriosFeito") !== "1") {
-    try {
-      const limpeza = await fetchJSON("/funcionarios/limpar-provisorios", { method: "POST", body: "{}" });
-      sessionStorage.setItem("rhLimparProvisoriosFeito", "1");
-      if (limpeza?.removidos > 0) {
-        showToast(limpeza.mensagem || `Removidos ${limpeza.removidos} cadastro(s) provisório(s).`, "warning");
-      }
-    } catch (_) {
-      sessionStorage.setItem("rhLimparProvisoriosFeito", "1");
-    }
-  }
+  // Limpeza de provisórios só via POST /funcionarios/limpar-provisorios (não roda sozinha ao abrir a tela).
   await loadUnidades(false).catch(() => {});
   const params = new URLSearchParams();
   ["nome", "cpf", "cargo", "unidade_id", "status"].forEach(k => {
@@ -14427,9 +14417,9 @@ function setupModals() {
       return;
     }
     const ok = confirm(
-      "⚠ ATENÇÃO\n\nIsso vai EXCLUIR o funcionário definitivamente.\n" +
-      "Use apenas para remover duplicados.\n\n" +
-      "Deseja continuar?"
+      "ATENÇÃO\n\nExcluir remove o cadastro para sempre.\n" +
+      "Se o funcionário tiver proventos, vale/consumo ou recibos, a exclusão será bloqueada.\n" +
+      "Prefira INATIVAR quando possível.\n\nDeseja continuar?"
     );
     if (!ok) return;
     try {
@@ -17851,6 +17841,17 @@ function formatDataBrasil(val) {
   return m ? m[3] + '/' + m[2] + '/' + m[1] : s;
 }
 
+function abrirWhatsAppUrl(tel, msgEnc) {
+  var url = 'https://wa.me/' + tel + '?text=' + msgEnc;
+  var a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function getMensagemReservaWhatsApp(r) {
   var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + (r.mesa_id || '');
   var dataStr = formatDataBrasil(r.data_reserva);
@@ -17877,6 +17878,59 @@ function getMensagemReservaWhatsApp(r) {
   return linhas.join('\n');
 }
 
+  return linhas.join('\n');
+}
+
+/** Mensagem interna para avisar a empresa/unidade sobre a reserva. */
+function getMensagemReservaWhatsAppEmpresa(r) {
+  var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + (r.mesa_id || '');
+  var dataStr = formatDataBrasil(r.data_reserva);
+  var horaStr = formatHora(r.hora_reserva);
+  var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
+  var unidadeNome = (r.unidade && r.unidade.nome) ? r.unidade.nome : '';
+  var status = (r.status || '').replace(/_/g, ' ');
+  var obs = stripReservaMovMarkers(r.observacao || '').trim();
+  var linhas = [
+    '📋 Nova reserva de mesa',
+    '',
+    '👤 Cliente: ' + (r.nome_cliente || '-'),
+    '📞 Telefone: ' + (r.telefone_cliente || '-'),
+    '📅 Data: ' + dataStr,
+    '🕐 Horário: ' + horaStr,
+    '🪑 Mesa: ' + mesaNome,
+    '👥 Pessoas: ' + String(r.qtd_pessoas || '-'),
+    '📌 Status: ' + (status || '-'),
+  ];
+  if (unidadeNome) linhas.push('🏢 Unidade: ' + unidadeNome);
+  if (criadoPor) linhas.push('✍️ Registrado por: ' + criadoPor);
+  if (obs) linhas.push('📝 Obs.: ' + obs);
+  return linhas.join('\n');
+}
+
+async function resolverUnidadeReserva(r) {
+  if (r.unidade && r.unidade.id) return r.unidade;
+  if (!r.unidade_id) return r.unidade || null;
+  var cached = (state.unidades || []).find(function (u) {
+    return String(u.id) === String(r.unidade_id);
+  });
+  if (cached) {
+    r.unidade = cached;
+    return cached;
+  }
+  try {
+    var u = await fetchJSON('/unidades/' + r.unidade_id);
+    r.unidade = u;
+    return u;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getTelefoneWhatsAppEmpresaReserva(unidade) {
+  if (!unidade) return null;
+  return formatTelefoneParaWhatsApp(unidade.telefone || unidade.whatsapp || '');
+}
+
 function abrirWhatsAppReserva(r) {
   if (!r) { showToast('Dados da reserva não encontrados.', 'warning'); return; }
   var tel = formatTelefoneParaWhatsApp(r.telefone_cliente);
@@ -17884,26 +17938,25 @@ function abrirWhatsAppReserva(r) {
     showToast('Telefone inválido ou não informado. Cadastre o telefone do cliente.', 'warning');
     return;
   }
-  function abrirWhatsAppUrl(tel, msgEnc) {
-    var url = 'https://wa.me/' + tel + '?text=' + msgEnc;
-    var a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  function enviar() {
+    abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
   }
   if (!r.unidade && r.unidade_id) {
-    fetchJSON('/unidades/' + r.unidade_id).then(function(u) {
-      r.unidade = u;
-      abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
-    }).catch(function() {
-      abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
-    });
+    resolverUnidadeReserva(r).then(enviar).catch(enviar);
     return;
   }
-  abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
+  enviar();
+}
+
+async function abrirWhatsAppReservaEmpresa(r) {
+  if (!r) { showToast('Dados da reserva não encontrados.', 'warning'); return; }
+  await resolverUnidadeReserva(r);
+  var tel = getTelefoneWhatsAppEmpresaReserva(r.unidade);
+  if (!tel) {
+    showToast('Telefone da unidade não cadastrado. Cadastre em Unidades → Telefone.', 'warning');
+    return;
+  }
+  abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsAppEmpresa(r)));
 }
 
 function formatHora(str) {
@@ -18181,7 +18234,11 @@ async function abrirDetalhesReserva(id) {
         '<button type="button" class="btn danger" data-action="liberar-mesa" data-id="' + r.id + '">✅ Liberar mesa</button>' +
         '</div>';
     }
-    var btnWhatsApp = r.telefone_cliente ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp</button></p>' : '';
+    var btnWhatsAppCliente = r.telefone_cliente
+      ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp (cliente)</button></p>'
+      : '';
+    var btnWhatsAppEmpresa =
+      '<p><button type="button" class="btn secondary" id="btnWhatsAppEmpresaDetalhes" style="margin-top:0.5rem;">📱 Notificar empresa no WhatsApp</button></p>';
     var movs = parseReservaMovHistory(r.observacao || '');
     var movHtml = '';
     if (movs && movs.length) {
@@ -18220,10 +18277,12 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
       (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(stripReservaMovMarkers(r.observacao)) + '</p>' : '') +
       movHtml +
-      btnWhatsApp +
+      btnWhatsAppCliente +
+      btnWhatsAppEmpresa +
       acoes +
       '</div>';
     document.getElementById('btnWhatsAppDetalhes') && document.getElementById('btnWhatsAppDetalhes').addEventListener('click', function() { abrirWhatsAppReserva(r); });
+    document.getElementById('btnWhatsAppEmpresaDetalhes') && document.getElementById('btnWhatsAppEmpresaDetalhes').addEventListener('click', function() { abrirWhatsAppReservaEmpresa(r); });
     content.querySelectorAll('[data-action]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var action = btn.getAttribute('data-action');
@@ -18767,6 +18826,9 @@ function setupReservasMesasModule() {
         var reservaCriada = resp.reserva || resp;
         if (reservaCriada && reservaCriada.telefone_cliente && confirm('Reserva criada! Deseja enviar confirmação por WhatsApp para o cliente?')) {
           abrirWhatsAppReserva(reservaCriada);
+        }
+        if (reservaCriada && confirm('Deseja notificar a empresa no WhatsApp sobre esta reserva?')) {
+          abrirWhatsAppReservaEmpresa(reservaCriada);
         }
       }
       document.getElementById('reservaMesaModal').classList.remove('active');
