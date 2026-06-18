@@ -17965,83 +17965,114 @@ async function montarOpcoesDestinoWhatsAppReserva(r) {
   return opcoes;
 }
 
-function htmlPickerWhatsAppReserva(opcoes, tipoMensagemDefault) {
-  if (!opcoes.length) {
-    return '<p style="margin-top:0.75rem;color:#607d8b;font-size:0.9rem;">Cadastre o telefone do cliente ou das unidades para enviar WhatsApp.</p>';
+function htmlPickerWhatsAppReserva(opcoes, tipoMensagemDefault, carregando) {
+  if (carregando) {
+    return (
+      '<div class="reserva-wa-picker" style="padding:0.5rem 0;text-align:center;color:#607d8b;">' +
+        '<p style="margin:0;">Carregando lista de números…</p>' +
+        '<p style="margin:0.5rem 0 0;font-size:0.85rem;">Escolha o destino e clique em Enviar. O WhatsApp só abre depois disso.</p>' +
+      '</div>'
+    );
   }
-  var optsDest = opcoes.map(function (o, i) {
-    return '<option value="' + escapeHtml(o.wa) + '"' + (i === 0 ? ' selected' : '') + '>' + escapeHtml(o.label) + '</option>';
-  }).join('');
+  if (!opcoes.length) {
+    return '<p style="margin:0;color:#607d8b;font-size:0.9rem;">Cadastre o telefone do cliente ou das unidades para enviar WhatsApp.</p>';
+  }
   var tipo = tipoMensagemDefault === 'empresa' ? 'empresa' : 'cliente';
+  var radios = opcoes.map(function (o, i) {
+    return (
+      '<label class="reserva-wa-opcao" style="display:flex;align-items:flex-start;gap:0.5rem;padding:0.55rem 0.65rem;margin-bottom:0.35rem;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer;background:#fafafa;">' +
+        '<input type="radio" class="js-reserva-wa-destino" name="reservaWaDestino" value="' + escapeHtml(o.wa) + '"' + (i === 0 ? ' checked' : '') + ' style="margin-top:0.2rem;" />' +
+        '<span style="font-size:0.92rem;line-height:1.35;">' + escapeHtml(o.label) + '</span>' +
+      '</label>'
+    );
+  }).join('');
   return (
-    '<div class="reserva-wa-picker" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #eee;">' +
-      '<p style="margin:0 0 0.5rem 0;"><strong>WhatsApp</strong></p>' +
-      '<label style="display:block;margin-bottom:0.5rem;font-size:0.9rem;">Enviar para' +
-        '<select id="reservaWhatsAppDestino" class="reservas-select" style="width:100%;margin-top:0.35rem;">' + optsDest + '</select>' +
-      '</label>' +
-      '<label style="display:block;margin-bottom:0.5rem;font-size:0.9rem;">Tipo de mensagem' +
-        '<select id="reservaWhatsAppTipo" class="reservas-select" style="width:100%;margin-top:0.35rem;">' +
+    '<div class="reserva-wa-picker">' +
+      '<p style="margin:0 0 0.65rem 0;font-size:0.9rem;color:#455a64;"><strong>Escolha para quem enviar:</strong></p>' +
+      '<div class="reserva-wa-opcoes" style="max-height:220px;overflow-y:auto;margin-bottom:0.75rem;">' + radios + '</div>' +
+      '<label style="display:block;margin-bottom:0.75rem;font-size:0.9rem;">Tipo de mensagem' +
+        '<select class="js-reserva-wa-tipo reservas-select" style="width:100%;margin-top:0.35rem;">' +
           '<option value="cliente"' + (tipo === 'cliente' ? ' selected' : '') + '>Confirmação para o cliente</option>' +
           '<option value="empresa"' + (tipo === 'empresa' ? ' selected' : '') + '>Aviso interno (empresa)</option>' +
         '</select>' +
       '</label>' +
-      '<button type="button" class="btn primary" id="btnWhatsAppEnviarReserva" style="margin-top:0.25rem;">📱 Abrir WhatsApp</button>' +
+      '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' +
+        '<button type="button" class="btn primary js-reserva-wa-enviar">📱 Enviar no WhatsApp</button>' +
+        '<button type="button" class="btn neutral js-reserva-wa-cancelar">Cancelar</button>' +
+      '</div>' +
     '</div>'
   );
 }
 
-function vincularPickerWhatsAppReserva(container, r) {
+function vincularPickerWhatsAppReserva(container, r, onCancel) {
   if (!container || !r) return;
-  var btn = container.querySelector('#btnWhatsAppEnviarReserva');
-  if (!btn) return;
-  btn.addEventListener('click', function () {
-    var dest = container.querySelector('#reservaWhatsAppDestino');
-    var tipoEl = container.querySelector('#reservaWhatsAppTipo');
-    var wa = dest && dest.value;
+  var btnEnviar = container.querySelector('.js-reserva-wa-enviar');
+  if (!btnEnviar) return;
+  btnEnviar.addEventListener('click', function () {
+    var sel = container.querySelector('.js-reserva-wa-destino:checked');
+    var wa = sel && sel.value;
     if (!wa) {
       showToast('Selecione para quem enviar.', 'warning');
       return;
     }
+    var tipoEl = container.querySelector('.js-reserva-wa-tipo');
     var msg = tipoEl && tipoEl.value === 'empresa'
       ? getMensagemReservaWhatsAppEmpresa(r)
       : getMensagemReservaWhatsApp(r);
     abrirWhatsAppUrl(wa, encodeURIComponent(msg));
+    var modal = container.closest('#reservaWhatsAppPickerModal');
+    if (modal) modal.remove();
   });
+  var btnCancel = container.querySelector('.js-reserva-wa-cancelar');
+  if (btnCancel) {
+    btnCancel.addEventListener('click', function () {
+      var modal = container.closest('#reservaWhatsAppPickerModal');
+      if (modal) modal.remove();
+      else if (typeof onCancel === 'function') onCancel();
+    });
+  }
 }
 
-/** Abre modal para escolher destino e tipo de mensagem (usado após criar reserva ou no histórico). */
+function fecharPickerWhatsAppReserva() {
+  var antigo = document.getElementById('reservaWhatsAppPickerModal');
+  if (antigo) antigo.remove();
+}
+
+/** Abre modal para escolher destino e tipo de mensagem — WhatsApp só abre ao clicar em Enviar. */
 async function abrirPickerWhatsAppReserva(r, tipoMensagemDefault) {
   if (!r) {
     showToast('Dados da reserva não encontrados.', 'warning');
     return;
   }
-  var opcoes = await montarOpcoesDestinoWhatsAppReserva(r);
-  if (!opcoes.length) {
-    showToast('Nenhum telefone cadastrado (cliente ou unidade).', 'warning');
-    return;
-  }
-  var antigo = document.getElementById('reservaWhatsAppPickerModal');
-  if (antigo) antigo.remove();
+  fecharPickerWhatsAppReserva();
   var backdrop = document.createElement('div');
   backdrop.id = 'reservaWhatsAppPickerModal';
   backdrop.className = 'modal-backdrop active';
+  backdrop.style.zIndex = '12000';
   backdrop.innerHTML =
-    '<div class="modal" style="max-width:420px;">' +
+    '<div class="modal" style="max-width:440px;" onclick="event.stopPropagation()">' +
       '<header><h2>📱 Enviar WhatsApp</h2>' +
-        '<button type="button" class="close-btn" id="closeReservaWhatsAppPicker" aria-label="Fechar">×</button>' +
+        '<button type="button" class="close-btn js-reserva-wa-fechar" aria-label="Fechar">×</button>' +
       '</header>' +
-      '<div id="reservaWhatsAppPickerBody" style="padding:1.25rem;"></div>' +
+      '<div class="js-reserva-wa-picker-body" style="padding:1.25rem;"></div>' +
     '</div>';
   document.body.appendChild(backdrop);
-  var body = backdrop.querySelector('#reservaWhatsAppPickerBody');
-  body.innerHTML = htmlPickerWhatsAppReserva(opcoes, tipoMensagemDefault || 'cliente');
-  vincularPickerWhatsAppReserva(body, r);
-  backdrop.querySelector('#closeReservaWhatsAppPicker').addEventListener('click', function () {
+  var body = backdrop.querySelector('.js-reserva-wa-picker-body');
+  body.innerHTML = htmlPickerWhatsAppReserva([], tipoMensagemDefault || 'cliente', true);
+  backdrop.querySelector('.js-reserva-wa-fechar').addEventListener('click', function () {
     backdrop.remove();
   });
   backdrop.addEventListener('click', function (e) {
     if (e.target === backdrop) backdrop.remove();
   });
+  var opcoes = await montarOpcoesDestinoWhatsAppReserva(r);
+  if (!document.body.contains(backdrop)) return;
+  if (!opcoes.length) {
+    body.innerHTML = htmlPickerWhatsAppReserva([], tipoMensagemDefault || 'cliente', false);
+    return;
+  }
+  body.innerHTML = htmlPickerWhatsAppReserva(opcoes, tipoMensagemDefault || 'cliente', false);
+  vincularPickerWhatsAppReserva(body, r);
 }
 
 function abrirWhatsAppReserva(r) {
@@ -18195,7 +18226,7 @@ async function loadReservasMesas() {
       var statusClass = (r.status || 'pendente').replace(/_/g, '-');
       var criadoPor = (r.usuario && r.usuario.nome) || '-';
       var podeEditar = ['cancelada', 'no_show', 'finalizada'].indexOf(r.status) === -1;
-      var btnWhatsApp = (r.telefone_cliente ? '<button class="btn-icon" title="Enviar WhatsApp" data-action="whatsapp" data-id="' + r.id + '">📱</button> ' : '');
+      var btnWhatsApp = '<button class="btn-icon" title="Enviar WhatsApp" data-action="whatsapp" data-id="' + r.id + '">📱</button> ';
       return '<tr class="reserva-row">' +
         '<td data-label="Horário">' + formatHora(r.hora_reserva) + '</td>' +
         '<td data-label="Mesa">' + escapeHtml(mesaNome) + '</td>' +
@@ -18365,15 +18396,14 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
       (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(stripReservaMovMarkers(r.observacao)) + '</p>' : '') +
       movHtml +
+      '<p style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #eee;">' +
+        '<button type="button" class="btn primary" id="btnAbrirPickerWhatsAppDetalhes">📱 Enviar WhatsApp (escolher número)</button>' +
+      '</p>' +
       acoes +
-      '<div id="reservaDetalhesWhatsAppPicker"></div>' +
       '</div>';
-    var opcoesWa = await montarOpcoesDestinoWhatsAppReserva(r);
-    var pickerEl = document.getElementById('reservaDetalhesWhatsAppPicker');
-    if (pickerEl) {
-      pickerEl.innerHTML = htmlPickerWhatsAppReserva(opcoesWa, 'cliente');
-      vincularPickerWhatsAppReserva(pickerEl, r);
-    }
+    document.getElementById('btnAbrirPickerWhatsAppDetalhes') && document.getElementById('btnAbrirPickerWhatsAppDetalhes').addEventListener('click', function () {
+      abrirPickerWhatsAppReserva(r, 'cliente');
+    });
     content.querySelectorAll('[data-action]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var action = btn.getAttribute('data-action');
@@ -18914,10 +18944,6 @@ function setupReservasMesasModule() {
       } else {
         var resp = await fetchJSON('/reservas-mesas', { method: 'POST', body: JSON.stringify(data) });
         showToast('Reserva criada.', 'success');
-        var reservaCriada = resp.reserva || resp;
-        if (reservaCriada && confirm('Reserva criada! Deseja enviar WhatsApp? Você poderá escolher o número e o tipo de mensagem.')) {
-          abrirPickerWhatsAppReserva(reservaCriada, 'cliente');
-        }
       }
       document.getElementById('reservaMesaModal').classList.remove('active');
       await loadReservasMesas();
