@@ -17928,32 +17928,128 @@ function getTelefoneWhatsAppEmpresaReserva(unidade) {
   return formatTelefoneParaWhatsApp(unidade.telefone || unidade.whatsapp || '');
 }
 
+/** Monta lista de destinos (cliente + unidades com telefone) para escolher antes de abrir o WhatsApp. */
+async function montarOpcoesDestinoWhatsAppReserva(r) {
+  if (!r) return [];
+  if (!state.unidades || !state.unidades.length) {
+    await loadUnidades(false).catch(function () {});
+  }
+  await resolverUnidadeReserva(r);
+  var opcoes = [];
+  var vistos = {};
+  function add(wa, label) {
+    if (!wa || vistos[wa]) return;
+    vistos[wa] = true;
+    opcoes.push({ wa: wa, label: label });
+  }
+  var waCliente = formatTelefoneParaWhatsApp(r.telefone_cliente);
+  if (waCliente) {
+    add(waCliente, 'Cliente — ' + (r.nome_cliente || 'Cliente') + ' (' + (r.telefone_cliente || '') + ')');
+  }
+  var lista = Array.isArray(state.unidades) ? state.unidades.slice() : [];
+  if (r.unidade && r.unidade.id && !lista.some(function (u) { return String(u.id) === String(r.unidade.id); })) {
+    lista.unshift(r.unidade);
+  }
+  lista.sort(function (a, b) {
+    if (String(a.id) === String(r.unidade_id)) return -1;
+    if (String(b.id) === String(r.unidade_id)) return 1;
+    return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+  });
+  lista.forEach(function (u) {
+    var raw = u.telefone || u.whatsapp || '';
+    var wa = formatTelefoneParaWhatsApp(raw);
+    if (!wa) return;
+    var marca = String(u.id) === String(r.unidade_id) ? ' ★' : '';
+    add(wa, 'Unidade — ' + (u.nome || 'Sem nome') + marca + ' (' + raw + ')');
+  });
+  return opcoes;
+}
+
+function htmlPickerWhatsAppReserva(opcoes, tipoMensagemDefault) {
+  if (!opcoes.length) {
+    return '<p style="margin-top:0.75rem;color:#607d8b;font-size:0.9rem;">Cadastre o telefone do cliente ou das unidades para enviar WhatsApp.</p>';
+  }
+  var optsDest = opcoes.map(function (o, i) {
+    return '<option value="' + escapeHtml(o.wa) + '"' + (i === 0 ? ' selected' : '') + '>' + escapeHtml(o.label) + '</option>';
+  }).join('');
+  var tipo = tipoMensagemDefault === 'empresa' ? 'empresa' : 'cliente';
+  return (
+    '<div class="reserva-wa-picker" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #eee;">' +
+      '<p style="margin:0 0 0.5rem 0;"><strong>WhatsApp</strong></p>' +
+      '<label style="display:block;margin-bottom:0.5rem;font-size:0.9rem;">Enviar para' +
+        '<select id="reservaWhatsAppDestino" class="reservas-select" style="width:100%;margin-top:0.35rem;">' + optsDest + '</select>' +
+      '</label>' +
+      '<label style="display:block;margin-bottom:0.5rem;font-size:0.9rem;">Tipo de mensagem' +
+        '<select id="reservaWhatsAppTipo" class="reservas-select" style="width:100%;margin-top:0.35rem;">' +
+          '<option value="cliente"' + (tipo === 'cliente' ? ' selected' : '') + '>Confirmação para o cliente</option>' +
+          '<option value="empresa"' + (tipo === 'empresa' ? ' selected' : '') + '>Aviso interno (empresa)</option>' +
+        '</select>' +
+      '</label>' +
+      '<button type="button" class="btn primary" id="btnWhatsAppEnviarReserva" style="margin-top:0.25rem;">📱 Abrir WhatsApp</button>' +
+    '</div>'
+  );
+}
+
+function vincularPickerWhatsAppReserva(container, r) {
+  if (!container || !r) return;
+  var btn = container.querySelector('#btnWhatsAppEnviarReserva');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var dest = container.querySelector('#reservaWhatsAppDestino');
+    var tipoEl = container.querySelector('#reservaWhatsAppTipo');
+    var wa = dest && dest.value;
+    if (!wa) {
+      showToast('Selecione para quem enviar.', 'warning');
+      return;
+    }
+    var msg = tipoEl && tipoEl.value === 'empresa'
+      ? getMensagemReservaWhatsAppEmpresa(r)
+      : getMensagemReservaWhatsApp(r);
+    abrirWhatsAppUrl(wa, encodeURIComponent(msg));
+  });
+}
+
+/** Abre modal para escolher destino e tipo de mensagem (usado após criar reserva ou no histórico). */
+async function abrirPickerWhatsAppReserva(r, tipoMensagemDefault) {
+  if (!r) {
+    showToast('Dados da reserva não encontrados.', 'warning');
+    return;
+  }
+  var opcoes = await montarOpcoesDestinoWhatsAppReserva(r);
+  if (!opcoes.length) {
+    showToast('Nenhum telefone cadastrado (cliente ou unidade).', 'warning');
+    return;
+  }
+  var antigo = document.getElementById('reservaWhatsAppPickerModal');
+  if (antigo) antigo.remove();
+  var backdrop = document.createElement('div');
+  backdrop.id = 'reservaWhatsAppPickerModal';
+  backdrop.className = 'modal-backdrop active';
+  backdrop.innerHTML =
+    '<div class="modal" style="max-width:420px;">' +
+      '<header><h2>📱 Enviar WhatsApp</h2>' +
+        '<button type="button" class="close-btn" id="closeReservaWhatsAppPicker" aria-label="Fechar">×</button>' +
+      '</header>' +
+      '<div id="reservaWhatsAppPickerBody" style="padding:1.25rem;"></div>' +
+    '</div>';
+  document.body.appendChild(backdrop);
+  var body = backdrop.querySelector('#reservaWhatsAppPickerBody');
+  body.innerHTML = htmlPickerWhatsAppReserva(opcoes, tipoMensagemDefault || 'cliente');
+  vincularPickerWhatsAppReserva(body, r);
+  backdrop.querySelector('#closeReservaWhatsAppPicker').addEventListener('click', function () {
+    backdrop.remove();
+  });
+  backdrop.addEventListener('click', function (e) {
+    if (e.target === backdrop) backdrop.remove();
+  });
+}
+
 function abrirWhatsAppReserva(r) {
-  if (!r) { showToast('Dados da reserva não encontrados.', 'warning'); return; }
-  var tel = formatTelefoneParaWhatsApp(r.telefone_cliente);
-  if (!tel) {
-    showToast('Telefone inválido ou não informado. Cadastre o telefone do cliente.', 'warning');
-    return;
-  }
-  function enviar() {
-    abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsApp(r)));
-  }
-  if (!r.unidade && r.unidade_id) {
-    resolverUnidadeReserva(r).then(enviar).catch(enviar);
-    return;
-  }
-  enviar();
+  abrirPickerWhatsAppReserva(r, 'cliente');
 }
 
 async function abrirWhatsAppReservaEmpresa(r) {
-  if (!r) { showToast('Dados da reserva não encontrados.', 'warning'); return; }
-  await resolverUnidadeReserva(r);
-  var tel = getTelefoneWhatsAppEmpresaReserva(r.unidade);
-  if (!tel) {
-    showToast('Telefone da unidade não cadastrado. Cadastre em Unidades → Telefone.', 'warning');
-    return;
-  }
-  abrirWhatsAppUrl(tel, encodeURIComponent(getMensagemReservaWhatsAppEmpresa(r)));
+  abrirPickerWhatsAppReserva(r, 'empresa');
 }
 
 function formatHora(str) {
@@ -17999,12 +18095,12 @@ async function loadHistoricoReservas() {
       var horaStr = formatHora(r.hora_reserva);
       var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || '-';
       var statusClass = (r.status || '').replace(/_/g, '-');
-      var btnWhatsApp = r.telefone_cliente ? '<button class="btn-icon" title="WhatsApp" data-id="' + r.id + '" data-action="whatsapp-historico">📱</button> ' : '';
+      var btnWhatsApp = '<button class="btn-icon" title="WhatsApp" data-id="' + r.id + '" data-action="whatsapp-historico">📱</button> ';
       return '<tr>' +
         '<td data-label="Data">' + escapeHtml(dataStr) + '</td>' +
         '<td data-label="Horário">' + escapeHtml(horaStr) + '</td>' +
         '<td data-label="Cliente">' + escapeHtml(r.nome_cliente || '-') + '</td>' +
-        '<td data-label="WhatsApp">' + escapeHtml(r.telefone_cliente || '-') + (btnWhatsApp ? ' ' + btnWhatsApp : '') + '</td>' +
+        '<td data-label="WhatsApp">' + escapeHtml(r.telefone_cliente || '-') + ' ' + btnWhatsApp + '</td>' +
         '<td data-label="Pessoas">' + (r.qtd_pessoas || '-') + '</td>' +
         '<td data-label="Mesa">' + escapeHtml(mesaNome) + '</td>' +
         '<td data-label="Status"><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || '').replace(/_/g, ' ') + '</span></td>' +
@@ -18231,11 +18327,6 @@ async function abrirDetalhesReserva(id) {
         '<button type="button" class="btn danger" data-action="liberar-mesa" data-id="' + r.id + '">✅ Liberar mesa</button>' +
         '</div>';
     }
-    var btnWhatsAppCliente = r.telefone_cliente
-      ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp (cliente)</button></p>'
-      : '';
-    var btnWhatsAppEmpresa =
-      '<p><button type="button" class="btn secondary" id="btnWhatsAppEmpresaDetalhes" style="margin-top:0.5rem;">📱 Notificar empresa no WhatsApp</button></p>';
     var movs = parseReservaMovHistory(r.observacao || '');
     var movHtml = '';
     if (movs && movs.length) {
@@ -18274,12 +18365,15 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
       (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(stripReservaMovMarkers(r.observacao)) + '</p>' : '') +
       movHtml +
-      btnWhatsAppCliente +
-      btnWhatsAppEmpresa +
       acoes +
+      '<div id="reservaDetalhesWhatsAppPicker"></div>' +
       '</div>';
-    document.getElementById('btnWhatsAppDetalhes') && document.getElementById('btnWhatsAppDetalhes').addEventListener('click', function() { abrirWhatsAppReserva(r); });
-    document.getElementById('btnWhatsAppEmpresaDetalhes') && document.getElementById('btnWhatsAppEmpresaDetalhes').addEventListener('click', function() { abrirWhatsAppReservaEmpresa(r); });
+    var opcoesWa = await montarOpcoesDestinoWhatsAppReserva(r);
+    var pickerEl = document.getElementById('reservaDetalhesWhatsAppPicker');
+    if (pickerEl) {
+      pickerEl.innerHTML = htmlPickerWhatsAppReserva(opcoesWa, 'cliente');
+      vincularPickerWhatsAppReserva(pickerEl, r);
+    }
     content.querySelectorAll('[data-action]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var action = btn.getAttribute('data-action');
@@ -18821,11 +18915,8 @@ function setupReservasMesasModule() {
         var resp = await fetchJSON('/reservas-mesas', { method: 'POST', body: JSON.stringify(data) });
         showToast('Reserva criada.', 'success');
         var reservaCriada = resp.reserva || resp;
-        if (reservaCriada && reservaCriada.telefone_cliente && confirm('Reserva criada! Deseja enviar confirmação por WhatsApp para o cliente?')) {
-          abrirWhatsAppReserva(reservaCriada);
-        }
-        if (reservaCriada && confirm('Deseja notificar a empresa no WhatsApp sobre esta reserva?')) {
-          abrirWhatsAppReservaEmpresa(reservaCriada);
+        if (reservaCriada && confirm('Reserva criada! Deseja enviar WhatsApp? Você poderá escolher o número e o tipo de mensagem.')) {
+          abrirPickerWhatsAppReserva(reservaCriada, 'cliente');
         }
       }
       document.getElementById('reservaMesaModal').classList.remove('active');
