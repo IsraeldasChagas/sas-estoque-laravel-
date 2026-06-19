@@ -49,6 +49,7 @@
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
+    <link rel="stylesheet" href="style-ia.css?v=20260616-ia" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -278,6 +279,16 @@
               <a href="#" class="nav-link nav-link-child" data-section="patrimonioInventario"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Inventário Patrimonial</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="patrimonioRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="patrimonioConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--ia">
+            <a href="#" class="nav-link nav-link-parent" id="iaMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🤖</span><span class="nav-label">IA</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="iaAssistente"><span class="nav-icon" aria-hidden="true">💬</span><span class="nav-label">Assistente</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="iaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--config">
@@ -4154,6 +4165,62 @@
             </div>
           </section>
 
+          </section>
+
+          <!-- IA — Assistente ChatGPT -->
+          <section id="iaAssistenteSection" class="view-section hidden">
+            <div class="ia-section-head">
+              <h2>💬 Assistente IA</h2>
+              <p class="subtle-text">Tire dúvidas sobre como usar o sistema. Não altera dados — só orienta.</p>
+            </div>
+            <div class="table-card form-card--wide">
+              <div id="iaChatAviso" class="ia-aviso hidden"></div>
+              <div class="ia-chat-wrap">
+                <div id="iaChatMessages" class="ia-chat-messages"></div>
+                <form id="iaChatForm" class="ia-chat-form">
+                  <textarea id="iaChatInput" rows="2" placeholder="Ex.: Como lanço vale/consumo? Como reservo uma mesa?" maxlength="4000"></textarea>
+                  <button type="submit" class="btn primary" id="iaChatEnviar">Enviar</button>
+                  <button type="button" class="btn neutral" id="iaChatLimpar">Limpar</button>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <section id="iaConfiguracoesSection" class="view-section hidden">
+            <div class="ia-section-head">
+              <h2>⚙️ Configurações IA (ChatGPT)</h2>
+              <p class="subtle-text">Somente ADMIN. Cole a chave API da OpenAI em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>.</p>
+              <p id="iaCfgStatus" class="ia-status-badge"></p>
+            </div>
+            <div id="iaConfigAviso" class="ia-aviso hidden"></div>
+            <div class="table-card form-card--wide">
+              <form id="iaConfigForm" class="ia-config-grid">
+                <label class="ia-config-check">
+                  <input type="checkbox" id="iaCfgAtivo" />
+                  <span>Ativar assistente IA para todos os usuários logados</span>
+                </label>
+                <label>Chave API (OpenAI)
+                  <input type="password" id="iaCfgApiKey" autocomplete="off" placeholder="sk-..." />
+                  <p class="ia-hint">A chave fica salva no servidor, nunca no navegador.</p>
+                </label>
+                <label class="ia-config-check">
+                  <input type="checkbox" id="iaCfgLimparChave" />
+                  <span>Remover chave API ao salvar</span>
+                </label>
+                <label>Modelo
+                  <select id="iaCfgModelo"></select>
+                  <p class="ia-hint">Recomendado: gpt-4o-mini (rápido e barato).</p>
+                </label>
+                <label>Instruções extras (opcional)
+                  <textarea id="iaCfgInstrucoes" rows="4" maxlength="4000" placeholder="Ex.: Sempre mencionar que reservas são feitas em Reservas → Mesa."></textarea>
+                </label>
+                <div>
+                  <button type="submit" class="btn primary" id="iaCfgSalvar">Salvar configurações</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
           <!-- Configurações — Painel do Sistema -->
           <section id="configuracoesPainelSection" class="view-section hidden">
             <div class="cfg-section-head">
@@ -5355,6 +5422,8 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="configuracoesPainel" /> Configurações — Painel do Sistema</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAssistente" /> IA — Assistente</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaConfiguracoes" /> IA — Configurações (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
           </section>
@@ -6725,6 +6794,7 @@
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
+    <script src="ia-assistente.js?v=20260616-ia"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>

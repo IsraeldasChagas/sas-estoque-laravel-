@@ -1579,7 +1579,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "configuracoesPainel",
+  "configuracoesPainel", "iaAssistente", "iaConfiguracoes",
 ]);
 
 function syncUrlSectionHash(section) {
@@ -1943,7 +1943,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "iaAssistente", "iaConfiguracoes", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -5319,6 +5319,13 @@ function applyPermissions() {
   if (["ADMIN", "GERENTE"].includes(perfilCfgAuto) && !sections.includes("configuracoesPainel")) {
     sections = [...sections, "configuracoesPainel"];
   }
+  // IA: assistente para todos; configurações só ADMIN.
+  if (!sections.includes("iaAssistente")) {
+    sections = [...sections, "iaAssistente"];
+  }
+  if (perfilCfgAuto === "ADMIN" && !sections.includes("iaConfiguracoes")) {
+    sections = [...sections, "iaConfiguracoes"];
+  }
   const rrSectionsAuto = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
   if (sections.includes("funcionarios") || sections.includes("rhRelatorios") || sections.includes("rhFolhaPonto")) {
     rrSectionsAuto.forEach((s) => {
@@ -5436,6 +5443,20 @@ function applyPermissions() {
     const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
     const temConfigPainel = regras.sections.includes("configuracoesPainel") || ["ADMIN", "GERENTE"].includes(perfilCfg);
     configuracoesNavSubmenu.classList.toggle("hidden", !temConfigPainel);
+  }
+  const iaNavSubmenu = document.getElementById("iaMenu")?.closest(".nav-submenu");
+  if (iaNavSubmenu) {
+    const perfilIa = (currentUser?.perfil || "").toString().trim().toUpperCase();
+    const temIa =
+      regras.sections.includes("iaAssistente") ||
+      regras.sections.includes("iaConfiguracoes") ||
+      perfilIa === "ADMIN";
+    iaNavSubmenu.classList.toggle("hidden", !temIa);
+    const linkCfg = iaNavSubmenu.querySelector('[data-section="iaConfiguracoes"]');
+    if (linkCfg) {
+      const podeCfg = regras.sections.includes("iaConfiguracoes") || perfilIa === "ADMIN";
+      linkCfg.classList.toggle("hidden", !podeCfg);
+    }
   }
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
@@ -5668,6 +5689,11 @@ function navigateTo(section) {
     if (section === "configuracoesPainel") configuracoesNavSubmenuNav.classList.add("open");
     else configuracoesNavSubmenuNav.classList.remove("open");
   }
+  const iaNavSubmenuNav = document.getElementById("iaMenu")?.closest(".nav-submenu");
+  if (iaNavSubmenuNav) {
+    if (section === "iaAssistente" || section === "iaConfiguracoes") iaNavSubmenuNav.classList.add("open");
+    else iaNavSubmenuNav.classList.remove("open");
+  }
   const patrimonioNavSubmenuNav = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
   if (patrimonioNavSubmenuNav) {
     const patSections = ["patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"];
@@ -5697,6 +5723,8 @@ function navigateTo(section) {
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
   else if (section === "configuracoesPainel") loadConfiguracoesPainel?.().catch(() => {});
+  else if (section === "iaAssistente") loadIaAssistente?.().catch(() => {});
+  else if (section === "iaConfiguracoes") loadIaConfiguracoes?.().catch(() => {});
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
   else if (section === "rhRescisaoSimulador") loadRhRescisaoSimulador?.().catch(() => {});
   else if (section === "rhRescisaoCalculo") loadRhRescisaoCalculo?.().catch(() => {});
