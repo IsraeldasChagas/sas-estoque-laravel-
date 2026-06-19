@@ -237,7 +237,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="financeiroFluxoCaixa"><span class="nav-icon" aria-hidden="true">💧</span><span class="nav-label">Fluxo de Caixa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroContasReceber"><span class="nav-icon" aria-hidden="true">📥</span><span class="nav-label">Contas a Receber</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroDre"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">DRE Gerencial</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="financeiroCmv"><span class="nav-icon" aria-hidden="true">🍽️</span><span class="nav-label">CMV</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="financeiroCmv"><span class="nav-icon" aria-hidden="true">📤</span><span class="nav-label">Saídas estoque</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroCentrosCusto"><span class="nav-icon" aria-hidden="true">🏷️</span><span class="nav-label">Centro de Custos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroOrcamento"><span class="nav-icon" aria-hidden="true">🎯</span><span class="nav-label">Orçamento Empresarial</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroIndicadores"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Indicadores Financeiros</span></a>
@@ -3548,7 +3548,7 @@
           <!-- Financeiro Gerencial -->
           <section id="financeiroDashboardSection" class="view-section hidden">
             <div class="fg-section-head">
-              <div><h2>📊 Dashboard Executivo Financeiro</h2><p class="subtle-text">Saúde real da empresa — faturamento, fluxo, CMV e indicadores consolidados.</p></div>
+              <div><h2>📊 Dashboard Executivo Financeiro</h2><p class="subtle-text">Saúde real da empresa — faturamento, fluxo, custo de saídas de estoque e indicadores consolidados.</p></div>
               <div id="fgDashSaude"></div>
             </div>
             <div class="table-card form-card--wide">
@@ -3671,7 +3671,7 @@
           </section>
 
           <section id="financeiroCmvSection" class="view-section hidden">
-            <div class="fg-section-head"><div><h2>🍽️ CMV — Custo da Mercadoria Vendida</h2><p class="subtle-text">Estimativa a partir de saídas de estoque e custo médio dos lotes.</p></div></div>
+            <div class="fg-section-head"><div><h2>📤 Custo de saídas de estoque</h2><p class="subtle-text">Consumo, produção e perda (transferências não entram). Custo da saída ou média do lote. Faturamento vem do fechamento de caixa.</p></div></div>
             <div class="table-card form-card--wide">
               <div class="fg-filters">
                 <label>De<input type="date" id="fgCmvFiltroDe" /></label>
@@ -3681,13 +3681,18 @@
               </div>
             </div>
             <div class="fg-cards" id="fgCmvCards"></div>
+            <p id="fgCmvObservacao" class="subtle-text" style="margin:0 0 1rem 1rem;"></p>
             <div class="table-card form-card--wide">
-              <header><h3>CMV por produto (top 50)</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Produto</th><th>CMV</th></tr></thead><tbody id="fgCmvProdutoTbody"></tbody></table></div>
+              <header><h3>Custo por motivo</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Motivo</th><th>Custo</th></tr></thead><tbody id="fgCmvMotivoTbody"></tbody></table></div>
             </div>
             <div class="table-card form-card--wide">
-              <header><h3>CMV por unidade</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>CMV</th></tr></thead><tbody id="fgCmvUnidadeTbody"></tbody></table></div>
+              <header><h3>Custo por produto (top 50)</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Produto</th><th>Custo</th></tr></thead><tbody id="fgCmvProdutoTbody"></tbody></table></div>
+            </div>
+            <div class="table-card form-card--wide">
+              <header><h3>Custo por unidade</h3></header>
+              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Custo</th></tr></thead><tbody id="fgCmvUnidadeTbody"></tbody></table></div>
             </div>
           </section>
 
@@ -5337,7 +5342,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroFluxoCaixa" /> Fluxo de Caixa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroContasReceber" /> Contas a Receber</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroDre" /> DRE Gerencial</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroCmv" /> CMV</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroCmv" /> Saídas de estoque</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroCentrosCusto" /> Centro de Custos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroOrcamento" /> Orçamento Empresarial</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="financeiroIndicadores" /> Indicadores Financeiros</label>
@@ -6722,7 +6727,7 @@
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
-    <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
+    <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
 </html>

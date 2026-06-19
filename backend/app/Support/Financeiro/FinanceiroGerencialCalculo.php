@@ -131,18 +131,15 @@ class FinanceiroGerencialCalculo
         return $s;
     }
 
-    /** CMV estimado: saídas de estoque × custo médio do produto na unidade. */
-    public static function cmvPeriodo(?string $de, ?string $ate, ?int $unidadeId = null): float
+    /** Saídas de estoque (consumo, produção, perda) × custo da movimentação ou média do lote. */
+    private static function exprCustoSaidaMovimentacao(): string
     {
-        if (! Schema::hasTable('movimentacoes')) {
-            return 0.0;
-        }
-        $custoSub = null;
-        if (Schema::hasTable('stock_lotes')) {
-            $custoSub = DB::table('stock_lotes')
-                ->select('produto_id', 'unidade_id', DB::raw('AVG(custo_unitario) as custo_medio'))
-                ->groupBy('produto_id', 'unidade_id');
-        }
+        return 'COALESCE(NULLIF(m.custo_unitario, 0), c.custo_medio, 0)';
+    }
+
+    /** Query base: SAIDA exceto transferência. */
+    private static function querySaidasEstoque(?string $de, ?string $ate, ?int $unidadeId = null)
+    {
         $q = DB::table('movimentacoes as m')
             ->where('m.tipo', 'SAIDA')
             ->where('m.motivo', '!=', 'TRANSFERENCIA');
@@ -155,14 +152,45 @@ class FinanceiroGerencialCalculo
         if ($unidadeId) {
             $q->where('m.de_unidade_id', $unidadeId);
         }
+
+        return $q;
+    }
+
+    private static function subqueryCustoMedioLotes()
+    {
+        if (! Schema::hasTable('stock_lotes')) {
+            return null;
+        }
+
+        return DB::table('stock_lotes')
+            ->select('produto_id', 'unidade_id', DB::raw('AVG(custo_unitario) as custo_medio'))
+            ->groupBy('produto_id', 'unidade_id');
+    }
+
+    /** Custo total das saídas de estoque no período (alias cmv para compatibilidade). */
+    public static function cmvPeriodo(?string $de, ?string $ate, ?int $unidadeId = null): float
+    {
+        if (! Schema::hasTable('movimentacoes')) {
+            return 0.0;
+        }
+        $custoSub = self::subqueryCustoMedioLotes();
+        $q = self::querySaidasEstoque($de, $ate, $unidadeId);
         if ($custoSub) {
             $q->leftJoinSub($custoSub, 'c', function ($join) {
                 $join->on('c.produto_id', '=', 'm.produto_id')
                     ->on('c.unidade_id', '=', 'm.de_unidade_id');
             });
-            $val = (float) ($q->selectRaw('COALESCE(SUM(m.qtd * COALESCE(c.custo_medio, 0)), 0) as total')->value('total') ?? 0);
+            $expr = self::exprCustoSaidaMovimentacao();
+            $val = (float) ($q->selectRaw("COALESCE(SUM(m.qtd * ({$expr})), 0) as total")->value('total') ?? 0);
         } else {
-            $val = 0.0;
+            $hasCol = Schema::hasColumn('movimentacoes', 'custo_unitario');
+            if ($hasCol) {
+                $val = (float) (self::querySaidasEstoque($de, $ate, $unidadeId)
+                    ->selectRaw('COALESCE(SUM(m.qtd * COALESCE(NULLIF(m.custo_unitario, 0), 0)), 0) as total')
+                    ->value('total') ?? 0);
+            } else {
+                $val = 0.0;
+            }
         }
 
         return round($val, 2);
@@ -173,43 +201,112 @@ class FinanceiroGerencialCalculo
         $total = self::cmvPeriodo($de, $ate, $unidadeId);
         $faturamento = self::faturamentoPeriodo($de, $ate, $unidadeId);
         $pct = $faturamento > 0 ? round(($total / $faturamento) * 100, 2) : 0.0;
+        $margemEstimada = round($faturamento - $total, 2);
 
         $porProduto = [];
         $porUnidade = [];
+        $porMotivo = [];
+        $saidasSemCusto = 0;
 
-        if (Schema::hasTable('movimentacoes') && Schema::hasTable('stock_lotes')) {
-            $custoSub = DB::table('stock_lotes')
-                ->select('produto_id', 'unidade_id', DB::raw('AVG(custo_unitario) as custo_medio'))
-                ->groupBy('produto_id', 'unidade_id');
+        if (Schema::hasTable('movimentacoes')) {
+            $custoSub = self::subqueryCustoMedioLotes();
+            $expr = self::exprCustoSaidaMovimentacao();
 
-            $q = DB::table('movimentacoes as m')
-                ->leftJoin('produtos as p', 'm.produto_id', '=', 'p.id')
-                ->leftJoinSub($custoSub, 'c', function ($join) {
+            $qMotivo = self::querySaidasEstoque($de, $ate, $unidadeId);
+            if ($custoSub) {
+                $qMotivo->leftJoinSub($custoSub, 'c', function ($join) {
                     $join->on('c.produto_id', '=', 'm.produto_id')
                         ->on('c.unidade_id', '=', 'm.de_unidade_id');
-                })
-                ->leftJoin('unidades as u', 'm.de_unidade_id', '=', 'u.id')
-                ->where('m.tipo', 'SAIDA')
-                ->where('m.motivo', '!=', 'TRANSFERENCIA');
-            if ($de) {
-                $q->whereDate('m.data_mov', '>=', $de);
+                });
             }
-            if ($ate) {
-                $q->whereDate('m.data_mov', '<=', $ate);
+            $motivoRows = $qMotivo
+                ->select(
+                    'm.motivo',
+                    DB::raw($custoSub
+                        ? "COALESCE(SUM(m.qtd * ({$expr})), 0) as custo"
+                        : 'COALESCE(SUM(m.qtd * COALESCE(NULLIF(m.custo_unitario, 0), 0)), 0) as custo')
+                )
+                ->groupBy('m.motivo')
+                ->get();
+            $labels = [
+                'CONSUMO' => 'Consumo',
+                'PRODUCAO' => 'Produção',
+                'PERDA' => 'Perda',
+            ];
+            foreach ($labels as $key => $label) {
+                $porMotivo[] = [
+                    'motivo' => $key,
+                    'motivo_label' => $label,
+                    'custo' => 0.0,
+                ];
             }
-            if ($unidadeId) {
-                $q->where('m.de_unidade_id', $unidadeId);
+            $motivoMap = [];
+            foreach ($porMotivo as $i => $row) {
+                $motivoMap[$row['motivo']] = $i;
             }
-            $rows = $q->select(
-                'm.produto_id',
-                'p.nome as produto_nome',
-                'm.de_unidade_id as unidade_id',
-                'u.nome as unidade_nome',
-                DB::raw('SUM(m.qtd * COALESCE(c.custo_medio, 0)) as cmv')
-            )->groupBy('m.produto_id', 'p.nome', 'm.de_unidade_id', 'u.nome')->get();
+            foreach ($motivoRows as $r) {
+                $key = strtoupper((string) ($r->motivo ?? ''));
+                $custo = round((float) ($r->custo ?? 0), 2);
+                if (isset($motivoMap[$key])) {
+                    $porMotivo[$motivoMap[$key]]['custo'] = $custo;
+                } else {
+                    $porMotivo[] = [
+                        'motivo' => $key ?: 'OUTROS',
+                        'motivo_label' => $labels[$key] ?? ($key ?: 'Outros'),
+                        'custo' => $custo,
+                    ];
+                }
+            }
+            usort($porMotivo, fn ($a, $b) => $b['custo'] <=> $a['custo']);
+
+            if ($custoSub) {
+                $q = self::querySaidasEstoque($de, $ate, $unidadeId)
+                    ->leftJoin('produtos as p', 'm.produto_id', '=', 'p.id')
+                    ->leftJoinSub($custoSub, 'c', function ($join) {
+                        $join->on('c.produto_id', '=', 'm.produto_id')
+                            ->on('c.unidade_id', '=', 'm.de_unidade_id');
+                    })
+                    ->leftJoin('unidades as u', 'm.de_unidade_id', '=', 'u.id');
+
+                $rows = $q->select(
+                    'm.produto_id',
+                    'p.nome as produto_nome',
+                    'm.de_unidade_id as unidade_id',
+                    'u.nome as unidade_nome',
+                    DB::raw("SUM(m.qtd * ({$expr})) as cmv")
+                )->groupBy('m.produto_id', 'p.nome', 'm.de_unidade_id', 'u.nome')->get();
+
+                $qSemCusto = self::querySaidasEstoque($de, $ate, $unidadeId)
+                    ->leftJoinSub($custoSub, 'c', function ($join) {
+                        $join->on('c.produto_id', '=', 'm.produto_id')
+                            ->on('c.unidade_id', '=', 'm.de_unidade_id');
+                    });
+                $saidasSemCusto = (int) ($qSemCusto
+                    ->whereRaw("({$expr}) <= 0")
+                    ->count() ?? 0);
+            } else {
+                $q = self::querySaidasEstoque($de, $ate, $unidadeId)
+                    ->leftJoin('produtos as p', 'm.produto_id', '=', 'p.id')
+                    ->leftJoin('unidades as u', 'm.de_unidade_id', '=', 'u.id');
+                $rows = $q->select(
+                    'm.produto_id',
+                    'p.nome as produto_nome',
+                    'm.de_unidade_id as unidade_id',
+                    'u.nome as unidade_nome',
+                    DB::raw('SUM(m.qtd * COALESCE(NULLIF(m.custo_unitario, 0), 0)) as cmv')
+                )->groupBy('m.produto_id', 'p.nome', 'm.de_unidade_id', 'u.nome')->get();
+                $saidasSemCusto = (int) (self::querySaidasEstoque($de, $ate, $unidadeId)
+                    ->where(function ($w) {
+                        $w->whereNull('m.custo_unitario')->orWhere('m.custo_unitario', '<=', 0);
+                    })
+                    ->count() ?? 0);
+            }
 
             foreach ($rows as $r) {
                 $cmv = round((float) $r->cmv, 2);
+                if ($cmv <= 0) {
+                    continue;
+                }
                 $porProduto[] = [
                     'produto_id' => (int) $r->produto_id,
                     'produto_nome' => $r->produto_nome ?? '—',
@@ -234,10 +331,16 @@ class FinanceiroGerencialCalculo
 
         return [
             'cmv_total' => $total,
+            'custo_saidas_total' => $total,
             'faturamento' => $faturamento,
+            'margem_estimada' => $margemEstimada,
             'percentual_sobre_faturamento' => $pct,
+            'percentual_custo_sobre_faturamento' => $pct,
+            'por_motivo' => $porMotivo,
+            'saidas_sem_custo' => $saidasSemCusto,
             'por_produto' => $porProduto,
             'por_unidade' => array_values($porUnidade),
+            'observacao' => 'Inclui consumo, produção e perda. Transferências não entram. Custo usa o valor da saída ou média do lote.',
         ];
     }
 

@@ -216,7 +216,7 @@
       fgCardHtml("Contas a receber vencidas", fmtMoeda(data.contas_receber_vencidas?.valor)),
       fgCardHtml("Despesas fixas (mês)", fmtMoeda(data.despesas_fixas_mes)),
       fgCardHtml("Folha / proventos", fmtMoeda(data.folha_proventos_mes)),
-      fgCardHtml("CMV estimado", fmtMoeda(data.cmv_estimado)),
+      fgCardHtml("Custo saídas estoque", fmtMoeda(data.cmv_estimado)),
       fgCardHtml("Margem líquida", `${data.margem_liquida ?? 0}%`),
       fgCardHtml("Ponto de equilíbrio", data.ponto_equilibrio != null ? fmtMoeda(data.ponto_equilibrio) : "—"),
     ].join("");
@@ -582,7 +582,7 @@
       ["Receita bruta", d.receita_bruta],
       ["(−) Deduções / impostos", d.deducoes_impostos, true],
       ["Receita líquida", d.receita_liquida, false, true],
-      ["(−) CMV", d.cmv, true],
+      ["(−) Custo saídas estoque", d.cmv, true],
       ["Lucro bruto", d.lucro_bruto, false, true],
       ["(−) Despesas operacionais", d.despesas_operacionais, true],
       [" Folha / proventos", d.folha_proventos, true],
@@ -601,27 +601,43 @@
     }
   }
 
-  // ——— CMV ———
+  // ——— Custo de saídas de estoque ———
   async function loadFinanceiroCmv() {
     fgInitFiltrosDatas("fgCmv");
     await fgCarregarUnidades(["fgCmvFiltroUnidade"]);
     const { q } = fgQueryFiltros("fgCmv");
     const data = await fgFetch(`/financeiro/cmv${q}`);
     const cards = document.getElementById("fgCmvCards");
+    const motivoTbody = document.getElementById("fgCmvMotivoTbody");
     const prodTbody = document.getElementById("fgCmvProdutoTbody");
     const uniTbody = document.getElementById("fgCmvUnidadeTbody");
+    const obsEl = document.getElementById("fgCmvObservacao");
+    const custoTotal = data.custo_saidas_total ?? data.cmv_total ?? 0;
+    const margem = data.margem_estimada;
+    const margemCls = margem != null && Number(margem) >= 0 ? "fg-card__value--pos" : "fg-card__value--neg";
     if (cards) {
       cards.innerHTML = [
-        fgCardHtml("CMV total", fmtMoeda(data.cmv_total)),
-        fgCardHtml("Faturamento", fmtMoeda(data.faturamento)),
-        fgCardHtml("% CMV / faturamento", `${data.percentual_sobre_faturamento ?? 0}%`),
+        fgCardHtml("Custo total (saídas)", fmtMoeda(custoTotal)),
+        fgCardHtml("Faturamento (caixa)", fmtMoeda(data.faturamento)),
+        fgCardHtml("Margem estimada", fmtMoeda(margem), margemCls),
+        fgCardHtml("% custo / faturamento", `${data.percentual_custo_sobre_faturamento ?? data.percentual_sobre_faturamento ?? 0}%`),
+        fgCardHtml("Saídas sem custo", String(data.saidas_sem_custo ?? 0)),
       ].join("");
+    }
+    if (obsEl) {
+      obsEl.textContent = data.observacao || "";
+    }
+    if (motivoTbody) {
+      const rows = data.por_motivo || [];
+      motivoTbody.innerHTML = rows.length
+        ? rows.map((r) => `<tr><td>${esc(r.motivo_label || r.motivo)}</td><td>${esc(fmtMoeda(r.custo))}</td></tr>`).join("")
+        : `<tr><td colspan="2" class="empty-row">Sem saídas no período.</td></tr>`;
     }
     if (prodTbody) {
       const rows = (data.por_produto || []).slice(0, 50);
       prodTbody.innerHTML = rows.length
         ? rows.map((r) => `<tr><td>${esc(r.produto_nome)}</td><td>${esc(fmtMoeda(r.cmv))}</td></tr>`).join("")
-        : `<tr><td colspan="2" class="empty-row">Sem saídas de estoque no período.</td></tr>`;
+        : `<tr><td colspan="2" class="empty-row">Sem saídas com custo no período.</td></tr>`;
     }
     if (uniTbody) {
       const rows = data.por_unidade || [];
