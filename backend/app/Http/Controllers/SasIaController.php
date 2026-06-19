@@ -56,7 +56,15 @@ class SasIaController extends Controller
         $conversationId = $request->input('conversation_id');
         $conversationId = ($conversationId !== null && $conversationId !== '') ? (int) $conversationId : null;
 
-        $result = $this->chatService->processar($ctx, $mensagem, $conversationId);
+        try {
+            $result = $this->chatService->processar($ctx, $mensagem, $conversationId);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->json([
+                'error' => 'Falha ao consultar a IA: '.mb_substr($e->getMessage(), 0, 300),
+            ], 502);
+        }
 
         if (isset($result['error'])) {
             return $this->json(['error' => $result['error']], $result['code'] ?? 400);

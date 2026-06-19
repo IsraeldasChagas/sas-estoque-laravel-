@@ -52,13 +52,13 @@ final class SasIaContext
     public function limiteDiario(): int
     {
         if ($this->isAdmin()) {
-            return (int) env('SAS_IA_LIMIT_ADMIN', 300);
+            return (int) (config('openai.limit_admin') ?? config('services.openai.limit_admin', 300));
         }
         if ($this->isGestor()) {
-            return (int) env('SAS_IA_LIMIT_GESTOR', 100);
+            return (int) (config('openai.limit_gestor') ?? config('services.openai.limit_gestor', 100));
         }
 
-        return (int) env('SAS_IA_LIMIT_USUARIO', 20);
+        return (int) (config('openai.limit_usuario') ?? config('services.openai.limit_usuario', 20));
     }
 
     /** Quantas mensagens de usuário foram enviadas hoje. */

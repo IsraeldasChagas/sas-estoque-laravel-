@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 
 /**
  * Cliente OpenAI — chat com function calling e estimativa de custo.
- * Chave e modelo vêm do .env (OPENAI_API_KEY, OPENAI_MODEL).
+ * Chave e modelo vêm de config/openai.php (lê .env).
  */
 class OpenAiService
 {
@@ -16,8 +16,23 @@ class OpenAiService
 
     public function __construct()
     {
-        $this->apiKey = trim((string) env('OPENAI_API_KEY', ''));
-        $this->model = trim((string) env('OPENAI_MODEL', 'gpt-4o-mini')) ?: 'gpt-4o-mini';
+        $this->apiKey = trim((string) self::cfg('api_key'));
+        $this->model = trim((string) self::cfg('model', 'gpt-4o-mini')) ?: 'gpt-4o-mini';
+    }
+
+    /** Lê config/openai.php ou config/services.php (fallback). */
+    private static function cfg(string $key, mixed $default = ''): mixed
+    {
+        $v = config("openai.{$key}");
+        if ($v !== null && $v !== '') {
+            return $v;
+        }
+        $v = config("services.openai.{$key}");
+        if ($v !== null && $v !== '') {
+            return $v;
+        }
+
+        return $default;
     }
 
     public function isConfigured(): bool
@@ -80,8 +95,8 @@ class OpenAiService
     /** Estimativa aproximada em USD (ajustável via env). */
     public function estimateCost(int $inputTokens, int $outputTokens): float
     {
-        $inPrice = (float) env('OPENAI_PRICE_INPUT_PER_1M', 0.15);
-        $outPrice = (float) env('OPENAI_PRICE_OUTPUT_PER_1M', 0.60);
+        $inPrice = (float) self::cfg('price_input_per_1m', 0.15);
+        $outPrice = (float) self::cfg('price_output_per_1m', 0.60);
 
         return round(($inputTokens / 1_000_000) * $inPrice + ($outputTokens / 1_000_000) * $outPrice, 6);
     }
@@ -130,16 +145,21 @@ class OpenAiService
      */
     private static function tool(string $name, string $description, array $props, array $required = []): array
     {
+        $parameters = [
+            'type' => 'object',
+            // OpenAI exige objeto JSON {}, não array [] quando não há parâmetros
+            'properties' => $props === [] ? (object) [] : $props,
+        ];
+        if ($required !== []) {
+            $parameters['required'] = $required;
+        }
+
         return [
             'type' => 'function',
             'function' => [
                 'name' => $name,
                 'description' => $description,
-                'parameters' => [
-                    'type' => 'object',
-                    'properties' => $props,
-                    'required' => $required,
-                ],
+                'parameters' => $parameters,
             ],
         ];
     }
