@@ -287,8 +287,10 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="iaAssistente"><span class="nav-icon" aria-hidden="true">💬</span><span class="nav-label">Assistente</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="iaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="sasIa"><span class="nav-icon" aria-hidden="true">🧠</span><span class="nav-label">SAS IA</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="sasIaDocumentos"><span class="nav-icon" aria-hidden="true">📚</span><span class="nav-label">Manuais IA</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="iaAssistente"><span class="nav-icon" aria-hidden="true">💬</span><span class="nav-label">Assistente (legado)</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="iaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. legado</span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--config">
@@ -4167,7 +4169,62 @@
 
           </section>
 
-          <!-- IA — Assistente ChatGPT -->
+          <!-- SAS IA — Agente inteligente -->
+          <section id="sasIaSection" class="view-section hidden">
+            <div class="ia-section-head">
+              <h2>🧠 SAS IA</h2>
+              <p class="subtle-text">Agente inteligente que consulta estoque, financeiro, compras, logs e manuais — respeitando suas permissões.</p>
+              <p id="sasIaStatusBar" class="ia-status-badge"></p>
+            </div>
+            <div class="table-card form-card--wide sas-ia-layout">
+              <aside class="sas-ia-sidebar">
+                <button type="button" class="btn primary sas-ia-nova-btn" id="sasIaNovaConversa">+ Nova conversa</button>
+                <ul id="sasIaConversasList" class="sas-ia-conversas"></ul>
+              </aside>
+              <div class="sas-ia-main">
+                <div class="ia-chat-wrap">
+                  <div id="sasIaChatMessages" class="ia-chat-messages"></div>
+                  <form id="sasIaChatForm" class="ia-chat-form">
+                    <textarea id="sasIaChatInput" rows="2" placeholder="Ex.: Quais produtos estão abaixo do estoque mínimo? Qual foi o faturamento de hoje?" maxlength="4000"></textarea>
+                    <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="sasIaDocumentosSection" class="view-section hidden">
+            <div class="ia-section-head">
+              <h2>📚 Manuais e documentos — SAS IA</h2>
+              <p class="subtle-text">Cadastre procedimentos, regras internas e manuais. Somente ADMIN.</p>
+            </div>
+            <div id="sasIaDocsAviso" class="ia-aviso hidden"></div>
+            <div class="table-card form-card--wide">
+              <form id="sasIaDocForm" class="ia-config-grid">
+                <label>Título<input type="text" id="sasIaDocTitulo" required maxlength="200" /></label>
+                <label>Tipo
+                  <select id="sasIaDocTipo">
+                    <option value="manual">Manual</option>
+                    <option value="procedimento">Procedimento</option>
+                    <option value="regra">Regra interna</option>
+                  </select>
+                </label>
+                <label class="cfg-full">Conteúdo<textarea id="sasIaDocConteudo" rows="8" required maxlength="50000"></textarea></label>
+                <div><button type="submit" class="btn primary">Salvar documento</button></div>
+              </form>
+            </div>
+            <div class="table-card form-card--wide" style="margin-top:1rem;">
+              <header><h3>Documentos cadastrados</h3></header>
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Título</th><th>Tipo</th><th>Atualizado</th></tr></thead>
+                  <tbody id="sasIaDocsList"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- IA — Assistente ChatGPT (legado) -->
           <section id="iaAssistenteSection" class="view-section hidden">
             <div class="ia-section-head">
               <h2>💬 Assistente IA</h2>
@@ -5422,8 +5479,10 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="configuracoesPainel" /> Configurações — Painel do Sistema</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAssistente" /> IA — Assistente</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaConfiguracoes" /> IA — Configurações (ADMIN)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIa" /> SAS IA — Chat</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaDocumentos" /> SAS IA — Manuais (ADMIN)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAssistente" /> IA — Assistente (legado)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaConfiguracoes" /> IA — Configurações legado (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
           </section>
@@ -6795,6 +6854,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
+    <script src="sas-ia.js?v=20260617-sas-ia"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
