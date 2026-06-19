@@ -1927,6 +1927,19 @@ const PERFIL_LABELS = {
   FUNCIONARIO: "Funcionário",
 };
 
+const TIPO_VINCULO_LABELS = {
+  clt: "CLT",
+  contrato: "Contrato",
+  prestador_servico: "Prestador de serviço",
+  outros: "Outros",
+};
+
+function labelTipoVinculo(value) {
+  if (!value) return "—";
+  const key = String(value).trim().toLowerCase();
+  return TIPO_VINCULO_LABELS[key] || value;
+}
+
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
@@ -14261,7 +14274,7 @@ function setupModals() {
     if (motEl) motEl.value = "";
     if (editId) {
       const f = await fetchJSON(`/funcionarios/${editId}`);
-      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix","ctps"].forEach(k => {
+      ["nome_completo","cpf","data_nascimento","sexo","estado_civil","unidade_id","whatsapp","email","data_admissao","status","observacoes","banco","agencia","conta","conta_digito","pix","ctps","tipo_vinculo"].forEach(k => {
         const el = dom.funcionarioForm?.elements[k];
         if (el && f[k] != null) el.value = f[k] || "";
       });
@@ -14351,6 +14364,7 @@ function setupModals() {
           <h3>Dados profissionais</h3>
           <div class="view-fields-grid">
             ${field("Cargo", f.cargo)}
+            ${field("Tipo de vínculo", labelTipoVinculo(f.tipo_vinculo))}
             ${field("Unidade", f.unidade_nome)}
             ${field("Data de admissão", f.data_admissao)}
             <div class="view-field"><div class="view-field-label">Status</div><div class="view-field-value">${statusPill}</div></div>
@@ -14759,6 +14773,7 @@ function setupModals() {
       conta_digito: form.elements.conta_digito?.value || null,
       pix: form.elements.pix?.value || null,
       ctps: (form.elements.ctps?.value || "").trim() || null,
+      tipo_vinculo: form.elements.tipo_vinculo?.value || null,
       escolaridade: form.elements.escolaridade?.value || null,
       possui_acesso: possuiAcesso,
     };
@@ -14795,6 +14810,7 @@ function setupModals() {
           conta_digito: payload.conta_digito,
           pix: payload.pix,
           ctps: payload.ctps ?? "",
+          tipo_vinculo: payload.tipo_vinculo ?? "",
           escolaridade: payload.escolaridade ?? "",
           formacao_json: formacaoJsonStr,
           // RH (Acesso ao sistema)
@@ -14828,6 +14844,7 @@ function setupModals() {
         fd.append("conta_digito", payload.conta_digito != null ? String(payload.conta_digito) : "");
         fd.append("pix", payload.pix != null ? String(payload.pix) : "");
         fd.append("ctps", payload.ctps != null ? String(payload.ctps) : "");
+        fd.append("tipo_vinculo", payload.tipo_vinculo != null ? String(payload.tipo_vinculo) : "");
         fd.append("escolaridade", payload.escolaridade != null ? String(payload.escolaridade) : "");
         fd.append("formacao_json", formacaoJsonStr);
         const salIni = lerMoedaFuncionario(document.getElementById("funcionarioSalarioBase"));

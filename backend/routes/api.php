@@ -6845,7 +6845,13 @@ $normalizeFuncionarioFormacaoJson = static function ($requestData) {
     return empty($clean) ? null : json_encode($clean, JSON_UNESCAPED_UNICODE);
 };
 
-Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson, $funcionariosTableHasColumn) {
+$normalizeTipoVinculo = static function ($raw): ?string {
+    $v = strtolower(trim((string) ($raw ?? '')));
+    $allowed = ['clt', 'contrato', 'prestador_servico', 'outros'];
+    return in_array($v, $allowed, true) ? $v : null;
+};
+
+Route::post('/funcionarios', function (Request $request) use ($normalizeFuncionarioFormacaoJson, $normalizeTipoVinculo, $funcionariosTableHasColumn) {
     try {
     if (!Schema::hasTable('funcionarios')) {
         return response()->json(['error' => 'Módulo RH não configurado. Execute: php artisan migrate'], 503)
@@ -6959,6 +6965,9 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             ? mb_substr(trim((string) $data['ctps']), 0, 80)
             : null;
     }
+    if ($funcionariosTableHasColumn('tipo_vinculo') && ($request->exists('tipo_vinculo') || array_key_exists('tipo_vinculo', $data))) {
+        $insert['tipo_vinculo'] = $normalizeTipoVinculo($data['tipo_vinculo'] ?? null);
+    }
     if ($funcionariosTableHasColumn('cpf_limpo')) {
         $insert['cpf_limpo'] = $cpfLimpo;
     }
@@ -7005,7 +7014,7 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
     }
 });
 
-Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $funcionariosTableHasColumn) {
+Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $normalizeTipoVinculo, $funcionariosTableHasColumn) {
     try {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
@@ -7137,6 +7146,9 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
             ? mb_substr(trim((string) $data['ctps']), 0, 80)
             : null;
     }
+    if ($funcionariosTableHasColumn('tipo_vinculo') && ($request->exists('tipo_vinculo') || array_key_exists('tipo_vinculo', $data))) {
+        $update['tipo_vinculo'] = $normalizeTipoVinculo($data['tipo_vinculo'] ?? null);
+    }
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {
             @unlink(public_path($existente->foto));
@@ -7174,7 +7186,7 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     }
 });
 
-Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $funcionariosTableHasColumn) {
+Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $normalizeTipoVinculo, $funcionariosTableHasColumn) {
     $userId = $request->header('X-Usuario-Id');
     if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
@@ -7224,6 +7236,9 @@ Route::put('/funcionarios/{id}', function (Request $request, $id) use ($normaliz
         $update['ctps'] = isset($data['ctps']) && trim((string) $data['ctps']) !== ''
             ? mb_substr(trim((string) $data['ctps']), 0, 80)
             : null;
+    }
+    if ($funcionariosTableHasColumn('tipo_vinculo') && ($request->exists('tipo_vinculo') || array_key_exists('tipo_vinculo', $data))) {
+        $update['tipo_vinculo'] = $normalizeTipoVinculo($data['tipo_vinculo'] ?? null);
     }
     if ($request->hasFile('foto')) {
         if ($existente->foto && file_exists(public_path($existente->foto))) {

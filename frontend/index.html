@@ -5432,6 +5432,15 @@
               </select>
             </label>
             <label>Unidade <select name="unidade_id"><option value="">Sem unidade</option></select></label>
+            <label>Tipo de vínculo
+              <select name="tipo_vinculo">
+                <option value="">Selecione</option>
+                <option value="clt">CLT</option>
+                <option value="contrato">Contrato</option>
+                <option value="prestador_servico">Prestador de serviço</option>
+                <option value="outros">Outros</option>
+              </select>
+            </label>
             <div class="grid-two">
               <label>Data de admissão <input name="data_admissao" type="date" /></label>
               <label>Status <select name="status" required><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></label>
@@ -6712,7 +6721,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
-    <script src="app.js?v=20260616-reserva-wa-empresa"></script>
+    <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260610-fg-cat"></script>
      
   </body>
