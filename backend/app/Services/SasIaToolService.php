@@ -42,6 +42,7 @@ class SasIaToolService
             'consultar_fornecedores' => $this->fornecedores($ctx, $args),
             'consultar_logs_recentes' => $this->logsRecentes($ctx, $args),
             'consultar_resumo_financeiro' => $this->resumoFinanceiro($ctx, $args),
+            'consultar_resumo_produtos' => $this->resumoProdutos($ctx, $args),
             'consultar_manual_documentacao' => $this->manualDocumentacao($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta desconhecida.'],
         };
@@ -361,6 +362,59 @@ class SasIaToolService
             'custo_saidas_estoque' => $dash['cmv_estimado'] ?? 0,
             'lucro_prejuizo' => $dash['lucro_prejuizo'] ?? 0,
             'margem_liquida_pct' => $dash['margem_liquida'] ?? 0,
+        ];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function resumoProdutos(SasIaContext $ctx, array $args): array
+    {
+        if (! Schema::hasTable('produtos')) {
+            return ['total_cadastrados' => 0, 'total_com_estoque' => 0, 'total_sem_estoque' => 0];
+        }
+
+        $totalCadastrados = (int) DB::table('produtos')->where('ativo', 1)->count();
+
+        $comEstoqueQ = DB::table('stock_lotes')
+            ->where('quantidade', '>', 0)
+            ->distinct();
+        if ($uid = $ctx->unidadeEfetiva()) {
+            $comEstoqueQ->where('unidade_id', $uid);
+        }
+        $idsComEstoque = $comEstoqueQ->pluck('produto_id')->unique();
+        $totalComEstoque = (int) DB::table('produtos')
+            ->where('ativo', 1)
+            ->whereIn('id', $idsComEstoque)
+            ->count();
+
+        $porUnidade = [];
+        if (Schema::hasTable('stock_lotes') && Schema::hasTable('unidades') && ! $ctx->unidadeEfetiva()) {
+            $porUnidade = DB::table('stock_lotes')
+                ->join('unidades', 'stock_lotes.unidade_id', '=', 'unidades.id')
+                ->where('stock_lotes.quantidade', '>', 0)
+                ->select(
+                    'unidades.id as unidade_id',
+                    'unidades.nome as unidade_nome',
+                    DB::raw('COUNT(DISTINCT stock_lotes.produto_id) as produtos_com_estoque')
+                )
+                ->groupBy('unidades.id', 'unidades.nome')
+                ->orderBy('unidades.nome')
+                ->limit(30)
+                ->get()
+                ->map(fn ($r) => [
+                    'unidade_id' => $r->unidade_id,
+                    'unidade_nome' => $r->unidade_nome,
+                    'produtos_com_estoque' => (int) $r->produtos_com_estoque,
+                ])
+                ->all();
+        }
+
+        return [
+            'total_cadastrados' => $totalCadastrados,
+            'total_com_estoque' => $totalComEstoque,
+            'total_sem_estoque' => max(0, $totalCadastrados - $totalComEstoque),
+            'escopo_unidade_id' => $ctx->unidadeEfetiva(),
+            'por_unidade_com_estoque' => $porUnidade,
+            'observacao' => 'Cadastrados = produtos ativos no sistema. Com estoque = produtos com saldo > 0 em lotes.',
         ];
     }
 

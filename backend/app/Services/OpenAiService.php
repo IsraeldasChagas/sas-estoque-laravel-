@@ -106,10 +106,11 @@ class OpenAiService
     {
         return [
             self::tool('consultar_produtos_abaixo_estoque_minimo', 'Lista produtos com estoque abaixo do mínimo.', []),
+            self::tool('consultar_resumo_produtos', 'Total de produtos cadastrados (ativos), quantos têm estoque e quantos estão zerados. Use para perguntas como "quantos produtos tem no estoque/cadastro".', []),
             self::tool('consultar_produto_por_nome', 'Busca produto pelo nome (parcial).', [
                 'nome' => ['type' => 'string', 'description' => 'Nome ou parte do nome do produto'],
             ], ['nome']),
-            self::tool('consultar_estoque_por_unidade', 'Resumo de estoque por unidade ou de uma unidade específica.', [
+            self::tool('consultar_estoque_por_unidade', 'Saldo em lotes por unidade: quantos produtos distintos têm saldo e soma das quantidades. Não substitui o total de cadastrados.', [
                 'unidade_id' => ['type' => 'integer', 'description' => 'ID da unidade (opcional)'],
             ]),
             self::tool('consultar_movimentacoes_recentes', 'Últimas movimentações de estoque.', [

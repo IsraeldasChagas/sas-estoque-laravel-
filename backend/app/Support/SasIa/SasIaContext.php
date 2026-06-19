@@ -91,6 +91,7 @@ final class SasIaContext
     {
         $map = [
             'consultar_produtos_abaixo_estoque_minimo' => ['dashboard', 'estoque', 'produtos'],
+            'consultar_resumo_produtos' => ['dashboard', 'estoque', 'produtos'],
             'consultar_produto_por_nome' => ['dashboard', 'estoque', 'produtos'],
             'consultar_estoque_por_unidade' => ['dashboard', 'estoque', 'produtos', 'lotes'],
             'consultar_movimentacoes_recentes' => ['movimentacoes', 'estoque', 'dashboard'],
