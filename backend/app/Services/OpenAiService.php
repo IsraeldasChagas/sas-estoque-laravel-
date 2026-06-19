@@ -104,64 +104,6 @@ class OpenAiService
     /** Definições das ferramentas expostas à OpenAI (JSON Schema). */
     public static function toolDefinitions(): array
     {
-        return [
-            self::tool('consultar_produtos_abaixo_estoque_minimo', 'Lista produtos com estoque abaixo do mínimo.', []),
-            self::tool('consultar_resumo_produtos', 'Total de produtos cadastrados (ativos), quantos têm estoque e quantos estão zerados. Use para perguntas como "quantos produtos tem no estoque/cadastro".', []),
-            self::tool('consultar_produto_por_nome', 'Busca produto pelo nome (parcial).', [
-                'nome' => ['type' => 'string', 'description' => 'Nome ou parte do nome do produto'],
-            ], ['nome']),
-            self::tool('consultar_estoque_por_unidade', 'Saldo em lotes por unidade: quantos produtos distintos têm saldo e soma das quantidades. Não substitui o total de cadastrados.', [
-                'unidade_id' => ['type' => 'integer', 'description' => 'ID da unidade (opcional)'],
-            ]),
-            self::tool('consultar_movimentacoes_recentes', 'Últimas movimentações de estoque.', [
-                'dias' => ['type' => 'integer', 'description' => 'Quantos dias atrás (padrão 7, máx 30)'],
-                'unidade_id' => ['type' => 'integer', 'description' => 'Filtrar por unidade (opcional)'],
-            ]),
-            self::tool('consultar_vendas_do_dia', 'Faturamento/vendas do fechamento de caixa em uma data.', [
-                'data' => ['type' => 'string', 'description' => 'Data YYYY-MM-DD (padrão hoje)'],
-                'unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)'],
-            ]),
-            self::tool('consultar_compras_recentes', 'Listas de compras recentes.', [
-                'limite' => ['type' => 'integer', 'description' => 'Quantidade máxima (padrão 10)'],
-            ]),
-            self::tool('consultar_fornecedores', 'Lista fornecedores cadastrados.', [
-                'busca' => ['type' => 'string', 'description' => 'Filtrar por nome (opcional)'],
-            ]),
-            self::tool('consultar_logs_recentes', 'Logs de auditoria recentes (requer permissão).', [
-                'limite' => ['type' => 'integer', 'description' => 'Máximo de registros (padrão 20)'],
-            ]),
-            self::tool('consultar_resumo_financeiro', 'Resumo financeiro do período (faturamento, CMV/custos).', [
-                'de' => ['type' => 'string', 'description' => 'Data início YYYY-MM-DD'],
-                'ate' => ['type' => 'string', 'description' => 'Data fim YYYY-MM-DD'],
-                'unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)'],
-            ]),
-            self::tool('consultar_manual_documentacao', 'Busca no manual e documentos internos cadastrados.', [
-                'consulta' => ['type' => 'string', 'description' => 'Termo ou pergunta sobre procedimento'],
-            ], ['consulta']),
-        ];
-    }
-
-    /** @param  array<string, array<string, mixed>>  $props
-     * @param  string[]  $required
-     */
-    private static function tool(string $name, string $description, array $props, array $required = []): array
-    {
-        $parameters = [
-            'type' => 'object',
-            // OpenAI exige objeto JSON {}, não array [] quando não há parâmetros
-            'properties' => $props === [] ? (object) [] : $props,
-        ];
-        if ($required !== []) {
-            $parameters['required'] = $required;
-        }
-
-        return [
-            'type' => 'function',
-            'function' => [
-                'name' => $name,
-                'description' => $description,
-                'parameters' => $parameters,
-            ],
-        ];
+        return \App\Support\SasIa\SasIaToolRegistry::definitions();
     }
 }

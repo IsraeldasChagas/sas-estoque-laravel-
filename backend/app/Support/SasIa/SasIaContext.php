@@ -89,20 +89,6 @@ final class SasIaContext
     /** Verifica se o usuário pode executar a ferramenta (via módulos do menu). */
     public function podeUsarFerramenta(string $toolName): bool
     {
-        $map = [
-            'consultar_produtos_abaixo_estoque_minimo' => ['dashboard', 'estoque', 'produtos'],
-            'consultar_resumo_produtos' => ['dashboard', 'estoque', 'produtos'],
-            'consultar_produto_por_nome' => ['dashboard', 'estoque', 'produtos'],
-            'consultar_estoque_por_unidade' => ['dashboard', 'estoque', 'produtos', 'lotes'],
-            'consultar_movimentacoes_recentes' => ['movimentacoes', 'estoque', 'dashboard'],
-            'consultar_vendas_do_dia' => ['fechamento', 'fechamentoDash', 'financeiroDashboard'],
-            'consultar_compras_recentes' => ['compras'],
-            'consultar_fornecedores' => ['fornecedores'],
-            'consultar_logs_recentes' => ['logs'],
-            'consultar_resumo_financeiro' => ['financeiroDashboard', 'financeiroDre', 'financeiroFluxoCaixa', 'boletao'],
-            'consultar_manual_documentacao' => ['sasIa', 'iaAssistente'],
-        ];
-
         if ($toolName === 'consultar_manual_documentacao') {
             return true;
         }
@@ -112,9 +98,13 @@ final class SasIaContext
                 || $this->temModulo('logs');
         }
 
-        $modulos = $map[$toolName] ?? [];
+        if ($toolName === 'consultar_resumo_usuarios') {
+            return $this->isAdmin() || $this->temModulo('usuarios');
+        }
 
-        return $this->temAlgumModulo($modulos);
+        $modulos = SasIaToolRegistry::modulosDaFerramenta($toolName);
+
+        return $modulos !== [] && $this->temAlgumModulo($modulos);
     }
 
     public function temModulo(string $modulo): bool

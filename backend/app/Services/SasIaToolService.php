@@ -13,8 +13,22 @@ use Illuminate\Support\Facades\Schema;
  */
 class SasIaToolService
 {
+    /** Ferramentas implementadas nesta classe (estoque/financeiro base). */
+    private const TOOLS_LOCAIS = [
+        'consultar_produtos_abaixo_estoque_minimo',
+        'consultar_produto_por_nome',
+        'consultar_estoque_por_unidade',
+        'consultar_movimentacoes_recentes',
+        'consultar_vendas_do_dia',
+        'consultar_compras_recentes',
+        'consultar_fornecedores',
+        'consultar_logs_recentes',
+        'consultar_resumo_financeiro',
+        'consultar_resumo_produtos',
+    ];
+
     public function __construct(
-        private SasIaDocumentService $documentService
+        private SasIaModuleQueryService $moduleQueries
     ) {}
 
     /**
@@ -32,6 +46,10 @@ class SasIaToolService
             ];
         }
 
+        if (! in_array($toolName, self::TOOLS_LOCAIS, true)) {
+            return $this->moduleQueries->executar($toolName, $ctx, $args);
+        }
+
         return match ($toolName) {
             'consultar_produtos_abaixo_estoque_minimo' => $this->produtosAbaixoMinimo($ctx),
             'consultar_produto_por_nome' => $this->produtoPorNome($ctx, $args),
@@ -43,7 +61,6 @@ class SasIaToolService
             'consultar_logs_recentes' => $this->logsRecentes($ctx, $args),
             'consultar_resumo_financeiro' => $this->resumoFinanceiro($ctx, $args),
             'consultar_resumo_produtos' => $this->resumoProdutos($ctx, $args),
-            'consultar_manual_documentacao' => $this->manualDocumentacao($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta desconhecida.'],
         };
     }
@@ -416,14 +433,6 @@ class SasIaToolService
             'por_unidade_com_estoque' => $porUnidade,
             'observacao' => 'Cadastrados = produtos ativos no sistema. Com estoque = produtos com saldo > 0 em lotes.',
         ];
-    }
-
-    /** @param  array<string, mixed>  $args */
-    private function manualDocumentacao(SasIaContext $ctx, array $args): array
-    {
-        $consulta = trim((string) ($args['consulta'] ?? ''));
-
-        return $this->documentService->buscarParaIa($consulta);
     }
 
     private function somaCampoFechamento(?string $json, string $campo): float
