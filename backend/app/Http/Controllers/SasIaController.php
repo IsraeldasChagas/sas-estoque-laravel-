@@ -161,6 +161,36 @@ class SasIaController extends Controller
         ]);
     }
 
+    /** DELETE /sas-ia/conversas/{id} — exclui conversa do usuário logado. */
+    public function conversaDestroy(Request $request, int $id)
+    {
+        $usuario = $this->authUsuario($request);
+        if (! $usuario) {
+            return $this->json(['error' => 'Não autorizado'], 401);
+        }
+
+        $c = AiConversation::query()
+            ->where('id', $id)
+            ->where('usuario_id', (int) $usuario->id)
+            ->first();
+
+        if (! $c) {
+            return $this->json(['error' => 'Conversa não encontrada.'], 404);
+        }
+
+        DB::transaction(function () use ($id) {
+            if (Schema::hasTable('ai_tool_logs')) {
+                DB::table('ai_tool_logs')->where('conversation_id', $id)->delete();
+            }
+            if (Schema::hasTable('ai_messages')) {
+                DB::table('ai_messages')->where('conversation_id', $id)->delete();
+            }
+            DB::table('ai_conversations')->where('id', $id)->delete();
+        });
+
+        return $this->json(['ok' => true, 'id' => $id]);
+    }
+
     /** GET /sas-ia/documentos — lista para ADMIN. */
     public function documentos(Request $request)
     {

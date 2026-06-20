@@ -8,6 +8,7 @@
   var sasIaEnviando = false;
   var sasIaInited = false;
   var SAS_IA_FLOAT_KEY = "sas-ia-float-open";
+  var SAS_IA_EXPAND_KEY = "sas-ia-float-expanded";
 
   function sasToast(msg, type) {
     var fn = typeof showToast === "function" ? showToast : window.showToast;
@@ -34,6 +35,41 @@
     return document.getElementById(id);
   }
 
+  function sasIsExpanded() {
+    var root = sasEl("sasIaFloatRoot");
+    return root && root.classList.contains("is-expanded");
+  }
+
+  function sasSetExpanded(expanded) {
+    var root = sasEl("sasIaFloatRoot");
+    var btn = sasEl("sasIaFloatExpand");
+    if (!root) return;
+
+    root.classList.toggle("is-expanded", !!expanded);
+    if (btn) {
+      btn.textContent = expanded ? "⊟" : "⛶";
+      btn.title = expanded ? "Restaurar tamanho" : "Expandir";
+      btn.setAttribute("aria-label", expanded ? "Restaurar tamanho" : "Expandir");
+    }
+
+    try {
+      sessionStorage.setItem(SAS_IA_EXPAND_KEY, expanded ? "1" : "0");
+    } catch (_) {}
+  }
+
+  function sasFloatToggleExpand() {
+    sasSetExpanded(!sasIsExpanded());
+  }
+
+  function sasAtualizarExcluirBtn() {
+    var btn = sasEl("sasIaExcluirConversa");
+    if (!btn) return;
+    if (sasIaConversationId) {
+      btn.classList.remove("hidden");
+    } else {
+      btn.classList.add("hidden");
+    }
+  }
   function sasIsOpen() {
     var root = sasEl("sasIaFloatRoot");
     return root && root.classList.contains("is-open");
@@ -59,6 +95,11 @@
   function sasFloatOpen() {
     var root = sasEl("sasIaFloatRoot");
     if (!root || root.classList.contains("hidden")) return;
+    var wasExpanded = false;
+    try {
+      wasExpanded = sessionStorage.getItem(SAS_IA_EXPAND_KEY) === "1";
+    } catch (_) {}
+    sasSetExpanded(wasExpanded);
     sasSetOpen(true);
     if (!sasIaInited) {
       sasIaInited = true;
@@ -177,6 +218,7 @@
       sasRenderMessages((data.mensagens || []).map(function (m) {
         return { role: m.role, content: m.content };
       }));
+      sasAtualizarExcluirBtn();
       await sasCarregarConversas();
     } catch (e) {
       sasToast(e?.message || "Erro ao abrir conversa.", "error");
@@ -186,7 +228,22 @@
   function sasNovaConversa() {
     sasIaConversationId = null;
     sasRenderMessages([]);
+    sasAtualizarExcluirBtn();
     sasCarregarConversas();
+  }
+
+  async function sasExcluirConversa() {
+    if (!sasIaConversationId || sasIaEnviando) return;
+    var id = sasIaConversationId;
+    if (!window.confirm("Excluir esta conversa? Esta ação não pode ser desfeita.")) return;
+
+    try {
+      await sasFetch("/sas-ia/conversas/" + id, { method: "DELETE" });
+      sasToast("Conversa excluída.", "success");
+      sasNovaConversa();
+    } catch (e) {
+      sasToast(e?.message || "Erro ao excluir conversa.", "error");
+    }
   }
 
   async function sasEnviar(e) {
@@ -227,6 +284,7 @@
       var data = await sasFetch("/sas-ia/chat", { method: "POST", body: JSON.stringify(body) });
       document.getElementById(loadingId)?.remove();
       if (data.conversation_id) sasIaConversationId = data.conversation_id;
+      sasAtualizarExcluirBtn();
       if (box) {
         box.insertAdjacentHTML(
           "beforeend",
@@ -254,6 +312,7 @@
     }
     await sasAtualizarStatus();
     await sasCarregarConversas();
+    sasAtualizarExcluirBtn();
     if (!sasIaConversationId && sasEl("sasIaChatMessages") && !sasEl("sasIaChatMessages").querySelector(".ia-msg")) {
       sasRenderMessages([]);
     }
@@ -303,8 +362,10 @@
   function sasSetup() {
     sasEl("sasIaChatForm")?.addEventListener("submit", sasEnviar);
     sasEl("sasIaNovaConversa")?.addEventListener("click", sasNovaConversa);
+    sasEl("sasIaExcluirConversa")?.addEventListener("click", sasExcluirConversa);
     sasEl("sasIaDocForm")?.addEventListener("submit", sasSalvarDocumento);
     sasEl("sasIaFloatFab")?.addEventListener("click", sasFloatOpen);
+    sasEl("sasIaFloatExpand")?.addEventListener("click", sasFloatToggleExpand);
     sasEl("sasIaFloatMinimize")?.addEventListener("click", sasFloatMinimize);
     sasEl("sasIaAbrirFloatBtn")?.addEventListener("click", sasFloatOpen);
   }

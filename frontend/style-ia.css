@@ -152,7 +152,20 @@
 
 .sas-ia-nova-btn {
   width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.sas-ia-excluir-btn {
+  width: 100%;
   margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.55rem;
+}
+
+.sas-ia-float__header-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 .sas-ia-conversas {
@@ -311,6 +324,39 @@
 
 .sas-ia-float__body .sas-ia-conversas {
   max-height: 220px;
+}
+
+/* Modo expandido — quase tela cheia */
+.sas-ia-float-root.is-expanded {
+  right: 0.5rem;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sas-ia-float-root.is-expanded .sas-ia-float__panel {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+}
+
+.sas-ia-float-root.is-expanded .sas-ia-float__body {
+  grid-template-columns: minmax(200px, 280px) 1fr;
+}
+
+.sas-ia-float-root.is-expanded .sas-ia-float__body .sas-ia-conversas {
+  max-height: none;
+  flex: 1;
+}
+
+.sas-ia-float-root.is-expanded .sas-ia-float__chat.ia-chat-wrap {
+  min-height: 0;
+  max-height: none;
+  flex: 1;
 }
 
 .sas-ia-landing {
