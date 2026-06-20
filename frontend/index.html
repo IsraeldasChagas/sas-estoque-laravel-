@@ -49,7 +49,7 @@
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
-    <link rel="stylesheet" href="style-ia.css?v=20260616-ia" />
+    <link rel="stylesheet" href="style-ia.css?v=20260619-float" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -4169,27 +4169,16 @@
 
           </section>
 
-          <!-- SAS IA — Agente inteligente -->
+          <!-- SAS IA — página informativa (chat flutuante fica fixo na tela) -->
           <section id="sasIaSection" class="view-section hidden">
             <div class="ia-section-head">
               <h2>🧠 SAS IA</h2>
               <p class="subtle-text">Agente inteligente que consulta estoque, financeiro, compras, logs e manuais — respeitando suas permissões.</p>
-              <p id="sasIaStatusBar" class="ia-status-badge"></p>
+              <p id="sasIaStatusBarPage" class="ia-status-badge"></p>
             </div>
-            <div class="table-card form-card--wide sas-ia-layout">
-              <aside class="sas-ia-sidebar">
-                <button type="button" class="btn primary sas-ia-nova-btn" id="sasIaNovaConversa">+ Nova conversa</button>
-                <ul id="sasIaConversasList" class="sas-ia-conversas"></ul>
-              </aside>
-              <div class="sas-ia-main">
-                <div class="ia-chat-wrap">
-                  <div id="sasIaChatMessages" class="ia-chat-messages"></div>
-                  <form id="sasIaChatForm" class="ia-chat-form">
-                    <textarea id="sasIaChatInput" rows="2" placeholder="Ex.: Quais produtos estão abaixo do estoque mínimo? Qual foi o faturamento de hoje?" maxlength="4000"></textarea>
-                    <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
-                  </form>
-                </div>
-              </div>
+            <div class="table-card form-card--wide sas-ia-landing">
+              <p>O assistente fica disponível em <strong>janela flutuante</strong> no canto da tela. Você pode minimizar, expandir e continuar a conversa enquanto navega em outras páginas do sistema.</p>
+              <button type="button" class="btn primary" id="sasIaAbrirFloatBtn">Abrir chat flutuante</button>
             </div>
           </section>
 
@@ -6839,6 +6828,40 @@
       </div>
     </div>
 
+    <!-- SAS IA — chat flutuante (persiste ao trocar de página) -->
+    <div id="sasIaFloatRoot" class="sas-ia-float-root hidden" aria-live="polite">
+      <button type="button" id="sasIaFloatFab" class="sas-ia-float__fab" title="Abrir SAS IA" aria-label="Abrir SAS IA">
+        <span class="sas-ia-float__fab-icon" aria-hidden="true">🧠</span>
+        <span class="sas-ia-float__fab-label">SAS IA</span>
+      </button>
+      <div id="sasIaFloatPanel" class="sas-ia-float__panel hidden" role="dialog" aria-label="Chat SAS IA">
+        <header class="sas-ia-float__header">
+          <div class="sas-ia-float__header-text">
+            <strong>🧠 SAS IA</strong>
+            <span id="sasIaStatusBar" class="sas-ia-float__status"></span>
+          </div>
+          <div class="sas-ia-float__header-actions">
+            <button type="button" id="sasIaFloatMinimize" class="sas-ia-float__icon-btn" title="Minimizar" aria-label="Minimizar">—</button>
+          </div>
+        </header>
+        <div class="sas-ia-float__body sas-ia-layout">
+          <aside class="sas-ia-sidebar">
+            <button type="button" class="btn primary sas-ia-nova-btn" id="sasIaNovaConversa">+ Nova conversa</button>
+            <ul id="sasIaConversasList" class="sas-ia-conversas"></ul>
+          </aside>
+          <div class="sas-ia-main">
+            <div class="ia-chat-wrap sas-ia-float__chat">
+              <div id="sasIaChatMessages" class="ia-chat-messages"></div>
+              <form id="sasIaChatForm" class="ia-chat-form">
+                <textarea id="sasIaChatInput" rows="2" placeholder="Pergunte sobre estoque, financeiro, RH, reservas…" maxlength="4000"></textarea>
+                <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
     <script src="config.js"></script>
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
@@ -6854,7 +6877,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260617-sas-ia"></script>
+    <script src="sas-ia.js?v=20260619-float"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>

@@ -1,11 +1,13 @@
 /**
- * SAS IA — agente inteligente (OpenAI + ferramentas internas)
+ * SAS IA — agente flutuante (persiste ao navegar entre páginas)
  */
 (function () {
   "use strict";
 
   var sasIaConversationId = null;
   var sasIaEnviando = false;
+  var sasIaInited = false;
+  var SAS_IA_FLOAT_KEY = "sas-ia-float-open";
 
   function sasToast(msg, type) {
     var fn = typeof showToast === "function" ? showToast : window.showToast;
@@ -28,8 +30,70 @@
     return sasEsc(text).replace(/\n/g, "<br>");
   }
 
+  function sasEl(id) {
+    return document.getElementById(id);
+  }
+
+  function sasIsOpen() {
+    var root = sasEl("sasIaFloatRoot");
+    return root && root.classList.contains("is-open");
+  }
+
+  function sasSetOpen(open) {
+    var root = sasEl("sasIaFloatRoot");
+    var panel = sasEl("sasIaFloatPanel");
+    if (!root || !panel) return;
+
+    root.classList.toggle("is-open", !!open);
+    panel.classList.toggle("hidden", !open);
+
+    try {
+      sessionStorage.setItem(SAS_IA_FLOAT_KEY, open ? "1" : "0");
+    } catch (_) {}
+
+    if (open) {
+      sasEl("sasIaChatInput")?.focus();
+    }
+  }
+
+  function sasFloatOpen() {
+    var root = sasEl("sasIaFloatRoot");
+    if (!root || root.classList.contains("hidden")) return;
+    sasSetOpen(true);
+    if (!sasIaInited) {
+      sasIaInited = true;
+      loadSasIa().catch(function () {});
+    }
+  }
+
+  function sasFloatMinimize() {
+    sasSetOpen(false);
+  }
+
+  function sasFloatToggle() {
+    if (sasIsOpen()) sasFloatMinimize();
+    else sasFloatOpen();
+  }
+
+  /** Exibe/oculta widget conforme permissão do usuário logado. */
+  function sasFloatSyncPerm(enabled) {
+    var root = sasEl("sasIaFloatRoot");
+    if (!root) return;
+    if (enabled) {
+      root.classList.remove("hidden");
+      var wasOpen = false;
+      try {
+        wasOpen = sessionStorage.getItem(SAS_IA_FLOAT_KEY) === "1";
+      } catch (_) {}
+      if (wasOpen) sasFloatOpen();
+    } else {
+      root.classList.add("hidden");
+      sasSetOpen(false);
+    }
+  }
+
   function sasRenderMessages(mensagens) {
-    var box = document.getElementById("sasIaChatMessages");
+    var box = sasEl("sasIaChatMessages");
     if (!box) return;
     if (!mensagens || !mensagens.length) {
       box.innerHTML =
@@ -54,24 +118,29 @@
     box.scrollTop = box.scrollHeight;
   }
 
+  function sasSetStatusText(text) {
+    var el = sasEl("sasIaStatusBar");
+    var pageEl = sasEl("sasIaStatusBarPage");
+    if (el) el.textContent = text || "";
+    if (pageEl) pageEl.textContent = text || "";
+  }
+
   async function sasAtualizarStatus() {
-    var el = document.getElementById("sasIaStatusBar");
     try {
       var st = await sasFetch("/sas-ia");
-      if (el) {
-        el.textContent = st.ativo
-          ? "Modelo: " + (st.modelo || "—") + " · Restam " + (st.restante_hoje ?? "—") + " perguntas hoje"
-          : "IA não configurada — defina OPENAI_API_KEY no servidor.";
-      }
+      var txt = st.ativo
+        ? "Modelo: " + (st.modelo || "—") + " · Restam " + (st.restante_hoje ?? "—") + " perguntas hoje"
+        : "IA não configurada — defina OPENAI_API_KEY no servidor.";
+      sasSetStatusText(txt);
       return st;
     } catch (e) {
-      if (el) el.textContent = e?.message || "Erro ao carregar status.";
+      sasSetStatusText(e?.message || "Erro ao carregar status.");
       return null;
     }
   }
 
   async function sasCarregarConversas() {
-    var ul = document.getElementById("sasIaConversasList");
+    var ul = sasEl("sasIaConversasList");
     if (!ul) return;
     try {
       var data = await sasFetch("/sas-ia/conversas");
@@ -123,24 +192,27 @@
   async function sasEnviar(e) {
     e?.preventDefault();
     if (sasIaEnviando) return;
-    var input = document.getElementById("sasIaChatInput");
-    var btn = document.getElementById("sasIaChatEnviar");
+    var input = sasEl("sasIaChatInput");
+    var btn = sasEl("sasIaChatEnviar");
     var msg = (input?.value || "").trim();
     if (!msg) return;
+
+    sasFloatOpen();
 
     sasIaEnviando = true;
     if (btn) btn.disabled = true;
 
-    var box = document.getElementById("sasIaChatMessages");
-    var tempUser =
-      '<div class="ia-msg ia-msg--user"><div class="ia-msg__avatar">👤</div><div class="ia-msg__bubble">' +
-      sasFmtMsg(msg) + "</div></div>";
+    var box = sasEl("sasIaChatMessages");
     var loadingId = "sas-ia-load-" + Date.now();
     if (box) {
       if (box.querySelector(".ia-msg") && box.textContent.indexOf("Como posso ajudar") >= 0 && !sasIaConversationId) {
         box.innerHTML = "";
       }
-      box.insertAdjacentHTML("beforeend", tempUser);
+      box.insertAdjacentHTML(
+        "beforeend",
+        '<div class="ia-msg ia-msg--user"><div class="ia-msg__avatar">👤</div><div class="ia-msg__bubble">' +
+          sasFmtMsg(msg) + "</div></div>"
+      );
       box.insertAdjacentHTML(
         "beforeend",
         '<div class="ia-msg ia-msg--bot" id="' + loadingId + '"><div class="ia-msg__avatar">🤖</div><div class="ia-msg__bubble ia-msg__bubble--loading">Consultando…</div></div>'
@@ -176,14 +248,20 @@
   }
 
   async function loadSasIa() {
-    sasRenderMessages([]);
+    if (!sasEl("sasIaChatMessages")) return;
+    if (!sasIaInited) {
+      sasIaInited = true;
+    }
     await sasAtualizarStatus();
     await sasCarregarConversas();
+    if (!sasIaConversationId && sasEl("sasIaChatMessages") && !sasEl("sasIaChatMessages").querySelector(".ia-msg")) {
+      sasRenderMessages([]);
+    }
   }
 
   async function loadSasIaDocumentos() {
-    var tbody = document.getElementById("sasIaDocsList");
-    var aviso = document.getElementById("sasIaDocsAviso");
+    var tbody = sasEl("sasIaDocsList");
+    var aviso = sasEl("sasIaDocsAviso");
     try {
       var data = await sasFetch("/sas-ia/documentos");
       var docs = data.documentos || [];
@@ -209,13 +287,13 @@
       await sasFetch("/sas-ia/upload-documento", {
         method: "POST",
         body: JSON.stringify({
-          titulo: document.getElementById("sasIaDocTitulo")?.value,
-          tipo: document.getElementById("sasIaDocTipo")?.value || "manual",
-          conteudo_texto: document.getElementById("sasIaDocConteudo")?.value,
+          titulo: sasEl("sasIaDocTitulo")?.value,
+          tipo: sasEl("sasIaDocTipo")?.value || "manual",
+          conteudo_texto: sasEl("sasIaDocConteudo")?.value,
         }),
       });
       sasToast("Documento salvo.", "success");
-      document.getElementById("sasIaDocForm")?.reset();
+      sasEl("sasIaDocForm")?.reset();
       await loadSasIaDocumentos();
     } catch (err) {
       sasToast(err?.message || "Erro ao salvar documento.", "error");
@@ -223,9 +301,12 @@
   }
 
   function sasSetup() {
-    document.getElementById("sasIaChatForm")?.addEventListener("submit", sasEnviar);
-    document.getElementById("sasIaNovaConversa")?.addEventListener("click", sasNovaConversa);
-    document.getElementById("sasIaDocForm")?.addEventListener("submit", sasSalvarDocumento);
+    sasEl("sasIaChatForm")?.addEventListener("submit", sasEnviar);
+    sasEl("sasIaNovaConversa")?.addEventListener("click", sasNovaConversa);
+    sasEl("sasIaDocForm")?.addEventListener("submit", sasSalvarDocumento);
+    sasEl("sasIaFloatFab")?.addEventListener("click", sasFloatOpen);
+    sasEl("sasIaFloatMinimize")?.addEventListener("click", sasFloatMinimize);
+    sasEl("sasIaAbrirFloatBtn")?.addEventListener("click", sasFloatOpen);
   }
 
   if (document.readyState === "loading") {
@@ -236,4 +317,8 @@
 
   window.loadSasIa = loadSasIa;
   window.loadSasIaDocumentos = loadSasIaDocumentos;
+  window.sasIaFloatOpen = sasFloatOpen;
+  window.sasIaFloatMinimize = sasFloatMinimize;
+  window.sasIaFloatToggle = sasFloatToggle;
+  window.sasIaFloatSyncPerm = sasFloatSyncPerm;
 })();

@@ -5485,6 +5485,8 @@ function applyPermissions() {
     if (!allowed) section.classList.add("hidden");
   });
 
+  window.sasIaFloatSyncPerm?.(regras.sections.includes("sasIa"));
+
   if (dom.openProdutoBtn) dom.openProdutoBtn.classList.toggle("hidden", !regras.canManageProdutos);
   // BAR pode criar usuários BAR, mesmo sem canManageUsuarios
   const podeGerenciarUsuarios = regras.canManageUsuarios || canManageUsuariosBar();
@@ -5737,7 +5739,10 @@ function navigateTo(section) {
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
   else if (section === "configuracoesPainel") loadConfiguracoesPainel?.().catch(() => {});
-  else if (section === "sasIa") loadSasIa?.().catch(() => {});
+  else if (section === "sasIa") {
+    loadSasIa?.().catch(() => {});
+    window.sasIaFloatOpen?.();
+  }
   else if (section === "sasIaDocumentos") loadSasIaDocumentos?.().catch(() => {});
   else if (section === "iaAssistente") loadIaAssistente?.().catch(() => {});
   else if (section === "iaConfiguracoes") loadIaConfiguracoes?.().catch(() => {});
@@ -12084,6 +12089,7 @@ function handleLogout() {
     }).catch(() => {});
   }
   clearUser();
+  window.sasIaFloatSyncPerm?.(false);
   resetForms();
   dom.appShell.classList.add("hidden");
   dom.loginOverlay.classList.remove("hidden");
