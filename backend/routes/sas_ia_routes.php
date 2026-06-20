@@ -7,7 +7,7 @@
 use App\Http\Controllers\SasIaController;
 use Illuminate\Support\Facades\Route;
 
-$ sasIaCors = fn () => response()->json([])
+$sasIaCors = fn () => response()->json([])
     ->header('Access-Control-Allow-Origin', '*')
     ->header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
