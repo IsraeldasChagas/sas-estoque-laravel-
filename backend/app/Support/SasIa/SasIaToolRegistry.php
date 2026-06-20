@@ -42,6 +42,7 @@ final class SasIaToolRegistry
 
             // RH
             'consultar_funcionarios_resumo' => ['funcionarios', 'rhDashboard', 'rhRelatorios'],
+            'consultar_rh_recrutamento_resumo' => ['rhDashboard', 'rhCandidatos', 'rhVagas', 'rhBancoTalentos'],
             'consultar_vagas_rh' => ['rhVagas', 'rhDashboard', 'rhCandidatos'],
             'consultar_candidatos_rh' => ['rhCandidatos', 'rhBancoTalentos', 'rhDashboard'],
             'consultar_folha_ponto_resumo' => ['rhFolhaPonto', 'funcionarios'],
@@ -105,8 +106,12 @@ final class SasIaToolRegistry
 
             // —— RH ——
             self::t('consultar_funcionarios_resumo', 'Funcionários ativos, por unidade e tipo de vínculo.', []),
+            self::t('consultar_rh_recrutamento_resumo', 'Totais do Dashboard RH (vagas, candidatos, entrevistas, aprovados). Use para "quantos candidatos/currículos no recrutamento" — retorna total_candidatos igual ao card do Dashboard.', []),
             self::t('consultar_vagas_rh', 'Vagas de emprego abertas ou pausadas.', ['status' => ['type' => 'string', 'description' => 'aberta, pausada ou encerrada (opcional)']]),
-            self::t('consultar_candidatos_rh', 'Candidatos recentes no RH.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 15)']]),
+            self::t('consultar_candidatos_rh', 'Lista recente de candidatos (amostra). Para o TOTAL use consultar_rh_recrutamento_resumo.', [
+                'limite' => ['type' => 'integer', 'description' => 'Máximo na amostra (padrão 15)'],
+                'status' => ['type' => 'string', 'description' => 'Filtrar status (opcional)'],
+            ]),
             self::t('consultar_folha_ponto_resumo', 'Folhas de ponto registradas (quantidade recente).', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 10)']]),
             self::t('consultar_rescisoes_rh', 'Rescisões trabalhistas calculadas recentemente.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 10)']]),
 

@@ -37,6 +37,7 @@ class SasIaModuleQueryService
             'consultar_reservas_periodo' => $this->reservasPeriodo($ctx, $args),
             'consultar_mesas_resumo' => $this->mesasResumo($ctx, $args),
             'consultar_funcionarios_resumo' => $this->funcionariosResumo($ctx),
+            'consultar_rh_recrutamento_resumo' => $this->rhRecrutamentoResumo($ctx),
             'consultar_vagas_rh' => $this->vagasRh($ctx, $args),
             'consultar_candidatos_rh' => $this->candidatosRh($ctx, $args),
             'consultar_folha_ponto_resumo' => $this->folhaPontoResumo($ctx, $args),
@@ -390,6 +391,43 @@ class SasIaModuleQueryService
         return ['total_ativos' => $total, 'por_tipo_vinculo' => $porVinculo];
     }
 
+    /** Mesmos totais do Dashboard RH (Recrutamento → Dashboard). */
+    private function rhRecrutamentoResumo(SasIaContext $ctx): array
+    {
+        if (! Schema::hasTable('rh_candidatos')) {
+            return ['total_candidatos' => 0];
+        }
+
+        $totalCandidatos = (int) DB::table('rh_candidatos')->count();
+        $totalCurriculosArquivos = Schema::hasTable('rh_curriculos')
+            ? (int) DB::table('rh_curriculos')->count()
+            : null;
+
+        $out = [
+            'fonte' => 'Dashboard RH — mesma consulta de /rh/dashboard/stats',
+            'vagas_abertas' => Schema::hasTable('rh_vagas')
+                ? (int) DB::table('rh_vagas')->where('status', 'aberta')->count()
+                : 0,
+            'total_candidatos' => $totalCandidatos,
+            'candidatos_em_teste' => (int) DB::table('rh_candidatos')->where('status', 'em_teste')->count(),
+            'candidatos_aprovados' => (int) DB::table('rh_candidatos')->whereIn('status', ['aprovado', 'em_contratacao'])->count(),
+            'entrevistas_total' => Schema::hasTable('rh_entrevistas')
+                ? (int) DB::table('rh_entrevistas')->count()
+                : 0,
+            'total_arquivos_curriculo' => $totalCurriculosArquivos,
+            'observacao' => 'Para "quantos candidatos/currículos no recrutamento", use total_candidatos (card Candidatos do Dashboard). Não confunda com amostra limitada de consultar_candidatos_rh.',
+        ];
+
+        if (Schema::hasTable('rh_candidatos')) {
+            $out['por_status'] = DB::table('rh_candidatos')
+                ->select('status', DB::raw('COUNT(*) as qtd'))
+                ->groupBy('status')
+                ->pluck('qtd', 'status');
+        }
+
+        return $out;
+    }
+
     /** @param  array<string, mixed>  $args */
     private function vagasRh(SasIaContext $ctx, array $args): array
     {
@@ -414,17 +452,29 @@ class SasIaModuleQueryService
     private function candidatosRh(SasIaContext $ctx, array $args): array
     {
         if (! Schema::hasTable('rh_candidatos')) {
-            return ['candidatos' => []];
+            return ['total_candidatos' => 0, 'candidatos' => []];
         }
 
         $limite = min(25, max(1, (int) ($args['limite'] ?? 15)));
-        $rows = DB::table('rh_candidatos')
-            ->select('id', 'nome', 'email', 'telefone', 'status', 'created_at')
-            ->orderByDesc('created_at')
-            ->limit($limite)
-            ->get();
+        $total = (int) DB::table('rh_candidatos')->count();
 
-        return ['candidatos' => $rows->all()];
+        $q = DB::table('rh_candidatos')
+            ->select('id', 'nome', 'email', 'telefone', 'status', 'created_at')
+            ->orderByDesc('created_at');
+
+        if ($status = trim((string) ($args['status'] ?? ''))) {
+            $q->where('status', $status);
+            $total = (int) DB::table('rh_candidatos')->where('status', $status)->count();
+        }
+
+        $rows = $q->limit($limite)->get();
+
+        return [
+            'total_candidatos' => $total,
+            'limite_amostra' => $limite,
+            'observacao' => 'total_candidatos é o número real no sistema (Dashboard RH). A lista candidatos traz só os mais recentes.',
+            'candidatos' => $rows->all(),
+        ];
     }
 
     /** @param  array<string, mixed>  $args */
