@@ -72,6 +72,60 @@
   align-items: flex-end;
 }
 
+.sas-ia-audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.sas-ia-audio-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: #455a64;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sas-ia-audio-btn:hover:not(:disabled) {
+  background: #eceff1;
+}
+
+.sas-ia-audio-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sas-ia-audio-btn.is-active {
+  background: #ffebee;
+  border-color: #ef5350;
+  box-shadow: 0 0 0 2px rgba(239, 83, 80, 0.25);
+}
+
+.sas-ia-audio-btn.is-on {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+}
+
+.sas-ia-mic-status {
+  font-size: 0.82rem;
+  color: #c62828;
+  font-weight: 500;
+  animation: sas-ia-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sas-ia-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .ia-chat-form--disabled {
   opacity: 0.55;
   pointer-events: none;

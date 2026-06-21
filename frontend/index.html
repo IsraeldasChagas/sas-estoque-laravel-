@@ -4177,7 +4177,7 @@
               <p id="sasIaStatusBarPage" class="ia-status-badge"></p>
             </div>
             <div class="table-card form-card--wide sas-ia-landing">
-              <p>O assistente fica disponível em <strong>janela flutuante</strong> no canto da tela. Você pode minimizar, expandir e continuar a conversa enquanto navega em outras páginas do sistema.</p>
+              <p>O assistente fica disponível em <strong>janela flutuante</strong> no canto da tela. Você pode minimizar, expandir, <strong>falar pelo microfone</strong> e ouvir as respostas em voz alta enquanto navega em outras páginas do sistema.</p>
               <button type="button" class="btn primary" id="sasIaAbrirFloatBtn">Abrir chat flutuante</button>
             </div>
           </section>
@@ -6855,7 +6855,13 @@
             <div class="ia-chat-wrap sas-ia-float__chat">
               <div id="sasIaChatMessages" class="ia-chat-messages"></div>
               <form id="sasIaChatForm" class="ia-chat-form">
-                <textarea id="sasIaChatInput" rows="2" placeholder="Pergunte sobre estoque, financeiro, RH, reservas…" maxlength="4000"></textarea>
+                <div class="sas-ia-audio-bar">
+                  <button type="button" id="sasIaMicBtn" class="sas-ia-audio-btn" title="Falar pergunta (microfone)" aria-label="Falar pergunta">🎤</button>
+                  <button type="button" id="sasIaAutoSpeakBtn" class="sas-ia-audio-btn" title="Ler respostas em voz alta" aria-label="Ler respostas em voz alta">🔇</button>
+                  <button type="button" id="sasIaStopSpeakBtn" class="sas-ia-audio-btn hidden" title="Parar leitura" aria-label="Parar leitura">⏹</button>
+                  <span id="sasIaMicStatus" class="sas-ia-mic-status hidden" aria-live="polite">Ouvindo… fale agora</span>
+                </div>
+                <textarea id="sasIaChatInput" rows="2" placeholder="Digite ou use o microfone para perguntar…" maxlength="4000"></textarea>
                 <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
               </form>
             </div>
@@ -6879,7 +6885,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260619-float2"></script>
+    <script src="sas-ia.js?v=20260620-audio"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>

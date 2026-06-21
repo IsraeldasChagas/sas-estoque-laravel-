@@ -9,6 +9,14 @@
   var sasIaInited = false;
   var SAS_IA_FLOAT_KEY = "sas-ia-float-open";
   var SAS_IA_EXPAND_KEY = "sas-ia-float-expanded";
+  var SAS_IA_AUTO_SPEAK_KEY = "sas-ia-auto-speak";
+
+  var sasIaListening = false;
+  var sasIaRecognition = null;
+  var sasIaAutoSpeak = false;
+  var sasIaSpeaking = false;
+  var sasIaMicSupported = false;
+  var sasIaVoiceSendPending = false;
 
   function sasToast(msg, type) {
     var fn = typeof showToast === "function" ? showToast : window.showToast;
@@ -29,6 +37,183 @@
 
   function sasFmtMsg(text) {
     return sasEsc(text).replace(/\n/g, "<br>");
+  }
+
+  function sasPlainText(text) {
+    if (text == null) return "";
+    return String(text)
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function sasInitAudio() {
+    try {
+      sasIaAutoSpeak = localStorage.getItem(SAS_IA_AUTO_SPEAK_KEY) === "1";
+    } catch (_) {}
+
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    sasIaMicSupported = !!SpeechRecognition && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+    if (SpeechRecognition) {
+      sasIaRecognition = new SpeechRecognition();
+      sasIaRecognition.lang = "pt-BR";
+      sasIaRecognition.continuous = false;
+      sasIaRecognition.interimResults = true;
+      sasIaRecognition.maxAlternatives = 1;
+
+      sasIaRecognition.onstart = function () {
+        sasIaListening = true;
+        sasUpdateAudioUi();
+      };
+
+      sasIaRecognition.onend = function () {
+        sasIaListening = false;
+        sasUpdateAudioUi();
+      };
+
+      sasIaRecognition.onerror = function (ev) {
+        sasIaListening = false;
+        sasUpdateAudioUi();
+        if (ev.error === "not-allowed") {
+          sasToast("Permita o acesso ao microfone para usar voz.", "warning");
+        } else if (ev.error !== "aborted" && ev.error !== "no-speech") {
+          sasToast("Erro no reconhecimento de voz: " + (ev.error || "desconhecido"), "error");
+        }
+      };
+
+      sasIaRecognition.onresult = function (ev) {
+        var interim = "";
+        var finalText = "";
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+          var chunk = ev.results[i][0]?.transcript || "";
+          if (ev.results[i].isFinal) finalText += chunk;
+          else interim += chunk;
+        }
+        var input = sasEl("sasIaChatInput");
+        if (!input) return;
+        if (finalText.trim()) {
+          input.value = finalText.trim();
+          if (sasIaVoiceSendPending && !sasIaEnviando) {
+            sasIaVoiceSendPending = false;
+            sasEnviar();
+          }
+        } else if (interim) {
+          input.value = interim.trim();
+        }
+      };
+    }
+
+    sasUpdateAudioUi();
+  }
+
+  function sasUpdateAudioUi() {
+    var micBtn = sasEl("sasIaMicBtn");
+    var autoBtn = sasEl("sasIaAutoSpeakBtn");
+    var stopBtn = sasEl("sasIaStopSpeakBtn");
+    var status = sasEl("sasIaMicStatus");
+
+    if (micBtn) {
+      micBtn.disabled = !sasIaMicSupported || sasIaEnviando;
+      micBtn.classList.toggle("is-active", sasIaListening);
+      micBtn.title = sasIaMicSupported
+        ? (sasIaListening ? "Parar de ouvir" : "Falar pergunta (microfone)")
+        : "Microfone não suportado neste navegador (use Chrome ou Edge)";
+      micBtn.textContent = sasIaListening ? "⏹" : "🎤";
+    }
+
+    if (autoBtn) {
+      autoBtn.classList.toggle("is-on", sasIaAutoSpeak);
+      autoBtn.textContent = sasIaAutoSpeak ? "🔊" : "🔇";
+      autoBtn.title = sasIaAutoSpeak
+        ? "Respostas serão lidas em voz alta (clique para desativar)"
+        : "Ler respostas em voz alta";
+    }
+
+    if (stopBtn) {
+      stopBtn.classList.toggle("hidden", !sasIaSpeaking);
+    }
+
+    if (status) {
+      status.classList.toggle("hidden", !sasIaListening);
+    }
+  }
+
+  function sasStopSpeak() {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    sasIaSpeaking = false;
+    sasUpdateAudioUi();
+  }
+
+  function sasSpeak(text) {
+    if (!window.speechSynthesis) return;
+    var plain = sasPlainText(text);
+    if (!plain) return;
+
+    sasStopSpeak();
+    var utter = new SpeechSynthesisUtterance(plain);
+    utter.lang = "pt-BR";
+    utter.rate = 1;
+    utter.pitch = 1;
+
+    var voices = window.speechSynthesis.getVoices() || [];
+    var ptVoice = voices.find(function (v) {
+      return (v.lang || "").toLowerCase().indexOf("pt") === 0;
+    });
+    if (ptVoice) utter.voice = ptVoice;
+
+    utter.onstart = function () {
+      sasIaSpeaking = true;
+      sasUpdateAudioUi();
+    };
+    utter.onend = utter.onerror = function () {
+      sasIaSpeaking = false;
+      sasUpdateAudioUi();
+    };
+
+    window.speechSynthesis.speak(utter);
+  }
+
+  function sasToggleMic() {
+    if (!sasIaMicSupported || !sasIaRecognition) {
+      sasToast("Seu navegador não suporta entrada por voz. Use Chrome ou Edge.", "warning");
+      return;
+    }
+    if (sasIaEnviando) return;
+
+    sasFloatOpen();
+
+    if (sasIaListening) {
+      sasIaVoiceSendPending = false;
+      try {
+        sasIaRecognition.stop();
+      } catch (_) {}
+      return;
+    }
+
+    sasStopSpeak();
+    sasIaVoiceSendPending = true;
+    try {
+      sasIaRecognition.start();
+    } catch (e) {
+      sasIaVoiceSendPending = false;
+      sasToast("Não foi possível iniciar o microfone.", "error");
+    }
+  }
+
+  function sasToggleAutoSpeak() {
+    sasIaAutoSpeak = !sasIaAutoSpeak;
+    try {
+      localStorage.setItem(SAS_IA_AUTO_SPEAK_KEY, sasIaAutoSpeak ? "1" : "0");
+    } catch (_) {}
+    if (!sasIaAutoSpeak) sasStopSpeak();
+    sasUpdateAudioUi();
+    sasToast(
+      sasIaAutoSpeak ? "Respostas serão lidas em voz alta." : "Leitura em voz alta desativada.",
+      "info"
+    );
   }
 
   function sasEl(id) {
@@ -249,6 +434,11 @@
   async function sasEnviar(e) {
     e?.preventDefault();
     if (sasIaEnviando) return;
+    if (sasIaListening && sasIaRecognition) {
+      try {
+        sasIaRecognition.stop();
+      } catch (_) {}
+    }
     var input = sasEl("sasIaChatInput");
     var btn = sasEl("sasIaChatEnviar");
     var msg = (input?.value || "").trim();
@@ -293,6 +483,9 @@
         );
         box.scrollTop = box.scrollHeight;
       }
+      if (sasIaAutoSpeak && data.reply) {
+        sasSpeak(data.reply);
+      }
       await sasAtualizarStatus();
       await sasCarregarConversas();
     } catch (err) {
@@ -301,6 +494,7 @@
     } finally {
       sasIaEnviando = false;
       if (btn) btn.disabled = false;
+      sasUpdateAudioUi();
       input?.focus();
     }
   }
@@ -360,7 +554,14 @@
   }
 
   function sasSetup() {
+    sasInitAudio();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = sasUpdateAudioUi;
+    }
     sasEl("sasIaChatForm")?.addEventListener("submit", sasEnviar);
+    sasEl("sasIaMicBtn")?.addEventListener("click", sasToggleMic);
+    sasEl("sasIaAutoSpeakBtn")?.addEventListener("click", sasToggleAutoSpeak);
+    sasEl("sasIaStopSpeakBtn")?.addEventListener("click", sasStopSpeak);
     sasEl("sasIaNovaConversa")?.addEventListener("click", sasNovaConversa);
     sasEl("sasIaExcluirConversa")?.addEventListener("click", sasExcluirConversa);
     sasEl("sasIaDocForm")?.addEventListener("submit", sasSalvarDocumento);
