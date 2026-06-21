@@ -22,6 +22,8 @@
   var sasIaMicManualStop = false;
   var SAS_IA_SILENCE_MS = 2600;
 
+  var sasIaBranding = { nome: "SAS IA", foto: "", foto_url: null };
+
   function sasToast(msg, type) {
     var fn = typeof showToast === "function" ? showToast : window.showToast;
     if (typeof fn === "function") fn(msg, type || "info");
@@ -389,6 +391,61 @@
     return document.getElementById(id);
   }
 
+  function sasAgentNome() {
+    return (sasIaBranding.nome || "SAS IA").trim() || "SAS IA";
+  }
+
+  function sasAgentFotoUrl() {
+    return sasIaBranding.foto_url || (sasIaBranding.foto ? sasUsuarioFotoUrl(sasIaBranding.foto) : null);
+  }
+
+  async function sasLoadBranding() {
+    try {
+      var data = await sasFetch("/sas-ia/config");
+      sasIaBranding.nome = data.nome || "SAS IA";
+      sasIaBranding.foto = data.foto || "";
+      sasIaBranding.foto_url = sasIaBranding.foto ? sasUsuarioFotoUrl(sasIaBranding.foto) : null;
+      sasApplyBrandingUi();
+      return data;
+    } catch (_) {
+      sasApplyBrandingUi();
+      return null;
+    }
+  }
+
+  function sasApplyBrandingUi() {
+    var nome = sasAgentNome();
+    var fotoUrl = sasAgentFotoUrl();
+    var title = sasEl("sasIaHeaderTitle");
+    if (title) title.textContent = nome;
+    var pageTitle = document.querySelector("#sasIaSection .ia-section-head h2");
+    if (pageTitle) pageTitle.textContent = "🧠 " + nome;
+    var fab = sasEl("sasIaFloatFab");
+    if (fab) {
+      fab.title = "Abrir " + nome;
+      fab.setAttribute("aria-label", "Abrir " + nome);
+      if (fotoUrl) {
+        fab.innerHTML = '<img src="' + sasEsc(fotoUrl) + '" alt="" class="sas-ia-float__fab-img" />';
+      } else {
+        fab.innerHTML = '<span class="sas-ia-float__fab-icon" aria-hidden="true">🧠</span>';
+      }
+    }
+    var box = sasEl("sasIaChatMessages");
+    if (box && !sasIaConversationId) {
+      var welcomeOnly = box.querySelector(".ia-msg--bot") && !box.querySelector(".ia-msg--user");
+      if (welcomeOnly || !box.querySelector(".ia-msg")) {
+        sasRenderMessages([]);
+      }
+    }
+  }
+
+  function sasWelcomeHtml() {
+    var nome = sasAgentNome();
+    return (
+      "E aí! Sou a " + nome + ", tô aqui pra te ajudar no dia a dia 😊" +
+      "<br><br>Me pergunta sobre estoque, financeiro, compras, RH… o que precisar!"
+    );
+  }
   function sasUsuarioFotoUrl(path) {
     if (!path || typeof path !== "string") return null;
     var api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || "https://api.gruposaborparaense.com.br/api";
@@ -427,6 +484,15 @@
   }
 
   function sasBotAvatarHtml() {
+    var url = sasAgentFotoUrl();
+    var nome = sasAgentNome();
+    if (url) {
+      return (
+        '<div class="ia-msg__avatar ia-msg__avatar--photo ia-msg__avatar--agent">' +
+          '<img src="' + sasEsc(url) + '" alt="' + sasEsc(nome) + '" class="ia-msg__avatar-img" />' +
+        "</div>"
+      );
+    }
     return '<div class="ia-msg__avatar ia-msg__avatar--bot" aria-hidden="true">🧠</div>';
   }
 
@@ -550,6 +616,7 @@
 
     if (enabled) {
       root.classList.remove("hidden");
+      sasLoadBranding().catch(function () {});
       var wasOpen = false;
       try {
         wasOpen = sessionStorage.getItem(SAS_IA_FLOAT_KEY) === "1";
@@ -568,7 +635,7 @@
       box.innerHTML =
         '<div class="ia-msg ia-msg--bot">' +
           sasBotAvatarHtml() +
-          '<div class="ia-msg__bubble">E aí! Sou a SAS IA, tô aqui pra te ajudar no dia a dia 😊<br><br>Me pergunta sobre estoque, financeiro, compras, RH… o que precisar!</div>' +
+          '<div class="ia-msg__bubble">' + sasWelcomeHtml() + "</div>" +
         "</div>";
       return;
     }
@@ -746,11 +813,88 @@
     if (!sasIaInited) {
       sasIaInited = true;
     }
+    await sasLoadBranding();
     await sasAtualizarStatus();
     await sasCarregarConversas();
     sasAtualizarExcluirBtn();
     if (!sasIaConversationId && sasEl("sasIaChatMessages") && !sasEl("sasIaChatMessages").querySelector(".ia-msg")) {
       sasRenderMessages([]);
+    }
+  }
+
+  function sasCfgAtualizarPreview(fotoPath) {
+    var preview = sasEl("sasIaCfgFotoPreview");
+    if (!preview) return;
+    var url = fotoPath ? sasUsuarioFotoUrl(fotoPath) : null;
+    if (url) {
+      preview.className = "sas-ia-cfg-foto__preview ia-msg__avatar ia-msg__avatar--photo ia-msg__avatar--agent";
+      preview.innerHTML = '<img src="' + sasEsc(url) + '" alt="" class="ia-msg__avatar-img" />';
+    } else {
+      preview.className = "sas-ia-cfg-foto__preview ia-msg__avatar ia-msg__avatar--bot";
+      preview.innerHTML = "🧠";
+    }
+  }
+
+  async function loadSasIaConfiguracoes() {
+    var aviso = sasEl("sasIaCfgAviso");
+    var form = sasEl("sasIaCfgForm");
+    try {
+      var data = await sasFetch("/sas-ia/config");
+      var pode = !!data.pode_editar;
+      if (aviso) aviso.classList.toggle("hidden", pode);
+      if (aviso && !pode) aviso.textContent = "Somente ADMIN pode configurar o assistente.";
+      var nomeEl = sasEl("sasIaCfgNome");
+      if (nomeEl) nomeEl.value = data.nome || "";
+      sasCfgAtualizarPreview(data.foto || "");
+      if (form) {
+        form.querySelectorAll("input,button").forEach(function (el) {
+          if (el.id === "sasIaCfgRemoverFoto") el.disabled = !pode;
+          else if (el.type === "file") el.disabled = !pode;
+          else if (el.tagName === "BUTTON") el.disabled = !pode;
+          else el.readOnly = !pode;
+        });
+      }
+      var rm = sasEl("sasIaCfgRemoverFoto");
+      if (rm) rm.checked = false;
+    } catch (e) {
+      if (aviso) {
+        aviso.classList.remove("hidden");
+        aviso.textContent = e?.message || "Erro ao carregar configurações.";
+      }
+    }
+  }
+
+  async function sasSalvarConfig(e) {
+    e?.preventDefault();
+    var btn = sasEl("sasIaCfgSalvar");
+    try {
+      if (btn) btn.disabled = true;
+      await sasFetch("/sas-ia/config", {
+        method: "POST",
+        body: JSON.stringify({
+          nome: sasEl("sasIaCfgNome")?.value || "",
+          remover_foto: sasEl("sasIaCfgRemoverFoto")?.checked ? "1" : "0",
+        }),
+      });
+      var fileInput = sasEl("sasIaCfgFotoInput");
+      var file = fileInput?.files?.[0];
+      if (file) {
+        var fd = new FormData();
+        fd.append("foto", file);
+        if (typeof window.fetchForm === "function") {
+          await window.fetchForm("/sas-ia/upload-foto", "POST", fd);
+        } else {
+          throw new Error("Upload indisponível");
+        }
+        if (fileInput) fileInput.value = "";
+      }
+      await sasLoadBranding();
+      await loadSasIaConfiguracoes();
+      sasToast("Configurações do assistente salvas.", "success");
+    } catch (err) {
+      sasToast(err?.message || "Erro ao salvar.", "error");
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -811,6 +955,17 @@
     sasEl("sasIaNovaConversa")?.addEventListener("click", sasNovaConversa);
     sasEl("sasIaExcluirConversa")?.addEventListener("click", sasExcluirConversa);
     sasEl("sasIaDocForm")?.addEventListener("submit", sasSalvarDocumento);
+    sasEl("sasIaCfgForm")?.addEventListener("submit", sasSalvarConfig);
+    sasEl("sasIaCfgFotoInput")?.addEventListener("change", function () {
+      var file = sasEl("sasIaCfgFotoInput")?.files?.[0];
+      if (!file) return;
+      var url = URL.createObjectURL(file);
+      var preview = sasEl("sasIaCfgFotoPreview");
+      if (preview) {
+        preview.className = "sas-ia-cfg-foto__preview ia-msg__avatar ia-msg__avatar--photo ia-msg__avatar--agent";
+        preview.innerHTML = '<img src="' + url + '" alt="" class="ia-msg__avatar-img" />';
+      }
+    });
     sasEl("sasIaFloatFab")?.addEventListener("click", sasFloatOpen);
     sasEl("sasIaFloatExpand")?.addEventListener("click", sasFloatToggleExpand);
     sasEl("sasIaFloatMinimize")?.addEventListener("click", sasFloatMinimize);
@@ -829,6 +984,8 @@
 
   window.loadSasIa = loadSasIa;
   window.loadSasIaDocumentos = loadSasIaDocumentos;
+  window.loadSasIaConfiguracoes = loadSasIaConfiguracoes;
+  window.sasIaLoadBranding = sasLoadBranding;
   window.sasIaFloatOpen = sasFloatOpen;
   window.sasIaFloatMinimize = sasFloatMinimize;
   window.sasIaFloatToggle = sasFloatToggle;

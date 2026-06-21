@@ -369,6 +369,40 @@
   line-height: 1;
 }
 
+.sas-ia-float__fab-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.ia-msg__avatar--agent {
+  border-color: #ce93d8;
+}
+
+.sas-ia-cfg-foto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.sas-ia-cfg-foto__preview {
+  width: 4rem;
+  height: 4rem;
+  min-width: 4rem;
+  min-height: 4rem;
+  max-width: 4rem;
+  max-height: 4rem;
+  font-size: 1.5rem;
+}
+
+.sas-ia-cfg-foto input[type="file"] {
+  font-size: 0.88rem;
+  max-width: 100%;
+}
+
 .sas-ia-float__panel {
   width: min(360px, calc(100vw - 1.25rem));
   height: min(480px, calc(100vh - 5.5rem));

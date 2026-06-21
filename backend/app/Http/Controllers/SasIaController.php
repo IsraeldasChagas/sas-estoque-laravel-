@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\SasIaChatService;
 use App\Services\SasIaDocumentService;
-use App\Support\SasIa\SasIaContext;
+use App\Support\SasIa\SasIaBranding;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -31,9 +31,12 @@ class SasIaController extends Controller
         }
 
         $ctx = new SasIaContext($usuario, $this->unidadeRequest($request));
+        $branding = SasIaBranding::ler();
 
         return $this->json([
-            'modulo' => 'SAS IA',
+            'modulo' => $branding['nome'],
+            'agente_nome' => $branding['nome'],
+            'agente_foto' => $branding['foto'],
             'ativo' => $this->openAi->isConfigured(),
             'modelo' => $this->openAi->model(),
             'limite_diario' => $ctx->limiteDiario(),
@@ -200,6 +203,92 @@ class SasIaController extends Controller
         }
 
         return $this->json(['documentos' => $this->documentService->listarAtivos()]);
+    }
+
+    /** GET /sas-ia/config — nome e foto do assistente (todos logados). */
+    public function configShow(Request $request)
+    {
+        $usuario = $this->authUsuario($request);
+        if (! $usuario) {
+            return $this->json(['error' => 'Não autorizado'], 401);
+        }
+
+        $branding = SasIaBranding::ler();
+        $isAdmin = strtoupper(trim((string) ($usuario->perfil ?? ''))) === 'ADMIN';
+
+        return $this->json([
+            'nome' => $branding['nome'],
+            'foto' => $branding['foto'],
+            'nome_padrao' => SasIaBranding::DEFAULT_NOME,
+            'pode_editar' => $isAdmin,
+        ]);
+    }
+
+    /** POST /sas-ia/config — salvar nome / remover foto (ADMIN). */
+    public function configUpdate(Request $request)
+    {
+        $usuario = $this->authUsuario($request);
+        if (! $usuario) {
+            return $this->json(['error' => 'Não autorizado'], 401);
+        }
+        if (strtoupper(trim((string) ($usuario->perfil ?? ''))) !== 'ADMIN') {
+            return $this->json(['error' => 'Somente administrador pode alterar configurações.'], 403);
+        }
+
+        if ($request->boolean('remover_foto') || in_array($request->input('remover_foto'), ['1', 'true', 'sim'], true)) {
+            SasIaBranding::removerFoto();
+        }
+
+        if ($request->has('nome')) {
+            SasIaBranding::salvarNome((string) $request->input('nome', ''));
+        }
+
+        $branding = SasIaBranding::ler();
+
+        return $this->json(['ok' => true, 'nome' => $branding['nome'], 'foto' => $branding['foto']]);
+    }
+
+    /** POST /sas-ia/upload-foto — foto do assistente (ADMIN, multipart). */
+    public function uploadFoto(Request $request)
+    {
+        $usuario = $this->authUsuario($request);
+        if (! $usuario) {
+            return $this->json(['error' => 'Não autorizado'], 401);
+        }
+        if (strtoupper(trim((string) ($usuario->perfil ?? ''))) !== 'ADMIN') {
+            return $this->json(['error' => 'Somente administrador pode enviar foto.'], 403);
+        }
+
+        if (! $request->hasFile('foto')) {
+            return $this->json(['error' => 'Selecione uma imagem.'], 422);
+        }
+
+        $foto = $request->file('foto');
+        if (! $foto->isValid()) {
+            return $this->json(['error' => 'Arquivo inválido.'], 422);
+        }
+
+        $ext = strtolower($foto->getClientOriginalExtension() ?: 'jpg');
+        if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+            return $this->json(['error' => 'Use JPG, PNG, WebP ou GIF.'], 422);
+        }
+        if ($foto->getSize() > 2 * 1024 * 1024) {
+            return $this->json(['error' => 'Imagem muito grande (máx. 2 MB).'], 422);
+        }
+
+        SasIaBranding::removerFoto();
+
+        $dir = public_path('uploads/sas-ia');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $nomeArquivo = 'agente_'.time().'.'.$ext;
+        $foto->move($dir, $nomeArquivo);
+        $path = 'uploads/sas-ia/'.$nomeArquivo;
+        SasIaBranding::salvarFoto($path);
+
+        return $this->json(['ok' => true, 'foto' => $path]);
     }
 
     private function authUsuario(Request $request): ?object

@@ -18,12 +18,17 @@ foreach ([
     '/sas-ia/upload-documento',
     '/sas-ia/conversas',
     '/sas-ia/documentos',
+    '/sas-ia/config',
+    '/sas-ia/upload-foto',
 ] as $p) {
     Route::options($p, $sasIaCors);
 }
 Route::options('/sas-ia/conversas/{id}', $sasIaCors);
 
 Route::get('/sas-ia', [SasIaController::class, 'index']);
+Route::get('/sas-ia/config', [SasIaController::class, 'configShow']);
+Route::post('/sas-ia/config', [SasIaController::class, 'configUpdate']);
+Route::post('/sas-ia/upload-foto', [SasIaController::class, 'uploadFoto']);
 Route::post('/sas-ia/chat', [SasIaController::class, 'chat']);
 Route::post('/sas-ia/upload-documento', [SasIaController::class, 'uploadDocumento']);
 Route::get('/sas-ia/conversas', [SasIaController::class, 'conversas']);

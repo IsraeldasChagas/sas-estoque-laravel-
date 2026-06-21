@@ -49,7 +49,7 @@
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
-    <link rel="stylesheet" href="style-ia.css?v=20260621-float-fix" />
+    <link rel="stylesheet" href="style-ia.css?v=20260621-branding" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -289,6 +289,7 @@
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="sasIa"><span class="nav-icon" aria-hidden="true">🧠</span><span class="nav-label">SAS IA</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="sasIaDocumentos"><span class="nav-icon" aria-hidden="true">📚</span><span class="nav-label">Manuais IA</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="sasIaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. SAS IA</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="iaAssistente"><span class="nav-icon" aria-hidden="true">💬</span><span class="nav-label">Assistente (legado)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="iaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. legado</span></a>
             </div>
@@ -4213,6 +4214,36 @@
             </div>
           </section>
 
+          <section id="sasIaConfiguracoesSection" class="view-section hidden">
+            <div class="ia-section-head">
+              <h2>⚙️ Configurações — SAS IA</h2>
+              <p class="subtle-text">Somente ADMIN. Escolha o nome e a foto que aparecem no chat flutuante e nas mensagens do assistente.</p>
+            </div>
+            <div id="sasIaCfgAviso" class="ia-aviso hidden"></div>
+            <div class="table-card form-card--wide">
+              <form id="sasIaCfgForm" class="ia-config-grid">
+                <label>Nome do assistente
+                  <input type="text" id="sasIaCfgNome" maxlength="80" placeholder="SAS IA" />
+                  <p class="ia-hint">Ex.: Ana, Bia, Assistente Sabor…</p>
+                </label>
+                <label>Foto do assistente
+                  <div class="sas-ia-cfg-foto">
+                    <div id="sasIaCfgFotoPreview" class="sas-ia-cfg-foto__preview ia-msg__avatar ia-msg__avatar--bot" aria-hidden="true">🧠</div>
+                    <input type="file" id="sasIaCfgFotoInput" accept="image/jpeg,image/png,image/webp,image/gif" />
+                    <p class="ia-hint">JPG, PNG, WebP ou GIF — máx. 2 MB. Aparece na bolinha do canto e nas respostas.</p>
+                  </div>
+                </label>
+                <label class="ia-config-check">
+                  <input type="checkbox" id="sasIaCfgRemoverFoto" />
+                  <span>Remover foto personalizada (volta ao ícone padrão 🧠)</span>
+                </label>
+                <div>
+                  <button type="submit" class="btn primary" id="sasIaCfgSalvar">Salvar configurações</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
           <!-- IA — Assistente ChatGPT (legado) -->
           <section id="iaAssistenteSection" class="view-section hidden">
             <div class="ia-section-head">
@@ -5470,6 +5501,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="configuracoesPainel" /> Configurações — Painel do Sistema</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIa" /> SAS IA — Chat</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaDocumentos" /> SAS IA — Manuais (ADMIN)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaConfiguracoes" /> SAS IA — Configurações (ADMIN)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAssistente" /> IA — Assistente (legado)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaConfiguracoes" /> IA — Configurações legado (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
@@ -6836,7 +6868,7 @@
       <div id="sasIaFloatPanel" class="sas-ia-float__panel hidden" role="dialog" aria-label="Chat SAS IA">
         <header class="sas-ia-float__header">
           <div class="sas-ia-float__header-text">
-            <strong>🧠 SAS IA</strong>
+            <strong id="sasIaHeaderTitle">SAS IA</strong>
             <span id="sasIaStatusBar" class="sas-ia-float__status"></span>
           </div>
           <div class="sas-ia-float__header-actions">
@@ -6884,7 +6916,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260621-float-fix"></script>
+    <script src="sas-ia.js?v=20260621-branding"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>

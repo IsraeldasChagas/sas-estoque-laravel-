@@ -1579,7 +1579,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "configuracoesPainel", "sasIa", "sasIaDocumentos", "iaAssistente", "iaConfiguracoes",
+  "configuracoesPainel", "sasIa", "sasIaDocumentos", "sasIaConfiguracoes", "iaAssistente", "iaConfiguracoes",
 ]);
 
 function syncUrlSectionHash(section) {
@@ -5326,6 +5326,9 @@ function applyPermissions() {
   if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("sasIaDocumentos")) {
     sections = [...sections, "sasIaDocumentos"];
   }
+  if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("sasIaConfiguracoes")) {
+    sections = [...sections, "sasIaConfiguracoes"];
+  }
   // IA legado: assistente para todos; configurações só ADMIN.
   if (!sections.includes("iaAssistente")) {
     sections = [...sections, "iaAssistente"];
@@ -5457,6 +5460,7 @@ function applyPermissions() {
     const temIa =
       regras.sections.includes("sasIa") ||
       regras.sections.includes("sasIaDocumentos") ||
+      regras.sections.includes("sasIaConfiguracoes") ||
       regras.sections.includes("iaAssistente") ||
       regras.sections.includes("iaConfiguracoes") ||
       perfilIa === "ADMIN";
@@ -5465,6 +5469,11 @@ function applyPermissions() {
     if (linkDocs) {
       const podeDocs = regras.sections.includes("sasIaDocumentos") || perfilIa === "ADMIN";
       linkDocs.classList.toggle("hidden", !podeDocs);
+    }
+    const linkSasCfg = iaNavSubmenu.querySelector('[data-section="sasIaConfiguracoes"]');
+    if (linkSasCfg) {
+      const podeSasCfg = regras.sections.includes("sasIaConfiguracoes") || perfilIa === "ADMIN";
+      linkSasCfg.classList.toggle("hidden", !podeSasCfg);
     }
     const linkCfg = iaNavSubmenu.querySelector('[data-section="iaConfiguracoes"]');
     if (linkCfg) {
@@ -5707,7 +5716,7 @@ function navigateTo(section) {
   }
   const iaNavSubmenuNav = document.getElementById("iaMenu")?.closest(".nav-submenu");
   if (iaNavSubmenuNav) {
-    if (section === "sasIa" || section === "sasIaDocumentos" || section === "iaAssistente" || section === "iaConfiguracoes") iaNavSubmenuNav.classList.add("open");
+    if (section === "sasIa" || section === "sasIaDocumentos" || section === "sasIaConfiguracoes" || section === "iaAssistente" || section === "iaConfiguracoes") iaNavSubmenuNav.classList.add("open");
     else iaNavSubmenuNav.classList.remove("open");
   }
   const patrimonioNavSubmenuNav = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
@@ -5744,6 +5753,7 @@ function navigateTo(section) {
     window.sasIaFloatOpen?.();
   }
   else if (section === "sasIaDocumentos") loadSasIaDocumentos?.().catch(() => {});
+  else if (section === "sasIaConfiguracoes") loadSasIaConfiguracoes?.().catch(() => {});
   else if (section === "iaAssistente") loadIaAssistente?.().catch(() => {});
   else if (section === "iaConfiguracoes") loadIaConfiguracoes?.().catch(() => {});
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});

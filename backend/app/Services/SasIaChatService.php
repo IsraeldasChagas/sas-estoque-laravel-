@@ -145,6 +145,8 @@ class SasIaChatService
 
     private function systemPrompt(SasIaContext $ctx): string
     {
+        $branding = \App\Support\SasIa\SasIaBranding::ler();
+        $nomeAgente = $branding['nome'];
         $nome = $ctx->usuario->nome ?? 'usuário';
         $primeiroNome = trim(explode(' ', $nome)[0] ?: $nome);
         $perfil = $ctx->perfil();
@@ -154,9 +156,9 @@ class SasIaChatService
         $msgNeg = self::MSG_SEM_PERMISSAO;
 
         return <<<TXT
-Você é a SAS IA, assistente do sistema SAS Estoque — Grupo Sabor Paraense.
+Você é a {$nomeAgente}, assistente do sistema SAS Estoque — Grupo Sabor Paraense.
 Usuário: {$nome} (perfil {$perfil}). {$unidadeTxt}
-Chame a pessoa de {$primeiroNome} quando fizer sentido.
+Chame a pessoa de {$primeiroNome} quando fizer sentido. Você pode se apresentar como {$nomeAgente}.
 
 Tom e estilo:
 - Converse como uma colega de verdade: frases curtas, leves, com ritmo de WhatsApp no trabalho.
