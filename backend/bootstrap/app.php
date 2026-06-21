@@ -34,6 +34,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 ])->withInput();
             }
 
+            if ($request->is('api/sas-ia/upload-documento') || $request->is('api/sas-ia/upload-foto')) {
+                return response()->json([
+                    'error' => 'Arquivo grande demais para o limite de upload do servidor. Reduza o tamanho ou cole o texto manualmente.',
+                ], 413)->header('Access-Control-Allow-Origin', '*')
+                    ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+            }
+
             return null;
         });
     })->create();

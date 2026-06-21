@@ -3836,7 +3836,11 @@ async function fetchForm(path, method, body) {
       if (parts.length) errorMsg = Array.isArray(parts[0]) ? parts.flat().join(' ') : parts.join(' ');
     }
     if (typeof errorMsg === 'string' && (errorMsg.length > 500 || errorMsg.trim().startsWith('<'))) {
-      errorMsg = res.status >= 500 ? 'Erro no servidor. Tente novamente.' : `Erro ${res.status}`;
+      if (payload.error && typeof payload.error === 'string' && payload.error.length <= 500) {
+        errorMsg = payload.error;
+      } else {
+        errorMsg = res.status >= 500 ? 'Erro no servidor. Tente novamente.' : `Erro ${res.status}`;
+      }
     }
     const err = new Error(errorMsg);
     err.responseData = payload;

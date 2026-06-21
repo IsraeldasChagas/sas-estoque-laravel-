@@ -22,15 +22,25 @@ class SasIaDocumentTextExtractor
     public static function fromUploadedFile(UploadedFile $file): string
     {
         $ext = strtolower($file->getClientOriginalExtension() ?: '');
+        $path = $file->getRealPath();
+        if (! $path || ! is_readable($path)) {
+            throw new \RuntimeException('Não foi possível ler o arquivo enviado.');
+        }
+
+        return self::fromPath($path, $ext);
+    }
+
+    public static function fromPath(string $path, string $ext): string
+    {
+        $ext = strtolower(trim($ext) ?: pathinfo($path, PATHINFO_EXTENSION));
         if (! in_array($ext, self::EXTENSOES, true)) {
             throw new \InvalidArgumentException(
                 'Formato não suportado. Use: '.implode(', ', self::EXTENSOES).'.'
             );
         }
 
-        $path = $file->getRealPath();
-        if (! $path || ! is_readable($path)) {
-            throw new \RuntimeException('Não foi possível ler o arquivo enviado.');
+        if (! is_readable($path)) {
+            throw new \RuntimeException('Não foi possível ler o arquivo.');
         }
 
         $texto = match ($ext) {

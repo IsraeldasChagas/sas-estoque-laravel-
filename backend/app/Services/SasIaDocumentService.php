@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AiDocument;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -10,6 +11,26 @@ use Illuminate\Support\Facades\Schema;
  */
 class SasIaDocumentService
 {
+    /** Garante tabela no servidor (útil quando migrate não foi executado). */
+    public function garantirTabela(): void
+    {
+        if (Schema::hasTable('ai_documents')) {
+            return;
+        }
+
+        Schema::create('ai_documents', function (Blueprint $table) {
+            $table->id();
+            $table->string('titulo', 255);
+            $table->string('tipo', 40)->default('manual');
+            $table->longText('conteudo_texto');
+            $table->string('arquivo_path', 500)->nullable();
+            $table->boolean('ativo')->default(true);
+            $table->unsignedBigInteger('usuario_id')->nullable();
+            $table->timestamps();
+            $table->index(['ativo', 'tipo']);
+        });
+    }
+
     /**
      * Busca documentos ativos por termo (para ferramenta da IA).
      *
@@ -71,6 +92,8 @@ class SasIaDocumentService
 
     public function criar(array $data, int $usuarioId): AiDocument
     {
+        $this->garantirTabela();
+
         return AiDocument::create([
             'titulo' => mb_substr(trim($data['titulo']), 0, 255),
             'tipo' => in_array($data['tipo'] ?? '', ['manual', 'procedimento', 'regra'], true)

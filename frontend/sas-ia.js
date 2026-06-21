@@ -964,6 +964,10 @@
       sasToast("Envie um arquivo ou cole o texto.", "warning");
       return;
     }
+    if (file && file.size > 5 * 1024 * 1024) {
+      sasToast("Arquivo muito grande (máx. 5 MB).", "warning");
+      return;
+    }
     try {
       var fd = new FormData();
       fd.append("titulo", titulo);

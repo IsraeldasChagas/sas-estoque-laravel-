@@ -81,75 +81,111 @@ class SasIaController extends Controller
     /** POST /sas-ia/upload-documento — cadastro de manual (ADMIN). Aceita JSON ou multipart com arquivo. */
     public function uploadDocumento(Request $request)
     {
-        $usuario = $this->authUsuario($request);
-        if (! $usuario) {
-            return $this->json(['error' => 'Não autorizado'], 401);
-        }
+        $arquivoSalvo = null;
 
-        if (strtoupper(trim((string) ($usuario->perfil ?? ''))) !== 'ADMIN') {
-            return $this->json(['error' => 'Somente administrador pode cadastrar documentos.'], 403);
-        }
-
-        $titulo = trim((string) $request->input('titulo', ''));
-        if ($titulo === '') {
-            return $this->json(['error' => 'Título é obrigatório.'], 422);
-        }
-
-        $conteudo = trim((string) $request->input('conteudo_texto', $request->input('conteudo', '')));
-        $arquivoPath = null;
-
-        if ($request->hasFile('arquivo')) {
-            $file = $request->file('arquivo');
-            if (! $file->isValid()) {
-                return $this->json(['error' => 'Arquivo inválido.'], 422);
-            }
-            if ($file->getSize() > 5 * 1024 * 1024) {
-                return $this->json(['error' => 'Arquivo muito grande (máx. 5 MB).'], 422);
+        try {
+            $usuario = $this->authUsuario($request);
+            if (! $usuario) {
+                return $this->json(['error' => 'Não autorizado'], 401);
             }
 
-            try {
-                $extraido = SasIaDocumentTextExtractor::fromUploadedFile($file);
-            } catch (\InvalidArgumentException $e) {
-                return $this->json(['error' => $e->getMessage()], 422);
-            } catch (\Throwable $e) {
-                report($e);
-
-                return $this->json(['error' => 'Falha ao ler o arquivo. Tente outro formato ou cole o texto.'], 422);
+            if (strtoupper(trim((string) ($usuario->perfil ?? ''))) !== 'ADMIN') {
+                return $this->json(['error' => 'Somente administrador pode cadastrar documentos.'], 403);
             }
 
-            $conteudo = $conteudo !== ''
-                ? mb_substr($conteudo."\n\n".$extraido, 0, 50000)
-                : $extraido;
-
-            $dir = public_path('uploads/sas-ia/docs');
-            if (! is_dir($dir)) {
-                mkdir($dir, 0755, true);
+            $titulo = trim((string) $request->input('titulo', ''));
+            if ($titulo === '') {
+                return $this->json(['error' => 'Título é obrigatório.'], 422);
             }
 
-            $ext = strtolower($file->getClientOriginalExtension() ?: 'bin');
-            $nomeArquivo = 'doc_'.time().'_'.uniqid().'.'.$ext;
-            $file->move($dir, $nomeArquivo);
-            $arquivoPath = 'uploads/sas-ia/docs/'.$nomeArquivo;
+            $conteudo = trim((string) $request->input('conteudo_texto', $request->input('conteudo', '')));
+            $arquivoPath = null;
+
+            if ($request->hasFile('arquivo')) {
+                $file = $request->file('arquivo');
+                if (! $file->isValid()) {
+                    $erroUpload = (string) ($file->getErrorMessage() ?: 'Arquivo inválido.');
+
+                    return $this->json(['error' => $erroUpload], 422);
+                }
+                if ($file->getSize() > 5 * 1024 * 1024) {
+                    return $this->json(['error' => 'Arquivo muito grande (máx. 5 MB).'], 422);
+                }
+
+                $ext = strtolower($file->getClientOriginalExtension() ?: 'bin');
+                if (! in_array($ext, SasIaDocumentTextExtractor::extensoesPermitidas(), true)) {
+                    return $this->json([
+                        'error' => 'Formato não suportado. Use: '.implode(', ', SasIaDocumentTextExtractor::extensoesPermitidas()).'.',
+                    ], 422);
+                }
+
+                $dir = public_path('uploads/sas-ia/docs');
+                if (! is_dir($dir) && ! @mkdir($dir, 0755, true) && ! is_dir($dir)) {
+                    return $this->json([
+                        'error' => 'Não foi possível criar a pasta uploads/sas-ia/docs no servidor. Verifique permissões.',
+                    ], 500);
+                }
+
+                $nomeArquivo = 'doc_'.time().'_'.uniqid().'.'.$ext;
+                try {
+                    $file->move($dir, $nomeArquivo);
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    return $this->json([
+                        'error' => 'Não foi possível salvar o arquivo. Verifique permissões da pasta uploads/sas-ia/docs.',
+                    ], 500);
+                }
+
+                $arquivoSalvo = $dir.DIRECTORY_SEPARATOR.$nomeArquivo;
+                $arquivoPath = 'uploads/sas-ia/docs/'.$nomeArquivo;
+
+                try {
+                    $extraido = SasIaDocumentTextExtractor::fromPath($arquivoSalvo, $ext);
+                } catch (\InvalidArgumentException $e) {
+                    @unlink($arquivoSalvo);
+
+                    return $this->json(['error' => $e->getMessage()], 422);
+                } catch (\Throwable $e) {
+                    report($e);
+                    @unlink($arquivoSalvo);
+
+                    return $this->json(['error' => 'Falha ao ler o arquivo. Tente outro formato ou cole o texto.'], 422);
+                }
+
+                $conteudo = $conteudo !== ''
+                    ? mb_substr($conteudo."\n\n".$extraido, 0, 50000)
+                    : $extraido;
+            }
+
+            if ($conteudo === '') {
+                return $this->json(['error' => 'Envie um arquivo ou cole o texto do documento.'], 422);
+            }
+
+            $doc = $this->documentService->criar([
+                'titulo' => $titulo,
+                'tipo' => $request->input('tipo', 'manual'),
+                'conteudo_texto' => mb_substr($conteudo, 0, 50000),
+                'arquivo_path' => $arquivoPath,
+            ], (int) $usuario->id);
+
+            return $this->json(['ok' => true, 'documento' => [
+                'id' => $doc->id,
+                'titulo' => $doc->titulo,
+                'tipo' => $doc->tipo,
+                'tem_arquivo' => ! empty($arquivoPath),
+                'tamanho_texto' => mb_strlen((string) $doc->conteudo_texto),
+            ]], 201);
+        } catch (\Throwable $e) {
+            report($e);
+            if (! empty($arquivoSalvo) && is_file($arquivoSalvo)) {
+                @unlink($arquivoSalvo);
+            }
+
+            return $this->json([
+                'error' => 'Erro ao salvar documento: '.mb_substr($e->getMessage(), 0, 250),
+            ], 500);
         }
-
-        if ($conteudo === '') {
-            return $this->json(['error' => 'Envie um arquivo ou cole o texto do documento.'], 422);
-        }
-
-        $doc = $this->documentService->criar([
-            'titulo' => $titulo,
-            'tipo' => $request->input('tipo', 'manual'),
-            'conteudo_texto' => mb_substr($conteudo, 0, 50000),
-            'arquivo_path' => $arquivoPath,
-        ], (int) $usuario->id);
-
-        return $this->json(['ok' => true, 'documento' => [
-            'id' => $doc->id,
-            'titulo' => $doc->titulo,
-            'tipo' => $doc->tipo,
-            'tem_arquivo' => ! empty($arquivoPath),
-            'tamanho_texto' => mb_strlen((string) $doc->conteudo_texto),
-        ]], 201);
     }
 
     /** GET /sas-ia/conversas */
