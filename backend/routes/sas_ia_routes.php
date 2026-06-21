@@ -24,6 +24,7 @@ foreach ([
     Route::options($p, $sasIaCors);
 }
 Route::options('/sas-ia/conversas/{id}', $sasIaCors);
+Route::options('/sas-ia/documentos/{id}', $sasIaCors);
 
 Route::get('/sas-ia', [SasIaController::class, 'index']);
 Route::get('/sas-ia/config', [SasIaController::class, 'configShow']);
@@ -35,3 +36,4 @@ Route::get('/sas-ia/conversas', [SasIaController::class, 'conversas']);
 Route::get('/sas-ia/conversas/{id}', [SasIaController::class, 'conversaShow']);
 Route::delete('/sas-ia/conversas/{id}', [SasIaController::class, 'conversaDestroy']);
 Route::get('/sas-ia/documentos', [SasIaController::class, 'documentos']);
+Route::delete('/sas-ia/documentos/{id}', [SasIaController::class, 'documentoDestroy']);

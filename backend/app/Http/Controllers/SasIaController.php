@@ -6,6 +6,7 @@ use App\Services\SasIaChatService;
 use App\Services\SasIaDocumentService;
 use App\Support\SasIa\SasIaBranding;
 use App\Support\SasIa\SasIaContext;
+use App\Support\SasIa\SasIaDocumentTextExtractor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -77,7 +78,7 @@ class SasIaController extends Controller
         return $this->json($result);
     }
 
-    /** POST /sas-ia/upload-documento — cadastro de manual (ADMIN). */
+    /** POST /sas-ia/upload-documento — cadastro de manual (ADMIN). Aceita JSON ou multipart com arquivo. */
     public function uploadDocumento(Request $request)
     {
         $usuario = $this->authUsuario($request);
@@ -90,21 +91,64 @@ class SasIaController extends Controller
         }
 
         $titulo = trim((string) $request->input('titulo', ''));
+        if ($titulo === '') {
+            return $this->json(['error' => 'Título é obrigatório.'], 422);
+        }
+
         $conteudo = trim((string) $request->input('conteudo_texto', $request->input('conteudo', '')));
-        if ($titulo === '' || $conteudo === '') {
-            return $this->json(['error' => 'Título e conteúdo são obrigatórios.'], 422);
+        $arquivoPath = null;
+
+        if ($request->hasFile('arquivo')) {
+            $file = $request->file('arquivo');
+            if (! $file->isValid()) {
+                return $this->json(['error' => 'Arquivo inválido.'], 422);
+            }
+            if ($file->getSize() > 5 * 1024 * 1024) {
+                return $this->json(['error' => 'Arquivo muito grande (máx. 5 MB).'], 422);
+            }
+
+            try {
+                $extraido = SasIaDocumentTextExtractor::fromUploadedFile($file);
+            } catch (\InvalidArgumentException $e) {
+                return $this->json(['error' => $e->getMessage()], 422);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return $this->json(['error' => 'Falha ao ler o arquivo. Tente outro formato ou cole o texto.'], 422);
+            }
+
+            $conteudo = $conteudo !== ''
+                ? mb_substr($conteudo."\n\n".$extraido, 0, 50000)
+                : $extraido;
+
+            $dir = public_path('uploads/sas-ia/docs');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+
+            $ext = strtolower($file->getClientOriginalExtension() ?: 'bin');
+            $nomeArquivo = 'doc_'.time().'_'.uniqid().'.'.$ext;
+            $file->move($dir, $nomeArquivo);
+            $arquivoPath = 'uploads/sas-ia/docs/'.$nomeArquivo;
+        }
+
+        if ($conteudo === '') {
+            return $this->json(['error' => 'Envie um arquivo ou cole o texto do documento.'], 422);
         }
 
         $doc = $this->documentService->criar([
             'titulo' => $titulo,
             'tipo' => $request->input('tipo', 'manual'),
-            'conteudo_texto' => $conteudo,
+            'conteudo_texto' => mb_substr($conteudo, 0, 50000),
+            'arquivo_path' => $arquivoPath,
         ], (int) $usuario->id);
 
         return $this->json(['ok' => true, 'documento' => [
             'id' => $doc->id,
             'titulo' => $doc->titulo,
             'tipo' => $doc->tipo,
+            'tem_arquivo' => ! empty($arquivoPath),
+            'tamanho_texto' => mb_strlen((string) $doc->conteudo_texto),
         ]], 201);
     }
 
@@ -204,6 +248,24 @@ class SasIaController extends Controller
         }
 
         return $this->json(['documentos' => $this->documentService->listarAtivos()]);
+    }
+
+    /** DELETE /sas-ia/documentos/{id} — remove documento da base (ADMIN). */
+    public function documentoDestroy(Request $request, int $id)
+    {
+        $usuario = $this->authUsuario($request);
+        if (! $usuario) {
+            return $this->json(['error' => 'Não autorizado'], 401);
+        }
+        if (strtoupper(trim((string) ($usuario->perfil ?? ''))) !== 'ADMIN') {
+            return $this->json(['error' => 'Somente administrador pode excluir documentos.'], 403);
+        }
+
+        if (! $this->documentService->excluir($id)) {
+            return $this->json(['error' => 'Documento não encontrado.'], 404);
+        }
+
+        return $this->json(['ok' => true, 'id' => $id]);
     }
 
     /** GET /sas-ia/config — nome e foto do assistente (todos logados). */

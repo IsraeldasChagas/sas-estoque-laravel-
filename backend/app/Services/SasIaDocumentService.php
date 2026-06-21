@@ -39,7 +39,8 @@ class SasIaDocumentService
                 'id' => $d->id,
                 'titulo' => $d->titulo,
                 'tipo' => $d->tipo,
-                'trecho' => mb_substr(strip_tags($d->conteudo_texto), 0, 1500),
+                'tem_arquivo' => ! empty($d->arquivo_path),
+                'trecho' => mb_substr(strip_tags((string) $d->conteudo_texto), 0, 3500),
             ])->all(),
         ];
     }
@@ -60,6 +61,9 @@ class SasIaDocumentService
                 'id' => $d->id,
                 'titulo' => $d->titulo,
                 'tipo' => $d->tipo,
+                'tem_arquivo' => ! empty($d->arquivo_path),
+                'arquivo_path' => $d->arquivo_path,
+                'tamanho_texto' => mb_strlen((string) $d->conteudo_texto),
                 'updated_at' => $d->updated_at?->toIso8601String(),
             ])
             ->all();
@@ -77,5 +81,28 @@ class SasIaDocumentService
             'ativo' => true,
             'usuario_id' => $usuarioId,
         ]);
+    }
+
+    public function excluir(int $id): bool
+    {
+        if (! Schema::hasTable('ai_documents')) {
+            return false;
+        }
+
+        $doc = AiDocument::query()->where('id', $id)->where('ativo', true)->first();
+        if (! $doc) {
+            return false;
+        }
+
+        if ($doc->arquivo_path) {
+            $full = public_path($doc->arquivo_path);
+            if (is_file($full)) {
+                @unlink($full);
+            }
+        }
+
+        $doc->update(['ativo' => false]);
+
+        return true;
     }
 }

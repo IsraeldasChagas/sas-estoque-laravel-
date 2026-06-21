@@ -54,13 +54,22 @@
     return s.trim();
   }
 
+  function sasCleanLaughs(text) {
+    if (text == null) return "";
+    var s = String(text);
+    s = s.replace(/[\u{1F602}\u{1F923}\u{1F606}\u{1F605}\u{1F92A}\u{1F602}]/gu, "");
+    s = s.replace(/\s+(?:kk{2,}|k{3,}|rs+|h[ae]{2,}|hehe|haha|huehue|huahuahua|lol)\s*$/gi, "");
+    s = s.replace(/\s+(?:kk{2,}|k{3,}|rs+|h[ae]{2,}|hehe|haha|huehue|huahuahua|lol)[.!?…]*\s*$/gi, "");
+    return s.replace(/\s{2,}/g, " ").trim();
+  }
+
   function sasFmtMsg(text) {
-    return sasEsc(sasStripMarkdown(text)).replace(/\n/g, "<br>");
+    return sasEsc(sasCleanLaughs(sasStripMarkdown(text))).replace(/\n/g, "<br>");
   }
 
   function sasPlainText(text) {
     if (text == null) return "";
-    var s = sasStripMarkdown(text);
+    var s = sasCleanLaughs(sasStripMarkdown(text));
     s = s.replace(/<[^>]+>/g, " ");
     s = s.replace(/R\$\s*/gi, "reais ");
     s = s.replace(/(\d)[.,](\d{3})/g, "$1$2");
@@ -907,9 +916,20 @@
       if (tbody) {
         tbody.innerHTML = docs.length
           ? docs.map(function (d) {
-              return "<tr><td>" + sasEsc(d.titulo) + "</td><td>" + sasEsc(d.tipo) + "</td><td>" + sasEsc(d.updated_at || "") + "</td></tr>";
+              var origem = d.tem_arquivo ? "📎 Arquivo" : "✍️ Texto";
+              var tam = d.tamanho_texto ? d.tamanho_texto + " caracteres" : "—";
+              return (
+                "<tr data-id=\"" + d.id + "\">" +
+                  "<td>" + sasEsc(d.titulo) + "</td>" +
+                  "<td>" + sasEsc(d.tipo) + "</td>" +
+                  "<td>" + origem + "</td>" +
+                  "<td>" + sasEsc(tam) + "</td>" +
+                  "<td>" + sasEsc(d.updated_at || "") + "</td>" +
+                  "<td><button type=\"button\" class=\"btn danger sas-ia-doc-del\" data-id=\"" + d.id + "\" title=\"Remover\">🗑</button></td>" +
+                "</tr>"
+              );
             }).join("")
-          : '<tr><td colspan="3" class="empty-row">Nenhum documento cadastrado.</td></tr>';
+          : '<tr><td colspan="6" class="empty-row">Nenhum documento cadastrado.</td></tr>';
       }
       if (aviso) aviso.classList.add("hidden");
     } catch (e) {
@@ -920,18 +940,42 @@
     }
   }
 
+  async function sasExcluirDocumento(id) {
+    if (!id || !window.confirm("Remover este documento da base de conhecimento da IA?")) return;
+    try {
+      await sasFetch("/sas-ia/documentos/" + id, { method: "DELETE" });
+      sasToast("Documento removido.", "success");
+      await loadSasIaDocumentos();
+    } catch (e) {
+      sasToast(e?.message || "Erro ao excluir.", "error");
+    }
+  }
+
   async function sasSalvarDocumento(e) {
     e?.preventDefault();
+    var titulo = (sasEl("sasIaDocTitulo")?.value || "").trim();
+    var texto = (sasEl("sasIaDocConteudo")?.value || "").trim();
+    var file = sasEl("sasIaDocArquivo")?.files?.[0];
+    if (!titulo) {
+      sasToast("Informe o título.", "warning");
+      return;
+    }
+    if (!file && !texto) {
+      sasToast("Envie um arquivo ou cole o texto.", "warning");
+      return;
+    }
     try {
-      await sasFetch("/sas-ia/upload-documento", {
-        method: "POST",
-        body: JSON.stringify({
-          titulo: sasEl("sasIaDocTitulo")?.value,
-          tipo: sasEl("sasIaDocTipo")?.value || "manual",
-          conteudo_texto: sasEl("sasIaDocConteudo")?.value,
-        }),
-      });
-      sasToast("Documento salvo.", "success");
+      var fd = new FormData();
+      fd.append("titulo", titulo);
+      fd.append("tipo", sasEl("sasIaDocTipo")?.value || "manual");
+      if (texto) fd.append("conteudo_texto", texto);
+      if (file) fd.append("arquivo", file);
+      if (typeof window.fetchForm === "function") {
+        await window.fetchForm("/sas-ia/upload-documento", "POST", fd);
+      } else {
+        throw new Error("Upload indisponível");
+      }
+      sasToast("Documento salvo — a IA já pode consultar.", "success");
       sasEl("sasIaDocForm")?.reset();
       await loadSasIaDocumentos();
     } catch (err) {
@@ -955,6 +999,11 @@
     sasEl("sasIaNovaConversa")?.addEventListener("click", sasNovaConversa);
     sasEl("sasIaExcluirConversa")?.addEventListener("click", sasExcluirConversa);
     sasEl("sasIaDocForm")?.addEventListener("submit", sasSalvarDocumento);
+    sasEl("sasIaDocsList")?.addEventListener("click", function (ev) {
+      var btn = ev.target.closest(".sas-ia-doc-del");
+      if (!btn) return;
+      sasExcluirDocumento(parseInt(btn.getAttribute("data-id"), 10));
+    });
     sasEl("sasIaCfgForm")?.addEventListener("submit", sasSalvarConfig);
     sasEl("sasIaCfgFotoInput")?.addEventListener("change", function () {
       var file = sasEl("sasIaCfgFotoInput")?.files?.[0];

@@ -4186,7 +4186,7 @@
           <section id="sasIaDocumentosSection" class="view-section hidden">
             <div class="ia-section-head">
               <h2>📚 Manuais e documentos — SAS IA</h2>
-              <p class="subtle-text">Cadastre procedimentos, regras internas e manuais. Somente ADMIN.</p>
+              <p class="subtle-text">Envie PDF, Word ou texto para a IA consultar nas respostas. Somente ADMIN.</p>
             </div>
             <div id="sasIaDocsAviso" class="ia-aviso hidden"></div>
             <div class="table-card form-card--wide">
@@ -4199,7 +4199,13 @@
                     <option value="regra">Regra interna</option>
                   </select>
                 </label>
-                <label class="cfg-full">Conteúdo<textarea id="sasIaDocConteudo" rows="8" required maxlength="50000"></textarea></label>
+                <label>Enviar arquivo
+                  <input type="file" id="sasIaDocArquivo" accept=".pdf,.docx,.txt,.md,.csv,.json" />
+                  <p class="ia-hint">PDF, DOCX, TXT, MD ou CSV — máx. 5 MB. A IA lê o texto do arquivo.</p>
+                </label>
+                <label class="cfg-full">Ou cole o texto aqui
+                  <textarea id="sasIaDocConteudo" rows="8" maxlength="50000" placeholder="Opcional se enviar arquivo. Procedimentos, regras, manuais…"></textarea>
+                </label>
                 <div><button type="submit" class="btn primary">Salvar documento</button></div>
               </form>
             </div>
@@ -4207,7 +4213,7 @@
               <header><h3>Documentos cadastrados</h3></header>
               <div class="table-wrapper">
                 <table class="data-table">
-                  <thead><tr><th>Título</th><th>Tipo</th><th>Atualizado</th></tr></thead>
+                  <thead><tr><th>Título</th><th>Tipo</th><th>Origem</th><th>Texto</th><th>Atualizado</th><th></th></tr></thead>
                   <tbody id="sasIaDocsList"></tbody>
                 </table>
               </div>
@@ -6916,7 +6922,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260621-branding"></script>
+    <script src="sas-ia.js?v=20260621-docs"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
