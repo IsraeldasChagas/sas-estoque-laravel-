@@ -435,6 +435,24 @@
     return root && root.classList.contains("is-expanded");
   }
 
+  function sasFloatResetLayout() {
+    var root = sasEl("sasIaFloatRoot");
+    var panel = sasEl("sasIaFloatPanel");
+    if (root) {
+      root.style.left = "";
+      root.style.top = "";
+      root.style.width = "";
+      root.style.height = "";
+      root.style.maxWidth = "";
+      root.style.maxHeight = "";
+    }
+    if (panel) {
+      panel.style.width = "";
+      panel.style.height = "";
+      panel.style.maxHeight = "";
+    }
+  }
+
   function sasSetExpanded(expanded) {
     var root = sasEl("sasIaFloatRoot");
     var panel = sasEl("sasIaFloatPanel");
@@ -442,11 +460,7 @@
     if (!root) return;
 
     root.classList.toggle("is-expanded", !!expanded);
-    if (panel) {
-      panel.style.width = "";
-      panel.style.height = "";
-      panel.style.maxHeight = "";
-    }
+    sasFloatResetLayout();
     if (btn) {
       btn.textContent = expanded ? "⊟" : "⛶";
       btn.title = expanded ? "Restaurar tamanho" : "Expandir";
@@ -485,9 +499,8 @@
     panel.classList.toggle("hidden", !open);
 
     if (!open) {
-      panel.style.width = "";
-      panel.style.height = "";
-      panel.style.maxHeight = "";
+      sasSetExpanded(false);
+      sasFloatResetLayout();
     }
 
     try {
@@ -516,7 +529,9 @@
   }
 
   function sasFloatMinimize() {
+    sasSetExpanded(false);
     sasSetOpen(false);
+    sasFloatResetLayout();
   }
 
   function sasFloatToggle() {
@@ -801,6 +816,9 @@
     sasEl("sasIaFloatMinimize")?.addEventListener("click", sasFloatMinimize);
     sasEl("sasIaAbrirFloatBtn")?.addEventListener("click", sasFloatOpen);
     sasFloatSyncPerm(false);
+    window.addEventListener("resize", function () {
+      if (!sasIsOpen()) sasFloatResetLayout();
+    });
   }
 
   if (document.readyState === "loading") {
