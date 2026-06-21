@@ -389,6 +389,47 @@
     return document.getElementById(id);
   }
 
+  function sasUsuarioFotoUrl(path) {
+    if (!path || typeof path !== "string") return null;
+    var api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || "https://api.gruposaborparaense.com.br/api";
+    var base = api.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
+    var p = path.replace(/^\//, "");
+    if (!p) return null;
+    if (p.indexOf("storage/") === 0) return base + "/" + p;
+    if (p.indexOf("usuarios/") === 0 && p.indexOf("uploads/") !== 0) return base + "/storage/" + p;
+    return base + "/" + p;
+  }
+
+  function sasLoggedUser() {
+    if (typeof window.getUser === "function") return window.getUser();
+    return null;
+  }
+
+  function sasUserAvatarHtml() {
+    var u = sasLoggedUser();
+    var nome = (u && (u.nome || u.email)) || "Você";
+    var url = u ? sasUsuarioFotoUrl(u.foto || u.foto_path) : null;
+    if (url) {
+      return (
+        '<div class="ia-msg__avatar ia-msg__avatar--photo">' +
+          '<img src="' + sasEsc(url) + '" alt="' + sasEsc(nome) + '" class="ia-msg__avatar-img" />' +
+        "</div>"
+      );
+    }
+    var parts = String(nome).trim().split(/\s+/).filter(Boolean);
+    var initials = (parts[0] ? parts[0][0] : "") + (parts[1] ? parts[1][0] : "");
+    initials = (initials || "?").toUpperCase();
+    return (
+      '<div class="ia-msg__avatar ia-msg__avatar--initials" aria-label="' + sasEsc(nome) + '">' +
+        sasEsc(initials) +
+      "</div>"
+    );
+  }
+
+  function sasBotAvatarHtml() {
+    return '<div class="ia-msg__avatar ia-msg__avatar--bot" aria-hidden="true">🧠</div>';
+  }
+
   function sasIsExpanded() {
     var root = sasEl("sasIaFloatRoot");
     return root && root.classList.contains("is-expanded");
@@ -396,10 +437,16 @@
 
   function sasSetExpanded(expanded) {
     var root = sasEl("sasIaFloatRoot");
+    var panel = sasEl("sasIaFloatPanel");
     var btn = sasEl("sasIaFloatExpand");
     if (!root) return;
 
     root.classList.toggle("is-expanded", !!expanded);
+    if (panel) {
+      panel.style.width = "";
+      panel.style.height = "";
+      panel.style.maxHeight = "";
+    }
     if (btn) {
       btn.textContent = expanded ? "⊟" : "⛶";
       btn.title = expanded ? "Restaurar tamanho" : "Expandir";
@@ -437,12 +484,19 @@
     root.classList.toggle("is-open", !!open);
     panel.classList.toggle("hidden", !open);
 
+    if (!open) {
+      panel.style.width = "";
+      panel.style.height = "";
+      panel.style.maxHeight = "";
+    }
+
     try {
       sessionStorage.setItem(SAS_IA_FLOAT_KEY, open ? "1" : "0");
     } catch (_) {}
 
     if (open) {
       sasEl("sasIaChatInput")?.focus();
+      if (typeof window.sasIaRefreshAvatars === "function") window.sasIaRefreshAvatars();
     }
   }
 
@@ -498,7 +552,7 @@
     if (!mensagens || !mensagens.length) {
       box.innerHTML =
         '<div class="ia-msg ia-msg--bot">' +
-          '<div class="ia-msg__avatar">🤖</div>' +
+          sasBotAvatarHtml() +
           '<div class="ia-msg__bubble">E aí! Sou a SAS IA, tô aqui pra te ajudar no dia a dia 😊<br><br>Me pergunta sobre estoque, financeiro, compras, RH… o que precisar!</div>' +
         "</div>";
       return;
@@ -506,7 +560,7 @@
     box.innerHTML = mensagens
       .map(function (m) {
         var cls = m.role === "user" ? "ia-msg ia-msg--user" : "ia-msg ia-msg--bot";
-        var av = m.role === "user" ? "👤" : "🤖";
+        var av = m.role === "user" ? sasUserAvatarHtml() : sasBotAvatarHtml();
         return (
           '<div class="' + cls + '">' +
             '<div class="ia-msg__avatar">' + av + "</div>" +
@@ -630,12 +684,12 @@
       }
       box.insertAdjacentHTML(
         "beforeend",
-        '<div class="ia-msg ia-msg--user"><div class="ia-msg__avatar">👤</div><div class="ia-msg__bubble">' +
+        '<div class="ia-msg ia-msg--user">' + sasUserAvatarHtml() + '<div class="ia-msg__bubble">' +
           sasFmtMsg(msg) + "</div></div>"
       );
       box.insertAdjacentHTML(
         "beforeend",
-        '<div class="ia-msg ia-msg--bot" id="' + loadingId + '"><div class="ia-msg__avatar">🤖</div><div class="ia-msg__bubble ia-msg__bubble--loading">Deixa eu dar uma olhada…</div></div>'
+        '<div class="ia-msg ia-msg--bot" id="' + loadingId + '">' + sasBotAvatarHtml() + '<div class="ia-msg__bubble ia-msg__bubble--loading">Deixa eu dar uma olhada…</div></div>'
       );
       box.scrollTop = box.scrollHeight;
     }
@@ -651,7 +705,7 @@
       if (box) {
         box.insertAdjacentHTML(
           "beforeend",
-          '<div class="ia-msg ia-msg--bot"><div class="ia-msg__avatar">🤖</div><div class="ia-msg__bubble">' +
+          '<div class="ia-msg ia-msg--bot">' + sasBotAvatarHtml() + '<div class="ia-msg__bubble">' +
             sasFmtMsg(data.reply || "Sem resposta.") + "</div></div>"
         );
         box.scrollTop = box.scrollHeight;
@@ -761,4 +815,11 @@
   window.sasIaFloatMinimize = sasFloatMinimize;
   window.sasIaFloatToggle = sasFloatToggle;
   window.sasIaFloatSyncPerm = sasFloatSyncPerm;
+  window.sasIaRefreshAvatars = function () {
+    var box = sasEl("sasIaChatMessages");
+    if (!box) return;
+    box.querySelectorAll(".ia-msg--user .ia-msg__avatar").forEach(function (el) {
+      el.outerHTML = sasUserAvatarHtml();
+    });
+  };
 })();

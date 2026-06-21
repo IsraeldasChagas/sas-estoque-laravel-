@@ -42,6 +42,35 @@
   justify-content: center;
   font-size: 1rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ia-msg__avatar--photo {
+  padding: 0;
+  border: 2px solid #bbdefb;
+  background: #e3f2fd;
+}
+
+.ia-msg__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ia-msg__avatar--initials {
+  background: linear-gradient(145deg, #42a5f5, #1565c0);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-color: #90caf9;
+}
+
+.ia-msg__avatar--bot {
+  background: #f3e5f5;
+  border-color: #e1bee7;
+  font-size: 0.95rem;
 }
 
 .ia-msg__bubble {
@@ -252,6 +281,9 @@
 
 .sas-ia-main {
   min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 768px) {
@@ -266,11 +298,11 @@
   }
 }
 
-/* SAS IA — chat flutuante */
+/* SAS IA — chat flutuante (discreto, canto inferior direito) */
 .sas-ia-float-root {
   position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
+  right: 1rem;
+  bottom: 1rem;
   z-index: 10050;
   pointer-events: none;
 }
@@ -282,22 +314,24 @@
 .sas-ia-float__fab {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.65rem 1rem;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.9rem;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #1565c0, #0d47a1);
+  background: linear-gradient(135deg, rgba(21, 101, 192, 0.92), rgba(13, 71, 161, 0.92));
   color: #fff;
   font-weight: 600;
-  font-size: 0.95rem;
-  box-shadow: 0 8px 28px rgba(13, 71, 161, 0.45);
+  font-size: 0.82rem;
+  box-shadow: 0 4px 14px rgba(13, 71, 161, 0.28);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  backdrop-filter: blur(4px);
 }
 
 .sas-ia-float__fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(13, 71, 161, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(13, 71, 161, 0.32);
 }
 
 .sas-ia-float-root.is-open .sas-ia-float__fab {
@@ -305,20 +339,24 @@
 }
 
 .sas-ia-float__fab-icon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   line-height: 1;
 }
 
+.sas-ia-float__fab-label {
+  white-space: nowrap;
+}
+
 .sas-ia-float__panel {
-  width: min(420px, calc(100vw - 1.5rem));
-  max-height: min(640px, calc(100vh - 2rem));
+  width: min(360px, calc(100vw - 1.25rem));
+  height: min(480px, calc(100vh - 5.5rem));
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #e0e6ed;
+  border: 1px solid rgba(224, 230, 237, 0.95);
 }
 
 .sas-ia-float__header {
@@ -326,91 +364,90 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.65rem 0.85rem;
-  background: linear-gradient(180deg, #f5f9ff, #eef4fc);
-  border-bottom: 1px solid #dde8f5;
+  padding: 0.55rem 0.75rem;
+  background: linear-gradient(180deg, #fafbfd, #f2f6fb);
+  border-bottom: 1px solid #e8eef5;
   flex-shrink: 0;
 }
 
 .sas-ia-float__header-text {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
   min-width: 0;
 }
 
+.sas-ia-float__header-text strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
 .sas-ia-float__status {
-  font-size: 0.78rem;
-  color: #607d8b;
+  font-size: 0.72rem;
+  color: #78909c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .sas-ia-float__icon-btn {
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid #cfd8dc;
-  border-radius: 8px;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid #d8e0e6;
+  border-radius: 7px;
   background: #fff;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   line-height: 1;
-  color: #455a64;
+  color: #546e7a;
 }
 
 .sas-ia-float__icon-btn:hover {
-  background: #eceff1;
+  background: #f5f7fa;
 }
 
 .sas-ia-float__body {
   flex: 1;
   min-height: 0;
-  padding: 0.65rem;
-  grid-template-columns: minmax(120px, 140px) 1fr;
+  padding: 0.55rem;
+  grid-template-columns: minmax(108px, 128px) 1fr;
   max-height: none;
+  overflow: hidden;
 }
 
 .sas-ia-float__chat.ia-chat-wrap {
-  min-height: 280px;
-  max-height: min(480px, calc(100vh - 12rem));
+  min-height: 0;
+  max-height: none;
+  flex: 1;
+  height: 100%;
 }
 
 .sas-ia-float__body .sas-ia-conversas {
-  max-height: 220px;
+  max-height: 160px;
 }
 
-/* Modo expandido — quase tela cheia */
-.sas-ia-float-root.is-expanded {
-  right: 0.5rem;
-  left: 0.5rem;
-  bottom: 0.5rem;
-  top: 0.5rem;
+.sas-ia-float__body .sas-ia-sidebar {
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
+/* Expandido — painel maior, ainda ancorado no canto (sem esticar a tela inteira) */
 .sas-ia-float-root.is-expanded .sas-ia-float__panel {
-  flex: 1;
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  max-height: none;
+  width: min(620px, calc(100vw - 1rem));
+  height: min(68vh, 580px);
 }
 
 .sas-ia-float-root.is-expanded .sas-ia-float__body {
-  grid-template-columns: minmax(200px, 280px) 1fr;
+  grid-template-columns: minmax(160px, 200px) 1fr;
 }
 
 .sas-ia-float-root.is-expanded .sas-ia-float__body .sas-ia-conversas {
   max-height: none;
   flex: 1;
-}
-
-.sas-ia-float-root.is-expanded .sas-ia-float__chat.ia-chat-wrap {
   min-height: 0;
-  max-height: none;
-  flex: 1;
 }
 
 .sas-ia-landing {
@@ -423,16 +460,41 @@
 
 @media (max-width: 520px) {
   .sas-ia-float-root {
-    right: 0.75rem;
-    bottom: 0.75rem;
+    right: 0.65rem;
+    bottom: 0.65rem;
+  }
+
+  .sas-ia-float__fab {
+    width: 2.65rem;
+    height: 2.65rem;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .sas-ia-float__fab-label {
+    display: none;
   }
 
   .sas-ia-float__panel {
-    width: calc(100vw - 1rem);
-    max-height: calc(100vh - 1.5rem);
+    width: calc(100vw - 0.85rem);
+    height: min(62vh, 460px);
+  }
+
+  .sas-ia-float-root.is-expanded .sas-ia-float__panel {
+    width: calc(100vw - 0.65rem);
+    height: min(78vh, 540px);
   }
 
   .sas-ia-float__body {
     grid-template-columns: 1fr;
+    padding: 0.45rem;
+  }
+
+  .sas-ia-float__body .sas-ia-conversas {
+    max-height: 120px;
+  }
+
+  .sas-ia-float-root.is-expanded .sas-ia-float__body .sas-ia-conversas {
+    max-height: 140px;
   }
 }
