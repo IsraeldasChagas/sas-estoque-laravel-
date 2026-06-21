@@ -5319,11 +5319,11 @@ function applyPermissions() {
   if (["ADMIN", "GERENTE"].includes(perfilCfgAuto) && !sections.includes("configuracoesPainel")) {
     sections = [...sections, "configuracoesPainel"];
   }
-  // SAS IA: chat para todos; manuais só ADMIN.
-  if (!sections.includes("sasIa")) {
+  // SAS IA: chat para usuários logados; manuais só ADMIN.
+  if (currentUser && !sections.includes("sasIa")) {
     sections = [...sections, "sasIa"];
   }
-  if (perfilCfgAuto === "ADMIN" && !sections.includes("sasIaDocumentos")) {
+  if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("sasIaDocumentos")) {
     sections = [...sections, "sasIaDocumentos"];
   }
   // IA legado: assistente para todos; configurações só ADMIN.
@@ -5485,7 +5485,7 @@ function applyPermissions() {
     if (!allowed) section.classList.add("hidden");
   });
 
-  window.sasIaFloatSyncPerm?.(regras.sections.includes("sasIa"));
+  window.sasIaFloatSyncPerm?.(!!currentUser && regras.sections.includes("sasIa"));
 
   if (dom.openProdutoBtn) dom.openProdutoBtn.classList.toggle("hidden", !regras.canManageProdutos);
   // BAR pode criar usuários BAR, mesmo sem canManageUsuarios

@@ -50,7 +50,7 @@ class OpenAiService
      * @param  array<int, array<string, mixed>>  $tools
      * @return array{message: array<string, mixed>, usage: array<string, int>, cost: float}
      */
-    public function chat(array $messages, array $tools = []): array
+    public function chat(array $messages, array $tools = [], ?float $temperature = null): array
     {
         if (! $this->isConfigured()) {
             throw new \RuntimeException('OPENAI_API_KEY não configurada no servidor.');
@@ -59,7 +59,7 @@ class OpenAiService
         $payload = [
             'model' => $this->model,
             'messages' => $messages,
-            'temperature' => 0.35,
+            'temperature' => $temperature ?? 0.35,
             'max_tokens' => 1200,
         ];
         if ($tools !== []) {

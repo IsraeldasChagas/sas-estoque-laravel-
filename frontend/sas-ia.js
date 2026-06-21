@@ -17,6 +17,10 @@
   var sasIaSpeaking = false;
   var sasIaMicSupported = false;
   var sasIaVoiceSendPending = false;
+  var sasIaVoiceTranscript = "";
+  var sasIaSilenceTimer = null;
+  var sasIaMicManualStop = false;
+  var SAS_IA_SILENCE_MS = 2600;
 
   function sasToast(msg, type) {
     var fn = typeof showToast === "function" ? showToast : window.showToast;
@@ -58,11 +62,21 @@
     s = s.replace(/<[^>]+>/g, " ");
     s = s.replace(/R\$\s*/gi, "reais ");
     s = s.replace(/(\d)[.,](\d{3})/g, "$1$2");
+    s = s.replace(/\s+([,.!?;:])/g, "$1");
     s = s.replace(/\s+/g, " ");
     return s.trim();
   }
 
+  function sasSplitSpeechChunks(text) {
+    var plain = sasPlainText(text);
+    if (!plain) return [];
+    var parts = plain.match(/[^.!?…]+[.!?…]?/g) || [plain];
+    return parts.map(function (p) { return p.trim(); }).filter(Boolean);
+  }
+
   var sasIaVoiceCache = null;
+  var sasIaSpeakQueue = [];
+  var sasIaSpeakRunning = false;
 
   function sasPickFeminineVoice() {
     if (sasIaVoiceCache) return sasIaVoiceCache;
@@ -108,6 +122,58 @@
     return sasIaVoiceCache;
   }
 
+  function sasSetMicStatus(text) {
+    var status = sasEl("sasIaMicStatus");
+    if (status) status.textContent = text || "";
+  }
+
+  function sasClearSilenceTimer() {
+    if (sasIaSilenceTimer) {
+      clearTimeout(sasIaSilenceTimer);
+      sasIaSilenceTimer = null;
+    }
+  }
+
+  function sasScheduleVoiceSend() {
+    sasClearSilenceTimer();
+    if (!sasIaVoiceSendPending) return;
+    sasIaSilenceTimer = setTimeout(function () {
+      sasMicFinishAndSend();
+    }, SAS_IA_SILENCE_MS);
+  }
+
+  function sasMicStopRecognition() {
+    sasIaMicManualStop = true;
+    sasClearSilenceTimer();
+    try {
+      sasIaRecognition.stop();
+    } catch (_) {}
+    sasIaListening = false;
+  }
+
+  function sasMicFinishAndSend() {
+    sasClearSilenceTimer();
+    if (!sasIaVoiceSendPending || sasIaEnviando) return;
+
+    sasMicStopRecognition();
+
+    var input = sasEl("sasIaChatInput");
+    var text = (input?.value || sasIaVoiceTranscript || "").trim();
+    sasIaVoiceTranscript = "";
+    sasIaVoiceSendPending = false;
+    sasSetMicStatus("");
+
+    if (!text) {
+      sasToast("Não captei nada. Pode tentar de novo?", "info");
+      sasUpdateAudioUi();
+      return;
+    }
+
+    if (input) input.value = text;
+    sasUpdateAudioUi();
+    sasEnviar();
+  }
+
   function sasInitAudio() {
     try {
       sasIaAutoSpeak = localStorage.getItem(SAS_IA_AUTO_SPEAK_KEY) === "1";
@@ -119,49 +185,80 @@
     if (SpeechRecognition) {
       sasIaRecognition = new SpeechRecognition();
       sasIaRecognition.lang = "pt-BR";
-      sasIaRecognition.continuous = false;
+      sasIaRecognition.continuous = true;
       sasIaRecognition.interimResults = true;
       sasIaRecognition.maxAlternatives = 1;
 
       sasIaRecognition.onstart = function () {
         sasIaListening = true;
+        sasIaMicManualStop = false;
+        sasSetMicStatus("Pode falar… envio quando você terminar");
         sasUpdateAudioUi();
       };
 
       sasIaRecognition.onend = function () {
         sasIaListening = false;
+        if (sasIaMicManualStop) {
+          sasIaMicManualStop = false;
+          sasUpdateAudioUi();
+          return;
+        }
+        if (sasIaVoiceSendPending && !sasIaSilenceTimer) {
+          var pending = (sasEl("sasIaChatInput")?.value || sasIaVoiceTranscript || "").trim();
+          if (pending) {
+            sasMicFinishAndSend();
+            return;
+          }
+          try {
+            sasIaRecognition.start();
+            sasIaListening = true;
+          } catch (_) {}
+        }
         sasUpdateAudioUi();
       };
 
       sasIaRecognition.onerror = function (ev) {
         sasIaListening = false;
-        sasUpdateAudioUi();
+        sasClearSilenceTimer();
         if (ev.error === "not-allowed") {
+          sasIaVoiceSendPending = false;
+          sasIaVoiceTranscript = "";
+          sasSetMicStatus("");
           sasToast("Permita o acesso ao microfone para usar voz.", "warning");
-        } else if (ev.error !== "aborted" && ev.error !== "no-speech") {
+        } else if (ev.error === "no-speech") {
+          if (sasIaVoiceSendPending) sasScheduleVoiceSend();
+        } else if (ev.error !== "aborted") {
+          sasIaVoiceSendPending = false;
+          sasIaVoiceTranscript = "";
+          sasSetMicStatus("");
           sasToast("Erro no reconhecimento de voz: " + (ev.error || "desconhecido"), "error");
         }
+        sasUpdateAudioUi();
       };
 
       sasIaRecognition.onresult = function (ev) {
         var interim = "";
-        var finalText = "";
+        var newFinal = "";
         for (var i = ev.resultIndex; i < ev.results.length; i++) {
           var chunk = ev.results[i][0]?.transcript || "";
-          if (ev.results[i].isFinal) finalText += chunk;
+          if (ev.results[i].isFinal) newFinal += chunk;
           else interim += chunk;
         }
+
+        if (newFinal) sasIaVoiceTranscript += newFinal;
+
         var input = sasEl("sasIaChatInput");
-        if (!input) return;
-        if (finalText.trim()) {
-          input.value = finalText.trim();
-          if (sasIaVoiceSendPending && !sasIaEnviando) {
-            sasIaVoiceSendPending = false;
-            sasEnviar();
-          }
-        } else if (interim) {
-          input.value = interim.trim();
+        if (input) {
+          input.value = (sasIaVoiceTranscript + interim).trim();
         }
+
+        if (interim) {
+          sasSetMicStatus("Ouvindo… pode continuar falando");
+        } else if (sasIaVoiceTranscript.trim()) {
+          sasSetMicStatus("Pausou… aguardando você terminar");
+        }
+
+        if (sasIaVoiceSendPending) sasScheduleVoiceSend();
       };
     }
 
@@ -178,7 +275,7 @@
       micBtn.disabled = !sasIaMicSupported || sasIaEnviando;
       micBtn.classList.toggle("is-active", sasIaListening);
       micBtn.title = sasIaMicSupported
-        ? (sasIaListening ? "Parar de ouvir" : "Falar pergunta (microfone)")
+        ? (sasIaListening ? "Terminar e enviar" : "Falar pergunta (microfone)")
         : "Microfone não suportado neste navegador (use Chrome ou Edge)";
       micBtn.textContent = sasIaListening ? "⏹" : "🎤";
     }
@@ -196,11 +293,13 @@
     }
 
     if (status) {
-      status.classList.toggle("hidden", !sasIaListening);
+      status.classList.toggle("hidden", !sasIaListening && !sasIaVoiceSendPending);
     }
   }
 
   function sasStopSpeak() {
+    sasIaSpeakQueue = [];
+    sasIaSpeakRunning = false;
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -208,30 +307,41 @@
     sasUpdateAudioUi();
   }
 
-  function sasSpeak(text) {
-    if (!window.speechSynthesis) return;
-    var plain = sasPlainText(text);
-    if (!plain) return;
-
-    sasStopSpeak();
-    var utter = new SpeechSynthesisUtterance(plain);
+  function sasSpeakChunk(text, voice, onDone) {
+    var utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
-    utter.rate = 0.93;
-    utter.pitch = 1.08;
-
-    var voice = sasPickFeminineVoice();
+    utter.rate = 0.9;
+    utter.pitch = 1.04;
     if (voice) utter.voice = voice;
+    utter.onend = function () { onDone?.(); };
+    utter.onerror = function () { onDone?.(); };
+    window.speechSynthesis.speak(utter);
+  }
 
-    utter.onstart = function () {
-      sasIaSpeaking = true;
-      sasUpdateAudioUi();
-    };
-    utter.onend = utter.onerror = function () {
+  function sasSpeakNextChunk() {
+    if (!sasIaSpeakQueue.length) {
+      sasIaSpeakRunning = false;
       sasIaSpeaking = false;
       sasUpdateAudioUi();
-    };
+      return;
+    }
+    var chunk = sasIaSpeakQueue.shift();
+    sasSpeakChunk(chunk, sasPickFeminineVoice(), function () {
+      setTimeout(sasSpeakNextChunk, 180);
+    });
+  }
 
-    window.speechSynthesis.speak(utter);
+  function sasSpeak(text) {
+    if (!window.speechSynthesis) return;
+    var chunks = sasSplitSpeechChunks(text);
+    if (!chunks.length) return;
+
+    sasStopSpeak();
+    sasIaSpeakQueue = chunks.slice();
+    sasIaSpeakRunning = true;
+    sasIaSpeaking = true;
+    sasUpdateAudioUi();
+    sasSpeakNextChunk();
   }
 
   function sasToggleMic() {
@@ -243,15 +353,16 @@
 
     sasFloatOpen();
 
-    if (sasIaListening) {
-      sasIaVoiceSendPending = false;
-      try {
-        sasIaRecognition.stop();
-      } catch (_) {}
+    if (sasIaListening || sasIaVoiceSendPending) {
+      sasMicFinishAndSend();
       return;
     }
 
     sasStopSpeak();
+    sasIaVoiceTranscript = "";
+    sasClearSilenceTimer();
+    var input = sasEl("sasIaChatInput");
+    if (input) input.value = "";
     sasIaVoiceSendPending = true;
     try {
       sasIaRecognition.start();
@@ -363,6 +474,11 @@
   function sasFloatSyncPerm(enabled) {
     var root = sasEl("sasIaFloatRoot");
     if (!root) return;
+
+    var loginEl = document.getElementById("loginOverlay");
+    var loggedIn = loginEl ? loginEl.classList.contains("hidden") : !!enabled;
+    if (!loggedIn) enabled = false;
+
     if (enabled) {
       root.classList.remove("hidden");
       var wasOpen = false;
@@ -383,7 +499,7 @@
       box.innerHTML =
         '<div class="ia-msg ia-msg--bot">' +
           '<div class="ia-msg__avatar">🤖</div>' +
-          '<div class="ia-msg__bubble">Olá! Sou o <strong>SAS IA</strong>. Posso consultar estoque, financeiro, compras, logs e manuais do sistema.<br><br>Como posso ajudar?</div>' +
+          '<div class="ia-msg__bubble">E aí! Sou a SAS IA, tô aqui pra te ajudar no dia a dia 😊<br><br>Me pergunta sobre estoque, financeiro, compras, RH… o que precisar!</div>' +
         "</div>";
       return;
     }
@@ -492,10 +608,9 @@
   async function sasEnviar(e) {
     e?.preventDefault();
     if (sasIaEnviando) return;
-    if (sasIaListening && sasIaRecognition) {
-      try {
-        sasIaRecognition.stop();
-      } catch (_) {}
+    if (sasIaListening || sasIaVoiceSendPending) {
+      sasMicFinishAndSend();
+      return;
     }
     var input = sasEl("sasIaChatInput");
     var btn = sasEl("sasIaChatEnviar");
@@ -520,7 +635,7 @@
       );
       box.insertAdjacentHTML(
         "beforeend",
-        '<div class="ia-msg ia-msg--bot" id="' + loadingId + '"><div class="ia-msg__avatar">🤖</div><div class="ia-msg__bubble ia-msg__bubble--loading">Consultando…</div></div>'
+        '<div class="ia-msg ia-msg--bot" id="' + loadingId + '"><div class="ia-msg__avatar">🤖</div><div class="ia-msg__bubble ia-msg__bubble--loading">Deixa eu dar uma olhada…</div></div>'
       );
       box.scrollTop = box.scrollHeight;
     }
@@ -631,6 +746,7 @@
     sasEl("sasIaFloatExpand")?.addEventListener("click", sasFloatToggleExpand);
     sasEl("sasIaFloatMinimize")?.addEventListener("click", sasFloatMinimize);
     sasEl("sasIaAbrirFloatBtn")?.addEventListener("click", sasFloatOpen);
+    sasFloatSyncPerm(false);
   }
 
   if (document.readyState === "loading") {
