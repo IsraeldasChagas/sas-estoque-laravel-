@@ -166,6 +166,7 @@ Regras:
 - Saudações e dúvidas gerais: responda normalmente, sem usar a frase de permissão.
 - Não altere dados; apenas consulte e explique.
 - Seja objetivo; use listas quando ajudar.
+- Não use markdown, asteriscos (*) ou negrito — escreva texto puro, especialmente em números e valores.
 TXT;
     }
 

@@ -35,16 +35,77 @@
     return d.innerHTML;
   }
 
+  function sasStripMarkdown(text) {
+    if (text == null) return "";
+    var s = String(text);
+    s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
+    s = s.replace(/__([^_]+)__/g, "$1");
+    s = s.replace(/(?<![*\w])\*([^*\n]+)\*(?![*\w])/g, "$1");
+    s = s.replace(/(?<![_\w])_([^_\n]+)_(?![_\w])/g, "$1");
+    s = s.replace(/\*+/g, "");
+    s = s.replace(/`+/g, "");
+    s = s.replace(/^[\s]*[-•*]\s+/gm, "");
+    return s.trim();
+  }
+
   function sasFmtMsg(text) {
-    return sasEsc(text).replace(/\n/g, "<br>");
+    return sasEsc(sasStripMarkdown(text)).replace(/\n/g, "<br>");
   }
 
   function sasPlainText(text) {
     if (text == null) return "";
-    return String(text)
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    var s = sasStripMarkdown(text);
+    s = s.replace(/<[^>]+>/g, " ");
+    s = s.replace(/R\$\s*/gi, "reais ");
+    s = s.replace(/(\d)[.,](\d{3})/g, "$1$2");
+    s = s.replace(/\s+/g, " ");
+    return s.trim();
+  }
+
+  var sasIaVoiceCache = null;
+
+  function sasPickFeminineVoice() {
+    if (sasIaVoiceCache) return sasIaVoiceCache;
+    if (!window.speechSynthesis) return null;
+
+    var voices = window.speechSynthesis.getVoices() || [];
+    var pt = voices.filter(function (v) {
+      return (v.lang || "").toLowerCase().replace("_", "-").indexOf("pt") === 0;
+    });
+    if (!pt.length) return null;
+
+    var hints = [
+      "maria",
+      "francisca",
+      "luciana",
+      "vitória",
+      "vitoria",
+      "fernanda",
+      "google português do brasil",
+      "português do brasil",
+      "brazil",
+      "female",
+      "feminina",
+    ];
+
+    var natural = pt.filter(function (v) {
+      var n = (v.name || "").toLowerCase();
+      return n.indexOf("natural") >= 0 || n.indexOf("online") >= 0 || n.indexOf("neural") >= 0;
+    });
+    var pool = natural.length ? natural : pt;
+
+    for (var i = 0; i < hints.length; i++) {
+      var found = pool.find(function (v) {
+        return (v.name || "").toLowerCase().indexOf(hints[i]) >= 0;
+      });
+      if (found) {
+        sasIaVoiceCache = found;
+        return found;
+      }
+    }
+
+    sasIaVoiceCache = pool[0];
+    return sasIaVoiceCache;
   }
 
   function sasInitAudio() {
@@ -155,14 +216,11 @@
     sasStopSpeak();
     var utter = new SpeechSynthesisUtterance(plain);
     utter.lang = "pt-BR";
-    utter.rate = 1;
-    utter.pitch = 1;
+    utter.rate = 0.93;
+    utter.pitch = 1.08;
 
-    var voices = window.speechSynthesis.getVoices() || [];
-    var ptVoice = voices.find(function (v) {
-      return (v.lang || "").toLowerCase().indexOf("pt") === 0;
-    });
-    if (ptVoice) utter.voice = ptVoice;
+    var voice = sasPickFeminineVoice();
+    if (voice) utter.voice = voice;
 
     utter.onstart = function () {
       sasIaSpeaking = true;
@@ -556,7 +614,11 @@
   function sasSetup() {
     sasInitAudio();
     if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = sasUpdateAudioUi;
+      window.speechSynthesis.onvoiceschanged = function () {
+        sasIaVoiceCache = null;
+        sasPickFeminineVoice();
+        sasUpdateAudioUi();
+      };
     }
     sasEl("sasIaChatForm")?.addEventListener("submit", sasEnviar);
     sasEl("sasIaMicBtn")?.addEventListener("click", sasToggleMic);
