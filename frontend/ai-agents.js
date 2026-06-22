@@ -32,12 +32,22 @@
 
   function avatarUrl(agent) {
     if (!agent) return null;
-    if (agent.avatar_url) return agent.avatar_url;
-    var p = agent.avatar;
+    if (typeof window.sasUsuarioFotoUrl === "function") {
+      if (agent.avatar) return window.sasUsuarioFotoUrl(agent.avatar);
+      if (agent.avatar_url) {
+        var u = String(agent.avatar_url);
+        if (u.indexOf("http://") === 0 || u.indexOf("https://") === 0) return u;
+        return window.sasUsuarioFotoUrl(u.replace(/^\//, ""));
+      }
+    }
+    var p = agent.avatar_url || agent.avatar;
     if (!p) return null;
     var api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || "https://api.gruposaborparaense.com.br/api";
-    var base = api.replace(/\/api\/?$/, "");
-    return base + "/storage/" + String(p).replace(/^\//, "");
+    var base = api.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
+    var path = String(p).replace(/^\//, "");
+    if (path.indexOf("http://") === 0 || path.indexOf("https://") === 0) return path;
+    if (path.indexOf("storage/") === 0) return base + "/" + path;
+    return base + "/storage/" + path;
   }
 
   function renderCards() {

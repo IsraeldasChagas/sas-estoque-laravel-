@@ -459,13 +459,19 @@
 
   async function sasLoadBranding() {
     try {
-      var data = await sasFetch("/sas-ia/config");
-      sasIaBranding.nome = data.nome || "SAS IA";
-      sasIaBranding.foto = data.foto || "";
+      var data = await sasFetch("/sas-ia");
+      sasIaBranding.nome = data.agente_nome || data.modulo || "SAS IA";
+      sasIaBranding.foto = data.agente_foto || "";
       sasIaBranding.foto_url = sasIaBranding.foto ? sasUsuarioFotoUrl(sasIaBranding.foto) : null;
       sasApplyBrandingUi();
       return data;
     } catch (_) {
+      try {
+        var cfg = await sasFetch("/sas-ia/config");
+        sasIaBranding.nome = cfg.nome || "SAS IA";
+        sasIaBranding.foto = cfg.foto || "";
+        sasIaBranding.foto_url = sasIaBranding.foto ? sasUsuarioFotoUrl(sasIaBranding.foto) : null;
+      } catch (e2) { /* ignore */ }
       sasApplyBrandingUi();
       return null;
     }
@@ -510,9 +516,13 @@
     var base = api.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
     var p = path.replace(/^\//, "");
     if (!p) return null;
+    if (p.indexOf("http://") === 0 || p.indexOf("https://") === 0) return p;
     if (p.indexOf("storage/") === 0) return base + "/" + p;
-    if (p.indexOf("usuarios/") === 0 && p.indexOf("uploads/") !== 0) return base + "/storage/" + p;
-    return base + "/" + p;
+    if (p.indexOf("ai-agents/") === 0 || p.indexOf("usuarios/") === 0 || p.indexOf("sas-ia/") === 0) {
+      return base + "/storage/" + p;
+    }
+    if (p.indexOf("uploads/") === 0) return base + "/" + p;
+    return base + "/storage/" + p;
   }
 
   function sasLoggedUser() {
@@ -1116,6 +1126,7 @@
   window.loadSasIaDocumentos = loadSasIaDocumentos;
   window.loadSasIaConfiguracoes = loadSasIaConfiguracoes;
   window.sasIaLoadBranding = sasLoadBranding;
+  window.sasUsuarioFotoUrl = sasUsuarioFotoUrl;
   window.sasIaFloatOpen = sasFloatOpen;
   window.sasIaFloatMinimize = sasFloatMinimize;
   window.sasIaFloatClose = sasFloatClose;
