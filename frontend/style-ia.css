@@ -606,6 +606,33 @@
   background: #fff;
 }
 
+.ia-chat-form__row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-end;
+}
+
+.ia-chat-form__row textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  min-height: 2.5rem;
+  max-height: 6rem;
+  border-radius: 10px;
+  border: 1px solid #cfd8dc;
+  padding: 0.5rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+}
+
+.ia-chat-form__row .btn.primary {
+  flex-shrink: 0;
+  align-self: flex-end;
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  white-space: nowrap;
+}
+
 .ia-chat-form textarea {
   width: 100%;
   resize: vertical;

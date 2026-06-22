@@ -32,22 +32,30 @@
 
   function avatarUrl(agent) {
     if (!agent) return null;
-    if (typeof window.sasUsuarioFotoUrl === "function") {
-      if (agent.avatar) return window.sasUsuarioFotoUrl(agent.avatar);
-      if (agent.avatar_url) {
-        var u = String(agent.avatar_url);
-        if (u.indexOf("http://") === 0 || u.indexOf("https://") === 0) return u;
-        return window.sasUsuarioFotoUrl(u.replace(/^\//, ""));
-      }
+    if (agent.avatar_url) {
+      var u = String(agent.avatar_url);
+      if (u.indexOf("http://") === 0 || u.indexOf("https://") === 0) return u;
+      if (typeof window.sasUsuarioFotoUrl === "function") return window.sasUsuarioFotoUrl(u.replace(/^\//, ""));
     }
-    var p = agent.avatar_url || agent.avatar;
+    if (typeof window.sasUsuarioFotoUrl === "function" && agent.avatar) {
+      return window.sasUsuarioFotoUrl(agent.avatar);
+    }
+    var p = agent.avatar;
     if (!p) return null;
     var api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || "https://api.gruposaborparaense.com.br/api";
     var base = api.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
     var path = String(p).replace(/^\//, "");
-    if (path.indexOf("http://") === 0 || path.indexOf("https://") === 0) return path;
+    if (path.indexOf("uploads/") === 0) return base + "/" + path;
     if (path.indexOf("storage/") === 0) return base + "/" + path;
     return base + "/storage/" + path;
+  }
+
+  function previewAvatarFile(file) {
+    var preview = el("aiAgentAvatarPreview");
+    if (!preview || !file) return;
+    var url = URL.createObjectURL(file);
+    preview.innerHTML = '<img src="' + esc(url) + '" alt="" class="ai-agent-card__avatar-img" />';
+    el("aiAgentFormRemoverAvatar").checked = false;
   }
 
   function renderCards() {
@@ -264,6 +272,10 @@
     el("aiAgentFormCancel")?.addEventListener("click", closeModal);
     el("aiAgentModalClose")?.addEventListener("click", closeModal);
     el("aiAgentForm")?.addEventListener("submit", salvarAgente);
+    el("aiAgentFormAvatar")?.addEventListener("change", function (ev) {
+      var file = ev.target.files && ev.target.files[0];
+      if (file) previewAvatarFile(file);
+    });
     el("aiAgentsSalvarModulosBtn")?.addEventListener("click", salvarModulos);
     el("aiAgentModal")?.addEventListener("click", function (ev) {
       if (ev.target === el("aiAgentModal")) closeModal();

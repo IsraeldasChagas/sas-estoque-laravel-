@@ -26,8 +26,11 @@ function getUsuarioFotoUrl(path) {
   if (!path || typeof path !== "string") return null;
   const p = path.replace(/^\//, "");
   if (!p) return null;
+  if (p.startsWith("http://") || p.startsWith("https://")) return p;
   if (p.startsWith("storage/")) return `${BASE_URL}/${p}`;
+  if (p.startsWith("uploads/")) return `${BASE_URL}/${p}`;
   if (p.startsWith("usuarios/") && !p.startsWith("uploads/")) return `${BASE_URL}/storage/${p}`;
+  if (p.startsWith("ai-agents/")) return `${BASE_URL}/storage/${p}`;
   return `${BASE_URL}/${p}`;
 }
 

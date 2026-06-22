@@ -462,7 +462,7 @@
       var data = await sasFetch("/sas-ia");
       sasIaBranding.nome = data.agente_nome || data.modulo || "SAS IA";
       sasIaBranding.foto = data.agente_foto || "";
-      sasIaBranding.foto_url = sasIaBranding.foto ? sasUsuarioFotoUrl(sasIaBranding.foto) : null;
+      sasIaBranding.foto_url = data.agente_foto_url || (sasIaBranding.foto ? sasUsuarioFotoUrl(sasIaBranding.foto) : null);
       sasApplyBrandingUi();
       return data;
     } catch (_) {
@@ -512,6 +512,10 @@
   }
   function sasUsuarioFotoUrl(path) {
     if (!path || typeof path !== "string") return null;
+    if (typeof getUsuarioFotoUrl === "function") {
+      var viaApp = getUsuarioFotoUrl(path);
+      if (viaApp) return viaApp;
+    }
     var api = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || "https://api.gruposaborparaense.com.br/api";
     var base = api.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
     var p = path.replace(/^\//, "");
@@ -740,7 +744,7 @@
         var av = m.role === "user" ? sasUserAvatarHtml() : sasBotAvatarHtml();
         return (
           '<div class="' + cls + '">' +
-            '<div class="ia-msg__avatar">' + av + "</div>" +
+            av +
             '<div class="ia-msg__bubble">' + sasFmtMsg(m.content) + "</div>" +
           "</div>"
         );

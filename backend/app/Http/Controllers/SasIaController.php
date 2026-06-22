@@ -43,6 +43,7 @@ class SasIaController extends Controller
             'modulo' => $agenteNome,
             'agente_nome' => $agenteNome,
             'agente_foto' => $agenteFoto,
+            'agente_foto_url' => $this->publicAssetUrl($agenteFoto),
             'agent_id' => $agent?->id,
             'ativo' => $this->openAi->isConfigured(),
             'modelo' => $agent?->model ?: $this->openAi->model(),
@@ -394,6 +395,24 @@ class SasIaController extends Controller
         SasIaBranding::salvarFoto($path);
 
         return $this->json(['ok' => true, 'foto' => $path]);
+    }
+
+    private function publicAssetUrl(?string $path): ?string
+    {
+        if (! $path || trim($path) === '') {
+            return null;
+        }
+        $p = ltrim(trim($path), '/');
+        if (str_starts_with($p, 'http')) {
+            return $p;
+        }
+
+        $base = rtrim((string) config('app.url'), '/');
+        if (str_starts_with($p, 'uploads/') || str_starts_with($p, 'storage/')) {
+            return $base.'/'.$p;
+        }
+
+        return $base.'/storage/'.$p;
     }
 
     private function authUsuario(Request $request): ?object

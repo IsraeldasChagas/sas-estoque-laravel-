@@ -71,18 +71,50 @@ class AiAgentController extends Controller
         if (str_starts_with($p, 'http')) {
             return $p;
         }
-        if (str_starts_with($p, 'storage/')) {
-            return '/'.$p;
+
+        $base = rtrim((string) config('app.url'), '/');
+        if (str_starts_with($p, 'uploads/') || str_starts_with($p, 'storage/')) {
+            return $base.'/'.$p;
         }
 
-        return '/storage/'.$p;
+        return $base.'/storage/'.$p;
     }
 
     private function salvarAvatar(UploadedFile $file): string
     {
         $ext = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+        if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+            $ext = 'jpg';
+        }
 
-        return $file->storeAs('ai-agents', time().'_'.uniqid().'.'.$ext, 'public');
+        $dir = public_path('uploads/ai-agents');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $nomeArquivo = time().'_'.uniqid().'.'.$ext;
+        $file->move($dir, $nomeArquivo);
+
+        return 'uploads/ai-agents/'.$nomeArquivo;
+    }
+
+    private function apagarAvatarArquivo(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+        $p = ltrim($path, '/');
+        if (str_starts_with($p, 'uploads/')) {
+            $full = public_path($p);
+            if (is_file($full)) {
+                @unlink($full);
+            }
+
+            return;
+        }
+        if (Storage::disk('public')->exists($p)) {
+            Storage::disk('public')->delete($p);
+        }
     }
 
     public function index(Request $request)
@@ -201,17 +233,15 @@ class AiAgentController extends Controller
         }
 
         if ($request->boolean('remover_avatar') && $agent->avatar) {
-            if (Storage::disk('public')->exists($agent->avatar)) {
-                Storage::disk('public')->delete($agent->avatar);
-            }
+            $this->apagarAvatarArquivo($agent->avatar);
             $agent->update(['avatar' => null]);
         }
 
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             if ($file instanceof UploadedFile && $file->isValid()) {
-                if ($agent->avatar && Storage::disk('public')->exists($agent->avatar)) {
-                    Storage::disk('public')->delete($agent->avatar);
+                if ($agent->avatar) {
+                    $this->apagarAvatarArquivo($agent->avatar);
                 }
                 $path = $this->salvarAvatar($file);
                 $agent->update(['avatar' => $path]);
@@ -259,8 +289,8 @@ class AiAgentController extends Controller
             }
         }
 
-        if ($agent->avatar && Storage::disk('public')->exists($agent->avatar)) {
-            Storage::disk('public')->delete($agent->avatar);
+        if ($agent->avatar) {
+            $this->apagarAvatarArquivo($agent->avatar);
         }
 
         $agent->delete();

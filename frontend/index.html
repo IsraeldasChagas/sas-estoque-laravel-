@@ -49,7 +49,7 @@
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
-    <link rel="stylesheet" href="style-ia.css?v=20260623-float-restore" />
+    <link rel="stylesheet" href="style-ia.css?v=20260623-chat-row" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -4359,8 +4359,10 @@
               <div class="ia-chat-wrap">
                 <div id="iaChatMessages" class="ia-chat-messages"></div>
                 <form id="iaChatForm" class="ia-chat-form">
-                  <textarea id="iaChatInput" rows="2" placeholder="Ex.: Como lanço vale/consumo? Como reservo uma mesa?" maxlength="4000"></textarea>
-                  <button type="submit" class="btn primary" id="iaChatEnviar">Enviar</button>
+                  <div class="ia-chat-form__row">
+                    <textarea id="iaChatInput" rows="2" placeholder="Ex.: Como lanço vale/consumo? Como reservo uma mesa?" maxlength="4000"></textarea>
+                    <button type="submit" class="btn primary" id="iaChatEnviar">Enviar</button>
+                  </div>
                   <button type="button" class="btn neutral" id="iaChatLimpar">Limpar</button>
                 </form>
               </div>
@@ -7158,8 +7160,10 @@
                   <button type="button" id="sasIaStopSpeakBtn" class="sas-ia-audio-btn hidden" title="Parar leitura" aria-label="Parar leitura">⏹</button>
                   <span id="sasIaMicStatus" class="sas-ia-mic-status hidden" aria-live="polite">Pode falar… envio quando você terminar</span>
                 </div>
-                <textarea id="sasIaChatInput" rows="2" placeholder="Digite ou use o microfone para perguntar…" maxlength="4000"></textarea>
-                <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
+                <div class="ia-chat-form__row">
+                  <textarea id="sasIaChatInput" rows="2" placeholder="Digite ou use o microfone para perguntar…" maxlength="4000"></textarea>
+                  <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
+                </div>
               </form>
             </div>
           </div>
@@ -7182,8 +7186,8 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260623-float-restore"></script>
-    <script src="ai-agents.js?v=20260623-float-restore"></script>
+    <script src="sas-ia.js?v=20260623-chat-row"></script>
+    <script src="ai-agents.js?v=20260623-chat-row"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
