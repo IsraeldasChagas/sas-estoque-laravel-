@@ -83,11 +83,48 @@
     return s.trim();
   }
 
+  function sasPauseAfterSegment(text) {
+    var t = String(text || "").trim();
+    if (!t) return 300;
+    var last = t.charAt(t.length - 1);
+    if (last === "!") return 460;
+    if (last === "?" || last === "？") return 440;
+    if (last === "." || last === "…") return 420;
+    if (last === ";" || last === ":") return 340;
+    if (last === ",") return 300;
+    return 320;
+  }
+
   function sasSplitSpeechChunks(text) {
     var plain = sasPlainText(text);
     if (!plain) return [];
-    var parts = plain.match(/[^.!?…]+[.!?…]?/g) || [plain];
-    return parts.map(function (p) { return p.trim(); }).filter(Boolean);
+
+    var segments = [];
+    var sentences = plain.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || [plain];
+
+    sentences.forEach(function (sentence) {
+      sentence = sentence.trim();
+      if (!sentence) return;
+
+      if (sentence.length <= 68) {
+        segments.push(sentence);
+        return;
+      }
+
+      var parts = sentence.split(/(?<!\d),(?!\d)\s*|(?<!\d);(?!\d)\s*|(?<!\d): (?!\d)/);
+      parts.forEach(function (part, idx) {
+        part = part.trim();
+        if (!part) return;
+        if (idx < parts.length - 1 && !/[,.!?…;:]$/.test(part)) {
+          part += ",";
+        }
+        segments.push(part);
+      });
+    });
+
+    return segments.map(function (seg) {
+      return { text: seg, pause: sasPauseAfterSegment(seg) };
+    }).filter(function (item) { return item.text; });
   }
 
   var sasIaVoiceCache = null;
@@ -326,8 +363,8 @@
   function sasSpeakChunk(text, voice, onDone) {
     var utter = new SpeechSynthesisUtterance(text);
     utter.lang = "pt-BR";
-    utter.rate = 0.9;
-    utter.pitch = 1.04;
+    utter.rate = 0.88;
+    utter.pitch = 1.03;
     if (voice) utter.voice = voice;
     utter.onend = function () { onDone?.(); };
     utter.onerror = function () { onDone?.(); };
@@ -341,9 +378,15 @@
       sasUpdateAudioUi();
       return;
     }
-    var chunk = sasIaSpeakQueue.shift();
-    sasSpeakChunk(chunk, sasPickFeminineVoice(), function () {
-      setTimeout(sasSpeakNextChunk, 180);
+    var item = sasIaSpeakQueue.shift();
+    var text = typeof item === "string" ? item : item.text;
+    var pause = typeof item === "object" && item.pause ? item.pause : sasPauseAfterSegment(text);
+    if (!text) {
+      sasSpeakNextChunk();
+      return;
+    }
+    sasSpeakChunk(text, sasPickFeminineVoice(), function () {
+      setTimeout(sasSpeakNextChunk, pause);
     });
   }
 
