@@ -314,16 +314,31 @@ class SasIaToolService
         $busca = trim((string) ($args['busca'] ?? ''));
         $q = DB::table('fornecedores')->where('ativo', 1)->orderBy('nome')->limit(25);
         if ($busca !== '') {
-            $q->where('nome', 'like', '%'.$busca.'%');
+            $digits = preg_replace('/\D/', '', $busca) ?? '';
+            $q->where(function ($w) use ($busca, $digits) {
+                $w->where('nome', 'like', '%'.$busca.'%');
+                foreach (['cnpj', 'cpf'] as $col) {
+                    if (Schema::hasColumn('fornecedores', $col)) {
+                        $w->orWhere($col, 'like', '%'.$busca.'%');
+                        if ($digits !== '') {
+                            $w->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE({$col}, '.', ''), '/', ''), '-', ''), ' ', '') LIKE ?", ['%'.$digits.'%']);
+                        }
+                    }
+                }
+            });
         }
 
         return [
-            'fornecedores' => $q->get(['id', 'nome', 'telefone', 'email'])->map(fn ($f) => [
-                'id' => $f->id,
-                'nome' => $f->nome,
-                'telefone' => $f->telefone ?? null,
-                'email' => $f->email ?? null,
-            ])->all(),
+            'fornecedores' => $q->get()->map(function ($f) {
+                $row = ['id' => $f->id, 'nome' => $f->nome];
+                foreach (['cnpj', 'cpf', 'telefone', 'email', 'endereco', 'observacoes'] as $col) {
+                    if (Schema::hasColumn('fornecedores', $col) && isset($f->{$col}) && $f->{$col} !== null && $f->{$col} !== '') {
+                        $row[$col] = $f->{$col};
+                    }
+                }
+
+                return $row;
+            })->all(),
         ];
     }
 

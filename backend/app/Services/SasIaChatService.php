@@ -6,6 +6,7 @@ use App\Models\AiConversation;
 use App\Models\AiMessage;
 use App\Models\AiToolLog;
 use App\Support\SasIa\SasIaContext;
+use App\Support\SasIa\SasIaResponseSanitizer;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -67,9 +68,10 @@ class SasIaChatService
         $totalCost = 0.0;
 
         $respostaFinal = self::MSG_SEM_PERMISSAO;
+        $ultimaRodadaUsouTools = false;
 
         for ($round = 0; $round < self::MAX_TOOL_ROUNDS; $round++) {
-            $result = $this->openAi->chat($messages, $tools, 0.72);
+            $result = $this->openAi->chat($messages, $tools, 0.65);
             $totalInput += $result['usage']['prompt_tokens'];
             $totalOutput += $result['usage']['completion_tokens'];
             $totalCost += $result['cost'];
@@ -82,9 +84,11 @@ class SasIaChatService
                 if ($respostaFinal === '') {
                     $respostaFinal = self::MSG_SEM_PERMISSAO;
                 }
+                $ultimaRodadaUsouTools = false;
                 break;
             }
 
+            $ultimaRodadaUsouTools = true;
             $messages[] = $assistantMsg;
 
             foreach ($toolCalls as $tc) {
@@ -116,6 +120,25 @@ class SasIaChatService
                     'content' => json_encode($toolResult, JSON_UNESCAPED_UNICODE),
                 ];
             }
+        }
+
+        if ($ultimaRodadaUsouTools || SasIaResponseSanitizer::ehIntermediaria($respostaFinal)) {
+            $respostaFinal = $this->finalizarResposta(
+                $ctx,
+                $conversa,
+                $userMsg,
+                $messages,
+                $toolsUsadas,
+                $totalInput,
+                $totalOutput,
+                $totalCost,
+                $respostaFinal
+            );
+        }
+
+        $respostaFinal = SasIaResponseSanitizer::limparRisadas($respostaFinal);
+        if ($respostaFinal === '') {
+            $respostaFinal = self::MSG_SEM_PERMISSAO;
         }
 
         $assistantRecord = $this->salvarMensagem(
@@ -162,17 +185,21 @@ Chame a pessoa de {$primeiroNome} quando fizer sentido. Você pode se apresentar
 
 Tom e estilo:
 - Converse como uma colega de verdade: frases curtas, leves, com ritmo de WhatsApp no trabalho.
-- Comece às vezes com "ah", "olha", "então", "deixa eu ver" — sem repetir a mesma fórmula toda hora.
+- Comece às vezes com "ah", "olha", "então" — sem repetir a mesma fórmula toda hora.
 - Nunca soe robótica: evite "Conforme solicitado", "De acordo com os dados", "Em relação ao seu questionamento", "Segue abaixo".
 - Prefira texto corrido; use listas só quando tiver muitos itens para comparar.
 - Respostas simples: 2 a 4 frases. Vá direto ao ponto, sem encher linguiça.
 - Chame de {$primeiroNome} de forma natural, não em toda mensagem.
 - Pode usar emoji leve ocasionalmente (😊 👍), no máximo 1 por resposta — nunca emoji de riso.
-- Nunca termine a resposta com risada escrita (kkk, rs, haha, hehe, hue) nem com emoji de riso (😂 🤣 😆).
+- Nunca termine a resposta com risada escrita (kkk, rs, haha, hehe, hue, rsrs) nem com emoji de riso (😂 🤣 😆).
+- Nunca diga que vai consultar, verificar ou pedir para aguardar ("aguarde", "um momento", "deixa eu ver"). Chame a ferramenta em silêncio e responda direto com o resultado final.
 
 Regras:
 - Responda sempre em português do Brasil.
 - Para perguntas sobre números, estoque, vendas, financeiro, RH, reservas, patrimônio, energia, investimento ou cadastros: SEMPRE chame a ferramenta do módulo correspondente antes de responder.
+- Para CNPJ, endereço ou dados completos de unidades/empresas: use consultar_resumo_unidades ou consultar_cadastro_geral (tipo unidade).
+- Para reserva de mesa (hoje, amanhã ou futuro): SEMPRE use consultar_reservas_periodo — ela busca reservas ativas no período.
+- Para buscar qualquer cadastro por nome/CNPJ/CPF: use consultar_cadastro_geral.
 - Para procedimentos, regras internas, manuais ou "como fazer" no Grupo Sabor Paraense: SEMPRE chame consultar_manual_documentacao antes de responder.
 - Use consultar_resumo_produtos para totais de produtos cadastrados.
 - Use consultar_rh_recrutamento_resumo para totais de candidatos/currículos no RH (mesmo número do Dashboard Recrutamento).
@@ -183,6 +210,104 @@ Regras:
 - Seja objetivo; evite listas longas quando uma frase resolve.
 - Não use markdown, asteriscos (*) ou negrito — escreva texto puro, especialmente em números e valores.
 TXT;
+    }
+
+    /**
+     * Completa a resposta quando o modelo só consultou ferramentas ou pediu para aguardar.
+     *
+     * @param  array<int, array<string, mixed>>  $messages
+     * @param  array<int, string>  $toolsUsadas
+     */
+    private function finalizarResposta(
+        SasIaContext $ctx,
+        AiConversation $conversa,
+        AiMessage $userMsg,
+        array $messages,
+        array &$toolsUsadas,
+        int &$totalInput,
+        int &$totalOutput,
+        float &$totalCost,
+        string $respostaAtual
+    ): string {
+        $msgs = $messages;
+        if ($respostaAtual !== '' && $respostaAtual !== self::MSG_SEM_PERMISSAO) {
+            $msgs[] = ['role' => 'assistant', 'content' => $respostaAtual];
+        }
+
+        $instrucao = empty($toolsUsadas)
+            ? 'Consulte o sistema com as ferramentas necessárias e responda ao usuário agora, de forma completa e direta. Não peça para aguardar.'
+            : 'Com base nos dados que você já consultou, responda ao usuário agora de forma completa e direta. Não peça para aguardar nem diga que vai consultar.';
+
+        $msgs[] = ['role' => 'user', 'content' => $instrucao];
+        $tools = OpenAiService::toolDefinitions();
+
+        for ($tentativa = 0; $tentativa < 3; $tentativa++) {
+            $result = $this->openAi->chat($msgs, $tools, 0.5);
+            $totalInput += $result['usage']['prompt_tokens'];
+            $totalOutput += $result['usage']['completion_tokens'];
+            $totalCost += $result['cost'];
+
+            $assistantMsg = $result['message'];
+            $toolCalls = $assistantMsg['tool_calls'] ?? null;
+
+            if (! empty($toolCalls)) {
+                $msgs[] = $assistantMsg;
+                foreach ($toolCalls as $tc) {
+                    $fn = $tc['function']['name'] ?? '';
+                    $argsJson = $tc['function']['arguments'] ?? '{}';
+                    $args = json_decode($argsJson, true);
+                    if (! is_array($args)) {
+                        $args = [];
+                    }
+
+                    $toolsUsadas[] = $fn;
+                    $inicio = microtime(true);
+                    $toolResult = $this->toolService->executar($ctx, $fn, $args);
+                    $duracao = (int) round((microtime(true) - $inicio) * 1000);
+
+                    $this->registrarToolLog(
+                        $ctx,
+                        $conversa->id,
+                        $userMsg->id,
+                        $fn,
+                        $args,
+                        $toolResult,
+                        $duracao
+                    );
+
+                    $msgs[] = [
+                        'role' => 'tool',
+                        'tool_call_id' => $tc['id'] ?? ('call_'.uniqid()),
+                        'content' => json_encode($toolResult, JSON_UNESCAPED_UNICODE),
+                    ];
+                }
+
+                continue;
+            }
+
+            $texto = trim((string) ($assistantMsg['content'] ?? ''));
+            if ($texto !== '' && ! SasIaResponseSanitizer::ehIntermediaria($texto)) {
+                return $texto;
+            }
+
+            if ($texto !== '') {
+                $msgs[] = ['role' => 'assistant', 'content' => $texto];
+            }
+        }
+
+        $result = $this->openAi->chat($msgs, [], 0.45);
+        $totalInput += $result['usage']['prompt_tokens'];
+        $totalOutput += $result['usage']['completion_tokens'];
+        $totalCost += $result['cost'];
+
+        $texto = trim((string) ($result['message']['content'] ?? ''));
+        if ($texto !== '' && ! SasIaResponseSanitizer::ehIntermediaria($texto)) {
+            return $texto;
+        }
+
+        return $respostaAtual !== '' && $respostaAtual !== self::MSG_SEM_PERMISSAO
+            ? $respostaAtual
+            : self::MSG_SEM_PERMISSAO;
     }
 
     private function obterOuCriarConversa(SasIaContext $ctx, ?int $conversationId, string $primeiraMsg): AiConversation

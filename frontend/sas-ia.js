@@ -57,9 +57,14 @@
   function sasCleanLaughs(text) {
     if (text == null) return "";
     var s = String(text);
-    s = s.replace(/[\u{1F602}\u{1F923}\u{1F606}\u{1F605}\u{1F92A}\u{1F602}]/gu, "");
-    s = s.replace(/\s+(?:kk{2,}|k{3,}|rs+|h[ae]{2,}|hehe|haha|huehue|huahuahua|lol)\s*$/gi, "");
-    s = s.replace(/\s+(?:kk{2,}|k{3,}|rs+|h[ae]{2,}|hehe|haha|huehue|huahuahua|lol)[.!?…]*\s*$/gi, "");
+    s = s.replace(/[\u{1F602}\u{1F923}\u{1F606}\u{1F605}\u{1F92A}]/gu, "");
+    var laughEnd = /(?:\s*[,.]?\s*(?:kk{2,}|k{3,}|rs{1,4}|rsrs|h[ae]{2,}|hehe|haha|huehue|huahuahua|lol|kkj+|kkkk+|\(risos\)|\(haha\)|\(rs\)))+[.!?…\s]*$/i;
+    var prev;
+    do {
+      prev = s;
+      s = s.replace(laughEnd, "").trim();
+    } while (s !== prev);
+    s = s.replace(/\s+(?:kk|rs)\b[.!?…]*\s*$/gi, "");
     return s.replace(/\s{2,}/g, " ").trim();
   }
 

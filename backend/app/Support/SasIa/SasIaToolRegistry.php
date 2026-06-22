@@ -23,6 +23,7 @@ final class SasIaToolRegistry
             'consultar_compras_recentes' => ['compras'],
             'consultar_fornecedores' => ['fornecedores'],
             'consultar_resumo_unidades' => ['unidades', 'dashboard'],
+            'consultar_cadastro_geral' => ['unidades', 'fornecedores', 'funcionarios', 'produtos', 'reservaMesa', 'dashboard'],
             'consultar_resumo_usuarios' => ['usuarios'],
 
             // Financeiro / fechamento
@@ -85,8 +86,8 @@ final class SasIaToolRegistry
             self::t('consultar_locais_estoque', 'Locais de armazenamento cadastrados.', ['unidade_id' => ['type' => 'integer', 'description' => 'Filtrar unidade (opcional)']]),
             self::t('consultar_movimentacoes_recentes', 'Últimas movimentações de estoque.', ['dias' => ['type' => 'integer', 'description' => 'Dias (padrão 7)'], 'unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
             self::t('consultar_compras_recentes', 'Listas de compras recentes.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 10)']]),
-            self::t('consultar_fornecedores', 'Fornecedores ativos.', ['busca' => ['type' => 'string', 'description' => 'Filtrar nome (opcional)']]),
-            self::t('consultar_resumo_unidades', 'Unidades cadastradas no sistema.', []),
+            self::t('consultar_fornecedores', 'Fornecedores ativos com CNPJ/CPF, contato e endereço.', ['busca' => ['type' => 'string', 'description' => 'Filtrar nome ou CNPJ (opcional)']]),
+            self::t('consultar_resumo_unidades', 'Unidades/empresas cadastradas com CNPJ, endereço, telefone e e-mail. Use para CNPJ das lojas.', ['busca' => ['type' => 'string', 'description' => 'Nome ou CNPJ (opcional)']]),
             self::t('consultar_resumo_usuarios', 'Usuários do sistema (quantidade por perfil).', []),
 
             // —— Financeiro ——
@@ -101,7 +102,13 @@ final class SasIaToolRegistry
             self::t('consultar_recibos_ajuda_resumo', 'Recibos de ajuda de custo recentes.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 10)']]),
 
             // —— Reservas ——
-            self::t('consultar_reservas_periodo', 'Reservas de mesa por data.', ['data' => ['type' => 'string', 'description' => 'YYYY-MM-DD (padrão hoje)'], 'unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
+            self::t('consultar_reservas_periodo', 'Reservas de mesa ativas (pendente/confirmada). Sem data: busca de hoje até 30 dias à frente. Use sempre para perguntas sobre reserva de mesa.', [
+                'data' => ['type' => 'string', 'description' => 'Dia único YYYY-MM-DD (opcional)'],
+                'de' => ['type' => 'string', 'description' => 'Início do período YYYY-MM-DD (opcional)'],
+                'ate' => ['type' => 'string', 'description' => 'Fim do período YYYY-MM-DD (opcional)'],
+                'unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)'],
+                'busca_cliente' => ['type' => 'string', 'description' => 'Nome do cliente (opcional)'],
+            ]),
             self::t('consultar_mesas_resumo', 'Mesas cadastradas e status (livre, reservada, ocupada).', ['unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
 
             // —— RH ——
@@ -130,6 +137,10 @@ final class SasIaToolRegistry
             self::t('consultar_kanban_resumo', 'Tarefas do kanban administrativo por status.', ['unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
             self::t('consultar_logs_recentes', 'Logs de auditoria recentes.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 20)']]),
             self::t('consultar_manual_documentacao', 'Manual e documentos internos do sistema.', ['consulta' => ['type' => 'string', 'description' => 'Termo ou pergunta']], ['consulta']),
+            self::t('consultar_cadastro_geral', 'Busca cadastros do sistema por nome, CNPJ ou CPF (unidades, fornecedores, funcionários, produtos).', [
+                'busca' => ['type' => 'string', 'description' => 'Nome, CNPJ, CPF ou parte do texto'],
+                'tipo' => ['type' => 'string', 'description' => 'unidade, fornecedor, funcionario, produto ou todos (padrão todos)'],
+            ], ['busca']),
         ];
     }
 

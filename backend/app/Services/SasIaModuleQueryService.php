@@ -25,7 +25,7 @@ class SasIaModuleQueryService
         return match ($toolName) {
             'consultar_lotes_proximos_vencer' => $this->lotesProximosVencer($ctx, $args),
             'consultar_locais_estoque' => $this->locaisEstoque($ctx, $args),
-            'consultar_resumo_unidades' => $this->resumoUnidades($ctx),
+            'consultar_resumo_unidades' => $this->resumoUnidades($ctx, $args),
             'consultar_resumo_usuarios' => $this->resumoUsuarios($ctx),
             'consultar_fechamentos_recentes' => $this->fechamentosRecentes($ctx, $args),
             'consultar_boletos_resumo' => $this->boletosResumo($ctx, $args),
@@ -49,6 +49,7 @@ class SasIaModuleQueryService
             'consultar_investimento_resumo' => $this->investimentoResumo($ctx),
             'consultar_kanban_resumo' => $this->kanbanResumo($ctx, $args),
             'consultar_manual_documentacao' => $this->manualDocumentacao($args),
+            'consultar_cadastro_geral' => $this->cadastroGeral($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta não implementada neste serviço.'],
         };
     }
@@ -122,23 +123,52 @@ class SasIaModuleQueryService
         ];
     }
 
-    private function resumoUnidades(SasIaContext $ctx): array
+    /** @param  array<string, mixed>  $args */
+    private function resumoUnidades(SasIaContext $ctx, array $args = []): array
     {
         if (! Schema::hasTable('unidades')) {
             return ['unidades' => []];
         }
 
-        $rows = DB::table('unidades')
-            ->select('id', 'nome', 'ativo')
-            ->orderBy('nome')
-            ->limit(50)
-            ->get();
+        $busca = trim((string) ($args['busca'] ?? ''));
+        $q = DB::table('unidades')->orderBy('nome');
+
+        if ($busca !== '') {
+            $digits = preg_replace('/\D/', '', $busca) ?? '';
+            $q->where(function ($w) use ($busca, $digits) {
+                $w->where('nome', 'like', '%'.$busca.'%');
+                if (Schema::hasColumn('unidades', 'cnpj')) {
+                    $w->orWhere('cnpj', 'like', '%'.$busca.'%');
+                    if ($digits !== '') {
+                        $w->orWhereRaw("REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') LIKE ?", ['%'.$digits.'%']);
+                    }
+                }
+            });
+        }
+
+        $rows = $q->limit(50)->get();
 
         return [
             'total' => $rows->count(),
             'ativas' => $rows->where('ativo', 1)->count(),
-            'unidades' => $rows->map(fn ($u) => ['id' => $u->id, 'nome' => $u->nome, 'ativo' => (bool) $u->ativo])->values()->all(),
+            'unidades' => $rows->map(fn ($u) => $this->mapearUnidade($u))->values()->all(),
         ];
+    }
+
+    private function mapearUnidade(object $u): array
+    {
+        $out = [
+            'id' => $u->id,
+            'nome' => $u->nome,
+            'ativo' => (bool) ($u->ativo ?? true),
+        ];
+        foreach (['cnpj', 'endereco', 'telefone', 'email', 'cidade', 'estado', 'cep'] as $col) {
+            if (Schema::hasColumn('unidades', $col) && isset($u->{$col}) && $u->{$col} !== null && $u->{$col} !== '') {
+                $out[$col] = $u->{$col};
+            }
+        }
+
+        return $out;
     }
 
     private function resumoUsuarios(SasIaContext $ctx): array
@@ -326,26 +356,84 @@ class SasIaModuleQueryService
     private function reservasPeriodo(SasIaContext $ctx, array $args): array
     {
         if (! Schema::hasTable('reservas_mesas')) {
-            return ['reservas' => []];
+            return ['reservas' => [], 'total' => 0, 'tem_reservas' => false];
         }
 
-        $data = trim((string) ($args['data'] ?? now()->format('Y-m-d')));
+        if (! empty($args['data'])) {
+            $de = $ate = trim((string) $args['data']);
+        } else {
+            $de = trim((string) ($args['de'] ?? now()->format('Y-m-d')));
+            $ate = trim((string) ($args['ate'] ?? now()->addDays(30)->format('Y-m-d')));
+        }
+
+        if ($de > $ate) {
+            [$de, $ate] = [$ate, $de];
+        }
+
+        $select = [
+            'r.id',
+            'r.nome_cliente',
+            'r.telefone_cliente',
+            'r.data_reserva',
+            'r.hora_reserva',
+            'r.qtd_pessoas',
+            'r.status',
+            'r.observacao',
+            'r.unidade_id',
+            'u.nome as unidade',
+            'm.numero_mesa',
+            'm.nome_mesa',
+        ];
+        if (Schema::hasColumn('reservas_mesas', 'local')) {
+            $select[] = 'r.local';
+        }
+        if (Schema::hasColumn('reservas_mesas', 'ocasiao')) {
+            $select[] = 'r.ocasiao';
+        }
+
         $q = DB::table('reservas_mesas as r')
             ->leftJoin('unidades as u', 'r.unidade_id', '=', 'u.id')
             ->leftJoin('mesas as m', 'r.mesa_id', '=', 'm.id')
-            ->whereDate('r.data_reserva', $data)
-            ->select('r.id', 'r.nome_cliente', 'r.hora_reserva', 'r.qtd_pessoas', 'r.status', 'u.nome as unidade', 'm.numero_mesa')
+            ->whereBetween('r.data_reserva', [$de, $ate])
+            ->whereNotIn('r.status', ['cancelada', 'no_show', 'finalizada'])
+            ->select($select)
+            ->orderBy('r.data_reserva')
             ->orderBy('r.hora_reserva')
-            ->limit(30);
+            ->limit(50);
 
         $unidadeId = isset($args['unidade_id']) ? (int) $args['unidade_id'] : $ctx->unidadeEfetiva();
         if ($unidadeId) {
             $q->where('r.unidade_id', $unidadeId);
         }
 
-        $rows = $q->get();
+        $buscaCliente = trim((string) ($args['busca_cliente'] ?? ''));
+        if ($buscaCliente !== '') {
+            $q->where('r.nome_cliente', 'like', '%'.$buscaCliente.'%');
+        }
 
-        return ['data' => $data, 'total' => $rows->count(), 'reservas' => $rows->all()];
+        $rows = $q->get()->map(fn ($r) => [
+            'id' => $r->id,
+            'cliente' => $r->nome_cliente,
+            'telefone' => $r->telefone_cliente ?? null,
+            'data' => $r->data_reserva,
+            'hora' => $r->hora_reserva,
+            'pessoas' => (int) ($r->qtd_pessoas ?? 1),
+            'status' => $r->status,
+            'unidade' => $r->unidade,
+            'unidade_id' => $r->unidade_id,
+            'mesa' => $r->numero_mesa ?? $r->nome_mesa ?? null,
+            'local' => property_exists($r, 'local') ? ($r->local ?? null) : null,
+            'ocasiao' => property_exists($r, 'ocasiao') ? ($r->ocasiao ?? null) : null,
+            'observacao' => $r->observacao ?? null,
+        ])->all();
+
+        return [
+            'periodo' => ['de' => $de, 'ate' => $ate],
+            'total' => count($rows),
+            'tem_reservas' => count($rows) > 0,
+            'reservas' => $rows,
+            'observacao' => 'Somente reservas ativas (pendente/confirmada). Canceladas e finalizadas não entram.',
+        ];
     }
 
     /** @param  array<string, mixed>  $args */
@@ -641,6 +729,121 @@ class SasIaModuleQueryService
         $porStatus = (clone $q)->select('status', DB::raw('COUNT(*) as qtd'))->groupBy('status')->pluck('qtd', 'status');
 
         return ['total' => (int) $q->count(), 'por_status' => $porStatus];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function cadastroGeral(SasIaContext $ctx, array $args): array
+    {
+        $busca = trim((string) ($args['busca'] ?? ''));
+        if ($busca === '') {
+            return ['erro' => true, 'mensagem' => 'Informe o termo de busca (nome, CNPJ ou CPF).'];
+        }
+
+        $tipo = mb_strtolower(trim((string) ($args['tipo'] ?? 'todos')));
+        $digits = preg_replace('/\D/', '', $busca) ?? '';
+        $out = [];
+
+        if (in_array($tipo, ['todos', 'unidade', 'unidades'], true) && ($ctx->isAdmin() || $ctx->temModulo('unidades'))) {
+            if (Schema::hasTable('unidades')) {
+                $q = DB::table('unidades')->orderBy('nome')->limit(20);
+                $q->where(function ($w) use ($busca, $digits) {
+                    $w->where('nome', 'like', '%'.$busca.'%');
+                    if (Schema::hasColumn('unidades', 'cnpj')) {
+                        $w->orWhere('cnpj', 'like', '%'.$busca.'%');
+                        if ($digits !== '') {
+                            $w->orWhereRaw("REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') LIKE ?", ['%'.$digits.'%']);
+                        }
+                    }
+                });
+                $out['unidades'] = $q->get()->map(fn ($u) => $this->mapearUnidade($u))->values()->all();
+            }
+        }
+
+        if (in_array($tipo, ['todos', 'fornecedor', 'fornecedores'], true) && ($ctx->isAdmin() || $ctx->temModulo('fornecedores'))) {
+            if (Schema::hasTable('fornecedores')) {
+                $q = DB::table('fornecedores')->where('ativo', 1)->orderBy('nome')->limit(20);
+                $q->where(function ($w) use ($busca, $digits) {
+                    $w->where('nome', 'like', '%'.$busca.'%');
+                    foreach (['cnpj', 'cpf'] as $col) {
+                        if (Schema::hasColumn('fornecedores', $col)) {
+                            $w->orWhere($col, 'like', '%'.$busca.'%');
+                            if ($digits !== '') {
+                                $w->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE({$col}, '.', ''), '/', ''), '-', ''), ' ', '') LIKE ?", ['%'.$digits.'%']);
+                            }
+                        }
+                    }
+                });
+                $out['fornecedores'] = $q->get()->map(fn ($f) => $this->mapearFornecedor($f))->values()->all();
+            }
+        }
+
+        if (in_array($tipo, ['todos', 'funcionario', 'funcionarios'], true) && ($ctx->isAdmin() || $ctx->temModulo('funcionarios'))) {
+            if (Schema::hasTable('funcionarios')) {
+                $q = DB::table('funcionarios as f')
+                    ->leftJoin('unidades as u', 'f.unidade_id', '=', 'u.id')
+                    ->where('f.ativo', 1)
+                    ->orderBy('f.nome_completo')
+                    ->limit(20);
+                $q->where(function ($w) use ($busca, $digits) {
+                    $w->where('f.nome_completo', 'like', '%'.$busca.'%');
+                    if (Schema::hasColumn('funcionarios', 'cpf')) {
+                        $w->orWhere('f.cpf', 'like', '%'.$busca.'%');
+                        if ($digits !== '') {
+                            $w->orWhereRaw("REPLACE(REPLACE(REPLACE(f.cpf, '.', ''), '-', ''), ' ', '') LIKE ?", ['%'.$digits.'%']);
+                        }
+                    }
+                });
+                if ($uid = $ctx->unidadeEfetiva()) {
+                    $q->where('f.unidade_id', $uid);
+                }
+                $out['funcionarios'] = $q->get(['f.id', 'f.nome_completo', 'f.cpf', 'f.cargo', 'f.telefone', 'f.email', 'u.nome as unidade'])
+                    ->map(fn ($f) => array_filter([
+                        'id' => $f->id,
+                        'nome' => $f->nome_completo,
+                        'cpf' => $f->cpf ?? null,
+                        'cargo' => $f->cargo ?? null,
+                        'telefone' => $f->telefone ?? null,
+                        'email' => $f->email ?? null,
+                        'unidade' => $f->unidade ?? null,
+                    ], fn ($v) => $v !== null && $v !== ''))
+                    ->values()->all();
+            }
+        }
+
+        if (in_array($tipo, ['todos', 'produto', 'produtos'], true) && ($ctx->isAdmin() || $ctx->temModulo('produtos'))) {
+            if (Schema::hasTable('produtos')) {
+                $q = DB::table('produtos')->where('ativo', 1)->where('nome', 'like', '%'.$busca.'%')->orderBy('nome')->limit(20);
+                $out['produtos'] = $q->get(['id', 'nome', 'categoria', 'unidade_base', 'estoque_minimo'])
+                    ->map(fn ($p) => [
+                        'id' => $p->id,
+                        'nome' => $p->nome,
+                        'categoria' => $p->categoria ?? null,
+                        'unidade_base' => $p->unidade_base ?? null,
+                        'estoque_minimo' => (float) ($p->estoque_minimo ?? 0),
+                    ])->all();
+            }
+        }
+
+        $total = array_sum(array_map('count', $out));
+
+        return [
+            'busca' => $busca,
+            'tipo' => $tipo,
+            'total_encontrados' => $total,
+            'resultados' => $out,
+        ];
+    }
+
+    private function mapearFornecedor(object $f): array
+    {
+        $out = ['id' => $f->id, 'nome' => $f->nome];
+        foreach (['cnpj', 'cpf', 'telefone', 'email', 'endereco', 'observacoes'] as $col) {
+            if (Schema::hasColumn('fornecedores', $col) && isset($f->{$col}) && $f->{$col} !== null && $f->{$col} !== '') {
+                $out[$col] = $f->{$col};
+            }
+        }
+
+        return $out;
     }
 
     /** @param  array<string, mixed>  $args */
