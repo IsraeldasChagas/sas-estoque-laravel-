@@ -49,7 +49,7 @@
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
-    <link rel="stylesheet" href="style-ia.css?v=20260621-branding" />
+    <link rel="stylesheet" href="style-ia.css?v=20260622-close" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -244,6 +244,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="financeiroIndicadores"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Indicadores Financeiros</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fechamento"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="boletao"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Boletos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="impostos"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Impostos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="alvara"><span class="nav-icon" aria-hidden="true">📁</span><span class="nav-label">Documentos empresa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="proventos"><span class="nav-icon" aria-hidden="true">💵</span><span class="nav-label">Proventos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="despesasFixas"><span class="nav-icon" aria-hidden="true">📆</span><span class="nav-label">Despesas fixas</span></a>
@@ -3211,6 +3212,76 @@
             </div>
           </section>
 
+          <!-- Módulo Financeiro - Impostos (cadastro; pagamento em Boletos) -->
+          <section id="impostosSection" class="view-section hidden">
+            <div class="boletos-header">
+              <h2>🏛️ Controle Financeiro — Impostos</h2>
+              <div class="boletos-actions">
+                <button class="btn primary" id="openNovoImposto">+ Novo imposto</button>
+              </div>
+            </div>
+
+            <p class="subtle-text" style="margin: 0 0 1rem 1rem; max-width: 52rem;">
+              Cadastre guias e tributos aqui. O <strong>pagamento e comprovante</strong> ficam em <strong>Boletos</strong> — use &quot;Gerar boleto&quot; e marque como pago lá, sem repetir dados.
+            </p>
+
+            <div class="boletos-filtro">
+              <label class="boletos-filtro__field">
+                📅 Mês/Ano (vencimento)
+                <select id="impostosMesAnoFiltro" class="boletos-mes-select">
+                  <option value="">Todos os meses</option>
+                </select>
+              </label>
+              <label class="boletos-filtro__field">
+                🏢 Unidade
+                <select id="impostosUnidadeFiltro" class="boletos-mes-select">
+                  <option value="">Todas as unidades</option>
+                </select>
+              </label>
+              <label class="boletos-filtro__field">
+                📊 Status
+                <select id="impostosStatusFiltro" class="boletos-mes-select">
+                  <option value="">Todos</option>
+                  <option value="A_VENCER">A vencer</option>
+                  <option value="VENCIDO">Atrasado</option>
+                  <option value="PAGO">Pago</option>
+                  <option value="CANCELADO">Cancelado</option>
+                </select>
+              </label>
+              <button type="button" id="limparFiltrosImpostos" class="btn neutral boletos-filtro__clear">🔄 Limpar filtros</button>
+            </div>
+
+            <div class="table-card form-card--wide">
+              <header>
+                <div>
+                  <h3>Impostos cadastrados</h3>
+                  <p class="subtle-text">Guias, tributos e documentos — status sincroniza com o boleto vinculado</p>
+                </div>
+                <button class="btn secondary" id="recarregarImpostos" style="margin-left: auto;">🔄 Atualizar</button>
+              </header>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Tipo</th>
+                      <th>Descrição</th>
+                      <th>Competência</th>
+                      <th>Vencimento</th>
+                      <th>Valor</th>
+                      <th>Boleto / Pagamento</th>
+                      <th>Anexos</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="impostosTable">
+                    <tr><td colspan="9" class="empty-row">Carregando…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
           <!-- Modulo Financeiro - Documentos empresa -->
           <section id="alvaraSection" class="view-section hidden">
             <div class="boletos-header">
@@ -5480,6 +5551,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="patrimonioConfiguracoes" /> Patrimônio — Configurações</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Financeiro</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="boletao" /> Boleto</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="impostos" /> Impostos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="alvara" /> Documentos empresa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="proventos" /> Proventos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="despesasFixas" /> Despesas fixas</label>
@@ -6605,6 +6677,104 @@
       </div>
     </div>
 
+    <!-- Modal de Novo/Editar Imposto -->
+    <div class="modal-backdrop" id="impostoModal">
+      <div class="modal">
+        <header>
+          <h2 id="impostoModalTitle">Novo imposto</h2>
+          <button type="button" class="close-btn" id="closeImposto" aria-label="Fechar modal">x</button>
+        </header>
+        <form id="impostoForm" novalidate enctype="multipart/form-data">
+          <div id="impostoPagamentoAviso" class="subtle-text" style="padding: 0.75rem 1rem; background: #e3f2fd; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #1976d2;">
+            O pagamento (data, valor pago, juros e comprovante) é feito em <strong>Financeiro → Boletos</strong>, após gerar o boleto vinculado.
+          </div>
+
+          <div class="grid-two">
+            <label>
+              Tipo de imposto *
+              <select name="tipo_imposto" required>
+                <option value="SIMPLES">Simples Nacional</option>
+                <option value="ISS">ISS</option>
+                <option value="ICMS">ICMS</option>
+                <option value="PIS">PIS</option>
+                <option value="COFINS">COFINS</option>
+                <option value="FGTS">FGTS</option>
+                <option value="INSS">INSS</option>
+                <option value="IRPJ">IRPJ</option>
+                <option value="CSLL">CSLL</option>
+                <option value="IPTU">IPTU</option>
+                <option value="IPVA">IPVA</option>
+                <option value="OUTROS" selected>Outros</option>
+              </select>
+            </label>
+            <label>
+              Unidade
+              <select name="unidade_id">
+                <option value="">Selecione (opcional)</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Descrição *
+            <input name="descricao" placeholder="Ex: DAS Simples — março/2026" required />
+          </label>
+
+          <div class="grid-two">
+            <label>
+              Órgão / receita
+              <input name="orgao" placeholder="Ex: Receita Federal, Prefeitura…" />
+            </label>
+            <label>
+              Competência
+              <input name="competencia" placeholder="2026-03" maxlength="7" />
+            </label>
+          </div>
+
+          <div class="grid-two">
+            <label>
+              Nº documento / guia
+              <input name="numero_documento" placeholder="Número da guia ou DARF" />
+            </label>
+            <label>
+              Data de vencimento *
+              <input name="data_vencimento" type="date" required min="2020-01-01" max="2099-12-31" />
+            </label>
+          </div>
+
+          <label>
+            Valor *
+            <input name="valor" type="text" inputmode="decimal" placeholder="R$ 0,00" required />
+          </label>
+
+          <label>
+            📎 Anexar guia (PDF ou imagem)
+            <input type="file" id="impostoAnexosGuiaInput" accept=".pdf,.jpg,.jpeg,.png" multiple />
+            <small style="color: #607d8b;">PDF, JPG ou PNG — máx. 5 MB cada</small>
+          </label>
+          <div id="impostoAnexosGuiaPreview" style="display:none;margin-top:0.5rem;"></div>
+          <div id="impostoAnexosGuiaAtual" style="display:none;margin-top:0.5rem;"></div>
+
+          <label style="margin-top:1rem;">
+            📎 Anexar nota / documento complementar
+            <input type="file" id="impostoAnexosNotaInput" accept=".pdf,.jpg,.jpeg,.png" multiple />
+          </label>
+          <div id="impostoAnexosNotaPreview" style="display:none;margin-top:0.5rem;"></div>
+          <div id="impostoAnexosNotaAtual" style="display:none;margin-top:0.5rem;"></div>
+
+          <label>
+            Observações
+            <textarea name="observacoes" rows="2" placeholder="Informações adicionais"></textarea>
+          </label>
+
+          <footer>
+            <button type="button" class="btn neutral" id="cancelImposto">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar imposto</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal de Novo/Editar Documento empresa -->
     <div class="modal-backdrop" id="alvaraModal">
       <div class="modal">
@@ -6880,6 +7050,7 @@
           <div class="sas-ia-float__header-actions">
             <button type="button" id="sasIaFloatExpand" class="sas-ia-float__icon-btn" title="Expandir" aria-label="Expandir">⛶</button>
             <button type="button" id="sasIaFloatMinimize" class="sas-ia-float__icon-btn" title="Minimizar" aria-label="Minimizar">—</button>
+            <button type="button" id="sasIaFloatClose" class="sas-ia-float__icon-btn sas-ia-float__icon-btn--close" title="Fechar" aria-label="Fechar">✕</button>
           </div>
         </header>
         <div class="sas-ia-float__body sas-ia-layout">
@@ -6922,8 +7093,9 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260621-tts"></script>
+    <script src="sas-ia.js?v=20260622-close"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
+    <script src="impostos.js?v=20260622-impostos"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      

@@ -367,6 +367,7 @@ class BoletoController extends Controller
             \Log::info('💾 Criando boleto no banco...');
             $boleto = Boleto::create($data);
             $this->processarAnexosRequest($request, $boleto);
+            \App\Models\Imposto::sincronizarDeBoleto($boleto->fresh());
             $boleto = $this->serializarBoleto($boleto->fresh());
 
             \Log::info('✅ Boleto criado com sucesso - ID: '.$boleto->id);
@@ -473,6 +474,7 @@ class BoletoController extends Controller
 
             $boleto->update($data);
             $this->processarAnexosRequest($request, $boleto);
+            \App\Models\Imposto::sincronizarDeBoleto($boleto->fresh());
             $boleto = $this->serializarBoleto($boleto->fresh());
 
             return response()->json([

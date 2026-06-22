@@ -11152,6 +11152,7 @@ require __DIR__ . '/financeiro_routes.php';
 require __DIR__ . '/configuracoes_routes.php';
 require __DIR__ . '/ia_routes.php';
 require __DIR__ . '/sas_ia_routes.php';
+require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';
 

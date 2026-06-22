@@ -27,6 +27,7 @@ class Boleto extends Model
         'nome_pagador',
         'whatsapp_pagador',
         'usuario_id',
+        'imposto_id',
         'anexo_path',
         'anexo_nome',
         'anexo_tipo',

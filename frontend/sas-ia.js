@@ -651,6 +651,11 @@
     }
   }
 
+  function sasFloatClose() {
+    sasStopSpeak();
+    sasFloatMinimize();
+  }
+
   function sasFloatMinimize() {
     sasSetExpanded(false);
     sasSetOpen(false);
@@ -1070,6 +1075,7 @@
     sasEl("sasIaFloatFab")?.addEventListener("click", sasFloatOpen);
     sasEl("sasIaFloatExpand")?.addEventListener("click", sasFloatToggleExpand);
     sasEl("sasIaFloatMinimize")?.addEventListener("click", sasFloatMinimize);
+    sasEl("sasIaFloatClose")?.addEventListener("click", sasFloatClose);
     sasEl("sasIaAbrirFloatBtn")?.addEventListener("click", sasFloatOpen);
     sasFloatSyncPerm(false);
     window.addEventListener("resize", function () {
@@ -1089,6 +1095,7 @@
   window.sasIaLoadBranding = sasLoadBranding;
   window.sasIaFloatOpen = sasFloatOpen;
   window.sasIaFloatMinimize = sasFloatMinimize;
+  window.sasIaFloatClose = sasFloatClose;
   window.sasIaFloatToggle = sasFloatToggle;
   window.sasIaFloatSyncPerm = sasFloatSyncPerm;
   window.sasIaRefreshAvatars = function () {
