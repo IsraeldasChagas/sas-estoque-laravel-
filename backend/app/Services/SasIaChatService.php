@@ -188,7 +188,38 @@ class SasIaChatService
             $base = 'Você é '.$branding['nome'].', assistente do sistema SAS Estoque — Grupo Sabor Paraense.';
         }
 
+        $blocoAgente = $this->blocoIdentidadeAgente($agent);
+        if ($blocoAgente !== '') {
+            $base = $blocoAgente."\n\n".$base;
+        }
+
         return $base."\n\n".$this->contextoDinamico($ctx);
+    }
+
+    private function blocoIdentidadeAgente(?\App\Models\AiAgent $agent): string
+    {
+        if (! $agent) {
+            return '';
+        }
+
+        $partes = [];
+        $role = trim((string) ($agent->role ?? ''));
+        if ($role !== '') {
+            $partes[] = "Função: {$role}";
+        }
+
+        $desc = trim((string) ($agent->description ?? ''));
+        if ($desc !== '') {
+            $partes[] = "Suas habilidades e o que você faz no sistema:\n{$desc}";
+        }
+
+        if ($partes === []) {
+            return '';
+        }
+
+        $partes[] = 'Quando perguntarem quem você é, o que faz ou quais são suas habilidades, responda com base nas informações acima de forma natural e objetiva.';
+
+        return implode("\n\n", $partes);
     }
 
     private function contextoDinamico(SasIaContext $ctx): string
