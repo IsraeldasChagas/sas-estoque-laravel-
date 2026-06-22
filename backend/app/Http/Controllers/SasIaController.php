@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\SasIaChatService;
 use App\Services\SasIaDocumentService;
+use App\Support\AiAgentResolver;
 use App\Support\SasIa\SasIaBranding;
 use App\Support\SasIa\SasIaContext;
 use App\Support\SasIa\SasIaDocumentTextExtractor;
@@ -33,14 +34,18 @@ class SasIaController extends Controller
         }
 
         $ctx = new SasIaContext($usuario, $this->unidadeRequest($request));
+        $agent = AiAgentResolver::resolveForModule(AiAgentResolver::DEFAULT_MODULE);
         $branding = SasIaBranding::ler();
+        $agenteNome = $agent?->name ?: $branding['nome'];
+        $agenteFoto = $agent?->avatar ?: $branding['foto'];
 
         return $this->json([
-            'modulo' => $branding['nome'],
-            'agente_nome' => $branding['nome'],
-            'agente_foto' => $branding['foto'],
+            'modulo' => $agenteNome,
+            'agente_nome' => $agenteNome,
+            'agente_foto' => $agenteFoto,
+            'agent_id' => $agent?->id,
             'ativo' => $this->openAi->isConfigured(),
-            'modelo' => $this->openAi->model(),
+            'modelo' => $agent?->model ?: $this->openAi->model(),
             'limite_diario' => $ctx->limiteDiario(),
             'usadas_hoje' => $ctx->perguntasHoje(),
             'restante_hoje' => $ctx->restanteHoje(),
@@ -60,9 +65,10 @@ class SasIaController extends Controller
         $mensagem = trim((string) $request->input('message', $request->input('mensagem', '')));
         $conversationId = $request->input('conversation_id');
         $conversationId = ($conversationId !== null && $conversationId !== '') ? (int) $conversationId : null;
+        $module = $request->input('module', $request->input('modulo', AiAgentResolver::DEFAULT_MODULE));
 
         try {
-            $result = $this->chatService->processar($ctx, $mensagem, $conversationId);
+            $result = $this->chatService->processar($ctx, $mensagem, $conversationId, $module);
         } catch (\Throwable $e) {
             report($e);
 

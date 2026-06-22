@@ -863,7 +863,7 @@
     if (input) input.value = "";
 
     try {
-      var body = { message: msg };
+      var body = { message: msg, module: "administrativo" };
       if (sasIaConversationId) body.conversation_id = sasIaConversationId;
       var data = await sasFetch("/sas-ia/chat", { method: "POST", body: JSON.stringify(body) });
       document.getElementById(loadingId)?.remove();

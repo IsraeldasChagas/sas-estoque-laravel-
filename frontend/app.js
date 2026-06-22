@@ -1579,7 +1579,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "configuracoesPainel", "sasIa", "sasIaDocumentos", "sasIaConfiguracoes", "iaAssistente", "iaConfiguracoes",
+  "configuracoesPainel", "sasIa", "sasIaDocumentos", "sasIaConfiguracoes", "iaAgentes", "iaAssistente", "iaConfiguracoes",
 ]);
 
 function syncUrlSectionHash(section) {
@@ -5336,6 +5336,9 @@ function applyPermissions() {
   if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("sasIaConfiguracoes")) {
     sections = [...sections, "sasIaConfiguracoes"];
   }
+  if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("iaAgentes")) {
+    sections = [...sections, "iaAgentes"];
+  }
   // IA legado: assistente para todos; configurações só ADMIN.
   if (!sections.includes("iaAssistente")) {
     sections = [...sections, "iaAssistente"];
@@ -5459,7 +5462,10 @@ function applyPermissions() {
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
     const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const temConfigPainel = regras.sections.includes("configuracoesPainel") || ["ADMIN", "GERENTE"].includes(perfilCfg);
+    const temConfigPainel =
+      regras.sections.includes("configuracoesPainel") ||
+      regras.sections.includes("iaAgentes") ||
+      ["ADMIN", "GERENTE"].includes(perfilCfg);
     configuracoesNavSubmenu.classList.toggle("hidden", !temConfigPainel);
   }
   const iaNavSubmenu = document.getElementById("iaMenu")?.closest(".nav-submenu");
@@ -5469,6 +5475,7 @@ function applyPermissions() {
       regras.sections.includes("sasIa") ||
       regras.sections.includes("sasIaDocumentos") ||
       regras.sections.includes("sasIaConfiguracoes") ||
+      regras.sections.includes("iaAgentes") ||
       regras.sections.includes("iaAssistente") ||
       regras.sections.includes("iaConfiguracoes") ||
       perfilIa === "ADMIN";
@@ -5479,9 +5486,14 @@ function applyPermissions() {
       linkDocs.classList.toggle("hidden", !podeDocs);
     }
     const linkSasCfg = iaNavSubmenu.querySelector('[data-section="sasIaConfiguracoes"]');
+    const linkIaAgentes = iaNavSubmenu.querySelector('[data-section="iaAgentes"]');
     if (linkSasCfg) {
       const podeSasCfg = regras.sections.includes("sasIaConfiguracoes") || perfilIa === "ADMIN";
       linkSasCfg.classList.toggle("hidden", !podeSasCfg);
+    }
+    if (linkIaAgentes) {
+      const podeAgentes = regras.sections.includes("iaAgentes") || perfilIa === "ADMIN";
+      linkIaAgentes.classList.toggle("hidden", !podeAgentes);
     }
     const linkCfg = iaNavSubmenu.querySelector('[data-section="iaConfiguracoes"]');
     if (linkCfg) {
@@ -5719,12 +5731,12 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "configuracoesPainel") configuracoesNavSubmenuNav.classList.add("open");
+    if (section === "configuracoesPainel" || section === "iaAgentes") configuracoesNavSubmenuNav.classList.add("open");
     else configuracoesNavSubmenuNav.classList.remove("open");
   }
   const iaNavSubmenuNav = document.getElementById("iaMenu")?.closest(".nav-submenu");
   if (iaNavSubmenuNav) {
-    if (section === "sasIa" || section === "sasIaDocumentos" || section === "sasIaConfiguracoes" || section === "iaAssistente" || section === "iaConfiguracoes") iaNavSubmenuNav.classList.add("open");
+    if (section === "sasIa" || section === "sasIaDocumentos" || section === "sasIaConfiguracoes" || section === "iaAgentes" || section === "iaAssistente" || section === "iaConfiguracoes") iaNavSubmenuNav.classList.add("open");
     else iaNavSubmenuNav.classList.remove("open");
   }
   const patrimonioNavSubmenuNav = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
@@ -5762,6 +5774,7 @@ function navigateTo(section) {
   }
   else if (section === "sasIaDocumentos") loadSasIaDocumentos?.().catch(() => {});
   else if (section === "sasIaConfiguracoes") loadSasIaConfiguracoes?.().catch(() => {});
+  else if (section === "iaAgentes") loadIaAgentes?.().catch(() => {});
   else if (section === "iaAssistente") loadIaAssistente?.().catch(() => {});
   else if (section === "iaConfiguracoes") loadIaConfiguracoes?.().catch(() => {});
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
@@ -25324,6 +25337,7 @@ async function init() {
   if (typeof setupPatrimonioModule === "function") setupPatrimonioModule();
   if (typeof setupInvestimentoModule === "function") setupInvestimentoModule();
   if (typeof setupRhRescisaoModule === "function") setupRhRescisaoModule();
+  if (typeof setupIaAgentesModule === "function") setupIaAgentesModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }

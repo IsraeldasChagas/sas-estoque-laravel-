@@ -291,6 +291,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="sasIa"><span class="nav-icon" aria-hidden="true">🧠</span><span class="nav-label">SAS IA</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="sasIaDocumentos"><span class="nav-icon" aria-hidden="true">📚</span><span class="nav-label">Manuais IA</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="sasIaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. SAS IA</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="iaAgentes"><span class="nav-icon" aria-hidden="true">🧩</span><span class="nav-label">Agentes</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="iaAssistente"><span class="nav-icon" aria-hidden="true">💬</span><span class="nav-label">Assistente (legado)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="iaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. legado</span></a>
             </div>
@@ -302,6 +303,8 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="configuracoesPainel"><span class="nav-icon" aria-hidden="true">🎛️</span><span class="nav-label">Painel do Sistema</span></a>
+              <div class="nav-submenu-divider-label">IA</div>
+              <a href="#" class="nav-link nav-link-child" data-section="iaAgentes"><span class="nav-icon" aria-hidden="true">🤖</span><span class="nav-label">Agentes</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
                 <span class="nav-icon" aria-hidden="true">🗄</span><span class="nav-label">Backup / Restaurar</span>
               </button>
@@ -4321,6 +4324,30 @@
             </div>
           </section>
 
+          <section id="iaAgentesSection" class="view-section hidden">
+            <div class="ia-section-head">
+              <h2>🤖 Agentes de IA</h2>
+              <p class="subtle-text">Cadastre personas, prompts e vincule cada módulo ao agente certo. Somente ADMIN.</p>
+            </div>
+            <div class="ai-agents-toolbar">
+              <button type="button" class="btn primary" id="aiAgentsNovoBtn">+ Novo agente</button>
+              <button type="button" class="btn secondary" id="aiAgentsRecarregarBtn">🔄 Atualizar</button>
+            </div>
+
+            <div class="table-card form-card--wide ai-agents-modules-card">
+              <header>
+                <h3>Agente por módulo</h3>
+                <p class="subtle-text">Escolha qual persona responde em cada área do sistema.</p>
+              </header>
+              <div id="aiAgentsModulesGrid" class="ai-agents-modules-grid"></div>
+              <footer class="ai-agents-modules-footer">
+                <button type="button" class="btn primary" id="aiAgentsSalvarModulosBtn">Salvar vínculos dos módulos</button>
+              </footer>
+            </div>
+
+            <div id="aiAgentsGrid" class="ai-agents-grid"></div>
+          </section>
+
           <!-- IA — Assistente ChatGPT (legado) -->
           <section id="iaAssistenteSection" class="view-section hidden">
             <div class="ia-section-head">
@@ -5580,6 +5607,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIa" /> SAS IA — Chat</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaDocumentos" /> SAS IA — Manuais (ADMIN)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaConfiguracoes" /> SAS IA — Configurações (ADMIN)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAgentes" /> IA — Agentes (ADMIN)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAssistente" /> IA — Assistente (legado)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaConfiguracoes" /> IA — Configurações legado (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
@@ -7036,6 +7064,67 @@
       </div>
     </div>
 
+    <!-- Modal Agente IA -->
+    <div class="modal-backdrop" id="aiAgentModal">
+      <div class="modal ai-agent-modal">
+        <header>
+          <h2 id="aiAgentModalTitle">Novo agente</h2>
+          <button type="button" class="close-btn" id="aiAgentModalClose" aria-label="Fechar">x</button>
+        </header>
+        <form id="aiAgentForm" class="ai-agent-form" novalidate enctype="multipart/form-data">
+          <div class="ai-agent-form__row">
+            <label class="ai-agent-form__field">
+              Nome do agente *
+              <input type="text" id="aiAgentFormName" required maxlength="120" placeholder="Ex.: Rafaela Almeida" />
+            </label>
+            <label class="ai-agent-form__field">
+              Função
+              <input type="text" id="aiAgentFormRole" maxlength="160" placeholder="Ex.: Assistente administrativa" />
+            </label>
+          </div>
+          <label class="ai-agent-form__field ai-agent-form__field--full">
+            Descrição
+            <textarea id="aiAgentFormDesc" rows="2" placeholder="Resumo do que este agente faz"></textarea>
+          </label>
+          <label class="ai-agent-form__field ai-agent-form__field--full ai-agent-form__field--prompt">
+            Prompt da persona *
+            <textarea id="aiAgentFormPrompt" rows="12" required placeholder="Personalidade, tom de voz e regras de atuação…"></textarea>
+          </label>
+          <div class="ai-agent-form__row">
+            <label class="ai-agent-form__field">
+              Foto / avatar
+              <div class="ai-agent-form__avatar-wrap">
+                <div id="aiAgentAvatarPreview" class="ai-agent-card__avatar ai-agent-form__avatar-preview"><span class="ai-agent-card__avatar-fallback">🤖</span></div>
+                <input type="file" id="aiAgentFormAvatar" accept="image/jpeg,image/png,image/webp,image/gif" />
+              </div>
+              <label class="checkbox-label ai-agent-form__remover-foto">
+                <input type="checkbox" id="aiAgentFormRemoverAvatar" />
+                <span>Remover foto</span>
+              </label>
+            </label>
+            <div class="ai-agent-form__col">
+              <label class="ai-agent-form__field">
+                Modelo da IA
+                <select id="aiAgentFormModel"></select>
+              </label>
+              <label class="ai-agent-form__field">
+                Temperatura (0–2)
+                <input type="number" id="aiAgentFormTemp" min="0" max="2" step="0.05" value="0.65" />
+              </label>
+              <label class="checkbox-label ai-agent-form__ativo">
+                <input type="checkbox" id="aiAgentFormActive" checked />
+                <span>Agente ativo</span>
+              </label>
+            </div>
+          </div>
+          <footer class="ai-agent-form__footer">
+            <button type="button" class="btn neutral" id="aiAgentFormCancel">Cancelar</button>
+            <button type="submit" class="btn primary">Salvar agente</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
     <!-- SAS IA — chat flutuante (persiste ao trocar de página) -->
     <div id="sasIaFloatRoot" class="sas-ia-float-root hidden" aria-live="polite">
       <button type="button" id="sasIaFloatFab" class="sas-ia-float__fab" title="Abrir SAS IA" aria-label="Abrir SAS IA">
@@ -7093,7 +7182,8 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260622-close-end"></script>
+    <script src="sas-ia.js?v=20260623-agents"></script>
+    <script src="ai-agents.js?v=20260623-agents"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>
