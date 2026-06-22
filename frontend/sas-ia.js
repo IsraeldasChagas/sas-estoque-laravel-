@@ -8,6 +8,7 @@
   var sasIaEnviando = false;
   var sasIaInited = false;
   var SAS_IA_FLOAT_KEY = "sas-ia-float-open";
+  var SAS_IA_FLOAT_DISMISSED_KEY = "sas-ia-float-dismissed";
   var SAS_IA_EXPAND_KEY = "sas-ia-float-expanded";
   var SAS_IA_AUTO_SPEAK_KEY = "sas-ia-auto-speak";
 
@@ -638,7 +639,11 @@
 
   function sasFloatOpen() {
     var root = sasEl("sasIaFloatRoot");
-    if (!root || root.classList.contains("hidden")) return;
+    if (!root) return;
+    root.classList.remove("hidden");
+    try {
+      sessionStorage.setItem(SAS_IA_FLOAT_DISMISSED_KEY, "0");
+    } catch (_) {}
     var wasExpanded = false;
     try {
       wasExpanded = sessionStorage.getItem(SAS_IA_EXPAND_KEY) === "1";
@@ -653,7 +658,16 @@
 
   function sasFloatClose() {
     sasStopSpeak();
-    sasFloatMinimize();
+    if (sasIaListening) sasMicStopRecognition();
+    sasSetExpanded(false);
+    sasSetOpen(false);
+    sasFloatResetLayout();
+    var root = sasEl("sasIaFloatRoot");
+    if (root) root.classList.add("hidden");
+    try {
+      sessionStorage.setItem(SAS_IA_FLOAT_KEY, "0");
+      sessionStorage.setItem(SAS_IA_FLOAT_DISMISSED_KEY, "1");
+    } catch (_) {}
   }
 
   function sasFloatMinimize() {
@@ -677,13 +691,22 @@
     if (!loggedIn) enabled = false;
 
     if (enabled) {
-      root.classList.remove("hidden");
-      sasLoadBranding().catch(function () {});
-      var wasOpen = false;
+      var dismissed = false;
       try {
-        wasOpen = sessionStorage.getItem(SAS_IA_FLOAT_KEY) === "1";
+        dismissed = sessionStorage.getItem(SAS_IA_FLOAT_DISMISSED_KEY) === "1";
       } catch (_) {}
-      if (wasOpen) sasFloatOpen();
+      if (!dismissed) {
+        root.classList.remove("hidden");
+        sasLoadBranding().catch(function () {});
+        var wasOpen = false;
+        try {
+          wasOpen = sessionStorage.getItem(SAS_IA_FLOAT_KEY) === "1";
+        } catch (_) {}
+        if (wasOpen) sasFloatOpen();
+      } else {
+        root.classList.add("hidden");
+        sasSetOpen(false);
+      }
     } else {
       root.classList.add("hidden");
       sasSetOpen(false);

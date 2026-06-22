@@ -359,6 +359,16 @@ class FinanceiroGerencialCalculo
         if ($unidadeId && Schema::hasColumn('boletos', 'unidade_id')) {
             $q->where('unidade_id', $unidadeId);
         }
+        // Boletos já espelhados no fluxo de caixa (ex.: impostos) entram só pelo lançamento.
+        if (Schema::hasTable('financeiro_lancamentos')) {
+            $q->whereNotExists(function ($sub) {
+                $sub->from('financeiro_lancamentos as fl')
+                    ->whereColumn('fl.origem_id', 'boletos.id')
+                    ->where('fl.origem_tipo', 'boleto')
+                    ->whereNull('fl.deleted_at')
+                    ->whereIn('fl.status', ['realizado', 'atrasado']);
+            });
+        }
 
         return round((float) $q->sum('valor'), 2);
     }

@@ -367,8 +367,10 @@ class BoletoController extends Controller
             \Log::info('💾 Criando boleto no banco...');
             $boleto = Boleto::create($data);
             $this->processarAnexosRequest($request, $boleto);
-            \App\Models\Imposto::sincronizarDeBoleto($boleto->fresh());
-            $boleto = $this->serializarBoleto($boleto->fresh());
+            $boletoFresh = $boleto->fresh();
+            \App\Models\Imposto::sincronizarDeBoleto($boletoFresh);
+            \App\Services\BoletoFluxoCaixaService::sincronizarDeBoleto($boletoFresh);
+            $boleto = $this->serializarBoleto($boletoFresh);
 
             \Log::info('✅ Boleto criado com sucesso - ID: '.$boleto->id);
 
@@ -474,8 +476,10 @@ class BoletoController extends Controller
 
             $boleto->update($data);
             $this->processarAnexosRequest($request, $boleto);
-            \App\Models\Imposto::sincronizarDeBoleto($boleto->fresh());
-            $boleto = $this->serializarBoleto($boleto->fresh());
+            $boletoFresh = $boleto->fresh();
+            \App\Models\Imposto::sincronizarDeBoleto($boletoFresh);
+            \App\Services\BoletoFluxoCaixaService::sincronizarDeBoleto($boletoFresh);
+            $boleto = $this->serializarBoleto($boletoFresh);
 
             return response()->json([
                 'message' => 'Boleto atualizado com sucesso',
@@ -512,6 +516,7 @@ class BoletoController extends Controller
                 Storage::disk('public')->delete($boleto->anexo_path);
             }
 
+            \App\Services\BoletoFluxoCaixaService::aoExcluirBoleto((int) $boleto->id);
             $boleto->delete();
 
             return response()->json([

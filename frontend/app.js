@@ -23652,6 +23652,10 @@ document.getElementById('boletoPagamentoForm')?.addEventListener('submit', async
     console.log('✅ Pagamento registrado:', result);
 
     showToast('✅ Pagamento registrado com sucesso!', 'success');
+    const b = result.boleto || {};
+    if (b.categoria === 'IMPOSTOS' || b.imposto_id) {
+      showToast('Saída lançada automaticamente no Fluxo de Caixa (categoria Impostos).', 'info');
+    }
     
     // Fecha modal
     document.getElementById('boletoPagamentoModal').classList.remove('active');
