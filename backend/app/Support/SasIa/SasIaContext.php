@@ -93,6 +93,14 @@ final class SasIaContext
             return true;
         }
 
+        if (in_array($toolName, [
+            'consultar_reservas_periodo',
+            'consultar_mesas_resumo',
+            'consultar_resumo_unidades',
+        ], true)) {
+            return $this->temModulo('sasIa') || $this->temAlgumModulo(SasIaToolRegistry::modulosDaFerramenta($toolName));
+        }
+
         if ($toolName === 'consultar_logs_recentes') {
             return in_array($this->perfil(), ['ADMIN', 'GERENTE'], true)
                 || $this->temModulo('logs');

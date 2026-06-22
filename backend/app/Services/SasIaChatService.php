@@ -6,6 +6,7 @@ use App\Models\AiConversation;
 use App\Models\AiMessage;
 use App\Models\AiToolLog;
 use App\Support\SasIa\SasIaContext;
+use App\Support\SasIa\SasIaPrefetchService;
 use App\Support\SasIa\SasIaResponseSanitizer;
 use Illuminate\Support\Facades\Schema;
 
@@ -20,7 +21,8 @@ class SasIaChatService
 
     public function __construct(
         private OpenAiService $openAi,
-        private SasIaToolService $toolService
+        private SasIaToolService $toolService,
+        private SasIaPrefetchService $prefetch
     ) {}
 
     /**
@@ -55,8 +57,9 @@ class SasIaChatService
         $userMsg = $this->salvarMensagem($conversa->id, 'user', $mensagem);
 
         $historico = $this->carregarHistoricoOpenAi($conversa->id, 12);
+        $systemPrompt = $this->systemPrompt($ctx).$this->prefetch->blocoParaPrompt($ctx, $mensagem);
         $messages = array_merge(
-            [['role' => 'system', 'content' => $this->systemPrompt($ctx)]],
+            [['role' => 'system', 'content' => $systemPrompt]],
             $historico,
             [['role' => 'user', 'content' => $mensagem]]
         );
@@ -198,7 +201,8 @@ Regras:
 - Responda sempre em português do Brasil.
 - Para perguntas sobre números, estoque, vendas, financeiro, RH, reservas, patrimônio, energia, investimento ou cadastros: SEMPRE chame a ferramenta do módulo correspondente antes de responder.
 - Para CNPJ, endereço ou dados completos de unidades/empresas: use consultar_resumo_unidades ou consultar_cadastro_geral (tipo unidade).
-- Para reserva de mesa (hoje, amanhã ou futuro): SEMPRE use consultar_reservas_periodo — ela busca reservas ativas no período.
+- Para reserva de mesa: os dados já vêm no contexto (RESERVAS_DE_MESA). Se tem_reservas ou reservas_hoje for true, diga quais são. Se false, diga que não há reserva ativa no período. Nunca diga que não há se os dados mostrarem reservas.
+- Para CNPJ e unidades: use os dados UNIDADES_EMPRESAS do contexto ou consultar_resumo_unidades.
 - Para buscar qualquer cadastro por nome/CNPJ/CPF: use consultar_cadastro_geral.
 - Para procedimentos, regras internas, manuais ou "como fazer" no Grupo Sabor Paraense: SEMPRE chame consultar_manual_documentacao antes de responder.
 - Use consultar_resumo_produtos para totais de produtos cadastrados.

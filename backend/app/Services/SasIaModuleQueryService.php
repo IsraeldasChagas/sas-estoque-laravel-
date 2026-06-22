@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Support\Financeiro\FinanceiroGerencialCalculo;
 use App\Support\SasIa\SasIaContext;
+use App\Support\SasIa\SasIaReservaQuery;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -355,85 +356,7 @@ class SasIaModuleQueryService
     /** @param  array<string, mixed>  $args */
     private function reservasPeriodo(SasIaContext $ctx, array $args): array
     {
-        if (! Schema::hasTable('reservas_mesas')) {
-            return ['reservas' => [], 'total' => 0, 'tem_reservas' => false];
-        }
-
-        if (! empty($args['data'])) {
-            $de = $ate = trim((string) $args['data']);
-        } else {
-            $de = trim((string) ($args['de'] ?? now()->format('Y-m-d')));
-            $ate = trim((string) ($args['ate'] ?? now()->addDays(30)->format('Y-m-d')));
-        }
-
-        if ($de > $ate) {
-            [$de, $ate] = [$ate, $de];
-        }
-
-        $select = [
-            'r.id',
-            'r.nome_cliente',
-            'r.telefone_cliente',
-            'r.data_reserva',
-            'r.hora_reserva',
-            'r.qtd_pessoas',
-            'r.status',
-            'r.observacao',
-            'r.unidade_id',
-            'u.nome as unidade',
-            'm.numero_mesa',
-            'm.nome_mesa',
-        ];
-        if (Schema::hasColumn('reservas_mesas', 'local')) {
-            $select[] = 'r.local';
-        }
-        if (Schema::hasColumn('reservas_mesas', 'ocasiao')) {
-            $select[] = 'r.ocasiao';
-        }
-
-        $q = DB::table('reservas_mesas as r')
-            ->leftJoin('unidades as u', 'r.unidade_id', '=', 'u.id')
-            ->leftJoin('mesas as m', 'r.mesa_id', '=', 'm.id')
-            ->whereBetween('r.data_reserva', [$de, $ate])
-            ->whereNotIn('r.status', ['cancelada', 'no_show', 'finalizada'])
-            ->select($select)
-            ->orderBy('r.data_reserva')
-            ->orderBy('r.hora_reserva')
-            ->limit(50);
-
-        $unidadeId = isset($args['unidade_id']) ? (int) $args['unidade_id'] : $ctx->unidadeEfetiva();
-        if ($unidadeId) {
-            $q->where('r.unidade_id', $unidadeId);
-        }
-
-        $buscaCliente = trim((string) ($args['busca_cliente'] ?? ''));
-        if ($buscaCliente !== '') {
-            $q->where('r.nome_cliente', 'like', '%'.$buscaCliente.'%');
-        }
-
-        $rows = $q->get()->map(fn ($r) => [
-            'id' => $r->id,
-            'cliente' => $r->nome_cliente,
-            'telefone' => $r->telefone_cliente ?? null,
-            'data' => $r->data_reserva,
-            'hora' => $r->hora_reserva,
-            'pessoas' => (int) ($r->qtd_pessoas ?? 1),
-            'status' => $r->status,
-            'unidade' => $r->unidade,
-            'unidade_id' => $r->unidade_id,
-            'mesa' => $r->numero_mesa ?? $r->nome_mesa ?? null,
-            'local' => property_exists($r, 'local') ? ($r->local ?? null) : null,
-            'ocasiao' => property_exists($r, 'ocasiao') ? ($r->ocasiao ?? null) : null,
-            'observacao' => $r->observacao ?? null,
-        ])->all();
-
-        return [
-            'periodo' => ['de' => $de, 'ate' => $ate],
-            'total' => count($rows),
-            'tem_reservas' => count($rows) > 0,
-            'reservas' => $rows,
-            'observacao' => 'Somente reservas ativas (pendente/confirmada). Canceladas e finalizadas não entram.',
-        ];
+        return SasIaReservaQuery::consultar($ctx, $args);
     }
 
     /** @param  array<string, mixed>  $args */

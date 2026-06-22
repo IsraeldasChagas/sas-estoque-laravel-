@@ -22,8 +22,8 @@ final class SasIaToolRegistry
             'consultar_movimentacoes_recentes' => ['movimentacoes', 'estoque', 'dashboard'],
             'consultar_compras_recentes' => ['compras'],
             'consultar_fornecedores' => ['fornecedores'],
-            'consultar_resumo_unidades' => ['unidades', 'dashboard'],
-            'consultar_cadastro_geral' => ['unidades', 'fornecedores', 'funcionarios', 'produtos', 'reservaMesa', 'dashboard'],
+            'consultar_resumo_unidades' => ['unidades', 'dashboard', 'sasIa'],
+            'consultar_cadastro_geral' => ['unidades', 'fornecedores', 'funcionarios', 'produtos', 'reservaMesa', 'dashboard', 'sasIa'],
             'consultar_resumo_usuarios' => ['usuarios'],
 
             // Financeiro / fechamento
@@ -38,8 +38,8 @@ final class SasIaToolRegistry
             'consultar_recibos_ajuda_resumo' => ['reciboAjuda'],
 
             // Reservas
-            'consultar_reservas_periodo' => ['reservaMesa', 'historicoReservas'],
-            'consultar_mesas_resumo' => ['reservaMesa'],
+            'consultar_reservas_periodo' => ['reservaMesa', 'historicoReservas', 'sasIa'],
+            'consultar_mesas_resumo' => ['reservaMesa', 'sasIa'],
 
             // RH
             'consultar_funcionarios_resumo' => ['funcionarios', 'rhDashboard', 'rhRelatorios'],
@@ -102,7 +102,7 @@ final class SasIaToolRegistry
             self::t('consultar_recibos_ajuda_resumo', 'Recibos de ajuda de custo recentes.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 10)']]),
 
             // —— Reservas ——
-            self::t('consultar_reservas_periodo', 'Reservas de mesa ativas (pendente/confirmada). Sem data: busca de hoje até 30 dias à frente. Use sempre para perguntas sobre reserva de mesa.', [
+            self::t('consultar_reservas_periodo', 'Reservas de mesa ATIVAS no banco. Retorna tem_reservas, reservas_hoje e lista completa. Use SEMPRE para qualquer pergunta sobre reserva de mesa.', [
                 'data' => ['type' => 'string', 'description' => 'Dia único YYYY-MM-DD (opcional)'],
                 'de' => ['type' => 'string', 'description' => 'Início do período YYYY-MM-DD (opcional)'],
                 'ate' => ['type' => 'string', 'description' => 'Fim do período YYYY-MM-DD (opcional)'],
