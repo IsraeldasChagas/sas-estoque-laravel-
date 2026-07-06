@@ -11156,6 +11156,8 @@ require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/ai_agent_routes.php';
 require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';
+require __DIR__ . '/ai_assistant_routes.php';
+require __DIR__ . '/openclaw_config_routes.php';
 
 // ============================================
 // DEPLOY - Atualiza o servidor via git pull

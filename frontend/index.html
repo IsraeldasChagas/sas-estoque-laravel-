@@ -303,6 +303,8 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="configuracoesPainel"><span class="nav-icon" aria-hidden="true">🎛️</span><span class="nav-label">Painel do Sistema</span></a>
+              <div class="nav-submenu-divider-label">Integrações</div>
+              <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
               <div class="nav-submenu-divider-label">IA</div>
               <a href="#" class="nav-link nav-link-child" data-section="iaAgentes"><span class="nav-icon" aria-hidden="true">🤖</span><span class="nav-label">Agentes</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
@@ -4404,6 +4406,75 @@
             </div>
           </section>
 
+          <!-- Configurações — Integrações — OpenClaw -->
+          <section id="openClawIntegracaoSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>🦞 OpenClaw / Assistente IA</h2>
+                <p class="subtle-text">Integração exclusiva para o assistente via WhatsApp consultar e executar ações controladas no estoque.</p>
+                <p class="subtle-text" id="ocStatusBadge"></p>
+              </div>
+            </div>
+            <div id="ocAvisoAdmin" class="ia-aviso hidden"></div>
+            <div class="table-card form-card--wide">
+              <header><h3>Configuração da integração</h3></header>
+              <form id="ocForm" class="ia-config-grid">
+                <label class="ia-config-check">
+                  <input type="checkbox" id="ocAtivo" />
+                  <span>Ativar integração OpenClaw</span>
+                </label>
+                <label>URL do OpenClaw (gateway)
+                  <input type="url" id="ocUrl" placeholder="http://SEU-IP:18789" maxlength="500" />
+                  <p class="ia-hint">Endereço do gateway OpenClaw na VPS (usado no teste de conexão).</p>
+                </label>
+                <label>Token secreto (Bearer)
+                  <div class="ia-chat-form__row">
+                    <input type="text" id="ocToken" readonly placeholder="Gere um token" />
+                    <button type="button" class="btn secondary" id="ocBtnGerarToken">Gerar token</button>
+                    <button type="button" class="btn neutral" id="ocBtnCopiarToken">Copiar</button>
+                  </div>
+                  <p class="ia-hint">Configure também <code>OPENCLAW_SAS_TOKEN</code> no .env do servidor.</p>
+                </label>
+                <label>URL base da API SAS (somente leitura)
+                  <input type="text" id="ocApiBase" readonly />
+                </label>
+                <div>
+                  <h4>Unidades permitidas</h4>
+                  <p class="subtle-text">Deixe todas desmarcadas para permitir qualquer unidade.</p>
+                  <div id="ocUnidadesPermitidas" class="oc-check-grid"></div>
+                </div>
+                <div>
+                  <h4>Ações permitidas</h4>
+                  <div id="ocAcoesPermitidas" class="oc-check-grid"></div>
+                </div>
+                <div class="ia-chat-form__row">
+                  <button type="submit" class="btn primary" id="ocSalvarBtn">Salvar configurações</button>
+                  <button type="button" class="btn secondary" id="ocBtnTestar">Testar conexão</button>
+                </div>
+              </form>
+            </div>
+            <div class="table-card form-card--wide">
+              <header>
+                <h3>Histórico de comandos da IA</h3>
+                <button type="button" class="btn secondary" id="ocBtnAtualizarLogs">Atualizar</button>
+              </header>
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Ação</th>
+                      <th>Status</th>
+                      <th>Resumo</th>
+                      <th>Comando</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ocLogsBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
           <!-- Configurações — Painel do Sistema -->
           <section id="configuracoesPainelSection" class="view-section hidden">
             <div class="cfg-section-head">
@@ -5606,6 +5677,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="configuracoesPainel" /> Configurações — Painel do Sistema</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="openClawIntegracao" /> Configurações — OpenClaw / Assistente IA (ADMIN)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIa" /> SAS IA — Chat</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaDocumentos" /> SAS IA — Manuais (ADMIN)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaConfiguracoes" /> SAS IA — Configurações (ADMIN)</label>
@@ -7187,6 +7259,7 @@
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
+    <script src="openclaw-integracao.js?v=20260706-oc"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
     <script src="sas-ia.js?v=20260623-chat-row"></script>
     <script src="ai-agents.js?v=20260623-chat-row"></script>

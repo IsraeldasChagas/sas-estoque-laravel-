@@ -1582,7 +1582,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "configuracoesPainel", "sasIa", "sasIaDocumentos", "sasIaConfiguracoes", "iaAgentes", "iaAssistente", "iaConfiguracoes",
+  "configuracoesPainel", "openClawIntegracao", "sasIa", "sasIaDocumentos", "sasIaConfiguracoes", "iaAgentes", "iaAssistente", "iaConfiguracoes",
 ]);
 
 function syncUrlSectionHash(section) {
@@ -1946,7 +1946,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "sasIa", "sasIaDocumentos", "iaAssistente", "iaConfiguracoes", "logs"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "openClawIntegracao", "sasIa", "sasIaDocumentos", "iaAssistente", "iaConfiguracoes", "logs"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -5329,6 +5329,9 @@ function applyPermissions() {
   if (["ADMIN", "GERENTE"].includes(perfilCfgAuto) && !sections.includes("configuracoesPainel")) {
     sections = [...sections, "configuracoesPainel"];
   }
+  if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
+    sections = [...sections, "openClawIntegracao"];
+  }
   // SAS IA: chat para usuários logados; manuais só ADMIN.
   if (currentUser && !sections.includes("sasIa")) {
     sections = [...sections, "sasIa"];
@@ -5467,6 +5470,7 @@ function applyPermissions() {
     const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
     const temConfigPainel =
       regras.sections.includes("configuracoesPainel") ||
+      regras.sections.includes("openClawIntegracao") ||
       regras.sections.includes("iaAgentes") ||
       ["ADMIN", "GERENTE"].includes(perfilCfg);
     configuracoesNavSubmenu.classList.toggle("hidden", !temConfigPainel);
@@ -5734,7 +5738,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "configuracoesPainel" || section === "iaAgentes") configuracoesNavSubmenuNav.classList.add("open");
+    if (section === "configuracoesPainel" || section === "openClawIntegracao" || section === "iaAgentes") configuracoesNavSubmenuNav.classList.add("open");
     else configuracoesNavSubmenuNav.classList.remove("open");
   }
   const iaNavSubmenuNav = document.getElementById("iaMenu")?.closest(".nav-submenu");
@@ -5771,6 +5775,7 @@ function navigateTo(section) {
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
   else if (section === "configuracoesPainel") loadConfiguracoesPainel?.().catch(() => {});
+  else if (section === "openClawIntegracao") loadOpenClawIntegracao?.().catch(() => {});
   else if (section === "sasIa") {
     loadSasIa?.().catch(() => {});
     window.sasIaFloatOpen?.();
