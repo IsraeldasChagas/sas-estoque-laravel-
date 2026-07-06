@@ -194,6 +194,11 @@ final class OpenClawSettings
             'acoes_permitidas' => self::acoesPermitidas(),
             'acoes_disponiveis' => self::ACOES_DISPONIVEIS,
             'api_base' => rtrim((string) config('app.url'), '/').'/api/ia',
+            'skill_path' => 'openclaw/skill-sas-estoque/',
+            'vps_env' => [
+                'SAS_ESTOQUE_API_URL' => rtrim((string) config('app.url'), '/').'/api/ia',
+                'SAS_ESTOQUE_TOKEN' => $token !== '' ? self::mascararToken($token) : '',
+            ],
         ];
     }
 }

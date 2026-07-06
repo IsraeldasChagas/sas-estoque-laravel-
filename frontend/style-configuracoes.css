@@ -81,3 +81,33 @@
   gap: 0.35rem 1rem;
   margin-top: 0.5rem;
 }
+
+.oc-setup-card ol.oc-setup-steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.55;
+}
+.oc-setup-card li {
+  margin-bottom: 0.65rem;
+}
+.oc-setup-card li.oc-step-done {
+  color: var(--muted, #607d8b);
+}
+.oc-setup-card li.oc-step-done strong {
+  color: inherit;
+}
+.oc-env-line {
+  display: block;
+  margin: 0.35rem 0;
+  padding: 0.45rem 0.6rem;
+  background: #f4f6f8;
+  border: 1px solid #cfd8dc;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+.oc-btn-mini {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+}

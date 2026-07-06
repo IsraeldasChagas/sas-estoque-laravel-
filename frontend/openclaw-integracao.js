@@ -97,11 +97,18 @@
     const token = document.getElementById("ocToken");
     const apiBase = document.getElementById("ocApiBase");
     const status = document.getElementById("ocStatusBadge");
+    const envLine = document.getElementById("ocEnvLine");
 
     if (ativo) ativo.checked = !!config.ativo;
     if (url) url.value = config.url || "";
     if (token) token.value = config.token_mascarado || "";
     if (apiBase) apiBase.value = config.api_base || "";
+    if (envLine) {
+      const tok = ocTokenGerado || (config.token_configurado ? "SEU_TOKEN_AQUI" : "");
+      envLine.textContent = tok && !tok.includes("•")
+        ? `OPENCLAW_SAS_TOKEN=${tok}`
+        : "OPENCLAW_SAS_TOKEN=oc_sas_... (gere o token abaixo)";
+    }
 
     if (status) {
       const partes = [];
@@ -112,9 +119,10 @@
 
     ocRenderUnidades(unidades, config.unidades_permitidas);
     ocRenderAcoes(config.acoes_disponiveis, config.acoes_permitidas);
+    ocAtualizarSetup(config);
 
     document.querySelectorAll("#ocForm input, #ocForm textarea, #ocForm button").forEach((el) => {
-      if (el.id === "ocBtnTestar" || el.id === "ocBtnGerarToken" || el.id === "ocBtnCopiarToken") return;
+      if (el.id === "ocBtnTestar" || el.id === "ocBtnGerarToken" || el.id === "ocBtnCopiarToken" || el.id === "ocBtnCopiarApi") return;
       if (!ocPodeEditar) el.setAttribute("disabled", "disabled");
       else el.removeAttribute("disabled");
     });
@@ -125,6 +133,45 @@
     }
     const gerar = document.getElementById("ocBtnGerarToken");
     if (gerar) gerar.disabled = !ocPodeEditar;
+  }
+
+  function ocAtualizarSetup(config) {
+    const tokenOk = !!(config.token_configurado || (ocTokenGerado && !ocTokenGerado.includes("•")));
+    const ativoOk = !!config.ativo;
+    const urlOk = !!(config.url && String(config.url).trim());
+    const map = {
+      token: tokenOk,
+      env: tokenOk,
+      ativo: ativoOk,
+      vps: urlOk,
+      teste: false,
+    };
+    document.querySelectorAll("#ocSetupSteps li[data-step]").forEach((li) => {
+      const step = li.dataset.step;
+      li.classList.toggle("oc-step-done", !!map[step]);
+    });
+    const resumo = document.getElementById("ocSetupResumo");
+    if (!resumo) return;
+    const faltam = [];
+    if (!tokenOk) faltam.push("gerar token");
+    if (!ativoOk) faltam.push("ativar e salvar");
+    if (!urlOk) faltam.push("URL da VPS");
+    resumo.textContent = faltam.length
+      ? `Falta: ${faltam.join(", ")}. Depois clique em Testar conexão.`
+      : "Configuração básica OK. Instale a skill na VPS e teste a conexão.";
+  }
+
+  async function ocCopiar(texto, okMsg) {
+    if (!texto) {
+      ocToast("Nada para copiar.", "warning");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(texto);
+      ocToast(okMsg || "Copiado.", "success");
+    } catch (_) {
+      ocToast("Não foi possível copiar.", "error");
+    }
   }
 
   async function loadOpenClawIntegracao() {
@@ -184,7 +231,10 @@
           ocTokenGerado = data.token || "";
           const tokenEl = document.getElementById("ocToken");
           if (tokenEl) tokenEl.value = ocTokenGerado;
+          const envLine = document.getElementById("ocEnvLine");
+          if (envLine) envLine.textContent = `OPENCLAW_SAS_TOKEN=${ocTokenGerado}`;
           ocToast(data.aviso || "Token gerado. Copie agora!", "success");
+          ocAtualizarSetup({ token_configurado: true, ativo: document.getElementById("ocAtivo")?.checked });
         } catch (e) {
           ocToast(e?.message || "Erro ao gerar token.", "error");
         }
@@ -200,12 +250,24 @@
           ocToast("Gere um token novo para copiar o valor completo.", "warning");
           return;
         }
-        try {
-          await navigator.clipboard.writeText(val);
-          ocToast("Token copiado.", "success");
-        } catch (_) {
-          ocToast("Não foi possível copiar automaticamente.", "error");
-        }
+        await ocCopiar(val, "Token copiado.");
+      });
+    }
+
+    const btnCopiarEnv = document.getElementById("ocBtnCopiarEnv");
+    if (btnCopiarEnv && !btnCopiarEnv.dataset.bound) {
+      btnCopiarEnv.dataset.bound = "1";
+      btnCopiarEnv.addEventListener("click", () => {
+        const line = document.getElementById("ocEnvLine")?.textContent || "";
+        ocCopiar(line, "Linha .env copiada.");
+      });
+    }
+
+    const btnCopiarApi = document.getElementById("ocBtnCopiarApi");
+    if (btnCopiarApi && !btnCopiarApi.dataset.bound) {
+      btnCopiarApi.dataset.bound = "1";
+      btnCopiarApi.addEventListener("click", () => {
+        ocCopiar(document.getElementById("ocApiBase")?.value || "", "URL da API copiada.");
       });
     }
 
@@ -217,6 +279,12 @@
           const data = await ocFetch("/openclaw/testar-conexao", { method: "POST", body: "{}" });
           const msg = data.message || (data.ok ? "Conexão OK" : "Falha no teste");
           ocToast(msg, data.ok ? "success" : "error");
+          if (data.ok) {
+            const li = document.getElementById("ocStep5");
+            if (li) li.classList.add("oc-step-done");
+            const resumo = document.getElementById("ocSetupResumo");
+            if (resumo) resumo.textContent = "Tudo certo! OpenClaw pode usar a API do SAS-Estoque.";
+          }
         } catch (e) {
           ocToast(e?.message || "Falha no teste de conexão.", "error");
         }
