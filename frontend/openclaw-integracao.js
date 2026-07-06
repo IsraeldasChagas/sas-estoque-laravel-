@@ -175,8 +175,11 @@
   }
 
   async function loadOpenClawIntegracao() {
+    if (!window.currentUser && typeof getUser === "function") {
+      try { window.currentUser = getUser(); } catch (_) {}
+    }
     const perfil = (window.currentUser?.perfil || "").toString().trim().toUpperCase();
-    ocPodeEditar = perfil === "ADMIN";
+    ocPodeEditar = perfil === "ADMIN" || perfil === "ADMINISTRADOR";
     const aviso = document.getElementById("ocAvisoAdmin");
     if (aviso) {
       aviso.classList.toggle("hidden", ocPodeEditar);

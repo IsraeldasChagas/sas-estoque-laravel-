@@ -18,7 +18,9 @@ class OpenClawConfigController extends Controller
             return null;
         }
         $u = DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first();
-        if (! $u || strtoupper(trim((string) ($u->perfil ?? ''))) !== 'ADMIN') {
+        $perfil = strtoupper(trim((string) ($u->perfil ?? '')));
+        // Compatibilidade: algumas instalações gravam "ADMINISTRADOR" em vez de "ADMIN".
+        if (! $u || ! in_array($perfil, ['ADMIN', 'ADMINISTRADOR'], true)) {
             return null;
         }
 
