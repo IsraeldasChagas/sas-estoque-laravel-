@@ -122,7 +122,7 @@
     ocAtualizarSetup(config);
 
     document.querySelectorAll("#ocForm input, #ocForm textarea, #ocForm button").forEach((el) => {
-      if (el.id === "ocBtnTestar" || el.id === "ocBtnGerarToken" || el.id === "ocBtnCopiarToken" || el.id === "ocBtnCopiarApi") return;
+      if (["ocBtnTestar", "ocBtnGerarToken", "ocBtnCopiarToken", "ocBtnCopiarApi"].includes(el.id)) return;
       if (!ocPodeEditar) el.setAttribute("disabled", "disabled");
       else el.removeAttribute("disabled");
     });

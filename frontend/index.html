@@ -48,7 +48,7 @@
     <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
-    <link rel="stylesheet" href="style-configuracoes.css?v=20260610-cfg" />
+    <link rel="stylesheet" href="style-configuracoes.css?v=20260706-oc" />
     <link rel="stylesheet" href="style-ia.css?v=20260623-chat-row" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
@@ -4419,63 +4419,83 @@
 
             <div class="table-card form-card--wide oc-setup-card">
               <header><h3>Passo a passo — deixar pronto</h3></header>
-              <ol class="oc-setup-steps" id="ocSetupSteps">
-                <li id="ocStep1" data-step="token">Gerar o <strong>token</strong> abaixo e copiar.</li>
-                <li id="ocStep2" data-step="env">No servidor da API (<code>api.gruposaborparaense.com.br</code>), colar no <code>.env</code>:
-                  <code class="oc-env-line" id="ocEnvLine">OPENCLAW_SAS_TOKEN=</code>
-                  <button type="button" class="btn neutral oc-btn-mini" id="ocBtnCopiarEnv">Copiar linha .env</button>
-                </li>
-                <li id="ocStep3" data-step="ativo">Marcar <strong>Ativar integração</strong>, escolher unidades/ações e clicar <strong>Salvar</strong>.</li>
-                <li id="ocStep4" data-step="vps">Na VPS, informar a <strong>URL do OpenClaw</strong> (ex.: <code>http://IP-DA-VPS:18789</code>) e instalar a skill do repositório:
-                  <code class="oc-env-line">openclaw/skill-sas-estoque/</code>
-                </li>
-                <li id="ocStep5" data-step="teste">Clicar <strong>Testar conexão</strong> — API SAS e OpenClaw devem responder OK.</li>
-              </ol>
-              <p class="subtle-text" id="ocSetupResumo"></p>
+              <div class="oc-setup-body">
+                <ol class="oc-setup-steps" id="ocSetupSteps">
+                  <li id="ocStep1" data-step="token">Gerar o <strong>token</strong> abaixo e copiar.</li>
+                  <li id="ocStep2" data-step="env">
+                    <span>No servidor da API (<code>api.gruposaborparaense.com.br</code>), colar no <code>.env</code>:</span>
+                    <code class="oc-env-line" id="ocEnvLine">OPENCLAW_SAS_TOKEN=</code>
+                    <button type="button" class="btn neutral oc-btn-mini" id="ocBtnCopiarEnv">Copiar linha .env</button>
+                  </li>
+                  <li id="ocStep3" data-step="ativo">Marcar <strong>Ativar integração</strong>, escolher unidades/ações e clicar <strong>Salvar</strong>.</li>
+                  <li id="ocStep4" data-step="vps">
+                    <span>Na VPS, informar a <strong>URL do OpenClaw</strong> (ex.: <code>http://IP-DA-VPS:18789</code>) e instalar a skill:</span>
+                    <code class="oc-env-line">openclaw/skill-sas-estoque/</code>
+                  </li>
+                  <li id="ocStep5" data-step="teste">Clicar <strong>Testar conexão</strong> — API SAS e OpenClaw devem responder OK.</li>
+                </ol>
+                <p class="subtle-text oc-setup-resumo" id="ocSetupResumo"></p>
+              </div>
             </div>
 
-            <div class="table-card form-card--wide">
+            <div class="table-card form-card--wide oc-config-card">
               <header><h3>Configuração da integração</h3></header>
-              <form id="ocForm" class="ia-config-grid">
-                <label class="ia-config-check">
-                  <input type="checkbox" id="ocAtivo" />
-                  <span>Ativar integração OpenClaw</span>
-                </label>
-                <label>URL do OpenClaw (gateway)
-                  <input type="url" id="ocUrl" placeholder="http://SEU-IP:18789" maxlength="500" />
-                  <p class="ia-hint">Endereço do gateway OpenClaw na VPS (usado no teste de conexão).</p>
-                </label>
-                <label>Token secreto (Bearer)
-                  <div class="ia-chat-form__row">
-                    <input type="text" id="ocToken" readonly placeholder="Gere um token" />
-                    <button type="button" class="btn secondary" id="ocBtnGerarToken">Gerar token</button>
-                    <button type="button" class="btn neutral" id="ocBtnCopiarToken">Copiar</button>
-                  </div>
-                  <p class="ia-hint">Configure também <code>OPENCLAW_SAS_TOKEN</code> no .env do servidor.</p>
-                </label>
-                <label>URL base da API SAS (somente leitura)
-                  <div class="ia-chat-form__row">
-                    <input type="text" id="ocApiBase" readonly />
-                    <button type="button" class="btn neutral" id="ocBtnCopiarApi">Copiar URL</button>
-                  </div>
-                </label>
-                <div>
-                  <h4>Unidades permitidas</h4>
-                  <p class="subtle-text">Deixe todas desmarcadas para permitir qualquer unidade.</p>
+              <form id="ocForm" class="oc-form">
+                <div class="oc-form-block">
+                  <label class="oc-toggle">
+                    <input type="checkbox" id="ocAtivo" />
+                    <span>Ativar integração OpenClaw</span>
+                  </label>
+                </div>
+
+                <div class="oc-form-block oc-form-block--grid">
+                  <label class="oc-field">
+                    <span class="oc-field__label">URL do OpenClaw (gateway)</span>
+                    <input type="url" id="ocUrl" placeholder="http://SEU-IP:18789" maxlength="500" />
+                    <span class="oc-field__hint">Endereço do gateway OpenClaw na VPS (usado no teste de conexão).</span>
+                  </label>
+                  <label class="oc-field">
+                    <span class="oc-field__label">URL base da API SAS</span>
+                    <div class="oc-input-actions">
+                      <input type="text" id="ocApiBase" readonly />
+                      <button type="button" class="btn neutral" id="ocBtnCopiarApi">Copiar URL</button>
+                    </div>
+                    <span class="oc-field__hint">Somente leitura — use esta URL na skill do OpenClaw.</span>
+                  </label>
+                </div>
+
+                <div class="oc-form-block">
+                  <label class="oc-field">
+                    <span class="oc-field__label">Token secreto (Bearer)</span>
+                    <div class="oc-input-actions">
+                      <input type="text" id="ocToken" readonly placeholder="Gere um token" />
+                      <button type="button" class="btn secondary" id="ocBtnGerarToken">Gerar token</button>
+                      <button type="button" class="btn neutral" id="ocBtnCopiarToken">Copiar</button>
+                    </div>
+                    <span class="oc-field__hint">Configure também <code>OPENCLAW_SAS_TOKEN</code> no .env do servidor.</span>
+                  </label>
+                </div>
+
+                <div class="oc-form-block">
+                  <h4 class="oc-block-title">Unidades permitidas</h4>
+                  <p class="oc-block-desc">Deixe todas desmarcadas para permitir qualquer unidade.</p>
                   <div id="ocUnidadesPermitidas" class="oc-check-grid"></div>
                 </div>
-                <div>
-                  <h4>Ações permitidas</h4>
+
+                <div class="oc-form-block">
+                  <h4 class="oc-block-title">Ações permitidas</h4>
                   <div id="ocAcoesPermitidas" class="oc-check-grid"></div>
                 </div>
-                <div class="ia-chat-form__row">
+
+                <div class="oc-form-actions">
                   <button type="submit" class="btn primary" id="ocSalvarBtn">Salvar configurações</button>
                   <button type="button" class="btn secondary" id="ocBtnTestar">Testar conexão</button>
                 </div>
               </form>
             </div>
-            <div class="table-card form-card--wide">
-              <header>
+
+            <div class="table-card form-card--wide oc-logs-card">
+              <header class="oc-logs-header">
                 <h3>Histórico de comandos da IA</h3>
                 <button type="button" class="btn secondary" id="ocBtnAtualizarLogs">Atualizar</button>
               </header>
@@ -7280,7 +7300,7 @@
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
-    <script src="openclaw-integracao.js?v=20260706-oc2"></script>
+    <script src="openclaw-integracao.js?v=20260706-oc3"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
     <script src="sas-ia.js?v=20260623-chat-row"></script>
     <script src="ai-agents.js?v=20260623-chat-row"></script>
