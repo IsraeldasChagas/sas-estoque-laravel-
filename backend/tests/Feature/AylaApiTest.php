@@ -1,0 +1,100 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Support\Facades\Config;
+use Tests\TestCase;
+
+/**
+ * Testes da API Ayla v1 focados em autenticação, envelope e validações,
+ * sem depender de tabelas legadas (usa endpoints que falham/validam antes do banco).
+ */
+class AylaApiTest extends TestCase
+{
+    private function ativar(string $token = 'TOKEN_SECRETO_AYLA'): void
+    {
+        Config::set('ayla.enabled', true);
+        Config::set('ayla.read_only', true);
+        Config::set('ayla.token', $token);
+        Config::set('ayla.rate_limit', 60);
+        Config::set('ayla.allowed_units', []);
+    }
+
+    public function test_status_sem_token_retorna_401(): void
+    {
+        $this->ativar();
+
+        $this->getJson('/api/ayla/v1/status')
+            ->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('meta.code', 'UNAUTHORIZED');
+    }
+
+    public function test_status_com_token_incorreto_retorna_401(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_ERRADO'])
+            ->getJson('/api/ayla/v1/status')
+            ->assertStatus(401)
+            ->assertJsonPath('meta.code', 'UNAUTHORIZED');
+    }
+
+    public function test_status_com_integracao_desativada_retorna_503(): void
+    {
+        $this->ativar();
+        Config::set('ayla.enabled', false);
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/status')
+            ->assertStatus(503)
+            ->assertJsonPath('meta.code', 'INTEGRATION_DISABLED');
+    }
+
+    public function test_status_com_token_correto_retorna_200(): void
+    {
+        $this->ativar();
+
+        $resp = $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/status')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.read_only', true)
+            ->assertJsonPath('meta.read_only', true);
+
+        // O token nunca pode aparecer na resposta.
+        $this->assertStringNotContainsString('TOKEN_SECRETO_AYLA', $resp->getContent());
+    }
+
+    public function test_limite_invalido_retorna_422(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/produtos?limite=999')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_unidade_nao_autorizada_retorna_403(): void
+    {
+        $this->ativar();
+        Config::set('ayla.allowed_units', [2]);
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/produtos?unidade_id=3&busca=arroz')
+            ->assertStatus(403)
+            ->assertJsonPath('meta.code', 'UNIT_NOT_ALLOWED');
+    }
+
+    public function test_nenhuma_rota_de_escrita_disponivel(): void
+    {
+        $this->ativar();
+
+        $headers = ['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'];
+
+        $this->withHeaders($headers)->postJson('/api/ayla/v1/status')->assertStatus(405);
+        $this->withHeaders($headers)->putJson('/api/ayla/v1/status')->assertStatus(405);
+        $this->withHeaders($headers)->deleteJson('/api/ayla/v1/status')->assertStatus(405);
+    }
+}
