@@ -96,5 +96,65 @@ class AylaApiTest extends TestCase
         $this->withHeaders($headers)->postJson('/api/ayla/v1/status')->assertStatus(405);
         $this->withHeaders($headers)->putJson('/api/ayla/v1/status')->assertStatus(405);
         $this->withHeaders($headers)->deleteJson('/api/ayla/v1/status')->assertStatus(405);
+        $this->withHeaders($headers)->postJson('/api/ayla/v1/kanban')->assertStatus(405);
+    }
+
+    public function test_kanban_com_token_correto_retorna_200(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/kanban')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => ['tarefas', 'total', 'resumo'],
+                'meta',
+            ]);
+    }
+
+    public function test_kanban_status_atrasado_retorna_200(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/kanban?status=atrasado')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.filtros_aplicados.status', 'atrasado');
+    }
+
+    public function test_kanban_responsavel_retorna_200(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/kanban?responsavel=Thiago')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.filtros_aplicados.responsavel', 'Thiago');
+    }
+
+    public function test_kanban_limite_invalido_retorna_422(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/kanban?limit=999')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_kanban_unidade_nao_autorizada_retorna_403(): void
+    {
+        $this->ativar();
+        Config::set('ayla.allowed_units', [2]);
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/kanban?unidade_id=3')
+            ->assertStatus(403)
+            ->assertJsonPath('meta.code', 'UNIT_NOT_ALLOWED');
     }
 }

@@ -24,6 +24,7 @@ Route::prefix('ayla/v1')->middleware('ayla.token')->group(function () {
     Route::get('/compras', [AylaController::class, 'compras']);
     Route::get('/fornecedores', [AylaController::class, 'fornecedores']);
     Route::get('/dashboard', [AylaController::class, 'dashboard']);
+    Route::get('/kanban', [AylaController::class, 'kanban']);
     Route::get('/relatorios/unidade/{id}', [AylaController::class, 'relatorioUnidade']);
 
     // Validação de acesso do gateway (VPS). Autenticação de usuário Telegram

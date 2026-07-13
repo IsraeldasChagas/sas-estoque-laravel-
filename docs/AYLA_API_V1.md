@@ -108,6 +108,7 @@ ou detalhes do servidor.
 | GET | `/api/ayla/v1/compras` | `unidade_id`, `dias`, `status`, `limite` |
 | GET | `/api/ayla/v1/fornecedores` | `busca`, `ativo`, `limite` |
 | GET | `/api/ayla/v1/dashboard` | — |
+| GET | `/api/ayla/v1/kanban` | `status`, `prioridade`, `responsavel`, `unidade`, `unidade_id`, `setor`, `data`, `vencimento`, `texto`, `limit` |
 | GET | `/api/ayla/v1/relatorios/unidade/{id}` | `id` na rota |
 
 ### Validações

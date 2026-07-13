@@ -28,6 +28,7 @@ class AylaApiService
         'consultar_compras_recentes',
         'consultar_fornecedores',
         'consultar_resumo_produtos',
+        'kanban_consultar',
     ];
 
     public function __construct(

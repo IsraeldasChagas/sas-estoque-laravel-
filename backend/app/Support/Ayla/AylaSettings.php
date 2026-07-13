@@ -128,7 +128,7 @@ final class AylaSettings
     {
         return [
             'dashboard', 'unidades', 'produtos', 'estoque', 'movimentacoes',
-            'lotes', 'compras', 'fornecedores', 'relatorios',
+            'lotes', 'compras', 'fornecedores', 'relatorios', 'kanban',
         ];
     }
 

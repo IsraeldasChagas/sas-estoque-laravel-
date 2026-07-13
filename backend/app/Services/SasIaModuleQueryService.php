@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\Financeiro\FinanceiroGerencialCalculo;
+use App\Services\Ayla\AylaKanbanService;
 use App\Support\SasIa\SasIaContext;
 use App\Support\SasIa\SasIaReservaQuery;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +50,7 @@ class SasIaModuleQueryService
             'consultar_patrimonio_manutencoes' => $this->patrimonioManutencoes($ctx, $args),
             'consultar_investimento_resumo' => $this->investimentoResumo($ctx),
             'consultar_kanban_resumo' => $this->kanbanResumo($ctx, $args),
+            'kanban_consultar' => $this->kanbanConsultar($ctx, $args),
             'consultar_manual_documentacao' => $this->manualDocumentacao($args),
             'consultar_cadastro_geral' => $this->cadastroGeral($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta não implementada neste serviço.'],
@@ -652,6 +654,19 @@ class SasIaModuleQueryService
         $porStatus = (clone $q)->select('status', DB::raw('COUNT(*) as qtd'))->groupBy('status')->pluck('qtd', 'status');
 
         return ['total' => (int) $q->count(), 'por_status' => $porStatus];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function kanbanConsultar(SasIaContext $ctx, array $args): array
+    {
+        $filtros = $args;
+        if (! isset($filtros['unidade_id']) && $ctx->unidadeEfetiva()) {
+            $filtros['unidade_id'] = $ctx->unidadeEfetiva();
+        }
+
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaKanbanService::class)->consultar($filtros, $userId);
     }
 
     /** @param  array<string, mixed>  $args */

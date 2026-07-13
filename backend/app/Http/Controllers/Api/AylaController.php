@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AylaAuditLog;
 use App\Services\AylaAccessService;
 use App\Services\AylaApiService;
+use App\Services\Ayla\AylaKanbanService;
 use App\Support\Ayla\AylaResponse;
 use App\Support\Ayla\AylaSettings;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,21 @@ class AylaController extends Controller
 {
     /** Status de compra aceitos em filtros (allow-list). */
     private const STATUS_COMPRA = ['aberta', 'pendente', 'aprovada', 'concluida', 'cancelada', 'rascunho'];
+
+    /** Status do kanban aceitos em filtros (allow-list + aliases). */
+    private const STATUS_KANBAN = [
+        'planejamento', 'a_fazer', 'em_execucao', 'aguardando', 'finalizado',
+        'pendente', 'pendentes', 'em_andamento', 'andamento',
+        'concluida', 'concluidas', 'concluido', 'concluidos', 'finalizada', 'finalizadas',
+        'bloqueada', 'bloqueadas', 'bloqueado', 'aguardando',
+        'atrasado', 'atrasada', 'atrasadas',
+    ];
+
+    /** Prioridades do kanban aceitas em filtros. */
+    private const PRIORIDADE_KANBAN = ['baixa', 'media', 'alta', 'média'];
+
+    /** Vencimento relativo aceito em filtros do kanban. */
+    private const VENCIMENTO_KANBAN = ['hoje', 'amanha', 'amanhã', 'atrasado', 'atrasada', 'atrasadas'];
 
     public function __construct(private AylaApiService $service) {}
 
@@ -137,6 +153,38 @@ class AylaController extends Controller
 
             return $r['data'];
         }, 'Relatório da unidade.');
+    }
+
+    /**
+     * Kanban administrativo — somente leitura.
+     * Filtros: status, prioridade, responsavel, unidade, setor, data, vencimento, texto, limit.
+     */
+    public function kanban(Request $request, AylaKanbanService $kanban): JsonResponse
+    {
+        return $this->executar($request, 'ayla.kanban', function (?int $userId) use ($request, $kanban) {
+            $p = $this->parseKanbanArgs($request);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $args = $p['args'];
+            $unidadeId = $args['unidade_id'] ?? null;
+            if ($unidadeId === null && ! empty($args['unidade'])) {
+                $unidadeId = $kanban->resolverUnidadeIdPorNome((string) $args['unidade']);
+                if ($unidadeId) {
+                    $args['unidade_id'] = $unidadeId;
+                }
+            }
+            if ($unidadeId !== null && ! AylaSettings::unidadePermitida($unidadeId)) {
+                return ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]];
+            }
+
+            if (! empty($args['unidade']) && $unidadeId === null) {
+                return ['_erro' => ['Unidade não encontrada.', 'NOT_FOUND', 404]];
+            }
+
+            return $kanban->consultar($args, $userId);
+        }, 'Tarefas do kanban consultadas.');
     }
 
     /**
@@ -372,6 +420,114 @@ class AylaController extends Controller
         return ['args' => $args, 'erro' => null];
     }
 
+    /**
+     * Lê e valida parâmetros de consulta do kanban.
+     *
+     * @return array{args: array<string, mixed>, erro: null|array{_erro: array{0:string,1:string,2:int}}}
+     */
+    private function parseKanbanArgs(Request $request): array
+    {
+        $args = [];
+
+        $limite = $request->query('limit', $request->query('limite'));
+        if ($limite !== null && $limite !== '') {
+            if (! ctype_digit((string) $limite) || (int) $limite < 1 || (int) $limite > 50) {
+                return $this->erroParam('limit');
+            }
+            $args['limit'] = (int) $limite;
+        }
+
+        $unidadeId = $request->query('unidade_id');
+        if ($unidadeId !== null && $unidadeId !== '') {
+            if (! ctype_digit((string) $unidadeId) || (int) $unidadeId < 1) {
+                return $this->erroParam('unidade_id');
+            }
+            $args['unidade_id'] = (int) $unidadeId;
+        }
+
+        $unidade = $request->query('unidade');
+        if ($unidade !== null) {
+            $unidade = trim((string) $unidade);
+            if (mb_strlen($unidade) > 120) {
+                return $this->erroParam('unidade');
+            }
+            if ($unidade !== '') {
+                $args['unidade'] = $unidade;
+            }
+        }
+
+        $status = $request->query('status');
+        if ($status !== null && $status !== '') {
+            $statusNorm = mb_strtolower(trim((string) $status));
+            $statusNorm = str_replace([' ', '-'], '_', $statusNorm);
+            if (! in_array($statusNorm, self::STATUS_KANBAN, true)) {
+                return $this->erroParam('status');
+            }
+            $args['status'] = $statusNorm;
+        }
+
+        $prioridade = $request->query('prioridade');
+        if ($prioridade !== null && $prioridade !== '') {
+            $prioNorm = mb_strtolower(trim((string) $prioridade));
+            if (! in_array($prioNorm, self::PRIORIDADE_KANBAN, true)) {
+                return $this->erroParam('prioridade');
+            }
+            $args['prioridade'] = $prioNorm;
+        }
+
+        $responsavel = $request->query('responsavel');
+        if ($responsavel !== null) {
+            $responsavel = trim((string) $responsavel);
+            if (mb_strlen($responsavel) > 120) {
+                return $this->erroParam('responsavel');
+            }
+            if ($responsavel !== '') {
+                $args['responsavel'] = $responsavel;
+            }
+        }
+
+        $setor = $request->query('setor');
+        if ($setor !== null) {
+            $setor = trim((string) $setor);
+            if (mb_strlen($setor) > 80) {
+                return $this->erroParam('setor');
+            }
+            if ($setor !== '') {
+                $args['setor'] = $setor;
+            }
+        }
+
+        $texto = $request->query('texto');
+        if ($texto !== null) {
+            $texto = trim((string) $texto);
+            if (mb_strlen($texto) > 120) {
+                return $this->erroParam('texto');
+            }
+            if ($texto !== '') {
+                $args['texto'] = $texto;
+            }
+        }
+
+        $data = $request->query('data');
+        if ($data !== null && $data !== '') {
+            if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $data)) {
+                return $this->erroParam('data');
+            }
+            $args['data'] = (string) $data;
+        }
+
+        $vencimento = $request->query('vencimento');
+        if ($vencimento !== null && $vencimento !== '') {
+            $vencNorm = mb_strtolower(trim((string) $vencimento));
+            if (! in_array($vencNorm, self::VENCIMENTO_KANBAN, true)) {
+                return $this->erroParam('vencimento');
+            }
+            $args['vencimento'] = $vencNorm;
+        }
+
+        return ['args' => $args, 'erro' => null];
+    }
+
     /** @return array{args: array<string, mixed>, erro: array{_erro: array{0:string,1:string,2:int}}} */
     private function erroParam(string $param): array
     {
@@ -444,6 +600,12 @@ class AylaController extends Controller
             if (is_array($valor)) {
                 $out[$chave] = count($valor);
             }
+        }
+        if (isset($data['total'])) {
+            $out['total'] = (int) $data['total'];
+        }
+        if (isset($data['retornadas'])) {
+            $out['retornadas'] = (int) $data['retornadas'];
         }
 
         return $out;

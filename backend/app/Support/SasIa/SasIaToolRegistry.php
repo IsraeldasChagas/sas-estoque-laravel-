@@ -62,6 +62,7 @@ final class SasIaToolRegistry
 
             // Admin / sistema
             'consultar_kanban_resumo' => ['kanbanAdministrativo', 'dashboard'],
+            'kanban_consultar' => ['kanbanAdministrativo', 'dashboard'],
             'consultar_logs_recentes' => ['logs'],
             'consultar_manual_documentacao' => ['sasIa', 'iaAssistente'],
         ];
@@ -135,6 +136,18 @@ final class SasIaToolRegistry
 
             // —— Admin ——
             self::t('consultar_kanban_resumo', 'Tarefas do kanban administrativo por status.', ['unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
+            self::t('kanban_consultar', 'Consulta tarefas do kanban administrativo com filtros (status, prioridade, responsável, unidade, setor, vencimento). Somente leitura.', [
+                'status' => ['type' => 'string', 'description' => 'pendente, atrasado, em_andamento, concluida, bloqueada, planejamento, a_fazer, em_execucao, aguardando, finalizado'],
+                'prioridade' => ['type' => 'string', 'description' => 'baixa, media ou alta'],
+                'responsavel' => ['type' => 'string', 'description' => 'Nome do responsável (parcial)'],
+                'unidade_id' => ['type' => 'integer', 'description' => 'ID da unidade'],
+                'unidade' => ['type' => 'string', 'description' => 'Nome da unidade (ex.: Centro)'],
+                'setor' => ['type' => 'string', 'description' => 'RH, Financeiro, Estoque, Compras, Cozinha, etc.'],
+                'data' => ['type' => 'string', 'description' => 'Prazo no formato YYYY-MM-DD'],
+                'vencimento' => ['type' => 'string', 'description' => 'hoje, amanha ou atrasado'],
+                'texto' => ['type' => 'string', 'description' => 'Busca em título, descrição ou observações'],
+                'limit' => ['type' => 'integer', 'description' => 'Máximo de tarefas (1-50, padrão 50)'],
+            ]),
             self::t('consultar_logs_recentes', 'Logs de auditoria recentes.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 20)']]),
             self::t('consultar_manual_documentacao', 'Manual e documentos internos do sistema.', ['consulta' => ['type' => 'string', 'description' => 'Termo ou pergunta']], ['consulta']),
             self::t('consultar_cadastro_geral', 'Busca cadastros do sistema por nome, CNPJ ou CPF (unidades, fornecedores, funcionários, produtos).', [

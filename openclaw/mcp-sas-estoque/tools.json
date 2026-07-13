@@ -1,0 +1,68 @@
+{
+  "name": "sas-estoque-ayla",
+  "version": "1.0.0",
+  "description": "Ferramentas MCP da API Ayla v1 (somente leitura) — SAS-Estoque",
+  "base_url": "{AYLA_API_URL}/api/ayla/v1",
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "env": "AYLA_SAS_TOKEN"
+  },
+  "tools": [
+    {
+      "name": "kanban_consultar",
+      "description": "Consulta tarefas do Kanban Administrativo (somente leitura). Use para perguntas sobre tarefas pendentes, atrasadas, por responsável, unidade, setor ou prioridade.",
+      "method": "GET",
+      "path": "/kanban",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "pendente, atrasado, em_andamento, concluida, bloqueada, planejamento, a_fazer, em_execucao, aguardando, finalizado"
+          },
+          "prioridade": {
+            "type": "string",
+            "description": "baixa, media ou alta"
+          },
+          "responsavel": {
+            "type": "string",
+            "description": "Nome do responsável (busca parcial)"
+          },
+          "unidade": {
+            "type": "string",
+            "description": "Nome da unidade (ex.: Centro)"
+          },
+          "unidade_id": {
+            "type": "integer",
+            "description": "ID da unidade"
+          },
+          "setor": {
+            "type": "string",
+            "description": "RH, Financeiro, Estoque, Compras, Cozinha, etc."
+          },
+          "data": {
+            "type": "string",
+            "description": "Prazo YYYY-MM-DD"
+          },
+          "vencimento": {
+            "type": "string",
+            "description": "hoje, amanha ou atrasado"
+          },
+          "texto": {
+            "type": "string",
+            "description": "Busca em título, descrição ou observações"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Máximo de tarefas retornadas (1-50)"
+          }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["tarefas", "total", "retornadas", "filtros_aplicados", "resumo"]
+      }
+    }
+  ]
+}
