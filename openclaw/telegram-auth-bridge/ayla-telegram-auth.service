@@ -1,0 +1,28 @@
+# systemd unit — Ayla Telegram auth bridge
+# Instale em: /etc/systemd/system/ayla-telegram-auth.service
+# Depois:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ayla-telegram-auth
+#   sudo systemctl status ayla-telegram-auth
+#   journalctl -u ayla-telegram-auth -f
+
+[Unit]
+Description=Ayla Telegram auth bridge (autenticacao externa via SAS-Estoque)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Ajuste o usuario e o caminho conforme sua VPS.
+User=openclaw
+WorkingDirectory=/opt/ayla-telegram-auth-bridge
+EnvironmentFile=/opt/ayla-telegram-auth-bridge/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=3
+# Endurecimento basico.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

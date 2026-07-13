@@ -1,0 +1,15 @@
+{
+  "name": "ayla-telegram-auth-bridge",
+  "version": "1.0.0",
+  "description": "Bridge de autenticação do Telegram para a Ayla — substitui o pairing do OpenClaw por autenticação externa via API SAS-Estoque.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true,
+  "license": "UNLICENSED"
+}
