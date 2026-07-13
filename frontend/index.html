@@ -49,7 +49,6 @@
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260712-ayla" />
-    <link rel="stylesheet" href="style-ia.css?v=20260623-chat-row" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -282,20 +281,6 @@
               <a href="#" class="nav-link nav-link-child" data-section="patrimonioConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
             </div>
           </div>
-          <div class="nav-submenu nav-submenu--ia">
-            <a href="#" class="nav-link nav-link-parent" id="iaMenu">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🤖</span><span class="nav-label">IA</span></span>
-              <span class="nav-arrow">▼</span>
-            </a>
-            <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="sasIa"><span class="nav-icon" aria-hidden="true">🧠</span><span class="nav-label">SAS IA</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="sasIaDocumentos"><span class="nav-icon" aria-hidden="true">📚</span><span class="nav-label">Manuais IA</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="sasIaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. SAS IA</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="iaAgentes"><span class="nav-icon" aria-hidden="true">🧩</span><span class="nav-label">Agentes</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="iaAssistente"><span class="nav-icon" aria-hidden="true">💬</span><span class="nav-label">Assistente (legado)</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="iaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Config. legado</span></a>
-            </div>
-          </div>
           <div class="nav-submenu nav-submenu--config">
             <a href="#" class="nav-link nav-link-parent" id="configuracoesMenu">
               <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configuracoes</span></span>
@@ -305,8 +290,6 @@
               <a href="#" class="nav-link nav-link-child" data-section="configuracoesPainel"><span class="nav-icon" aria-hidden="true">🎛️</span><span class="nav-label">Painel do Sistema</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
-              <div class="nav-submenu-divider-label">IA</div>
-              <a href="#" class="nav-link nav-link-child" data-section="iaAgentes"><span class="nav-icon" aria-hidden="true">🤖</span><span class="nav-label">Agentes</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
                 <span class="nav-icon" aria-hidden="true">🗄</span><span class="nav-label">Backup / Restaurar</span>
               </button>
@@ -4260,166 +4243,6 @@
 
           </section>
 
-          <!-- SAS IA — página informativa (chat flutuante fica fixo na tela) -->
-          <section id="sasIaSection" class="view-section hidden">
-            <div class="ia-section-head">
-              <h2>🧠 SAS IA</h2>
-              <p class="subtle-text">Agente inteligente que consulta estoque, financeiro, compras, logs e manuais — respeitando suas permissões.</p>
-              <p id="sasIaStatusBarPage" class="ia-status-badge"></p>
-            </div>
-            <div class="table-card form-card--wide sas-ia-landing">
-              <p>O assistente fica disponível em <strong>janela flutuante</strong> no canto da tela. Você pode minimizar, expandir, <strong>falar pelo microfone</strong> e ouvir as respostas em voz alta enquanto navega em outras páginas do sistema.</p>
-              <button type="button" class="btn primary" id="sasIaAbrirFloatBtn">Abrir chat flutuante</button>
-            </div>
-          </section>
-
-          <section id="sasIaDocumentosSection" class="view-section hidden">
-            <div class="ia-section-head">
-              <h2>📚 Manuais e documentos — SAS IA</h2>
-              <p class="subtle-text">Envie PDF, Word ou texto para a IA consultar nas respostas. Somente ADMIN.</p>
-            </div>
-            <div id="sasIaDocsAviso" class="ia-aviso hidden"></div>
-            <div class="table-card form-card--wide">
-              <form id="sasIaDocForm" class="ia-config-grid">
-                <label>Título<input type="text" id="sasIaDocTitulo" required maxlength="200" /></label>
-                <label>Tipo
-                  <select id="sasIaDocTipo">
-                    <option value="manual">Manual</option>
-                    <option value="procedimento">Procedimento</option>
-                    <option value="regra">Regra interna</option>
-                  </select>
-                </label>
-                <label>Enviar arquivo
-                  <input type="file" id="sasIaDocArquivo" accept=".pdf,.docx,.txt,.md,.csv,.json" />
-                  <p class="ia-hint">PDF, DOCX, TXT, MD ou CSV — máx. 5 MB. A IA lê o texto do arquivo.</p>
-                </label>
-                <label class="cfg-full">Ou cole o texto aqui
-                  <textarea id="sasIaDocConteudo" rows="8" maxlength="50000" placeholder="Opcional se enviar arquivo. Procedimentos, regras, manuais…"></textarea>
-                </label>
-                <div><button type="submit" class="btn primary">Salvar documento</button></div>
-              </form>
-            </div>
-            <div class="table-card form-card--wide" style="margin-top:1rem;">
-              <header><h3>Documentos cadastrados</h3></header>
-              <div class="table-wrapper">
-                <table class="data-table">
-                  <thead><tr><th>Título</th><th>Tipo</th><th>Origem</th><th>Texto</th><th>Atualizado</th><th></th></tr></thead>
-                  <tbody id="sasIaDocsList"></tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <section id="sasIaConfiguracoesSection" class="view-section hidden">
-            <div class="ia-section-head">
-              <h2>⚙️ Configurações — SAS IA</h2>
-              <p class="subtle-text">Somente ADMIN. Escolha o nome e a foto que aparecem no chat flutuante e nas mensagens do assistente.</p>
-            </div>
-            <div id="sasIaCfgAviso" class="ia-aviso hidden"></div>
-            <div class="table-card form-card--wide">
-              <form id="sasIaCfgForm" class="ia-config-grid">
-                <label>Nome do assistente
-                  <input type="text" id="sasIaCfgNome" maxlength="80" placeholder="SAS IA" />
-                  <p class="ia-hint">Ex.: Ana, Bia, Assistente Sabor…</p>
-                </label>
-                <label>Foto do assistente
-                  <div class="sas-ia-cfg-foto">
-                    <div id="sasIaCfgFotoPreview" class="sas-ia-cfg-foto__preview ia-msg__avatar ia-msg__avatar--bot" aria-hidden="true">🧠</div>
-                    <input type="file" id="sasIaCfgFotoInput" accept="image/jpeg,image/png,image/webp,image/gif" />
-                    <p class="ia-hint">JPG, PNG, WebP ou GIF — máx. 2 MB. Aparece na bolinha do canto e nas respostas.</p>
-                  </div>
-                </label>
-                <label class="ia-config-check">
-                  <input type="checkbox" id="sasIaCfgRemoverFoto" />
-                  <span>Remover foto personalizada (volta ao ícone padrão 🧠)</span>
-                </label>
-                <div>
-                  <button type="submit" class="btn primary" id="sasIaCfgSalvar">Salvar configurações</button>
-                </div>
-              </form>
-            </div>
-          </section>
-
-          <section id="iaAgentesSection" class="view-section hidden">
-            <div class="ia-section-head">
-              <h2>🤖 Agentes de IA</h2>
-              <p class="subtle-text">Cadastre personas, prompts e vincule cada módulo ao agente certo. Somente ADMIN.</p>
-            </div>
-            <div class="ai-agents-toolbar">
-              <button type="button" class="btn primary" id="aiAgentsNovoBtn">+ Novo agente</button>
-              <button type="button" class="btn secondary" id="aiAgentsRecarregarBtn">🔄 Atualizar</button>
-            </div>
-
-            <div class="table-card form-card--wide ai-agents-modules-card">
-              <header>
-                <h3>Agente por módulo</h3>
-                <p class="subtle-text">Escolha qual persona responde em cada área do sistema.</p>
-              </header>
-              <div id="aiAgentsModulesGrid" class="ai-agents-modules-grid"></div>
-              <footer class="ai-agents-modules-footer">
-                <button type="button" class="btn primary" id="aiAgentsSalvarModulosBtn">Salvar vínculos dos módulos</button>
-              </footer>
-            </div>
-
-            <div id="aiAgentsGrid" class="ai-agents-grid"></div>
-          </section>
-
-          <!-- IA — Assistente ChatGPT (legado) -->
-          <section id="iaAssistenteSection" class="view-section hidden">
-            <div class="ia-section-head">
-              <h2>💬 Assistente IA</h2>
-              <p class="subtle-text">Tire dúvidas sobre como usar o sistema. Não altera dados — só orienta.</p>
-            </div>
-            <div class="table-card form-card--wide">
-              <div id="iaChatAviso" class="ia-aviso hidden"></div>
-              <div class="ia-chat-wrap">
-                <div id="iaChatMessages" class="ia-chat-messages"></div>
-                <form id="iaChatForm" class="ia-chat-form">
-                  <div class="ia-chat-form__row">
-                    <textarea id="iaChatInput" rows="2" placeholder="Ex.: Como lanço vale/consumo? Como reservo uma mesa?" maxlength="4000"></textarea>
-                    <button type="submit" class="btn primary" id="iaChatEnviar">Enviar</button>
-                  </div>
-                  <button type="button" class="btn neutral" id="iaChatLimpar">Limpar</button>
-                </form>
-              </div>
-            </div>
-          </section>
-
-          <section id="iaConfiguracoesSection" class="view-section hidden">
-            <div class="ia-section-head">
-              <h2>⚙️ Configurações IA (ChatGPT)</h2>
-              <p class="subtle-text">Somente ADMIN. Cole a chave API da OpenAI em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>.</p>
-              <p id="iaCfgStatus" class="ia-status-badge"></p>
-            </div>
-            <div id="iaConfigAviso" class="ia-aviso hidden"></div>
-            <div class="table-card form-card--wide">
-              <form id="iaConfigForm" class="ia-config-grid">
-                <label class="ia-config-check">
-                  <input type="checkbox" id="iaCfgAtivo" />
-                  <span>Ativar assistente IA para todos os usuários logados</span>
-                </label>
-                <label>Chave API (OpenAI)
-                  <input type="password" id="iaCfgApiKey" autocomplete="off" placeholder="sk-..." />
-                  <p class="ia-hint">A chave fica salva no servidor, nunca no navegador.</p>
-                </label>
-                <label class="ia-config-check">
-                  <input type="checkbox" id="iaCfgLimparChave" />
-                  <span>Remover chave API ao salvar</span>
-                </label>
-                <label>Modelo
-                  <select id="iaCfgModelo"></select>
-                  <p class="ia-hint">Recomendado: gpt-4o-mini (rápido e barato).</p>
-                </label>
-                <label>Instruções extras (opcional)
-                  <textarea id="iaCfgInstrucoes" rows="4" maxlength="4000" placeholder="Ex.: Sempre mencionar que reservas são feitas em Reservas → Mesa."></textarea>
-                </label>
-                <div>
-                  <button type="submit" class="btn primary" id="iaCfgSalvar">Salvar configurações</button>
-                </div>
-              </form>
-            </div>
-          </section>
-
           <!-- Configurações — Integrações — OpenClaw -->
           <section id="openClawIntegracaoSection" class="view-section hidden">
             <div class="cfg-section-head">
@@ -5807,12 +5630,6 @@
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="configuracoesPainel" /> Configurações — Painel do Sistema</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="openClawIntegracao" /> Configurações — OpenClaw / Assistente IA (ADMIN)</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIa" /> SAS IA — Chat</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaDocumentos" /> SAS IA — Manuais (ADMIN)</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="sasIaConfiguracoes" /> SAS IA — Configurações (ADMIN)</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAgentes" /> IA — Agentes (ADMIN)</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaAssistente" /> IA — Assistente (legado)</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="iaConfiguracoes" /> IA — Configurações legado (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
           </section>
@@ -7330,50 +7147,6 @@
       </div>
     </div>
 
-    <!-- SAS IA — chat flutuante (persiste ao trocar de página) -->
-    <div id="sasIaFloatRoot" class="sas-ia-float-root hidden" aria-live="polite">
-      <button type="button" id="sasIaFloatFab" class="sas-ia-float__fab" title="Abrir SAS IA" aria-label="Abrir SAS IA">
-        <span class="sas-ia-float__fab-icon" aria-hidden="true">🧠</span>
-      </button>
-      <div id="sasIaFloatPanel" class="sas-ia-float__panel hidden" role="dialog" aria-label="Chat SAS IA">
-        <header class="sas-ia-float__header">
-          <div class="sas-ia-float__header-text">
-            <strong id="sasIaHeaderTitle">SAS IA</strong>
-            <span id="sasIaStatusBar" class="sas-ia-float__status"></span>
-          </div>
-          <div class="sas-ia-float__header-actions">
-            <button type="button" id="sasIaFloatExpand" class="sas-ia-float__icon-btn" title="Expandir" aria-label="Expandir">⛶</button>
-            <button type="button" id="sasIaFloatMinimize" class="sas-ia-float__icon-btn" title="Minimizar" aria-label="Minimizar">—</button>
-            <button type="button" id="sasIaFloatClose" class="sas-ia-float__icon-btn sas-ia-float__icon-btn--close" title="Encerrar chat" aria-label="Encerrar chat">✕</button>
-          </div>
-        </header>
-        <div class="sas-ia-float__body sas-ia-layout">
-          <aside class="sas-ia-sidebar">
-            <button type="button" class="btn primary sas-ia-nova-btn" id="sasIaNovaConversa">+ Nova conversa</button>
-            <button type="button" class="btn danger sas-ia-excluir-btn hidden" id="sasIaExcluirConversa" title="Excluir conversa atual">🗑 Excluir conversa</button>
-            <ul id="sasIaConversasList" class="sas-ia-conversas"></ul>
-          </aside>
-          <div class="sas-ia-main">
-            <div class="ia-chat-wrap sas-ia-float__chat">
-              <div id="sasIaChatMessages" class="ia-chat-messages"></div>
-              <form id="sasIaChatForm" class="ia-chat-form">
-                <div class="sas-ia-audio-bar">
-                  <button type="button" id="sasIaMicBtn" class="sas-ia-audio-btn" title="Falar pergunta (microfone)" aria-label="Falar pergunta">🎤</button>
-                  <button type="button" id="sasIaAutoSpeakBtn" class="sas-ia-audio-btn" title="Ler respostas em voz alta" aria-label="Ler respostas em voz alta">🔇</button>
-                  <button type="button" id="sasIaStopSpeakBtn" class="sas-ia-audio-btn hidden" title="Parar leitura" aria-label="Parar leitura">⏹</button>
-                  <span id="sasIaMicStatus" class="sas-ia-mic-status hidden" aria-live="polite">Pode falar… envio quando você terminar</span>
-                </div>
-                <div class="ia-chat-form__row">
-                  <textarea id="sasIaChatInput" rows="2" placeholder="Digite ou use o microfone para perguntar…" maxlength="4000"></textarea>
-                  <button type="submit" class="btn primary" id="sasIaChatEnviar">Enviar</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Configuração da aplicação (deve ser carregado antes do app.js) -->
     <script src="config.js"></script>
     <!-- Router para carregar as telas dinamicamente (antes do app.js) -->
@@ -7390,9 +7163,6 @@
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="openclaw-integracao.js?v=20260706-oc4"></script>
     <script src="ayla-ia.js?v=20260712-ayla1"></script>
-    <script src="ia-assistente.js?v=20260616-ia"></script>
-    <script src="sas-ia.js?v=20260623-chat-row"></script>
-    <script src="ai-agents.js?v=20260623-chat-row"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="app.js?v=20260616-tipo-vinculo"></script>

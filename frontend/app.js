@@ -1582,7 +1582,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "configuracoesPainel", "openClawIntegracao", "sasIa", "sasIaDocumentos", "sasIaConfiguracoes", "iaAgentes", "iaAssistente", "iaConfiguracoes",
+  "configuracoesPainel", "openClawIntegracao",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
 ]);
 
@@ -1947,7 +1947,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "openClawIntegracao", "sasIa", "sasIaDocumentos", "iaAssistente", "iaConfiguracoes", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -5340,26 +5340,6 @@ function applyPermissions() {
   } else if (perfilCfgAuto === "GERENTE" && !sections.includes("aylaDashboard")) {
     sections = [...sections, "aylaDashboard"];
   }
-  // SAS IA: chat para usuários logados; manuais só ADMIN.
-  if (currentUser && !sections.includes("sasIa")) {
-    sections = [...sections, "sasIa"];
-  }
-  if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("sasIaDocumentos")) {
-    sections = [...sections, "sasIaDocumentos"];
-  }
-  if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("sasIaConfiguracoes")) {
-    sections = [...sections, "sasIaConfiguracoes"];
-  }
-  if (currentUser && perfilCfgAuto === "ADMIN" && !sections.includes("iaAgentes")) {
-    sections = [...sections, "iaAgentes"];
-  }
-  // IA legado: assistente para todos; configurações só ADMIN.
-  if (!sections.includes("iaAssistente")) {
-    sections = [...sections, "iaAssistente"];
-  }
-  if (perfilCfgAuto === "ADMIN" && !sections.includes("iaConfiguracoes")) {
-    sections = [...sections, "iaConfiguracoes"];
-  }
   const rrSectionsAuto = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
   if (sections.includes("funcionarios") || sections.includes("rhRelatorios") || sections.includes("rhFolhaPonto")) {
     rrSectionsAuto.forEach((s) => {
@@ -5479,7 +5459,6 @@ function applyPermissions() {
     const temConfigPainel =
       regras.sections.includes("configuracoesPainel") ||
       regras.sections.includes("openClawIntegracao") ||
-      regras.sections.includes("iaAgentes") ||
       ["ADMIN", "GERENTE"].includes(perfilCfg);
     configuracoesNavSubmenu.classList.toggle("hidden", !temConfigPainel);
   }
@@ -5489,39 +5468,6 @@ function applyPermissions() {
     const temAyla = ["aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"]
       .some((s) => regras.sections.includes(s));
     aylaNavSubmenu.classList.toggle("hidden", !temAyla);
-  }
-  const iaNavSubmenu = document.getElementById("iaMenu")?.closest(".nav-submenu");
-  if (iaNavSubmenu) {
-    const perfilIa = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const temIa =
-      regras.sections.includes("sasIa") ||
-      regras.sections.includes("sasIaDocumentos") ||
-      regras.sections.includes("sasIaConfiguracoes") ||
-      regras.sections.includes("iaAgentes") ||
-      regras.sections.includes("iaAssistente") ||
-      regras.sections.includes("iaConfiguracoes") ||
-      perfilIa === "ADMIN";
-    iaNavSubmenu.classList.toggle("hidden", !temIa);
-    const linkDocs = iaNavSubmenu.querySelector('[data-section="sasIaDocumentos"]');
-    if (linkDocs) {
-      const podeDocs = regras.sections.includes("sasIaDocumentos") || perfilIa === "ADMIN";
-      linkDocs.classList.toggle("hidden", !podeDocs);
-    }
-    const linkSasCfg = iaNavSubmenu.querySelector('[data-section="sasIaConfiguracoes"]');
-    const linkIaAgentes = iaNavSubmenu.querySelector('[data-section="iaAgentes"]');
-    if (linkSasCfg) {
-      const podeSasCfg = regras.sections.includes("sasIaConfiguracoes") || perfilIa === "ADMIN";
-      linkSasCfg.classList.toggle("hidden", !podeSasCfg);
-    }
-    if (linkIaAgentes) {
-      const podeAgentes = regras.sections.includes("iaAgentes") || perfilIa === "ADMIN";
-      linkIaAgentes.classList.toggle("hidden", !podeAgentes);
-    }
-    const linkCfg = iaNavSubmenu.querySelector('[data-section="iaConfiguracoes"]');
-    if (linkCfg) {
-      const podeCfg = regras.sections.includes("iaConfiguracoes") || perfilIa === "ADMIN";
-      linkCfg.classList.toggle("hidden", !podeCfg);
-    }
   }
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
@@ -5535,8 +5481,6 @@ function applyPermissions() {
     const allowed = regras.sections.includes(key);
     if (!allowed) section.classList.add("hidden");
   });
-
-  window.sasIaFloatSyncPerm?.(!!currentUser && regras.sections.includes("sasIa"));
 
   if (dom.openProdutoBtn) dom.openProdutoBtn.classList.toggle("hidden", !regras.canManageProdutos);
   // BAR pode criar usuários BAR, mesmo sem canManageUsuarios
@@ -5753,18 +5697,13 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "configuracoesPainel" || section === "openClawIntegracao" || section === "iaAgentes") configuracoesNavSubmenuNav.classList.add("open");
+    if (section === "configuracoesPainel" || section === "openClawIntegracao") configuracoesNavSubmenuNav.classList.add("open");
     else configuracoesNavSubmenuNav.classList.remove("open");
   }
   const aylaNavSubmenuNav = document.getElementById("aylaMenu")?.closest(".nav-submenu");
   if (aylaNavSubmenuNav) {
     if (["aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"].includes(section)) aylaNavSubmenuNav.classList.add("open");
     else aylaNavSubmenuNav.classList.remove("open");
-  }
-  const iaNavSubmenuNav = document.getElementById("iaMenu")?.closest(".nav-submenu");
-  if (iaNavSubmenuNav) {
-    if (section === "sasIa" || section === "sasIaDocumentos" || section === "sasIaConfiguracoes" || section === "iaAgentes" || section === "iaAssistente" || section === "iaConfiguracoes") iaNavSubmenuNav.classList.add("open");
-    else iaNavSubmenuNav.classList.remove("open");
   }
   const patrimonioNavSubmenuNav = document.getElementById("patrimonioMenu")?.closest(".nav-submenu");
   if (patrimonioNavSubmenuNav) {
@@ -5802,15 +5741,6 @@ function navigateTo(section) {
   else if (section === "aylaCanaisVoz") loadAylaCanaisVoz?.().catch(() => {});
   else if (section === "aylaLogs") loadAylaLogs?.().catch(() => {});
   else if (section === "aylaConfiguracoes") loadAylaConfiguracoes?.().catch(() => {});
-  else if (section === "sasIa") {
-    loadSasIa?.().catch(() => {});
-    window.sasIaFloatOpen?.();
-  }
-  else if (section === "sasIaDocumentos") loadSasIaDocumentos?.().catch(() => {});
-  else if (section === "sasIaConfiguracoes") loadSasIaConfiguracoes?.().catch(() => {});
-  else if (section === "iaAgentes") loadIaAgentes?.().catch(() => {});
-  else if (section === "iaAssistente") loadIaAssistente?.().catch(() => {});
-  else if (section === "iaConfiguracoes") loadIaConfiguracoes?.().catch(() => {});
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
   else if (section === "rhRescisaoSimulador") loadRhRescisaoSimulador?.().catch(() => {});
   else if (section === "rhRescisaoCalculo") loadRhRescisaoCalculo?.().catch(() => {});
@@ -12157,7 +12087,6 @@ function handleLogout() {
     }).catch(() => {});
   }
   clearUser();
-  window.sasIaFloatSyncPerm?.(false);
   resetForms();
   dom.appShell.classList.add("hidden");
   dom.loginOverlay.classList.remove("hidden");
@@ -25371,7 +25300,6 @@ async function init() {
   if (typeof setupPatrimonioModule === "function") setupPatrimonioModule();
   if (typeof setupInvestimentoModule === "function") setupInvestimentoModule();
   if (typeof setupRhRescisaoModule === "function") setupRhRescisaoModule();
-  if (typeof setupIaAgentesModule === "function") setupIaAgentesModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }
