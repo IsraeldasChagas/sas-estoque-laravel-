@@ -25,4 +25,8 @@ Route::prefix('ayla/v1')->middleware('ayla.token')->group(function () {
     Route::get('/fornecedores', [AylaController::class, 'fornecedores']);
     Route::get('/dashboard', [AylaController::class, 'dashboard']);
     Route::get('/relatorios/unidade/{id}', [AylaController::class, 'relatorioUnidade']);
+
+    // Validação de acesso do gateway (VPS). Autenticação de usuário Telegram
+    // vinculada a usuário SAS; não é uma operação de escrita de dados.
+    Route::post('/acesso/validar', [AylaController::class, 'validarAcesso']);
 });

@@ -253,3 +253,85 @@
   padding: 0 1rem 1rem;
   overflow-x: auto;
 }
+
+/* ============================================================
+   Ayla IA — módulo administrativo
+   Usa as variáveis globais de tema (claro/escuro/personalizado).
+   ============================================================ */
+.ayla-root { display: block; }
+.ayla-head-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.ayla-block { margin-bottom: 1.25rem; }
+.ayla-block > header { padding: 0.9rem 1.15rem 0; }
+.ayla-block > header h3 { margin: 0; }
+
+.ayla-loading,
+.ayla-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted, #607d8b);
+  font-size: 0.92rem;
+}
+
+.ayla-cards { margin-bottom: 1.25rem; }
+.ayla-card {
+  background: var(--card-bg, #fff);
+  color: var(--text, #263238);
+}
+.ayla-card__value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.ayla-card--muted { opacity: 0.72; }
+
+.ayla-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.ayla-badge--ok { background: #16a34a; color: #fff; }
+.ayla-badge--warn { background: #f59e0b; color: #1f2937; }
+.ayla-badge--danger { background: #dc2626; color: #fff; }
+.ayla-badge--muted { background: var(--border, #e0e6ef); color: var(--text, #263238); }
+
+.ayla-hint { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--muted, #607d8b); font-weight: 400; }
+.ayla-form-block { margin: 0.35rem 0 0.5rem; }
+.ayla-form-block > strong { display: block; margin-bottom: 0.25rem; }
+.ayla-form-card { padding-bottom: 1rem; }
+.ayla-disabled { opacity: 0.55; }
+
+.ayla-row-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+.btn.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+
+.ayla-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  color: var(--muted, #607d8b);
+  flex-wrap: wrap;
+}
+
+.ayla-filtros-actions { display: flex; align-items: flex-end; }
+.ayla-token-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.35rem 0;
+}
+.ayla-token-line code {
+  padding: 0.35rem 0.6rem;
+  background: var(--sidebar-nested-bg, rgba(0, 0, 0, 0.06));
+  border-radius: 6px;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+.ayla-token-novo { margin-top: 0.75rem; }
+
+@media (max-width: 640px) {
+  .ayla-head-actions { width: 100%; }
+  .ayla-card__value { font-size: 1.25rem; }
+}

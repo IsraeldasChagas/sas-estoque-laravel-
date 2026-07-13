@@ -48,7 +48,7 @@
     <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
-    <link rel="stylesheet" href="style-configuracoes.css?v=20260706-oc" />
+    <link rel="stylesheet" href="style-configuracoes.css?v=20260712-ayla" />
     <link rel="stylesheet" href="style-ia.css?v=20260623-chat-row" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
@@ -310,6 +310,20 @@
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
                 <span class="nav-icon" aria-hidden="true">🗄</span><span class="nav-label">Backup / Restaurar</span>
               </button>
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--ayla">
+            <a href="#" class="nav-link nav-link-parent" id="aylaMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🤖</span><span class="nav-label">Ayla IA</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="aylaDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="aylaUsuarios"><span class="nav-icon" aria-hidden="true">👥</span><span class="nav-label">Usuários autorizados</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="aylaPermissoes"><span class="nav-icon" aria-hidden="true">🔐</span><span class="nav-label">Permissões</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="aylaCanaisVoz"><span class="nav-icon" aria-hidden="true">🎙️</span><span class="nav-label">Canais e voz</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="aylaLogs"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Logs</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="aylaConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
             </div>
           </div>
         </nav>
@@ -4516,6 +4530,80 @@
             </div>
           </section>
 
+          <!-- Ayla IA — Dashboard -->
+          <section id="aylaDashboardSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>🤖 Ayla IA — Dashboard</h2>
+                <p class="subtle-text">Visão geral da assistente Ayla: integração, usuários e atividades recentes.</p>
+              </div>
+              <div class="ayla-head-actions">
+                <button type="button" class="btn secondary" id="aylaBtnTestarConexao">Testar conexão</button>
+              </div>
+            </div>
+            <div id="aylaAvisoAcesso" class="ia-aviso hidden"></div>
+            <div id="aylaDashboardRoot" class="ayla-root"></div>
+          </section>
+
+          <!-- Ayla IA — Usuários autorizados -->
+          <section id="aylaUsuariosSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>👥 Ayla IA — Usuários autorizados</h2>
+                <p class="subtle-text">Vincule usuários do SAS ao assistente. O acesso é sempre atrelado a um usuário existente.</p>
+              </div>
+              <div class="ayla-head-actions">
+                <button type="button" class="btn primary" id="aylaBtnNovoUsuario">+ Novo acesso</button>
+              </div>
+            </div>
+            <div id="aylaUsuariosRoot" class="ayla-root"></div>
+          </section>
+
+          <!-- Ayla IA — Permissões -->
+          <section id="aylaPermissoesSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>🔐 Ayla IA — Permissões</h2>
+                <p class="subtle-text">Defina os módulos e ações liberados por usuário. A permissão efetiva respeita sempre o que o usuário já possui no SAS.</p>
+              </div>
+            </div>
+            <div id="aylaPermissoesRoot" class="ayla-root"></div>
+          </section>
+
+          <!-- Ayla IA — Canais e voz -->
+          <section id="aylaCanaisVozSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>🎙️ Ayla IA — Canais e voz</h2>
+                <p class="subtle-text">Configurações de Telegram, WhatsApp e voz. As configurações ficam registradas aqui; a VPS as consome.</p>
+              </div>
+            </div>
+            <div id="aylaCanaisVozRoot" class="ayla-root"></div>
+          </section>
+
+          <!-- Ayla IA — Logs -->
+          <section id="aylaLogsSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>📋 Ayla IA — Logs</h2>
+                <p class="subtle-text">Histórico de consultas e acessos da Ayla. Dados sensíveis nunca são exibidos.</p>
+              </div>
+            </div>
+            <div id="aylaLogsRoot" class="ayla-root"></div>
+          </section>
+
+          <!-- Ayla IA — Configurações -->
+          <section id="aylaConfiguracoesSection" class="view-section hidden">
+            <div class="cfg-section-head">
+              <div>
+                <h2>⚙️ Ayla IA — Configurações</h2>
+                <p class="subtle-text">Ajustes gerais, token de acesso e administrador principal da Ayla.</p>
+              </div>
+            </div>
+            <div id="aylaConfigAvisoAdmin" class="ia-aviso hidden"></div>
+            <div id="aylaConfiguracoesRoot" class="ayla-root"></div>
+          </section>
+
           <!-- Configurações — Painel do Sistema -->
           <section id="configuracoesPainelSection" class="view-section hidden">
             <div class="cfg-section-head">
@@ -7301,6 +7389,7 @@
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
     <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="openclaw-integracao.js?v=20260706-oc4"></script>
+    <script src="ayla-ia.js?v=20260712-ayla1"></script>
     <script src="ia-assistente.js?v=20260616-ia"></script>
     <script src="sas-ia.js?v=20260623-chat-row"></script>
     <script src="ai-agents.js?v=20260623-chat-row"></script>

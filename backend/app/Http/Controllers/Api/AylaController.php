@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AylaAuditLog;
+use App\Services\AylaAccessService;
 use App\Services\AylaApiService;
 use App\Support\Ayla\AylaResponse;
 use App\Support\Ayla\AylaSettings;
@@ -136,6 +137,51 @@ class AylaController extends Controller
 
             return $r['data'];
         }, 'Relatório da unidade.');
+    }
+
+    /**
+     * Validação de acesso para o gateway (VPS). Recebe telegram_user_id e
+     * retorna apenas as permissões necessárias. O Telegram ID nunca concede
+     * acesso sozinho: precisa estar vinculado a um usuário SAS ativo.
+     */
+    public function validarAcesso(Request $request, AylaAccessService $access): JsonResponse
+    {
+        $inicio = microtime(true);
+        $acao = 'ayla.acesso.validar';
+
+        $telegramId = trim((string) $request->input('telegram_user_id', ''));
+        $username = $request->input('telegram_username');
+        if ($telegramId === '') {
+            return $this->responder($request, $acao, false, 'Informe telegram_user_id.', 'VALIDATION_ERROR', 422, $inicio, null, []);
+        }
+
+        try {
+            $res = $access->autorizarTelegram($telegramId, is_string($username) ? $username : null);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->responder($request, $acao, false, 'Não foi possível validar o acesso.', 'INTERNAL_ERROR', 500, $inicio, null, []);
+        }
+
+        $autorizado = ($res['autorizado'] ?? false) === true;
+        $mensagem = $autorizado ? 'Usuário autorizado.' : (string) ($res['motivo'] ?? 'Acesso não autorizado.');
+        $duracao = (int) round((microtime(true) - $inicio) * 1000);
+
+        AylaAuditLog::registrar([
+            'user_id' => $res['usuario_id'] ?? null,
+            'ip' => $request->ip(),
+            'metodo' => $request->method(),
+            'rota' => $request->path(),
+            'acao' => $acao,
+            'payload' => ['telegram_user_id' => $telegramId, 'telegram_username' => is_string($username) ? $username : null],
+            'resposta_resumo' => ['autorizado' => $autorizado, 'motivo' => $res['motivo'] ?? null],
+            'status' => $autorizado ? 'ok' : 'negado',
+            'http_status' => 200,
+            'duracao_ms' => $duracao,
+        ]);
+
+        // Sempre 200: o gateway lê data.autorizado. Nunca retorna dados sensíveis.
+        return AylaResponse::success($acao, $mensagem, $res, ['duracao_ms' => $duracao]);
     }
 
     // ---------------------------------------------------------------------

@@ -42,7 +42,7 @@ class AylaResponse
     private static function withCors(JsonResponse $response): JsonResponse
     {
         $response->headers->set('Access-Control-Allow-Origin', '*');
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Ayla-Channel, X-Ayla-Sender-Id');
 
         return $response;
