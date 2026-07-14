@@ -1,0 +1,324 @@
+/* Fechamento de caixa + Recibo ajuda de custo — mesmo padrão visual (Ayla / Patrimônio / Financeiro) */
+:is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) {
+  padding: 0.25rem 0.35rem 2rem;
+  box-sizing: border-box;
+}
+
+:is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) > .boletos-header,
+#fechamentoDashSection .fechamento-dash__head {
+  margin-bottom: 1.5rem;
+  padding: 0 0.35rem;
+}
+
+:is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .btn {
+  min-height: 2.75rem;
+  min-width: 9.5rem;
+  padding: 0.65rem 1.15rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.caixa-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1280px;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+}
+
+:is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) .table-card {
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+
+:is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) .table-card > header {
+  padding: 1.05rem 1.5rem;
+}
+
+:is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) .table-card > .table-wrapper {
+  padding: 0.35rem 1.25rem 1.25rem;
+}
+
+.caixa-form-body {
+  padding: 1.35rem 1.5rem 1.6rem;
+  box-sizing: border-box;
+}
+
+/* Fechamento — auditoria */
+#fechamentoSection .fechamento-audit__intro {
+  max-width: 1100px;
+  margin: 0 0 1.5rem;
+  padding: 0 0.35rem;
+  line-height: 1.55;
+}
+
+#fechamentoSection #fechamentoPrincipalPainel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+#fechamentoSection .fechamento-audit__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.15rem 1.25rem;
+  padding: 1.35rem 1.5rem 0.5rem;
+}
+
+#fechamentoSection .fechamento-audit__obs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.5rem 1.5rem 1.5rem;
+  margin: 0;
+}
+
+#fechamentoSection .fechamento-audit__meta label,
+#fechamentoSection .fechamento-audit__obs {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+#fechamentoSection .fechamento-audit__meta input,
+#fechamentoSection .fechamento-audit__meta select,
+#fechamentoSection .fechamento-audit__obs textarea {
+  font-weight: 400;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+#fechamentoSection .fechamento-audit__meta input:focus,
+#fechamentoSection .fechamento-audit__meta select:focus,
+#fechamentoSection .fechamento-audit__obs textarea:focus {
+  outline: none;
+  border-color: var(--primary, #0047ab);
+  box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.12);
+}
+
+#fechamentoSection .fechamento-audit__resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+#fechamentoSection .fechamento-audit__card {
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+}
+
+#fechamentoSection .fechamento-audit__resumo-mes-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.15rem 1.25rem;
+  align-items: end;
+  padding: 1.35rem 1.5rem 1rem;
+}
+
+#fechamentoSection .fechamento-audit__resumo-mes-bar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+#fechamentoSection .fechamento-audit__resumo-mes-bar input,
+#fechamentoSection .fechamento-audit__resumo-mes-bar select {
+  font-weight: 400;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #c5cdd6;
+  min-width: 10rem;
+}
+
+#fechamentoSection .fechamento-audit__resumo-mes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+#fechamentoSection .fechamento-audit__resumo-mes-actions .btn,
+#fechamentoSection #fechamentoAddFormaBtn {
+  min-height: 2.75rem;
+  min-width: 10rem;
+  padding: 0.65rem 1.25rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+#fechamentoSection .fechamento-audit__resumo-mes-resultado {
+  padding: 0 1.5rem 1.5rem;
+  line-height: 1.5;
+}
+
+/* Fechamento — dashboard */
+#fechamentoDashSection .fechamento-dash__filters-grid {
+  gap: 1.15rem 1.25rem;
+  padding: 1.35rem 1.5rem 0.75rem;
+}
+
+#fechamentoDashSection .fechamento-dash__filters-grid label {
+  gap: 0.45rem;
+}
+
+#fechamentoDashSection .fechamento-dash__filters-grid input,
+#fechamentoDashSection .fechamento-dash__filters-grid select {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #c5cdd6;
+}
+
+#fechamentoDashSection .fechamento-dash__filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+#fechamentoDashSection .fechamento-dash__filters-actions .btn,
+#fechamentoDashSection .fechamento-dash__unidades-pick-actions .btn {
+  min-height: 2.75rem;
+  min-width: 10rem;
+  padding: 0.65rem 1.25rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+#fechamentoDashSection .fechamento-dash__hint {
+  padding: 0 1.5rem 1.35rem;
+  margin: 0;
+}
+
+#fechamentoDashSection .fechamento-dash__unidades-pick-desc,
+#fechamentoDashSection .fechamento-dash__unidades-pick-actions {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+#fechamentoDashSection .fechamento-dash__unidades-pick-list {
+  padding: 0.75rem 1.5rem 1.5rem;
+}
+
+#fechamentoDashSection .fechamento-dash__cards {
+  gap: 1rem;
+}
+
+#fechamentoDashSection .fechamento-dash__card {
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+}
+
+#fechamentoDashSection .fechamento-dash__charts {
+  gap: 1.5rem;
+}
+
+/* Recibo ajuda de custo */
+/* Dropdown finalidade não pode ser cortado pelo card */
+#reciboAjudaPainel > .table-card.form-card--wide:first-of-type {
+  overflow: visible;
+  position: relative;
+  z-index: 6;
+}
+
+#reciboAjudaSection .recibo-ajuda__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.15rem 1.25rem;
+  padding: 1.35rem 1.5rem 1.6rem;
+}
+
+#reciboAjudaSection .recibo-ajuda__grid.caixa-form-body {
+  padding: 1.35rem 1.5rem 1.6rem;
+}
+
+#reciboAjudaSection .recibo-ajuda__grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+#reciboAjudaSection .recibo-ajuda__grid input,
+#reciboAjudaSection .recibo-ajuda__grid select,
+#reciboAjudaSection .recibo-ajuda__grid textarea {
+  font-weight: 400;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+#reciboAjudaSection .recibo-ajuda__grid input:focus,
+#reciboAjudaSection .recibo-ajuda__grid select:focus,
+#reciboAjudaSection .recibo-ajuda__grid textarea:focus {
+  outline: none;
+  border-color: var(--primary, #0047ab);
+  box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.12);
+}
+
+#reciboAjudaSection .recibo-ajuda__sign-wrap {
+  padding: 1.35rem 1.5rem 1.6rem;
+}
+
+#reciboAjudaSection .recibo-ajuda__sign-actions,
+#reciboAjudaSection .recibo-ajuda__evidencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+#reciboAjudaSection .recibo-ajuda__sign-actions .btn,
+#reciboAjudaSection .recibo-ajuda__evidencias .btn,
+#reciboAjudaSection .boletos-actions .btn {
+  min-height: 2.75rem;
+  padding: 0.65rem 1.15rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+#reciboAjudaSection .recibo-ajuda__sign-actions .btn.primary,
+#reciboAjudaSection .boletos-actions .btn.secondary,
+#reciboAjudaSection .boletos-actions .btn.neutral {
+  min-width: 10rem;
+}
+
+#reciboAjudaSection #reciboAjudaPainel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  :is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) {
+    padding: 0 0 1.5rem;
+  }
+
+  :is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .btn,
+  #fechamentoSection .fechamento-audit__resumo-mes-actions .btn,
+  #fechamentoDashSection .fechamento-dash__filters-actions .btn,
+  #reciboAjudaSection .recibo-ajuda__sign-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #fechamentoSection .fechamento-audit__grid,
+  #reciboAjudaSection .recibo-ajuda__grid,
+  #reciboAjudaSection .recibo-ajuda__sign-wrap,
+  #fechamentoDashSection .fechamento-dash__filters-grid {
+    padding: 1.1rem;
+  }
+
+  :is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) .table-card > .table-wrapper {
+    padding: 0.25rem 0.85rem 1rem;
+  }
+}

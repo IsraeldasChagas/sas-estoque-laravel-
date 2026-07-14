@@ -47,6 +47,7 @@
     <link rel="stylesheet" href="style-patrimonio.css?v=20260714-pat-padrao" />
     <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260714-fg-padrao" />
+    <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-padrao" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
@@ -2853,6 +2854,7 @@
             </div>
             <div id="reciboAjudaApiFeedback" class="form-feedback hidden" style="margin-bottom:1rem;"></div>
 
+            <div class="caixa-page-wrap">
             <div id="reciboAjudaPainel" class="recibo-ajuda__painel">
             <div class="table-card form-card--wide">
               <header>
@@ -2861,7 +2863,7 @@
                   <p class="subtle-text">Funcionário, unidade, competência/finalidade e valor</p>
                 </div>
               </header>
-              <div class="recibo-ajuda__grid">
+              <div class="recibo-ajuda__grid caixa-form-body">
                 <label class="recibo-ajuda__unidade">
                   Unidade
                   <select id="reciboAjudaUnidadeSelect">
@@ -2988,6 +2990,7 @@
                   </tbody>
                 </table>
               </div>
+            </div>
             </div>
           </section>
 
@@ -4673,6 +4676,7 @@
               Em cada linha, <strong>Diferença</strong> = <strong>maquinha − PDV</strong> (referência da maquinha). A <strong>soma</strong> das diferenças é o saldo do fechamento: se fechar em <strong>zero</strong>, o que faltou numa forma foi coberto pelo que sobrou em outra — <strong>sem quebra</strong>. Caso contrário, há <strong>quebra</strong> ou <strong>sobra líquida</strong>.
             </p>
 
+            <div class="caixa-page-wrap">
             <div id="fechamentoPrincipalPainel" class="fechamento-audit__principal-painel">
             <div class="table-card form-card--wide fechamento-audit__meta">
               <header>
@@ -4681,7 +4685,7 @@
                   <p class="subtle-text">Data, hora, unidade, operador do caixa, sistema e maquinha</p>
                 </div>
               </header>
-              <div class="fechamento-audit__grid">
+              <div class="fechamento-audit__grid caixa-form-body">
                 <label>
                   Data do fechamento
                   <input type="date" id="fechamentoData" />
@@ -4872,6 +4876,7 @@
                 </table>
               </div>
             </div>
+            </div>
           </section>
 
           <!-- Financeiro — Dashboard análise fechamentos de caixa -->
@@ -4884,9 +4889,10 @@
               </p>
             </div>
 
+            <div class="caixa-page-wrap">
             <div class="table-card fechamento-dash__filters">
               <header><h3>Filtros</h3></header>
-              <div class="fechamento-dash__filters-grid">
+              <div class="fechamento-dash__filters-grid caixa-form-body">
                 <label>
                   Data inicial
                   <input type="date" id="fechamentoDashDe" />
@@ -4995,6 +5001,7 @@
               <ol class="fechamento-dash__top3-list" id="fechamentoDashTop3List">
                 <li class="subtle-text">Atualize os dados para ver o ranking.</li>
               </ol>
+            </div>
             </div>
           </section>
         </section>
