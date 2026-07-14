@@ -255,42 +255,80 @@
 }
 
 /* ============================================================
-   Ayla IA — módulo administrativo
-   Usa as variáveis globais de tema (claro/escuro/personalizado).
+   Ayla IA — padrão visual de todas as páginas do módulo
    ============================================================ */
-.ayla-root { display: block; }
-.ayla-head-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-
-/* Configurações: mais respiro nas bordas e entre blocos */
-#aylaConfiguracoesSection {
+:is(
+  #aylaDashboardSection,
+  #aylaUsuariosSection,
+  #aylaPermissoesSection,
+  #aylaCanaisVozSection,
+  #aylaLogsSection,
+  #aylaConfiguracoesSection
+) {
   padding: 0.25rem 0.35rem 2rem;
   box-sizing: border-box;
 }
-#aylaConfiguracoesSection .cfg-section-head {
+:is(
+  #aylaDashboardSection,
+  #aylaUsuariosSection,
+  #aylaPermissoesSection,
+  #aylaCanaisVozSection,
+  #aylaLogsSection,
+  #aylaConfiguracoesSection
+) .cfg-section-head {
   margin-bottom: 1.5rem;
   padding: 0 0.35rem;
 }
-#aylaConfiguracoesSection .ayla-root {
+:is(
+  #aylaDashboardSection,
+  #aylaUsuariosSection,
+  #aylaPermissoesSection,
+  #aylaCanaisVozSection,
+  #aylaLogsSection,
+  #aylaConfiguracoesSection
+) .ayla-root {
   padding: 0 0.15rem;
 }
+
+.ayla-root { display: block; }
+.ayla-head-actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.ayla-head-actions .btn {
+  min-height: 2.75rem;
+  min-width: 11.5rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.ayla-page-wrap,
 .ayla-config-wrap {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   max-width: 1100px;
 }
-.ayla-block { margin-bottom: 0; }
-#aylaConfiguracoesSection .ayla-block {
+:is(#aylaDashboardSection, #aylaUsuariosSection, #aylaLogsSection) .ayla-page-wrap {
+  max-width: 1280px;
+}
+
+.ayla-block {
+  margin-bottom: 0;
   border-radius: 14px;
 }
-#aylaConfiguracoesSection .ayla-block > header {
+.ayla-block > header {
   padding: 1.05rem 1.5rem;
 }
 .ayla-block > header h3 { margin: 0; }
+
 .ayla-form-body {
   padding: 1.35rem 1.5rem 1.6rem;
   box-sizing: border-box;
 }
+.ayla-block > .table-wrapper {
+  padding: 0.35rem 1.25rem 1.25rem;
+}
+
 .ayla-toggle-row {
   display: flex;
   flex-wrap: wrap;
@@ -300,26 +338,44 @@
 .ayla-cfg-grid {
   gap: 1.15rem 1.25rem;
 }
-#aylaConfiguracoesSection .cfg-form-grid label {
+
+.ayla-page-wrap .cfg-form-grid label,
+.ayla-config-wrap .cfg-form-grid label,
+.ayla-form-body .cfg-form-grid label {
   gap: 0.45rem;
 }
-#aylaConfiguracoesSection .cfg-form-grid input,
-#aylaConfiguracoesSection .cfg-form-grid textarea,
-#aylaConfiguracoesSection .cfg-form-grid select {
+.ayla-page-wrap .cfg-form-grid input,
+.ayla-page-wrap .cfg-form-grid textarea,
+.ayla-page-wrap .cfg-form-grid select,
+.ayla-config-wrap .cfg-form-grid input,
+.ayla-config-wrap .cfg-form-grid textarea,
+.ayla-config-wrap .cfg-form-grid select,
+.ayla-form-body .cfg-form-grid input,
+.ayla-form-body .cfg-form-grid textarea,
+.ayla-form-body .cfg-form-grid select {
   padding: 0.7rem 0.85rem;
   border-radius: 10px;
   border: 1.5px solid #c5cdd6;
   background: var(--card-bg, #fff);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-#aylaConfiguracoesSection .cfg-form-grid input:focus,
-#aylaConfiguracoesSection .cfg-form-grid textarea:focus,
-#aylaConfiguracoesSection .cfg-form-grid select:focus {
+.ayla-page-wrap .cfg-form-grid input:focus,
+.ayla-page-wrap .cfg-form-grid textarea:focus,
+.ayla-page-wrap .cfg-form-grid select:focus,
+.ayla-config-wrap .cfg-form-grid input:focus,
+.ayla-config-wrap .cfg-form-grid textarea:focus,
+.ayla-config-wrap .cfg-form-grid select:focus,
+.ayla-form-body .cfg-form-grid input:focus,
+.ayla-form-body .cfg-form-grid textarea:focus,
+.ayla-form-body .cfg-form-grid select:focus {
   outline: none;
   border-color: var(--primary, #0047ab);
   box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.12);
 }
-#aylaConfiguracoesSection .oc-check-grid {
+
+.ayla-page-wrap .oc-check-grid,
+.ayla-config-wrap .oc-check-grid,
+.ayla-form-body .oc-check-grid {
   margin-top: 0.75rem;
   gap: 0.7rem 1.25rem;
   padding: 0.85rem 1rem;
@@ -327,14 +383,21 @@
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 12px;
 }
-#aylaConfiguracoesSection .oc-form-actions {
+
+.ayla-page-wrap .oc-form-actions,
+.ayla-config-wrap .oc-form-actions,
+.ayla-form-body .oc-form-actions {
   margin-top: 1.75rem;
   padding-top: 1.35rem;
 }
-/* Botões de ação (vermelho/azul) no mesmo tamanho */
-#aylaConfiguracoesSection .ayla-token-actions .btn,
-#aylaConfiguracoesSection .ayla-form-body .oc-form-actions .btn,
-#aylaConfiguracoesSection .ayla-form-body .ayla-filtros-actions .btn {
+
+/* Botões de ação principais no mesmo tamanho */
+.ayla-token-actions .btn,
+.ayla-page-wrap .oc-form-actions .btn,
+.ayla-config-wrap .oc-form-actions .btn,
+.ayla-form-body .oc-form-actions .btn,
+.ayla-page-wrap .ayla-filtros-actions .btn,
+.ayla-form-body .ayla-filtros-actions .btn {
   min-height: 2.75rem;
   min-width: 11.5rem;
   padding: 0.65rem 1.25rem;
@@ -343,10 +406,10 @@
   justify-content: center;
   box-sizing: border-box;
 }
-#aylaConfiguracoesSection .ayla-token-actions {
-  margin-top: 1rem;
-}
-#aylaConfiguracoesSection .oc-toggle {
+.ayla-token-actions { margin-top: 1rem; }
+
+.ayla-page-wrap .oc-toggle,
+.ayla-config-wrap .oc-toggle {
   border: 1.5px solid #c5cdd6;
   background: rgba(0, 71, 171, 0.04);
   padding: 0.75rem 1rem;
@@ -364,13 +427,27 @@
   font-size: 0.92rem;
 }
 
-.ayla-cards { margin-bottom: 1.25rem; }
+.ayla-cards {
+  margin-bottom: 0;
+  gap: 1rem;
+}
 .ayla-card {
   background: var(--card-bg, #fff);
   color: var(--text, #263238);
+  padding: 1.15rem 1.25rem;
+  border-radius: 14px;
+  min-height: 100%;
 }
-.ayla-card__value { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.ayla-card__value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0.35rem 0;
+}
 .ayla-card--muted { opacity: 0.72; }
+.ayla-card .btn {
+  margin-top: 0.75rem;
+}
 
 .ayla-badge {
   display: inline-block;
@@ -387,6 +464,7 @@
 
 .ayla-hint { margin: 0.35rem 0 0; font-size: 0.82rem; color: var(--muted, #607d8b); font-weight: 400; line-height: 1.45; }
 .ayla-form-block { margin: 0.25rem 0 0.35rem; }
+.ayla-form-block--spaced { margin-top: 1.15rem; }
 .ayla-form-block > strong { display: block; margin-bottom: 0.35rem; font-size: 0.92rem; }
 .ayla-form-card { padding-bottom: 1rem; }
 .ayla-disabled { opacity: 0.55; }
@@ -425,17 +503,35 @@
 
 @media (max-width: 640px) {
   .ayla-head-actions { width: 100%; }
+  .ayla-head-actions .btn { width: 100%; min-width: 0; }
   .ayla-card__value { font-size: 1.25rem; }
-  #aylaConfiguracoesSection {
+  :is(
+    #aylaDashboardSection,
+    #aylaUsuariosSection,
+    #aylaPermissoesSection,
+    #aylaCanaisVozSection,
+    #aylaLogsSection,
+    #aylaConfiguracoesSection
+  ) {
     padding: 0 0 1.5rem;
   }
   .ayla-form-body {
     padding: 1.1rem 1.1rem 1.35rem;
   }
-  #aylaConfiguracoesSection .ayla-block > header {
+  .ayla-block > header {
     padding: 0.95rem 1.1rem;
+  }
+  .ayla-block > .table-wrapper {
+    padding: 0.25rem 0.85rem 1rem;
   }
   .ayla-toggle-row .oc-toggle {
     width: 100%;
+  }
+  .ayla-token-actions .btn,
+  .ayla-page-wrap .oc-form-actions .btn,
+  .ayla-form-body .oc-form-actions .btn,
+  .ayla-page-wrap .ayla-filtros-actions .btn {
+    width: 100%;
+    min-width: 0;
   }
 }

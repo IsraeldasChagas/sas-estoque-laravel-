@@ -89,29 +89,31 @@
       const ultimas = d.ultimas_atividades || [];
 
       root.innerHTML = `
-        <div class="cfg-grid ayla-cards">
-          ${card("Status da integração", integ.ativa ? "🟢 Online" : "🔴 Offline", integ.ativa ? "A Ayla está ativa." : "Integração desativada.")}
-          ${card("API SAS-Estoque", integ.read_only ? "Somente leitura" : "Leitura/escrita", `Versão ${esc(integ.versao || "-")} · ${integ.token_configurado ? "token configurado" : "sem token"}`)}
-          ${card("Telegram", tg.ativo ? "Configurado" : "Não configurado", tg.bot_username ? "@" + esc(tg.bot_username) : "Bot não informado")}
-          ${card("Usuários autorizados", String(us.total || 0), `${us.ativos || 0} ativos · ${us.pendentes || 0} pendentes · ${us.bloqueados || 0} bloqueados`)}
-          ${card("Consultas hoje", String(cons.hoje || 0), `${cons.sucesso || 0} ok · ${cons.erros || 0} erros · ${cons.tempo_medio_ms || 0} ms médio`)}
-          ${card("Último teste", teste.status ? esc(teste.status) : "—", teste.em ? fmtData(teste.em) : "Nunca testado")}
-        </div>
-        <div class="table-card form-card--wide ayla-block">
-          <header><h3>Últimas atividades</h3></header>
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Status</th><th>Duração</th></tr></thead>
-              <tbody>${ultimas.length ? ultimas.map(a => `
-                <tr>
-                  <td>${fmtData(a.quando)}</td>
-                  <td>${esc(a.usuario || "—")}</td>
-                  <td>${esc(a.acao || "—")}</td>
-                  <td>${esc(a.status || "—")} (${esc(a.http_status || "-")})</td>
-                  <td>${a.duracao_ms != null ? esc(a.duracao_ms) + " ms" : "—"}</td>
-                </tr>`).join("") : `<tr><td colspan="5" class="ayla-empty">Nenhuma atividade registrada ainda.</td></tr>`}
-              </tbody>
-            </table>
+        <div class="ayla-page-wrap">
+          <div class="cfg-grid ayla-cards">
+            ${card("Status da integração", integ.ativa ? "🟢 Online" : "🔴 Offline", integ.ativa ? "A Ayla está ativa." : "Integração desativada.")}
+            ${card("API SAS-Estoque", integ.read_only ? "Somente leitura" : "Leitura/escrita", `Versão ${esc(integ.versao || "-")} · ${integ.token_configurado ? "token configurado" : "sem token"}`)}
+            ${card("Telegram", tg.ativo ? "Configurado" : "Não configurado", tg.bot_username ? "@" + esc(tg.bot_username) : "Bot não informado")}
+            ${card("Usuários autorizados", String(us.total || 0), `${us.ativos || 0} ativos · ${us.pendentes || 0} pendentes · ${us.bloqueados || 0} bloqueados`)}
+            ${card("Consultas hoje", String(cons.hoje || 0), `${cons.sucesso || 0} ok · ${cons.erros || 0} erros · ${cons.tempo_medio_ms || 0} ms médio`)}
+            ${card("Último teste", teste.status ? esc(teste.status) : "—", teste.em ? fmtData(teste.em) : "Nunca testado")}
+          </div>
+          <div class="table-card form-card--wide ayla-block">
+            <header><h3>Últimas atividades</h3></header>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Status</th><th>Duração</th></tr></thead>
+                <tbody>${ultimas.length ? ultimas.map(a => `
+                  <tr>
+                    <td>${fmtData(a.quando)}</td>
+                    <td>${esc(a.usuario || "—")}</td>
+                    <td>${esc(a.acao || "—")}</td>
+                    <td>${esc(a.status || "—")} (${esc(a.http_status || "-")})</td>
+                    <td>${a.duracao_ms != null ? esc(a.duracao_ms) + " ms" : "—"}</td>
+                  </tr>`).join("") : `<tr><td colspan="5" class="ayla-empty">Nenhuma atividade registrada ainda.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>`;
     } catch (e) {
@@ -160,39 +162,42 @@
   function renderUsuariosTabela(root) {
     const rows = state.usuarios;
     root.innerHTML = `
-      <div class="table-card form-card--wide ayla-block">
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead><tr>
-              <th>Usuário</th><th>Perfil</th><th>Cargo</th><th>Unidade</th>
-              <th>Telegram</th><th>Texto</th><th>Áudio</th><th>Consulta</th><th>Ações IA</th>
-              <th>Status</th><th>Último acesso</th><th>Ações</th>
-            </tr></thead>
-            <tbody>${rows.length ? rows.map(u => `
-              <tr>
-                <td>${esc(u.usuario_nome || "#" + u.usuario_id)}</td>
-                <td>${esc(u.usuario_perfil || "—")}</td>
-                <td>${esc(u.cargo || "—")}</td>
-                <td>${esc(u.unidade_nome || "—")}</td>
-                <td>${esc(u.telegram_user_id || "—")}${u.telegram_username ? " (@" + esc(u.telegram_username) + ")" : ""}</td>
-                <td>${simNao(u.pode_usar_texto)}</td>
-                <td>${simNao(u.pode_usar_audio)}</td>
-                <td>${simNao(u.pode_consultar_dados)}</td>
-                <td>${simNao(u.pode_executar_acoes)}</td>
-                <td>${statusBadge(u.status)}</td>
-                <td>${fmtData(u.ultimo_acesso_em)}</td>
-                <td class="ayla-row-actions">
-                  <button class="btn neutral btn-sm" data-ayla-edit="${u.id}">Editar</button>
-                  ${u.status !== "ativo" ? `<button class="btn secondary btn-sm" data-ayla-status="${u.id}" data-novo="ativo">Ativar</button>` : ""}
-                  ${u.status !== "bloqueado" ? `<button class="btn neutral btn-sm" data-ayla-status="${u.id}" data-novo="bloqueado">Bloquear</button>` : ""}
-                  ${u.status !== "revogado" ? `<button class="btn danger btn-sm" data-ayla-revogar="${u.id}">Revogar</button>` : ""}
-                </td>
-              </tr>`).join("") : `<tr><td colspan="12" class="ayla-empty">Nenhum acesso cadastrado. Clique em “Novo acesso”.</td></tr>`}
-            </tbody>
-          </table>
+      <div class="ayla-page-wrap">
+        <div class="table-card form-card--wide ayla-block">
+          <header><h3>Acessos autorizados</h3></header>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead><tr>
+                <th>Usuário</th><th>Perfil</th><th>Cargo</th><th>Unidade</th>
+                <th>Telegram</th><th>Texto</th><th>Áudio</th><th>Consulta</th><th>Ações IA</th>
+                <th>Status</th><th>Último acesso</th><th>Ações</th>
+              </tr></thead>
+              <tbody>${rows.length ? rows.map(u => `
+                <tr>
+                  <td>${esc(u.usuario_nome || "#" + u.usuario_id)}</td>
+                  <td>${esc(u.usuario_perfil || "—")}</td>
+                  <td>${esc(u.cargo || "—")}</td>
+                  <td>${esc(u.unidade_nome || "—")}</td>
+                  <td>${esc(u.telegram_user_id || "—")}${u.telegram_username ? " (@" + esc(u.telegram_username) + ")" : ""}</td>
+                  <td>${simNao(u.pode_usar_texto)}</td>
+                  <td>${simNao(u.pode_usar_audio)}</td>
+                  <td>${simNao(u.pode_consultar_dados)}</td>
+                  <td>${simNao(u.pode_executar_acoes)}</td>
+                  <td>${statusBadge(u.status)}</td>
+                  <td>${fmtData(u.ultimo_acesso_em)}</td>
+                  <td class="ayla-row-actions">
+                    <button class="btn neutral btn-sm" data-ayla-edit="${u.id}">Editar</button>
+                    ${u.status !== "ativo" ? `<button class="btn secondary btn-sm" data-ayla-status="${u.id}" data-novo="ativo">Ativar</button>` : ""}
+                    ${u.status !== "bloqueado" ? `<button class="btn neutral btn-sm" data-ayla-status="${u.id}" data-novo="bloqueado">Bloquear</button>` : ""}
+                    ${u.status !== "revogado" ? `<button class="btn danger btn-sm" data-ayla-revogar="${u.id}">Revogar</button>` : ""}
+                  </td>
+                </tr>`).join("") : `<tr><td colspan="12" class="ayla-empty">Nenhum acesso cadastrado. Clique em “Novo acesso”.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-      <div id="aylaUsuarioFormWrap"></div>`;
+        <div id="aylaUsuarioFormWrap"></div>
+      </div>`;
 
     root.querySelectorAll("[data-ayla-edit]").forEach(b => b.addEventListener("click", () => abrirFormUsuario(b.getAttribute("data-ayla-edit"))));
     root.querySelectorAll("[data-ayla-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b.getAttribute("data-ayla-status"), b.getAttribute("data-novo"))));
@@ -212,44 +217,46 @@
     wrap.innerHTML = `
       <div class="table-card form-card--wide ayla-block ayla-form-card">
         <header><h3>${editar ? "Editar acesso" : "Novo acesso"}</h3></header>
-        <div class="cfg-form-grid">
-          <label class="cfg-full">Usuário do SAS
-            <select id="aylaFUsuario" ${editar ? "disabled" : ""}>
-              <option value="">Selecione…</option>
-              ${usuarios.map(u => `<option value="${u.id}" ${editar && String(editar.usuario_id) === String(u.id) ? "selected" : ""}>${esc(u.nome)} — ${esc(u.perfil || "")}</option>`).join("")}
-            </select>
-          </label>
-          <label>Cargo <input type="text" id="aylaFCargo" maxlength="120" value="${esc(editar?.cargo || "")}"></label>
-          <label>Telegram User ID <input type="text" id="aylaFTgId" maxlength="32" inputmode="numeric" value="${esc(editar?.telegram_user_id || "")}"></label>
-          <label>Username Telegram <input type="text" id="aylaFTgUser" maxlength="120" value="${esc(editar?.telegram_username || "")}"></label>
-          <label>Status
-            <select id="aylaFStatus">
-              ${(state.opcoes?.status_disponiveis || ["pendente","ativo","bloqueado","revogado"]).map(s => `<option value="${s}" ${editar && editar.status === s ? "selected" : (!editar && s === "pendente" ? "selected" : "")}>${s}</option>`).join("")}
-            </select>
-          </label>
-          <div class="cfg-full ayla-form-block">
-            <strong>Unidades permitidas</strong>
-            <p class="ayla-hint">Vazio = todas que o usuário já enxerga no SAS.</p>
-            <div class="oc-check-grid">${unidades.map(u => `<label class="checkbox-label"><input type="checkbox" class="aylaFUnidade" value="${u.id}" ${uniSel.includes(String(u.id)) ? "checked" : ""}> ${esc(u.nome)}</label>`).join("") || "<span class='ayla-hint'>Sem unidades cadastradas.</span>"}</div>
-          </div>
-          <div class="cfg-full ayla-form-block">
-            <strong>Módulos permitidos</strong>
-            <div class="oc-check-grid">${Object.entries(modulos).map(([k, label]) => `<label class="checkbox-label"><input type="checkbox" class="aylaFModulo" value="${k}" ${modSel.includes(k) ? "checked" : ""}> ${esc(label)}</label>`).join("")}</div>
-          </div>
-          <div class="cfg-full ayla-form-block">
-            <strong>Capacidades</strong>
-            <div class="oc-check-grid">
-              <label class="checkbox-label"><input type="checkbox" id="aylaFTexto" ${editar ? (editar.pode_usar_texto ? "checked" : "") : "checked"}> Permitir texto</label>
-              <label class="checkbox-label"><input type="checkbox" id="aylaFAudio" ${editar ? (editar.pode_usar_audio ? "checked" : "") : "checked"}> Permitir áudio</label>
-              <label class="checkbox-label"><input type="checkbox" id="aylaFConsulta" ${editar ? (editar.pode_consultar_dados ? "checked" : "") : "checked"}> Permitir consultas</label>
-              <label class="checkbox-label ayla-disabled" title="A API Ayla está em modo somente leitura"><input type="checkbox" disabled> Solicitar ações (bloqueado)</label>
+        <div class="ayla-form-body">
+          <div class="cfg-form-grid ayla-cfg-grid">
+            <label class="cfg-full">Usuário do SAS
+              <select id="aylaFUsuario" ${editar ? "disabled" : ""}>
+                <option value="">Selecione…</option>
+                ${usuarios.map(u => `<option value="${u.id}" ${editar && String(editar.usuario_id) === String(u.id) ? "selected" : ""}>${esc(u.nome)} — ${esc(u.perfil || "")}</option>`).join("")}
+              </select>
+            </label>
+            <label>Cargo <input type="text" id="aylaFCargo" maxlength="120" value="${esc(editar?.cargo || "")}"></label>
+            <label>Telegram User ID <input type="text" id="aylaFTgId" maxlength="32" inputmode="numeric" value="${esc(editar?.telegram_user_id || "")}"></label>
+            <label>Username Telegram <input type="text" id="aylaFTgUser" maxlength="120" value="${esc(editar?.telegram_username || "")}"></label>
+            <label>Status
+              <select id="aylaFStatus">
+                ${(state.opcoes?.status_disponiveis || ["pendente","ativo","bloqueado","revogado"]).map(s => `<option value="${s}" ${editar && editar.status === s ? "selected" : (!editar && s === "pendente" ? "selected" : "")}>${s}</option>`).join("")}
+              </select>
+            </label>
+            <div class="cfg-full ayla-form-block">
+              <strong>Unidades permitidas</strong>
+              <p class="ayla-hint">Vazio = todas que o usuário já enxerga no SAS.</p>
+              <div class="oc-check-grid">${unidades.map(u => `<label class="checkbox-label"><input type="checkbox" class="aylaFUnidade" value="${u.id}" ${uniSel.includes(String(u.id)) ? "checked" : ""}> ${esc(u.nome)}</label>`).join("") || "<span class='ayla-hint'>Sem unidades cadastradas.</span>"}</div>
             </div>
+            <div class="cfg-full ayla-form-block">
+              <strong>Módulos permitidos</strong>
+              <div class="oc-check-grid">${Object.entries(modulos).map(([k, label]) => `<label class="checkbox-label"><input type="checkbox" class="aylaFModulo" value="${k}" ${modSel.includes(k) ? "checked" : ""}> ${esc(label)}</label>`).join("")}</div>
+            </div>
+            <div class="cfg-full ayla-form-block">
+              <strong>Capacidades</strong>
+              <div class="oc-check-grid">
+                <label class="checkbox-label"><input type="checkbox" id="aylaFTexto" ${editar ? (editar.pode_usar_texto ? "checked" : "") : "checked"}> Permitir texto</label>
+                <label class="checkbox-label"><input type="checkbox" id="aylaFAudio" ${editar ? (editar.pode_usar_audio ? "checked" : "") : "checked"}> Permitir áudio</label>
+                <label class="checkbox-label"><input type="checkbox" id="aylaFConsulta" ${editar ? (editar.pode_consultar_dados ? "checked" : "") : "checked"}> Permitir consultas</label>
+                <label class="checkbox-label ayla-disabled" title="A API Ayla está em modo somente leitura"><input type="checkbox" disabled> Solicitar ações (bloqueado)</label>
+              </div>
+            </div>
+            <label class="cfg-full">Observações <textarea id="aylaFObs" maxlength="1000" rows="3">${esc(editar?.observacoes || "")}</textarea></label>
           </div>
-          <label class="cfg-full">Observações <textarea id="aylaFObs" maxlength="1000" rows="2">${esc(editar?.observacoes || "")}</textarea></label>
-        </div>
-        <div class="oc-form-actions">
-          <button class="btn primary" id="aylaFSalvar">${editar ? "Salvar alterações" : "Cadastrar acesso"}</button>
-          <button class="btn neutral" id="aylaFCancelar">Cancelar</button>
+          <div class="oc-form-actions">
+            <button type="button" class="btn primary" id="aylaFSalvar">${editar ? "Salvar alterações" : "Cadastrar acesso"}</button>
+            <button type="button" class="btn neutral" id="aylaFCancelar">Cancelar</button>
+          </div>
         </div>
       </div>`;
 
@@ -317,14 +324,19 @@
       const r = await ayFetch("/ayla-admin/usuarios");
       state.usuarios = r.usuarios || [];
       root.innerHTML = `
-        <div class="ia-aviso">ℹ️ A API Ayla está em <strong>modo somente leitura</strong>. Ações de escrita permanecem bloqueadas nesta versão.</div>
-        <div class="table-card form-card--wide ayla-block">
-          <div class="cfg-form-grid">
-            <label class="cfg-full">Usuário autorizado
-              <select id="aylaPermUser"><option value="">Selecione…</option>${state.usuarios.map(u => `<option value="${u.id}">${esc(u.usuario_nome || "#" + u.usuario_id)} — ${esc(u.status)}</option>`).join("")}</select>
-            </label>
+        <div class="ayla-page-wrap">
+          <div class="ia-aviso">ℹ️ A API Ayla está em <strong>modo somente leitura</strong>. Ações de escrita permanecem bloqueadas nesta versão.</div>
+          <div class="table-card form-card--wide ayla-block">
+            <header><h3>Permissões por usuário</h3></header>
+            <div class="ayla-form-body">
+              <div class="cfg-form-grid ayla-cfg-grid">
+                <label class="cfg-full">Usuário autorizado
+                  <select id="aylaPermUser"><option value="">Selecione…</option>${state.usuarios.map(u => `<option value="${u.id}">${esc(u.usuario_nome || "#" + u.usuario_id)} — ${esc(u.status)}</option>`).join("")}</select>
+                </label>
+              </div>
+              <div id="aylaPermDetalhe"></div>
+            </div>
           </div>
-          <div id="aylaPermDetalhe"></div>
         </div>`;
       document.getElementById("aylaPermUser").addEventListener("change", (e) => renderPermDetalhe(e.target.value));
     } catch (e) {
@@ -340,7 +352,7 @@
     const modulos = modulosDisponiveis();
     const modSel = u.modulos_permitidos || [];
     box.innerHTML = `
-      <div class="ayla-form-block">
+      <div class="ayla-form-block ayla-form-block--spaced">
         <strong>Módulos de leitura</strong>
         <p class="ayla-hint">A permissão efetiva é a interseção com o que ${esc(u.usuario_nome || "o usuário")} já possui no SAS.</p>
         <div class="oc-check-grid">${Object.entries(modulos).map(([k, label]) => `<label class="checkbox-label"><input type="checkbox" class="aylaPermMod" value="${k}" ${modSel.includes(k) ? "checked" : ""}> ${esc(label)}</label>`).join("")}</div>
@@ -356,7 +368,7 @@
           <label class="checkbox-label ayla-disabled" title="Somente leitura"><input type="checkbox" disabled> Confirmar ação (bloqueado)</label>
         </div>
       </div>
-      <div class="oc-form-actions"><button class="btn primary" id="aylaPermSalvar">Salvar permissões</button></div>`;
+      <div class="oc-form-actions"><button type="button" class="btn primary" id="aylaPermSalvar">Salvar permissões</button></div>`;
     document.getElementById("aylaPermSalvar").addEventListener("click", () => salvarPermissoes(u));
   }
 
@@ -391,40 +403,46 @@
       const c = r.config || {};
       const podeEditar = ehAdmin();
       root.innerHTML = `
-        <div class="cfg-grid ayla-cards">
-          <div class="cfg-card ayla-card">
-            <div class="cfg-card__title">📨 Telegram</div>
-            <div class="ayla-card__value">${c.telegram_ativo ? "🟢 Ativo" : "⚪ Inativo"}</div>
-            <div class="cfg-card__text">${c.telegram_bot_username ? "@" + esc(c.telegram_bot_username) : "Bot não informado"}<br>Modo: recebimento contínuo</div>
-            <button class="btn secondary btn-sm" id="aylaTgTestar">Testar</button>
+        <div class="ayla-page-wrap">
+          <div class="cfg-grid ayla-cards">
+            <div class="cfg-card ayla-card">
+              <div class="cfg-card__title">📨 Telegram</div>
+              <div class="ayla-card__value">${c.telegram_ativo ? "🟢 Ativo" : "⚪ Inativo"}</div>
+              <div class="cfg-card__text">${c.telegram_bot_username ? "@" + esc(c.telegram_bot_username) : "Bot não informado"}<br>Modo: recebimento contínuo</div>
+              <button type="button" class="btn secondary" id="aylaTgTestar">Testar</button>
+            </div>
+            <div class="cfg-card ayla-card ayla-card--muted">
+              <div class="cfg-card__title">💬 WhatsApp</div>
+              <div class="ayla-card__value">Desativado</div>
+              <div class="cfg-card__text">Não há conexão de WhatsApp nesta versão.</div>
+            </div>
+            <div class="cfg-card ayla-card">
+              <div class="cfg-card__title">🎙️ Voz</div>
+              <div class="ayla-card__value">${c.audio_ativo ? "Ativa" : "Desativada"}</div>
+              <div class="cfg-card__text">Provedor: ${esc(c.audio_provider || "-")} · Voz: ${esc(c.audio_voice || "-")}</div>
+            </div>
           </div>
-          <div class="cfg-card ayla-card ayla-card--muted">
-            <div class="cfg-card__title">💬 WhatsApp</div>
-            <div class="ayla-card__value">Desativado</div>
-            <div class="cfg-card__text">Não há conexão de WhatsApp nesta versão.</div>
+          <div class="table-card form-card--wide ayla-block">
+            <header><h3>Configuração de canais e voz</h3></header>
+            <div class="ayla-form-body">
+              <div class="ayla-toggle-row">
+                <label class="oc-toggle"><input type="checkbox" id="aylaCVTgAtivo" ${c.telegram_ativo ? "checked" : ""} ${podeEditar ? "" : "disabled"}> Telegram ativo</label>
+                <label class="oc-toggle"><input type="checkbox" id="aylaCVAudio" ${c.audio_ativo ? "checked" : ""} ${podeEditar ? "" : "disabled"}> Áudio ativo</label>
+                <label class="oc-toggle"><input type="checkbox" id="aylaCVInbound" ${c.audio_inbound_only ? "checked" : ""} ${podeEditar ? "" : "disabled"}> Áudio só em resposta a áudio</label>
+              </div>
+              <div class="cfg-form-grid ayla-cfg-grid">
+                <label>Nome do bot (username) <input type="text" id="aylaCVTgUser" value="${esc(c.telegram_bot_username || "")}" ${podeEditar ? "" : "disabled"}></label>
+                <label>Provedor de voz
+                  <select id="aylaCVProvider" ${podeEditar ? "" : "disabled"}>
+                    <option value="openai" ${c.audio_provider === "openai" ? "selected" : ""}>OpenAI</option>
+                    <option value="microsoft" ${c.audio_provider === "microsoft" ? "selected" : ""}>Microsoft</option>
+                  </select>
+                </label>
+                <label>Voz <input type="text" id="aylaCVVoice" value="${esc(c.audio_voice || "")}" ${podeEditar ? "" : "disabled"}></label>
+              </div>
+              ${podeEditar ? `<div class="oc-form-actions"><button type="button" class="btn primary" id="aylaCVSalvar">Salvar canais e voz</button></div>` : `<div class="ia-aviso">🔒 Somente administradores podem alterar.</div>`}
+            </div>
           </div>
-          <div class="cfg-card ayla-card">
-            <div class="cfg-card__title">🎙️ Voz</div>
-            <div class="ayla-card__value">${c.audio_ativo ? "Ativa" : "Desativada"}</div>
-            <div class="cfg-card__text">Provedor: ${esc(c.audio_provider || "-")} · Voz: ${esc(c.audio_voice || "-")}</div>
-          </div>
-        </div>
-        <div class="table-card form-card--wide ayla-block">
-          <header><h3>Configuração de canais e voz</h3></header>
-          <div class="cfg-form-grid">
-            <label class="checkbox-label cfg-full"><input type="checkbox" id="aylaCVTgAtivo" ${c.telegram_ativo ? "checked" : ""} ${podeEditar ? "" : "disabled"}> Telegram ativo</label>
-            <label>Nome do bot (username) <input type="text" id="aylaCVTgUser" value="${esc(c.telegram_bot_username || "")}" ${podeEditar ? "" : "disabled"}></label>
-            <label class="checkbox-label cfg-full"><input type="checkbox" id="aylaCVAudio" ${c.audio_ativo ? "checked" : ""} ${podeEditar ? "" : "disabled"}> Áudio ativo</label>
-            <label>Provedor de voz
-              <select id="aylaCVProvider" ${podeEditar ? "" : "disabled"}>
-                <option value="openai" ${c.audio_provider === "openai" ? "selected" : ""}>OpenAI</option>
-                <option value="microsoft" ${c.audio_provider === "microsoft" ? "selected" : ""}>Microsoft</option>
-              </select>
-            </label>
-            <label>Voz <input type="text" id="aylaCVVoice" value="${esc(c.audio_voice || "")}" ${podeEditar ? "" : "disabled"}></label>
-            <label class="checkbox-label cfg-full"><input type="checkbox" id="aylaCVInbound" ${c.audio_inbound_only ? "checked" : ""} ${podeEditar ? "" : "disabled"}> Responder em áudio apenas quando receber áudio</label>
-          </div>
-          ${podeEditar ? `<div class="oc-form-actions"><button class="btn primary" id="aylaCVSalvar">Salvar canais e voz</button></div>` : `<div class="ia-aviso">🔒 Somente administradores podem alterar.</div>`}
         </div>`;
       document.getElementById("aylaTgTestar")?.addEventListener("click", testarConexao);
       document.getElementById("aylaCVSalvar")?.addEventListener("click", salvarCanaisVoz);
@@ -461,19 +479,24 @@
     const root = document.getElementById("aylaLogsRoot");
     if (!root) return;
     root.innerHTML = `
-      <div class="table-card form-card--wide ayla-block">
-        <div class="cfg-form-grid ayla-filtros">
-          <label>De <input type="date" id="aylaLogDe"></label>
-          <label>Até <input type="date" id="aylaLogAte"></label>
-          <label>Status
-            <select id="aylaLogStatus"><option value="">Todos</option><option value="ok">OK</option><option value="erro">Erro</option><option value="negado">Negado</option></select>
-          </label>
-          <label>Ação <input type="text" id="aylaLogAcao" placeholder="ex.: ayla.produtos"></label>
-          <label>Rota <input type="text" id="aylaLogRota" placeholder="ex.: ayla/v1/estoque"></label>
-          <div class="ayla-filtros-actions"><button class="btn primary" id="aylaLogFiltrar">Filtrar</button></div>
+      <div class="ayla-page-wrap">
+        <div class="table-card form-card--wide ayla-block">
+          <header><h3>Filtros</h3></header>
+          <div class="ayla-form-body">
+            <div class="cfg-form-grid ayla-cfg-grid ayla-filtros">
+              <label>De <input type="date" id="aylaLogDe"></label>
+              <label>Até <input type="date" id="aylaLogAte"></label>
+              <label>Status
+                <select id="aylaLogStatus"><option value="">Todos</option><option value="ok">OK</option><option value="erro">Erro</option><option value="negado">Negado</option></select>
+              </label>
+              <label>Ação <input type="text" id="aylaLogAcao" placeholder="ex.: ayla.produtos"></label>
+              <label>Rota <input type="text" id="aylaLogRota" placeholder="ex.: ayla/v1/estoque"></label>
+              <div class="ayla-filtros-actions"><button type="button" class="btn primary" id="aylaLogFiltrar">Filtrar</button></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div id="aylaLogsTabela"></div>`;
+        <div id="aylaLogsTabela"></div>
+      </div>`;
     document.getElementById("aylaLogFiltrar").addEventListener("click", () => { state.logPagina = 1; buscarLogs(); });
     state.logPagina = 1;
     buscarLogs();
@@ -502,6 +525,7 @@
       const totalPag = Math.max(1, Math.ceil((r.total || 0) / (r.por_pagina || 20)));
       box.innerHTML = `
         <div class="table-card form-card--wide ayla-block">
+          <header><h3>Registros</h3></header>
           <div class="table-wrapper">
             <table class="data-table">
               <thead><tr><th>Data/hora</th><th>Usuário</th><th>Ação</th><th>Rota</th><th>HTTP</th><th>Resultado</th><th>Duração</th></tr></thead>
@@ -519,9 +543,9 @@
             </table>
           </div>
           <div class="ayla-paginacao">
-            <button class="btn neutral btn-sm" id="aylaLogPrev" ${state.logPagina <= 1 ? "disabled" : ""}>‹ Anterior</button>
+            <button type="button" class="btn neutral btn-sm" id="aylaLogPrev" ${state.logPagina <= 1 ? "disabled" : ""}>‹ Anterior</button>
             <span>Página ${state.logPagina} de ${totalPag} · ${r.total || 0} registros</span>
-            <button class="btn neutral btn-sm" id="aylaLogNext" ${state.logPagina >= totalPag ? "disabled" : ""}>Próxima ›</button>
+            <button type="button" class="btn neutral btn-sm" id="aylaLogNext" ${state.logPagina >= totalPag ? "disabled" : ""}>Próxima ›</button>
           </div>
         </div>`;
       document.getElementById("aylaLogPrev")?.addEventListener("click", () => { if (state.logPagina > 1) { state.logPagina--; buscarLogs(); } });
@@ -546,7 +570,7 @@
       const uniSel = (c.unidades_globais || []).map(String);
       const usuarios = (state.opcoes?.usuarios) || [];
       root.innerHTML = `
-        <div class="ayla-config-wrap">
+        <div class="ayla-page-wrap ayla-config-wrap">
         <div class="table-card form-card--wide ayla-block">
           <header><h3>Configurações gerais</h3></header>
           <div class="ayla-form-body">
