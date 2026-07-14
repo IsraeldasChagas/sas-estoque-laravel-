@@ -546,48 +546,58 @@
       const uniSel = (c.unidades_globais || []).map(String);
       const usuarios = (state.opcoes?.usuarios) || [];
       root.innerHTML = `
+        <div class="ayla-config-wrap">
         <div class="table-card form-card--wide ayla-block">
           <header><h3>Configurações gerais</h3></header>
-          <div class="cfg-form-grid">
-            <label class="checkbox-label cfg-full"><input type="checkbox" id="aylaCfgAtiva" ${c.ativa ? "checked" : ""}> Ayla ativa</label>
-            <label class="checkbox-label cfg-full"><input type="checkbox" id="aylaCfgReadOnly" ${c.read_only ? "checked" : ""}> Modo somente leitura</label>
-            <label>URL pública da API <input type="text" id="aylaCfgApiUrl" value="${esc(c.api_url || "")}"></label>
-            <label>URL do gateway (OpenClaw) <input type="text" id="aylaCfgGateway" value="${esc(c.gateway_url || "")}"></label>
-            <label>Limite de requisições/min <input type="number" id="aylaCfgRate" min="1" max="1000" value="${esc(c.rate_limit || 60)}"></label>
-            <div class="cfg-full ayla-form-block">
-              <strong>Unidades globais permitidas</strong>
-              <p class="ayla-hint">Vazio = todas. Aplica-se quando não há usuário identificado.</p>
-              <div class="oc-check-grid">${unidades.map(u => `<label class="checkbox-label"><input type="checkbox" class="aylaCfgUnidade" value="${u.id}" ${uniSel.includes(String(u.id)) ? "checked" : ""}> ${esc(u.nome)}</label>`).join("") || "<span class='ayla-hint'>Sem unidades.</span>"}</div>
+          <div class="ayla-form-body">
+            <div class="ayla-toggle-row">
+              <label class="oc-toggle"><input type="checkbox" id="aylaCfgAtiva" ${c.ativa ? "checked" : ""}> Ayla ativa</label>
+              <label class="oc-toggle"><input type="checkbox" id="aylaCfgReadOnly" ${c.read_only ? "checked" : ""}> Modo somente leitura</label>
             </div>
-            <label class="cfg-full">Mensagem para acesso não autorizado <textarea id="aylaCfgMsgNeg" rows="2" maxlength="500">${esc(c.msg_nao_autorizado || "")}</textarea></label>
-            <label class="cfg-full">Mensagem de boas-vindas <textarea id="aylaCfgMsgBv" rows="2" maxlength="500">${esc(c.msg_boas_vindas || "")}</textarea></label>
+            <div class="cfg-form-grid ayla-cfg-grid">
+              <label>URL pública da API <input type="text" id="aylaCfgApiUrl" value="${esc(c.api_url || "")}"></label>
+              <label>URL do gateway (OpenClaw) <input type="text" id="aylaCfgGateway" value="${esc(c.gateway_url || "")}"></label>
+              <label>Limite de requisições/min <input type="number" id="aylaCfgRate" min="1" max="1000" value="${esc(c.rate_limit || 60)}"></label>
+              <div class="cfg-full ayla-form-block">
+                <strong>Unidades globais permitidas</strong>
+                <p class="ayla-hint">Vazio = todas. Aplica-se quando não há usuário identificado.</p>
+                <div class="oc-check-grid">${unidades.map(u => `<label class="checkbox-label"><input type="checkbox" class="aylaCfgUnidade" value="${u.id}" ${uniSel.includes(String(u.id)) ? "checked" : ""}> ${esc(u.nome)}</label>`).join("") || "<span class='ayla-hint'>Sem unidades.</span>"}</div>
+              </div>
+              <label class="cfg-full">Mensagem para acesso não autorizado <textarea id="aylaCfgMsgNeg" rows="3" maxlength="500">${esc(c.msg_nao_autorizado || "")}</textarea></label>
+              <label class="cfg-full">Mensagem de boas-vindas <textarea id="aylaCfgMsgBv" rows="3" maxlength="500">${esc(c.msg_boas_vindas || "")}</textarea></label>
+            </div>
+            <div class="oc-form-actions"><button class="btn primary" id="aylaCfgSalvar">Salvar configurações</button></div>
           </div>
-          <div class="oc-form-actions"><button class="btn primary" id="aylaCfgSalvar">Salvar configurações</button></div>
         </div>
 
         <div class="table-card form-card--wide ayla-block">
           <header><h3>Token de acesso</h3></header>
-          <div class="oc-field">
-            <div class="oc-field__label">Token atual</div>
-            <div class="ayla-token-line"><code id="aylaCfgTokenMasc">${esc(c.token_mascarado || "não configurado")}</code>
-              <span class="ayla-hint">${c.token_origem === "env" ? "Definido no .env (prioritário)" : "Definido pelo painel"}</span>
+          <div class="ayla-form-body">
+            <div class="oc-field">
+              <div class="oc-field__label">Token atual</div>
+              <div class="ayla-token-line"><code id="aylaCfgTokenMasc">${esc(c.token_mascarado || "não configurado")}</code>
+                <span class="ayla-hint">${c.token_origem === "env" ? "Definido no .env (prioritário)" : "Definido pelo painel"}</span>
+              </div>
+              <p class="ayla-hint">O token nunca é exibido por completo. Gere um novo apenas se necessário.</p>
+              <button class="btn secondary" id="aylaCfgGerarToken">Gerar novo token</button>
             </div>
-            <p class="ayla-hint">O token nunca é exibido por completo. Gere um novo apenas se necessário.</p>
-            <button class="btn secondary" id="aylaCfgGerarToken">Gerar novo token</button>
+            <div id="aylaCfgTokenNovo"></div>
           </div>
-          <div id="aylaCfgTokenNovo"></div>
         </div>
 
         <div class="table-card form-card--wide ayla-block">
           <header><h3>Administrador principal da Ayla</h3></header>
-          <div class="cfg-form-grid">
-            <label>Usuário (ADMIN)
-              <select id="aylaCfgAdminUser">${usuarios.map(u => `<option value="${u.id}" ${String(u.id) === String(window.currentUser?.id) ? "selected" : ""}>${esc(u.nome)} — ${esc(u.perfil || "")}</option>`).join("")}</select>
-            </label>
-            <label>Telegram User ID <input type="text" id="aylaCfgAdminTg" inputmode="numeric" maxlength="32"></label>
-            <div class="ayla-filtros-actions"><button class="btn primary" id="aylaCfgAdminSalvar">Definir administrador</button></div>
+          <div class="ayla-form-body">
+            <div class="cfg-form-grid ayla-cfg-grid">
+              <label>Usuário (ADMIN)
+                <select id="aylaCfgAdminUser">${usuarios.map(u => `<option value="${u.id}" ${String(u.id) === String(window.currentUser?.id) ? "selected" : ""}>${esc(u.nome)} — ${esc(u.perfil || "")}</option>`).join("")}</select>
+              </label>
+              <label>Telegram User ID <input type="text" id="aylaCfgAdminTg" inputmode="numeric" maxlength="32"></label>
+              <div class="ayla-filtros-actions"><button class="btn primary" id="aylaCfgAdminSalvar">Definir administrador</button></div>
+            </div>
+            <p class="ayla-hint ayla-hint--block">Vincula seu usuário SAS ao Telegram com acesso total à Ayla (somente leitura nesta versão).</p>
           </div>
-          <p class="ayla-hint">Vincula seu usuário SAS ao Telegram com acesso total à Ayla (somente leitura nesta versão).</p>
+        </div>
         </div>`;
       document.getElementById("aylaCfgSalvar").addEventListener("click", salvarConfig);
       document.getElementById("aylaCfgGerarToken").addEventListener("click", gerarToken);
