@@ -2,18 +2,22 @@
 
 namespace App\Services\Ayla;
 
+use App\Models\Mesa;
+use App\Models\ReservaMesa;
 use App\Support\Ayla\AylaSettings;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 
 /**
- * Consultas somente leitura do módulo Reservas de Mesas para a Ayla.
+ * Consultas e escrita controlada do módulo Reservas de Mesas para a Ayla.
  *
- * Campos reais: reservas_mesas (nome_cliente, telefone_cliente, data_reserva,
- * hora_reserva, qtd_pessoas, status, observacao, local, ocasiao) e mesas
- * (capacidade, status, numero_mesa). Sem duração nem data_hora composta.
+ * Leitura: consultar/resumo/disponibilidade/alertas.
+ * Escrita: somente via prepararPreview + executarAcaoConfirmada (após confirmação).
+ *
+ * Regras alinhadas a ReservaMesaController (conflito exato, capacidade, status reais).
  */
 class AylaReservasService
 {
@@ -744,5 +748,854 @@ class AylaReservasService
         }
 
         return $out;
+    }
+
+    // ------------------------------------------------------------------
+    // Escrita controlada (somente após confirmação via AylaAcaoPendenteService)
+    // ------------------------------------------------------------------
+
+    /**
+     * Valida intenção e monta preview sem persistir a reserva.
+     *
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function prepararPreview(string $acao, array $dados): array
+    {
+        return match ($acao) {
+            'criar' => $this->previewCriar($dados),
+            'atualizar' => $this->previewAtualizar($dados),
+            'alterar_mesa' => $this->previewAlterarMesa($dados),
+            'confirmar', 'registrar_chegada', 'finalizar', 'cancelar' => $this->previewStatus($acao, $dados),
+            default => ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Ação desconhecida.'],
+        };
+    }
+
+    /**
+     * Executa ação já confirmada. Reaproveita as mesmas regras do ReservaMesaController.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function executarAcaoConfirmada(string $acao, array $payload, ?int $usuarioId): array
+    {
+        return match ($acao) {
+            'criar' => $this->criarReserva($payload, $usuarioId),
+            'atualizar' => $this->atualizarReserva((int) ($payload['reserva_id'] ?? 0), $payload, $usuarioId),
+            'alterar_mesa' => $this->alterarMesa((int) ($payload['reserva_id'] ?? 0), (int) ($payload['mesa_id'] ?? 0), $usuarioId),
+            'confirmar' => $this->confirmarReserva((int) ($payload['reserva_id'] ?? 0), $usuarioId),
+            'registrar_chegada' => $this->registrarChegada((int) ($payload['reserva_id'] ?? 0), $usuarioId),
+            'finalizar' => $this->finalizarReserva((int) ($payload['reserva_id'] ?? 0), $usuarioId),
+            'cancelar' => $this->cancelarReserva((int) ($payload['reserva_id'] ?? 0), $payload['motivo'] ?? null, $usuarioId),
+            default => ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Ação desconhecida.'],
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function criarReserva(array $dados, ?int $usuarioId = null): array
+    {
+        if (! Schema::hasTable('reservas_mesas') || ! Schema::hasTable('mesas')) {
+            return ['ok' => false, 'code' => 'UNAVAILABLE', 'message' => 'Tabelas de reservas indisponíveis.'];
+        }
+
+        $normalizado = $this->normalizarDadosCriacao($dados);
+        $val = $this->validarCriacao($normalizado);
+        if (! ($val['ok'] ?? false)) {
+            return $val;
+        }
+
+        /** @var Mesa $mesa */
+        $mesa = $val['mesa'];
+        $payload = $val['payload'];
+
+        try {
+            $reserva = DB::transaction(function () use ($payload, $mesa, $usuarioId) {
+                $conflito = $this->verificarConflito([
+                    'mesa_id' => $payload['mesa_id'],
+                    'data_reserva' => $payload['data_reserva'],
+                    'hora_reserva' => $payload['hora_reserva'],
+                ]);
+                if ($conflito['tem_conflito']) {
+                    throw new \RuntimeException('CONFLITO');
+                }
+
+                $reserva = ReservaMesa::create([
+                    'unidade_id' => $payload['unidade_id'],
+                    'mesa_id' => $payload['mesa_id'],
+                    'usuario_id' => $usuarioId,
+                    'nome_cliente' => $payload['nome_cliente'],
+                    'telefone_cliente' => $payload['telefone_cliente'] ?? null,
+                    'data_reserva' => $payload['data_reserva'],
+                    'hora_reserva' => $payload['hora_reserva'],
+                    'qtd_pessoas' => $payload['qtd_pessoas'],
+                    'status' => $payload['status'] ?? ReservaMesa::STATUS_PENDENTE,
+                    'observacao' => $payload['observacao'] ?? null,
+                    'local' => $payload['local'] ?? null,
+                    'ocasiao' => $payload['ocasiao'] ?? null,
+                ]);
+
+                $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
+
+                return $reserva->fresh(['mesa:id,numero_mesa,nome_mesa,capacidade', 'unidade:id,nome']);
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'CONFLITO') {
+                return [
+                    'ok' => false,
+                    'code' => 'CONFLICT',
+                    'message' => 'Já existe uma reserva para esta mesa no mesmo horário.',
+                ];
+            }
+            throw $e;
+        }
+
+        return [
+            'ok' => true,
+            'data' => [
+                'mensagem' => 'Reserva criada com sucesso.',
+                'reserva' => $this->serializarModelo($reserva),
+                'anterior' => null,
+                'novo' => $this->serializarModelo($reserva),
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function atualizarReserva(int $id, array $dados, ?int $usuarioId = null): array
+    {
+        if ($id < 1) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'reserva_id inválido.'];
+        }
+
+        $reserva = ReservaMesa::with(['mesa', 'unidade'])->find($id);
+        if (! $reserva) {
+            return ['ok' => false, 'code' => 'NOT_FOUND', 'message' => 'Reserva não encontrada.'];
+        }
+        if (! AylaSettings::unidadePermitida((int) $reserva->unidade_id)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+        if (in_array($reserva->status, [ReservaMesa::STATUS_CANCELADA, ReservaMesa::STATUS_FINALIZADA, ReservaMesa::STATUS_NO_SHOW], true)) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Reserva não pode ser editada neste status.'];
+        }
+
+        $anterior = $this->serializarModelo($reserva);
+        $campos = $this->somenteCamposEditaveis($dados);
+
+        $mesaId = (int) ($campos['mesa_id'] ?? $reserva->mesa_id);
+        $dataReserva = (string) ($campos['data_reserva'] ?? $reserva->data_reserva->format('Y-m-d'));
+        $horaReserva = $this->normalizarHorarioCurto((string) ($campos['hora_reserva'] ?? substr((string) $reserva->hora_reserva, 0, 5)));
+        $qtd = (int) ($campos['qtd_pessoas'] ?? $reserva->qtd_pessoas);
+
+        if (isset($campos['data_reserva']) && $dataReserva < Carbon::today()->toDateString()) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Data não pode ser no passado.'];
+        }
+
+        $mesa = Mesa::find($mesaId);
+        if (! $mesa || ! $mesa->ativo) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa inválida ou inativa.'];
+        }
+        if ((int) $mesa->unidade_id !== (int) $reserva->unidade_id) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa não pertence à unidade da reserva.'];
+        }
+        if ($qtd > (int) $mesa->capacidade) {
+            return [
+                'ok' => false,
+                'code' => 'VALIDATION_ERROR',
+                'message' => "A mesa suporta no máximo {$mesa->capacidade} pessoas.",
+            ];
+        }
+
+        $mudouSlot = $mesaId !== (int) $reserva->mesa_id
+            || $dataReserva !== $reserva->data_reserva->format('Y-m-d')
+            || $horaReserva !== substr((string) $reserva->hora_reserva, 0, 5);
+
+        if ($mudouSlot) {
+            $conflito = $this->verificarConflito([
+                'mesa_id' => $mesaId,
+                'data_reserva' => $dataReserva,
+                'hora_reserva' => $horaReserva,
+                'exceto_id' => $id,
+            ]);
+            if ($conflito['tem_conflito']) {
+                return [
+                    'ok' => false,
+                    'code' => 'CONFLICT',
+                    'message' => 'Já existe uma reserva para esta mesa no mesmo horário.',
+                    'data' => $conflito,
+                ];
+            }
+        }
+
+        DB::transaction(function () use ($reserva, $campos, $mesaId, $dataReserva, $horaReserva, $mudouSlot, $mesa) {
+            if ($mudouSlot) {
+                $antiga = Mesa::find($reserva->mesa_id);
+                if ($antiga) {
+                    $outras = ReservaMesa::where('mesa_id', $antiga->id)
+                        ->where('id', '!=', $reserva->id)
+                        ->whereDate('data_reserva', $reserva->data_reserva)
+                        ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+                        ->exists();
+                    if (! $outras) {
+                        $antiga->update(['status' => Mesa::STATUS_LIVRE]);
+                    }
+                }
+                $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
+            }
+
+            $update = $campos;
+            if (isset($update['mesa_id'])) {
+                $update['mesa_id'] = $mesaId;
+            }
+            if (isset($update['data_reserva'])) {
+                $update['data_reserva'] = $dataReserva;
+            }
+            if (isset($update['hora_reserva'])) {
+                $update['hora_reserva'] = $horaReserva;
+            }
+            // Nunca altera unidade_id ou usuario_id por esta rota.
+            unset($update['unidade_id'], $update['usuario_id'], $update['reserva_id'], $update['motivo'], $update['forcar_duplicidade']);
+
+            $reserva->update($update);
+        });
+
+        $fresca = $reserva->fresh(['mesa:id,numero_mesa,nome_mesa,capacidade', 'unidade:id,nome']);
+
+        return [
+            'ok' => true,
+            'data' => [
+                'mensagem' => 'Reserva atualizada.',
+                'reserva' => $this->serializarModelo($fresca),
+                'anterior' => $anterior,
+                'novo' => $this->serializarModelo($fresca),
+            ],
+        ];
+    }
+
+    /** @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>} */
+    public function confirmarReserva(int $id, ?int $usuarioId = null): array
+    {
+        return $this->alterarStatusReserva($id, ReservaMesa::STATUS_CONFIRMADA, $usuarioId);
+    }
+
+    /** @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>} */
+    public function registrarChegada(int $id, ?int $usuarioId = null): array
+    {
+        return $this->alterarStatusReserva($id, ReservaMesa::STATUS_CLIENTE_CHEGOU, $usuarioId);
+    }
+
+    /** @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>} */
+    public function finalizarReserva(int $id, ?int $usuarioId = null): array
+    {
+        return $this->alterarStatusReserva($id, ReservaMesa::STATUS_FINALIZADA, $usuarioId);
+    }
+
+    /**
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function cancelarReserva(int $id, ?string $motivo = null, ?int $usuarioId = null): array
+    {
+        $r = $this->alterarStatusReserva($id, ReservaMesa::STATUS_CANCELADA, $usuarioId);
+        if (($r['ok'] ?? false) && $motivo !== null && trim($motivo) !== '') {
+            $reserva = ReservaMesa::find($id);
+            if ($reserva) {
+                $obs = trim((string) ($reserva->observacao ?? ''));
+                $nota = 'Cancelamento (Ayla): '.mb_substr(trim($motivo), 0, 400);
+                $reserva->update([
+                    'observacao' => $obs !== '' ? ($obs."\n".$nota) : $nota,
+                ]);
+                $r['data']['reserva'] = $this->serializarModelo($reserva->fresh(['mesa', 'unidade']));
+                $r['data']['motivo'] = mb_substr(trim($motivo), 0, 400);
+            }
+        }
+
+        return $r;
+    }
+
+    /**
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function alterarMesa(int $id, int $mesaId, ?int $usuarioId = null): array
+    {
+        return $this->atualizarReserva($id, ['mesa_id' => $mesaId], $usuarioId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{tem_conflito: bool, conflitos: array<int, array<string, mixed>>}
+     */
+    public function verificarConflito(array $dados): array
+    {
+        $mesaId = (int) ($dados['mesa_id'] ?? 0);
+        $data = (string) ($dados['data_reserva'] ?? $dados['data'] ?? '');
+        $hora = $this->normalizarHorarioCurto((string) ($dados['hora_reserva'] ?? $dados['horario'] ?? ''));
+        $exceto = isset($dados['exceto_id']) ? (int) $dados['exceto_id'] : null;
+
+        if ($mesaId < 1 || $data === '' || $hora === null) {
+            return ['tem_conflito' => false, 'conflitos' => []];
+        }
+
+        $q = ReservaMesa::query()
+            ->where('mesa_id', $mesaId)
+            ->whereDate('data_reserva', $data)
+            ->whereTime('hora_reserva', $hora)
+            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
+
+        if ($exceto) {
+            $q->where('id', '!=', $exceto);
+        }
+
+        $rows = $q->get(['id', 'nome_cliente', 'status', 'qtd_pessoas', 'unidade_id']);
+
+        return [
+            'tem_conflito' => $rows->isNotEmpty(),
+            'conflitos' => $rows->map(fn ($r) => [
+                'reserva_id' => (int) $r->id,
+                'cliente' => (string) $r->nome_cliente,
+                'status' => (string) $r->status,
+                'qtd_pessoas' => (int) $r->qtd_pessoas,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function validarDisponibilidade(array $dados): array
+    {
+        $disp = $this->disponibilidade([
+            'unidade_id' => (int) ($dados['unidade_id'] ?? 0),
+            'data' => (string) ($dados['data_reserva'] ?? $dados['data'] ?? ''),
+            'horario' => (string) ($dados['hora_reserva'] ?? $dados['horario'] ?? ''),
+            'quantidade_pessoas' => isset($dados['qtd_pessoas']) ? (int) $dados['qtd_pessoas'] : null,
+        ]);
+
+        $ok = ! empty($disp['mesas_disponiveis']);
+
+        return [
+            'ok' => $ok,
+            'code' => $ok ? null : 'NO_AVAILABILITY',
+            'message' => $ok ? 'Há mesa disponível.' : 'Nenhuma mesa disponível para os critérios.',
+            'data' => $disp,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>, mesa?: Mesa, payload?: array<string, mixed>}
+     */
+    private function previewCriar(array $dados): array
+    {
+        $normalizado = $this->normalizarDadosCriacao($dados);
+        $val = $this->validarCriacao($normalizado, true);
+        if (! ($val['ok'] ?? false)) {
+            return $val;
+        }
+
+        /** @var array<string, mixed> $payload */
+        $payload = $val['payload'];
+        /** @var Mesa $mesa */
+        $mesa = $val['mesa'];
+
+        $similares = $this->buscarSimilares($payload);
+        $unidadeNome = Schema::hasTable('unidades')
+            ? (string) (DB::table('unidades')->where('id', $payload['unidade_id'])->value('nome') ?? '')
+            : '';
+
+        $resumo = [
+            'cliente' => $payload['nome_cliente'],
+            'telefone' => $this->mascararTelefone($payload['telefone_cliente'] ?? null),
+            'data' => $payload['data_reserva'],
+            'horario' => $payload['hora_reserva'],
+            'pessoas' => $payload['qtd_pessoas'],
+            'unidade_id' => $payload['unidade_id'],
+            'unidade' => $unidadeNome,
+            'mesa_id' => (int) $mesa->id,
+            'mesa' => $mesa->nome_mesa ?: ('Mesa '.$mesa->numero_mesa),
+            'status' => $payload['status'] ?? ReservaMesa::STATUS_PENDENTE,
+            'observacao' => $payload['observacao'] ?? null,
+        ];
+
+        $texto = sprintf(
+            "Reserva:\n- Cliente: %s\n- Data: %s\n- Horário: %s\n- Pessoas: %d\n- Unidade: %s\n- Mesa sugerida: %s\n\nDeseja confirmar a criação da reserva?",
+            $resumo['cliente'],
+            Carbon::parse($resumo['data'])->format('d/m/Y'),
+            $resumo['horario'],
+            $resumo['pessoas'],
+            $resumo['unidade'] !== '' ? $resumo['unidade'] : ('Unidade '.$resumo['unidade_id']),
+            $resumo['mesa']
+        );
+
+        return [
+            'ok' => true,
+            'data' => [
+                'payload' => $payload,
+                'resumo' => $resumo,
+                'resumo_texto' => $texto,
+                'possivel_duplicidade' => $similares !== [],
+                'similares' => $similares,
+                'alternativas' => $val['alternativas'] ?? null,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function previewAtualizar(array $dados): array
+    {
+        $id = (int) ($dados['reserva_id'] ?? $dados['id'] ?? 0);
+        if ($id < 1) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Informe reserva_id.'];
+        }
+        $reserva = ReservaMesa::with(['mesa', 'unidade'])->find($id);
+        if (! $reserva) {
+            return ['ok' => false, 'code' => 'NOT_FOUND', 'message' => 'Reserva não encontrada.'];
+        }
+        if (! AylaSettings::unidadePermitida((int) $reserva->unidade_id)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+        if (in_array($reserva->status, [ReservaMesa::STATUS_CANCELADA, ReservaMesa::STATUS_FINALIZADA, ReservaMesa::STATUS_NO_SHOW], true)) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Reserva não pode ser editada neste status.'];
+        }
+
+        $campos = $this->somenteCamposEditaveis($dados);
+        if ($campos === []) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Nenhum campo para atualizar.'];
+        }
+
+        $payload = array_merge($campos, ['reserva_id' => $id]);
+        $anterior = $this->serializarModelo($reserva);
+
+        $texto = "Editar reserva #{$id}:\n".json_encode($campos, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            ."\n\nDeseja confirmar a alteração?";
+
+        return [
+            'ok' => true,
+            'data' => [
+                'payload' => $payload,
+                'resumo' => ['reserva_id' => $id, 'alteracoes' => $campos, 'anterior' => $anterior],
+                'resumo_texto' => $texto,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function previewAlterarMesa(array $dados): array
+    {
+        $id = (int) ($dados['reserva_id'] ?? $dados['id'] ?? 0);
+        $mesaId = (int) ($dados['mesa_id'] ?? 0);
+        if ($id < 1 || $mesaId < 1) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Informe reserva_id e mesa_id.'];
+        }
+
+        return $this->previewAtualizar(['reserva_id' => $id, 'mesa_id' => $mesaId]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function previewStatus(string $acao, array $dados): array
+    {
+        $id = (int) ($dados['reserva_id'] ?? $dados['id'] ?? 0);
+        if ($id < 1) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Informe reserva_id.'];
+        }
+        $reserva = ReservaMesa::with(['mesa', 'unidade'])->find($id);
+        if (! $reserva) {
+            return ['ok' => false, 'code' => 'NOT_FOUND', 'message' => 'Reserva não encontrada.'];
+        }
+        if (! AylaSettings::unidadePermitida((int) $reserva->unidade_id)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+
+        $statusAlvo = match ($acao) {
+            'confirmar' => ReservaMesa::STATUS_CONFIRMADA,
+            'registrar_chegada' => ReservaMesa::STATUS_CLIENTE_CHEGOU,
+            'finalizar' => ReservaMesa::STATUS_FINALIZADA,
+            'cancelar' => ReservaMesa::STATUS_CANCELADA,
+            default => null,
+        };
+
+        $payload = ['reserva_id' => $id];
+        if ($acao === 'cancelar' && ! empty($dados['motivo'])) {
+            $payload['motivo'] = mb_substr(trim((string) $dados['motivo']), 0, 400);
+        }
+
+        $labels = [
+            'confirmar' => 'confirmar',
+            'registrar_chegada' => 'registrar a chegada do cliente em',
+            'finalizar' => 'finalizar',
+            'cancelar' => 'cancelar',
+        ];
+
+        $texto = sprintf(
+            "Ação: %s a reserva #%d\nCliente: %s\nStatus atual: %s → %s\n\nDeseja confirmar?",
+            $labels[$acao] ?? $acao,
+            $id,
+            $reserva->nome_cliente,
+            $reserva->status,
+            $statusAlvo
+        );
+
+        return [
+            'ok' => true,
+            'data' => [
+                'payload' => $payload,
+                'resumo' => [
+                    'reserva_id' => $id,
+                    'acao' => $acao,
+                    'status_atual' => $reserva->status,
+                    'status_novo' => $statusAlvo,
+                    'cliente' => $reserva->nome_cliente,
+                    'unidade_id' => (int) $reserva->unidade_id,
+                ],
+                'resumo_texto' => $texto,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>, mesa?: Mesa, payload?: array<string, mixed>, alternativas?: mixed}
+     */
+    private function validarCriacao(array $dados, bool $sugerirMesa = false): array
+    {
+        $validator = Validator::make($dados, [
+            'unidade_id' => 'required|integer|min:1',
+            'mesa_id' => 'nullable|integer|min:1',
+            'nome_cliente' => 'required|string|max:255',
+            'telefone_cliente' => 'nullable|string|max:30',
+            'data_reserva' => 'required|date|after_or_equal:today',
+            'hora_reserva' => 'required|date_format:H:i',
+            'qtd_pessoas' => 'required|integer|min:1|max:99',
+            'status' => 'nullable|in:pendente,confirmada',
+            'observacao' => 'nullable|string|max:500',
+            'local' => 'nullable|string|max:100',
+            'ocasiao' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return [
+                'ok' => false,
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Dados inválidos para criar reserva.',
+                'data' => ['errors' => $validator->errors()->toArray()],
+            ];
+        }
+
+        $unidadeId = (int) $dados['unidade_id'];
+        if (! AylaSettings::unidadePermitida($unidadeId)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+        if (! Schema::hasTable('unidades') || ! DB::table('unidades')->where('id', $unidadeId)->exists()) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Unidade inválida.'];
+        }
+
+        $mesa = null;
+        $mesaId = isset($dados['mesa_id']) ? (int) $dados['mesa_id'] : 0;
+
+        if ($mesaId > 0) {
+            $mesa = Mesa::where('id', $mesaId)->where('ativo', 1)->first();
+            if (! $mesa) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa inválida ou inativa.'];
+            }
+            if ((int) $mesa->unidade_id !== $unidadeId) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa não pertence à unidade selecionada.'];
+            }
+            if ($mesa->status === Mesa::STATUS_BLOQUEADA) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa está bloqueada para reservas.'];
+            }
+            if ((int) $dados['qtd_pessoas'] > (int) $mesa->capacidade) {
+                return [
+                    'ok' => false,
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => "A mesa suporta no máximo {$mesa->capacidade} pessoas.",
+                ];
+            }
+            $conflito = $this->verificarConflito([
+                'mesa_id' => $mesaId,
+                'data_reserva' => $dados['data_reserva'],
+                'hora_reserva' => $dados['hora_reserva'],
+            ]);
+            if ($conflito['tem_conflito']) {
+                $alt = $this->validarDisponibilidade($dados);
+                return [
+                    'ok' => false,
+                    'code' => 'CONFLICT',
+                    'message' => 'Já existe uma reserva para esta mesa no mesmo horário.',
+                    'data' => [
+                        'conflitos' => $conflito['conflitos'],
+                        'alternativas' => $alt['data']['mesas_disponiveis'] ?? [],
+                    ],
+                ];
+            }
+        } else {
+            $disp = $this->validarDisponibilidade($dados);
+            $livres = $disp['data']['mesas_disponiveis'] ?? [];
+            if ($livres === []) {
+                return [
+                    'ok' => false,
+                    'code' => 'NO_AVAILABILITY',
+                    'message' => 'Nenhuma mesa disponível. Sugira outro horário ou quantidade.',
+                    'data' => ['ocupadas' => $disp['data']['mesas_ocupadas'] ?? []],
+                ];
+            }
+            $sugerida = $disp['data']['sugestao'] ?? $livres[0];
+            $mesa = Mesa::find((int) ($sugerida['mesa_id'] ?? 0));
+            if (! $mesa) {
+                return ['ok' => false, 'code' => 'NO_AVAILABILITY', 'message' => 'Não foi possível sugerir mesa.'];
+            }
+            $dados['mesa_id'] = (int) $mesa->id;
+        }
+
+        $payload = [
+            'unidade_id' => $unidadeId,
+            'mesa_id' => (int) $mesa->id,
+            'nome_cliente' => trim((string) $dados['nome_cliente']),
+            'telefone_cliente' => isset($dados['telefone_cliente']) ? trim((string) $dados['telefone_cliente']) : null,
+            'data_reserva' => (string) $dados['data_reserva'],
+            'hora_reserva' => $this->normalizarHorarioCurto((string) $dados['hora_reserva']),
+            'qtd_pessoas' => (int) $dados['qtd_pessoas'],
+            'status' => $dados['status'] ?? ReservaMesa::STATUS_PENDENTE,
+            'observacao' => isset($dados['observacao']) ? mb_substr(trim((string) $dados['observacao']), 0, 500) : null,
+            'local' => isset($dados['local']) ? mb_substr(trim((string) $dados['local']), 0, 100) : null,
+            'ocasiao' => isset($dados['ocasiao']) ? mb_substr(trim((string) $dados['ocasiao']), 0, 255) : null,
+            'forcar_duplicidade' => ! empty($dados['forcar_duplicidade']),
+        ];
+
+        return [
+            'ok' => true,
+            'mesa' => $mesa,
+            'payload' => $payload,
+            'alternativas' => $sugerirMesa ? ($this->validarDisponibilidade($dados)['data']['mesas_disponiveis'] ?? null) : null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array<string, mixed>
+     */
+    private function normalizarDadosCriacao(array $dados): array
+    {
+        if (isset($dados['data']) && empty($dados['data_reserva'])) {
+            $dados['data_reserva'] = $dados['data'];
+        }
+        if (isset($dados['horario']) && empty($dados['hora_reserva'])) {
+            $dados['hora_reserva'] = $dados['horario'];
+        }
+        if (isset($dados['quantidade_pessoas']) && empty($dados['qtd_pessoas'])) {
+            $dados['qtd_pessoas'] = $dados['quantidade_pessoas'];
+        }
+        if (isset($dados['cliente']) && empty($dados['nome_cliente'])) {
+            $dados['nome_cliente'] = $dados['cliente'];
+        }
+        if (isset($dados['telefone']) && empty($dados['telefone_cliente'])) {
+            $dados['telefone_cliente'] = $dados['telefone'];
+        }
+        if (isset($dados['hora_reserva'])) {
+            $h = $this->normalizarHorarioCurto((string) $dados['hora_reserva']);
+            if ($h) {
+                $dados['hora_reserva'] = $h;
+            }
+        }
+
+        return $dados;
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array<string, mixed>
+     */
+    private function somenteCamposEditaveis(array $dados): array
+    {
+        $dados = $this->normalizarDadosCriacao($dados);
+        $out = [];
+        foreach (['mesa_id', 'nome_cliente', 'telefone_cliente', 'data_reserva', 'hora_reserva', 'qtd_pessoas', 'observacao', 'local', 'ocasiao'] as $k) {
+            if (array_key_exists($k, $dados) && $dados[$k] !== null && $dados[$k] !== '') {
+                $out[$k] = $dados[$k];
+            }
+        }
+        if (isset($out['hora_reserva'])) {
+            $out['hora_reserva'] = $this->normalizarHorarioCurto((string) $out['hora_reserva']);
+        }
+        if (isset($out['observacao'])) {
+            $out['observacao'] = mb_substr(trim((string) $out['observacao']), 0, 500);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function alterarStatusReserva(int $id, string $statusNovo, ?int $usuarioId = null): array
+    {
+        if ($id < 1) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'reserva_id inválido.'];
+        }
+        if (! in_array($statusNovo, self::STATUS_RESERVA, true)) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Status inválido.'];
+        }
+
+        $reserva = ReservaMesa::with(['mesa', 'unidade'])->find($id);
+        if (! $reserva) {
+            return ['ok' => false, 'code' => 'NOT_FOUND', 'message' => 'Reserva não encontrada.'];
+        }
+        if (! AylaSettings::unidadePermitida((int) $reserva->unidade_id)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+
+        $anterior = $this->serializarModelo($reserva);
+        $statusAnterior = (string) $reserva->status;
+
+        DB::transaction(function () use ($reserva, $statusNovo) {
+            $reserva->update(['status' => $statusNovo]);
+            $mesa = $reserva->mesa;
+            if (! $mesa) {
+                return;
+            }
+            $outras = ReservaMesa::where('mesa_id', $mesa->id)
+                ->whereDate('data_reserva', $reserva->data_reserva)
+                ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+                ->where('id', '!=', $reserva->id)
+                ->exists();
+
+            // Mesma lógica do ReservaMesaController::alterarStatus
+            if (in_array($statusNovo, ['cancelada', 'no_show', 'finalizada'], true) && ! $outras) {
+                $mesa->update(['status' => Mesa::STATUS_LIVRE]);
+            } elseif ($statusNovo === 'cliente_chegou') {
+                $mesa->update(['status' => Mesa::STATUS_AGUARDANDO_CLIENTE]);
+            } elseif (in_array($statusNovo, ['pendente', 'confirmada'], true)) {
+                $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
+            }
+        });
+
+        $fresca = $reserva->fresh(['mesa:id,numero_mesa,nome_mesa,capacidade', 'unidade:id,nome']);
+
+        return [
+            'ok' => true,
+            'data' => [
+                'mensagem' => 'Status alterado.',
+                'reserva' => $this->serializarModelo($fresca),
+                'anterior' => $anterior,
+                'novo' => $this->serializarModelo($fresca),
+                'status_anterior' => $statusAnterior,
+                'status_novo' => $statusNovo,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>
+     */
+    private function buscarSimilares(array $payload): array
+    {
+        if (! Schema::hasTable('reservas_mesas')) {
+            return [];
+        }
+
+        $q = ReservaMesa::query()
+            ->where('unidade_id', (int) $payload['unidade_id'])
+            ->whereDate('data_reserva', (string) $payload['data_reserva'])
+            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
+
+        $nome = trim((string) $payload['nome_cliente']);
+        $q->where(function ($qq) use ($nome, $payload) {
+            $qq->where('nome_cliente', 'like', $nome);
+            $tel = preg_replace('/\D+/', '', (string) ($payload['telefone_cliente'] ?? '')) ?? '';
+            if (strlen($tel) >= 8) {
+                $qq->orWhere('telefone_cliente', 'like', '%'.$tel.'%');
+            }
+        });
+
+        $hora = $this->normalizarHorarioCurto((string) $payload['hora_reserva']);
+        // Horário próximo: ±60 minutos no mesmo dia.
+        $rows = $q->limit(10)->get();
+
+        return $rows->filter(function ($r) use ($hora, $payload) {
+            $h = substr((string) $r->hora_reserva, 0, 5);
+            $diff = abs($this->horaParaMinutos($h) - $this->horaParaMinutos((string) $hora));
+            $qtdOk = abs((int) $r->qtd_pessoas - (int) $payload['qtd_pessoas']) <= 2;
+
+            return $diff <= 60 && $qtdOk;
+        })->map(fn ($r) => [
+            'reserva_id' => (int) $r->id,
+            'cliente' => (string) $r->nome_cliente,
+            'horario' => substr((string) $r->hora_reserva, 0, 5),
+            'pessoas' => (int) $r->qtd_pessoas,
+            'status' => (string) $r->status,
+        ])->values()->all();
+    }
+
+    private function horaParaMinutos(string $hora): int
+    {
+        $p = explode(':', $hora);
+
+        return ((int) ($p[0] ?? 0)) * 60 + ((int) ($p[1] ?? 0));
+    }
+
+    private function normalizarHorarioCurto(?string $hora): ?string
+    {
+        if ($hora === null || trim($hora) === '') {
+            return null;
+        }
+        $full = $this->normalizarHorario(trim($hora));
+        if ($full === null) {
+            return null;
+        }
+
+        return substr($full, 0, 5);
+    }
+
+    private function mascararTelefone(?string $tel): ?string
+    {
+        if ($tel === null || trim($tel) === '') {
+            return null;
+        }
+        $d = preg_replace('/\D+/', '', $tel) ?? '';
+        if (strlen($d) < 4) {
+            return '[MASKED]';
+        }
+
+        return str_repeat('*', max(0, strlen($d) - 4)).substr($d, -4);
+    }
+
+    /** @return array<string, mixed> */
+    private function serializarModelo(ReservaMesa $reserva): array
+    {
+        $reserva->loadMissing(['mesa:id,numero_mesa,nome_mesa,capacidade', 'unidade:id,nome']);
+
+        return [
+            'id' => (int) $reserva->id,
+            'unidade_id' => (int) $reserva->unidade_id,
+            'unidade' => $reserva->unidade->nome ?? null,
+            'mesa_id' => (int) $reserva->mesa_id,
+            'mesa' => $reserva->mesa
+                ? ($reserva->mesa->nome_mesa ?: ('Mesa '.$reserva->mesa->numero_mesa))
+                : null,
+            'numero_mesa' => $reserva->mesa->numero_mesa ?? null,
+            'nome_cliente' => (string) $reserva->nome_cliente,
+            'telefone_cliente' => $this->mascararTelefone($reserva->telefone_cliente),
+            'data_reserva' => $reserva->data_reserva?->format('Y-m-d'),
+            'hora_reserva' => substr((string) $reserva->hora_reserva, 0, 5),
+            'qtd_pessoas' => (int) $reserva->qtd_pessoas,
+            'status' => (string) $reserva->status,
+            'observacao' => $reserva->observacao ? (string) $reserva->observacao : null,
+            'local' => $reserva->local ? (string) $reserva->local : null,
+            'ocasiao' => $reserva->ocasiao ? (string) $reserva->ocasiao : null,
+        ];
     }
 }

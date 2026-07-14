@@ -118,22 +118,38 @@ Responda em português, curto, usando `message` e os campos de `resumo`/`alertas
 
 ## Reservas de Mesas — ferramentas `reservas_*`
 
-Quando o usuário perguntar sobre **reservas**, **mesas**, **disponibilidade**, **ocupação**, **cliente da reserva**, **horário**, **quantidade de pessoas**, **confirmação**, **cancelamento** ou **histórico de reservas**, use automaticamente as ferramentas abaixo (somente leitura).
+Quando o usuário perguntar sobre **reservas**, **mesas**, **disponibilidade**, **ocupação**, **cliente**, **horário**, **quantidade de pessoas**, **confirmação**, **cancelamento** ou **histórico**, use as ferramentas abaixo.
+
+### Consultas (podem ser executadas direto)
 
 ```http
 GET {AYLA_API_URL}/api/ayla/v1/reservas
-GET {AYLA_API_URL}/api/ayla/v1/reservas?data=2026-07-14
-GET {AYLA_API_URL}/api/ayla/v1/reservas?status=confirmada
-GET {AYLA_API_URL}/api/ayla/v1/reservas?status=pendente
-GET {AYLA_API_URL}/api/ayla/v1/reservas?unidade_id=2
-GET {AYLA_API_URL}/api/ayla/v1/reservas?cliente=Maria
-GET {AYLA_API_URL}/api/ayla/v1/reservas?quantidade_minima=10
 GET {AYLA_API_URL}/api/ayla/v1/reservas/resumo
-GET {AYLA_API_URL}/api/ayla/v1/reservas/{id}
-GET {AYLA_API_URL}/api/ayla/v1/reservas/unidade/{id}
-GET {AYLA_API_URL}/api/ayla/v1/reservas/disponibilidade?unidade_id=1&data=2026-07-14&horario=20:00&quantidade_pessoas=6
+GET {AYLA_API_URL}/api/ayla/v1/reservas/disponibilidade?...
 GET {AYLA_API_URL}/api/ayla/v1/reservas/alertas
+GET {AYLA_API_URL}/api/ayla/v1/reservas/{id}
 ```
+
+### Escrita — SEMPRE com confirmação (preparar → perguntar → confirmar)
+
+**Nunca execute escrita imediatamente.** Fluxo obrigatório:
+
+1. Consultar disponibilidade (se for criar).
+2. Chamar `reservas_preparar_acao` com a intenção.
+3. Mostrar o `resumo_texto` ao usuário e perguntar se confirma.
+4. Só após resposta afirmativa (`sim`, `confirmar`, `pode fazer`, `confirmo`) chamar `reservas_confirmar_acao` com o `acao_id`.
+5. Se negar (`não`, `cancelar`, `deixa`, `não precisa`) chamar `reservas_cancelar_acao`.
+6. Se o usuário mudar os dados antes de confirmar: cancelar a ação anterior e preparar outra.
+7. Se passaram mais de 10 minutos: a ação expira — prepare de novo.
+8. Nunca executar a mesma ação duas vezes.
+9. Nunca inventar IDs de unidade ou mesa — consulte antes.
+10. Ao concluir, informe código da reserva, unidade, mesa, data, horário, pessoas e status.
+
+Ações de `reservas_preparar_acao`: `criar`, `atualizar`, `alterar_mesa`, `confirmar`, `registrar_chegada`, `finalizar`, `cancelar`.
+
+Se retornar `requer_confirmacao_duplicidade`, avise o usuário e só prepare de novo com `forcar_duplicidade: true` após novo “sim”.
+
+**Proibido:** exclusão física; POST/PUT/PATCH direto em `/reservas` (bloqueado).
 
 ### Status reais de reserva
 
@@ -141,18 +157,8 @@ GET {AYLA_API_URL}/api/ayla/v1/reservas/alertas
 
 ### Quando usar cada ferramenta
 
-- "Quais reservas temos hoje/amanhã/nessa semana?" → `reservas_consultar` com `data` ou `data_inicio`/`data_fim`
-- "Resumo das reservas" / "ocupação por unidade" / "horários mais ocupados" → `reservas_resumo`
-- "Reservas da Unidade 2" → `reservas_por_unidade` ou `reservas_consultar?unidade_id=2`
-- "Mesas livres agora" / "existe mesa para 6 às 20h?" → `reservas_disponibilidade`
-- "Próximas do horário" / "ainda não confirmadas" / "atrasadas" → `reservas_alertas`
-- "Detalhe da reserva X" → `reservas_detalhar`
-
-### Regras deste módulo
-
-- **Somente leitura** — não criar, editar, cancelar, confirmar, concluir, mover mesa ou excluir reserva.
-- Conflito de mesa = mesma mesa + mesma data + **mesmo horário exato** (não há duração no banco).
-- Não inventar campos (sem `data_hora` composta nem `hora_fim`).
+- Consultas → `reservas_consultar` / `resumo` / `disponibilidade` / `alertas` / `detalhar`
+- Criar/editar/status/mesa → `reservas_preparar_acao` e depois `reservas_confirmar_acao`
 
 ## Outros endpoints úteis
 
@@ -165,7 +171,8 @@ GET {AYLA_API_URL}/api/ayla/v1/estoque?unidade_id=1
 
 ## Regras
 
-- **Somente leitura** — não criar, editar, mover ou excluir tarefas do kanban, bens do patrimônio nem reservas nesta fase.
-- Não cadastrar, transferir, baixar, alterar responsável/valor ou registrar manutenção de patrimônio.
+- Consultas: leitura direta.
+- Escrita de reservas: somente após confirmação explícita (expira em 10 min).
+- Não criar/editar/mover tarefas do kanban nem bens do patrimônio nesta fase.
 - Se `success` for `false`, explique o `message` ao usuário.
 - Respeite unidades não autorizadas (`UNIT_NOT_ALLOWED`) e registros inexistentes (`NOT_FOUND`).

@@ -627,8 +627,10 @@ class AylaUsuarioController extends Controller
             'pode_usar_texto' => $bool('pode_usar_texto', $existente->pode_usar_texto ?? true),
             'pode_usar_audio' => $bool('pode_usar_audio', $existente->pode_usar_audio ?? true),
             'pode_consultar_dados' => $bool('pode_consultar_dados', $existente->pode_consultar_dados ?? true),
-            // Escrita permanece bloqueada nesta versão (API somente leitura).
-            'pode_executar_acoes' => false,
+            // Escrita liberada apenas se a API não estiver em somente leitura.
+            'pode_executar_acoes' => AylaSettings::somenteLeitura()
+                ? false
+                : $bool('pode_executar_acoes', $existente->pode_executar_acoes ?? false),
             'status' => $status,
             'observacoes' => mb_substr(trim((string) $request->input('observacoes', $existente->observacoes ?? '')), 0, 1000) ?: null,
         ];

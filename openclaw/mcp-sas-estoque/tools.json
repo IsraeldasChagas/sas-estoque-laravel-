@@ -275,6 +275,51 @@
       "response": {
         "envelope": ["success", "message", "data", "meta"]
       }
+    },
+    {
+      "name": "reservas_preparar_acao",
+      "description": "Prepara ação de escrita em reservas SEM executar. Retorna acao_id e resumo. Após o usuário confirmar, use reservas_confirmar_acao.",
+      "method": "POST",
+      "path": "/reservas/acoes/preparar",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "acao": { "type": "string", "description": "criar|atualizar|alterar_mesa|confirmar|registrar_chegada|finalizar|cancelar" },
+          "dados": { "type": "object" }
+        },
+        "required": ["acao", "dados"]
+      },
+      "headers": ["X-Usuario-Id", "X-Telegram-User-Id"],
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["acao_id", "resumo", "resumo_texto", "expira_em"]
+      }
+    },
+    {
+      "name": "reservas_confirmar_acao",
+      "description": "Confirma e executa ação pendente SOMENTE após o usuário dizer sim/confirmar.",
+      "method": "POST",
+      "path": "/reservas/acoes/{id}/confirmar",
+      "path_params": ["id"],
+      "parameters": {
+        "type": "object",
+        "properties": { "id": { "type": "integer", "description": "acao_id" } },
+        "required": ["id"]
+      },
+      "headers": ["X-Usuario-Id", "X-Telegram-User-Id"]
+    },
+    {
+      "name": "reservas_cancelar_acao",
+      "description": "Cancela ação pendente sem alterar reservas.",
+      "method": "POST",
+      "path": "/reservas/acoes/{id}/cancelar",
+      "path_params": ["id"],
+      "parameters": {
+        "type": "object",
+        "properties": { "id": { "type": "integer" } },
+        "required": ["id"]
+      },
+      "headers": ["X-Usuario-Id", "X-Telegram-User-Id"]
     }
   ]
 }

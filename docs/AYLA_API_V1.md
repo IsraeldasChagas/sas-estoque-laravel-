@@ -120,6 +120,10 @@ ou detalhes do servidor.
 | GET | `/api/ayla/v1/reservas/alertas` | `unidade_id` |
 | GET | `/api/ayla/v1/reservas/unidade/{id}` | `id` na rota |
 | GET | `/api/ayla/v1/reservas/{id}` | `id` na rota |
+| POST | `/api/ayla/v1/reservas/acoes/preparar` | body: `acao`, `dados` (não executa) |
+| POST | `/api/ayla/v1/reservas/acoes/{id}/confirmar` | executa ação pendente |
+| POST | `/api/ayla/v1/reservas/acoes/{id}/cancelar` | cancela pendente |
+| POST/PUT/PATCH | `/api/ayla/v1/reservas*` (direto) | **403** `CONFIRMATION_REQUIRED` |
 | GET | `/api/ayla/v1/relatorios/unidade/{id}` | `id` na rota |
 
 ### Validações

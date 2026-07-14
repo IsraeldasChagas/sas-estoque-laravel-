@@ -90,7 +90,6 @@ class AylaAccessService
             'pode_usar_texto' => (bool) $vinculo->pode_usar_texto,
             'pode_usar_audio' => (bool) $vinculo->pode_usar_audio,
             'pode_consultar_dados' => (bool) $vinculo->pode_consultar_dados,
-            // Nesta versão a API é somente leitura: ações de escrita nunca são liberadas.
             'pode_executar_acoes' => AylaSettings::somenteLeitura() ? false : (bool) $vinculo->pode_executar_acoes,
         ];
     }

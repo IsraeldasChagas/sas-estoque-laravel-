@@ -6,18 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\AylaAuditLog;
 use App\Services\AylaAccessService;
 use App\Services\AylaApiService;
+use App\Services\Ayla\AylaAcaoPendenteService;
 use App\Services\Ayla\AylaKanbanService;
 use App\Services\Ayla\AylaPatrimonioService;
 use App\Services\Ayla\AylaReservasService;
 use App\Support\Ayla\AylaResponse;
 use App\Support\Ayla\AylaSettings;
+use App\Support\Ayla\AylaWriteGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * API Ayla v1 — somente leitura.
- * Todos os endpoints reutilizam ferramentas SAS IA já existentes.
+ * API Ayla v1 — leitura + escrita controlada (reservas via preparar/confirmar).
  */
 class AylaController extends Controller
 {
@@ -368,6 +369,97 @@ class AylaController extends Controller
     }
 
     /**
+     * Prepara ação de escrita em reservas (não altera dados).
+     * Fluxo: preparar → confirmação do usuário → confirmar.
+     */
+    public function reservasPrepararAcao(Request $request, AylaAcaoPendenteService $acoes): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.acao.preparar', function (?int $userId) use ($request, $acoes) {
+            $telegramId = AylaWriteGuard::telegramDoRequest($request);
+            $gate = AylaWriteGuard::autorizarEscrita($userId, $telegramId);
+            if (! $gate['ok']) {
+                return ['_erro' => [$gate['message'], $gate['code'], $gate['http']]];
+            }
+
+            $acao = strtolower(trim((string) $request->input('acao', '')));
+            $dados = $request->input('dados', []);
+            if (! is_array($dados)) {
+                return ['_erro' => ['Campo dados deve ser um objeto.', 'VALIDATION_ERROR', 422]];
+            }
+
+            $r = $acoes->preparar(
+                ['acao' => $acao, 'dados' => $dados],
+                [
+                    'usuario_id' => $userId,
+                    'telegram_user_id' => $telegramId,
+                    'canal' => $request->header('X-Ayla-Channel', 'api'),
+                ]
+            );
+
+            return $this->normalizarEscrita($r);
+        }, 'Ação preparada. Aguardando confirmação.');
+    }
+
+    /** Confirma e executa ação pendente (única via de escrita efetiva). */
+    public function reservasConfirmarAcao(Request $request, $id, AylaAcaoPendenteService $acoes): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.acao.confirmar', function (?int $userId) use ($request, $id, $acoes) {
+            if (! ctype_digit((string) $id) || (int) $id < 1) {
+                return ['_erro' => ['Identificador de ação inválido.', 'VALIDATION_ERROR', 422]];
+            }
+
+            $telegramId = AylaWriteGuard::telegramDoRequest($request);
+            $gate = AylaWriteGuard::autorizarEscrita($userId, $telegramId);
+            if (! $gate['ok']) {
+                return ['_erro' => [$gate['message'], $gate['code'], $gate['http']]];
+            }
+
+            $r = $acoes->confirmar((int) $id, [
+                'usuario_id' => $userId,
+                'telegram_user_id' => $telegramId,
+            ]);
+
+            return $this->normalizarEscrita($r);
+        }, 'Ação confirmada e executada.');
+    }
+
+    /** Cancela ação pendente sem alterar reservas. */
+    public function reservasCancelarAcao(Request $request, $id, AylaAcaoPendenteService $acoes): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.acao.cancelar', function (?int $userId) use ($request, $id, $acoes) {
+            if (! ctype_digit((string) $id) || (int) $id < 1) {
+                return ['_erro' => ['Identificador de ação inválido.', 'VALIDATION_ERROR', 422]];
+            }
+
+            $telegramId = AylaWriteGuard::telegramDoRequest($request);
+            $gate = AylaWriteGuard::autorizarEscrita($userId, $telegramId);
+            if (! $gate['ok']) {
+                return ['_erro' => [$gate['message'], $gate['code'], $gate['http']]];
+            }
+
+            $r = $acoes->cancelar((int) $id, [
+                'usuario_id' => $userId,
+                'telegram_user_id' => $telegramId,
+            ]);
+
+            return $this->normalizarEscrita($r);
+        }, 'Ação pendente cancelada.');
+    }
+
+    /**
+     * Escrita direta bloqueada — exige fluxo preparar + confirmar.
+     */
+    public function reservasEscritaBloqueada(): JsonResponse
+    {
+        return AylaResponse::error(
+            'ayla.reservas.escrita',
+            'Escrita direta bloqueada. Use POST /reservas/acoes/preparar e depois /reservas/acoes/{id}/confirmar.',
+            'CONFIRMATION_REQUIRED',
+            403
+        );
+    }
+
+    /**
      * Validação de acesso para o gateway (VPS). Recebe telegram_user_id e
      * retorna apenas as permissões necessárias. O Telegram ID nunca concede
      * acesso sozinho: precisa estar vinculado a um usuário SAS ativo.
@@ -513,6 +605,30 @@ class AylaController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * Normaliza retorno de serviços de escrita (ok/code/message/data).
+     *
+     * @param  array<string, mixed>  $r
+     * @return array<string, mixed>
+     */
+    private function normalizarEscrita(array $r): array
+    {
+        if ($r['ok'] ?? false) {
+            return $r['data'] ?? [];
+        }
+
+        $http = match ($r['code'] ?? '') {
+            'PERMISSION_DENIED', 'WRITE_NOT_ALLOWED', 'READ_ONLY', 'UNIT_NOT_ALLOWED', 'CONFIRMATION_REQUIRED' => 403,
+            'NOT_FOUND' => 404,
+            'VALIDATION_ERROR', 'CONFLICT', 'NO_AVAILABILITY', 'EXPIRED', 'CANCELLED', 'ALREADY_EXECUTED', 'INVALID_STATE' => 422,
+            'MIGRATION_REQUIRED' => 503,
+            'INVALID_USER' => 401,
+            default => 422,
+        };
+
+        return ['_erro' => [$r['message'] ?? 'Falha na ação.', $r['code'] ?? 'EXECUTION_ERROR', $http]];
     }
 
     /**

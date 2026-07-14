@@ -40,6 +40,9 @@ class AylaApiService
         'reservas_por_unidade',
         'reservas_disponibilidade',
         'reservas_alertas',
+        'reservas_preparar_acao',
+        'reservas_confirmar_acao',
+        'reservas_cancelar_acao',
     ];
 
     public function __construct(

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\Financeiro\FinanceiroGerencialCalculo;
+use App\Services\Ayla\AylaAcaoPendenteService;
 use App\Services\Ayla\AylaKanbanService;
 use App\Services\Ayla\AylaPatrimonioService;
 use App\Services\Ayla\AylaReservasService;
@@ -64,6 +65,9 @@ class SasIaModuleQueryService
             'reservas_por_unidade' => $this->reservasPorUnidade($ctx, $args),
             'reservas_disponibilidade' => $this->reservasDisponibilidade($ctx, $args),
             'reservas_alertas' => $this->reservasAlertas($ctx, $args),
+            'reservas_preparar_acao' => $this->reservasPrepararAcao($ctx, $args),
+            'reservas_confirmar_acao' => $this->reservasConfirmarAcaoTool($ctx, $args),
+            'reservas_cancelar_acao' => $this->reservasCancelarAcaoTool($ctx, $args),
             'consultar_manual_documentacao' => $this->manualDocumentacao($args),
             'consultar_cadastro_geral' => $this->cadastroGeral($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta não implementada neste serviço.'],
@@ -851,6 +855,78 @@ class SasIaModuleQueryService
         $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
 
         return app(AylaReservasService::class)->alertas($this->reservasFiltrosComEscopo($ctx, $args), $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasPrepararAcao(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+        $r = app(AylaAcaoPendenteService::class)->preparar(
+            ['acao' => $args['acao'] ?? '', 'dados' => is_array($args['dados'] ?? null) ? $args['dados'] : []],
+            ['usuario_id' => $userId, 'telegram_user_id' => $args['telegram_user_id'] ?? null, 'canal' => 'tool']
+        );
+
+        if (! ($r['ok'] ?? false)) {
+            return [
+                'erro' => true,
+                'code' => $r['code'] ?? 'VALIDATION_ERROR',
+                'mensagem' => $r['message'] ?? 'Falha ao preparar ação.',
+                'data' => $r['data'] ?? [],
+            ];
+        }
+
+        return $r['data'] ?? [];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasConfirmarAcaoTool(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+        $id = (int) ($args['acao_id'] ?? 0);
+        if ($id < 1) {
+            return ['erro' => true, 'code' => 'VALIDATION_ERROR', 'mensagem' => 'Informe acao_id.'];
+        }
+
+        $r = app(AylaAcaoPendenteService::class)->confirmar($id, [
+            'usuario_id' => $userId,
+            'telegram_user_id' => $args['telegram_user_id'] ?? null,
+        ]);
+
+        if (! ($r['ok'] ?? false)) {
+            return [
+                'erro' => true,
+                'code' => $r['code'] ?? 'EXECUTION_ERROR',
+                'mensagem' => $r['message'] ?? 'Falha ao confirmar ação.',
+                'data' => $r['data'] ?? [],
+            ];
+        }
+
+        return $r['data'] ?? [];
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasCancelarAcaoTool(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+        $id = (int) ($args['acao_id'] ?? 0);
+        if ($id < 1) {
+            return ['erro' => true, 'code' => 'VALIDATION_ERROR', 'mensagem' => 'Informe acao_id.'];
+        }
+
+        $r = app(AylaAcaoPendenteService::class)->cancelar($id, [
+            'usuario_id' => $userId,
+            'telegram_user_id' => $args['telegram_user_id'] ?? null,
+        ]);
+
+        if (! ($r['ok'] ?? false)) {
+            return [
+                'erro' => true,
+                'code' => $r['code'] ?? 'EXECUTION_ERROR',
+                'mensagem' => $r['message'] ?? 'Falha ao cancelar ação.',
+            ];
+        }
+
+        return $r['data'] ?? [];
     }
 
     /** @param  array<string, mixed>  $args */

@@ -46,6 +46,9 @@ final class SasIaToolRegistry
             'reservas_por_unidade' => ['reservaMesa', 'historicoReservas'],
             'reservas_disponibilidade' => ['reservaMesa', 'historicoReservas'],
             'reservas_alertas' => ['reservaMesa', 'historicoReservas'],
+            'reservas_preparar_acao' => ['reservaMesa', 'historicoReservas'],
+            'reservas_confirmar_acao' => ['reservaMesa', 'historicoReservas'],
+            'reservas_cancelar_acao' => ['reservaMesa', 'historicoReservas'],
 
             // RH
             'consultar_funcionarios_resumo' => ['funcionarios', 'rhDashboard', 'rhRelatorios'],
@@ -153,6 +156,16 @@ final class SasIaToolRegistry
             self::t('reservas_alertas', 'Alertas: próximas, sem confirmação, atrasadas, conflitos, acima da capacidade.', [
                 'unidade_id' => ['type' => 'integer'],
             ]),
+            self::t('reservas_preparar_acao', 'Prepara ação de escrita em reservas (criar/editar/status/mesa). NÃO executa. Retorna acao_id e resumo para o usuário confirmar.', [
+                'acao' => ['type' => 'string', 'description' => 'criar, atualizar, alterar_mesa, confirmar, registrar_chegada, finalizar, cancelar'],
+                'dados' => ['type' => 'object', 'description' => 'Payload da ação (unidade_id, data, horario, cliente, etc.)'],
+            ], ['acao', 'dados']),
+            self::t('reservas_confirmar_acao', 'Confirma e executa uma ação pendente (somente após o usuário dizer sim/confirmar).', [
+                'acao_id' => ['type' => 'integer', 'description' => 'ID retornado por reservas_preparar_acao'],
+            ], ['acao_id']),
+            self::t('reservas_cancelar_acao', 'Cancela ação pendente sem alterar reservas.', [
+                'acao_id' => ['type' => 'integer'],
+            ], ['acao_id']),
 
             // —— RH ——
             self::t('consultar_funcionarios_resumo', 'Funcionários ativos, por unidade e tipo de vínculo.', []),

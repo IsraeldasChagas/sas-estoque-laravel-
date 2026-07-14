@@ -390,9 +390,290 @@ class AylaApiTest extends TestCase
         $this->ativar();
         $headers = ['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'];
 
-        $this->withHeaders($headers)->postJson('/api/ayla/v1/reservas')->assertStatus(405);
-        $this->withHeaders($headers)->putJson('/api/ayla/v1/reservas/1')->assertStatus(405);
-        $this->withHeaders($headers)->patchJson('/api/ayla/v1/reservas/1')->assertStatus(405);
+        // Escrita direta bloqueada (exige preparar+confirmar).
+        $this->withHeaders($headers)->postJson('/api/ayla/v1/reservas')->assertStatus(403)
+            ->assertJsonPath('meta.code', 'CONFIRMATION_REQUIRED');
+        $this->withHeaders($headers)->putJson('/api/ayla/v1/reservas/1')->assertStatus(403)
+            ->assertJsonPath('meta.code', 'CONFIRMATION_REQUIRED');
+        $this->withHeaders($headers)->patchJson('/api/ayla/v1/reservas/1/status')->assertStatus(403)
+            ->assertJsonPath('meta.code', 'CONFIRMATION_REQUIRED');
         $this->withHeaders($headers)->deleteJson('/api/ayla/v1/reservas/1')->assertStatus(405);
+    }
+
+    public function test_reservas_preparar_sem_usuario_retorna_401(): void
+    {
+        $this->ativar();
+        Config::set('ayla.read_only', false);
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar',
+                'dados' => ['unidade_id' => 1, 'nome_cliente' => 'João'],
+            ])
+            ->assertStatus(401)
+            ->assertJsonPath('meta.code', 'INVALID_USER');
+    }
+
+    public function test_reservas_preparar_em_somente_leitura_retorna_403(): void
+    {
+        $this->ativar();
+        Config::set('ayla.read_only', true);
+
+        $this->criarSchemaEscritaMinimo();
+
+        $this->withHeaders([
+            'Authorization' => 'Bearer TOKEN_SECRETO_AYLA',
+            'X-Usuario-Id' => '1',
+        ])
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'nome_cliente' => 'João',
+                    'data_reserva' => now()->addDay()->toDateString(),
+                    'hora_reserva' => '20:00',
+                    'qtd_pessoas' => 4,
+                ],
+            ])
+            ->assertStatus(403)
+            ->assertJsonPath('meta.code', 'READ_ONLY');
+    }
+
+    public function test_reservas_fluxo_preparar_confirmar_e_cancelar(): void
+    {
+        $this->ativar();
+        Config::set('ayla.read_only', false);
+        $this->criarSchemaEscritaMinimo();
+
+        $headers = [
+            'Authorization' => 'Bearer TOKEN_SECRETO_AYLA',
+            'X-Usuario-Id' => '1',
+            'X-Telegram-User-Id' => '999001',
+        ];
+
+        $amanha = now()->addDay()->toDateString();
+
+        $prep = $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'mesa_id' => 1,
+                    'nome_cliente' => 'João Teste',
+                    'telefone_cliente' => '91999998888',
+                    'data_reserva' => $amanha,
+                    'hora_reserva' => '20:00',
+                    'qtd_pessoas' => 4,
+                    'forcar_duplicidade' => true,
+                ],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $acaoId = (int) $prep->json('data.acao_id');
+        $this->assertGreaterThan(0, $acaoId);
+        $this->assertStringNotContainsString('91999998888', $prep->getContent());
+
+        // Outro usuário não confirma.
+        $this->withHeaders([
+            'Authorization' => 'Bearer TOKEN_SECRETO_AYLA',
+            'X-Usuario-Id' => '2',
+            'X-Telegram-User-Id' => '999002',
+        ])
+            ->postJson("/api/ayla/v1/reservas/acoes/{$acaoId}/confirmar")
+            ->assertStatus(403);
+
+        $conf = $this->withHeaders($headers)
+            ->postJson("/api/ayla/v1/reservas/acoes/{$acaoId}/confirmar")
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertNotEmpty($conf->json('data.resultado.reserva.id'));
+        $this->assertDatabaseHas('reservas_mesas', ['nome_cliente' => 'João Teste', 'status' => 'pendente']);
+
+        // Execução duplicada bloqueada.
+        $this->withHeaders($headers)
+            ->postJson("/api/ayla/v1/reservas/acoes/{$acaoId}/confirmar")
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'ALREADY_EXECUTED');
+
+        // Nova ação e cancelamento.
+        $prep2 = $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'mesa_id' => 2,
+                    'nome_cliente' => 'Maria',
+                    'data_reserva' => $amanha,
+                    'hora_reserva' => '21:00',
+                    'qtd_pessoas' => 2,
+                    'forcar_duplicidade' => true,
+                ],
+            ])
+            ->assertStatus(200);
+
+        $acao2 = (int) $prep2->json('data.acao_id');
+        $this->withHeaders($headers)
+            ->postJson("/api/ayla/v1/reservas/acoes/{$acao2}/cancelar")
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'cancelada');
+
+        $this->assertDatabaseMissing('reservas_mesas', ['nome_cliente' => 'Maria']);
+    }
+
+    public function test_reservas_acao_expirada(): void
+    {
+        $this->ativar();
+        Config::set('ayla.read_only', false);
+        $this->criarSchemaEscritaMinimo();
+
+        $headers = [
+            'Authorization' => 'Bearer TOKEN_SECRETO_AYLA',
+            'X-Usuario-Id' => '1',
+        ];
+
+        $prep = $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'mesa_id' => 1,
+                    'nome_cliente' => 'Expirado',
+                    'data_reserva' => now()->addDay()->toDateString(),
+                    'hora_reserva' => '19:00',
+                    'qtd_pessoas' => 2,
+                    'forcar_duplicidade' => true,
+                ],
+            ])
+            ->assertStatus(200);
+
+        $acaoId = (int) $prep->json('data.acao_id');
+        \DB::table('ayla_acoes_pendentes')->where('id', $acaoId)->update([
+            'expira_em' => now()->subMinute()->toDateTimeString(),
+        ]);
+
+        $this->withHeaders($headers)
+            ->postJson("/api/ayla/v1/reservas/acoes/{$acaoId}/confirmar")
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'EXPIRED');
+    }
+
+    public function test_reservas_get_continua_funcionando_apos_escrita(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/resumo')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+    }
+
+    /** Schema mínimo em SQLite :memory: para testes de escrita. */
+    private function criarSchemaEscritaMinimo(): void
+    {
+        \Illuminate\Support\Facades\Schema::dropIfExists('ayla_acoes_pendentes');
+        \Illuminate\Support\Facades\Schema::dropIfExists('reservas_mesas');
+        \Illuminate\Support\Facades\Schema::dropIfExists('mesas');
+        \Illuminate\Support\Facades\Schema::dropIfExists('ayla_usuarios_autorizados');
+        \Illuminate\Support\Facades\Schema::dropIfExists('usuarios');
+        \Illuminate\Support\Facades\Schema::dropIfExists('unidades');
+
+        \Illuminate\Support\Facades\Schema::create('unidades', function ($t) {
+            $t->id();
+            $t->string('nome');
+            $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('usuarios', function ($t) {
+            $t->id();
+            $t->string('nome');
+            $t->string('perfil')->default('ADMIN');
+            $t->boolean('ativo')->default(1);
+            $t->unsignedBigInteger('unidade_id')->nullable();
+            $t->text('permissoes_menu')->nullable();
+            $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('mesas', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('unidade_id');
+            $t->string('numero_mesa', 20);
+            $t->string('nome_mesa')->nullable();
+            $t->unsignedInteger('capacidade')->default(4);
+            $t->string('localizacao')->nullable();
+            $t->boolean('pode_juntar')->default(0);
+            $t->boolean('pode_separar')->default(0);
+            $t->string('status', 30)->default('livre');
+            $t->text('observacao')->nullable();
+            $t->boolean('ativo')->default(1);
+            $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('reservas_mesas', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('unidade_id');
+            $t->unsignedBigInteger('mesa_id');
+            $t->unsignedBigInteger('usuario_id')->nullable();
+            $t->string('nome_cliente');
+            $t->string('telefone_cliente', 30)->nullable();
+            $t->date('data_reserva');
+            $t->time('hora_reserva');
+            $t->unsignedInteger('qtd_pessoas')->default(1);
+            $t->string('status', 30)->default('pendente');
+            $t->text('observacao')->nullable();
+            $t->string('local', 100)->nullable();
+            $t->string('ocasiao')->nullable();
+            $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('ayla_acoes_pendentes', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('usuario_id')->nullable();
+            $t->string('telegram_user_id', 60)->nullable();
+            $t->string('canal', 40)->nullable();
+            $t->string('modulo', 60)->default('reservas');
+            $t->string('acao', 60);
+            $t->json('payload');
+            $t->text('resumo')->nullable();
+            $t->string('status', 20)->default('pendente');
+            $t->timestamp('expira_em')->nullable();
+            $t->timestamp('confirmado_em')->nullable();
+            $t->timestamp('executado_em')->nullable();
+            $t->json('resultado')->nullable();
+            $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('ayla_usuarios_autorizados', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('usuario_id');
+            $t->string('telegram_user_id', 60)->nullable();
+            $t->boolean('pode_executar_acoes')->default(1);
+            $t->string('status', 20)->default('ativo');
+            $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('ayla_audit_logs', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('user_id')->nullable();
+            $t->string('ip', 45)->nullable();
+            $t->string('metodo', 10)->nullable();
+            $t->string('rota')->nullable();
+            $t->string('acao')->nullable();
+            $t->json('payload')->nullable();
+            $t->json('resposta_resumo')->nullable();
+            $t->string('status', 20)->nullable();
+            $t->unsignedInteger('http_status')->nullable();
+            $t->unsignedInteger('duracao_ms')->nullable();
+            $t->timestamps();
+        });
+
+        \DB::table('unidades')->insert(['id' => 1, 'nome' => 'Sabor Paraense 1', 'created_at' => now(), 'updated_at' => now()]);
+        \DB::table('usuarios')->insert([
+            ['id' => 1, 'nome' => 'Admin', 'perfil' => 'ADMIN', 'ativo' => 1, 'unidade_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'nome' => 'Outro', 'perfil' => 'GERENTE', 'ativo' => 1, 'unidade_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        \DB::table('mesas')->insert([
+            ['id' => 1, 'unidade_id' => 1, 'numero_mesa' => '8', 'nome_mesa' => 'Mesa 8', 'capacidade' => 6, 'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'unidade_id' => 1, 'numero_mesa' => '9', 'nome_mesa' => 'Mesa 9', 'capacidade' => 4, 'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        \DB::table('ayla_usuarios_autorizados')->insert([
+            ['id' => 1, 'usuario_id' => 1, 'telegram_user_id' => '999001', 'pode_executar_acoes' => 1, 'status' => 'ativo', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'usuario_id' => 2, 'telegram_user_id' => '999002', 'pode_executar_acoes' => 1, 'status' => 'ativo', 'created_at' => now(), 'updated_at' => now()],
+        ]);
     }
 }
