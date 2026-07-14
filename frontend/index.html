@@ -287,7 +287,6 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="configuracoesPainel"><span class="nav-icon" aria-hidden="true">🎛️</span><span class="nav-label">Painel do Sistema</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
@@ -4427,32 +4426,6 @@
             <div id="aylaConfiguracoesRoot" class="ayla-root"></div>
           </section>
 
-          <!-- Configurações — Painel do Sistema -->
-          <section id="configuracoesPainelSection" class="view-section hidden">
-            <div class="cfg-section-head">
-              <div>
-                <h2>🎛️ Painel de Configurações</h2>
-                <p class="subtle-text">Central do sistema: dados da empresa, atalhos e resumo geral.</p>
-                <p class="subtle-text" id="cfgPerfilBadge"></p>
-              </div>
-            </div>
-            <div class="cfg-stats" id="cfgStats"></div>
-            <div class="cfg-grid" id="cfgCardsGrid"></div>
-            <div class="table-card form-card--wide">
-              <header><h3>Dados gerais da empresa</h3></header>
-              <form id="cfgForm" class="cfg-form-grid">
-                <label>Nome da empresa<input type="text" id="cfgEmpresaNome" maxlength="180" /></label>
-                <label>CNPJ<input type="text" id="cfgEmpresaCnpj" maxlength="20" /></label>
-                <label>E-mail<input type="email" id="cfgEmpresaEmail" maxlength="150" /></label>
-                <label>Telefone<input type="text" id="cfgEmpresaTelefone" maxlength="30" /></label>
-                <label class="cfg-full">Endereço<input type="text" id="cfgEmpresaEndereco" maxlength="255" /></label>
-                <label>E-mail de suporte<input type="email" id="cfgSuporteEmail" maxlength="150" /></label>
-                <label class="cfg-full">Observações do sistema<textarea id="cfgObservacoes" rows="3" maxlength="2000"></textarea></label>
-                <label><button type="submit" class="btn primary" id="cfgSalvarBtn">Salvar configurações</button></label>
-              </form>
-            </div>
-          </section>
-
           <!-- Manutenção — Energia -->
           <section id="energiaDashboardSection" class="view-section hidden">
             <div class="energia-section-head">
@@ -5628,7 +5601,6 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoResgates" /> Investimento — Resgates</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="configuracoesPainel" /> Configurações — Painel do Sistema</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="openClawIntegracao" /> Configurações — OpenClaw / Assistente IA (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="logs" /> Logs / Auditoria</label>
@@ -7160,7 +7132,6 @@
     <script src="energia.js?v=20260615-submenu-fix2"></script>
     <script src="patrimonio.js?v=20260526-patrimonio-busca-fix"></script>
     <script src="investimento.js?v=20260607-investimento-collapse"></script>
-    <script src="configuracoes-painel.js?v=20260610-cfg"></script>
     <script src="openclaw-integracao.js?v=20260706-oc4"></script>
     <script src="ayla-ia.js?v=20260712-ayla1"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>

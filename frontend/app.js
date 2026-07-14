@@ -1582,7 +1582,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "configuracoesPainel", "openClawIntegracao",
+  "openClawIntegracao",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
 ]);
 
@@ -1947,7 +1947,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1955,7 +1955,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "configuracoesPainel", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -5325,11 +5325,7 @@ function applyPermissions() {
   if ((sections.includes("funcionarios") || sections.includes("rhRelatorios")) && !sections.includes("rhFolhaPonto")) {
     sections = [...sections, "rhFolhaPonto"];
   }
-  // Painel de configurações: ADMIN e GERENTE ganham o módulo novo (permissoes_menu antigas).
   const perfilCfgAuto = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  if (["ADMIN", "GERENTE"].includes(perfilCfgAuto) && !sections.includes("configuracoesPainel")) {
-    sections = [...sections, "configuracoesPainel"];
-  }
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
@@ -5452,15 +5448,14 @@ function applyPermissions() {
       regras.sections.includes("fechamento") || regras.sections.includes("fechamentoDash");
     fechamentoNavSubmenu.classList.toggle("hidden", !temAcessoFechamento);
   }
-  // Menu Configurações: ADMIN e GERENTE veem o painel; backup continua só ADMIN.
+  // Menu Configurações: OpenClaw (ADMIN) e backup (ADMIN).
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
     const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
-    const temConfigPainel =
-      regras.sections.includes("configuracoesPainel") ||
+    const temConfigMenu =
       regras.sections.includes("openClawIntegracao") ||
-      ["ADMIN", "GERENTE"].includes(perfilCfg);
-    configuracoesNavSubmenu.classList.toggle("hidden", !temConfigPainel);
+      perfilCfg === "ADMIN";
+    configuracoesNavSubmenu.classList.toggle("hidden", !temConfigMenu);
   }
 
   const aylaNavSubmenu = document.getElementById("aylaMenu")?.closest(".nav-submenu");
@@ -5697,7 +5692,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "configuracoesPainel" || section === "openClawIntegracao") configuracoesNavSubmenuNav.classList.add("open");
+    if (section === "openClawIntegracao") configuracoesNavSubmenuNav.classList.add("open");
     else configuracoesNavSubmenuNav.classList.remove("open");
   }
   const aylaNavSubmenuNav = document.getElementById("aylaMenu")?.closest(".nav-submenu");
@@ -5733,7 +5728,6 @@ function navigateTo(section) {
   else if (section === "financeiroCentrosCusto") loadFinanceiroCentrosCusto?.().catch(() => {});
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
-  else if (section === "configuracoesPainel") loadConfiguracoesPainel?.().catch(() => {});
   else if (section === "openClawIntegracao") loadOpenClawIntegracao?.().catch(() => {});
   else if (section === "aylaDashboard") loadAylaDashboard?.().catch(() => {});
   else if (section === "aylaUsuarios") loadAylaUsuarios?.().catch(() => {});
