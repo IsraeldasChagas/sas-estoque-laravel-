@@ -44,7 +44,7 @@
       })();
     </script>
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
-    <link rel="stylesheet" href="style-patrimonio.css?v=20260615-submenu-fix2" />
+    <link rel="stylesheet" href="style-patrimonio.css?v=20260714-pat-padrao" />
     <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
@@ -4012,31 +4012,38 @@
           <!-- Módulo Patrimônio -->
           <section id="patrimonioDashboardSection" class="view-section hidden">
             <div class="patrimonio-section-head">
-              <h2>📌 Dashboard Patrimônio</h2>
-              <p class="subtle-text">Visão consolidada dos ativos por unidade e categoria.</p>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="filters-grid">
-                <label>Unidade<select id="patDashFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="patDashAtualizar">Atualizar</button></label>
+              <div>
+                <h2>📌 Dashboard Patrimônio</h2>
+                <p class="subtle-text">Visão consolidada dos ativos por unidade e categoria.</p>
               </div>
             </div>
-            <div class="patrimonio-cards" id="patDashCards"></div>
-            <div class="patrimonio-charts-grid">
-              <div class="patrimonio-chart-box"><h4>Por categoria</h4><canvas id="patChartCategoria"></canvas></div>
-              <div class="patrimonio-chart-box"><h4>Por unidade</h4><canvas id="patChartUnidade"></canvas></div>
-            </div>
-            <div class="table-card form-card--wide">
-              <header><h3>Últimas movimentações</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>Obs.</th></tr></thead><tbody id="patDashMovTbody"></tbody></table></div>
-            </div>
-            <div class="table-card form-card--wide patrimonio-alertas">
-              <header><h3>Alertas de manutenção</h3></header>
-              <div id="patDashAlertas"></div>
-            </div>
-            <div class="table-card form-card--wide patrimonio-alertas">
-              <header><h3>Garantias e vencimentos (60 dias)</h3></header>
-              <div id="patDashGarantias"></div>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="pat-form-body">
+                  <div class="filters-grid">
+                    <label>Unidade<select id="patDashFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="patDashAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
+              </div>
+              <div class="patrimonio-cards" id="patDashCards"></div>
+              <div class="patrimonio-charts-grid">
+                <div class="patrimonio-chart-box"><h4>Por categoria</h4><canvas id="patChartCategoria"></canvas></div>
+                <div class="patrimonio-chart-box"><h4>Por unidade</h4><canvas id="patChartUnidade"></canvas></div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Últimas movimentações</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>Obs.</th></tr></thead><tbody id="patDashMovTbody"></tbody></table></div>
+              </div>
+              <div class="table-card form-card--wide patrimonio-alertas">
+                <header><h3>Alertas de manutenção</h3></header>
+                <div id="patDashAlertas"></div>
+              </div>
+              <div class="table-card form-card--wide patrimonio-alertas">
+                <header><h3>Garantias e vencimentos (60 dias)</h3></header>
+                <div id="patDashGarantias"></div>
+              </div>
             </div>
           </section>
 
@@ -4045,132 +4052,163 @@
               <h2>📦 Patrimônios</h2>
               <button type="button" class="btn primary" id="patBtnNovo">+ Novo patrimônio</button>
             </div>
-            <div class="table-card form-card--wide">
-              <div class="filters-grid">
-                <label class="pat-filtro-busca-label">Busca / patrimônio
-                  <div class="pat-filtro-busca">
-                    <input type="search" id="patFiltroBusca" list="patBuscaDatalist" placeholder="Digite para filtrar…" autocomplete="off" />
-                    <select id="patFiltroPatrimonioSel" title="Escolher patrimônio na lista">
-                      <option value="">— Lista —</option>
-                    </select>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="pat-form-body">
+                  <div class="filters-grid">
+                    <label class="pat-filtro-busca-label">Busca / patrimônio
+                      <div class="pat-filtro-busca">
+                        <input type="search" id="patFiltroBusca" list="patBuscaDatalist" placeholder="Digite para filtrar…" autocomplete="off" />
+                        <select id="patFiltroPatrimonioSel" title="Escolher patrimônio na lista">
+                          <option value="">— Lista —</option>
+                        </select>
+                      </div>
+                      <datalist id="patBuscaDatalist"></datalist>
+                      <small class="subtle-text pat-filtro-busca-hint">Filtra ao digitar: nome, código, serial, setor, responsável, marca…</small>
+                    </label>
+                    <label>Unidade<select id="patFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label>Categoria<select id="patFiltroCategoria"><option value="">Todas</option></select></label>
+                    <label>Situação<select id="patFiltroSituacao"><option value="">Todas</option><option value="ativo">Ativo</option><option value="manutencao">Em manutenção</option><option value="baixado">Baixado</option><option value="vendido">Vendido</option><option value="quebrado">Quebrado</option></select></label>
+                    <label>Setor<select id="patFiltroSetor"><option value="">Todos</option></select></label>
+                    <label><button type="button" class="btn primary" id="patFiltroAplicar">Filtrar</button></label>
                   </div>
-                  <datalist id="patBuscaDatalist"></datalist>
-                  <small class="subtle-text pat-filtro-busca-hint">Filtra ao digitar: nome, código, serial, setor, responsável, marca…</small>
-                </label>
-                <label>Unidade<select id="patFiltroUnidade"><option value="">Todas</option></select></label>
-                <label>Categoria<select id="patFiltroCategoria"><option value="">Todas</option></select></label>
-                <label>Situação<select id="patFiltroSituacao"><option value="">Todas</option><option value="ativo">Ativo</option><option value="manutencao">Em manutenção</option><option value="baixado">Baixado</option><option value="vendido">Vendido</option><option value="quebrado">Quebrado</option></select></label>
-                <label>Setor<select id="patFiltroSetor"><option value="">Todos</option></select></label>
-                <label><button type="button" class="btn primary" id="patFiltroAplicar">Filtrar</button></label>
+                </div>
               </div>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="table-wrapper"><table><thead><tr><th>Setor</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Situação</th><th>Valor atual</th><th>QR</th><th>Ações</th></tr></thead><tbody id="patListaTbody"></tbody></table></div>
+              <div class="table-card form-card--wide">
+                <header><h3>Lista de patrimônios</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Setor</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Situação</th><th>Valor atual</th><th>QR</th><th>Ações</th></tr></thead><tbody id="patListaTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="patrimonioCategoriasSection" class="view-section hidden">
             <div class="patrimonio-section-head"><h2>🏷️ Categorias</h2><button type="button" class="btn primary" id="patCatBtnNova">+ Nova categoria</button></div>
-            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Ícone</th><th>Nome</th><th>Campos específicos</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="patCatTbody"></tbody></table></div></div>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Categorias cadastradas</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Ícone</th><th>Nome</th><th>Campos específicos</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="patCatTbody"></tbody></table></div>
+              </div>
+            </div>
           </section>
 
           <section id="patrimonioMovimentacoesSection" class="view-section hidden">
             <div class="patrimonio-section-head"><h2>🔄 Movimentações</h2><button type="button" class="btn primary" id="patMovBtnNova">+ Nova movimentação</button></div>
-            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>De → Para</th><th>Responsável</th><th>Obs.</th></tr></thead><tbody id="patMovTbody"></tbody></table></div></div>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Histórico de movimentações</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>De → Para</th><th>Responsável</th><th>Obs.</th></tr></thead><tbody id="patMovTbody"></tbody></table></div>
+              </div>
+            </div>
           </section>
 
           <section id="patrimonioManutencoesSection" class="view-section hidden">
             <div class="patrimonio-section-head"><h2>🔧 Manutenções</h2><button type="button" class="btn primary" id="patManBtnNova">+ Nova manutenção</button></div>
-            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>Técnico</th><th>Custo</th><th>Próxima</th></tr></thead><tbody id="patManTbody"></tbody></table></div></div>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Histórico de manutenções</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Patrimônio</th><th>Tipo</th><th>Técnico</th><th>Custo</th><th>Próxima</th></tr></thead><tbody id="patManTbody"></tbody></table></div>
+              </div>
+            </div>
           </section>
 
           <section id="patrimonioInventarioSection" class="view-section hidden">
             <div class="patrimonio-section-head"><h2>📋 Inventário patrimonial</h2><button type="button" class="btn primary" id="patInvBtnNovo">+ Novo inventário</button></div>
-            <div class="table-card form-card--wide"><div class="table-wrapper"><table><thead><tr><th>Título</th><th>Unidade</th><th>Status</th><th>Início</th><th>Ações</th></tr></thead><tbody id="patInvListaTbody"></tbody></table></div></div>
-            <div class="table-card form-card--wide hidden" id="patInvItensCard">
-              <header style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;justify-content:space-between">
-                <h3 id="patInvItensTitulo">Itens do inventário</h3>
-                <span>
-                  <button type="button" class="btn secondary" id="patInvRelPdf">Relatório PDF</button>
-                  <button type="button" class="btn secondary" id="patInvRelCsv">Relatório CSV</button>
-                  <button type="button" class="btn primary" id="patInvFechar">Encerrar inventário</button>
-                </span>
-              </header>
-              <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Patrimônio</th><th>Qtd sistema</th><th>Qtd encontrada</th><th>Diferença</th><th>Obs.</th><th></th></tr></thead><tbody id="patInvItensTbody"></tbody></table></div>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Inventários</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Título</th><th>Unidade</th><th>Status</th><th>Início</th><th>Ações</th></tr></thead><tbody id="patInvListaTbody"></tbody></table></div>
+              </div>
+              <div class="table-card form-card--wide hidden" id="patInvItensCard">
+                <header class="pat-inv-itens-head">
+                  <h3 id="patInvItensTitulo">Itens do inventário</h3>
+                  <span class="pat-inv-itens-actions">
+                    <button type="button" class="btn secondary" id="patInvRelPdf">Relatório PDF</button>
+                    <button type="button" class="btn secondary" id="patInvRelCsv">Relatório CSV</button>
+                    <button type="button" class="btn primary" id="patInvFechar">Encerrar inventário</button>
+                  </span>
+                </header>
+                <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Patrimônio</th><th>Qtd sistema</th><th>Qtd encontrada</th><th>Diferença</th><th>Obs.</th><th></th></tr></thead><tbody id="patInvItensTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="patrimonioRelatoriosSection" class="view-section hidden">
             <div class="patrimonio-section-head"><h2>📊 Relatórios Patrimônio</h2></div>
+            <div class="pat-page-wrap">
+              <div class="table-card form-card--wide pat-rel-filtros-card">
+                <header class="pat-rel-filtros-head">
+                  <h3>Relatório com filtros</h3>
+                  <p class="subtle-text">Visualize na tela ou exporte por categoria, unidade, situação, setor e busca.</p>
+                </header>
+                <div class="pat-form-body">
+                  <div class="filters-grid pat-rel-filtros-grid">
+                    <label>Unidade<select id="patRelFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label>Categoria<select id="patRelFiltroCategoria"><option value="">Todas</option></select></label>
+                    <label>Situação
+                      <select id="patRelFiltroSituacao">
+                        <option value="">Todas</option>
+                        <option value="ativo">Ativo</option>
+                        <option value="manutencao">Em manutenção</option>
+                        <option value="baixado">Baixado</option>
+                        <option value="vendido">Vendido</option>
+                        <option value="quebrado">Quebrado</option>
+                      </select>
+                    </label>
+                    <label>Setor<select id="patRelFiltroSetor"><option value="">Todos</option></select></label>
+                    <label>Busca<input type="search" id="patRelFiltroBusca" placeholder="Nome, código, serial..." autocomplete="off" /></label>
+                  </div>
+                  <div class="pat-rel-filtros-actions">
+                    <button type="button" class="btn primary" id="patRelGerar">Visualizar relatório</button>
+                    <button type="button" class="btn secondary" id="patRelPdf">Exportar PDF</button>
+                    <button type="button" class="btn secondary" id="patRelCsv">Exportar CSV</button>
+                    <button type="button" class="btn neutral" id="patRelLimpar">Limpar filtros</button>
+                  </div>
+                </div>
+              </div>
 
-            <div class="table-card form-card--wide pat-rel-filtros-card">
-              <header class="pat-rel-filtros-head">
-                <h3>Relatório com filtros</h3>
-                <p class="subtle-text">Visualize na tela ou exporte por categoria, unidade, situação, setor e busca.</p>
-              </header>
-              <div class="filters-grid pat-rel-filtros-grid">
-                <label>Unidade<select id="patRelFiltroUnidade"><option value="">Todas</option></select></label>
-                <label>Categoria<select id="patRelFiltroCategoria"><option value="">Todas</option></select></label>
-                <label>Situação
-                  <select id="patRelFiltroSituacao">
-                    <option value="">Todas</option>
-                    <option value="ativo">Ativo</option>
-                    <option value="manutencao">Em manutenção</option>
-                    <option value="baixado">Baixado</option>
-                    <option value="vendido">Vendido</option>
-                    <option value="quebrado">Quebrado</option>
-                  </select>
-                </label>
-                <label>Setor<select id="patRelFiltroSetor"><option value="">Todos</option></select></label>
-                <label>Busca<input type="search" id="patRelFiltroBusca" placeholder="Nome, código, serial..." autocomplete="off" /></label>
+              <div class="pat-rel-totais hidden" id="patRelTotais"></div>
+              <div class="pat-rel-grupos hidden" id="patRelGrupos"></div>
+              <div class="table-card form-card--wide hidden" id="patRelResultadoCard">
+                <header>
+                  <h3 id="patRelResultadoTitulo">Resultado do relatório</h3>
+                  <p class="subtle-text" id="patRelResultadoMeta"></p>
+                </header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Código</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Setor</th><th>Situação</th><th>Responsável</th><th>Valor compra</th><th>Valor atual</th>
+                      </tr>
+                    </thead>
+                    <tbody id="patRelTbody"></tbody>
+                  </table>
+                </div>
               </div>
-              <div class="pat-rel-filtros-actions">
-                <button type="button" class="btn primary" id="patRelGerar">Visualizar relatório</button>
-                <button type="button" class="btn secondary" id="patRelPdf">Exportar PDF</button>
-                <button type="button" class="btn secondary" id="patRelCsv">Exportar CSV</button>
-                <button type="button" class="btn neutral" id="patRelLimpar">Limpar filtros</button>
-              </div>
+
+              <details class="pat-rel-outros table-card form-card--wide">
+                <summary>Outros relatórios rápidos (sem filtro)</summary>
+                <div class="pat-form-body">
+                  <p class="subtle-text">Exportações em PDF (visualizar/imprimir) ou CSV (abre no Excel). Ficha patrimonial: informe o ID na listagem de patrimônios.</p>
+                  <div class="patrimonio-relatorios-grid">
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="resumo" data-formato="csv">Resumo geral (CSV)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="pdf">Movimentações (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="csv">Movimentações (CSV)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="pdf">Manutenções (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="csv">Manutenções (CSV)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="pdf">Depreciação (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="csv">Depreciação (CSV)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="pdf">Ativos por unidade (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="csv">Ativos por unidade (CSV)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="pdf">Por categoria (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="csv">Por categoria (CSV)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="ficha" data-formato="pdf">Ficha patrimonial (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="pdf">Inventário aberto (PDF)</button>
+                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="csv">Inventário aberto (CSV)</button>
+                  </div>
+                </div>
+              </details>
             </div>
-
-            <div class="pat-rel-totais hidden" id="patRelTotais"></div>
-            <div class="pat-rel-grupos hidden" id="patRelGrupos"></div>
-            <div class="table-card form-card--wide hidden" id="patRelResultadoCard">
-              <header>
-                <h3 id="patRelResultadoTitulo">Resultado do relatório</h3>
-                <p class="subtle-text" id="patRelResultadoMeta"></p>
-              </header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Código</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Setor</th><th>Situação</th><th>Responsável</th><th>Valor compra</th><th>Valor atual</th>
-                    </tr>
-                  </thead>
-                  <tbody id="patRelTbody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <details class="pat-rel-outros table-card form-card--wide">
-              <summary>Outros relatórios rápidos (sem filtro)</summary>
-              <p class="subtle-text">Exportações em PDF (visualizar/imprimir) ou CSV (abre no Excel). Ficha patrimonial: informe o ID na listagem de patrimônios.</p>
-              <div class="patrimonio-relatorios-grid">
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="resumo" data-formato="csv">Resumo geral (CSV)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="pdf">Movimentações (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="csv">Movimentações (CSV)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="pdf">Manutenções (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="csv">Manutenções (CSV)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="pdf">Depreciação (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="csv">Depreciação (CSV)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="pdf">Ativos por unidade (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="csv">Ativos por unidade (CSV)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="pdf">Por categoria (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="csv">Por categoria (CSV)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="ficha" data-formato="pdf">Ficha patrimonial (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="pdf">Inventário aberto (PDF)</button>
-                <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="csv">Inventário aberto (CSV)</button>
-              </div>
-            </details>
           </section>
 
           <section id="patrimonioConfiguracoesSection" class="view-section hidden">
@@ -4180,63 +4218,65 @@
                 <p class="subtle-text pat-config-subtitle">Atalhos e regras do módulo de bens patrimoniais</p>
               </div>
             </div>
-            <div class="pat-config-grid">
-              <article class="pat-config-card">
-                <span class="pat-config-card__icon" aria-hidden="true">🏷️</span>
-                <h3 class="pat-config-card__title">Categorias</h3>
-                <p class="pat-config-card__text">Veículos, Informática, Refrigeração e demais tipos com campos específicos.</p>
-                <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioCategorias">Abrir categorias</button>
-              </article>
-              <article class="pat-config-card">
-                <span class="pat-config-card__icon" aria-hidden="true">📦</span>
-                <h3 class="pat-config-card__title">Patrimônios</h3>
-                <p class="pat-config-card__text">Cadastro, edição, fotos, documentos e valores em <strong>R$</strong>.</p>
-                <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonios">Ver patrimônios</button>
-              </article>
-              <article class="pat-config-card">
-                <span class="pat-config-card__icon" aria-hidden="true">🔢</span>
-                <h3 class="pat-config-card__title">Código automático</h3>
-                <p class="pat-config-card__text">Formato <code class="pat-config-code">PAT-UNI-ANO-SEQ</code> gerado ao salvar cada item.</p>
-              </article>
-              <article class="pat-config-card">
-                <span class="pat-config-card__icon" aria-hidden="true">📉</span>
-                <h3 class="pat-config-card__title">Depreciação</h3>
-                <p class="pat-config-card__text">Cálculo linear por valor de compra, data da compra e vida útil em meses.</p>
-              </article>
-              <article class="pat-config-card">
-                <span class="pat-config-card__icon" aria-hidden="true">📱</span>
-                <h3 class="pat-config-card__title">QR Code</h3>
-                <p class="pat-config-card__text">Código único por patrimônio — botão 📱 na listagem para imprimir ou abrir a ficha.</p>
-              </article>
-              <article class="pat-config-card">
-                <span class="pat-config-card__icon" aria-hidden="true">🏢</span>
-                <h3 class="pat-config-card__title">Multiunidade</h3>
-                <p class="pat-config-card__text">Cada bem vinculado à unidade/filial; filtros por unidade no dashboard e na lista.</p>
-                <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioDashboard">Abrir dashboard</button>
-              </article>
-            </div>
-            <div class="table-card form-card--wide pat-config-setores-card">
-              <header class="patrimonio-section-head" style="margin-bottom:0.75rem">
-                <div>
-                  <h3 class="pat-config-panel__title" style="margin:0">Setores</h3>
-                  <p class="subtle-text">Cadastre os setores usados no formulário de patrimônio (Cozinha, Salão, Depósito…).</p>
-                </div>
-                <button type="button" class="btn primary" id="patSetorBtnNova">+ Novo setor</button>
-              </header>
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>Nome</th><th>Descrição</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead>
-                  <tbody id="patSetorTbody"></tbody>
-                </table>
+            <div class="pat-page-wrap">
+              <div class="pat-config-grid">
+                <article class="pat-config-card">
+                  <span class="pat-config-card__icon" aria-hidden="true">🏷️</span>
+                  <h3 class="pat-config-card__title">Categorias</h3>
+                  <p class="pat-config-card__text">Veículos, Informática, Refrigeração e demais tipos com campos específicos.</p>
+                  <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioCategorias">Abrir categorias</button>
+                </article>
+                <article class="pat-config-card">
+                  <span class="pat-config-card__icon" aria-hidden="true">📦</span>
+                  <h3 class="pat-config-card__title">Patrimônios</h3>
+                  <p class="pat-config-card__text">Cadastro, edição, fotos, documentos e valores em <strong>R$</strong>.</p>
+                  <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonios">Ver patrimônios</button>
+                </article>
+                <article class="pat-config-card">
+                  <span class="pat-config-card__icon" aria-hidden="true">🔢</span>
+                  <h3 class="pat-config-card__title">Código automático</h3>
+                  <p class="pat-config-card__text">Formato <code class="pat-config-code">PAT-UNI-ANO-SEQ</code> gerado ao salvar cada item.</p>
+                </article>
+                <article class="pat-config-card">
+                  <span class="pat-config-card__icon" aria-hidden="true">📉</span>
+                  <h3 class="pat-config-card__title">Depreciação</h3>
+                  <p class="pat-config-card__text">Cálculo linear por valor de compra, data da compra e vida útil em meses.</p>
+                </article>
+                <article class="pat-config-card">
+                  <span class="pat-config-card__icon" aria-hidden="true">📱</span>
+                  <h3 class="pat-config-card__title">QR Code</h3>
+                  <p class="pat-config-card__text">Código único por patrimônio — botão 📱 na listagem para imprimir ou abrir a ficha.</p>
+                </article>
+                <article class="pat-config-card">
+                  <span class="pat-config-card__icon" aria-hidden="true">🏢</span>
+                  <h3 class="pat-config-card__title">Multiunidade</h3>
+                  <p class="pat-config-card__text">Cada bem vinculado à unidade/filial; filtros por unidade no dashboard e na lista.</p>
+                  <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioDashboard">Abrir dashboard</button>
+                </article>
               </div>
-            </div>
-            <div class="pat-config-panel">
-              <h3 class="pat-config-panel__title">Resumo rápido</h3>
-              <ul class="pat-config-panel__list">
-                <li>Inventário e movimentações registram histórico por item.</li>
-                <li>Relatórios em CSV/PDF disponíveis no menu Relatórios.</li>
-                <li>Permissões do módulo são definidas por perfil em Usuários.</li>
-              </ul>
+              <div class="table-card form-card--wide pat-config-setores-card">
+                <header class="pat-config-setores-head">
+                  <div>
+                    <h3 class="pat-config-panel__title">Setores</h3>
+                    <p class="subtle-text">Cadastre os setores usados no formulário de patrimônio (Cozinha, Salão, Depósito…).</p>
+                  </div>
+                  <button type="button" class="btn primary" id="patSetorBtnNova">+ Novo setor</button>
+                </header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead><tr><th>Nome</th><th>Descrição</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead>
+                    <tbody id="patSetorTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="pat-config-panel">
+                <h3 class="pat-config-panel__title">Resumo rápido</h3>
+                <ul class="pat-config-panel__list">
+                  <li>Inventário e movimentações registram histórico por item.</li>
+                  <li>Relatórios em CSV/PDF disponíveis no menu Relatórios.</li>
+                  <li>Permissões do módulo são definidas por perfil em Usuários.</li>
+                </ul>
+              </div>
             </div>
           </section>
 

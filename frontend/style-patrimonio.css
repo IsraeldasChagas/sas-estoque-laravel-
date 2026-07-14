@@ -1,26 +1,145 @@
-/* Módulo Patrimônio — submenu lateral (display toggle em style.css) */
+/* Módulo Patrimônio — padrão visual (mesmo respiro da Ayla / OpenClaw) */
+:is(
+  #patrimonioDashboardSection,
+  #patrimoniosSection,
+  #patrimonioCategoriasSection,
+  #patrimonioMovimentacoesSection,
+  #patrimonioManutencoesSection,
+  #patrimonioInventarioSection,
+  #patrimonioRelatoriosSection,
+  #patrimonioConfiguracoesSection
+) {
+  padding: 0.25rem 0.35rem 2rem;
+  box-sizing: border-box;
+}
+
 .patrimonio-section-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.35rem;
 }
 .patrimonio-section-head h2 {
   margin: 0;
 }
+.patrimonio-section-head > .btn,
+.patrimonio-section-head .btn.primary,
+.patrimonio-section-head .btn.secondary {
+  min-height: 2.75rem;
+  min-width: 11.5rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.pat-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1280px;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+}
+
+:is(
+  #patrimonioDashboardSection,
+  #patrimoniosSection,
+  #patrimonioCategoriasSection,
+  #patrimonioMovimentacoesSection,
+  #patrimonioManutencoesSection,
+  #patrimonioInventarioSection,
+  #patrimonioRelatoriosSection,
+  #patrimonioConfiguracoesSection
+) .table-card {
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+:is(
+  #patrimonioDashboardSection,
+  #patrimoniosSection,
+  #patrimonioCategoriasSection,
+  #patrimonioMovimentacoesSection,
+  #patrimonioManutencoesSection,
+  #patrimonioInventarioSection,
+  #patrimonioRelatoriosSection,
+  #patrimonioConfiguracoesSection
+) .table-card > header {
+  padding: 1.05rem 1.5rem;
+}
+:is(
+  #patrimonioDashboardSection,
+  #patrimoniosSection,
+  #patrimonioCategoriasSection,
+  #patrimonioMovimentacoesSection,
+  #patrimonioManutencoesSection,
+  #patrimonioInventarioSection,
+  #patrimonioRelatoriosSection,
+  #patrimonioConfiguracoesSection
+) .table-card > .table-wrapper {
+  padding: 0.35rem 1.25rem 1.25rem;
+}
+
+.pat-form-body {
+  padding: 1.35rem 1.5rem 1.6rem;
+  box-sizing: border-box;
+}
+.pat-form-body .filters-grid {
+  gap: 1.15rem 1.25rem;
+}
+.pat-form-body label {
+  gap: 0.45rem;
+}
+.pat-page-wrap .filters-grid input,
+.pat-page-wrap .filters-grid select,
+.pat-page-wrap .filters-grid textarea,
+.pat-form-body input,
+.pat-form-body select,
+.pat-form-body textarea {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+.pat-page-wrap .filters-grid input:focus,
+.pat-page-wrap .filters-grid select:focus,
+.pat-page-wrap .filters-grid textarea:focus,
+.pat-form-body input:focus,
+.pat-form-body select:focus,
+.pat-form-body textarea:focus {
+  outline: none;
+  border-color: var(--primary, #0047ab);
+  box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.12);
+}
+
+.pat-page-wrap .filters-grid .btn,
+.pat-form-body .btn,
+.pat-rel-filtros-actions .btn,
+#patInvItensCard header .btn {
+  min-height: 2.75rem;
+  min-width: 10rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .patrimonio-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  gap: 1rem;
+  margin-bottom: 0;
 }
 .patrimonio-card {
   background: linear-gradient(145deg, #fff 0%, #f5f8fc 100%);
   border: var(--card-border, 2px solid #000);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -32,37 +151,50 @@
   display: block;
   font-size: 0.78rem;
   color: #607d8b;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 .patrimonio-card__value {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1565c0;
+  line-height: 1.2;
 }
 .patrimonio-charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: 1.25rem;
+  margin-bottom: 0;
 }
 .patrimonio-chart-box {
   background: #fff;
   border: var(--card-border, 2px solid #000);
-  border-radius: 12px;
-  padding: 1rem;
+  border-radius: 14px;
+  padding: 1.25rem 1.35rem;
   min-height: 220px;
 }
 .patrimonio-chart-box h4 {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
 }
 .patrimonio-alertas .pat-alerta-item {
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   border-left: 3px solid #ff9800;
   background: #fff8e1;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  margin: 0 1.25rem 0.65rem;
   font-size: 0.88rem;
+}
+.patrimonio-alertas .pat-alerta-item:last-child {
+  margin-bottom: 1.25rem;
+}
+.patrimonio-alertas > div:not(.table-wrapper):empty::before,
+#patDashAlertas:empty::before,
+#patDashGarantias:empty::before {
+  content: none;
+}
+#patDashAlertas,
+#patDashGarantias {
+  padding: 0.35rem 0 0.5rem;
 }
 .patrimonio-campos-especificos {
   display: none;
@@ -128,8 +260,28 @@
 .pat-config-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: 1.15rem;
+  margin-bottom: 0;
+}
+.pat-config-setores-head,
+.pat-inv-itens-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.05rem 1.5rem;
+  border-bottom: 1px solid var(--border, #e0e6ef);
+  background: rgba(0, 71, 171, 0.06);
+}
+.pat-config-setores-head .pat-config-panel__title,
+.pat-inv-itens-head h3 {
+  margin: 0 0 0.25rem;
+}
+.pat-inv-itens-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
 }
 .pat-config-card {
   display: flex;
@@ -188,8 +340,8 @@
   justify-content: center;
 }
 .pat-config-setores-card {
-  margin-top: 1.25rem;
-  border-radius: 16px;
+  margin-top: 0;
+  border-radius: 14px;
 }
 
 /* Botões da lista — classe própria para não acionar handlers globais de .btn-icon (Boleto, etc.) */
@@ -244,10 +396,10 @@
 }
 
 .pat-config-panel {
-  padding: 1.25rem 1.4rem;
+  padding: 1.35rem 1.5rem;
   background: #fff;
   border: 1px solid #e3eaf2;
-  border-radius: 20px;
+  border-radius: 14px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 .pat-config-panel__title {
@@ -271,28 +423,34 @@
 
 /* Relatório com filtros */
 .pat-rel-filtros-card {
-  border-radius: 20px;
-  margin-bottom: 1rem;
+  border-radius: 14px;
+  margin-bottom: 0;
+}
+.pat-rel-filtros-head {
+  padding: 1.05rem 1.5rem;
 }
 .pat-rel-filtros-head h3 {
   margin: 0 0 0.35rem;
 }
 .pat-rel-filtros-grid {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 .pat-rel-filtros-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 .pat-rel-totais {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  margin-bottom: 0;
 }
 .pat-rel-grupos {
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 .pat-rel-grupos-grid {
   display: grid;
@@ -327,14 +485,27 @@
   font-weight: 600;
 }
 .pat-rel-outros {
-  border-radius: 16px;
-  padding: 0.75rem 1rem 1rem;
+  border-radius: 14px;
+  padding: 0;
+  overflow: hidden;
 }
 .pat-rel-outros summary {
   cursor: pointer;
   font-weight: 600;
   color: #1565c0;
-  margin-bottom: 0.5rem;
+  margin: 0;
+  padding: 1.05rem 1.5rem;
+  list-style: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 71, 171, 0.04);
+}
+.pat-rel-outros summary::-webkit-details-marker { display: none; }
+.patrimonio-relatorios-grid {
+  margin-top: 0.85rem;
+}
+.patrimonio-relatorios-grid .btn {
+  min-height: 2.6rem;
+  justify-content: center;
 }
 .pat-form-feedback {
   margin: 0.75rem 0 0;
@@ -368,12 +539,51 @@
   border: 1px solid #90caf9;
 }
 @media (max-width: 768px) {
+  :is(
+    #patrimonioDashboardSection,
+    #patrimoniosSection,
+    #patrimonioCategoriasSection,
+    #patrimonioMovimentacoesSection,
+    #patrimonioManutencoesSection,
+    #patrimonioInventarioSection,
+    #patrimonioRelatoriosSection,
+    #patrimonioConfiguracoesSection
+  ) {
+    padding: 0 0 1.5rem;
+  }
   .patrimonio-section-head {
     flex-direction: column;
     align-items: stretch;
+    padding: 0;
   }
-  .patrimonio-section-head .btn {
+  .patrimonio-section-head .btn,
+  .pat-page-wrap .filters-grid .btn,
+  .pat-form-body .btn,
+  .pat-rel-filtros-actions .btn,
+  .pat-inv-itens-actions .btn,
+  .pat-config-setores-head .btn {
     width: 100%;
+    min-width: 0;
     justify-content: center;
+  }
+  .pat-form-body {
+    padding: 1.1rem 1.1rem 1.35rem;
+  }
+  .pat-config-setores-head,
+  .pat-inv-itens-head,
+  .pat-rel-filtros-head {
+    padding: 0.95rem 1.1rem;
+  }
+  :is(
+    #patrimonioDashboardSection,
+    #patrimoniosSection,
+    #patrimonioCategoriasSection,
+    #patrimonioMovimentacoesSection,
+    #patrimonioManutencoesSection,
+    #patrimonioInventarioSection,
+    #patrimonioRelatoriosSection,
+    #patrimonioConfiguracoesSection
+  ) .table-card > .table-wrapper {
+    padding: 0.25rem 0.85rem 1rem;
   }
 }
