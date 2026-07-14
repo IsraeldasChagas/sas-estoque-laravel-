@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Schema;
 
 class ReservaMesa extends Model
 {
@@ -35,18 +38,69 @@ class ReservaMesa extends Model
     public const STATUS_NO_SHOW = 'no_show';
     public const STATUS_FINALIZADA = 'finalizada';
 
-    public function unidade()
+    public function unidade(): BelongsTo
     {
         return $this->belongsTo(Unidade::class);
     }
 
-    public function mesa()
+    public function mesa(): BelongsTo
     {
         return $this->belongsTo(Mesa::class);
     }
 
-    public function usuario()
+    public function usuario(): BelongsTo
     {
         return $this->belongsTo(Usuario::class);
+    }
+
+    public function mesas(): BelongsToMany
+    {
+        return $this->belongsToMany(Mesa::class, 'reserva_mesas', 'reserva_id', 'mesa_id')
+            ->withPivot([
+                'capacidade_utilizada',
+                'cadeiras_extras_utilizadas',
+                'principal',
+                'configuracao_emergencial',
+            ])
+            ->withTimestamps();
+    }
+
+    public function mesaPrincipal(): ?Mesa
+    {
+        if (Schema::hasTable('reserva_mesas')) {
+            $principal = $this->mesas()->wherePivot('principal', true)->first();
+            if ($principal) {
+                return $principal;
+            }
+        }
+
+        return $this->mesa;
+    }
+
+    public function capacidadeTotalReservada(): int
+    {
+        if (Schema::hasTable('reserva_mesas') && $this->mesas()->exists()) {
+            return (int) $this->mesas()->sum('reserva_mesas.capacidade_utilizada');
+        }
+
+        return (int) $this->qtd_pessoas;
+    }
+
+    public function cadeirasExtrasUtilizadas(): int
+    {
+        if (Schema::hasTable('reserva_mesas') && $this->mesas()->exists()) {
+            return (int) $this->mesas()->sum('reserva_mesas.cadeiras_extras_utilizadas');
+        }
+
+        return 0;
+    }
+
+    public function configuracaoEmergencial(): bool
+    {
+        if (! Schema::hasTable('reserva_mesas')) {
+            return false;
+        }
+
+        return $this->mesas()->wherePivot('configuracao_emergencial', true)->exists();
     }
 }

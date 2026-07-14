@@ -1,0 +1,89 @@
+@startuml RESERVAS_DIAGRAMA
+title Fluxo UML — Reservas de Mesas (SAS-Estoque + Ayla)
+
+|Usuario Painel|
+start
+:Abre seção reservaMesa;
+:Filtra unidade / data / turno;
+
+if (Nova reserva?) then (sim)
+  :Abre modalreservaMesaForm;
+  :POST /reservas-mesas;
+  |ReservaMesaController|
+  if (Validação OK?\nmesa ativa, capacidade,\nsem conflito exato) then (não)
+    :HTTP 422;
+    stop
+  else (sim)
+    :INSERT reservas_mesas\nstatus pendente|confirmada;
+    :UPDATE mesas.status = reservada;
+    |Usuario Painel|
+    :Opcional: abrir wa.me;
+  endif
+endif
+
+|Usuario Painel|
+if (Ação na reserva?) then (editar)
+  :PUT /reservas-mesas/{id};
+  |ReservaMesaController|
+  if (status cancelada|finalizada|no_show?) then (sim)
+    :HTTP 422 bloqueado;
+  else (não)
+    :UPDATE campos;
+    if (mudou mesa/data/hora?) then (sim)
+      :Revalida conflito/capacidade;
+      :Ajusta status mesas antiga/nova;
+    endif
+  endif
+elseif (cancelar) then
+  :POST .../cancelar;
+  :status = cancelada;
+  :mesa livre se sem outras ativas no dia;
+elseif (confirmar) then
+  :PATCH .../status confirmada;
+  :mesa = reservada;
+elseif (chegada) then
+  :PATCH .../status cliente_chegou;
+  :mesa = aguardando_cliente;
+elseif (finalizar / no_show) then
+  :PATCH status finalizada|no_show;
+  :mesa livre se aplicável;
+elseif (juntar UI) then
+  :PUT mesa_id → outra mesa\n(1 reserva, 1 mesa);
+elseif (separar UI) then
+  :PUT reduz qtd + POST nova reserva\n(2 linhas independentes);
+endif
+
+|Usuario Painel|
+:Histórico opcional\nGET /reservas-mesas/historico;
+
+|Usuario Telegram / Ayla|
+start
+:Pergunta sobre reservas;
+
+if (Somente consulta?) then (sim)
+  :GET /api/ayla/v1/reservas*;
+  :AylaReservasService leitura;
+  stop
+else (escrita)
+  :POST .../acoes/preparar;
+  :Persiste ayla_acoes_pendentes\nexpira 10 min;
+  :Ayla mostra resumo e pergunta;
+  if (Usuário confirma?) then (sim)
+    :POST .../acoes/{id}/confirmar;
+    :AylaReservasService executa\n(criar|atualizar|status|mesa);
+    :Marca ação executada;
+  else (não)
+    :POST .../acoes/{id}/cancelar;
+    :Nenhuma alteração em reservas_mesas;
+  endif
+endif
+
+stop
+
+legend right
+  |= Conflito |= mesma mesa + data + hora exata
+  |= Capacidade |= qtd_pessoas <= mesas.capacidade
+  |= Sem |= duração, N mesas por reserva, mapa XY, fila, QR
+endlegend
+
+@enduml

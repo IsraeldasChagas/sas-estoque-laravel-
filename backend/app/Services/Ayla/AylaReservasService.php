@@ -235,105 +235,18 @@ class AylaReservasService
      */
     public function disponibilidade(array $args): array
     {
-        $unidadeId = (int) ($args['unidade_id'] ?? 0);
-        $data = (string) ($args['data'] ?? '');
-        $horario = $this->normalizarHorario((string) ($args['horario'] ?? ''));
-        $qtd = isset($args['quantidade_pessoas']) ? (int) $args['quantidade_pessoas'] : null;
-        // Duração não existe no banco; parâmetro aceito e ignorado com nota.
-        $duracao = isset($args['duracao_minutos']) ? (int) $args['duracao_minutos'] : null;
+        $analise = app(\App\Services\Reservas\ReservaDisponibilidadeService::class)->analisar($args);
 
-        if (! Schema::hasTable('mesas')) {
-            return [
-                'unidade_id' => $unidadeId,
-                'data' => $data,
-                'horario' => $horario,
-                'mesas_disponiveis' => [],
-                'mesas_ocupadas' => [],
-                'capacidade_total_disponivel' => 0,
-                'observacoes' => ['Tabela de mesas indisponível.'],
-                'sugestao' => null,
-            ];
+        // Compatibilidade com consumidores antigos (sugestao / capacidade_total_disponivel).
+        if (! isset($analise['sugestao']) && is_array($analise['sugestao_operacional'] ?? null)) {
+            $sug = $analise['sugestao_operacional'];
+            $analise['sugestao'] = $sug['mesa'] ?? ($sug['mesas'][0] ?? $sug);
+        }
+        if (! isset($analise['capacidade_total_disponivel'])) {
+            $analise['capacidade_total_disponivel'] = (int) ($analise['capacidade_total'] ?? 0);
         }
 
-        $mesas = DB::table('mesas as m')
-            ->where('m.unidade_id', $unidadeId)
-            ->where('m.ativo', 1)
-            ->where('m.status', '!=', 'bloqueada')
-            ->orderBy('m.numero_mesa')
-            ->get(['m.id', 'm.numero_mesa', 'm.nome_mesa', 'm.capacidade', 'm.status', 'm.localizacao']);
-
-        $ocupadasIds = [];
-        if (Schema::hasTable('reservas_mesas') && $data !== '' && $horario !== null) {
-            $ocupadasIds = DB::table('reservas_mesas')
-                ->where('unidade_id', $unidadeId)
-                ->whereDate('data_reserva', $data)
-                ->whereTime('hora_reserva', $horario)
-                ->whereIn('status', self::STATUS_ATIVAS)
-                ->pluck('mesa_id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-        }
-
-        $disponiveis = [];
-        $ocupadas = [];
-        $notas = [];
-
-        if ($duracao !== null && $duracao > 0) {
-            $notas[] = 'O sistema não armazena duração de reserva; o conflito é por data+horário exatos.';
-        }
-
-        foreach ($mesas as $m) {
-            $item = [
-                'mesa_id' => (int) $m->id,
-                'numero_mesa' => (string) $m->numero_mesa,
-                'nome' => $m->nome_mesa ? (string) $m->nome_mesa : ('Mesa '.$m->numero_mesa),
-                'capacidade' => (int) $m->capacidade,
-                'status_mesa' => (string) $m->status,
-                'localizacao' => $m->localizacao ? (string) $m->localizacao : null,
-            ];
-
-            $ocupadaSlot = in_array((int) $m->id, $ocupadasIds, true);
-            $capOk = $qtd === null || $qtd <= (int) $m->capacidade;
-
-            if ($ocupadaSlot) {
-                $item['motivo'] = 'Já possui reserva ativa neste horário.';
-                $ocupadas[] = $item;
-            } elseif (! $capOk) {
-                $item['motivo'] = 'Capacidade insuficiente ('.$m->capacidade.' lugares).';
-                $ocupadas[] = $item;
-            } else {
-                $disponiveis[] = $item;
-            }
-        }
-
-        $capDisp = array_sum(array_column($disponiveis, 'capacidade'));
-
-        usort($disponiveis, function ($a, $b) use ($qtd) {
-            if ($qtd === null) {
-                return $a['capacidade'] <=> $b['capacidade'];
-            }
-            // Melhor mesa: capacidade suficiente mais próxima da quantidade.
-            $da = abs($a['capacidade'] - $qtd);
-            $db = abs($b['capacidade'] - $qtd);
-
-            return $da <=> $db;
-        });
-
-        $sugestao = $disponiveis[0] ?? null;
-
-        return [
-            'unidade_id' => $unidadeId,
-            'data' => $data,
-            'horario' => $horario,
-            'quantidade_pessoas' => $qtd,
-            'mesas_disponiveis' => $disponiveis,
-            'mesas_ocupadas' => $ocupadas,
-            'capacidade_total_disponivel' => $capDisp,
-            'total_disponiveis' => count($disponiveis),
-            'total_ocupadas' => count($ocupadas),
-            'observacoes' => $notas,
-            'sugestao' => $sugestao,
-        ];
+        return $analise;
     }
 
     /**
@@ -762,11 +675,19 @@ class AylaReservasService
      */
     public function prepararPreview(string $acao, array $dados): array
     {
+        $acao = strtolower(trim($acao));
+
         return match ($acao) {
-            'criar' => $this->previewCriar($dados),
-            'atualizar' => $this->previewAtualizar($dados),
+            'criar', 'criar_reserva', 'preparar_composicao_mesas' => $this->previewCriar($dados),
+            'atualizar', 'atualizar_reserva' => $this->previewAtualizar($dados),
             'alterar_mesa' => $this->previewAlterarMesa($dados),
-            'confirmar', 'registrar_chegada', 'finalizar', 'cancelar' => $this->previewStatus($acao, $dados),
+            'confirmar', 'confirmar_reserva' => $this->previewStatus('confirmar', $dados),
+            'registrar_chegada' => $this->previewStatus('registrar_chegada', $dados),
+            'finalizar', 'finalizar_reserva' => $this->previewStatus('finalizar', $dados),
+            'cancelar', 'cancelar_reserva' => $this->previewStatus('cancelar', $dados),
+            'criar_mesa_emergencial', 'criar_mesa_emergencial_e_reservar' => $this->previewMesaEmergencial($dados, str_contains($acao, 'e_reservar')),
+            'ajustar_capacidade_mesa' => $this->previewAjusteCapacidade($dados),
+            'criar_alerta_operacional' => $this->previewAlertaOperacional($dados),
             default => ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Ação desconhecida.'],
         };
     }
@@ -780,13 +701,17 @@ class AylaReservasService
     public function executarAcaoConfirmada(string $acao, array $payload, ?int $usuarioId): array
     {
         return match ($acao) {
-            'criar' => $this->criarReserva($payload, $usuarioId),
-            'atualizar' => $this->atualizarReserva((int) ($payload['reserva_id'] ?? 0), $payload, $usuarioId),
+            'criar', 'criar_reserva', 'preparar_composicao_mesas' => $this->criarReserva($payload, $usuarioId),
+            'atualizar', 'atualizar_reserva' => $this->atualizarReserva((int) ($payload['reserva_id'] ?? 0), $payload, $usuarioId),
             'alterar_mesa' => $this->alterarMesa((int) ($payload['reserva_id'] ?? 0), (int) ($payload['mesa_id'] ?? 0), $usuarioId),
-            'confirmar' => $this->confirmarReserva((int) ($payload['reserva_id'] ?? 0), $usuarioId),
+            'confirmar', 'confirmar_reserva' => $this->confirmarReserva((int) ($payload['reserva_id'] ?? 0), $usuarioId),
             'registrar_chegada' => $this->registrarChegada((int) ($payload['reserva_id'] ?? 0), $usuarioId),
-            'finalizar' => $this->finalizarReserva((int) ($payload['reserva_id'] ?? 0), $usuarioId),
-            'cancelar' => $this->cancelarReserva((int) ($payload['reserva_id'] ?? 0), $payload['motivo'] ?? null, $usuarioId),
+            'finalizar', 'finalizar_reserva' => $this->finalizarReserva((int) ($payload['reserva_id'] ?? 0), $usuarioId),
+            'cancelar', 'cancelar_reserva' => $this->cancelarReserva((int) ($payload['reserva_id'] ?? 0), $payload['motivo'] ?? null, $usuarioId),
+            'criar_mesa_emergencial' => $this->criarMesaEmergencial($payload['mesa'] ?? $payload, $usuarioId),
+            'criar_mesa_emergencial_e_reservar' => $this->criarMesaEmergencialEReservar($payload, $usuarioId),
+            'ajustar_capacidade_mesa' => $this->ajustarCapacidadeMesa($payload, $usuarioId),
+            'criar_alerta_operacional' => $this->criarAlertaOperacional($payload, $usuarioId),
             default => ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Ação desconhecida.'],
         };
     }
@@ -802,61 +727,106 @@ class AylaReservasService
         }
 
         $normalizado = $this->normalizarDadosCriacao($dados);
-        $val = $this->validarCriacao($normalizado);
-        if (! ($val['ok'] ?? false)) {
-            return $val;
+
+        // Composição explícita no payload
+        $vinculos = $this->extrairVinculosMesas($normalizado);
+        if ($vinculos === []) {
+            $val = $this->validarCriacao($normalizado);
+            if (! ($val['ok'] ?? false)) {
+                return $val;
+            }
+            /** @var Mesa $mesa */
+            $mesa = $val['mesa'];
+            $payload = $val['payload'];
+            $vinculos = [[
+                'mesa_id' => (int) $mesa->id,
+                'principal' => true,
+                'capacidade_utilizada' => (int) $payload['qtd_pessoas'],
+                'cadeiras_extras_utilizadas' => max(0, (int) $payload['qtd_pessoas'] - $mesa->capacidadeBase()),
+                'configuracao_emergencial' => ! empty($payload['configuracao_emergencial']),
+            ]];
+            $normalizado = $payload;
+        } else {
+            $chk = $this->validarVinculosParaCriacao($normalizado, $vinculos);
+            if (! ($chk['ok'] ?? false)) {
+                return $chk;
+            }
+            $normalizado = $chk['payload'];
+            $vinculos = $chk['vinculos'];
         }
 
-        /** @var Mesa $mesa */
-        $mesa = $val['mesa'];
-        $payload = $val['payload'];
+        $mesaPrincipalId = (int) collect($vinculos)->firstWhere('principal', true)['mesa_id']
+            ?? (int) $vinculos[0]['mesa_id'];
 
         try {
-            $reserva = DB::transaction(function () use ($payload, $mesa, $usuarioId) {
-                $conflito = $this->verificarConflito([
-                    'mesa_id' => $payload['mesa_id'],
-                    'data_reserva' => $payload['data_reserva'],
-                    'hora_reserva' => $payload['hora_reserva'],
-                ]);
-                if ($conflito['tem_conflito']) {
-                    throw new \RuntimeException('CONFLITO');
+            $reserva = DB::transaction(function () use ($normalizado, $vinculos, $mesaPrincipalId, $usuarioId) {
+                $mesaIds = array_map(fn ($v) => (int) $v['mesa_id'], $vinculos);
+                $mesas = Mesa::query()->whereIn('id', $mesaIds)->lockForUpdate()->get()->keyBy('id');
+
+                foreach ($vinculos as $v) {
+                    $mesa = $mesas->get((int) $v['mesa_id']);
+                    if (! $mesa || ! $mesa->ativo || $mesa->status === Mesa::STATUS_BLOQUEADA) {
+                        throw new \RuntimeException('MESA_INVALIDA');
+                    }
+                    if ((int) $mesa->unidade_id !== (int) $normalizado['unidade_id']) {
+                        throw new \RuntimeException('MESA_UNIDADE');
+                    }
+                    $conflito = $this->verificarConflito([
+                        'mesa_id' => (int) $v['mesa_id'],
+                        'data_reserva' => $normalizado['data_reserva'],
+                        'hora_reserva' => $normalizado['hora_reserva'],
+                    ]);
+                    if ($conflito['tem_conflito']) {
+                        throw new \RuntimeException('CONFLITO');
+                    }
                 }
 
                 $reserva = ReservaMesa::create([
-                    'unidade_id' => $payload['unidade_id'],
-                    'mesa_id' => $payload['mesa_id'],
+                    'unidade_id' => $normalizado['unidade_id'],
+                    'mesa_id' => $mesaPrincipalId,
                     'usuario_id' => $usuarioId,
-                    'nome_cliente' => $payload['nome_cliente'],
-                    'telefone_cliente' => $payload['telefone_cliente'] ?? null,
-                    'data_reserva' => $payload['data_reserva'],
-                    'hora_reserva' => $payload['hora_reserva'],
-                    'qtd_pessoas' => $payload['qtd_pessoas'],
-                    'status' => $payload['status'] ?? ReservaMesa::STATUS_PENDENTE,
-                    'observacao' => $payload['observacao'] ?? null,
-                    'local' => $payload['local'] ?? null,
-                    'ocasiao' => $payload['ocasiao'] ?? null,
+                    'nome_cliente' => $normalizado['nome_cliente'],
+                    'telefone_cliente' => $normalizado['telefone_cliente'] ?? null,
+                    'data_reserva' => $normalizado['data_reserva'],
+                    'hora_reserva' => $normalizado['hora_reserva'],
+                    'qtd_pessoas' => $normalizado['qtd_pessoas'],
+                    'status' => $normalizado['status'] ?? ReservaMesa::STATUS_PENDENTE,
+                    'observacao' => $normalizado['observacao'] ?? null,
+                    'local' => $normalizado['local'] ?? null,
+                    'ocasiao' => $normalizado['ocasiao'] ?? null,
                 ]);
 
-                $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
+                $this->sincronizarVinculos($reserva, $vinculos);
+
+                foreach ($mesaIds as $mid) {
+                    Mesa::where('id', $mid)->update(['status' => Mesa::STATUS_RESERVADA]);
+                }
 
                 return $reserva->fresh(['mesa:id,numero_mesa,nome_mesa,capacidade', 'unidade:id,nome']);
             });
         } catch (\RuntimeException $e) {
-            if ($e->getMessage() === 'CONFLITO') {
-                return [
-                    'ok' => false,
-                    'code' => 'CONFLICT',
-                    'message' => 'Já existe uma reserva para esta mesa no mesmo horário.',
-                ];
-            }
-            throw $e;
+            return match ($e->getMessage()) {
+                'CONFLITO' => ['ok' => false, 'code' => 'CONFLICT', 'message' => 'Já existe uma reserva para esta mesa no mesmo horário.'],
+                'MESA_INVALIDA' => ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa inválida, inativa ou bloqueada.'],
+                'MESA_UNIDADE' => ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa não pertence à unidade selecionada.'],
+                default => throw $e,
+            };
+        }
+
+        $alerta = $this->criarAlertaOperacionalSeNecessario($reserva, $vinculos, $usuarioId);
+
+        $msg = 'Reserva criada com sucesso.';
+        if ($this->vinculoEhEmergencial($vinculos)) {
+            $msg .= ' Atenção: organize fisicamente a mesa e as cadeiras antes do horário do cliente.';
         }
 
         return [
             'ok' => true,
             'data' => [
-                'mensagem' => 'Reserva criada com sucesso.',
+                'mensagem' => $msg,
                 'reserva' => $this->serializarModelo($reserva),
+                'mesas_vinculadas' => $vinculos,
+                'alerta_operacional' => $alerta,
                 'anterior' => null,
                 'novo' => $this->serializarModelo($reserva),
             ],
@@ -1052,6 +1022,26 @@ class AylaReservasService
 
         $rows = $q->get(['id', 'nome_cliente', 'status', 'qtd_pessoas', 'unidade_id']);
 
+        // Conflito também via pivô de composição (mesas secundárias).
+        if (Schema::hasTable('reserva_mesas')) {
+            $reservaIds = DB::table('reserva_mesas')->where('mesa_id', $mesaId)->pluck('reserva_id');
+            if ($reservaIds->isNotEmpty()) {
+                $q2 = ReservaMesa::query()
+                    ->whereIn('id', $reservaIds->all())
+                    ->whereDate('data_reserva', $data)
+                    ->whereTime('hora_reserva', $hora)
+                    ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
+                if ($exceto) {
+                    $q2->where('id', '!=', $exceto);
+                }
+                if ($rows->isNotEmpty()) {
+                    $q2->whereNotIn('id', $rows->pluck('id')->all());
+                }
+                $extra = $q2->get(['id', 'nome_cliente', 'status', 'qtd_pessoas', 'unidade_id']);
+                $rows = $rows->concat($extra);
+            }
+        }
+
         return [
             'tem_conflito' => $rows->isNotEmpty(),
             'conflitos' => $rows->map(fn ($r) => [
@@ -1076,7 +1066,12 @@ class AylaReservasService
             'quantidade_pessoas' => isset($dados['qtd_pessoas']) ? (int) $dados['qtd_pessoas'] : null,
         ]);
 
-        $ok = ! empty($disp['mesas_disponiveis']);
+        $ok = ! empty($disp['sugestao_operacional'])
+            && empty($disp['exige_cadastro_emergencial'])
+            && empty($disp['exige_ajuste_capacidade']);
+        if (! $ok) {
+            $ok = ! empty($disp['mesas_disponiveis']) && empty($disp['exige_cadastro_emergencial']);
+        }
 
         return [
             'ok' => $ok,
@@ -1093,21 +1088,154 @@ class AylaReservasService
     private function previewCriar(array $dados): array
     {
         $normalizado = $this->normalizarDadosCriacao($dados);
-        $val = $this->validarCriacao($normalizado, true);
-        if (! ($val['ok'] ?? false)) {
-            return $val;
+
+        // Composição explícita
+        if (! empty($normalizado['mesas']) && is_array($normalizado['mesas'])) {
+            $chk = $this->validarVinculosParaCriacao($normalizado, $normalizado['mesas']);
+            if (! ($chk['ok'] ?? false)) {
+                return $chk;
+            }
+            $payload = $chk['payload'];
+            $vinculos = $chk['vinculos'];
+            $texto = $this->textoResumoComposicao($payload, $vinculos);
+
+            return [
+                'ok' => true,
+                'data' => [
+                    'payload' => array_merge($payload, ['mesas' => $vinculos]),
+                    'resumo' => [
+                        'cliente' => $payload['nome_cliente'],
+                        'data' => $payload['data_reserva'],
+                        'horario' => $payload['hora_reserva'],
+                        'pessoas' => $payload['qtd_pessoas'],
+                        'unidade_id' => $payload['unidade_id'],
+                        'mesas' => $vinculos,
+                        'composicao' => true,
+                    ],
+                    'resumo_texto' => $texto,
+                    'possivel_duplicidade' => $this->buscarSimilares($payload) !== [],
+                    'similares' => $this->buscarSimilares($payload),
+                ],
+            ];
         }
 
-        /** @var array<string, mixed> $payload */
-        $payload = $val['payload'];
-        /** @var Mesa $mesa */
-        $mesa = $val['mesa'];
+        $analise = app(\App\Services\Reservas\ReservaDisponibilidadeService::class)->analisar([
+            'unidade_id' => (int) ($normalizado['unidade_id'] ?? 0),
+            'data' => (string) ($normalizado['data_reserva'] ?? ''),
+            'horario' => (string) ($normalizado['hora_reserva'] ?? ''),
+            'quantidade_pessoas' => (int) ($normalizado['qtd_pessoas'] ?? 1),
+            'duracao_minutos' => $normalizado['duracao_minutos'] ?? null,
+        ]);
 
-        $similares = $this->buscarSimilares($payload);
+        $sug = $analise['sugestao_operacional'] ?? null;
+
+        if (! empty($analise['exige_cadastro_emergencial'])) {
+            return [
+                'ok' => false,
+                'code' => 'NO_AVAILABILITY',
+                'message' => $analise['sugestao_operacional']['mensagem'] ?? 'Sem capacidade suficiente.',
+                'data' => [
+                    'exige_cadastro_emergencial' => true,
+                    'exige_ajuste_capacidade' => (bool) ($analise['exige_ajuste_capacidade'] ?? false),
+                    'sugestao_operacional' => $analise['sugestao_operacional'] ?? null,
+                    'opcoes' => $analise['sugestao_operacional']['opcoes'] ?? [],
+                    'alternativas' => $analise['alternativas'] ?? [],
+                ],
+            ];
+        }
+
+        if (! empty($analise['exige_ajuste_capacidade'])) {
+            return [
+                'ok' => false,
+                'code' => 'NEEDS_CAPACITY_ADJUSTMENT',
+                'message' => $analise['sugestao_operacional']['mensagem'] ?? 'É necessário ajustar capacidade.',
+                'data' => [
+                    'exige_ajuste_capacidade' => true,
+                    'sugestao_operacional' => $analise['sugestao_operacional'] ?? null,
+                ],
+            ];
+        }
+
+        if (! is_array($sug)) {
+            $val = $this->validarCriacao($normalizado, true);
+            if (! ($val['ok'] ?? false)) {
+                return $val;
+            }
+            $mesa = $val['mesa'];
+            $payload = $val['payload'];
+            $extras = max(0, (int) $payload['qtd_pessoas'] - $mesa->capacidadeBase());
+            $vinculos = [[
+                'mesa_id' => (int) $mesa->id,
+                'principal' => true,
+                'capacidade_utilizada' => (int) $payload['qtd_pessoas'],
+                'cadeiras_extras_utilizadas' => $extras,
+                'configuracao_emergencial' => $extras > 0,
+            ]];
+        } elseif (($sug['tipo'] ?? '') === 'composicao') {
+            $vinculos = $sug['mesas'] ?? [];
+            $mesaIdPrincipal = (int) (collect($vinculos)->firstWhere('principal', true)['mesa_id'] ?? ($vinculos[0]['mesa_id'] ?? 0));
+            $normalizado['mesa_id'] = $mesaIdPrincipal;
+            $val = $this->validarCriacao($normalizado, false);
+            if (! ($val['ok'] ?? false) && ($val['code'] ?? '') !== 'CONFLICT') {
+                // validarCriacao may fail on single mesa capacity - OK for composition
+                if (empty($normalizado['nome_cliente']) || empty($normalizado['unidade_id'])) {
+                    return $val;
+                }
+                $payload = array_merge($this->payloadBaseDeNormalizado($normalizado), [
+                    'mesa_id' => $mesaIdPrincipal,
+                ]);
+            } else {
+                $payload = $val['payload'] ?? $this->payloadBaseDeNormalizado($normalizado);
+                $payload['mesa_id'] = $mesaIdPrincipal;
+            }
+            $texto = $sug['mensagem'] ?? $this->textoResumoComposicao($payload, $vinculos);
+
+            return [
+                'ok' => true,
+                'data' => [
+                    'payload' => array_merge($payload, ['mesas' => $vinculos, 'configuracao_emergencial' => true]),
+                    'resumo' => [
+                        'cliente' => $payload['nome_cliente'],
+                        'data' => $payload['data_reserva'],
+                        'horario' => $payload['hora_reserva'],
+                        'pessoas' => $payload['qtd_pessoas'],
+                        'unidade_id' => $payload['unidade_id'],
+                        'mesas' => $vinculos,
+                        'composicao' => true,
+                        'capacidade_total' => $sug['capacidade_total'] ?? null,
+                    ],
+                    'resumo_texto' => $texto."\n\nDeseja confirmar a composição?",
+                    'possivel_duplicidade' => $this->buscarSimilares($payload) !== [],
+                    'similares' => $this->buscarSimilares($payload),
+                    'alternativas' => $analise['composicoes'] ?? [],
+                ],
+            ];
+        } else {
+            $mesaId = (int) ($sug['mesa_id'] ?? $sug['mesa']['mesa_id'] ?? 0);
+            $extras = (int) ($sug['cadeiras_extras_utilizadas'] ?? 0);
+            $normalizado['mesa_id'] = $mesaId;
+            $val = $this->validarCriacao($normalizado, true);
+            if (! ($val['ok'] ?? false)) {
+                return $val;
+            }
+            $mesa = $val['mesa'];
+            $payload = $val['payload'];
+            $vinculos = [[
+                'mesa_id' => (int) $mesa->id,
+                'principal' => true,
+                'capacidade_utilizada' => (int) $payload['qtd_pessoas'],
+                'cadeiras_extras_utilizadas' => $extras,
+                'configuracao_emergencial' => $extras > 0,
+            ]];
+        }
+
+        /** @var Mesa $mesa */
+        $mesa = $mesa ?? Mesa::find((int) ($vinculos[0]['mesa_id'] ?? 0));
         $unidadeNome = Schema::hasTable('unidades')
             ? (string) (DB::table('unidades')->where('id', $payload['unidade_id'])->value('nome') ?? '')
             : '';
 
+        $extras = (int) ($vinculos[0]['cadeiras_extras_utilizadas'] ?? 0);
         $resumo = [
             'cliente' => $payload['nome_cliente'],
             'telefone' => $this->mascararTelefone($payload['telefone_cliente'] ?? null),
@@ -1118,29 +1246,40 @@ class AylaReservasService
             'unidade' => $unidadeNome,
             'mesa_id' => (int) $mesa->id,
             'mesa' => $mesa->nome_mesa ?: ('Mesa '.$mesa->numero_mesa),
+            'capacidade_base' => $mesa->capacidadeBase(),
+            'cadeiras_extras' => $extras,
+            'capacidade_maxima' => $mesa->capacidadeMaximaCalculada(),
             'status' => $payload['status'] ?? ReservaMesa::STATUS_PENDENTE,
             'observacao' => $payload['observacao'] ?? null,
         ];
 
-        $texto = sprintf(
-            "Reserva:\n- Cliente: %s\n- Data: %s\n- Horário: %s\n- Pessoas: %d\n- Unidade: %s\n- Mesa sugerida: %s\n\nDeseja confirmar a criação da reserva?",
-            $resumo['cliente'],
-            Carbon::parse($resumo['data'])->format('d/m/Y'),
-            $resumo['horario'],
-            $resumo['pessoas'],
-            $resumo['unidade'] !== '' ? $resumo['unidade'] : ('Unidade '.$resumo['unidade_id']),
-            $resumo['mesa']
-        );
+        $texto = $extras > 0
+            ? sprintf(
+                "Encontrei a Mesa %s.\n\nCapacidade atual: %d pessoas.\nSerá necessário acrescentar %d cadeira(s).\nCapacidade máxima: %d pessoas.\n\nDeseja confirmar essa configuração?",
+                $resumo['mesa'],
+                $resumo['capacidade_base'],
+                $extras,
+                $resumo['capacidade_maxima']
+            )
+            : sprintf(
+                "Reserva:\n- Cliente: %s\n- Data: %s\n- Horário: %s\n- Pessoas: %d\n- Unidade: %s\n- Mesa sugerida: %s\n\nDeseja confirmar a criação da reserva?",
+                $resumo['cliente'],
+                Carbon::parse($resumo['data'])->format('d/m/Y'),
+                $resumo['horario'],
+                $resumo['pessoas'],
+                $resumo['unidade'] !== '' ? $resumo['unidade'] : ('Unidade '.$resumo['unidade_id']),
+                $resumo['mesa']
+            );
 
         return [
             'ok' => true,
             'data' => [
-                'payload' => $payload,
+                'payload' => array_merge($payload, ['mesas' => $vinculos]),
                 'resumo' => $resumo,
                 'resumo_texto' => $texto,
-                'possivel_duplicidade' => $similares !== [],
-                'similares' => $similares,
-                'alternativas' => $val['alternativas'] ?? null,
+                'possivel_duplicidade' => $this->buscarSimilares($payload) !== [],
+                'similares' => $this->buscarSimilares($payload),
+                'alternativas' => $analise['alternativas'] ?? ($val['alternativas'] ?? null),
             ],
         ];
     }
@@ -1317,11 +1456,20 @@ class AylaReservasService
             if ($mesa->status === Mesa::STATUS_BLOQUEADA) {
                 return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa está bloqueada para reservas.'];
             }
-            if ((int) $dados['qtd_pessoas'] > (int) $mesa->capacidade) {
+            $qtd = (int) $dados['qtd_pessoas'];
+            $max = $mesa->capacidadeMaximaCalculada();
+            if ($qtd > $max) {
                 return [
                     'ok' => false,
                     'code' => 'VALIDATION_ERROR',
-                    'message' => "A mesa suporta no máximo {$mesa->capacidade} pessoas.",
+                    'message' => "A mesa suporta no máximo {$max} pessoas (base {$mesa->capacidadeBase()} + extras).",
+                ];
+            }
+            if ($qtd > $mesa->capacidadeBase() && ! $mesa->permiteAdicionarCadeiras()) {
+                return [
+                    'ok' => false,
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => "A mesa suporta no máximo {$mesa->capacidadeBase()} pessoas.",
                 ];
             }
             $conflito = $this->verificarConflito([
@@ -1337,7 +1485,7 @@ class AylaReservasService
                     'message' => 'Já existe uma reserva para esta mesa no mesmo horário.',
                     'data' => [
                         'conflitos' => $conflito['conflitos'],
-                        'alternativas' => $alt['data']['mesas_disponiveis'] ?? [],
+                        'alternativas' => $alt['data']['mesas_disponiveis'] ?? $alt['data']['composicoes'] ?? [],
                     ],
                 ];
             }
@@ -1576,7 +1724,47 @@ class AylaReservasService
     /** @return array<string, mixed> */
     private function serializarModelo(ReservaMesa $reserva): array
     {
-        $reserva->loadMissing(['mesa:id,numero_mesa,nome_mesa,capacidade', 'unidade:id,nome']);
+        $reserva->loadMissing(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima', 'unidade:id,nome']);
+
+        $vinculos = [];
+        if (Schema::hasTable('reserva_mesas')) {
+            $vinculos = DB::table('reserva_mesas as rm')
+                ->leftJoin('mesas as m', 'm.id', '=', 'rm.mesa_id')
+                ->where('rm.reserva_id', $reserva->id)
+                ->get([
+                    'rm.mesa_id', 'rm.capacidade_utilizada', 'rm.cadeiras_extras_utilizadas',
+                    'rm.principal', 'rm.configuracao_emergencial',
+                    'm.numero_mesa', 'm.nome_mesa', 'm.capacidade', 'm.capacidade_base', 'm.capacidade_maxima',
+                ])
+                ->map(fn ($r) => [
+                    'mesa_id' => (int) $r->mesa_id,
+                    'numero_mesa' => $r->numero_mesa ? (string) $r->numero_mesa : null,
+                    'nome' => $r->nome_mesa ? (string) $r->nome_mesa : ($r->numero_mesa ? 'Mesa '.$r->numero_mesa : null),
+                    'capacidade_utilizada' => (int) $r->capacidade_utilizada,
+                    'cadeiras_extras_utilizadas' => (int) $r->cadeiras_extras_utilizadas,
+                    'principal' => (bool) $r->principal,
+                    'configuracao_emergencial' => (bool) $r->configuracao_emergencial,
+                    'capacidade_base' => (int) ($r->capacidade_base ?? $r->capacidade ?? 0),
+                    'capacidade_maxima' => (int) ($r->capacidade_maxima ?? $r->capacidade ?? 0),
+                ])->values()->all();
+        }
+
+        if ($vinculos === [] && $reserva->mesa) {
+            $vinculos = [[
+                'mesa_id' => (int) $reserva->mesa_id,
+                'numero_mesa' => (string) $reserva->mesa->numero_mesa,
+                'nome' => $reserva->mesa->nome_mesa ?: ('Mesa '.$reserva->mesa->numero_mesa),
+                'capacidade_utilizada' => (int) $reserva->qtd_pessoas,
+                'cadeiras_extras_utilizadas' => 0,
+                'principal' => true,
+                'configuracao_emergencial' => false,
+                'capacidade_base' => $reserva->mesa->capacidadeBase(),
+                'capacidade_maxima' => $reserva->mesa->capacidadeMaximaCalculada(),
+            ]];
+        }
+
+        $extras = array_sum(array_column($vinculos, 'cadeiras_extras_utilizadas'));
+        $emergencial = (bool) collect($vinculos)->contains(fn ($v) => ! empty($v['configuracao_emergencial']));
 
         return [
             'id' => (int) $reserva->id,
@@ -1586,6 +1774,12 @@ class AylaReservasService
             'mesa' => $reserva->mesa
                 ? ($reserva->mesa->nome_mesa ?: ('Mesa '.$reserva->mesa->numero_mesa))
                 : null,
+            'mesa_principal' => collect($vinculos)->firstWhere('principal', true) ?: ($vinculos[0] ?? null),
+            'mesas_vinculadas' => $vinculos,
+            'composicao' => count($vinculos) > 1,
+            'cadeiras_extras' => $extras,
+            'capacidade_total' => array_sum(array_column($vinculos, 'capacidade_utilizada')) ?: (int) $reserva->qtd_pessoas,
+            'configuracao_emergencial' => $emergencial,
             'numero_mesa' => $reserva->mesa->numero_mesa ?? null,
             'nome_cliente' => (string) $reserva->nome_cliente,
             'telefone_cliente' => $this->mascararTelefone($reserva->telefone_cliente),
@@ -1596,6 +1790,659 @@ class AylaReservasService
             'observacao' => $reserva->observacao ? (string) $reserva->observacao : null,
             'local' => $reserva->local ? (string) $reserva->local : null,
             'ocasiao' => $reserva->ocasiao ? (string) $reserva->ocasiao : null,
+            'alerta_preparacao_fisica' => $emergencial || $extras > 0 || count($vinculos) > 1
+                ? 'Organize fisicamente a mesa e as cadeiras antes do horário do cliente.'
+                : null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array<int, array<string, mixed>>
+     */
+    private function extrairVinculosMesas(array $dados): array
+    {
+        if (empty($dados['mesas']) || ! is_array($dados['mesas'])) {
+            return [];
+        }
+        $out = [];
+        foreach ($dados['mesas'] as $i => $m) {
+            if (! is_array($m)) {
+                continue;
+            }
+            $mesaId = (int) ($m['mesa_id'] ?? 0);
+            if ($mesaId < 1) {
+                continue;
+            }
+            $out[] = [
+                'mesa_id' => $mesaId,
+                'principal' => ! empty($m['principal']) || $i === 0,
+                'capacidade_utilizada' => (int) ($m['capacidade_utilizada'] ?? 0),
+                'cadeiras_extras_utilizadas' => (int) ($m['cadeiras_extras_utilizadas'] ?? 0),
+                'configuracao_emergencial' => ! empty($m['configuracao_emergencial']) || ! empty($dados['configuracao_emergencial']),
+            ];
+        }
+        if ($out !== []) {
+            $temPrincipal = collect($out)->contains(fn ($v) => ! empty($v['principal']));
+            if (! $temPrincipal) {
+                $out[0]['principal'] = true;
+            }
+            // garantir só um principal
+            $seen = false;
+            foreach ($out as &$v) {
+                if (! empty($v['principal'])) {
+                    if ($seen) {
+                        $v['principal'] = false;
+                    }
+                    $seen = true;
+                }
+            }
+            unset($v);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @param  array<int, array<string, mixed>>  $vinculos
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>, payload?: array<string, mixed>, vinculos?: array<int, array<string, mixed>>}
+     */
+    private function validarVinculosParaCriacao(array $dados, array $vinculos): array
+    {
+        if (count($vinculos) > 4) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Não é permitido combinar mais de 4 mesas automaticamente.'];
+        }
+
+        $validator = Validator::make($dados, [
+            'unidade_id' => 'required|integer|min:1',
+            'nome_cliente' => 'required|string|max:255',
+            'telefone_cliente' => 'nullable|string|max:30',
+            'data_reserva' => 'required|date|after_or_equal:today',
+            'hora_reserva' => 'required|date_format:H:i',
+            'qtd_pessoas' => 'required|integer|min:1|max:99',
+            'status' => 'nullable|in:pendente,confirmada',
+            'observacao' => 'nullable|string|max:500',
+        ]);
+        if ($validator->fails()) {
+            return [
+                'ok' => false,
+                'code' => 'VALIDATION_ERROR',
+                'message' => 'Dados inválidos para composição.',
+                'data' => ['errors' => $validator->errors()->toArray()],
+            ];
+        }
+
+        $unidadeId = (int) $dados['unidade_id'];
+        if (! AylaSettings::unidadePermitida($unidadeId)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+
+        $capTotal = 0;
+        $normalizados = [];
+        foreach ($vinculos as $i => $v) {
+            $mesa = Mesa::find((int) $v['mesa_id']);
+            if (! $mesa || ! $mesa->ativo || $mesa->status === Mesa::STATUS_BLOQUEADA) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa inválida na composição.'];
+            }
+            if ((int) $mesa->unidade_id !== $unidadeId) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Todas as mesas devem ser da mesma unidade.'];
+            }
+            if ($i > 0) {
+                $primeira = Mesa::find((int) $vinculos[0]['mesa_id']);
+                if ($primeira && ! $primeira->podeSerCombinadaCom($mesa)) {
+                    return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Grupo de composição incompatível ou mesas não permitem junção.'];
+                }
+            }
+            $usa = (int) ($v['capacidade_utilizada'] ?? $mesa->capacidadeBase());
+            $extras = (int) ($v['cadeiras_extras_utilizadas'] ?? max(0, $usa - $mesa->capacidadeBase()));
+            if ($extras > 0 && ! $mesa->permiteAdicionarCadeiras()) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Mesa não permite cadeiras extras.'];
+            }
+            if ($extras > (int) ($mesa->cadeiras_extras_max ?? 0)) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Excede o máximo de cadeiras extras da mesa.'];
+            }
+            if ($usa > $mesa->capacidadeMaximaCalculada()) {
+                return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Capacidade máxima da mesa excedida.'];
+            }
+            $capTotal += $usa;
+            $normalizados[] = [
+                'mesa_id' => (int) $mesa->id,
+                'principal' => ! empty($v['principal']),
+                'capacidade_utilizada' => $usa,
+                'cadeiras_extras_utilizadas' => $extras,
+                'configuracao_emergencial' => ! empty($v['configuracao_emergencial']) || count($vinculos) > 1 || $extras > 0,
+                'numero_mesa' => (string) $mesa->numero_mesa,
+                'nome' => $mesa->nome_mesa ?: ('Mesa '.$mesa->numero_mesa),
+            ];
+        }
+
+        if ($capTotal < (int) $dados['qtd_pessoas']) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Capacidade total da composição insuficiente.'];
+        }
+
+        $payload = $this->payloadBaseDeNormalizado($dados);
+        $principal = collect($normalizados)->firstWhere('principal', true) ?? $normalizados[0];
+        $payload['mesa_id'] = (int) $principal['mesa_id'];
+
+        return ['ok' => true, 'payload' => $payload, 'vinculos' => $normalizados];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $vinculos
+     */
+    private function sincronizarVinculos(ReservaMesa $reserva, array $vinculos): void
+    {
+        if (! Schema::hasTable('reserva_mesas')) {
+            return;
+        }
+
+        DB::table('reserva_mesas')->where('reserva_id', $reserva->id)->delete();
+        $now = now();
+        foreach ($vinculos as $v) {
+            DB::table('reserva_mesas')->insert([
+                'reserva_id' => $reserva->id,
+                'mesa_id' => (int) $v['mesa_id'],
+                'capacidade_utilizada' => (int) ($v['capacidade_utilizada'] ?? $reserva->qtd_pessoas),
+                'cadeiras_extras_utilizadas' => (int) ($v['cadeiras_extras_utilizadas'] ?? 0),
+                'principal' => ! empty($v['principal']),
+                'configuracao_emergencial' => ! empty($v['configuracao_emergencial']),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $vinculos
+     * @return array<string, mixed>|null
+     */
+    private function criarAlertaOperacionalSeNecessario(ReservaMesa $reserva, array $vinculos, ?int $usuarioId): ?array
+    {
+        if (! $this->vinculoEhEmergencial($vinculos) && count($vinculos) <= 1) {
+            $extras = array_sum(array_map(fn ($v) => (int) ($v['cadeiras_extras_utilizadas'] ?? 0), $vinculos));
+            if ($extras < 1) {
+                return null;
+            }
+        }
+
+        return $this->criarAlertaOperacional([
+            'reserva_id' => $reserva->id,
+            'unidade_id' => $reserva->unidade_id,
+            'mesas' => $vinculos,
+            'cliente' => $reserva->nome_cliente,
+            'quantidade_pessoas' => $reserva->qtd_pessoas,
+            'data' => $reserva->data_reserva?->format('Y-m-d'),
+            'horario' => substr((string) $reserva->hora_reserva, 0, 5),
+        ], $usuarioId)['data'] ?? null;
+    }
+
+    /** @param  array<int, array<string, mixed>>  $vinculos */
+    private function vinculoEhEmergencial(array $vinculos): bool
+    {
+        foreach ($vinculos as $v) {
+            if (! empty($v['configuracao_emergencial']) || (int) ($v['cadeiras_extras_utilizadas'] ?? 0) > 0) {
+                return true;
+            }
+        }
+
+        return count($vinculos) > 1;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, array<string, mixed>>  $vinculos
+     */
+    private function textoResumoComposicao(array $payload, array $vinculos): string
+    {
+        $linhas = ["Não há uma mesa individual para {$payload['qtd_pessoas']} pessoas.", '', 'Posso juntar:'];
+        $total = 0;
+        foreach ($vinculos as $v) {
+            $cap = (int) ($v['capacidade_utilizada'] ?? 0);
+            $total += $cap;
+            $nome = $v['nome'] ?? ('Mesa '.($v['mesa_id'] ?? '?'));
+            $linhas[] = "- {$nome}: {$cap} lugares";
+        }
+        $linhas[] = '';
+        $linhas[] = "Capacidade total: {$total} pessoas.";
+
+        return implode("\n", $linhas);
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array<string, mixed>
+     */
+    private function payloadBaseDeNormalizado(array $dados): array
+    {
+        return [
+            'unidade_id' => (int) $dados['unidade_id'],
+            'mesa_id' => (int) ($dados['mesa_id'] ?? 0),
+            'nome_cliente' => trim((string) $dados['nome_cliente']),
+            'telefone_cliente' => isset($dados['telefone_cliente']) ? trim((string) $dados['telefone_cliente']) : null,
+            'data_reserva' => (string) $dados['data_reserva'],
+            'hora_reserva' => $this->normalizarHorarioCurto((string) $dados['hora_reserva']),
+            'qtd_pessoas' => (int) $dados['qtd_pessoas'],
+            'status' => $dados['status'] ?? ReservaMesa::STATUS_PENDENTE,
+            'observacao' => isset($dados['observacao']) ? mb_substr(trim((string) $dados['observacao']), 0, 500) : null,
+            'local' => isset($dados['local']) ? mb_substr(trim((string) $dados['local']), 0, 100) : null,
+            'ocasiao' => isset($dados['ocasiao']) ? mb_substr(trim((string) $dados['ocasiao']), 0, 255) : null,
+            'forcar_duplicidade' => ! empty($dados['forcar_duplicidade']),
+            'configuracao_emergencial' => ! empty($dados['configuracao_emergencial']),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function previewMesaEmergencial(array $dados, bool $comReserva): array
+    {
+        $mesaDados = is_array($dados['mesa'] ?? null) ? $dados['mesa'] : $dados;
+        $reservaDados = is_array($dados['reserva'] ?? null) ? $dados['reserva'] : [];
+
+        $base = max(1, (int) ($mesaDados['capacidade_base'] ?? $mesaDados['capacidade'] ?? 1));
+        $extrasMax = max(0, (int) ($mesaDados['cadeiras_extras_max'] ?? 0));
+        $maxima = (int) ($mesaDados['capacidade_maxima'] ?? ($base + $extrasMax));
+        $numero = trim((string) ($mesaDados['numero_mesa'] ?? $mesaDados['nome'] ?? $mesaDados['nome_mesa'] ?? ''));
+        $unidadeId = (int) ($mesaDados['unidade_id'] ?? $reservaDados['unidade_id'] ?? 0);
+
+        if ($numero === '' || $unidadeId < 1) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Informe número/nome da mesa e unidade_id.'];
+        }
+        if (! AylaSettings::unidadePermitida($unidadeId)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+
+        $payload = [
+            'mesa' => [
+                'numero_mesa' => $numero,
+                'nome_mesa' => (string) ($mesaDados['nome'] ?? $mesaDados['nome_mesa'] ?? $numero),
+                'unidade_id' => $unidadeId,
+                'localizacao' => $mesaDados['localizacao'] ?? null,
+                'capacidade' => $base,
+                'capacidade_base' => $base,
+                'permite_cadeiras_extras' => ! empty($mesaDados['permite_cadeiras_extras']) || $extrasMax > 0,
+                'cadeiras_extras_max' => $extrasMax,
+                'capacidade_maxima' => $maxima,
+                'pode_juntar' => ! empty($mesaDados['pode_juntar']),
+                'pode_separar' => ! empty($mesaDados['pode_separar']),
+                'grupo_composicao' => $mesaDados['grupo_composicao'] ?? null,
+                'cadastro_emergencial' => true,
+                'cadastrado_pela_ayla' => true,
+                'motivo_cadastro' => (string) ($mesaDados['motivo_cadastro'] ?? 'Cadastro emergencial pela Ayla para atendimento ao cliente.'),
+            ],
+        ];
+
+        if ($comReserva) {
+            $payload['reserva'] = $this->normalizarDadosCriacao(array_merge($reservaDados, [
+                'unidade_id' => $unidadeId,
+            ]));
+        }
+
+        $texto = "Resumo do cadastro emergencial:\n\n"
+            ."Mesa: {$payload['mesa']['nome_mesa']}\n"
+            ."Unidade: {$unidadeId}\n"
+            .'Localização: '.($payload['mesa']['localizacao'] ?? '—')."\n"
+            ."Capacidade base: {$base}\n"
+            ."Cadeiras extras máximas: {$extrasMax}\n"
+            ."Capacidade máxima: {$maxima}\n"
+            .'Pode juntar: '.($payload['mesa']['pode_juntar'] ? 'Sim' : 'Não')."\n\n"
+            .'Deseja confirmar o cadastro'.($comReserva ? ' e usar essa mesa na reserva' : '').'?';
+
+        return [
+            'ok' => true,
+            'data' => [
+                'payload' => $payload,
+                'resumo' => $payload,
+                'resumo_texto' => $texto,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function previewAjusteCapacidade(array $dados): array
+    {
+        $mesaId = (int) ($dados['mesa_id'] ?? 0);
+        $novaMax = (int) ($dados['capacidade_maxima'] ?? $dados['capacidade_desejada'] ?? 0);
+        $mesa = Mesa::find($mesaId);
+        if (! $mesa) {
+            return ['ok' => false, 'code' => 'NOT_FOUND', 'message' => 'Mesa não encontrada.'];
+        }
+        if (! AylaSettings::unidadePermitida((int) $mesa->unidade_id)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+        if ($novaMax < $mesa->capacidadeBase()) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Capacidade máxima não pode ser menor que a base.'];
+        }
+
+        $extras = $novaMax - $mesa->capacidadeBase();
+        $texto = sprintf(
+            "A Mesa %s possui capacidade cadastrada para %d pessoas.\n\nPara atender, será necessário acrescentar %d cadeira(s).\nDeseja autorizar o ajuste da capacidade máxima dessa mesa para %d pessoas?",
+            $mesa->nome_mesa ?: $mesa->numero_mesa,
+            $mesa->capacidadeBase(),
+            $extras,
+            $novaMax
+        );
+
+        $payload = array_merge($dados, [
+            'mesa_id' => $mesaId,
+            'capacidade_anterior' => $mesa->capacidadeMaximaCalculada(),
+            'capacidade_base' => $mesa->capacidadeBase(),
+            'cadeiras_extras_max' => $extras,
+            'capacidade_maxima' => $novaMax,
+            'permite_cadeiras_extras' => true,
+        ]);
+
+        return [
+            'ok' => true,
+            'data' => [
+                'payload' => $payload,
+                'resumo' => $payload,
+                'resumo_texto' => $texto,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    private function previewAlertaOperacional(array $dados): array
+    {
+        $texto = 'Criar alerta/tarefa operacional: '.($dados['titulo'] ?? ('Preparar estrutura da reserva #'.($dados['reserva_id'] ?? '?')))
+            ."\n\nDeseja confirmar?";
+
+        return [
+            'ok' => true,
+            'data' => [
+                'payload' => $dados,
+                'resumo' => $dados,
+                'resumo_texto' => $texto,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function criarMesaEmergencial(array $dados, ?int $usuarioId = null): array
+    {
+        if (! Schema::hasTable('mesas')) {
+            return ['ok' => false, 'code' => 'UNAVAILABLE', 'message' => 'Tabela de mesas indisponível.'];
+        }
+
+        $base = max(1, (int) ($dados['capacidade_base'] ?? $dados['capacidade'] ?? 1));
+        $extras = max(0, (int) ($dados['cadeiras_extras_max'] ?? 0));
+        $maxima = (int) ($dados['capacidade_maxima'] ?? ($base + $extras));
+        $unidadeId = (int) ($dados['unidade_id'] ?? 0);
+        $numero = trim((string) ($dados['numero_mesa'] ?? $dados['nome'] ?? $dados['nome_mesa'] ?? ''));
+
+        if ($unidadeId < 1 || $numero === '') {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'unidade_id e número/nome da mesa são obrigatórios.'];
+        }
+        if (! AylaSettings::unidadePermitida($unidadeId)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+
+        $existe = Mesa::where('unidade_id', $unidadeId)->where('numero_mesa', $numero)->where('ativo', true)->exists();
+        if ($existe) {
+            return ['ok' => false, 'code' => 'VALIDATION_ERROR', 'message' => 'Já existe uma mesa com esse número nesta unidade.'];
+        }
+
+        $attrs = [
+            'unidade_id' => $unidadeId,
+            'numero_mesa' => $numero,
+            'nome_mesa' => (string) ($dados['nome_mesa'] ?? $dados['nome'] ?? $numero),
+            'capacidade' => $base,
+            'localizacao' => $dados['localizacao'] ?? null,
+            'pode_juntar' => ! empty($dados['pode_juntar']),
+            'pode_separar' => ! empty($dados['pode_separar']),
+            'status' => Mesa::STATUS_LIVRE,
+            'observacao' => $dados['observacao'] ?? null,
+            'ativo' => true,
+        ];
+
+        if (Schema::hasColumn('mesas', 'capacidade_base')) {
+            $attrs['capacidade_base'] = $base;
+            $attrs['permite_cadeiras_extras'] = ! empty($dados['permite_cadeiras_extras']) || $extras > 0;
+            $attrs['cadeiras_extras_max'] = $extras;
+            $attrs['capacidade_maxima'] = $maxima;
+            $attrs['grupo_composicao'] = $dados['grupo_composicao'] ?? null;
+            $attrs['cadastro_emergencial'] = true;
+            $attrs['cadastrado_pela_ayla'] = true;
+            $attrs['cadastrado_por_usuario_id'] = $usuarioId;
+            $attrs['motivo_cadastro'] = (string) ($dados['motivo_cadastro'] ?? 'Cadastro emergencial pela Ayla');
+        }
+
+        $mesa = Mesa::create($attrs);
+
+        return [
+            'ok' => true,
+            'data' => [
+                'mensagem' => 'A mesa foi cadastrada no sistema. Atenção: organize fisicamente a mesa e as cadeiras antes do horário do cliente.',
+                'mesa' => $mesa->toArray(),
+                'mesa_criada' => true,
+                'cadastro_emergencial' => true,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function criarMesaEmergencialEReservar(array $payload, ?int $usuarioId = null): array
+    {
+        $mesaPayload = is_array($payload['mesa'] ?? null) ? $payload['mesa'] : $payload;
+        $criada = $this->criarMesaEmergencial($mesaPayload, $usuarioId);
+        if (! ($criada['ok'] ?? false)) {
+            return $criada;
+        }
+
+        $mesaId = (int) ($criada['data']['mesa']['id'] ?? 0);
+        $reservaPayload = $this->normalizarDadosCriacao(is_array($payload['reserva'] ?? null) ? $payload['reserva'] : []);
+        $reservaPayload['mesa_id'] = $mesaId;
+        $reservaPayload['unidade_id'] = (int) ($mesaPayload['unidade_id'] ?? $reservaPayload['unidade_id'] ?? 0);
+        $reservaPayload['configuracao_emergencial'] = true;
+        $reservaPayload['forcar_duplicidade'] = true;
+
+        $qtd = (int) ($reservaPayload['qtd_pessoas'] ?? 0);
+        $base = (int) ($criada['data']['mesa']['capacidade_base'] ?? $criada['data']['mesa']['capacidade'] ?? 0);
+        $reservaPayload['mesas'] = [[
+            'mesa_id' => $mesaId,
+            'principal' => true,
+            'capacidade_utilizada' => $qtd,
+            'cadeiras_extras_utilizadas' => max(0, $qtd - $base),
+            'configuracao_emergencial' => true,
+        ]];
+
+        $reserva = $this->criarReserva($reservaPayload, $usuarioId);
+        if (! ($reserva['ok'] ?? false)) {
+            return $reserva;
+        }
+
+        return [
+            'ok' => true,
+            'data' => array_merge($reserva['data'] ?? [], [
+                'mesa' => $criada['data']['mesa'] ?? null,
+                'mensagem' => 'A mesa foi cadastrada no sistema e a reserva foi criada. Atenção: organize fisicamente a mesa e as cadeiras antes do horário do cliente.',
+            ]),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function ajustarCapacidadeMesa(array $dados, ?int $usuarioId = null): array
+    {
+        $mesaId = (int) ($dados['mesa_id'] ?? 0);
+        $mesa = Mesa::find($mesaId);
+        if (! $mesa) {
+            return ['ok' => false, 'code' => 'NOT_FOUND', 'message' => 'Mesa não encontrada.'];
+        }
+        if (! AylaSettings::unidadePermitida((int) $mesa->unidade_id)) {
+            return ['ok' => false, 'code' => 'UNIT_NOT_ALLOWED', 'message' => 'Unidade não autorizada.'];
+        }
+
+        $anterior = [
+            'capacidade' => (int) $mesa->capacidade,
+            'capacidade_base' => $mesa->capacidadeBase(),
+            'cadeiras_extras_max' => (int) ($mesa->cadeiras_extras_max ?? 0),
+            'capacidade_maxima' => $mesa->capacidadeMaximaCalculada(),
+        ];
+
+        $base = (int) ($dados['capacidade_base'] ?? $mesa->capacidadeBase());
+        $maxima = (int) ($dados['capacidade_maxima'] ?? 0);
+        $extras = (int) ($dados['cadeiras_extras_max'] ?? max(0, $maxima - $base));
+        if ($maxima < 1) {
+            $maxima = $base + $extras;
+        }
+
+        $update = [];
+        // Preserva capacidade física cadastrada (capacidade/capacidade_base).
+        if (Schema::hasColumn('mesas', 'capacidade_base')) {
+            $update['capacidade_base'] = $base;
+            $update['permite_cadeiras_extras'] = true;
+            $update['cadeiras_extras_max'] = $extras;
+            $update['capacidade_maxima'] = $maxima;
+        } else {
+            // Fallback legado: só então altera capacidade.
+            $update['capacidade'] = $maxima;
+        }
+
+        $mesa->update($update);
+
+        $alerta = null;
+        if (! empty($dados['criar_reserva_apos']) && is_array($dados['reserva'] ?? null)) {
+            $dados['reserva']['mesa_id'] = $mesaId;
+            $dados['reserva']['unidade_id'] = (int) $mesa->unidade_id;
+            $dados['reserva']['configuracao_emergencial'] = true;
+            $dados['reserva']['forcar_duplicidade'] = true;
+            $dados['reserva']['mesas'] = [[
+                'mesa_id' => $mesaId,
+                'principal' => true,
+                'capacidade_utilizada' => (int) ($dados['reserva']['qtd_pessoas'] ?? $dados['reserva']['quantidade_pessoas'] ?? $maxima),
+                'cadeiras_extras_utilizadas' => max(0, (int) ($dados['reserva']['qtd_pessoas'] ?? $maxima) - $base),
+                'configuracao_emergencial' => true,
+            ]];
+            $reserva = $this->criarReserva($this->normalizarDadosCriacao($dados['reserva']), $usuarioId);
+            if (! ($reserva['ok'] ?? false)) {
+                return $reserva;
+            }
+            $alerta = $reserva['data']['alerta_operacional'] ?? null;
+
+            return [
+                'ok' => true,
+                'data' => array_merge($reserva['data'] ?? [], [
+                    'capacidade_anterior' => $anterior,
+                    'capacidade_nova' => [
+                        'capacidade_base' => $base,
+                        'cadeiras_extras_max' => $extras,
+                        'capacidade_maxima' => $maxima,
+                    ],
+                    'alerta_operacional' => $alerta,
+                    'mensagem' => 'Capacidade ajustada e reserva criada. Organize fisicamente as cadeiras extras.',
+                ]),
+            ];
+        }
+
+        $alerta = $this->criarAlertaOperacional([
+            'unidade_id' => (int) $mesa->unidade_id,
+            'mesa_id' => $mesaId,
+            'titulo' => 'Ajustar cadeiras da Mesa '.($mesa->nome_mesa ?: $mesa->numero_mesa),
+            'quantidade_pessoas' => $maxima,
+            'observacoes' => 'Ajuste emergencial de capacidade pela Ayla.',
+        ], $usuarioId)['data'] ?? null;
+
+        return [
+            'ok' => true,
+            'data' => [
+                'mensagem' => 'Capacidade máxima atualizada. Capacidade física base preservada.',
+                'mesa' => $mesa->fresh()->toArray(),
+                'capacidade_anterior' => $anterior,
+                'capacidade_nova' => [
+                    'capacidade_base' => $base,
+                    'cadeiras_extras_max' => $extras,
+                    'capacidade_maxima' => $maxima,
+                ],
+                'alerta_operacional' => $alerta,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dados
+     * @return array{ok: bool, code?: string, message?: string, data?: array<string, mixed>}
+     */
+    public function criarAlertaOperacional(array $dados, ?int $usuarioId = null): array
+    {
+        $reservaId = (int) ($dados['reserva_id'] ?? 0);
+        $unidadeId = (int) ($dados['unidade_id'] ?? 0);
+        $titulo = (string) ($dados['titulo'] ?? ('Preparar estrutura da reserva #'.($reservaId ?: '?')));
+        $data = (string) ($dados['data'] ?? '');
+        $horario = (string) ($dados['horario'] ?? '');
+        $prazo = null;
+        if ($data !== '' && $horario !== '') {
+            try {
+                $prazo = Carbon::parse($data.' '.$horario)->subMinutes(30)->toDateString();
+            } catch (\Throwable $e) {
+                $prazo = $data;
+            }
+        }
+
+        $descricao = "Preparar estrutura física\n"
+            .'Unidade: '.$unidadeId."\n"
+            .'Data: '.$data."\n"
+            .'Horário: '.$horario."\n"
+            .'Cliente: '.($dados['cliente'] ?? '—')."\n"
+            .'Pessoas: '.($dados['quantidade_pessoas'] ?? '—')."\n"
+            .'Mesas: '.json_encode($dados['mesas'] ?? $dados['mesa_id'] ?? [], JSON_UNESCAPED_UNICODE)."\n"
+            .'Obs: '.($dados['observacoes'] ?? '');
+
+        $task = null;
+        if (Schema::hasTable('kanban_tasks')) {
+            try {
+                $task = \App\Models\KanbanTask::create([
+                    'titulo' => mb_substr($titulo, 0, 255),
+                    'descricao' => $descricao,
+                    'unidade_id' => $unidadeId > 0 ? $unidadeId : null,
+                    'setor' => 'Reservas',
+                    'responsavel' => $dados['responsavel'] ?? 'gerente',
+                    'prioridade' => 'alta',
+                    'status' => 'pendente',
+                    'prazo' => $prazo,
+                    'observacoes' => 'Gerado automaticamente pela Ayla. Não concluir automaticamente.',
+                ]);
+            } catch (\Throwable $e) {
+                $task = null;
+            }
+        }
+
+        // Sempre registra alerta na observação da reserva, se houver.
+        if ($reservaId > 0) {
+            $reserva = ReservaMesa::find($reservaId);
+            if ($reserva) {
+                $nota = '[ALERTA OPERACIONAL AYLA] '.$titulo.' — organize mesas/cadeiras 30 min antes.';
+                $obs = trim((string) ($reserva->observacao ?? ''));
+                $reserva->update(['observacao' => $obs !== '' ? $obs."\n".$nota : $nota]);
+            }
+        }
+
+        return [
+            'ok' => true,
+            'data' => [
+                'kanban_task_id' => $task?->id,
+                'titulo' => $titulo,
+                'prazo' => $prazo,
+                'descricao' => $descricao,
+                'registrado_na_reserva' => $reservaId > 0,
+            ],
         ];
     }
 }

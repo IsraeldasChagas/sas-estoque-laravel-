@@ -13,12 +13,22 @@ class AylaAcaoPendenteService
 {
     public const ACOES_RESERVAS = [
         'criar',
+        'criar_reserva',
         'atualizar',
+        'atualizar_reserva',
         'alterar_mesa',
         'confirmar',
+        'confirmar_reserva',
         'registrar_chegada',
         'finalizar',
+        'finalizar_reserva',
         'cancelar',
+        'cancelar_reserva',
+        'criar_mesa_emergencial',
+        'ajustar_capacidade_mesa',
+        'preparar_composicao_mesas',
+        'criar_mesa_emergencial_e_reservar',
+        'criar_alerta_operacional',
     ];
 
     public function __construct(private AylaReservasService $reservas) {}

@@ -147,7 +147,7 @@ final class SasIaToolRegistry
             ]),
             self::t('reservas_detalhar', 'Detalha uma reserva de mesa.', ['reserva_id' => ['type' => 'integer']], ['reserva_id']),
             self::t('reservas_por_unidade', 'Resumo e reservas do dia de uma unidade.', ['unidade_id' => ['type' => 'integer']], ['unidade_id']),
-            self::t('reservas_disponibilidade', 'Mesas disponíveis/ocupadas para unidade, data e horário (quantidade opcional).', [
+            self::t('reservas_disponibilidade', 'Mesas disponíveis/ocupadas; sugere extras, composição (até 4) ou cadastro emergencial quando necessário.', [
                 'unidade_id' => ['type' => 'integer'],
                 'data' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
                 'horario' => ['type' => 'string', 'description' => 'HH:MM'],
@@ -156,9 +156,9 @@ final class SasIaToolRegistry
             self::t('reservas_alertas', 'Alertas: próximas, sem confirmação, atrasadas, conflitos, acima da capacidade.', [
                 'unidade_id' => ['type' => 'integer'],
             ]),
-            self::t('reservas_preparar_acao', 'Prepara ação de escrita em reservas (criar/editar/status/mesa). NÃO executa. Retorna acao_id e resumo para o usuário confirmar.', [
-                'acao' => ['type' => 'string', 'description' => 'criar, atualizar, alterar_mesa, confirmar, registrar_chegada, finalizar, cancelar'],
-                'dados' => ['type' => 'object', 'description' => 'Payload da ação (unidade_id, data, horario, cliente, etc.)'],
+            self::t('reservas_preparar_acao', 'Prepara ação de escrita em reservas (criar/editar/status/mesa/emergencial/composição). NÃO executa. Retorna acao_id e resumo para o usuário confirmar.', [
+                'acao' => ['type' => 'string', 'description' => 'criar, atualizar, alterar_mesa, confirmar, registrar_chegada, finalizar, cancelar, criar_mesa_emergencial, ajustar_capacidade_mesa, preparar_composicao_mesas, criar_mesa_emergencial_e_reservar, criar_alerta_operacional'],
+                'dados' => ['type' => 'object', 'description' => 'Payload da ação (unidade_id, data, horario, cliente, mesas[], capacidade, etc.)'],
             ], ['acao', 'dados']),
             self::t('reservas_confirmar_acao', 'Confirma e executa uma ação pendente (somente após o usuário dizer sim/confirmar).', [
                 'acao_id' => ['type' => 'integer', 'description' => 'ID retornado por reservas_preparar_acao'],

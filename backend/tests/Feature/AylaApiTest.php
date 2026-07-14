@@ -573,6 +573,7 @@ class AylaApiTest extends TestCase
     private function criarSchemaEscritaMinimo(): void
     {
         \Illuminate\Support\Facades\Schema::dropIfExists('ayla_acoes_pendentes');
+        \Illuminate\Support\Facades\Schema::dropIfExists('reserva_mesas');
         \Illuminate\Support\Facades\Schema::dropIfExists('reservas_mesas');
         \Illuminate\Support\Facades\Schema::dropIfExists('mesas');
         \Illuminate\Support\Facades\Schema::dropIfExists('ayla_usuarios_autorizados');
@@ -599,12 +600,21 @@ class AylaApiTest extends TestCase
             $t->string('numero_mesa', 20);
             $t->string('nome_mesa')->nullable();
             $t->unsignedInteger('capacidade')->default(4);
+            $t->unsignedInteger('capacidade_base')->nullable();
+            $t->boolean('permite_cadeiras_extras')->default(0);
+            $t->unsignedInteger('cadeiras_extras_max')->default(0);
+            $t->unsignedInteger('capacidade_maxima')->nullable();
             $t->string('localizacao')->nullable();
             $t->boolean('pode_juntar')->default(0);
             $t->boolean('pode_separar')->default(0);
+            $t->string('grupo_composicao', 100)->nullable();
             $t->string('status', 30)->default('livre');
             $t->text('observacao')->nullable();
             $t->boolean('ativo')->default(1);
+            $t->boolean('cadastro_emergencial')->default(0);
+            $t->boolean('cadastrado_pela_ayla')->default(0);
+            $t->unsignedBigInteger('cadastrado_por_usuario_id')->nullable();
+            $t->string('motivo_cadastro')->nullable();
             $t->timestamps();
         });
         \Illuminate\Support\Facades\Schema::create('reservas_mesas', function ($t) {
@@ -622,6 +632,17 @@ class AylaApiTest extends TestCase
             $t->string('local', 100)->nullable();
             $t->string('ocasiao')->nullable();
             $t->timestamps();
+        });
+        \Illuminate\Support\Facades\Schema::create('reserva_mesas', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('reserva_id');
+            $t->unsignedBigInteger('mesa_id');
+            $t->unsignedInteger('capacidade_utilizada')->default(0);
+            $t->unsignedInteger('cadeiras_extras_utilizadas')->default(0);
+            $t->boolean('principal')->default(0);
+            $t->boolean('configuracao_emergencial')->default(0);
+            $t->timestamps();
+            $t->unique(['reserva_id', 'mesa_id']);
         });
         \Illuminate\Support\Facades\Schema::create('ayla_acoes_pendentes', function ($t) {
             $t->id();
@@ -668,12 +689,127 @@ class AylaApiTest extends TestCase
             ['id' => 2, 'nome' => 'Outro', 'perfil' => 'GERENTE', 'ativo' => 1, 'unidade_id' => 1, 'created_at' => now(), 'updated_at' => now()],
         ]);
         \DB::table('mesas')->insert([
-            ['id' => 1, 'unidade_id' => 1, 'numero_mesa' => '8', 'nome_mesa' => 'Mesa 8', 'capacidade' => 6, 'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now()],
-            ['id' => 2, 'unidade_id' => 1, 'numero_mesa' => '9', 'nome_mesa' => 'Mesa 9', 'capacidade' => 4, 'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now()],
+            [
+                'id' => 1, 'unidade_id' => 1, 'numero_mesa' => '8', 'nome_mesa' => 'Mesa 8',
+                'capacidade' => 6, 'capacidade_base' => 6, 'capacidade_maxima' => 8,
+                'permite_cadeiras_extras' => 1, 'cadeiras_extras_max' => 2,
+                'pode_juntar' => 1, 'grupo_composicao' => 'salão',
+                'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'id' => 2, 'unidade_id' => 1, 'numero_mesa' => '9', 'nome_mesa' => 'Mesa 9',
+                'capacidade' => 4, 'capacidade_base' => 4, 'capacidade_maxima' => 4,
+                'permite_cadeiras_extras' => 0, 'cadeiras_extras_max' => 0,
+                'pode_juntar' => 1, 'grupo_composicao' => 'salão',
+                'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'id' => 3, 'unidade_id' => 1, 'numero_mesa' => '10', 'nome_mesa' => 'Mesa 10',
+                'capacidade' => 4, 'capacidade_base' => 4, 'capacidade_maxima' => 4,
+                'permite_cadeiras_extras' => 0, 'cadeiras_extras_max' => 0,
+                'pode_juntar' => 1, 'grupo_composicao' => 'salão',
+                'status' => 'livre', 'ativo' => 1, 'created_at' => now(), 'updated_at' => now(),
+            ],
         ]);
         \DB::table('ayla_usuarios_autorizados')->insert([
             ['id' => 1, 'usuario_id' => 1, 'telegram_user_id' => '999001', 'pode_executar_acoes' => 1, 'status' => 'ativo', 'created_at' => now(), 'updated_at' => now()],
             ['id' => 2, 'usuario_id' => 2, 'telegram_user_id' => '999002', 'pode_executar_acoes' => 1, 'status' => 'ativo', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+    }
+
+    public function test_reservas_composicao_e_extras_com_confirmacao(): void
+    {
+        $this->ativar();
+        Config::set('ayla.read_only', false);
+        $this->criarSchemaEscritaMinimo();
+
+        $headers = [
+            'Authorization' => 'Bearer TOKEN_SECRETO_AYLA',
+            'X-Usuario-Id' => '1',
+            'X-Telegram-User-Id' => '999001',
+        ];
+        $amanha = now()->addDay()->toDateString();
+
+        // Extras: 7 pessoas na mesa 8 (base 6 + 2 extras).
+        $prepExtras = $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'mesa_id' => 1,
+                    'nome_cliente' => 'Grupo Extras',
+                    'data_reserva' => $amanha,
+                    'hora_reserva' => '19:00',
+                    'qtd_pessoas' => 7,
+                    'forcar_duplicidade' => true,
+                ],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $acaoExtras = (int) $prepExtras->json('data.acao_id');
+        $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/'.$acaoExtras.'/confirmar')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('reservas_mesas', ['nome_cliente' => 'Grupo Extras', 'qtd_pessoas' => 7]);
+        $this->assertDatabaseHas('reserva_mesas', ['mesa_id' => 1, 'cadeiras_extras_utilizadas' => 1, 'principal' => 1]);
+
+        // Composição explícita: mesas 2+3 para 8 pessoas.
+        $prepComp = $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'preparar_composicao_mesas',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'nome_cliente' => 'Grupo Composto',
+                    'data_reserva' => $amanha,
+                    'hora_reserva' => '21:00',
+                    'qtd_pessoas' => 8,
+                    'forcar_duplicidade' => true,
+                    'mesas' => [
+                        ['mesa_id' => 2, 'principal' => true, 'capacidade_utilizada' => 4],
+                        ['mesa_id' => 3, 'principal' => false, 'capacidade_utilizada' => 4],
+                    ],
+                ],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $acaoComp = (int) $prepComp->json('data.acao_id');
+        $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/'.$acaoComp.'/confirmar')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $reservaId = (int) \DB::table('reservas_mesas')->where('nome_cliente', 'Grupo Composto')->value('id');
+        $this->assertGreaterThan(0, $reservaId);
+        $this->assertSame(2, \DB::table('reserva_mesas')->where('reserva_id', $reservaId)->count());
+
+        // Mesa emergencial: sempre com confirmação.
+        $prepEm = $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/preparar', [
+                'acao' => 'criar_mesa_emergencial',
+                'dados' => [
+                    'unidade_id' => 1,
+                    'numero_mesa' => 'E1',
+                    'capacidade' => 10,
+                    'motivo_cadastro' => 'Cliente grande sem mesa',
+                ],
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $acaoEm = (int) $prepEm->json('data.acao_id');
+        $this->withHeaders($headers)
+            ->postJson('/api/ayla/v1/reservas/acoes/'.$acaoEm.'/confirmar')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('mesas', [
+            'numero_mesa' => 'E1',
+            'cadastro_emergencial' => 1,
+            'cadastrado_pela_ayla' => 1,
         ]);
     }
 }

@@ -1,0 +1,40 @@
+categoria,item,existe,parcial,nao_existe,fonte_codigo,observacao
+mesa,campos_basicos_numero_nome_unidade_capacidade_status,SIM,,,Mesa model + migration,
+mesa,localizacao_texto,SIM,,,mesas.localizacao,nao e XY
+mesa,pode_juntar_pode_separar_flags,SIM,,,migration 2026_03_12,nao usados na regra
+mesa,setor_cor_ordem_posicao_xy,, ,SIM,,
+mesa,cadeiras_individuais,,,SIM,,so capacidade
+mesa,CRUD_API,SIM,,,MesaController,
+mesa,CRUD_UI_completo,,SIM,,app.js prompt so numero+capacidade,
+reserva,campos_cliente_tel_data_hora_qtd_mesa_unidade_status_obs,SIM,,,reservas_mesas,
+reserva,local_ocasiao,SIM,,,migration 2026_03_17,
+reserva,duracao_hora_fim,,,SIM,,
+reserva,motivo_cancelamento_coluna,,,SIM,,Ayla pode anexar em observacao
+reserva,origem_canal_whatsapp_coluna,,,SIM,,
+reserva,CRUD_SAS,SIM,,,ReservaMesaController,
+fluxo,criar_editar_cancelar,SIM,,,controller,
+fluxo,confirmar_chegada_finalizar_noshow,SIM,,,PATCH status,
+fluxo,exclusao_fisica,,,SIM,destroy=cancelar,
+conflito,exato_mesa_data_hora,SIM,,,store/update,
+conflito,intervalo_duracao,,,SIM,,
+capacidade,validacao_qtd_vs_mesa,SIM,,,controller + Ayla,
+juntar,uma_reserva_N_mesas,,,SIM,,
+juntar,UI_mover_mesa,SIM,,,app.js PUT mesa_id,
+separar,UI_duas_reservas,,SIM,,app.js,
+mapa_salao,grade_cards,SIM,,,CSS mesa-card,
+mapa_salao,XY_drag_drop,,,SIM,,
+dashboard,resumo_dia_operacional,SIM,,,GET resumo + UI,
+agenda,diaria,SIM,,,filtro data,
+agenda,semanal_calendario,,,SIM,,
+historico,tela_e_endpoint,SIM,,,historicoReservas,
+relatorio,PDF_excel_dedicado,,,SIM,,
+auditoria,SAS_reservas,,,SIM,,
+auditoria,Ayla_logs,SIM,,,ayla_audit_logs,
+fila_espera,,, ,SIM,,
+qr_code_reservas,,, ,SIM,,
+whatsapp,link_wa_me,,SIM,,frontend app.js,sem API oficial
+permissoes,reservaMesa_historicoReservas,SIM,,,ReservaMesaAcesso,
+ayla,consulta_GET,SIM,,,ayla_routes + service,
+ayla,escrita_preparar_confirmar,SIM,,,AylaAcaoPendenteService,exige flags
+ayla,escrita_direta,,,SIM,,403 CONFIRMATION_REQUIRED,
+mcp,ferramentas_read_write,SIM,,,docs/mcp/reservas-*.mjs,

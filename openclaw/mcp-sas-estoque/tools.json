@@ -284,7 +284,7 @@
       "parameters": {
         "type": "object",
         "properties": {
-          "acao": { "type": "string", "description": "criar|atualizar|alterar_mesa|confirmar|registrar_chegada|finalizar|cancelar" },
+          "acao": { "type": "string", "description": "criar|atualizar|alterar_mesa|confirmar|registrar_chegada|finalizar|cancelar|criar_mesa_emergencial|ajustar_capacidade_mesa|preparar_composicao_mesas|criar_mesa_emergencial_e_reservar|criar_alerta_operacional" },
           "dados": { "type": "object" }
         },
         "required": ["acao", "dados"]

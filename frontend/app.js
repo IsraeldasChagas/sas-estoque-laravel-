@@ -18143,7 +18143,7 @@ async function loadReservasMesas() {
       return '<div class="mesa-card mesa-card--' + statusClass + '" data-mesa-id="' + m.id + '" data-reserva-id="' + (res ? res.id : '') + '">' +
         btnDeletar +
         '<div class="mesa-card__numero">' + (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + '</div>' +
-        '<div class="mesa-card__info">Capacidade: ' + m.capacidade + (m.localizacao ? ' • ' + m.localizacao : '') + '</div>' +
+        '<div class="mesa-card__info">' + formatCapacidadeMesaLabel(m) + (m.localizacao ? ' • ' + m.localizacao : '') + (m.cadastro_emergencial ? ' • emergencial' : '') + '</div>' +
         (cliente ? '<div class="mesa-card__cliente">' + cliente + (horario ? ' • ' + horario : '') + (qtd ? ' (' + qtd + ' p.)' : '') + '</div>' : '') +
         '</div>';
     }).join('') || '<p class="reservas-empty">Nenhuma mesa cadastrada.</p>';
@@ -18228,11 +18228,32 @@ async function popularMesasReserva(unidadeId) {
   (mesas || []).filter(function(m) { return m.ativo !== false; }).forEach(function(m) {
     var opt = document.createElement('option');
     opt.value = m.id;
-    opt.textContent = (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + ' (cap. ' + m.capacidade + ')';
+    var max = capacidadeMaximaMesa(m);
+    opt.textContent = (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + ' (cap. ' + max + ')';
     if (m.unidade_id) opt.setAttribute('data-unidade-id', String(m.unidade_id));
-    opt.setAttribute('data-capacidade', String(parseInt(m.capacidade, 10) || 1));
+    opt.setAttribute('data-capacidade', String(max));
     select.appendChild(opt);
   });
+}
+
+function capacidadeMaximaMesa(m) {
+  if (!m) return 1;
+  var max = parseInt(m.capacidade_maxima, 10);
+  if (Number.isFinite(max) && max > 0) return max;
+  var base = parseInt(m.capacidade_base != null ? m.capacidade_base : m.capacidade, 10) || 1;
+  var extras = (m.permite_cadeiras_extras || (parseInt(m.cadeiras_extras_max, 10) > 0))
+    ? (parseInt(m.cadeiras_extras_max, 10) || 0) : 0;
+  return Math.max(base, base + extras);
+}
+
+function formatCapacidadeMesaLabel(m) {
+  var base = parseInt(m.capacidade_base != null ? m.capacidade_base : m.capacidade, 10) || 0;
+  var max = capacidadeMaximaMesa(m);
+  var extras = parseInt(m.cadeiras_extras_max, 10) || 0;
+  if (extras > 0 || max > base) {
+    return 'Capacidade: ' + base + '–' + max + (extras ? ' (+' + extras + ' extras)' : '');
+  }
+  return 'Capacidade: ' + (base || max || '-');
 }
 
 /** Ajusta max/clamp de qtd_pessoas conforme a mesa escolhida (o backend rejeita se passar da capacidade). */
@@ -18268,7 +18289,7 @@ async function abrirMesaLivre(mesaId, mesas, unidadeId) {
   await popularMesasReserva(unidadeId);
   var sel = document.getElementById('reservaMesaSelect');
   if (sel && mesaId) sel.value = String(mesaId);
-  var cap = parseInt(m.capacidade, 10) || 4;
+  var cap = capacidadeMaximaMesa(m);
   var qtdIn = form.querySelector('[name="qtd_pessoas"]');
   if (qtdIn) qtdIn.value = String(cap);
   aplicarLimiteCapacidadeReservaForm(form);
@@ -18283,8 +18304,22 @@ async function abrirDetalhesReserva(id) {
   try {
     var r = await fetchJSON('/reservas-mesas/' + id);
     var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || 'Mesa ' + r.mesa_id;
-    var cap = (r.mesa && r.mesa.capacidade) || 99;
+    var cap = capacidadeMaximaMesa(r.mesa);
     var qtd = r.qtd_pessoas || 1;
+    var vinculos = r.mesas_vinculadas || [];
+    var vinculosHtml = '';
+    if (vinculos.length > 1 || (vinculos.length === 1 && (vinculos[0].cadeiras_extras_utilizadas > 0 || vinculos[0].configuracao_emergencial))) {
+      vinculosHtml = '<div style="margin-top:0.5rem;"><strong>Mesas vinculadas:</strong><ul style="margin:0.35rem 0 0 1.1rem;padding:0;">' +
+        vinculos.map(function(v) {
+          var nome = v.nome_mesa || ('Mesa ' + (v.numero_mesa || v.mesa_id));
+          var extras = v.cadeiras_extras_utilizadas ? (' • +' + v.cadeiras_extras_utilizadas + ' cadeiras') : '';
+          var prin = v.principal ? ' (principal)' : '';
+          return '<li>' + escapeHtml(nome) + prin + extras + '</li>';
+        }).join('') + '</ul></div>';
+    }
+    var alertaPrep = r.alerta_preparo_fisico
+      ? '<p style="color:#b45309;margin:0.5rem 0 0;"><strong>Alerta operacional:</strong> preparação física necessária (composição/extras/emergencial).</p>'
+      : '';
     var podeEditar = ['cancelada', 'no_show', 'finalizada'].indexOf(r.status || '') === -1;
     var acoes = '';
     if (podeEditar) {
@@ -18326,6 +18361,8 @@ async function abrirDetalhesReserva(id) {
 
     content.innerHTML = '<div style="display:grid; gap:0.75rem;">' +
       '<p><strong>Mesa:</strong> ' + escapeHtml(mesaNome) + '</p>' +
+      vinculosHtml +
+      alertaPrep +
       '<p><strong>Cliente:</strong> ' + escapeHtml(r.nome_cliente) + '</p>' +
       '<p><strong>Telefone:</strong> ' + escapeHtml(r.telefone_cliente || '-') + '</p>' +
       '<p><strong>Data:</strong> ' + formatDataBrasil(r.data_reserva) + ' | <strong>Horário:</strong> ' + formatHora(r.hora_reserva) + '</p>' +
@@ -18346,7 +18383,7 @@ async function abrirDetalhesReserva(id) {
       btn.addEventListener('click', async function() {
         var action = btn.getAttribute('data-action');
         var resid = btn.getAttribute('data-id');
-        var data = { id: r.id, qtd_pessoas: r.qtd_pessoas || 1, capacidade: (r.mesa && r.mesa.capacidade) || 99, mesa_id: r.mesa_id, unidade_id: r.unidade_id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: r.data_reserva, hora_reserva: r.hora_reserva, status: r.status, observacao: r.observacao };
+        var data = { id: r.id, qtd_pessoas: r.qtd_pessoas || 1, capacidade: capacidadeMaximaMesa(r.mesa), mesa_id: r.mesa_id, unidade_id: r.unidade_id, nome_cliente: r.nome_cliente, telefone_cliente: r.telefone_cliente, data_reserva: r.data_reserva, hora_reserva: r.hora_reserva, status: r.status, observacao: r.observacao };
         if (action === 'mais-pessoa') acaoMaisPessoa(resid, data);
         else if (action === 'menos-pessoa') acaoMenosPessoa(resid, data);
         else if (action === 'juntar-mesa') acaoJuntarMesa(resid, data);
@@ -18403,7 +18440,7 @@ async function acaoJuntarMesa(reservId, data) {
   }).map(function(r) { return r.mesa_id || (r.mesa && r.mesa.id); });
   var qtd = data.qtd_pessoas || 1;
   var opcoes = (mesas || []).filter(function(m) {
-    return m.ativo !== false && m.id != data.mesa_id && m.capacidade >= qtd && mesasOcupadasNesseHorario.indexOf(m.id) === -1;
+    return m.ativo !== false && m.id != data.mesa_id && capacidadeMaximaMesa(m) >= qtd && mesasOcupadasNesseHorario.indexOf(m.id) === -1;
   });
   if (!opcoes.length) { showToast('Nenhuma outra mesa disponível com capacidade suficiente no mesmo horário.', 'warning'); return; }
   var mesaNova = await openMesaPicker(opcoes, {
@@ -18456,8 +18493,8 @@ async function acaoSepararMesa(reservId, data) {
     var hr = formatHora(rr.hora_reserva) || (rr.hora_reserva || '').toString().slice(0, 5);
     return hr === horaReserva;
   }).map(function(rr) { return rr.mesa_id || (rr.mesa && rr.mesa.id); });
-  var opcoes = (mesas || []).filter(function(m) { return m.ativo !== false && m.id != data.mesa_id && m.capacidade >= qtdNova && mesasOcupadasHorario.indexOf(m.id) === -1; });
-  if (!opcoes.length) { opcoes = (mesas || []).filter(function(m) { return m.ativo !== false && m.id != data.mesa_id && m.capacidade >= qtdNova; }); }
+  var opcoes = (mesas || []).filter(function(m) { return m.ativo !== false && m.id != data.mesa_id && capacidadeMaximaMesa(m) >= qtdNova && mesasOcupadasHorario.indexOf(m.id) === -1; });
+  if (!opcoes.length) { opcoes = (mesas || []).filter(function(m) { return m.ativo !== false && m.id != data.mesa_id && capacidadeMaximaMesa(m) >= qtdNova; }); }
   if (!opcoes.length) { showToast('Nenhuma mesa disponível.', 'warning'); return; }
   var mesaNova = await openMesaPicker(opcoes, {
     title: 'Separar mesa',
@@ -18551,7 +18588,7 @@ function openMesaPicker(mesas, opts) {
 
     function mesaLabel(m) {
       var nome = (m && (m.nome_mesa || m.numero_mesa)) ? String(m.nome_mesa || m.numero_mesa) : ('Mesa ' + (m && m.id ? m.id : ''));
-      var cap = m && m.capacidade != null ? String(m.capacidade) : '-';
+      var cap = String(capacidadeMaximaMesa(m));
       return nome + ' (cap. ' + cap + ')';
     }
 
@@ -18767,16 +18804,23 @@ function setupReservasMesasModule() {
     var numero = prompt('Número da mesa:', '1');
     if (!numero || !numero.trim()) return;
     numero = numero.trim();
-    var capStr = prompt('Quantidade de pessoas (capacidade):', '4');
+    var capStr = prompt('Capacidade base (pessoas):', '4');
     var capacidade = 4;
     if (capStr && !isNaN(parseInt(capStr, 10))) capacidade = Math.max(1, parseInt(capStr, 10));
+    var extrasStr = prompt('Cadeiras extras máximas (0 se não permitir):', '0');
+    var extras = 0;
+    if (extrasStr && !isNaN(parseInt(extrasStr, 10))) extras = Math.max(0, parseInt(extrasStr, 10));
     try {
       var resp = await fetchJSON('/mesas', {
         method: 'POST',
         body: JSON.stringify({
           unidade_id: unidadeId,
           numero_mesa: numero,
-          capacidade: capacidade
+          capacidade: capacidade,
+          capacidade_base: capacidade,
+          permite_cadeiras_extras: extras > 0,
+          cadeiras_extras_max: extras,
+          capacidade_maxima: capacidade + extras
         })
       });
       var mesaNova = resp.mesa || resp;

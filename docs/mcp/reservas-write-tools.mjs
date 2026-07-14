@@ -51,12 +51,12 @@ export function reservasWriteTools(cfg) {
           acao: {
             type: "string",
             description:
-              "criar | atualizar | alterar_mesa | confirmar | registrar_chegada | finalizar | cancelar",
+              "criar | atualizar | alterar_mesa | confirmar | registrar_chegada | finalizar | cancelar | criar_mesa_emergencial | ajustar_capacidade_mesa | preparar_composicao_mesas | criar_mesa_emergencial_e_reservar | criar_alerta_operacional",
           },
           dados: {
             type: "object",
             description:
-              "Campos da ação. criar: unidade_id, data/data_reserva, horario/hora_reserva, quantidade_pessoas/qtd_pessoas, nome_cliente/cliente, telefone opcional, mesa_id opcional. Status: reserva_id. atualizar: reserva_id + campos.",
+              "Campos da ação. criar: unidade_id, data, horario, qtd_pessoas, nome_cliente, mesa_id ou mesas[]. Emergentcial: numero_mesa, capacidade, motivo. Composição: mesas[{mesa_id,principal,capacidade_utilizada}].",
           },
           usuario_id: { type: "integer", description: "ID do usuário SAS (enviado no header)" },
           telegram_user_id: { type: "string", description: "Telegram ID do solicitante" },

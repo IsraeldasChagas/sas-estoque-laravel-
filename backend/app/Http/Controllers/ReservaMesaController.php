@@ -7,6 +7,7 @@ use App\Models\ReservaMesa;
 use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -223,9 +224,10 @@ class ReservaMesaController extends Controller
         if ($mesa->status === Mesa::STATUS_BLOQUEADA) {
             return response()->json(['message' => 'Mesa está bloqueada para reservas.'], 422);
         }
-        if ($request->qtd_pessoas > $mesa->capacidade) {
+        $capMax = $mesa->capacidadeMaximaCalculada();
+        if ($request->qtd_pessoas > $capMax) {
             return response()->json([
-                'message' => "A mesa suporta no máximo {$mesa->capacidade} pessoas.",
+                'message' => "A mesa suporta no máximo {$capMax} pessoas.",
                 'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
             ], 422);
         }
@@ -253,14 +255,16 @@ class ReservaMesaController extends Controller
         $reserva = ReservaMesa::create($data);
 
         $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
+        $this->sincronizarVinculoPrincipal($reserva);
 
-        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone']);
+        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone']);
+        $this->anexarMesasCompostas($reserva);
         return response()->json(['message' => 'Reserva criada com sucesso', 'reserva' => $reserva], 201);
     }
 
     public function show($id)
     {
-        $reserva = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,localizacao,unidade_id', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone'])
+        $reserva = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,localizacao,unidade_id', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone'])
             ->findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
@@ -268,6 +272,7 @@ class ReservaMesaController extends Controller
         if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
             return response()->json(['message' => 'Sem permissão para acessar esta reserva.'], 403);
         }
+        $this->anexarMesasCompostas($reserva);
         return response()->json($reserva);
     }
 
@@ -314,9 +319,10 @@ class ReservaMesaController extends Controller
 
         if ($mesaId != $reserva->mesa_id || $dataReserva != $reserva->data_reserva->format('Y-m-d') || $horaReserva != $reserva->hora_reserva) {
             $mesa = Mesa::findOrFail($mesaId);
-            if ($request->has('qtd_pessoas') && $request->qtd_pessoas > $mesa->capacidade) {
+            $capMax = $mesa->capacidadeMaximaCalculada();
+            if ($request->has('qtd_pessoas') && $request->qtd_pessoas > $capMax) {
                 return response()->json([
-                    'message' => "A mesa suporta no máximo {$mesa->capacidade} pessoas.",
+                    'message' => "A mesa suporta no máximo {$capMax} pessoas.",
                     'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
                 ], 422);
             }
@@ -348,9 +354,10 @@ class ReservaMesaController extends Controller
             $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
         } elseif ($request->has('qtd_pessoas')) {
             $mesa = Mesa::find($mesaId);
-            if ($request->qtd_pessoas > $mesa->capacidade) {
+            $capMax = $mesa ? $mesa->capacidadeMaximaCalculada() : 0;
+            if ($mesa && $request->qtd_pessoas > $capMax) {
                 return response()->json([
-                    'message' => "A mesa suporta no máximo {$mesa->capacidade} pessoas.",
+                    'message' => "A mesa suporta no máximo {$capMax} pessoas.",
                     'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
                 ], 422);
             }
@@ -361,7 +368,9 @@ class ReservaMesaController extends Controller
             'hora_reserva', 'qtd_pessoas', 'status', 'observacao', 'local', 'ocasiao'
         ]));
 
-        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade', 'usuario:id,nome']);
+        $this->sincronizarVinculoPrincipal($reserva->fresh());
+        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima', 'usuario:id,nome']);
+        $this->anexarMesasCompostas($reserva);
         return response()->json(['message' => 'Reserva atualizada', 'reserva' => $reserva]);
     }
 
@@ -499,5 +508,82 @@ class ReservaMesaController extends Controller
         });
 
         return response()->json($result->values()->all());
+    }
+
+    /** Mantém pivô alinhado à mesa principal (compatibilidade com composição Ayla). */
+    private function sincronizarVinculoPrincipal(ReservaMesa $reserva): void
+    {
+        if (! Schema::hasTable('reserva_mesas') || ! $reserva->id || ! $reserva->mesa_id) {
+            return;
+        }
+
+        $now = now();
+        $exists = DB::table('reserva_mesas')
+            ->where('reserva_id', $reserva->id)
+            ->where('principal', true)
+            ->exists();
+
+        if ($exists) {
+            DB::table('reserva_mesas')
+                ->where('reserva_id', $reserva->id)
+                ->where('principal', true)
+                ->update([
+                    'mesa_id' => (int) $reserva->mesa_id,
+                    'capacidade_utilizada' => (int) $reserva->qtd_pessoas,
+                    'updated_at' => $now,
+                ]);
+
+            return;
+        }
+
+        DB::table('reserva_mesas')->updateOrInsert(
+            ['reserva_id' => (int) $reserva->id, 'mesa_id' => (int) $reserva->mesa_id],
+            [
+                'capacidade_utilizada' => (int) $reserva->qtd_pessoas,
+                'cadeiras_extras_utilizadas' => 0,
+                'principal' => true,
+                'configuracao_emergencial' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]
+        );
+    }
+
+    private function anexarMesasCompostas(ReservaMesa $reserva): void
+    {
+        if (! Schema::hasTable('reserva_mesas')) {
+            $reserva->setAttribute('mesas_vinculadas', []);
+            $reserva->setAttribute('alerta_preparo_fisico', false);
+
+            return;
+        }
+
+        $vinculos = DB::table('reserva_mesas as rm')
+            ->leftJoin('mesas as m', 'm.id', '=', 'rm.mesa_id')
+            ->where('rm.reserva_id', $reserva->id)
+            ->orderByDesc('rm.principal')
+            ->get([
+                'rm.mesa_id', 'rm.capacidade_utilizada', 'rm.cadeiras_extras_utilizadas',
+                'rm.principal', 'rm.configuracao_emergencial',
+                'm.numero_mesa', 'm.nome_mesa', 'm.capacidade', 'm.capacidade_base', 'm.capacidade_maxima',
+            ])
+            ->map(fn ($r) => [
+                'mesa_id' => (int) $r->mesa_id,
+                'numero_mesa' => $r->numero_mesa,
+                'nome_mesa' => $r->nome_mesa,
+                'capacidade_utilizada' => (int) $r->capacidade_utilizada,
+                'cadeiras_extras_utilizadas' => (int) $r->cadeiras_extras_utilizadas,
+                'principal' => (bool) $r->principal,
+                'configuracao_emergencial' => (bool) $r->configuracao_emergencial,
+                'capacidade_base' => (int) ($r->capacidade_base ?? $r->capacidade ?? 0),
+                'capacidade_maxima' => (int) ($r->capacidade_maxima ?? $r->capacidade ?? 0),
+            ])->values()->all();
+
+        $reserva->setAttribute('mesas_vinculadas', $vinculos);
+        $composicao = count($vinculos) > 1;
+        $extras = collect($vinculos)->sum('cadeiras_extras_utilizadas') > 0;
+        $emerg = collect($vinculos)->contains(fn ($v) => ! empty($v['configuracao_emergencial']));
+        $reserva->setAttribute('alerta_preparo_fisico', $composicao || $extras || $emerg);
+        $reserva->setAttribute('composicao', $composicao);
     }
 }

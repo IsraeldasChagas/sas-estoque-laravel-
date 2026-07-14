@@ -7,6 +7,7 @@ use App\Models\ReservaMesa;
 use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class MesaController extends Controller
@@ -75,11 +76,18 @@ class MesaController extends Controller
             'numero_mesa' => 'required|string|max:50',
             'nome_mesa' => 'nullable|string|max:255',
             'capacidade' => 'required|integer|min:1|max:99',
+            'capacidade_base' => 'nullable|integer|min:1|max:99',
+            'permite_cadeiras_extras' => 'nullable|boolean',
+            'cadeiras_extras_max' => 'nullable|integer|min:0|max:50',
+            'capacidade_maxima' => 'nullable|integer|min:1|max:149',
             'localizacao' => 'nullable|string|max:100',
             'pode_juntar' => 'nullable|boolean',
             'pode_separar' => 'nullable|boolean',
+            'grupo_composicao' => 'nullable|string|max:100',
             'status' => 'nullable|in:livre,reservada,aguardando_cliente,ocupada,bloqueada',
             'observacao' => 'nullable|string|max:500',
+            'cadastro_emergencial' => 'nullable|boolean',
+            'motivo_cadastro' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -98,10 +106,32 @@ class MesaController extends Controller
             ], 422);
         }
 
-        $mesa = Mesa::create($request->only([
+        $base = (int) ($request->input('capacidade_base', $request->capacidade));
+        $extras = (int) ($request->input('cadeiras_extras_max', 0));
+        $maxima = (int) ($request->input('capacidade_maxima', $base + $extras));
+        if ($base < 1) {
+            return response()->json(['message' => 'Capacidade base deve ser >= 1.'], 422);
+        }
+        if ($extras < 0 || $maxima < $base) {
+            return response()->json(['message' => 'Capacidade máxima inválida.'], 422);
+        }
+
+        $attrs = $request->only([
             'unidade_id', 'numero_mesa', 'nome_mesa', 'capacidade',
             'localizacao', 'pode_juntar', 'pode_separar', 'status', 'observacao'
-        ]));
+        ]);
+        $attrs['capacidade'] = $base;
+        if (Schema::hasColumn('mesas', 'capacidade_base')) {
+            $attrs['capacidade_base'] = $base;
+            $attrs['permite_cadeiras_extras'] = $request->boolean('permite_cadeiras_extras') || $extras > 0;
+            $attrs['cadeiras_extras_max'] = $extras;
+            $attrs['capacidade_maxima'] = $maxima;
+            $attrs['grupo_composicao'] = $request->input('grupo_composicao');
+            $attrs['cadastro_emergencial'] = $request->boolean('cadastro_emergencial');
+            $attrs['motivo_cadastro'] = $request->input('motivo_cadastro');
+        }
+
+        $mesa = Mesa::create($attrs);
 
         return response()->json(['message' => 'Mesa criada com sucesso', 'mesa' => $mesa], 201);
     }
@@ -132,12 +162,19 @@ class MesaController extends Controller
             'numero_mesa' => 'sometimes|required|string|max:50',
             'nome_mesa' => 'nullable|string|max:255',
             'capacidade' => 'sometimes|required|integer|min:1|max:99',
+            'capacidade_base' => 'nullable|integer|min:1|max:99',
+            'permite_cadeiras_extras' => 'nullable|boolean',
+            'cadeiras_extras_max' => 'nullable|integer|min:0|max:50',
+            'capacidade_maxima' => 'nullable|integer|min:1|max:149',
             'localizacao' => 'nullable|string|max:100',
             'pode_juntar' => 'nullable|boolean',
             'pode_separar' => 'nullable|boolean',
+            'grupo_composicao' => 'nullable|string|max:100',
             'status' => 'nullable|in:livre,reservada,aguardando_cliente,ocupada,bloqueada',
             'observacao' => 'nullable|string|max:500',
             'ativo' => 'nullable|boolean',
+            'cadastro_emergencial' => 'nullable|boolean',
+            'motivo_cadastro' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -157,12 +194,37 @@ class MesaController extends Controller
             }
         }
 
-        $mesa->update($request->only([
+        $attrs = $request->only([
             'numero_mesa', 'nome_mesa', 'capacidade', 'localizacao',
             'pode_juntar', 'pode_separar', 'status', 'observacao', 'ativo'
-        ]));
+        ]);
 
-        return response()->json(['message' => 'Mesa atualizada', 'mesa' => $mesa]);
+        if (Schema::hasColumn('mesas', 'capacidade_base')) {
+            if ($request->filled('capacidade_base') || $request->filled('capacidade')) {
+                $base = (int) $request->input('capacidade_base', $request->input('capacidade', $mesa->capacidadeBase()));
+                $attrs['capacidade'] = $base;
+                $attrs['capacidade_base'] = $base;
+            }
+            if ($request->has('permite_cadeiras_extras') || $request->has('cadeiras_extras_max') || $request->has('capacidade_maxima')) {
+                $base = (int) ($attrs['capacidade_base'] ?? $mesa->capacidadeBase());
+                $extras = (int) $request->input('cadeiras_extras_max', $mesa->cadeiras_extras_max ?? 0);
+                $maxima = (int) $request->input('capacidade_maxima', $base + $extras);
+                $attrs['permite_cadeiras_extras'] = $request->has('permite_cadeiras_extras')
+                    ? $request->boolean('permite_cadeiras_extras')
+                    : ($extras > 0);
+                $attrs['cadeiras_extras_max'] = $extras;
+                $attrs['capacidade_maxima'] = max($base, $maxima);
+            }
+            foreach (['grupo_composicao', 'cadastro_emergencial', 'motivo_cadastro'] as $campo) {
+                if ($request->exists($campo)) {
+                    $attrs[$campo] = $request->input($campo);
+                }
+            }
+        }
+
+        $mesa->update($attrs);
+
+        return response()->json(['message' => 'Mesa atualizada', 'mesa' => $mesa->fresh()]);
     }
 
     public function destroy($id)

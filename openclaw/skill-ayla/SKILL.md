@@ -145,7 +145,9 @@ GET {AYLA_API_URL}/api/ayla/v1/reservas/{id}
 9. Nunca inventar IDs de unidade ou mesa — consulte antes.
 10. Ao concluir, informe código da reserva, unidade, mesa, data, horário, pessoas e status.
 
-Ações de `reservas_preparar_acao`: `criar`, `atualizar`, `alterar_mesa`, `confirmar`, `registrar_chegada`, `finalizar`, `cancelar`.
+Ações de `reservas_preparar_acao`: `criar`, `atualizar`, `alterar_mesa`, `confirmar`, `registrar_chegada`, `finalizar`, `cancelar`, `criar_mesa_emergencial`, `ajustar_capacidade_mesa`, `preparar_composicao_mesas`, `criar_mesa_emergencial_e_reservar`, `criar_alerta_operacional`.
+
+Capacidade flexível: use `reservas_disponibilidade` — o retorno pode sugerir mesa exata, extras, composição (até 4 mesas do mesmo grupo) ou cadastro emergencial. Nunca cadastre mesa emergencial sem confirmação.
 
 Se retornar `requer_confirmacao_duplicidade`, avise o usuário e só prepare de novo com `forcar_duplicidade: true` após novo “sim”.
 
