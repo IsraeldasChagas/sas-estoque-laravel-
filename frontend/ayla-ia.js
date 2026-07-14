@@ -579,7 +579,9 @@
                 <span class="ayla-hint">${c.token_origem === "env" ? "Definido no .env (prioritário)" : "Definido pelo painel"}</span>
               </div>
               <p class="ayla-hint">O token nunca é exibido por completo. Gere um novo apenas se necessário.</p>
-              <button class="btn secondary" id="aylaCfgGerarToken">Gerar novo token</button>
+              <div class="ayla-token-actions">
+                <button type="button" class="btn secondary" id="aylaCfgGerarToken">Gerar novo token</button>
+              </div>
             </div>
             <div id="aylaCfgTokenNovo"></div>
           </div>

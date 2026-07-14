@@ -331,6 +331,21 @@
   margin-top: 1.75rem;
   padding-top: 1.35rem;
 }
+/* Botões de ação (vermelho/azul) no mesmo tamanho */
+#aylaConfiguracoesSection .ayla-token-actions .btn,
+#aylaConfiguracoesSection .ayla-form-body .oc-form-actions .btn,
+#aylaConfiguracoesSection .ayla-form-body .ayla-filtros-actions .btn {
+  min-height: 2.75rem;
+  min-width: 11.5rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  justify-content: center;
+  box-sizing: border-box;
+}
+#aylaConfiguracoesSection .ayla-token-actions {
+  margin-top: 1rem;
+}
 #aylaConfiguracoesSection .oc-toggle {
   border: 1.5px solid #c5cdd6;
   background: rgba(0, 71, 171, 0.04);
