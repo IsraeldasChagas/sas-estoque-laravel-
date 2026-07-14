@@ -63,6 +63,102 @@
         "envelope": ["success", "message", "data", "meta"],
         "data_fields": ["tarefas", "total", "retornadas", "filtros_aplicados", "resumo"]
       }
+    },
+    {
+      "name": "patrimonio_consultar",
+      "description": "Consulta bens patrimoniais (somente leitura). Use para perguntas sobre bens, equipamentos, veículos, computadores, geladeiras, máquinas, móveis, número patrimonial ou localização.",
+      "method": "GET",
+      "path": "/patrimonio",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "busca": { "type": "string", "description": "Nome, código, série, marca, modelo, fornecedor" },
+          "patrimonio_id": { "type": "integer", "description": "ID do bem" },
+          "unidade_id": { "type": "integer", "description": "ID da unidade" },
+          "unidade": { "type": "string", "description": "Nome da unidade (ex.: Doce Norte)" },
+          "categoria": { "type": "string", "description": "Nome ou ID da categoria (ex.: Informática, Veículos)" },
+          "status": { "type": "string", "description": "ativo, manutencao, baixado, vendido, quebrado" },
+          "responsavel": { "type": "string", "description": "Nome do responsável (parcial)" },
+          "setor": { "type": "string", "description": "Nome ou ID do setor" },
+          "data_inicio": { "type": "string", "description": "Aquisição inicial YYYY-MM-DD" },
+          "data_fim": { "type": "string", "description": "Aquisição final YYYY-MM-DD" },
+          "valor_minimo": { "type": "number", "description": "Valor de compra mínimo" },
+          "valor_maximo": { "type": "number", "description": "Valor de compra máximo" },
+          "limite": { "type": "integer", "description": "Máximo de bens (1-50)" }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["bens", "total", "retornados", "filtros_aplicados"]
+      }
+    },
+    {
+      "name": "patrimonio_resumo",
+      "description": "Resumo patrimonial: totais, valor total, por unidade, por categoria, aquisições recentes, mais antigos, maior valor e alertas. Use para 'resumo do patrimônio' ou 'valor total do patrimônio'.",
+      "method": "GET",
+      "path": "/patrimonio/resumo",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "unidade_id": { "type": "integer", "description": "Unidade (opcional)" },
+          "categoria": { "type": "string", "description": "Categoria (opcional)" }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["total_bens", "total_ativo", "total_manutencao", "valor_total_aquisicao", "valor_total_atual", "por_unidade", "por_categoria", "alertas"]
+      }
+    },
+    {
+      "name": "patrimonio_detalhar",
+      "description": "Detalha um bem patrimonial (inclui manutenções e movimentações).",
+      "method": "GET",
+      "path": "/patrimonio/{id}",
+      "path_params": ["id"],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "ID do bem" }
+        },
+        "required": ["id"]
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"]
+      }
+    },
+    {
+      "name": "patrimonio_por_unidade",
+      "description": "Resumo e lista de bens de uma unidade.",
+      "method": "GET",
+      "path": "/patrimonio/unidade/{id}",
+      "path_params": ["id"],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "ID da unidade" }
+        },
+        "required": ["id"]
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["unidade", "resumo", "bens"]
+      }
+    },
+    {
+      "name": "patrimonio_alertas",
+      "description": "Alertas patrimoniais: garantia próxima/vencida, manutenção próxima/atrasada, bens sem responsável, sem unidade, sem número patrimonial ou em situação irregular.",
+      "method": "GET",
+      "path": "/patrimonio/alertas",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "unidade_id": { "type": "integer", "description": "Unidade (opcional)" }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["garantia_proxima", "garantia_vencida", "manutencao_proxima", "manutencao_atrasada", "bens_sem_responsavel", "bens_sem_unidade", "bens_sem_codigo", "bens_situacao_irregular"]
+      }
     }
   ]
 }

@@ -56,6 +56,11 @@ final class SasIaToolRegistry
             // Patrimônio
             'consultar_patrimonio_resumo' => ['patrimonioDashboard', 'patrimonios', 'patrimonioRelatorios'],
             'consultar_patrimonio_manutencoes' => ['patrimonioManutencoes', 'patrimonioDashboard'],
+            'patrimonio_consultar' => ['patrimonios', 'patrimonioDashboard', 'patrimonioRelatorios'],
+            'patrimonio_resumo' => ['patrimonioDashboard', 'patrimonios', 'patrimonioRelatorios'],
+            'patrimonio_detalhar' => ['patrimonios', 'patrimonioDashboard', 'patrimonioRelatorios'],
+            'patrimonio_por_unidade' => ['patrimonioDashboard', 'patrimonios', 'patrimonioRelatorios'],
+            'patrimonio_alertas' => ['patrimonioDashboard', 'patrimonios', 'patrimonioManutencoes', 'patrimonioRelatorios'],
 
             // Investimento
             'consultar_investimento_resumo' => ['investimentoDashboard', 'investimentoCarteira', 'investimentoReservas', 'investimentoRelatorios'],
@@ -130,6 +135,28 @@ final class SasIaToolRegistry
             // —— Patrimônio ——
             self::t('consultar_patrimonio_resumo', 'Patrimônios cadastrados, valor total e por status.', []),
             self::t('consultar_patrimonio_manutencoes', 'Manutenções de patrimônio pendentes ou recentes.', ['limite' => ['type' => 'integer', 'description' => 'Máximo (padrão 10)']]),
+            self::t('patrimonio_consultar', 'Consulta bens patrimoniais com filtros (unidade, categoria, situação, responsável, setor, valor, data). Somente leitura.', [
+                'busca' => ['type' => 'string', 'description' => 'Nome, código, série, marca, modelo, etc.'],
+                'patrimonio_id' => ['type' => 'integer', 'description' => 'ID do bem'],
+                'unidade_id' => ['type' => 'integer', 'description' => 'ID da unidade'],
+                'unidade' => ['type' => 'string', 'description' => 'Nome da unidade (ex.: Doce Norte)'],
+                'categoria' => ['type' => 'string', 'description' => 'Nome ou ID da categoria (ex.: Informática, Veículos)'],
+                'status' => ['type' => 'string', 'description' => 'ativo, manutencao, baixado, vendido, quebrado'],
+                'responsavel' => ['type' => 'string', 'description' => 'Nome do responsável (parcial)'],
+                'setor' => ['type' => 'string', 'description' => 'Nome ou ID do setor'],
+                'data_inicio' => ['type' => 'string', 'description' => 'Data de aquisição inicial YYYY-MM-DD'],
+                'data_fim' => ['type' => 'string', 'description' => 'Data de aquisição final YYYY-MM-DD'],
+                'valor_minimo' => ['type' => 'number', 'description' => 'Valor de compra mínimo'],
+                'valor_maximo' => ['type' => 'number', 'description' => 'Valor de compra máximo'],
+                'limite' => ['type' => 'integer', 'description' => 'Máximo de bens (1-50)'],
+            ]),
+            self::t('patrimonio_resumo', 'Resumo patrimonial: totais, valor, por unidade, por categoria, alertas.', [
+                'unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)'],
+                'categoria' => ['type' => 'string', 'description' => 'Categoria (opcional)'],
+            ]),
+            self::t('patrimonio_detalhar', 'Detalha um bem patrimonial (inclui manutenções e movimentações).', ['patrimonio_id' => ['type' => 'integer', 'description' => 'ID do bem']], ['patrimonio_id']),
+            self::t('patrimonio_por_unidade', 'Resumo e lista de bens de uma unidade.', ['unidade_id' => ['type' => 'integer', 'description' => 'ID da unidade']], ['unidade_id']),
+            self::t('patrimonio_alertas', 'Alertas patrimoniais: garantia, manutenção, sem responsável, sem unidade, irregulares.', ['unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
 
             // —— Investimento ——
             self::t('consultar_investimento_resumo', 'Reservas, carteira e resgates do módulo investimento.', []),

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Support\Financeiro\FinanceiroGerencialCalculo;
 use App\Services\Ayla\AylaKanbanService;
+use App\Services\Ayla\AylaPatrimonioService;
 use App\Support\SasIa\SasIaContext;
 use App\Support\SasIa\SasIaReservaQuery;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,11 @@ class SasIaModuleQueryService
             'consultar_investimento_resumo' => $this->investimentoResumo($ctx),
             'consultar_kanban_resumo' => $this->kanbanResumo($ctx, $args),
             'kanban_consultar' => $this->kanbanConsultar($ctx, $args),
+            'patrimonio_consultar' => $this->patrimonioConsultar($ctx, $args),
+            'patrimonio_resumo' => $this->patrimonioResumoAyla($ctx, $args),
+            'patrimonio_detalhar' => $this->patrimonioDetalhar($ctx, $args),
+            'patrimonio_por_unidade' => $this->patrimonioPorUnidade($ctx, $args),
+            'patrimonio_alertas' => $this->patrimonioAlertas($ctx, $args),
             'consultar_manual_documentacao' => $this->manualDocumentacao($args),
             'consultar_cadastro_geral' => $this->cadastroGeral($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta não implementada neste serviço.'],
@@ -667,6 +673,84 @@ class SasIaModuleQueryService
         $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
 
         return app(AylaKanbanService::class)->consultar($filtros, $userId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    private function patrimonioFiltrosComEscopo(SasIaContext $ctx, array $args): array
+    {
+        $filtros = $args;
+        if (! isset($filtros['unidade_id']) && $ctx->unidadeEfetiva()) {
+            $filtros['unidade_id'] = $ctx->unidadeEfetiva();
+        }
+
+        return $filtros;
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function patrimonioConsultar(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaPatrimonioService::class)->consultar($this->patrimonioFiltrosComEscopo($ctx, $args), $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function patrimonioResumoAyla(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaPatrimonioService::class)->resumo($this->patrimonioFiltrosComEscopo($ctx, $args), $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function patrimonioDetalhar(SasIaContext $ctx, array $args): array
+    {
+        $id = (int) ($args['patrimonio_id'] ?? 0);
+        if ($id < 1) {
+            return ['erro' => true, 'mensagem' => 'Informe o patrimonio_id.'];
+        }
+
+        $bem = app(AylaPatrimonioService::class)->detalhar($id);
+        if ($bem === null) {
+            return ['erro' => true, 'code' => 'NOT_FOUND', 'mensagem' => 'Bem patrimonial não encontrado.'];
+        }
+
+        // Reforça escopo de unidade para perfis não-admin.
+        $escopo = $ctx->unidadeEfetiva();
+        if ($escopo !== null && $bem['unidade_id'] !== null && (int) $bem['unidade_id'] !== $escopo) {
+            return ['erro' => true, 'mensagem' => 'Sem permissão para acessar esse bem.'];
+        }
+
+        return $bem;
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function patrimonioPorUnidade(SasIaContext $ctx, array $args): array
+    {
+        $unidadeId = (int) ($args['unidade_id'] ?? $ctx->unidadeEfetiva() ?? 0);
+        if ($unidadeId < 1) {
+            return ['erro' => true, 'mensagem' => 'Informe a unidade.'];
+        }
+
+        $escopo = $ctx->unidadeEfetiva();
+        if ($escopo !== null && $escopo !== $unidadeId) {
+            return ['erro' => true, 'mensagem' => 'Sem permissão para acessar essa unidade.'];
+        }
+
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaPatrimonioService::class)->porUnidade($unidadeId, $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function patrimonioAlertas(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaPatrimonioService::class)->alertas($this->patrimonioFiltrosComEscopo($ctx, $args), $userId);
     }
 
     /** @param  array<string, mixed>  $args */

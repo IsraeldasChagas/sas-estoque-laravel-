@@ -7,6 +7,7 @@ use App\Models\AylaAuditLog;
 use App\Services\AylaAccessService;
 use App\Services\AylaApiService;
 use App\Services\Ayla\AylaKanbanService;
+use App\Services\Ayla\AylaPatrimonioService;
 use App\Support\Ayla\AylaResponse;
 use App\Support\Ayla\AylaSettings;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +37,9 @@ class AylaController extends Controller
 
     /** Vencimento relativo aceito em filtros do kanban. */
     private const VENCIMENTO_KANBAN = ['hoje', 'amanha', 'amanhã', 'atrasado', 'atrasada', 'atrasadas'];
+
+    /** Situações reais do patrimônio (coluna `situacao`). */
+    private const STATUS_PATRIMONIO = ['ativo', 'manutencao', 'baixado', 'vendido', 'quebrado'];
 
     public function __construct(private AylaApiService $service) {}
 
@@ -188,6 +192,87 @@ class AylaController extends Controller
     }
 
     /**
+     * Patrimônio — lista de bens (somente leitura).
+     * Filtros: busca, patrimonio_id, unidade_id, categoria, status, responsavel,
+     * setor, data_inicio, data_fim, valor_minimo, valor_maximo, limite.
+     */
+    public function patrimonio(Request $request, AylaPatrimonioService $patrimonio): JsonResponse
+    {
+        return $this->executar($request, 'ayla.patrimonio', function (?int $userId) use ($request, $patrimonio) {
+            $p = $this->parsePatrimonioArgs($request, $patrimonio);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('patrimonio_consultar', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, $p['args']['limite'] ?? 50);
+        }, 'Consulta patrimonial concluída.');
+    }
+
+    /** Patrimônio — resumo geral ou por unidade/categoria. */
+    public function patrimonioResumo(Request $request, AylaPatrimonioService $patrimonio): JsonResponse
+    {
+        return $this->executar($request, 'ayla.patrimonio.resumo', function (?int $userId) use ($request, $patrimonio) {
+            $p = $this->parsePatrimonioArgs($request, $patrimonio, ['unidade_id', 'categoria']);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('patrimonio_resumo', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, 50);
+        }, 'Resumo patrimonial gerado.');
+    }
+
+    /** Patrimônio — detalhes de um bem. */
+    public function patrimonioDetalhe(Request $request, $id): JsonResponse
+    {
+        return $this->executar($request, 'ayla.patrimonio.detalhe', function (?int $userId) use ($id) {
+            if (! ctype_digit((string) $id) || (int) $id < 1) {
+                return ['_erro' => ['Identificador de patrimônio inválido.', 'VALIDATION_ERROR', 422]];
+            }
+
+            $r = $this->service->executarFerramenta('patrimonio_detalhar', ['patrimonio_id' => (int) $id], $userId, null);
+
+            return $this->normalizar($r, 50);
+        }, 'Detalhes do bem patrimonial.');
+    }
+
+    /** Patrimônio — resumo e lista de bens de uma unidade. */
+    public function patrimonioUnidade(Request $request, $id): JsonResponse
+    {
+        return $this->executar($request, 'ayla.patrimonio.unidade', function (?int $userId) use ($id) {
+            if (! ctype_digit((string) $id) || (int) $id < 1) {
+                return ['_erro' => ['Identificador de unidade inválido.', 'VALIDATION_ERROR', 422]];
+            }
+            $unidadeId = (int) $id;
+            if (! AylaSettings::unidadePermitida($unidadeId)) {
+                return ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]];
+            }
+
+            $r = $this->service->executarFerramenta('patrimonio_por_unidade', ['unidade_id' => $unidadeId], $userId, $unidadeId);
+
+            return $this->normalizar($r, 50);
+        }, 'Patrimônio da unidade.');
+    }
+
+    /** Patrimônio — alertas (garantia, manutenção, pendências). */
+    public function patrimonioAlertas(Request $request, AylaPatrimonioService $patrimonio): JsonResponse
+    {
+        return $this->executar($request, 'ayla.patrimonio.alertas', function (?int $userId) use ($request, $patrimonio) {
+            $p = $this->parsePatrimonioArgs($request, $patrimonio, ['unidade_id']);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('patrimonio_alertas', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, 50);
+        }, 'Alertas patrimoniais gerados.');
+    }
+
+    /**
      * Validação de acesso para o gateway (VPS). Recebe telegram_user_id e
      * retorna apenas as permissões necessárias. O Telegram ID nunca concede
      * acesso sozinho: precisa estar vinculado a um usuário SAS ativo.
@@ -314,6 +399,8 @@ class AylaController extends Controller
             $http = match ($r['code'] ?? '') {
                 'PERMISSION_DENIED' => 403,
                 'TOOL_NOT_ALLOWED' => 403,
+                'NOT_FOUND' => 404,
+                'VALIDATION_ERROR' => 422,
                 default => 500,
             };
 
@@ -523,6 +610,151 @@ class AylaController extends Controller
                 return $this->erroParam('vencimento');
             }
             $args['vencimento'] = $vencNorm;
+        }
+
+        return ['args' => $args, 'erro' => null];
+    }
+
+    /**
+     * Lê e valida parâmetros de consulta do patrimônio.
+     *
+     * @param  string[]  $apenas  Restringe aos parâmetros informados (padrão: todos)
+     * @return array{args: array<string, mixed>, erro: null|array{_erro: array{0:string,1:string,2:int}}}
+     */
+    private function parsePatrimonioArgs(Request $request, AylaPatrimonioService $patrimonio, array $apenas = []): array
+    {
+        $todos = $apenas === [];
+        $permite = fn (string $p) => $todos || in_array($p, $apenas, true);
+        $args = [];
+
+        if ($permite('limite')) {
+            $limite = $request->query('limite', $request->query('limit'));
+            if ($limite !== null && $limite !== '') {
+                if (! ctype_digit((string) $limite) || (int) $limite < 1 || (int) $limite > 50) {
+                    return $this->erroParam('limite');
+                }
+                $args['limite'] = (int) $limite;
+            }
+        }
+
+        if ($permite('patrimonio_id')) {
+            $v = $request->query('patrimonio_id');
+            if ($v !== null && $v !== '') {
+                if (! ctype_digit((string) $v) || (int) $v < 1) {
+                    return $this->erroParam('patrimonio_id');
+                }
+                $args['patrimonio_id'] = (int) $v;
+            }
+        }
+
+        if ($permite('unidade_id')) {
+            $v = $request->query('unidade_id');
+            if ($v !== null && $v !== '') {
+                if (! ctype_digit((string) $v) || (int) $v < 1) {
+                    return $this->erroParam('unidade_id');
+                }
+                if (! AylaSettings::unidadePermitida((int) $v)) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]]];
+                }
+                $args['unidade_id'] = (int) $v;
+            }
+        }
+
+        if ($permite('unidade')) {
+            $v = $request->query('unidade');
+            if ($v !== null && trim((string) $v) !== '' && empty($args['unidade_id'])) {
+                $v = trim((string) $v);
+                if (mb_strlen($v) > 120) {
+                    return $this->erroParam('unidade');
+                }
+                $uid = $patrimonio->resolverUnidadeIdPorNome($v);
+                if ($uid === null) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não encontrada.', 'NOT_FOUND', 404]]];
+                }
+                if (! AylaSettings::unidadePermitida($uid)) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]]];
+                }
+                $args['unidade_id'] = $uid;
+            }
+        }
+
+        if ($permite('categoria')) {
+            $v = $request->query('categoria');
+            if ($v !== null && trim((string) $v) !== '') {
+                $v = trim((string) $v);
+                if (mb_strlen($v) > 120) {
+                    return $this->erroParam('categoria');
+                }
+                $args['categoria'] = $v;
+            }
+        }
+
+        if ($permite('setor')) {
+            $v = $request->query('setor');
+            if ($v !== null && trim((string) $v) !== '') {
+                $v = trim((string) $v);
+                if (mb_strlen($v) > 120) {
+                    return $this->erroParam('setor');
+                }
+                $args['setor'] = $v;
+            }
+        }
+
+        if ($permite('status')) {
+            $v = $request->query('status');
+            if ($v !== null && $v !== '') {
+                $v = strtolower(trim((string) $v));
+                if (! in_array($v, self::STATUS_PATRIMONIO, true)) {
+                    return $this->erroParam('status');
+                }
+                $args['status'] = $v;
+            }
+        }
+
+        if ($permite('responsavel')) {
+            $v = $request->query('responsavel');
+            if ($v !== null && trim((string) $v) !== '') {
+                $v = trim((string) $v);
+                if (mb_strlen($v) > 120) {
+                    return $this->erroParam('responsavel');
+                }
+                $args['responsavel'] = $v;
+            }
+        }
+
+        if ($permite('busca')) {
+            $v = $request->query('busca');
+            if ($v !== null && trim((string) $v) !== '') {
+                $v = trim((string) $v);
+                if (mb_strlen($v) > 120) {
+                    return $this->erroParam('busca');
+                }
+                $args['busca'] = $v;
+            }
+        }
+
+        foreach (['data_inicio', 'data_fim'] as $campoData) {
+            if ($permite($campoData)) {
+                $v = $request->query($campoData);
+                if ($v !== null && $v !== '') {
+                    if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $v)) {
+                        return $this->erroParam($campoData);
+                    }
+                    $args[$campoData] = (string) $v;
+                }
+            }
+        }
+
+        foreach (['valor_minimo', 'valor_maximo'] as $campoValor) {
+            if ($permite($campoValor)) {
+                $v = $request->query($campoValor);
+                if ($v !== null && $v !== '') {
+                    if (! is_numeric($v) || (float) $v < 0) {
+                        return $this->erroParam($campoValor);
+                    }
+                    $args[$campoValor] = (float) $v;
+                }
+            }
         }
 
         return ['args' => $args, 'erro' => null];

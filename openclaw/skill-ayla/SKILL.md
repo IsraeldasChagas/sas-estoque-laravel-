@@ -74,6 +74,48 @@ O campo `data` inclui:
 
 Use `message` e `resumo` para responder em português, de forma curta (WhatsApp/Telegram).
 
+## Patrimônio — bens da empresa (somente leitura)
+
+Use estas ferramentas quando o usuário perguntar sobre: **bens, equipamentos, patrimônio, veículos, computadores, geladeiras, máquinas, móveis, número patrimonial, valor patrimonial, manutenção, garantia ou localização de bens**.
+
+```http
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio?unidade=Doce Norte
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio?status=manutencao
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio?categoria=Informática
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio?responsavel=João
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio/resumo
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio/resumo?unidade_id=2
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio/{id}
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio/unidade/{id}
+GET {AYLA_API_URL}/api/ayla/v1/patrimonio/alertas
+```
+
+### Filtros de `patrimonio`
+
+| Parâmetro | Exemplos |
+|---|---|
+| `busca` | Nome, código, série, marca, modelo |
+| `status` | `ativo`, `manutencao`, `baixado`, `vendido`, `quebrado` |
+| `categoria` | `Informática`, `Veículos`, `Refrigeração` |
+| `unidade` / `unidade_id` | `Doce Norte` / `2` |
+| `responsavel` | Nome parcial |
+| `setor` | `cozinha`, etc. |
+| `data_inicio` / `data_fim` | `YYYY-MM-DD` (aquisição) |
+| `valor_minimo` / `valor_maximo` | Valor de compra |
+| `limite` | 1–50 |
+
+### Mapeamento de perguntas → ferramenta
+
+- "Quantos bens temos?" / "valor total do patrimônio" → `patrimonio/resumo`
+- "Resumo do patrimônio" / "relatório patrimonial da Unidade 2" → `patrimonio/resumo?unidade_id=2` ou `patrimonio/unidade/2`
+- "Quais equipamentos estão em manutenção?" → `patrimonio?status=manutencao`
+- "Quais bens estão sem responsável?" / "garantias vencendo" / "manutenção próxima" → `patrimonio/alertas`
+- "Quais computadores/geladeiras/veículos?" → `patrimonio?categoria=...` ou `patrimonio?busca=...`
+- "Detalhe do bem X" → `patrimonio/{id}`
+
+Responda em português, curto, usando `message` e os campos de `resumo`/`alertas`.
+
 ## Outros endpoints úteis
 
 ```http
@@ -85,6 +127,7 @@ GET {AYLA_API_URL}/api/ayla/v1/estoque?unidade_id=1
 
 ## Regras
 
-- **Somente leitura** — não criar, editar, mover ou excluir tarefas do kanban nesta fase.
+- **Somente leitura** — não criar, editar, mover ou excluir tarefas do kanban nem bens do patrimônio nesta fase.
+- Não cadastrar, transferir, baixar, alterar responsável/valor ou registrar manutenção de patrimônio.
 - Se `success` for `false`, explique o `message` ao usuário.
-- Respeite unidades não autorizadas (`UNIT_NOT_ALLOWED`).
+- Respeite unidades não autorizadas (`UNIT_NOT_ALLOWED`) e bens inexistentes (`NOT_FOUND`).

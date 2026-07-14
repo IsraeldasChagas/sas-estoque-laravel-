@@ -29,6 +29,11 @@ class AylaApiService
         'consultar_fornecedores',
         'consultar_resumo_produtos',
         'kanban_consultar',
+        'patrimonio_consultar',
+        'patrimonio_resumo',
+        'patrimonio_detalhar',
+        'patrimonio_por_unidade',
+        'patrimonio_alertas',
     ];
 
     public function __construct(
@@ -60,9 +65,13 @@ class AylaApiService
         }
 
         if (is_array($resultado) && ! empty($resultado['erro'])) {
+            $code = isset($resultado['code']) && is_string($resultado['code'])
+                ? $resultado['code']
+                : 'PERMISSION_DENIED';
+
             return [
                 'ok' => false,
-                'code' => 'PERMISSION_DENIED',
+                'code' => $code,
                 'message' => (string) ($resultado['mensagem'] ?? 'Sem permissão para acessar esse dado.'),
                 'duracao_ms' => $this->duracao($inicio),
             ];

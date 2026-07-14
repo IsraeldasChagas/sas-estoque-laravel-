@@ -109,6 +109,11 @@ ou detalhes do servidor.
 | GET | `/api/ayla/v1/fornecedores` | `busca`, `ativo`, `limite` |
 | GET | `/api/ayla/v1/dashboard` | — |
 | GET | `/api/ayla/v1/kanban` | `status`, `prioridade`, `responsavel`, `unidade`, `unidade_id`, `setor`, `data`, `vencimento`, `texto`, `limit` |
+| GET | `/api/ayla/v1/patrimonio` | `busca`, `patrimonio_id`, `unidade_id`, `unidade`, `categoria`, `status`, `responsavel`, `setor`, `data_inicio`, `data_fim`, `valor_minimo`, `valor_maximo`, `limite` |
+| GET | `/api/ayla/v1/patrimonio/resumo` | `unidade_id`, `categoria` |
+| GET | `/api/ayla/v1/patrimonio/alertas` | `unidade_id` |
+| GET | `/api/ayla/v1/patrimonio/unidade/{id}` | `id` na rota |
+| GET | `/api/ayla/v1/patrimonio/{id}` | `id` na rota |
 | GET | `/api/ayla/v1/relatorios/unidade/{id}` | `id` na rota |
 
 ### Validações
