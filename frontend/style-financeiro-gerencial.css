@@ -1,30 +1,139 @@
-/* Financeiro Gerencial — Grupo Sabor Paraense */
+/* Financeiro Gerencial — padrão visual (mesmo respiro da Ayla / Patrimônio) */
+:is(
+  #financeiroDashboardSection,
+  #financeiroFluxoCaixaSection,
+  #financeiroContasReceberSection,
+  #financeiroDreSection,
+  #financeiroCmvSection,
+  #financeiroCentrosCustoSection,
+  #financeiroOrcamentoSection,
+  #financeiroIndicadoresSection
+) {
+  padding: 0.25rem 0.35rem 2rem;
+  box-sizing: border-box;
+}
+
 .fg-section-head {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.35rem;
 }
 .fg-section-head h2 { margin: 0 0 0.25rem; }
+
+.fg-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1280px;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+}
+
+:is(
+  #financeiroDashboardSection,
+  #financeiroFluxoCaixaSection,
+  #financeiroContasReceberSection,
+  #financeiroDreSection,
+  #financeiroCmvSection,
+  #financeiroCentrosCustoSection,
+  #financeiroOrcamentoSection,
+  #financeiroIndicadoresSection
+) .table-card {
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+:is(
+  #financeiroDashboardSection,
+  #financeiroFluxoCaixaSection,
+  #financeiroContasReceberSection,
+  #financeiroDreSection,
+  #financeiroCmvSection,
+  #financeiroCentrosCustoSection,
+  #financeiroOrcamentoSection,
+  #financeiroIndicadoresSection
+) .table-card > header {
+  padding: 1.05rem 1.5rem;
+}
+:is(
+  #financeiroDashboardSection,
+  #financeiroFluxoCaixaSection,
+  #financeiroContasReceberSection,
+  #financeiroDreSection,
+  #financeiroCmvSection,
+  #financeiroCentrosCustoSection,
+  #financeiroOrcamentoSection,
+  #financeiroIndicadoresSection
+) .table-card > .table-wrapper {
+  padding: 0.35rem 1.25rem 1.25rem;
+}
+
+.fg-form-body {
+  padding: 1.35rem 1.5rem 1.6rem;
+  box-sizing: border-box;
+}
 .fg-filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1.15rem 1.25rem;
   align-items: end;
 }
+.fg-form-body .fg-filters label,
+.fg-form-body .fg-form-grid label {
+  gap: 0.45rem;
+}
+.fg-page-wrap .fg-filters input,
+.fg-page-wrap .fg-filters select,
+.fg-page-wrap .fg-form-grid input,
+.fg-page-wrap .fg-form-grid select,
+.fg-page-wrap .fg-form-grid textarea,
+.fg-form-body input,
+.fg-form-body select,
+.fg-form-body textarea {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+.fg-page-wrap .fg-filters input:focus,
+.fg-page-wrap .fg-filters select:focus,
+.fg-page-wrap .fg-form-grid input:focus,
+.fg-page-wrap .fg-form-grid select:focus,
+.fg-page-wrap .fg-form-grid textarea:focus {
+  outline: none;
+  border-color: var(--primary, #0047ab);
+  box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.12);
+}
+
+.fg-page-wrap .fg-filters .btn,
+.fg-form-body .fg-form-actions .btn,
+.fg-form-body .btn.primary,
+.fg-form-body .btn.secondary,
+.fg-form-body .btn.neutral {
+  min-height: 2.75rem;
+  min-width: 10rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
 .fg-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.85rem;
-  margin-bottom: 1.25rem;
+  gap: 1rem;
+  margin-bottom: 0;
 }
 .fg-card {
   background: var(--card-bg, #fff);
   border: var(--card-border, 2px solid #000);
-  border-radius: 10px;
-  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 .fg-card__label {
@@ -32,10 +141,10 @@
   color: var(--text-muted, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
 }
 .fg-card__value {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -70,12 +179,13 @@
 .fg-projecoes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 1.5rem;
 }
 .fg-proj-card {
   border: var(--card-border, 2px solid #000);
-  border-radius: 8px;
-  padding: 0.75rem;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
   text-align: center;
 }
 .fg-lancamento-card__header {
@@ -127,7 +237,9 @@
   margin-left: 2px;
 }
 .fg-lancamento-card__body {
-  margin-top: 1rem;
+  margin-top: 0;
+  padding: 1.35rem 1.5rem 1.6rem;
+  box-sizing: border-box;
 }
 .fg-lancamento-card--collapsed .fg-lancamento-card__body {
   display: none;
@@ -138,14 +250,35 @@
 .fg-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem;
+  gap: 1.15rem 1.25rem;
 }
 .fg-form-grid--full { grid-column: 1 / -1; }
 .fg-form-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
+  gap: 0.75rem;
   align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+#fgOrcChart {
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+.fg-cmv-obs {
+  margin: 0;
+  padding: 0 0.35rem;
+  line-height: 1.45;
+}
+#financeiroContasReceberSection .table-card > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+#financeiroContasReceberSection .table-card > header h3 {
+  margin: 0;
 }
 .fg-acoes {
   display: flex;
@@ -221,8 +354,47 @@
 }
 .fg-chart-bar__lbl { font-size: 0.65rem; color: var(--text-muted, #64748b); }
 @media (max-width: 768px) {
+  :is(
+    #financeiroDashboardSection,
+    #financeiroFluxoCaixaSection,
+    #financeiroContasReceberSection,
+    #financeiroDreSection,
+    #financeiroCmvSection,
+    #financeiroCentrosCustoSection,
+    #financeiroOrcamentoSection,
+    #financeiroIndicadoresSection
+  ) {
+    padding: 0 0 1.5rem;
+  }
+  .fg-section-head { padding: 0; }
+  .fg-form-body,
+  .fg-lancamento-card__body {
+    padding: 1.1rem 1.1rem 1.35rem;
+  }
+  .fg-projecoes {
+    padding: 1.1rem;
+  }
   .fg-cards { grid-template-columns: 1fr 1fr; }
   .fg-card__value { font-size: 1.1rem; }
+  .fg-page-wrap .fg-filters .btn,
+  .fg-form-body .fg-form-actions .btn,
+  .fg-form-body .btn.primary,
+  .fg-form-body .btn.neutral {
+    width: 100%;
+    min-width: 0;
+  }
+  :is(
+    #financeiroDashboardSection,
+    #financeiroFluxoCaixaSection,
+    #financeiroContasReceberSection,
+    #financeiroDreSection,
+    #financeiroCmvSection,
+    #financeiroCentrosCustoSection,
+    #financeiroOrcamentoSection,
+    #financeiroIndicadoresSection
+  ) .table-card > .table-wrapper {
+    padding: 0.25rem 0.85rem 1rem;
+  }
 }
 @media (max-width: 480px) {
   .fg-cards { grid-template-columns: 1fr; }

@@ -46,7 +46,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260714-pat-padrao" />
     <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
-    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260610-fg-collapse" />
+    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260714-fg-padrao" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
@@ -3637,183 +3637,232 @@
               <div><h2>📊 Dashboard Executivo Financeiro</h2><p class="subtle-text">Saúde real da empresa — faturamento, fluxo, custo de saídas de estoque e indicadores consolidados.</p></div>
               <div id="fgDashSaude"></div>
             </div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>De<input type="date" id="fgDashFiltroDe" /></label>
-                <label>Até<input type="date" id="fgDashFiltroAte" /></label>
-                <label>Unidade<select id="fgDashFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="fgDashAtualizar">Atualizar</button></label>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>De<input type="date" id="fgDashFiltroDe" /></label>
+                    <label>Até<input type="date" id="fgDashFiltroAte" /></label>
+                    <label>Unidade<select id="fgDashFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgDashAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="fg-cards" id="fgDashCards"></div>
-            <div class="table-card form-card--wide">
-              <header><h3>Faturamento por unidade</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Faturamento</th></tr></thead><tbody id="fgDashUnidadeTbody"></tbody></table></div>
+              <div class="fg-cards" id="fgDashCards"></div>
+              <div class="table-card form-card--wide">
+                <header><h3>Faturamento por unidade</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Faturamento</th></tr></thead><tbody id="fgDashUnidadeTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="financeiroFluxoCaixaSection" class="view-section hidden">
             <div class="fg-section-head"><div><h2>💧 Fluxo de Caixa</h2><p class="subtle-text">Lançamentos, saldo e projeção 30/60/90 dias. O histórico usa o filtro De/Até — após salvar, o período ajusta para o mês da competência.</p></div></div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>De<input type="date" id="fgFluxoFiltroDe" /></label>
-                <label>Até<input type="date" id="fgFluxoFiltroAte" /></label>
-                <label>Unidade<select id="fgFluxoFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="fgFluxoAtualizar">Atualizar</button></label>
-              </div>
-            </div>
-            <div class="fg-cards" id="fgFluxoResumo"></div>
-            <div class="table-card form-card--wide"><header><h3>Projeção</h3></header><div class="fg-projecoes" id="fgFluxoProjecoes"></div></div>
-            <div class="table-card form-card--wide fg-lancamento-card" id="fgFluxoLancamentoCard">
-              <header class="fg-lancamento-card__header">
-                <button
-                  type="button"
-                  class="fg-collapse-btn"
-                  id="fgFluxoToggleForm"
-                  aria-expanded="true"
-                  aria-controls="fgFluxoFormBody"
-                  title="Recolher ou expandir formulário"
-                  aria-label="Recolher ou expandir formulário de lançamento"
-                >
-                  <span class="fg-collapse-btn__icon" aria-hidden="true"></span>
-                </button>
-                <h3 id="fgFluxoFormTitle">Novo lançamento</h3>
-              </header>
-              <div id="fgFluxoFormBody" class="fg-lancamento-card__body">
-              <form id="fgFluxoForm" class="fg-form-grid">
-                <label>Tipo<select id="fgFluxoTipo" required><option value="entrada">Entrada</option><option value="saida">Saída</option></select></label>
-                <label>Valor<input type="text" id="fgFluxoValor" data-fg-moeda required placeholder="R$ 0,00" /></label>
-                <label>Competência<input type="date" id="fgFluxoCompetencia" required /></label>
-                <label>Pagamento<input type="date" id="fgFluxoPagamento" /></label>
-                <label>Status<select id="fgFluxoStatus"><option value="previsto">Previsto</option><option value="realizado">Realizado</option><option value="atrasado">Atrasado</option><option value="cancelado">Cancelado</option></select></label>
-                <label>Unidade<select id="fgFluxoUnidade"><option value="">—</option></select></label>
-                <label>Tipo de gasto/receita<select id="fgFluxoCategoria" title="Classifique o lançamento: compra de mercado, aluguel, vendas…"><option value="">Selecione</option></select></label>
-                <label>Centro de custo<select id="fgFluxoCentroCusto"><option value="">—</option></select></label>
-                <label>Forma pgto<select id="fgFluxoFormaPgto">
-                  <option value="">Selecione</option>
-                  <option value="Pix">Pix</option>
-                  <option value="Dinheiro">Dinheiro</option>
-                  <option value="Credito">Crédito</option>
-                  <option value="Debito">Débito</option>
-                </select></label>
-                <label class="fg-form-grid--full">Descrição<input type="text" id="fgFluxoDescricao" /></label>
-                <label class="fg-form-grid--full">Observação<textarea id="fgFluxoObs" rows="2"></textarea></label>
-                <div class="fg-form-grid--full fg-form-actions">
-                  <button type="submit" class="btn primary" id="fgFluxoSubmitBtn">Salvar lançamento</button>
-                  <button type="button" class="btn neutral hidden" id="fgFluxoCancelBtn">Cancelar edição</button>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>De<input type="date" id="fgFluxoFiltroDe" /></label>
+                    <label>Até<input type="date" id="fgFluxoFiltroAte" /></label>
+                    <label>Unidade<select id="fgFluxoFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgFluxoAtualizar">Atualizar</button></label>
+                  </div>
                 </div>
-              </form>
               </div>
-            </div>
-            <div class="table-card form-card--wide">
-              <header><h3>Histórico de lançamentos</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th>Unidade</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="fgFluxoTbody"></tbody></table></div>
+              <div class="fg-cards" id="fgFluxoResumo"></div>
+              <div class="table-card form-card--wide"><header><h3>Projeção</h3></header><div class="fg-projecoes" id="fgFluxoProjecoes"></div></div>
+              <div class="table-card form-card--wide fg-lancamento-card" id="fgFluxoLancamentoCard">
+                <header class="fg-lancamento-card__header">
+                  <button
+                    type="button"
+                    class="fg-collapse-btn"
+                    id="fgFluxoToggleForm"
+                    aria-expanded="true"
+                    aria-controls="fgFluxoFormBody"
+                    title="Recolher ou expandir formulário"
+                    aria-label="Recolher ou expandir formulário de lançamento"
+                  >
+                    <span class="fg-collapse-btn__icon" aria-hidden="true"></span>
+                  </button>
+                  <h3 id="fgFluxoFormTitle">Novo lançamento</h3>
+                </header>
+                <div id="fgFluxoFormBody" class="fg-lancamento-card__body">
+                  <form id="fgFluxoForm" class="fg-form-grid">
+                    <label>Tipo<select id="fgFluxoTipo" required><option value="entrada">Entrada</option><option value="saida">Saída</option></select></label>
+                    <label>Valor<input type="text" id="fgFluxoValor" data-fg-moeda required placeholder="R$ 0,00" /></label>
+                    <label>Competência<input type="date" id="fgFluxoCompetencia" required /></label>
+                    <label>Pagamento<input type="date" id="fgFluxoPagamento" /></label>
+                    <label>Status<select id="fgFluxoStatus"><option value="previsto">Previsto</option><option value="realizado">Realizado</option><option value="atrasado">Atrasado</option><option value="cancelado">Cancelado</option></select></label>
+                    <label>Unidade<select id="fgFluxoUnidade"><option value="">—</option></select></label>
+                    <label>Tipo de gasto/receita<select id="fgFluxoCategoria" title="Classifique o lançamento: compra de mercado, aluguel, vendas…"><option value="">Selecione</option></select></label>
+                    <label>Centro de custo<select id="fgFluxoCentroCusto"><option value="">—</option></select></label>
+                    <label>Forma pgto<select id="fgFluxoFormaPgto">
+                      <option value="">Selecione</option>
+                      <option value="Pix">Pix</option>
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Credito">Crédito</option>
+                      <option value="Debito">Débito</option>
+                    </select></label>
+                    <label class="fg-form-grid--full">Descrição<input type="text" id="fgFluxoDescricao" /></label>
+                    <label class="fg-form-grid--full">Observação<textarea id="fgFluxoObs" rows="2"></textarea></label>
+                    <div class="fg-form-grid--full fg-form-actions">
+                      <button type="submit" class="btn primary" id="fgFluxoSubmitBtn">Salvar lançamento</button>
+                      <button type="button" class="btn neutral hidden" id="fgFluxoCancelBtn">Cancelar edição</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Histórico de lançamentos</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th>Unidade</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="fgFluxoTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="financeiroContasReceberSection" class="view-section hidden">
             <div class="fg-section-head"><div><h2>📥 Contas a Receber</h2><p class="subtle-text">Clientes, parcelas, inadimplência e recebimentos previstos.</p></div></div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>De<input type="date" id="fgCrFiltroDe" /></label>
-                <label>Até<input type="date" id="fgCrFiltroAte" /></label>
-                <label>Unidade<select id="fgCrFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="fgCrAtualizar">Atualizar</button></label>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>De<input type="date" id="fgCrFiltroDe" /></label>
+                    <label>Até<input type="date" id="fgCrFiltroAte" /></label>
+                    <label>Unidade<select id="fgCrFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgCrAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="fg-cards" id="fgCrInadimplencia"></div>
-            <div class="table-card form-card--wide">
-              <header><h3>Novo recebimento</h3><button type="button" class="btn btn-sm" id="fgCrNovoCliente">+ Cliente</button></header>
-              <form id="fgCrForm" class="fg-form-grid">
-                <label>Cliente<select id="fgCrCliente"><option value="">—</option></select></label>
-                <label>Unidade<select id="fgCrUnidade"><option value="">—</option></select></label>
-                <label>Valor<input type="text" id="fgCrValor" data-fg-moeda required /></label>
-                <label>Vencimento<input type="date" id="fgCrVencimento" required /></label>
-                <label>Parcelas<input type="number" id="fgCrParcelas" min="1" max="60" value="1" /></label>
-                <label>Forma<input type="text" id="fgCrForma" placeholder="PIX, boleto…" /></label>
-                <label class="fg-form-grid--full">Descrição<input type="text" id="fgCrDescricao" /></label>
-                <label class="fg-form-grid--full">Observação<textarea id="fgCrObs" rows="2"></textarea></label>
-                <label><button type="submit" class="btn primary">Lançar</button></label>
-              </form>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="table-wrapper"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="fgCrTbody"></tbody></table></div>
+              <div class="fg-cards" id="fgCrInadimplencia"></div>
+              <div class="table-card form-card--wide">
+                <header><h3>Novo recebimento</h3><button type="button" class="btn btn-sm" id="fgCrNovoCliente">+ Cliente</button></header>
+                <div class="fg-form-body">
+                  <form id="fgCrForm" class="fg-form-grid">
+                    <label>Cliente<select id="fgCrCliente"><option value="">—</option></select></label>
+                    <label>Unidade<select id="fgCrUnidade"><option value="">—</option></select></label>
+                    <label>Valor<input type="text" id="fgCrValor" data-fg-moeda required /></label>
+                    <label>Vencimento<input type="date" id="fgCrVencimento" required /></label>
+                    <label>Parcelas<input type="number" id="fgCrParcelas" min="1" max="60" value="1" /></label>
+                    <label>Forma<input type="text" id="fgCrForma" placeholder="PIX, boleto…" /></label>
+                    <label class="fg-form-grid--full">Descrição<input type="text" id="fgCrDescricao" /></label>
+                    <label class="fg-form-grid--full">Observação<textarea id="fgCrObs" rows="2"></textarea></label>
+                    <div class="fg-form-grid--full fg-form-actions">
+                      <button type="submit" class="btn primary">Lançar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Recebimentos</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="fgCrTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="financeiroDreSection" class="view-section hidden">
             <div class="fg-section-head"><div><h2>📋 DRE Gerencial</h2><p class="subtle-text">Demonstração do resultado consolidada com dados do sistema.</p></div></div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>De<input type="date" id="fgDreFiltroDe" /></label>
-                <label>Até<input type="date" id="fgDreFiltroAte" /></label>
-                <label>Unidade<select id="fgDreFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="fgDreAtualizar">Atualizar</button></label>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>De<input type="date" id="fgDreFiltroDe" /></label>
+                    <label>Até<input type="date" id="fgDreFiltroAte" /></label>
+                    <label>Unidade<select id="fgDreFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgDreAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="table-wrapper"><table class="fg-dre-table"><thead><tr><th>Conta</th><th>Valor</th></tr></thead><tbody id="fgDreTbody"></tbody></table></div>
+              <div class="table-card form-card--wide">
+                <header><h3>Demonstração do resultado</h3></header>
+                <div class="table-wrapper"><table class="fg-dre-table"><thead><tr><th>Conta</th><th>Valor</th></tr></thead><tbody id="fgDreTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="financeiroCmvSection" class="view-section hidden">
             <div class="fg-section-head"><div><h2>📤 Custo de saídas de estoque</h2><p class="subtle-text">Consumo, produção e perda (transferências não entram). Custo da saída ou média do lote. Faturamento vem do fechamento de caixa.</p></div></div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>De<input type="date" id="fgCmvFiltroDe" /></label>
-                <label>Até<input type="date" id="fgCmvFiltroAte" /></label>
-                <label>Unidade<select id="fgCmvFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="fgCmvAtualizar">Atualizar</button></label>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>De<input type="date" id="fgCmvFiltroDe" /></label>
+                    <label>Até<input type="date" id="fgCmvFiltroAte" /></label>
+                    <label>Unidade<select id="fgCmvFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgCmvAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="fg-cards" id="fgCmvCards"></div>
-            <p id="fgCmvObservacao" class="subtle-text" style="margin:0 0 1rem 1rem;"></p>
-            <div class="table-card form-card--wide">
-              <header><h3>Custo por motivo</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Motivo</th><th>Custo</th></tr></thead><tbody id="fgCmvMotivoTbody"></tbody></table></div>
-            </div>
-            <div class="table-card form-card--wide">
-              <header><h3>Custo por produto (top 50)</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Produto</th><th>Custo</th></tr></thead><tbody id="fgCmvProdutoTbody"></tbody></table></div>
-            </div>
-            <div class="table-card form-card--wide">
-              <header><h3>Custo por unidade</h3></header>
-              <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Custo</th></tr></thead><tbody id="fgCmvUnidadeTbody"></tbody></table></div>
+              <div class="fg-cards" id="fgCmvCards"></div>
+              <p id="fgCmvObservacao" class="subtle-text fg-cmv-obs"></p>
+              <div class="table-card form-card--wide">
+                <header><h3>Custo por motivo</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Motivo</th><th>Custo</th></tr></thead><tbody id="fgCmvMotivoTbody"></tbody></table></div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Custo por produto (top 50)</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Produto</th><th>Custo</th></tr></thead><tbody id="fgCmvProdutoTbody"></tbody></table></div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Custo por unidade</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Unidade</th><th>Custo</th></tr></thead><tbody id="fgCmvUnidadeTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="financeiroCentrosCustoSection" class="view-section hidden">
             <div class="fg-section-head"><div><h2>🏷️ Centro de Custos</h2><p class="subtle-text">Administrativo, Manutenção, Estoque e Outros.</p></div></div>
-            <div class="table-card form-card--wide hidden" id="fgCcFormCard" aria-hidden="true">
-              <form id="fgCcForm" class="fg-form-grid">
-                <label>Nome<input type="text" id="fgCcNome" required /></label>
-                <label>Código<input type="text" id="fgCcCodigo" /></label>
-                <label><button type="submit" class="btn primary">Adicionar</button></label>
-              </form>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Nome</th><th>Status</th></tr></thead><tbody id="fgCcTbody"></tbody></table></div>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide hidden" id="fgCcFormCard" aria-hidden="true">
+                <header><h3>Novo centro de custo</h3></header>
+                <div class="fg-form-body">
+                  <form id="fgCcForm" class="fg-form-grid">
+                    <label>Nome<input type="text" id="fgCcNome" required /></label>
+                    <label>Código<input type="text" id="fgCcCodigo" /></label>
+                    <div class="fg-form-grid--full fg-form-actions">
+                      <button type="submit" class="btn primary">Adicionar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Centros cadastrados</h3></header>
+                <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Nome</th><th>Status</th></tr></thead><tbody id="fgCcTbody"></tbody></table></div>
+              </div>
             </div>
           </section>
 
           <section id="financeiroOrcamentoSection" class="view-section hidden">
             <div class="fg-section-head"><div><h2>🎯 Orçamento Empresarial</h2><p class="subtle-text">Metas mensais vs. realizado por unidade.</p></div></div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>Competência<input type="month" id="fgOrcCompetencia" /></label>
-                <label>Unidade<select id="fgOrcFiltroUnidade"><option value="">Consolidado</option></select></label>
-                <label><button type="button" class="btn primary" id="fgOrcAtualizar">Atualizar</button></label>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>Competência<input type="month" id="fgOrcCompetencia" /></label>
+                    <label>Unidade<select id="fgOrcFiltroUnidade"><option value="">Consolidado</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgOrcAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="fg-cards" id="fgOrcCards"></div>
-            <div class="table-card form-card--wide"><header><h3>Evolução mensal (faturamento)</h3></header><div id="fgOrcChart"></div></div>
-            <div class="table-card form-card--wide">
-              <form id="fgOrcForm" class="fg-form-grid">
-                <label>Meta faturamento<input type="number" id="fgOrcMetaFat" min="0" step="0.01" /></label>
-                <label>Meta despesa<input type="number" id="fgOrcMetaDesp" min="0" step="0.01" /></label>
-                <label>Meta lucro<input type="number" id="fgOrcMetaLucro" min="0" step="0.01" /></label>
-                <label><button type="submit" class="btn primary">Salvar metas</button></label>
-              </form>
+              <div class="fg-cards" id="fgOrcCards"></div>
+              <div class="table-card form-card--wide"><header><h3>Evolução mensal (faturamento)</h3></header><div id="fgOrcChart"></div></div>
+              <div class="table-card form-card--wide">
+                <header><h3>Metas do período</h3></header>
+                <div class="fg-form-body">
+                  <form id="fgOrcForm" class="fg-form-grid">
+                    <label>Meta faturamento<input type="number" id="fgOrcMetaFat" min="0" step="0.01" /></label>
+                    <label>Meta despesa<input type="number" id="fgOrcMetaDesp" min="0" step="0.01" /></label>
+                    <label>Meta lucro<input type="number" id="fgOrcMetaLucro" min="0" step="0.01" /></label>
+                    <div class="fg-form-grid--full fg-form-actions">
+                      <button type="submit" class="btn primary">Salvar metas</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -3822,15 +3871,20 @@
               <div><h2>📈 Indicadores Financeiros</h2><p class="subtle-text">Liquidez, margens, endividamento e saúde geral.</p></div>
               <div id="fgIndSaude"></div>
             </div>
-            <div class="table-card form-card--wide">
-              <div class="fg-filters">
-                <label>De<input type="date" id="fgIndFiltroDe" /></label>
-                <label>Até<input type="date" id="fgIndFiltroAte" /></label>
-                <label>Unidade<select id="fgIndFiltroUnidade"><option value="">Todas</option></select></label>
-                <label><button type="button" class="btn primary" id="fgIndAtualizar">Atualizar</button></label>
+            <div class="fg-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="fg-form-body">
+                  <div class="fg-filters">
+                    <label>De<input type="date" id="fgIndFiltroDe" /></label>
+                    <label>Até<input type="date" id="fgIndFiltroAte" /></label>
+                    <label>Unidade<select id="fgIndFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label><button type="button" class="btn primary" id="fgIndAtualizar">Atualizar</button></label>
+                  </div>
+                </div>
               </div>
+              <div class="fg-cards" id="fgIndCards"></div>
             </div>
-            <div class="fg-cards" id="fgIndCards"></div>
           </section>
 
           <section id="investimentoDashboardSection" class="view-section hidden">
