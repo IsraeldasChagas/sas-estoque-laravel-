@@ -10,11 +10,20 @@
   padding: 0 0.35rem;
 }
 
-:is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .btn {
+:is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .btn:not(.fechamento-audit__toggle-principal) {
   min-height: 2.75rem;
   min-width: 9.5rem;
   padding: 0.65rem 1.15rem;
   font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+:is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .fechamento-audit__toggle-principal {
+  min-height: 2.75rem;
+  min-width: 2.5rem;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
   justify-content: center;
   box-sizing: border-box;
 }
@@ -58,6 +67,10 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+#fechamentoSection #fechamentoPrincipalPainel.fechamento-audit__principal-painel--collapsed {
+  display: none;
 }
 
 #fechamentoSection .fechamento-audit__grid {
@@ -298,12 +311,16 @@
   gap: 1.5rem;
 }
 
+#reciboAjudaSection #reciboAjudaPainel.recibo-ajuda__painel--collapsed {
+  display: none;
+}
+
 @media (max-width: 768px) {
   :is(#fechamentoSection, #fechamentoDashSection, #reciboAjudaSection) {
     padding: 0 0 1.5rem;
   }
 
-  :is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .btn,
+  :is(#fechamentoSection, #reciboAjudaSection) > .boletos-header .boletos-actions .btn:not(.fechamento-audit__toggle-principal),
   #fechamentoSection .fechamento-audit__resumo-mes-actions .btn,
   #fechamentoDashSection .fechamento-dash__filters-actions .btn,
   #reciboAjudaSection .recibo-ajuda__sign-actions .btn {
