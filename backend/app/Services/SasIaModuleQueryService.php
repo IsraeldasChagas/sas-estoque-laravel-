@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Support\Financeiro\FinanceiroGerencialCalculo;
 use App\Services\Ayla\AylaKanbanService;
 use App\Services\Ayla\AylaPatrimonioService;
+use App\Services\Ayla\AylaReservasService;
 use App\Support\SasIa\SasIaContext;
 use App\Support\SasIa\SasIaReservaQuery;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +58,12 @@ class SasIaModuleQueryService
             'patrimonio_detalhar' => $this->patrimonioDetalhar($ctx, $args),
             'patrimonio_por_unidade' => $this->patrimonioPorUnidade($ctx, $args),
             'patrimonio_alertas' => $this->patrimonioAlertas($ctx, $args),
+            'reservas_consultar' => $this->reservasConsultar($ctx, $args),
+            'reservas_resumo' => $this->reservasResumoAyla($ctx, $args),
+            'reservas_detalhar' => $this->reservasDetalhar($ctx, $args),
+            'reservas_por_unidade' => $this->reservasPorUnidade($ctx, $args),
+            'reservas_disponibilidade' => $this->reservasDisponibilidade($ctx, $args),
+            'reservas_alertas' => $this->reservasAlertas($ctx, $args),
             'consultar_manual_documentacao' => $this->manualDocumentacao($args),
             'consultar_cadastro_geral' => $this->cadastroGeral($ctx, $args),
             default => ['erro' => true, 'mensagem' => 'Ferramenta não implementada neste serviço.'],
@@ -751,6 +758,99 @@ class SasIaModuleQueryService
         $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
 
         return app(AylaPatrimonioService::class)->alertas($this->patrimonioFiltrosComEscopo($ctx, $args), $userId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    private function reservasFiltrosComEscopo(SasIaContext $ctx, array $args): array
+    {
+        $filtros = $args;
+        if (! isset($filtros['unidade_id']) && $ctx->unidadeEfetiva()) {
+            $filtros['unidade_id'] = $ctx->unidadeEfetiva();
+        }
+
+        return $filtros;
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasConsultar(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaReservasService::class)->consultar($this->reservasFiltrosComEscopo($ctx, $args), $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasResumoAyla(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaReservasService::class)->resumo($this->reservasFiltrosComEscopo($ctx, $args), $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasDetalhar(SasIaContext $ctx, array $args): array
+    {
+        $id = (int) ($args['reserva_id'] ?? 0);
+        if ($id < 1) {
+            return ['erro' => true, 'code' => 'VALIDATION_ERROR', 'mensagem' => 'Informe o reserva_id.'];
+        }
+
+        $reserva = app(AylaReservasService::class)->detalhar($id);
+        if ($reserva === null) {
+            return ['erro' => true, 'code' => 'NOT_FOUND', 'mensagem' => 'Reserva não encontrada.'];
+        }
+
+        $escopo = $ctx->unidadeEfetiva();
+        if ($escopo !== null && $reserva['unidade_id'] !== null && (int) $reserva['unidade_id'] !== $escopo) {
+            return ['erro' => true, 'mensagem' => 'Sem permissão para acessar essa reserva.'];
+        }
+
+        return $reserva;
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasPorUnidade(SasIaContext $ctx, array $args): array
+    {
+        $unidadeId = (int) ($args['unidade_id'] ?? $ctx->unidadeEfetiva() ?? 0);
+        if ($unidadeId < 1) {
+            return ['erro' => true, 'code' => 'VALIDATION_ERROR', 'mensagem' => 'Informe a unidade.'];
+        }
+
+        $escopo = $ctx->unidadeEfetiva();
+        if ($escopo !== null && $escopo !== $unidadeId) {
+            return ['erro' => true, 'mensagem' => 'Sem permissão para acessar essa unidade.'];
+        }
+
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaReservasService::class)->porUnidade($unidadeId, $userId);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasDisponibilidade(SasIaContext $ctx, array $args): array
+    {
+        $unidadeId = (int) ($args['unidade_id'] ?? 0);
+        if ($unidadeId < 1) {
+            return ['erro' => true, 'code' => 'VALIDATION_ERROR', 'mensagem' => 'Informe unidade_id.'];
+        }
+
+        $escopo = $ctx->unidadeEfetiva();
+        if ($escopo !== null && $escopo !== $unidadeId) {
+            return ['erro' => true, 'mensagem' => 'Sem permissão para acessar essa unidade.'];
+        }
+
+        return app(AylaReservasService::class)->disponibilidade($args);
+    }
+
+    /** @param  array<string, mixed>  $args */
+    private function reservasAlertas(SasIaContext $ctx, array $args): array
+    {
+        $userId = $ctx->usuarioId() > 0 ? $ctx->usuarioId() : null;
+
+        return app(AylaReservasService::class)->alertas($this->reservasFiltrosComEscopo($ctx, $args), $userId);
     }
 
     /** @param  array<string, mixed>  $args */

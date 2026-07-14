@@ -34,6 +34,12 @@ class AylaApiService
         'patrimonio_detalhar',
         'patrimonio_por_unidade',
         'patrimonio_alertas',
+        'reservas_consultar',
+        'reservas_resumo',
+        'reservas_detalhar',
+        'reservas_por_unidade',
+        'reservas_disponibilidade',
+        'reservas_alertas',
     ];
 
     public function __construct(

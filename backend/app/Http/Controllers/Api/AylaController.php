@@ -8,6 +8,7 @@ use App\Services\AylaAccessService;
 use App\Services\AylaApiService;
 use App\Services\Ayla\AylaKanbanService;
 use App\Services\Ayla\AylaPatrimonioService;
+use App\Services\Ayla\AylaReservasService;
 use App\Support\Ayla\AylaResponse;
 use App\Support\Ayla\AylaSettings;
 use Illuminate\Http\JsonResponse;
@@ -40,6 +41,11 @@ class AylaController extends Controller
 
     /** Situações reais do patrimônio (coluna `situacao`). */
     private const STATUS_PATRIMONIO = ['ativo', 'manutencao', 'baixado', 'vendido', 'quebrado'];
+
+    /** Status reais de reserva de mesa. */
+    private const STATUS_RESERVA = [
+        'pendente', 'confirmada', 'cancelada', 'cliente_chegou', 'no_show', 'finalizada',
+    ];
 
     public function __construct(private AylaApiService $service) {}
 
@@ -270,6 +276,95 @@ class AylaController extends Controller
 
             return $this->normalizar($r, 50);
         }, 'Alertas patrimoniais gerados.');
+    }
+
+    /**
+     * Reservas de mesas — lista (somente leitura).
+     */
+    public function reservas(Request $request, AylaReservasService $reservas): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas', function (?int $userId) use ($request, $reservas) {
+            $p = $this->parseReservasArgs($request, $reservas);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('reservas_consultar', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, $p['args']['limite'] ?? 50);
+        }, 'Consulta de reservas concluída.');
+    }
+
+    public function reservasResumo(Request $request, AylaReservasService $reservas): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.resumo', function (?int $userId) use ($request, $reservas) {
+            $p = $this->parseReservasArgs($request, $reservas, ['unidade_id', 'unidade']);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('reservas_resumo', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, 50);
+        }, 'Resumo de reservas gerado.');
+    }
+
+    public function reservasDetalhe(Request $request, $id): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.detalhe', function (?int $userId) use ($id) {
+            if (! ctype_digit((string) $id) || (int) $id < 1) {
+                return ['_erro' => ['Identificador de reserva inválido.', 'VALIDATION_ERROR', 422]];
+            }
+
+            $r = $this->service->executarFerramenta('reservas_detalhar', ['reserva_id' => (int) $id], $userId, null);
+
+            return $this->normalizar($r, 50);
+        }, 'Detalhes da reserva.');
+    }
+
+    public function reservasUnidade(Request $request, $id): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.unidade', function (?int $userId) use ($id) {
+            if (! ctype_digit((string) $id) || (int) $id < 1) {
+                return ['_erro' => ['Identificador de unidade inválido.', 'VALIDATION_ERROR', 422]];
+            }
+            $unidadeId = (int) $id;
+            if (! AylaSettings::unidadePermitida($unidadeId)) {
+                return ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]];
+            }
+
+            $r = $this->service->executarFerramenta('reservas_por_unidade', ['unidade_id' => $unidadeId], $userId, $unidadeId);
+
+            return $this->normalizar($r, 50);
+        }, 'Reservas da unidade.');
+    }
+
+    public function reservasDisponibilidade(Request $request, AylaReservasService $reservas): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.disponibilidade', function (?int $userId) use ($request, $reservas) {
+            $p = $this->parseDisponibilidadeArgs($request, $reservas);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('reservas_disponibilidade', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, 50);
+        }, 'Disponibilidade de mesas consultada.');
+    }
+
+    public function reservasAlertas(Request $request, AylaReservasService $reservas): JsonResponse
+    {
+        return $this->executar($request, 'ayla.reservas.alertas', function (?int $userId) use ($request, $reservas) {
+            $p = $this->parseReservasArgs($request, $reservas, ['unidade_id', 'unidade']);
+            if ($p['erro']) {
+                return $p['erro'];
+            }
+
+            $r = $this->service->executarFerramenta('reservas_alertas', $p['args'], $userId, $p['args']['unidade_id'] ?? null);
+
+            return $this->normalizar($r, 50);
+        }, 'Alertas de reservas gerados.');
     }
 
     /**
@@ -758,6 +853,254 @@ class AylaController extends Controller
         }
 
         return ['args' => $args, 'erro' => null];
+    }
+
+    /**
+     * Valida filtros de reservas (query string).
+     *
+     * @param  string[]  $apenas  Se não vazio, só esses parâmetros são lidos.
+     * @return array{args: array<string, mixed>, erro: null|array{_erro: array{0:string,1:string,2:int}}}
+     */
+    private function parseReservasArgs(Request $request, AylaReservasService $reservas, array $apenas = []): array
+    {
+        $todos = $apenas === [];
+        $permite = fn (string $p) => $todos || in_array($p, $apenas, true);
+        $args = [];
+
+        if ($permite('limite')) {
+            $limite = $request->query('limite', $request->query('limit'));
+            if ($limite !== null && $limite !== '') {
+                if (! ctype_digit((string) $limite) || (int) $limite < 1 || (int) $limite > 50) {
+                    return $this->erroParam('limite');
+                }
+                $args['limite'] = (int) $limite;
+            }
+        }
+
+        if ($permite('reserva_id')) {
+            $v = $request->query('reserva_id');
+            if ($v !== null && $v !== '') {
+                if (! ctype_digit((string) $v) || (int) $v < 1) {
+                    return $this->erroParam('reserva_id');
+                }
+                $args['reserva_id'] = (int) $v;
+            }
+        }
+
+        if ($permite('mesa_id')) {
+            $v = $request->query('mesa_id');
+            if ($v !== null && $v !== '') {
+                if (! ctype_digit((string) $v) || (int) $v < 1) {
+                    return $this->erroParam('mesa_id');
+                }
+                $args['mesa_id'] = (int) $v;
+            }
+        }
+
+        if ($permite('unidade_id')) {
+            $v = $request->query('unidade_id');
+            if ($v !== null && $v !== '') {
+                if (! ctype_digit((string) $v) || (int) $v < 1) {
+                    return $this->erroParam('unidade_id');
+                }
+                if (! AylaSettings::unidadePermitida((int) $v)) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]]];
+                }
+                $args['unidade_id'] = (int) $v;
+            }
+        }
+
+        if ($permite('unidade')) {
+            $v = $request->query('unidade');
+            if ($v !== null && trim((string) $v) !== '' && empty($args['unidade_id'])) {
+                $v = trim((string) $v);
+                if (mb_strlen($v) > 120) {
+                    return $this->erroParam('unidade');
+                }
+                $uid = $reservas->resolverUnidadeIdPorNome($v);
+                if ($uid === null) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não encontrada.', 'NOT_FOUND', 404]]];
+                }
+                if (! AylaSettings::unidadePermitida($uid)) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]]];
+                }
+                $args['unidade_id'] = $uid;
+            }
+        }
+
+        if ($permite('status')) {
+            $v = $request->query('status');
+            if ($v !== null && $v !== '') {
+                $v = strtolower(trim((string) $v));
+                if (! in_array($v, self::STATUS_RESERVA, true)) {
+                    return $this->erroParam('status');
+                }
+                $args['status'] = $v;
+            }
+        }
+
+        foreach (['data', 'data_inicio', 'data_fim'] as $campoData) {
+            if ($permite($campoData)) {
+                $v = $request->query($campoData);
+                if ($v !== null && $v !== '') {
+                    if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $v)) {
+                        return $this->erroParam($campoData);
+                    }
+                    $args[$campoData] = (string) $v;
+                }
+            }
+        }
+
+        if ($permite('data_inicio') && $permite('data_fim')
+            && isset($args['data_inicio'], $args['data_fim'])
+            && $args['data_inicio'] > $args['data_fim']) {
+            return ['args' => [], 'erro' => ['_erro' => ['data_inicio não pode ser posterior a data_fim.', 'VALIDATION_ERROR', 422]]];
+        }
+
+        if ($permite('data') && isset($args['data']) && (isset($args['data_inicio']) || isset($args['data_fim']))) {
+            return ['args' => [], 'erro' => ['_erro' => ['Não combine data com data_inicio/data_fim.', 'VALIDATION_ERROR', 422]]];
+        }
+
+        foreach (['cliente', 'busca'] as $campoTexto) {
+            if ($permite($campoTexto)) {
+                $v = $request->query($campoTexto);
+                if ($v !== null && trim((string) $v) !== '') {
+                    $v = trim((string) $v);
+                    if (mb_strlen($v) > 120) {
+                        return $this->erroParam($campoTexto);
+                    }
+                    $args[$campoTexto] = $v;
+                }
+            }
+        }
+
+        if ($permite('telefone')) {
+            $v = $request->query('telefone');
+            if ($v !== null && trim((string) $v) !== '') {
+                $v = preg_replace('/\D+/', '', (string) $v) ?? '';
+                if ($v === '' || strlen($v) > 20) {
+                    return $this->erroParam('telefone');
+                }
+                $args['telefone'] = $v;
+            }
+        }
+
+        foreach (['quantidade_minima', 'quantidade_maxima'] as $campoQtd) {
+            if ($permite($campoQtd)) {
+                $v = $request->query($campoQtd);
+                if ($v !== null && $v !== '') {
+                    if (! ctype_digit((string) $v) || (int) $v < 1) {
+                        return $this->erroParam($campoQtd);
+                    }
+                    $args[$campoQtd] = (int) $v;
+                }
+            }
+        }
+
+        if (isset($args['quantidade_minima'], $args['quantidade_maxima'])
+            && $args['quantidade_minima'] > $args['quantidade_maxima']) {
+            return ['args' => [], 'erro' => ['_erro' => ['quantidade_minima não pode ser maior que quantidade_maxima.', 'VALIDATION_ERROR', 422]]];
+        }
+
+        foreach (['horario_inicio', 'horario_fim'] as $campoHora) {
+            if ($permite($campoHora)) {
+                $v = $request->query($campoHora);
+                if ($v !== null && $v !== '') {
+                    $norm = $this->normalizarHorario((string) $v);
+                    if ($norm === null) {
+                        return $this->erroParam($campoHora);
+                    }
+                    $args[$campoHora] = $norm;
+                }
+            }
+        }
+
+        if (isset($args['horario_inicio'], $args['horario_fim'])
+            && $args['horario_inicio'] > $args['horario_fim']) {
+            return ['args' => [], 'erro' => ['_erro' => ['horario_inicio não pode ser posterior a horario_fim.', 'VALIDATION_ERROR', 422]]];
+        }
+
+        return ['args' => $args, 'erro' => null];
+    }
+
+    /**
+     * Valida parâmetros de disponibilidade (unidade_id, data, horario obrigatórios).
+     *
+     * @return array{args: array<string, mixed>, erro: null|array{_erro: array{0:string,1:string,2:int}}}
+     */
+    private function parseDisponibilidadeArgs(Request $request, AylaReservasService $reservas): array
+    {
+        $args = [];
+
+        $unidadeId = $request->query('unidade_id');
+        if ($unidadeId === null || $unidadeId === '') {
+            $unidadeNome = $request->query('unidade');
+            if ($unidadeNome !== null && trim((string) $unidadeNome) !== '') {
+                $uid = $reservas->resolverUnidadeIdPorNome(trim((string) $unidadeNome));
+                if ($uid === null) {
+                    return ['args' => [], 'erro' => ['_erro' => ['Unidade não encontrada.', 'NOT_FOUND', 404]]];
+                }
+                $unidadeId = $uid;
+            } else {
+                return ['args' => [], 'erro' => ['_erro' => ['unidade_id é obrigatório.', 'VALIDATION_ERROR', 422]]];
+            }
+        }
+        if (! ctype_digit((string) $unidadeId) || (int) $unidadeId < 1) {
+            return $this->erroParam('unidade_id');
+        }
+        if (! AylaSettings::unidadePermitida((int) $unidadeId)) {
+            return ['args' => [], 'erro' => ['_erro' => ['Unidade não autorizada.', 'UNIT_NOT_ALLOWED', 403]]];
+        }
+        $args['unidade_id'] = (int) $unidadeId;
+
+        $data = $request->query('data');
+        if ($data === null || $data === '' || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $data)) {
+            return ['args' => [], 'erro' => ['_erro' => ['data é obrigatória (YYYY-MM-DD).', 'VALIDATION_ERROR', 422]]];
+        }
+        $args['data'] = (string) $data;
+
+        $horario = $request->query('horario');
+        if ($horario === null || $horario === '') {
+            return ['args' => [], 'erro' => ['_erro' => ['horario é obrigatório.', 'VALIDATION_ERROR', 422]]];
+        }
+        $norm = $this->normalizarHorario((string) $horario);
+        if ($norm === null) {
+            return $this->erroParam('horario');
+        }
+        $args['horario'] = $norm;
+
+        $qtd = $request->query('quantidade_pessoas', $request->query('qtd_pessoas'));
+        if ($qtd !== null && $qtd !== '') {
+            if (! ctype_digit((string) $qtd) || (int) $qtd < 1) {
+                return $this->erroParam('quantidade_pessoas');
+            }
+            $args['quantidade_pessoas'] = (int) $qtd;
+        }
+
+        $dur = $request->query('duracao_minutos');
+        if ($dur !== null && $dur !== '') {
+            if (! ctype_digit((string) $dur) || (int) $dur < 1 || (int) $dur > 480) {
+                return $this->erroParam('duracao_minutos');
+            }
+            $args['duracao_minutos'] = (int) $dur;
+        }
+
+        return ['args' => $args, 'erro' => null];
+    }
+
+    /** Aceita HH:MM ou HH:MM:SS; retorna HH:MM:SS ou null. */
+    private function normalizarHorario(string $hora): ?string
+    {
+        $hora = trim($hora);
+        if (preg_match('/^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/', $hora, $m)) {
+            $h = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $i = $m[2];
+            $s = isset($m[3]) ? $m[3] : '00';
+
+            return "{$h}:{$i}:{$s}";
+        }
+
+        return null;
     }
 
     /** @return array{args: array<string, mixed>, erro: array{_erro: array{0:string,1:string,2:int}}} */

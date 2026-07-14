@@ -114,6 +114,12 @@ ou detalhes do servidor.
 | GET | `/api/ayla/v1/patrimonio/alertas` | `unidade_id` |
 | GET | `/api/ayla/v1/patrimonio/unidade/{id}` | `id` na rota |
 | GET | `/api/ayla/v1/patrimonio/{id}` | `id` na rota |
+| GET | `/api/ayla/v1/reservas` | `busca`, `reserva_id`, `unidade_id`, `mesa_id`, `status`, `data`, `data_inicio`, `data_fim`, `cliente`, `telefone`, `quantidade_minima`, `quantidade_maxima`, `horario_inicio`, `horario_fim`, `limite` |
+| GET | `/api/ayla/v1/reservas/resumo` | `unidade_id` |
+| GET | `/api/ayla/v1/reservas/disponibilidade` | `unidade_id` (obrig.), `data` (obrig.), `horario` (obrig.), `quantidade_pessoas`, `duracao_minutos` |
+| GET | `/api/ayla/v1/reservas/alertas` | `unidade_id` |
+| GET | `/api/ayla/v1/reservas/unidade/{id}` | `id` na rota |
+| GET | `/api/ayla/v1/reservas/{id}` | `id` na rota |
 | GET | `/api/ayla/v1/relatorios/unidade/{id}` | `id` na rota |
 
 ### Validações

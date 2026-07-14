@@ -36,7 +36,7 @@ class AylaAuditLog extends Model
     private const CHAVES_SENSIVEIS = [
         'authorization', 'token', 'password', 'senha', 'api_key',
         'apikey', 'secret', 'cpf', 'rg', 'senha_atual', 'nova_senha',
-        'access_token', 'bearer',
+        'access_token', 'bearer', 'telefone', 'telefone_cliente', 'phone',
     ];
 
     /**

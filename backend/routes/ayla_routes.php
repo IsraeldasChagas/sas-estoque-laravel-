@@ -33,6 +33,14 @@ Route::prefix('ayla/v1')->middleware('ayla.token')->group(function () {
     Route::get('/patrimonio/unidade/{id}', [AylaController::class, 'patrimonioUnidade'])->where('id', '[0-9]+');
     Route::get('/patrimonio/{id}', [AylaController::class, 'patrimonioDetalhe'])->where('id', '[0-9]+');
 
+    // Reservas de mesas (somente leitura). Rotas específicas antes de /{id}.
+    Route::get('/reservas', [AylaController::class, 'reservas']);
+    Route::get('/reservas/resumo', [AylaController::class, 'reservasResumo']);
+    Route::get('/reservas/disponibilidade', [AylaController::class, 'reservasDisponibilidade']);
+    Route::get('/reservas/alertas', [AylaController::class, 'reservasAlertas']);
+    Route::get('/reservas/unidade/{id}', [AylaController::class, 'reservasUnidade'])->where('id', '[0-9]+');
+    Route::get('/reservas/{id}', [AylaController::class, 'reservasDetalhe'])->where('id', '[0-9]+');
+
     Route::get('/relatorios/unidade/{id}', [AylaController::class, 'relatorioUnidade']);
 
     // Validação de acesso do gateway (VPS). Autenticação de usuário Telegram

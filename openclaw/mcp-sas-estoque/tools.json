@@ -159,6 +159,122 @@
         "envelope": ["success", "message", "data", "meta"],
         "data_fields": ["garantia_proxima", "garantia_vencida", "manutencao_proxima", "manutencao_atrasada", "bens_sem_responsavel", "bens_sem_unidade", "bens_sem_codigo", "bens_situacao_irregular"]
       }
+    },
+    {
+      "name": "reservas_consultar",
+      "description": "Consulta reservas de mesa (somente leitura). Use para reservas de hoje/amanhã/semana, por status, unidade, cliente, quantidade de pessoas, horário ou histórico.",
+      "method": "GET",
+      "path": "/reservas",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "busca": { "type": "string", "description": "Cliente, observação, local ou ocasião" },
+          "reserva_id": { "type": "integer" },
+          "unidade_id": { "type": "integer" },
+          "mesa_id": { "type": "integer" },
+          "status": { "type": "string", "description": "pendente, confirmada, cancelada, cliente_chegou, no_show, finalizada" },
+          "data": { "type": "string", "description": "YYYY-MM-DD" },
+          "data_inicio": { "type": "string" },
+          "data_fim": { "type": "string" },
+          "cliente": { "type": "string" },
+          "telefone": { "type": "string" },
+          "quantidade_minima": { "type": "integer" },
+          "quantidade_maxima": { "type": "integer" },
+          "horario_inicio": { "type": "string" },
+          "horario_fim": { "type": "string" },
+          "limite": { "type": "integer", "description": "1-50" }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["reservas", "total", "retornadas", "filtros_aplicados"]
+      }
+    },
+    {
+      "name": "reservas_resumo",
+      "description": "Resumo de reservas: totais, hoje, amanhã, por status, por unidade, por horário e mesas mais usadas.",
+      "method": "GET",
+      "path": "/reservas/resumo",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "unidade_id": { "type": "integer", "description": "Unidade (opcional)" }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"]
+      }
+    },
+    {
+      "name": "reservas_detalhar",
+      "description": "Detalha uma reserva de mesa.",
+      "method": "GET",
+      "path": "/reservas/{id}",
+      "path_params": ["id"],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "ID da reserva" }
+        },
+        "required": ["id"]
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"]
+      }
+    },
+    {
+      "name": "reservas_por_unidade",
+      "description": "Resumo e lista de reservas do dia de uma unidade.",
+      "method": "GET",
+      "path": "/reservas/unidade/{id}",
+      "path_params": ["id"],
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "description": "ID da unidade" }
+        },
+        "required": ["id"]
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["unidade", "resumo", "reservas"]
+      }
+    },
+    {
+      "name": "reservas_disponibilidade",
+      "description": "Mesas disponíveis/ocupadas para unidade, data e horário. Conflito = mesma mesa + data + horário exato.",
+      "method": "GET",
+      "path": "/reservas/disponibilidade",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "unidade_id": { "type": "integer" },
+          "data": { "type": "string", "description": "YYYY-MM-DD" },
+          "horario": { "type": "string", "description": "HH:MM" },
+          "quantidade_pessoas": { "type": "integer" },
+          "duracao_minutos": { "type": "integer", "description": "Informativo; banco não grava duração" }
+        },
+        "required": ["unidade_id", "data", "horario"]
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"],
+        "data_fields": ["mesas_disponiveis", "mesas_ocupadas", "sugestao", "observacoes"]
+      }
+    },
+    {
+      "name": "reservas_alertas",
+      "description": "Alertas: próximas, sem confirmação, atrasadas, conflitos, sem mesa, acima da capacidade, canceladas recentes.",
+      "method": "GET",
+      "path": "/reservas/alertas",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "unidade_id": { "type": "integer", "description": "Unidade (opcional)" }
+        }
+      },
+      "response": {
+        "envelope": ["success", "message", "data", "meta"]
+      }
     }
   ]
 }

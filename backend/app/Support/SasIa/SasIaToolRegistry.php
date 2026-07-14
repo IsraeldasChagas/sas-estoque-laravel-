@@ -40,6 +40,12 @@ final class SasIaToolRegistry
             // Reservas
             'consultar_reservas_periodo' => ['reservaMesa', 'historicoReservas', 'sasIa'],
             'consultar_mesas_resumo' => ['reservaMesa', 'sasIa'],
+            'reservas_consultar' => ['reservaMesa', 'historicoReservas'],
+            'reservas_resumo' => ['reservaMesa', 'historicoReservas'],
+            'reservas_detalhar' => ['reservaMesa', 'historicoReservas'],
+            'reservas_por_unidade' => ['reservaMesa', 'historicoReservas'],
+            'reservas_disponibilidade' => ['reservaMesa', 'historicoReservas'],
+            'reservas_alertas' => ['reservaMesa', 'historicoReservas'],
 
             // RH
             'consultar_funcionarios_resumo' => ['funcionarios', 'rhDashboard', 'rhRelatorios'],
@@ -116,6 +122,37 @@ final class SasIaToolRegistry
                 'busca_cliente' => ['type' => 'string', 'description' => 'Nome do cliente (opcional)'],
             ]),
             self::t('consultar_mesas_resumo', 'Mesas cadastradas e status (livre, reservada, ocupada).', ['unidade_id' => ['type' => 'integer', 'description' => 'Unidade (opcional)']]),
+            self::t('reservas_consultar', 'Consulta reservas de mesa com filtros (data, status, unidade, cliente, pessoas, horário). Somente leitura.', [
+                'busca' => ['type' => 'string', 'description' => 'Cliente, telefone, mesa, observação'],
+                'reserva_id' => ['type' => 'integer'],
+                'unidade_id' => ['type' => 'integer'],
+                'mesa_id' => ['type' => 'integer'],
+                'status' => ['type' => 'string', 'description' => 'pendente, confirmada, cancelada, cliente_chegou, no_show, finalizada'],
+                'data' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                'data_inicio' => ['type' => 'string'],
+                'data_fim' => ['type' => 'string'],
+                'cliente' => ['type' => 'string'],
+                'telefone' => ['type' => 'string'],
+                'quantidade_minima' => ['type' => 'integer'],
+                'quantidade_maxima' => ['type' => 'integer'],
+                'horario_inicio' => ['type' => 'string', 'description' => 'HH:MM'],
+                'horario_fim' => ['type' => 'string', 'description' => 'HH:MM'],
+                'limite' => ['type' => 'integer'],
+            ]),
+            self::t('reservas_resumo', 'Resumo de reservas: hoje, amanhã, status, ocupação, horários e mesas mais usadas.', [
+                'unidade_id' => ['type' => 'integer'],
+            ]),
+            self::t('reservas_detalhar', 'Detalha uma reserva de mesa.', ['reserva_id' => ['type' => 'integer']], ['reserva_id']),
+            self::t('reservas_por_unidade', 'Resumo e reservas do dia de uma unidade.', ['unidade_id' => ['type' => 'integer']], ['unidade_id']),
+            self::t('reservas_disponibilidade', 'Mesas disponíveis/ocupadas para unidade, data e horário (quantidade opcional).', [
+                'unidade_id' => ['type' => 'integer'],
+                'data' => ['type' => 'string', 'description' => 'YYYY-MM-DD'],
+                'horario' => ['type' => 'string', 'description' => 'HH:MM'],
+                'quantidade_pessoas' => ['type' => 'integer'],
+            ], ['unidade_id', 'data', 'horario']),
+            self::t('reservas_alertas', 'Alertas: próximas, sem confirmação, atrasadas, conflitos, acima da capacidade.', [
+                'unidade_id' => ['type' => 'integer'],
+            ]),
 
             // —— RH ——
             self::t('consultar_funcionarios_resumo', 'Funcionários ativos, por unidade e tipo de vínculo.', []),

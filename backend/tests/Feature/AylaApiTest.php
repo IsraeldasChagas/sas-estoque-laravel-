@@ -271,4 +271,128 @@ class AylaApiTest extends TestCase
         $this->withHeaders($headers)->putJson('/api/ayla/v1/patrimonio/1')->assertStatus(405);
         $this->withHeaders($headers)->deleteJson('/api/ayla/v1/patrimonio/1')->assertStatus(405);
     }
+
+    public function test_reservas_com_token_correto_retorna_200(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('meta.read_only', true);
+    }
+
+    public function test_reservas_resumo_retorna_200(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/resumo')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_reservas_alertas_retorna_200(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/alertas')
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+    }
+
+    public function test_reservas_disponibilidade_exige_params(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/disponibilidade')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_reservas_disponibilidade_horario_invalido(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/disponibilidade?unidade_id=1&data=2026-07-14&horario=25:99')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_reservas_disponibilidade_data_invalida(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/disponibilidade?unidade_id=1&data=14-07-2026&horario=20:00')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_reservas_limite_invalido_retorna_422(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas?limite=999')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_reservas_status_invalido_retorna_422(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas?status=xpto')
+            ->assertStatus(422)
+            ->assertJsonPath('meta.code', 'VALIDATION_ERROR');
+    }
+
+    public function test_reservas_unidade_nao_autorizada_retorna_403(): void
+    {
+        $this->ativar();
+        Config::set('ayla.allowed_units', [2]);
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas?unidade_id=3')
+            ->assertStatus(403)
+            ->assertJsonPath('meta.code', 'UNIT_NOT_ALLOWED');
+    }
+
+    public function test_reservas_inexistente_retorna_404(): void
+    {
+        $this->ativar();
+
+        $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/99999999')
+            ->assertStatus(404)
+            ->assertJsonPath('meta.code', 'NOT_FOUND');
+    }
+
+    public function test_reservas_nao_expoe_token(): void
+    {
+        $this->ativar();
+
+        $resp = $this->withHeaders(['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'])
+            ->getJson('/api/ayla/v1/reservas/resumo')
+            ->assertStatus(200);
+
+        $this->assertStringNotContainsString('TOKEN_SECRETO_AYLA', $resp->getContent());
+    }
+
+    public function test_reservas_nenhuma_rota_de_escrita(): void
+    {
+        $this->ativar();
+        $headers = ['Authorization' => 'Bearer TOKEN_SECRETO_AYLA'];
+
+        $this->withHeaders($headers)->postJson('/api/ayla/v1/reservas')->assertStatus(405);
+        $this->withHeaders($headers)->putJson('/api/ayla/v1/reservas/1')->assertStatus(405);
+        $this->withHeaders($headers)->patchJson('/api/ayla/v1/reservas/1')->assertStatus(405);
+        $this->withHeaders($headers)->deleteJson('/api/ayla/v1/reservas/1')->assertStatus(405);
+    }
 }
