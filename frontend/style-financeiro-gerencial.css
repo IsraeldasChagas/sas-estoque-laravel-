@@ -77,7 +77,7 @@
 }
 .fg-filters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1.15rem 1.25rem;
   align-items: end;
 }
@@ -118,15 +118,32 @@
   min-height: 2.5rem;
   min-width: auto;
   width: auto;
+  max-width: max-content;
   padding: 0.5rem 0.9rem;
   font-size: 0.9rem;
   justify-content: center;
   box-sizing: border-box;
 }
 
+.fg-page-wrap .filters-grid > label:has(> .btn),
+.fg-form-body .filters-grid > label:has(> .btn),
+.fg-page-wrap .fg-filters > label:has(> .btn) {
+  width: max-content;
+  max-width: 100%;
+  align-self: end;
+  justify-self: start;
+}
+
+.fg-page-wrap .filters-grid > label:has(> .btn) .btn,
+.fg-form-body .filters-grid > label:has(> .btn) .btn,
+.fg-page-wrap .fg-filters > label:has(> .btn) .btn {
+  width: auto;
+  max-width: none;
+}
+
 .fg-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
   margin-bottom: 0;
 }
