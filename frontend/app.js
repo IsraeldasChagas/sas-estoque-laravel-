@@ -18212,6 +18212,9 @@ async function loadReservasMesas() {
   }
 }
 
+/** Limite operacional livre de + cadeiras (todas as mesas). */
+var RESERVA_CADEIRAS_EXTRAS_MAX = 20;
+
 async function popularMesasReserva(unidadeId) {
   var u = unidadeId || (document.getElementById('reservaFormUnidadeId') && document.getElementById('reservaFormUnidadeId').value) || (document.getElementById('reservaUnidadeSelect') && document.getElementById('reservaUnidadeSelect').value) || (document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value);
   if (!u) return;
@@ -18223,15 +18226,13 @@ async function popularMesasReserva(unidadeId) {
     var opt = document.createElement('option');
     opt.value = m.id;
     var base = capacidadeBaseMesa(m);
-    var extrasMax = cadeirasExtrasMaxMesa(m);
-    var max = capacidadeMaximaMesa(m);
+    var maxLivre = Math.min(99, base + RESERVA_CADEIRAS_EXTRAS_MAX);
     var label = (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + ' (cap. ' + base + ')';
-    if (extrasMax > 0) label += ' +' + extrasMax + ' cadeiras';
     opt.textContent = label;
     if (m.unidade_id) opt.setAttribute('data-unidade-id', String(m.unidade_id));
-    opt.setAttribute('data-capacidade', String(max));
+    opt.setAttribute('data-capacidade', String(maxLivre));
     opt.setAttribute('data-capacidade-base', String(base));
-    opt.setAttribute('data-cadeiras-extras-max', String(extrasMax));
+    opt.setAttribute('data-cadeiras-extras-max', String(RESERVA_CADEIRAS_EXTRAS_MAX));
     select.appendChild(opt);
   });
 }
@@ -18242,28 +18243,15 @@ function capacidadeBaseMesa(m) {
   return Number.isFinite(base) && base > 0 ? base : 1;
 }
 
-function cadeirasExtrasMaxMesa(m) {
-  if (!m) return 0;
-  if (!(m.permite_cadeiras_extras || (parseInt(m.cadeiras_extras_max, 10) > 0))) return 0;
-  return Math.max(0, parseInt(m.cadeiras_extras_max, 10) || 0);
-}
-
 function capacidadeMaximaMesa(m) {
   if (!m) return 1;
-  var max = parseInt(m.capacidade_maxima, 10);
-  if (Number.isFinite(max) && max > 0) return max;
   var base = capacidadeBaseMesa(m);
-  return Math.max(base, base + cadeirasExtrasMaxMesa(m));
+  return Math.min(99, base + RESERVA_CADEIRAS_EXTRAS_MAX);
 }
 
 function formatCapacidadeMesaLabel(m) {
   var base = capacidadeBaseMesa(m);
-  var max = capacidadeMaximaMesa(m);
-  var extras = cadeirasExtrasMaxMesa(m);
-  if (extras > 0 || max > base) {
-    return 'Capacidade: ' + base + '–' + max + (extras ? ' (+' + extras + ' cadeiras)' : '');
-  }
-  return 'Capacidade: ' + (base || max || '-');
+  return 'Capacidade: ' + (base || '-') + ' (+ cadeiras liberadas)';
 }
 
 function mesaSelecionadaReservaForm(form) {
@@ -18274,7 +18262,7 @@ function mesaSelecionadaReservaForm(form) {
   if (!opt || !opt.value) return null;
   return {
     base: parseInt(opt.getAttribute('data-capacidade-base'), 10) || 1,
-    extrasMax: parseInt(opt.getAttribute('data-cadeiras-extras-max'), 10) || 0,
+    extrasMax: RESERVA_CADEIRAS_EXTRAS_MAX,
     max: parseInt(opt.getAttribute('data-capacidade'), 10) || 1
   };
 }
@@ -18288,26 +18276,22 @@ function atualizarCampoCadeirasReservaForm(form, extrasPreferido) {
   var info = mesaSelecionadaReservaForm(form);
   if (!info) {
     if (wrap) wrap.classList.add('hidden');
-    if (input) { input.value = '0'; input.max = '0'; input.disabled = true; }
+    if (input) { input.value = '0'; input.max = String(RESERVA_CADEIRAS_EXTRAS_MAX); input.disabled = true; }
     if (hint) hint.textContent = '';
     return;
   }
   if (wrap) wrap.classList.remove('hidden');
   var extras = Number.isFinite(extrasPreferido) ? extrasPreferido : parseInt(input && input.value, 10);
   if (!Number.isFinite(extras) || extras < 0) extras = 0;
-  extras = Math.min(info.extrasMax, extras);
+  extras = Math.min(RESERVA_CADEIRAS_EXTRAS_MAX, extras);
   if (input) {
-    input.max = String(info.extrasMax);
+    input.max = String(RESERVA_CADEIRAS_EXTRAS_MAX);
     input.min = '0';
     input.value = String(extras);
-    input.disabled = info.extrasMax < 1;
+    input.disabled = false;
   }
   if (hint) {
-    if (info.extrasMax > 0) {
-      hint.textContent = 'Capacidade base ' + info.base + ' · até +' + info.extrasMax + ' cadeiras (total ' + (info.base + extras) + ' pessoas).';
-    } else {
-      hint.textContent = 'Capacidade da mesa: ' + info.base + ' pessoa(s). Esta mesa não permite cadeiras extras (cadastre o limite na mesa).';
-    }
+    hint.textContent = 'Capacidade base ' + info.base + ' · +' + extras + ' cadeira(s) = ' + (info.base + extras) + ' pessoa(s).';
   }
 }
 
@@ -18321,13 +18305,14 @@ function aplicarLimiteCapacidadeReservaForm(form) {
   var extrasIn = document.getElementById('reservaCadeirasExtras');
   var extras = extrasIn ? parseInt(extrasIn.value, 10) : 0;
   if (!Number.isFinite(extras) || extras < 0) extras = 0;
-  var cap = info ? (info.base + Math.min(extras, info.extrasMax || 0)) : NaN;
+  extras = Math.min(RESERVA_CADEIRAS_EXTRAS_MAX, extras);
+  var cap = info ? (info.base + extras) : NaN;
   if (!qtdIn) return;
   if (!Number.isFinite(cap) || cap < 1) {
     qtdIn.setAttribute('max', '99');
     return;
   }
-  qtdIn.setAttribute('max', String(cap));
+  qtdIn.setAttribute('max', String(Math.min(99, cap)));
   var v = parseInt(qtdIn.value, 10);
   if (!Number.isFinite(v) || v < 1) qtdIn.value = String(Math.min(cap, info.base));
   else if (v > cap) qtdIn.value = String(cap);
@@ -19055,15 +19040,12 @@ function setupReservasMesasModule() {
     }
     var infoMesa = mesaSelecionadaReservaForm(form);
     if (infoMesa) {
-      extrasNum = Math.min(extrasNum, infoMesa.extrasMax || 0);
+      extrasNum = Math.min(extrasNum, RESERVA_CADEIRAS_EXTRAS_MAX);
       data.cadeiras_extras_utilizadas = extrasNum;
       var capComExtras = infoMesa.base + extrasNum;
       if (data.qtd_pessoas > capComExtras) {
         showToast('Com +' + extrasNum + ' cadeira(s) esta mesa comporta no máximo ' + capComExtras + ' pessoa(s).', 'error');
         return;
-      }
-      if (extrasNum > 0 && data.qtd_pessoas < infoMesa.base + 1) {
-        // permitido: usuário pode reservar extras mesmo sem usar todas; não força qtd
       }
     }
     try {
