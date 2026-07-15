@@ -115,10 +115,11 @@
 .fg-form-body .btn.primary,
 .fg-form-body .btn.secondary,
 .fg-form-body .btn.neutral {
-  min-height: 2.75rem;
-  min-width: 10rem;
-  padding: 0.65rem 1.25rem;
-  font-size: 0.95rem;
+  min-height: 2.5rem;
+  min-width: auto;
+  width: auto;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
   justify-content: center;
   box-sizing: border-box;
 }

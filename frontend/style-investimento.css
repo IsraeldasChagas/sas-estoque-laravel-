@@ -33,10 +33,11 @@
 .inv-section-head > .btn,
 .inv-section-head .btn.primary,
 .inv-section-head .btn.secondary {
-  min-height: 2.75rem;
-  min-width: 11.5rem;
-  padding: 0.65rem 1.25rem;
-  font-size: 0.95rem;
+  min-height: 2.5rem;
+  min-width: auto;
+  width: auto;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
   justify-content: center;
   box-sizing: border-box;
 }
@@ -131,10 +132,11 @@
 .inv-page-wrap .filters-grid .btn,
 .inv-form-body .btn,
 .inv-sim-calc-btn {
-  min-height: 2.75rem;
-  min-width: 10rem;
-  padding: 0.65rem 1.25rem;
-  font-size: 0.95rem;
+  min-height: 2.5rem;
+  min-width: auto;
+  width: auto;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
   justify-content: center;
   box-sizing: border-box;
 }
