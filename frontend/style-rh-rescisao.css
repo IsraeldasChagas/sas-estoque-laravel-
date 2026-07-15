@@ -247,47 +247,6 @@
   background: #f0f4ff;
 }
 
-.rr-hist-bulk {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
-  background: #eef3fb;
-  border: 1px solid var(--border, #d5dde8);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  color: var(--muted, #546e7a);
-}
-
-.rr-hist-bulk.hidden {
-  display: none;
-}
-
-.rr-hist-bulk #rrHistBulkCount {
-  font-weight: 600;
-  color: var(--primary, #0047ab);
-  margin-right: 4px;
-}
-
-.rr-hist-check-col {
-  width: 2.25rem;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.rr-hist-check-col input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  vertical-align: middle;
-}
-
-#rrHistTable tr.rr-hist-selected {
-  background: #f0f5ff;
-}
-
 @media (max-width: 640px) {
   .rr-form-grid .rr-span-2 {
     grid-column: span 1;
