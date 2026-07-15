@@ -1,0 +1,322 @@
+/* Comercial / PDV — protótipo visual (mesmo respiro Patrimônio / Energia) */
+:is(
+  #comercialDashboardSection,
+  #comercialPdvSection,
+  #comercialMesasSection,
+  #comercialPedidosSection,
+  #comercialCozinhaSection,
+  #comercialPagamentosSection,
+  #comercialFechamentoSection,
+  #comercialClientesSection,
+  #comercialHistoricoSection,
+  #comercialRelatoriosSection,
+  #comercialConfiguracoesSection,
+  #comercialFiscalSection
+) {
+  padding: 0.25rem 0.35rem 2rem;
+  box-sizing: border-box;
+}
+
+.cpdv-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 0 0.35rem;
+}
+.cpdv-section-head h2 { margin: 0; }
+.cpdv-section-head .subtle-text { margin: 0.35rem 0 0; }
+
+.cpdv-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 1400px;
+  padding: 0 0.15rem;
+  box-sizing: border-box;
+}
+
+.cpdv-aviso-proto {
+  padding: 0.85rem 1.1rem;
+  border-radius: 12px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #6d4c00;
+  font-size: 0.9rem;
+}
+
+.cpdv-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+.cpdv-card {
+  background: linear-gradient(145deg, #fff 0%, #f5f8fc 100%);
+  border: var(--card-border, 2px solid #000);
+  border-radius: 14px;
+  padding: 1.05rem 1.15rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.cpdv-card span { display: block; font-size: 0.78rem; color: #607d8b; margin-bottom: 0.3rem; }
+.cpdv-card strong { font-size: 1.2rem; color: #1565c0; }
+
+.cpdv-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.15rem;
+}
+.cpdv-chart-box {
+  background: var(--card-bg, #fff);
+  border: var(--card-border, 2px solid #000);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+  min-height: 220px;
+}
+.cpdv-chart-box h4 { margin: 0 0 0.75rem; font-size: 0.95rem; }
+.cpdv-chart-box canvas { max-height: 200px; width: 100% !important; }
+
+:is(
+  #comercialDashboardSection,
+  #comercialPdvSection,
+  #comercialMesasSection,
+  #comercialPedidosSection,
+  #comercialCozinhaSection,
+  #comercialPagamentosSection,
+  #comercialFechamentoSection,
+  #comercialClientesSection,
+  #comercialHistoricoSection,
+  #comercialRelatoriosSection,
+  #comercialConfiguracoesSection,
+  #comercialFiscalSection
+) .table-card {
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+:is(
+  #comercialDashboardSection,
+  #comercialPdvSection,
+  #comercialMesasSection,
+  #comercialPedidosSection,
+  #comercialCozinhaSection,
+  #comercialPagamentosSection,
+  #comercialFechamentoSection,
+  #comercialClientesSection,
+  #comercialHistoricoSection,
+  #comercialRelatoriosSection,
+  #comercialConfiguracoesSection,
+  #comercialFiscalSection
+) .table-card > header { padding: 1rem 1.35rem; }
+
+.cpdv-form-body { padding: 1.2rem 1.35rem 1.4rem; box-sizing: border-box; }
+.cpdv-form-body .filters-grid { gap: 1rem 1.15rem; }
+.cpdv-form-body .btn,
+.cpdv-section-head .btn,
+.cpdv-actions .btn {
+  min-height: 2.5rem;
+  min-width: auto;
+  width: auto;
+  max-width: max-content;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+}
+.cpdv-form-body .filters-grid > label:has(> .btn) {
+  width: max-content;
+  align-self: end;
+}
+
+.cpdv-pdv-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 1.15rem;
+  align-items: start;
+}
+.cpdv-pdv-cats { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.85rem; }
+.cpdv-chip {
+  border: 1px solid #c5cae9;
+  background: #fff;
+  color: #3949ab;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cpdv-chip.active { background: #3949ab; color: #fff; border-color: #3949ab; }
+.cpdv-prod-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+.cpdv-prod {
+  border: var(--card-border, 2px solid #000);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+  text-align: left;
+}
+.cpdv-prod:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+.cpdv-prod--off { opacity: 0.45; cursor: not-allowed; }
+.cpdv-prod__nome { font-weight: 700; font-size: 0.88rem; margin: 0 0 0.25rem; }
+.cpdv-prod__preco { color: #1565c0; font-weight: 700; }
+.cpdv-prod__fav { font-size: 0.75rem; color: #f57f17; }
+.cpdv-cart-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #eceff1;
+  font-size: 0.88rem;
+}
+.cpdv-cart-totais { margin-top: 0.75rem; display: grid; gap: 0.35rem; font-size: 0.9rem; }
+.cpdv-cart-totais .total { font-size: 1.15rem; font-weight: 800; color: #1a237e; }
+.cpdv-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
+
+.cpdv-mesas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.85rem;
+}
+.cpdv-mesa {
+  border: 2px solid #000;
+  border-radius: 14px;
+  padding: 0.9rem;
+  cursor: pointer;
+  background: #fff;
+  min-height: 130px;
+}
+.cpdv-mesa:hover { transform: translateY(-2px); }
+.cpdv-mesa h4 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.cpdv-mesa small { display: block; color: #607d8b; font-size: 0.78rem; line-height: 1.35; }
+.cpdv-mesa--livre { background: #efebe9; border-color: #8d6e63; }
+.cpdv-mesa--ocupada { background: #ffebee; border-color: #e53935; }
+.cpdv-mesa--reservada { background: #e3f2fd; border-color: #1e88e5; }
+.cpdv-mesa--aguardando_pedido { background: #fff3e0; border-color: #fb8c00; }
+.cpdv-mesa--em_producao { background: #fff8e1; border-color: #f9a825; }
+.cpdv-mesa--aguardando_pagamento { background: #f3e5f5; border-color: #8e24aa; }
+.cpdv-mesa--limpeza { background: #e0f7fa; border-color: #00acc1; }
+.cpdv-mesa--bloqueada { background: #eceff1; border-color: #78909c; opacity: 0.75; }
+
+.cpdv-kds {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+.cpdv-kds-col {
+  background: #f5f7fa;
+  border-radius: 14px;
+  padding: 0.75rem;
+  border: 1px solid #e0e6ef;
+  min-height: 320px;
+}
+.cpdv-kds-col h3 { margin: 0 0 0.65rem; font-size: 0.95rem; }
+.cpdv-kds-card {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.85rem;
+}
+.cpdv-kds-card--cozinha { border-left: 5px solid #ef6c00; }
+.cpdv-kds-card--bar { border-left: 5px solid #1565c0; }
+.cpdv-kds-card--sobremesa { border-left: 5px solid #8e24aa; }
+.cpdv-kds-card strong { display: block; margin-bottom: 0.25rem; }
+.cpdv-prio {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #ffebee;
+  color: #c62828;
+}
+
+.cpdv-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e8eaf6;
+  color: #3949ab;
+}
+.cpdv-badge--warn { background: #fff3e0; color: #ef6c00; }
+.cpdv-badge--ok { background: #e8f5e9; color: #2e7d32; }
+.cpdv-badge--danger { background: #ffebee; color: #c62828; }
+.cpdv-badge--muted { background: #eceff1; color: #546e7a; }
+
+.cpdv-rel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+.cpdv-rel-card {
+  border: var(--card-border, 2px solid #000);
+  border-radius: 14px;
+  padding: 1.1rem;
+  background: var(--card-bg, #fff);
+}
+.cpdv-rel-card h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.cpdv-rel-card p { margin: 0 0 0.75rem; font-size: 0.82rem; color: #607d8b; }
+
+.cpdv-cfg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+.cpdv-cfg-card {
+  border: var(--card-border, 2px solid #000);
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  background: var(--card-bg, #fff);
+}
+.cpdv-cfg-card h4 { margin: 0 0 0.5rem; }
+.cpdv-cfg-card ul { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; color: #546e7a; }
+
+.cpdv-fiscal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+.cpdv-fiscal-card {
+  border: 2px dashed #b0bec5;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  color: #78909c;
+  background: #fafafa;
+  opacity: 0.85;
+}
+.cpdv-fiscal-card strong { display: block; margin-bottom: 0.35rem; color: #546e7a; }
+
+.cpdv-garcom-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: end;
+  margin-bottom: 0.5rem;
+}
+
+#cpdvModal .modal { max-width: 640px; width: 96%; }
+#cpdvModal .cpdv-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .cpdv-pdv-layout { grid-template-columns: 1fr; }
+  .cpdv-kds { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+  .cpdv-kds { grid-template-columns: 1fr; }
+  .cpdv-mesas-grid { grid-template-columns: 1fr 1fr; }
+  .cpdv-section-head .btn,
+  .cpdv-form-body .btn,
+  .cpdv-actions .btn { max-width: none; }
+}

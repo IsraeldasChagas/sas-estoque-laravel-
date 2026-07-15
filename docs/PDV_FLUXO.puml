@@ -1,0 +1,38 @@
+@startuml PDV_Fluxo_Prototipo
+title Comercial / PDV — Fluxo visual (protótipo sem persistência)
+skinparam backgroundColor #FEFEFE
+skinparam activity {
+  BackgroundColor #E3F2FD
+  BorderColor #1565C0
+}
+
+start
+:Login SAS-Estoque;
+:Abrir menu Comercial;
+
+fork
+  :Dashboard Comercial\n(KPIs e gráficos demo);
+fork again
+  :PDV / Caixa\nSelecionar produtos → Carrinho;
+  :Aplicar desconto / cliente (visual);
+  :Receber pagamento (simulado);
+  :Finalizar venda (toast — sem DB);
+fork again
+  :Mapa de Mesas;
+  :Abrir mesa / seleção garçom;
+  :Lançar pedido → enviar Cozinha/Bar;
+  :KDS: Novo → Preparo → Pronto → Entregue;
+  :Pré-conta → Pagamento → Fechar mesa;
+fork again
+  :Fechamento de Caixa PDV\nAbrir → Movimentos → Contar → Fechar;
+end fork
+
+:Histórico / Relatórios (somente leitura demo);
+note right
+  Fiscal permanece
+  "Em desenvolvimento"
+end note
+
+stop
+
+@enduml

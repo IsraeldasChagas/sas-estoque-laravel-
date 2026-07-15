@@ -1582,6 +1582,9 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
+  "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha",
+  "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico",
+  "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "openClawIntegracao",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
 ]);
@@ -1928,6 +1931,8 @@ const PERFIL_LABELS = {
   GERENTE: "Gerente",
   ATENDENTE: "Atendente",
   ATENDENTE_CAIXA: "Atendente Caixa",
+  CAIXA: "Caixa",
+  GARCOM: "Garçom",
   FUNCIONARIO: "Funcionário",
 };
 
@@ -1947,7 +1952,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1955,7 +1960,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2019,7 +2024,23 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaMesa", "historicoReservas", "comercialPdv", "comercialPagamentos", "comercialFechamento"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+  CAIXA: {
+    sections: ["boasVindas", "minhaConta", "dashboard", "comercialPdv", "comercialPagamentos", "comercialFechamento", "fechaTecnica"],
+    canManageUsuarios: false,
+    canManageProdutos: false,
+    canManageUnidades: false,
+    canManageCompras: false,
+    canRegistrarMovimentacoes: false,
+  },
+  GARCOM: {
+    sections: ["boasVindas", "minhaConta", "comercialMesas", "comercialPedidos", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -5429,6 +5450,12 @@ function applyPermissions() {
       regras.sections.includes("investimentoRelatorios");
     investimentoNavSubmenu.classList.toggle("hidden", !temAcessoInvestimento);
   }
+  const comercialNavSubmenu = document.getElementById("comercialMenu")?.closest(".nav-submenu");
+  if (comercialNavSubmenu) {
+    const comercialKeys = ["comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal"];
+    const temAcessoComercial = comercialKeys.some((k) => regras.sections.includes(k));
+    comercialNavSubmenu.classList.toggle("hidden", !temAcessoComercial);
+  }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
   if (financeiroNavSubmenu) {
@@ -5706,6 +5733,12 @@ function navigateTo(section) {
     if (patSections.includes(section)) patrimonioNavSubmenuNav.classList.add("open");
     else patrimonioNavSubmenuNav.classList.remove("open");
   }
+  const comercialNavSubmenuNav = document.getElementById("comercialMenu")?.closest(".nav-submenu");
+  if (comercialNavSubmenuNav) {
+    const cpdvSections = ["comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal"];
+    if (cpdvSections.includes(section)) comercialNavSubmenuNav.classList.add("open");
+    else comercialNavSubmenuNav.classList.remove("open");
+  }
   if (section === "patrimonioDashboard") loadPatrimonioDashboard?.().catch(() => {});
   else if (section === "patrimonios") loadPatrimonios?.().catch(() => {});
   else if (section === "patrimonioCategorias") loadPatrimonioCategorias?.().catch(() => {});
@@ -5720,6 +5753,18 @@ function navigateTo(section) {
   else if (section === "investimentoCarteira") loadInvestimentoCarteira?.().catch(() => {});
   else if (section === "investimentoResgates") loadInvestimentoResgates?.().catch(() => {});
   else if (section === "investimentoRelatorios") loadInvestimentoRelatorios?.().catch(() => {});
+  else if (section === "comercialDashboard") loadComercialDashboard?.().catch(() => {});
+  else if (section === "comercialPdv") loadComercialPdv?.().catch(() => {});
+  else if (section === "comercialMesas") loadComercialMesas?.().catch(() => {});
+  else if (section === "comercialPedidos") loadComercialPedidos?.().catch(() => {});
+  else if (section === "comercialCozinha") loadComercialCozinha?.().catch(() => {});
+  else if (section === "comercialPagamentos") loadComercialPagamentos?.().catch(() => {});
+  else if (section === "comercialFechamento") loadComercialFechamento?.().catch(() => {});
+  else if (section === "comercialClientes") loadComercialClientes?.().catch(() => {});
+  else if (section === "comercialHistorico") loadComercialHistorico?.().catch(() => {});
+  else if (section === "comercialRelatorios") loadComercialRelatorios?.().catch(() => {});
+  else if (section === "comercialConfiguracoes") loadComercialConfiguracoes?.().catch(() => {});
+  else if (section === "comercialFiscal") loadComercialFiscal?.().catch(() => {});
   else if (section === "financeiroDashboard") loadFinanceiroDashboard?.().catch(() => {});
   else if (section === "financeiroFluxoCaixa") loadFinanceiroFluxoCaixa?.().catch(() => {});
   else if (section === "financeiroContasReceber") loadFinanceiroContasReceber?.().catch(() => {});
@@ -25473,6 +25518,7 @@ async function init() {
   if (typeof setupPatrimonioModule === "function") setupPatrimonioModule();
   if (typeof setupInvestimentoModule === "function") setupInvestimentoModule();
   if (typeof setupRhRescisaoModule === "function") setupRhRescisaoModule();
+  if (typeof setupComercialPdvModule === "function") setupComercialPdvModule();
   if (!stopMatrixAnimation) {
     stopMatrixAnimation = initMatrixBackground();
   }

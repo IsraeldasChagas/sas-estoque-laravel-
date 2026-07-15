@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
+    <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -264,6 +265,26 @@
               <a href="#" class="nav-link nav-link-child" data-section="investimentoCarteira"><span class="nav-icon" aria-hidden="true">💼</span><span class="nav-label">Carteira da Empresa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="investimentoResgates"><span class="nav-icon" aria-hidden="true">💸</span><span class="nav-label">Resgates</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="investimentoRelatorios"><span class="nav-icon" aria-hidden="true">📑</span><span class="nav-label">Relatórios</span></a>
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--comercial">
+            <a href="#" class="nav-link nav-link-parent" id="comercialMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Comercial</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="comercialDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard Comercial</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialPdv"><span class="nav-icon" aria-hidden="true">🖥️</span><span class="nav-label">PDV / Caixa</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialMesas"><span class="nav-icon" aria-hidden="true">🍽️</span><span class="nav-label">Mesas e Comandas</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialPedidos"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Pedidos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialCozinha"><span class="nav-icon" aria-hidden="true">👨‍🍳</span><span class="nav-label">Cozinha / Produção</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialPagamentos"><span class="nav-icon" aria-hidden="true">💳</span><span class="nav-label">Pagamentos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialFechamento"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialClientes"><span class="nav-icon" aria-hidden="true">👤</span><span class="nav-label">Clientes</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialHistorico"><span class="nav-icon" aria-hidden="true">🕘</span><span class="nav-label">Histórico de Vendas</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios Comerciais</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações do PDV</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialFiscal"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Fiscal <em style="opacity:.75;font-size:.8em">(Em desenvolvimento)</em></span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--patrimonio">
@@ -4114,6 +4135,56 @@
             </div>
           </section>
 
+          <!-- Módulo Comercial / PDV — protótipo visual -->
+          <section id="comercialDashboardSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🛒 Dashboard Comercial</h2><p class="subtle-text">Visão demonstrativa de vendas, mesas e produção.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialDashboardRoot"></div>
+          </section>
+          <section id="comercialPdvSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🖥️ PDV / Caixa</h2><p class="subtle-text">Venda rápida — protótipo visual sem persistência.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialPdvRoot"></div>
+          </section>
+          <section id="comercialMesasSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🍽️ Mesas e Comandas</h2><p class="subtle-text">Mapa de mesas e fluxo de comanda (demo).</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialMesasRoot"></div>
+          </section>
+          <section id="comercialPedidosSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🧾 Pedidos</h2><p class="subtle-text">Listagem demonstrativa de pedidos.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialPedidosRoot"></div>
+          </section>
+          <section id="comercialCozinhaSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>👨‍🍳 Cozinha / Produção</h2><p class="subtle-text">KDS visual — cozinha, bar e sobremesas.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialCozinhaRoot"></div>
+          </section>
+          <section id="comercialPagamentosSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>💳 Pagamentos</h2><p class="subtle-text">Simulação de recebimentos e troco.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialPagamentosRoot"></div>
+          </section>
+          <section id="comercialFechamentoSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🧮 Fechamento de Caixa (PDV)</h2><p class="subtle-text">Protótipo separado do fechamento financeiro existente.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialFechamentoRoot"></div>
+          </section>
+          <section id="comercialClientesSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>👤 Clientes</h2><p class="subtle-text">Cadastro demonstrativo — sem persistência.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialClientesRoot"></div>
+          </section>
+          <section id="comercialHistoricoSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🕘 Histórico de Vendas</h2><p class="subtle-text">Consulta visual de vendas demonstrativas.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialHistoricoRoot"></div>
+          </section>
+          <section id="comercialRelatoriosSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>📈 Relatórios Comerciais</h2><p class="subtle-text">Cards de relatório — PDF/Excel apenas visuais.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialRelatoriosRoot"></div>
+          </section>
+          <section id="comercialConfiguracoesSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>⚙️ Configurações do PDV</h2><p class="subtle-text">Somente protótipo das futuras configurações.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialConfiguracoesRoot"></div>
+          </section>
+          <section id="comercialFiscalSection" class="view-section hidden">
+            <div class="cpdv-section-head"><div><h2>🏛️ Fiscal</h2><p class="subtle-text">Em desenvolvimento — sem emissão nesta fase.</p></div></div>
+            <div class="cpdv-page-wrap" id="comercialFiscalRoot"></div>
+          </section>
+
           <!-- Módulo Patrimônio -->
           <section id="patrimonioDashboardSection" class="view-section hidden">
             <div class="patrimonio-section-head">
@@ -5779,6 +5850,19 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoCarteira" /> Investimento — Carteira</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoResgates" /> Investimento — Resgates</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Comercial / PDV (protótipo)</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialDashboard" /> Comercial — Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialPdv" /> Comercial — PDV / Caixa</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialMesas" /> Comercial — Mesas e Comandas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialPedidos" /> Comercial — Pedidos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialCozinha" /> Comercial — Cozinha / Produção</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialPagamentos" /> Comercial — Pagamentos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFechamento" /> Comercial — Fechamento de Caixa</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialClientes" /> Comercial — Clientes</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialHistorico" /> Comercial — Histórico de Vendas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialRelatorios" /> Comercial — Relatórios</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialConfiguracoes" /> Comercial — Configurações do PDV</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFiscal" /> Comercial — Fiscal (em desenvolvimento)</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="openClawIntegracao" /> Configurações — OpenClaw / Assistente IA (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
@@ -7315,7 +7399,8 @@
     <script src="ayla-ia.js?v=20260714-ayla-padrao"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
-    <script src="app.js?v=20260715-pessoas-so"></script>
+    <script src="comercial-pdv.js?v=20260715-proto2"></script>
+    <script src="app.js?v=20260715-comercial-proto"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
