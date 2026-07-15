@@ -18411,7 +18411,7 @@ async function abrirDetalhesReserva(id) {
       '<p><strong>Cliente:</strong> ' + escapeHtml(r.nome_cliente) + '</p>' +
       '<p><strong>Telefone:</strong> ' + escapeHtml(r.telefone_cliente || '-') + '</p>' +
       '<p><strong>Data:</strong> ' + formatDataBrasil(r.data_reserva) + ' | <strong>Horário:</strong> ' + formatHora(r.hora_reserva) + '</p>' +
-      '<p><strong>Pessoas:</strong> <span id="detQtdPessoas">' + qtd + '</span> / ' + cap + '</p>' +
+      '<p><strong>Pessoas:</strong> <span id="detQtdPessoas">' + qtd + '</span></p>' +
       '<p><strong>Status:</strong> ' + (r.status || '').replace(/_/g, ' ') + '</p>' +
       '<p><strong>Criado por:</strong> ' + escapeHtml((r.usuario && r.usuario.nome) || '-') + '</p>' +
       (r.observacao ? '<p><strong>Observação:</strong> ' + escapeHtml(stripReservaMovMarkers(r.observacao)) + '</p>' : '') +
