@@ -51,6 +51,7 @@
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
+    <link rel="stylesheet" href="delivery.css?v=20260715-dlv1" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -285,6 +286,29 @@
               <a href="#" class="nav-link nav-link-child" data-section="comercialRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios Comerciais</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="comercialConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações do PDV</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="comercialFiscal"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Fiscal <em style="opacity:.75;font-size:.8em">(Em desenvolvimento)</em></span></a>
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--delivery">
+            <a href="#" class="nav-link nav-link-parent" id="deliveryMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🛵</span><span class="nav-label">Delivery</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard Delivery</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryVitrine"><span class="nav-icon" aria-hidden="true">🏪</span><span class="nav-label">Vitrine</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryCategorias"><span class="nav-icon" aria-hidden="true">🗂️</span><span class="nav-label">Categorias</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryProdutos"><span class="nav-icon" aria-hidden="true">📦</span><span class="nav-label">Produtos do Delivery</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryAdicionais"><span class="nav-icon" aria-hidden="true">➕</span><span class="nav-label">Adicionais e Variações</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryBanners"><span class="nav-icon" aria-hidden="true">🖼️</span><span class="nav-label">Banners e Destaques</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryPedidos"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Pedidos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryClientes"><span class="nav-icon" aria-hidden="true">👤</span><span class="nav-label">Clientes</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryEnderecos"><span class="nav-icon" aria-hidden="true">📍</span><span class="nav-label">Endereços</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryTaxas"><span class="nav-icon" aria-hidden="true">🚚</span><span class="nav-label">Taxas de Entrega</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryCupons"><span class="nav-icon" aria-hidden="true">🎟️</span><span class="nav-label">Cupons e Promoções</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryPagamentos"><span class="nav-icon" aria-hidden="true">💳</span><span class="nav-label">Formas de Pagamento</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryHorarios"><span class="nav-icon" aria-hidden="true">🕐</span><span class="nav-label">Horários de Funcionamento</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações da Vitrine</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios Delivery</span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--patrimonio">
@@ -4185,6 +4209,67 @@
             <div class="cpdv-page-wrap" id="comercialFiscalRoot"></div>
           </section>
 
+          <!-- Módulo Delivery — protótipo visual (ref. VendaFácil) -->
+          <section id="deliveryDashboardSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🛵 Dashboard Delivery</h2><p class="subtle-text">KPIs demonstrativos do delivery.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryDashboardRoot"></div>
+          </section>
+          <section id="deliveryVitrineSection" class="view-section hidden">
+            <div class="dlv-page-wrap" id="deliveryVitrineRoot"></div>
+          </section>
+          <section id="deliveryCategoriasSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🗂️ Categorias</h2><p class="subtle-text">Cadastro que alimenta a vitrine.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryCategoriasRoot"></div>
+          </section>
+          <section id="deliveryProdutosSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>📦 Produtos do Delivery</h2><p class="subtle-text">Cardápio digital — protótipo.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryProdutosRoot"></div>
+          </section>
+          <section id="deliveryAdicionaisSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>➕ Adicionais e Variações</h2><p class="subtle-text">Personalização de produtos.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryAdicionaisRoot"></div>
+          </section>
+          <section id="deliveryBannersSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🖼️ Banners e Destaques</h2><p class="subtle-text">Destaques da vitrine pública.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryBannersRoot"></div>
+          </section>
+          <section id="deliveryPedidosSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🧾 Pedidos</h2><p class="subtle-text">Gestão de pedidos delivery.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryPedidosRoot"></div>
+          </section>
+          <section id="deliveryClientesSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>👤 Clientes</h2><p class="subtle-text">Clientes do delivery.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryClientesRoot"></div>
+          </section>
+          <section id="deliveryEnderecosSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>📍 Endereços</h2><p class="subtle-text">Endereços de entrega.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryEnderecosRoot"></div>
+          </section>
+          <section id="deliveryTaxasSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🚚 Taxas de Entrega</h2><p class="subtle-text">Faixas por bairro/CEP (demo).</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryTaxasRoot"></div>
+          </section>
+          <section id="deliveryCuponsSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🎟️ Cupons e Promoções</h2><p class="subtle-text">Cupons da vitrine.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryCuponsRoot"></div>
+          </section>
+          <section id="deliveryPagamentosSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>💳 Formas de Pagamento</h2><p class="subtle-text">Opções na vitrine.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryPagamentosRoot"></div>
+          </section>
+          <section id="deliveryHorariosSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>🕐 Horários de Funcionamento</h2><p class="subtle-text">Quando a loja aceita pedidos.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryHorariosRoot"></div>
+          </section>
+          <section id="deliveryConfiguracoesSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>⚙️ Configurações da Vitrine</h2><p class="subtle-text">Tema, logo, WhatsApp.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryConfiguracoesRoot"></div>
+          </section>
+          <section id="deliveryRelatoriosSection" class="view-section hidden">
+            <div class="dlv-section-head"><div><h2>📈 Relatórios Delivery</h2><p class="subtle-text">PDF/Excel apenas visuais.</p></div></div>
+            <div class="dlv-page-wrap" id="deliveryRelatoriosRoot"></div>
+          </section>
+
           <!-- Módulo Patrimônio -->
           <section id="patrimonioDashboardSection" class="view-section hidden">
             <div class="patrimonio-section-head">
@@ -5863,6 +5948,22 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialRelatorios" /> Comercial — Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialConfiguracoes" /> Comercial — Configurações do PDV</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFiscal" /> Comercial — Fiscal (em desenvolvimento)</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Delivery (protótipo)</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryDashboard" /> Delivery — Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryVitrine" /> Delivery — Vitrine</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCategorias" /> Delivery — Categorias</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryProdutos" /> Delivery — Produtos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryAdicionais" /> Delivery — Adicionais</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryBanners" /> Delivery — Banners</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryPedidos" /> Delivery — Pedidos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryClientes" /> Delivery — Clientes</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryEnderecos" /> Delivery — Endereços</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryTaxas" /> Delivery — Taxas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCupons" /> Delivery — Cupons</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryPagamentos" /> Delivery — Pagamentos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryHorarios" /> Delivery — Horários</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryConfiguracoes" /> Delivery — Configurações</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryRelatorios" /> Delivery — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="openClawIntegracao" /> Configurações — OpenClaw / Assistente IA (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
@@ -7400,7 +7501,8 @@
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="comercial-pdv.js?v=20260715-proto2"></script>
-    <script src="app.js?v=20260715-comercial-proto"></script>
+    <script src="delivery.js?v=20260715-dlv1"></script>
+    <script src="app.js?v=20260715-delivery-proto"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
