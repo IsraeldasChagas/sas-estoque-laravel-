@@ -18317,12 +18317,13 @@ async function abrirDetalhesReserva(id) {
     var podeEditar = ['cancelada', 'no_show', 'finalizada'].indexOf(r.status || '') === -1;
     var acoes = '';
     if (podeEditar) {
-      acoes = '<div class="reserva-detalhes-acoes" style="margin-top:1rem;padding-top:1rem;border-top:1px solid #eee;display:flex;flex-wrap:wrap;gap:0.5rem;">' +
+      acoes = '<div class="reserva-detalhes-acoes" style="margin-top:1rem;padding-top:1rem;border-top:1px solid #eee;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">' +
         '<button type="button" class="btn primary" data-action="mais-pessoa" data-id="' + r.id + '">➕ Mais pessoa</button>' +
         '<button type="button" class="btn primary" data-action="menos-pessoa" data-id="' + r.id + '">➖ Menos pessoa</button>' +
         '<button type="button" class="btn neutral" data-action="juntar-mesa" data-id="' + r.id + '">🔗 Juntar mesa</button>' +
         '<button type="button" class="btn neutral" data-action="separar-mesa" data-id="' + r.id + '">✂️ Separar mesa</button>' +
         '<button type="button" class="btn danger" data-action="liberar-mesa" data-id="' + r.id + '">✅ Liberar mesa</button>' +
+        '<button type="button" class="btn neutral" data-action="trocar-mesa" data-id="' + r.id + '">🔄 Trocar de mesa</button>' +
         '</div>';
     }
     var movs = parseReservaMovHistory(r.observacao || '');
@@ -18383,6 +18384,7 @@ async function abrirDetalhesReserva(id) {
         else if (action === 'juntar-mesa') acaoJuntarMesa(resid, data);
         else if (action === 'separar-mesa') acaoSepararMesa(resid, data);
         else if (action === 'liberar-mesa') acaoLiberarMesa(resid, data);
+        else if (action === 'trocar-mesa') acaoTrocarMesa(resid, data);
       });
     });
   } catch (e) {
@@ -18418,6 +18420,59 @@ async function acaoMenosPessoa(reservId, data) {
     abrirDetalhesReserva(reservId);
   } catch (e) {
     showToast(e.message || 'Erro ao atualizar.', 'error');
+  }
+}
+
+async function acaoTrocarMesa(reservId, data) {
+  var unidadeId = data.unidade_id || document.getElementById('reservasUnidadeFiltro')?.value;
+  if (!unidadeId) { showToast('Selecione a unidade.', 'warning'); return; }
+  var mesas = await fetchJSON('/mesas?unidade_id=' + unidadeId);
+  var reservas = await fetchJSON('/reservas-mesas?unidade_id=' + unidadeId + '&data_reserva=' + formatDataReserva(data.data_reserva));
+  var horaReserva = (data.hora_reserva || '').toString().slice(0, 5);
+  var mesasOcupadasNesseHorario = (reservas || []).filter(function(r) {
+    if (['cancelada', 'no_show', 'finalizada'].indexOf(r.status || '') !== -1) return false;
+    var hr = (r.hora_reserva || '').toString().slice(0, 5);
+    return hr === horaReserva;
+  }).map(function(r) { return r.mesa_id || (r.mesa && r.mesa.id); });
+  var qtd = data.qtd_pessoas || 1;
+  var opcoes = (mesas || []).filter(function(m) {
+    return m.ativo !== false && m.id != data.mesa_id && capacidadeMaximaMesa(m) >= qtd && mesasOcupadasNesseHorario.indexOf(m.id) === -1;
+  });
+  if (!opcoes.length) { showToast('Nenhuma outra mesa disponível com capacidade suficiente no mesmo horário.', 'warning'); return; }
+  var mesaNova = await openMesaPicker(opcoes, {
+    title: 'Trocar de mesa',
+    subtitle: 'Selecione a nova mesa para esta reserva.',
+    confirmLabel: 'Trocar'
+  });
+  if (!mesaNova) return;
+  try {
+    var r = await fetchJSON('/reservas-mesas/' + reservId);
+    var mesaAtualLabel = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || ('Mesa ' + (r.mesa_id || data.mesa_id || ''));
+    var mesaNovaLabel = (mesaNova && (mesaNova.nome_mesa || mesaNova.numero_mesa)) || ('Mesa ' + (mesaNova && mesaNova.id ? mesaNova.id : ''));
+    var nextObs = addReservaMovHistory(r.observacao || '', {
+      type: 'trocar',
+      from: mesaAtualLabel,
+      to: mesaNovaLabel,
+      moved_people: r.qtd_pessoas || data.qtd_pessoas || 1,
+      remaining_people: 0,
+      owner: r.nome_cliente || data.nome_cliente || ''
+    });
+    var payload = {
+      mesa_id: mesaNova.id,
+      nome_cliente: r.nome_cliente,
+      telefone_cliente: r.telefone_cliente,
+      data_reserva: formatDataReserva(r.data_reserva),
+      hora_reserva: formatHora(r.hora_reserva),
+      qtd_pessoas: r.qtd_pessoas,
+      status: r.status,
+      observacao: nextObs
+    };
+    await fetchJSON('/reservas-mesas/' + reservId, { method: 'PUT', body: JSON.stringify(payload) });
+    showToast('Reserva trocada para ' + (mesaNova.nome_mesa || mesaNova.numero_mesa) + '.', 'success');
+    document.getElementById('closeReservaDetalhes').click();
+    await loadReservasMesas();
+  } catch (e) {
+    showToast(e.message || 'Erro ao trocar mesa.', 'error');
   }
 }
 
