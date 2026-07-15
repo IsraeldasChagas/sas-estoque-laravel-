@@ -867,6 +867,27 @@
     }
   }
 
+  function rrHistIdsSelecionados() {
+    return [...document.querySelectorAll("#rrHistTable input.rr-hist-check:checked")]
+      .map((el) => el.dataset.id)
+      .filter(Boolean);
+  }
+
+  function rrHistAtualizarSelecao() {
+    const boxes = [...document.querySelectorAll("#rrHistTable input.rr-hist-check")];
+    const checked = boxes.filter((b) => b.checked);
+    const all = document.getElementById("rrHistSelectAll");
+    const bar = document.getElementById("rrHistBulkBar");
+    const count = document.getElementById("rrHistBulkCount");
+    if (all) {
+      all.checked = boxes.length > 0 && checked.length === boxes.length;
+      all.indeterminate = checked.length > 0 && checked.length < boxes.length;
+    }
+    boxes.forEach((b) => b.closest("tr")?.classList.toggle("rr-hist-selected", b.checked));
+    if (count) count.textContent = `${checked.length} selecionado${checked.length === 1 ? "" : "s"}`;
+    if (bar) bar.classList.toggle("hidden", checked.length === 0);
+  }
+
   async function loadRhRescisaoHistorico() {
     await rrCarregarCatalogos();
     await rrPreencherUnidades("rrHistUnidade", "Todas");
@@ -894,11 +915,18 @@
     const lista = await rrFetch(`/rh/rescisoes${qs ? `?${qs}` : ""}`);
     const tb = document.getElementById("rrHistTable");
     if (!tb) return;
+    const all = document.getElementById("rrHistSelectAll");
+    if (all) {
+      all.checked = false;
+      all.indeterminate = false;
+    }
     if (!lista.length) {
       tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#607d8b">Nenhum registro.</td></tr>';
+      rrHistAtualizarSelecao();
       return;
     }
     tb.innerHTML = lista.map((r) => `<tr>
+      <td class="rr-hist-check-col"><input type="checkbox" class="rr-hist-check" data-id="${r.id}" data-status="${rrEsc(r.status)}" aria-label="Selecionar rescisão ${r.id}" /></td>
       <td>${r.id}</td>
       <td>${rrEsc(r.funcionario_nome)}</td>
       <td>${rrEsc(r.unidade_nome)}</td>
@@ -912,6 +940,7 @@
         ${r.status === "simulacao" ? `<button type="button" class="table-action rr-btn-confirm" data-id="${r.id}">Confirmar</button>` : ""}
       </td>
     </tr>`).join("");
+    rrHistAtualizarSelecao();
   }
 
   async function loadRhRescisaoRelatorios() {
@@ -1032,6 +1061,61 @@
 
     document.getElementById("rrCompBtnComparar")?.addEventListener("click", () => rrExecutarComparativo().catch((e) => rrToast(e.message, "error")));
     document.getElementById("rrHistFiltrar")?.addEventListener("click", () => loadRhRescisaoHistorico().catch((e) => rrToast(e.message, "error")));
+
+    document.getElementById("rrHistSelectAll")?.addEventListener("change", (e) => {
+      const on = !!e.target.checked;
+      document.querySelectorAll("#rrHistTable input.rr-hist-check").forEach((cb) => { cb.checked = on; });
+      rrHistAtualizarSelecao();
+    });
+
+    document.getElementById("rrHistBulkLimpar")?.addEventListener("click", () => {
+      document.querySelectorAll("#rrHistTable input.rr-hist-check").forEach((cb) => { cb.checked = false; });
+      const all = document.getElementById("rrHistSelectAll");
+      if (all) { all.checked = false; all.indeterminate = false; }
+      rrHistAtualizarSelecao();
+    });
+
+    document.getElementById("rrHistBulkConfirmar")?.addEventListener("click", async () => {
+      const ids = rrHistIdsSelecionados();
+      if (!ids.length) return;
+      const simular = ids.filter((id) => {
+        const cb = document.querySelector(`#rrHistTable input.rr-hist-check[data-id="${id}"]`);
+        return cb && cb.dataset.status === "simulacao";
+      });
+      if (!simular.length) {
+        rrToast("Nenhuma simulação selecionada para confirmar.", "info");
+        return;
+      }
+      if (!confirm(`Confirmar ${simular.length} rescisão(ões)?`)) return;
+      try {
+        for (const id of simular) {
+          await rrFetch(`/rh/rescisoes/${id}/confirmar`, { method: "POST", body: "{}" });
+        }
+        rrToast(`${simular.length} confirmada(s).`, "success");
+        await loadRhRescisaoHistorico();
+      } catch (err) {
+        rrToast(err.message || "Erro ao confirmar.", "error");
+      }
+    });
+
+    document.getElementById("rrHistBulkCancelar")?.addEventListener("click", async () => {
+      const ids = rrHistIdsSelecionados();
+      if (!ids.length) return;
+      if (!confirm(`Cancelar ${ids.length} registro(s) selecionado(s)?`)) return;
+      try {
+        for (const id of ids) {
+          await rrFetch(`/rh/rescisoes/${id}`, { method: "DELETE" });
+        }
+        rrToast(`${ids.length} cancelado(s).`, "success");
+        await loadRhRescisaoHistorico();
+      } catch (err) {
+        rrToast(err.message || "Erro ao cancelar.", "error");
+      }
+    });
+
+    document.getElementById("rhRescisaoHistoricoSection")?.addEventListener("change", (e) => {
+      if (e.target.matches?.("input.rr-hist-check")) rrHistAtualizarSelecao();
+    });
 
     document.getElementById("rhRescisaoHistoricoSection")?.addEventListener("click", async (e) => {
       const pdf = e.target.closest(".rr-btn-pdf, .rr-btn-pdf-via");
