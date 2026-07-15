@@ -43,7 +43,7 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="style-energia.css?v=20260521-energia" />
+    <link rel="stylesheet" href="style-energia.css?v=20260715-energia-padrao" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260714-pat-padrao" />
     <link rel="stylesheet" href="style-investimento.css?v=20260615-submenu-fix2" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20260714-fg-padrao" />
@@ -4528,125 +4528,153 @@
           <!-- Manutenção — Energia -->
           <section id="energiaDashboardSection" class="view-section hidden">
             <div class="energia-section-head">
-              <h2>⚡ Dashboard de Energia</h2>
-              <p class="subtle-text">Visão consolidada por unidade, setor e equipamentos monitorados.</p>
-            </div>
-            <div class="table-card form-card--wide">
-              <header><h3>Filtros</h3></header>
-              <div class="filters-panel">
-                <div class="filters-grid">
-                  <label>Unidade<select id="energiaDashFiltroUnidade"><option value="">Todas</option></select></label>
-                  <label>Setor<input type="text" id="energiaDashFiltroSetor" placeholder="Filtrar setor" /></label>
-                  <label>Mês<input type="month" id="energiaDashFiltroMes" /></label>
-                  <label><button type="button" class="btn primary" id="energiaDashAtualizar">Atualizar dashboard</button></label>
-                </div>
+              <div>
+                <h2>⚡ Dashboard de Energia</h2>
+                <p class="subtle-text">Visão consolidada por unidade, setor e equipamentos monitorados.</p>
               </div>
             </div>
-            <div class="energia-cards">
-              <div class="energia-card"><span class="energia-card__label">Consumo total (kWh)</span><span class="energia-card__value" id="energiaCardKwh">—</span></div>
-              <div class="energia-card"><span class="energia-card__label">Custo total estimado</span><span class="energia-card__value" id="energiaCardCusto">—</span></div>
-              <div class="energia-card energia-card--alert"><span class="energia-card__label">Maior consumo (unidade)</span><span class="energia-card__value" id="energiaCardUnidade">—</span></div>
-              <div class="energia-card"><span class="energia-card__label">Maior consumo (setor)</span><span class="energia-card__value" id="energiaCardSetor">—</span></div>
-              <div class="energia-card"><span class="energia-card__label">Equipamento que mais consome</span><span class="energia-card__value" id="energiaCardEquip">—</span></div>
-              <div class="energia-card energia-card--ok"><span class="energia-card__label">Equipamentos monitorados</span><span class="energia-card__value" id="energiaCardQtd">—</span></div>
-            </div>
-            <div class="table-card form-card--wide energia-alertas">
-              <header><h3>Alertas inteligentes</h3></header>
-              <div id="energiaAlertasLista"></div>
-            </div>
-            <div class="energia-charts-grid">
-              <div class="energia-chart-box"><h4>Consumo por unidade (kWh)</h4><canvas id="energiaChartUnidadeKwh"></canvas></div>
-              <div class="energia-chart-box"><h4>Custo por unidade (R$)</h4><canvas id="energiaChartUnidadeCusto"></canvas></div>
-              <div class="energia-chart-box"><h4>Consumo por setor</h4><canvas id="energiaChartSetor"></canvas></div>
-              <div class="energia-chart-box"><h4>Ranking — maior consumo</h4><canvas id="energiaChartRanking"></canvas></div>
-              <div class="energia-chart-box"><h4>Comparativo mensal — kWh</h4><canvas id="energiaChartMesKwh"></canvas></div>
-              <div class="energia-chart-box"><h4>Comparativo mensal — custo</h4><canvas id="energiaChartMesCusto"></canvas></div>
+            <div class="energia-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="energia-form-body">
+                  <div class="filters-grid">
+                    <label>Unidade<select id="energiaDashFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label>Setor<input type="text" id="energiaDashFiltroSetor" placeholder="Filtrar setor" /></label>
+                    <label>Mês<input type="month" id="energiaDashFiltroMes" /></label>
+                    <label><button type="button" class="btn primary" id="energiaDashAtualizar">Atualizar dashboard</button></label>
+                  </div>
+                </div>
+              </div>
+              <div class="energia-cards">
+                <div class="energia-card"><span class="energia-card__label">Consumo total (kWh)</span><span class="energia-card__value" id="energiaCardKwh">—</span></div>
+                <div class="energia-card"><span class="energia-card__label">Custo total estimado</span><span class="energia-card__value" id="energiaCardCusto">—</span></div>
+                <div class="energia-card energia-card--alert"><span class="energia-card__label">Maior consumo (unidade)</span><span class="energia-card__value" id="energiaCardUnidade">—</span></div>
+                <div class="energia-card"><span class="energia-card__label">Maior consumo (setor)</span><span class="energia-card__value" id="energiaCardSetor">—</span></div>
+                <div class="energia-card"><span class="energia-card__label">Equipamento que mais consome</span><span class="energia-card__value" id="energiaCardEquip">—</span></div>
+                <div class="energia-card energia-card--ok"><span class="energia-card__label">Equipamentos monitorados</span><span class="energia-card__value" id="energiaCardQtd">—</span></div>
+              </div>
+              <div class="table-card form-card--wide energia-alertas">
+                <header><h3>Alertas inteligentes</h3></header>
+                <div class="energia-form-body" id="energiaAlertasLista"></div>
+              </div>
+              <div class="energia-charts-grid">
+                <div class="energia-chart-box"><h4>Consumo por unidade (kWh)</h4><canvas id="energiaChartUnidadeKwh"></canvas></div>
+                <div class="energia-chart-box"><h4>Custo por unidade (R$)</h4><canvas id="energiaChartUnidadeCusto"></canvas></div>
+                <div class="energia-chart-box"><h4>Consumo por setor</h4><canvas id="energiaChartSetor"></canvas></div>
+                <div class="energia-chart-box"><h4>Ranking — maior consumo</h4><canvas id="energiaChartRanking"></canvas></div>
+                <div class="energia-chart-box"><h4>Comparativo mensal — kWh</h4><canvas id="energiaChartMesKwh"></canvas></div>
+                <div class="energia-chart-box"><h4>Comparativo mensal — custo</h4><canvas id="energiaChartMesCusto"></canvas></div>
+              </div>
             </div>
           </section>
 
           <section id="energiaEquipamentosSection" class="view-section hidden">
             <div class="energia-section-head">
-              <h2>🔌 Controle de Equipamentos</h2>
-              <p class="subtle-text">Cadastro e listagem de equipamentos com cálculo automático de consumo e custo.</p>
-            </div>
-            <div class="actions" style="margin-bottom:1rem;">
+              <div>
+                <h2>🔌 Controle de Equipamentos</h2>
+                <p class="subtle-text">Cadastro e listagem de equipamentos com cálculo automático de consumo e custo.</p>
+              </div>
               <button type="button" class="btn primary" id="energiaNovoEquipamento">+ Novo equipamento</button>
             </div>
-            <div class="table-card form-card--wide">
-              <header><h3>Filtros</h3></header>
-              <form class="filters-panel" id="energiaFiltroForm" onsubmit="return false;">
-                <div class="filters-grid">
-                  <label>Unidade<select id="energiaFiltroUnidade"><option value="">Todas</option></select></label>
-                  <label>Setor<input type="text" id="energiaFiltroSetor" /></label>
-                  <label>Equipamento<input type="text" id="energiaFiltroEquipamento" /></label>
-                  <label>Tipo<input type="text" id="energiaFiltroTipo" /></label>
-                  <label>Tensão<select id="energiaFiltroTensao"><option value="">Todas</option><option value="110">110V</option><option value="220">220V</option><option value="380">380V</option></select></label>
-                  <label>Mês<input type="month" id="energiaFiltroMes" /></label>
-                  <label class="checkbox-label"><input type="checkbox" id="energiaFiltroMaiorConsumo" /> Maior consumo</label>
-                  <label class="checkbox-label"><input type="checkbox" id="energiaFiltroMaiorCusto" /> Maior custo</label>
+            <div class="energia-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros</h3></header>
+                <div class="energia-form-body">
+                  <form id="energiaFiltroForm" onsubmit="return false;">
+                    <div class="filters-grid">
+                      <label>Unidade<select id="energiaFiltroUnidade"><option value="">Todas</option></select></label>
+                      <label>Setor<input type="text" id="energiaFiltroSetor" /></label>
+                      <label>Equipamento<input type="text" id="energiaFiltroEquipamento" /></label>
+                      <label>Tipo<input type="text" id="energiaFiltroTipo" /></label>
+                      <label>Tensão<select id="energiaFiltroTensao"><option value="">Todas</option><option value="110">110V</option><option value="220">220V</option><option value="380">380V</option></select></label>
+                      <label>Mês<input type="month" id="energiaFiltroMes" /></label>
+                      <label class="checkbox-label"><input type="checkbox" id="energiaFiltroMaiorConsumo" /> Maior consumo</label>
+                      <label class="checkbox-label"><input type="checkbox" id="energiaFiltroMaiorCusto" /> Maior custo</label>
+                    </div>
+                    <div class="filters-actions">
+                      <button type="button" class="btn primary" id="energiaFiltroAplicar">Aplicar filtros</button>
+                      <button type="button" class="btn neutral" id="energiaFiltroLimpar">Limpar</button>
+                    </div>
+                  </form>
                 </div>
-                <div class="filters-actions">
-                  <button type="button" class="btn primary" id="energiaFiltroAplicar">Aplicar filtros</button>
-                  <button type="button" class="btn neutral" id="energiaFiltroLimpar">Limpar</button>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Equipamentos</h3></header>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Unidade</th><th>Setor</th><th>Equipamento</th><th>Tipo</th><th>Potência</th><th>Tensão</th>
+                        <th>Qtd</th><th>Horas/dia</th><th>Dias/mês</th><th>Consumo kWh</th><th>Custo</th><th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody id="energiaEquipamentosTable"></tbody>
+                  </table>
                 </div>
-              </form>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Unidade</th><th>Setor</th><th>Equipamento</th><th>Tipo</th><th>Potência</th><th>Tensão</th>
-                      <th>Qtd</th><th>Horas/dia</th><th>Dias/mês</th><th>Consumo kWh</th><th>Custo</th><th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="energiaEquipamentosTable"></tbody>
-                </table>
               </div>
             </div>
           </section>
 
           <section id="energiaProjecaoSection" class="view-section hidden">
             <div class="energia-section-head">
-              <h2>📈 Projeção de Consumo</h2>
-              <p class="subtle-text">Simule alterações de horas, dias, quantidade ou valor do kWh e compare com o cenário atual.</p>
+              <div>
+                <h2>📈 Projeção de Consumo</h2>
+                <p class="subtle-text">Simule alterações de horas, dias, quantidade ou valor do kWh e compare com o cenário atual.</p>
+              </div>
             </div>
-            <div class="table-card form-card--wide">
-              <label>Unidade<select id="energiaProjUnidade"><option value="">Todas</option></select></label>
-              <label style="margin-top:12px;display:block;">Equipamento<select id="energiaProjEquipamento"><option value="">Selecione</option></select></label>
-              <form id="energiaProjecaoForm" class="form-card__grid" style="margin-top:16px;" onsubmit="return false;">
-                <label>Horas ligado/dia<input type="number" name="horas_por_dia" min="0" max="24" step="0.5" /></label>
-                <label>Dias de uso no mês<input type="number" name="dias_uso_mes" min="0" max="31" /></label>
-                <label>Quantidade<input type="number" name="quantidade" min="1" /></label>
-                <label>Valor do kWh (R$)<input type="number" name="valor_kwh" min="0" step="0.0001" /></label>
-              </form>
-              <div id="energiaProjecaoResultado" class="energia-projecao-result"></div>
+            <div class="energia-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Simulação</h3></header>
+                <div class="energia-form-body">
+                  <div class="filters-grid">
+                    <label>Unidade<select id="energiaProjUnidade"><option value="">Todas</option></select></label>
+                    <label>Equipamento<select id="energiaProjEquipamento"><option value="">Selecione</option></select></label>
+                  </div>
+                  <form id="energiaProjecaoForm" class="filters-grid" style="margin-top:1.15rem;" onsubmit="return false;">
+                    <label>Horas ligado/dia<input type="number" name="horas_por_dia" min="0" max="24" step="0.5" /></label>
+                    <label>Dias de uso no mês<input type="number" name="dias_uso_mes" min="0" max="31" /></label>
+                    <label>Quantidade<input type="number" name="quantidade" min="1" /></label>
+                    <label>Valor do kWh (R$)<input type="number" name="valor_kwh" min="0" step="0.0001" /></label>
+                  </form>
+                  <div id="energiaProjecaoResultado" class="energia-projecao-result"></div>
+                </div>
+              </div>
             </div>
           </section>
 
           <section id="energiaRelatoriosSection" class="view-section hidden">
             <div class="energia-section-head">
-              <h2>📄 Relatórios de Energia</h2>
-              <p class="subtle-text">Filtre e exporte em PDF ou CSV (Excel).</p>
-            </div>
-            <div class="table-card form-card--wide">
-              <div class="filters-grid">
-                <label>Unidade<select id="energiaRelFiltroUnidade"><option value="">Todas</option></select></label>
-                <label>Setor<input type="text" id="energiaRelFiltroSetor" /></label>
-                <label>Equipamento<input type="text" id="energiaRelFiltroEquipamento" /></label>
-                <label>Tipo<input type="text" id="energiaRelFiltroTipo" /></label>
-                <label>Tensão<select id="energiaRelFiltroTensao"><option value="">Todas</option><option value="110">110V</option><option value="220">220V</option><option value="380">380V</option></select></label>
-                <label>Mês<input type="month" id="energiaRelFiltroMes" /></label>
-                <label class="checkbox-label"><input type="checkbox" id="energiaRelFiltroMaiorConsumo" /> Maior consumo</label>
-                <label class="checkbox-label"><input type="checkbox" id="energiaRelFiltroMaiorCusto" /> Maior custo</label>
-              </div>
-              <div class="filters-actions" style="margin-top:12px;">
-                <button type="button" class="btn primary" id="energiaRelAtualizar">Atualizar prévia</button>
-                <button type="button" class="btn secondary" id="energiaRelPdf">Exportar PDF</button>
-                <button type="button" class="btn secondary" id="energiaRelCsv">Exportar CSV (Excel)</button>
+              <div>
+                <h2>📄 Relatórios de Energia</h2>
+                <p class="subtle-text">Filtre e exporte em PDF ou CSV (Excel).</p>
               </div>
             </div>
-            <div id="energiaRelatorioPreview" class="table-card form-card--wide" style="margin-top:1rem;"></div>
+            <div class="energia-page-wrap">
+              <div class="table-card form-card--wide">
+                <header><h3>Filtros e exportação</h3></header>
+                <div class="energia-form-body">
+                  <div class="filters-grid">
+                    <label>Unidade<select id="energiaRelFiltroUnidade"><option value="">Todas</option></select></label>
+                    <label>Setor<input type="text" id="energiaRelFiltroSetor" /></label>
+                    <label>Equipamento<input type="text" id="energiaRelFiltroEquipamento" /></label>
+                    <label>Tipo<input type="text" id="energiaRelFiltroTipo" /></label>
+                    <label>Tensão<select id="energiaRelFiltroTensao"><option value="">Todas</option><option value="110">110V</option><option value="220">220V</option><option value="380">380V</option></select></label>
+                    <label>Mês<input type="month" id="energiaRelFiltroMes" /></label>
+                    <label class="checkbox-label"><input type="checkbox" id="energiaRelFiltroMaiorConsumo" /> Maior consumo</label>
+                    <label class="checkbox-label"><input type="checkbox" id="energiaRelFiltroMaiorCusto" /> Maior custo</label>
+                  </div>
+                  <div class="filters-actions">
+                    <button type="button" class="btn primary" id="energiaRelAtualizar">Atualizar prévia</button>
+                    <button type="button" class="btn secondary" id="energiaRelPdf">Exportar PDF</button>
+                    <button type="button" class="btn secondary" id="energiaRelCsv">Exportar CSV (Excel)</button>
+                  </div>
+                </div>
+              </div>
+              <div class="table-card form-card--wide">
+                <header><h3>Prévia do relatório</h3></header>
+                <div class="energia-form-body" id="energiaRelatorioPreview"></div>
+              </div>
+            </div>
           </section>
 
           <!-- Financeiro - Auditoria fechamento caixa -->
