@@ -7310,6 +7310,40 @@ select[size]:not([size="1"]) {
 }
 
 /* ========== RESERVAS DE MESAS ========== */
+.reserva-mesa-block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  margin-bottom: 0.35rem;
+}
+.reserva-mesa-block > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+.reserva-mesa-select-label {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.reserva-cadeiras-label {
+  flex: 0 0 auto;
+  min-width: 6.5rem;
+}
+.reserva-cadeiras-label input {
+  width: 5.5rem;
+  max-width: 100%;
+}
+.reserva-mesa-cap-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+.reserva-cadeiras-label.hidden,
+#reservaCadeirasWrap.hidden {
+  display: none !important;
+}
+
 .reservas-mesas-container {
   padding: 0 1rem;
   max-width: 100%;

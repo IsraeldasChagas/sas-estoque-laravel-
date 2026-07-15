@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260615-submenu-revert" />
+    <link rel="stylesheet" href="style.css?v=20260715-cadeiras" />
     <script>
       (function () {
         try {
@@ -1220,12 +1220,19 @@
                       <option value="">Selecione</option>
                     </select>
                   </label>
-                  <label>
-                    Mesa *
-                    <select name="mesa_id" id="reservaMesaSelect" required>
-                      <option value="">Selecione a mesa</option>
-                    </select>
-                  </label>
+                  <div class="reserva-mesa-block">
+                    <label class="reserva-mesa-select-label">
+                      Mesa *
+                      <select name="mesa_id" id="reservaMesaSelect" required>
+                        <option value="">Selecione a mesa</option>
+                      </select>
+                    </label>
+                    <label class="reserva-cadeiras-label hidden" id="reservaCadeirasWrap">
+                      + cadeiras
+                      <input type="number" name="cadeiras_extras" id="reservaCadeirasExtras" min="0" max="0" value="0" step="1" />
+                    </label>
+                  </div>
+                  <p class="subtle-text reserva-mesa-cap-hint" id="reservaMesaCapHint"></p>
                   <label>
                     Nome do cliente *
                     <input type="text" name="nome_cliente" placeholder="Nome completo" required />
@@ -7308,7 +7315,7 @@
     <script src="ayla-ia.js?v=20260714-ayla-padrao"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
-    <script src="app.js?v=20260715-trocar-mesa"></script>
+    <script src="app.js?v=20260715-cadeiras"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

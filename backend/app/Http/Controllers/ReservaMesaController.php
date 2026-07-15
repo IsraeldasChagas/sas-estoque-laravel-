@@ -212,6 +212,7 @@ class ReservaMesaController extends Controller
             'observacao' => 'nullable|string|max:500',
             'local' => 'nullable|string|max:100',
             'ocasiao' => 'nullable|string|max:255',
+            'cadeiras_extras_utilizadas' => 'nullable|integer|min:0|max:99',
         ]);
 
         if ($validator->fails()) {
@@ -229,6 +230,21 @@ class ReservaMesaController extends Controller
             return response()->json([
                 'message' => "A mesa suporta no máximo {$capMax} pessoas.",
                 'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
+            ], 422);
+        }
+        $extrasReq = (int) $request->input('cadeiras_extras_utilizadas', 0);
+        $extrasMax = $mesa->permiteAdicionarCadeiras() ? (int) ($mesa->cadeiras_extras_max ?? 0) : 0;
+        if ($extrasReq > $extrasMax) {
+            return response()->json([
+                'message' => "Esta mesa permite no máximo {$extrasMax} cadeira(s) extra(s).",
+                'errors' => ['cadeiras_extras_utilizadas' => ['Quantidade de cadeiras extras inválida.']]
+            ], 422);
+        }
+        $capComExtras = $mesa->capacidadeBase() + max(0, $extrasReq);
+        if ($request->qtd_pessoas > $capComExtras) {
+            return response()->json([
+                'message' => "Com +{$extrasReq} cadeira(s) a capacidade é {$capComExtras} pessoa(s).",
+                'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade com as cadeiras selecionadas.']]
             ], 422);
         }
 
@@ -255,16 +271,16 @@ class ReservaMesaController extends Controller
         $reserva = ReservaMesa::create($data);
 
         $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
-        $this->sincronizarVinculoPrincipal($reserva);
+        $this->sincronizarVinculoPrincipal($reserva, $extrasReq);
 
-        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone']);
+        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,permite_cadeiras_extras,cadeiras_extras_max', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone']);
         $this->anexarMesasCompostas($reserva);
         return response()->json(['message' => 'Reserva criada com sucesso', 'reserva' => $reserva], 201);
     }
 
     public function show($id)
     {
-        $reserva = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,localizacao,unidade_id', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone'])
+        $reserva = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,permite_cadeiras_extras,cadeiras_extras_max,localizacao,unidade_id', 'usuario:id,nome', 'unidade:id,nome,endereco,telefone'])
             ->findOrFail($id);
         $usuarioId = request()->header('X-Usuario-Id');
         $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
@@ -307,6 +323,7 @@ class ReservaMesaController extends Controller
             'observacao' => 'nullable|string|max:500',
             'local' => 'nullable|string|max:100',
             'ocasiao' => 'nullable|string|max:255',
+            'cadeiras_extras_utilizadas' => 'nullable|integer|min:0|max:99',
         ]);
 
         if ($validator->fails()) {
@@ -316,16 +333,32 @@ class ReservaMesaController extends Controller
         $mesaId = $request->get('mesa_id', $reserva->mesa_id);
         $dataReserva = $request->get('data_reserva', $reserva->data_reserva->format('Y-m-d'));
         $horaReserva = $request->get('hora_reserva', $reserva->hora_reserva);
+        $mesa = Mesa::findOrFail($mesaId);
+        $qtdPessoas = (int) $request->get('qtd_pessoas', $reserva->qtd_pessoas);
+        $extrasReq = $request->has('cadeiras_extras_utilizadas')
+            ? (int) $request->input('cadeiras_extras_utilizadas', 0)
+            : null;
+        $extrasMax = $mesa->permiteAdicionarCadeiras() ? (int) ($mesa->cadeiras_extras_max ?? 0) : 0;
+        if ($extrasReq !== null && $extrasReq > $extrasMax) {
+            return response()->json([
+                'message' => "Esta mesa permite no máximo {$extrasMax} cadeira(s) extra(s).",
+                'errors' => ['cadeiras_extras_utilizadas' => ['Quantidade de cadeiras extras inválida.']]
+            ], 422);
+        }
+        $extrasEfetivas = $extrasReq !== null
+            ? max(0, $extrasReq)
+            : max(0, $qtdPessoas - $mesa->capacidadeBase());
+        $extrasEfetivas = min($extrasEfetivas, $extrasMax);
+        $capComExtras = $mesa->capacidadeBase() + $extrasEfetivas;
+        $capMax = $mesa->capacidadeMaximaCalculada();
+        if ($qtdPessoas > $capMax || $qtdPessoas > $capComExtras) {
+            return response()->json([
+                'message' => "Com as cadeiras selecionadas a capacidade é {$capComExtras} pessoa(s).",
+                'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
+            ], 422);
+        }
 
         if ($mesaId != $reserva->mesa_id || $dataReserva != $reserva->data_reserva->format('Y-m-d') || $horaReserva != $reserva->hora_reserva) {
-            $mesa = Mesa::findOrFail($mesaId);
-            $capMax = $mesa->capacidadeMaximaCalculada();
-            if ($request->has('qtd_pessoas') && $request->qtd_pessoas > $capMax) {
-                return response()->json([
-                    'message' => "A mesa suporta no máximo {$capMax} pessoas.",
-                    'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
-                ], 422);
-            }
             $conflito = ReservaMesa::where('mesa_id', $mesaId)
                 ->where('data_reserva', $dataReserva)
                 ->where('hora_reserva', is_string($horaReserva) ? $horaReserva : substr($horaReserva, 0, 5))
@@ -352,15 +385,6 @@ class ReservaMesaController extends Controller
             }
 
             $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
-        } elseif ($request->has('qtd_pessoas')) {
-            $mesa = Mesa::find($mesaId);
-            $capMax = $mesa ? $mesa->capacidadeMaximaCalculada() : 0;
-            if ($mesa && $request->qtd_pessoas > $capMax) {
-                return response()->json([
-                    'message' => "A mesa suporta no máximo {$capMax} pessoas.",
-                    'errors' => ['qtd_pessoas' => ['Quantidade excede a capacidade da mesa.']]
-                ], 422);
-            }
         }
 
         $reserva->update($request->only([
@@ -368,8 +392,8 @@ class ReservaMesaController extends Controller
             'hora_reserva', 'qtd_pessoas', 'status', 'observacao', 'local', 'ocasiao'
         ]));
 
-        $this->sincronizarVinculoPrincipal($reserva->fresh());
-        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima', 'usuario:id,nome']);
+        $this->sincronizarVinculoPrincipal($reserva->fresh(), $extrasEfetivas);
+        $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,permite_cadeiras_extras,cadeiras_extras_max', 'usuario:id,nome']);
         $this->anexarMesasCompostas($reserva);
         return response()->json(['message' => 'Reserva atualizada', 'reserva' => $reserva]);
     }
@@ -511,11 +535,19 @@ class ReservaMesaController extends Controller
     }
 
     /** Mantém pivô alinhado à mesa principal (compatibilidade com composição Ayla). */
-    private function sincronizarVinculoPrincipal(ReservaMesa $reserva): void
+    private function sincronizarVinculoPrincipal(ReservaMesa $reserva, ?int $cadeirasExtras = null): void
     {
         if (! Schema::hasTable('reserva_mesas') || ! $reserva->id || ! $reserva->mesa_id) {
             return;
         }
+
+        $mesa = Mesa::find($reserva->mesa_id);
+        $base = $mesa ? $mesa->capacidadeBase() : 0;
+        $extrasMax = $mesa && $mesa->permiteAdicionarCadeiras() ? (int) ($mesa->cadeiras_extras_max ?? 0) : 0;
+        if ($cadeirasExtras === null) {
+            $cadeirasExtras = max(0, (int) $reserva->qtd_pessoas - $base);
+        }
+        $cadeirasExtras = max(0, min((int) $cadeirasExtras, $extrasMax));
 
         $now = now();
         $exists = DB::table('reserva_mesas')
@@ -530,6 +562,7 @@ class ReservaMesaController extends Controller
                 ->update([
                     'mesa_id' => (int) $reserva->mesa_id,
                     'capacidade_utilizada' => (int) $reserva->qtd_pessoas,
+                    'cadeiras_extras_utilizadas' => $cadeirasExtras,
                     'updated_at' => $now,
                 ]);
 
@@ -540,7 +573,7 @@ class ReservaMesaController extends Controller
             ['reserva_id' => (int) $reserva->id, 'mesa_id' => (int) $reserva->mesa_id],
             [
                 'capacidade_utilizada' => (int) $reserva->qtd_pessoas,
-                'cadeiras_extras_utilizadas' => 0,
+                'cadeiras_extras_utilizadas' => $cadeirasExtras,
                 'principal' => true,
                 'configuracao_emergencial' => false,
                 'created_at' => $now,
