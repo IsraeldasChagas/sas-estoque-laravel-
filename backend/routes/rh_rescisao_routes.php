@@ -469,7 +469,14 @@ Route::delete('/rh/rescisoes/{id}', function (Request $request, $id) use ($rrAut
     if (! $podeRhRescisao($u)) {
         return $rrJson(['error' => 'Sem permissão'], 403);
     }
-    DB::table('rh_rescisoes')->where('id', (int) $id)->update(['status' => 'cancelada', 'updated_at' => now()]);
+    $id = (int) $id;
+    if (! DB::table('rh_rescisoes')->where('id', $id)->exists()) {
+        return $rrJson(['error' => 'Não encontrado'], 404);
+    }
+    if (Schema::hasTable('rh_rescisao_cenarios')) {
+        DB::table('rh_rescisao_cenarios')->where('rescisao_id', $id)->delete();
+    }
+    DB::table('rh_rescisoes')->where('id', $id)->delete();
 
     return $rrJson(['sucesso' => true]);
 });

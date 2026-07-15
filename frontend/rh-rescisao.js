@@ -910,7 +910,7 @@
         <button type="button" class="table-action rr-btn-pdf" data-id="${r.id}" data-via="completo">TRCT</button>
         <button type="button" class="table-action rr-btn-pdf-via" data-id="${r.id}" data-via="funcionario">Via func.</button>
         ${r.status === "simulacao" ? `<button type="button" class="table-action rr-btn-confirm" data-id="${r.id}">Confirmar</button>` : ""}
-        ${r.status !== "cancelada" ? `<button type="button" class="table-action rr-btn-delete" data-id="${r.id}">Deletar</button>` : ""}
+        <button type="button" class="table-action danger rr-btn-delete" data-id="${r.id}">Deletar</button>
       </td>
     </tr>`).join("");
   }
