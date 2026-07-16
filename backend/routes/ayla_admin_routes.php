@@ -5,6 +5,7 @@
  * Autenticação: X-Usuario-Id (ADMIN para alterações; ADMIN/GERENTE para leitura).
  */
 
+use App\Http\Controllers\AylaConviteController;
 use App\Http\Controllers\AylaUsuarioController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,4 +33,11 @@ Route::prefix('ayla-admin')->group(function () {
     Route::put('/usuarios/{id}', [AylaUsuarioController::class, 'update']);
     Route::patch('/usuarios/{id}/status', [AylaUsuarioController::class, 'status']);
     Route::delete('/usuarios/{id}', [AylaUsuarioController::class, 'destroy']);
+
+    Route::get('/usuarios/{id}/convite', [AylaConviteController::class, 'show']);
+    Route::post('/usuarios/{id}/convite', [AylaConviteController::class, 'gerar']);
+    Route::post('/usuarios/{id}/convite/renovar', [AylaConviteController::class, 'renovar']);
+    Route::delete('/usuarios/{id}/convite', [AylaConviteController::class, 'cancelar']);
+    Route::post('/usuarios/{id}/telegram/sincronizar', [AylaConviteController::class, 'sincronizar']);
+    Route::post('/usuarios/{id}/telegram/desvincular', [AylaConviteController::class, 'desvincular']);
 });

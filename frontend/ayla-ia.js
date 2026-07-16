@@ -13,7 +13,178 @@
     energia: "Energia", patrimonio: "Patrimônio", investimentos: "Investimentos", logs: "Logs",
   };
 
-  const state = { opcoes: null, usuarios: [], logPagina: 1 };
+  const state = { opcoes: null, usuarios: [], logPagina: 1, convitePoll: null };
+
+  function fmtTelefone(v) {
+    if (!v) return "—";
+    return esc(v);
+  }
+
+  function pararPollConvite() {
+    if (state.convitePoll) {
+      clearInterval(state.convitePoll);
+      state.convitePoll = null;
+    }
+  }
+
+  function badgeTelegramEstado(estado) {
+    const map = {
+      nao_conectado: ["⚪ Não conectado", "ayla-badge--muted"],
+      convite_pendente: ["🟡 Aguardando aceite", "ayla-badge--warn"],
+      conectado: ["🟢 Conectado", "ayla-badge--ok"],
+      bloqueado: ["🔴 Bloqueado", "ayla-badge--danger"],
+      sync_erro: ["⚠️ Não sincronizado", "ayla-badge--warn"],
+      revogado: ["🔴 Revogado", "ayla-badge--danger"],
+    };
+    const [txt, cls] = map[estado] || map.nao_conectado;
+    return `<span class="ayla-badge ${cls}">${txt}</span>`;
+  }
+
+  async function carregarStatusConvite(acessoId) {
+    if (!acessoId) return null;
+    try {
+      const r = await ayFetch(`/ayla-admin/usuarios/${acessoId}/convite`);
+      return r.data || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function iniciarPollConvite(acessoId) {
+    pararPollConvite();
+    if (!acessoId) return;
+    state.convitePoll = setInterval(async () => {
+      const st = await carregarStatusConvite(acessoId);
+      const box = document.getElementById("aylaTgStatusBox");
+      if (box && st) {
+        box.innerHTML = renderPainelTelegram(st, acessoId);
+        bindPainelTelegram(acessoId);
+        if (st.estado === "conectado" || st.estado === "bloqueado") pararPollConvite();
+      }
+    }, 10000);
+  }
+
+  function renderPainelTelegram(st, acessoId) {
+    if (!st) return `<p class="ayla-hint">Carregando status do Telegram…</p>`;
+    const conv = st.convite || {};
+    let acoes = "";
+    if (st.estado === "nao_conectado") {
+      acoes = `<button type="button" class="btn secondary btn-sm" data-ayla-convite-gerar="${acessoId}">Gerar convite</button>`;
+    } else if (st.estado === "convite_pendente") {
+      acoes = `
+        <button type="button" class="btn secondary btn-sm" data-ayla-convite-copiar>Copiar convite</button>
+        <button type="button" class="btn secondary btn-sm" data-ayla-convite-wa>Abrir WhatsApp</button>
+        <button type="button" class="btn neutral btn-sm" data-ayla-convite-msg>Copiar mensagem</button>
+        <button type="button" class="btn neutral btn-sm" data-ayla-convite-renovar="${acessoId}">Renovar</button>
+        <button type="button" class="btn danger btn-sm" data-ayla-convite-cancelar="${acessoId}">Cancelar</button>
+        <button type="button" class="btn neutral btn-sm" data-ayla-convite-atualizar="${acessoId}">Atualizar status</button>`;
+    } else if (st.estado === "conectado") {
+      acoes = `<button type="button" class="btn neutral btn-sm" data-ayla-desvincular="${acessoId}">Desvincular Telegram</button>`;
+    } else if (st.estado === "sync_erro") {
+      acoes = `<button type="button" class="btn secondary btn-sm" data-ayla-sync="${acessoId}">Sincronizar novamente</button>`;
+    }
+
+    return `
+      <div class="ayla-tg-panel">
+        <div class="ayla-status-row">${badgeTelegramEstado(st.estado)}</div>
+        <p class="ayla-meta">Telefone informado: <strong>${fmtTelefone(st.telefone_telegram_mascarado || st.telefone_telegram)}</strong></p>
+        ${st.telegram_username ? `<p class="ayla-meta">Telegram: <strong>@${esc(st.telegram_username)}</strong></p>` : ""}
+        ${st.telegram_nome ? `<p class="ayla-meta">Nome: <strong>${esc(st.telegram_nome)}</strong></p>` : ""}
+        ${st.telegram_user_id ? `<p class="ayla-meta">Telegram User ID: <strong>${esc(st.telegram_user_id)}</strong></p>` : ""}
+        ${st.telegram_vinculado_em ? `<p class="ayla-meta">Vinculado em: <strong>${fmtData(st.telegram_vinculado_em)}</strong></p>` : ""}
+        ${conv.expira_em && st.estado === "convite_pendente" ? `<p class="ayla-meta">Expira em: <strong>${fmtData(conv.expira_em)}</strong></p>` : ""}
+        ${st.telegram_sync_erro ? `<p class="ayla-hint ayla-hint--danger">${esc(st.telegram_sync_erro)}</p>` : ""}
+        <div class="ayla-row-actions ayla-row-actions--wrap">${acoes}</div>
+      </div>`;
+  }
+
+  function bindPainelTelegram(acessoId) {
+    document.querySelector("[data-ayla-convite-gerar]")?.addEventListener("click", () => gerarConvite(acessoId));
+    document.querySelector("[data-ayla-convite-renovar]")?.addEventListener("click", () => renovarConvite(acessoId));
+    document.querySelector("[data-ayla-convite-cancelar]")?.addEventListener("click", () => cancelarConvite(acessoId));
+    document.querySelector("[data-ayla-convite-atualizar]")?.addEventListener("click", () => atualizarPainelConvite(acessoId));
+    document.querySelector("[data-ayla-sync]")?.addEventListener("click", () => sincronizarTelegram(acessoId));
+    document.querySelector("[data-ayla-desvincular]")?.addEventListener("click", () => desvincularTelegram(acessoId));
+    document.querySelector("[data-ayla-convite-copiar]")?.addEventListener("click", () => {
+      const url = state.ultimoConviteUrl;
+      if (url) navigator.clipboard?.writeText(url).then(() => toast("Link copiado.", "success"));
+    });
+    document.querySelector("[data-ayla-convite-wa]")?.addEventListener("click", () => {
+      if (state.ultimoWhatsappUrl) window.open(state.ultimoWhatsappUrl, "_blank");
+    });
+    document.querySelector("[data-ayla-convite-msg]")?.addEventListener("click", () => {
+      if (state.ultimaMensagemWhatsapp) navigator.clipboard?.writeText(state.ultimaMensagemWhatsapp).then(() => toast("Mensagem copiada.", "success"));
+    });
+  }
+
+  async function atualizarPainelConvite(acessoId) {
+    const st = await carregarStatusConvite(acessoId);
+    const box = document.getElementById("aylaTgStatusBox");
+    if (box) {
+      box.innerHTML = renderPainelTelegram(st, acessoId);
+      bindPainelTelegram(acessoId);
+    }
+  }
+
+  async function gerarConvite(acessoId, aposSalvar) {
+    const tel = document.getElementById("aylaFTelefone")?.value?.trim();
+    if (!tel && !aposSalvar) {
+      toast("Informe o telefone usado no Telegram antes de gerar o convite.", "error");
+      return;
+    }
+    try {
+      const r = await ayFetch(`/ayla-admin/usuarios/${acessoId}/convite`, {
+        method: "POST",
+        body: JSON.stringify({ telefone_telegram: tel || undefined }),
+      });
+      state.ultimoConviteUrl = r.data?.convite_url;
+      state.ultimoWhatsappUrl = r.data?.whatsapp_url;
+      state.ultimaMensagemWhatsapp = r.data?.mensagem_whatsapp;
+      toast("Convite gerado.", "success");
+      await atualizarPainelConvite(acessoId);
+      iniciarPollConvite(acessoId);
+    } catch (e) {
+      toast(e.message || "Erro ao gerar convite.", "error");
+    }
+  }
+
+  async function renovarConvite(acessoId) {
+    try {
+      const r = await ayFetch(`/ayla-admin/usuarios/${acessoId}/convite/renovar`, { method: "POST", body: "{}" });
+      state.ultimoConviteUrl = r.data?.convite_url;
+      toast("Convite renovado.", "success");
+      await atualizarPainelConvite(acessoId);
+      iniciarPollConvite(acessoId);
+    } catch (e) { toast(e.message || "Erro.", "error"); }
+  }
+
+  async function cancelarConvite(acessoId) {
+    if (!confirm("Cancelar o convite pendente?")) return;
+    try {
+      await ayFetch(`/ayla-admin/usuarios/${acessoId}/convite`, { method: "DELETE" });
+      toast("Convite cancelado.", "success");
+      await atualizarPainelConvite(acessoId);
+      pararPollConvite();
+    } catch (e) { toast(e.message || "Erro.", "error"); }
+  }
+
+  async function sincronizarTelegram(acessoId) {
+    try {
+      const r = await ayFetch(`/ayla-admin/usuarios/${acessoId}/telegram/sincronizar`, { method: "POST", body: "{}" });
+      toast(r.message || (r.success ? "Sincronizado." : "Falha na sincronização."), r.success ? "success" : "error");
+      await atualizarPainelConvite(acessoId);
+    } catch (e) { toast(e.message || "Erro.", "error"); }
+  }
+
+  async function desvincularTelegram(acessoId) {
+    if (!confirm("Desvincular o Telegram deste acesso? O usuário precisará de um novo convite.")) return;
+    try {
+      await ayFetch(`/ayla-admin/usuarios/${acessoId}/telegram/desvincular`, { method: "POST", body: "{}" });
+      toast("Telegram desvinculado.", "success");
+      await atualizarPainelConvite(acessoId);
+      loadAylaUsuarios();
+    } catch (e) { toast(e.message || "Erro.", "error"); }
+  }
 
   // ---- helpers -----------------------------------------------------------
   function toast(msg, type) {
@@ -178,7 +349,7 @@
                   <td>${esc(u.usuario_perfil || "—")}</td>
                   <td>${esc(u.cargo || "—")}</td>
                   <td>${esc(u.unidade_nome || "—")}</td>
-                  <td>${esc(u.telegram_user_id || "—")}${u.telegram_username ? " (@" + esc(u.telegram_username) + ")" : ""}</td>
+                  <td>${esc(u.telegram_user_id ? (u.telegram_username ? "@" + u.telegram_username : u.telegram_user_id) : "—")}</td>
                   <td>${simNao(u.pode_usar_texto)}</td>
                   <td>${simNao(u.pode_usar_audio)}</td>
                   <td>${simNao(u.pode_consultar_dados)}</td>
@@ -205,6 +376,7 @@
   }
 
   function abrirFormUsuario(id) {
+    pararPollConvite();
     const wrap = document.getElementById("aylaUsuarioFormWrap");
     if (!wrap) return;
     const editar = id ? state.usuarios.find(u => String(u.id) === String(id)) : null;
@@ -213,6 +385,7 @@
     const modulos = modulosDisponiveis();
     const modSel = editar?.modulos_permitidos || Object.keys(modulos);
     const uniSel = (editar?.unidades_permitidas || []).map(String);
+    const tgConectado = !!editar?.telegram_conectado;
 
     wrap.innerHTML = `
       <div class="table-card form-card--wide ayla-block ayla-form-card">
@@ -226,13 +399,22 @@
               </select>
             </label>
             <label>Cargo <input type="text" id="aylaFCargo" maxlength="120" value="${esc(editar?.cargo || "")}"></label>
-            <label>Telegram User ID <input type="text" id="aylaFTgId" maxlength="32" inputmode="numeric" value="${esc(editar?.telegram_user_id || "")}"></label>
-            <label>Username Telegram <input type="text" id="aylaFTgUser" maxlength="120" value="${esc(editar?.telegram_username || "")}"></label>
+            <label class="cfg-full">Telefone usado no Telegram
+              <input type="tel" id="aylaFTelefone" placeholder="(69) 98463-9070" value="${esc(editar?.telefone_telegram || "")}">
+              <span class="ayla-hint">Informe o número que a pessoa utiliza na conta do Telegram. O vínculo será confirmado automaticamente quando ela aceitar o convite.</span>
+            </label>
             <label>Status
               <select id="aylaFStatus">
                 ${(state.opcoes?.status_disponiveis || ["pendente","ativo","bloqueado","revogado"]).map(s => `<option value="${s}" ${editar && editar.status === s ? "selected" : (!editar && s === "pendente" ? "selected" : "")}>${s}</option>`).join("")}
               </select>
             </label>
+            ${tgConectado ? `
+            <label>Telegram User ID <input type="text" id="aylaFTgId" readonly disabled value="${esc(editar?.telegram_user_id || "")}"></label>
+            <label>Username Telegram <input type="text" id="aylaFTgUser" readonly disabled value="${esc(editar?.telegram_username || "")}"></label>
+            ` : `<input type="hidden" id="aylaFTgId" value=""><input type="hidden" id="aylaFTgUser" value="">`}
+            <div class="cfg-full ayla-form-block" id="aylaTgStatusBox">
+              ${editar ? `<p class="ayla-hint">Carregando status do Telegram…</p>` : `<p class="ayla-hint">Salve o acesso e gere o convite para vincular o Telegram automaticamente.</p>`}
+            </div>
             <div class="cfg-full ayla-form-block">
               <strong>Unidades permitidas</strong>
               <p class="ayla-hint">Vazio = todas que o usuário já enxerga no SAS.</p>
@@ -254,23 +436,37 @@
             <label class="cfg-full">Observações <textarea id="aylaFObs" maxlength="1000" rows="3">${esc(editar?.observacoes || "")}</textarea></label>
           </div>
           <div class="oc-form-actions">
-            <button type="button" class="btn primary" id="aylaFSalvar">${editar ? "Salvar alterações" : "Cadastrar acesso"}</button>
+            <button type="button" class="btn primary" id="aylaFSalvar">${editar ? "Salvar alterações" : "Salvar"}</button>
+            <button type="button" class="btn secondary" id="aylaFSalvarConvite">${editar ? "Salvar e gerar convite" : "Salvar e gerar convite"}</button>
             <button type="button" class="btn neutral" id="aylaFCancelar">Cancelar</button>
           </div>
         </div>
       </div>`;
 
     wrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    document.getElementById("aylaFCancelar").addEventListener("click", () => { wrap.innerHTML = ""; });
-    document.getElementById("aylaFSalvar").addEventListener("click", () => salvarUsuario(editar ? editar.id : null));
+    document.getElementById("aylaFCancelar").addEventListener("click", () => { pararPollConvite(); wrap.innerHTML = ""; });
+    document.getElementById("aylaFSalvar").addEventListener("click", () => salvarUsuario(editar ? editar.id : null, false));
+    document.getElementById("aylaFSalvarConvite").addEventListener("click", () => salvarUsuario(editar ? editar.id : null, true));
+
+    if (editar?.id) {
+      carregarStatusConvite(editar.id).then((st) => {
+        const box = document.getElementById("aylaTgStatusBox");
+        if (box) {
+          box.innerHTML = renderPainelTelegram(st, editar.id);
+          bindPainelTelegram(editar.id);
+          if (st?.estado === "convite_pendente") iniciarPollConvite(editar.id);
+        }
+      });
+    }
   }
 
   function coletarFormUsuario() {
     return {
-      usuario_id: parseInt(document.getElementById("aylaFUsuario").value || "0", 10),
+      usuario_id: parseInt(document.getElementById("aylaFUsuario")?.value || document.querySelector("#aylaFUsuario option[selected]")?.value || "0", 10),
       cargo: document.getElementById("aylaFCargo").value.trim(),
-      telegram_user_id: document.getElementById("aylaFTgId").value.trim(),
-      telegram_username: document.getElementById("aylaFTgUser").value.trim(),
+      telefone_telegram: document.getElementById("aylaFTelefone").value.trim(),
+      telegram_user_id: document.getElementById("aylaFTgId")?.value?.trim() || "",
+      telegram_username: document.getElementById("aylaFTgUser")?.value?.trim() || "",
       status: document.getElementById("aylaFStatus").value,
       unidades_permitidas: Array.from(document.querySelectorAll(".aylaFUnidade:checked")).map(c => parseInt(c.value, 10)),
       modulos_permitidos: Array.from(document.querySelectorAll(".aylaFModulo:checked")).map(c => c.value),
@@ -281,15 +477,30 @@
     };
   }
 
-  async function salvarUsuario(id) {
+  async function salvarUsuario(id, gerarConviteApos) {
     const dados = coletarFormUsuario();
+    if (id) {
+      const editar = state.usuarios.find(u => String(u.id) === String(id));
+      if (editar) dados.usuario_id = editar.usuario_id;
+    }
     if (!dados.usuario_id) { toast("Selecione um usuário do SAS.", "error"); return; }
     try {
+      let novoId = id;
       if (id) await ayFetch(`/ayla-admin/usuarios/${id}`, { method: "PUT", body: JSON.stringify(dados) });
-      else await ayFetch("/ayla-admin/usuarios", { method: "POST", body: JSON.stringify(dados) });
+      else {
+        const r = await ayFetch("/ayla-admin/usuarios", { method: "POST", body: JSON.stringify(dados) });
+        novoId = r.id;
+      }
       toast("Acesso salvo.", "success");
-      document.getElementById("aylaUsuarioFormWrap").innerHTML = "";
-      loadAylaUsuarios();
+      await loadAylaUsuarios();
+      if (gerarConviteApos && novoId) {
+        abrirFormUsuario(novoId);
+        setTimeout(() => gerarConvite(novoId, true), 300);
+      } else if (novoId) {
+        abrirFormUsuario(novoId);
+      } else {
+        document.getElementById("aylaUsuarioFormWrap").innerHTML = "";
+      }
     } catch (e) {
       toast(e.message || "Erro ao salvar.", "error");
     }

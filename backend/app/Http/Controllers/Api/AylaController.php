@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AylaAuditLog;
 use App\Services\AylaAccessService;
+use App\Services\Ayla\AylaConviteService;
 use App\Services\AylaApiService;
 use App\Services\Ayla\AylaAcaoPendenteService;
 use App\Services\Ayla\AylaKanbanService;
@@ -502,6 +503,52 @@ class AylaController extends Controller
 
         // Sempre 200: o gateway lê data.autorizado. Nunca retorna dados sensíveis.
         return AylaResponse::success($acao, $mensagem, $res, ['duracao_ms' => $duracao]);
+    }
+
+    /**
+     * Vincula Telegram User ID a partir de convite (/start TOKEN).
+     * Autenticação: Bearer AYLA_BRIDGE_TOKEN (middleware ayla.bridge).
+     */
+    public function vincularTelegram(Request $request, AylaConviteService $convites): JsonResponse
+    {
+        $inicio = microtime(true);
+        $acao = 'ayla.telegram.vincular';
+
+        $token = trim((string) $request->input('convite_token', ''));
+        if ($token === '') {
+            return AylaResponse::error($acao, 'Informe convite_token.', 'VALIDATION_ERROR', 422);
+        }
+
+        $result = $convites->vincularPorToken($token, [
+            'telegram_user_id' => (string) $request->input('telegram_user_id', ''),
+            'telegram_username' => $request->input('telegram_username'),
+            'telegram_nome' => $request->input('telegram_nome'),
+        ]);
+
+        $duracao = (int) round((microtime(true) - $inicio) * 1000);
+        $ok = (bool) ($result['success'] ?? false);
+
+        AylaAuditLog::registrar([
+            'user_id' => $result['data']['usuario_id'] ?? null,
+            'ip' => $request->ip(),
+            'metodo' => $request->method(),
+            'rota' => $request->path(),
+            'acao' => $acao,
+            'payload' => [
+                'telegram_user_id' => $request->input('telegram_user_id'),
+                'telegram_username' => $request->input('telegram_username'),
+            ],
+            'resposta_resumo' => ['success' => $ok, 'sync_ok' => $result['data']['sync_ok'] ?? null],
+            'status' => $ok ? 'ok' : 'erro',
+            'http_status' => $ok ? 200 : 422,
+            'duracao_ms' => $duracao,
+        ]);
+
+        if (! $ok) {
+            return AylaResponse::error($acao, $result['message'] ?? 'Falha ao vincular.', 'INVITE_ERROR', 422);
+        }
+
+        return AylaResponse::success($acao, $result['message'] ?? 'Vinculado.', $result['data'] ?? [], ['duracao_ms' => $duracao]);
     }
 
     // ---------------------------------------------------------------------

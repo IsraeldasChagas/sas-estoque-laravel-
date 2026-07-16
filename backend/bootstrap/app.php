@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'sas.usuario' => \App\Http\Middleware\EnsureSasUsuario::class,
             'openclaw.token' => \App\Http\Middleware\CheckOpenClawToken::class,
             'ayla.token' => \App\Http\Middleware\CheckAylaToken::class,
+            'ayla.bridge' => \App\Http\Middleware\CheckAylaBridgeToken::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'kanban-administrativo/tasks',

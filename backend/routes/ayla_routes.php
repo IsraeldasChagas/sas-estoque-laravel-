@@ -10,6 +10,10 @@
 use App\Http\Controllers\Api\AylaController;
 use Illuminate\Support\Facades\Route;
 
+// Vínculo Telegram via convite — autenticado pelo bridge (token dedicado).
+Route::post('/ayla/v1/telegram/vincular', [AylaController::class, 'vincularTelegram'])
+    ->middleware('ayla.bridge');
+
 Route::prefix('ayla/v1')->middleware('ayla.token')->group(function () {
     // Preflight CORS (o middleware responde ao OPTIONS antes da validação de token).
     Route::options('/{any}', fn () => response('', 204))->where('any', '.*');

@@ -20,6 +20,11 @@ class AylaUsuarioAutorizado extends Model
         'telegram_user_id',
         'telegram_username',
         'telegram_nome',
+        'telefone_telegram',
+        'telegram_vinculado_em',
+        'telegram_sincronizado_em',
+        'telegram_sync_status',
+        'telegram_sync_erro',
         'cargo',
         'unidades_permitidas',
         'modulos_permitidos',
@@ -43,7 +48,19 @@ class AylaUsuarioAutorizado extends Model
         'pode_executar_acoes' => 'boolean',
         'ultimo_acesso_em' => 'datetime',
         'autorizado_em' => 'datetime',
+        'telegram_vinculado_em' => 'datetime',
+        'telegram_sincronizado_em' => 'datetime',
     ];
+
+    public function convites(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AylaConvite::class, 'ayla_usuario_autorizado_id');
+    }
+
+    public function temTelegramConectado(): bool
+    {
+        return trim((string) $this->telegram_user_id) !== '';
+    }
 
     public function usuario(): BelongsTo
     {

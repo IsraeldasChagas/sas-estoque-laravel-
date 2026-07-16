@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AylaUsuarioAutorizado;
 use App\Support\Ayla\AylaSettings;
+use App\Support\Ayla\AylaTelefone;
 use App\Support\SasIa\SasIaContext;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +19,33 @@ use Illuminate\Support\Facades\DB;
  */
 class AylaAccessService
 {
+    /** @return array<string, mixed> */
+    public function estadoTelegram(AylaUsuarioAutorizado $vinculo, bool $admin = true): array
+    {
+        $conectado = trim((string) $vinculo->telegram_user_id) !== '';
+
+        $estado = match (true) {
+            $vinculo->status === 'bloqueado' => 'bloqueado',
+            $vinculo->status === 'revogado' => 'revogado',
+            $conectado && $vinculo->telegram_sync_status === 'erro' => 'sync_erro',
+            $conectado && $vinculo->status === 'ativo' => 'conectado',
+            default => 'nao_conectado',
+        };
+
+        return [
+            'estado' => $estado,
+            'conectado' => $conectado && $vinculo->status === 'ativo',
+            'telegram_user_id' => $admin ? $vinculo->telegram_user_id : null,
+            'telegram_username' => $vinculo->telegram_username,
+            'telegram_nome' => $vinculo->telegram_nome,
+            'telegram_vinculado_em' => $vinculo->telegram_vinculado_em?->toIso8601String(),
+            'telegram_sync_status' => $vinculo->telegram_sync_status,
+            'telefone_telegram' => $admin
+                ? AylaTelefone::formatar($vinculo->telefone_telegram)
+                : AylaTelefone::mascarar($vinculo->telefone_telegram),
+        ];
+    }
+
     /**
      * @return array<string, mixed>
      */

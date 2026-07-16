@@ -29,6 +29,8 @@ const CFG = {
 
   aylaUrl: (process.env.SAS_AYLA_URL || "https://api.gruposaborparaense.com.br/api/ayla/v1/acesso/validar").trim(),
   sasToken: (process.env.SAS_TOKEN || "").trim(),
+  bridgeToken: (process.env.AYLA_BRIDGE_TOKEN || process.env.SAS_TOKEN || "").trim(),
+  vincularUrl: (process.env.SAS_AYLA_VINCULAR_URL || "").trim(),
 
   // Webhook do OpenClaw (local). Padrão do OpenClaw: 127.0.0.1:8787/telegram-webhook
   openclawWebhookUrl: (process.env.OPENCLAW_WEBHOOK_URL || "http://127.0.0.1:8787/telegram-webhook").trim(),
@@ -50,6 +52,10 @@ const CFG = {
   denyMessage:
     process.env.DENY_MESSAGE ||
     "Olá! Seu acesso ainda não foi autorizado pelo administrador do Grupo Sabor Paraense.\n\nSolicite sua liberação no painel Ayla IA.",
+
+  welcomeMessage:
+    process.env.WELCOME_MESSAGE ||
+    "✅ Acesso vinculado com sucesso!\n\nVocê já pode conversar com a Ayla. Envie sua mensagem quando quiser.",
 };
 
 function log(msg, extra) {
@@ -143,7 +149,69 @@ function extrairContexto(update) {
     lastName: from.last_name || null,
     nome: nome || from.username || String(from.id),
     chatId,
+    text: m && typeof m.text === "string" ? m.text.trim() : "",
   };
+}
+
+// ---- Convite /start TOKEN ---------------------------------------------
+function extrairStartToken(text) {
+  if (!text) return null;
+  const m = text.match(/^\/start(?:@\w+)?\s+([A-Za-z0-9_-]{16,128})/);
+  return m ? m[1] : null;
+}
+
+function vincularUrlEfetiva() {
+  if (CFG.vincularUrl) return CFG.vincularUrl;
+  try {
+    const u = new URL(CFG.aylaUrl);
+    u.pathname = u.pathname.replace(/\/acesso\/validar\/?$/, "") + "/telegram/vincular";
+    return u.toString();
+  } catch (_) {
+    return "";
+  }
+}
+
+async function vincularPorConvite(ctx, token) {
+  const url = vincularUrlEfetiva();
+  if (!url || !CFG.bridgeToken) {
+    warn("Vincular URL ou AYLA_BRIDGE_TOKEN não configurado.");
+    return { ok: false, message: "Serviço de convite indisponível." };
+  }
+  try {
+    const resp = await fetchWithTimeout(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${CFG.bridgeToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        convite_token: token,
+        telegram_user_id: ctx.telegramUserId,
+        telegram_username: ctx.username || "",
+        telegram_nome: ctx.nome || "",
+      }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    const ok = resp.ok && data && data.success === true;
+    return { ok, message: data.message || (ok ? "Vinculado." : "Convite inválido.") };
+  } catch (e) {
+    warn("Falha ao vincular convite:", e.message);
+    return { ok: false, message: "Não foi possível validar o convite agora. Tente novamente." };
+  }
+}
+
+async function enviarTexto(chatId, text) {
+  if (!chatId || !CFG.botToken) return;
+  try {
+    await fetchWithTimeout(`${CFG.telegramApiRoot}/bot${CFG.botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+  } catch (e) {
+    warn("Falha ao enviar mensagem:", e.message);
+  }
 }
 
 // ---- Autorização via API SAS ------------------------------------------
@@ -183,16 +251,7 @@ async function autorizar(ctx) {
 
 // ---- Telegram: responder acesso negado --------------------------------
 async function enviarNegado(chatId) {
-  if (!chatId || !CFG.botToken) return;
-  try {
-    await fetchWithTimeout(`${CFG.telegramApiRoot}/bot${CFG.botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: CFG.denyMessage }),
-    });
-  } catch (e) {
-    warn("Falha ao enviar mensagem de acesso negado:", e.message);
-  }
+  return enviarTexto(chatId, CFG.denyMessage);
 }
 
 // ---- Encaminhar update autorizado ao OpenClaw -------------------------
@@ -262,6 +321,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    const startToken = extrairStartToken(ctx.text);
+    if (startToken) {
+      const v = await vincularPorConvite(ctx, startToken);
+      if (v.ok) {
+        cacheSet(ctx.telegramUserId, true);
+        log(`Convite aceito. user=${ctx.telegramUserId}`);
+        await enviarTexto(ctx.chatId, CFG.welcomeMessage);
+        return;
+      }
+      await enviarTexto(ctx.chatId, v.message || "Convite inválido ou expirado.");
+      return;
+    }
+
     const ok = await autorizar(ctx);
     if (ok) {
       log(`Telegram autorizado via SAS. user=${ctx.telegramUserId} username=${ctx.username || "-"}`);

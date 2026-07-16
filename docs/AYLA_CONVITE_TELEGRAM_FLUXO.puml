@@ -1,0 +1,42 @@
+@startuml Ayla_Convite_Telegram
+title Fluxo de convite e vínculo Telegram — Ayla IA
+
+actor Admin as admin
+actor Usuario as user
+participant "SAS Painel\n(ayla-ia.js)" as painel
+participant "SAS API\n(Napoleon)" as sas
+database "MySQL\nayla_*" as db
+participant "Telegram\nAuth Bridge\n(VPS)" as bridge
+participant "Sync API\n(VPS)" as sync
+participant "OpenClaw\nGateway" as oc
+participant Telegram as tg
+
+== Cadastro e convite ==
+admin -> painel : Seleciona usuário SAS\n+ telefone Telegram
+painel -> sas : PUT/POST /ayla-admin/usuarios
+sas -> db : Salva acesso + telefone
+admin -> painel : Gerar convite
+painel -> sas : POST /usuarios/{id}/convite
+sas -> db : token_hash, expira_em\n(cancela pendente anterior)
+sas --> painel : convite_url + WhatsApp
+admin -> user : Envia link (WhatsApp)
+
+== Aceite no Telegram ==
+user -> tg : Toca no link / INICIAR
+tg -> bridge : /start TOKEN
+bridge -> sas : POST /ayla/v1/telegram/vincular\nBearer AYLA_BRIDGE_TOKEN
+sas -> db : Valida hash, marca usado\npreenche telegram_user_id
+sas -> sync : POST /internal/allowlist/adicionar
+sync -> oc : Atualiza allowFrom\n+ restart gateway
+sas --> bridge : success
+bridge -> tg : Mensagem boas-vindas
+
+== Conversa ==
+user -> tg : Mensagem
+tg -> bridge : webhook update
+bridge -> sas : POST /acesso/validar
+sas -> db : autorizarTelegram
+bridge -> oc : encaminha update
+oc --> user : Resposta Ayla
+
+@enduml

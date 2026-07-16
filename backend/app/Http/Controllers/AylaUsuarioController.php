@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\AylaAuditLog;
 use App\Models\AylaUsuarioAutorizado;
+use App\Services\Ayla\AylaConviteService;
+use App\Services\Ayla\AylaTelegramSyncService;
 use App\Support\Ayla\AylaSettings;
+use App\Support\Ayla\AylaTelefone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -17,6 +20,11 @@ use Illuminate\Support\Facades\Schema;
  */
 class AylaUsuarioController extends Controller
 {
+    public function __construct(
+        private readonly AylaTelegramSyncService $telegramSync,
+        private readonly AylaConviteService $convites,
+    ) {}
+
     /** Módulos que podem ser marcados nas permissões da Ayla. */
     public const MODULOS_DISPONIVEIS = [
         'dashboard' => 'Dashboard',
@@ -235,6 +243,14 @@ class AylaUsuarioController extends Controller
         if ($novo === 'ativo') {
             $registro->autorizado_por = $u->id;
             $registro->autorizado_em = now();
+            if ($registro->telegram_user_id) {
+                $sync = $this->telegramSync->adicionarAllowlist((string) $registro->telegram_user_id);
+                $registro->telegram_sync_status = ($sync['success'] ?? false) ? 'ok' : 'erro';
+                $registro->telegram_sync_erro = ($sync['success'] ?? false) ? null : ($sync['message'] ?? null);
+                $registro->telegram_sincronizado_em = ($sync['success'] ?? false) ? now() : $registro->telegram_sincronizado_em;
+            }
+        } elseif (in_array($novo, ['bloqueado', 'revogado'], true) && $registro->telegram_user_id) {
+            $this->telegramSync->removerAllowlist((string) $registro->telegram_user_id);
         }
         $registro->save();
 
@@ -256,6 +272,9 @@ class AylaUsuarioController extends Controller
         }
 
         // Nunca apaga fisicamente: apenas revoga, preservando auditoria.
+        if ($registro->telegram_user_id) {
+            $this->telegramSync->removerAllowlist((string) $registro->telegram_user_id);
+        }
         $registro->status = 'revogado';
         $registro->save();
 
@@ -597,6 +616,12 @@ class AylaUsuarioController extends Controller
             return ['error' => 'Status inválido.'];
         }
 
+        $telefoneRaw = trim((string) $request->input('telefone_telegram', $existente->telefone_telegram ?? ''));
+        $telefoneNorm = $telefoneRaw !== '' ? AylaTelefone::normalizar($telefoneRaw) : null;
+        if ($telefoneNorm !== null && ! AylaTelefone::validar($telefoneNorm)) {
+            return ['error' => 'Telefone do Telegram inválido. Informe DDD + número brasileiro.'];
+        }
+
         $telegramId = trim((string) $request->input('telegram_user_id', $existente->telegram_user_id ?? ''));
         if ($telegramId !== '' && ! preg_match('/^[0-9]{3,32}$/', $telegramId)) {
             return ['error' => 'Telegram User ID deve conter apenas números.'];
@@ -618,6 +643,7 @@ class AylaUsuarioController extends Controller
 
         return [
             'usuario_id' => $usuarioId,
+            'telefone_telegram' => $telefoneNorm,
             'telegram_user_id' => $telegramId !== '' ? $telegramId : null,
             'telegram_username' => mb_substr(trim((string) $request->input('telegram_username', $existente->telegram_username ?? '')), 0, 120) ?: null,
             'telegram_nome' => mb_substr(trim((string) $request->input('telegram_nome', $existente->telegram_nome ?? '')), 0, 160) ?: null,
@@ -667,6 +693,13 @@ class AylaUsuarioController extends Controller
             'telegram_user_id' => $r->telegram_user_id,
             'telegram_username' => $r->telegram_username,
             'telegram_nome' => $r->telegram_nome,
+            'telefone_telegram' => AylaTelefone::formatar($r->telefone_telegram ?? null),
+            'telefone_telegram_mascarado' => AylaTelefone::mascarar($r->telefone_telegram ?? null),
+            'telegram_vinculado_em' => $r->telegram_vinculado_em ?? null,
+            'telegram_sync_status' => $r->telegram_sync_status ?? null,
+            'telegram_sync_erro' => $r->telegram_sync_erro ?? null,
+            'telegram_sincronizado_em' => $r->telegram_sincronizado_em ?? null,
+            'telegram_conectado' => ! empty($r->telegram_user_id),
             'cargo' => $r->cargo,
             'unidades_permitidas' => $this->jsonArr($r->unidades_permitidas),
             'modulos_permitidos' => $this->jsonArr($r->modulos_permitidos),
