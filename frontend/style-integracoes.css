@@ -1,0 +1,249 @@
+/* Módulo Integrações — Fase 2 */
+
+.int-unidade-map--phase2 .int-unidade-map__row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) repeat(2, minmax(120px, 1fr)) auto auto;
+  gap: 0.65rem 0.75rem;
+  align-items: end;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.int-unidade-map__flags {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.int-health-toolbar,
+.int-logs-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.int-logs-filters {
+  flex: 1;
+  min-width: 280px;
+}
+
+.int-field textarea {
+  min-height: 4rem;
+  resize: vertical;
+  font: inherit;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: var(--input-bg, #fff);
+  color: inherit;
+}
+
+@media (max-width: 900px) {
+  .int-unidade-map--phase2 .int-unidade-map__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.int-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 1200px;
+}
+
+.int-section-head h2 {
+  margin: 0 0 0.35rem;
+}
+
+.int-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.int-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.int-card header {
+  margin-bottom: 0.85rem;
+}
+
+.int-card header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.int-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+}
+
+.int-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.int-badge--online {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.int-badge--offline {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+.int-badge--error {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.int-badge--soon {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.int-meta {
+  font-size: 0.88rem;
+  color: #607d8b;
+}
+
+.int-meta strong {
+  color: #37474f;
+}
+
+.int-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem 1rem;
+}
+
+.int-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.int-field span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #455a64;
+}
+
+.int-field input,
+.int-field select {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.int-field--full {
+  grid-column: 1 / -1;
+}
+
+.int-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.35rem 0.75rem;
+}
+
+.int-unidade-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.int-unidade-map__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.int-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.int-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.int-app-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 140px;
+}
+
+.int-app-card__icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.int-app-card h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.int-app-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #607d8b;
+  flex: 1;
+}
+
+.int-health-table td,
+.int-health-table th {
+  font-size: 0.88rem;
+}
+
+.int-placeholder {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #78909c;
+}
+
+.int-placeholder__icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.int-aviso-fase {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  color: #1565c0;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+.int-logs-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #90a4ae;
+}

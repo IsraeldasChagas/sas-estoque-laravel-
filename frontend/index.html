@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
+    <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
@@ -314,6 +315,21 @@
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
                 <span class="nav-icon" aria-hidden="true">🗄</span><span class="nav-label">Backup / Restaurar</span>
               </button>
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--integracoes">
+            <a href="#" class="nav-link nav-link-parent" id="integracoesMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🔌</span><span class="nav-label">Integrações</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="integracaoVendafacil"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">VendaFácil</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="integracaoAplicacoes"><span class="nav-icon" aria-hidden="true">📱</span><span class="nav-label">Aplicações Conectadas</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="integracaoHealthCheck"><span class="nav-icon" aria-hidden="true">💚</span><span class="nav-label">Health Check</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="integracaoLogs"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Logs</span></a>
+              <a href="#" class="nav-link nav-link-child nav-link--soon" data-section="integracaoWebhooks"><span class="nav-icon" aria-hidden="true">🔗</span><span class="nav-label">Webhooks <em style="opacity:.7;font-size:.8em">(em breve)</em></span></a>
+              <a href="#" class="nav-link nav-link-child nav-link--soon" data-section="integracaoTokens"><span class="nav-icon" aria-hidden="true">🔑</span><span class="nav-label">Tokens <em style="opacity:.7;font-size:.8em">(em breve)</em></span></a>
+              <a href="#" class="nav-link nav-link-child nav-link--soon" data-section="integracaoConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações <em style="opacity:.7;font-size:.8em">(em breve)</em></span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--ayla">
@@ -4458,6 +4474,76 @@
 
           </section>
 
+          <!-- Módulo Integrações — Fase 1 (infraestrutura) -->
+          <section id="integracaoVendafacilSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head">
+              <div>
+                <h2>🔌 Integrações → VendaFácil</h2>
+                <p class="subtle-text">Configuração estrutural — comunicação HTTP na Fase 2.</p>
+              </div>
+            </div>
+            <div id="integracaoVendafacilRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="integracaoAplicacoesSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head">
+              <div>
+                <h2>📱 Aplicações Conectadas</h2>
+                <p class="subtle-text">Catálogo de integrações disponíveis e futuras.</p>
+              </div>
+            </div>
+            <div id="integracaoAplicacoesRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="integracaoHealthCheckSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head">
+              <div>
+                <h2>💚 Health Check</h2>
+                <p class="subtle-text">Disponibilidade dos sistemas integrados (estrutural).</p>
+              </div>
+            </div>
+            <div id="integracaoHealthCheckRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="integracaoLogsSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head">
+              <div>
+                <h2>📋 Logs de Integração</h2>
+                <p class="subtle-text">Histórico de requisições e eventos (sem tokens).</p>
+              </div>
+            </div>
+            <div class="table-card form-card--wide">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Sistema</th>
+                      <th>Endpoint</th>
+                      <th>Método</th>
+                      <th>Tempo</th>
+                      <th>Status</th>
+                      <th>Mensagem</th>
+                      <th>Empresa</th>
+                      <th>Usuário</th>
+                    </tr>
+                  </thead>
+                  <tbody id="integracaoLogsBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div id="integracaoLogsRoot" class="hidden"></div>
+          </section>
+          <section id="integracaoWebhooksSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head"><div><h2>🔗 Webhooks</h2></div></div>
+            <div id="integracaoWebhooksRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="integracaoTokensSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head"><div><h2>🔑 Tokens</h2></div></div>
+            <div id="integracaoTokensRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="integracaoConfiguracoesSection" class="view-section hidden">
+            <div class="int-section-head cfg-section-head"><div><h2>⚙️ Configurações de Integrações</h2></div></div>
+            <div id="integracaoConfiguracoesRoot" class="int-page-wrap"></div>
+          </section>
+
           <!-- Configurações — Integrações — OpenClaw -->
           <section id="openClawIntegracaoSection" class="view-section hidden">
             <div class="cfg-section-head">
@@ -5863,6 +5949,14 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialRelatorios" /> Comercial — Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialConfiguracoes" /> Comercial — Configurações do PDV</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFiscal" /> Comercial — Fiscal (em desenvolvimento)</label>
+            <div style="margin-top:0.5rem;"><strong>Menu: Integrações</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoVendafacil" /> Integrações — VendaFácil</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoAplicacoes" /> Integrações — Aplicações Conectadas</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoHealthCheck" /> Integrações — Health Check</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoLogs" /> Integrações — Logs</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoWebhooks" /> Integrações — Webhooks (em breve)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoTokens" /> Integrações — Tokens (em breve)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoConfiguracoes" /> Integrações — Configurações (em breve)</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Configurações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="openClawIntegracao" /> Configurações — OpenClaw / Assistente IA (ADMIN)</label>
             <div style="margin-top:0.5rem;"><strong>Administração</strong></div>
@@ -7400,7 +7494,8 @@
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="comercial-pdv.js?v=20260715-proto2"></script>
-    <script src="app.js?v=20260716-a1"></script>
+    <script src="integracoes.js?v=20260716-int1"></script>
+    <script src="app.js?v=20260716-int1"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
