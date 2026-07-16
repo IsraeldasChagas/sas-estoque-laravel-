@@ -164,7 +164,7 @@ Evidência típica: menu (`data-section`) + seção HTML + loader JS + rotas API
 | PDV / caixa operador (módulo próprio) | Só campos “PDV” no **fechamento de caixa** (auditoria maquinha vs sistema) |
 | Vendas (módulo) | Não há `/vendas` / menu vendas |
 | Cardápio digital | Não encontrado |
-| Delivery / entregadores / taxa entrega | Não encontrado |
+| Delivery / entregadores / taxa entrega | Removido do produto |
 | Fidelidade | Não encontrado |
 | CRM comercial | Não encontrado (só `financeiro_clientes` de AR) |
 | NF-e / NFC-e / NFS-e (emissão) | Não encontrado (apenas campos nota em lotes/UI) |
@@ -291,7 +291,7 @@ Finanças (boletos, DRE, fluxo, CR, fechamento…), RH completo, reservas/mesas,
 6. **Menu RH incompleto** (entrevistas / banco).  
 7. **Limpeza controlada de tabelas `ai_*` órfãs** (sem DROP automático em prod).  
 8. **Refatoração gradual de `api.php`**.  
-9. **Decisão de produto:** PDV / fiscal / delivery — **não existem**; planejar do zero se forem roadmap.  
+9. **Decisão de produto:** PDV / fiscal — planejar do zero se forem roadmap. Delivery foi removido do escopo.  
 10. **Cobertura de testes** nos módulos financeiros/RH.
 
 Ordem sugerida de desenvolvimento (após estabilizar Ayla ops+kanban+patrimônio):
@@ -311,7 +311,7 @@ Ordem sugerida de desenvolvimento (após estabilizar Ayla ops+kanban+patrimônio
 |---|---|
 | `php artisan route:list --path=ayla/v1` | 19 rotas (18 + OPTIONS) |
 | `php artisan test --filter=AylaApiTest` | 22 passed |
-| Buscas FE/BE por PDV, delivery, NFe, ifood… | documentadas nas seções E/B |
+| Buscas FE/BE por PDV, NFe, ifood… | documentadas nas seções E/B |
 | Glob `app/Jobs` | **inexistente** |
 | Inventário migrations | 94 arquivos |
 | Cross menu ↔ section ↔ loader | inventário frontend |

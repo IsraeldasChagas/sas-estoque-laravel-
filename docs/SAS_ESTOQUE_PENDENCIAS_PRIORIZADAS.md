@@ -76,7 +76,7 @@ Só iniciar após decisão de negócio explícita; **não** há código funciona
 | Tema | Situação atual |
 |---|---|
 | PDV / vendas / caixa operador | Só campos auxiliares no fechamento |
-| Delivery / entregadores / taxa | Não encontrado |
+| Delivery / entregadores / taxa | Removido do produto (não usar) |
 | Cardápio digital | Não encontrado |
 | NF-e / NFC-e / NFS-e | Não encontrado |
 | Fidelidade / CRM | Não encontrado |
@@ -99,7 +99,7 @@ Só iniciar após decisão de negócio explícita; **não** há código funciona
 7. Menu RH incompleto (entrevistas / banco).  
 8. Reduzir dívida de `api.php` (extração por domínio).  
 9. Limpeza controlada de `ai_*` órfãs.  
-10. Decisão de roadmap: PDV/fiscal/delivery (greenfield).
+10. Decisão de roadmap: PDV/fiscal (greenfield).
 
 ---
 
@@ -118,7 +118,7 @@ Correções UX/menu RH + CI tests
         ↓
 Refatoração progressiva api.php
         ↓
-(Se negócio aprovar) PDV / Fiscal / Delivery do zero
+(Se negócio aprovar) PDV / Fiscal do zero
 ```
 
 ---
