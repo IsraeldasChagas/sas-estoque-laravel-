@@ -107,47 +107,288 @@
   async function loadProdutos() {
     const root = $("deliveryProdutosRoot"); if (!root) return;
     await hydrate();
-    const cats = `<option value="">Sem categoria</option>${state.categorias.map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")}`;
-    root.innerHTML = shell(header("Produtos Delivery", "Catálogo comercial independente, com vínculo opcional ao estoque.", "◆")
-      + `<form id="dlvProdutoForm" class="orc-card"><div class="orc-section-title"><div><h3>Novo produto</h3><p>Preço e publicação pertencem ao Delivery; nenhum saldo de estoque será alterado.</p></div></div>
-      <div class="orc-form-grid"><label>Nome<input name="nome" required></label><label>Categoria<select name="categoria_id">${cats}</select></label>
-      <label>SKU<input name="sku"></label><label>Preço<input name="preco" type="number" min="0" step="0.01" required></label>
-      <label>Referência do produto no estoque<input name="estoque_produto_id" type="number" min="1" placeholder="Opcional"></label>
-      <label>Apresentação<input name="apresentacao" placeholder="unidade, porção, 500 ml..."></label>
-      <label class="checkbox-label"><input name="visivel_loja" type="checkbox" checked> Visível na vitrine</label>
-      <label class="checkbox-label"><input name="permite_adicionais" type="checkbox"> Permite adicionais</label></div>
-      <label>Descrição<textarea name="descricao" rows="2"></textarea></label><button class="btn primary">Cadastrar produto</button></form>
-      <div class="orc-table-card"><div class="table-scroll"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Vitrine</th><th>Estoque ref.</th><th>Ações</th></tr></thead><tbody>
-      ${state.produtos.map((p) => `<tr><td><strong>${esc(p.nome)}</strong><small>${esc(p.sku || "")}</small></td><td>${esc(state.categorias.find((c) => Number(c.id) === Number(p.categoria_id))?.nome || "Sem categoria")}</td>
-      <td>${money(p.preco)}</td><td>${badge(Number(p.visivel_loja) ? "ativo" : "inativo")}</td><td>${esc(p.estoque_produto_id || "—")}</td><td>
-      <button class="btn small secondary" data-prod-edit="${p.id}">Editar preço</button> <button class="btn small neutral" data-prod-add="${p.id}">Adicionais</button> <button class="btn small danger" data-prod-del="${p.id}">Excluir</button></td></tr>`).join("") || emptyRow(6, "Cadastre o primeiro produto comercial.")}</tbody></table></div></div>`);
-    $("dlvProdutoForm").onsubmit = async (e) => {
-      e.preventDefault(); const f = e.currentTarget;
-      await api("/produtos", { method: "POST", body: JSON.stringify({
-        nome: val(f, "nome"), categoria_id: val(f, "categoria_id") ? Number(val(f, "categoria_id")) : null,
-        sku: val(f, "sku") || null, preco: Number(val(f, "preco")), descricao: val(f, "descricao") || null,
-        estoque_produto_id: val(f, "estoque_produto_id") ? Number(val(f, "estoque_produto_id")) : null,
-        apresentacao: val(f, "apresentacao") || null, ativo: true, visivel_loja: bool(f, "visivel_loja"), permite_adicionais: bool(f, "permite_adicionais"),
-      }) });
-      toast("Produto Delivery criado.", "success"); await loadProdutos();
+    renderProdutosList(root, state.produtos, "", "");
+  }
+
+  function deliveryImageUrl(url) {
+    if (!url) return "";
+    if (/^https?:\/\//i.test(url) || /^data:/i.test(url)) return url;
+    const apiBase = String(window.APP_CONFIG?.API_URL || "").replace(/\/api\/?$/, "");
+    return `${apiBase}${String(url).startsWith("/") ? "" : "/"}${url}`;
+  }
+
+  function produtoThumb(produto) {
+    const url = deliveryImageUrl(produto.foto_url);
+    return `<span class="vf-product-thumb">${url ? `<img src="${esc(url)}" alt="">` : "▧"}</span>`;
+  }
+
+  function renderProdutosList(root, items, q, ativo) {
+    root.innerHTML = `<div class="vf-products">
+      <div class="vf-products__breadcrumb"><button type="button" data-vf-go-dashboard>Dashboard</button> / Produtos</div>
+      <div class="vf-products__toolbar">
+        <h2>Catálogo</h2>
+        <div class="vf-products__actions">
+          <button class="vf-btn" type="button" data-vf-go-categorias>Categorias</button>
+          <button class="vf-btn vf-btn--primary" type="button" data-vf-new-product>＋ Novo produto</button>
+        </div>
+      </div>
+      <form class="vf-filter-bar" id="vfProdutosFiltro">
+        <label class="vf-field"><span>Buscar</span><input type="search" name="q" value="${esc(q)}" placeholder="Nome, código interno, categoria..."></label>
+        <label class="vf-field"><span>Status</span><select name="ativo"><option value="">Todos</option><option value="1" ${ativo === "1" ? "selected" : ""}>Ativo</option><option value="0" ${ativo === "0" ? "selected" : ""}>Inativo</option></select></label>
+        <div class="vf-filter-bar__buttons"><button class="vf-btn" type="submit">Filtrar</button><button class="vf-btn" type="button" data-vf-clear-filter>Limpar</button></div>
+      </form>
+      <div class="vf-card vf-table-card"><div class="vf-table-wrap"><table class="vf-table">
+        <thead><tr><th style="width:3.5rem"></th><th>Cód. interno</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th><th class="vf-table__right">Ações</th></tr></thead>
+        <tbody id="vfProdutosBody">${renderProdutosRows(items)}</tbody>
+      </table></div></div>
+    </div>`;
+
+    root.querySelector("[data-vf-go-dashboard]").onclick = () => window.navigateTo?.("deliveryDashboard");
+    root.querySelector("[data-vf-go-categorias]").onclick = () => window.navigateTo?.("deliveryCategorias");
+    root.querySelector("[data-vf-clear-filter]").onclick = () => renderProdutosList(root, state.produtos, "", "");
+    $("vfProdutosFiltro").onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const busca = val(form, "q");
+      const status = val(form, "ativo");
+      const query = new URLSearchParams();
+      if (busca) query.set("q", busca);
+      if (status !== "") query.set("ativo", status);
+      const data = await api(`/produtos${query.toString() ? `?${query}` : ""}`);
+      renderProdutosList(root, data.items || [], busca, status);
     };
+    root.onclick = (e) => {
+      if (e.target.closest("[data-vf-new-product]")) {
+        openProdutoEditor(null);
+        return;
+      }
+      const edit = e.target.closest("[data-vf-edit-product]");
+      if (edit) openProdutoEditor(Number(edit.dataset.vfEditProduct));
+    };
+  }
+
+  function renderProdutosRows(items) {
+    if (!items.length) {
+      return `<tr><td colspan="8" class="vf-empty">Nenhum produto cadastrado. <button type="button" class="vf-btn vf-btn--link" data-vf-new-product>Criar primeiro</button></td></tr>`;
+    }
+    return items.map((p) => `<tr>
+      <td>${produtoThumb(p)}</td>
+      <td><span class="vf-code">${esc(p.sku || "—")}</span></td>
+      <td><strong>${esc(p.nome)}</strong></td>
+      <td>${esc(p.categoria_nome || "—")}</td>
+      <td>${money(p.preco)}</td>
+      <td>${Number(p.estoque || 0)}</td>
+      <td><span class="vf-badge ${Number(p.ativo) ? "vf-badge--active" : "vf-badge--inactive"}">${Number(p.ativo) ? "Ativo" : "Inativo"}</span>${Number(p.visivel_loja) ? "" : `<span class="vf-badge vf-badge--hidden">Oculto</span>`}</td>
+      <td class="vf-table__right"><button class="vf-btn" type="button" data-vf-edit-product="${p.id}">Editar</button></td>
+    </tr>`).join("");
+  }
+
+  async function openProdutoEditor(id) {
+    const root = $("deliveryProdutosRoot"); if (!root) return;
+    await hydrate();
+    const produto = id ? await api(`/produtos/${id}`) : null;
+    renderProdutoEditor(root, produto);
+  }
+
+  function categoriaOptions(selected) {
+    return `<option value="">— Sem categoria —</option>${state.categorias.map((c) =>
+      `<option value="${c.id}" ${Number(selected) === Number(c.id) ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}`;
+  }
+
+  function renderProdutoEditor(root, produto) {
+    const editando = !!produto;
+    const adicionaisSelecionados = new Set((produto?.adicionais || []).map((a) => Number(a.id)));
+    const ingredientes = produto?.ingredientes || [];
+    const fotoUrl = deliveryImageUrl(produto?.foto_url);
+    root.innerHTML = `<div class="vf-products vf-product-editor ${editando ? "vf-product-editor--edit" : ""}">
+      <div class="vf-products__breadcrumb"><button type="button" data-vf-back-products>Produtos</button> / ${editando ? `Editar #${produto.id}` : "Novo"}</div>
+      <div class="vf-card vf-product-form-card">
+        ${editando ? `<div class="vf-editor-head"><div><h2>${esc(produto.nome)}</h2><div class="vf-help">Código interno: <code class="vf-code">${esc(produto.sku)}</code></div></div>
+          <span class="vf-badge ${Number(produto.ativo) ? "vf-badge--active" : "vf-badge--inactive"}">${Number(produto.ativo) ? "Ativo" : "Inativo"}</span></div>` : `<h2>Dados do produto</h2>`}
+        <form id="vfProdutoEditorForm">
+          <div class="vf-form-grid">
+            <label class="vf-field vf-col-12"><span>Foto do produto</span>
+              <img id="vfProdutoFotoPreview" class="vf-photo-preview ${fotoUrl ? "is-visible" : ""}" src="${esc(fotoUrl)}" alt="Prévia da foto">
+              <input type="file" name="foto" accept="image/jpeg,image/png,image/webp,image/gif">
+              <small>Opcional. JPG, PNG, WebP ou GIF, até 3 MB. Aparece no cardápio online.</small>
+            </label>
+            <label class="vf-field vf-col-12"><span>Nome</span><input name="nome" value="${esc(produto?.nome || "")}" placeholder="Ex.: X-Burger" maxlength="180" required>
+              ${editando ? "" : `<small>O <strong>código interno</strong> será gerado automaticamente ao salvar.</small>`}
+            </label>
+            <label class="vf-field vf-col-6"><span>Categoria</span><select name="categoria_id">${categoriaOptions(produto?.categoria_id)}</select><small><button class="vf-btn vf-btn--link" type="button" data-vf-go-categorias>Gerenciar categorias</button></small></label>
+            <label class="vf-field vf-col-3"><span>Preço (R$)</span><input name="preco" type="number" min="0" step="0.01" value="${esc(produto?.preco ?? "")}" required></label>
+            <label class="vf-field vf-col-3"><span>Estoque</span><input name="estoque" type="number" min="0" step="1" value="${esc(produto?.estoque ?? 0)}" required></label>
+            <label class="vf-field vf-col-12"><span>Descrição</span><textarea name="descricao" rows="3">${esc(produto?.descricao || "")}</textarea></label>
+
+            <fieldset class="vf-fieldset vf-col-12"><legend>Na vitrine da loja — retirar ingredientes</legend>
+              <p class="vf-help">Como o cliente escolhe os ingredientes que deseja retirar do produto.</p>
+              <div class="vf-choice-stack">
+                <label class="vf-check"><input type="radio" name="ingredientes_retirar_ui" value="stepper" ${(produto?.ingredientes_retirar_ui || "stepper") === "stepper" ? "checked" : ""}> Botões − e +</label>
+                <label class="vf-check"><input type="radio" name="ingredientes_retirar_ui" value="checkbox" ${produto?.ingredientes_retirar_ui === "checkbox" ? "checked" : ""}> Caixas de seleção</label>
+              </div>
+            </fieldset>
+
+            <div class="vf-field vf-col-12">
+              <span>Ingredientes do prato <em class="vf-help">(opcional)</em></span>
+              <div id="vfIngredientesList" class="vf-ingredients-list">${ingredientes.map(renderIngredienteRow).join("")}</div>
+              <div><button class="vf-btn" type="button" data-vf-add-ingredient>＋ Adicionar ingrediente</button></div>
+              <small>Use os botões para incluir ou excluir linhas. Fotos por ingrediente são opcionais.</small>
+            </div>
+
+            <label class="vf-field vf-col-4"><span>Máx. ingredientes para retirar</span><input name="max_ingredientes_retirar" type="number" min="0" value="${esc(produto?.max_ingredientes_retirar ?? "")}" placeholder="Ex.: 2">
+              <small>Quantos ingredientes o cliente pode pedir para retirar.</small>
+            </label>
+            <label class="vf-field vf-col-4"><span>Mín. acréscimos pagos</span><input name="acrescimo_escolhas_min" type="number" min="0" max="999" value="${esc(produto?.acrescimo_escolhas_min ?? "")}" placeholder="Sem mínimo"></label>
+            <label class="vf-field vf-col-4"><span>Máx. acréscimos pagos</span><input name="acrescimo_escolhas_max" type="number" min="0" max="999" value="${esc(produto?.acrescimo_escolhas_max ?? "")}" placeholder="Sem máximo"></label>
+
+            <div class="vf-paid-options vf-col-12 is-collapsed" id="vfPaidOptions">
+              <div class="vf-paid-options__intro">
+                <p class="vf-help">As opções pagas ficam ocultas para deixar o formulário mais limpo. Clique para ver ou alterar adicionais deste produto.</p>
+                <button class="vf-btn" type="button" data-vf-show-additions>⊕ Ver adicionais disponíveis</button>
+              </div>
+              <div class="vf-paid-options__content">
+                <div class="vf-paid-options__top"><strong>Adicionais / opções pagas</strong><button class="vf-btn vf-btn--link" type="button" data-vf-hide-additions>⌃ Recolher</button></div>
+                <fieldset class="vf-fieldset"><legend>Na vitrine da loja</legend>
+                  <p class="vf-help">Como o cliente escolhe os acréscimos pagos deste produto.</p>
+                  <div class="vf-choice-stack">
+                    <label class="vf-check"><input type="radio" name="acrescimos_loja_ui" value="stepper" ${(produto?.acrescimos_loja_ui || "stepper") === "stepper" ? "checked" : ""}> Botões − e + (quantidade por opção)</label>
+                    <label class="vf-check"><input type="radio" name="acrescimos_loja_ui" value="checkbox" ${produto?.acrescimos_loja_ui === "checkbox" ? "checked" : ""}> Caixas — marcar só o que quer</label>
+                  </div>
+                </fieldset>
+                <label class="vf-check"><input type="checkbox" name="permite_adicionais" ${Number(produto?.permite_adicionais) ? "checked" : ""}> Permitir acréscimos pagos na loja</label>
+                <p class="vf-help">Marque só para este produto quais opções aparecem na vitrine.</p>
+                <div class="vf-additions-list">${renderAdicionaisOptions(adicionaisSelecionados)}</div>
+                <p class="vf-help"><strong>Recolher</strong> só esconde este bloco; as opções marcadas continuam sendo salvas.</p>
+              </div>
+            </div>
+
+            <div class="vf-col-12 vf-choice-stack">
+              <label class="vf-check"><input type="checkbox" name="visivel_loja" ${produto ? (Number(produto.visivel_loja) ? "checked" : "") : "checked"}> Visível na loja pública</label>
+              <label class="vf-check"><input type="checkbox" name="ativo" ${produto ? (Number(produto.ativo) ? "checked" : "") : "checked"}> ${editando ? "Ativo" : "Ativo (disponível para venda)"}</label>
+            </div>
+            <div class="vf-form-actions vf-col-12">
+              <button class="vf-btn vf-btn--primary" type="submit">${editando ? "Atualizar" : "Salvar"}</button>
+              <button class="vf-btn" type="button" data-vf-back-products>${editando ? "Voltar" : "Cancelar"}</button>
+            </div>
+          </div>
+        </form>
+        ${editando ? `<div class="vf-delete-zone"><button class="vf-btn vf-btn--danger" type="button" data-vf-delete-product="${produto.id}">Excluir produto</button></div>` : ""}
+      </div>
+    </div>`;
+    bindProdutoEditor(root, produto);
+  }
+
+  function renderIngredienteRow(ingrediente) {
+    const fotoUrl = deliveryImageUrl(ingrediente?.foto_url);
+    return `<div class="vf-ingredient-row" data-ing-id="${esc(ingrediente?.id || "")}" data-ing-photo="${esc(ingrediente?.foto_path || "")}">
+      <span class="vf-ingredient-thumb">${fotoUrl ? `<img src="${esc(fotoUrl)}" alt="">` : "＋"}</span>
+      <input type="text" class="vf-ing-name" value="${esc(ingrediente?.nome || "")}" maxlength="160" placeholder="Nome do ingrediente">
+      <input type="file" class="vf-ingredient-file vf-ing-photo" accept="image/jpeg,image/png,image/webp,image/gif">
+      <button class="vf-btn vf-btn--danger" type="button" data-vf-remove-ingredient title="Remover ingrediente">🗑</button>
+    </div>`;
+  }
+
+  function renderAdicionaisOptions(selected) {
+    const disponiveis = state.adicionais.filter((a) => a.tipo === "acrescentar" && Number(a.ativo));
+    if (!disponiveis.length) return `<span class="vf-help">Nenhum adicional de acréscimo cadastrado.</span>`;
+    return disponiveis.map((a) => {
+      const foto = deliveryImageUrl(a.foto_url || a.foto_path);
+      return `<label class="vf-addition-option"><input type="checkbox" name="adicional_ids" value="${a.id}" ${selected.has(Number(a.id)) ? "checked" : ""}>
+        ${foto ? `<img src="${esc(foto)}" alt="">` : ""}<span>${esc(a.nome)} <span class="vf-help">(+ ${money(a.preco)})</span></span></label>`;
+    }).join("");
+  }
+
+  function bindProdutoEditor(root, produto) {
+    root.querySelectorAll("[data-vf-back-products]").forEach((b) => { b.onclick = () => loadProdutos(); });
+    root.querySelector("[data-vf-go-categorias]").onclick = () => window.navigateTo?.("deliveryCategorias");
+    root.querySelector("[data-vf-add-ingredient]").onclick = () => {
+      $("vfIngredientesList").insertAdjacentHTML("beforeend", renderIngredienteRow(null));
+    };
+    root.querySelector("[data-vf-show-additions]").onclick = () => $("vfPaidOptions").classList.remove("is-collapsed");
+    root.querySelector("[data-vf-hide-additions]").onclick = () => $("vfPaidOptions").classList.add("is-collapsed");
     root.onclick = async (e) => {
-      const edit = e.target.closest("[data-prod-edit]"), adds = e.target.closest("[data-prod-add]"), del = e.target.closest("[data-prod-del]");
-      if (edit) {
-        const row = state.produtos.find((x) => Number(x.id) === Number(edit.dataset.prodEdit));
-        const preco = prompt(`Novo preço de ${row.nome}:`, row.preco); if (preco === null) return;
-        await api(`/produtos/${row.id}`, { method: "PUT", body: JSON.stringify({ preco: Number(String(preco).replace(",", ".")) }) });
+      const remove = e.target.closest("[data-vf-remove-ingredient]");
+      if (remove) remove.closest(".vf-ingredient-row")?.remove();
+      const del = e.target.closest("[data-vf-delete-product]");
+      if (del && confirm("Excluir este produto?")) {
+        await api(`/produtos/${del.dataset.vfDeleteProduct}`, { method: "DELETE" });
+        toast("Produto excluído.", "success");
+        await loadProdutos();
       }
-      if (adds) {
-        const detail = await api(`/produtos/${adds.dataset.prodAdd}`);
-        const atuais = new Set((detail.adicionais || []).map((x) => Number(x.id)));
-        const nomes = state.adicionais.map((a) => `${a.id}: ${a.nome}${atuais.has(Number(a.id)) ? " [vinculado]" : ""}`).join("\n");
-        const ids = prompt(`Informe IDs dos adicionais separados por vírgula:\n${nomes}`, [...atuais].join(",")); if (ids === null) return;
-        await api(`/produtos/${adds.dataset.prodAdd}/adicionais`, { method: "POST", body: JSON.stringify({ adicional_ids: ids.split(",").map(Number).filter(Boolean) }) });
-      }
-      if (del && confirm("Excluir este produto do catálogo Delivery?")) await api(`/produtos/${del.dataset.prodDel}`, { method: "DELETE" });
-      if (edit || adds || del) { toast("Produto atualizado.", "success"); await loadProdutos(); }
     };
+    root.onchange = async (e) => {
+      if (e.target.matches('input[name="foto"]') && e.target.files?.[0]) {
+        const preview = $("vfProdutoFotoPreview");
+        preview.src = URL.createObjectURL(e.target.files[0]);
+        preview.classList.add("is-visible");
+      }
+      if (e.target.matches(".vf-ing-photo") && e.target.files?.[0]) {
+        const thumb = e.target.closest(".vf-ingredient-row")?.querySelector(".vf-ingredient-thumb");
+        if (thumb) thumb.innerHTML = `<img src="${esc(URL.createObjectURL(e.target.files[0]))}" alt="">`;
+      }
+    };
+    $("vfProdutoEditorForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const form = e.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const ingredientes = await Promise.all([...form.querySelectorAll(".vf-ingredient-row")].map(async (row) => {
+          const file = row.querySelector(".vf-ing-photo")?.files?.[0];
+          return {
+            id: row.dataset.ingId ? Number(row.dataset.ingId) : null,
+            nome: row.querySelector(".vf-ing-name")?.value.trim() || "",
+            foto_path: file ? null : (row.dataset.ingPhoto || null),
+            foto_base64: file ? await fileToDataUrl(file, 2 * 1024 * 1024, "Foto do ingrediente") : null,
+          };
+        }));
+        const ingredientesValidos = ingredientes.filter((x) => x.nome);
+        if (ingredientesValidos.length && val(form, "max_ingredientes_retirar") === "") {
+          throw new Error("Informe o máximo de ingredientes que o cliente pode retirar.");
+        }
+        const mainFile = form.elements.foto?.files?.[0];
+        const payload = {
+          nome: val(form, "nome").trim(),
+          categoria_id: val(form, "categoria_id") ? Number(val(form, "categoria_id")) : null,
+          preco: Number(val(form, "preco")),
+          estoque: Number(val(form, "estoque")),
+          descricao: val(form, "descricao") || null,
+          foto_base64: mainFile ? await fileToDataUrl(mainFile, 3 * 1024 * 1024, "Foto do produto") : null,
+          foto_path: produto?.foto_path || null,
+          ingredientes_retirar_ui: form.elements.ingredientes_retirar_ui.value,
+          max_ingredientes_retirar: val(form, "max_ingredientes_retirar") === "" ? null : Number(val(form, "max_ingredientes_retirar")),
+          acrescimo_escolhas_min: val(form, "acrescimo_escolhas_min") === "" ? null : Number(val(form, "acrescimo_escolhas_min")),
+          acrescimo_escolhas_max: val(form, "acrescimo_escolhas_max") === "" ? null : Number(val(form, "acrescimo_escolhas_max")),
+          acrescimos_loja_ui: form.elements.acrescimos_loja_ui.value,
+          permite_adicionais: bool(form, "permite_adicionais"),
+          adicional_ids: [...form.querySelectorAll('input[name="adicional_ids"]:checked')].map((x) => Number(x.value)),
+          ingredientes: ingredientesValidos,
+          visivel_loja: bool(form, "visivel_loja"),
+          ativo: bool(form, "ativo"),
+        };
+        await api(produto ? `/produtos/${produto.id}` : "/produtos", { method: produto ? "PUT" : "POST", body: JSON.stringify(payload) });
+        toast(produto ? "Produto atualizado." : "Produto cadastrado.", "success");
+        await loadProdutos();
+      } catch (error) {
+        toast(error?.message || "Não foi possível salvar o produto.", "error");
+      } finally {
+        submit.disabled = false;
+      }
+    };
+  }
+
+  function fileToDataUrl(file, maxBytes, label) {
+    if (!file) return Promise.resolve(null);
+    if (file.size > maxBytes) return Promise.reject(new Error(`${label} excede o tamanho permitido.`));
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      return Promise.reject(new Error(`${label} deve ser JPG, PNG, WebP ou GIF.`));
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error(`Não foi possível ler ${label.toLowerCase()}.`));
+      reader.readAsDataURL(file);
+    });
   }
 
   async function loadAdicionais() {

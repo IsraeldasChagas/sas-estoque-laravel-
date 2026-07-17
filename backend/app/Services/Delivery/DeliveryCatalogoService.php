@@ -61,18 +61,7 @@ class DeliveryCatalogoService
         ];
 
         foreach ($produtos as $produto) {
-            $row = [
-                'id' => (int) $produto->id,
-                'categoria_id' => $produto->categoria_id !== null ? (int) $produto->categoria_id : null,
-                'estoque_produto_id' => $produto->estoque_produto_id !== null ? (int) $produto->estoque_produto_id : null,
-                'sku' => $produto->sku,
-                'nome' => (string) $produto->nome,
-                'preco' => (float) $produto->preco,
-                'descricao' => $produto->descricao,
-                'foto_path' => $produto->foto_path,
-                'permite_adicionais' => (bool) $produto->permite_adicionais,
-                'apresentacao' => $produto->apresentacao,
-            ];
+            $row = $this->mapProduto($produto);
             $cid = $produto->categoria_id !== null ? (int) $produto->categoria_id : null;
             if ($cid !== null && isset($porCategoria[$cid])) {
                 $porCategoria[$cid]['produtos'][] = $row;
@@ -90,18 +79,40 @@ class DeliveryCatalogoService
             'unidade_id' => $unidadeId,
             'total_produtos' => $produtos->count(),
             'categorias' => $grupos,
-            'produtos' => $produtos->map(fn ($p) => [
-                'id' => (int) $p->id,
-                'categoria_id' => $p->categoria_id !== null ? (int) $p->categoria_id : null,
-                'estoque_produto_id' => $p->estoque_produto_id !== null ? (int) $p->estoque_produto_id : null,
-                'sku' => $p->sku,
-                'nome' => (string) $p->nome,
-                'preco' => (float) $p->preco,
-                'descricao' => $p->descricao,
-                'foto_path' => $p->foto_path,
-                'permite_adicionais' => (bool) $p->permite_adicionais,
-                'apresentacao' => $p->apresentacao,
-            ])->values(),
+            'produtos' => $produtos->map(fn ($p) => $this->mapProduto($p))->values(),
         ];
+    }
+
+    private function mapProduto(object $produto): array
+    {
+        $fotoPath = $produto->foto_path ?? null;
+
+        return [
+            'id' => (int) $produto->id,
+            'categoria_id' => $produto->categoria_id !== null ? (int) $produto->categoria_id : null,
+            'estoque_produto_id' => $produto->estoque_produto_id !== null ? (int) $produto->estoque_produto_id : null,
+            'sku' => $produto->sku,
+            'nome' => (string) $produto->nome,
+            'preco' => (float) $produto->preco,
+            'estoque' => (int) ($produto->estoque ?? 0),
+            'descricao' => $produto->descricao,
+            'foto_path' => $fotoPath,
+            'foto_url' => $this->fotoUrl($fotoPath),
+            'permite_adicionais' => (bool) $produto->permite_adicionais,
+            'apresentacao' => $produto->apresentacao,
+        ];
+    }
+
+    private function fotoUrl(?string $path): ?string
+    {
+        if ($path === null || trim($path) === '') {
+            return null;
+        }
+        $rel = ltrim(str_replace('\\', '/', $path), '/');
+        if ($rel === '' || str_contains($rel, '..') || ! str_starts_with($rel, 'uploads/delivery/')) {
+            return null;
+        }
+
+        return '/'.$rel;
     }
 }

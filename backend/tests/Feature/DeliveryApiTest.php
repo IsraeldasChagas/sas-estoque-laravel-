@@ -91,6 +91,9 @@ class DeliveryApiTest extends TestCase
 
         $migration = require database_path('migrations/2026_07_17_150000_create_delivery_tables.php');
         $migration->up();
+
+        $estoqueMigration = require database_path('migrations/2026_07_17_160000_add_estoque_to_delivery_products.php');
+        $estoqueMigration->up();
     }
 
     private function seedUsuarios(): void
@@ -499,5 +502,260 @@ class DeliveryApiTest extends TestCase
             ->getJson('/api/delivery/entregadores?unidade_id=1')
             ->assertOk()
             ->assertJsonCount(1, 'items');
+    }
+
+    public function test_produto_gera_sku_automatico_quando_omitido(): void
+    {
+        $this->bootstrapLoja(1);
+
+        $produto = $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'nome' => 'Auto SKU',
+            'preco' => 12,
+            'estoque' => 5,
+        ])->assertCreated()->json();
+
+        $this->assertMatchesRegularExpression('/^CI-[A-Z0-9]{8}$/', (string) $produto['sku']);
+        $this->assertSame(5, (int) $produto['estoque']);
+
+        $this->withHeaders($this->headers())
+            ->putJson('/api/delivery/produtos/'.$produto['id'], ['nome' => 'Auto SKU 2', 'sku' => 'HACK-01'])
+            ->assertOk()
+            ->assertJsonPath('sku', $produto['sku']);
+    }
+
+    public function test_produto_payload_completo_ingredientes_e_adicionais(): void
+    {
+        $this->bootstrapLoja(1);
+
+        $categoria = $this->withHeaders($this->headers())->postJson('/api/delivery/categorias', [
+            'unidade_id' => 1,
+            'nome' => 'Burgers',
+        ])->assertCreated()->json();
+
+        $adicional = $this->withHeaders($this->headers())->postJson('/api/delivery/adicionais', [
+            'unidade_id' => 1,
+            'nome' => 'Bacon',
+            'tipo' => 'acrescentar',
+            'preco' => 4,
+        ])->assertCreated()->json();
+
+        $retirar = $this->withHeaders($this->headers())->postJson('/api/delivery/adicionais', [
+            'unidade_id' => 1,
+            'nome' => 'Sem cebola (legado)',
+            'tipo' => 'retirar',
+            'preco' => 0,
+        ])->assertCreated()->json();
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'categoria_id' => $categoria['id'],
+            'nome' => 'X-Tudo inválido',
+            'preco' => 32,
+            'estoque' => 10,
+            'permite_adicionais' => true,
+            'acrescimo_escolhas_min' => 0,
+            'acrescimo_escolhas_max' => 2,
+            'adicional_ids' => [$adicional['id'], $retirar['id']],
+            'ingredientes' => [
+                ['nome' => 'Alface'],
+                ['nome' => 'Tomate'],
+            ],
+            'max_ingredientes_retirar' => 1,
+        ])->assertStatus(422);
+
+        $produto = $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'categoria_id' => $categoria['id'],
+            'nome' => 'X-Tudo',
+            'preco' => 32,
+            'estoque' => 10,
+            'permite_adicionais' => true,
+            'acrescimo_escolhas_min' => 0,
+            'acrescimo_escolhas_max' => 2,
+            'acrescimos_loja_ui' => 'stepper',
+            'ingredientes_retirar_ui' => 'checkbox',
+            'max_ingredientes_retirar' => 1,
+            'adicional_ids' => [$adicional['id']],
+            'ingredientes' => [
+                ['nome' => 'Alface'],
+                ['nome' => ''],
+                ['nome' => 'Tomate'],
+            ],
+        ])->assertCreated()->json();
+
+        $this->assertCount(1, $produto['adicionais']);
+        $this->assertCount(2, $produto['ingredientes']);
+        $this->assertSame('Alface', $produto['ingredientes'][0]['nome']);
+        $this->assertSame('Tomate', $produto['ingredientes'][1]['nome']);
+        $this->assertSame(0, (int) $produto['ingredientes'][0]['ordem']);
+        $this->assertSame(1, (int) $produto['ingredientes'][1]['ordem']);
+
+        $atualizado = $this->withHeaders($this->headers())->putJson('/api/delivery/produtos/'.$produto['id'], [
+            'permite_adicionais' => false,
+            'ingredientes' => [
+                ['nome' => 'Queijo', 'id' => $produto['ingredientes'][0]['id']],
+            ],
+            'max_ingredientes_retirar' => 0,
+            'ingredientes_retirar_ui' => 'stepper',
+        ])->assertOk()->json();
+
+        $this->assertFalse((bool) $atualizado['permite_adicionais']);
+        $this->assertCount(0, $atualizado['adicionais']);
+        $this->assertSame(0, (int) $atualizado['acrescimo_escolhas_min']);
+        $this->assertNull($atualizado['acrescimo_escolhas_max']);
+        $this->assertCount(1, $atualizado['ingredientes']);
+        $this->assertSame('Queijo', $atualizado['ingredientes'][0]['nome']);
+    }
+
+    public function test_produto_validacoes_ui_minmax_e_lista_filtros(): void
+    {
+        $this->bootstrapLoja(1);
+
+        $catA = $this->withHeaders($this->headers())->postJson('/api/delivery/categorias', [
+            'unidade_id' => 1,
+            'nome' => 'Doces',
+        ])->assertCreated()->json();
+
+        $catB = $this->withHeaders($this->headers())->postJson('/api/delivery/categorias', [
+            'unidade_id' => 1,
+            'nome' => 'Salgados',
+        ])->assertCreated()->json();
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'categoria_id' => $catA['id'],
+            'nome' => 'Brigadeiro',
+            'sku' => 'DOC-01',
+            'preco' => 5,
+            'ativo' => true,
+            'estoque' => 3,
+        ])->assertCreated();
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'categoria_id' => $catB['id'],
+            'nome' => 'Coxinha',
+            'sku' => 'SAL-01',
+            'preco' => 8,
+            'ativo' => false,
+            'estoque' => 0,
+        ])->assertCreated();
+
+        $this->withHeaders($this->headers())
+            ->getJson('/api/delivery/produtos?unidade_id=1&q=Doces')
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.nome', 'Brigadeiro')
+            ->assertJsonPath('items.0.categoria_nome', 'Doces')
+            ->assertJsonPath('items.0.estoque', 3);
+
+        $this->withHeaders($this->headers())
+            ->getJson('/api/delivery/produtos?unidade_id=1&busca=SAL-01')
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.nome', 'Coxinha');
+
+        $this->withHeaders($this->headers())
+            ->getJson('/api/delivery/produtos?unidade_id=1&ativo=false')
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.nome', 'Coxinha');
+
+        $lista = $this->withHeaders($this->headers())
+            ->getJson('/api/delivery/produtos?unidade_id=1')
+            ->assertOk()
+            ->json('items');
+        $this->assertSame(['Brigadeiro', 'Coxinha'], array_column($lista, 'nome'));
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'nome' => 'Inválido UI',
+            'preco' => 1,
+            'ingredientes_retirar_ui' => 'radio',
+        ])->assertStatus(422);
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'nome' => 'Inválido minmax',
+            'preco' => 1,
+            'permite_adicionais' => true,
+            'acrescimo_escolhas_min' => 5,
+            'acrescimo_escolhas_max' => 2,
+        ])->assertStatus(422);
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'nome' => 'Sem max retirar',
+            'preco' => 1,
+            'ingredientes' => [['nome' => 'Cebola']],
+        ])->assertStatus(422);
+
+        $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'nome' => 'Max retirar alto',
+            'preco' => 1,
+            'ingredientes' => [['nome' => 'Cebola']],
+            'max_ingredientes_retirar' => 3,
+        ])->assertStatus(422);
+    }
+
+    public function test_produto_foto_base64_upload_e_cleanup(): void
+    {
+        $this->bootstrapLoja(1);
+
+        $png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+        $produto = $this->withHeaders($this->headers())->postJson('/api/delivery/produtos', [
+            'unidade_id' => 1,
+            'nome' => 'Com Foto',
+            'preco' => 15,
+            'estoque' => 2,
+            'foto_base64' => $png,
+            'ingredientes' => [
+                ['nome' => 'Molho', 'foto_base64' => $png],
+            ],
+            'max_ingredientes_retirar' => 1,
+            'ingredientes_retirar_ui' => 'stepper',
+        ])->assertCreated()->json();
+
+        $this->assertNotEmpty($produto['foto_path']);
+        $this->assertSame('/'.$produto['foto_path'], $produto['foto_url']);
+        $this->assertFileExists(public_path($produto['foto_path']));
+        $this->assertNotEmpty($produto['ingredientes'][0]['foto_path']);
+        $this->assertFileExists(public_path($produto['ingredientes'][0]['foto_path']));
+
+        $catalogo = $this->withHeaders($this->headers())
+            ->getJson('/api/delivery/catalogo?unidade_id=1')
+            ->assertOk()
+            ->json();
+        $this->assertSame(2, (int) $catalogo['produtos'][0]['estoque']);
+        $this->assertSame($produto['foto_url'], $catalogo['produtos'][0]['foto_url']);
+
+        $oldProdutoFoto = $produto['foto_path'];
+        $oldIngFoto = $produto['ingredientes'][0]['foto_path'];
+
+        $atualizado = $this->withHeaders($this->headers())->putJson('/api/delivery/produtos/'.$produto['id'], [
+            'foto_base64' => $png,
+            'ingredientes' => [
+                [
+                    'nome' => 'Molho especial',
+                    'foto_path' => $oldIngFoto,
+                ],
+            ],
+            'max_ingredientes_retirar' => 0,
+        ])->assertOk()->json();
+
+        $this->assertNotSame($oldProdutoFoto, $atualizado['foto_path']);
+        $this->assertFileDoesNotExist(public_path($oldProdutoFoto));
+        $this->assertFileExists(public_path($oldIngFoto));
+        $this->assertSame($oldIngFoto, $atualizado['ingredientes'][0]['foto_path']);
+
+        $this->withHeaders($this->headers())
+            ->deleteJson('/api/delivery/produtos/'.$produto['id'])
+            ->assertOk();
+
+        $this->assertFileDoesNotExist(public_path($atualizado['foto_path']));
+        $this->assertFileDoesNotExist(public_path($oldIngFoto));
     }
 }
