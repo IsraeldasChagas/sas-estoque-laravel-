@@ -17,6 +17,11 @@
         @if($banners->count() > 1)
             <button type="button" class="vf-loja-banner__ctrl prev" data-banner-prev aria-label="Banner anterior">‹</button>
             <button type="button" class="vf-loja-banner__ctrl next" data-banner-next aria-label="Próximo banner">›</button>
+            <div class="vf-loja-banner__dots" data-banner-dots>
+                @foreach($banners as $banner)
+                    <button type="button" class="{{ $loop->first ? 'is-active' : '' }}" data-banner-dot="{{ $loop->index }}" aria-label="Banner {{ $loop->iteration }}"></button>
+                @endforeach
+            </div>
         @endif
         <div class="vf-loja-banner__scrim">
             <a href="{{ route('delivery.public.store', $slug) }}">Ver Promoções</a>
@@ -94,12 +99,18 @@
 <script>
 (function () {
   const banner = document.querySelector('[data-banner-carousel]');
-  if (banner && banner.querySelectorAll('img').length > 1) {
+  if (banner && banner.querySelectorAll('.vf-loja-banner__media > img').length > 1) {
     let slide = 0;
-    const slides = [...banner.querySelectorAll('img')];
-    const show = (n) => slides.forEach((img, i) => { img.hidden = i !== n; });
-    banner.querySelector('[data-banner-prev]')?.addEventListener('click', () => show(slide = (slide - 1 + slides.length) % slides.length));
-    banner.querySelector('[data-banner-next]')?.addEventListener('click', () => show(slide = (slide + 1) % slides.length));
+    const slides = [...banner.querySelectorAll('.vf-loja-banner__media > img')];
+    const dots = [...banner.querySelectorAll('[data-banner-dot]')];
+    const show = (n) => {
+      slide = n;
+      slides.forEach((img, i) => { img.hidden = i !== n; });
+      dots.forEach((dot, i) => dot.classList.toggle('is-active', i === n));
+    };
+    banner.querySelector('[data-banner-prev]')?.addEventListener('click', () => show((slide - 1 + slides.length) % slides.length));
+    banner.querySelector('[data-banner-next]')?.addEventListener('click', () => show((slide + 1) % slides.length));
+    dots.forEach((dot) => dot.addEventListener('click', () => show(Number(dot.dataset.bannerDot))));
   }
 
   const select = document.querySelector('[data-category-select]');

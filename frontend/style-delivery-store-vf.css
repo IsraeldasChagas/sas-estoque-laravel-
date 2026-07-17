@@ -123,8 +123,47 @@
 .vf-toggle-row input { width: 17px; height: 17px; accent-color: var(--vf-blue); }
 
 .vf-vitrine-preview { --store-primary: #2563eb; overflow: hidden; padding: 0; border-top: 4px solid var(--store-primary); }
-.vf-vitrine-preview__banner { display: grid; width: 100%; aspect-ratio: 3 / 1; place-items: center; overflow: hidden; background: #eef2f6; color: #98a2b3; font-size: .8rem; }
-.vf-vitrine-preview__banner img { width: 100%; height: 100%; object-fit: cover; }
+.vf-vitrine-preview__banner { display: grid; width: 100%; max-width: 420px; margin: 0 auto; aspect-ratio: 3 / 1; place-items: center; overflow: hidden; background: #eef2f6; color: #98a2b3; font-size: .8rem; border-radius: .55rem; }
+.vf-vitrine-preview__banner img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.vf-banners-field > span em { font-style: normal; font-weight: 500; color: var(--vf-muted); }
+.vf-banners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: .65rem;
+  justify-items: center;
+}
+.vf-banners-empty {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: .9rem;
+  border: 1px dashed #d0d5dd;
+  border-radius: .5rem;
+  color: var(--vf-muted);
+  text-align: center;
+  background: #f8fafc;
+}
+.vf-banner-thumb {
+  position: relative;
+  margin: 0;
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 3 / 1;
+  border-radius: .5rem;
+  overflow: hidden;
+  border: 1px solid var(--vf-border);
+  background: #eef2f6;
+}
+.vf-banner-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+.vf-banner-thumb__remove {
+  position: absolute; inset: auto 6px 6px auto;
+  border: 0; border-radius: .35rem; padding: .25rem .45rem;
+  background: rgba(15, 23, 42, .78); color: #fff; font-size: .7rem; cursor: pointer;
+}
+.vf-banner-thumb__badge {
+  position: absolute; top: 6px; left: 6px;
+  background: #2563eb; color: #fff; font-size: .68rem; font-weight: 700;
+  border-radius: .3rem; padding: .15rem .4rem;
+}
 .vf-vitrine-preview__identity { display: flex; gap: .7rem; align-items: center; padding: 1rem 1rem .5rem; }
 .vf-vitrine-preview__logo { display: grid; width: 58px; height: 58px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 3px solid #fff; border-radius: 50%; background: #f2f4f7; box-shadow: 0 1px 4px #98a2b3; color: #98a2b3; font-size: .68rem; }
 .vf-vitrine-preview__logo img { width: 100%; height: 100%; object-fit: cover; }

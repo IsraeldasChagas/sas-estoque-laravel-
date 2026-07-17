@@ -50,6 +50,7 @@ class DeliveryStoreConfigTest extends TestCase
 
         (require database_path('migrations/2026_07_17_150000_create_delivery_tables.php'))->up();
         (require database_path('migrations/2026_07_17_160000_add_estoque_to_delivery_products.php'))->up();
+        (require database_path('migrations/2026_07_17_191000_create_dlv_loja_banners_table.php'))->up();
 
         DB::table('usuarios')->insert([
             'id' => 1,
@@ -72,6 +73,7 @@ class DeliveryStoreConfigTest extends TestCase
     private function tables(): array
     {
         return [
+            'dlv_loja_banners',
             'dlv_pedido_historico', 'dlv_pedido_itens', 'dlv_pedidos', 'dlv_entregadores',
             'dlv_frete_faixas_cep', 'dlv_produto_ingredientes', 'dlv_produto_adicional',
             'dlv_adicionais', 'dlv_produtos', 'dlv_categorias', 'dlv_loja_config',
@@ -129,6 +131,8 @@ class DeliveryStoreConfigTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('logo_url', fn ($value) => str_starts_with($value, '/uploads/delivery/lojas/1/logo-'))
             ->assertJsonPath('banner_url', fn ($value) => str_starts_with($value, '/uploads/delivery/lojas/1/banner-'))
+            ->assertJsonPath('banners.0.url', fn ($value) => str_starts_with($value, '/uploads/delivery/lojas/1/banner-'))
+            ->assertJsonPath('banners_max', 10)
             ->assertJsonPath('preview_path', '/loja/sabor-paraense')
             ->assertJsonPath('preview_url', fn ($value) => str_ends_with($value, '/loja/sabor-paraense'))
             ->assertJsonPath('public_route_available', true)
@@ -136,21 +140,38 @@ class DeliveryStoreConfigTest extends TestCase
 
         $oldLogo = $first['logo_path'];
         $banner = $first['banner_path'];
+        $bannerId = $first['banners'][0]['id'];
         $this->assertFileExists(public_path($oldLogo));
         $this->assertFileExists(public_path($banner));
+
+        $multi = $this->withHeaders($this->headers())->putJson('/api/delivery/vitrine?unidade_id=1', [
+            'unidade_id' => 1,
+            'banners_base64' => [self::PNG, self::PNG],
+        ])->assertOk()
+            ->assertJsonPath('banners', fn ($items) => is_array($items) && count($items) === 3)
+            ->json();
+        $this->assertCount(3, $multi['banners']);
 
         $second = $this->withHeaders($this->headers())->putJson('/api/delivery/vitrine?unidade_id=1', [
             'unidade_id' => 1,
             'logo_base64' => self::PNG,
-            'banner_clear' => true,
+            'banners_remove' => array_column($multi['banners'], 'id'),
         ])->assertOk()->json();
 
         $this->assertNotSame($oldLogo, $second['logo_path']);
         $this->assertFileDoesNotExist(public_path($oldLogo));
         $this->assertFileExists(public_path($second['logo_path']));
+        $this->assertSame([], $second['banners']);
         $this->assertNull($second['banner_path']);
         $this->assertNull($second['banner_url']);
         $this->assertFileDoesNotExist(public_path($banner));
+        $this->assertDatabaseMissing('dlv_loja_banners', ['id' => $bannerId]);
+
+        $overflow = $this->withHeaders($this->headers())->putJson('/api/delivery/vitrine?unidade_id=1', [
+            'unidade_id' => 1,
+            'banners_base64' => array_fill(0, 11, self::PNG),
+        ]);
+        $overflow->assertStatus(422);
 
         @unlink(public_path($second['logo_path']));
     }

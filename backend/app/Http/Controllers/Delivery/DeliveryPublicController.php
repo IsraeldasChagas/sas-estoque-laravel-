@@ -40,7 +40,7 @@ class DeliveryPublicController extends Controller
         $adicionais = DB::table('dlv_adicionais')->where('unidade_id', $unidadeId)
             ->where('ativo', 1)->where('tipo', 'acrescentar')->orderBy('ordem')->orderBy('nome')->get()
             ->map(fn ($a) => (object) array_merge((array) $a, ['foto_url' => $this->imagem($a->foto_path ?? null, $unidadeId, 'adicionais')]));
-        $banners = collect($config->banner_url ? [['url' => $config->banner_url, 'alt' => $config->nome_loja]] : []);
+        $banners = $this->bannersPublicos($config);
         $passoAtual = 'loja';
         $fidelidadeAtiva = $this->fidelidadeAtiva($unidadeId);
         $footerFixed = true;
@@ -230,6 +230,31 @@ class DeliveryPublicController extends Controller
         }
 
         return DB::table('fid_programas')->where('unidade_id', $unidadeId)->where('ativo', 1)->exists();
+    }
+
+    /** @return \Illuminate\Support\Collection<int, array{url:string,alt:?string}> */
+    private function bannersPublicos(object $config): \Illuminate\Support\Collection
+    {
+        $alt = $config->nome_loja ?: 'Banner';
+        if (\Illuminate\Support\Facades\Schema::hasTable('dlv_loja_banners')) {
+            $rows = DB::table('dlv_loja_banners')
+                ->where('loja_config_id', $config->id)
+                ->orderBy('ordem')
+                ->orderBy('id')
+                ->get();
+            $slides = collect();
+            foreach ($rows as $row) {
+                $url = $this->imagem($row->caminho ?? null, (int) $config->unidade_id, 'lojas');
+                if ($url) {
+                    $slides->push(['url' => $url, 'alt' => $alt]);
+                }
+            }
+            if ($slides->isNotEmpty()) {
+                return $slides;
+            }
+        }
+
+        return collect($config->banner_url ? [['url' => $config->banner_url, 'alt' => $alt]] : []);
     }
 
     private function validarRetirada(object $config, string $fulfillment): void

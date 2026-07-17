@@ -149,10 +149,16 @@
               <input name="logo" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
               <label><input name="logo_clear" type="checkbox"> Remover logo atual</label><small>Até 3 MB.</small>
             </div>
-            <div class="vf-store-upload">
-              <span>Banner</span><div class="vf-store-upload__preview" data-banner-preview>${previewImageMarkup(config.banner_url, "banner", "Banner")}</div>
-              <input name="banner" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
-              <label><input name="banner_clear" type="checkbox"> Remover banner atual</label><small>Até 6 MB.</small>
+            <div class="vf-store-upload vf-span-2 vf-banners-field">
+              <span>Banners da vitrine <em>(0 a 10 · centralizados na loja)</em></span>
+              <div class="vf-banners-grid" data-banners-grid>${(config.banners || []).map((banner) => `
+                <figure class="vf-banner-thumb" data-banner-id="${banner.id ?? ""}">
+                  <img src="${esc(imageUrl(banner.url))}" alt="Banner">
+                  <button type="button" class="vf-banner-thumb__remove" data-banner-remove="${banner.id ?? ""}" ${banner.id == null ? "disabled" : ""}>Remover</button>
+                </figure>`).join("") || `<div class="vf-banners-empty">Nenhum banner ainda. A loja funciona sem banners.</div>`}
+              </div>
+              <input name="banners" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+              <small data-banners-hint>Até 10 imagens · 6 MB cada · ${(config.banners || []).length}/10</small>
             </div>
           </div>
           <div class="vf-toggle-row">
@@ -162,7 +168,9 @@
           <button class="vf-store-btn vf-store-btn--primary" type="submit">Salvar vitrine</button>
         </form>
         <aside class="vf-store-card vf-vitrine-preview" style="--store-primary:${esc(primary)}">
-          <div class="vf-vitrine-preview__banner" data-public-banner>${previewImageMarkup(config.banner_url, "banner", "Seu banner")}</div>
+          <div class="vf-vitrine-preview__banner" data-public-banner>${(config.banners || []).length
+            ? `<img src="${esc(imageUrl(config.banners[0].url))}" alt="Banner">`
+            : previewImageMarkup(null, "banner", "Seu banner")}</div>
           <div class="vf-vitrine-preview__identity">
             <div class="vf-vitrine-preview__logo" data-public-logo>${previewImageMarkup(config.logo_url, "logo", "Logo")}</div>
             <div><h3 data-public-name>${esc(config.nome_loja || "Sua loja")}</h3><span class="${config.aberta ? "is-open" : "is-closed"}" data-public-status>${config.aberta ? "Aberta agora" : "Loja fechada"}</span></div>
@@ -180,6 +188,9 @@
 
     const form = $("vfVitrineForm");
     const publicUrl = publicStoreUrl(config);
+    const bannersRemove = new Set();
+    const pendingBannerFiles = [];
+    const maxBanners = Number(config.banners_max || 10);
     bindDashboard(root);
     form.oninput = () => {
       root.querySelector("[data-public-name]").textContent = value(form, "nome_loja") || "Sua loja";
@@ -190,20 +201,59 @@
       status.className = open ? "is-open" : "is-closed";
       root.querySelector(".vf-vitrine-preview").style.setProperty("--store-primary", value(form, "cor_primaria"));
     };
-    form.onchange = (event) => {
+    const refreshBannerHint = () => {
+      const kept = (config.banners || []).filter((banner) => banner.id == null || !bannersRemove.has(Number(banner.id))).length;
+      const total = kept + pendingBannerFiles.length;
+      const hint = root.querySelector("[data-banners-hint]");
+      if (hint) hint.textContent = `Até 10 imagens · 6 MB cada · ${total}/10`;
+      form.elements.banners.disabled = total >= maxBanners;
+    };
+    root.querySelector("[data-banners-grid]")?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-banner-remove]");
+      if (!button || button.disabled) return;
+      const id = Number(button.dataset.bannerRemove);
+      if (!id) return;
+      bannersRemove.add(id);
+      button.closest(".vf-banner-thumb")?.remove();
+      const grid = root.querySelector("[data-banners-grid]");
+      if (grid && !grid.querySelector(".vf-banner-thumb")) {
+        grid.innerHTML = `<div class="vf-banners-empty">Nenhum banner ainda. A loja funciona sem banners.</div>`;
+      }
+      refreshBannerHint();
+    });
+    form.onchange = async (event) => {
       const file = event.target.files?.[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      if (event.target.name === "logo") {
+      if (event.target.name === "logo" && file) {
+        const url = URL.createObjectURL(file);
         root.querySelector("[data-logo-preview]").innerHTML = `<img src="${esc(url)}" alt="Prévia do logo">`;
         root.querySelector("[data-public-logo]").innerHTML = `<img src="${esc(url)}" alt="Logo">`;
         form.elements.logo_clear.checked = false;
+        return;
       }
-      if (event.target.name === "banner") {
-        root.querySelector("[data-banner-preview]").innerHTML = `<img src="${esc(url)}" alt="Prévia do banner">`;
+      if (event.target.name !== "banners") return;
+      const files = [...(event.target.files || [])];
+      event.target.value = "";
+      const kept = (config.banners || []).filter((banner) => banner.id == null || !bannersRemove.has(Number(banner.id))).length;
+      const room = maxBanners - kept - pendingBannerFiles.length;
+      if (room <= 0) {
+        toast("Limite de 10 banners atingido.", "error");
+        return;
+      }
+      const accepted = files.slice(0, room);
+      for (const bannerFile of accepted) {
+        if (bannerFile.size > 6 * 1024 * 1024) {
+          toast(`${bannerFile.name} excede 6 MB.`, "error");
+          continue;
+        }
+        pendingBannerFiles.push(bannerFile);
+        const url = URL.createObjectURL(bannerFile);
+        const grid = root.querySelector("[data-banners-grid]");
+        grid?.querySelector(".vf-banners-empty")?.remove();
+        grid?.insertAdjacentHTML("beforeend", `<figure class="vf-banner-thumb is-pending">
+          <img src="${esc(url)}" alt="Novo banner"><span class="vf-banner-thumb__badge">Novo</span></figure>`);
         root.querySelector("[data-public-banner]").innerHTML = `<img src="${esc(url)}" alt="Banner">`;
-        form.elements.banner_clear.checked = false;
       }
+      refreshBannerHint();
     };
     root.querySelector("[data-copy-path]").onclick = async () => {
       try {
@@ -221,6 +271,10 @@
       const submit = form.querySelector('[type="submit"]');
       submit.disabled = true;
       try {
+        const bannersBase64 = [];
+        for (const bannerFile of pendingBannerFiles) {
+          bannersBase64.push(await fileData(bannerFile, 6 * 1024 * 1024, "Banner"));
+        }
         const payload = {
           nome_loja: value(form, "nome_loja") || null,
           slug: value(form, "slug") || null,
@@ -237,9 +291,9 @@
           ativo: checked(form, "ativo"),
           aberta: checked(form, "aberta"),
           logo_clear: checked(form, "logo_clear"),
-          banner_clear: checked(form, "banner_clear"),
           logo_base64: await fileData(form.elements.logo.files?.[0], 3 * 1024 * 1024, "Logo"),
-          banner_base64: await fileData(form.elements.banner.files?.[0], 6 * 1024 * 1024, "Banner"),
+          banners_base64: bannersBase64,
+          banners_remove: [...bannersRemove],
         };
         await api("/vitrine", { method: "PUT", body: JSON.stringify(payload) });
         toast("Vitrine atualizada.", "success");

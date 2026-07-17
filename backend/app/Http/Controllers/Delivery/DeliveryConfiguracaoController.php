@@ -108,6 +108,10 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'nome_loja' => 'nullable|string|max:160',
             'logo_base64' => 'nullable|string',
             'banner_base64' => 'nullable|string',
+            'banners_base64' => 'nullable|array|max:10',
+            'banners_base64.*' => 'nullable|string',
+            'banners_remove' => 'nullable|array|max:10',
+            'banners_remove.*' => 'integer',
             'logo_clear' => 'nullable|boolean',
             'banner_clear' => 'nullable|boolean',
             'cor_primaria' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
@@ -136,12 +140,15 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             $data['slug'] = $slug;
         }
 
-        [$imagens, $novosArquivos, $arquivosAntigos] = $this->prepararImagens($data, $config, $unidadeId);
+        // Logo via fluxo antigo; banners múltiplos em sincronizarBanners (0–10).
+        $dataLogo = $data;
+        unset($dataLogo['banner_base64'], $dataLogo['banner_clear']);
+        [$imagens, $novosArquivos, $arquivosAntigos] = $this->prepararImagens($dataLogo, $config, $unidadeId);
         $update = [
             'slug' => $data['slug'] ?? $config->slug,
             'nome_loja' => array_key_exists('nome_loja', $data) ? $data['nome_loja'] : $config->nome_loja,
             'logo_path' => $imagens['logo_path'],
-            'banner_path' => $imagens['banner_path'],
+            'banner_path' => $config->banner_path,
             'cor_primaria' => array_key_exists('cor_primaria', $data) ? $data['cor_primaria'] : $config->cor_primaria,
             'descricao' => array_key_exists('descricao', $data) ? $data['descricao'] : $config->descricao,
             'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $config->whatsapp,
@@ -158,6 +165,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
         ];
         try {
             DB::table('dlv_loja_config')->where('id', $config->id)->update($this->somenteColunasExistentes($update));
+            $this->sincronizarBanners(
+                DB::table('dlv_loja_config')->where('id', $config->id)->first(),
+                $unidadeId,
+                $data
+            );
         } catch (\Throwable $e) {
             $this->removerArquivos($novosArquivos, $unidadeId);
             throw $e;
@@ -287,6 +299,8 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
     private function formatarVitrine(object $config, int $unidadeId): array
     {
         $previewPath = '/loja/'.$config->slug;
+        $banners = $this->listarBanners($config, $unidadeId);
+        $primeiro = $banners[0] ?? null;
 
         return [
             'unidade_id' => $unidadeId,
@@ -296,8 +310,10 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'nome_loja' => $config->nome_loja,
             'logo_path' => $config->logo_path,
             'logo_url' => $this->imagemUrl($config->logo_path),
-            'banner_path' => $config->banner_path,
-            'banner_url' => $this->imagemUrl($config->banner_path),
+            'banner_path' => $primeiro['path'] ?? null,
+            'banner_url' => $primeiro['url'] ?? null,
+            'banners' => $banners,
+            'banners_max' => 10,
             'cor_primaria' => $config->cor_primaria,
             'descricao' => $config->descricao,
             'whatsapp' => $config->whatsapp,
@@ -315,6 +331,146 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
                 fn ($route) => ltrim($route->uri(), '/') === 'loja/{slug}'
             ),
         ];
+    }
+
+    /**
+     * @return list<array{id:int|null,path:string,url:string,ordem:int}>
+     */
+    private function listarBanners(object $config, int $unidadeId): array
+    {
+        if (Schema::hasTable('dlv_loja_banners')) {
+            $rows = DB::table('dlv_loja_banners')
+                ->where('loja_config_id', $config->id)
+                ->orderBy('ordem')
+                ->orderBy('id')
+                ->get();
+            $items = [];
+            foreach ($rows as $row) {
+                $url = $this->imagemUrl($row->caminho);
+                if (! $url) {
+                    continue;
+                }
+                $items[] = [
+                    'id' => (int) $row->id,
+                    'path' => (string) $row->caminho,
+                    'url' => $url,
+                    'ordem' => (int) $row->ordem,
+                ];
+            }
+            if ($items !== []) {
+                return $items;
+            }
+        }
+
+        $legacyUrl = $this->imagemUrl($config->banner_path ?? null);
+        if ($legacyUrl) {
+            return [[
+                'id' => null,
+                'path' => (string) $config->banner_path,
+                'url' => $legacyUrl,
+                'ordem' => 0,
+            ]];
+        }
+
+        return [];
+    }
+
+    private function sincronizarBanners(object $config, int $unidadeId, array $data): void
+    {
+        if (! Schema::hasTable('dlv_loja_banners')) {
+            // Fallback legado: um único banner_path.
+            if (! empty($data['banner_clear'])) {
+                if ($config->banner_path) {
+                    $this->removerArquivos([(string) $config->banner_path], $unidadeId);
+                }
+                DB::table('dlv_loja_config')->where('id', $config->id)->update([
+                    'banner_path' => null,
+                    'updated_at' => now(),
+                ]);
+            } elseif (! empty($data['banner_base64'])) {
+                $novo = $this->salvarImagemBase64((string) $data['banner_base64'], $unidadeId, 'banner', 6 * 1024 * 1024);
+                if ($config->banner_path && $config->banner_path !== $novo) {
+                    $this->removerArquivos([(string) $config->banner_path], $unidadeId);
+                }
+                DB::table('dlv_loja_config')->where('id', $config->id)->update([
+                    'banner_path' => $novo,
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return;
+        }
+
+        $novosArquivos = [];
+        try {
+            if (! empty($data['banner_clear'])) {
+                $atuais = DB::table('dlv_loja_banners')->where('loja_config_id', $config->id)->get();
+                foreach ($atuais as $row) {
+                    $this->removerArquivos([(string) $row->caminho], $unidadeId);
+                }
+                DB::table('dlv_loja_banners')->where('loja_config_id', $config->id)->delete();
+            } else {
+                $remover = array_values(array_unique(array_map('intval', $data['banners_remove'] ?? [])));
+                if ($remover !== []) {
+                    $rows = DB::table('dlv_loja_banners')
+                        ->where('loja_config_id', $config->id)
+                        ->whereIn('id', $remover)
+                        ->get();
+                    foreach ($rows as $row) {
+                        $this->removerArquivos([(string) $row->caminho], $unidadeId);
+                    }
+                    DB::table('dlv_loja_banners')
+                        ->where('loja_config_id', $config->id)
+                        ->whereIn('id', $remover)
+                        ->delete();
+                }
+            }
+
+            $adicoes = [];
+            foreach ($data['banners_base64'] ?? [] as $base64) {
+                if (is_string($base64) && $base64 !== '') {
+                    $adicoes[] = $base64;
+                }
+            }
+            if (! empty($data['banner_base64']) && is_string($data['banner_base64'])) {
+                $adicoes[] = $data['banner_base64'];
+            }
+
+            $atuaisCount = DB::table('dlv_loja_banners')->where('loja_config_id', $config->id)->count();
+            if ($atuaisCount + count($adicoes) > 10) {
+                throw ValidationException::withMessages([
+                    'banners_base64' => 'Máximo de 10 banners por loja.',
+                ]);
+            }
+
+            $ordem = (int) (DB::table('dlv_loja_banners')->where('loja_config_id', $config->id)->max('ordem') ?? -1);
+            foreach ($adicoes as $base64) {
+                $caminho = $this->salvarImagemBase64($base64, $unidadeId, 'banner', 6 * 1024 * 1024);
+                $novosArquivos[] = $caminho;
+                $ordem++;
+                DB::table('dlv_loja_banners')->insert([
+                    'unidade_id' => $unidadeId,
+                    'loja_config_id' => $config->id,
+                    'caminho' => $caminho,
+                    'ordem' => $ordem,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $primeiro = DB::table('dlv_loja_banners')
+                ->where('loja_config_id', $config->id)
+                ->orderBy('ordem')
+                ->orderBy('id')
+                ->value('caminho');
+            DB::table('dlv_loja_config')->where('id', $config->id)->update([
+                'banner_path' => $primeiro,
+                'updated_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            $this->removerArquivos($novosArquivos, $unidadeId);
+            throw $e;
+        }
     }
 
     /**
