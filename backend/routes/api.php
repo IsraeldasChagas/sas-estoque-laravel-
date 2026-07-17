@@ -11159,6 +11159,7 @@ require __DIR__ . '/openclaw_config_routes.php';
 require __DIR__ . '/ayla_routes.php';
 require __DIR__ . '/ayla_admin_routes.php';
 require __DIR__ . '/integrations_routes.php';
+require __DIR__ . '/orcamentos_routes.php';
 
 // ============================================
 // DEPLOY - Atualiza o servidor via git pull

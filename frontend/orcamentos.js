@@ -1,648 +1,625 @@
 /**
- * Orçamentos — Etapa 1.
- * Protótipo 100% frontend: nenhum fetch, API, banco ou persistência.
+ * Orçamentos — módulo funcional.
+ * Persistência exclusiva nas tabelas de orçamentos; não movimenta estoque, financeiro ou RH.
  */
 (function () {
   "use strict";
 
   const SECTIONS = {
-    dashboard: "orcamentosDashboard",
-    novo: "orcamentosNovo",
-    lista: "orcamentosLista",
-    proposta: "orcamentosProposta",
-    modelos: "orcamentosModelos",
-    clientes: "orcamentosClientes",
-    itens: "orcamentosItens",
-    configuracoes: "orcamentosConfiguracoes",
-    relatorios: "orcamentosRelatorios",
+    dashboard: "orcamentosDashboard", novo: "orcamentosNovo", lista: "orcamentosLista",
+    proposta: "orcamentosProposta", modelos: "orcamentosModelos", clientes: "orcamentosClientes",
+    itens: "orcamentosItens", configuracoes: "orcamentosConfiguracoes", relatorios: "orcamentosRelatorios",
   };
-
-  const STATUS_CLASS = {
-    aprovado: "success",
-    convertido: "success",
-    pendente: "warning",
-    "em negociação": "warning",
-    recusado: "danger",
+  const STEPS = ["Cliente", "Tipo", "Produtos", "Equipe", "Equipamentos", "Consumo", "Frete", "Financeiro"];
+  const TYPE_LABELS = {
+    produto: "Produto", servico: "Serviço", equipamento: "Equipamento", evento: "Evento",
+    buffet: "Buffet", mesa: "Mesa", locacao: "Locação", mao_obra: "Mão de obra", outro: "Outro",
   };
+  const STATUS_LABELS = {
+    rascunho: "Rascunho", pendente: "Pendente", em_negociacao: "Em negociação",
+    aprovado: "Aprovado", recusado: "Recusado", convertido: "Convertido",
+  };
+  const STATUS_CLASS = { aprovado: "success", convertido: "success", pendente: "warning", em_negociacao: "warning", recusado: "danger" };
 
   const state = {
-    loaded: new Set(),
     wizardStep: 1,
-    wizardType: "Evento",
-    activeItemTab: "Produtos",
-    selectedBudget: null,
-    budgets: [
-      { id: 1048, cliente: "Mariana Lopes", tipo: "Buffet", data: "16/07/2026", valor: 12850, responsavel: "Ana Paula", status: "aprovado" },
-      { id: 1047, cliente: "Construtora Vale", tipo: "Evento", data: "16/07/2026", valor: 28600, responsavel: "Carlos Lima", status: "em negociação" },
-      { id: 1046, cliente: "Roberto Almeida", tipo: "Serviço", data: "15/07/2026", valor: 3450, responsavel: "Ana Paula", status: "pendente" },
-      { id: 1045, cliente: "Clínica Mais Vida", tipo: "Locação", data: "14/07/2026", valor: 8990, responsavel: "Thiago Souza", status: "convertido" },
-      { id: 1044, cliente: "Beatriz & Henrique", tipo: "Mesa", data: "13/07/2026", valor: 6750, responsavel: "Ana Paula", status: "recusado" },
-      { id: 1043, cliente: "Grupo Horizonte", tipo: "Equipamento", data: "12/07/2026", valor: 15400, responsavel: "Carlos Lima", status: "aprovado" },
-    ],
-    clients: [
-      { nome: "Mariana Lopes", cidade: "Porto Velho", telefone: "(69) 99241-8802", ultimo: "#1048", total: 26350 },
-      { nome: "Construtora Vale", cidade: "Ariquemes", telefone: "(69) 98420-1177", ultimo: "#1047", total: 48900 },
-      { nome: "Clínica Mais Vida", cidade: "Porto Velho", telefone: "(69) 99352-6621", ultimo: "#1045", total: 18740 },
-      { nome: "Grupo Horizonte", cidade: "Ji-Paraná", telefone: "(69) 98110-2234", ultimo: "#1043", total: 62100 },
-      { nome: "Beatriz & Henrique", cidade: "Cacoal", telefone: "(69) 99206-9040", ultimo: "#1044", total: 6750 },
-      { nome: "Roberto Almeida", cidade: "Porto Velho", telefone: "(69) 98412-7710", ultimo: "#1046", total: 11320 },
-    ],
+    selectedId: null,
+    draft: blankDraft(),
+    clients: [],
+    budgets: [],
+    dashboard: null,
+    activeItemTab: "produto_servico",
   };
 
-  const wizardSteps = [
-    "Cliente",
-    "Tipo",
-    "Produtos",
-    "Equipe",
-    "Equipamentos",
-    "Consumo",
-    "Frete",
-    "Financeiro",
-  ];
-
-  function root(id) {
-    return document.getElementById(id);
+  function today() {
+    return new Date().toISOString().slice(0, 10);
   }
 
+  function plusDays(days) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function blankDraft() {
+    return {
+      id: null,
+      codigo: null,
+      status: "rascunho",
+      etapa_wizard: 1,
+      data_orcamento: today(),
+      validade: plusDays(7),
+      tipo: "evento",
+      cliente: { id: null, nome: "", telefone: "", whatsapp: "", instagram: "", email: "", documento: "", empresa: "", origem: "", observacoes: "" },
+      linhas: [],
+      frete: { tipo: "sem_frete", valor: 0, distancia_km: "", observacoes: "" },
+      financeiro: { desconto_percentual: 0, desconto_valor: 0, acrescimo_valor: 0, forma_pagamento: "pix", observacoes: "" },
+      observacoes: "",
+    };
+  }
+
+  function root(id) { return document.getElementById(id); }
   function esc(value) {
-    return String(value == null ? "" : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-
   function money(value) {
     return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
-
+  function number(value) {
+    const parsed = Number(String(value == null ? "" : value).replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
   function toast(message, type) {
     if (typeof window.showToast === "function") window.showToast(message, type || "info");
   }
-
   function go(section) {
     if (typeof window.navigateTo === "function") window.navigateTo(section);
   }
-
-  function simulate(button, message, callback) {
-    if (!button || button.disabled) return;
-    const original = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = "Aguarde…";
-    setTimeout(function () {
-      button.disabled = false;
-      button.innerHTML = original;
-      if (message) toast(message, "success");
-      if (callback) callback();
-    }, 550);
+  async function orcFetch(path, options) {
+    if (typeof window.fetchJSON !== "function") throw new Error("Conexão com a API indisponível.");
+    return window.fetchJSON(path, options || {});
   }
-
-  function badge(status) {
-    const cls = STATUS_CLASS[String(status).toLowerCase()] || "";
-    return `<span class="orc-badge ${cls ? `orc-badge--${cls}` : ""}">${esc(status)}</span>`;
+  async function busy(button, callback) {
+    const original = button ? button.innerHTML : "";
+    if (button) { button.disabled = true; button.innerHTML = "Aguarde…"; }
+    try { return await callback(); }
+    finally { if (button) { button.disabled = false; button.innerHTML = original; } }
   }
-
+  function query(params) {
+    const qs = new URLSearchParams();
+    Object.entries(params || {}).forEach(([key, value]) => { if (value !== "" && value != null) qs.set(key, value); });
+    const value = qs.toString();
+    return value ? `?${value}` : "";
+  }
+  function shell(content) { return `<div class="orc-shell">${content}</div>`; }
   function header(title, subtitle, icon, actions, crumb) {
-    return `
-      <header class="orc-head">
-        <div>
-          <div class="orc-breadcrumb"><button type="button" data-orc-go="${SECTIONS.dashboard}">Orçamentos</button> / ${esc(crumb || title)}</div>
-          <div class="orc-head__title">
-            <span class="orc-head__icon" aria-hidden="true">${icon || "□"}</span>
-            <div><h2>${esc(title)}</h2><p>${esc(subtitle || "")}</p></div>
-          </div>
-        </div>
-        <div class="orc-actions">${actions || ""}</div>
-      </header>`;
+    return `<header class="orc-head"><div>
+      <div class="orc-breadcrumb"><button type="button" data-orc-go="${SECTIONS.dashboard}">Orçamentos</button> / ${esc(crumb || title)}</div>
+      <div class="orc-head__title"><span class="orc-head__icon" aria-hidden="true">${icon || "□"}</span>
+      <div><h2>${esc(title)}</h2><p>${esc(subtitle || "")}</p></div></div></div>
+      <div class="orc-actions">${actions || ""}</div></header>`;
+  }
+  function loading(target) {
+    target.innerHTML = shell(`<div class="orc-skeleton"></div><div class="orc-kpis"><div class="orc-skeleton"></div><div class="orc-skeleton"></div><div class="orc-skeleton"></div></div>`);
+  }
+  function errorView(target, error, retry) {
+    target.innerHTML = shell(`<div class="orc-notice"><strong>Não foi possível carregar.</strong><br>${esc(error.message || error)}</div>
+      <button class="orc-btn orc-btn--primary" id="orcRetry">Tentar novamente</button>`);
+    root("orcRetry")?.addEventListener("click", retry);
+  }
+  function bindNavigation(container) {
+    container.querySelectorAll("[data-orc-go]").forEach(button => button.addEventListener("click", () => go(button.dataset.orcGo)));
+  }
+  function badge(status) {
+    const key = String(status || "rascunho").toLowerCase();
+    const cls = STATUS_CLASS[key] || "";
+    return `<span class="orc-badge ${cls ? `orc-badge--${cls}` : ""}">${esc(STATUS_LABELS[key] || status)}</span>`;
+  }
+  function kpi(label, value, icon, detail, target) {
+    return `<article class="orc-kpi" ${target ? `data-orc-go="${target}"` : ""}>
+      <div class="orc-kpi__top"><span>${esc(label)}</span><span class="orc-kpi__icon">${icon}</span></div>
+      <div class="orc-kpi__value">${value}</div><div class="orc-kpi__trend">${esc(detail || "")}</div></article>`;
+  }
+  function typeLabel(type) { return TYPE_LABELS[type] || type || "—"; }
+  function displayDate(value) {
+    if (!value) return "—";
+    const parts = String(value).slice(0, 10).split("-");
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
   }
 
-  function shell(content) {
-    return `<div class="orc-shell">${content}</div>`;
+  function lineSubtotal(line) {
+    const qty = Math.max(0, number(line.quantidade));
+    const unit = Math.max(0, number(line.valor_unitario));
+    const discount = Math.min(100, Math.max(0, number(line.desconto_percentual)));
+    let subtotal;
+    if (line.tipo_linha === "equipe") subtotal = qty * (number(line.valor_evento) > 0 ? number(line.valor_evento) : number(line.horas) * unit);
+    else if (line.tipo_linha === "equipamento") subtotal = qty * Math.max(1, number(line.dias)) * unit;
+    else subtotal = qty * unit;
+    return Math.max(0, subtotal * (1 - discount / 100));
   }
 
-  function skeleton(target, render) {
-    if (!target) return;
-    if (state.loaded.has(target.id)) {
-      render();
-      return;
+  function totals() {
+    const result = { produto_servico: 0, equipe: 0, equipamento: 0, consumo: 0 };
+    state.draft.linhas.forEach(line => { result[line.tipo_linha] = (result[line.tipo_linha] || 0) + lineSubtotal(line); });
+    const freight = number(state.draft.frete.valor);
+    const base = Object.values(result).reduce((sum, value) => sum + value, 0) + freight;
+    const discount = base * number(state.draft.financeiro.desconto_percentual) / 100 + number(state.draft.financeiro.desconto_valor);
+    const total = Math.max(0, base - discount + number(state.draft.financeiro.acrescimo_valor));
+    return { ...result, frete: freight, base, desconto: discount, total };
+  }
+
+  function payload(finalize) {
+    return {
+      cliente: state.draft.cliente,
+      tipo: state.draft.tipo,
+      status: finalize ? "pendente" : (state.draft.status || "rascunho"),
+      data_orcamento: state.draft.data_orcamento || today(),
+      validade: state.draft.validade || null,
+      linhas: state.draft.linhas,
+      frete: state.draft.frete,
+      financeiro: state.draft.financeiro,
+      observacoes: state.draft.observacoes || null,
+      etapa_wizard: state.wizardStep,
+    };
+  }
+
+  function hydrate(data, duplicate) {
+    state.draft = blankDraft();
+    state.draft.id = duplicate ? null : data.id;
+    state.draft.codigo = duplicate ? null : data.codigo;
+    state.draft.status = duplicate ? "rascunho" : data.status;
+    state.draft.etapa_wizard = duplicate ? 1 : (data.etapa_wizard || 1);
+    state.draft.data_orcamento = duplicate ? today() : (data.data_orcamento || today());
+    state.draft.validade = duplicate ? plusDays(7) : (data.validade || plusDays(7));
+    state.draft.tipo = data.tipo || "evento";
+    if (data.cliente) {
+      state.draft.cliente = {
+        id: duplicate ? null : data.cliente.id, nome: data.cliente.nome || "", telefone: data.cliente.telefone || "",
+        whatsapp: data.cliente.whatsapp || "", instagram: data.cliente.instagram || "", email: data.cliente.email || "",
+        documento: data.cliente.documento || "", empresa: data.cliente.empresa || "", origem: data.cliente.origem || "",
+        observacoes: data.cliente.observacoes || "",
+      };
     }
-    target.innerHTML = shell(`
-      <div class="orc-skeleton"></div>
-      <div class="orc-kpis">
-        <div class="orc-skeleton"></div><div class="orc-skeleton"></div>
-        <div class="orc-skeleton"></div><div class="orc-skeleton"></div>
-      </div>`);
-    setTimeout(function () {
-      state.loaded.add(target.id);
-      render();
-    }, 320);
+    state.draft.linhas = (data.linhas || []).map(line => ({
+      tipo_linha: line.tipo_linha, descricao: line.descricao, quantidade: number(line.quantidade),
+      unidade_medida: line.unidade_medida || "", horas: number(line.horas), dias: number(line.dias),
+      valor_unitario: number(line.valor_unitario), desconto_percentual: number(line.desconto_percentual),
+      valor_evento: number(line.valor_evento), custo_unitario: number(line.custo_unitario),
+    }));
+    state.draft.frete = { ...state.draft.frete, ...(data.frete || {}) };
+    state.draft.financeiro = { ...state.draft.financeiro, ...(data.financeiro || {}) };
+    state.draft.observacoes = data.observacoes || "";
+    state.selectedId = duplicate ? null : data.id;
+    state.wizardStep = duplicate ? 1 : Math.min(8, Math.max(1, data.etapa_wizard || 1));
   }
 
-  function bindCommon(container) {
-    if (!container) return;
-    container.querySelectorAll("[data-orc-go]").forEach(function (button) {
-      button.addEventListener("click", function () { go(button.dataset.orcGo); });
-    });
-    container.querySelectorAll("[data-orc-demo]").forEach(function (button) {
-      button.addEventListener("click", function () {
-        simulate(button, button.dataset.orcDemo || "Ação simulada com sucesso.");
-      });
-    });
+  async function saveDraft(finalize, button) {
+    if (!state.draft.cliente.nome.trim()) {
+      state.wizardStep = 1;
+      renderWizard();
+      throw new Error("Informe o nome do cliente.");
+    }
+    const data = await busy(button, () => orcFetch(
+      state.draft.id ? `/orcamentos/${state.draft.id}` : "/orcamentos",
+      { method: state.draft.id ? "PUT" : "POST", body: JSON.stringify(payload(finalize)) }
+    ));
+    hydrate(data, false);
+    return data;
   }
 
-  function kpi(label, value, icon, trend, target) {
-    return `
-      <article class="orc-kpi" ${target ? `data-orc-go="${target}"` : ""} tabindex="0">
-        <div class="orc-kpi__top"><span>${esc(label)}</span><span class="orc-kpi__icon">${icon}</span></div>
-        <div class="orc-kpi__value">${value}</div>
-        <div class="orc-kpi__trend">${esc(trend || "Dados simulados")}</div>
-      </article>`;
-  }
-
-  function loadDashboard() {
+  async function loadDashboard() {
     const target = root("orcamentosDashboardRoot");
-    skeleton(target, function () {
-      const recent = state.budgets.slice(0, 5).map(function (b) {
-        return `<div class="orc-list-row orc-clickable" data-budget="${b.id}">
-          <div class="orc-avatar">#</div>
-          <div><strong>#${b.id} · ${esc(b.cliente)}</strong><div class="orc-muted">${esc(b.tipo)} · ${esc(b.data)}</div></div>
-          <div style="text-align:right">${badge(b.status)}<div class="orc-money">${money(b.valor)}</div></div>
-        </div>`;
-      }).join("");
-      const topClients = state.clients.slice(0, 5).map(function (c, index) {
-        return `<div class="orc-list-row">
-          <div class="orc-avatar">${index + 1}</div>
-          <div><strong>${esc(c.nome)}</strong><div class="orc-muted">${esc(c.cidade)} · ${esc(c.ultimo)}</div></div>
-          <div class="orc-money">${money(c.total)}</div>
-        </div>`;
-      }).join("");
+    if (!target) return;
+    loading(target);
+    try {
+      const data = await orcFetch("/orcamentos/dashboard");
+      state.dashboard = data;
+      const r = data.resumo || {};
+      const evolution = data.evolucao || [];
+      const max = Math.max(1, ...evolution.map(item => number(item.valor)));
       target.innerHTML = shell(`
-        ${header("Dashboard de Orçamentos", "Visão comercial consolidada do período.", "▦",
-          `<button class="orc-btn orc-btn--primary" data-orc-go="${SECTIONS.novo}">＋ Novo Orçamento</button>`, "Dashboard")}
-        <div class="orc-notice">Protótipo navegável com dados fictícios. Nenhuma informação é gravada.</div>
+        ${header("Dashboard de Orçamentos", "Indicadores atualizados com os orçamentos cadastrados.", "▦",
+          `<button class="orc-btn orc-btn--primary" id="orcNewDashboard">＋ Novo Orçamento</button>`, "Dashboard")}
         <div class="orc-kpis">
-          ${kpi("Total de orçamentos", "128", "▤", "+12% no mês", SECTIONS.lista)}
-          ${kpi("Pendentes", "18", "◷", "7 aguardam retorno", SECTIONS.lista)}
-          ${kpi("Aprovados", "74", "✓", "57,8% do total", SECTIONS.lista)}
-          ${kpi("Recusados", "9", "×", "7% do total", SECTIONS.lista)}
-          ${kpi("Em negociação", "21", "↔", "Potencial de R$ 94 mil", SECTIONS.lista)}
-          ${kpi("Convertidos", "63", "◆", "49,2% de conversão", SECTIONS.lista)}
-          ${kpi("Valor total", money(486920), "R$", "+18,4% no período", SECTIONS.relatorios)}
-          ${kpi("Ticket médio", money(3804.06), "∅", "Aprovação média: 2,8 dias", SECTIONS.relatorios)}
+          ${kpi("Total de orçamentos", String(r.total_orcamentos || 0), "▤", "Registros cadastrados", SECTIONS.lista)}
+          ${kpi("Pendentes", String(r.pendentes || 0), "◷", "Aguardando retorno", SECTIONS.lista)}
+          ${kpi("Aprovados", String(r.aprovados || 0), "✓", `${number(r.conversao_percentual).toFixed(1)}% de conversão`, SECTIONS.lista)}
+          ${kpi("Recusados", String(r.recusados || 0), "×", "Propostas recusadas", SECTIONS.lista)}
+          ${kpi("Em negociação", String(r.em_negociacao || 0), "↔", "Em acompanhamento", SECTIONS.lista)}
+          ${kpi("Convertidos", String(r.convertidos || 0), "◆", "Orçamentos convertidos", SECTIONS.lista)}
+          ${kpi("Valor total", money(r.valor_total), "R$", "Total orçado", SECTIONS.relatorios)}
+          ${kpi("Ticket médio", money(r.ticket_medio), "∅", "Média por orçamento", SECTIONS.relatorios)}
         </div>
         <div class="orc-grid-2">
-          <section class="orc-card">
-            <div class="orc-card__head"><div><h3>Evolução dos orçamentos</h3><div class="orc-muted">Valores simulados nos últimos 7 meses</div></div>${badge("crescimento")}</div>
-            <div class="orc-chart" aria-label="Gráfico simulado de evolução">
-              ${[42, 56, 48, 68, 74, 86, 95].map(function (h, i) {
-                return `<div class="orc-chart__bar" style="--h:${h}%"><span>${["Jan","Fev","Mar","Abr","Mai","Jun","Jul"][i]}</span></div>`;
-              }).join("")}
-            </div>
+          <section class="orc-card"><div class="orc-card__head"><h3>Evolução dos valores</h3>${badge("aprovado")}</div>
+            <div class="orc-chart">${evolution.length ? evolution.map(item => `<div class="orc-chart__bar" style="--h:${Math.max(8, number(item.valor) / max * 100)}%"><span>${esc(String(item.mes).slice(5))}/${esc(String(item.mes).slice(2,4))}</span></div>`).join("") : '<div class="orc-muted">Cadastre orçamentos para formar o gráfico.</div>'}</div>
           </section>
-          <section class="orc-card"><div class="orc-card__head"><h3>Top clientes</h3><button class="orc-btn orc-btn--sm" data-orc-go="${SECTIONS.clientes}">Ver todos</button></div><div class="orc-list">${topClients}</div></section>
+          <section class="orc-card"><div class="orc-card__head"><h3>Top clientes</h3><button class="orc-btn orc-btn--sm" data-orc-go="${SECTIONS.clientes}">Ver clientes</button></div>
+            <div class="orc-list">${(data.top_clientes || []).map((c, i) => `<div class="orc-list-row"><div class="orc-avatar">${i + 1}</div><strong>${esc(c.nome)}</strong><span class="orc-money">${money(c.total)}</span></div>`).join("") || '<div class="orc-muted">Nenhum cliente ainda.</div>'}</div>
+          </section>
         </div>
-        <section class="orc-card"><div class="orc-card__head"><h3>Últimos orçamentos</h3><button class="orc-btn orc-btn--sm" data-orc-go="${SECTIONS.lista}">Abrir lista</button></div><div class="orc-list">${recent}</div></section>
-        <button class="orc-fab" data-orc-go="${SECTIONS.novo}" title="Novo orçamento" aria-label="Novo orçamento">＋</button>`);
-      bindCommon(target);
-      target.querySelectorAll("[data-budget]").forEach(function (row) {
-        row.addEventListener("click", function () {
-          state.selectedBudget = Number(row.dataset.budget);
+        <section class="orc-card"><div class="orc-card__head"><h3>Últimos orçamentos</h3><button class="orc-btn orc-btn--sm" data-orc-go="${SECTIONS.lista}">Abrir lista</button></div>
+          <div class="orc-list">${(data.ultimos || []).map(b => `<button class="orc-list-row orc-clickable" data-open-budget="${b.id}" style="width:100%;border:0;text-align:left;color:inherit">
+            <div class="orc-avatar">#</div><div><strong>${esc(b.codigo || `#${b.id}`)} · ${esc(b.cliente_nome)}</strong><div class="orc-muted">${typeLabel(b.tipo)} · ${displayDate(b.data_orcamento)}</div></div>
+            <div style="text-align:right">${badge(b.status)}<div class="orc-money">${money(b.total)}</div></div></button>`).join("") || '<div class="orc-muted">Nenhum orçamento cadastrado.</div>'}</div>
+        </section><button class="orc-fab" id="orcNewFab" title="Novo orçamento">＋</button>`);
+      bindNavigation(target);
+      const newBudget = () => { state.draft = blankDraft(); state.wizardStep = 1; state.selectedId = null; go(SECTIONS.novo); };
+      root("orcNewDashboard")?.addEventListener("click", newBudget);
+      root("orcNewFab")?.addEventListener("click", newBudget);
+      target.querySelectorAll("[data-open-budget]").forEach(el => el.addEventListener("click", () => { state.selectedId = Number(el.dataset.openBudget); go(SECTIONS.proposta); }));
+    } catch (error) { errorView(target, error, loadDashboard); }
+  }
+
+  function listFilters() {
+    return `<section class="orc-card"><div class="orc-filter-grid">
+      <label class="orc-field"><span>Pesquisar</span><input class="orc-input" id="orcListSearch" placeholder="Código, cliente ou responsável"></label>
+      <label class="orc-field"><span>Cliente</span><select class="orc-select" id="orcListClient"><option value="">Todos</option>${state.clients.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join("")}</select></label>
+      <label class="orc-field"><span>Status</span><select class="orc-select" id="orcListStatus"><option value="">Todos</option>${Object.entries(STATUS_LABELS).map(([v,l]) => `<option value="${v}">${l}</option>`).join("")}</select></label>
+      <label class="orc-field"><span>Tipo</span><select class="orc-select" id="orcListType"><option value="">Todos</option>${Object.entries(TYPE_LABELS).map(([v,l]) => `<option value="${v}">${l}</option>`).join("")}</select></label>
+      <label class="orc-field"><span>Data inicial</span><input class="orc-input" id="orcListStart" type="date"></label>
+      <label class="orc-field"><span>Data final</span><input class="orc-input" id="orcListEnd" type="date"></label>
+      <div class="orc-actions" style="align-self:end"><button class="orc-btn orc-btn--primary" id="orcApplyFilter">Filtrar</button><button class="orc-btn" id="orcClearFilter">Limpar</button></div>
+    </div></section>`;
+  }
+
+  function budgetRows(items) {
+    return items.map(b => `<tr><td><strong>${esc(b.codigo || `#${b.id}`)}</strong></td><td>${esc(b.cliente_nome)}</td>
+      <td>${esc(typeLabel(b.tipo))}</td><td>${displayDate(b.data_orcamento)}</td><td class="orc-money">${money(b.total)}</td>
+      <td>${esc(b.responsavel_nome || "—")}</td><td>${badge(b.status)}</td><td><div class="orc-row-actions">
+        <button class="orc-btn orc-btn--sm" data-action="view" data-id="${b.id}">Ver</button>
+        <button class="orc-btn orc-btn--sm" data-action="edit" data-id="${b.id}">Editar</button>
+        <button class="orc-btn orc-btn--sm" data-action="duplicate" data-id="${b.id}">Duplicar</button>
+        <button class="orc-btn orc-btn--sm" data-action="pdf" data-id="${b.id}">PDF</button>
+        <button class="orc-btn orc-btn--sm" data-action="whatsapp" data-id="${b.id}">WhatsApp</button>
+        <button class="orc-btn orc-btn--sm orc-btn--danger" data-action="delete" data-id="${b.id}">Excluir</button>
+      </div></td></tr>`).join("") || '<tr><td colspan="8" class="orc-muted" style="text-align:center">Nenhum orçamento encontrado.</td></tr>';
+  }
+
+  async function loadBudgetList(params) {
+    const tbody = root("orcBudgetRows");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="orc-muted" style="text-align:center">Carregando…</td></tr>';
+    const data = await orcFetch(`/orcamentos${query(params)}`);
+    state.budgets = data.items || [];
+    if (tbody) {
+      tbody.innerHTML = budgetRows(state.budgets);
+      bindBudgetActions(tbody);
+    }
+  }
+
+  function bindBudgetActions(container) {
+    container.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", async () => {
+      const id = Number(button.dataset.id);
+      const action = button.dataset.action;
+      try {
+        if (action === "delete") {
+          if (!confirm("Excluir definitivamente este orçamento?")) return;
+          await busy(button, () => orcFetch(`/orcamentos/${id}`, { method: "DELETE" }));
+          toast("Orçamento excluído.", "success");
+          await loadBudgetList();
+          return;
+        }
+        if (action === "view" || action === "pdf" || action === "whatsapp") {
+          state.selectedId = id;
           go(SECTIONS.proposta);
-        });
-      });
-    });
+          if (action === "pdf") toast("Na proposta, use Imprimir para salvar em PDF.", "info");
+          return;
+        }
+        const data = await busy(button, () => orcFetch(`/orcamentos/${id}`));
+        hydrate(data, action === "duplicate");
+        if (action === "duplicate") toast("Cópia preparada. Revise e salve.", "info");
+        go(SECTIONS.novo);
+      } catch (error) { toast(error.message || "Falha na operação.", "error"); }
+    }));
   }
 
-  function filtersList() {
-    return `
-      <section class="orc-card">
-        <div class="orc-filter-grid">
-          <label class="orc-field"><span>Pesquisar</span><input class="orc-input" id="orcListSearch" placeholder="Número, cliente ou responsável"></label>
-          <label class="orc-field"><span>Cliente</span><select class="orc-select" id="orcListClient"><option value="">Todos</option>${state.clients.map(c => `<option>${esc(c.nome)}</option>`).join("")}</select></label>
-          <label class="orc-field"><span>Status</span><select class="orc-select" id="orcListStatus"><option value="">Todos</option><option>Pendente</option><option>Aprovado</option><option>Recusado</option><option>Em negociação</option><option>Convertido</option></select></label>
-          <label class="orc-field"><span>Tipo</span><select class="orc-select" id="orcListType"><option value="">Todos</option><option>Buffet</option><option>Evento</option><option>Serviço</option><option>Locação</option><option>Mesa</option></select></label>
-          <label class="orc-field"><span>Data inicial</span><input class="orc-input" type="date"></label>
-          <label class="orc-field"><span>Data final</span><input class="orc-input" type="date"></label>
-          <div class="orc-actions" style="align-self:end"><button class="orc-btn orc-btn--primary" id="orcApplyFilter">Filtrar</button><button class="orc-btn" id="orcClearFilter">Limpar</button></div>
-        </div>
-      </section>`;
-  }
-
-  function renderBudgetTable(target, budgets) {
-    const rows = budgets.map(function (b) {
-      return `<tr data-row-id="${b.id}">
-        <td><strong>#${b.id}</strong></td><td>${esc(b.cliente)}</td><td>${esc(b.tipo)}</td><td>${esc(b.data)}</td>
-        <td class="orc-money">${money(b.valor)}</td><td>${esc(b.responsavel)}</td><td>${badge(b.status)}</td>
-        <td><div class="orc-row-actions">
-          <button class="orc-btn orc-btn--sm" data-budget-action="view" data-id="${b.id}" title="Visualizar proposta">Ver</button>
-          <button class="orc-btn orc-btn--sm" data-budget-action="edit" data-id="${b.id}" title="Editar">Editar</button>
-          <button class="orc-btn orc-btn--sm" data-budget-action="duplicate" data-id="${b.id}" title="Duplicar">Duplicar</button>
-          <button class="orc-btn orc-btn--sm" data-budget-action="pdf" data-id="${b.id}" title="PDF">PDF</button>
-          <button class="orc-btn orc-btn--sm" data-budget-action="whatsapp" data-id="${b.id}" title="WhatsApp">WhatsApp</button>
-          <button class="orc-btn orc-btn--sm" data-budget-action="instagram" data-id="${b.id}" title="Instagram">Instagram</button>
-          <button class="orc-btn orc-btn--sm" data-budget-action="email" data-id="${b.id}" title="E-mail">E-mail</button>
-          <button class="orc-btn orc-btn--sm orc-btn--danger" data-budget-action="delete" data-id="${b.id}" title="Excluir">Excluir</button>
-        </div></td>
-      </tr>`;
-    }).join("");
-    target.innerHTML = rows || `<tr><td colspan="8" class="orc-muted" style="text-align:center">Nenhum orçamento fictício encontrado.</td></tr>`;
-  }
-
-  function loadLista() {
+  async function loadLista() {
     const target = root("orcamentosListaRoot");
-    skeleton(target, function () {
-      target.innerHTML = shell(`
-        ${header("Orçamentos", "Consulte, filtre e acompanhe todas as propostas.", "☷",
-          `<button class="orc-btn orc-btn--primary" data-orc-go="${SECTIONS.novo}">＋ Novo</button>`, "Lista")}
-        ${filtersList()}
-        <div class="orc-table-wrap"><table class="orc-table">
-          <thead><tr><th>Número</th><th>Cliente</th><th>Tipo</th><th>Data</th><th>Valor</th><th>Responsável</th><th>Situação</th><th>Ações</th></tr></thead>
-          <tbody id="orcBudgetRows"></tbody>
-        </table></div>
-        <button class="orc-fab" data-orc-go="${SECTIONS.novo}" title="Novo orçamento">＋</button>`);
-      bindCommon(target);
-      const tbody = root("orcBudgetRows");
-      renderBudgetTable(tbody, state.budgets);
-
-      function bindRows() {
-        tbody.querySelectorAll("[data-budget-action]").forEach(function (button) {
-          button.addEventListener("click", function () {
-            const action = button.dataset.budgetAction;
-            const id = Number(button.dataset.id);
-            state.selectedBudget = id;
-            if (action === "delete") {
-              if (!confirm("Excluir este orçamento fictício? A alteração dura somente nesta sessão.")) return;
-              state.budgets = state.budgets.filter(b => b.id !== id);
-              renderBudgetTable(tbody, state.budgets);
-              bindRows();
-              toast("Orçamento fictício removido.", "success");
-              return;
-            }
-            if (action === "edit" || action === "duplicate") {
-              state.wizardStep = 1;
-              toast(action === "duplicate" ? "Cópia fictícia preparada." : "Modo de edição simulado.", "info");
-              go(SECTIONS.novo);
-              return;
-            }
-            if (["pdf", "whatsapp", "instagram", "email"].includes(action)) {
-              toast(`Canal ${action} preparado para demonstração.`, "info");
-            }
-            go(SECTIONS.proposta);
-          });
-        });
-      }
-      bindRows();
-      root("orcApplyFilter").addEventListener("click", function () {
-        const search = root("orcListSearch").value.trim().toLowerCase();
-        const client = root("orcListClient").value;
-        const status = root("orcListStatus").value.toLowerCase();
-        const type = root("orcListType").value;
-        const filtered = state.budgets.filter(function (b) {
-          const haystack = `${b.id} ${b.cliente} ${b.responsavel}`.toLowerCase();
-          return (!search || haystack.includes(search)) && (!client || b.cliente === client) &&
-            (!status || b.status.toLowerCase() === status) && (!type || b.tipo === type);
-        });
-        renderBudgetTable(tbody, filtered);
-        bindRows();
-        toast(`${filtered.length} orçamento(s) encontrado(s).`, "info");
-      });
-      root("orcClearFilter").addEventListener("click", function () {
+    if (!target) return;
+    loading(target);
+    try {
+      const clientsData = await orcFetch("/orcamentos/clientes");
+      state.clients = clientsData.items || [];
+      target.innerHTML = shell(`${header("Orçamentos", "Consulte, filtre e gerencie propostas reais.", "☷",
+        '<button class="orc-btn orc-btn--primary" id="orcNewList">＋ Novo</button>', "Lista")}
+        ${listFilters()}<div class="orc-table-wrap"><table class="orc-table"><thead><tr><th>Número</th><th>Cliente</th><th>Tipo</th><th>Data</th><th>Valor</th><th>Responsável</th><th>Situação</th><th>Ações</th></tr></thead><tbody id="orcBudgetRows"></tbody></table></div>`);
+      bindNavigation(target);
+      root("orcNewList").addEventListener("click", () => { state.draft = blankDraft(); state.wizardStep = 1; go(SECTIONS.novo); });
+      root("orcApplyFilter").addEventListener("click", () => loadBudgetList({
+        busca: root("orcListSearch").value, cliente_id: root("orcListClient").value,
+        status: root("orcListStatus").value, tipo: root("orcListType").value,
+        data_inicio: root("orcListStart").value, data_fim: root("orcListEnd").value,
+      }).catch(error => toast(error.message, "error")));
+      root("orcClearFilter").addEventListener("click", () => {
         target.querySelectorAll("input").forEach(el => { el.value = ""; });
         target.querySelectorAll("select").forEach(el => { el.selectedIndex = 0; });
-        renderBudgetTable(tbody, state.budgets);
-        bindRows();
+        loadBudgetList().catch(error => toast(error.message, "error"));
       });
-    });
+      await loadBudgetList();
+    } catch (error) { errorView(target, error, loadLista); }
   }
 
-  function tableEditor(title, rows, addLabel) {
-    return `
-      <div class="orc-card__head"><div><h3>${esc(title)}</h3><div class="orc-muted">Valores fictícios para visualização</div></div><button class="orc-btn orc-btn--primary" data-add-row="${esc(title)}">＋ ${esc(addLabel)}</button></div>
-      <div class="orc-table-wrap"><table class="orc-table"><thead><tr>${rows.headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead>
-      <tbody>${rows.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
-  }
-
-  function wizardContent(step) {
-    if (step === 1) return `
-      <div class="orc-card__head"><div><h3>Dados do cliente</h3><div class="orc-muted">Identificação e canais de contato</div></div>${badge("Passo 1 de 8")}</div>
+  function clientStep() {
+    const c = state.draft.cliente;
+    return `<div class="orc-card__head"><div><h3>Dados do cliente</h3><div class="orc-muted">Identificação e canais de contato</div></div>${badge("rascunho")}</div>
       <div class="orc-form-grid">
-        <label class="orc-field"><span>Nome</span><input class="orc-input" value="Mariana Lopes"></label>
-        <label class="orc-field"><span>Telefone</span><input class="orc-input" value="(69) 99241-8802"></label>
-        <label class="orc-field"><span>WhatsApp</span><input class="orc-input" value="(69) 99241-8802"></label>
-        <label class="orc-field"><span>Instagram</span><input class="orc-input" value="@marianalopes"></label>
-        <label class="orc-field"><span>E-mail</span><input class="orc-input" value="mariana@email.com"></label>
-        <label class="orc-field"><span>CPF/CNPJ</span><input class="orc-input" value="123.456.789-00"></label>
-        <label class="orc-field"><span>Empresa</span><input class="orc-input" placeholder="Empresa do cliente"></label>
-        <label class="orc-field"><span>Origem</span><select class="orc-select"><option>Instagram</option><option>Indicação</option><option>WhatsApp</option><option>Site</option></select></label>
-        <label class="orc-field orc-field--full"><span>Observações</span><textarea class="orc-textarea">Cliente deseja evento elegante e acolhedor.</textarea></label>
+        ${field("Nome *", "nome", c.nome)}${field("Telefone", "telefone", c.telefone)}${field("WhatsApp", "whatsapp", c.whatsapp)}
+        ${field("Instagram", "instagram", c.instagram)}${field("E-mail", "email", c.email, "email")}${field("CPF/CNPJ", "documento", c.documento)}
+        ${field("Empresa", "empresa", c.empresa)}
+        <label class="orc-field"><span>Origem</span><select class="orc-select" data-client-field="origem"><option value="">Selecione</option>${["Instagram","Indicação","WhatsApp","Site","Outro"].map(v => `<option ${c.origem === v ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+        <label class="orc-field orc-field--full"><span>Observações</span><textarea class="orc-textarea" data-client-field="observacoes">${esc(c.observacoes)}</textarea></label>
       </div>`;
+  }
+  function field(label, key, value, type) {
+    return `<label class="orc-field"><span>${label}</span><input class="orc-input" type="${type || "text"}" data-client-field="${key}" value="${esc(value)}"></label>`;
+  }
 
-    if (step === 2) {
-      const types = [["Produto","◆"],["Serviço","◇"],["Equipamento","▣"],["Evento","★"],["Buffet","◉"],["Mesa","▦"],["Locação","⌂"],["Mão de obra","◎"],["Outro","＋"]];
-      return `<div class="orc-card__head"><div><h3>Tipo do orçamento</h3><div class="orc-muted">Escolha a categoria principal</div></div>${badge("Passo 2 de 8")}</div>
-        <div class="orc-choice-grid">${types.map(t => `<button class="orc-choice ${state.wizardType === t[0] ? "is-selected" : ""}" data-budget-type="${t[0]}"><span class="orc-choice__icon">${t[1]}</span><strong>${t[0]}</strong><span class="orc-muted">Estrutura pronta para ${t[0].toLowerCase()}.</span></button>`).join("")}</div>`;
-    }
+  function typeStep() {
+    const icons = { produto:"◆", servico:"◇", equipamento:"▣", evento:"★", buffet:"◉", mesa:"▦", locacao:"⌂", mao_obra:"◎", outro:"＋" };
+    return `<div class="orc-card__head"><div><h3>Tipo do orçamento</h3><div class="orc-muted">Selecione a categoria principal</div></div></div>
+      <div class="orc-choice-grid">${Object.entries(TYPE_LABELS).map(([value,label]) => `<button class="orc-choice ${state.draft.tipo === value ? "is-selected" : ""}" data-budget-type="${value}">
+        <span class="orc-choice__icon">${icons[value]}</span><strong>${label}</strong><span class="orc-muted">Orçamento de ${label.toLowerCase()}.</span></button>`).join("")}</div>`;
+  }
 
-    if (step === 3) return tableEditor("Produtos e serviços", {
-      headers: ["Produto", "Quantidade", "Valor", "Desconto", "Subtotal", "Ação"],
-      data: [
-        ["Buffet completo premium", "80", money(98), "5%", money(7448), '<button class="orc-btn orc-btn--sm orc-btn--danger" data-orc-demo="Item removido apenas da demonstração.">Remover</button>'],
-        ["Mesa de doces", "1", money(1850), "—", money(1850), '<button class="orc-btn orc-btn--sm orc-btn--danger" data-orc-demo="Item removido apenas da demonstração.">Remover</button>'],
-      ],
-    }, "Adicionar item") + `<label class="orc-field" style="margin-top:1rem"><span>Pesquisa inteligente</span><input class="orc-input" placeholder="Digite produto, serviço ou código…"></label>`;
+  function linesBy(type) { return state.draft.linhas.map((line, index) => ({ line, index })).filter(item => item.line.tipo_linha === type); }
+  function lineInput(index, key, value, inputType, step) {
+    return `<input class="orc-input" style="min-width:${key === "descricao" ? "180px" : "80px"}" type="${inputType || "text"}" step="${step || "any"}" data-line-index="${index}" data-line-key="${key}" value="${esc(value)}">`;
+  }
+  function linesStep(type) {
+    const configs = {
+      produto_servico: { title:"Produtos e serviços", add:"Adicionar item", headers:["Produto/serviço","Quantidade","Valor","Desconto %","Subtotal","Ação"] },
+      equipe: { title:"Equipe do evento", add:"Adicionar profissional", headers:["Função","Qtd.","Horas","Valor/hora","Valor evento","Subtotal","Ação"] },
+      equipamento: { title:"Equipamentos", add:"Adicionar equipamento", headers:["Equipamento","Qtd.","Dias","Valor/dia","Subtotal","Ação"] },
+      consumo: { title:"Produtos consumidos", add:"Adicionar produto", headers:["Produto","Quantidade","Valor","Subtotal","Ação"] },
+    };
+    const cfg = configs[type];
+    const rows = linesBy(type).map(({ line, index }) => {
+      const base = [lineInput(index,"descricao",line.descricao), lineInput(index,"quantidade",line.quantidade,"number","0.001")];
+      if (type === "equipe") base.push(lineInput(index,"horas",line.horas,"number"), lineInput(index,"valor_unitario",line.valor_unitario,"number"), lineInput(index,"valor_evento",line.valor_evento,"number"));
+      else if (type === "equipamento") base.push(lineInput(index,"dias",line.dias || 1,"number"), lineInput(index,"valor_unitario",line.valor_unitario,"number"));
+      else {
+        base.push(lineInput(index,"valor_unitario",line.valor_unitario,"number"));
+        if (type === "produto_servico") base.push(lineInput(index,"desconto_percentual",line.desconto_percentual,"number"));
+      }
+      base.push(`<strong data-line-total="${index}">${money(lineSubtotal(line))}</strong>`, `<button class="orc-btn orc-btn--sm orc-btn--danger" data-remove-line="${index}">Remover</button>`);
+      return `<tr>${base.map(value => `<td>${value}</td>`).join("")}</tr>`;
+    }).join("");
+    return `<div class="orc-card__head"><div><h3>${cfg.title}</h3><div class="orc-muted">Os valores são recalculados e validados no servidor</div></div><button class="orc-btn orc-btn--primary" data-add-line="${type}">＋ ${cfg.add}</button></div>
+      <div class="orc-table-wrap"><table class="orc-table"><thead><tr>${cfg.headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows || `<tr><td colspan="${cfg.headers.length}" class="orc-muted" style="text-align:center">Adicione o primeiro item.</td></tr>`}</tbody></table></div>
+      ${type === "consumo" ? '<div class="orc-notice" style="margin-top:1rem">Itens de consumo pertencem somente ao orçamento e não baixam estoque.</div>' : ""}`;
+  }
 
-    if (step === 4) return tableEditor("Equipe do evento", {
-      headers: ["Função", "Qtd.", "Horas", "Valor/hora", "Valor evento", "Subtotal"],
-      data: [
-        ["Garçom", "6", "8h", money(25), money(200), money(1200)],
-        ["Cozinheiro", "2", "10h", money(35), money(350), money(700)],
-        ["Supervisor", "1", "10h", money(42), money(420), money(420)],
-      ],
-    }, "Adicionar profissional") + `<div class="orc-summary" style="margin-top:1rem"><div class="orc-summary__row orc-summary__row--total"><span>Custo total da equipe</span><span>${money(2320)}</span></div></div>
-      <p class="orc-muted">Funções disponíveis: Atendente, Garçom, Recepcionista, Caixa, Cozinheiro, Auxiliar, Supervisor, Segurança, Limpeza, Motorista, Montador, Desmontador e Outro.</p>`;
-
-    if (step === 5) return tableEditor("Equipamentos", {
-      headers: ["Equipamento", "Quantidade", "Dias", "Valor", "Subtotal"],
-      data: [["Mesas redondas","10","1",money(55),money(550)],["Cadeiras","80","1",money(9),money(720)],["Rechaud","8","1",money(45),money(360)],["Tenda 5x5","2","1",money(380),money(760)]],
-    }, "Adicionar equipamento") + `<p class="orc-muted">Catálogo: Mesas, Cadeiras, Toalhas, Pratos, Copos, Talheres, Rechaud, Caixa térmica, Tendas, Freezer e Outro.</p>`;
-
-    if (step === 6) return tableEditor("Produtos consumidos", {
-      headers: ["Produto", "Quantidade", "Valor", "Subtotal"],
-      data: [["Arroz tipo 1","12 kg",money(7.9),money(94.8)],["Filé de frango","28 kg",money(21.5),money(602)],["Refrigerantes","35 un.",money(9.5),money(332.5)],["Descartáveis","80 kits",money(4.2),money(336)]],
-    }, "Adicionar produto") + `<div class="orc-notice" style="margin-top:1rem">Consumo simulado. Não há consulta ou baixa no estoque.</div>`;
-
-    if (step === 7) return `
-      <div class="orc-card__head"><div><h3>Frete e logística</h3><div class="orc-muted">Defina entrega, montagem e retirada</div></div>${badge("Passo 7 de 8")}</div>
-      <div class="orc-choice-grid">
-        ${["Sem frete","Retirada","Entrega","Montagem","Desmontagem"].map((t, i) => `<button class="orc-choice ${i === 2 ? "is-selected" : ""}" data-freight="${t}"><span class="orc-choice__icon">${["×","↙","→","↑","↓"][i]}</span><strong>${t}</strong></button>`).join("")}
-      </div>
+  function freightStep() {
+    const f = state.draft.frete;
+    const options = [["sem_frete","Sem frete","×"],["retirada","Retirada","↙"],["entrega","Entrega","→"],["montagem","Montagem","↑"],["desmontagem","Desmontagem","↓"]];
+    return `<div class="orc-card__head"><div><h3>Frete e logística</h3><div class="orc-muted">Defina a modalidade e os custos</div></div></div>
+      <div class="orc-choice-grid">${options.map(([v,l,i]) => `<button class="orc-choice ${f.tipo === v ? "is-selected" : ""}" data-freight-type="${v}"><span class="orc-choice__icon">${i}</span><strong>${l}</strong></button>`).join("")}</div>
       <div class="orc-form-grid" style="margin-top:1rem">
-        <label class="orc-field"><span>Valor manual</span><input class="orc-input" value="R$ 450,00"></label>
-        <label class="orc-field"><span>Distância</span><input class="orc-input" value="18 km"></label>
-        <label class="orc-field orc-field--full"><span>Observações</span><textarea class="orc-textarea">Entrega duas horas antes do evento. Acesso pela portaria lateral.</textarea></label>
+        <label class="orc-field"><span>Valor</span><input class="orc-input" type="number" step="0.01" data-freight-field="valor" value="${esc(f.valor)}"></label>
+        <label class="orc-field"><span>Distância (km)</span><input class="orc-input" type="number" step="0.01" data-freight-field="distancia_km" value="${esc(f.distancia_km)}"></label>
+        <label class="orc-field orc-field--full"><span>Observações</span><textarea class="orc-textarea" data-freight-field="observacoes">${esc(f.observacoes)}</textarea></label>
       </div>`;
+  }
 
-    return `
-      <div class="orc-card__head"><div><h3>Financeiro</h3><div class="orc-muted">Condições e resumo final da proposta</div></div>${badge("Passo 8 de 8")}</div>
-      <div class="orc-grid-2">
-        <div class="orc-form-grid">
-          <label class="orc-field"><span>Desconto %</span><input class="orc-input" value="5"></label>
-          <label class="orc-field"><span>Desconto R$</span><input class="orc-input" value="R$ 0,00"></label>
-          <label class="orc-field"><span>Acréscimo</span><input class="orc-input" value="R$ 0,00"></label>
-          <label class="orc-field"><span>Forma de pagamento</span><select class="orc-select"><option>PIX</option><option>Dinheiro</option><option>Cartão</option><option>Parcelado</option></select></label>
-          <label class="orc-field"><span>Validade</span><input class="orc-input" type="date" value="2026-07-24"></label>
-          <label class="orc-field orc-field--full"><span>Observações</span><textarea class="orc-textarea">50% na aprovação e 50% até 48 horas antes do evento.</textarea></label>
-        </div>
-        <div class="orc-summary">
-          <h3>Resumo financeiro</h3>
-          ${[["Subtotal",9298],["Equipe",2320],["Equipamentos",2390],["Produtos",1365.3],["Frete",450],["Desconto",-791.17]].map(r => `<div class="orc-summary__row"><span>${r[0]}</span><strong>${money(r[1])}</strong></div>`).join("")}
-          <div class="orc-summary__row orc-summary__row--total"><span>Total</span><span>${money(15032.13)}</span></div>
-          <div class="orc-summary__row"><span>Lucro estimado</span><strong style="color:var(--orc-success)">${money(4120)} (27,4%)</strong></div>
-        </div>
-      </div>`;
+  function financeStep() {
+    const f = state.draft.financeiro;
+    const t = totals();
+    return `<div class="orc-card__head"><div><h3>Financeiro</h3><div class="orc-muted">Condições e fechamento do orçamento</div></div></div>
+      <div class="orc-grid-2"><div class="orc-form-grid">
+        <label class="orc-field"><span>Desconto %</span><input class="orc-input" type="number" step="0.01" data-finance-field="desconto_percentual" value="${esc(f.desconto_percentual)}"></label>
+        <label class="orc-field"><span>Desconto R$</span><input class="orc-input" type="number" step="0.01" data-finance-field="desconto_valor" value="${esc(f.desconto_valor)}"></label>
+        <label class="orc-field"><span>Acréscimo R$</span><input class="orc-input" type="number" step="0.01" data-finance-field="acrescimo_valor" value="${esc(f.acrescimo_valor)}"></label>
+        <label class="orc-field"><span>Forma de pagamento</span><select class="orc-select" data-finance-field="forma_pagamento">${["pix","dinheiro","cartao","parcelado"].map(v => `<option value="${v}" ${f.forma_pagamento === v ? "selected" : ""}>${v === "cartao" ? "Cartão" : v[0].toUpperCase()+v.slice(1)}</option>`).join("")}</select></label>
+        <label class="orc-field"><span>Validade</span><input class="orc-input" type="date" id="orcValidity" value="${esc(state.draft.validade)}"></label>
+        <label class="orc-field orc-field--full"><span>Observações financeiras</span><textarea class="orc-textarea" data-finance-field="observacoes">${esc(f.observacoes)}</textarea></label>
+      </div><div class="orc-summary"><h3>Resumo financeiro</h3>
+        <div class="orc-summary__row"><span>Produtos/serviços</span><strong>${money(t.produto_servico)}</strong></div>
+        <div class="orc-summary__row"><span>Equipe</span><strong>${money(t.equipe)}</strong></div>
+        <div class="orc-summary__row"><span>Equipamentos</span><strong>${money(t.equipamento)}</strong></div>
+        <div class="orc-summary__row"><span>Consumo</span><strong>${money(t.consumo)}</strong></div>
+        <div class="orc-summary__row"><span>Frete</span><strong>${money(t.frete)}</strong></div>
+        <div class="orc-summary__row"><span>Desconto</span><strong>− ${money(t.desconto)}</strong></div>
+        <div class="orc-summary__row orc-summary__row--total"><span>Total</span><span>${money(t.total)}</span></div>
+      </div></div>`;
+  }
+
+  function wizardContent() {
+    if (state.wizardStep === 1) return clientStep();
+    if (state.wizardStep === 2) return typeStep();
+    if (state.wizardStep === 3) return linesStep("produto_servico");
+    if (state.wizardStep === 4) return linesStep("equipe");
+    if (state.wizardStep === 5) return linesStep("equipamento");
+    if (state.wizardStep === 6) return linesStep("consumo");
+    if (state.wizardStep === 7) return freightStep();
+    return financeStep();
+  }
+
+  function bindDraftInputs(target) {
+    target.querySelectorAll("[data-client-field]").forEach(input => input.addEventListener("input", () => { state.draft.cliente[input.dataset.clientField] = input.value; }));
+    target.querySelectorAll("[data-line-index]").forEach(input => input.addEventListener("input", () => {
+      const line = state.draft.linhas[Number(input.dataset.lineIndex)];
+      line[input.dataset.lineKey] = input.type === "number" ? number(input.value) : input.value;
+      const total = target.querySelector(`[data-line-total="${input.dataset.lineIndex}"]`);
+      if (total) total.textContent = money(lineSubtotal(line));
+    }));
+    target.querySelectorAll("[data-remove-line]").forEach(button => button.addEventListener("click", () => {
+      state.draft.linhas.splice(Number(button.dataset.removeLine), 1); renderWizard();
+    }));
+    target.querySelectorAll("[data-add-line]").forEach(button => button.addEventListener("click", () => {
+      const type = button.dataset.addLine;
+      state.draft.linhas.push({ tipo_linha:type, descricao:"", quantidade:1, unidade_medida:"", horas:type === "equipe" ? 1 : 0, dias:type === "equipamento" ? 1 : 0, valor_unitario:0, desconto_percentual:0, valor_evento:0, custo_unitario:0 });
+      renderWizard();
+    }));
+    target.querySelectorAll("[data-budget-type]").forEach(button => button.addEventListener("click", () => { state.draft.tipo = button.dataset.budgetType; renderWizard(); }));
+    target.querySelectorAll("[data-freight-type]").forEach(button => button.addEventListener("click", () => { state.draft.frete.tipo = button.dataset.freightType; renderWizard(); }));
+    target.querySelectorAll("[data-freight-field]").forEach(input => input.addEventListener("input", () => { state.draft.frete[input.dataset.freightField] = input.type === "number" ? number(input.value) : input.value; }));
+    target.querySelectorAll("[data-finance-field]").forEach(input => input.addEventListener("input", () => { state.draft.financeiro[input.dataset.financeField] = input.type === "number" ? number(input.value) : input.value; }));
+    root("orcValidity")?.addEventListener("input", event => { state.draft.validade = event.target.value; });
   }
 
   function renderWizard() {
     const target = root("orcamentosNovoRoot");
     if (!target) return;
-    target.innerHTML = shell(`
-      ${header("Novo Orçamento", "Monte a proposta em oito passos simples.", "＋",
-        `<button class="orc-btn" data-orc-go="${SECTIONS.lista}">Cancelar</button>`, "Novo")}
-      <div class="orc-wizard">
-        <aside class="orc-wizard__steps">${wizardSteps.map((label, i) => `
-          <button class="orc-step ${state.wizardStep === i + 1 ? "is-active" : ""} ${state.wizardStep > i + 1 ? "is-done" : ""}" data-wizard-step="${i + 1}">
-            <span class="orc-step__num">${state.wizardStep > i + 1 ? "✓" : i + 1}</span><span class="orc-step__label">${label}</span>
-          </button>`).join("")}</aside>
-        <main class="orc-card orc-wizard__body">
-          <div id="orcWizardContent">${wizardContent(state.wizardStep)}</div>
-          <footer class="orc-wizard__footer">
-            <button class="orc-btn" id="orcWizardPrev" ${state.wizardStep === 1 ? "disabled" : ""}>← Voltar</button>
-            <button class="orc-btn orc-btn--primary" id="orcWizardNext">${state.wizardStep === 8 ? "Concluir e visualizar proposta" : "Continuar →"}</button>
-          </footer>
-        </main>
-      </div>`);
-    bindCommon(target);
-    target.querySelectorAll("[data-wizard-step]").forEach(button => button.addEventListener("click", function () {
-      state.wizardStep = Number(button.dataset.wizardStep);
-      renderWizard();
-    }));
-    target.querySelectorAll("[data-budget-type]").forEach(button => button.addEventListener("click", function () {
-      state.wizardType = button.dataset.budgetType;
-      renderWizard();
-    }));
-    target.querySelectorAll("[data-freight]").forEach(button => button.addEventListener("click", function () {
-      target.querySelectorAll("[data-freight]").forEach(el => el.classList.remove("is-selected"));
-      button.classList.add("is-selected");
-      toast(`${button.dataset.freight} selecionado.`, "info");
-    }));
-    target.querySelectorAll("[data-add-row]").forEach(button => button.addEventListener("click", function () {
-      simulate(button, `${button.dataset.addRow}: item fictício adicionado.`);
-    }));
-    root("orcWizardPrev").addEventListener("click", function () { if (state.wizardStep > 1) { state.wizardStep--; renderWizard(); } });
-    root("orcWizardNext").addEventListener("click", function () {
-      if (state.wizardStep < 8) {
-        simulate(this, "", function () { state.wizardStep++; renderWizard(); });
-      } else {
-        simulate(this, "Orçamento fictício concluído.", function () {
-          state.selectedBudget = 1048;
+    target.innerHTML = shell(`${header(state.draft.id ? `Editar ${state.draft.codigo}` : "Novo Orçamento",
+      "Preencha as etapas; cada avanço salva o rascunho.", "＋", `<button class="orc-btn" data-orc-go="${SECTIONS.lista}">Cancelar</button>`, "Novo")}
+      <div class="orc-wizard"><aside class="orc-wizard__steps">${STEPS.map((label, index) => `<button class="orc-step ${state.wizardStep === index + 1 ? "is-active" : ""} ${state.wizardStep > index + 1 ? "is-done" : ""}" data-wizard-step="${index + 1}">
+        <span class="orc-step__num">${state.wizardStep > index + 1 ? "✓" : index + 1}</span><span class="orc-step__label">${label}</span></button>`).join("")}</aside>
+      <main class="orc-card orc-wizard__body"><div>${wizardContent()}</div><footer class="orc-wizard__footer">
+        <button class="orc-btn" id="orcWizardPrev" ${state.wizardStep === 1 ? "disabled" : ""}>← Voltar</button>
+        <button class="orc-btn orc-btn--primary" id="orcWizardNext">${state.wizardStep === 8 ? "Salvar e enviar proposta" : "Salvar e continuar →"}</button>
+      </footer></main></div>`);
+    bindNavigation(target);
+    bindDraftInputs(target);
+    target.querySelectorAll("[data-wizard-step]").forEach(button => button.addEventListener("click", () => { state.wizardStep = Number(button.dataset.wizardStep); renderWizard(); }));
+    root("orcWizardPrev").addEventListener("click", () => { if (state.wizardStep > 1) { state.wizardStep--; renderWizard(); } });
+    root("orcWizardNext").addEventListener("click", async function () {
+      try {
+        const final = state.wizardStep === 8;
+        await saveDraft(final, this);
+        if (final) {
+          toast("Orçamento salvo e enviado para aprovação.", "success");
+          state.selectedId = state.draft.id;
           go(SECTIONS.proposta);
-        });
-      }
+        } else {
+          state.wizardStep++;
+          state.draft.etapa_wizard = state.wizardStep;
+          renderWizard();
+          toast("Rascunho salvo.", "success");
+        }
+      } catch (error) { toast(error.message || "Não foi possível salvar.", "error"); }
     });
   }
 
-  function loadNovo() {
-    state.loaded.add("orcamentosNovoRoot");
+  async function loadNovo() {
+    if (!state.draft) state.draft = blankDraft();
     renderWizard();
   }
 
-  function selectedBudget() {
-    return state.budgets.find(b => b.id === state.selectedBudget) || state.budgets[0] || {
-      id: 1048, cliente: "Mariana Lopes", tipo: "Buffet", data: "16/07/2026", valor: 15032.13, responsavel: "Ana Paula", status: "pendente",
-    };
-  }
-
-  function loadProposta() {
+  async function loadProposta() {
     const target = root("orcamentosPropostaRoot");
-    skeleton(target, function () {
-      const b = selectedBudget();
-      target.innerHTML = shell(`
-        ${header(`Proposta #${b.id}`, "Visualização simulada do documento final.", "▤",
-          `<button class="orc-btn" data-orc-go="${SECTIONS.lista}">← Orçamentos</button>
-           <button class="orc-btn orc-btn--primary" data-orc-demo="PDF simulado preparado.">Gerar PDF</button>`, "Proposta")}
-        <article class="orc-proposal">
-          <div class="orc-proposal__brand">
-            <div style="display:flex;gap:1rem;align-items:center"><img src="imagens/logo-sem-fundo.png?v=20260717" alt="Logo Sabor Paraense" class="orc-proposal__logo"><div><h2>Grupo Sabor Paraense</h2><div>Proposta Comercial</div></div></div>
-            <div style="text-align:right"><strong>#${b.id}</strong><div>${esc(b.data)}</div>${badge(b.status)}</div>
-          </div>
-          <div class="orc-proposal__columns">
-            <div><h4>Empresa</h4><p>Grupo Sabor Paraense<br>Porto Velho — RO<br>contato@gruposaborparaense.com.br</p></div>
-            <div><h4>Cliente</h4><p>${esc(b.cliente)}<br>(69) 99241-8802<br>mariana@email.com</p></div>
-          </div>
-          <div class="orc-table-wrap"><table class="orc-table" style="min-width:0"><thead><tr><th>Descrição</th><th>Qtd.</th><th>Valor</th><th>Total</th></tr></thead>
-            <tbody><tr><td>Buffet completo premium</td><td>80</td><td>${money(98)}</td><td>${money(7840)}</td></tr>
-            <tr><td>Equipe do evento</td><td>9</td><td>—</td><td>${money(2320)}</td></tr>
-            <tr><td>Equipamentos e estrutura</td><td>1</td><td>—</td><td>${money(2390)}</td></tr>
-            <tr><td>Entrega e logística</td><td>1</td><td>${money(450)}</td><td>${money(450)}</td></tr></tbody></table></div>
-          <div class="orc-proposal__columns">
-            <div><h4>Condições</h4><p>50% na aprovação e 50% até 48 horas antes do evento.<br>Validade: 7 dias.</p><h4>Observações</h4><p>Montagem concluída duas horas antes do início.</p></div>
-            <div class="orc-summary"><div class="orc-summary__row"><span>Subtotal</span><strong>${money(15823.3)}</strong></div><div class="orc-summary__row"><span>Desconto</span><strong>${money(791.17)}</strong></div><div class="orc-summary__row orc-summary__row--total"><span>Total</span><span>${money(15032.13)}</span></div></div>
-          </div>
-          <div class="orc-signature"><div>Grupo Sabor Paraense</div><div>${esc(b.cliente)}</div></div>
-        </article>
-        <div class="orc-card"><div class="orc-actions">
-          <button class="orc-btn" data-orc-demo="Impressão simulada preparada.">Imprimir</button>
-          <button class="orc-btn" data-orc-demo="Mensagem de WhatsApp preparada.">WhatsApp</button>
-          <button class="orc-btn" data-orc-demo="Mensagem do Instagram copiada.">Instagram</button>
-          <button class="orc-btn" data-orc-demo="E-mail fictício preparado.">E-mail</button>
-          <button class="orc-btn" data-orc-demo="Link fictício copiado.">Copiar link</button>
-          <button class="orc-btn orc-btn--success" data-orc-demo="Proposta aprovada na demonstração.">Aprovar</button>
-          <button class="orc-btn orc-btn--danger" data-orc-demo="Proposta recusada na demonstração.">Recusar</button>
-        </div></div>`);
-      bindCommon(target);
-    });
+    if (!target) return;
+    if (!state.selectedId && state.draft.id) state.selectedId = state.draft.id;
+    if (!state.selectedId) { go(SECTIONS.lista); return; }
+    loading(target);
+    try {
+      const b = await orcFetch(`/orcamentos/${state.selectedId}`);
+      hydrate(b, false);
+      const c = b.cliente || {};
+      target.innerHTML = shell(`${header(`Proposta ${b.codigo}`, "Documento comercial pronto para envio e aprovação.", "▤",
+        `<button class="orc-btn" data-orc-go="${SECTIONS.lista}">← Orçamentos</button><button class="orc-btn orc-btn--primary" id="orcPrintProposal">Imprimir / PDF</button>`, "Proposta")}
+        <article class="orc-proposal"><div class="orc-proposal__brand"><div style="display:flex;gap:1rem;align-items:center">
+          <img src="imagens/logo-sem-fundo.png?v=20260717" alt="Logo Sabor Paraense" class="orc-proposal__logo"><div><h2>Grupo Sabor Paraense</h2><div>Proposta Comercial</div></div></div>
+          <div style="text-align:right"><strong>${esc(b.codigo)}</strong><div>${displayDate(b.data_orcamento)}</div>${badge(b.status)}</div></div>
+        <div class="orc-proposal__columns"><div><h4>Empresa</h4><p>Grupo Sabor Paraense<br>Atendimento comercial</p></div>
+          <div><h4>Cliente</h4><p>${esc(c.nome)}<br>${esc(c.whatsapp || c.telefone || "")}<br>${esc(c.email || "")}</p></div></div>
+        <div class="orc-table-wrap"><table class="orc-table" style="min-width:0"><thead><tr><th>Descrição</th><th>Qtd.</th><th>Valor</th><th>Total</th></tr></thead>
+          <tbody>${(b.linhas || []).map(line => `<tr><td>${esc(line.descricao)}</td><td>${number(line.quantidade)}</td><td>${money(line.valor_unitario)}</td><td>${money(line.subtotal)}</td></tr>`).join("") || '<tr><td colspan="4">Sem itens.</td></tr>'}</tbody></table></div>
+        <div class="orc-proposal__columns"><div><h4>Condições</h4><p>Forma de pagamento: ${esc(b.financeiro?.forma_pagamento || "A combinar")}<br>Validade: ${displayDate(b.validade)}</p>
+          <h4>Observações</h4><p>${esc(b.financeiro?.observacoes || b.observacoes || "—")}</p></div>
+          <div class="orc-summary"><div class="orc-summary__row"><span>Produtos/serviços</span><strong>${money(b.subtotal_produtos)}</strong></div>
+          <div class="orc-summary__row"><span>Equipe</span><strong>${money(b.subtotal_equipe)}</strong></div><div class="orc-summary__row"><span>Equipamentos</span><strong>${money(b.subtotal_equipamentos)}</strong></div>
+          <div class="orc-summary__row"><span>Frete</span><strong>${money(b.subtotal_frete)}</strong></div><div class="orc-summary__row"><span>Desconto</span><strong>− ${money(b.total_desconto)}</strong></div>
+          <div class="orc-summary__row orc-summary__row--total"><span>Total</span><span>${money(b.total)}</span></div></div></div>
+        <div class="orc-signature"><div>Grupo Sabor Paraense</div><div>${esc(c.nome)}</div></div></article>
+        <section class="orc-card"><div class="orc-actions">
+          <button class="orc-btn" id="orcPrintBottom">Imprimir / PDF</button><button class="orc-btn" id="orcWhatsApp">WhatsApp</button>
+          <button class="orc-btn" id="orcEmail">E-mail</button><button class="orc-btn" id="orcCopyLink">Copiar link</button>
+          <button class="orc-btn orc-btn--success" data-status="aprovado">Aprovar</button>
+          <button class="orc-btn orc-btn--danger" data-status="recusado">Recusar</button>
+        </div></section>`);
+      bindNavigation(target);
+      const print = () => window.print();
+      root("orcPrintProposal").addEventListener("click", print);
+      root("orcPrintBottom").addEventListener("click", print);
+      root("orcWhatsApp").addEventListener("click", () => {
+        const phone = String(c.whatsapp || c.telefone || "").replace(/\D/g, "");
+        const message = `Olá, ${c.nome}! Segue a proposta ${b.codigo}, no valor de ${money(b.total)}: ${location.href}`;
+        window.open(`https://wa.me/${phone.startsWith("55") ? phone : `55${phone}`}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+      });
+      root("orcEmail").addEventListener("click", () => { location.href = `mailto:${encodeURIComponent(c.email || "")}?subject=${encodeURIComponent(`Proposta ${b.codigo}`)}&body=${encodeURIComponent(`Olá, ${c.nome}! Segue sua proposta no valor de ${money(b.total)}: ${location.href}`)}`; });
+      root("orcCopyLink").addEventListener("click", async () => { await navigator.clipboard.writeText(location.href); toast("Link copiado.", "success"); });
+      target.querySelectorAll("[data-status]").forEach(button => button.addEventListener("click", async () => {
+        try {
+          await busy(button, () => orcFetch(`/orcamentos/${b.id}/status`, { method:"PATCH", body:JSON.stringify({ status:button.dataset.status }) }));
+          toast("Situação atualizada.", "success"); await loadProposta();
+        } catch (error) { toast(error.message, "error"); }
+      }));
+    } catch (error) { errorView(target, error, loadProposta); }
   }
 
-  const models = [
-    ["Buffet Completo","◉","Cardápio, equipe, equipamentos e logística"],
-    ["Evento Corporativo","★","Estrutura completa para empresas"],
-    ["Venda de Produtos","◆","Produtos, quantidades e descontos"],
-    ["Prestação de Serviço","◇","Horas, profissionais e escopo"],
-    ["Locação","⌂","Equipamentos por quantidade e dias"],
-    ["Equipamentos","▣","Mesas, cadeiras, tendas e acessórios"],
-    ["Mesa Posta","▦","Composição elegante e personalizada"],
-  ];
+  async function loadClientes() {
+    const target = root("orcamentosClientesRoot");
+    if (!target) return;
+    loading(target);
+    try {
+      const data = await orcFetch("/orcamentos/clientes");
+      state.clients = data.items || [];
+      target.innerHTML = shell(`${header("Clientes", "Clientes cadastrados por meio dos orçamentos.", "◎",
+        '<button class="orc-btn orc-btn--primary" id="orcClientNew">＋ Novo orçamento</button>', "Clientes")}
+        <div class="orc-client-grid">${state.clients.map(c => `<article class="orc-client"><div class="orc-avatar">${esc(c.nome.split(" ").slice(0,2).map(n => n[0]).join(""))}</div>
+          <div><h3>${esc(c.nome)}</h3><div class="orc-muted">${esc(c.whatsapp || c.telefone || "Sem telefone")}<br>${esc(c.email || "")}</div></div>
+          <button class="orc-btn orc-btn--primary" data-client-budget="${c.id}">＋ Novo orçamento</button></article>`).join("") || '<div class="orc-muted">Os clientes aparecerão após o primeiro orçamento.</div>'}</div>`);
+      bindNavigation(target);
+      root("orcClientNew").addEventListener("click", () => { state.draft = blankDraft(); state.wizardStep = 1; go(SECTIONS.novo); });
+      target.querySelectorAll("[data-client-budget]").forEach(button => button.addEventListener("click", () => {
+        const client = state.clients.find(c => c.id === Number(button.dataset.clientBudget));
+        state.draft = blankDraft();
+        state.draft.cliente = { ...state.draft.cliente, ...client };
+        state.wizardStep = 1; go(SECTIONS.novo);
+      }));
+    } catch (error) { errorView(target, error, loadClientes); }
+  }
 
   function loadModelos() {
     const target = root("orcamentosModelosRoot");
-    skeleton(target, function () {
-      target.innerHTML = shell(`
-        ${header("Modelos", "Comece rapidamente com estruturas prontas.", "▣", `<button class="orc-btn orc-btn--primary" data-orc-demo="Novo modelo fictício aberto.">＋ Novo modelo</button>`, "Modelos")}
-        <div class="orc-model-grid">${models.map((m, i) => `<article class="orc-model orc-clickable"><span class="orc-model__icon">${m[1]}</span><div><h3>${m[0]}</h3><p class="orc-muted">${m[2]}</p></div><div class="orc-actions">
-          <button class="orc-btn orc-btn--primary orc-btn--sm" data-model-use="${i}">Usar modelo</button>
-          <button class="orc-btn orc-btn--sm" data-orc-demo="Modelo duplicado apenas nesta demonstração.">Duplicar</button>
-          <button class="orc-btn orc-btn--sm" data-orc-demo="Editor fictício do modelo aberto.">Editar</button>
-        </div></article>`).join("")}</div>`);
-      bindCommon(target);
-      target.querySelectorAll("[data-model-use]").forEach(button => button.addEventListener("click", function () {
-        state.wizardType = models[Number(button.dataset.modelUse)][0];
-        state.wizardStep = 1;
-        toast("Modelo aplicado ao novo orçamento.", "success");
-        go(SECTIONS.novo);
-      }));
-    });
-  }
-
-  function loadClientes() {
-    const target = root("orcamentosClientesRoot");
-    skeleton(target, function () {
-      target.innerHTML = shell(`
-        ${header("Clientes", "Relacionamento e histórico comercial simulado.", "◎", `<button class="orc-btn orc-btn--primary" data-orc-demo="Formulário fictício de cliente aberto.">＋ Novo cliente</button>`, "Clientes")}
-        <div class="orc-client-grid">${state.clients.map(function (c) {
-          const initials = c.nome.split(" ").slice(0,2).map(n => n[0]).join("");
-          return `<article class="orc-client orc-clickable"><div class="orc-avatar">${esc(initials)}</div><div><h3>${esc(c.nome)}</h3><div class="orc-muted">${esc(c.telefone)}<br>${esc(c.cidade)}</div></div>
-            <div><div class="orc-muted">Último orçamento: ${esc(c.ultimo)}</div><div class="orc-money">${money(c.total)}</div></div>
-            <button class="orc-btn orc-btn--primary" data-client-budget="${esc(c.nome)}">＋ Novo orçamento</button></article>`;
-        }).join("")}</div>`);
-      bindCommon(target);
-      target.querySelectorAll("[data-client-budget]").forEach(button => button.addEventListener("click", function () {
-        state.wizardStep = 1;
-        toast(`Cliente ${button.dataset.clientBudget} selecionado.`, "success");
-        go(SECTIONS.novo);
-      }));
-    });
-  }
-
-  const itemData = {
-    Produtos: [["Buffet premium","unidade",money(98),"Ativo"],["Kit mesa posta","kit",money(145),"Ativo"],["Mesa de doces","serviço",money(1850),"Ativo"]],
-    Serviços: [["Montagem de salão","evento",money(850),"Ativo"],["Cerimonial","hora",money(120),"Ativo"],["Limpeza pós-evento","evento",money(480),"Ativo"]],
-    Equipe: [["Garçom","hora",money(25),"Ativo"],["Cozinheiro","hora",money(35),"Ativo"],["Supervisor","evento",money(420),"Ativo"]],
-    Equipamentos: [["Mesa redonda","dia",money(55),"Ativo"],["Cadeira Tiffany","dia",money(9),"Ativo"],["Tenda 5x5","dia",money(380),"Ativo"]],
-    Fretes: [["Entrega urbana","viagem",money(250),"Ativo"],["Montagem externa","evento",money(350),"Ativo"],["Desmontagem","evento",money(280),"Ativo"]],
-  };
-
-  function renderItemsTab(container) {
-    const rows = itemData[state.activeItemTab] || [];
-    container.innerHTML = `<div class="orc-table-wrap"><table class="orc-table"><thead><tr><th>Item/serviço</th><th>Unidade</th><th>Valor padrão</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody>${rows.map(r => `<tr><td><strong>${r[0]}</strong></td><td>${r[1]}</td><td>${r[2]}</td><td>${badge(r[3])}</td><td><button class="orc-btn orc-btn--sm" data-orc-demo="Editor fictício aberto.">Editar</button></td></tr>`).join("")}</tbody></table></div>`;
-    bindCommon(container);
+    const models = [["buffet","Buffet Completo","◉"],["evento","Evento Corporativo","★"],["produto","Venda de Produtos","◆"],["servico","Prestação de Serviço","◇"],["locacao","Locação","⌂"],["equipamento","Equipamentos","▣"],["mesa","Mesa Posta","▦"]];
+    target.innerHTML = shell(`${header("Modelos", "Estruturas rápidas para iniciar um orçamento.", "▣", "", "Modelos")}
+      <div class="orc-model-grid">${models.map(m => `<article class="orc-model"><span class="orc-model__icon">${m[2]}</span><h3>${m[1]}</h3><p class="orc-muted">Inicia um rascunho real com este tipo.</p>
+      <button class="orc-btn orc-btn--primary" data-use-model="${m[0]}">Usar modelo</button></article>`).join("")}</div>`);
+    bindNavigation(target);
+    target.querySelectorAll("[data-use-model]").forEach(button => button.addEventListener("click", () => {
+      state.draft = blankDraft(); state.draft.tipo = button.dataset.useModel; state.wizardStep = 1; go(SECTIONS.novo);
+    }));
   }
 
   function loadItens() {
     const target = root("orcamentosItensRoot");
-    skeleton(target, function () {
-      target.innerHTML = shell(`
-        ${header("Itens e Serviços", "Catálogo fictício utilizado na montagem das propostas.", "◆", `<button class="orc-btn orc-btn--primary" data-orc-demo="Cadastro fictício de item aberto.">＋ Novo item</button>`, "Itens e Serviços")}
-        <section class="orc-card"><div class="orc-tabs">${Object.keys(itemData).map(t => `<button class="orc-tab ${state.activeItemTab === t ? "is-active" : ""}" data-item-tab="${t}">${t}</button>`).join("")}</div></section>
-        <div id="orcItemsTabContent"></div>`);
-      bindCommon(target);
-      const content = root("orcItemsTabContent");
-      renderItemsTab(content);
-      target.querySelectorAll("[data-item-tab]").forEach(button => button.addEventListener("click", function () {
-        state.activeItemTab = button.dataset.itemTab;
-        loadItens();
-      }));
-    });
+    const labels = { produto_servico:"Produtos/Serviços", equipe:"Equipe", equipamento:"Equipamentos", consumo:"Consumo" };
+    const items = linesBy(state.activeItemTab);
+    target.innerHTML = shell(`${header("Itens do orçamento atual", "Visualize as linhas do rascunho em edição.", "◆",
+      `<button class="orc-btn orc-btn--primary" data-orc-go="${SECTIONS.novo}">Editar no wizard</button>`, "Itens")}
+      <section class="orc-card"><div class="orc-tabs">${Object.entries(labels).map(([v,l]) => `<button class="orc-tab ${state.activeItemTab === v ? "is-active" : ""}" data-item-tab="${v}">${l}</button>`).join("")}</div></section>
+      <div class="orc-table-wrap"><table class="orc-table"><thead><tr><th>Descrição</th><th>Quantidade</th><th>Valor</th><th>Subtotal</th></tr></thead>
+      <tbody>${items.map(({line}) => `<tr><td>${esc(line.descricao)}</td><td>${number(line.quantidade)}</td><td>${money(line.valor_unitario)}</td><td>${money(lineSubtotal(line))}</td></tr>`).join("") || '<tr><td colspan="4">Nenhum item no rascunho.</td></tr>'}</tbody></table></div>`);
+    bindNavigation(target);
+    target.querySelectorAll("[data-item-tab]").forEach(button => button.addEventListener("click", () => { state.activeItemTab = button.dataset.itemTab; loadItens(); }));
   }
 
   function loadConfiguracoes() {
     const target = root("orcamentosConfiguracoesRoot");
-    skeleton(target, function () {
-      target.innerHTML = shell(`
-        ${header("Configurações", "Personalize a aparência e as mensagens das propostas.", "⚙", "", "Configurações")}
-        <div class="orc-grid-2">
-          <section class="orc-card"><div class="orc-card__head"><h3>Padrões do orçamento</h3></div><div class="orc-form-grid">
-            <label class="orc-field"><span>Percentual padrão</span><input class="orc-input" value="10%"></label>
-            <label class="orc-field"><span>Validade padrão</span><input class="orc-input" value="7 dias"></label>
-            <label class="orc-field orc-field--full"><span>Mensagem WhatsApp</span><textarea class="orc-textarea">Olá, {cliente}! Preparamos sua proposta {numero}. Confira todos os detalhes.</textarea></label>
-            <label class="orc-field orc-field--full"><span>Mensagem E-mail</span><textarea class="orc-textarea">Olá, {cliente}. Segue a proposta comercial solicitada.</textarea></label>
-            <label class="orc-field orc-field--full"><span>Mensagem Instagram</span><textarea class="orc-textarea">Oi, {cliente}! Sua proposta está pronta. Posso enviar o link?</textarea></label>
-          </div></section>
-          <section class="orc-card"><div class="orc-card__head"><h3>Identidade da proposta</h3></div><div class="orc-form-grid">
-            <label class="orc-field orc-field--full"><span>Rodapé</span><textarea class="orc-textarea">Grupo Sabor Paraense · Qualidade e cuidado em cada detalhe.</textarea></label>
-            <label class="orc-field"><span>Logo</span><input class="orc-input" type="file" accept="image/*"></label>
-            <label class="orc-field"><span>Assinatura</span><input class="orc-input" type="file" accept="image/*"></label>
-            <label class="orc-field"><span>Cor da proposta</span><input class="orc-input" type="color" value="#0047ab"></label>
-          </div></section>
-        </div>
-        <div class="orc-actions"><button class="orc-btn orc-btn--primary" id="orcSaveSettings">Salvar configurações</button><button class="orc-btn" data-orc-go="${SECTIONS.proposta}">Visualizar proposta</button></div>
-        <div class="orc-notice">Configurações demonstrativas: os valores não são gravados nem enviados.</div>`);
-      bindCommon(target);
-      root("orcSaveSettings").addEventListener("click", function () { simulate(this, "Configurações simuladas aplicadas apenas nesta tela."); });
-    });
+    target.innerHTML = shell(`${header("Configurações", "Mensagens utilizadas pelos canais de envio.", "⚙", "", "Configurações")}
+      <div class="orc-notice">As condições financeiras e a validade são definidas em cada orçamento.</div>
+      <section class="orc-card"><div class="orc-form-grid"><label class="orc-field orc-field--full"><span>Mensagem WhatsApp</span>
+      <textarea class="orc-textarea" readonly>Olá, {cliente}! Segue a proposta {codigo}, no valor de {total}.</textarea></label>
+      <label class="orc-field orc-field--full"><span>Mensagem E-mail</span><textarea class="orc-textarea" readonly>Olá, {cliente}. Segue sua proposta comercial.</textarea></label></div></section>`);
+    bindNavigation(target);
   }
 
-  function loadRelatorios() {
+  async function loadRelatorios() {
     const target = root("orcamentosRelatoriosRoot");
-    skeleton(target, function () {
-      target.innerHTML = shell(`
-        ${header("Relatórios", "Indicadores comerciais e rankings simulados.", "⌁", `<button class="orc-btn" data-orc-demo="Relatório fictício exportado.">Exportar</button>`, "Relatórios")}
-        <div class="orc-kpis">
-          ${kpi("Total vendido", money(318450), "R$", "+18%")}
-          ${kpi("Total orçado", money(486920), "▤", "+12%")}
-          ${kpi("Conversão", "65,4%", "↗", "+4,2 p.p.")}
-          ${kpi("Clientes", "96", "◎", "18 novos")}
-          ${kpi("Tipos ativos", "9", "◆", "Buffet lidera")}
-          ${kpi("Funcionários", "24", "◉", "Equipe cadastrada")}
-          ${kpi("Equipamentos", "312", "▣", "92% disponíveis")}
-          ${kpi("Ticket médio", money(3804), "∅", "+6,8%")}
-        </div>
-        <div class="orc-grid-2">
-          <section class="orc-card"><div class="orc-card__head"><h3>Orçado x convertido</h3>${badge("7 meses")}</div><div class="orc-chart">
-            ${[40,55,48,72,65,82,96].map((h,i) => `<div class="orc-chart__bar" style="--h:${h}%"><span>${["Jan","Fev","Mar","Abr","Mai","Jun","Jul"][i]}</span></div>`).join("")}
-          </div></section>
-          <section class="orc-card"><div class="orc-card__head"><h3>Ranking por tipo</h3></div><div class="orc-list">
-            ${[["Buffet",148200],["Evento",92400],["Locação",56800],["Serviço",44200],["Equipamentos",31900]].map((r,i) => `<div class="orc-list-row"><div class="orc-avatar">${i+1}</div><strong>${r[0]}</strong><span class="orc-money">${money(r[1])}</span></div>`).join("")}
-          </div></section>
-        </div>
-        <div class="orc-grid-2"><section class="orc-card"><div class="orc-card__head"><h3>Funcionários com mais propostas</h3></div><div class="orc-list">
-          ${[["Ana Paula",42],["Carlos Lima",31],["Thiago Souza",26]].map((r,i) => `<div class="orc-list-row"><div class="orc-avatar">${i+1}</div><strong>${r[0]}</strong><span>${r[1]} propostas</span></div>`).join("")}
-        </div></section><section class="orc-card"><div class="orc-card__head"><h3>Equipamentos mais orçados</h3></div><div class="orc-list">
-          ${[["Cadeiras",820],["Mesas",296],["Rechaud",184],["Tendas",71]].map((r,i) => `<div class="orc-list-row"><div class="orc-avatar">${i+1}</div><strong>${r[0]}</strong><span>${r[1]} unidades</span></div>`).join("")}
-        </div></section></div>`);
-      bindCommon(target);
-    });
+    if (!target) return;
+    loading(target);
+    try {
+      const data = await orcFetch("/orcamentos/dashboard");
+      const r = data.resumo || {};
+      target.innerHTML = shell(`${header("Relatórios", "Resumo comercial calculado com os dados cadastrados.", "⌁", "", "Relatórios")}
+        <div class="orc-kpis">${kpi("Total orçado",money(r.valor_total),"R$","Valor acumulado")}${kpi("Conversão",`${number(r.conversao_percentual).toFixed(1)}%`,"↗","Aprovados e convertidos")}
+        ${kpi("Clientes",String((data.top_clientes || []).length),"◎","Top clientes no período")}${kpi("Ticket médio",money(r.ticket_medio),"∅","Média por proposta")}</div>
+        <section class="orc-card"><div class="orc-card__head"><h3>Ranking de clientes</h3></div><div class="orc-list">${(data.top_clientes || []).map((c,i) => `<div class="orc-list-row"><div class="orc-avatar">${i+1}</div><strong>${esc(c.nome)}</strong><span class="orc-money">${money(c.total)}</span></div>`).join("") || '<div class="orc-muted">Sem dados.</div>'}</div></section>`);
+      bindNavigation(target);
+    } catch (error) { errorView(target, error, loadRelatorios); }
   }
 
   window.loadOrcamentosDashboard = loadDashboard;
