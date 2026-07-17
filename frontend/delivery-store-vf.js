@@ -137,8 +137,13 @@
             <label class="vf-store-field"><span>Cor principal</span><input name="cor_primaria" type="color" value="${esc(primary)}"></label>
             <label class="vf-store-field"><span>WhatsApp</span><input name="whatsapp" maxlength="30" value="${esc(config.whatsapp || "")}"></label>
             <label class="vf-store-field"><span>Telefone</span><input name="telefone" maxlength="30" value="${esc(config.telefone || "")}"></label>
+            <label class="vf-store-field"><span>Instagram (URL)</span><input name="instagram_url" maxlength="255" placeholder="https://instagram.com/sua_loja" value="${esc(config.instagram_url || "")}"></label>
+            <label class="vf-store-field"><span>Facebook (URL)</span><input name="facebook_url" maxlength="255" placeholder="https://facebook.com/sua_loja" value="${esc(config.facebook_url || "")}"></label>
             <label class="vf-store-field vf-span-2"><span>Descrição</span><textarea name="descricao" rows="3">${esc(config.descricao || "")}</textarea></label>
             <label class="vf-store-field vf-span-2"><span>Endereço</span><textarea name="endereco_texto" rows="2">${esc(config.endereco_texto || "")}</textarea></label>
+            <label class="vf-store-field"><span>Outra unidade (nome)</span><input name="filial_nome" maxlength="160" value="${esc(config.filial_nome || "")}"></label>
+            <label class="vf-store-field"><span>Link da outra unidade</span><input name="filial_link_url" maxlength="255" placeholder="https://..." value="${esc(config.filial_link_url || "")}"></label>
+            <label class="vf-store-field vf-span-2"><span>Texto da barra de entrega</span><input name="entrega_texto" maxlength="180" placeholder="Entrega em até 45 min · Pagamento na entrega ou online" value="${esc(config.entrega_texto || "")}"></label>
             <div class="vf-store-upload">
               <span>Logo</span><div class="vf-store-upload__preview vf-store-upload__preview--logo" data-logo-preview>${previewImageMarkup(config.logo_url, "logo", "Logo")}</div>
               <input name="logo" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
@@ -222,6 +227,11 @@
           cor_primaria: value(form, "cor_primaria"),
           whatsapp: value(form, "whatsapp") || null,
           telefone: value(form, "telefone") || null,
+          instagram_url: value(form, "instagram_url") || null,
+          facebook_url: value(form, "facebook_url") || null,
+          filial_nome: value(form, "filial_nome") || null,
+          filial_link_url: value(form, "filial_link_url") || null,
+          entrega_texto: value(form, "entrega_texto") || null,
           descricao: value(form, "descricao") || null,
           endereco_texto: value(form, "endereco_texto") || null,
           ativo: checked(form, "ativo"),

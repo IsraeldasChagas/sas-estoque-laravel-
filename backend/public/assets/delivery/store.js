@@ -73,6 +73,15 @@
   document.querySelectorAll('[data-track-open]').forEach(button => button.onclick = () => dialog.showModal());
   document.querySelectorAll('[data-track-close]').forEach(button => button.onclick = () => dialog.close());
 
+  const storeInfo = document.querySelector('[data-store-info]');
+  const contactToggle = document.querySelector('[data-contact-toggle]');
+  if (storeInfo && contactToggle) {
+    contactToggle.addEventListener('click', () => {
+      const collapsed = storeInfo.classList.toggle('is-collapsed');
+      contactToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    });
+  }
+
   window.DeliveryCart = {
     items: read,
     add(item) { const items = read(); items.push(item); write(items); },

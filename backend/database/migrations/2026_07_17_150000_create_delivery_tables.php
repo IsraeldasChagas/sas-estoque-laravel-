@@ -34,6 +34,12 @@ return new class extends Migration
                 $table->string('whatsapp', 30)->nullable();
                 $table->string('telefone', 30)->nullable();
                 $table->text('endereco_texto')->nullable();
+                $table->string('instagram_url', 255)->nullable();
+                $table->string('facebook_url', 255)->nullable();
+                $table->string('filial_nome', 160)->nullable();
+                $table->string('filial_link_url', 255)->nullable();
+                $table->string('filial_logo_path', 255)->nullable();
+                $table->string('entrega_texto', 180)->nullable();
                 $table->timestamps();
             });
         }

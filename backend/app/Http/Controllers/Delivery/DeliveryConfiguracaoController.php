@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -69,11 +70,16 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $config->whatsapp,
             'telefone' => array_key_exists('telefone', $data) ? $data['telefone'] : $config->telefone,
             'endereco_texto' => array_key_exists('endereco_texto', $data) ? $data['endereco_texto'] : $config->endereco_texto,
+            'instagram_url' => array_key_exists('instagram_url', $data) ? $this->normalizeUrl($data['instagram_url'] ?? null) : ($config->instagram_url ?? null),
+            'facebook_url' => array_key_exists('facebook_url', $data) ? $this->normalizeUrl($data['facebook_url'] ?? null) : ($config->facebook_url ?? null),
+            'filial_nome' => array_key_exists('filial_nome', $data) ? $data['filial_nome'] : ($config->filial_nome ?? null),
+            'filial_link_url' => array_key_exists('filial_link_url', $data) ? $this->normalizeUrl($data['filial_link_url'] ?? null) : ($config->filial_link_url ?? null),
+            'entrega_texto' => array_key_exists('entrega_texto', $data) ? $data['entrega_texto'] : ($config->entrega_texto ?? null),
             'updated_at' => now(),
         ];
 
         try {
-            DB::table('dlv_loja_config')->where('id', $config->id)->update($update);
+            DB::table('dlv_loja_config')->where('id', $config->id)->update($this->somenteColunasExistentes($update));
         } catch (\Throwable $e) {
             $this->removerArquivos($novosArquivos, $unidadeId);
             throw $e;
@@ -109,6 +115,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'whatsapp' => 'nullable|string|max:30',
             'telefone' => 'nullable|string|max:30',
             'endereco_texto' => 'nullable|string',
+            'instagram_url' => 'nullable|string|max:255',
+            'facebook_url' => 'nullable|string|max:255',
+            'filial_nome' => 'nullable|string|max:160',
+            'filial_link_url' => 'nullable|string|max:255',
+            'entrega_texto' => 'nullable|string|max:180',
             'aberta' => 'nullable|boolean',
             'ativo' => 'nullable|boolean',
             'slug' => 'nullable|string|max:120',
@@ -136,12 +147,17 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $config->whatsapp,
             'telefone' => array_key_exists('telefone', $data) ? $data['telefone'] : $config->telefone,
             'endereco_texto' => array_key_exists('endereco_texto', $data) ? $data['endereco_texto'] : $config->endereco_texto,
+            'instagram_url' => array_key_exists('instagram_url', $data) ? $this->normalizeUrl($data['instagram_url'] ?? null) : ($config->instagram_url ?? null),
+            'facebook_url' => array_key_exists('facebook_url', $data) ? $this->normalizeUrl($data['facebook_url'] ?? null) : ($config->facebook_url ?? null),
+            'filial_nome' => array_key_exists('filial_nome', $data) ? $data['filial_nome'] : ($config->filial_nome ?? null),
+            'filial_link_url' => array_key_exists('filial_link_url', $data) ? $this->normalizeUrl($data['filial_link_url'] ?? null) : ($config->filial_link_url ?? null),
+            'entrega_texto' => array_key_exists('entrega_texto', $data) ? $data['entrega_texto'] : ($config->entrega_texto ?? null),
             'aberta' => array_key_exists('aberta', $data) ? (bool) $data['aberta'] : (bool) $config->aberta,
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : (bool) $config->ativo,
             'updated_at' => now(),
         ];
         try {
-            DB::table('dlv_loja_config')->where('id', $config->id)->update($update);
+            DB::table('dlv_loja_config')->where('id', $config->id)->update($this->somenteColunasExistentes($update));
         } catch (\Throwable $e) {
             $this->removerArquivos($novosArquivos, $unidadeId);
             throw $e;
@@ -219,6 +235,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'whatsapp' => $config->whatsapp,
             'telefone' => $config->telefone,
             'endereco_texto' => $config->endereco_texto,
+            'instagram_url' => $config->instagram_url ?? null,
+            'facebook_url' => $config->facebook_url ?? null,
+            'filial_nome' => $config->filial_nome ?? null,
+            'filial_link_url' => $config->filial_link_url ?? null,
+            'entrega_texto' => $config->entrega_texto ?? null,
         ];
     }
 
@@ -249,6 +270,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'whatsapp' => 'nullable|string|max:30',
             'telefone' => 'nullable|string|max:30',
             'endereco_texto' => 'nullable|string',
+            'instagram_url' => 'nullable|string|max:255',
+            'facebook_url' => 'nullable|string|max:255',
+            'filial_nome' => 'nullable|string|max:160',
+            'filial_link_url' => 'nullable|string|max:255',
+            'entrega_texto' => 'nullable|string|max:180',
             'unidade_id' => 'nullable|integer',
         ]);
         if ($validator->fails()) {
@@ -277,6 +303,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'whatsapp' => $config->whatsapp,
             'telefone' => $config->telefone,
             'endereco_texto' => $config->endereco_texto,
+            'instagram_url' => $config->instagram_url ?? null,
+            'facebook_url' => $config->facebook_url ?? null,
+            'filial_nome' => $config->filial_nome ?? null,
+            'filial_link_url' => $config->filial_link_url ?? null,
+            'entrega_texto' => $config->entrega_texto ?? null,
             'preview_path' => $previewPath,
             // Preferir o host da requisição (api.*) — APP_URL às vezes aponta pro domínio do frontend.
             'preview_url' => rtrim(request()->getSchemeAndHttpHost(), '/').$previewPath,
@@ -373,6 +404,29 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
         return $relativo !== '' && ! str_contains($relativo, '..') && str_starts_with($relativo, 'uploads/delivery/lojas/')
             ? '/'.$relativo
             : null;
+    }
+
+    private function normalizeUrl(?string $url): ?string
+    {
+        $value = trim((string) $url);
+        if ($value === '') {
+            return null;
+        }
+        if (! preg_match('#^https?://#i', $value)) {
+            $value = 'https://'.$value;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_URL) ? $value : null;
+    }
+
+    /** @param array<string, mixed> $update */
+    private function somenteColunasExistentes(array $update): array
+    {
+        return array_filter(
+            $update,
+            fn ($key) => Schema::hasColumn('dlv_loja_config', $key),
+            ARRAY_FILTER_USE_KEY
+        );
     }
 
     /** @param list<string> $paths */

@@ -41,8 +41,14 @@ class DeliveryPublicController extends Controller
             ->where('ativo', 1)->where('tipo', 'acrescentar')->orderBy('ordem')->orderBy('nome')->get()
             ->map(fn ($a) => (object) array_merge((array) $a, ['foto_url' => $this->imagem($a->foto_path ?? null, $unidadeId, 'adicionais')]));
         $banners = collect($config->banner_url ? [['url' => $config->banner_url, 'alt' => $config->nome_loja]] : []);
+        $passoAtual = 'loja';
+        $fidelidadeAtiva = $this->fidelidadeAtiva($unidadeId);
+        $footerFixed = true;
 
-        return view('delivery.public.loja', compact('config', 'slug', 'categorias', 'produtos', 'adicionais', 'banners'));
+        return view('delivery.public.loja', compact(
+            'config', 'slug', 'categorias', 'produtos', 'adicionais', 'banners',
+            'passoAtual', 'fidelidadeAtiva', 'footerFixed'
+        ));
     }
 
     public function produto(string $slug, int $id): View
@@ -62,16 +68,44 @@ class DeliveryPublicController extends Controller
             ->where('pa.produto_id', $id)->where('a.unidade_id', $config->unidade_id)
             ->where('a.ativo', 1)->where('a.tipo', 'acrescentar')
             ->orderBy('a.ordem')->orderBy('a.nome')->get(['a.*']);
+        $passoAtual = 'loja';
+        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $footerFixed = false;
 
-        return view('delivery.public.produto', compact('config', 'slug', 'produto', 'ingredientes', 'adicionais'));
+        return view('delivery.public.produto', compact(
+            'config', 'slug', 'produto', 'ingredientes', 'adicionais',
+            'passoAtual', 'fidelidadeAtiva', 'footerFixed'
+        ));
     }
 
     public function checkout(string $slug): View
     {
         $config = $this->config($slug);
         $pagamentos = $this->pagamentos($config);
+        $passoAtual = 'checkout';
+        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $footerFixed = false;
 
-        return view('delivery.public.checkout', compact('config', 'slug', 'pagamentos'));
+        return view('delivery.public.checkout', compact(
+            'config', 'slug', 'pagamentos', 'passoAtual', 'fidelidadeAtiva', 'footerFixed'
+        ));
+    }
+
+    public function fidelidade(string $slug): View
+    {
+        $config = $this->config($slug);
+        $programa = DB::table('fid_programas')
+            ->where('unidade_id', $config->unidade_id)
+            ->where('ativo', 1)
+            ->first();
+        abort_unless($programa, 404);
+        $passoAtual = 'loja';
+        $fidelidadeAtiva = true;
+        $footerFixed = false;
+
+        return view('delivery.public.fidelidade', compact(
+            'config', 'slug', 'programa', 'passoAtual', 'fidelidadeAtiva', 'footerFixed'
+        ));
     }
 
     public function frete(Request $request, string $slug): JsonResponse
@@ -152,8 +186,14 @@ class DeliveryPublicController extends Controller
     public function sucesso(string $slug, string $codigo, string $token): View
     {
         [$config, $pedido] = $this->pedidoSeguro($slug, $codigo, $token);
+        $passoAtual = 'pedido';
+        $pedidoShowUrl = route('delivery.public.order', [$slug, $codigo, $token]);
+        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $footerFixed = false;
 
-        return view('delivery.public.sucesso', compact('config', 'slug', 'pedido', 'token'));
+        return view('delivery.public.sucesso', compact(
+            'config', 'slug', 'pedido', 'token', 'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed'
+        ));
     }
 
     public function pedido(string $slug, string $codigo, string $token): View
@@ -161,8 +201,15 @@ class DeliveryPublicController extends Controller
         [$config, $pedido] = $this->pedidoSeguro($slug, $codigo, $token);
         $itens = DB::table('dlv_pedido_itens')->where('pedido_id', $pedido->id)->orderBy('ordem')->get();
         $historico = DB::table('dlv_pedido_historico')->where('pedido_id', $pedido->id)->orderBy('id')->get();
+        $passoAtual = 'pedido';
+        $pedidoShowUrl = route('delivery.public.order', [$slug, $codigo, $token]);
+        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $footerFixed = false;
 
-        return view('delivery.public.pedido', compact('config', 'slug', 'pedido', 'token', 'itens', 'historico'));
+        return view('delivery.public.pedido', compact(
+            'config', 'slug', 'pedido', 'token', 'itens', 'historico',
+            'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed'
+        ));
     }
 
     private function config(string $slug): object
@@ -171,8 +218,18 @@ class DeliveryPublicController extends Controller
         abort_unless($config, 404);
         $config->logo_url = $this->imagem($config->logo_path ?? null, (int) $config->unidade_id, 'lojas');
         $config->banner_url = $this->imagem($config->banner_path ?? null, (int) $config->unidade_id, 'lojas');
+        $config->filial_logo_url = $this->imagem($config->filial_logo_path ?? null, (int) $config->unidade_id, 'lojas');
 
         return $config;
+    }
+
+    private function fidelidadeAtiva(int $unidadeId): bool
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('fid_programas')) {
+            return false;
+        }
+
+        return DB::table('fid_programas')->where('unidade_id', $unidadeId)->where('ativo', 1)->exists();
     }
 
     private function validarRetirada(object $config, string $fulfillment): void

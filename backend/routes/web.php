@@ -13,6 +13,7 @@ Route::get('/', function () {
 Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
     Route::get('/', [DeliveryPublicController::class, 'loja'])->name('store');
     Route::get('/produto/{id}', [DeliveryPublicController::class, 'produto'])->whereNumber('id')->name('product');
+    Route::get('/fidelidade', [DeliveryPublicController::class, 'fidelidade'])->name('fidelity');
     Route::get('/checkout', [DeliveryPublicController::class, 'checkout'])->name('checkout');
     Route::post('/frete', [DeliveryPublicController::class, 'frete'])->middleware('throttle:30,1')->name('freight');
     Route::post('/checkout', [DeliveryPublicController::class, 'finalizar'])->middleware('throttle:10,1')->name('finish');
