@@ -18006,22 +18006,32 @@ function getMensagemReservaWhatsApp(r) {
   var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
   var unidadeNome = (r.unidade && r.unidade.nome) ? r.unidade.nome : '';
   var unidadeEndereco = (r.unidade && r.unidade.endereco) ? r.unidade.endereco.trim() : '';
+  var icone = {
+    local: '\uD83D\uDCCD',
+    endereco: '\uD83D\uDDFA\uFE0F',
+    data: '\uD83D\uDCC5',
+    horario: '\u23F0',
+    mesa: '\uD83C\uDF7D\uFE0F',
+    pessoas: '\uD83D\uDC65',
+    atendimento: '\uD83D\uDC64',
+    confirmado: '\u2705',
+  };
   var pad = function(lbl) { return (lbl + ':').padEnd(13, ' '); };
   var linhas = [];
-  linhas.push('Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:');
+  linhas.push(icone.confirmado + ' Olá ' + (r.nome_cliente || '') + '! Sua reserva foi confirmada:');
   linhas.push('');
   if (unidadeNome) {
-    linhas.push('📍 ' + pad('Local') + unidadeNome);
-    if (unidadeEndereco) linhas.push('   ' + unidadeEndereco);
+    linhas.push(icone.local + ' ' + pad('Local') + unidadeNome);
+    if (unidadeEndereco) linhas.push(icone.endereco + ' ' + pad('Endereço') + unidadeEndereco);
     linhas.push('');
   }
-  linhas.push('📅 ' + pad('Data') + dataStr);
-  linhas.push('🕐 ' + pad('Horário') + horaStr);
-  linhas.push('🪑 ' + pad('Mesa') + mesaNome);
-  linhas.push('👥 ' + pad('Pessoas') + String(r.qtd_pessoas || '-'));
-  if (criadoPor) linhas.push('👤 ' + pad('Atendimento') + criadoPor);
+  linhas.push(icone.data + ' ' + pad('Data') + dataStr);
+  linhas.push(icone.horario + ' ' + pad('Horário') + horaStr);
+  linhas.push(icone.mesa + ' ' + pad('Mesa') + mesaNome);
+  linhas.push(icone.pessoas + ' ' + pad('Pessoas') + String(r.qtd_pessoas || '-'));
+  if (criadoPor) linhas.push(icone.atendimento + ' ' + pad('Atendimento') + criadoPor);
   linhas.push('');
-  linhas.push('Aguardamos você!');
+  linhas.push(icone.confirmado + ' Aguardamos você!');
   return linhas.join('\n');
 }
 
@@ -18034,20 +18044,33 @@ function getMensagemReservaWhatsAppEmpresa(r) {
   var unidadeNome = (r.unidade && r.unidade.nome) ? r.unidade.nome : '';
   var status = (r.status || '').replace(/_/g, ' ');
   var obs = stripReservaMovMarkers(r.observacao || '').trim();
+  var icone = {
+    reserva: '\uD83D\uDCCB',
+    cliente: '\uD83D\uDC64',
+    telefone: '\uD83D\uDCF1',
+    data: '\uD83D\uDCC5',
+    horario: '\u23F0',
+    mesa: '\uD83C\uDF7D\uFE0F',
+    pessoas: '\uD83D\uDC65',
+    status: '\uD83D\uDCCC',
+    unidade: '\uD83C\uDFE2',
+    registradoPor: '\u270D\uFE0F',
+    observacao: '\uD83D\uDCDD',
+  };
   var linhas = [
-    '📋 Nova reserva de mesa',
+    icone.reserva + ' Nova reserva de mesa',
     '',
-    '👤 Cliente: ' + (r.nome_cliente || '-'),
-    '📞 Telefone: ' + (r.telefone_cliente || '-'),
-    '📅 Data: ' + dataStr,
-    '🕐 Horário: ' + horaStr,
-    '🪑 Mesa: ' + mesaNome,
-    '👥 Pessoas: ' + String(r.qtd_pessoas || '-'),
-    '📌 Status: ' + (status || '-'),
+    icone.cliente + ' Cliente: ' + (r.nome_cliente || '-'),
+    icone.telefone + ' Telefone: ' + (r.telefone_cliente || '-'),
+    icone.data + ' Data: ' + dataStr,
+    icone.horario + ' Horário: ' + horaStr,
+    icone.mesa + ' Mesa: ' + mesaNome,
+    icone.pessoas + ' Pessoas: ' + String(r.qtd_pessoas || '-'),
+    icone.status + ' Status: ' + (status || '-'),
   ];
-  if (unidadeNome) linhas.push('🏢 Unidade: ' + unidadeNome);
-  if (criadoPor) linhas.push('✍️ Registrado por: ' + criadoPor);
-  if (obs) linhas.push('📝 Obs.: ' + obs);
+  if (unidadeNome) linhas.push(icone.unidade + ' Unidade: ' + unidadeNome);
+  if (criadoPor) linhas.push(icone.registradoPor + ' Registrado por: ' + criadoPor);
+  if (obs) linhas.push(icone.observacao + ' Obs.: ' + obs);
   return linhas.join('\n');
 }
 
