@@ -5,12 +5,20 @@ namespace App\Http\Controllers\Delivery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class DeliveryConfiguracaoController extends DeliveryBaseController
 {
+    private const IMAGE_MIMES = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
+
     public function show(Request $request): JsonResponse
     {
         $usuario = $this->auth($request, 'deliveryConfiguracoes');
@@ -37,6 +45,7 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             $data['slug'] = $slug;
         }
 
+        [$imagens, $novosArquivos, $arquivosAntigos] = $this->prepararImagens($data, $config, $unidadeId);
         $update = [
             'slug' => $data['slug'] ?? $config->slug,
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : (bool) $config->ativo,
@@ -53,8 +62,8 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'pix_beneficiario' => array_key_exists('pix_beneficiario', $data) ? $data['pix_beneficiario'] : $config->pix_beneficiario,
             'formas_pagamento' => array_key_exists('formas_pagamento', $data) ? $data['formas_pagamento'] : $config->formas_pagamento,
             'nome_loja' => array_key_exists('nome_loja', $data) ? $data['nome_loja'] : $config->nome_loja,
-            'logo_path' => array_key_exists('logo_path', $data) ? $data['logo_path'] : $config->logo_path,
-            'banner_path' => array_key_exists('banner_path', $data) ? $data['banner_path'] : $config->banner_path,
+            'logo_path' => $imagens['logo_path'],
+            'banner_path' => $imagens['banner_path'],
             'cor_primaria' => array_key_exists('cor_primaria', $data) ? $data['cor_primaria'] : $config->cor_primaria,
             'descricao' => array_key_exists('descricao', $data) ? $data['descricao'] : $config->descricao,
             'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $config->whatsapp,
@@ -63,7 +72,13 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'updated_at' => now(),
         ];
 
-        DB::table('dlv_loja_config')->where('id', $config->id)->update($update);
+        try {
+            DB::table('dlv_loja_config')->where('id', $config->id)->update($update);
+        } catch (\Throwable $e) {
+            $this->removerArquivos($novosArquivos, $unidadeId);
+            throw $e;
+        }
+        $this->removerArquivos($arquivosAntigos, $unidadeId);
 
         return response()->json($this->formatar(DB::table('dlv_loja_config')->where('id', $config->id)->first()));
     }
@@ -74,21 +89,7 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
         $unidadeId = $this->access->exigirUnidade($request, $usuario);
         $config = $this->obterOuCriar($unidadeId);
 
-        return response()->json([
-            'unidade_id' => $unidadeId,
-            'slug' => $config->slug,
-            'ativo' => (bool) $config->ativo,
-            'aberta' => (bool) $config->aberta,
-            'nome_loja' => $config->nome_loja,
-            'logo_path' => $config->logo_path,
-            'banner_path' => $config->banner_path,
-            'cor_primaria' => $config->cor_primaria,
-            'descricao' => $config->descricao,
-            'whatsapp' => $config->whatsapp,
-            'telefone' => $config->telefone,
-            'endereco_texto' => $config->endereco_texto,
-            'preview_path' => '/loja/'.$config->slug,
-        ]);
+        return response()->json($this->formatarVitrine($config, $unidadeId));
     }
 
     public function vitrineUpdate(Request $request): JsonResponse
@@ -99,9 +100,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
 
         $validator = Validator::make($request->all(), [
             'nome_loja' => 'nullable|string|max:160',
-            'logo_path' => 'nullable|string|max:255',
-            'banner_path' => 'nullable|string|max:255',
-            'cor_primaria' => 'nullable|string|max:20',
+            'logo_base64' => 'nullable|string',
+            'banner_base64' => 'nullable|string',
+            'logo_clear' => 'nullable|boolean',
+            'banner_clear' => 'nullable|boolean',
+            'cor_primaria' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'descricao' => 'nullable|string',
             'whatsapp' => 'nullable|string|max:30',
             'telefone' => 'nullable|string|max:30',
@@ -122,11 +125,12 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             $data['slug'] = $slug;
         }
 
-        DB::table('dlv_loja_config')->where('id', $config->id)->update([
+        [$imagens, $novosArquivos, $arquivosAntigos] = $this->prepararImagens($data, $config, $unidadeId);
+        $update = [
             'slug' => $data['slug'] ?? $config->slug,
             'nome_loja' => array_key_exists('nome_loja', $data) ? $data['nome_loja'] : $config->nome_loja,
-            'logo_path' => array_key_exists('logo_path', $data) ? $data['logo_path'] : $config->logo_path,
-            'banner_path' => array_key_exists('banner_path', $data) ? $data['banner_path'] : $config->banner_path,
+            'logo_path' => $imagens['logo_path'],
+            'banner_path' => $imagens['banner_path'],
             'cor_primaria' => array_key_exists('cor_primaria', $data) ? $data['cor_primaria'] : $config->cor_primaria,
             'descricao' => array_key_exists('descricao', $data) ? $data['descricao'] : $config->descricao,
             'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $config->whatsapp,
@@ -135,9 +139,19 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'aberta' => array_key_exists('aberta', $data) ? (bool) $data['aberta'] : (bool) $config->aberta,
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : (bool) $config->ativo,
             'updated_at' => now(),
-        ]);
+        ];
+        try {
+            DB::table('dlv_loja_config')->where('id', $config->id)->update($update);
+        } catch (\Throwable $e) {
+            $this->removerArquivos($novosArquivos, $unidadeId);
+            throw $e;
+        }
+        $this->removerArquivos($arquivosAntigos, $unidadeId);
 
-        return $this->vitrineShow($request);
+        return response()->json($this->formatarVitrine(
+            DB::table('dlv_loja_config')->where('id', $config->id)->first(),
+            $unidadeId
+        ));
     }
 
     private function obterOuCriar(int $unidadeId): object
@@ -197,7 +211,9 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'formas_pagamento' => $config->formas_pagamento,
             'nome_loja' => $config->nome_loja,
             'logo_path' => $config->logo_path,
+            'logo_url' => $this->imagemUrl($config->logo_path),
             'banner_path' => $config->banner_path,
+            'banner_url' => $this->imagemUrl($config->banner_path),
             'cor_primaria' => $config->cor_primaria,
             'descricao' => $config->descricao,
             'whatsapp' => $config->whatsapp,
@@ -224,9 +240,11 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'pix_beneficiario' => 'nullable|string|max:160',
             'formas_pagamento' => 'nullable|string|max:255',
             'nome_loja' => 'nullable|string|max:160',
-            'logo_path' => 'nullable|string|max:255',
-            'banner_path' => 'nullable|string|max:255',
-            'cor_primaria' => 'nullable|string|max:20',
+            'logo_base64' => 'nullable|string',
+            'banner_base64' => 'nullable|string',
+            'logo_clear' => 'nullable|boolean',
+            'banner_clear' => 'nullable|boolean',
+            'cor_primaria' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'descricao' => 'nullable|string',
             'whatsapp' => 'nullable|string|max:30',
             'telefone' => 'nullable|string|max:30',
@@ -238,5 +256,136 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
         }
 
         return $validator->validated();
+    }
+
+    private function formatarVitrine(object $config, int $unidadeId): array
+    {
+        $previewPath = '/loja/'.$config->slug;
+
+        return [
+            'unidade_id' => $unidadeId,
+            'slug' => $config->slug,
+            'ativo' => (bool) $config->ativo,
+            'aberta' => (bool) $config->aberta,
+            'nome_loja' => $config->nome_loja,
+            'logo_path' => $config->logo_path,
+            'logo_url' => $this->imagemUrl($config->logo_path),
+            'banner_path' => $config->banner_path,
+            'banner_url' => $this->imagemUrl($config->banner_path),
+            'cor_primaria' => $config->cor_primaria,
+            'descricao' => $config->descricao,
+            'whatsapp' => $config->whatsapp,
+            'telefone' => $config->telefone,
+            'endereco_texto' => $config->endereco_texto,
+            'preview_path' => $previewPath,
+            'public_route_available' => collect(Route::getRoutes())->contains(
+                fn ($route) => ltrim($route->uri(), '/') === 'loja/{slug}'
+            ),
+        ];
+    }
+
+    /**
+     * @return array{0:array{logo_path:?string,banner_path:?string},1:list<string>,2:list<string>}
+     */
+    private function prepararImagens(array $data, object $config, int $unidadeId): array
+    {
+        $paths = [
+            'logo_path' => $config->logo_path,
+            'banner_path' => $config->banner_path,
+        ];
+        $novos = [];
+        $antigos = [];
+
+        try {
+            foreach (['logo', 'banner'] as $tipo) {
+                $pathKey = $tipo.'_path';
+                $base64Key = $tipo.'_base64';
+                $clearKey = $tipo.'_clear';
+                $atual = $config->{$pathKey};
+
+                if (! empty($data[$base64Key])) {
+                    $novo = $this->salvarImagemBase64(
+                        (string) $data[$base64Key],
+                        $unidadeId,
+                        $tipo,
+                        $tipo === 'logo' ? 3 * 1024 * 1024 : 6 * 1024 * 1024
+                    );
+                    $paths[$pathKey] = $novo;
+                    $novos[] = $novo;
+                    if ($atual && $atual !== $novo) {
+                        $antigos[] = $atual;
+                    }
+                } elseif (! empty($data[$clearKey])) {
+                    $paths[$pathKey] = null;
+                    if ($atual) {
+                        $antigos[] = $atual;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->removerArquivos($novos, $unidadeId);
+            throw $e;
+        }
+
+        return [$paths, $novos, $antigos];
+    }
+
+    private function salvarImagemBase64(string $dataUrl, int $unidadeId, string $tipo, int $maxBytes): string
+    {
+        if (! preg_match('#^data:(image/(?:jpeg|png|webp|gif));base64,([a-zA-Z0-9+/=\r\n]+)$#', trim($dataUrl), $match)) {
+            throw ValidationException::withMessages([$tipo.'_base64' => 'Imagem inválida. Use JPG, PNG, WebP ou GIF.']);
+        }
+
+        $binario = base64_decode(preg_replace('/\s+/', '', $match[2]), true);
+        if ($binario === false || $binario === '' || strlen($binario) > $maxBytes) {
+            throw ValidationException::withMessages([
+                $tipo.'_base64' => $tipo === 'logo' ? 'O logo deve ter no máximo 3 MB.' : 'O banner deve ter no máximo 6 MB.',
+            ]);
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = (string) $finfo->buffer($binario);
+        if (! isset(self::IMAGE_MIMES[$mime]) || @getimagesizefromstring($binario) === false) {
+            throw ValidationException::withMessages([$tipo.'_base64' => 'O conteúdo enviado não é uma imagem permitida.']);
+        }
+
+        $diretorioRelativo = 'uploads/delivery/lojas/'.$unidadeId;
+        $diretorio = public_path($diretorioRelativo);
+        if (! is_dir($diretorio) && ! mkdir($diretorio, 0755, true) && ! is_dir($diretorio)) {
+            throw ValidationException::withMessages([$tipo.'_base64' => 'Não foi possível preparar o diretório de imagens.']);
+        }
+
+        $nome = $tipo.'-'.Str::lower(Str::random(24)).'.'.self::IMAGE_MIMES[$mime];
+        $relativo = $diretorioRelativo.'/'.$nome;
+        if (file_put_contents(public_path($relativo), $binario, LOCK_EX) === false) {
+            throw ValidationException::withMessages([$tipo.'_base64' => 'Não foi possível gravar a imagem.']);
+        }
+
+        return $relativo;
+    }
+
+    private function imagemUrl(?string $path): ?string
+    {
+        $relativo = $path ? ltrim(str_replace('\\', '/', $path), '/') : '';
+
+        return $relativo !== '' && ! str_contains($relativo, '..') && str_starts_with($relativo, 'uploads/delivery/lojas/')
+            ? '/'.$relativo
+            : null;
+    }
+
+    /** @param list<string> $paths */
+    private function removerArquivos(array $paths, int $unidadeId): void
+    {
+        $prefixo = 'uploads/delivery/lojas/'.$unidadeId.'/';
+        foreach (array_unique($paths) as $path) {
+            $relativo = ltrim(str_replace('\\', '/', (string) $path), '/');
+            if ($relativo === '' || str_contains($relativo, '..') || ! str_starts_with($relativo, $prefixo)) {
+                continue;
+            }
+            $arquivo = public_path($relativo);
+            if (is_file($arquivo)) {
+                @unlink($arquivo);
+            }
+        }
     }
 }

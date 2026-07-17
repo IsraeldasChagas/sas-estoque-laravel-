@@ -13,7 +13,13 @@ class DeliveryCategoriaController extends DeliveryBaseController
     public function index(Request $request): JsonResponse
     {
         $usuario = $this->auth($request, 'deliveryCategorias');
-        $query = DB::table('dlv_categorias');
+        $query = DB::table('dlv_categorias')
+            ->select('dlv_categorias.*')
+            ->selectSub(function ($query) {
+                $query->from('dlv_produtos')
+                    ->selectRaw('count(*)')
+                    ->whereColumn('dlv_produtos.categoria_id', 'dlv_categorias.id');
+            }, 'product_count');
         $this->access->aplicarEscopo($query, $usuario, $request);
 
         if ($request->has('ativo')) {
@@ -34,6 +40,11 @@ class DeliveryCategoriaController extends DeliveryBaseController
         $usuario = $this->auth($request, 'deliveryCategorias');
         $data = $this->validar($request);
         $unidadeId = $this->access->exigirUnidade($request, $usuario, $data);
+        $data['nome'] = trim($data['nome']);
+        if ($data['nome'] === '') {
+            throw ValidationException::withMessages(['nome' => 'O nome da categoria é obrigatório.']);
+        }
+        $this->garantirNomeUnico($unidadeId, $data['nome']);
         $agora = now();
 
         $id = DB::table('dlv_categorias')->insertGetId([
@@ -65,6 +76,13 @@ class DeliveryCategoriaController extends DeliveryBaseController
         abort_unless($row, 404, 'Categoria não encontrada.');
         $this->access->autorizarRegistro($usuario, $row);
         $data = $this->validar($request, false);
+        if (array_key_exists('nome', $data)) {
+            $data['nome'] = trim($data['nome']);
+            if ($data['nome'] === '') {
+                throw ValidationException::withMessages(['nome' => 'O nome da categoria é obrigatório.']);
+            }
+            $this->garantirNomeUnico((int) $row->unidade_id, $data['nome'], $id);
+        }
 
         DB::table('dlv_categorias')->where('id', $id)->update([
             'nome' => $data['nome'] ?? $row->nome,
@@ -82,7 +100,12 @@ class DeliveryCategoriaController extends DeliveryBaseController
         $row = DB::table('dlv_categorias')->where('id', $id)->first();
         abort_unless($row, 404, 'Categoria não encontrada.');
         $this->access->autorizarRegistro($usuario, $row);
-        DB::table('dlv_produtos')->where('categoria_id', $id)->update(['categoria_id' => null, 'updated_at' => now()]);
+        $referencias = DB::table('dlv_produtos')->where('categoria_id', $id)->count();
+        if ($referencias > 0) {
+            throw ValidationException::withMessages([
+                'categoria' => "Esta categoria está vinculada a {$referencias} produto(s). Altere a categoria dos produtos antes de excluir.",
+            ]);
+        }
         DB::table('dlv_categorias')->where('id', $id)->delete();
 
         return response()->json(['ok' => true]);
@@ -91,8 +114,8 @@ class DeliveryCategoriaController extends DeliveryBaseController
     private function validar(Request $request, bool $criar = true): array
     {
         $rules = [
-            'nome' => ($criar ? 'required' : 'sometimes').'|string|max:120',
-            'ordem' => 'nullable|integer|min:0',
+            'nome' => ($criar ? 'required' : 'sometimes').'|string|max:255',
+            'ordem' => 'nullable|integer|min:0|max:65535',
             'ativo' => 'nullable|boolean',
             'unidade_id' => 'nullable|integer',
         ];
@@ -102,5 +125,22 @@ class DeliveryCategoriaController extends DeliveryBaseController
         }
 
         return $validator->validated();
+    }
+
+    private function garantirNomeUnico(int $unidadeId, string $nome, ?int $excetoId = null): void
+    {
+        $query = DB::table('dlv_categorias')
+            ->where('unidade_id', $unidadeId)
+            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)]);
+
+        if ($excetoId !== null) {
+            $query->where('id', '!=', $excetoId);
+        }
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'nome' => 'Já existe uma categoria com este nome nesta unidade.',
+            ]);
+        }
     }
 }

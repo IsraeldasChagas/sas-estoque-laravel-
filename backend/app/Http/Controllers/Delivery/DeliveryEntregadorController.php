@@ -5,11 +5,23 @@ namespace App\Http\Controllers\Delivery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class DeliveryEntregadorController extends DeliveryBaseController
 {
+    private const FOTO_MAX_BYTES = 2 * 1024 * 1024;
+
+    private const IMAGE_EXTENSIONS = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+    ];
+
     public function index(Request $request): JsonResponse
     {
         $usuario = $this->auth($request, 'deliveryEntregadores');
@@ -20,7 +32,10 @@ class DeliveryEntregadorController extends DeliveryBaseController
             $query->where('ativo', filter_var($request->query('ativo'), FILTER_VALIDATE_BOOLEAN) ? 1 : 0);
         }
 
-        return response()->json(['items' => $query->orderBy('ordem')->orderBy('nome')->get()]);
+        $items = $query->orderBy('ordem')->orderBy('nome')->get()
+            ->map(fn ($row) => $this->serializar($row));
+
+        return response()->json(['items' => $items]);
     }
 
     public function store(Request $request): JsonResponse
@@ -28,23 +43,34 @@ class DeliveryEntregadorController extends DeliveryBaseController
         $usuario = $this->auth($request, 'deliveryEntregadores');
         $data = $this->validar($request);
         $unidadeId = $this->access->exigirUnidade($request, $usuario, $data);
-        $agora = now();
-
-        $id = DB::table('dlv_entregadores')->insertGetId([
+        $foto = $this->salvarFotoBase64($data['foto_base64'] ?? null, $unidadeId);
+        $payload = [
             'unidade_id' => $unidadeId,
             'nome' => $data['nome'],
-            'whatsapp' => $data['whatsapp'] ?? null,
+            'whatsapp' => $data['whatsapp'],
             'telefone' => $data['telefone'] ?? null,
             'moto_placa' => $data['moto_placa'] ?? null,
             'moto_modelo' => $data['moto_modelo'] ?? null,
-            'foto_path' => $data['foto_path'] ?? null,
+            'foto_path' => $foto,
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : true,
             'ordem' => (int) ($data['ordem'] ?? 0),
-            'created_at' => $agora,
-            'updated_at' => $agora,
-        ]);
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+        if (Schema::hasColumn('dlv_entregadores', 'moto_cor')) {
+            $payload['moto_cor'] = $data['moto_cor'] ?? null;
+        }
 
-        return response()->json(DB::table('dlv_entregadores')->where('id', $id)->first(), 201);
+        try {
+            $id = DB::table('dlv_entregadores')->insertGetId($payload);
+        } catch (Throwable $e) {
+            $this->removerFoto($foto, $unidadeId);
+            throw $e;
+        }
+
+        return response()->json($this->serializar(
+            DB::table('dlv_entregadores')->where('id', $id)->first()
+        ), 201);
     }
 
     public function show(Request $request, int $id): JsonResponse
@@ -54,7 +80,7 @@ class DeliveryEntregadorController extends DeliveryBaseController
         abort_unless($row, 404, 'Entregador não encontrado.');
         $this->access->autorizarRegistro($usuario, $row);
 
-        return response()->json($row);
+        return response()->json($this->serializar($row));
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -65,19 +91,45 @@ class DeliveryEntregadorController extends DeliveryBaseController
         $this->access->autorizarRegistro($usuario, $row);
         $data = $this->validar($request, false);
 
-        DB::table('dlv_entregadores')->where('id', $id)->update([
+        $novaFoto = null;
+        $fotoPath = $row->foto_path ?? null;
+        if (! empty($data['foto_base64'])) {
+            $novaFoto = $this->salvarFotoBase64($data['foto_base64'], (int) $row->unidade_id);
+            $fotoPath = $novaFoto;
+        } elseif (($data['remover_foto'] ?? false) === true) {
+            $fotoPath = null;
+        }
+
+        $payload = [
             'nome' => $data['nome'] ?? $row->nome,
             'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $row->whatsapp,
             'telefone' => array_key_exists('telefone', $data) ? $data['telefone'] : $row->telefone,
             'moto_placa' => array_key_exists('moto_placa', $data) ? $data['moto_placa'] : $row->moto_placa,
             'moto_modelo' => array_key_exists('moto_modelo', $data) ? $data['moto_modelo'] : $row->moto_modelo,
-            'foto_path' => array_key_exists('foto_path', $data) ? $data['foto_path'] : $row->foto_path,
+            'foto_path' => $fotoPath,
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : (bool) $row->ativo,
             'ordem' => array_key_exists('ordem', $data) ? (int) $data['ordem'] : $row->ordem,
             'updated_at' => now(),
-        ]);
+        ];
+        if (Schema::hasColumn('dlv_entregadores', 'moto_cor')) {
+            $payload['moto_cor'] = array_key_exists('moto_cor', $data)
+                ? $data['moto_cor']
+                : ($row->moto_cor ?? null);
+        }
 
-        return response()->json(DB::table('dlv_entregadores')->where('id', $id)->first());
+        try {
+            DB::table('dlv_entregadores')->where('id', $id)->update($payload);
+        } catch (Throwable $e) {
+            $this->removerFoto($novaFoto, (int) $row->unidade_id);
+            throw $e;
+        }
+        if ($fotoPath !== ($row->foto_path ?? null)) {
+            $this->removerFoto($row->foto_path ?? null, (int) $row->unidade_id);
+        }
+
+        return response()->json($this->serializar(
+            DB::table('dlv_entregadores')->where('id', $id)->first()
+        ));
     }
 
     public function destroy(Request $request, int $id): JsonResponse
@@ -87,6 +139,7 @@ class DeliveryEntregadorController extends DeliveryBaseController
         abort_unless($row, 404, 'Entregador não encontrado.');
         $this->access->autorizarRegistro($usuario, $row);
         DB::table('dlv_entregadores')->where('id', $id)->delete();
+        $this->removerFoto($row->foto_path ?? null, (int) $row->unidade_id);
 
         return response()->json(['ok' => true]);
     }
@@ -94,14 +147,16 @@ class DeliveryEntregadorController extends DeliveryBaseController
     private function validar(Request $request, bool $criar = true): array
     {
         $rules = [
-            'nome' => ($criar ? 'required' : 'sometimes').'|string|max:160',
-            'whatsapp' => 'nullable|string|max:30',
-            'telefone' => 'nullable|string|max:30',
-            'moto_placa' => 'nullable|string|max:20',
-            'moto_modelo' => 'nullable|string|max:80',
-            'foto_path' => 'nullable|string|max:255',
+            'nome' => ($criar ? 'required' : 'sometimes').'|string|max:255',
+            'whatsapp' => ($criar ? 'required' : 'sometimes').'|string|max:32',
+            'telefone' => 'nullable|string|max:32',
+            'moto_placa' => 'nullable|string|max:16',
+            'moto_modelo' => 'nullable|string|max:120',
+            'moto_cor' => 'nullable|string|max:64',
+            'foto_base64' => 'nullable|string',
+            'remover_foto' => 'nullable|boolean',
             'ativo' => 'nullable|boolean',
-            'ordem' => 'nullable|integer|min:0',
+            'ordem' => 'nullable|integer|min:0|max:99999',
             'unidade_id' => 'nullable|integer',
         ];
         $validator = Validator::make($request->all(), $rules);
@@ -110,5 +165,69 @@ class DeliveryEntregadorController extends DeliveryBaseController
         }
 
         return $validator->validated();
+    }
+
+    private function serializar(object $row): array
+    {
+        return array_merge((array) $row, [
+            'foto_url' => empty($row->foto_path) ? null : '/'.ltrim((string) $row->foto_path, '/'),
+        ]);
+    }
+
+    private function salvarFotoBase64(?string $dataUrl, int $unidadeId): ?string
+    {
+        if ($dataUrl === null || trim($dataUrl) === '') {
+            return null;
+        }
+        if (! preg_match('#^data:(image/(?:jpeg|png|webp|gif));base64,([a-zA-Z0-9+/=\r\n]+)$#', trim($dataUrl), $match)) {
+            throw ValidationException::withMessages([
+                'foto_base64' => 'Imagem inválida. Use JPG, PNG, WebP ou GIF em base64.',
+            ]);
+        }
+
+        $binario = base64_decode(preg_replace('/\s+/', '', $match[2]) ?? '', true);
+        if ($binario === false || $binario === '') {
+            throw ValidationException::withMessages(['foto_base64' => 'Não foi possível decodificar a imagem.']);
+        }
+        if (strlen($binario) > self::FOTO_MAX_BYTES) {
+            throw ValidationException::withMessages(['foto_base64' => 'A foto do entregador não pode exceder 2MB.']);
+        }
+
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binario) ?: '';
+        if (! isset(self::IMAGE_EXTENSIONS[$mime])) {
+            throw ValidationException::withMessages(['foto_base64' => 'O conteúdo enviado não é uma imagem permitida.']);
+        }
+
+        $diretorio = 'uploads/delivery/entregadores/'.$unidadeId;
+        $diretorioAbsoluto = public_path($diretorio);
+        if (! is_dir($diretorioAbsoluto) && ! mkdir($diretorioAbsoluto, 0755, true) && ! is_dir($diretorioAbsoluto)) {
+            throw ValidationException::withMessages(['foto_base64' => 'Não foi possível criar o diretório da foto.']);
+        }
+
+        $caminho = $diretorio.'/'.Str::lower(Str::random(32)).'.'.self::IMAGE_EXTENSIONS[$mime];
+        if (file_put_contents(public_path($caminho), $binario, LOCK_EX) === false) {
+            throw ValidationException::withMessages(['foto_base64' => 'Não foi possível salvar a foto.']);
+        }
+
+        return $caminho;
+    }
+
+    private function removerFoto(?string $caminho, int $unidadeId): void
+    {
+        if (empty($caminho)) {
+            return;
+        }
+
+        $relativo = str_replace('\\', '/', ltrim($caminho, '/'));
+        $prefixo = 'uploads/delivery/entregadores/'.$unidadeId.'/';
+        if (! str_starts_with($relativo, $prefixo) || str_contains($relativo, '..')) {
+            return;
+        }
+
+        $arquivo = realpath(public_path($relativo));
+        $raiz = realpath(public_path(rtrim($prefixo, '/')));
+        if ($arquivo && $raiz && str_starts_with($arquivo, $raiz.DIRECTORY_SEPARATOR) && is_file($arquivo)) {
+            @unlink($arquivo);
+        }
     }
 }

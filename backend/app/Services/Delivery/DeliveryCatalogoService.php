@@ -21,8 +21,13 @@ class DeliveryCatalogoService
 
         $produtosQuery = DB::table('dlv_produtos')
             ->where('unidade_id', $unidadeId)
-            ->where('ativo', 1)
-            ->where('visivel_loja', 1);
+            ->where('ativo', 1);
+
+        // A consulta administrativa mostra todo produto ativo. Consumidores
+        // públicos devem solicitar explicitamente apenas os publicados.
+        if ($request->boolean('somente_publicados')) {
+            $produtosQuery->where('visivel_loja', 1);
+        }
 
         if ($categoriaId) {
             $produtosQuery->where('categoria_id', $categoriaId);
@@ -98,6 +103,9 @@ class DeliveryCatalogoService
             'descricao' => $produto->descricao,
             'foto_path' => $fotoPath,
             'foto_url' => $this->fotoUrl($fotoPath),
+            'ativo' => (bool) $produto->ativo,
+            'visivel_loja' => (bool) $produto->visivel_loja,
+            'disponivel' => (int) ($produto->estoque ?? 0) > 0,
             'permite_adicionais' => (bool) $produto->permite_adicionais,
             'apresentacao' => $produto->apresentacao,
         ];

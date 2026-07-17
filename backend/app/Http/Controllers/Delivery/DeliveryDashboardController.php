@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Delivery;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class DeliveryDashboardController extends DeliveryBaseController
@@ -13,6 +14,7 @@ class DeliveryDashboardController extends DeliveryBaseController
         $usuario = $this->auth($request, 'deliveryDashboard');
         $query = DB::table('dlv_pedidos');
         $this->access->aplicarEscopo($query, $usuario, $request);
+        $scopedOrders = clone $query;
 
         if ($inicio = trim((string) $request->query('data_inicio', ''))) {
             $query->whereDate('created_at', '>=', $inicio);
@@ -22,6 +24,37 @@ class DeliveryDashboardController extends DeliveryBaseController
         }
 
         $rows = $query->orderByDesc('id')->get();
+        $today = Carbon::today();
+        $todayOrders = (clone $scopedOrders)
+            ->whereDate('created_at', $today)
+            ->where('status', '!=', 'cancelado');
+        $todayOrderIds = (clone $todayOrders)->pluck('id');
+        $todayItems = DB::table('dlv_pedido_itens')
+            ->whereIn('pedido_id', $todayOrderIds);
+        $products = DB::table('dlv_produtos');
+        $this->access->aplicarEscopo($products, $usuario, $request);
+
+        $sevenDays = collect(range(6, 0))->map(function (int $daysAgo) use ($scopedOrders, $today) {
+            $date = $today->copy()->subDays($daysAgo);
+            $dayOrders = (clone $scopedOrders)
+                ->whereDate('created_at', $date)
+                ->where('status', '!=', 'cancelado');
+
+            return [
+                'date' => $date->toDateString(),
+                'label' => $date->locale('pt_BR')->translatedFormat('D'),
+                'sales' => (int) (clone $dayOrders)->count(),
+                'total' => round((float) (clone $dayOrders)->sum('total'), 2),
+            ];
+        })->values();
+
+        $metrics = [
+            'vendas_hoje' => (int) (clone $todayOrders)->count(),
+            'produtos_vendidos_hoje' => (int) (clone $todayItems)->distinct()->count('produto_id'),
+            'unidades_vendidas_hoje' => (float) (clone $todayItems)->sum('quantidade'),
+            'produtos_cadastrados' => (int) (clone $products)->count(),
+            'venda_total' => round((float) (clone $scopedOrders)->where('status', '!=', 'cancelado')->sum('total'), 2),
+        ];
         $statusKeys = [
             'pendente_loja', 'recebido', 'preparo', 'pronto', 'rota',
             'entregue', 'cancelado', 'endereco_nao_encontrado',
@@ -46,6 +79,8 @@ class DeliveryDashboardController extends DeliveryBaseController
             + $contagens['rota'];
 
         return response()->json([
+            'metrics' => $metrics,
+            'seven_days' => $sevenDays,
             'resumo' => [
                 'total_pedidos' => $rows->count(),
                 'abertos' => $abertos,
@@ -62,6 +97,8 @@ class DeliveryDashboardController extends DeliveryBaseController
                 'id' => (int) $row->id,
                 'codigo_publico' => (string) $row->codigo_publico,
                 'status' => (string) $row->status,
+                'canal' => (string) $row->canal,
+                'fulfillment' => (string) $row->fulfillment,
                 'cliente_nome' => (string) $row->cliente_nome,
                 'total' => (float) $row->total,
                 'created_at' => $row->created_at,

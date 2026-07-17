@@ -100,17 +100,37 @@ class DeliveryFreteController extends DeliveryBaseController
         $unidadeId = $this->access->exigirUnidade($request, $usuario, $request->all());
 
         $validator = Validator::make($request->all(), [
-            'cep' => 'nullable|string',
+            'cep' => 'nullable|string|max:16',
             'subtotal' => 'nullable|numeric|min:0',
             'fulfillment' => 'nullable|string',
             'chuva' => 'nullable|boolean',
             'unidade_id' => 'nullable|integer',
+            'endereco' => 'nullable|string|max:500',
+            'logradouro' => 'nullable|string|max:180',
+            'rua' => 'nullable|string|max:180',
+            'numero' => 'nullable|string|max:40',
+            'bairro' => 'nullable|string|max:120',
+            'cidade' => 'nullable|string|max:120',
+            'uf' => 'nullable|string|size:2',
+            'complemento' => 'nullable|string|max:255',
+            'cliente_telefone' => 'nullable|string|max:32',
+            'telefone' => 'nullable|string|max:32',
         ]);
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
 
-        return response()->json($this->frete->calcular($unidadeId, $validator->validated()));
+        $resultado = $this->frete->calcular($unidadeId, $validator->validated());
+        $mensagem = (string) ($resultado['mensagem'] ?? '');
+        $label = $resultado['bloqueado'] ?? false
+            ? 'Entrega indisponível'
+            : (($resultado['frete_gratis'] ?? false) ? 'Frete grátis' : ($mensagem ?: 'Frete calculado'));
+
+        return response()->json(array_merge($resultado, [
+            'label' => $label,
+            'message' => $mensagem,
+            'mensagem' => $mensagem,
+        ]));
     }
 
     private function cep(string $value): string
