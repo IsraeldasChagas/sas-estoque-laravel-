@@ -11160,6 +11160,8 @@ require __DIR__ . '/ayla_routes.php';
 require __DIR__ . '/ayla_admin_routes.php';
 require __DIR__ . '/integrations_routes.php';
 require __DIR__ . '/orcamentos_routes.php';
+require __DIR__ . '/fidelidade_routes.php';
+require __DIR__ . '/delivery_routes.php';
 
 // ============================================
 // DEPLOY - Atualiza o servidor via git pull

@@ -15,7 +15,7 @@ class EnsureSasUsuario
         // Por isso aplicamos CORS via $response->headers->set(...), que funciona para JSON e stream igualmente.
         $response->headers->set('Access-Control-Allow-Origin', '*');
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform, Idempotency-Key');
 
         return $response;
     }

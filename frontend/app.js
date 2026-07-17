@@ -1573,6 +1573,13 @@ const ORCAMENTOS_SECTION_IDS = [
   "orcamentosDashboard", "orcamentosNovo", "orcamentosLista", "orcamentosProposta",
   "orcamentosModelos", "orcamentosClientes", "orcamentosItens", "orcamentosConfiguracoes", "orcamentosRelatorios",
 ];
+const FIDELIDADE_SECTION_IDS = [
+  "fidelidadePrograma", "fidelidadeCartoes", "fidelidadeHistorico", "fidelidadeRecompensas", "fidelidadeRelatorios",
+];
+const DELIVERY_SECTION_IDS = [
+  "deliveryDashboard", "deliveryCatalogo", "deliveryCategorias", "deliveryProdutos", "deliveryAdicionais",
+  "deliveryVitrine", "deliveryPedidos", "deliveryFretes", "deliveryEntregadores", "deliveryConfiguracoes",
+];
 const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
   "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
@@ -1594,6 +1601,8 @@ const ALL_NAV_SECTION_IDS = new Set([
   "openClawIntegracao",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
+  ...FIDELIDADE_SECTION_IDS,
+  ...DELIVERY_SECTION_IDS,
 ]);
 
 function syncUrlSectionHash(section) {
@@ -2078,6 +2087,19 @@ const PERMISSOES = {
   const sections = PERMISSOES[perfil]?.sections;
   if (!sections) return;
   ORCAMENTOS_SECTION_IDS.forEach((section) => {
+    if (!sections.includes(section)) sections.push(section);
+  });
+  FIDELIDADE_SECTION_IDS.forEach((section) => {
+    if (!sections.includes(section)) sections.push(section);
+  });
+  DELIVERY_SECTION_IDS.forEach((section) => {
+    if (!sections.includes(section)) sections.push(section);
+  });
+});
+["ATENDENTE_CAIXA", "CAIXA"].forEach((perfil) => {
+  const sections = PERMISSOES[perfil]?.sections;
+  if (!sections) return;
+  ["fidelidadeCartoes", "fidelidadeHistorico"].forEach((section) => {
     if (!sections.includes(section)) sections.push(section);
   });
 });
@@ -5374,7 +5396,7 @@ function applyPermissions() {
   const perfilCfgAuto = (currentUser?.perfil || "").toString().trim().toUpperCase();
   // ADMIN sempre visualiza o protótipo completo, inclusive com permissões antigas personalizadas.
   if (perfilCfgAuto === "ADMIN") {
-    ORCAMENTOS_SECTION_IDS.forEach((s) => {
+    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS, ...DELIVERY_SECTION_IDS].forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
   }
@@ -5499,6 +5521,14 @@ function applyPermissions() {
   if (orcamentosNavSubmenu) {
     const temAcessoOrcamentos = ORCAMENTOS_SECTION_IDS.some((s) => regras.sections.includes(s));
     orcamentosNavSubmenu.classList.toggle("hidden", !temAcessoOrcamentos);
+  }
+  const fidelidadeNavSubmenu = document.getElementById("fidelidadeMenu")?.closest(".nav-submenu");
+  if (fidelidadeNavSubmenu) {
+    fidelidadeNavSubmenu.classList.toggle("hidden", !FIDELIDADE_SECTION_IDS.some((s) => regras.sections.includes(s)));
+  }
+  const deliveryNavSubmenu = document.getElementById("deliveryMenu")?.closest(".nav-submenu");
+  if (deliveryNavSubmenu) {
+    deliveryNavSubmenu.classList.toggle("hidden", !DELIVERY_SECTION_IDS.some((s) => regras.sections.includes(s)));
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
@@ -5795,6 +5825,14 @@ function navigateTo(section) {
     if (ORCAMENTOS_SECTION_IDS.includes(section)) orcamentosNavSubmenuNav.classList.add("open");
     else orcamentosNavSubmenuNav.classList.remove("open");
   }
+  const fidelidadeNavSubmenuNav = document.getElementById("fidelidadeMenu")?.closest(".nav-submenu");
+  if (fidelidadeNavSubmenuNav) {
+    fidelidadeNavSubmenuNav.classList.toggle("open", FIDELIDADE_SECTION_IDS.includes(section));
+  }
+  const deliveryNavSubmenuNav = document.getElementById("deliveryMenu")?.closest(".nav-submenu");
+  if (deliveryNavSubmenuNav) {
+    deliveryNavSubmenuNav.classList.toggle("open", DELIVERY_SECTION_IDS.includes(section));
+  }
   const integracoesNavSubmenuNav = document.getElementById("integracoesMenu")?.closest(".nav-submenu");
   if (integracoesNavSubmenuNav) {
     const intSections = ["integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes"];
@@ -5858,6 +5896,21 @@ function navigateTo(section) {
   else if (section === "orcamentosItens") Promise.resolve(loadOrcamentosItens?.()).catch((e) => showToast(e?.message || "Falha ao carregar itens.", "error"));
   else if (section === "orcamentosConfiguracoes") Promise.resolve(loadOrcamentosConfiguracoes?.()).catch((e) => showToast(e?.message || "Falha ao abrir configurações.", "error"));
   else if (section === "orcamentosRelatorios") Promise.resolve(loadOrcamentosRelatorios?.()).catch((e) => showToast(e?.message || "Falha ao carregar relatórios.", "error"));
+  else if (section === "fidelidadePrograma") Promise.resolve(loadFidelidadePrograma?.()).catch((e) => showToast(e?.message || "Falha ao carregar o programa.", "error"));
+  else if (section === "fidelidadeCartoes") Promise.resolve(loadFidelidadeCartoes?.()).catch((e) => showToast(e?.message || "Falha ao carregar cartões.", "error"));
+  else if (section === "fidelidadeHistorico") Promise.resolve(loadFidelidadeHistorico?.()).catch((e) => showToast(e?.message || "Falha ao carregar o extrato.", "error"));
+  else if (section === "fidelidadeRecompensas") Promise.resolve(loadFidelidadeRecompensas?.()).catch((e) => showToast(e?.message || "Falha ao carregar recompensas.", "error"));
+  else if (section === "fidelidadeRelatorios") Promise.resolve(loadFidelidadeRelatorios?.()).catch((e) => showToast(e?.message || "Falha ao carregar relatórios.", "error"));
+  else if (section === "deliveryDashboard") Promise.resolve(loadDeliveryDashboard?.()).catch((e) => showToast(e?.message || "Falha ao carregar Delivery.", "error"));
+  else if (section === "deliveryCatalogo") Promise.resolve(loadDeliveryCatalogo?.()).catch((e) => showToast(e?.message || "Falha ao carregar o catálogo.", "error"));
+  else if (section === "deliveryCategorias") Promise.resolve(loadDeliveryCategorias?.()).catch((e) => showToast(e?.message || "Falha ao carregar categorias.", "error"));
+  else if (section === "deliveryProdutos") Promise.resolve(loadDeliveryProdutos?.()).catch((e) => showToast(e?.message || "Falha ao carregar produtos.", "error"));
+  else if (section === "deliveryAdicionais") Promise.resolve(loadDeliveryAdicionais?.()).catch((e) => showToast(e?.message || "Falha ao carregar adicionais.", "error"));
+  else if (section === "deliveryVitrine") Promise.resolve(loadDeliveryVitrine?.()).catch((e) => showToast(e?.message || "Falha ao carregar a vitrine.", "error"));
+  else if (section === "deliveryPedidos") Promise.resolve(loadDeliveryPedidos?.()).catch((e) => showToast(e?.message || "Falha ao carregar pedidos.", "error"));
+  else if (section === "deliveryFretes") Promise.resolve(loadDeliveryFretes?.()).catch((e) => showToast(e?.message || "Falha ao carregar fretes.", "error"));
+  else if (section === "deliveryEntregadores") Promise.resolve(loadDeliveryEntregadores?.()).catch((e) => showToast(e?.message || "Falha ao carregar entregadores.", "error"));
+  else if (section === "deliveryConfiguracoes") Promise.resolve(loadDeliveryConfiguracoes?.()).catch((e) => showToast(e?.message || "Falha ao carregar configurações.", "error"));
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
   else if (section === "rhRescisaoSimulador") loadRhRescisaoSimulador?.().catch(() => {});
   else if (section === "rhRescisaoCalculo") loadRhRescisaoCalculo?.().catch(() => {});
