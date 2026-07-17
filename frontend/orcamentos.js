@@ -473,7 +473,7 @@
            <button class="orc-btn orc-btn--primary" data-orc-demo="PDF simulado preparado.">Gerar PDF</button>`, "Proposta")}
         <article class="orc-proposal">
           <div class="orc-proposal__brand">
-            <div style="display:flex;gap:1rem;align-items:center"><img src="imagens/logo.png" alt="Logo" class="orc-proposal__logo"><div><h2>Grupo Sabor Paraense</h2><div>Proposta Comercial</div></div></div>
+            <div style="display:flex;gap:1rem;align-items:center"><img src="imagens/logo-sem-fundo.png?v=20260717" alt="Logo Sabor Paraense" class="orc-proposal__logo"><div><h2>Grupo Sabor Paraense</h2><div>Proposta Comercial</div></div></div>
             <div style="text-align:right"><strong>#${b.id}</strong><div>${esc(b.data)}</div>${badge(b.status)}</div>
           </div>
           <div class="orc-proposal__columns">

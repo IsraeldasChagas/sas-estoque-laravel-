@@ -6,6 +6,8 @@
   --orc-success: #138a55;
   --orc-warning: #c47a00;
   --orc-danger: #c53b4a;
+  --orc-shadow: 0 14px 38px rgba(20, 38, 60, 0.08);
+  --orc-shadow-hover: 0 20px 46px rgba(20, 38, 60, 0.13);
   color: var(--text, #263238);
   animation: orcFadeIn 0.25s ease;
 }
@@ -17,21 +19,23 @@
 
 .orc-shell {
   display: grid;
-  gap: 1rem;
-  max-width: 1480px;
+  gap: 1.4rem;
+  max-width: 1440px;
   margin: 0 auto;
+  padding: 0.25rem 0 2rem;
 }
 
 .orc-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.15rem 1.25rem;
+  gap: 1.5rem;
+  padding: 1.45rem 1.55rem;
   border: 1px solid var(--border, rgba(120, 130, 140, 0.2));
-  border-radius: var(--radius, 14px);
-  background: color-mix(in srgb, var(--card-bg, #fff) 88%, transparent);
-  backdrop-filter: blur(14px);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 94%, transparent);
+  box-shadow: var(--orc-shadow);
+  backdrop-filter: blur(18px);
 }
 
 .orc-head h2,
@@ -58,14 +62,14 @@
 
 .orc-head__title {
   display: flex;
-  gap: 0.8rem;
+  gap: 1rem;
   align-items: center;
 }
 
 .orc-head__icon {
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   place-items: center;
   border-radius: 12px;
   background: var(--orc-accent-soft);
@@ -82,15 +86,15 @@
 .orc-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.7rem;
   align-items: center;
 }
 
 .orc-btn {
-  min-height: 42px;
-  padding: 0.62rem 0.9rem;
+  min-height: 44px;
+  padding: 0.68rem 1rem;
   border: 1px solid var(--border, rgba(120, 130, 140, 0.22));
-  border-radius: 10px;
+  border-radius: 11px;
   background: var(--card-bg, #fff);
   color: var(--text, #263238);
   cursor: pointer;
@@ -110,26 +114,28 @@
 .orc-btn--success { background: var(--orc-success); color: #fff; border-color: var(--orc-success); }
 .orc-btn--danger { color: var(--orc-danger); border-color: color-mix(in srgb, var(--orc-danger) 45%, transparent); }
 .orc-btn--ghost { background: transparent; }
-.orc-btn--sm { min-height: 34px; padding: 0.4rem 0.62rem; font-size: 0.8rem; }
+.orc-btn--sm { min-height: 36px; padding: 0.45rem 0.7rem; font-size: 0.8rem; }
 
 .orc-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(150px, 1fr));
-  gap: 0.85rem;
+  gap: 1.15rem;
 }
 
 .orc-kpi,
 .orc-card {
   border: 1px solid var(--border, rgba(120, 130, 140, 0.2));
-  border-radius: var(--radius, 14px);
-  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent);
+  box-shadow: var(--orc-shadow);
+  backdrop-filter: blur(16px);
 }
 
 .orc-kpi {
   display: grid;
-  gap: 0.4rem;
-  min-height: 128px;
-  padding: 1rem;
+  gap: 0.65rem;
+  min-height: 148px;
+  padding: 1.25rem;
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease;
 }
@@ -138,6 +144,7 @@
 .orc-clickable:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--orc-accent) 55%, transparent);
+  box-shadow: var(--orc-shadow-hover);
 }
 
 .orc-kpi__top {
@@ -150,8 +157,8 @@
 
 .orc-kpi__icon {
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   place-items: center;
   border-radius: 9px;
   background: var(--orc-accent-soft);
@@ -172,27 +179,27 @@
 .orc-grid-2 {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
-  gap: 1rem;
+  gap: 1.35rem;
 }
 
 .orc-card {
-  padding: 1rem;
+  padding: 1.3rem;
 }
 
 .orc-card__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.7rem;
-  margin-bottom: 0.9rem;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
 }
 
 .orc-chart {
   display: flex;
   min-height: 245px;
-  padding: 1rem 0.3rem 0;
+  padding: 1.25rem 0.5rem 0;
   align-items: end;
-  gap: 0.75rem;
+  gap: 0.9rem;
   border-bottom: 1px solid var(--border, rgba(120, 130, 140, 0.2));
 }
 
@@ -217,16 +224,17 @@
 
 .orc-list {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.75rem;
 }
 
 .orc-list-row {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
-  gap: 0.65rem;
+  gap: 0.85rem;
   align-items: center;
-  padding: 0.7rem;
-  border-radius: 10px;
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--border, #dce1e6) 70%, transparent);
+  border-radius: 12px;
   background: color-mix(in srgb, var(--bg, #f6f7fb) 75%, transparent);
 }
 
@@ -267,7 +275,7 @@
 .orc-form-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(150px, 1fr));
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .orc-form-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
@@ -275,7 +283,7 @@
 
 .orc-field {
   display: grid;
-  gap: 0.32rem;
+  gap: 0.42rem;
 }
 
 .orc-field > span {
@@ -288,23 +296,24 @@
 .orc-select,
 .orc-textarea {
   width: 100%;
-  min-height: 42px;
-  padding: 0.62rem 0.7rem;
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
   border: 1px solid var(--border, rgba(120, 130, 140, 0.25));
-  border-radius: 9px;
+  border-radius: 11px;
   background: var(--card-bg, #fff);
   color: var(--text, #263238);
   font: inherit;
 }
 
-.orc-textarea { min-height: 90px; resize: vertical; }
+.orc-textarea { min-height: 108px; resize: vertical; }
 .orc-input:focus, .orc-select:focus, .orc-textarea:focus { outline: 2px solid var(--orc-accent-soft); border-color: var(--orc-accent); }
 
 .orc-table-wrap {
   overflow: auto;
   border: 1px solid var(--border, rgba(120, 130, 140, 0.2));
-  border-radius: var(--radius, 14px);
+  border-radius: 16px;
   background: var(--card-bg, #fff);
+  box-shadow: 0 10px 28px rgba(20, 38, 60, 0.06);
 }
 
 .orc-table {
@@ -315,7 +324,7 @@
 
 .orc-table th,
 .orc-table td {
-  padding: 0.78rem 0.72rem;
+  padding: 0.95rem 0.85rem;
   border-bottom: 1px solid var(--border, rgba(120, 130, 140, 0.15));
   text-align: left;
   vertical-align: middle;
@@ -334,13 +343,13 @@
 
 .orc-wizard {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 1.35rem;
 }
 
 .orc-wizard__steps {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.6rem;
   align-self: start;
   position: sticky;
   top: 0.5rem;
@@ -349,11 +358,11 @@
 .orc-step {
   display: grid;
   grid-template-columns: 34px 1fr;
-  gap: 0.6rem;
+  gap: 0.75rem;
   align-items: center;
-  padding: 0.65rem;
+  padding: 0.8rem;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   color: var(--muted, #607d8b);
   text-align: left;
@@ -383,15 +392,15 @@
 }
 
 .orc-wizard__body {
-  min-height: 520px;
+  min-height: 560px;
 }
 
 .orc-wizard__footer {
   display: flex;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
+  gap: 1rem;
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
   border-top: 1px solid var(--border, rgba(120, 130, 140, 0.2));
 }
 
@@ -399,20 +408,21 @@
 .orc-model-grid,
 .orc-client-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+  gap: 1.15rem;
 }
 
 .orc-choice,
 .orc-model,
 .orc-client {
   display: grid;
-  gap: 0.65rem;
-  min-height: 140px;
-  padding: 1rem;
+  gap: 0.85rem;
+  min-height: 165px;
+  padding: 1.25rem;
   border: 1px solid var(--border, rgba(120, 130, 140, 0.2));
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--card-bg, #fff) 92%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-bg, #fff) 96%, transparent);
+  box-shadow: var(--orc-shadow);
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease;
 }
@@ -429,9 +439,9 @@
 
 .orc-summary {
   display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-radius: 12px;
+  gap: 0.7rem;
+  padding: 1.25rem;
+  border-radius: 15px;
   background: color-mix(in srgb, var(--orc-accent) 8%, var(--card-bg, #fff));
 }
 
@@ -451,13 +461,13 @@
 
 .orc-tabs {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.65rem;
   overflow: auto;
   padding-bottom: 0.2rem;
 }
 
 .orc-tab {
-  padding: 0.55rem 0.8rem;
+  padding: 0.68rem 1rem;
   border: 0;
   border-radius: 9px;
   background: transparent;
@@ -470,35 +480,38 @@
 .orc-tab.is-active { background: var(--orc-accent-soft); color: var(--orc-accent); }
 
 .orc-proposal {
-  max-width: 930px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: clamp(1.25rem, 4vw, 3rem);
-  border-radius: 4px;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  border-radius: 18px;
   background: #fff;
   color: #263238;
   border: 1px solid #dce1e6;
+  box-shadow: 0 24px 65px rgba(20, 38, 60, 0.15);
 }
 
 .orc-proposal__brand {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 1.2rem;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
   border-bottom: 3px solid var(--orc-accent);
 }
 
 .orc-proposal__logo {
-  width: 58px;
-  height: 58px;
+  width: 92px;
+  height: 92px;
   object-fit: contain;
+  background: transparent;
+  filter: drop-shadow(0 8px 14px rgba(20, 38, 60, 0.16));
 }
 
 .orc-proposal__columns {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin: 1.2rem 0;
+  gap: 1.5rem;
+  margin: 1.6rem 0;
 }
 
 .orc-signature {
@@ -546,12 +559,16 @@
 }
 
 .orc-notice {
-  padding: 0.75rem 0.9rem;
+  padding: 0.9rem 1.05rem;
   border: 1px solid color-mix(in srgb, var(--orc-warning) 30%, transparent);
-  border-radius: 10px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--orc-warning) 9%, transparent);
   color: var(--text, #263238);
   font-size: 0.85rem;
+}
+
+@media (max-width: 1280px) {
+  .orc-kpis { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
 }
 
 @media (max-width: 1100px) {
@@ -562,6 +579,7 @@
 }
 
 @media (max-width: 760px) {
+  .orc-shell { gap: 1rem; }
   .orc-head { flex-direction: column; }
   .orc-head .orc-actions, .orc-actions .orc-btn { width: 100%; }
   .orc-wizard { grid-template-columns: 1fr; }
@@ -587,8 +605,10 @@
 
 @media (max-width: 520px) {
   .orc-kpis, .orc-choice-grid, .orc-model-grid, .orc-client-grid { grid-template-columns: 1fr; }
-  .orc-kpi { min-height: 104px; }
-  .orc-card, .orc-head { padding: 0.85rem; }
+  .orc-kpi { min-height: 118px; padding: 1rem; }
+  .orc-card, .orc-head { padding: 1rem; }
+  .orc-proposal__brand { align-items: flex-start; }
+  .orc-proposal__logo { width: 72px; height: 72px; }
   .orc-wizard__footer { position: sticky; bottom: 0; background: var(--card-bg, #fff); padding-bottom: 0.35rem; }
   .orc-wizard__footer .orc-btn { flex: 1; }
   .orc-signature { grid-template-columns: 1fr; }
