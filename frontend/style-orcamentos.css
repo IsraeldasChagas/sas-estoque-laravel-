@@ -8,8 +8,30 @@
   --orc-danger: #c53b4a;
   --orc-shadow: 0 14px 38px rgba(20, 38, 60, 0.08);
   --orc-shadow-hover: 0 20px 46px rgba(20, 38, 60, 0.13);
+  width: 100%;
+  min-width: 0;
+  padding: clamp(1rem, 2vw, 1.75rem);
+  overflow-x: clip;
+  box-sizing: border-box;
+  container-type: inline-size;
   color: var(--text, #263238);
   animation: orcFadeIn 0.25s ease;
+}
+
+.orc-root *,
+.orc-root *::before,
+.orc-root *::after {
+  box-sizing: border-box;
+}
+
+.orc-root > *,
+.orc-shell > *,
+.orc-grid-2 > *,
+.orc-kpis > *,
+.orc-wizard > *,
+.orc-form-grid > *,
+.orc-filter-grid > * {
+  min-width: 0;
 }
 
 @keyframes orcFadeIn {
@@ -19,6 +41,8 @@
 
 .orc-shell {
   display: grid;
+  width: 100%;
+  min-width: 0;
   gap: 1.4rem;
   max-width: 1440px;
   margin: 0 auto;
@@ -26,6 +50,8 @@
 }
 
 .orc-head {
+  width: 100%;
+  max-width: 100%;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -118,7 +144,7 @@
 
 .orc-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 1.15rem;
 }
 
@@ -274,11 +300,11 @@
 .orc-filter-grid,
 .orc-form-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.orc-form-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+.orc-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .orc-field--full { grid-column: 1 / -1; }
 
 .orc-field {
@@ -343,7 +369,9 @@
 
 .orc-wizard {
   display: grid;
-  grid-template-columns: 270px minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
   gap: 1.35rem;
 }
 
@@ -408,7 +436,7 @@
 .orc-model-grid,
 .orc-client-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.15rem;
 }
 
@@ -567,8 +595,36 @@
   font-size: 0.85rem;
 }
 
-@media (max-width: 1280px) {
-  .orc-kpis { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+@container (max-width: 980px) {
+  .orc-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .orc-wizard { grid-template-columns: 205px minmax(0, 1fr); gap: 1rem; }
+  .orc-card { padding: 1.15rem; }
+}
+
+@container (max-width: 760px) {
+  .orc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .orc-grid-2 { grid-template-columns: 1fr; }
+  .orc-wizard { grid-template-columns: 1fr; }
+  .orc-wizard__steps {
+    display: flex;
+    position: static;
+    overflow-x: auto;
+    padding: 0.15rem 0.1rem 0.65rem;
+  }
+  .orc-step {
+    min-width: 76px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .orc-step__label { max-width: 76px; }
+  .orc-filter-grid, .orc-form-grid { grid-template-columns: 1fr; }
+  .orc-field--full { grid-column: auto; }
+}
+
+@container (max-width: 480px) {
+  .orc-kpis { grid-template-columns: 1fr; }
+  .orc-choice-grid, .orc-model-grid, .orc-client-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1100px) {
@@ -579,6 +635,7 @@
 }
 
 @media (max-width: 760px) {
+  .orc-root { padding: 0.9rem; }
   .orc-shell { gap: 1rem; }
   .orc-head { flex-direction: column; }
   .orc-head .orc-actions, .orc-actions .orc-btn { width: 100%; }
@@ -604,6 +661,7 @@
 }
 
 @media (max-width: 520px) {
+  .orc-root { padding: 0.65rem; }
   .orc-kpis, .orc-choice-grid, .orc-model-grid, .orc-client-grid { grid-template-columns: 1fr; }
   .orc-kpi { min-height: 118px; padding: 1rem; }
   .orc-card, .orc-head { padding: 1rem; }
