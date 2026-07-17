@@ -119,36 +119,94 @@ a{color:inherit}
   border-radius:8px;padding:.35rem .7rem;
 }
 
-/* Banner */
-.vf-loja-banner{margin:0 auto 18px;max-width:920px}
-.vf-loja-banner__media{
-  position:relative;border-radius:1rem;overflow:hidden;border:1px solid color-mix(in srgb,var(--primary) 18%,white);
-  box-shadow:var(--shadow);background:#e2e8f0;aspect-ratio:3.2/1;min-height:150px;max-height:240px;
-  margin:0 auto;
+/* Banner — carrossel VF (fade + fogo) */
+.vf-loja-banner-card{margin:0 auto 18px;max-width:920px;overflow:hidden}
+.vf-loja-banner-carousel.vf-loja-banner-media{
+  --vf-loja-banner-h:clamp(168px,26vw,240px);
+  position:relative;display:flex;flex-direction:column;width:100%;overflow:hidden;
+  border-radius:1rem;border:1px solid color-mix(in srgb,var(--primary) 18%,white);
+  box-shadow:var(--shadow);background:#eef2f7;
 }
-.vf-loja-banner__media img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
-.vf-loja-banner__ctrl{
-  position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;
-  border:0;background:rgba(255,255,255,.88);color:#0f172a;font-size:22px;cursor:pointer;z-index:2;
-  box-shadow:0 2px 8px rgba(15,23,42,.18);
+.vf-loja-banner-inner{
+  position:relative;flex:1 1 auto;min-height:0;
+  height:var(--vf-loja-banner-h);max-height:var(--vf-loja-banner-h);
+  overflow:hidden;border-radius:inherit;isolation:isolate;background:#eef2f7;
 }
-.vf-loja-banner__ctrl.prev{left:10px}
-.vf-loja-banner__ctrl.next{right:10px}
-.vf-loja-banner__scrim{
-  position:absolute;left:0;right:0;bottom:0;padding:12px 16px;
-  background:linear-gradient(transparent,rgba(15,23,42,.55));
-  text-align:center;
+.vf-loja-banner-item{
+  position:absolute;inset:0;opacity:0;pointer-events:none;z-index:0;
 }
-.vf-loja-banner__scrim a{color:#fff;font-weight:700;font-size:.86rem}
-.vf-loja-banner__dots{
-  position:absolute;left:50%;bottom:10px;transform:translateX(-50%);
-  display:flex;gap:6px;z-index:2;
+.vf-loja-banner-carousel--fade .vf-loja-banner-item{
+  transition:opacity .75s ease-in-out;
 }
-.vf-loja-banner__dots button{
-  width:8px;height:8px;border-radius:50%;border:0;padding:0;cursor:pointer;
-  background:rgba(255,255,255,.55);
+.vf-loja-banner-item.is-active{
+  opacity:1;pointer-events:auto;z-index:1;
 }
-.vf-loja-banner__dots button.is-active{background:#fff}
+.vf-loja-banner-slide-frame{
+  display:flex;align-items:center;justify-content:center;width:100%;
+  height:var(--vf-loja-banner-h);max-height:var(--vf-loja-banner-h);
+  overflow:hidden;background:#eef2f7;
+}
+.vf-loja-banner-img{
+  max-width:100%;max-height:100%;width:auto;height:auto;
+  object-fit:contain;object-position:center center;display:block;
+}
+.vf-loja-banner-ctrl{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:5;
+  width:2.25rem;height:2.25rem;border:0;border-radius:50%;cursor:pointer;
+  color:#fff;font-size:1.35rem;line-height:1;
+  background:rgba(0,0,0,.45);display:grid;place-items:center;
+}
+.vf-loja-banner-ctrl.prev{left:.65rem}
+.vf-loja-banner-ctrl.next{right:.65rem}
+.vf-loja-banner-scrim{
+  position:absolute;left:0;right:0;bottom:0;z-index:4;padding:12px 16px;text-align:center;
+  background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,.12) 55%,transparent);
+  pointer-events:none;
+}
+.vf-loja-banner-scrim a{pointer-events:auto;color:#fff;font-weight:700;font-size:.86rem;text-decoration:underline}
+
+/* Camadas de fogo ambient + burst na troca (igual VendaFácil) */
+.vf-loja-banner-carousel--fire .vf-loja-banner-inner::before{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.38;
+  background:
+    radial-gradient(ellipse 85% 60% at 50% 105%,rgba(255,55,0,.5) 0%,transparent 58%),
+    radial-gradient(ellipse 55% 45% at 22% 98%,rgba(255,160,40,.42) 0%,transparent 52%),
+    radial-gradient(ellipse 55% 45% at 78% 98%,rgba(255,90,0,.38) 0%,transparent 52%);
+  mix-blend-mode:screen;
+  animation:vfBannerFireAmbient 2.8s ease-in-out infinite;
+}
+@keyframes vfBannerFireAmbient{
+  0%,100%{opacity:.32;transform:translateY(0) scaleY(1);filter:saturate(1)}
+  50%{opacity:.48;transform:translateY(-1px) scaleY(1.01);filter:saturate(1.35)}
+}
+.vf-loja-banner-carousel--fire .vf-loja-banner-inner::after{
+  content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;
+  background:
+    radial-gradient(ellipse 110% 85% at 50% 115%,rgba(255,40,0,.65) 0%,transparent 58%),
+    radial-gradient(ellipse 70% 50% at 50% 100%,rgba(255,200,60,.45) 0%,transparent 55%);
+  mix-blend-mode:screen;
+}
+.vf-loja-banner-carousel--fire.vf-loja-banner--ignite .vf-loja-banner-inner::after{
+  animation:vfBannerFireBurst .78s ease-out forwards;
+}
+@keyframes vfBannerFireBurst{
+  0%{opacity:0;transform:scaleY(.92);filter:brightness(1)}
+  35%{opacity:.95;transform:scaleY(1.02);filter:brightness(1.35) saturate(1.75)}
+  100%{opacity:0;transform:scaleY(1);filter:brightness(1)}
+}
+.vf-loja-banner-carousel--fire.vf-loja-banner--ignite .vf-loja-banner-item.is-active .vf-loja-banner-img{
+  animation:vfBannerImgFlare .75s ease-out;
+}
+@keyframes vfBannerImgFlare{
+  0%{filter:brightness(1) saturate(1)}
+  40%{filter:brightness(1.22) saturate(1.35) contrast(1.05)}
+  100%{filter:brightness(1) saturate(1)}
+}
+@media (prefers-reduced-motion:reduce){
+  .vf-loja-banner-carousel--fire .vf-loja-banner-inner::before,
+  .vf-loja-banner-carousel--fire .vf-loja-banner-inner::after{animation:none!important;opacity:.22!important}
+  .vf-loja-banner-carousel--fade .vf-loja-banner-item{transition-duration:.01ms!important}
+}
 
 /* Filter */
 .vf-filter-bar{
@@ -301,5 +359,5 @@ input:focus,textarea:focus,select:focus{outline:2px solid #bfdbfe;border-color:v
   .tracking-grid{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
   .span-2{grid-column:auto}
-  .vf-loja-banner__media{aspect-ratio:2.2/1}
+  .vf-loja-banner-carousel.vf-loja-banner-media{--vf-loja-banner-h:clamp(140px,38vw,200px)}
 }

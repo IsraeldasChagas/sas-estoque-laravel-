@@ -9,21 +9,23 @@
 @endif
 
 @if($banners->isNotEmpty())
-<section class="vf-loja-banner" data-banner-carousel>
-    <div class="vf-loja-banner__media">
-        @foreach($banners as $banner)
-            <img src="{{ $banner['url'] }}" alt="{{ $banner['alt'] }}" fetchpriority="{{ $loop->first ? 'high' : 'auto' }}" @if(!$loop->first) hidden @endif>
-        @endforeach
-        @if($banners->count() > 1)
-            <button type="button" class="vf-loja-banner__ctrl prev" data-banner-prev aria-label="Banner anterior">‹</button>
-            <button type="button" class="vf-loja-banner__ctrl next" data-banner-next aria-label="Próximo banner">›</button>
-            <div class="vf-loja-banner__dots" data-banner-dots>
-                @foreach($banners as $banner)
-                    <button type="button" class="{{ $loop->first ? 'is-active' : '' }}" data-banner-dot="{{ $loop->index }}" aria-label="Banner {{ $loop->iteration }}"></button>
-                @endforeach
-            </div>
+@php $multiBanner = $banners->count() > 1; @endphp
+<section class="vf-loja-banner vf-loja-banner-card">
+    <div id="vfLojaBanner" class="vf-loja-banner-carousel vf-loja-banner-media{{ $multiBanner ? ' vf-loja-banner-carousel--fire vf-loja-banner-carousel--fade' : '' }}" data-banner-carousel @if($multiBanner) data-banner-auto="4500" @endif>
+        <div class="vf-loja-banner-inner" data-banner-inner>
+            @foreach($banners as $banner)
+                <div class="vf-loja-banner-item{{ $loop->first ? ' is-active' : '' }}" data-banner-item @if(!$loop->first) aria-hidden="true" @endif>
+                    <div class="vf-loja-banner-slide-frame">
+                        <img src="{{ $banner['url'] }}" alt="{{ $banner['alt'] }}" class="vf-loja-banner-img" loading="{{ $loop->first ? 'eager' : 'lazy' }}" decoding="async" fetchpriority="{{ $loop->first ? 'high' : 'auto' }}">
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @if($multiBanner)
+            <button type="button" class="vf-loja-banner-ctrl prev" data-banner-prev aria-label="Banner anterior">‹</button>
+            <button type="button" class="vf-loja-banner-ctrl next" data-banner-next aria-label="Próximo banner">›</button>
         @endif
-        <div class="vf-loja-banner__scrim">
+        <div class="vf-loja-banner-scrim vf-loja-banner-scrim--carousel">
             <a href="{{ route('delivery.public.store', $slug) }}">Ver Promoções</a>
         </div>
     </div>
@@ -98,19 +100,48 @@
 @push('scripts')
 <script>
 (function () {
-  const banner = document.querySelector('[data-banner-carousel]');
-  if (banner && banner.querySelectorAll('.vf-loja-banner__media > img').length > 1) {
-    let slide = 0;
-    const slides = [...banner.querySelectorAll('.vf-loja-banner__media > img')];
-    const dots = [...banner.querySelectorAll('[data-banner-dot]')];
-    const show = (n) => {
-      slide = n;
-      slides.forEach((img, i) => { img.hidden = i !== n; });
-      dots.forEach((dot, i) => dot.classList.toggle('is-active', i === n));
-    };
-    banner.querySelector('[data-banner-prev]')?.addEventListener('click', () => show((slide - 1 + slides.length) % slides.length));
-    banner.querySelector('[data-banner-next]')?.addEventListener('click', () => show((slide + 1) % slides.length));
-    dots.forEach((dot) => dot.addEventListener('click', () => show(Number(dot.dataset.bannerDot))));
+  const el = document.querySelector('[data-banner-carousel]');
+  if (el) {
+    const items = [...el.querySelectorAll('[data-banner-item]')];
+    if (items.length > 1) {
+      let slide = 0;
+      let igniteTimer = null;
+      let autoTimer = null;
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced) {
+        el.classList.remove('vf-loja-banner-carousel--fire', 'vf-loja-banner-carousel--fade');
+      }
+
+      const show = (n) => {
+        if (n === slide) return;
+        if (!reduced) {
+          clearTimeout(igniteTimer);
+          el.classList.add('vf-loja-banner--ignite');
+          igniteTimer = setTimeout(() => el.classList.remove('vf-loja-banner--ignite'), 620);
+        }
+        slide = (n + items.length) % items.length;
+        items.forEach((item, i) => {
+          const active = i === slide;
+          item.classList.toggle('is-active', active);
+          item.setAttribute('aria-hidden', active ? 'false' : 'true');
+        });
+      };
+
+      const next = () => show(slide + 1);
+      const prev = () => show(slide - 1);
+      el.querySelector('[data-banner-prev]')?.addEventListener('click', () => { prev(); restartAuto(); });
+      el.querySelector('[data-banner-next]')?.addEventListener('click', () => { next(); restartAuto(); });
+
+      function restartAuto() {
+        clearInterval(autoTimer);
+        if (reduced) return;
+        const interval = Number(el.dataset.bannerAuto || 4500);
+        autoTimer = setInterval(next, interval);
+      }
+      restartAuto();
+      el.addEventListener('mouseenter', () => clearInterval(autoTimer));
+      el.addEventListener('mouseleave', restartAuto);
+    }
   }
 
   const select = document.querySelector('[data-category-select]');
