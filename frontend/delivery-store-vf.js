@@ -151,8 +151,8 @@
           <p data-public-description>${esc(config.descricao || "A descrição da loja aparecerá aqui.")}</p>
           <div class="vf-preview-products"><span></span><span></span><span></span></div>
           <div class="vf-preview-path"><small>${config.public_route_available ? "Endereço público" : "Caminho configurado (rota pública ainda indisponível)"}</small>
-            <code>${esc(config.preview_path)}</code>
-            <div><button class="vf-store-btn" type="button" data-copy-path>Copiar caminho</button>
+            <code>${esc(config.preview_url || config.preview_path)}</code>
+            <div><button class="vf-store-btn" type="button" data-copy-path>Copiar link</button>
             <button class="vf-store-btn" type="button" data-open-path ${config.public_route_available ? "" : "disabled"}>Abrir</button></div>
           </div>
         </aside>
@@ -160,6 +160,7 @@
     </main>`;
 
     const form = $("vfVitrineForm");
+    const publicUrl = config.preview_url || config.preview_path;
     bindDashboard(root);
     form.oninput = () => {
       root.querySelector("[data-public-name]").textContent = value(form, "nome_loja") || "Sua loja";
@@ -187,14 +188,14 @@
     };
     root.querySelector("[data-copy-path]").onclick = async () => {
       try {
-        await navigator.clipboard.writeText(config.preview_path);
-        toast("Caminho copiado.", "success");
+        await navigator.clipboard.writeText(publicUrl);
+        toast("Link da loja copiado.", "success");
       } catch (_) {
-        toast("Não foi possível copiar o caminho.", "error");
+        toast("Não foi possível copiar o link.", "error");
       }
     };
     root.querySelector("[data-open-path]").onclick = () => {
-      if (config.public_route_available) window.open(config.preview_path, "_blank", "noopener");
+      if (config.public_route_available) window.open(publicUrl, "_blank", "noopener");
     };
     form.onsubmit = async (event) => {
       event.preventDefault();
