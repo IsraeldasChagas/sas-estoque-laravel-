@@ -18119,7 +18119,7 @@ async function loadHistoricoReservas() {
   var tbody = document.getElementById('historicoReservasTableBody');
   if (!tbody) return;
   if (!unidadeId) {
-    tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>';
     return;
   }
   var params = 'unidade_id=' + unidadeId;
@@ -18129,7 +18129,7 @@ async function loadHistoricoReservas() {
   try {
     var lista = await fetchJSON('/reservas-mesas/historico?' + params);
     if (!lista || lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Nenhuma reserva encontrada no período.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="reservas-empty">Nenhuma reserva encontrada no período.</td></tr>';
       return;
     }
     tbody.innerHTML = lista.map(function(r) {
@@ -18146,7 +18146,8 @@ async function loadHistoricoReservas() {
         '<td data-label="Pessoas">' + (r.qtd_pessoas || '-') + '</td>' +
         '<td data-label="Mesa">' + escapeHtml(mesaNome) + '</td>' +
         '<td data-label="Status"><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || '').replace(/_/g, ' ') + '</span></td>' +
-        '<td data-label="Total">' + (r.total_reservas_cliente || 1) + '</td></tr>';
+        '<td data-label="Total">' + (r.total_reservas_cliente || 1) + '</td>' +
+        '<td data-label="Ações"><button type="button" class="btn-icon btn-icon--danger" title="Excluir reserva do histórico" aria-label="Excluir reserva do histórico" data-id="' + r.id + '" data-action="excluir-historico">🗑️</button></td></tr>';
     }).join('');
     tbody.querySelectorAll('[data-action="whatsapp-historico"]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
@@ -18155,9 +18156,27 @@ async function loadHistoricoReservas() {
         abrirWhatsAppReserva(r);
       });
     });
+    tbody.querySelectorAll('[data-action="excluir-historico"]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var id = btn.getAttribute('data-id');
+        var reserva = lista.find(function(item) { return String(item.id) === String(id); });
+        var cliente = (reserva && reserva.nome_cliente) || 'esta reserva';
+        if (!confirm('Excluir definitivamente a reserva de ' + cliente + ' do histórico?\n\nUse esta opção apenas para registros de teste. Esta ação não pode ser desfeita.')) return;
+
+        btn.disabled = true;
+        try {
+          var resposta = await fetchJSON('/reservas-mesas/' + id, { method: 'DELETE' });
+          showToast((resposta && resposta.message) || 'Reserva excluída do histórico.', 'success');
+          await loadHistoricoReservas();
+        } catch (err) {
+          btn.disabled = false;
+          showToast(err.message || 'Erro ao excluir reserva.', 'error');
+        }
+      });
+    });
   } catch (err) {
     showToast(err.message || 'Erro ao carregar histórico.', 'error');
-    tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Erro ao carregar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="reservas-empty">Erro ao carregar.</td></tr>';
   }
 }
 

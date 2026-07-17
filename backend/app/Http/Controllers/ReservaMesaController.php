@@ -443,9 +443,41 @@ class ReservaMesaController extends Controller
         return response()->json(['message' => 'Status alterado', 'reserva' => $reserva->fresh(['mesa', 'usuario'])]);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        return $this->cancelar($id);
+        $reserva = ReservaMesa::findOrFail($id);
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->where('ativo', 1)->first() : null;
+
+        if (! ReservaMesaAcesso::temAcessoModulo($usuario)) {
+            return response()->json(['message' => 'Sem permissão para excluir reservas.'], 403);
+        }
+
+        $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
+            return response()->json(['message' => 'Sem permissão para excluir esta reserva.'], 403);
+        }
+
+        $mesaId = (int) $reserva->mesa_id;
+        $dataReserva = $reserva->data_reserva;
+
+        DB::transaction(function () use ($reserva) {
+            if (Schema::hasTable('reserva_mesas')) {
+                DB::table('reserva_mesas')->where('reserva_id', $reserva->id)->delete();
+            }
+            $reserva->delete();
+        });
+
+        $outrasReservas = ReservaMesa::where('mesa_id', $mesaId)
+            ->where('data_reserva', $dataReserva)
+            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+            ->exists();
+
+        if (! $outrasReservas) {
+            Mesa::where('id', $mesaId)->update(['status' => Mesa::STATUS_LIVRE]);
+        }
+
+        return response()->json(['message' => 'Reserva excluída definitivamente do histórico.']);
     }
 
     /**

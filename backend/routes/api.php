@@ -5766,6 +5766,7 @@ Route::get('/reservas-mesas/historico', fn (Request $r) => (new ReservaMesaContr
 Route::post('/reservas-mesas', fn (Request $r) => (new ReservaMesaController())->store($r)->withHeaders($cors));
 Route::get('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->show($id)->withHeaders($cors));
 Route::put('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->update($r, $id)->withHeaders($cors));
+Route::delete('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->destroy($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/cancelar', fn (Request $r, $id) => (new ReservaMesaController())->cancelar($id)->withHeaders($cors));
 Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new ReservaMesaController())->alterarStatus($r, $id)->withHeaders($cors));
 
