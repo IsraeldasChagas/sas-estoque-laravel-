@@ -3,14 +3,17 @@
     $primary = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($config->cor_primaria ?? '')) ? $config->cor_primaria : '#2563eb';
     $endereco = trim((string) ($config->endereco_texto ?? ''));
     $whatsRaw = trim((string) ($config->whatsapp ?? ''));
+    if ($whatsRaw === '') {
+        // Compatibilidade: se só o telefone estiver preenchido, usa como WhatsApp na vitrine.
+        $whatsRaw = trim((string) ($config->telefone ?? ''));
+    }
     $whatsDigits = $whatsRaw !== '' ? preg_replace('/\D+/', '', $whatsRaw) : '';
     if (is_string($whatsDigits) && $whatsDigits !== '' && (strlen($whatsDigits) === 10 || strlen($whatsDigits) === 11)) {
         $whatsDigits = '55'.$whatsDigits;
     }
-    $telRaw = trim((string) ($config->telefone ?? ''));
     $igUrl = trim((string) ($config->instagram_url ?? ''));
     $fbUrl = trim((string) ($config->facebook_url ?? ''));
-    $temContato = $endereco !== '' || $whatsDigits !== '' || $telRaw !== '' || $igUrl !== '' || $fbUrl !== '';
+    $temContato = $endereco !== '' || $whatsDigits !== '' || $igUrl !== '' || $fbUrl !== '';
     $filialNome = trim((string) ($config->filial_nome ?? ''));
     $filialHref = trim((string) ($config->filial_link_url ?? ''));
     $filialLogo = $config->filial_logo_url ?? null;
@@ -97,12 +100,11 @@
                     <div class="vf-info-line"><span class="vf-ico" aria-hidden="true">📍</span><div>{{ $endereco }}</div></div>
                 @endif
                 @if($whatsDigits !== '')
-                    <div class="vf-info-line"><span class="vf-ico" aria-hidden="true">📞</span>
+                    <div class="vf-info-line">
+                        <span class="vf-ico vf-ico--wa" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#25D366" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.43 17.5 2 12.04 2zm5.83 14.1c-.24.68-1.41 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.66-.62-2.92-1.26-4.82-4.2-4.96-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07.99-2.35.26-.28.57-.35.76-.35h.55c.17 0 .4-.06.63.48.24.56.8 1.95.87 2.09.07.14.12.3.02.49-.1.19-.14.3-.28.47-.14.16-.3.36-.42.49-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.94 1.22 2.22 1.36.28.14.44.12.6-.07.17-.19.7-.81.89-1.09.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.7-.17 1.38z"/></svg>
+                        </span>
                         <a href="https://wa.me/{{ $whatsDigits }}" target="_blank" rel="noopener">{{ $whatsRaw }}</a>
-                    </div>
-                @elseif($telRaw !== '')
-                    <div class="vf-info-line"><span class="vf-ico" aria-hidden="true">📞</span>
-                        <a href="tel:{{ preg_replace('/[^\d+]/', '', $telRaw) }}">{{ $telRaw }}</a>
                     </div>
                 @endif
                 @if($igUrl !== '')
