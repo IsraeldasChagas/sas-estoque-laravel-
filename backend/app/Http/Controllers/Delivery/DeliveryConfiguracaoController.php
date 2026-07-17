@@ -278,7 +278,8 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'telefone' => $config->telefone,
             'endereco_texto' => $config->endereco_texto,
             'preview_path' => $previewPath,
-            'preview_url' => url($previewPath),
+            // Preferir o host da requisição (api.*) — APP_URL às vezes aponta pro domínio do frontend.
+            'preview_url' => rtrim(request()->getSchemeAndHttpHost(), '/').$previewPath,
             'public_route_available' => collect(Route::getRoutes())->contains(
                 fn ($route) => ltrim($route->uri(), '/') === 'loja/{slug}'
             ),

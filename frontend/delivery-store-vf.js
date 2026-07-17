@@ -17,11 +17,25 @@
   const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const value = (form, name) => form.elements[name]?.value ?? "";
   const checked = (form, name) => !!form.elements[name]?.checked;
+  const apiOrigin = () => {
+    const fromConfig = String(window.APP_CONFIG?.API_URL || "").replace(/\/api\/?$/, "");
+    if (fromConfig) return fromConfig;
+    if (typeof window.API_URL === "string" && window.API_URL) {
+      return String(window.API_URL).replace(/\/api\/?$/, "");
+    }
+    return "https://api.gruposaborparaense.com.br";
+  };
   const imageUrl = (url) => {
     if (!url) return "";
     if (/^(?:https?:|data:|blob:)/i.test(url)) return url;
-    const base = String(window.APP_CONFIG?.API_URL || "").replace(/\/api\/?$/, "");
+    const base = apiOrigin();
     return `${base}${String(url).startsWith("/") ? "" : "/"}${url}`;
+  };
+  /** Loja pública vive no host da API (Laravel), não no frontend. */
+  const publicStoreUrl = (config) => {
+    const path = config?.preview_path || (config?.slug ? `/loja/${config.slug}` : "");
+    if (!path) return "";
+    return `${apiOrigin()}${String(path).startsWith("/") ? path : `/${path}`}`;
   };
   const breadcrumb = (section) => `<div class="vf-store__breadcrumb"><button type="button" data-vfs-dashboard>Dashboard</button><span>/</span>${esc(section)}</div>`;
   const heading = (title, subtitle) => `<div class="vf-store__heading"><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div>`;
@@ -151,7 +165,7 @@
           <p data-public-description>${esc(config.descricao || "A descrição da loja aparecerá aqui.")}</p>
           <div class="vf-preview-products"><span></span><span></span><span></span></div>
           <div class="vf-preview-path"><small>${config.public_route_available ? "Endereço público" : "Caminho configurado (rota pública ainda indisponível)"}</small>
-            <code>${esc(config.preview_url || config.preview_path)}</code>
+            <code>${esc(publicStoreUrl(config) || config.preview_path)}</code>
             <div><button class="vf-store-btn" type="button" data-copy-path>Copiar link</button>
             <button class="vf-store-btn" type="button" data-open-path ${config.public_route_available ? "" : "disabled"}>Abrir</button></div>
           </div>
@@ -160,7 +174,7 @@
     </main>`;
 
     const form = $("vfVitrineForm");
-    const publicUrl = config.preview_url || config.preview_path;
+    const publicUrl = publicStoreUrl(config);
     bindDashboard(root);
     form.oninput = () => {
       root.querySelector("[data-public-name]").textContent = value(form, "nome_loja") || "Sua loja";
