@@ -3,6 +3,7 @@
 namespace App\Services\Delivery;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -13,7 +14,7 @@ class DeliveryPedidoService
         private readonly DeliveryPedidoStatusService $statusService,
     ) {}
 
-    public function montarItens(int $unidadeId, array $itens): array
+    public function montarItens(int $unidadeId, array $itens, bool $publico = false): array
     {
         if ($itens === []) {
             throw ValidationException::withMessages(['itens' => 'Informe ao menos um item.']);
@@ -24,16 +25,34 @@ class DeliveryPedidoService
 
         foreach ($itens as $index => $item) {
             $produtoId = (int) ($item['produto_id'] ?? 0);
-            $quantidade = max(0.001, (float) ($item['quantidade'] ?? 1));
-            $produto = DB::table('dlv_produtos')
+            $quantidade = (float) ($item['quantidade'] ?? 1);
+            if ($quantidade <= 0 || ($publico && (int) $quantidade != $quantidade)) {
+                throw ValidationException::withMessages(["itens.$index.quantidade" => 'Quantidade inválida.']);
+            }
+            $produtoQuery = DB::table('dlv_produtos')
                 ->where('id', $produtoId)
                 ->where('unidade_id', $unidadeId)
-                ->where('ativo', 1)
-                ->first();
+                ->where('ativo', 1);
+            if ($publico) {
+                $produtoQuery->where('visivel_loja', 1)
+                    ->where(function ($query) use ($unidadeId) {
+                        $query->whereNull('categoria_id')->orWhereExists(fn ($category) => $category
+                            ->selectRaw('1')->from('dlv_categorias')
+                            ->whereColumn('dlv_categorias.id', 'dlv_produtos.categoria_id')
+                            ->where('dlv_categorias.unidade_id', $unidadeId)
+                            ->where('dlv_categorias.ativo', 1));
+                    })->lockForUpdate();
+            }
+            $produto = $produtoQuery->first();
 
             if (! $produto) {
                 throw ValidationException::withMessages([
                     "itens.$index.produto_id" => 'Produto delivery inválido ou inativo.',
+                ]);
+            }
+            if ($publico && (int) $produto->estoque < (int) $quantidade) {
+                throw ValidationException::withMessages([
+                    "itens.$index.quantidade" => "Estoque insuficiente para {$produto->nome}.",
                 ]);
             }
 
@@ -88,13 +107,15 @@ class DeliveryPedidoService
 
     public function criar(int $unidadeId, array $payload, ?int $usuarioId): int
     {
-        $montagem = $this->montarItens($unidadeId, $payload['itens'] ?? []);
-        $totais = $this->calcularTotais($unidadeId, $payload, $montagem);
         $agora = now();
-        $token = Str::random(40);
+        $entregadorToken = Str::random(40);
+        $clienteToken = bin2hex(random_bytes(32));
+        $publico = strtolower((string) ($payload['canal'] ?? 'admin')) === 'loja';
 
-        return (int) DB::transaction(function () use ($unidadeId, $payload, $usuarioId, $montagem, $totais, $agora, $token) {
-            $id = DB::table('dlv_pedidos')->insertGetId([
+        return (int) DB::transaction(function () use ($unidadeId, $payload, $usuarioId, $agora, $entregadorToken, $clienteToken, $publico) {
+            $montagem = $this->montarItens($unidadeId, $payload['itens'] ?? [], $publico);
+            $totais = $this->calcularTotais($unidadeId, $payload, $montagem);
+            $pedidoData = [
                 'unidade_id' => $unidadeId,
                 'codigo_publico' => 'TMP-'.$agora->format('YmdHis').'-'.Str::lower(Str::random(4)),
                 'status' => 'pendente_loja',
@@ -117,12 +138,23 @@ class DeliveryPedidoService
                 'frete_valor' => $totais['frete_valor'],
                 'total' => $totais['total'],
                 'entregador_id' => $payload['entregador_id'] ?? null,
-                'entregador_token' => $token,
+                'entregador_token' => $entregadorToken,
                 'observacoes' => $payload['observacoes'] ?? null,
                 'usuario_id' => $usuarioId,
                 'created_at' => $agora,
                 'updated_at' => $agora,
-            ]);
+            ];
+            if (Schema::hasColumn('dlv_pedidos', 'cliente_email')) {
+                $pedidoData['cliente_email'] = $payload['cliente_email'] ?? null;
+            }
+            if (Schema::hasColumn('dlv_pedidos', 'cliente_token')) {
+                $pedidoData['cliente_token'] = $clienteToken;
+            }
+            if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em')) {
+                $pedidoData['estoque_baixado_em'] = $publico ? $agora : null;
+                $pedidoData['estoque_restaurado_em'] = null;
+            }
+            $id = DB::table('dlv_pedidos')->insertGetId($pedidoData);
 
             $codigo = 'DLV-'.str_pad((string) $unidadeId, 3, '0', STR_PAD_LEFT).'-'.$agora->format('Y').'-'.str_pad((string) $id, 5, '0', STR_PAD_LEFT);
             DB::table('dlv_pedidos')->where('id', $id)->update(['codigo_publico' => $codigo]);
@@ -141,6 +173,16 @@ class DeliveryPedidoService
                     'created_at' => $agora,
                     'updated_at' => $agora,
                 ]);
+                if ($publico) {
+                    $afetadas = DB::table('dlv_produtos')
+                        ->where('id', $linha['produto_id'])
+                        ->where('unidade_id', $unidadeId)
+                        ->where('estoque', '>=', (int) $linha['quantidade'])
+                        ->decrement('estoque', (int) $linha['quantidade']);
+                    if ($afetadas !== 1) {
+                        throw ValidationException::withMessages(['itens' => "Estoque insuficiente para {$linha['nome_produto']}."]);
+                    }
+                }
             }
 
             $this->registrarHistorico($id, null, 'pendente_loja', 'criado', ['total' => $totais['total']], $usuarioId);
@@ -155,10 +197,30 @@ class DeliveryPedidoService
         $this->statusService->validarTransicao((string) $pedido->status, $novoStatus);
 
         DB::transaction(function () use ($pedido, $novoStatus, $usuarioId, $detalhe) {
-            DB::table('dlv_pedidos')->where('id', $pedido->id)->update([
+            $atual = DB::table('dlv_pedidos')->where('id', $pedido->id)->lockForUpdate()->first();
+            if (! $atual) {
+                return;
+            }
+            $update = [
                 'status' => $novoStatus,
                 'updated_at' => now(),
-            ]);
+            ];
+            if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em')
+                && in_array($novoStatus, ['cancelado', 'endereco_nao_encontrado'], true)
+                && $atual->estoque_baixado_em !== null
+                && $atual->estoque_restaurado_em === null) {
+                $itens = DB::table('dlv_pedido_itens')->where('pedido_id', $atual->id)->get();
+                foreach ($itens as $item) {
+                    if ($item->produto_id !== null) {
+                        DB::table('dlv_produtos')
+                            ->where('id', $item->produto_id)
+                            ->where('unidade_id', $atual->unidade_id)
+                            ->increment('estoque', (int) $item->quantidade);
+                    }
+                }
+                $update['estoque_restaurado_em'] = now();
+            }
+            DB::table('dlv_pedidos')->where('id', $pedido->id)->update($update);
             $this->registrarHistorico(
                 (int) $pedido->id,
                 (string) $pedido->status,
@@ -222,6 +284,7 @@ class DeliveryPedidoService
             'cliente_nome' => (string) $pedido->cliente_nome,
             'cliente_telefone' => $pedido->cliente_telefone,
             'cliente_whatsapp' => $pedido->cliente_whatsapp,
+            'cliente_email' => $pedido->cliente_email ?? null,
             'endereco' => [
                 'texto' => $pedido->endereco_texto,
                 'cep' => $pedido->endereco_cep,
@@ -298,16 +361,18 @@ class DeliveryPedidoService
                 ];
             }
 
-            if ($qtdEscolhas < $min) {
-                throw ValidationException::withMessages(['opcoes.adicionais' => "Selecione ao menos {$min} adicional(is)."]);
-            }
             if ($max !== null && $qtdEscolhas > $max) {
                 throw ValidationException::withMessages(['opcoes.adicionais' => "Selecione no máximo {$max} adicional(is)."]);
             }
         }
+        $min = (int) ($produto->acrescimo_escolhas_min ?? 0);
+        if ($adicionaisSelecionados->sum(fn ($sel) => max(1, (int) ($sel['quantidade'] ?? 1))) < $min) {
+            throw ValidationException::withMessages(['opcoes.adicionais' => "Selecione ao menos {$min} adicional(is)."]);
+        }
 
         $snapshotRetiradas = [];
         if ($retiradas->isNotEmpty()) {
+            $retiradas = $retiradas->unique(fn ($ret) => (int) ($ret['id'] ?? $ret['ingrediente_id'] ?? 0))->values();
             $maxRetirar = $produto->max_ingredientes_retirar !== null ? (int) $produto->max_ingredientes_retirar : null;
             if ($maxRetirar !== null && $retiradas->count() > $maxRetirar) {
                 throw ValidationException::withMessages(['opcoes.retiradas' => "Retire no máximo {$maxRetirar} ingrediente(s)."]);

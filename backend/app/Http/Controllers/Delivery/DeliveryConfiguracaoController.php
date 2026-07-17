@@ -278,6 +278,7 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'telefone' => $config->telefone,
             'endereco_texto' => $config->endereco_texto,
             'preview_path' => $previewPath,
+            'preview_url' => url($previewPath),
             'public_route_available' => collect(Route::getRoutes())->contains(
                 fn ($route) => ltrim($route->uri(), '/') === 'loja/{slug}'
             ),

@@ -129,7 +129,9 @@ class DeliveryStoreConfigTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('logo_url', fn ($value) => str_starts_with($value, '/uploads/delivery/lojas/1/logo-'))
             ->assertJsonPath('banner_url', fn ($value) => str_starts_with($value, '/uploads/delivery/lojas/1/banner-'))
-            ->assertJsonPath('public_route_available', false)
+            ->assertJsonPath('preview_path', '/loja/sabor-paraense')
+            ->assertJsonPath('preview_url', fn ($value) => str_ends_with($value, '/loja/sabor-paraense'))
+            ->assertJsonPath('public_route_available', true)
             ->json();
 
         $oldLogo = $first['logo_path'];
