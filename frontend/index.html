@@ -52,6 +52,7 @@
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
+    <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto1" />
     <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
@@ -169,6 +170,22 @@
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="reservaMesa"><span class="nav-icon" aria-hidden="true">🪑</span><span class="nav-label">Mesa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="historicoReservas"><span class="nav-icon" aria-hidden="true">🕐</span><span class="nav-label">Histórico</span></a>
+            </div>
+          </div>
+          <div class="nav-submenu nav-submenu--orcamentos">
+            <a href="#" class="nav-link nav-link-parent" id="orcamentosMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">📑</span><span class="nav-label">Orçamentos</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosDashboard"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Dashboard</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosNovo"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">Novo Orçamento</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosLista"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label">Orçamentos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosModelos"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Modelos</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosClientes"><span class="nav-icon" aria-hidden="true">◎</span><span class="nav-label">Clientes</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosItens"><span class="nav-icon" aria-hidden="true">◆</span><span class="nav-label">Itens e Serviços</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-label">Configurações</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="orcamentosRelatorios"><span class="nav-icon" aria-hidden="true">⌁</span><span class="nav-label">Relatórios</span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--rh">
@@ -5239,6 +5256,35 @@
             </div>
           </section>
         </section>
+
+        <!-- Orçamentos — protótipo navegável, sem persistência/API -->
+        <section id="orcamentosDashboardSection" class="view-section hidden">
+          <div id="orcamentosDashboardRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosNovoSection" class="view-section hidden">
+          <div id="orcamentosNovoRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosListaSection" class="view-section hidden">
+          <div id="orcamentosListaRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosPropostaSection" class="view-section hidden">
+          <div id="orcamentosPropostaRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosModelosSection" class="view-section hidden">
+          <div id="orcamentosModelosRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosClientesSection" class="view-section hidden">
+          <div id="orcamentosClientesRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosItensSection" class="view-section hidden">
+          <div id="orcamentosItensRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosConfiguracoesSection" class="view-section hidden">
+          <div id="orcamentosConfiguracoesRoot" class="orc-root"></div>
+        </section>
+        <section id="orcamentosRelatoriosSection" class="view-section hidden">
+          <div id="orcamentosRelatoriosRoot" class="orc-root"></div>
+        </section>
       </main>
     </div>
 
@@ -5880,6 +5926,15 @@
             <div style="margin-top:0.5rem;"><strong>Submenu: Reservas</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reservas — Mesa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="historicoReservas" /> Reservas — Histórico</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Orçamentos</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosDashboard" /> Orçamentos — Dashboard</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosNovo" /> Orçamentos — Novo orçamento</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosLista" /> Orçamentos — Lista</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosModelos" /> Orçamentos — Modelos</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosClientes" /> Orçamentos — Clientes</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosItens" /> Orçamentos — Itens e serviços</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosConfiguracoes" /> Orçamentos — Configurações</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="orcamentosRelatorios" /> Orçamentos — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRelatorios" /> RH — Relatório</label>
@@ -7496,6 +7551,7 @@
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="comercial-pdv.js?v=20260715-proto2"></script>
     <script src="integracoes.js?v=20260716-int1"></script>
+    <script src="orcamentos.js?v=20260717-proto1"></script>
     <script src="app.js?v=20260716-int1"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      

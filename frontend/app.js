@@ -1569,6 +1569,10 @@ valeConsumoBindOnce();
 
 const storageKey = "sas-estoque-user";
 const currentSectionKey = "sas-estoque-current-section";
+const ORCAMENTOS_SECTION_IDS = [
+  "orcamentosDashboard", "orcamentosNovo", "orcamentosLista", "orcamentosProposta",
+  "orcamentosModelos", "orcamentosClientes", "orcamentosItens", "orcamentosConfiguracoes", "orcamentosRelatorios",
+];
 const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
   "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
@@ -1589,6 +1593,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
   "openClawIntegracao",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
+  ...ORCAMENTOS_SECTION_IDS,
 ]);
 
 function syncUrlSectionHash(section) {
@@ -2067,6 +2072,15 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
 };
+
+// Orçamentos (protótipo): acesso padrão aos perfis administrativos.
+["ADMIN", "GERENTE", "ASSISTENTE_ADMINISTRATIVO"].forEach((perfil) => {
+  const sections = PERMISSOES[perfil]?.sections;
+  if (!sections) return;
+  ORCAMENTOS_SECTION_IDS.forEach((section) => {
+    if (!sections.includes(section)) sections.push(section);
+  });
+});
 
 const LOCAL_TIPOS_LABELS = {
   CAMARA_FRIA: "Câmara Fria",
@@ -5358,6 +5372,12 @@ function applyPermissions() {
     sections = [...sections, "rhFolhaPonto"];
   }
   const perfilCfgAuto = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  // ADMIN sempre visualiza o protótipo completo, inclusive com permissões antigas personalizadas.
+  if (perfilCfgAuto === "ADMIN") {
+    ORCAMENTOS_SECTION_IDS.forEach((s) => {
+      if (!sections.includes(s)) sections = [...sections, s];
+    });
+  }
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
@@ -5474,6 +5494,11 @@ function applyPermissions() {
     const comercialKeys = ["comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal"];
     const temAcessoComercial = comercialKeys.some((k) => regras.sections.includes(k));
     comercialNavSubmenu.classList.toggle("hidden", !temAcessoComercial);
+  }
+  const orcamentosNavSubmenu = document.getElementById("orcamentosMenu")?.closest(".nav-submenu");
+  if (orcamentosNavSubmenu) {
+    const temAcessoOrcamentos = ORCAMENTOS_SECTION_IDS.some((s) => regras.sections.includes(s));
+    orcamentosNavSubmenu.classList.toggle("hidden", !temAcessoOrcamentos);
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
@@ -5765,6 +5790,11 @@ function navigateTo(section) {
     if (cpdvSections.includes(section)) comercialNavSubmenuNav.classList.add("open");
     else comercialNavSubmenuNav.classList.remove("open");
   }
+  const orcamentosNavSubmenuNav = document.getElementById("orcamentosMenu")?.closest(".nav-submenu");
+  if (orcamentosNavSubmenuNav) {
+    if (ORCAMENTOS_SECTION_IDS.includes(section)) orcamentosNavSubmenuNav.classList.add("open");
+    else orcamentosNavSubmenuNav.classList.remove("open");
+  }
   const integracoesNavSubmenuNav = document.getElementById("integracoesMenu")?.closest(".nav-submenu");
   if (integracoesNavSubmenuNav) {
     const intSections = ["integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes"];
@@ -5819,6 +5849,15 @@ function navigateTo(section) {
   else if (section === "aylaCanaisVoz") loadAylaCanaisVoz?.().catch(() => {});
   else if (section === "aylaLogs") loadAylaLogs?.().catch(() => {});
   else if (section === "aylaConfiguracoes") loadAylaConfiguracoes?.().catch(() => {});
+  else if (section === "orcamentosDashboard") loadOrcamentosDashboard?.();
+  else if (section === "orcamentosNovo") loadOrcamentosNovo?.();
+  else if (section === "orcamentosLista") loadOrcamentosLista?.();
+  else if (section === "orcamentosProposta") loadOrcamentosProposta?.();
+  else if (section === "orcamentosModelos") loadOrcamentosModelos?.();
+  else if (section === "orcamentosClientes") loadOrcamentosClientes?.();
+  else if (section === "orcamentosItens") loadOrcamentosItens?.();
+  else if (section === "orcamentosConfiguracoes") loadOrcamentosConfiguracoes?.();
+  else if (section === "orcamentosRelatorios") loadOrcamentosRelatorios?.();
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
   else if (section === "rhRescisaoSimulador") loadRhRescisaoSimulador?.().catch(() => {});
   else if (section === "rhRescisaoCalculo") loadRhRescisaoCalculo?.().catch(() => {});
