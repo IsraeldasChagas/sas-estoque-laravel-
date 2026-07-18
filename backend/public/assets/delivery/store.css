@@ -78,6 +78,18 @@ a{color:inherit}
 .btn.success{background:var(--success);color:#fff}
 .btn.ghost{border-color:var(--line);color:#334155;background:#fff}
 .btn.icon-only{padding:8px 10px}
+.vf-contact-toggle{
+  width:28px;height:28px;min-width:28px;padding:0;
+  border-radius:999px;display:inline-grid;place-items:center;
+  border-color:#cbd5e1;color:#475569;background:#fff;
+}
+.vf-contact-toggle__icon{
+  display:block;transition:transform .18s ease;
+  transform:rotate(-90deg); /* fechado: seta para o lado */
+}
+.vf-contact-toggle[aria-expanded="true"] .vf-contact-toggle__icon{
+  transform:rotate(0deg); /* aberto: seta para baixo */
+}
 .btn.wide{width:100%}
 .cart-button{
   gap:8px;
@@ -309,15 +321,26 @@ a{color:inherit}
 .vf-back-btn{
   display:inline-flex;align-items:center;gap:6px;
   min-height:40px;padding:8px 14px;border-radius:.55rem;
-  border:1px solid color-mix(in srgb,var(--primary) 28%,#cbd5e1);
-  background:color-mix(in srgb,var(--primary) 10%,#fff);
-  color:var(--primary);font:inherit;font-weight:700;text-decoration:none;cursor:pointer;
+  border:1px solid #2563eb;
+  background:#2563eb;
+  color:#fff;font:inherit;font-weight:700;text-decoration:none;cursor:pointer;
+  box-shadow:0 2px 8px rgba(37,99,235,.25);
 }
-.vf-back-btn:hover{background:color-mix(in srgb,var(--primary) 16%,#fff)}
+.vf-back-btn:hover{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
 .vf-back-btn--ghost{
-  background:#fff;border-color:var(--line);color:#334155;font-weight:650;
+  background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;font-weight:650;
+  box-shadow:none;
 }
+.vf-back-btn--ghost:hover{background:#dbeafe;border-color:#60a5fa;color:#1e40af}
 .vf-back-after-action{margin-top:10px;text-align:center}
+a.btn.ghost.vf-back-after-action,
+.btn.ghost.vf-back-after-action{
+  border-color:#2563eb;background:#2563eb;color:#fff;font-weight:700;
+}
+a.btn.ghost.vf-back-after-action:hover,
+.btn.ghost.vf-back-after-action:hover{
+  background:#1d4ed8;border-color:#1d4ed8;color:#fff;
+}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
 .detail-photo{aspect-ratio:1;max-height:520px;border-radius:var(--radius);overflow:hidden;background:var(--primary-soft);display:grid;place-items:center;font-size:70px;color:#93c5fd}
 .detail-photo img{width:100%;height:100%;object-fit:cover}

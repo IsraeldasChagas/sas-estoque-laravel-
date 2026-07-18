@@ -76,9 +76,15 @@
   const storeInfo = document.querySelector('[data-store-info]');
   const contactToggle = document.querySelector('[data-contact-toggle]');
   if (storeInfo && contactToggle) {
+    const syncToggle = (collapsed) => {
+      contactToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      contactToggle.title = collapsed ? 'Ver contato' : 'Ocultar contato';
+    };
+    // Começa expandido (como hoje), seta para baixo.
+    syncToggle(false);
     contactToggle.addEventListener('click', () => {
       const collapsed = storeInfo.classList.toggle('is-collapsed');
-      contactToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      syncToggle(collapsed);
     });
   }
 

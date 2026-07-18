@@ -39,7 +39,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260717-vf7">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260717-vf9">
     <style>:root{--primary:{{ $primary }};--primary-soft:color-mix(in srgb, {{ $primary }} 14%, white);}</style>
 </head>
 <body class="vf-body {{ $footerFixed ? 'vf-body--footer-fixed' : '' }}" data-store="{{ $slug }}">
@@ -82,8 +82,10 @@
             </div>
             <div class="vf-header-actions">
                 @if($temContato)
-                    <button class="btn ghost icon-only" type="button" data-contact-toggle aria-expanded="true" aria-controls="vf-store-info" title="Contato">
-                        <span aria-hidden="true">▾</span>
+                    <button class="btn ghost vf-contact-toggle" type="button" data-contact-toggle aria-expanded="true" aria-controls="vf-store-info" title="Ver contato">
+                        <svg class="vf-contact-toggle__icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+                            <path fill="currentColor" d="M8.12 9.29 12 13.17l3.88-3.88a1 1 0 1 1 1.41 1.42l-4.59 4.58a1 1 0 0 1-1.41 0L6.71 10.7a1 1 0 0 1 1.41-1.41z"/>
+                        </svg>
                     </button>
                 @endif
                 @if($fidelidadeAtiva)
@@ -167,7 +169,7 @@
 </footer>
 
 <script>window.deliveryStore={slug:@json($slug),checkout:@json(route('delivery.public.checkout',$slug)),csrf:@json(csrf_token())};</script>
-<script src="{{ asset('assets/delivery/store.js') }}?v=20260717-vf7"></script>
+<script src="{{ asset('assets/delivery/store.js') }}?v=20260717-vf9"></script>
 @stack('scripts')
 </body>
 </html>
