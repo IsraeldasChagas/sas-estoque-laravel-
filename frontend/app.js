@@ -18767,81 +18767,42 @@ function reservaFidMoeda(valor) {
   return Number(valor || 0).toFixed(2).replace('.', ',');
 }
 
-var _reservaFidMeiosCache = null;
+var _reservaFidCadastroCache = [];
 
-function reservaFidTipoMeio(forma) {
-  if (forma === 'pix') return 'pix';
-  if (forma === 'dinheiro') return 'dinheiro';
-  if (forma === 'credito' || forma === 'debito' || forma === 'maquininha') return 'maquininha';
-  return null;
-}
-
-function reservaFidLabelMeio(forma) {
-  var tipo = reservaFidTipoMeio(forma);
-  if (tipo === 'pix') return 'Recebedor PIX';
-  if (tipo === 'dinheiro') return 'Recebedor (caixa)';
-  return 'Maquininha / recebedor';
-}
-
-function reservaFidOptsFormas(formas, selected) {
-  var lista = formas && formas.length ? formas : [
-    { value: 'pix', label: 'PIX' },
-    { value: 'credito', label: 'Crédito' },
-    { value: 'debito', label: 'Débito' },
-    { value: 'maquininha', label: 'Maquininha' },
-    { value: 'dinheiro', label: 'Dinheiro' }
-  ];
-  return lista.map(function(f) {
-    var sel = selected && f.value === selected ? ' selected' : '';
-    return '<option value="' + escapeHtml(f.value) + '"' + sel + '>' + escapeHtml(f.label) + '</option>';
-  }).join('');
-}
-
-function reservaFidOptsMeios(meios, forma, selectedId) {
-  var tipo = reservaFidTipoMeio(forma);
-  var lista = (meios && tipo && meios[tipo]) ? meios[tipo] : [];
-  if (!lista.length) {
-    return '<option value="">Cadastre em Modos de pagamento</option>';
+function reservaFidOptsCadastro(cadastro, selectedId) {
+  if (!cadastro || !cadastro.length) {
+    return '<option value="">Cadastre em Reserva → Forma de pagamento</option>';
   }
-  return '<option value="">Selecione…</option>' + lista.map(function(m) {
-    var sel = selectedId && Number(selectedId) === Number(m.id) ? ' selected' : '';
-    return '<option value="' + m.id + '"' + sel + '>' + escapeHtml(m.nome) + '</option>';
+  var opts = cadastro.map(function(f) {
+    var sel = selectedId && Number(selectedId) === Number(f.id) ? ' selected' : '';
+    var txt = f.label || ((f.tipo_label || f.tipo || '') + ' — ' + (f.nome || ''));
+    return '<option value="' + f.id + '"' + sel + '>' + escapeHtml(txt) + '</option>';
   }).join('');
+  if (!selectedId && cadastro.length === 1) {
+    return opts.replace(' value="' + cadastro[0].id + '"', ' value="' + cadastro[0].id + '" selected');
+  }
+  return '<option value="">Selecione a forma…</option>' + opts;
 }
 
-function reservaFidNomeMeio(meios, forma, meioId) {
-  var tipo = reservaFidTipoMeio(forma);
-  var lista = (meios && tipo && meios[tipo]) ? meios[tipo] : [];
-  for (var i = 0; i < lista.length; i++) {
-    if (Number(lista[i].id) === Number(meioId)) return lista[i].nome;
+function reservaFidLabelCadastro(cadastro, meioId) {
+  if (!cadastro || !cadastro.length) return '';
+  for (var i = 0; i < cadastro.length; i++) {
+    if (Number(cadastro[i].id) === Number(meioId)) {
+      return cadastro[i].label || ((cadastro[i].tipo_label || '') + ' — ' + (cadastro[i].nome || ''));
+    }
   }
   return '';
 }
 
-function reservaFidAtualizarLinhaMeio(row, meios) {
-  if (!row) return;
-  var formaEl = row.querySelector('[data-pag-forma]');
-  var meioSel = row.querySelector('[data-pag-meio]');
-  var meioLabel = row.querySelector('[data-pag-meio-label]');
-  var forma = formaEl ? formaEl.value : 'pix';
-  if (meioLabel) meioLabel.textContent = reservaFidLabelMeio(forma);
-  if (meioSel) {
-    var cur = meioSel.value;
-    meioSel.innerHTML = reservaFidOptsMeios(meios, forma, cur);
-  }
-}
-
-function reservaFidHtmlLinhaPagamento(formas, meios, dados, idx) {
-  var forma = (dados && dados.forma) || 'pix';
-  var valor = dados && dados.valor != null ? dados.valor : '';
+function reservaFidHtmlLinhaPagamento(cadastro, dados, idx) {
   var meioId = dados && dados.meio_id != null ? dados.meio_id : '';
+  var valor = dados && dados.valor != null ? dados.valor : '';
   var rotulo = (dados && dados.rotulo) || '';
   var n = (idx || 0) + 1;
   return '<div class="reserva-fid__pag-row" data-pag-row="' + idx + '">' +
     '<div class="reserva-fid__pag-row-title">Pagamento ' + n + '</div>' +
     '<label>Quem pagou (opcional)<input type="text" data-pag-rotulo maxlength="80" placeholder="Ex.: João, Maria…" value="' + escapeHtml(rotulo) + '"></label>' +
-    '<label>Forma<select data-pag-forma>' + reservaFidOptsFormas(formas, forma) + '</select></label>' +
-    '<label class="reserva-fid__pag-meio"><span data-pag-meio-label>' + escapeHtml(reservaFidLabelMeio(forma)) + '</span><select data-pag-meio>' + reservaFidOptsMeios(meios, forma, meioId) + '</select></label>' +
+    '<label class="reserva-fid__pag-forma">Forma de pagamento<select data-pag-meio>' + reservaFidOptsCadastro(cadastro, meioId) + '</select></label>' +
     '<label>Valor (R$)<input type="number" data-pag-valor min="0.01" step="0.01" placeholder="0,00" value="' + (valor !== '' ? escapeHtml(String(valor)) : '') + '"></label>' +
     '<button type="button" class="btn danger reserva-fid__pag-remove" data-pag-remove title="Remover linha" aria-label="Remover pagamento">×</button>' +
   '</div>';
@@ -18875,16 +18836,13 @@ function reservaFidAtualizarTotaisPagamento() {
   }
 }
 
-function reservaFidBindPagamentos(formas, meios) {
-  _reservaFidMeiosCache = meios || { pix: [], maquininha: [], dinheiro: [] };
+function reservaFidBindPagamentos(cadastro) {
+  _reservaFidCadastroCache = cadastro || [];
   var wrap = document.getElementById('reservaFidPagamentos');
   if (!wrap) return;
   if (!wrap.dataset.bound) {
     wrap.dataset.bound = '1';
-    wrap.addEventListener('change', function(e) {
-      if (e.target.matches('[data-pag-forma]')) {
-        reservaFidAtualizarLinhaMeio(e.target.closest('[data-pag-row]'), _reservaFidMeiosCache);
-      }
+    wrap.addEventListener('change', function() {
       reservaFidAtualizarTotaisPagamento();
     });
     wrap.addEventListener('input', function(e) {
@@ -18908,30 +18866,25 @@ function reservaFidBindPagamentos(formas, meios) {
     });
     document.getElementById('btnReservaFidAddPag') && document.getElementById('btnReservaFidAddPag').addEventListener('click', function() {
       var idx = wrap.querySelectorAll('[data-pag-row]').length;
-      wrap.insertAdjacentHTML('beforeend', reservaFidHtmlLinhaPagamento(formas, _reservaFidMeiosCache, { forma: 'pix' }, idx));
+      wrap.insertAdjacentHTML('beforeend', reservaFidHtmlLinhaPagamento(_reservaFidCadastroCache, {}, idx));
       reservaFidAtualizarTotaisPagamento();
     });
     var totalInp = document.getElementById('reservaFidValorConta');
     if (totalInp) totalInp.addEventListener('input', reservaFidAtualizarTotaisPagamento);
   }
-  wrap.querySelectorAll('[data-pag-row]').forEach(function(row) {
-    reservaFidAtualizarLinhaMeio(row, _reservaFidMeiosCache);
-  });
   reservaFidAtualizarTotaisPagamento();
 }
 
 function reservaFidColetarPagamentos() {
   var pagamentos = [];
   document.querySelectorAll('[data-pag-row]').forEach(function(row) {
-    var formaEl = row.querySelector('[data-pag-forma]');
     var valorEl = row.querySelector('[data-pag-valor]');
     var meioEl = row.querySelector('[data-pag-meio]');
     var rotuloEl = row.querySelector('[data-pag-rotulo]');
-    var forma = formaEl ? formaEl.value : '';
     var valor = valorEl && valorEl.value !== '' ? Number(valorEl.value) : NaN;
     var meioId = meioEl && meioEl.value ? Number(meioEl.value) : 0;
-    if (!forma || isNaN(valor) || valor <= 0) return;
-    var item = { forma: forma, valor: valor, meio_id: meioId };
+    if (isNaN(valor) || valor <= 0) return;
+    var item = { meio_id: meioId, valor: valor };
     var rotulo = rotuloEl ? String(rotuloEl.value || '').trim() : '';
     if (rotulo) item.rotulo = rotulo;
     pagamentos.push(item);
@@ -18939,22 +18892,13 @@ function reservaFidColetarPagamentos() {
   return pagamentos;
 }
 
-function reservaFidFormaLabel(forma) {
-  if (forma === 'pix') return 'PIX';
-  if (forma === 'credito') return 'Crédito';
-  if (forma === 'debito') return 'Débito';
-  if (forma === 'maquininha') return 'Maquininha';
-  if (forma === 'dinheiro') return 'Dinheiro';
-  return forma;
-}
-
 function reservaFidHtmlPagamentosRegistrados(pagamentos) {
   if (!pagamentos || !pagamentos.length) return '';
   return '<ul class="reserva-fid__pag-list">' + pagamentos.map(function(p) {
     var quem = p.rotulo ? ('<strong>' + escapeHtml(p.rotulo) + ':</strong> ') : '';
-    var txt = quem + escapeHtml(p.forma_label || reservaFidFormaLabel(p.forma)) + ' · R$ ' + reservaFidMoeda(p.valor);
-    var recebedor = p.meio_nome || p.maquina;
-    if (recebedor) txt += ' <span class="subtle-text">(' + escapeHtml(recebedor) + ')</span>';
+    var formaTxt = p.label || p.forma_label || p.tipo_label || p.forma || 'Pagamento';
+    if (!p.label && p.meio_nome) formaTxt += ' — ' + p.meio_nome;
+    var txt = quem + escapeHtml(formaTxt) + ' · R$ ' + reservaFidMoeda(p.valor);
     return '<li>' + txt + '</li>';
   }).join('') + '</ul>';
 }
@@ -19081,8 +19025,9 @@ async function renderReservaFidelidade(reservaId) {
     var seloOk = !!data.selo_ja_creditado;
     var contaPaga = !!data.conta_paga;
     var valorConta = data.valor_conta != null ? Number(data.valor_conta) : '';
-    var formasPag = data.formas_pagamento || [];
-    var meiosPag = data.meios_pagamento || { pix: [], maquininha: [], dinheiro: [] };
+    var cadastroFormas = Array.isArray(data.formas_pagamento_cadastro)
+      ? data.formas_pagamento_cadastro
+      : (data.formas_pagamento_cadastro ? Object.values(data.formas_pagamento_cadastro) : []);
     var pagamentosReg = data.pagamentos_conta || [];
     if (statusEl) statusEl.textContent = conta ? ('Cartão ' + (codigo || '#' + conta.id)) : 'Sem cartão ainda';
 
@@ -19101,8 +19046,11 @@ async function renderReservaFidelidade(reservaId) {
             '<strong>Como foi pago</strong>' +
             '<button type="button" class="btn info reserva-fid__btn-dividir" id="btnReservaFidAddPag">+ Dividir conta</button>' +
           '</div>' +
-          '<p class="subtle-text" style="margin:0;">Cadastre recebedores em <strong>Modos de pagamento</strong>. Cada linha pode ser outra pessoa da mesa, forma e maquininha/recebedor.</p>' +
-          '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(formasPag, meiosPag, { forma: 'pix' }, 0) + '</div>' +
+          '<p class="subtle-text" style="margin:0;">Escolha as formas cadastradas em <strong>Reserva → Forma de pagamento</strong>. Pode dividir entre pessoas da mesa.</p>' +
+          (cadastroFormas.length
+            ? '<p class="reserva-fid__cadastro-ok subtle-text" style="margin:0;">' + cadastroFormas.length + ' forma(s) disponível(is) nesta unidade.</p>'
+            : '<p class="reserva-fid__cadastro-warn">Nenhuma forma cadastrada para esta unidade. Cadastre em <strong>Reserva → Forma de pagamento</strong> (mesma unidade da reserva).</p>') +
+          '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(cadastroFormas, {}, 0) + '</div>' +
           '<p class="reserva-fid__split-total" id="reservaFidPagTotal">Informe o valor total da conta e como foi pago.</p>' +
         '</div>' +
         '<button type="button" class="btn primary" id="btnReservaFidContaPaga">Conta paga · liberar selo</button>';
@@ -19125,7 +19073,7 @@ async function renderReservaFidelidade(reservaId) {
     if (!contaPaga) {
       var wrapPag = document.getElementById('reservaFidPagamentos');
       if (wrapPag) wrapPag.dataset.bound = '';
-      reservaFidBindPagamentos(formasPag, meiosPag);
+      reservaFidBindPagamentos(cadastroFormas);
     }
 
     document.getElementById('btnReservaFidContaPaga') && document.getElementById('btnReservaFidContaPaga').addEventListener('click', async function() {
@@ -19145,16 +19093,18 @@ async function renderReservaFidelidade(reservaId) {
         showToast('A soma dos pagamentos deve bater com o valor da conta.', 'warning');
         return;
       }
+      if (!cadastroFormas.length) {
+        showToast('Cadastre formas de pagamento em Reserva → Forma de pagamento.', 'warning');
+        return;
+      }
       for (var i = 0; i < pagamentos.length; i++) {
         if (!pagamentos[i].meio_id) {
-          showToast('Selecione o recebedor/meio na linha ' + (i + 1) + '. Cadastre em Modos de pagamento.', 'warning');
+          showToast('Selecione a forma de pagamento na linha ' + (i + 1) + '.', 'warning');
           return;
         }
       }
       var resumoPag = pagamentos.map(function(p) {
-        var recebedor = reservaFidNomeMeio(meiosPag, p.forma, p.meio_id);
-        var linha = (p.rotulo ? p.rotulo + ': ' : '') + reservaFidFormaLabel(p.forma) + ' R$ ' + reservaFidMoeda(p.valor);
-        if (recebedor) linha += ' (' + recebedor + ')';
+        var linha = (p.rotulo ? p.rotulo + ': ' : '') + reservaFidLabelCadastro(cadastroFormas, p.meio_id) + ' R$ ' + reservaFidMoeda(p.valor);
         return linha;
       }).join('\n');
       if (!confirm('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nIsso cria o cartão (se preciso) e libera 1 selo.')) return;
