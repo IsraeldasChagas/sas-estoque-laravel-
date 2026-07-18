@@ -7617,10 +7617,11 @@ select[size]:not([size="1"]) {
   border-bottom: 1px solid var(--border);
 }
 
-/* Mobile/Tablet: Reservas do dia - card layout para não estourar */
+/* Mobile/Tablet: Reserva Mesa + Histórico — pergunta (negrito) em cima, resposta embaixo */
 @media (max-width: 900px) {
   .reservas-mesas-mesas, .reservas-mesas-lista { min-width: 0; }
-  .reservas-mesas-lista .table-wrapper {
+  .reservas-mesas-lista .table-wrapper,
+  #historicoReservasSection .table-wrapper {
     overflow: visible;
     max-width: 100%;
   }
@@ -7628,19 +7629,20 @@ select[size]:not([size="1"]) {
   .reservas-table tr.reserva-row {
     display: block;
     margin-bottom: 1rem;
-    padding: 0.75rem;
+    padding: 0.85rem 0.9rem;
     min-width: 0;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--card-bg);
   }
   .reservas-table tr.reserva-row td {
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
     justify-content: flex-start;
-    gap: 0.75rem;
-    padding: 0.4rem 0;
-    border-bottom: none;
+    gap: 0.2rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
     text-align: left;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -7650,23 +7652,35 @@ select[size]:not([size="1"]) {
   .reservas-table tr.reserva-row td:last-child { border-bottom: none; }
   .reservas-table tr.reserva-row td::before {
     content: attr(data-label);
-    font-weight: 700;
+    display: block;
+    width: 100%;
+    margin: 0;
+    min-width: 0;
     flex-shrink: 0;
-    min-width: 70px;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #182230;
+    line-height: 1.25;
   }
-  .reservas-table tr.reserva-row td {
-    flex-wrap: wrap;
+  .reservas-table tr.reserva-row td:not([data-label])::before,
+  .reservas-table tr.reserva-row td[data-label=""]::before {
+    display: none;
   }
   .reservas-table tr.reserva-row td.reserva-row-acoes {
+    flex-direction: row;
     flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
     padding-top: 0.75rem;
-    margin-top: 0.5rem;
+    margin-top: 0.35rem;
     border-top: 1px solid var(--border);
+    border-bottom: none;
   }
   .reservas-table tr.reserva-row td.reserva-row-acoes::before {
     width: 100%;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
+    flex-basis: 100%;
   }
   .reservas-table tr.reserva-row-empty td {
     display: block;
@@ -7683,7 +7697,11 @@ select[size]:not([size="1"]) {
 }
 
 @media (max-width: 600px) {
-  .reservas-table tr.reserva-row td::before { min-width: 80px; font-size: 0.8rem; }
+  .reservas-table tr.reserva-row td::before {
+    min-width: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
   .reservas-table td.reservas-empty {
     text-align: left !important;
     padding-left: 1rem;
