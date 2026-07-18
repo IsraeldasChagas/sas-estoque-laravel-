@@ -641,7 +641,6 @@ class ReservaMesaController extends Controller
             return response()->json(['message' => 'Sem permissão para alterar esta reserva.'], 403);
         }
 
-        $statusAnterior = $reserva->status;
         $reserva->update(['status' => $request->status]);
 
         $mesa = $reserva->mesa;
@@ -659,32 +658,9 @@ class ReservaMesaController extends Controller
             $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
         }
 
-        $fidelidade = null;
-        if ($request->status === 'cliente_chegou' && $statusAnterior !== 'cliente_chegou') {
-            try {
-                $fid = app(ReservaFidelidadeService::class);
-                $snap = $fid->snapshot($reserva);
-                if ($snap['disponivel'] && $snap['programa_ativo'] && $snap['telefone_ok']) {
-                    $credito = $fid->creditarSelo($reserva, $usuario ? (int) $usuario->id : null, true);
-                    $fidelidade = [
-                        'selo_creditado' => ! $credito['replayed'],
-                        'selo_ja_existia' => (bool) $credito['replayed'],
-                        'conta' => $credito['conta'],
-                        'criado_conta' => $credito['criado_conta'],
-                    ];
-                }
-            } catch (\Throwable $e) {
-                $fidelidade = [
-                    'selo_creditado' => false,
-                    'erro' => $e->getMessage(),
-                ];
-            }
-        }
-
         return response()->json([
             'message' => 'Status alterado',
             'reserva' => $reserva->fresh(['mesa', 'usuario']),
-            'fidelidade' => $fidelidade,
         ]);
     }
 
@@ -709,6 +685,50 @@ class ReservaMesaController extends Controller
             'recompensas' => $recompensas,
             'reserva_id' => (int) $reserva->id,
         ]));
+    }
+
+    /**
+     * Conta paga: registra valor, cria cartão se necessário e libera o selo.
+     */
+    public function fidelidadeContaPaga(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        $data = Validator::make($request->all(), [
+            'valor_conta' => 'required|numeric|min:0|max:9999999.99',
+        ])->validate();
+
+        try {
+            $result = app(ReservaFidelidadeService::class)->registrarContaPaga(
+                $reserva,
+                (float) $data['valor_conta'],
+                $usuario ? (int) $usuario->id : null
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível registrar a conta paga.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        $msg = $result['replayed']
+            ? 'Conta já estava paga; selo desta reserva já havia sido creditado.'
+            : ($result['criado_conta']
+                ? 'Conta paga registrada. Cartão criado e selo liberado.'
+                : 'Conta paga registrada. Selo liberado.');
+
+        return response()->json([
+            'message' => $msg,
+            'reserva' => $result['reserva'],
+            'conta' => $result['conta'],
+            'ledger' => $result['ledger'],
+            'replayed' => $result['replayed'],
+            'criado_conta' => $result['criado_conta'],
+        ], $result['replayed'] ? 200 : 201);
     }
 
     /**

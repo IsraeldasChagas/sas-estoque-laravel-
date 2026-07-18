@@ -7866,6 +7866,34 @@ select[size]:not([size="1"]) {
   display: grid;
   gap: 0.5rem;
 }
+.reserva-fid__conta {
+  margin-top: 0.65rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: rgba(196, 122, 18, 0.08);
+  border: 1px solid rgba(196, 122, 18, 0.2);
+  display: grid;
+  gap: 0.45rem;
+}
+.reserva-fid__conta label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5c6f63;
+}
+.reserva-fid__conta input {
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(20, 38, 28, 0.15);
+  border-radius: 8px;
+}
+.reserva-fid__conta-ok {
+  margin: 0;
+  font-weight: 700;
+  color: #1f6b45;
+}
 .reserva-fid__pagar label {
   display: flex;
   flex-direction: column;

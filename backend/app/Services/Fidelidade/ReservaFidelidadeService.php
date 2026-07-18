@@ -55,6 +55,9 @@ final class ReservaFidelidadeService
                 'conta' => null,
                 'telefone_ok' => false,
                 'selo_ja_creditado' => false,
+                'conta_paga' => (bool) ($reserva->conta_paga ?? false),
+                'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
+                'conta_paga_em' => null,
                 'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
                 'mensagem' => 'Informe um telefone válido na reserva para usar fidelidade.',
             ];
@@ -83,6 +86,11 @@ final class ReservaFidelidadeService
             'conta' => $conta,
             'telefone_ok' => true,
             'selo_ja_creditado' => $seloJa,
+            'conta_paga' => (bool) ($reserva->conta_paga ?? false),
+            'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
+            'conta_paga_em' => $reserva->conta_paga_em
+                ? (string) (is_string($reserva->conta_paga_em) ? $reserva->conta_paga_em : $reserva->conta_paga_em->toDateTimeString())
+                : null,
             'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
             'mensagem' => $programaAtivo
                 ? null
@@ -298,8 +306,56 @@ final class ReservaFidelidadeService
             'conta' => null,
             'telefone_ok' => false,
             'selo_ja_creditado' => false,
+            'conta_paga' => false,
+            'valor_conta' => null,
+            'conta_paga_em' => null,
             'meta_selos' => 10,
             'mensagem' => $mensagem,
+        ];
+    }
+
+    /**
+     * Marca conta paga na reserva: gera cartão (se preciso) e libera 1 selo.
+     *
+     * @return array{reserva:ReservaMesa,conta:object,ledger:object,replayed:bool,criado_conta:bool}
+     */
+    public function registrarContaPaga(ReservaMesa $reserva, float $valorConta, ?int $usuarioId): array
+    {
+        if ($valorConta < 0) {
+            throw ValidationException::withMessages(['valor_conta' => 'Informe o valor da conta (0 ou maior).']);
+        }
+
+        $snap = $this->snapshot($reserva);
+        if (! $snap['disponivel']) {
+            throw ValidationException::withMessages(['fidelidade' => $snap['mensagem'] ?: 'Fidelidade indisponível.']);
+        }
+        if (! $snap['programa_ativo']) {
+            throw ValidationException::withMessages(['programa' => 'Programa de fidelidade inativo nesta unidade.']);
+        }
+        if (! $snap['telefone_ok']) {
+            throw ValidationException::withMessages(['telefone' => 'Telefone da reserva inválido para gerar o cartão.']);
+        }
+
+        $criado = false;
+        $conta = $snap['conta'];
+        if (! $conta) {
+            $conta = $this->garantirConta($reserva, $usuarioId);
+            $criado = true;
+        }
+
+        $credito = $this->creditarSelo($reserva, $usuarioId, false);
+
+        $reserva->conta_paga = true;
+        $reserva->valor_conta = round($valorConta, 2);
+        $reserva->conta_paga_em = now();
+        $reserva->save();
+
+        return [
+            'reserva' => $reserva->fresh(['mesa', 'usuario']),
+            'conta' => $credito['conta'],
+            'ledger' => $credito['ledger'],
+            'replayed' => $credito['replayed'],
+            'criado_conta' => $criado || $credito['criado_conta'],
         ];
     }
 }

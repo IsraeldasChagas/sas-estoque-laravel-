@@ -664,9 +664,10 @@ class FidelidadeController extends Controller
     private function aplicarEscopo($query, object $usuario, Request $request): void
     {
         $perfil = strtoupper(trim((string) ($usuario->perfil ?? '')));
-        if ($perfil === 'ADMIN' && $request->filled('unidade_id')) {
+        $podeEscolher = in_array($perfil, ['ADMIN', 'GERENTE', 'ASSISTENTE_ADMINISTRATIVO'], true);
+        if ($podeEscolher && $request->filled('unidade_id')) {
             $query->where('unidade_id', (int) $request->query('unidade_id', $request->input('unidade_id')));
-        } elseif ($perfil !== 'ADMIN' && ! empty($usuario->unidade_id)) {
+        } elseif (! $podeEscolher && ! empty($usuario->unidade_id)) {
             $query->where('unidade_id', (int) $usuario->unidade_id);
         }
     }
@@ -674,7 +675,8 @@ class FidelidadeController extends Controller
     private function autorizarRegistro(object $usuario, object $row): void
     {
         $perfil = strtoupper(trim((string) ($usuario->perfil ?? '')));
-        if ($perfil !== 'ADMIN' && ! empty($usuario->unidade_id) && (int) $row->unidade_id !== (int) $usuario->unidade_id) {
+        $podeTodas = in_array($perfil, ['ADMIN', 'GERENTE', 'ASSISTENTE_ADMINISTRATIVO'], true);
+        if (! $podeTodas && ! empty($usuario->unidade_id) && (int) $row->unidade_id !== (int) $usuario->unidade_id) {
             abort(403, 'Sem permissão para este registro.');
         }
     }
@@ -682,7 +684,8 @@ class FidelidadeController extends Controller
     private function resolverUnidade(object $usuario, Request $request, bool $fromBody = false): ?int
     {
         $perfil = strtoupper(trim((string) ($usuario->perfil ?? '')));
-        if ($perfil === 'ADMIN') {
+        $podeEscolher = in_array($perfil, ['ADMIN', 'GERENTE', 'ASSISTENTE_ADMINISTRATIVO'], true);
+        if ($podeEscolher) {
             $raw = $fromBody
                 ? $request->input('unidade_id', $request->query('unidade_id'))
                 : $request->query('unidade_id', $request->input('unidade_id'));

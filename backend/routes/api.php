@@ -5773,6 +5773,7 @@ Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new Reserva
 Route::get('/reservas-mesas/{id}/fidelidade', fn (Request $r, $id) => (new ReservaMesaController())->fidelidade($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/fidelidade/selo', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeSelo($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/fidelidade/garantir', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeGarantir($r, $id)->withHeaders($cors));
+Route::post('/reservas-mesas/{id}/fidelidade/conta-paga', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeContaPaga($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/fidelidade/resgatar', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeResgatar($r, $id)->withHeaders($cors));
 
 /** Chave esperada para backup/listar/baixar/restaurar (igual ao frontend Configurações ou ADMIN_BACKUP_KEY no .env). */

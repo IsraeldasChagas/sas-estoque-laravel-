@@ -21,6 +21,9 @@ class ReservaMesa extends Model
         'hora_reserva',
         'qtd_pessoas',
         'status',
+        'conta_paga',
+        'valor_conta',
+        'conta_paga_em',
         'observacao',
         'local',
         'ocasiao',
@@ -29,6 +32,9 @@ class ReservaMesa extends Model
     protected $casts = [
         'data_reserva' => 'date',
         'qtd_pessoas' => 'integer',
+        'conta_paga' => 'boolean',
+        'valor_conta' => 'decimal:2',
+        'conta_paga_em' => 'datetime',
     ];
 
     public const STATUS_PENDENTE = 'pendente';

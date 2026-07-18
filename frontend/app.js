@@ -18606,18 +18606,8 @@ async function loadReservasMesas() {
           showToast('Reserva cancelada.', 'success');
           await loadReservasMesas();
         } else if (action === 'cliente_chegou') {
-          var respChegada = await fetchJSON('/reservas-mesas/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: 'cliente_chegou' }) });
+          await fetchJSON('/reservas-mesas/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: 'cliente_chegou' }) });
           showToast('Cliente marcado como chegou.', 'success');
-          if (respChegada && respChegada.fidelidade) {
-            if (respChegada.fidelidade.selo_creditado) {
-              var saldo = respChegada.fidelidade.conta ? respChegada.fidelidade.conta.saldo_selos : null;
-              showToast('✦ Selo fidelidade creditado' + (saldo != null ? ' · saldo ' + saldo : '') + '.', 'success');
-            } else if (respChegada.fidelidade.selo_ja_existia) {
-              showToast('✦ Selo desta reserva já estava creditado.', 'info');
-            } else if (respChegada.fidelidade.erro) {
-              showToast('Fidelidade: ' + respChegada.fidelidade.erro, 'warning');
-            }
-          }
           await loadReservasMesas();
         } else if (action === 'whatsapp') {
           var r = await fetchJSON('/reservas-mesas/' + id);
@@ -18794,6 +18784,8 @@ async function renderReservaFidelidade(reservaId) {
     var codigo = conta ? (conta.codigo_fidelidade || '') : '';
     var meta = Number(data.meta_selos || 10);
     var seloOk = !!data.selo_ja_creditado;
+    var contaPaga = !!data.conta_paga;
+    var valorConta = data.valor_conta != null ? Number(data.valor_conta) : '';
     if (statusEl) statusEl.textContent = conta ? ('Cartão ' + (codigo || '#' + conta.id)) : 'Sem cartão ainda';
 
     var recompensas = data.recompensas || [];
@@ -18808,34 +18800,35 @@ async function renderReservaFidelidade(reservaId) {
         '<div><span>Pontos</span><strong>' + (conta ? Number(conta.saldo_pontos || 0) : 0) + '</strong></div>' +
         '<div><span>Meta</span><strong>' + meta + '</strong></div>' +
       '</div>' +
-      '<p class="subtle-text" style="margin:0.35rem 0 0.65rem;">' +
-        (seloOk ? 'Selo desta reserva já creditado.' : 'Ao marcar chegada, o selo é creditado automaticamente.') +
-      '</p>' +
-      '<div class="reserva-fid__acoes">' +
-        '<button type="button" class="btn primary" id="btnReservaFidSelo"' + (seloOk ? ' disabled' : '') + '>' + (seloOk ? '✓ Selo ok' : '+ Creditar selo') + '</button>' +
-        (!conta ? '<button type="button" class="btn neutral" id="btnReservaFidCriar">Criar cartão</button>' : '') +
+      '<div class="reserva-fid__conta">' +
+        '<p class="subtle-text" style="margin:0 0 0.5rem;">O selo só libera quando a <strong>conta for paga</strong>. Aí o cartão é criado (se ainda não existir) e o selo entra.</p>' +
+        (contaPaga
+          ? '<p class="reserva-fid__conta-ok">✓ Conta paga' + (valorConta !== '' ? ' · R$ ' + Number(valorConta).toFixed(2).replace('.', ',') : '') + (seloOk ? ' · selo liberado' : '') + '</p>'
+          : '<label>Valor da conta (R$)<input type="number" id="reservaFidValorConta" min="0" step="0.01" placeholder="0,00" value=""></label>' +
+            '<button type="button" class="btn primary" id="btnReservaFidContaPaga">Conta paga · liberar selo</button>') +
       '</div>' +
       '<div class="reserva-fid__pagar">' +
-        '<label>Pagar com selos<select id="reservaFidRecompensa">' + opts + '</select></label>' +
-        '<button type="button" class="btn secondary" id="btnReservaFidPagar">Pagar / Resgatar</button>' +
+        '<label>Resgatar recompensa com selos<select id="reservaFidRecompensa">' + opts + '</select></label>' +
+        '<button type="button" class="btn secondary" id="btnReservaFidPagar"' + (selos <= 0 ? ' disabled' : '') + '>Pagar / Resgatar</button>' +
       '</div>';
 
-    document.getElementById('btnReservaFidSelo') && document.getElementById('btnReservaFidSelo').addEventListener('click', async function() {
-      try {
-        var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/selo', { method: 'POST', body: '{}' });
-        showToast(resp.message || 'Selo creditado.', 'success');
-        await renderReservaFidelidade(reservaId);
-      } catch (e) {
-        showToast(e.message || 'Erro ao creditar selo.', 'error');
+    document.getElementById('btnReservaFidContaPaga') && document.getElementById('btnReservaFidContaPaga').addEventListener('click', async function() {
+      var inp = document.getElementById('reservaFidValorConta');
+      var valor = inp && inp.value !== '' ? Number(inp.value) : NaN;
+      if (isNaN(valor) || valor < 0) {
+        showToast('Informe o valor da conta.', 'warning');
+        return;
       }
-    });
-    document.getElementById('btnReservaFidCriar') && document.getElementById('btnReservaFidCriar').addEventListener('click', async function() {
+      if (!confirm('Confirmar conta paga em R$ ' + valor.toFixed(2).replace('.', ',') + '?\nIsso cria o cartão (se preciso) e libera 1 selo.')) return;
       try {
-        var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/garantir', { method: 'POST', body: '{}' });
-        showToast(resp.message || 'Cartão criado.', 'success');
+        var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/conta-paga', {
+          method: 'POST',
+          body: JSON.stringify({ valor_conta: valor })
+        });
+        showToast(resp.message || 'Conta paga e selo liberado.', 'success');
         await renderReservaFidelidade(reservaId);
       } catch (e) {
-        showToast(e.message || 'Erro ao criar cartão.', 'error');
+        showToast(e.message || 'Erro ao registrar conta paga.', 'error');
       }
     });
     document.getElementById('btnReservaFidPagar') && document.getElementById('btnReservaFidPagar').addEventListener('click', async function() {
