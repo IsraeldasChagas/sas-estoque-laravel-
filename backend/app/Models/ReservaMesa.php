@@ -24,6 +24,7 @@ class ReservaMesa extends Model
         'conta_paga',
         'valor_conta',
         'conta_paga_em',
+        'pagamentos_conta',
         'observacao',
         'local',
         'ocasiao',
@@ -35,6 +36,7 @@ class ReservaMesa extends Model
         'conta_paga' => 'boolean',
         'valor_conta' => 'decimal:2',
         'conta_paga_em' => 'datetime',
+        'pagamentos_conta' => 'array',
     ];
 
     public const STATUS_PENDENTE = 'pendente';

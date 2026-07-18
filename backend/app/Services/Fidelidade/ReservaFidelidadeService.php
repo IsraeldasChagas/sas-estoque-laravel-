@@ -12,6 +12,19 @@ use Illuminate\Validation\ValidationException;
  */
 final class ReservaFidelidadeService
 {
+    public const FORMA_PIX = 'pix';
+    public const FORMA_CREDITO = 'credito';
+    public const FORMA_DEBITO = 'debito';
+    public const FORMA_MAQUININHA = 'maquininha';
+
+    /** @var array<string, string> */
+    public const FORMAS_PAGAMENTO = [
+        self::FORMA_PIX => 'PIX',
+        self::FORMA_CREDITO => 'Crédito',
+        self::FORMA_DEBITO => 'Débito',
+        self::FORMA_MAQUININHA => 'Maquininha',
+    ];
+
     public function __construct(
         private FidelidadeLedgerService $ledger,
         private FidelidadeResgateService $resgate
@@ -22,6 +35,112 @@ final class ReservaFidelidadeService
         return Schema::hasTable('fid_contas')
             && Schema::hasTable('fid_programas')
             && Schema::hasTable('fid_ledger');
+    }
+
+    /**
+     * @return list<array{value:string,label:string}>
+     */
+    public function opcoesFormasPagamento(): array
+    {
+        $out = [];
+        foreach (self::FORMAS_PAGAMENTO as $value => $label) {
+            $out[] = ['value' => $value, 'label' => $label];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  mixed  $raw
+     * @return list<array{forma:string,valor:float,maquina:?string}>
+     */
+    public function normalizarPagamentosConta(mixed $raw): array
+    {
+        if (! is_array($raw)) {
+            throw ValidationException::withMessages(['pagamentos' => 'Informe ao menos uma forma de pagamento.']);
+        }
+        if ($raw === []) {
+            throw ValidationException::withMessages(['pagamentos' => 'Informe ao menos uma forma de pagamento.']);
+        }
+
+        $out = [];
+        foreach ($raw as $i => $item) {
+            if (! is_array($item)) {
+                throw ValidationException::withMessages(['pagamentos' => 'Pagamento #'.($i + 1).' inválido.']);
+            }
+            $forma = strtolower(trim((string) ($item['forma'] ?? '')));
+            if (! array_key_exists($forma, self::FORMAS_PAGAMENTO)) {
+                throw ValidationException::withMessages(['pagamentos' => 'Forma de pagamento inválida na linha '.($i + 1).'.']);
+            }
+            if (! array_key_exists('valor', $item) || ! is_numeric($item['valor'])) {
+                throw ValidationException::withMessages(['pagamentos' => 'Informe o valor na linha '.($i + 1).'.']);
+            }
+            $valor = round((float) $item['valor'], 2);
+            if ($valor <= 0) {
+                throw ValidationException::withMessages(['pagamentos' => 'Valor deve ser maior que zero na linha '.($i + 1).'.']);
+            }
+            $maquina = trim((string) ($item['maquina'] ?? ''));
+            $precisaMaquina = in_array($forma, [self::FORMA_CREDITO, self::FORMA_DEBITO, self::FORMA_MAQUININHA], true);
+            if ($precisaMaquina && $maquina === '') {
+                throw ValidationException::withMessages(['pagamentos' => 'Informe a maquininha usada na linha '.($i + 1).'.']);
+            }
+            $out[] = [
+                'forma' => $forma,
+                'valor' => $valor,
+                'maquina' => $maquina !== '' ? $maquina : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array{forma:string,valor:float,maquina:?string}>  $pagamentos
+     */
+    public function validarTotalPagamentos(float $valorConta, array $pagamentos): void
+    {
+        $soma = round(array_sum(array_column($pagamentos, 'valor')), 2);
+        $total = round($valorConta, 2);
+        if (abs($soma - $total) > 0.009) {
+            throw ValidationException::withMessages([
+                'pagamentos' => 'A soma dos pagamentos (R$ '.number_format($soma, 2, ',', '.').') deve bater com o valor da conta (R$ '.number_format($total, 2, ',', '.').').',
+            ]);
+        }
+    }
+
+    /**
+     * @return list<array{forma:string,forma_label:string,valor:float,maquina:?string}>
+     */
+    public function pagamentosContaReserva(ReservaMesa $reserva): array
+    {
+        $raw = $reserva->pagamentos_conta;
+        if (! is_array($raw) || $raw === []) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($raw as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $forma = strtolower(trim((string) ($item['forma'] ?? '')));
+            if (! array_key_exists($forma, self::FORMAS_PAGAMENTO)) {
+                continue;
+            }
+            $valor = round((float) ($item['valor'] ?? 0), 2);
+            if ($valor <= 0) {
+                continue;
+            }
+            $maquina = trim((string) ($item['maquina'] ?? ''));
+            $out[] = [
+                'forma' => $forma,
+                'forma_label' => self::FORMAS_PAGAMENTO[$forma],
+                'valor' => $valor,
+                'maquina' => $maquina !== '' ? $maquina : null,
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -57,7 +176,11 @@ final class ReservaFidelidadeService
                 'selo_ja_creditado' => false,
                 'conta_paga' => (bool) ($reserva->conta_paga ?? false),
                 'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
-                'conta_paga_em' => null,
+                'conta_paga_em' => $reserva->conta_paga_em
+                    ? (string) (is_string($reserva->conta_paga_em) ? $reserva->conta_paga_em : $reserva->conta_paga_em->toDateTimeString())
+                    : null,
+                'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
+                'formas_pagamento' => $this->opcoesFormasPagamento(),
                 'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
                 'mensagem' => 'Informe um telefone válido na reserva para usar fidelidade.',
             ];
@@ -91,6 +214,8 @@ final class ReservaFidelidadeService
             'conta_paga_em' => $reserva->conta_paga_em
                 ? (string) (is_string($reserva->conta_paga_em) ? $reserva->conta_paga_em : $reserva->conta_paga_em->toDateTimeString())
                 : null,
+            'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
+            'formas_pagamento' => $this->opcoesFormasPagamento(),
             'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
             'mensagem' => $programaAtivo
                 ? null
@@ -309,6 +434,8 @@ final class ReservaFidelidadeService
             'conta_paga' => false,
             'valor_conta' => null,
             'conta_paga_em' => null,
+            'pagamentos_conta' => [],
+            'formas_pagamento' => $this->opcoesFormasPagamento(),
             'meta_selos' => 10,
             'mensagem' => $mensagem,
         ];
@@ -319,11 +446,14 @@ final class ReservaFidelidadeService
      *
      * @return array{reserva:ReservaMesa,conta:object,ledger:object,replayed:bool,criado_conta:bool}
      */
-    public function registrarContaPaga(ReservaMesa $reserva, float $valorConta, ?int $usuarioId): array
+    public function registrarContaPaga(ReservaMesa $reserva, float $valorConta, array $pagamentos, ?int $usuarioId): array
     {
         if ($valorConta < 0) {
             throw ValidationException::withMessages(['valor_conta' => 'Informe o valor da conta (0 ou maior).']);
         }
+
+        $pagamentos = $this->normalizarPagamentosConta($pagamentos);
+        $this->validarTotalPagamentos($valorConta, $pagamentos);
 
         $snap = $this->snapshot($reserva);
         if (! $snap['disponivel']) {
@@ -348,6 +478,7 @@ final class ReservaFidelidadeService
         $reserva->conta_paga = true;
         $reserva->valor_conta = round($valorConta, 2);
         $reserva->conta_paga_em = now();
+        $reserva->pagamentos_conta = $pagamentos;
         $reserva->save();
 
         return [

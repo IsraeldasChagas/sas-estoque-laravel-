@@ -700,12 +700,17 @@ class ReservaMesaController extends Controller
 
         $data = Validator::make($request->all(), [
             'valor_conta' => 'required|numeric|min:0|max:9999999.99',
+            'pagamentos' => 'required|array|min:1',
+            'pagamentos.*.forma' => 'required|string|max:30',
+            'pagamentos.*.valor' => 'required|numeric|min:0.01|max:9999999.99',
+            'pagamentos.*.maquina' => 'nullable|string|max:120',
         ])->validate();
 
         try {
             $result = app(ReservaFidelidadeService::class)->registrarContaPaga(
                 $reserva,
                 (float) $data['valor_conta'],
+                $data['pagamentos'],
                 $usuario ? (int) $usuario->id : null
             );
         } catch (ValidationException $e) {

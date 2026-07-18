@@ -7905,6 +7905,73 @@ select[size]:not([size="1"]) {
 .reserva-fid__pagar select {
   font-weight: 500;
 }
+.reserva-fid__split {
+  display: grid;
+  gap: 0.5rem;
+}
+.reserva-fid__split-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.reserva-fid__split-head strong {
+  color: #5c3b12;
+}
+.reserva-fid__pag-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(100px, 0.9fr) minmax(140px, 1.2fr) auto;
+  gap: 0.45rem;
+  align-items: end;
+  padding: 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(196, 122, 18, 0.15);
+}
+.reserva-fid__pag-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #5c6f63;
+}
+.reserva-fid__pag-row input,
+.reserva-fid__pag-row select {
+  min-height: 38px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(20, 38, 28, 0.15);
+  border-radius: 8px;
+}
+.reserva-fid__pag-remove {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  line-height: 1;
+}
+.reserva-fid__split-total {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5c6f63;
+}
+.reserva-fid__split-total.is-ok { color: #1f6b45; }
+.reserva-fid__split-total.is-warn { color: #b45309; }
+.reserva-fid__pag-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  color: #33443a;
+}
+.reserva-fid__pag-list li { margin: 0.2rem 0; }
+@media (max-width: 640px) {
+  .reserva-fid__pag-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .reserva-fid__pag-maquina { grid-column: 1 / -1; }
+  .reserva-fid__pag-remove { grid-column: 2; justify-self: end; }
+}
 
 .reservas-mesas-grid {
   display: grid;

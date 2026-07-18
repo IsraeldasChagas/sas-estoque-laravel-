@@ -18757,6 +18757,132 @@ async function abrirMesaLivre(mesaId, mesas, unidadeId) {
   document.getElementById('reservaMesaModal').classList.add('active');
 }
 
+function reservaFidMoeda(valor) {
+  return Number(valor || 0).toFixed(2).replace('.', ',');
+}
+
+function reservaFidPrecisaMaquina(forma) {
+  return forma === 'credito' || forma === 'debito' || forma === 'maquininha';
+}
+
+function reservaFidOptsFormas(formas, selected) {
+  var lista = formas && formas.length ? formas : [
+    { value: 'pix', label: 'PIX' },
+    { value: 'credito', label: 'Crédito' },
+    { value: 'debito', label: 'Débito' },
+    { value: 'maquininha', label: 'Maquininha' }
+  ];
+  return lista.map(function(f) {
+    var sel = selected && f.value === selected ? ' selected' : '';
+    return '<option value="' + escapeHtml(f.value) + '"' + sel + '>' + escapeHtml(f.label) + '</option>';
+  }).join('');
+}
+
+function reservaFidHtmlLinhaPagamento(formas, dados, idx) {
+  var forma = (dados && dados.forma) || 'pix';
+  var valor = dados && dados.valor != null ? dados.valor : '';
+  var maquina = (dados && dados.maquina) || '';
+  var showMaquina = reservaFidPrecisaMaquina(forma);
+  return '<div class="reserva-fid__pag-row" data-pag-row="' + idx + '">' +
+    '<label>Forma<select data-pag-forma>' + reservaFidOptsFormas(formas, forma) + '</select></label>' +
+    '<label>Valor (R$)<input type="number" data-pag-valor min="0.01" step="0.01" placeholder="0,00" value="' + (valor !== '' ? escapeHtml(String(valor)) : '') + '"></label>' +
+    '<label class="reserva-fid__pag-maquina"' + (showMaquina ? '' : ' hidden') + '>Maquininha<input type="text" data-pag-maquina maxlength="120" placeholder="Ex.: Stone, Cielo…" value="' + escapeHtml(maquina) + '"></label>' +
+    '<button type="button" class="btn ghost reserva-fid__pag-remove" data-pag-remove title="Remover linha">×</button>' +
+  '</div>';
+}
+
+function reservaFidAtualizarTotaisPagamento() {
+  var totalInp = document.getElementById('reservaFidValorConta');
+  var total = totalInp && totalInp.value !== '' ? Number(totalInp.value) : NaN;
+  var soma = 0;
+  document.querySelectorAll('[data-pag-row]').forEach(function(row) {
+    var v = row.querySelector('[data-pag-valor]');
+    if (v && v.value !== '') soma += Number(v.value) || 0;
+  });
+  var el = document.getElementById('reservaFidPagTotal');
+  if (!el) return;
+  if (isNaN(total) || total <= 0) {
+    el.textContent = 'Informe o valor total da conta e como foi pago.';
+    el.className = 'reserva-fid__split-total';
+    return;
+  }
+  var diff = Math.round((total - soma) * 100) / 100;
+  if (Math.abs(diff) < 0.01) {
+    el.textContent = 'Total informado: R$ ' + reservaFidMoeda(soma) + ' · confere com a conta.';
+    el.className = 'reserva-fid__split-total is-ok';
+  } else if (diff > 0) {
+    el.textContent = 'Faltam R$ ' + reservaFidMoeda(diff) + ' para fechar a conta.';
+    el.className = 'reserva-fid__split-total is-warn';
+  } else {
+    el.textContent = 'Sobra R$ ' + reservaFidMoeda(Math.abs(diff)) + ' — ajuste os valores.';
+    el.className = 'reserva-fid__split-total is-warn';
+  }
+}
+
+function reservaFidBindPagamentos(formas) {
+  var wrap = document.getElementById('reservaFidPagamentos');
+  if (!wrap) return;
+  if (!wrap.dataset.bound) {
+    wrap.dataset.bound = '1';
+    wrap.addEventListener('change', function(e) {
+      if (!e.target.matches('[data-pag-forma]')) return;
+      var row = e.target.closest('[data-pag-row]');
+      var maqLabel = row && row.querySelector('.reserva-fid__pag-maquina');
+      if (maqLabel) maqLabel.hidden = !reservaFidPrecisaMaquina(e.target.value);
+      reservaFidAtualizarTotaisPagamento();
+    });
+    wrap.addEventListener('input', function(e) {
+      if (e.target.matches('[data-pag-valor]')) reservaFidAtualizarTotaisPagamento();
+    });
+    wrap.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-pag-remove]');
+      if (!btn) return;
+      var rows = wrap.querySelectorAll('[data-pag-row]');
+      if (rows.length <= 1) {
+        showToast('Deixe ao menos uma forma de pagamento.', 'warning');
+        return;
+      }
+      btn.closest('[data-pag-row]').remove();
+      reservaFidAtualizarTotaisPagamento();
+    });
+    document.getElementById('btnReservaFidAddPag') && document.getElementById('btnReservaFidAddPag').addEventListener('click', function() {
+      var idx = wrap.querySelectorAll('[data-pag-row]').length;
+      wrap.insertAdjacentHTML('beforeend', reservaFidHtmlLinhaPagamento(formas, { forma: 'pix' }, idx));
+      reservaFidAtualizarTotaisPagamento();
+    });
+    var totalInp = document.getElementById('reservaFidValorConta');
+    if (totalInp) totalInp.addEventListener('input', reservaFidAtualizarTotaisPagamento);
+  }
+  reservaFidAtualizarTotaisPagamento();
+}
+
+function reservaFidColetarPagamentos() {
+  var pagamentos = [];
+  document.querySelectorAll('[data-pag-row]').forEach(function(row) {
+    var formaEl = row.querySelector('[data-pag-forma]');
+    var valorEl = row.querySelector('[data-pag-valor]');
+    var maqEl = row.querySelector('[data-pag-maquina]');
+    var forma = formaEl ? formaEl.value : '';
+    var valor = valorEl && valorEl.value !== '' ? Number(valorEl.value) : NaN;
+    if (!forma || isNaN(valor) || valor <= 0) return;
+    var item = { forma: forma, valor: valor };
+    if (reservaFidPrecisaMaquina(forma)) {
+      item.maquina = maqEl ? String(maqEl.value || '').trim() : '';
+    }
+    pagamentos.push(item);
+  });
+  return pagamentos;
+}
+
+function reservaFidHtmlPagamentosRegistrados(pagamentos) {
+  if (!pagamentos || !pagamentos.length) return '';
+  return '<ul class="reserva-fid__pag-list">' + pagamentos.map(function(p) {
+    var txt = escapeHtml(p.forma_label || p.forma || 'Pagamento') + ' · R$ ' + reservaFidMoeda(p.valor);
+    if (p.maquina) txt += ' <span class="subtle-text">(' + escapeHtml(p.maquina) + ')</span>';
+    return '<li>' + txt + '</li>';
+  }).join('') + '</ul>';
+}
+
 async function renderReservaFidelidade(reservaId) {
   var statusEl = document.getElementById('reservaFidStatus');
   var bodyEl = document.getElementById('reservaFidBody');
@@ -18786,6 +18912,8 @@ async function renderReservaFidelidade(reservaId) {
     var seloOk = !!data.selo_ja_creditado;
     var contaPaga = !!data.conta_paga;
     var valorConta = data.valor_conta != null ? Number(data.valor_conta) : '';
+    var formasPag = data.formas_pagamento || [];
+    var pagamentosReg = data.pagamentos_conta || [];
     if (statusEl) statusEl.textContent = conta ? ('Cartão ' + (codigo || '#' + conta.id)) : 'Sem cartão ainda';
 
     var recompensas = data.recompensas || [];
@@ -18794,6 +18922,21 @@ async function renderReservaFidelidade(reservaId) {
         return '<option value="' + rw.id + '">' + escapeHtml(rw.titulo) + ' · ' + Number(rw.custo_selos || 0) + ' selos</option>';
       }).join('');
 
+    var contaHtml = contaPaga
+      ? '<p class="reserva-fid__conta-ok">✓ Conta paga' + (valorConta !== '' ? ' · R$ ' + reservaFidMoeda(valorConta) : '') + (seloOk ? ' · selo liberado' : '') + '</p>' +
+        reservaFidHtmlPagamentosRegistrados(pagamentosReg)
+      : '<label>Valor total da conta (R$)<input type="number" id="reservaFidValorConta" min="0.01" step="0.01" placeholder="0,00" value=""></label>' +
+        '<div class="reserva-fid__split">' +
+          '<div class="reserva-fid__split-head">' +
+            '<strong>Como foi pago</strong>' +
+            '<button type="button" class="btn ghost" id="btnReservaFidAddPag">+ Dividir conta</button>' +
+          '</div>' +
+          '<p class="subtle-text" style="margin:0;">Registro informativo: PIX, crédito, débito ou maquininha. Pode dividir em mais de uma forma.</p>' +
+          '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(formasPag, { forma: 'pix' }, 0) + '</div>' +
+          '<p class="reserva-fid__split-total" id="reservaFidPagTotal">Informe o valor total da conta e como foi pago.</p>' +
+        '</div>' +
+        '<button type="button" class="btn primary" id="btnReservaFidContaPaga">Conta paga · liberar selo</button>';
+
     bodyEl.innerHTML =
       '<div class="reserva-fid__saldo">' +
         '<div><span>Selos</span><strong id="reservaFidSelos">' + selos + '</strong></div>' +
@@ -18801,29 +18944,54 @@ async function renderReservaFidelidade(reservaId) {
         '<div><span>Meta</span><strong>' + meta + '</strong></div>' +
       '</div>' +
       '<div class="reserva-fid__conta">' +
-        '<p class="subtle-text" style="margin:0 0 0.5rem;">O selo só libera quando a <strong>conta for paga</strong>. Aí o cartão é criado (se ainda não existir) e o selo entra.</p>' +
-        (contaPaga
-          ? '<p class="reserva-fid__conta-ok">✓ Conta paga' + (valorConta !== '' ? ' · R$ ' + Number(valorConta).toFixed(2).replace('.', ',') : '') + (seloOk ? ' · selo liberado' : '') + '</p>'
-          : '<label>Valor da conta (R$)<input type="number" id="reservaFidValorConta" min="0" step="0.01" placeholder="0,00" value=""></label>' +
-            '<button type="button" class="btn primary" id="btnReservaFidContaPaga">Conta paga · liberar selo</button>') +
+        '<p class="subtle-text" style="margin:0 0 0.5rem;">O selo só libera quando a <strong>conta for paga</strong>. Informe valor e formas de pagamento (só registro).</p>' +
+        contaHtml +
       '</div>' +
       '<div class="reserva-fid__pagar">' +
         '<label>Resgatar recompensa com selos<select id="reservaFidRecompensa">' + opts + '</select></label>' +
         '<button type="button" class="btn secondary" id="btnReservaFidPagar"' + (selos <= 0 ? ' disabled' : '') + '>Pagar / Resgatar</button>' +
       '</div>';
 
+    if (!contaPaga) {
+      reservaFidBindPagamentos(formasPag);
+    }
+
     document.getElementById('btnReservaFidContaPaga') && document.getElementById('btnReservaFidContaPaga').addEventListener('click', async function() {
       var inp = document.getElementById('reservaFidValorConta');
       var valor = inp && inp.value !== '' ? Number(inp.value) : NaN;
-      if (isNaN(valor) || valor < 0) {
-        showToast('Informe o valor da conta.', 'warning');
+      if (isNaN(valor) || valor <= 0) {
+        showToast('Informe o valor total da conta.', 'warning');
         return;
       }
-      if (!confirm('Confirmar conta paga em R$ ' + valor.toFixed(2).replace('.', ',') + '?\nIsso cria o cartão (se preciso) e libera 1 selo.')) return;
+      var pagamentos = reservaFidColetarPagamentos();
+      if (!pagamentos.length) {
+        showToast('Informe ao menos uma forma de pagamento.', 'warning');
+        return;
+      }
+      var soma = pagamentos.reduce(function(s, p) { return s + Number(p.valor || 0); }, 0);
+      if (Math.abs(Math.round((soma - valor) * 100) / 100) >= 0.01) {
+        showToast('A soma dos pagamentos deve bater com o valor da conta.', 'warning');
+        return;
+      }
+      for (var i = 0; i < pagamentos.length; i++) {
+        if (reservaFidPrecisaMaquina(pagamentos[i].forma) && !pagamentos[i].maquina) {
+          showToast('Informe a maquininha usada na linha ' + (i + 1) + '.', 'warning');
+          return;
+        }
+      }
+      var resumoPag = pagamentos.map(function(p) {
+        var lbl = p.forma;
+        if (p.forma === 'pix') lbl = 'PIX';
+        else if (p.forma === 'credito') lbl = 'Crédito';
+        else if (p.forma === 'debito') lbl = 'Débito';
+        else if (p.forma === 'maquininha') lbl = 'Maquininha';
+        return lbl + ' R$ ' + reservaFidMoeda(p.valor) + (p.maquina ? ' (' + p.maquina + ')' : '');
+      }).join('\n');
+      if (!confirm('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nIsso cria o cartão (se preciso) e libera 1 selo.')) return;
       try {
         var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/conta-paga', {
           method: 'POST',
-          body: JSON.stringify({ valor_conta: valor })
+          body: JSON.stringify({ valor_conta: valor, pagamentos: pagamentos })
         });
         showToast(resp.message || 'Conta paga e selo liberado.', 'success');
         await renderReservaFidelidade(reservaId);

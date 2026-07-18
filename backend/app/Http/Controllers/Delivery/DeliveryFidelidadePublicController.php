@@ -554,20 +554,32 @@ class DeliveryFidelidadePublicController extends Controller
     {
         $config = DB::table('dlv_loja_config')->where('slug', $slug)->where('ativo', 1)->first();
         abort_unless($config, 404);
-        $config->logo_url = $config->logo_url ?? null;
-        $config->banner_url = $config->banner_url ?? null;
-        $config->filial_logo_url = $config->filial_logo_url ?? null;
-        $config->aberta = (bool) ($config->aberta ?? true);
-        $config->cor_primaria = $config->cor_primaria ?? '#2563eb';
-        $config->endereco_texto = $config->endereco_texto ?? null;
-        $config->whatsapp = $config->whatsapp ?? null;
-        $config->telefone = $config->telefone ?? null;
-        $config->instagram_url = $config->instagram_url ?? null;
-        $config->facebook_url = $config->facebook_url ?? null;
-        $config->filial_nome = $config->filial_nome ?? null;
-        $config->filial_link_url = $config->filial_link_url ?? null;
-        $config->entrega_texto = $config->entrega_texto ?? null;
-        $config->nome_loja = $config->nome_loja ?? 'Loja';
+
+        $defaults = [
+            'logo_url' => null,
+            'banner_url' => null,
+            'filial_logo_url' => null,
+            'aberta' => true,
+            'cor_primaria' => '#2563eb',
+            'endereco_texto' => null,
+            'whatsapp' => null,
+            'telefone' => null,
+            'instagram_url' => null,
+            'facebook_url' => null,
+            'filial_nome' => null,
+            'filial_link_url' => null,
+            'entrega_texto' => null,
+            'nome_loja' => 'Loja',
+        ];
+
+        foreach ($defaults as $key => $default) {
+            if (! property_exists($config, $key)) {
+                $config->{$key} = $default;
+            }
+        }
+
+        $config->aberta = (bool) $config->aberta;
+        $config->nome_loja = trim((string) ($config->nome_loja ?? '')) ?: 'Loja';
 
         return $config;
     }
