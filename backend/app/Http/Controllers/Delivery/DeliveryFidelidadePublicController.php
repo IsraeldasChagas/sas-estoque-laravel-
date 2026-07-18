@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Fidelidade\FidelidadeCodigoService;
 use App\Services\Fidelidade\FidelidadeLedgerService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
+use App\Services\Fidelidade\FidelidadePublicConsultaService;
 use App\Services\Fidelidade\FidelidadePublicOtpEntrega;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,17 +36,19 @@ class DeliveryFidelidadePublicController extends Controller
     public function __construct(
         private FidelidadePublicOtpEntrega $otpEntrega,
         private FidelidadeLedgerService $ledger,
+        private FidelidadePublicConsultaService $consulta,
     ) {}
 
     public function show(string $slug): View
     {
         $config = $this->config($slug);
-        $programa = $this->programaAtivo((int) $config->unidade_id);
+        $unidadeVitrine = (int) $config->unidade_id;
+        $unidadeFidPadrao = $this->consulta->unidadeFidelidade($config);
+        $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
         abort_unless($programa, 404);
 
-        $unidadeId = (int) $config->unidade_id;
-        $acesso = $this->acessoValido($unidadeId);
-        $otpPending = $this->otpPendenteValido($unidadeId);
+        $acesso = $this->acessoValido($unidadeVitrine);
+        $otpPending = $this->otpPendenteValido($unidadeVitrine);
         $otpCadastro = false;
         if ($otpPending) {
             $p = session(self::SESSION_OTP, []);
@@ -59,10 +62,12 @@ class DeliveryFidelidadePublicController extends Controller
             $mostrarProgresso = true;
             $norm = $acesso['tel_norm'];
             $telefoneMascara = strlen($norm) >= 4 ? '***'.substr($norm, -4) : $norm;
-            $conta = DB::table('fid_contas')
-                ->where('unidade_id', $unidadeId)
-                ->where('telefone_normalizado', $norm)
-                ->first();
+            $unidadeFid = (int) ($acesso['unidade_fidelidade_id'] ?? $unidadeFidPadrao);
+            $conta = $this->consulta->buscarContaAtivaNaUnidade($unidadeFid, $norm)
+                ?: $this->consulta->buscarContaAtiva($config, $norm);
+            if ($conta) {
+                $programa = $this->programaAtivo((int) $conta->unidade_id) ?? $programa;
+            }
         }
 
         return view('delivery.public.fidelidade', [
@@ -83,7 +88,9 @@ class DeliveryFidelidadePublicController extends Controller
     public function solicitarCodigo(Request $request, string $slug): RedirectResponse
     {
         $config = $this->config($slug);
-        $programa = $this->programaAtivo((int) $config->unidade_id);
+        $unidadeVitrine = (int) $config->unidade_id;
+        $unidadeFidPadrao = $this->consulta->unidadeFidelidade($config);
+        $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
         if (! $programa) {
             return $this->voltar($slug)->with('warning', 'Programa de fidelidade indisponível.');
         }
@@ -96,19 +103,15 @@ class DeliveryFidelidadePublicController extends Controller
             return back()->withErrors(['telefone' => 'Informe um telefone válido (DDD + número).'])->withInput();
         }
 
-        $unidadeId = (int) $config->unidade_id;
-        $temCartao = DB::table('fid_contas')
-            ->where('unidade_id', $unidadeId)
-            ->where('telefone_normalizado', $norm)
-            ->where('status', 'ativo')
-            ->exists();
-        if (! $temCartao) {
+        $conta = $this->consulta->buscarContaAtiva($config, $norm);
+        if (! $conta) {
             return back()
                 ->with('warning', 'Não encontramos cartão fidelidade para este telefone nesta loja. Cadastre-se acima ou confira o número.')
                 ->withInput();
         }
+        $unidadeFid = (int) $conta->unidade_id;
 
-        $rateKey = 'sas-fid-otp:'.$unidadeId.':'.$norm;
+        $rateKey = 'sas-fid-otp:'.$unidadeVitrine.':'.$norm;
         if (RateLimiter::tooManyAttempts($rateKey, 4)) {
             $seg = RateLimiter::availableIn($rateKey);
 
@@ -117,13 +120,13 @@ class DeliveryFidelidadePublicController extends Controller
         RateLimiter::hit($rateKey, 3600);
 
         $codigo = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
-        Cache::forget($this->keyOtpCadastro($unidadeId, $norm));
-        Cache::forget($this->keyFalhasCadastro($unidadeId, $norm));
-        Cache::put($this->keyOtp($unidadeId, $norm), $codigo, now()->addMinutes(self::OTP_TTL_MINUTES));
-        Cache::forget($this->keyFalhas($unidadeId, $norm));
+        Cache::forget($this->keyOtpCadastro($unidadeVitrine, $norm));
+        Cache::forget($this->keyFalhasCadastro($unidadeVitrine, $norm));
+        Cache::put($this->keyOtp($unidadeVitrine, $norm), $codigo, now()->addMinutes(self::OTP_TTL_MINUTES));
+        Cache::forget($this->keyFalhas($unidadeVitrine, $norm));
 
         $nomeLoja = trim((string) ($config->nome_loja ?: 'Loja'));
-        $envio = $this->otpEntrega->entregar($nomeLoja, $unidadeId, $norm, $codigo, self::OTP_TTL_MINUTES);
+        $envio = $this->otpEntrega->entregar($nomeLoja, $unidadeVitrine, $norm, $codigo, self::OTP_TTL_MINUTES);
         if (! $envio['ok']) {
             Cache::forget($this->keyOtp($unidadeId, $norm));
             RateLimiter::clear($rateKey);
@@ -132,7 +135,8 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $request->session()->put(self::SESSION_OTP, [
-            'unidade_id' => $unidadeId,
+            'unidade_id' => $unidadeVitrine,
+            'unidade_fidelidade_id' => $unidadeFid,
             'tel_norm' => $norm,
             'telefone_input' => $data['telefone'],
             'tipo' => self::OTP_TIPO_CONSULTA,
@@ -302,6 +306,7 @@ class DeliveryFidelidadePublicController extends Controller
         $request->session()->forget(self::SESSION_OTP);
         $request->session()->put(self::SESSION_ACESSO, [
             'unidade_id' => $unidadeId,
+            'unidade_fidelidade_id' => (int) ($pending['unidade_fidelidade_id'] ?? $this->consulta->unidadeFidelidade($config)),
             'tel_norm' => $telNorm,
             'exp' => now()->addMinutes(self::ACESSO_TTL_MINUTES)->timestamp,
         ]);

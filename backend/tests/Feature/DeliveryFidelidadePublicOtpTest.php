@@ -35,6 +35,7 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
         Schema::create('dlv_loja_config', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('unidade_id');
+            $table->unsignedBigInteger('unidade_fidelidade_id')->nullable();
             $table->string('slug')->unique();
             $table->string('nome_loja')->nullable();
             $table->boolean('ativo')->default(1);
@@ -144,5 +145,63 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
 
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertDontSee('Seu progresso');
+    }
+
+    public function test_encontra_cartao_de_outra_unidade_vinculada_a_vitrine(): void
+    {
+        config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $unidadeReserva = (int) DB::table('unidades')->insertGetId([
+            'nome' => 'Unidade Reserva',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('fid_programas')->insert([
+            'unidade_id' => $unidadeReserva,
+            'ativo' => 1,
+            'nome_exibicao' => 'Cartão reserva',
+            'modo' => 'selos',
+            'pedidos_meta' => 10,
+            'pontos_por_selo' => 1,
+            'tipo_recompensa_padrao' => 'produto',
+            'permite_ajuste_manual' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('fid_contas')->insert([
+            'unidade_id' => $unidadeReserva,
+            'telefone_normalizado' => '69911112222',
+            'email' => null,
+            'nome' => 'Cliente Reserva',
+            'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
+            'status' => 'ativo',
+            'saldo_selos' => 2,
+            'saldo_pontos' => 2,
+            'total_resgates' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('dlv_loja_config')->where('slug', $this->slug)->update([
+            'unidade_fidelidade_id' => $unidadeReserva,
+        ]);
+
+        $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+            'telefone' => '(69) 91111-2222',
+        ])->assertRedirect('/loja/'.$this->slug.'/fidelidade');
+
+        $codigo = Cache::get('sas_fid_otp:'.$this->unidadeId.':69911112222');
+        $this->assertIsString($codigo);
+
+        $this->post('/loja/'.$this->slug.'/fidelidade/verificar-codigo', [
+            'codigo' => $codigo,
+        ])->assertRedirect('/loja/'.$this->slug.'/fidelidade');
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Seu progresso')
+            ->assertSee('2');
     }
 }
