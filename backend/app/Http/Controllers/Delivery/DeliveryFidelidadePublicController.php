@@ -52,7 +52,6 @@ class DeliveryFidelidadePublicController extends Controller
         $telefoneMascara = null;
         $unidadeFid = $unidadeFidPadrao;
         if ($acesso !== null && ! $otpPending) {
-            $mostrarProgresso = true;
             $norm = $acesso['tel_norm'];
             $telefoneMascara = strlen($norm) >= 4 ? '***'.substr($norm, -4) : $norm;
             $unidadeFid = (int) ($acesso['unidade_fidelidade_id'] ?? $unidadeFidPadrao);
@@ -61,6 +60,13 @@ class DeliveryFidelidadePublicController extends Controller
             if ($conta) {
                 $unidadeFid = (int) $conta->unidade_id;
                 $programa = $this->programaAtivo($unidadeFid) ?? $programa;
+                $mostrarProgresso = true;
+            } else {
+                $this->limparSessaoConsulta($unidadeVitrine);
+                session()->flash(
+                    'warning',
+                    'Não encontramos cartão fidelidade para este telefone. O cartão é criado após a reserva de mesa e o pagamento da conta — use o mesmo telefone informado na reserva.'
+                );
             }
         }
 
@@ -94,12 +100,16 @@ class DeliveryFidelidadePublicController extends Controller
         ]);
         $norm = FidelidadeNormalizer::telefone($data['telefone']);
         if (strlen($norm) < 10) {
-            return back()->withErrors(['telefone' => 'Informe um telefone válido (DDD + número).'])->withInput();
+            return $this->voltar($slug)
+                ->withErrors(['telefone' => 'Informe um telefone válido (DDD + número).'])
+                ->withInput();
         }
 
         $conta = $this->consulta->buscarContaAtiva($config, $norm);
         if (! $conta) {
-            return back()
+            $this->limparSessaoConsulta($unidadeVitrine);
+
+            return $this->voltar($slug)
                 ->with('warning', 'Não encontramos cartão fidelidade para este telefone nesta unidade. O cartão é criado automaticamente após a reserva de mesa e o pagamento da conta — use o mesmo telefone informado na reserva.')
                 ->withInput();
         }
@@ -109,7 +119,9 @@ class DeliveryFidelidadePublicController extends Controller
         if (RateLimiter::tooManyAttempts($rateKey, 4)) {
             $seg = RateLimiter::availableIn($rateKey);
 
-            return back()->withErrors(['telefone' => 'Aguarde '.max(1, $seg).' segundos para solicitar outro código.'])->withInput();
+            return $this->voltar($slug)
+                ->withErrors(['telefone' => 'Aguarde '.max(1, $seg).' segundos para solicitar outro código.'])
+                ->withInput();
         }
         RateLimiter::hit($rateKey, 3600);
 
@@ -122,10 +134,12 @@ class DeliveryFidelidadePublicController extends Controller
         $nomeLoja = trim((string) ($config->nome_loja ?: 'Loja'));
         $envio = $this->otpEntrega->entregar($nomeLoja, $unidadeVitrine, $norm, $codigo, self::OTP_TTL_MINUTES);
         if (! $envio['ok']) {
-            Cache::forget($this->keyOtp($unidadeId, $norm));
+            Cache::forget($this->keyOtp($unidadeVitrine, $norm));
             RateLimiter::clear($rateKey);
 
-            return back()->withErrors(['telefone' => $this->msgFalha($envio)])->withInput();
+            return $this->voltar($slug)
+                ->withErrors(['telefone' => $this->msgFalha($envio)])
+                ->withInput();
         }
 
         $request->session()->put(self::SESSION_OTP, [
@@ -253,7 +267,9 @@ class DeliveryFidelidadePublicController extends Controller
         $data = $request->validate(['codigo' => ['required', 'string', 'max:32']]);
         $digits = preg_replace('/\D+/', '', $data['codigo']) ?? '';
         if (strlen($digits) !== 6) {
-            return back()->withErrors(['codigo' => 'Informe os 6 dígitos do código.'])->withInput();
+            return $this->voltar($slug)
+                ->withErrors(['codigo' => 'Informe os 6 dígitos do código.'])
+                ->withInput();
         }
 
         $tipo = (string) ($pending['tipo'] ?? self::OTP_TIPO_CONSULTA);
@@ -272,7 +288,9 @@ class DeliveryFidelidadePublicController extends Controller
         if (! is_string($esperado) || ! hash_equals($esperado, $digits)) {
             Cache::put($fk, (int) Cache::get($fk, 0) + 1, now()->addMinutes(self::OTP_TTL_MINUTES));
 
-            return back()->withErrors(['codigo' => 'Código inválido ou expirado.'])->withInput();
+            return $this->voltar($slug)
+                ->withErrors(['codigo' => 'Código inválido ou expirado.'])
+                ->withInput();
         }
 
         Cache::forget($ck);
@@ -410,6 +428,25 @@ class DeliveryFidelidadePublicController extends Controller
         return $reenvio
             ? 'Geramos um novo código. Use o botão verde nesta página para abrir o WhatsApp com o texto pronto.'
             : 'Use o botão verde nesta página: ele abre o WhatsApp com o código na mensagem — leia e digite abaixo.';
+    }
+
+    private function limparSessaoConsulta(int $unidadeId): void
+    {
+        $acesso = session(self::SESSION_ACESSO);
+        if (is_array($acesso) && (int) ($acesso['unidade_id'] ?? 0) === $unidadeId) {
+            session()->forget(self::SESSION_ACESSO);
+        }
+
+        $pending = session(self::SESSION_OTP);
+        if (is_array($pending) && (int) ($pending['unidade_id'] ?? 0) === $unidadeId) {
+            if (is_string($pending['tel_norm'] ?? null)) {
+                $tipo = (string) ($pending['tipo'] ?? self::OTP_TIPO_CONSULTA);
+                [$ck, $fk] = $this->chaves($unidadeId, $pending['tel_norm'], $tipo);
+                Cache::forget($ck);
+                Cache::forget($fk);
+            }
+            session()->forget(self::SESSION_OTP);
+        }
     }
 
     private function voltar(string $slug): RedirectResponse

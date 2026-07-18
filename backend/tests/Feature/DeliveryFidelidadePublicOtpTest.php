@@ -147,6 +147,41 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
             ->assertDontSee('Seu progresso');
     }
 
+    public function test_telefone_sem_cartao_mostra_aviso_sem_erro_419(): void
+    {
+        $this->from('/loja/'.$this->slug.'/fidelidade')
+            ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+                'telefone' => '(69) 98888-7777',
+            ])
+            ->assertRedirect('/loja/'.$this->slug.'/fidelidade')
+            ->assertSessionHas('warning');
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Não encontramos cartão fidelidade')
+            ->assertSee('Solicitar código')
+            ->assertDontSee('419');
+    }
+
+    public function test_sessao_antiga_com_cartao_excluido_limpa_e_mostra_formulario(): void
+    {
+        config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+            'telefone' => '(69) 99999-8888',
+        ]);
+        $codigo = Cache::get('sas_fid_otp:'.$this->unidadeId.':69999998888');
+        $this->post('/loja/'.$this->slug.'/fidelidade/verificar-codigo', ['codigo' => $codigo]);
+
+        DB::table('fid_contas')->where('telefone_normalizado', '69999998888')->delete();
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Não encontramos cartão fidelidade')
+            ->assertSee('Solicitar código')
+            ->assertDontSee('Seu progresso');
+    }
+
     public function test_encontra_cartao_de_outra_unidade_vinculada_a_vitrine(): void
     {
         config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);

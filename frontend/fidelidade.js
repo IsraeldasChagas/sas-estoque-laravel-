@@ -171,7 +171,7 @@
       <button class="btn small secondary" data-fid-action="resgatar" data-id="${c.id}">Resgatar</button>
       <button class="btn small neutral" data-fid-action="extrato" data-id="${c.id}">Extrato</button>
       <button class="btn small neutral" data-fid-action="status" data-id="${c.id}" data-status="${c.status}">${c.status === "ativo" ? "Bloquear" : "Ativar"}</button>
-      <button class="btn small danger" data-fid-action="excluir" data-id="${c.id}" data-nome="${esc(c.nome || c.telefone_normalizado || "cliente")}">Excluir</button>
+      <button class="btn small danger" data-fid-action="excluir" data-id="${c.id}" data-nome="${esc(c.nome || c.telefone_normalizado || "cliente")}" title="Apaga cartão, selos e extrato">Excluir cartão</button>
       </div></td></tr>`).join("");
   }
 

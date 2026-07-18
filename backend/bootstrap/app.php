@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -42,6 +43,19 @@ return Application::configure(basePath: dirname(__DIR__))
                     'error' => 'Arquivo grande demais para o limite de upload do servidor. Reduza o tamanho ou cole o texto manualmente.',
                 ], 413)->header('Access-Control-Allow-Origin', '*')
                     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+            }
+
+            return null;
+        });
+
+        $exceptions->render(function (TokenMismatchException $e, Request $request) {
+            if ($request->is('loja/*/fidelidade*')) {
+                $slug = $request->route('slug');
+                if (is_string($slug) && $slug !== '') {
+                    return redirect()
+                        ->route('delivery.public.fidelity', ['slug' => $slug])
+                        ->with('warning', 'Sessão expirada. Informe o telefone novamente e clique em Solicitar código.');
+                }
             }
 
             return null;
