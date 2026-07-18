@@ -18594,6 +18594,7 @@ async function loadReservasMesas() {
     document.getElementById('reservasTotalDia').textContent = resumo.total_reservas_dia ?? 0;
 
     _reservasMesasCache = { mesas: mesas || [], reservas: reservas || [], unidadeId: unidadeId };
+    loadReservaMeiosPagamento(unidadeId);
     cardsEl.querySelectorAll('.mesa-card').forEach(function(c) { c.style.cursor = 'pointer'; });
     document.querySelectorAll('#reservasTableBody .btn-icon').forEach(function(btn) {
       btn.addEventListener('click', async function(e) {
@@ -18761,8 +18762,20 @@ function reservaFidMoeda(valor) {
   return Number(valor || 0).toFixed(2).replace('.', ',');
 }
 
-function reservaFidPrecisaMaquina(forma) {
-  return forma === 'credito' || forma === 'debito' || forma === 'maquininha';
+var _reservaFidMeiosCache = null;
+
+function reservaFidTipoMeio(forma) {
+  if (forma === 'pix') return 'pix';
+  if (forma === 'dinheiro') return 'dinheiro';
+  if (forma === 'credito' || forma === 'debito' || forma === 'maquininha') return 'maquininha';
+  return null;
+}
+
+function reservaFidLabelMeio(forma) {
+  var tipo = reservaFidTipoMeio(forma);
+  if (tipo === 'pix') return 'Recebedor PIX';
+  if (tipo === 'dinheiro') return 'Recebedor (caixa)';
+  return 'Maquininha / recebedor';
 }
 
 function reservaFidOptsFormas(formas, selected) {
@@ -18770,7 +18783,8 @@ function reservaFidOptsFormas(formas, selected) {
     { value: 'pix', label: 'PIX' },
     { value: 'credito', label: 'Crédito' },
     { value: 'debito', label: 'Débito' },
-    { value: 'maquininha', label: 'Maquininha' }
+    { value: 'maquininha', label: 'Maquininha' },
+    { value: 'dinheiro', label: 'Dinheiro' }
   ];
   return lista.map(function(f) {
     var sel = selected && f.value === selected ? ' selected' : '';
@@ -18778,15 +18792,52 @@ function reservaFidOptsFormas(formas, selected) {
   }).join('');
 }
 
-function reservaFidHtmlLinhaPagamento(formas, dados, idx) {
+function reservaFidOptsMeios(meios, forma, selectedId) {
+  var tipo = reservaFidTipoMeio(forma);
+  var lista = (meios && tipo && meios[tipo]) ? meios[tipo] : [];
+  if (!lista.length) {
+    return '<option value="">Cadastre em Modos de pagamento</option>';
+  }
+  return '<option value="">Selecione…</option>' + lista.map(function(m) {
+    var sel = selectedId && Number(selectedId) === Number(m.id) ? ' selected' : '';
+    return '<option value="' + m.id + '"' + sel + '>' + escapeHtml(m.nome) + '</option>';
+  }).join('');
+}
+
+function reservaFidNomeMeio(meios, forma, meioId) {
+  var tipo = reservaFidTipoMeio(forma);
+  var lista = (meios && tipo && meios[tipo]) ? meios[tipo] : [];
+  for (var i = 0; i < lista.length; i++) {
+    if (Number(lista[i].id) === Number(meioId)) return lista[i].nome;
+  }
+  return '';
+}
+
+function reservaFidAtualizarLinhaMeio(row, meios) {
+  if (!row) return;
+  var formaEl = row.querySelector('[data-pag-forma]');
+  var meioSel = row.querySelector('[data-pag-meio]');
+  var meioLabel = row.querySelector('[data-pag-meio-label]');
+  var forma = formaEl ? formaEl.value : 'pix';
+  if (meioLabel) meioLabel.textContent = reservaFidLabelMeio(forma);
+  if (meioSel) {
+    var cur = meioSel.value;
+    meioSel.innerHTML = reservaFidOptsMeios(meios, forma, cur);
+  }
+}
+
+function reservaFidHtmlLinhaPagamento(formas, meios, dados, idx) {
   var forma = (dados && dados.forma) || 'pix';
   var valor = dados && dados.valor != null ? dados.valor : '';
-  var maquina = (dados && dados.maquina) || '';
-  var showMaquina = reservaFidPrecisaMaquina(forma);
+  var meioId = dados && dados.meio_id != null ? dados.meio_id : '';
+  var rotulo = (dados && dados.rotulo) || '';
+  var n = (idx || 0) + 1;
   return '<div class="reserva-fid__pag-row" data-pag-row="' + idx + '">' +
+    '<div class="reserva-fid__pag-row-title">Pagamento ' + n + '</div>' +
+    '<label>Quem pagou (opcional)<input type="text" data-pag-rotulo maxlength="80" placeholder="Ex.: João, Maria…" value="' + escapeHtml(rotulo) + '"></label>' +
     '<label>Forma<select data-pag-forma>' + reservaFidOptsFormas(formas, forma) + '</select></label>' +
+    '<label class="reserva-fid__pag-meio"><span data-pag-meio-label>' + escapeHtml(reservaFidLabelMeio(forma)) + '</span><select data-pag-meio>' + reservaFidOptsMeios(meios, forma, meioId) + '</select></label>' +
     '<label>Valor (R$)<input type="number" data-pag-valor min="0.01" step="0.01" placeholder="0,00" value="' + (valor !== '' ? escapeHtml(String(valor)) : '') + '"></label>' +
-    '<label class="reserva-fid__pag-maquina"' + (showMaquina ? '' : ' hidden') + '>Maquininha<input type="text" data-pag-maquina maxlength="120" placeholder="Ex.: Stone, Cielo…" value="' + escapeHtml(maquina) + '"></label>' +
     '<button type="button" class="btn ghost reserva-fid__pag-remove" data-pag-remove title="Remover linha">×</button>' +
   '</div>';
 }
@@ -18819,16 +18870,16 @@ function reservaFidAtualizarTotaisPagamento() {
   }
 }
 
-function reservaFidBindPagamentos(formas) {
+function reservaFidBindPagamentos(formas, meios) {
+  _reservaFidMeiosCache = meios || { pix: [], maquininha: [], dinheiro: [] };
   var wrap = document.getElementById('reservaFidPagamentos');
   if (!wrap) return;
   if (!wrap.dataset.bound) {
     wrap.dataset.bound = '1';
     wrap.addEventListener('change', function(e) {
-      if (!e.target.matches('[data-pag-forma]')) return;
-      var row = e.target.closest('[data-pag-row]');
-      var maqLabel = row && row.querySelector('.reserva-fid__pag-maquina');
-      if (maqLabel) maqLabel.hidden = !reservaFidPrecisaMaquina(e.target.value);
+      if (e.target.matches('[data-pag-forma]')) {
+        reservaFidAtualizarLinhaMeio(e.target.closest('[data-pag-row]'), _reservaFidMeiosCache);
+      }
       reservaFidAtualizarTotaisPagamento();
     });
     wrap.addEventListener('input', function(e) {
@@ -18843,16 +18894,24 @@ function reservaFidBindPagamentos(formas) {
         return;
       }
       btn.closest('[data-pag-row]').remove();
+      wrap.querySelectorAll('[data-pag-row]').forEach(function(row, i) {
+        row.setAttribute('data-pag-row', String(i));
+        var title = row.querySelector('.reserva-fid__pag-row-title');
+        if (title) title.textContent = 'Pagamento ' + (i + 1);
+      });
       reservaFidAtualizarTotaisPagamento();
     });
     document.getElementById('btnReservaFidAddPag') && document.getElementById('btnReservaFidAddPag').addEventListener('click', function() {
       var idx = wrap.querySelectorAll('[data-pag-row]').length;
-      wrap.insertAdjacentHTML('beforeend', reservaFidHtmlLinhaPagamento(formas, { forma: 'pix' }, idx));
+      wrap.insertAdjacentHTML('beforeend', reservaFidHtmlLinhaPagamento(formas, _reservaFidMeiosCache, { forma: 'pix' }, idx));
       reservaFidAtualizarTotaisPagamento();
     });
     var totalInp = document.getElementById('reservaFidValorConta');
     if (totalInp) totalInp.addEventListener('input', reservaFidAtualizarTotaisPagamento);
   }
+  wrap.querySelectorAll('[data-pag-row]').forEach(function(row) {
+    reservaFidAtualizarLinhaMeio(row, _reservaFidMeiosCache);
+  });
   reservaFidAtualizarTotaisPagamento();
 }
 
@@ -18861,26 +18920,76 @@ function reservaFidColetarPagamentos() {
   document.querySelectorAll('[data-pag-row]').forEach(function(row) {
     var formaEl = row.querySelector('[data-pag-forma]');
     var valorEl = row.querySelector('[data-pag-valor]');
-    var maqEl = row.querySelector('[data-pag-maquina]');
+    var meioEl = row.querySelector('[data-pag-meio]');
+    var rotuloEl = row.querySelector('[data-pag-rotulo]');
     var forma = formaEl ? formaEl.value : '';
     var valor = valorEl && valorEl.value !== '' ? Number(valorEl.value) : NaN;
+    var meioId = meioEl && meioEl.value ? Number(meioEl.value) : 0;
     if (!forma || isNaN(valor) || valor <= 0) return;
-    var item = { forma: forma, valor: valor };
-    if (reservaFidPrecisaMaquina(forma)) {
-      item.maquina = maqEl ? String(maqEl.value || '').trim() : '';
-    }
+    var item = { forma: forma, valor: valor, meio_id: meioId };
+    var rotulo = rotuloEl ? String(rotuloEl.value || '').trim() : '';
+    if (rotulo) item.rotulo = rotulo;
     pagamentos.push(item);
   });
   return pagamentos;
 }
 
+function reservaFidFormaLabel(forma) {
+  if (forma === 'pix') return 'PIX';
+  if (forma === 'credito') return 'Crédito';
+  if (forma === 'debito') return 'Débito';
+  if (forma === 'maquininha') return 'Maquininha';
+  if (forma === 'dinheiro') return 'Dinheiro';
+  return forma;
+}
+
 function reservaFidHtmlPagamentosRegistrados(pagamentos) {
   if (!pagamentos || !pagamentos.length) return '';
   return '<ul class="reserva-fid__pag-list">' + pagamentos.map(function(p) {
-    var txt = escapeHtml(p.forma_label || p.forma || 'Pagamento') + ' · R$ ' + reservaFidMoeda(p.valor);
-    if (p.maquina) txt += ' <span class="subtle-text">(' + escapeHtml(p.maquina) + ')</span>';
+    var quem = p.rotulo ? ('<strong>' + escapeHtml(p.rotulo) + ':</strong> ') : '';
+    var txt = quem + escapeHtml(p.forma_label || reservaFidFormaLabel(p.forma)) + ' · R$ ' + reservaFidMoeda(p.valor);
+    var recebedor = p.meio_nome || p.maquina;
+    if (recebedor) txt += ' <span class="subtle-text">(' + escapeHtml(recebedor) + ')</span>';
     return '<li>' + txt + '</li>';
   }).join('') + '</ul>';
+}
+
+async function loadReservaMeiosPagamento(unidadeId) {
+  var lista = document.getElementById('reservaMeiosLista');
+  if (!lista) return;
+  if (!unidadeId) {
+    lista.innerHTML = '<p class="subtle-text">Selecione uma unidade para gerenciar.</p>';
+    return;
+  }
+  try {
+    var data = await fetchJSON('/reservas-mesas/meios-pagamento?unidade_id=' + encodeURIComponent(unidadeId));
+    var items = data.items || [];
+    if (!items.length) {
+      lista.innerHTML = '<p class="subtle-text">Nenhum recebedor cadastrado. Adicione PIX, maquininhas e caixas de dinheiro acima.</p>';
+      return;
+    }
+    lista.innerHTML = '<div class="table-wrapper"><table class="reservas-table reserva-meios-table"><thead><tr><th>Tipo</th><th>Recebedor</th><th>Status</th><th></th></tr></thead><tbody>' +
+      items.map(function(it) {
+        return '<tr><td data-label="Tipo">' + escapeHtml(it.tipo_label || it.tipo) + '</td>' +
+          '<td data-label="Recebedor">' + escapeHtml(it.nome) + '</td>' +
+          '<td data-label="Status">' + (it.ativo ? 'Ativo' : 'Inativo') + '</td>' +
+          '<td data-label="Ações"><button type="button" class="btn ghost" data-meio-del="' + it.id + '">Excluir</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    lista.querySelectorAll('[data-meio-del]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        if (!confirm('Remover este recebedor?')) return;
+        try {
+          await fetchJSON('/reservas-mesas/meios-pagamento/' + btn.getAttribute('data-meio-del') + '?unidade_id=' + encodeURIComponent(unidadeId), { method: 'DELETE' });
+          showToast('Recebedor removido.', 'success');
+          await loadReservaMeiosPagamento(unidadeId);
+        } catch (e) {
+          showToast(e.message || 'Erro ao remover.', 'error');
+        }
+      });
+    });
+  } catch (e) {
+    lista.innerHTML = '<p class="subtle-text">' + escapeHtml(e.message || 'Erro ao carregar modos de pagamento.') + '</p>';
+  }
 }
 
 async function renderReservaFidelidade(reservaId) {
@@ -18913,6 +19022,7 @@ async function renderReservaFidelidade(reservaId) {
     var contaPaga = !!data.conta_paga;
     var valorConta = data.valor_conta != null ? Number(data.valor_conta) : '';
     var formasPag = data.formas_pagamento || [];
+    var meiosPag = data.meios_pagamento || { pix: [], maquininha: [], dinheiro: [] };
     var pagamentosReg = data.pagamentos_conta || [];
     if (statusEl) statusEl.textContent = conta ? ('Cartão ' + (codigo || '#' + conta.id)) : 'Sem cartão ainda';
 
@@ -18931,8 +19041,8 @@ async function renderReservaFidelidade(reservaId) {
             '<strong>Como foi pago</strong>' +
             '<button type="button" class="btn ghost" id="btnReservaFidAddPag">+ Dividir conta</button>' +
           '</div>' +
-          '<p class="subtle-text" style="margin:0;">Registro informativo: PIX, crédito, débito ou maquininha. Pode dividir em mais de uma forma.</p>' +
-          '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(formasPag, { forma: 'pix' }, 0) + '</div>' +
+          '<p class="subtle-text" style="margin:0;">Cadastre recebedores em <strong>Modos de pagamento</strong>. Cada linha pode ser outra pessoa da mesa, forma e maquininha/recebedor.</p>' +
+          '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(formasPag, meiosPag, { forma: 'pix' }, 0) + '</div>' +
           '<p class="reserva-fid__split-total" id="reservaFidPagTotal">Informe o valor total da conta e como foi pago.</p>' +
         '</div>' +
         '<button type="button" class="btn primary" id="btnReservaFidContaPaga">Conta paga · liberar selo</button>';
@@ -18953,7 +19063,9 @@ async function renderReservaFidelidade(reservaId) {
       '</div>';
 
     if (!contaPaga) {
-      reservaFidBindPagamentos(formasPag);
+      var wrapPag = document.getElementById('reservaFidPagamentos');
+      if (wrapPag) wrapPag.dataset.bound = '';
+      reservaFidBindPagamentos(formasPag, meiosPag);
     }
 
     document.getElementById('btnReservaFidContaPaga') && document.getElementById('btnReservaFidContaPaga').addEventListener('click', async function() {
@@ -18974,18 +19086,16 @@ async function renderReservaFidelidade(reservaId) {
         return;
       }
       for (var i = 0; i < pagamentos.length; i++) {
-        if (reservaFidPrecisaMaquina(pagamentos[i].forma) && !pagamentos[i].maquina) {
-          showToast('Informe a maquininha usada na linha ' + (i + 1) + '.', 'warning');
+        if (!pagamentos[i].meio_id) {
+          showToast('Selecione o recebedor/meio na linha ' + (i + 1) + '. Cadastre em Modos de pagamento.', 'warning');
           return;
         }
       }
       var resumoPag = pagamentos.map(function(p) {
-        var lbl = p.forma;
-        if (p.forma === 'pix') lbl = 'PIX';
-        else if (p.forma === 'credito') lbl = 'Crédito';
-        else if (p.forma === 'debito') lbl = 'Débito';
-        else if (p.forma === 'maquininha') lbl = 'Maquininha';
-        return lbl + ' R$ ' + reservaFidMoeda(p.valor) + (p.maquina ? ' (' + p.maquina + ')' : '');
+        var recebedor = reservaFidNomeMeio(meiosPag, p.forma, p.meio_id);
+        var linha = (p.rotulo ? p.rotulo + ': ' : '') + reservaFidFormaLabel(p.forma) + ' R$ ' + reservaFidMoeda(p.valor);
+        if (recebedor) linha += ' (' + recebedor + ')';
+        return linha;
       }).join('\n');
       if (!confirm('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nIsso cria o cartão (se preciso) e libera 1 selo.')) return;
       try {
@@ -19773,6 +19883,30 @@ function setupReservasMesasModule() {
   document.getElementById('reservasTurnoFiltro') && document.getElementById('reservasTurnoFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasStatusFiltro') && document.getElementById('reservasStatusFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasAtualizar') && document.getElementById('reservasAtualizar').addEventListener('click', function() { loadReservasMesas(); });
+
+  document.getElementById('reservaMeioForm') && document.getElementById('reservaMeioForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var unidadeId = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
+    if (!unidadeId) {
+      showToast('Selecione a unidade.', 'warning');
+      return;
+    }
+    var fd = new FormData(e.target);
+    try {
+      await fetchJSON('/reservas-mesas/meios-pagamento?unidade_id=' + encodeURIComponent(unidadeId), {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo: fd.get('tipo'),
+          nome: fd.get('nome')
+        })
+      });
+      showToast('Recebedor cadastrado.', 'success');
+      e.target.reset();
+      await loadReservaMeiosPagamento(unidadeId);
+    } catch (err) {
+      showToast(err.message || 'Erro ao cadastrar.', 'error');
+    }
+  });
 
   document.getElementById('rdashUnidadeFiltro') && document.getElementById('rdashUnidadeFiltro').addEventListener('change', function() { loadReservaDashboard(); });
   document.getElementById('rdashAtualizar') && document.getElementById('rdashAtualizar').addEventListener('click', function() { loadReservaDashboard(); });

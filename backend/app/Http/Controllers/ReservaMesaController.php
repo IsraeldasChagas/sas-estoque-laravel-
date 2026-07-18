@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Mesa;
 use App\Models\ReservaMesa;
 use App\Services\Fidelidade\ReservaFidelidadeService;
+use App\Services\Reservas\ReservaMeioPagamentoService;
 use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -703,7 +704,8 @@ class ReservaMesaController extends Controller
             'pagamentos' => 'required|array|min:1',
             'pagamentos.*.forma' => 'required|string|max:30',
             'pagamentos.*.valor' => 'required|numeric|min:0.01|max:9999999.99',
-            'pagamentos.*.maquina' => 'nullable|string|max:120',
+            'pagamentos.*.meio_id' => 'required|integer|min:1',
+            'pagamentos.*.rotulo' => 'nullable|string|max:80',
         ])->validate();
 
         try {
@@ -1044,5 +1046,116 @@ class ReservaMesaController extends Controller
         $emerg = collect($vinculos)->contains(fn ($v) => ! empty($v['configuracao_emergencial']));
         $reserva->setAttribute('alerta_preparo_fisico', $composicao || $extras || $emerg);
         $reserva->setAttribute('composicao', $composicao);
+    }
+
+    public function meiosPagamentoIndex(Request $request)
+    {
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
+        if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
+            return $resp;
+        }
+
+        $unidadeId = $this->resolveUnidadeId($request, $usuario);
+        if (! $unidadeId) {
+            return response()->json(['message' => 'Informe a unidade.'], 422);
+        }
+
+        $svc = app(ReservaMeioPagamentoService::class);
+
+        return response()->json([
+            'items' => $svc->listarAdmin($unidadeId),
+            'agrupados' => $svc->agrupadosPorUnidade($unidadeId, false),
+            'tipos' => \App\Models\ReservaMeioPagamento::TIPOS,
+        ]);
+    }
+
+    public function meiosPagamentoStore(Request $request)
+    {
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
+        if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
+            return $resp;
+        }
+
+        $unidadeId = $this->resolveUnidadeId($request, $usuario);
+        if (! $unidadeId) {
+            return response()->json(['message' => 'Informe a unidade.'], 422);
+        }
+
+        $data = Validator::make($request->all(), [
+            'tipo' => 'required|string|max:20',
+            'nome' => 'required|string|max:160',
+            'ativo' => 'nullable|boolean',
+            'ordem' => 'nullable|integer|min:0|max:9999',
+        ])->validate();
+
+        try {
+            $item = app(ReservaMeioPagamentoService::class)->criar($unidadeId, $data);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first(),
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json(['message' => 'Meio de pagamento cadastrado.', 'item' => $item], 201);
+    }
+
+    public function meiosPagamentoUpdate(Request $request, $id)
+    {
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
+        if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
+            return $resp;
+        }
+
+        $unidadeId = $this->resolveUnidadeId($request, $usuario);
+        if (! $unidadeId) {
+            return response()->json(['message' => 'Informe a unidade.'], 422);
+        }
+
+        $data = Validator::make($request->all(), [
+            'tipo' => 'sometimes|string|max:20',
+            'nome' => 'sometimes|string|max:160',
+            'ativo' => 'nullable|boolean',
+            'ordem' => 'nullable|integer|min:0|max:9999',
+        ])->validate();
+
+        try {
+            $item = app(ReservaMeioPagamentoService::class)->atualizar($unidadeId, (int) $id, $data);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first(),
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json(['message' => 'Meio de pagamento atualizado.', 'item' => $item]);
+    }
+
+    public function meiosPagamentoDestroy(Request $request, $id)
+    {
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
+        if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
+            return $resp;
+        }
+
+        $unidadeId = $this->resolveUnidadeId($request, $usuario);
+        if (! $unidadeId) {
+            return response()->json(['message' => 'Informe a unidade.'], 422);
+        }
+
+        try {
+            app(ReservaMeioPagamentoService::class)->excluir($unidadeId, (int) $id);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first(),
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json(['message' => 'Meio de pagamento removido.']);
     }
 }

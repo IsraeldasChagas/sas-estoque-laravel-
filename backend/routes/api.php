@@ -5760,6 +5760,10 @@ Route::get('/mesas/{id}', fn (Request $r, $id) => (new MesaController())->show($
 Route::put('/mesas/{id}', fn (Request $r, $id) => (new MesaController())->update($r, $id)->withHeaders($cors));
 Route::delete('/mesas/{id}', fn (Request $r, $id) => (new MesaController())->destroy($id)->withHeaders($cors));
 
+Route::get('/reservas-mesas/meios-pagamento', fn (Request $r) => (new ReservaMesaController())->meiosPagamentoIndex($r)->withHeaders($cors));
+Route::post('/reservas-mesas/meios-pagamento', fn (Request $r) => (new ReservaMesaController())->meiosPagamentoStore($r)->withHeaders($cors));
+Route::put('/reservas-mesas/meios-pagamento/{id}', fn (Request $r, $id) => (new ReservaMesaController())->meiosPagamentoUpdate($r, $id)->withHeaders($cors));
+Route::delete('/reservas-mesas/meios-pagamento/{id}', fn (Request $r, $id) => (new ReservaMesaController())->meiosPagamentoDestroy($r, $id)->withHeaders($cors));
 Route::get('/reservas-mesas', fn (Request $r) => (new ReservaMesaController())->index($r)->withHeaders($cors));
 Route::get('/reservas-mesas/resumo', fn (Request $r) => (new ReservaMesaController())->resumo($r)->withHeaders($cors));
 Route::get('/reservas-mesas/dashboard', fn (Request $r) => (new ReservaMesaController())->dashboard($r)->withHeaders($cors));

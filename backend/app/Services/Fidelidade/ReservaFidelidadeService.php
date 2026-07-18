@@ -3,6 +3,7 @@
 namespace App\Services\Fidelidade;
 
 use App\Models\ReservaMesa;
+use App\Services\Reservas\ReservaMeioPagamentoService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,7 @@ final class ReservaFidelidadeService
     public const FORMA_CREDITO = 'credito';
     public const FORMA_DEBITO = 'debito';
     public const FORMA_MAQUININHA = 'maquininha';
+    public const FORMA_DINHEIRO = 'dinheiro';
 
     /** @var array<string, string> */
     public const FORMAS_PAGAMENTO = [
@@ -23,11 +25,13 @@ final class ReservaFidelidadeService
         self::FORMA_CREDITO => 'Crédito',
         self::FORMA_DEBITO => 'Débito',
         self::FORMA_MAQUININHA => 'Maquininha',
+        self::FORMA_DINHEIRO => 'Dinheiro',
     ];
 
     public function __construct(
         private FidelidadeLedgerService $ledger,
-        private FidelidadeResgateService $resgate
+        private FidelidadeResgateService $resgate,
+        private ReservaMeioPagamentoService $meiosPagamento,
     ) {}
 
     public function tabelasDisponiveis(): bool
@@ -52,9 +56,9 @@ final class ReservaFidelidadeService
 
     /**
      * @param  mixed  $raw
-     * @return list<array{forma:string,valor:float,maquina:?string}>
+     * @return list<array{forma:string,valor:float,meio_id:int,meio_nome:string,rotulo:?string}>
      */
-    public function normalizarPagamentosConta(mixed $raw): array
+    public function normalizarPagamentosConta(int $unidadeId, mixed $raw): array
     {
         if (! is_array($raw)) {
             throw ValidationException::withMessages(['pagamentos' => 'Informe ao menos uma forma de pagamento.']);
@@ -79,15 +83,26 @@ final class ReservaFidelidadeService
             if ($valor <= 0) {
                 throw ValidationException::withMessages(['pagamentos' => 'Valor deve ser maior que zero na linha '.($i + 1).'.']);
             }
-            $maquina = trim((string) ($item['maquina'] ?? ''));
-            $precisaMaquina = in_array($forma, [self::FORMA_CREDITO, self::FORMA_DEBITO, self::FORMA_MAQUININHA], true);
-            if ($precisaMaquina && $maquina === '') {
-                throw ValidationException::withMessages(['pagamentos' => 'Informe a maquininha usada na linha '.($i + 1).'.']);
+
+            $meioId = (int) ($item['meio_id'] ?? 0);
+            if ($meioId <= 0) {
+                throw ValidationException::withMessages(['pagamentos' => 'Selecione o recebedor/meio na linha '.($i + 1).'.']);
             }
+
+            $tipoEsperado = $this->meiosPagamento->tipoParaForma($forma);
+            $meio = $this->meiosPagamento->buscarMeio($unidadeId, $meioId, $tipoEsperado);
+            if (! $meio) {
+                throw ValidationException::withMessages(['pagamentos' => 'Recebedor/meio inválido na linha '.($i + 1).'. Cadastre em Reservas → Modos de pagamento.']);
+            }
+
+            $rotulo = trim((string) ($item['rotulo'] ?? ''));
+
             $out[] = [
                 'forma' => $forma,
                 'valor' => $valor,
-                'maquina' => $maquina !== '' ? $maquina : null,
+                'meio_id' => (int) $meio->id,
+                'meio_nome' => (string) $meio->nome,
+                'rotulo' => $rotulo !== '' ? $rotulo : null,
             ];
         }
 
@@ -109,7 +124,7 @@ final class ReservaFidelidadeService
     }
 
     /**
-     * @return list<array{forma:string,forma_label:string,valor:float,maquina:?string}>
+     * @return list<array{forma:string,forma_label:string,valor:float,meio_id:?int,meio_nome:?string,rotulo:?string,maquina:?string}>
      */
     public function pagamentosContaReserva(ReservaMesa $reserva): array
     {
@@ -131,16 +146,31 @@ final class ReservaFidelidadeService
             if ($valor <= 0) {
                 continue;
             }
-            $maquina = trim((string) ($item['maquina'] ?? ''));
+            $meioNome = trim((string) ($item['meio_nome'] ?? ''));
+            if ($meioNome === '') {
+                $meioNome = trim((string) ($item['maquina'] ?? ''));
+            }
+            $rotulo = trim((string) ($item['rotulo'] ?? ''));
             $out[] = [
                 'forma' => $forma,
                 'forma_label' => self::FORMAS_PAGAMENTO[$forma],
                 'valor' => $valor,
-                'maquina' => $maquina !== '' ? $maquina : null,
+                'meio_id' => isset($item['meio_id']) ? (int) $item['meio_id'] : null,
+                'meio_nome' => $meioNome !== '' ? $meioNome : null,
+                'rotulo' => $rotulo !== '' ? $rotulo : null,
+                'maquina' => $meioNome !== '' ? $meioNome : null,
             ];
         }
 
         return $out;
+    }
+
+    /**
+     * @return array{pix:list<object>,maquininha:list<object>,dinheiro:list<object>}
+     */
+    public function meiosPagamentoUnidade(int $unidadeId): array
+    {
+        return $this->meiosPagamento->agrupadosPorUnidade($unidadeId);
     }
 
     /**
@@ -181,6 +211,7 @@ final class ReservaFidelidadeService
                     : null,
                 'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
                 'formas_pagamento' => $this->opcoesFormasPagamento(),
+                'meios_pagamento' => $this->meiosPagamentoUnidade($unidadeId),
                 'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
                 'mensagem' => 'Informe um telefone válido na reserva para usar fidelidade.',
             ];
@@ -216,6 +247,7 @@ final class ReservaFidelidadeService
                 : null,
             'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
             'formas_pagamento' => $this->opcoesFormasPagamento(),
+            'meios_pagamento' => $this->meiosPagamentoUnidade($unidadeId),
             'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
             'mensagem' => $programaAtivo
                 ? null
@@ -436,6 +468,7 @@ final class ReservaFidelidadeService
             'conta_paga_em' => null,
             'pagamentos_conta' => [],
             'formas_pagamento' => $this->opcoesFormasPagamento(),
+            'meios_pagamento' => ['pix' => [], 'maquininha' => [], 'dinheiro' => []],
             'meta_selos' => 10,
             'mensagem' => $mensagem,
         ];
@@ -452,7 +485,7 @@ final class ReservaFidelidadeService
             throw ValidationException::withMessages(['valor_conta' => 'Informe o valor da conta (0 ou maior).']);
         }
 
-        $pagamentos = $this->normalizarPagamentosConta($pagamentos);
+        $pagamentos = $this->normalizarPagamentosConta((int) $reserva->unidade_id, $pagamentos);
         $this->validarTotalPagamentos($valorConta, $pagamentos);
 
         $snap = $this->snapshot($reserva);

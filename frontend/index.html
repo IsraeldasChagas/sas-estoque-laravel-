@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260718-pag-reserva" />
+    <link rel="stylesheet" href="style.css?v=20260718-meios-pag" />
     <script>
       (function () {
         try {
@@ -1265,6 +1265,29 @@
                 </label>
                 <button type="button" id="reservasAtualizar" class="btn neutral">🔄 Atualizar</button>
               </div>
+
+              <details class="reserva-meios-panel" id="reservaMeiosPanel">
+                <summary>💳 Modos de pagamento (PIX, maquininha, dinheiro)</summary>
+                <div class="reserva-meios-panel__body">
+                  <p class="subtle-text">Cadastre recebedores auditáveis por unidade. Na conta paga da reserva, cada linha escolhe forma + recebedor (pode dividir entre pessoas da mesa).</p>
+                  <form id="reservaMeioForm" class="reserva-meios-form">
+                    <label>Tipo
+                      <select name="tipo" required>
+                        <option value="pix">PIX</option>
+                        <option value="maquininha">Maquininha</option>
+                        <option value="dinheiro">Dinheiro</option>
+                      </select>
+                    </label>
+                    <label>Nome do recebedor
+                      <input name="nome" maxlength="160" required placeholder="Ex.: PIX Restaurante, Stone — João, Caixa 1">
+                    </label>
+                    <button type="submit" class="btn primary">+ Cadastrar</button>
+                  </form>
+                  <div id="reservaMeiosLista" class="reserva-meios-lista">
+                    <p class="subtle-text">Selecione uma unidade para gerenciar.</p>
+                  </div>
+                </div>
+              </details>
 
               <div class="reservas-mesas-resumo">
                 <div class="reserva-card reserva-card--livre">
@@ -7724,7 +7747,7 @@
     <script src="delivery-orders-vf.js?v=20260717-vf1"></script>
     <script src="delivery-logistics-vf.js?v=20260717-vf1"></script>
     <script src="delivery-store-vf.js?v=20260717-vf4"></script>
-    <script src="app.js?v=20260718-pag-reserva"></script>
+    <script src="app.js?v=20260718-meios-pag"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

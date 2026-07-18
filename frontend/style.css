@@ -7921,13 +7921,19 @@ select[size]:not([size="1"]) {
 }
 .reserva-fid__pag-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(100px, 0.9fr) minmax(140px, 1.2fr) auto;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
   gap: 0.45rem;
   align-items: end;
   padding: 0.55rem;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.65);
   border: 1px solid rgba(196, 122, 18, 0.15);
+}
+.reserva-fid__pag-row-title {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #8a5a12;
 }
 .reserva-fid__pag-row label {
   display: flex;
@@ -7969,8 +7975,41 @@ select[size]:not([size="1"]) {
   .reserva-fid__pag-row {
     grid-template-columns: 1fr 1fr;
   }
-  .reserva-fid__pag-maquina { grid-column: 1 / -1; }
   .reserva-fid__pag-remove { grid-column: 2; justify-self: end; }
+}
+.reserva-meios-panel {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid rgba(31, 107, 69, 0.15);
+  border-radius: 12px;
+  background: #f8fbf9;
+  padding: 0.65rem 0.85rem;
+}
+.reserva-meios-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #1f6b45;
+}
+.reserva-meios-panel__body {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.reserva-meios-form {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(180px, 2fr) auto;
+  gap: 0.55rem;
+  align-items: end;
+}
+.reserva-meios-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.reserva-meios-lista .reserva-meios-table { font-size: 0.88rem; }
+@media (max-width: 720px) {
+  .reserva-meios-form { grid-template-columns: 1fr; }
 }
 
 .reservas-mesas-grid {
