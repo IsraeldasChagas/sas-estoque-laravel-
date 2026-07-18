@@ -4,13 +4,14 @@
 @php
     $meta = (int) ($programa->pedidos_meta ?? 10);
     $nomeProg = $programa->nome_exibicao ?? $programa->nome ?? 'Cartão fidelidade';
+    $nomeUnidade = trim((string) ($unidade_fidelidade_nome ?? '')) ?: ($config->nome_loja ?: 'Loja');
     $abrirCadastro = $errors->has('cadastro_telefone') || $errors->has('cadastro_cpf') || $errors->has('cadastro_email');
 @endphp
 <section class="vf-fidelity-page">
     <div class="vf-fidelity-hero">
         <span class="vf-fidelity-hero__icon" aria-hidden="true">✦</span>
         <h1>{{ $nomeProg }}</h1>
-        <p>{{ $config->nome_loja ?: 'Loja' }}</p>
+        <p>{{ $nomeUnidade }}</p>
     </div>
 
     @if(session('status'))
@@ -57,7 +58,7 @@
             @if(! empty($programa->texto_recompensa))
                 <li>{{ $programa->texto_recompensa }}</li>
             @endif
-            <li>Para ver seu saldo, confirme o telefone com um código de 6 dígitos (como no VendaFácil).</li>
+            <li>Para ver seu saldo, confirme o telefone com um código de 6 dígitos.</li>
         </ul>
 
         <h2 class="vf-fid-subtitle">Ver meus selos</h2>
@@ -104,7 +105,7 @@
                 <button type="submit" class="btn link">Usar outro telefone</button>
             </form>
         @else
-            <p class="muted">Digite seu celular (o mesmo do cadastro) e solicite o código. Sem o código, o saldo não aparece — proteção igual à do VendaFácil.</p>
+            <p class="muted">Digite seu celular (o mesmo do cadastro) e solicite o código. Sem o código, o saldo não aparece — medida de segurança.</p>
             <form method="post" action="{{ route('delivery.public.fidelity.request', $slug) }}" class="vf-fid-form">
                 @csrf
                 <label>Seu celular
@@ -138,11 +139,11 @@
                     <strong>{{ $selos }}</strong> selo(s) · meta <strong>{{ $meta }}</strong>
                     @if($pontos > 0) · <strong>{{ $pontos }}</strong> ponto(s) @endif
                 </p>
-                @if(! empty($conta->codigo_fidelidade))
-                    <p class="muted">Código do cartão: <strong>{{ $conta->codigo_fidelidade }}</strong></p>
+                @if($nomeUnidade !== '')
+                    <p class="muted">Unidade: <strong>{{ $nomeUnidade }}</strong></p>
                 @endif
                 @if($cheio)
-                    <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa (no SAS, em Reserva).</div>
+                    <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa.</div>
                 @endif
                 <form method="post" action="{{ route('delivery.public.fidelity.logout', $slug) }}" class="vf-fid-form-inline">
                     @csrf

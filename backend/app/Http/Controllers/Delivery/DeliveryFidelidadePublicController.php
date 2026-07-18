@@ -58,6 +58,7 @@ class DeliveryFidelidadePublicController extends Controller
         $conta = null;
         $mostrarProgresso = false;
         $telefoneMascara = null;
+        $unidadeFid = $unidadeFidPadrao;
         if ($acesso !== null && ! $otpPending) {
             $mostrarProgresso = true;
             $norm = $acesso['tel_norm'];
@@ -66,7 +67,8 @@ class DeliveryFidelidadePublicController extends Controller
             $conta = $this->consulta->buscarContaAtivaNaUnidade($unidadeFid, $norm)
                 ?: $this->consulta->buscarContaAtiva($config, $norm);
             if ($conta) {
-                $programa = $this->programaAtivo((int) $conta->unidade_id) ?? $programa;
+                $unidadeFid = (int) $conta->unidade_id;
+                $programa = $this->programaAtivo($unidadeFid) ?? $programa;
             }
         }
 
@@ -78,6 +80,7 @@ class DeliveryFidelidadePublicController extends Controller
             'fidelidadeAtiva' => true,
             'footerFixed' => false,
             'conta' => $conta,
+            'unidade_fidelidade_nome' => $this->nomeUnidade($unidadeFid),
             'mostrar_progresso_selos' => $mostrarProgresso,
             'telefone_selos_mascara' => $telefoneMascara,
             'fidelidade_otp_pending' => $otpPending,
@@ -585,7 +588,29 @@ class DeliveryFidelidadePublicController extends Controller
 
         $config->aberta = (bool) $config->aberta;
         $config->nome_loja = trim((string) ($config->nome_loja ?? '')) ?: 'Loja';
+        $config->logo_url = $this->imagemPublica($config->logo_path ?? null, (int) $config->unidade_id, 'lojas');
+        $config->banner_url = $this->imagemPublica($config->banner_path ?? null, (int) $config->unidade_id, 'lojas');
+        $config->filial_logo_url = $this->imagemPublica($config->filial_logo_path ?? null, (int) $config->unidade_id, 'lojas');
 
         return $config;
+    }
+
+    private function nomeUnidade(int $unidadeId): string
+    {
+        if ($unidadeId <= 0 || ! Schema::hasTable('unidades')) {
+            return '';
+        }
+
+        $nome = DB::table('unidades')->where('id', $unidadeId)->value('nome');
+
+        return trim((string) $nome);
+    }
+
+    private function imagemPublica(?string $path, int $unidadeId, string $grupo): ?string
+    {
+        $rel = ltrim(str_replace('\\', '/', (string) $path), '/');
+        $prefix = "uploads/delivery/{$grupo}/{$unidadeId}/";
+
+        return $rel !== '' && ! str_contains($rel, '..') && str_starts_with($rel, $prefix) ? '/'.$rel : null;
     }
 }
