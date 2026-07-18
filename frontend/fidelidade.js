@@ -171,6 +171,7 @@
       <button class="btn small secondary" data-fid-action="resgatar" data-id="${c.id}">Resgatar</button>
       <button class="btn small neutral" data-fid-action="extrato" data-id="${c.id}">Extrato</button>
       <button class="btn small neutral" data-fid-action="status" data-id="${c.id}" data-status="${c.status}">${c.status === "ativo" ? "Bloquear" : "Ativar"}</button>
+      <button class="btn small danger" data-fid-action="excluir" data-id="${c.id}" data-nome="${esc(c.nome || c.telefone_normalizado || "cliente")}">Excluir</button>
       </div></td></tr>`).join("");
   }
 
@@ -196,6 +197,15 @@
       const b = e.target.closest("[data-fid-action]"); if (!b) return;
       const id = Number(b.dataset.id); const action = b.dataset.fidAction;
       if (action === "extrato") { state.cartaoId = id; window.navigateTo?.("fidelidadeHistorico"); return; }
+      if (action === "excluir") {
+        const nome = b.dataset.nome || "este cliente";
+        if (!confirm(`Excluir o cartão de ${nome}?\n\nTodo o histórico (selos, pontos e extrato) será apagado. Se cadastrar de novo, começa do zero.`)) return;
+        await api(`/cartoes/${id}`, { method: "DELETE" });
+        if (Number(state.cartaoId) === id) state.cartaoId = null;
+        toast("Cartão excluído. Novo cadastro começa do zero.", "success");
+        await loadCartoes();
+        return;
+      }
       if (action === "selo") await api(`/cartoes/${id}/selo`, { method: "POST", body: JSON.stringify({ idempotency_key: uid(), descricao: "Selo lançado pelo painel" }) });
       if (action === "ajuste") {
         const delta = prompt("Informe o ajuste de selos (use número negativo para retirar):", "1"); if (delta === null) return;

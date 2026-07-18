@@ -13,6 +13,7 @@ Route::prefix('fidelidade')->middleware('sas.usuario')->group(function () {
     Route::get('/cartoes', [FidelidadeController::class, 'listCartoes']);
     Route::post('/cartoes', [FidelidadeController::class, 'storeCartao']);
     Route::get('/cartoes/{id}', [FidelidadeController::class, 'showCartao'])->whereNumber('id');
+    Route::delete('/cartoes/{id}', [FidelidadeController::class, 'destroyCartao'])->whereNumber('id');
     Route::post('/cartoes/{id}/selo', [FidelidadeController::class, 'postSelo'])->whereNumber('id');
     Route::post('/cartoes/{id}/ajuste', [FidelidadeController::class, 'postAjuste'])->whereNumber('id');
     Route::patch('/cartoes/{id}/status', [FidelidadeController::class, 'patchStatus'])->whereNumber('id');

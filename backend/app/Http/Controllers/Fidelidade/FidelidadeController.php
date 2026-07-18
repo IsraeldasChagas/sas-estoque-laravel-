@@ -232,6 +232,28 @@ class FidelidadeController extends Controller
         return response()->json(['conta' => $conta]);
     }
 
+    public function destroyCartao(Request $request, int $id): JsonResponse
+    {
+        $usuario = $this->autorizar($request, 'fidelidadeCartoes');
+        $this->verificarTabelas();
+        $conta = $this->obterContaEscopo($id, $usuario);
+
+        DB::transaction(function () use ($conta) {
+            if (Schema::hasTable('fid_resgates')) {
+                DB::table('fid_resgates')->where('conta_id', $conta->id)->delete();
+            }
+            if (Schema::hasTable('fid_ledger')) {
+                DB::table('fid_ledger')->where('conta_id', $conta->id)->delete();
+            }
+            DB::table('fid_contas')->where('id', $conta->id)->delete();
+        });
+
+        return response()->json([
+            'message' => 'Cartão excluído. Se o cliente for cadastrado de novo, começa do zero.',
+            'deleted_id' => (int) $conta->id,
+        ]);
+    }
+
     public function postSelo(Request $request, int $id): JsonResponse
     {
         $usuario = $this->autorizar($request, 'fidelidadeCartoes');

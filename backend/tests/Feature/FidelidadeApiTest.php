@@ -272,6 +272,37 @@ class FidelidadeApiTest extends TestCase
             ->assertJsonPath('resumo.resgates_pendentes', 1);
     }
 
+    public function test_excluir_cartao_recomeca_do_zero(): void
+    {
+        $this->seedPrograma(1, 5);
+        $contaId = $this->criarCartao();
+        $codigoAntigo = DB::table('fid_contas')->where('id', $contaId)->value('codigo_fidelidade');
+
+        $this->withHeaders($this->headers())->postJson("/api/fidelidade/cartoes/{$contaId}/selo", [
+            'idempotency_key' => 'selo-del',
+        ])->assertCreated();
+
+        $this->withHeaders($this->headers())
+            ->deleteJson("/api/fidelidade/cartoes/{$contaId}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('fid_contas', ['id' => $contaId]);
+        $this->assertDatabaseCount('fid_ledger', 0);
+        $this->assertDatabaseCount('fid_resgates', 0);
+
+        $novo = $this->withHeaders($this->headers())->postJson('/api/fidelidade/cartoes', [
+            'unidade_id' => 1,
+            'telefone' => '69988887777',
+            'nome' => 'Cliente',
+        ])->assertCreated()
+            ->assertJsonPath('conta.saldo_selos', 0)
+            ->assertJsonPath('conta.saldo_pontos', 0)
+            ->assertJsonPath('reativado', false);
+
+        $this->assertNotSame($codigoAntigo, $novo->json('conta.codigo_fidelidade'));
+        $this->assertDatabaseCount('fid_ledger', 1); // só geracao
+    }
+
     private function seedPrograma(int $unidadeId, int $meta): void
     {
         DB::table('fid_programas')->insert([
