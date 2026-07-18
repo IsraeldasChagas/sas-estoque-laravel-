@@ -21,6 +21,12 @@
     $passoAtual = $passoAtual ?? 'loja';
     $entregaTexto = trim((string) ($config->entrega_texto ?? '')) ?: 'Entrega em até 45 min · Pagamento na entrega ou online';
     $footerFixed = ($footerFixed ?? true) && in_array($passoAtual, ['loja', 'carrinho'], true);
+    // Contraste do ícone do carrinho: branco em botão escuro/colorido; preto se a cor for clara.
+    $hex = ltrim((string) $primary, '#');
+    $r = hexdec(substr($hex, 0, 2));
+    $g = hexdec(substr($hex, 2, 2));
+    $b = hexdec(substr($hex, 4, 2));
+    $cartOnDark = (($r * 299) + ($g * 587) + ($b * 114)) / 1000 < 160;
 @endphp
 <!doctype html>
 <html lang="pt-BR">
@@ -33,7 +39,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260717-vf5">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260717-vf6">
     <style>:root{--primary:{{ $primary }};--primary-soft:color-mix(in srgb, {{ $primary }} 14%, white);}</style>
 </head>
 <body class="vf-body {{ $footerFixed ? 'vf-body--footer-fixed' : '' }}" data-store="{{ $slug }}">
@@ -88,8 +94,12 @@
                 <button class="btn ghost" type="button" data-track-open title="Acompanhar pedido">
                     <span aria-hidden="true">⌕</span><span class="btn-label">Pedido</span>
                 </button>
-                <button class="btn primary cart-button" type="button" data-cart-open title="Carrinho">
-                    <span aria-hidden="true">🛒</span><span class="btn-label">Carrinho</span> <span data-cart-count>0</span>
+                <button class="btn primary cart-button{{ $cartOnDark ? '' : ' cart-button--on-light' }}" type="button" data-cart-open title="Carrinho">
+                    <svg class="cart-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.16 14h9.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 21.08 5H6.21l-.94-2H1v2h2l3.6 7.59-1.35 2.44C4.52 15.37 5.48 17 7 17h12v-2H7.42l.74-1.35z"/>
+                    </svg>
+                    <span class="btn-label">Carrinho</span>
+                    <span data-cart-count>0</span>
                 </button>
             </div>
         </div>

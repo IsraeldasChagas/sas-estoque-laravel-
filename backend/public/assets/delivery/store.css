@@ -79,7 +79,36 @@ a{color:inherit}
 .btn.ghost{border-color:var(--line);color:#334155;background:#fff}
 .btn.icon-only{padding:8px 10px}
 .btn.wide{width:100%}
-.cart-button span[data-cart-count]{background:#fff;color:var(--primary);border-radius:999px;padding:0 6px;margin-left:2px;font-size:.85rem}
+.cart-button{
+  gap:8px;
+  color:#fff;
+  min-width:44px;
+}
+.cart-button .cart-icon{
+  flex-shrink:0;
+  display:block;
+  color:#fff;
+  fill:currentColor;
+}
+.cart-button.cart-button--on-light,
+.cart-button.cart-button--on-light .cart-icon{
+  color:#0f172a;
+}
+.cart-button span[data-cart-count]{
+  background:#fff;
+  color:var(--primary);
+  border-radius:999px;
+  padding:0 7px;
+  margin-left:0;
+  font-size:.85rem;
+  font-weight:800;
+  min-width:1.35rem;
+  text-align:center;
+}
+.cart-button.cart-button--on-light span[data-cart-count]{
+  background:#0f172a;
+  color:#fff;
+}
 
 .vf-store-info{
   margin-top:10px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.92rem;
