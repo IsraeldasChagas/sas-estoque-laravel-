@@ -1,6 +1,7 @@
 @extends('delivery.public.layout')
 @section('title', 'Fidelidade · '.($config->nome_loja ?: 'Loja'))
 @section('content')
+@include('delivery.public.partials.voltar', ['voltarLabel' => 'Continuar comprando'])
 <section class="vf-fidelity-page">
     <div class="vf-fidelity-hero">
         <span class="vf-fidelity-hero__icon" aria-hidden="true">✦</span>
@@ -17,7 +18,7 @@
         @if(! empty($programa->descricao))
             <p class="muted">{{ $programa->descricao }}</p>
         @endif
-        <a class="btn primary" href="{{ route('delivery.public.store', $slug) }}">Voltar ao cardápio</a>
+        <a class="btn primary" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
     </div>
 </section>
 @endsection

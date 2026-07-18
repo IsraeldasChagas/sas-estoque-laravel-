@@ -1,6 +1,7 @@
 @extends('delivery.public.layout')
 @section('title', $produto->nome.' · '.($config->nome_loja ?: 'Loja'))
 @section('content')
+@include('delivery.public.partials.voltar', ['voltarLabel' => 'Continuar comprando'])
 <nav class="breadcrumb"><a href="{{ route('delivery.public.store', $slug) }}">Cardápio</a> / {{ $produto->nome }}</nav>
 <div class="detail-grid">
     <div class="detail-photo">@if($produto->foto_url)<img src="{{ $produto->foto_url }}" alt="{{ $produto->nome }}">@else<span>▧</span>@endif</div>
@@ -35,7 +36,10 @@
             <div class="quantity"><button type="button" data-main-minus>−</button><input type="number" value="1" min="1" max="{{ $produto->estoque }}" data-main-qty><button type="button" data-main-plus>+</button></div>
             <p class="form-error" data-product-error></p>
             <button class="btn success wide" type="submit">Adicionar ao carrinho</button>
+            <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
         </form>
+        @else
+            <a class="btn ghost wide" href="{{ route('delivery.public.store', $slug) }}">← Voltar ao cardápio</a>
         @endif
     </section>
 </div>

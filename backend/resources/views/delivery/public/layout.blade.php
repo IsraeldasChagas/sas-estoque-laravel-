@@ -39,7 +39,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260717-vf6">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260717-vf7">
     <style>:root{--primary:{{ $primary }};--primary-soft:color-mix(in srgb, {{ $primary }} 14%, white);}</style>
 </head>
 <body class="vf-body {{ $footerFixed ? 'vf-body--footer-fixed' : '' }}" data-store="{{ $slug }}">
@@ -148,6 +148,7 @@
     <div data-cart-items></div>
     <div class="drawer-total"><span>Subtotal</span><strong data-cart-total>R$ 0,00</strong></div>
     <a class="btn success wide" href="{{ route('delivery.public.checkout', $slug) }}">Ir para checkout</a>
+    <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
 </aside>
 <div class="backdrop" data-cart-close></div>
 <dialog data-track-dialog>
@@ -166,7 +167,7 @@
 </footer>
 
 <script>window.deliveryStore={slug:@json($slug),checkout:@json(route('delivery.public.checkout',$slug)),csrf:@json(csrf_token())};</script>
-<script src="{{ asset('assets/delivery/store.js') }}?v=20260717-vf3"></script>
+<script src="{{ asset('assets/delivery/store.js') }}?v=20260717-vf7"></script>
 @stack('scripts')
 </body>
 </html>

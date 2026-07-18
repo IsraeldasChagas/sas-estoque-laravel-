@@ -1,6 +1,10 @@
 @extends('delivery.public.layout')
 @section('title', 'Checkout · '.($config->nome_loja ?: 'Loja'))
 @section('content')
+@include('delivery.public.partials.voltar', [
+    'voltarLabel' => 'Voltar ao cardápio',
+    'voltarExtra' => '<button type="button" class="vf-back-btn vf-back-btn--ghost" data-cart-open>Ver carrinho</button>',
+])
 <nav class="breadcrumb"><a href="{{ route('delivery.public.store', $slug) }}">Cardápio</a> / Checkout</nav>
 <h1>Finalizar pedido</h1>
 <div class="checkout-grid">
@@ -28,6 +32,7 @@
     <label>Observações<textarea name="observacoes" rows="3" maxlength="1000"></textarea></label></section>
     <div class="form-error" data-checkout-error></div>
     <button class="btn success wide" type="submit">Confirmar pedido</button>
+    <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
 </form>
 <aside class="order-summary"><h2>Resumo</h2><div data-checkout-items></div><hr><div><span>Subtotal</span><strong data-summary-subtotal></strong></div><div><span>Frete</span><strong data-summary-freight>—</strong></div><div class="grand-total"><span>Total</span><strong data-summary-total></strong></div></aside>
 </div>

@@ -1,6 +1,7 @@
 @extends('delivery.public.layout')
 @section('title', 'Pedido '.$pedido->codigo_publico)
 @section('content')
+@include('delivery.public.partials.voltar', ['voltarLabel' => 'Continuar comprando'])
 @php
 $steps=['pendente_loja'=>'Pedido enviado','recebido'=>'Recebido pela loja','preparo'=>'Em preparo','pronto'=>'Pronto','rota'=>'Saiu para entrega','entregue'=>'Entregue'];
 $order=array_keys($steps); $current=array_search($pedido->status,$order,true);
@@ -18,5 +19,6 @@ $order=array_keys($steps); $current=array_search($pedido->status,$order,true);
 <section class="form-card"><h2>Entrega e pagamento</h2><p><strong>{{ $pedido->fulfillment === 'entrega' ? 'Entrega' : 'Retirada na loja' }}</strong></p>@if($pedido->endereco_texto)<p>{{ $pedido->endereco_texto }}@if($pedido->endereco_complemento)<br>{{ $pedido->endereco_complemento }}@endif</p>@endif<p>Pagamento: {{ ucfirst($pedido->pagamento_forma) }}</p>@if($pedido->observacoes)<p>Observações: {{ $pedido->observacoes }}</p>@endif</section>
 </div>
 <p class="refresh-note">Esta página é atualizada automaticamente.</p>
+<a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
 @push('scripts')<script>setTimeout(()=>location.reload(),30000);</script>@endpush
 @endsection
