@@ -14,13 +14,37 @@ final class ReservaMeioPagamentoService
     }
 
     /**
-     * @return array{pix:list<object>,maquininha:list<object>,dinheiro:list<object>}
+     * @return list<object>
+     */
+    public function listarAtivos(int $unidadeId): array
+    {
+        if (! $this->tabelaDisponivel()) {
+            return [];
+        }
+
+        return ReservaMeioPagamento::query()
+            ->where('unidade_id', $unidadeId)
+            ->where('ativo', true)
+            ->orderBy('ordem')
+            ->orderBy('tipo')
+            ->orderBy('nome')
+            ->get()
+            ->map(fn (ReservaMeioPagamento $row) => $this->toDto($row))
+            ->all();
+    }
+
+    /**
+     * @return array<string, list<object>>
      */
     public function agrupadosPorUnidade(int $unidadeId, bool $somenteAtivos = true): array
     {
-        $vazio = ['pix' => [], 'maquininha' => [], 'dinheiro' => []];
+        $out = [];
+        foreach (array_keys(ReservaMeioPagamento::TIPOS) as $tipo) {
+            $out[$tipo] = [];
+        }
+
         if (! $this->tabelaDisponivel()) {
-            return $vazio;
+            return $out;
         }
 
         $query = ReservaMeioPagamento::query()
@@ -32,36 +56,18 @@ final class ReservaMeioPagamentoService
             $query->where('ativo', true);
         }
 
-        $out = $vazio;
         foreach ($query->get() as $row) {
             $tipo = (string) $row->tipo;
             if (! array_key_exists($tipo, $out)) {
                 continue;
             }
-            $out[$tipo][] = (object) [
-                'id' => (int) $row->id,
-                'tipo' => $tipo,
-                'tipo_label' => ReservaMeioPagamento::TIPOS[$tipo] ?? $tipo,
-                'nome' => (string) $row->nome,
-                'ativo' => (bool) $row->ativo,
-                'ordem' => (int) $row->ordem,
-            ];
+            $out[$tipo][] = $this->toDto($row);
         }
 
         return $out;
     }
 
-    public function tipoParaForma(string $forma): ?string
-    {
-        return match (strtolower(trim($forma))) {
-            'pix' => ReservaMeioPagamento::TIPO_PIX,
-            'credito', 'debito', 'maquininha' => ReservaMeioPagamento::TIPO_MAQUININHA,
-            'dinheiro' => ReservaMeioPagamento::TIPO_DINHEIRO,
-            default => null,
-        };
-    }
-
-    public function buscarMeio(int $unidadeId, int $meioId, ?string $tipoEsperado = null): ?object
+    public function buscarMeio(int $unidadeId, int $meioId): ?object
     {
         if (! $this->tabelaDisponivel() || $meioId <= 0) {
             return null;
@@ -73,20 +79,7 @@ final class ReservaMeioPagamentoService
             ->where('ativo', true)
             ->first();
 
-        if (! $row) {
-            return null;
-        }
-
-        if ($tipoEsperado !== null && (string) $row->tipo !== $tipoEsperado) {
-            return null;
-        }
-
-        return (object) [
-            'id' => (int) $row->id,
-            'tipo' => (string) $row->tipo,
-            'tipo_label' => ReservaMeioPagamento::TIPOS[(string) $row->tipo] ?? (string) $row->tipo,
-            'nome' => (string) $row->nome,
-        ];
+        return $row ? $this->toDto($row) : null;
     }
 
     /**
@@ -104,15 +97,7 @@ final class ReservaMeioPagamentoService
             ->orderBy('ordem')
             ->orderBy('nome')
             ->get()
-            ->map(fn (ReservaMeioPagamento $row) => (object) [
-                'id' => (int) $row->id,
-                'unidade_id' => (int) $row->unidade_id,
-                'tipo' => (string) $row->tipo,
-                'tipo_label' => ReservaMeioPagamento::TIPOS[(string) $row->tipo] ?? (string) $row->tipo,
-                'nome' => (string) $row->nome,
-                'ativo' => (bool) $row->ativo,
-                'ordem' => (int) $row->ordem,
-            ])
+            ->map(fn (ReservaMeioPagamento $row) => $this->toDto($row))
             ->all();
     }
 
@@ -133,15 +118,7 @@ final class ReservaMeioPagamentoService
             'ordem' => (int) ($data['ordem'] ?? 0),
         ]);
 
-        return (object) [
-            'id' => (int) $row->id,
-            'unidade_id' => (int) $row->unidade_id,
-            'tipo' => (string) $row->tipo,
-            'tipo_label' => ReservaMeioPagamento::TIPOS[(string) $row->tipo],
-            'nome' => (string) $row->nome,
-            'ativo' => (bool) $row->ativo,
-            'ordem' => (int) $row->ordem,
-        ];
+        return $this->toDto($row);
     }
 
     public function atualizar(int $unidadeId, int $id, array $data): object
@@ -149,7 +126,7 @@ final class ReservaMeioPagamentoService
         $this->assertTabela();
         $row = ReservaMeioPagamento::query()->where('id', $id)->where('unidade_id', $unidadeId)->first();
         if (! $row) {
-            throw ValidationException::withMessages(['id' => 'Meio de pagamento não encontrado.']);
+            throw ValidationException::withMessages(['id' => 'Forma de pagamento não encontrada.']);
         }
 
         if (array_key_exists('tipo', $data)) {
@@ -170,15 +147,7 @@ final class ReservaMeioPagamentoService
         }
         $row->save();
 
-        return (object) [
-            'id' => (int) $row->id,
-            'unidade_id' => (int) $row->unidade_id,
-            'tipo' => (string) $row->tipo,
-            'tipo_label' => ReservaMeioPagamento::TIPOS[(string) $row->tipo],
-            'nome' => (string) $row->nome,
-            'ativo' => (bool) $row->ativo,
-            'ordem' => (int) $row->ordem,
-        ];
+        return $this->toDto($row);
     }
 
     public function excluir(int $unidadeId, int $id): void
@@ -186,7 +155,7 @@ final class ReservaMeioPagamentoService
         $this->assertTabela();
         $row = ReservaMeioPagamento::query()->where('id', $id)->where('unidade_id', $unidadeId)->first();
         if (! $row) {
-            throw ValidationException::withMessages(['id' => 'Meio de pagamento não encontrado.']);
+            throw ValidationException::withMessages(['id' => 'Forma de pagamento não encontrada.']);
         }
         $row->delete();
     }
@@ -195,16 +164,32 @@ final class ReservaMeioPagamentoService
     {
         $tipo = strtolower(trim($tipo));
         if (! array_key_exists($tipo, ReservaMeioPagamento::TIPOS)) {
-            throw ValidationException::withMessages(['tipo' => 'Tipo inválido. Use pix, maquininha ou dinheiro.']);
+            throw ValidationException::withMessages(['tipo' => 'Tipo inválido.']);
         }
 
         return $tipo;
     }
 
+    private function toDto(ReservaMeioPagamento $row): object
+    {
+        $tipo = (string) $row->tipo;
+
+        return (object) [
+            'id' => (int) $row->id,
+            'unidade_id' => (int) $row->unidade_id,
+            'tipo' => $tipo,
+            'tipo_label' => ReservaMeioPagamento::TIPOS[$tipo] ?? $tipo,
+            'nome' => (string) $row->nome,
+            'label' => ReservaMeioPagamento::rotuloCompleto($tipo, (string) $row->nome),
+            'ativo' => (bool) $row->ativo,
+            'ordem' => (int) $row->ordem,
+        ];
+    }
+
     private function assertTabela(): void
     {
         if (! $this->tabelaDisponivel()) {
-            throw ValidationException::withMessages(['meios_pagamento' => 'Cadastro de meios de pagamento indisponível. Execute as migrations.']);
+            throw ValidationException::withMessages(['formas_pagamento' => 'Cadastro indisponível. Execute as migrations.']);
         }
     }
 }

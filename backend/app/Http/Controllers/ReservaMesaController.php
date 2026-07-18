@@ -702,9 +702,8 @@ class ReservaMesaController extends Controller
         $data = Validator::make($request->all(), [
             'valor_conta' => 'required|numeric|min:0|max:9999999.99',
             'pagamentos' => 'required|array|min:1',
-            'pagamentos.*.forma' => 'required|string|max:30',
-            'pagamentos.*.valor' => 'required|numeric|min:0.01|max:9999999.99',
             'pagamentos.*.meio_id' => 'required|integer|min:1',
+            'pagamentos.*.valor' => 'required|numeric|min:0.01|max:9999999.99',
             'pagamentos.*.rotulo' => 'nullable|string|max:80',
         ])->validate();
 

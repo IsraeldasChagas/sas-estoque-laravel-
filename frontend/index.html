@@ -175,6 +175,7 @@
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="reservaDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="reservaMesa"><span class="nav-icon" aria-hidden="true">🪑</span><span class="nav-label">Mesa</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="reservaFormasPagamento"><span class="nav-icon" aria-hidden="true">💳</span><span class="nav-label">Forma de pagamento</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="historicoReservas"><span class="nav-icon" aria-hidden="true">🕐</span><span class="nav-label">Histórico</span></a>
             </div>
           </div>
@@ -1266,29 +1267,6 @@
                 <button type="button" id="reservasAtualizar" class="btn neutral">🔄 Atualizar</button>
               </div>
 
-              <details class="reserva-meios-panel" id="reservaMeiosPanel">
-                <summary>💳 Modos de pagamento (PIX, maquininha, dinheiro)</summary>
-                <div class="reserva-meios-panel__body">
-                  <p class="subtle-text">Cadastre recebedores auditáveis por unidade. Na conta paga da reserva, cada linha escolhe forma + recebedor (pode dividir entre pessoas da mesa).</p>
-                  <form id="reservaMeioForm" class="reserva-meios-form">
-                    <label>Tipo
-                      <select name="tipo" required>
-                        <option value="pix">PIX</option>
-                        <option value="maquininha">Maquininha</option>
-                        <option value="dinheiro">Dinheiro</option>
-                      </select>
-                    </label>
-                    <label>Nome do recebedor
-                      <input name="nome" maxlength="160" required placeholder="Ex.: PIX Restaurante, Stone — João, Caixa 1">
-                    </label>
-                    <button type="submit" class="btn primary">+ Cadastrar</button>
-                  </form>
-                  <div id="reservaMeiosLista" class="reserva-meios-lista">
-                    <p class="subtle-text">Selecione uma unidade para gerenciar.</p>
-                  </div>
-                </div>
-              </details>
-
               <div class="reservas-mesas-resumo">
                 <div class="reserva-card reserva-card--livre">
                   <div class="reserva-card__icon">✅</div>
@@ -1349,6 +1327,42 @@
                     </table>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Formas de pagamento (Reserva) -->
+          <section id="reservaFormasPagamentoSection" class="view-section hidden">
+            <div class="reservas-mesas-container">
+              <div class="reservas-mesas-header">
+                <h2>💳 Formas de pagamento</h2>
+              </div>
+              <p class="subtle-text">Cadastre por unidade: dinheiro, PIX, crédito, débito e resgate do cartão fidelidade. Essas opções aparecem ao registrar a conta paga nos detalhes da reserva.</p>
+              <div class="reservas-mesas-filtro">
+                <label>
+                  🏢 Unidade:
+                  <select id="reservaFormasUnidade" class="reservas-select">
+                    <option value="">Selecione a unidade</option>
+                  </select>
+                </label>
+              </div>
+              <form id="reservaFormaPagForm" class="reserva-meios-form">
+                <label>Tipo
+                  <select name="tipo" required>
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="pix">PIX</option>
+                    <option value="credito">Crédito</option>
+                    <option value="debito">Débito</option>
+                    <option value="resgate_fidelidade">Resgate cartão fidelidade</option>
+                  </select>
+                </label>
+                <label>Nome / recebedor
+                  <input name="nome" maxlength="160" required placeholder="Ex.: Caixa 1, PIX Restaurante, Stone — João">
+                </label>
+                <button type="submit" class="btn primary">+ Cadastrar</button>
+              </form>
+              <div id="reservaFormasLista" class="reserva-meios-lista">
+                <p class="subtle-text">Selecione uma unidade.</p>
               </div>
             </div>
           </section>

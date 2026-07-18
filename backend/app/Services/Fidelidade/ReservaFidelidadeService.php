@@ -13,21 +13,6 @@ use Illuminate\Validation\ValidationException;
  */
 final class ReservaFidelidadeService
 {
-    public const FORMA_PIX = 'pix';
-    public const FORMA_CREDITO = 'credito';
-    public const FORMA_DEBITO = 'debito';
-    public const FORMA_MAQUININHA = 'maquininha';
-    public const FORMA_DINHEIRO = 'dinheiro';
-
-    /** @var array<string, string> */
-    public const FORMAS_PAGAMENTO = [
-        self::FORMA_PIX => 'PIX',
-        self::FORMA_CREDITO => 'Crédito',
-        self::FORMA_DEBITO => 'Débito',
-        self::FORMA_MAQUININHA => 'Maquininha',
-        self::FORMA_DINHEIRO => 'Dinheiro',
-    ];
-
     public function __construct(
         private FidelidadeLedgerService $ledger,
         private FidelidadeResgateService $resgate,
@@ -42,28 +27,12 @@ final class ReservaFidelidadeService
     }
 
     /**
-     * @return list<array{value:string,label:string}>
-     */
-    public function opcoesFormasPagamento(): array
-    {
-        $out = [];
-        foreach (self::FORMAS_PAGAMENTO as $value => $label) {
-            $out[] = ['value' => $value, 'label' => $label];
-        }
-
-        return $out;
-    }
-
-    /**
      * @param  mixed  $raw
-     * @return list<array{forma:string,valor:float,meio_id:int,meio_nome:string,rotulo:?string}>
+     * @return list<array{meio_id:int,tipo:string,tipo_label:string,meio_nome:string,label:string,valor:float,rotulo:?string,forma:string}>
      */
     public function normalizarPagamentosConta(int $unidadeId, mixed $raw): array
     {
-        if (! is_array($raw)) {
-            throw ValidationException::withMessages(['pagamentos' => 'Informe ao menos uma forma de pagamento.']);
-        }
-        if ($raw === []) {
+        if (! is_array($raw) || $raw === []) {
             throw ValidationException::withMessages(['pagamentos' => 'Informe ao menos uma forma de pagamento.']);
         }
 
@@ -71,10 +40,6 @@ final class ReservaFidelidadeService
         foreach ($raw as $i => $item) {
             if (! is_array($item)) {
                 throw ValidationException::withMessages(['pagamentos' => 'Pagamento #'.($i + 1).' inválido.']);
-            }
-            $forma = strtolower(trim((string) ($item['forma'] ?? '')));
-            if (! array_key_exists($forma, self::FORMAS_PAGAMENTO)) {
-                throw ValidationException::withMessages(['pagamentos' => 'Forma de pagamento inválida na linha '.($i + 1).'.']);
             }
             if (! array_key_exists('valor', $item) || ! is_numeric($item['valor'])) {
                 throw ValidationException::withMessages(['pagamentos' => 'Informe o valor na linha '.($i + 1).'.']);
@@ -86,23 +51,25 @@ final class ReservaFidelidadeService
 
             $meioId = (int) ($item['meio_id'] ?? 0);
             if ($meioId <= 0) {
-                throw ValidationException::withMessages(['pagamentos' => 'Selecione o recebedor/meio na linha '.($i + 1).'.']);
+                throw ValidationException::withMessages(['pagamentos' => 'Selecione a forma de pagamento na linha '.($i + 1).'.']);
             }
 
-            $tipoEsperado = $this->meiosPagamento->tipoParaForma($forma);
-            $meio = $this->meiosPagamento->buscarMeio($unidadeId, $meioId, $tipoEsperado);
+            $meio = $this->meiosPagamento->buscarMeio($unidadeId, $meioId);
             if (! $meio) {
-                throw ValidationException::withMessages(['pagamentos' => 'Recebedor/meio inválido na linha '.($i + 1).'. Cadastre em Reservas → Modos de pagamento.']);
+                throw ValidationException::withMessages(['pagamentos' => 'Forma de pagamento inválida na linha '.($i + 1).'. Cadastre em Reserva → Forma de pagamento.']);
             }
 
             $rotulo = trim((string) ($item['rotulo'] ?? ''));
 
             $out[] = [
-                'forma' => $forma,
-                'valor' => $valor,
                 'meio_id' => (int) $meio->id,
+                'tipo' => (string) $meio->tipo,
+                'tipo_label' => (string) $meio->tipo_label,
                 'meio_nome' => (string) $meio->nome,
+                'label' => (string) $meio->label,
+                'valor' => $valor,
                 'rotulo' => $rotulo !== '' ? $rotulo : null,
+                'forma' => (string) $meio->tipo,
             ];
         }
 
@@ -138,26 +105,31 @@ final class ReservaFidelidadeService
             if (! is_array($item)) {
                 continue;
             }
-            $forma = strtolower(trim((string) ($item['forma'] ?? '')));
-            if (! array_key_exists($forma, self::FORMAS_PAGAMENTO)) {
-                continue;
-            }
             $valor = round((float) ($item['valor'] ?? 0), 2);
             if ($valor <= 0) {
                 continue;
             }
-            $meioNome = trim((string) ($item['meio_nome'] ?? ''));
-            if ($meioNome === '') {
-                $meioNome = trim((string) ($item['maquina'] ?? ''));
+            $tipo = strtolower(trim((string) ($item['tipo'] ?? $item['forma'] ?? '')));
+            $tipoLabel = trim((string) ($item['tipo_label'] ?? ''));
+            if ($tipoLabel === '' && $tipo !== '') {
+                $tipoLabel = \App\Models\ReservaMeioPagamento::TIPOS[$tipo] ?? $tipo;
+            }
+            $meioNome = trim((string) ($item['meio_nome'] ?? $item['maquina'] ?? ''));
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($label === '' && $tipoLabel !== '' && $meioNome !== '') {
+                $label = $tipoLabel.' — '.$meioNome;
             }
             $rotulo = trim((string) ($item['rotulo'] ?? ''));
             $out[] = [
-                'forma' => $forma,
-                'forma_label' => self::FORMAS_PAGAMENTO[$forma],
-                'valor' => $valor,
                 'meio_id' => isset($item['meio_id']) ? (int) $item['meio_id'] : null,
+                'tipo' => $tipo !== '' ? $tipo : null,
+                'tipo_label' => $tipoLabel !== '' ? $tipoLabel : null,
                 'meio_nome' => $meioNome !== '' ? $meioNome : null,
+                'label' => $label !== '' ? $label : null,
+                'valor' => $valor,
                 'rotulo' => $rotulo !== '' ? $rotulo : null,
+                'forma' => $tipo !== '' ? $tipo : null,
+                'forma_label' => $tipoLabel !== '' ? $tipoLabel : null,
                 'maquina' => $meioNome !== '' ? $meioNome : null,
             ];
         }
@@ -166,11 +138,11 @@ final class ReservaFidelidadeService
     }
 
     /**
-     * @return array{pix:list<object>,maquininha:list<object>,dinheiro:list<object>}
+     * @return list<object>
      */
-    public function meiosPagamentoUnidade(int $unidadeId): array
+    public function formasPagamentoCadastro(int $unidadeId): array
     {
-        return $this->meiosPagamento->agrupadosPorUnidade($unidadeId);
+        return $this->meiosPagamento->listarAtivos($unidadeId);
     }
 
     /**
@@ -210,8 +182,7 @@ final class ReservaFidelidadeService
                     ? (string) (is_string($reserva->conta_paga_em) ? $reserva->conta_paga_em : $reserva->conta_paga_em->toDateTimeString())
                     : null,
                 'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
-                'formas_pagamento' => $this->opcoesFormasPagamento(),
-                'meios_pagamento' => $this->meiosPagamentoUnidade($unidadeId),
+                'formas_pagamento_cadastro' => $this->formasPagamentoCadastro($unidadeId),
                 'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
                 'mensagem' => 'Informe um telefone válido na reserva para usar fidelidade.',
             ];
@@ -246,8 +217,7 @@ final class ReservaFidelidadeService
                 ? (string) (is_string($reserva->conta_paga_em) ? $reserva->conta_paga_em : $reserva->conta_paga_em->toDateTimeString())
                 : null,
             'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
-            'formas_pagamento' => $this->opcoesFormasPagamento(),
-            'meios_pagamento' => $this->meiosPagamentoUnidade($unidadeId),
+            'formas_pagamento_cadastro' => $this->formasPagamentoCadastro($unidadeId),
             'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
             'mensagem' => $programaAtivo
                 ? null
@@ -467,8 +437,7 @@ final class ReservaFidelidadeService
             'valor_conta' => null,
             'conta_paga_em' => null,
             'pagamentos_conta' => [],
-            'formas_pagamento' => $this->opcoesFormasPagamento(),
-            'meios_pagamento' => ['pix' => [], 'maquininha' => [], 'dinheiro' => []],
+            'formas_pagamento_cadastro' => [],
             'meta_selos' => 10,
             'mensagem' => $mensagem,
         ];

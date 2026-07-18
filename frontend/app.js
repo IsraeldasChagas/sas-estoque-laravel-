@@ -1586,7 +1586,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash",
   "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv",
   "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
-  "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "rhDashboard", "rhVagas",
+  "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "rhDashboard", "rhVagas",
   "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs",
   "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios",
   "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes",
@@ -1969,7 +1969,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1977,7 +1977,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2001,7 +2001,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "fechaTecnica", "estoque", "movimentacoes", "relatorios", "reservaDashboard", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "fechaTecnica", "estoque", "movimentacoes", "relatorios", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2009,7 +2009,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaDashboard", "reservaMesa", "historicoReservas", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2017,7 +2017,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2033,7 +2033,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
-    sections: ["boasVindas", "minhaConta", "estoque", "fechaTecnica", "reservaDashboard", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "estoque", "fechaTecnica", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2041,7 +2041,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaDashboard", "reservaMesa", "historicoReservas", "comercialPdv", "comercialPagamentos", "comercialFechamento"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "comercialPdv", "comercialPagamentos", "comercialFechamento"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -4056,7 +4056,7 @@ function getSectionsUsuarioAtual() {
 /** Reserva de Mesa: quem tem o módulo liberado opera em todas as unidades (como ADMIN). */
 function canEscolherUnidadeReservaMesa() {
   const sections = getSectionsUsuarioAtual();
-  return sections.includes("reservaDashboard") || sections.includes("reservaMesa") || sections.includes("historicoReservas");
+  return sections.includes("reservaDashboard") || sections.includes("reservaMesa") || sections.includes("reservaFormasPagamento") || sections.includes("historicoReservas");
 }
 
 // Verifica se é ADMIN (apenas administrador)
@@ -5718,7 +5718,7 @@ function navigateTo(section) {
   if (sidebarNavScroll) sidebarNavScroll.scrollTop = sidebarScrollTop;
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
-    if (section === "reservaDashboard" || section === "reservaMesa" || section === "historicoReservas") {
+    if (section === "reservaDashboard" || section === "reservaMesa" || section === "reservaFormasPagamento" || section === "historicoReservas") {
       reservaNavSubmenu.classList.add("open");
     } else {
       reservaNavSubmenu.classList.remove("open");
