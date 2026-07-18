@@ -5,7 +5,6 @@
     $meta = (int) ($programa->pedidos_meta ?? 10);
     $nomeProg = $programa->nome_exibicao ?? $programa->nome ?? 'Cartão fidelidade';
     $nomeUnidade = trim((string) ($unidade_fidelidade_nome ?? '')) ?: ($config->nome_loja ?: 'Loja');
-    $abrirCadastro = $errors->has('cadastro_telefone') || $errors->has('cadastro_cpf') || $errors->has('cadastro_email');
 @endphp
 <section class="vf-fidelity-page">
     <div class="vf-fidelity-hero">
@@ -21,44 +20,16 @@
         <div class="vf-fid-alert vf-fid-alert--warn" role="status">{{ session('warning') }}</div>
     @endif
 
-    <div class="vf-fidelity-card vf-fid-collapse">
-        <button type="button" class="vf-fid-collapse__btn {{ $abrirCadastro ? 'is-open' : '' }}" id="fidCadastroToggle" aria-expanded="{{ $abrirCadastro ? 'true' : 'false' }}" aria-controls="fidCadastroPanel">
-            <span>Cadastrar ou atualizar meu cartão</span>
-            <span aria-hidden="true">▾</span>
-        </button>
-        <div id="fidCadastroPanel" class="vf-fid-collapse__panel {{ $abrirCadastro ? 'is-open' : '' }}">
-            <p class="muted">Informe o telefone (WhatsApp), CPF e e-mail — use o <strong>mesmo telefone das reservas/compras</strong>. Os selos são lançados pela loja.</p>
-            <form method="post" action="{{ route('delivery.public.fidelity.register', $slug) }}" class="vf-fid-form">
-                @csrf
-                <label>Telefone / WhatsApp
-                    <input type="tel" name="cadastro_telefone" value="{{ old('cadastro_telefone') }}" placeholder="(69) 99999-0000" autocomplete="tel" required maxlength="32">
-                </label>
-                @error('cadastro_telefone')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                <label>Nome (opcional)
-                    <input type="text" name="cadastro_nome" value="{{ old('cadastro_nome') }}" maxlength="160" autocomplete="name">
-                </label>
-                <label>CPF
-                    <input type="text" name="cadastro_cpf" value="{{ old('cadastro_cpf') }}" placeholder="000.000.000-00" inputmode="numeric" required maxlength="18">
-                </label>
-                @error('cadastro_cpf')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                <label>E-mail
-                    <input type="email" name="cadastro_email" value="{{ old('cadastro_email') }}" placeholder="seu@email.com" autocomplete="email" required maxlength="160">
-                </label>
-                @error('cadastro_email')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                <button type="submit" class="btn primary">Enviar código para confirmar</button>
-            </form>
-        </div>
-    </div>
-
     <div class="vf-fidelity-card">
         <h2>Como funciona</h2>
         <ul>
-            <li>A cada visita/reserva contabilizada pela loja, você ganha selos.</li>
+            <li>A cada <strong>reserva de mesa</strong> no Sabor Paraense, na unidade <strong>{{ $nomeUnidade }}</strong> em que você reservou, você ganha selos após o <strong>pagamento da conta</strong>.</li>
+            <li>O cartão é criado automaticamente pela loja na reserva — não é possível cadastrar por aqui.</li>
             <li>Meta: <strong>{{ $meta }}</strong> selos para a recompensa.</li>
             @if(! empty($programa->texto_recompensa))
                 <li>{{ $programa->texto_recompensa }}</li>
             @endif
-            <li>Para ver seu saldo, confirme o telefone com um código de 6 dígitos.</li>
+            <li>Use o <strong>mesmo telefone da reserva</strong> e confirme com um código de 6 dígitos para ver seu saldo.</li>
         </ul>
 
         <h2 class="vf-fid-subtitle">Ver meus selos</h2>
@@ -66,7 +37,6 @@
         @if($fidelidade_otp_pending ?? false)
             @php
                 $pend = session('sas_fid_otp_pending', []);
-                $otpCadastroFlow = $fidelidade_otp_cadastro ?? false;
                 $telPend = is_array($pend) ? (string) ($pend['tel_norm'] ?? '') : '';
                 $suf = strlen($telPend) >= 4 ? substr($telPend, -4) : '****';
                 $canalOtp = is_array($pend) ? (string) ($pend['canal'] ?? '') : '';
@@ -94,7 +64,7 @@
                     <input type="text" name="codigo" value="{{ old('codigo') }}" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="000000" required>
                 </label>
                 @error('codigo')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                <button type="submit" class="btn primary">{{ $otpCadastroFlow ? 'Confirmar cadastro' : 'Confirmar e ver selos' }}</button>
+                <button type="submit" class="btn primary">Confirmar e ver selos</button>
             </form>
             <form method="post" action="{{ route('delivery.public.fidelity.resend', $slug) }}" class="vf-fid-form-inline">
                 @csrf
@@ -105,7 +75,7 @@
                 <button type="submit" class="btn link">Usar outro telefone</button>
             </form>
         @else
-            <p class="muted">Digite seu celular (o mesmo do cadastro) e solicite o código. Sem o código, o saldo não aparece — medida de segurança.</p>
+            <p class="muted">Digite o celular usado na <strong>reserva de mesa</strong> e solicite o código. Sem o código, o saldo não aparece — medida de segurança.</p>
             <form method="post" action="{{ route('delivery.public.fidelity.request', $slug) }}" class="vf-fid-form">
                 @csrf
                 <label>Seu celular
@@ -151,7 +121,7 @@
                 </form>
             </div>
         @else
-            <div class="vf-fid-alert vf-fid-alert--warn">Ainda não há selos neste telefone. Após a loja lançar o primeiro selo, eles aparecem aqui.</div>
+            <div class="vf-fid-alert vf-fid-alert--warn">Ainda não há selos neste telefone. Após a loja confirmar o pagamento da sua reserva de mesa, o selo aparece aqui.</div>
         @endif
     @endif
 
@@ -159,16 +129,4 @@
         <a class="btn ghost" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
     </p>
 </section>
-<script>
-(function () {
-  var btn = document.getElementById('fidCadastroToggle');
-  var panel = document.getElementById('fidCadastroPanel');
-  if (!btn || !panel) return;
-  btn.addEventListener('click', function () {
-    var open = panel.classList.toggle('is-open');
-    btn.classList.toggle('is-open', open);
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-})();
-</script>
 @endsection

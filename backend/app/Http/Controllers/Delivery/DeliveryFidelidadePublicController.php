@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Delivery;
 
 use App\Http\Controllers\Controller;
-use App\Services\Fidelidade\FidelidadeCodigoService;
-use App\Services\Fidelidade\FidelidadeLedgerService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
 use App\Services\Fidelidade\FidelidadePublicOtpEntrega;
@@ -35,7 +33,6 @@ class DeliveryFidelidadePublicController extends Controller
 
     public function __construct(
         private FidelidadePublicOtpEntrega $otpEntrega,
-        private FidelidadeLedgerService $ledger,
         private FidelidadePublicConsultaService $consulta,
     ) {}
 
@@ -49,11 +46,6 @@ class DeliveryFidelidadePublicController extends Controller
 
         $acesso = $this->acessoValido($unidadeVitrine);
         $otpPending = $this->otpPendenteValido($unidadeVitrine);
-        $otpCadastro = false;
-        if ($otpPending) {
-            $p = session(self::SESSION_OTP, []);
-            $otpCadastro = is_array($p) && (($p['tipo'] ?? self::OTP_TIPO_CONSULTA) === self::OTP_TIPO_CADASTRO);
-        }
 
         $conta = null;
         $mostrarProgresso = false;
@@ -84,7 +76,6 @@ class DeliveryFidelidadePublicController extends Controller
             'mostrar_progresso_selos' => $mostrarProgresso,
             'telefone_selos_mascara' => $telefoneMascara,
             'fidelidade_otp_pending' => $otpPending,
-            'fidelidade_otp_cadastro' => $otpCadastro,
         ]);
     }
 
@@ -109,7 +100,7 @@ class DeliveryFidelidadePublicController extends Controller
         $conta = $this->consulta->buscarContaAtiva($config, $norm);
         if (! $conta) {
             return back()
-                ->with('warning', 'Não encontramos cartão fidelidade para este telefone nesta loja. Cadastre-se acima ou confira o número.')
+                ->with('warning', 'Não encontramos cartão fidelidade para este telefone nesta unidade. O cartão é criado automaticamente após a reserva de mesa e o pagamento da conta — use o mesmo telefone informado na reserva.')
                 ->withInput();
         }
         $unidadeFid = (int) $conta->unidade_id;
@@ -288,22 +279,12 @@ class DeliveryFidelidadePublicController extends Controller
         Cache::forget($fk);
 
         if ($tipo === self::OTP_TIPO_CADASTRO) {
-            $cpf = FidelidadeNormalizer::cpf((string) ($pending['cadastro_cpf'] ?? ''));
-            $email = strtolower(trim((string) ($pending['cadastro_email'] ?? '')));
-            if (! $cpf || ! FidelidadeNormalizer::cpfValido($cpf) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $request->session()->forget(self::SESSION_OTP);
-
-                return $this->voltar($slug)->with('warning', 'Os dados do cadastro expiraram. Preencha o formulário novamente.');
-            }
-            $this->persistirCadastro($unidadeId, $telNorm, $cpf, $email, FidelidadeNormalizer::nome($pending['cadastro_nome'] ?? null));
             $request->session()->forget(self::SESSION_OTP);
-            $request->session()->put(self::SESSION_ACESSO, [
-                'unidade_id' => $unidadeId,
-                'tel_norm' => $telNorm,
-                'exp' => now()->addMinutes(self::ACESSO_TTL_MINUTES)->timestamp,
-            ]);
 
-            return $this->voltar($slug)->with('status', 'Cadastro confirmado! Abaixo você já vê os selos deste telefone.');
+            return $this->voltar($slug)->with(
+                'warning',
+                'O cadastro de cartão não é feito por aqui. Use o telefone da sua reserva de mesa após o pagamento da conta.'
+            );
         }
 
         $request->session()->forget(self::SESSION_OTP);
@@ -319,123 +300,10 @@ class DeliveryFidelidadePublicController extends Controller
 
     public function cadastrar(Request $request, string $slug): RedirectResponse
     {
-        $config = $this->config($slug);
-        $programa = $this->programaAtivo((int) $config->unidade_id);
-        if (! $programa) {
-            return $this->voltar($slug)->with('warning', 'Programa de fidelidade indisponível.');
-        }
-
-        $data = $request->validate([
-            'cadastro_telefone' => ['required', 'string', 'min:8', 'max:32'],
-            'cadastro_cpf' => ['required', 'string', 'max:18'],
-            'cadastro_email' => ['required', 'email', 'max:160'],
-            'cadastro_nome' => ['nullable', 'string', 'max:160'],
-        ]);
-
-        $telNorm = FidelidadeNormalizer::telefone($data['cadastro_telefone']);
-        if (strlen($telNorm) < 10) {
-            return back()->withErrors(['cadastro_telefone' => 'Informe um telefone válido (DDD + número).'])->withInput();
-        }
-        $cpf = FidelidadeNormalizer::cpf($data['cadastro_cpf']);
-        if (! $cpf || ! FidelidadeNormalizer::cpfValido($cpf)) {
-            return back()->withErrors(['cadastro_cpf' => 'Informe um CPF válido.'])->withInput();
-        }
-        $email = strtolower(trim($data['cadastro_email']));
-        $unidadeId = (int) $config->unidade_id;
-
-        $cpfOutro = DB::table('fid_contas')
-            ->where('unidade_id', $unidadeId)
-            ->where('cpf_normalizado', $cpf)
-            ->where('telefone_normalizado', '!=', $telNorm)
-            ->exists();
-        if ($cpfOutro) {
-            return back()->withErrors(['cadastro_cpf' => 'Este CPF já está em outro telefone nesta loja.'])->withInput();
-        }
-
-        $rateKey = 'sas-fid-otp:'.$unidadeId.':'.$telNorm;
-        if (RateLimiter::tooManyAttempts($rateKey, 4)) {
-            $seg = RateLimiter::availableIn($rateKey);
-
-            return back()->withErrors(['cadastro_telefone' => 'Aguarde '.max(1, $seg).' segundos para solicitar outro código.'])->withInput();
-        }
-        RateLimiter::hit($rateKey, 3600);
-
-        $codigo = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
-        Cache::forget($this->keyOtp($unidadeId, $telNorm));
-        Cache::forget($this->keyFalhas($unidadeId, $telNorm));
-        Cache::put($this->keyOtpCadastro($unidadeId, $telNorm), $codigo, now()->addMinutes(self::OTP_TTL_MINUTES));
-        Cache::forget($this->keyFalhasCadastro($unidadeId, $telNorm));
-
-        $nomeLoja = trim((string) ($config->nome_loja ?: 'Loja'));
-        $envio = $this->otpEntrega->entregar($nomeLoja, $unidadeId, $telNorm, $codigo, self::OTP_TTL_MINUTES, $email);
-        if (! $envio['ok']) {
-            Cache::forget($this->keyOtpCadastro($unidadeId, $telNorm));
-            RateLimiter::clear($rateKey);
-
-            return back()->withErrors(['cadastro_telefone' => $this->msgFalha($envio)])->withInput();
-        }
-
-        $request->session()->put(self::SESSION_OTP, [
-            'unidade_id' => $unidadeId,
-            'tel_norm' => $telNorm,
-            'telefone_input' => $data['cadastro_telefone'],
-            'cadastro_telefone' => $data['cadastro_telefone'],
-            'cadastro_cpf' => $data['cadastro_cpf'],
-            'cadastro_email' => $email,
-            'cadastro_nome' => $data['cadastro_nome'] ?? null,
-            'tipo' => self::OTP_TIPO_CADASTRO,
-            'canal' => $envio['canal'] ?? FidelidadePublicOtpEntrega::CANAL_EMAIL,
-            'wa_me_url' => $envio['wa_me_url'] ?? null,
-        ]);
-
-        return $this->voltar($slug)->with('status', $this->msgSucesso((string) ($envio['canal'] ?? ''), false, true));
-    }
-
-    private function persistirCadastro(int $unidadeId, string $telNorm, string $cpf, string $email, ?string $nome): void
-    {
-        $existente = DB::table('fid_contas')
-            ->where('unidade_id', $unidadeId)
-            ->where('telefone_normalizado', $telNorm)
-            ->first();
-
-        $agora = now();
-        if ($existente) {
-            DB::table('fid_contas')->where('id', $existente->id)->update([
-                'cpf_normalizado' => $cpf,
-                'email' => $email,
-                'nome' => $nome ?: $existente->nome,
-                'status' => 'ativo',
-                'updated_at' => $agora,
-            ]);
-
-            return;
-        }
-
-        $id = DB::table('fid_contas')->insertGetId([
-            'unidade_id' => $unidadeId,
-            'telefone_normalizado' => $telNorm,
-            'cpf_normalizado' => $cpf,
-            'email' => $email,
-            'nome' => $nome,
-            'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
-            'status' => 'ativo',
-            'saldo_selos' => 0,
-            'saldo_pontos' => 0,
-            'total_resgates' => 0,
-            'origem_tipo' => 'vitrine',
-            'origem_id' => null,
-            'created_at' => $agora,
-            'updated_at' => $agora,
-        ]);
-
-        $this->ledger->aplicar([
-            'conta_id' => $id,
-            'tipo' => 'geracao',
-            'delta_selos' => 0,
-            'delta_pontos' => 0,
-            'descricao' => 'Cadastro pela vitrine',
-            'idempotency_key' => 'geracao-conta-'.$id,
-        ]);
+        return $this->voltar($slug)->with(
+            'warning',
+            'O cartão fidelidade não é cadastrado por aqui. Ele é criado automaticamente quando a loja confirma o pagamento da sua reserva de mesa.'
+        );
     }
 
     private function acessoValido(int $unidadeId): ?array
