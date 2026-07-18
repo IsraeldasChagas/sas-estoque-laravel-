@@ -18843,7 +18843,7 @@ function reservaFidHtmlLinhaPagamento(formas, meios, dados, idx) {
     '<label>Forma<select data-pag-forma>' + reservaFidOptsFormas(formas, forma) + '</select></label>' +
     '<label class="reserva-fid__pag-meio"><span data-pag-meio-label>' + escapeHtml(reservaFidLabelMeio(forma)) + '</span><select data-pag-meio>' + reservaFidOptsMeios(meios, forma, meioId) + '</select></label>' +
     '<label>Valor (R$)<input type="number" data-pag-valor min="0.01" step="0.01" placeholder="0,00" value="' + (valor !== '' ? escapeHtml(String(valor)) : '') + '"></label>' +
-    '<button type="button" class="btn ghost reserva-fid__pag-remove" data-pag-remove title="Remover linha">×</button>' +
+    '<button type="button" class="btn danger reserva-fid__pag-remove" data-pag-remove title="Remover linha" aria-label="Remover pagamento">×</button>' +
   '</div>';
 }
 
@@ -19099,7 +19099,7 @@ async function renderReservaFidelidade(reservaId) {
         '<div class="reserva-fid__split">' +
           '<div class="reserva-fid__split-head">' +
             '<strong>Como foi pago</strong>' +
-            '<button type="button" class="btn ghost" id="btnReservaFidAddPag">+ Dividir conta</button>' +
+            '<button type="button" class="btn info reserva-fid__btn-dividir" id="btnReservaFidAddPag">+ Dividir conta</button>' +
           '</div>' +
           '<p class="subtle-text" style="margin:0;">Cadastre recebedores em <strong>Modos de pagamento</strong>. Cada linha pode ser outra pessoa da mesa, forma e maquininha/recebedor.</p>' +
           '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(formasPag, meiosPag, { forma: 'pix' }, 0) + '</div>' +

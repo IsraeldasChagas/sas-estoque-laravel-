@@ -7955,6 +7955,51 @@ select[size]:not([size="1"]) {
   min-height: 38px;
   padding: 0;
   line-height: 1;
+  font-size: 1.35rem;
+  font-weight: 700;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.reserva-fid__btn-dividir {
+  font-size: 0.82rem;
+  min-height: 36px;
+  padding: 0.35rem 0.85rem;
+  white-space: nowrap;
+}
+.reserva-fid .btn.primary {
+  background: linear-gradient(135deg, #1565c0 0%, #1976d2 100%);
+  border-color: #0d47a1;
+  color: #fff;
+  font-weight: 700;
+  min-height: 44px;
+  box-shadow: 0 3px 10px rgba(21, 101, 192, 0.28);
+}
+.reserva-fid .btn.primary:hover {
+  filter: brightness(1.06);
+}
+.reserva-fid .btn.info {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+  border-color: #c2410c;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+}
+.reserva-fid .btn.info:hover {
+  filter: brightness(1.05);
+}
+.reserva-fid .btn.danger.reserva-fid__pag-remove {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  border-color: #b91c1c;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+.reserva-fid .btn.danger.reserva-fid__pag-remove:hover {
+  filter: brightness(1.06);
+}
+.reserva-fid .btn.secondary {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+  border-color: #6d28d9;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.22);
 }
 .reserva-fid__split-total {
   margin: 0;
