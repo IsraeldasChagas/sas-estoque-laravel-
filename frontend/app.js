@@ -18606,8 +18606,18 @@ async function loadReservasMesas() {
           showToast('Reserva cancelada.', 'success');
           await loadReservasMesas();
         } else if (action === 'cliente_chegou') {
-          await fetchJSON('/reservas-mesas/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: 'cliente_chegou' }) });
+          var respChegada = await fetchJSON('/reservas-mesas/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status: 'cliente_chegou' }) });
           showToast('Cliente marcado como chegou.', 'success');
+          if (respChegada && respChegada.fidelidade) {
+            if (respChegada.fidelidade.selo_creditado) {
+              var saldo = respChegada.fidelidade.conta ? respChegada.fidelidade.conta.saldo_selos : null;
+              showToast('✦ Selo fidelidade creditado' + (saldo != null ? ' · saldo ' + saldo : '') + '.', 'success');
+            } else if (respChegada.fidelidade.selo_ja_existia) {
+              showToast('✦ Selo desta reserva já estava creditado.', 'info');
+            } else if (respChegada.fidelidade.erro) {
+              showToast('Fidelidade: ' + respChegada.fidelidade.erro, 'warning');
+            }
+          }
           await loadReservasMesas();
         } else if (action === 'whatsapp') {
           var r = await fetchJSON('/reservas-mesas/' + id);
@@ -18757,6 +18767,102 @@ async function abrirMesaLivre(mesaId, mesas, unidadeId) {
   document.getElementById('reservaMesaModal').classList.add('active');
 }
 
+async function renderReservaFidelidade(reservaId) {
+  var statusEl = document.getElementById('reservaFidStatus');
+  var bodyEl = document.getElementById('reservaFidBody');
+  if (!bodyEl) return;
+  try {
+    var data = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade');
+    if (!data.disponivel) {
+      if (statusEl) statusEl.textContent = 'Indisponível';
+      bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(data.mensagem || 'Fidelidade não disponível.') + '</p>';
+      return;
+    }
+    if (!data.programa_ativo) {
+      if (statusEl) statusEl.textContent = 'Programa inativo';
+      bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(data.mensagem || 'Ative o programa em Fidelidade → Programa.') + '</p>';
+      return;
+    }
+    if (!data.telefone_ok) {
+      if (statusEl) statusEl.textContent = 'Sem telefone';
+      bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(data.mensagem || 'Cadastre o telefone do cliente.') + '</p>';
+      return;
+    }
+
+    var conta = data.conta;
+    var selos = conta ? Number(conta.saldo_selos || 0) : 0;
+    var codigo = conta ? (conta.codigo_fidelidade || '') : '';
+    var meta = Number(data.meta_selos || 10);
+    var seloOk = !!data.selo_ja_creditado;
+    if (statusEl) statusEl.textContent = conta ? ('Cartão ' + (codigo || '#' + conta.id)) : 'Sem cartão ainda';
+
+    var recompensas = data.recompensas || [];
+    var opts = '<option value="">Recompensa padrão do programa (' + meta + ' selos)</option>' +
+      recompensas.map(function(rw) {
+        return '<option value="' + rw.id + '">' + escapeHtml(rw.titulo) + ' · ' + Number(rw.custo_selos || 0) + ' selos</option>';
+      }).join('');
+
+    bodyEl.innerHTML =
+      '<div class="reserva-fid__saldo">' +
+        '<div><span>Selos</span><strong id="reservaFidSelos">' + selos + '</strong></div>' +
+        '<div><span>Pontos</span><strong>' + (conta ? Number(conta.saldo_pontos || 0) : 0) + '</strong></div>' +
+        '<div><span>Meta</span><strong>' + meta + '</strong></div>' +
+      '</div>' +
+      '<p class="subtle-text" style="margin:0.35rem 0 0.65rem;">' +
+        (seloOk ? 'Selo desta reserva já creditado.' : 'Ao marcar chegada, o selo é creditado automaticamente.') +
+      '</p>' +
+      '<div class="reserva-fid__acoes">' +
+        '<button type="button" class="btn primary" id="btnReservaFidSelo"' + (seloOk ? ' disabled' : '') + '>' + (seloOk ? '✓ Selo ok' : '+ Creditar selo') + '</button>' +
+        (!conta ? '<button type="button" class="btn neutral" id="btnReservaFidCriar">Criar cartão</button>' : '') +
+      '</div>' +
+      '<div class="reserva-fid__pagar">' +
+        '<label>Pagar com selos<select id="reservaFidRecompensa">' + opts + '</select></label>' +
+        '<button type="button" class="btn secondary" id="btnReservaFidPagar">Pagar / Resgatar</button>' +
+      '</div>';
+
+    document.getElementById('btnReservaFidSelo') && document.getElementById('btnReservaFidSelo').addEventListener('click', async function() {
+      try {
+        var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/selo', { method: 'POST', body: '{}' });
+        showToast(resp.message || 'Selo creditado.', 'success');
+        await renderReservaFidelidade(reservaId);
+      } catch (e) {
+        showToast(e.message || 'Erro ao creditar selo.', 'error');
+      }
+    });
+    document.getElementById('btnReservaFidCriar') && document.getElementById('btnReservaFidCriar').addEventListener('click', async function() {
+      try {
+        var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/garantir', { method: 'POST', body: '{}' });
+        showToast(resp.message || 'Cartão criado.', 'success');
+        await renderReservaFidelidade(reservaId);
+      } catch (e) {
+        showToast(e.message || 'Erro ao criar cartão.', 'error');
+      }
+    });
+    document.getElementById('btnReservaFidPagar') && document.getElementById('btnReservaFidPagar').addEventListener('click', async function() {
+      var sel = document.getElementById('reservaFidRecompensa');
+      var recompensaId = sel && sel.value ? Number(sel.value) : null;
+      var custoTxt = sel && sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : 'recompensa';
+      if (!confirm('Confirmar pagamento com selos?\n' + custoTxt)) return;
+      try {
+        var payload = { observacao: 'Pagamento na reserva #' + reservaId };
+        if (recompensaId) payload.recompensa_id = recompensaId;
+        var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/resgatar', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        var novo = resp.conta ? resp.conta.saldo_selos : null;
+        showToast('✦ Resgate ok' + (novo != null ? ' · saldo ' + novo + ' selos' : '') + '.', 'success');
+        await renderReservaFidelidade(reservaId);
+      } catch (e) {
+        showToast(e.message || 'Saldo insuficiente ou erro no resgate.', 'error');
+      }
+    });
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Erro';
+    bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(e.message || 'Não foi possível carregar fidelidade.') + '</p>';
+  }
+}
+
 async function abrirDetalhesReserva(id) {
   var modal = document.getElementById('reservaDetalhesModal');
   var content = document.getElementById('reservaDetalhesContent');
@@ -18793,6 +18899,12 @@ async function abrirDetalhesReserva(id) {
         '<button type="button" class="btn neutral" data-action="trocar-mesa" data-id="' + r.id + '">🔄 Trocar de mesa</button>' +
         '</div>';
     }
+
+    var fidHtml = '<div id="reservaFidBox" class="reserva-fid" data-reserva-id="' + r.id + '">' +
+      '<div class="reserva-fid__head"><strong>✦ Fidelidade</strong><span class="subtle-text" id="reservaFidStatus">Carregando…</span></div>' +
+      '<div id="reservaFidBody" class="reserva-fid__body"></div>' +
+      '</div>';
+
     var movs = parseReservaMovHistory(r.observacao || '');
     var movHtml = '';
     if (movs && movs.length) {
@@ -18837,10 +18949,12 @@ async function abrirDetalhesReserva(id) {
         ? '<p><button type="button" class="btn primary" id="btnWhatsAppDetalhes" style="margin-top:0.5rem;">📱 Enviar confirmação no WhatsApp (cliente)</button></p>'
         : '') +
       '<p><button type="button" class="btn secondary" id="btnWhatsAppEmpresaDetalhes" style="margin-top:0.5rem;">🏢 Notificar empresa no WhatsApp (escolher contato)</button></p>' +
+      fidHtml +
       acoes +
       '</div>';
     document.getElementById('btnWhatsAppDetalhes') && document.getElementById('btnWhatsAppDetalhes').addEventListener('click', function () { abrirWhatsAppReserva(r); });
     document.getElementById('btnWhatsAppEmpresaDetalhes') && document.getElementById('btnWhatsAppEmpresaDetalhes').addEventListener('click', function () { abrirWhatsAppReservaEmpresa(r); });
+    renderReservaFidelidade(r.id);
     content.querySelectorAll('[data-action]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var action = btn.getAttribute('data-action');

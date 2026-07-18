@@ -7815,6 +7815,69 @@ select[size]:not([size="1"]) {
 .reserva-card__label { font-size: 0.8rem; color: var(--muted); font-weight: 700; text-align: left; }
 .reserva-card__value { font-size: 1.5rem; font-weight: 600; text-align: left; }
 
+/* Fidelidade dentro da reserva */
+.reserva-fid {
+  margin-top: 0.85rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 107, 69, 0.18);
+  background: linear-gradient(135deg, #f4faf6 0%, #fff 55%, #fff8ee 100%);
+}
+.reserva-fid__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+.reserva-fid__head strong { color: #1f6b45; }
+.reserva-fid__saldo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.reserva-fid__saldo > div {
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: rgba(31, 107, 69, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.reserva-fid__saldo span {
+  font-size: 0.72rem;
+  color: #5c6f63;
+  font-weight: 600;
+}
+.reserva-fid__saldo strong {
+  font-size: 1.2rem;
+  color: #14261c;
+}
+.reserva-fid__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+.reserva-fid__pagar {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(31, 107, 69, 0.2);
+  display: grid;
+  gap: 0.5rem;
+}
+.reserva-fid__pagar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5c6f63;
+}
+.reserva-fid__pagar select {
+  font-weight: 500;
+}
+
 .reservas-mesas-grid {
   display: grid;
   grid-template-columns: 1fr 1.5fr;

@@ -45,4 +45,13 @@ return [
         'limit_admin' => (int) env('SAS_IA_LIMIT_ADMIN', 300),
     ],
 
+    /*
+    | Fidelidade pública (vitrine) — mesma ideia do VendaFácil:
+    | OTP por telefone; e-mail opcional; fallback wa.me com o código na mensagem.
+    */
+    'fidelidade_otp' => [
+        'email_fallback' => (bool) env('FIDELIDADE_OTP_EMAIL_FALLBACK', true),
+        'wa_me_fallback' => (bool) env('FIDELIDADE_OTP_WAME_FALLBACK', true),
+    ],
+
 ];

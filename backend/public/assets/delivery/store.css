@@ -315,6 +315,39 @@ a{color:inherit}
 .vf-fidelity-card h2{margin:0 0 10px;font-size:1.1rem}
 .vf-fidelity-card ul{margin:0 0 16px;padding-left:1.1rem;color:var(--muted)}
 .vf-fidelity-card li{margin:6px 0}
+.vf-fid-subtitle{margin-top:1.25rem!important}
+.vf-fid-alert{padding:12px 14px;border-radius:.75rem;margin:0 0 14px;font-size:.9rem;line-height:1.4}
+.vf-fid-alert--ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+.vf-fid-alert--warn{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+.vf-fid-error{color:#b91c1c;font-size:.85rem;margin:.25rem 0 .5rem}
+.vf-fid-form{display:grid;gap:10px;margin-top:8px}
+.vf-fid-form label{display:grid;gap:4px;font-size:.85rem;font-weight:600;color:#334155}
+.vf-fid-form input{
+  min-height:42px;padding:8px 12px;border:1px solid var(--line);border-radius:.55rem;font:inherit;font-weight:500;
+}
+.vf-fid-form-inline{margin-top:8px}
+.vf-fid-form-inline .btn{width:100%}
+.btn.link,.vf-fid-form-inline .btn.link{
+  background:transparent;border:0;color:var(--muted);text-decoration:underline;min-height:auto;padding:6px 0;box-shadow:none;
+}
+.vf-fid-wa{display:inline-flex;justify-content:center;width:100%;margin:8px 0 12px;text-decoration:none}
+.vf-fid-stamps{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 14px}
+.vf-fid-stamp{
+  width:2.25rem;height:2.25rem;border-radius:50%;display:grid;place-items:center;
+  border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;font-size:.75rem;font-weight:700;
+}
+.vf-fid-stamp.is-on{background:#16a34a;border-color:#16a34a;color:#fff}
+.vf-fid-saldo{text-align:center;margin:0 0 8px}
+.vf-fid-mask{margin:0 0 8px}
+.vf-fid-back{margin-top:18px}
+.vf-fid-collapse{padding:0;overflow:hidden;margin-bottom:14px}
+.vf-fid-collapse__btn{
+  width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:14px 18px;border:0;background:#f8fafc;font:inherit;font-weight:600;cursor:pointer;text-align:left;
+}
+.vf-fid-collapse__btn.is-open span:last-child{transform:rotate(180deg)}
+.vf-fid-collapse__panel{display:none;padding:0 18px 18px;border-top:1px solid var(--line);background:#fafafa}
+.vf-fid-collapse__panel.is-open{display:block}
 
 /* Shared forms / cart / product detail (kept) */
 .breadcrumb{font-size:13px;color:var(--muted);margin-bottom:18px}

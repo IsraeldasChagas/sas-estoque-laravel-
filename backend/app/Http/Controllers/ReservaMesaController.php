@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Mesa;
 use App\Models\ReservaMesa;
+use App\Services\Fidelidade\ReservaFidelidadeService;
 use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 class ReservaMesaController extends Controller
@@ -657,7 +659,180 @@ class ReservaMesaController extends Controller
             $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
         }
 
-        return response()->json(['message' => 'Status alterado', 'reserva' => $reserva->fresh(['mesa', 'usuario'])]);
+        $fidelidade = null;
+        if ($request->status === 'cliente_chegou' && $statusAnterior !== 'cliente_chegou') {
+            try {
+                $fid = app(ReservaFidelidadeService::class);
+                $snap = $fid->snapshot($reserva);
+                if ($snap['disponivel'] && $snap['programa_ativo'] && $snap['telefone_ok']) {
+                    $credito = $fid->creditarSelo($reserva, $usuario ? (int) $usuario->id : null, true);
+                    $fidelidade = [
+                        'selo_creditado' => ! $credito['replayed'],
+                        'selo_ja_existia' => (bool) $credito['replayed'],
+                        'conta' => $credito['conta'],
+                        'criado_conta' => $credito['criado_conta'],
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $fidelidade = [
+                    'selo_creditado' => false,
+                    'erro' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json([
+            'message' => 'Status alterado',
+            'reserva' => $reserva->fresh(['mesa', 'usuario']),
+            'fidelidade' => $fidelidade,
+        ]);
+    }
+
+    /**
+     * Snapshot fidelidade da reserva (cartão, saldo, programa).
+     */
+    public function fidelidade(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva] = $ctx;
+
+        $fid = app(ReservaFidelidadeService::class);
+        $snap = $fid->snapshot($reserva);
+        $recompensas = ($snap['disponivel'] && $snap['programa_ativo'])
+            ? $fid->listarRecompensas((int) $reserva->unidade_id)
+            : [];
+
+        return response()->json(array_merge($snap, [
+            'recompensas' => $recompensas,
+            'reserva_id' => (int) $reserva->id,
+        ]));
+    }
+
+    /**
+     * Credita selo manualmente pela reserva.
+     */
+    public function fidelidadeSelo(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        try {
+            $result = app(ReservaFidelidadeService::class)->creditarSelo(
+                $reserva,
+                $usuario ? (int) $usuario->id : null,
+                true
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível creditar o selo.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => $result['replayed'] ? 'Selo já havia sido creditado nesta reserva.' : 'Selo creditado.',
+            'conta' => $result['conta'],
+            'ledger' => $result['ledger'],
+            'replayed' => $result['replayed'],
+            'criado_conta' => $result['criado_conta'],
+        ], $result['replayed'] ? 200 : 201);
+    }
+
+    /**
+     * Garante cartão fidelidade pelo telefone da reserva (sem creditar selo).
+     */
+    public function fidelidadeGarantir(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        try {
+            $conta = app(ReservaFidelidadeService::class)->garantirConta(
+                $reserva,
+                $usuario ? (int) $usuario->id : null
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível criar o cartão.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Cartão fidelidade pronto.',
+            'conta' => $conta,
+        ]);
+    }
+
+    /**
+     * Paga / resgata recompensa com selos na reserva.
+     */
+    public function fidelidadeResgatar(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        $data = Validator::make($request->all(), [
+            'recompensa_id' => 'nullable|integer',
+            'observacao' => 'nullable|string|max:500',
+        ])->validate();
+
+        try {
+            $result = app(ReservaFidelidadeService::class)->pagarComSelos(
+                $reserva,
+                isset($data['recompensa_id']) ? (int) $data['recompensa_id'] : null,
+                $usuario ? (int) $usuario->id : null,
+                $data['observacao'] ?? null
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível resgatar.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Resgate realizado com selos.',
+            'resgate' => $result['resgate'],
+            'conta' => $result['conta'],
+            'ledger' => $result['ledger'],
+            'replayed' => $result['replayed'],
+        ], $result['replayed'] ? 200 : 201);
+    }
+
+    /**
+     * @return array{reserva:ReservaMesa,usuario:?object}|\Illuminate\Http\JsonResponse
+     */
+    protected function autorizarReservaOu403(Request $request, $id)
+    {
+        $reserva = ReservaMesa::findOrFail($id);
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->where('ativo', 1)->first() : null;
+
+        if (! ReservaMesaAcesso::temAcessoModulo($usuario)) {
+            return response()->json(['message' => 'Sem permissão para reservas.'], 403);
+        }
+        if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
+            return $resp;
+        }
+        $unidadeIdUsuario = $usuario ? (int) ($usuario->unidade_id ?? 0) : 0;
+        if (! $this->podeGerenciarTodasUnidades($usuario) && $unidadeIdUsuario > 0 && (int) $reserva->unidade_id !== $unidadeIdUsuario) {
+            return response()->json(['message' => 'Sem permissão para esta reserva.'], 403);
+        }
+
+        return ['reserva' => $reserva, 'usuario' => $usuario];
     }
 
     public function destroy(Request $request, $id)
