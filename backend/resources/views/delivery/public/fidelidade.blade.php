@@ -1,7 +1,6 @@
 @extends('delivery.public.layout')
 @section('title', 'Fidelidade · '.($config->nome_loja ?: 'Loja'))
 @section('content')
-@include('delivery.public.partials.voltar', ['voltarLabel' => 'Continuar comprando'])
 @php
     $meta = (int) ($programa->pedidos_meta ?? 10);
     $nomeProg = $programa->nome_exibicao ?? $programa->nome ?? 'Cartão fidelidade';

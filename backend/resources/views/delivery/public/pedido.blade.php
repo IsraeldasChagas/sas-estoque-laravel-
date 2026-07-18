@@ -1,7 +1,6 @@
 @extends('delivery.public.layout')
 @section('title', 'Pedido '.$pedido->codigo_publico)
 @section('content')
-@include('delivery.public.partials.voltar', ['voltarLabel' => 'Continuar comprando'])
 @php
 $steps=['pendente_loja'=>'Pedido enviado','recebido'=>'Recebido pela loja','preparo'=>'Em preparo','pronto'=>'Pronto','rota'=>'Saiu para entrega','entregue'=>'Entregue'];
 $order=array_keys($steps); $current=array_search($pedido->status,$order,true);

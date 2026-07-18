@@ -1,10 +1,6 @@
 @extends('delivery.public.layout')
 @section('title', 'Checkout · '.($config->nome_loja ?: 'Loja'))
 @section('content')
-@include('delivery.public.partials.voltar', [
-    'voltarLabel' => 'Voltar ao cardápio',
-    'voltarExtra' => '<button type="button" class="vf-back-btn vf-back-btn--ghost" data-cart-open>Ver carrinho</button>',
-])
 <nav class="breadcrumb"><a href="{{ route('delivery.public.store', $slug) }}">Cardápio</a> / Checkout</nav>
 <h1>Finalizar pedido</h1>
 <div class="checkout-grid">

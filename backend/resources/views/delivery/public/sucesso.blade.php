@@ -1,7 +1,6 @@
 @extends('delivery.public.layout')
 @section('title', 'Pedido recebido')
 @section('content')
-@include('delivery.public.partials.voltar', ['voltarLabel' => 'Continuar comprando'])
 <section class="success-page">
     <div class="success-icon">✓</div>
     <h1>Pedido recebido!</h1>
