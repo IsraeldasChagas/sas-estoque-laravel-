@@ -158,6 +158,223 @@ class ReservaMesaController extends Controller
         ]);
     }
 
+    /**
+     * Dashboard operacional de reservas (hoje + tendência + próximos horários).
+     */
+    public function dashboard(Request $request)
+    {
+        $usuarioId = $request->header('X-Usuario-Id');
+        $usuario = $usuarioId ? DB::table('usuarios')->where('id', $usuarioId)->first() : null;
+        if ($resp = $this->assertUnidadeDoUsuarioOu403($request, $usuario)) {
+            return $resp;
+        }
+
+        $unidadeId = $this->resolveUnidadeId($request, $usuario);
+        $hoje = Carbon::today()->toDateString();
+        $dias = max(7, min(30, (int) $request->get('dias', 14)));
+        $inicio = Carbon::today()->subDays($dias - 1)->toDateString();
+
+        if (! $unidadeId) {
+            return response()->json([
+                'unidade_id' => null,
+                'hoje' => $hoje,
+                'kpis' => [
+                    'reservas_hoje' => 0,
+                    'pessoas_hoje' => 0,
+                    'confirmadas' => 0,
+                    'pendentes' => 0,
+                    'chegaram' => 0,
+                    'no_show' => 0,
+                    'canceladas' => 0,
+                    'mesas_livres' => 0,
+                    'mesas_total' => 0,
+                    'ocupacao_pct' => 0,
+                    'taxa_no_show_pct' => 0,
+                    'taxa_cancelamento_pct' => 0,
+                ],
+                'por_status' => [],
+                'por_turno' => ['almoco' => 0, 'tarde' => 0, 'noite' => 0],
+                'serie_dias' => [],
+                'proximas' => [],
+                'top_clientes' => [],
+                'insights' => ['Selecione uma unidade para ver o painel de reservas.'],
+            ]);
+        }
+
+        $mesasTotal = Mesa::where('ativo', true)->where('unidade_id', $unidadeId)->count();
+
+        $reservasHoje = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa'])
+            ->where('unidade_id', $unidadeId)
+            ->whereDate('data_reserva', $hoje)
+            ->orderBy('hora_reserva')
+            ->get();
+
+        $ativasHoje = $reservasHoje->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
+        $mesasOcupadasIds = $ativasHoje->pluck('mesa_id')->unique()->count();
+        $livres = max(0, $mesasTotal - $mesasOcupadasIds);
+
+        $countStatus = function ($status) use ($reservasHoje) {
+            return $reservasHoje->where('status', $status)->count();
+        };
+
+        $confirmadas = $countStatus('confirmada');
+        $pendentes = $countStatus('pendente');
+        $chegaram = $countStatus('cliente_chegou');
+        $noShow = $countStatus('no_show');
+        $canceladas = $countStatus('cancelada');
+        $finalizadas = $countStatus('finalizada');
+        $pessoasHoje = (int) $ativasHoje->sum('qtd_pessoas');
+
+        $periodo = ReservaMesa::where('unidade_id', $unidadeId)
+            ->whereDate('data_reserva', '>=', $inicio)
+            ->whereDate('data_reserva', '<=', $hoje)
+            ->get(['data_reserva', 'status', 'qtd_pessoas', 'nome_cliente', 'telefone_cliente', 'hora_reserva']);
+
+        $totalPeriodo = $periodo->count();
+        $noShowPeriodo = $periodo->where('status', 'no_show')->count();
+        $cancelPeriodo = $periodo->where('status', 'cancelada')->count();
+
+        $serie = [];
+        for ($i = $dias - 1; $i >= 0; $i--) {
+            $dia = Carbon::today()->subDays($i)->toDateString();
+            $doDia = $periodo->filter(fn ($r) => Carbon::parse($r->data_reserva)->toDateString() === $dia);
+            $serie[] = [
+                'data' => $dia,
+                'label' => Carbon::parse($dia)->format('d/m'),
+                'total' => $doDia->count(),
+                'ativas' => $doDia->whereNotIn('status', ['cancelada', 'no_show'])->count(),
+                'pessoas' => (int) $doDia->whereNotIn('status', ['cancelada', 'no_show'])->sum('qtd_pessoas'),
+                'no_show' => $doDia->where('status', 'no_show')->count(),
+                'canceladas' => $doDia->where('status', 'cancelada')->count(),
+            ];
+        }
+
+        $horaAgora = Carbon::now()->format('H:i:s');
+        $proximas = $ativasHoje
+            ->filter(fn ($r) => (string) $r->hora_reserva >= $horaAgora)
+            ->take(8)
+            ->values()
+            ->map(function ($r) {
+                $mesa = $r->mesa;
+
+                return [
+                    'id' => $r->id,
+                    'hora' => substr((string) $r->hora_reserva, 0, 5),
+                    'cliente' => $r->nome_cliente,
+                    'telefone' => $r->telefone_cliente,
+                    'pessoas' => (int) $r->qtd_pessoas,
+                    'status' => $r->status,
+                    'mesa' => $mesa ? ($mesa->nome_mesa ?: $mesa->numero_mesa ?: ('Mesa '.$mesa->id)) : '—',
+                ];
+            });
+
+        if ($proximas->isEmpty()) {
+            $proximas = $ativasHoje->take(8)->values()->map(function ($r) {
+                $mesa = $r->mesa;
+
+                return [
+                    'id' => $r->id,
+                    'hora' => substr((string) $r->hora_reserva, 0, 5),
+                    'cliente' => $r->nome_cliente,
+                    'telefone' => $r->telefone_cliente,
+                    'pessoas' => (int) $r->qtd_pessoas,
+                    'status' => $r->status,
+                    'mesa' => $mesa ? ($mesa->nome_mesa ?: $mesa->numero_mesa ?: ('Mesa '.$mesa->id)) : '—',
+                ];
+            });
+        }
+
+        $turno = ['almoco' => 0, 'tarde' => 0, 'noite' => 0];
+        foreach ($ativasHoje as $r) {
+            $h = (int) substr((string) $r->hora_reserva, 0, 2);
+            if ($h < 15) {
+                $turno['almoco']++;
+            } elseif ($h < 18) {
+                $turno['tarde']++;
+            } else {
+                $turno['noite']++;
+            }
+        }
+
+        $topClientes = $periodo
+            ->filter(fn ($r) => ! in_array($r->status, ['cancelada', 'no_show'], true))
+            ->groupBy(function ($r) {
+                $tel = preg_replace('/\D+/', '', (string) ($r->telefone_cliente ?? ''));
+
+                return $tel !== '' ? $tel : mb_strtolower(trim((string) $r->nome_cliente));
+            })
+            ->map(function ($grupo) {
+                $primeiro = $grupo->first();
+
+                return [
+                    'nome' => $primeiro->nome_cliente,
+                    'telefone' => $primeiro->telefone_cliente,
+                    'visitas' => $grupo->count(),
+                    'pessoas' => (int) $grupo->sum('qtd_pessoas'),
+                ];
+            })
+            ->sortByDesc('visitas')
+            ->take(5)
+            ->values();
+
+        $ocupacaoPct = $mesasTotal > 0 ? round(($mesasOcupadasIds / $mesasTotal) * 100) : 0;
+        $insights = [];
+        if ($ativasHoje->count() === 0) {
+            $insights[] = 'Nenhuma reserva ativa para hoje — boa hora para campanha no WhatsApp.';
+        } elseif ($ocupacaoPct >= 80) {
+            $insights[] = 'Ocupação alta hoje ('.$ocupacaoPct.'%). Prepare mesas emergenciais se precisar.';
+        } elseif ($ocupacaoPct <= 30 && $ativasHoje->count() > 0) {
+            $insights[] = 'Ainda há bastante mesa livre ('.$livres.'). Dá para aceitar walk-ins.';
+        }
+        if ($pendentes > 0) {
+            $insights[] = $pendentes.' reserva(s) pendente(s) aguardando confirmação.';
+        }
+        if ($noShowPeriodo > 0 && $totalPeriodo > 0) {
+            $insights[] = 'No-show no período: '.round(($noShowPeriodo / $totalPeriodo) * 100).'% — reforçar lembrete no WhatsApp.';
+        }
+        if ($turno['noite'] > $turno['almoco'] && $turno['noite'] > $turno['tarde']) {
+            $insights[] = 'Hoje o pico está à noite — alinhe equipe e salão para o jantar.';
+        } elseif ($turno['almoco'] >= $turno['noite'] && $turno['almoco'] > 0) {
+            $insights[] = 'Almoço concentra a maior parte das reservas de hoje.';
+        }
+        if ($insights === []) {
+            $insights[] = 'Operação estável. Acompanhe as próximas chegadas na lista ao lado.';
+        }
+
+        return response()->json([
+            'unidade_id' => $unidadeId,
+            'hoje' => $hoje,
+            'kpis' => [
+                'reservas_hoje' => $ativasHoje->count(),
+                'pessoas_hoje' => $pessoasHoje,
+                'confirmadas' => $confirmadas,
+                'pendentes' => $pendentes,
+                'chegaram' => $chegaram,
+                'no_show' => $noShow,
+                'canceladas' => $canceladas,
+                'finalizadas' => $finalizadas,
+                'mesas_livres' => $livres,
+                'mesas_total' => $mesasTotal,
+                'ocupacao_pct' => $ocupacaoPct,
+                'taxa_no_show_pct' => $totalPeriodo > 0 ? round(($noShowPeriodo / $totalPeriodo) * 100, 1) : 0,
+                'taxa_cancelamento_pct' => $totalPeriodo > 0 ? round(($cancelPeriodo / $totalPeriodo) * 100, 1) : 0,
+            ],
+            'por_status' => [
+                ['key' => 'pendente', 'label' => 'Pendente', 'total' => $pendentes],
+                ['key' => 'confirmada', 'label' => 'Confirmada', 'total' => $confirmadas],
+                ['key' => 'cliente_chegou', 'label' => 'Chegou', 'total' => $chegaram],
+                ['key' => 'finalizada', 'label' => 'Finalizada', 'total' => $finalizadas],
+                ['key' => 'no_show', 'label' => 'No-show', 'total' => $noShow],
+                ['key' => 'cancelada', 'label' => 'Cancelada', 'total' => $canceladas],
+            ],
+            'por_turno' => $turno,
+            'serie_dias' => $serie,
+            'proximas' => $proximas,
+            'top_clientes' => $topClientes,
+            'insights' => $insights,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $usuarioId = $request->header('X-Usuario-Id');

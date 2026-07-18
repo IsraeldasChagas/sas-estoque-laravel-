@@ -1586,7 +1586,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash",
   "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv",
   "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
-  "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "rhDashboard", "rhVagas",
+  "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "rhDashboard", "rhVagas",
   "rhCandidatos", "rhEntrevistas", "rhBancoTalentos", "logs",
   "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios",
   "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes",
@@ -1969,7 +1969,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1977,7 +1977,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2001,7 +2001,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   BAR: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "fechaTecnica", "estoque", "movimentacoes", "relatorios", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "compras", "produtos", "fechaTecnica", "estoque", "movimentacoes", "relatorios", "reservaDashboard", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2009,7 +2009,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   FINANCEIRO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "relatorios", "fornecedores", "fechaTecnica", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaDashboard", "reservaMesa", "historicoReservas", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2017,7 +2017,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ASSISTENTE_ADMINISTRATIVO: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "locais", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "reservaDashboard", "reservaMesa", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2033,7 +2033,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE: {
-    sections: ["boasVindas", "minhaConta", "estoque", "fechaTecnica", "reservaMesa", "historicoReservas"],
+    sections: ["boasVindas", "minhaConta", "estoque", "fechaTecnica", "reservaDashboard", "reservaMesa", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2041,7 +2041,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaMesa", "historicoReservas", "comercialPdv", "comercialPagamentos", "comercialFechamento"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaDashboard", "reservaMesa", "historicoReservas", "comercialPdv", "comercialPagamentos", "comercialFechamento"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2057,7 +2057,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   GARCOM: {
-    sections: ["boasVindas", "minhaConta", "comercialMesas", "comercialPedidos", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "comercialMesas", "comercialPedidos", "reservaDashboard", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -4056,7 +4056,7 @@ function getSectionsUsuarioAtual() {
 /** Reserva de Mesa: quem tem o módulo liberado opera em todas as unidades (como ADMIN). */
 function canEscolherUnidadeReservaMesa() {
   const sections = getSectionsUsuarioAtual();
-  return sections.includes("reservaMesa") || sections.includes("historicoReservas");
+  return sections.includes("reservaDashboard") || sections.includes("reservaMesa") || sections.includes("historicoReservas");
 }
 
 // Verifica se é ADMIN (apenas administrador)
@@ -5575,7 +5575,9 @@ function applyPermissions() {
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
     const temAcessoReserva =
-      regras.sections.includes("reservaMesa") || regras.sections.includes("historicoReservas");
+      regras.sections.includes("reservaDashboard") ||
+      regras.sections.includes("reservaMesa") ||
+      regras.sections.includes("historicoReservas");
     reservaNavSubmenu.classList.toggle("hidden", !temAcessoReserva);
   }
 
@@ -5716,7 +5718,7 @@ function navigateTo(section) {
   if (sidebarNavScroll) sidebarNavScroll.scrollTop = sidebarScrollTop;
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
-    if (section === "reservaMesa" || section === "historicoReservas") {
+    if (section === "reservaDashboard" || section === "reservaMesa" || section === "historicoReservas") {
       reservaNavSubmenu.classList.add("open");
     } else {
       reservaNavSubmenu.classList.remove("open");
@@ -11882,6 +11884,9 @@ async function startAppSession(user) {
         else if (sectionToNavigate === 'compras') await loadListasCompras();
         else if (sectionToNavigate === 'fornecedores') await loadFornecedores();
         else if (sectionToNavigate === 'logs') await loadLogs();
+        else if (sectionToNavigate === 'reservaDashboard') {
+          await loadReservaDashboard();
+        }
         else if (sectionToNavigate === 'reservaMesa') {
           var uSelect = document.getElementById('reservasUnidadeFiltro');
           if (uSelect && uSelect.options.length <= 1) {
@@ -16413,6 +16418,9 @@ function wireSidebarSectionNavClicks() {
         }).catch(() => {});
         await loadLogs();
       }
+      else if (target === "reservaDashboard") {
+        await loadReservaDashboard();
+      }
       else if (target === "reservaMesa") {
         var uSelect = document.getElementById('reservasUnidadeFiltro');
         if (uSelect && uSelect.options.length <= 1) {
@@ -18225,6 +18233,197 @@ function formatDataReserva(val) {
 
 var _reservasMesasCache = { mesas: [], reservas: [], unidadeId: '' };
 
+async function fillReservaUnidadeSelect(selectEl) {
+  if (!selectEl) return;
+  if (selectEl.options.length > 1 && selectEl.value) return;
+  var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
+  state.unidades = unidades;
+  selectEl.innerHTML = '<option value="">Selecione a unidade</option>';
+  var livre = canEscolherUnidadeReservaMesa();
+  var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+  if (!livre && !unidadeUsuario) {
+    selectEl.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+    selectEl.disabled = true;
+    return;
+  }
+  var lista = (unidades || []);
+  if (!livre && unidadeUsuario) {
+    lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+  }
+  lista.forEach(function(u) {
+    var opt = document.createElement('option');
+    opt.value = u.id;
+    opt.textContent = u.nome || 'Unidade ' + u.id;
+    selectEl.appendChild(opt);
+  });
+  if (!livre && unidadeUsuario) {
+    selectEl.value = unidadeUsuario;
+    selectEl.disabled = true;
+  } else if (livre && selectEl.disabled) {
+    selectEl.disabled = false;
+  }
+  if (!selectEl.value && lista.length === 1) {
+    selectEl.value = String(lista[0].id);
+  }
+}
+
+function rdashEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function rdashStatusLabel(status) {
+  var map = {
+    pendente: 'Pendente',
+    confirmada: 'Confirmada',
+    cliente_chegou: 'Chegou',
+    cancelada: 'Cancelada',
+    no_show: 'No-show',
+    finalizada: 'Finalizada'
+  };
+  return map[status] || status || '—';
+}
+
+async function loadReservaDashboard() {
+  var sel = document.getElementById('rdashUnidadeFiltro');
+  await fillReservaUnidadeSelect(sel);
+  var unidadeId = sel && sel.value ? String(sel.value).trim() : '';
+  var lead = document.getElementById('rdashLead');
+  var insightsEl = document.getElementById('rdashInsights');
+  var barsEl = document.getElementById('rdashBars');
+  var statusEl = document.getElementById('rdashStatus');
+  var turnosEl = document.getElementById('rdashTurnos');
+  var proximasEl = document.getElementById('rdashProximas');
+  var topEl = document.getElementById('rdashTopClientes');
+
+  if (!unidadeId) {
+    if (lead) lead.textContent = 'Selecione uma unidade para ver o painel operacional.';
+    if (insightsEl) insightsEl.innerHTML = '<p class="rdash-insight">Escolha a unidade no filtro acima.</p>';
+    ['rdashKpiReservas', 'rdashKpiOcupacao', 'rdashKpiPendentes', 'rdashKpiChegaram', 'rdashKpiNoShow'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    if (barsEl) barsEl.innerHTML = '';
+    if (statusEl) statusEl.innerHTML = '';
+    if (turnosEl) turnosEl.innerHTML = '';
+    if (proximasEl) proximasEl.innerHTML = '<p class="reservas-empty">Sem dados.</p>';
+    if (topEl) topEl.innerHTML = '<li class="subtle-text">Sem dados.</li>';
+    return;
+  }
+
+  try {
+    var data = await fetchJSON('/reservas-mesas/dashboard?unidade_id=' + encodeURIComponent(unidadeId) + '&dias=14');
+    var k = data.kpis || {};
+    var hojeFmt = (data.hoje || '').slice(8, 10) + '/' + (data.hoje || '').slice(5, 7);
+    if (lead) {
+      lead.textContent = 'Hoje ' + (hojeFmt || '—') + ' · ' + (k.reservas_hoje || 0) + ' ativas · ocupação ' + (k.ocupacao_pct || 0) + '%';
+    }
+
+    var setTxt = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('rdashKpiReservas', String(k.reservas_hoje != null ? k.reservas_hoje : '—'));
+    setTxt('rdashKpiPessoas', (k.pessoas_hoje || 0) + ' pessoas esperadas');
+    setTxt('rdashKpiOcupacao', (k.ocupacao_pct != null ? k.ocupacao_pct : '—') + '%');
+    setTxt('rdashKpiMesas', (k.mesas_total - (k.mesas_livres || 0)) + ' / ' + (k.mesas_total || 0) + ' mesas · ' + (k.mesas_livres || 0) + ' livres');
+    setTxt('rdashKpiPendentes', String(k.pendentes != null ? k.pendentes : '—'));
+    setTxt('rdashKpiChegaram', String(k.chegaram != null ? k.chegaram : '—'));
+    setTxt('rdashKpiNoShow', (k.taxa_no_show_pct != null ? k.taxa_no_show_pct : '—') + '%');
+    setTxt('rdashKpiCancel', 'Cancel. ' + (k.taxa_cancelamento_pct != null ? k.taxa_cancelamento_pct : 0) + '%');
+    var bar = document.getElementById('rdashKpiBar');
+    if (bar) bar.style.width = Math.max(0, Math.min(100, Number(k.ocupacao_pct) || 0)) + '%';
+
+    if (insightsEl) {
+      var insights = data.insights || [];
+      insightsEl.innerHTML = insights.map(function(txt, i) {
+        return '<p class="rdash-insight' + (i === 0 ? ' rdash-insight--main' : '') + '">' + rdashEsc(txt) + '</p>';
+      }).join('') || '<p class="rdash-insight">Sem insights no momento.</p>';
+    }
+
+    var serie = data.serie_dias || [];
+    var maxBar = Math.max(1, ...serie.map(function(d) { return Number(d.ativas) || 0; }));
+    if (barsEl) {
+      barsEl.innerHTML = serie.map(function(d) {
+        var h = Math.round(((Number(d.ativas) || 0) / maxBar) * 100);
+        var noshow = Number(d.no_show) || 0;
+        return '<div class="rdash-bar" title="' + rdashEsc(d.label) + ': ' + (d.ativas || 0) + ' ativas, ' + noshow + ' no-show">' +
+          '<div class="rdash-bar__stack">' +
+            '<span class="rdash-bar__fill" style="height:' + h + '%"></span>' +
+            (noshow > 0 ? '<span class="rdash-bar__noshow" style="height:' + Math.max(8, Math.round((noshow / maxBar) * 100)) + '%"></span>' : '') +
+          '</div>' +
+          '<span class="rdash-bar__label">' + rdashEsc(d.label) + '</span>' +
+          '<span class="rdash-bar__n">' + (d.ativas || 0) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    var porStatus = data.por_status || [];
+    var totalStatus = porStatus.reduce(function(acc, s) { return acc + (Number(s.total) || 0); }, 0) || 1;
+    if (statusEl) {
+      statusEl.innerHTML = porStatus.map(function(s) {
+        var pct = Math.round(((Number(s.total) || 0) / totalStatus) * 100);
+        return '<li class="rdash-status__item rdash-status__item--' + rdashEsc(s.key) + '">' +
+          '<div class="rdash-status__row"><span>' + rdashEsc(s.label) + '</span><strong>' + (s.total || 0) + '</strong></div>' +
+          '<div class="rdash-status__track"><span style="width:' + pct + '%"></span></div>' +
+        '</li>';
+      }).join('');
+    }
+
+    var turno = data.por_turno || { almoco: 0, tarde: 0, noite: 0 };
+    var maxTurno = Math.max(1, turno.almoco || 0, turno.tarde || 0, turno.noite || 0);
+    if (turnosEl) {
+      turnosEl.innerHTML = [
+        { key: 'almoco', label: 'Almoço', n: turno.almoco || 0 },
+        { key: 'tarde', label: 'Tarde', n: turno.tarde || 0 },
+        { key: 'noite', label: 'Noite', n: turno.noite || 0 }
+      ].map(function(t) {
+        var pct = Math.round((t.n / maxTurno) * 100);
+        return '<div class="rdash-turno rdash-turno--' + t.key + '">' +
+          '<span class="rdash-turno__label">' + t.label + '</span>' +
+          '<div class="rdash-turno__track"><span style="width:' + pct + '%"></span></div>' +
+          '<strong class="rdash-turno__n">' + t.n + '</strong>' +
+        '</div>';
+      }).join('');
+    }
+
+    var proximas = data.proximas || [];
+    if (proximasEl) {
+      if (!proximas.length) {
+        proximasEl.innerHTML = '<p class="reservas-empty">Nenhuma reserva ativa para hoje.</p>';
+      } else {
+        proximasEl.innerHTML = proximas.map(function(p) {
+          return '<article class="rdash-prox">' +
+            '<div class="rdash-prox__hora">' + rdashEsc(p.hora) + '</div>' +
+            '<div class="rdash-prox__body">' +
+              '<strong>' + rdashEsc(p.cliente) + '</strong>' +
+              '<span>' + rdashEsc(p.mesa) + ' · ' + (p.pessoas || 0) + ' pess. · ' + rdashEsc(rdashStatusLabel(p.status)) + '</span>' +
+            '</div>' +
+          '</article>';
+        }).join('');
+      }
+    }
+
+    var top = data.top_clientes || [];
+    if (topEl) {
+      if (!top.length) {
+        topEl.innerHTML = '<li class="subtle-text">Ainda sem recorrência no período.</li>';
+      } else {
+        topEl.innerHTML = top.map(function(c, i) {
+          return '<li class="rdash-top__item">' +
+            '<span class="rdash-top__rank">' + (i + 1) + '</span>' +
+            '<div><strong>' + rdashEsc(c.nome) + '</strong><span>' + rdashEsc(c.telefone || '') + '</span></div>' +
+            '<em>' + (c.visitas || 0) + '×</em>' +
+          '</li>';
+        }).join('');
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    showToast(err && err.message ? err.message : 'Erro ao carregar dashboard de reservas.', 'error');
+  }
+}
+
 async function loadHistoricoReservas() {
   var selUnidade = document.getElementById('historicoUnidadeFiltro');
   var unidadeId = (selUnidade && selUnidade.value) || '';
@@ -18297,7 +18496,7 @@ async function loadHistoricoReservas() {
 
 function setupHistoricoReservas() {
   document.getElementById('btnVoltarReservas') && document.getElementById('btnVoltarReservas').addEventListener('click', function() {
-    navigateTo('reservaMesa');
+    navigateTo('reservaDashboard');
   });
   document.getElementById('historicoAtualizar') && document.getElementById('historicoAtualizar').addEventListener('click', function() {
     loadHistoricoReservas();
@@ -19299,6 +19498,25 @@ function setupReservasMesasModule() {
   document.getElementById('reservasTurnoFiltro') && document.getElementById('reservasTurnoFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasStatusFiltro') && document.getElementById('reservasStatusFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasAtualizar') && document.getElementById('reservasAtualizar').addEventListener('click', function() { loadReservasMesas(); });
+
+  document.getElementById('rdashUnidadeFiltro') && document.getElementById('rdashUnidadeFiltro').addEventListener('change', function() { loadReservaDashboard(); });
+  document.getElementById('rdashAtualizar') && document.getElementById('rdashAtualizar').addEventListener('click', function() { loadReservaDashboard(); });
+  document.getElementById('rdashIrMesas') && document.getElementById('rdashIrMesas').addEventListener('click', function() {
+    var u = document.getElementById('rdashUnidadeFiltro');
+    var filtro = document.getElementById('reservasUnidadeFiltro');
+    if (u && u.value && filtro) {
+      if (filtro.options.length <= 1) {
+        Array.from(u.options).forEach(function(opt) {
+          if (!opt.value) return;
+          if (![].some.call(filtro.options, function(o) { return o.value === opt.value; })) {
+            filtro.appendChild(opt.cloneNode(true));
+          }
+        });
+      }
+      filtro.value = u.value;
+    }
+    navigateTo('reservaMesa');
+  });
 
   var cardsContainer = document.getElementById('reservasMesasCards');
   if (cardsContainer) {

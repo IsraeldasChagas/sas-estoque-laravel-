@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260718-reservas-stack" />
+    <link rel="stylesheet" href="style.css?v=20260718-reserva-dash" />
     <script>
       (function () {
         try {
@@ -173,6 +173,7 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="reservaDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="reservaMesa"><span class="nav-icon" aria-hidden="true">🪑</span><span class="nav-label">Mesa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="historicoReservas"><span class="nav-icon" aria-hidden="true">🕐</span><span class="nav-label">Histórico</span></a>
             </div>
@@ -1119,6 +1120,102 @@
                       <tr><td colspan="6" style="text-align: center; color: #607d8b;">Carregando...</td></tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Dashboard de Reservas -->
+          <section id="reservaDashboardSection" class="view-section hidden">
+            <div class="rdash">
+              <div class="rdash__hero">
+                <div class="rdash__hero-copy">
+                  <p class="rdash__eyebrow">Reserva · operação do dia</p>
+                  <h2 class="rdash__title">Dashboard de Reservas</h2>
+                  <p class="rdash__lead" id="rdashLead">Visão rápida do salão: ocupação, chegadas e tendência.</p>
+                </div>
+                <div class="rdash__hero-actions">
+                  <label class="rdash__filter">
+                    Unidade
+                    <select id="rdashUnidadeFiltro" class="reservas-select">
+                      <option value="">Selecione a unidade</option>
+                    </select>
+                  </label>
+                  <button type="button" class="btn primary" id="rdashAtualizar">Atualizar</button>
+                  <button type="button" class="btn neutral" id="rdashIrMesas">Abrir mesas</button>
+                </div>
+              </div>
+
+              <div class="rdash__insights" id="rdashInsights" aria-live="polite"></div>
+
+              <div class="rdash__kpis" id="rdashKpis">
+                <article class="rdash-kpi rdash-kpi--reservas">
+                  <span class="rdash-kpi__label">Reservas ativas hoje</span>
+                  <strong class="rdash-kpi__value" id="rdashKpiReservas">—</strong>
+                  <span class="rdash-kpi__meta" id="rdashKpiPessoas">0 pessoas</span>
+                </article>
+                <article class="rdash-kpi rdash-kpi--ocupacao">
+                  <span class="rdash-kpi__label">Ocupação do salão</span>
+                  <strong class="rdash-kpi__value" id="rdashKpiOcupacao">—</strong>
+                  <span class="rdash-kpi__meta" id="rdashKpiMesas">0 / 0 mesas</span>
+                  <div class="rdash-kpi__bar"><span id="rdashKpiBar"></span></div>
+                </article>
+                <article class="rdash-kpi rdash-kpi--pendente">
+                  <span class="rdash-kpi__label">Pendentes</span>
+                  <strong class="rdash-kpi__value" id="rdashKpiPendentes">—</strong>
+                  <span class="rdash-kpi__meta">Aguardando confirmação</span>
+                </article>
+                <article class="rdash-kpi rdash-kpi--chegou">
+                  <span class="rdash-kpi__label">Já chegaram</span>
+                  <strong class="rdash-kpi__value" id="rdashKpiChegaram">—</strong>
+                  <span class="rdash-kpi__meta">Cliente no salão</span>
+                </article>
+                <article class="rdash-kpi rdash-kpi--noshow">
+                  <span class="rdash-kpi__label">No-show (período)</span>
+                  <strong class="rdash-kpi__value" id="rdashKpiNoShow">—</strong>
+                  <span class="rdash-kpi__meta" id="rdashKpiCancel">Cancel. 0%</span>
+                </article>
+              </div>
+
+              <div class="rdash__grid">
+                <div class="rdash-panel rdash-panel--trend">
+                  <header class="rdash-panel__head">
+                    <h3>Tendência · últimos 14 dias</h3>
+                    <p class="subtle-text">Reservas ativas e no-shows por dia</p>
+                  </header>
+                  <div class="rdash-bars" id="rdashBars" role="img" aria-label="Gráfico de tendência de reservas"></div>
+                </div>
+
+                <div class="rdash-panel">
+                  <header class="rdash-panel__head">
+                    <h3>Status de hoje</h3>
+                    <p class="subtle-text">Distribuição do dia</p>
+                  </header>
+                  <ul class="rdash-status" id="rdashStatus"></ul>
+                </div>
+
+                <div class="rdash-panel">
+                  <header class="rdash-panel__head">
+                    <h3>Turnos de hoje</h3>
+                    <p class="subtle-text">Almoço · tarde · noite</p>
+                  </header>
+                  <div class="rdash-turnos" id="rdashTurnos"></div>
+                </div>
+
+                <div class="rdash-panel rdash-panel--lista">
+                  <header class="rdash-panel__head">
+                    <h3>Próximas chegadas</h3>
+                    <p class="subtle-text">Fila do dia</p>
+                  </header>
+                  <div class="rdash-proximas" id="rdashProximas"></div>
+                </div>
+
+                <div class="rdash-panel rdash-panel--clientes">
+                  <header class="rdash-panel__head">
+                    <h3>Clientes frequentes</h3>
+                    <p class="subtle-text">Mais visitas no período</p>
+                  </header>
+                  <ol class="rdash-top" id="rdashTopClientes"></ol>
                 </div>
               </div>
             </div>
@@ -5975,6 +6072,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="relatorios" /> Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedores" /> Fornecedores</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Reservas</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaDashboard" /> Reservas — Dashboard</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="reservaMesa" /> Reservas — Mesa</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="historicoReservas" /> Reservas — Histórico</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Orçamentos</strong></div>
@@ -7626,7 +7724,7 @@
     <script src="delivery-orders-vf.js?v=20260717-vf1"></script>
     <script src="delivery-logistics-vf.js?v=20260717-vf1"></script>
     <script src="delivery-store-vf.js?v=20260717-vf4"></script>
-    <script src="app.js?v=20260718-reservas-stack"></script>
+    <script src="app.js?v=20260718-reserva-dash"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

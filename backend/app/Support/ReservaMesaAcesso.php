@@ -4,7 +4,7 @@ namespace App\Support;
 
 class ReservaMesaAcesso
 {
-    private const MODULOS = ['reservaMesa', 'historicoReservas'];
+    private const MODULOS = ['reservaDashboard', 'reservaMesa', 'historicoReservas'];
 
     /** Perfis com reserva de mesa quando permissoes_menu não está personalizado (espelha o frontend). */
     private const PERFIS_PADRAO_COM_RESERVA = [
