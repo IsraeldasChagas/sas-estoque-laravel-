@@ -722,10 +722,12 @@ class ReservaMesaController extends Controller
         }
 
         $msg = $result['replayed']
-            ? 'Conta já estava paga; selo desta reserva já havia sido creditado.'
-            : ($result['criado_conta']
-                ? 'Conta paga registrada. Cartão criado e selo liberado.'
-                : 'Conta paga registrada. Selo liberado.');
+            ? 'Conta já estava paga.'.($result['conta'] ? ' Selo desta reserva já havia sido creditado.' : '')
+            : ((bool) ($result['reserva']->participa_fidelidade ?? false)
+                ? ($result['criado_conta']
+                    ? 'Conta paga registrada. Cartão criado e selo liberado.'
+                    : 'Conta paga registrada. Selo liberado.')
+                : 'Conta paga registrada. Você já pode liberar a mesa.');
 
         return response()->json([
             'message' => $msg,
@@ -768,6 +770,36 @@ class ReservaMesaController extends Controller
             'replayed' => $result['replayed'],
             'criado_conta' => $result['criado_conta'],
         ], $result['replayed'] ? 200 : 201);
+    }
+
+    /**
+     * Marca se o cliente deseja participar do programa fidelidade nesta reserva.
+     */
+    public function participaFidelidade(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva] = $ctx;
+
+        if ($reserva->conta_paga) {
+            return response()->json(['message' => 'Conta já paga; não é possível alterar a opção de fidelidade.'], 422);
+        }
+
+        $data = Validator::make($request->all(), [
+            'participa_fidelidade' => 'required|boolean',
+        ])->validate();
+
+        $reserva->participa_fidelidade = (bool) $data['participa_fidelidade'];
+        $reserva->save();
+
+        return response()->json([
+            'message' => $reserva->participa_fidelidade
+                ? 'Cliente participará do programa fidelidade nesta reserva.'
+                : 'Cliente não participará do programa fidelidade. Registre apenas valor e pagamento.',
+            'reserva' => $reserva->fresh(['mesa', 'usuario']),
+        ]);
     }
 
     /**

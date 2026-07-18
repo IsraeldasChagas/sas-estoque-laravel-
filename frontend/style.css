@@ -7919,6 +7919,26 @@ select[size]:not([size="1"]) {
 .reserva-fid__split-head strong {
   color: #5c3b12;
 }
+.reserva-fid__optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(92, 59, 18, 0.15);
+  cursor: pointer;
+}
+.reserva-fid__optin input {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+.reserva-fid__optin-info {
+  margin: 0 0 0.75rem;
+}
 .reserva-fid__cadastro-warn {
   margin: 0;
   padding: 0.55rem 0.75rem;

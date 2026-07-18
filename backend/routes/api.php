@@ -5774,6 +5774,7 @@ Route::put('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaContr
 Route::delete('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->destroy($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/cancelar', fn (Request $r, $id) => (new ReservaMesaController())->cancelar($id)->withHeaders($cors));
 Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new ReservaMesaController())->alterarStatus($r, $id)->withHeaders($cors));
+Route::patch('/reservas-mesas/{id}/participa-fidelidade', fn (Request $r, $id) => (new ReservaMesaController())->participaFidelidade($r, $id)->withHeaders($cors));
 Route::get('/reservas-mesas/{id}/fidelidade', fn (Request $r, $id) => (new ReservaMesaController())->fidelidade($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/fidelidade/selo', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeSelo($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/fidelidade/garantir', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeGarantir($r, $id)->withHeaders($cors));

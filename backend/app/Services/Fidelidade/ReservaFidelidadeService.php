@@ -176,6 +176,7 @@ final class ReservaFidelidadeService
                 'conta' => null,
                 'telefone_ok' => false,
                 'selo_ja_creditado' => false,
+                'participa_fidelidade' => (bool) ($reserva->participa_fidelidade ?? false),
                 'conta_paga' => (bool) ($reserva->conta_paga ?? false),
                 'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
                 'conta_paga_em' => $reserva->conta_paga_em
@@ -211,6 +212,7 @@ final class ReservaFidelidadeService
             'conta' => $conta,
             'telefone_ok' => true,
             'selo_ja_creditado' => $seloJa,
+            'participa_fidelidade' => (bool) ($reserva->participa_fidelidade ?? false),
             'conta_paga' => (bool) ($reserva->conta_paga ?? false),
             'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
             'conta_paga_em' => $reserva->conta_paga_em
@@ -433,6 +435,7 @@ final class ReservaFidelidadeService
             'conta' => null,
             'telefone_ok' => false,
             'selo_ja_creditado' => false,
+            'participa_fidelidade' => false,
             'conta_paga' => false,
             'valor_conta' => null,
             'conta_paga_em' => null,
@@ -456,6 +459,36 @@ final class ReservaFidelidadeService
 
         $pagamentos = $this->normalizarPagamentosConta((int) $reserva->unidade_id, $pagamentos);
         $this->validarTotalPagamentos($valorConta, $pagamentos);
+
+        if ($reserva->conta_paga) {
+            $snap = $this->snapshot($reserva);
+
+            return [
+                'reserva' => $reserva->fresh(['mesa', 'usuario']),
+                'conta' => $snap['conta'],
+                'ledger' => null,
+                'replayed' => true,
+                'criado_conta' => false,
+            ];
+        }
+
+        $participa = (bool) ($reserva->participa_fidelidade ?? false);
+
+        if (! $participa) {
+            $reserva->conta_paga = true;
+            $reserva->valor_conta = round($valorConta, 2);
+            $reserva->conta_paga_em = now();
+            $reserva->pagamentos_conta = $pagamentos;
+            $reserva->save();
+
+            return [
+                'reserva' => $reserva->fresh(['mesa', 'usuario']),
+                'conta' => null,
+                'ledger' => null,
+                'replayed' => false,
+                'criado_conta' => false,
+            ];
+        }
 
         $snap = $this->snapshot($reserva);
         if (! $snap['disponivel']) {

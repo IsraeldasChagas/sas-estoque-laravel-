@@ -19007,20 +19007,12 @@ async function renderReservaFidelidade(reservaId) {
       bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(data.mensagem || 'Fidelidade não disponível.') + '</p>';
       return;
     }
-    if (!data.programa_ativo) {
-      if (statusEl) statusEl.textContent = 'Programa inativo';
-      bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(data.mensagem || 'Ative o programa em Fidelidade → Programa.') + '</p>';
-      return;
-    }
-    if (!data.telefone_ok) {
-      if (statusEl) statusEl.textContent = 'Sem telefone';
-      bodyEl.innerHTML = '<p class="subtle-text">' + escapeHtml(data.mensagem || 'Cadastre o telefone do cliente.') + '</p>';
-      return;
-    }
 
+    var participa = !!data.participa_fidelidade;
+    var programaAtivo = !!data.programa_ativo;
+    var telefoneOk = !!data.telefone_ok;
     var conta = data.conta;
     var selos = conta ? Number(conta.saldo_selos || 0) : 0;
-    var codigo = conta ? (conta.codigo_fidelidade || '') : '';
     var meta = Number(data.meta_selos || 10);
     var seloOk = !!data.selo_ja_creditado;
     var contaPaga = !!data.conta_paga;
@@ -19029,16 +19021,47 @@ async function renderReservaFidelidade(reservaId) {
       ? data.formas_pagamento_cadastro
       : (data.formas_pagamento_cadastro ? Object.values(data.formas_pagamento_cadastro) : []);
     var pagamentosReg = data.pagamentos_conta || [];
-    if (statusEl) statusEl.textContent = conta ? ('Cartão ' + (codigo || '#' + conta.id)) : 'Sem cartão ainda';
 
-    var recompensas = data.recompensas || [];
-    var opts = '<option value="">Recompensa padrão do programa (' + meta + ' selos)</option>' +
-      recompensas.map(function(rw) {
-        return '<option value="' + rw.id + '">' + escapeHtml(rw.titulo) + ' · ' + Number(rw.custo_selos || 0) + ' selos</option>';
-      }).join('');
+    if (statusEl) {
+      if (contaPaga) statusEl.textContent = participa ? (seloOk ? 'Conta paga · selo ok' : 'Conta paga') : 'Conta paga · sem fidelidade';
+      else if (participa) statusEl.textContent = 'Com fidelidade';
+      else statusEl.textContent = 'Só pagamento';
+    }
+
+    var optinHtml = '';
+    if (!contaPaga && programaAtivo) {
+      optinHtml =
+        '<label class="reserva-fid__optin">' +
+          '<input type="checkbox" id="reservaFidParticipa"' + (participa ? ' checked' : '') + '>' +
+          '<span><strong>Cliente deseja participar do programa fidelidade</strong><br>' +
+          '<span class="subtle-text">Se marcado, após o pagamento da conta o cartão é criado e libera 1 selo. Se não, registre só valor e forma de pagamento.</span></span>' +
+        '</label>';
+    } else if (contaPaga) {
+      optinHtml = '<p class="subtle-text reserva-fid__optin-info">' +
+        (participa ? '✓ Cliente participou do programa fidelidade nesta reserva.' : 'Cliente não participou do programa fidelidade nesta reserva.') +
+      '</p>';
+    } else if (!programaAtivo) {
+      optinHtml = '<p class="subtle-text">Programa de fidelidade inativo nesta unidade. Registre valor e pagamento para liberar a mesa.</p>';
+    }
+
+    var fidSaldoHtml = '';
+    if (participa && programaAtivo && telefoneOk) {
+      fidSaldoHtml =
+        '<div class="reserva-fid__saldo">' +
+          '<div><span>Selos</span><strong id="reservaFidSelos">' + selos + '</strong></div>' +
+          '<div><span>Pontos</span><strong>' + (conta ? Number(conta.saldo_pontos || 0) : 0) + '</strong></div>' +
+          '<div><span>Meta</span><strong>' + meta + '</strong></div>' +
+        '</div>';
+    } else if (participa && programaAtivo && !telefoneOk && !contaPaga) {
+      fidSaldoHtml = '<p class="reserva-fid__cadastro-warn">Informe um telefone válido na reserva para usar fidelidade.</p>';
+    }
+
+    var btnContaLabel = participa && programaAtivo && telefoneOk
+      ? 'Conta paga · liberar selo'
+      : 'Conta paga · liberar mesa';
 
     var contaHtml = contaPaga
-      ? '<p class="reserva-fid__conta-ok">✓ Conta paga' + (valorConta !== '' ? ' · R$ ' + reservaFidMoeda(valorConta) : '') + (seloOk ? ' · selo liberado' : '') + '</p>' +
+      ? '<p class="reserva-fid__conta-ok">✓ Conta paga' + (valorConta !== '' ? ' · R$ ' + reservaFidMoeda(valorConta) : '') + (participa && seloOk ? ' · selo liberado' : '') + '</p>' +
         reservaFidHtmlPagamentosRegistrados(pagamentosReg)
       : '<label>Valor total da conta (R$)<input type="number" id="reservaFidValorConta" min="0.01" step="0.01" placeholder="0,00" value=""></label>' +
         '<div class="reserva-fid__split">' +
@@ -19046,29 +19069,57 @@ async function renderReservaFidelidade(reservaId) {
             '<strong>Como foi pago</strong>' +
             '<button type="button" class="btn info reserva-fid__btn-dividir" id="btnReservaFidAddPag">+ Dividir conta</button>' +
           '</div>' +
-          '<p class="subtle-text" style="margin:0;">Escolha as formas cadastradas em <strong>Reserva → Forma de pagamento</strong>. Pode dividir entre pessoas da mesa.</p>' +
+          '<p class="subtle-text" style="margin:0;">Escolha as formas cadastradas em <strong>Reserva → Forma de pagamento</strong>.</p>' +
           (cadastroFormas.length
             ? '<p class="reserva-fid__cadastro-ok subtle-text" style="margin:0;">' + cadastroFormas.length + ' forma(s) disponível(is) nesta unidade.</p>'
-            : '<p class="reserva-fid__cadastro-warn">Nenhuma forma cadastrada para esta unidade. Cadastre em <strong>Reserva → Forma de pagamento</strong> (mesma unidade da reserva).</p>') +
+            : '<p class="reserva-fid__cadastro-warn">Nenhuma forma cadastrada para esta unidade. Cadastre em <strong>Reserva → Forma de pagamento</strong>.</p>') +
           '<div id="reservaFidPagamentos">' + reservaFidHtmlLinhaPagamento(cadastroFormas, {}, 0) + '</div>' +
           '<p class="reserva-fid__split-total" id="reservaFidPagTotal">Informe o valor total da conta e como foi pago.</p>' +
         '</div>' +
-        '<button type="button" class="btn primary" id="btnReservaFidContaPaga">Conta paga · liberar selo</button>';
+        '<button type="button" class="btn primary" id="btnReservaFidContaPaga">' + btnContaLabel + '</button>';
+
+    var resgateHtml = '';
+    if (participa && programaAtivo && telefoneOk && conta) {
+      var recompensas = data.recompensas || [];
+      var opts = '<option value="">Recompensa padrão do programa (' + meta + ' selos)</option>' +
+        recompensas.map(function(rw) {
+          return '<option value="' + rw.id + '">' + escapeHtml(rw.titulo) + ' · ' + Number(rw.custo_selos || 0) + ' selos</option>';
+        }).join('');
+      resgateHtml =
+        '<div class="reserva-fid__pagar">' +
+          '<label>Resgatar recompensa com selos<select id="reservaFidRecompensa">' + opts + '</select></label>' +
+          '<button type="button" class="btn secondary" id="btnReservaFidPagar"' + (selos <= 0 ? ' disabled' : '') + '>Pagar / Resgatar</button>' +
+        '</div>';
+    }
+
+    var contaIntro = participa && programaAtivo && telefoneOk
+      ? 'O selo só libera quando a <strong>conta for paga</strong>. Informe valor e formas de pagamento (só registro).'
+      : 'Informe valor e formas de pagamento (só registro). Depois use <strong>Liberar mesa</strong> abaixo.';
 
     bodyEl.innerHTML =
-      '<div class="reserva-fid__saldo">' +
-        '<div><span>Selos</span><strong id="reservaFidSelos">' + selos + '</strong></div>' +
-        '<div><span>Pontos</span><strong>' + (conta ? Number(conta.saldo_pontos || 0) : 0) + '</strong></div>' +
-        '<div><span>Meta</span><strong>' + meta + '</strong></div>' +
-      '</div>' +
+      optinHtml +
+      fidSaldoHtml +
       '<div class="reserva-fid__conta">' +
-        '<p class="subtle-text" style="margin:0 0 0.5rem;">O selo só libera quando a <strong>conta for paga</strong>. Informe valor e formas de pagamento (só registro).</p>' +
+        '<p class="subtle-text" style="margin:0 0 0.5rem;">' + contaIntro + '</p>' +
         contaHtml +
       '</div>' +
-      '<div class="reserva-fid__pagar">' +
-        '<label>Resgatar recompensa com selos<select id="reservaFidRecompensa">' + opts + '</select></label>' +
-        '<button type="button" class="btn secondary" id="btnReservaFidPagar"' + (selos <= 0 ? ' disabled' : '') + '>Pagar / Resgatar</button>' +
-      '</div>';
+      resgateHtml;
+
+    var chk = document.getElementById('reservaFidParticipa');
+    if (chk) {
+      chk.addEventListener('change', async function() {
+        try {
+          await fetchJSON('/reservas-mesas/' + reservaId + '/participa-fidelidade', {
+            method: 'PATCH',
+            body: JSON.stringify({ participa_fidelidade: !!chk.checked })
+          });
+          await renderReservaFidelidade(reservaId);
+        } catch (e) {
+          chk.checked = !chk.checked;
+          showToast(e.message || 'Erro ao salvar opção de fidelidade.', 'error');
+        }
+      });
+    }
 
     if (!contaPaga) {
       var wrapPag = document.getElementById('reservaFidPagamentos');
@@ -19077,6 +19128,10 @@ async function renderReservaFidelidade(reservaId) {
     }
 
     document.getElementById('btnReservaFidContaPaga') && document.getElementById('btnReservaFidContaPaga').addEventListener('click', async function() {
+      if (participa && programaAtivo && !telefoneOk) {
+        showToast('Cadastre um telefone válido na reserva ou desmarque a participação no fidelidade.', 'warning');
+        return;
+      }
       var inp = document.getElementById('reservaFidValorConta');
       var valor = inp && inp.value !== '' ? Number(inp.value) : NaN;
       if (isNaN(valor) || valor <= 0) {
@@ -19104,16 +19159,18 @@ async function renderReservaFidelidade(reservaId) {
         }
       }
       var resumoPag = pagamentos.map(function(p) {
-        var linha = (p.rotulo ? p.rotulo + ': ' : '') + reservaFidLabelCadastro(cadastroFormas, p.meio_id) + ' R$ ' + reservaFidMoeda(p.valor);
-        return linha;
+        return (p.rotulo ? p.rotulo + ': ' : '') + reservaFidLabelCadastro(cadastroFormas, p.meio_id) + ' R$ ' + reservaFidMoeda(p.valor);
       }).join('\n');
-      if (!confirm('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nIsso cria o cartão (se preciso) e libera 1 selo.')) return;
+      var confirmMsg = participa && programaAtivo && telefoneOk
+        ? ('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nIsso cria o cartão (se preciso) e libera 1 selo.')
+        : ('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nDepois clique em Liberar mesa.');
+      if (!confirm(confirmMsg)) return;
       try {
         var resp = await fetchJSON('/reservas-mesas/' + reservaId + '/fidelidade/conta-paga', {
           method: 'POST',
           body: JSON.stringify({ valor_conta: valor, pagamentos: pagamentos })
         });
-        showToast(resp.message || 'Conta paga e selo liberado.', 'success');
+        showToast(resp.message || 'Conta paga registrada.', 'success');
         await renderReservaFidelidade(reservaId);
       } catch (e) {
         showToast(e.message || 'Erro ao registrar conta paga.', 'error');
@@ -19182,7 +19239,7 @@ async function abrirDetalhesReserva(id) {
     }
 
     var fidHtml = '<div id="reservaFidBox" class="reserva-fid" data-reserva-id="' + r.id + '">' +
-      '<div class="reserva-fid__head"><strong>✦ Fidelidade</strong><span class="subtle-text" id="reservaFidStatus">Carregando…</span></div>' +
+      '<div class="reserva-fid__head"><strong>Conta da mesa</strong><span class="subtle-text" id="reservaFidStatus">Carregando…</span></div>' +
       '<div id="reservaFidBody" class="reserva-fid__body"></div>' +
       '</div>';
 
