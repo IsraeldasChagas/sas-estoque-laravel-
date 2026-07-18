@@ -11887,6 +11887,9 @@ async function startAppSession(user) {
         else if (sectionToNavigate === 'reservaDashboard') {
           await loadReservaDashboard();
         }
+        else if (sectionToNavigate === 'reservaFormasPagamento') {
+          await initReservaFormasPagamentoSection();
+        }
         else if (sectionToNavigate === 'reservaMesa') {
           var uSelect = document.getElementById('reservasUnidadeFiltro');
           if (uSelect && uSelect.options.length <= 1) {
@@ -16421,6 +16424,9 @@ function wireSidebarSectionNavClicks() {
       else if (target === "reservaDashboard") {
         await loadReservaDashboard();
       }
+      else if (target === "reservaFormasPagamento") {
+        await initReservaFormasPagamentoSection();
+      }
       else if (target === "reservaMesa") {
         var uSelect = document.getElementById('reservasUnidadeFiltro');
         if (uSelect && uSelect.options.length <= 1) {
@@ -18594,7 +18600,6 @@ async function loadReservasMesas() {
     document.getElementById('reservasTotalDia').textContent = resumo.total_reservas_dia ?? 0;
 
     _reservasMesasCache = { mesas: mesas || [], reservas: reservas || [], unidadeId: unidadeId };
-    loadReservaMeiosPagamento(unidadeId);
     cardsEl.querySelectorAll('.mesa-card').forEach(function(c) { c.style.cursor = 'pointer'; });
     document.querySelectorAll('#reservasTableBody .btn-icon').forEach(function(btn) {
       btn.addEventListener('click', async function(e) {
@@ -18954,42 +18959,97 @@ function reservaFidHtmlPagamentosRegistrados(pagamentos) {
   }).join('') + '</ul>';
 }
 
-async function loadReservaMeiosPagamento(unidadeId) {
-  var lista = document.getElementById('reservaMeiosLista');
+async function popularSelectUnidadeReserva(selectEl) {
+  if (!selectEl) return;
+  var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades').catch(function() { return []; });
+  state.unidades = unidades;
+  var perfilLivre = canEscolherUnidadeReservaMesa();
+  var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
+  selectEl.innerHTML = '<option value="">Selecione a unidade</option>';
+  if (!perfilLivre && !unidadeUsuario) {
+    selectEl.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
+    selectEl.disabled = true;
+    return;
+  }
+  var lista = (unidades || []);
+  if (!perfilLivre && unidadeUsuario) {
+    lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
+  }
+  lista.forEach(function(u) {
+    var opt = document.createElement('option');
+    opt.value = u.id;
+    opt.textContent = u.nome || 'Unidade ' + u.id;
+    selectEl.appendChild(opt);
+  });
+  if (!perfilLivre && unidadeUsuario) {
+    selectEl.value = unidadeUsuario;
+    selectEl.disabled = true;
+  } else if (selectEl.disabled) {
+    selectEl.disabled = false;
+  }
+}
+
+function reservaFormaTipoClass(tipo) {
+  var map = {
+    dinheiro: 'reserva-tipo--dinheiro',
+    pix: 'reserva-tipo--pix',
+    credito: 'reserva-tipo--credito',
+    debito: 'reserva-tipo--debito',
+    resgate_fidelidade: 'reserva-tipo--fidelidade'
+  };
+  return map[tipo] || 'reserva-tipo--outro';
+}
+
+async function loadReservaFormasPagamento(unidadeId) {
+  var lista = document.getElementById('reservaFormasLista');
   if (!lista) return;
   if (!unidadeId) {
-    lista.innerHTML = '<p class="subtle-text">Selecione uma unidade para gerenciar.</p>';
+    lista.innerHTML = '<p class="subtle-text">Selecione uma unidade acima.</p>';
     return;
   }
   try {
     var data = await fetchJSON('/reservas-mesas/meios-pagamento?unidade_id=' + encodeURIComponent(unidadeId));
     var items = data.items || [];
     if (!items.length) {
-      lista.innerHTML = '<p class="subtle-text">Nenhum recebedor cadastrado. Adicione PIX, maquininhas e caixas de dinheiro acima.</p>';
+      lista.innerHTML = '<p class="subtle-text">Nenhuma forma cadastrada. Use o formulário acima para adicionar.</p>';
       return;
     }
-    lista.innerHTML = '<div class="table-wrapper"><table class="reservas-table reserva-meios-table"><thead><tr><th>Tipo</th><th>Recebedor</th><th>Status</th><th></th></tr></thead><tbody>' +
+    lista.innerHTML = '<div class="table-wrapper"><table class="reservas-table reserva-meios-table"><thead><tr><th>Tipo</th><th>Nome / recebedor</th><th>Status</th><th></th></tr></thead><tbody>' +
       items.map(function(it) {
-        return '<tr><td data-label="Tipo">' + escapeHtml(it.tipo_label || it.tipo) + '</td>' +
-          '<td data-label="Recebedor">' + escapeHtml(it.nome) + '</td>' +
-          '<td data-label="Status">' + (it.ativo ? 'Ativo' : 'Inativo') + '</td>' +
-          '<td data-label="Ações"><button type="button" class="btn ghost" data-meio-del="' + it.id + '">Excluir</button></td></tr>';
+        var tipoCls = reservaFormaTipoClass(it.tipo);
+        return '<tr><td data-label="Tipo"><span class="reserva-tipo-pill ' + tipoCls + '">' + escapeHtml(it.tipo_label || it.tipo) + '</span></td>' +
+          '<td data-label="Nome">' + escapeHtml(it.nome) + '</td>' +
+          '<td data-label="Status"><span class="reserva-status-pill' + (it.ativo ? ' is-ativo' : ' is-inativo') + '">' + (it.ativo ? 'Ativo' : 'Inativo') + '</span></td>' +
+          '<td data-label="Ações"><button type="button" class="btn danger reserva-btn-sm" data-meio-del="' + it.id + '">Excluir</button></td></tr>';
       }).join('') + '</tbody></table></div>';
     lista.querySelectorAll('[data-meio-del]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
-        if (!confirm('Remover este recebedor?')) return;
+        if (!confirm('Remover esta forma de pagamento?')) return;
         try {
           await fetchJSON('/reservas-mesas/meios-pagamento/' + btn.getAttribute('data-meio-del') + '?unidade_id=' + encodeURIComponent(unidadeId), { method: 'DELETE' });
-          showToast('Recebedor removido.', 'success');
-          await loadReservaMeiosPagamento(unidadeId);
+          showToast('Forma de pagamento removida.', 'success');
+          await loadReservaFormasPagamento(unidadeId);
         } catch (e) {
           showToast(e.message || 'Erro ao remover.', 'error');
         }
       });
     });
   } catch (e) {
-    lista.innerHTML = '<p class="subtle-text">' + escapeHtml(e.message || 'Erro ao carregar modos de pagamento.') + '</p>';
+    lista.innerHTML = '<p class="subtle-text">' + escapeHtml(e.message || 'Erro ao carregar formas de pagamento.') + '</p>';
   }
+}
+
+async function initReservaFormasPagamentoSection() {
+  var sel = document.getElementById('reservaFormasUnidade');
+  if (sel && sel.options.length <= 1) {
+    await popularSelectUnidadeReserva(sel);
+  }
+  var unidadeId = sel && sel.value;
+  if (!unidadeId && sel && !sel.disabled && sel.options.length === 2) {
+    sel.selectedIndex = 1;
+    unidadeId = sel.value;
+  }
+  await loadReservaFormasPagamento(unidadeId || '');
 }
 
 async function renderReservaFidelidade(reservaId) {
@@ -19670,32 +19730,7 @@ function setupReservasMesasModule() {
   if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
 
   async function popularUnidades() {
-    var unidades = state.unidades && state.unidades.length ? state.unidades : await fetchJSON('/unidades');
-    if (!unidadeSelect) return;
-    unidadeSelect.innerHTML = '<option value="">Selecione a unidade</option>';
-    var perfilLivre = canEscolherUnidadeReservaMesa();
-    var unidadeUsuario = currentUser && currentUser.unidade_id ? String(currentUser.unidade_id) : '';
-    if (!perfilLivre && !unidadeUsuario) {
-      unidadeSelect.innerHTML = '<option value="">Usuário sem unidade cadastrada</option>';
-      unidadeSelect.disabled = true;
-      return;
-    }
-    var lista = (unidades || []);
-    if (!perfilLivre && unidadeUsuario) {
-      lista = lista.filter(function(u) { return String(u.id) === unidadeUsuario; });
-    }
-    lista.forEach(function(u) {
-      var opt = document.createElement('option');
-      opt.value = u.id;
-      opt.textContent = u.nome || 'Unidade ' + u.id;
-      unidadeSelect.appendChild(opt);
-    });
-    if (!perfilLivre && unidadeUsuario) {
-      unidadeSelect.value = unidadeUsuario;
-      unidadeSelect.disabled = true;
-    } else if (unidadeSelect.disabled) {
-      unidadeSelect.disabled = false;
-    }
+    await popularSelectUnidadeReserva(unidadeSelect);
   }
 
   var reservaUnidadeLabel = document.getElementById('reservaUnidadeLabel');
@@ -19746,6 +19781,35 @@ function setupReservasMesasModule() {
   });
 
   popularUnidades();
+  popularSelectUnidadeReserva(document.getElementById('reservaFormasUnidade'));
+
+  document.getElementById('reservaFormasUnidade') && document.getElementById('reservaFormasUnidade').addEventListener('change', function() {
+    loadReservaFormasPagamento(this.value || '');
+  });
+
+  document.getElementById('reservaFormaPagForm') && document.getElementById('reservaFormaPagForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var unidadeId = document.getElementById('reservaFormasUnidade') && document.getElementById('reservaFormasUnidade').value;
+    if (!unidadeId) {
+      showToast('Selecione a unidade.', 'warning');
+      return;
+    }
+    var fd = new FormData(e.target);
+    try {
+      await fetchJSON('/reservas-mesas/meios-pagamento?unidade_id=' + encodeURIComponent(unidadeId), {
+        method: 'POST',
+        body: JSON.stringify({
+          tipo: fd.get('tipo'),
+          nome: fd.get('nome')
+        })
+      });
+      showToast('Forma de pagamento cadastrada.', 'success');
+      e.target.reset();
+      await loadReservaFormasPagamento(unidadeId);
+    } catch (err) {
+      showToast(err.message || 'Erro ao cadastrar.', 'error');
+    }
+  });
 
   document.getElementById('openNovaReservaMesa') && document.getElementById('openNovaReservaMesa').addEventListener('click', async function() {
     var unidadeId = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
@@ -19883,30 +19947,6 @@ function setupReservasMesasModule() {
   document.getElementById('reservasTurnoFiltro') && document.getElementById('reservasTurnoFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasStatusFiltro') && document.getElementById('reservasStatusFiltro').addEventListener('change', function() { loadReservasMesas(); });
   document.getElementById('reservasAtualizar') && document.getElementById('reservasAtualizar').addEventListener('click', function() { loadReservasMesas(); });
-
-  document.getElementById('reservaMeioForm') && document.getElementById('reservaMeioForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    var unidadeId = document.getElementById('reservasUnidadeFiltro') && document.getElementById('reservasUnidadeFiltro').value;
-    if (!unidadeId) {
-      showToast('Selecione a unidade.', 'warning');
-      return;
-    }
-    var fd = new FormData(e.target);
-    try {
-      await fetchJSON('/reservas-mesas/meios-pagamento?unidade_id=' + encodeURIComponent(unidadeId), {
-        method: 'POST',
-        body: JSON.stringify({
-          tipo: fd.get('tipo'),
-          nome: fd.get('nome')
-        })
-      });
-      showToast('Recebedor cadastrado.', 'success');
-      e.target.reset();
-      await loadReservaMeiosPagamento(unidadeId);
-    } catch (err) {
-      showToast(err.message || 'Erro ao cadastrar.', 'error');
-    }
-  });
 
   document.getElementById('rdashUnidadeFiltro') && document.getElementById('rdashUnidadeFiltro').addEventListener('change', function() { loadReservaDashboard(); });
   document.getElementById('rdashAtualizar') && document.getElementById('rdashAtualizar').addEventListener('click', function() { loadReservaDashboard(); });

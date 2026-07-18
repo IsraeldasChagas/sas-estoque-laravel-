@@ -8008,6 +8008,46 @@ select[size]:not([size="1"]) {
   font-weight: 600;
 }
 .reserva-meios-lista .reserva-meios-table { font-size: 0.88rem; }
+.reserva-formas-section .reserva-meios-form .btn.primary {
+  background: linear-gradient(135deg, #1f6b45 0%, #2d8f5c 100%);
+  border-color: #1a5c3a;
+  color: #fff;
+  font-weight: 700;
+  min-height: 42px;
+  box-shadow: 0 2px 8px rgba(31, 107, 69, 0.25);
+}
+.reserva-formas-section .reserva-meios-form .btn.primary:hover {
+  filter: brightness(1.05);
+}
+.reserva-btn-sm {
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+}
+.reserva-tipo-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.reserva-tipo--dinheiro { background: #ecfdf3; color: #166534; border: 1px solid #86efac; }
+.reserva-tipo--pix { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+.reserva-tipo--credito { background: #faf5ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+.reserva-tipo--debito { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+.reserva-tipo--fidelidade { background: #fdf4ff; color: #a21caf; border: 1px solid #f0abfc; }
+.reserva-tipo--outro { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.reserva-status-pill {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.reserva-status-pill.is-ativo { background: #dcfce7; color: #15803d; }
+.reserva-status-pill.is-inativo { background: #fee2e2; color: #b91c1c; }
 @media (max-width: 720px) {
   .reserva-meios-form { grid-template-columns: 1fr; }
 }
