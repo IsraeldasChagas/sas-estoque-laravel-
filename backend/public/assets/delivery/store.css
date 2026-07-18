@@ -81,10 +81,14 @@ a{color:inherit}
 .vf-contact-toggle{
   width:28px;height:28px;min-width:28px;padding:0;
   border-radius:999px;display:inline-grid;place-items:center;
-  border-color:#cbd5e1;color:#475569;background:#fff;
+  border:1.5px solid #64748b;color:#0f172a;background:#fff;
+}
+.vf-contact-toggle:hover{
+  border-color:#2563eb;color:#2563eb;background:#eff6ff;
 }
 .vf-contact-toggle__icon{
-  display:block;transition:transform .18s ease;
+  display:block;width:18px;height:18px;
+  transition:transform .18s ease;
   transform:rotate(-90deg); /* fechado: seta para o lado */
 }
 .vf-contact-toggle[aria-expanded="true"] .vf-contact-toggle__icon{
