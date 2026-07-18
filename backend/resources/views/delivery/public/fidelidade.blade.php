@@ -88,18 +88,29 @@
     </div>
 
     @if($mostrar_progresso_selos ?? false)
-        @if($telefone_selos_mascara ?? false)
-            <p class="muted vf-fid-mask">Mostrando selos do número <strong>{{ $telefone_selos_mascara }}</strong>.</p>
-        @endif
         @if($conta)
             @php
                 $selos = (int) ($conta->saldo_selos ?? 0);
                 $pontos = (int) ($conta->saldo_pontos ?? 0);
                 $filled = min($selos, $meta);
                 $cheio = $selos >= $meta && $meta > 0;
+                $nomeCliente = trim((string) ($conta->nome ?? ''));
+                $telSuf = strlen((string) ($conta->telefone_normalizado ?? '')) >= 4
+                    ? substr((string) $conta->telefone_normalizado, -4)
+                    : null;
             @endphp
             <div class="vf-fidelity-card">
                 <h2>Seu progresso</h2>
+                @if($nomeCliente !== '' || $telSuf)
+                    <p class="muted vf-fid-mask">
+                        @if($nomeCliente !== '')
+                            Olá, <strong>{{ $nomeCliente }}</strong>
+                            @if($telSuf) · telefone ***{{ $telSuf }} @endif
+                        @elseif($telSuf)
+                            Telefone ***{{ $telSuf }}
+                        @endif
+                    </p>
+                @endif
                 <div class="vf-fid-stamps" aria-label="Progresso de selos">
                     @for($i = 1; $i <= $meta; $i++)
                         <span class="vf-fid-stamp {{ $i <= $filled ? 'is-on' : '' }}">{{ $i <= $filled ? '✓' : $i }}</span>

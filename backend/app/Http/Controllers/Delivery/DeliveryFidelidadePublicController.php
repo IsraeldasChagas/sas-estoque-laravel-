@@ -45,7 +45,7 @@ class DeliveryFidelidadePublicController extends Controller
         abort_unless($programa, 404);
 
         $acesso = $this->acessoValido($unidadeVitrine);
-        $otpPending = $this->otpPendenteValido($unidadeVitrine);
+        $otpPending = $this->otpPendenteValido($unidadeVitrine, $config);
 
         $conta = null;
         $mostrarProgresso = false;
@@ -54,9 +54,13 @@ class DeliveryFidelidadePublicController extends Controller
         if ($acesso !== null && ! $otpPending) {
             $norm = $acesso['tel_norm'];
             $telefoneMascara = strlen($norm) >= 4 ? '***'.substr($norm, -4) : $norm;
-            $unidadeFid = (int) ($acesso['unidade_fidelidade_id'] ?? $unidadeFidPadrao);
-            $conta = $this->consulta->buscarContaAtivaNaUnidade($unidadeFid, $norm)
-                ?: $this->consulta->buscarContaAtiva($config, $norm);
+            $contaId = (int) ($acesso['conta_id'] ?? 0);
+            $conta = $contaId > 0
+                ? $this->consulta->buscarContaPorId($contaId, $norm)
+                : null;
+            if (! $conta) {
+                $conta = $this->consulta->buscarContaAtiva($config, $norm);
+            }
             if ($conta) {
                 $unidadeFid = (int) $conta->unidade_id;
                 $programa = $this->programaAtivo($unidadeFid) ?? $programa;
@@ -170,6 +174,14 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $norm = $pending['tel_norm'];
+        if (! $this->consulta->buscarContaAtiva($config, $norm)) {
+            $this->limparSessaoConsulta($unidadeId);
+
+            return $this->voltar($slug)->with(
+                'warning',
+                'Não encontramos cartão fidelidade para este telefone. O cartão é criado após a reserva de mesa e o pagamento da conta — use o mesmo telefone informado na reserva.'
+            );
+        }
         $rateKey = 'sas-fid-otp:'.$unidadeId.':'.$norm;
         if (RateLimiter::tooManyAttempts($rateKey, 4)) {
             $seg = RateLimiter::availableIn($rateKey);
@@ -305,10 +317,21 @@ class DeliveryFidelidadePublicController extends Controller
             );
         }
 
+        $conta = $this->consulta->buscarContaAtiva($config, $telNorm);
+        if (! $conta) {
+            $request->session()->forget(self::SESSION_OTP);
+
+            return $this->voltar($slug)->with(
+                'warning',
+                'Não encontramos cartão fidelidade para este telefone. O cartão é criado após a reserva de mesa e o pagamento da conta — use o mesmo telefone informado na reserva.'
+            );
+        }
+
         $request->session()->forget(self::SESSION_OTP);
         $request->session()->put(self::SESSION_ACESSO, [
             'unidade_id' => $unidadeId,
-            'unidade_fidelidade_id' => (int) ($pending['unidade_fidelidade_id'] ?? $this->consulta->unidadeFidelidade($config)),
+            'unidade_fidelidade_id' => (int) $conta->unidade_id,
+            'conta_id' => (int) $conta->id,
             'tel_norm' => $telNorm,
             'exp' => now()->addMinutes(self::ACESSO_TTL_MINUTES)->timestamp,
         ]);
@@ -342,7 +365,7 @@ class DeliveryFidelidadePublicController extends Controller
         return $v;
     }
 
-    private function otpPendenteValido(int $unidadeId): bool
+    private function otpPendenteValido(int $unidadeId, object $config): bool
     {
         $pending = session(self::SESSION_OTP);
         if (! is_array($pending) || (int) ($pending['unidade_id'] ?? 0) !== $unidadeId) {
@@ -351,6 +374,11 @@ class DeliveryFidelidadePublicController extends Controller
         $tel = $pending['tel_norm'] ?? null;
         if (! is_string($tel) || strlen($tel) < 8) {
             session()->forget(self::SESSION_OTP);
+
+            return false;
+        }
+        if (! $this->consulta->buscarContaAtiva($config, $tel)) {
+            $this->limparSessaoConsulta($unidadeId);
 
             return false;
         }

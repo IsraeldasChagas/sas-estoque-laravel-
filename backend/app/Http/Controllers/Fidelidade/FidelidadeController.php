@@ -168,6 +168,17 @@ class FidelidadeController extends Controller
             }
         }
 
+        if ($email) {
+            $emailOutro = DB::table('fid_contas')
+                ->where('unidade_id', $unidadeId)
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->where('telefone_normalizado', '!=', $telefone)
+                ->exists();
+            if ($emailOutro) {
+                throw ValidationException::withMessages(['email' => 'Este e-mail já está cadastrado em outro telefone.']);
+            }
+        }
+
         $existente = DB::table('fid_contas')
             ->where('unidade_id', $unidadeId)
             ->where('telefone_normalizado', $telefone)

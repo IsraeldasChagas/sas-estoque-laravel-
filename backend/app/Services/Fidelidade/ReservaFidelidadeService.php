@@ -17,6 +17,7 @@ final class ReservaFidelidadeService
         private FidelidadeLedgerService $ledger,
         private FidelidadeResgateService $resgate,
         private ReservaMeioPagamentoService $meiosPagamento,
+        private FidelidadeIdentidadeService $identidade,
     ) {}
 
     public function tabelasDisponiveis(): bool
@@ -177,6 +178,10 @@ final class ReservaFidelidadeService
                 'telefone_ok' => false,
                 'selo_ja_creditado' => false,
                 'participa_fidelidade' => (bool) ($reserva->participa_fidelidade ?? false),
+                'fidelidade_nome' => $reserva->fidelidade_nome,
+                'fidelidade_cpf' => $reserva->fidelidade_cpf,
+                'fidelidade_email' => $reserva->fidelidade_email,
+                'fidelidade_dados_ok' => $this->dadosFidelidadeOk($reserva),
                 'conta_paga' => (bool) ($reserva->conta_paga ?? false),
                 'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
                 'conta_paga_em' => $reserva->conta_paga_em
@@ -213,6 +218,10 @@ final class ReservaFidelidadeService
             'telefone_ok' => true,
             'selo_ja_creditado' => $seloJa,
             'participa_fidelidade' => (bool) ($reserva->participa_fidelidade ?? false),
+            'fidelidade_nome' => $reserva->fidelidade_nome,
+            'fidelidade_cpf' => $reserva->fidelidade_cpf,
+            'fidelidade_email' => $reserva->fidelidade_email,
+            'fidelidade_dados_ok' => $this->dadosFidelidadeOk($reserva),
             'conta_paga' => (bool) ($reserva->conta_paga ?? false),
             'valor_conta' => $reserva->valor_conta !== null ? (float) $reserva->valor_conta : null,
             'conta_paga_em' => $reserva->conta_paga_em
@@ -225,6 +234,46 @@ final class ReservaFidelidadeService
                 ? null
                 : 'Programa de fidelidade inativo nesta unidade. Ative em Fidelidade → Programa.',
         ];
+    }
+
+    /**
+     * @return array{nome:string,cpf:string,email:string}
+     */
+    public function salvarDadosFidelidade(ReservaMesa $reserva, ?string $nome, ?string $cpf, ?string $email): array
+    {
+        $tel = FidelidadeNormalizer::telefone($reserva->telefone_cliente);
+        if ($tel === '' || strlen($tel) < 10) {
+            throw ValidationException::withMessages(['telefone' => 'Telefone da reserva inválido para fidelidade.']);
+        }
+
+        $contaId = DB::table('fid_contas')
+            ->where('unidade_id', (int) $reserva->unidade_id)
+            ->where('telefone_normalizado', $tel)
+            ->value('id');
+
+        $dados = $this->identidade->validarCadastro(
+            (int) $reserva->unidade_id,
+            $tel,
+            $nome,
+            $cpf,
+            $email,
+            $contaId ? (int) $contaId : null
+        );
+
+        $reserva->fidelidade_nome = $dados['nome'];
+        $reserva->fidelidade_cpf = $dados['cpf'];
+        $reserva->fidelidade_email = $dados['email'];
+        $reserva->save();
+
+        return $dados;
+    }
+
+    public function limparDadosFidelidade(ReservaMesa $reserva): void
+    {
+        $reserva->fidelidade_nome = null;
+        $reserva->fidelidade_cpf = null;
+        $reserva->fidelidade_email = null;
+        $reserva->save();
     }
 
     /**
@@ -241,6 +290,19 @@ final class ReservaFidelidadeService
             throw ValidationException::withMessages(['telefone' => 'Telefone da reserva inválido para fidelidade.']);
         }
 
+        if (! $this->dadosFidelidadeOk($reserva)) {
+            throw ValidationException::withMessages([
+                'fidelidade' => 'Informe nome completo, CPF e e-mail do cliente para o cartão fidelidade.',
+            ]);
+        }
+
+        $dados = [
+            'nome' => (string) $reserva->fidelidade_nome,
+            'cpf' => (string) $reserva->fidelidade_cpf,
+            'email' => (string) $reserva->fidelidade_email,
+        ];
+        $this->identidade->validarCadastro((int) $reserva->unidade_id, $tel, $dados['nome'], $dados['cpf'], $dados['email']);
+
         $unidadeId = (int) $reserva->unidade_id;
         $existente = DB::table('fid_contas')
             ->where('unidade_id', $unidadeId)
@@ -248,18 +310,13 @@ final class ReservaFidelidadeService
             ->first();
 
         if ($existente) {
-            if ((string) $existente->status !== 'ativo') {
-                DB::table('fid_contas')->where('id', $existente->id)->update([
-                    'status' => 'ativo',
-                    'nome' => FidelidadeNormalizer::nome($reserva->nome_cliente) ?: $existente->nome,
-                    'updated_at' => now(),
-                ]);
-            } elseif (! $existente->nome && $reserva->nome_cliente) {
-                DB::table('fid_contas')->where('id', $existente->id)->update([
-                    'nome' => FidelidadeNormalizer::nome($reserva->nome_cliente),
-                    'updated_at' => now(),
-                ]);
-            }
+            DB::table('fid_contas')->where('id', $existente->id)->update([
+                'status' => 'ativo',
+                'nome' => $dados['nome'],
+                'cpf_normalizado' => $dados['cpf'],
+                'email' => $dados['email'],
+                'updated_at' => now(),
+            ]);
 
             return DB::table('fid_contas')->where('id', $existente->id)->first();
         }
@@ -268,9 +325,9 @@ final class ReservaFidelidadeService
         $id = DB::table('fid_contas')->insertGetId([
             'unidade_id' => $unidadeId,
             'telefone_normalizado' => $tel,
-            'cpf_normalizado' => null,
-            'email' => null,
-            'nome' => FidelidadeNormalizer::nome($reserva->nome_cliente),
+            'cpf_normalizado' => $dados['cpf'],
+            'email' => $dados['email'],
+            'nome' => $dados['nome'],
             'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
             'status' => 'ativo',
             'saldo_selos' => 0,
@@ -436,6 +493,10 @@ final class ReservaFidelidadeService
             'telefone_ok' => false,
             'selo_ja_creditado' => false,
             'participa_fidelidade' => false,
+            'fidelidade_nome' => null,
+            'fidelidade_cpf' => null,
+            'fidelidade_email' => null,
+            'fidelidade_dados_ok' => false,
             'conta_paga' => false,
             'valor_conta' => null,
             'conta_paga_em' => null,
@@ -500,13 +561,14 @@ final class ReservaFidelidadeService
         if (! $snap['telefone_ok']) {
             throw ValidationException::withMessages(['telefone' => 'Telefone da reserva inválido para gerar o cartão.']);
         }
-
-        $criado = false;
-        $conta = $snap['conta'];
-        if (! $conta) {
-            $conta = $this->garantirConta($reserva, $usuarioId);
-            $criado = true;
+        if (! $this->dadosFidelidadeOk($reserva)) {
+            throw ValidationException::withMessages([
+                'fidelidade' => 'Informe e salve nome completo, CPF e e-mail do cliente antes de liberar o selo.',
+            ]);
         }
+
+        $criado = ! $snap['conta'];
+        $this->garantirConta($reserva, $usuarioId);
 
         $credito = $this->creditarSelo($reserva, $usuarioId, false);
 
@@ -523,5 +585,24 @@ final class ReservaFidelidadeService
             'replayed' => $credito['replayed'],
             'criado_conta' => $criado || $credito['criado_conta'],
         ];
+    }
+
+    private function dadosFidelidadeOk(ReservaMesa $reserva): bool
+    {
+        if (! (bool) ($reserva->participa_fidelidade ?? false)) {
+            return false;
+        }
+
+        try {
+            $this->identidade->exigirCompletos(
+                $reserva->fidelidade_nome,
+                $reserva->fidelidade_cpf,
+                $reserva->fidelidade_email
+            );
+        } catch (ValidationException) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -791,13 +791,64 @@ class ReservaMesaController extends Controller
             'participa_fidelidade' => 'required|boolean',
         ])->validate();
 
-        $reserva->participa_fidelidade = (bool) $data['participa_fidelidade'];
-        $reserva->save();
+        $participa = (bool) $data['participa_fidelidade'];
+
+        if (! $participa) {
+            $reserva->participa_fidelidade = false;
+            app(ReservaFidelidadeService::class)->limparDadosFidelidade($reserva);
+        } else {
+            $reserva->participa_fidelidade = true;
+            $reserva->save();
+        }
 
         return response()->json([
             'message' => $reserva->participa_fidelidade
-                ? 'Cliente participará do programa fidelidade nesta reserva.'
-                : 'Cliente não participará do programa fidelidade. Registre apenas valor e pagamento.',
+                ? 'Cliente participará do fidelidade. Informe nome, CPF e e-mail antes de liberar o selo.'
+                : 'Cliente não participará do fidelidade. Registre apenas valor e pagamento.',
+            'reserva' => $reserva->fresh(['mesa', 'usuario']),
+        ]);
+    }
+
+    /**
+     * Salva nome, CPF e e-mail do cliente para o cartão fidelidade (com validação de unicidade).
+     */
+    public function fidelidadeDados(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva] = $ctx;
+
+        if ($reserva->conta_paga) {
+            return response()->json(['message' => 'Conta já paga; não é possível alterar os dados de fidelidade.'], 422);
+        }
+
+        $data = Validator::make($request->all(), [
+            'fidelidade_nome' => 'required|string|min:3|max:160',
+            'fidelidade_cpf' => 'required|string|max:20',
+            'fidelidade_email' => 'required|email|max:160',
+        ])->validate();
+
+        try {
+            app(ReservaFidelidadeService::class)->salvarDadosFidelidade(
+                $reserva,
+                $data['fidelidade_nome'],
+                $data['fidelidade_cpf'],
+                $data['fidelidade_email']
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível validar os dados.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        $reserva->participa_fidelidade = true;
+        $reserva->save();
+
+        return response()->json([
+            'message' => 'Dados do cartão fidelidade confirmados.',
             'reserva' => $reserva->fresh(['mesa', 'usuario']),
         ]);
     }

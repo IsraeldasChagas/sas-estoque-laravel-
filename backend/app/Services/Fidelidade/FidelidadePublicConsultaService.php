@@ -26,6 +26,12 @@ final class FidelidadePublicConsultaService
     {
         $unidadeVitrine = (int) $config->unidade_id;
         $unidadeFid = $this->unidadeFidelidade($config);
+        $fidelidadeVinculada = Schema::hasColumn('dlv_loja_config', 'unidade_fidelidade_id')
+            && (int) ($config->unidade_fidelidade_id ?? 0) > 0;
+
+        if ($fidelidadeVinculada) {
+            return $this->buscarContaAtivaNaUnidade($unidadeFid, $telNorm);
+        }
 
         foreach (array_values(array_unique([$unidadeFid, $unidadeVitrine])) as $uid) {
             $conta = $this->buscarContaAtivaNaUnidade($uid, $telNorm);
@@ -34,17 +40,19 @@ final class FidelidadePublicConsultaService
             }
         }
 
-        if (! Schema::hasTable('fid_programas')) {
+        return null;
+    }
+
+    public function buscarContaPorId(int $contaId, string $telNorm): ?object
+    {
+        if ($contaId <= 0) {
             return null;
         }
 
         return DB::table('fid_contas')
-            ->join('fid_programas', 'fid_programas.unidade_id', '=', 'fid_contas.unidade_id')
-            ->where('fid_contas.telefone_normalizado', $telNorm)
-            ->where('fid_contas.status', 'ativo')
-            ->where('fid_programas.ativo', 1)
-            ->orderByDesc('fid_contas.updated_at')
-            ->select('fid_contas.*')
+            ->where('id', $contaId)
+            ->where('telefone_normalizado', $telNorm)
+            ->where('status', 'ativo')
             ->first();
     }
 

@@ -126,6 +126,7 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Seu progresso')
+            ->assertSee('Cliente Teste')
             ->assertSee('***8888')
             ->assertSee('4');
     }
@@ -237,6 +238,80 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Seu progresso')
+            ->assertSee('Cliente Reserva')
             ->assertSee('2');
+    }
+
+    public function test_cartao_excluido_na_unidade_vinculada_nao_mostra_cartao_da_vitrine(): void
+    {
+        config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        DB::table('fid_contas')->where('unidade_id', $this->unidadeId)->delete();
+
+        $unidadeReserva = (int) DB::table('unidades')->insertGetId([
+            'nome' => 'Unidade Reserva',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('fid_programas')->insert([
+            'unidade_id' => $unidadeReserva,
+            'ativo' => 1,
+            'nome_exibicao' => 'Cartão reserva',
+            'modo' => 'selos',
+            'pedidos_meta' => 10,
+            'pontos_por_selo' => 1,
+            'tipo_recompensa_padrao' => 'produto',
+            'permite_ajuste_manual' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('fid_contas')->insert([
+            'unidade_id' => $unidadeReserva,
+            'telefone_normalizado' => '69999998888',
+            'email' => null,
+            'nome' => 'Cliente Reserva',
+            'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
+            'status' => 'ativo',
+            'saldo_selos' => 1,
+            'saldo_pontos' => 1,
+            'total_resgates' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('fid_contas')->insert([
+            'unidade_id' => $this->unidadeId,
+            'telefone_normalizado' => '69999998888',
+            'email' => null,
+            'nome' => 'Cliente Delivery',
+            'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
+            'status' => 'ativo',
+            'saldo_selos' => 9,
+            'saldo_pontos' => 9,
+            'total_resgates' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('dlv_loja_config')->where('slug', $this->slug)->update([
+            'unidade_fidelidade_id' => $unidadeReserva,
+        ]);
+
+        DB::table('fid_contas')->where('unidade_id', $unidadeReserva)->delete();
+
+        $this->from('/loja/'.$this->slug.'/fidelidade')
+            ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+                'telefone' => '(69) 99999-8888',
+            ])
+            ->assertRedirect('/loja/'.$this->slug.'/fidelidade')
+            ->assertSessionHas('warning');
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Não encontramos cartão fidelidade')
+            ->assertDontSee('Seu progresso')
+            ->assertDontSee('Cliente Delivery');
     }
 }
