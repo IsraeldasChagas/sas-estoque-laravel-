@@ -28,6 +28,9 @@ class EnsureSasUsuario
         }
 
         $uid = $request->header('X-Usuario-Id');
+        if (! $uid && $request->isMethod('GET')) {
+            $uid = $request->query('x_usuario_id');
+        }
         if (! $uid || ! DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->exists()) {
             return $this->aplicarCors(
                 response()->json(['error' => 'Faça login novamente. Sessão expirada ou usuário não identificado.'], 401)

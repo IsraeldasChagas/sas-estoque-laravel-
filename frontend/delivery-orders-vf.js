@@ -29,6 +29,14 @@
     if (window.APP_CONFIG?.API_URL) return window.APP_CONFIG.API_URL;
     return `${location.origin.replace(/\/$/, "")}/api`;
   })();
+  const apiOrigin = () => {
+    const fromConfig = String(window.APP_CONFIG?.API_URL || "").replace(/\/api\/?$/, "");
+    if (fromConfig) return fromConfig.replace(/\/$/, "");
+    if (typeof window.API_URL === "string" && window.API_URL) {
+      return String(window.API_URL).replace(/\/api\/?$/, "").replace(/\/$/, "");
+    }
+    return location.origin.replace(/\/$/, "");
+  };
 
   function mediaUrl(url) {
     if (typeof window.deliveryMediaUrl === "function") return window.deliveryMediaUrl(url);
@@ -49,31 +57,27 @@
     return headers;
   }
 
+  function printCupomHref(orderId, auto) {
+    const uid = window.currentUser?.id;
+    if (uid == null || uid === "") return "";
+    const params = new URLSearchParams({ x_usuario_id: String(uid) });
+    if (auto) params.set("auto", "1");
+    return `${API_URL}/delivery/pedidos/${orderId}/imprimir?${params.toString()}`;
+  }
+
+  function publicStoreUrl(order, vitrine) {
+    if (vitrine?.preview_url) return vitrine.preview_url;
+    const slug = order?.loja_slug || vitrine?.slug || "";
+    if (!slug) return "";
+    const path = vitrine?.preview_path || `/loja/${slug}`;
+    return `${apiOrigin()}${String(path).startsWith("/") ? path : `/${path}`}`;
+  }
+
   async function openPrint(orderId, auto) {
-    const path = `/delivery/pedidos/${orderId}/imprimir`;
-    const res = await fetch(`${API_URL}${path}`, { headers: authHeaders(), cache: "no-store" });
-    if (!res.ok) throw new Error("Não foi possível abrir o cupom para impressão.");
-    let html = await res.text();
-    const baseHref = `${location.origin.replace(/\/$/, "")}/`;
-    if (!/<base\b/i.test(html)) {
-      html = html.replace(/<head(\b[^>]*)>/i, `<head$1><base href="${baseHref}">`);
-    }
-    if (auto) {
-      html = html.replace(
-        /<\/body>/i,
-        '<script>window.addEventListener("load",function(){window.print();});<\/script></body>'
-      );
-    }
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const blobUrl = URL.createObjectURL(blob);
-    const win = window.open(blobUrl, "_blank", "noopener,noreferrer");
-    if (!win) {
-      URL.revokeObjectURL(blobUrl);
-      throw new Error("Permita pop-ups para imprimir o cupom.");
-    }
-    win.addEventListener("load", () => {
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-    }, { once: true });
+    const href = printCupomHref(orderId, auto);
+    if (!href) throw new Error("Faça login novamente para abrir o cupom.");
+    const win = window.open(href, "_blank");
+    if (!win) throw new Error("Permita pop-ups para imprimir o cupom.");
   }
 
   function rotuloCanal(canal) {
@@ -166,13 +170,18 @@
   function renderCupomActions(order) {
     const wa = order.cupom_whatsapp_url;
     const printEnabled = order.impressao_habilitada !== false;
+    const printUrl = printCupomHref(order.id, false);
+    const printAutoUrl = printCupomHref(order.id, true);
     return `<div class="vf-show-card vf-show-card--sidebar">
       <h3 class="vf-show-card__title">Cupom do cliente</h3>
       <p class="vf-show-help">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> pelo navegador ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
       <div class="vf-show-stack">
-        ${printEnabled ? `<a href="#" class="vf-show-btn vf-show-btn--dark vf-show-btn--block" data-vf-print="0" role="button"><i class="bi bi-printer"></i>Abrir cupom / imprimir</a>
-          <a href="#" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block" data-vf-print="1" role="button"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</a>`
-          : `<p class="vf-show-help">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
+        ${printEnabled && printUrl
+          ? `<a href="${esc(printUrl)}" target="_blank" rel="noopener noreferrer" class="vf-show-btn vf-show-btn--dark vf-show-btn--block"><i class="bi bi-printer"></i>Abrir cupom / imprimir</a>
+          <a href="${esc(printAutoUrl)}" target="_blank" rel="noopener noreferrer" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</a>`
+          : printEnabled
+            ? `<p class="vf-show-warn">Faça login novamente para abrir o cupom.</p>`
+            : `<p class="vf-show-help">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
         ${wa
           ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(wa)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Enviar cupom no WhatsApp</a>`
           : `<p class="vf-show-warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
@@ -320,8 +329,7 @@
 
   function renderOrderTopbar(order, vitrine) {
     const sub = [order.cliente_nome, order.cliente_email].filter(Boolean).join(" · ");
-    const slug = vitrine?.slug || "";
-    const vitrineUrl = slug ? `${location.origin.replace(/\/$/, "")}/loja/${encodeURIComponent(slug)}` : "";
+    const vitrineUrl = publicStoreUrl(order, vitrine);
     const logo = mediaUrl(vitrine?.logo_url || vitrine?.logo_path);
     return `<div class="vf-order-page-topbar">
       <div class="vf-order-page-topbar__left">
@@ -665,13 +673,6 @@
         });
       };
     }
-    root.querySelectorAll("[data-vf-print]").forEach((button) => {
-      button.onclick = async (event) => {
-        event.preventDefault();
-        try { await openPrint(order.id, button.dataset.vfPrint === "1"); }
-        catch (error) { toast(error?.message || "Não foi possível imprimir o cupom.", "error"); }
-      };
-    });
     const confirmPix = root.querySelector("[data-vf-confirm-pix]");
     if (confirmPix) {
       confirmPix.onclick = async () => {

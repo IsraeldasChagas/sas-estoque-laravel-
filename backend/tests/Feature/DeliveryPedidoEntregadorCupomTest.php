@@ -135,6 +135,10 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
         $this->assertStringContainsString('Imprimir na térmica', $html);
         $this->assertStringContainsString('Enviar cupom no WhatsApp', $html);
         $this->assertStringContainsString('Recebido', $html);
+
+        $this->get('/api/delivery/pedidos/904/imprimir?x_usuario_id=90&auto=1')
+            ->assertOk()
+            ->assertSee('Cupom fiscal simplificado / comanda', false);
     }
 
     public function test_entregador_publico_marca_pedido_como_entregue(): void
