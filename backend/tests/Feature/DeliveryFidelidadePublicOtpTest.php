@@ -45,6 +45,9 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
         $migration = require database_path('migrations/2026_07_17_140000_create_fidelidade_tables.php');
         $migration->up();
 
+        $lgpdMigration = require database_path('migrations/2026_07_18_210000_add_lgpd_aceite_to_fid_contas.php');
+        $lgpdMigration->up();
+
         $this->unidadeId = (int) DB::table('unidades')->insertGetId([
             'nome' => 'Unidade Fid',
             'created_at' => now(),
@@ -103,13 +106,36 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
     {
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
-            ->assertSee('Solicitar código')
+            ->assertSee('Termo de consentimento (LGPD)')
+            ->assertDontSee('Solicitar código')
             ->assertDontSee('Seu progresso');
+    }
+
+    public function test_sem_lgpd_bloqueia_solicitar_codigo(): void
+    {
+        $this->from('/loja/'.$this->slug.'/fidelidade')
+            ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+                'telefone' => '(69) 99999-8888',
+            ])
+            ->assertRedirect('/loja/'.$this->slug.'/fidelidade')
+            ->assertSessionHas('warning');
+    }
+
+    public function test_aceite_lgpd_libera_formulario_telefone(): void
+    {
+        $this->aceitarLgpd();
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Solicitar código')
+            ->assertDontSee('Termo de consentimento (LGPD)');
     }
 
     public function test_otp_wa_me_e_verificacao_mostra_selos(): void
     {
         config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $this->aceitarLgpd();
 
         $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
             'telefone' => '(69) 99999-8888',
@@ -129,11 +155,17 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
             ->assertSee('Cliente Teste')
             ->assertSee('***8888')
             ->assertSee('4');
+
+        $conta = DB::table('fid_contas')->where('telefone_normalizado', '69999998888')->first();
+        $this->assertNotNull($conta->lgpd_aceite_em);
+        $this->assertSame('2026-07-18', $conta->lgpd_aceite_versao);
     }
 
     public function test_codigo_errado_bloqueia_acesso(): void
     {
         config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $this->aceitarLgpd();
 
         $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
             'telefone' => '69999998888',
@@ -150,6 +182,8 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
 
     public function test_telefone_sem_cartao_mostra_aviso_sem_erro_419(): void
     {
+        $this->aceitarLgpd();
+
         $this->from('/loja/'.$this->slug.'/fidelidade')
             ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
                 'telefone' => '(69) 98888-7777',
@@ -167,6 +201,8 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
     public function test_sessao_antiga_com_cartao_excluido_limpa_e_mostra_formulario(): void
     {
         config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $this->aceitarLgpd();
 
         $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
             'telefone' => '(69) 99999-8888',
@@ -186,6 +222,8 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
     public function test_otp_pendente_some_apos_excluir_cartao(): void
     {
         config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $this->aceitarLgpd();
 
         $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
             'telefone' => '(69) 99999-8888',
@@ -245,6 +283,8 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
         DB::table('dlv_loja_config')->where('slug', $this->slug)->update([
             'unidade_fidelidade_id' => $unidadeReserva,
         ]);
+
+        $this->aceitarLgpd();
 
         $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
             'telefone' => '(69) 91111-2222',
@@ -323,6 +363,8 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
 
         DB::table('fid_contas')->where('unidade_id', $unidadeReserva)->delete();
 
+        $this->aceitarLgpd();
+
         $this->from('/loja/'.$this->slug.'/fidelidade')
             ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
                 'telefone' => '(69) 99999-8888',
@@ -335,5 +377,14 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
             ->assertSee('Não encontramos cartão fidelidade')
             ->assertDontSee('Seu progresso')
             ->assertDontSee('Cliente Delivery');
+    }
+
+    private function aceitarLgpd(): void
+    {
+        $this->from('/loja/'.$this->slug.'/fidelidade')
+            ->post('/loja/'.$this->slug.'/fidelidade/aceitar-lgpd', [
+                'lgpd_autorizo' => '1',
+            ])
+            ->assertRedirect('/loja/'.$this->slug.'/fidelidade');
     }
 }

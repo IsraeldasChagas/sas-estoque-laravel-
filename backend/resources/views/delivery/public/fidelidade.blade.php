@@ -34,6 +34,26 @@
 
         <h2 class="vf-fid-subtitle">Ver meus selos</h2>
 
+        @if(!($lgpd_aceito ?? false))
+            <div class="vf-fid-lgpd">
+                <h3>Termo de consentimento (LGPD)</h3>
+                <div class="vf-fid-lgpd__text">
+                    <p>{{ $lgpd_texto ?? '' }}</p>
+                    <p class="muted">
+                        <a href="{{ route('delivery.public.fidelity.privacy', $slug) }}" target="_blank" rel="noopener noreferrer">Leia a política de privacidade completa</a>
+                    </p>
+                </div>
+                <form method="post" action="{{ route('delivery.public.fidelity.lgpd', $slug) }}" class="vf-fid-form">
+                    @csrf
+                    <label class="vf-fid-lgpd__check">
+                        <input type="checkbox" name="lgpd_autorizo" value="1" {{ old('lgpd_autorizo') ? 'checked' : '' }} required>
+                        <span>Autorizo o uso dos meus dados sensíveis exclusivamente para a segurança e consulta do meu cartão fidelidade.</span>
+                    </label>
+                    @error('lgpd_autorizo')<p class="vf-fid-error">{{ $message }}</p>@enderror
+                    <button type="submit" class="btn primary">Autorizo e continuar</button>
+                </form>
+            </div>
+        @else
         @if($fidelidade_otp_pending ?? false)
             @php
                 $pend = session('sas_fid_otp_pending', []);
@@ -85,9 +105,10 @@
                 <button type="submit" class="btn primary">Solicitar código</button>
             </form>
         @endif
+        @endif
     </div>
 
-    @if($mostrar_progresso_selos ?? false)
+    @if(($lgpd_aceito ?? false) && ($mostrar_progresso_selos ?? false))
         @if($conta)
             @php
                 $selos = (int) ($conta->saldo_selos ?? 0);

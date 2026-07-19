@@ -681,10 +681,12 @@ class ReservaMesaController extends Controller
         $recompensas = ($snap['disponivel'] && $snap['programa_ativo'])
             ? $fid->listarRecompensas((int) $reserva->unidade_id)
             : [];
+        $vitrine = app(\App\Services\Fidelidade\FidelidadeVitrineLinkService::class)->paraReserva($reserva, $request);
 
         return response()->json(array_merge($snap, [
             'recompensas' => $recompensas,
             'reserva_id' => (int) $reserva->id,
+            'vitrine_fidelidade' => $vitrine,
         ]));
     }
 
@@ -736,6 +738,8 @@ class ReservaMesaController extends Controller
             'ledger' => $result['ledger'],
             'replayed' => $result['replayed'],
             'criado_conta' => $result['criado_conta'],
+            'vitrine_fidelidade' => app(\App\Services\Fidelidade\FidelidadeVitrineLinkService::class)
+                ->paraReserva($result['reserva'], $request),
         ], $result['replayed'] ? 200 : 201);
     }
 

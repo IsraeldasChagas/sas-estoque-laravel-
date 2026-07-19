@@ -8187,6 +8187,46 @@ select[size]:not([size="1"]) {
   border-color: #b91c1c;
 }
 
+.reserva-fid__link-vitrine {
+  margin: 0.75rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+.reserva-fid__link-title {
+  margin: 0 0 0.35rem;
+  color: #1e3a8a;
+}
+.reserva-fid__link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.88rem;
+}
+.reserva-fid__link-field input {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.78rem;
+  color: #334155;
+}
+.reserva-fid__link-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+.reserva-fid__btn-wa {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .reserva-meios-panel {
   margin: 0.75rem 0 1rem;
   border: 1px solid rgba(31, 107, 69, 0.15);

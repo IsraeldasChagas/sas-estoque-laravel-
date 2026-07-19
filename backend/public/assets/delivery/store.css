@@ -340,6 +340,20 @@ a{color:inherit}
 .vf-fid-saldo{text-align:center;margin:0 0 8px}
 .vf-fid-mask{margin:0 0 8px}
 .vf-fid-back{margin-top:18px}
+.vf-fid-lgpd{
+  margin-top:10px;padding:16px;border:1px solid var(--line,#e2e8f0);border-radius:.75rem;background:#f8fafc;
+}
+.vf-fid-lgpd h3{margin:0 0 10px;font-size:1rem;color:#0f172a}
+.vf-fid-lgpd__text{font-size:.88rem;line-height:1.5;color:#334155;margin-bottom:12px}
+.vf-fid-lgpd__text p{margin:0 0 8px}
+.vf-fid-lgpd__check{
+  display:flex;align-items:flex-start;gap:10px;font-size:.88rem;font-weight:500;color:#334155;line-height:1.45;
+}
+.vf-fid-lgpd__check input{margin-top:3px;flex-shrink:0;width:18px;height:18px}
+.vf-fid-lgpd-politica h2{margin:1.1rem 0 .35rem;font-size:.95rem;color:#0f172a}
+.vf-fid-lgpd-politica h2:first-of-type{margin-top:.5rem}
+.vf-fid-lgpd-politica p{margin:0 0 .75rem;line-height:1.5;font-size:.9rem;color:#334155}
+.vf-fid-lgpd-politica__note{margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--line,#e2e8f0)}
 .vf-fid-collapse{padding:0;overflow:hidden;margin-bottom:14px}
 .vf-fid-collapse__btn{
   width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;

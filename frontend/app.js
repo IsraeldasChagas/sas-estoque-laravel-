@@ -18898,6 +18898,46 @@ function reservaFidColetarPagamentos() {
   return pagamentos;
 }
 
+function reservaFidHtmlLinkVitrine(vitrine) {
+  if (!vitrine || !vitrine.url) return '';
+  var url = String(vitrine.url);
+  var wa = vitrine.whatsapp_url ? String(vitrine.whatsapp_url) : '';
+  return '<div class="reserva-fid__link-vitrine">' +
+    '<p class="reserva-fid__link-title"><strong>Consulta do cartão fidelidade</strong></p>' +
+    '<p class="subtle-text" style="margin:0 0 0.5rem;">Envie este link ao cliente para consultar selos na vitrine (com o telefone da reserva).</p>' +
+    '<label class="reserva-fid__link-field">Link da vitrine<input type="text" id="reservaFidLinkVitrine" readonly value="' + escapeHtml(url) + '"></label>' +
+    '<div class="reserva-fid__link-acoes">' +
+      '<button type="button" class="btn secondary reserva-fid__btn-copy" id="btnReservaFidCopiarLink">Copiar link</button>' +
+      (wa
+        ? '<a class="btn primary reserva-fid__btn-wa" id="btnReservaFidWhatsApp" href="' + escapeHtml(wa) + '" target="_blank" rel="noopener noreferrer">Enviar WhatsApp</a>'
+        : '<span class="subtle-text">Telefone inválido para WhatsApp.</span>') +
+    '</div></div>';
+}
+
+function reservaFidBindLinkVitrine(vitrine) {
+  var inp = document.getElementById('reservaFidLinkVitrine');
+  var btnCopy = document.getElementById('btnReservaFidCopiarLink');
+  if (!inp || !btnCopy || !vitrine || !vitrine.url) return;
+  btnCopy.addEventListener('click', async function() {
+    var url = String(vitrine.url || inp.value || '');
+    if (!url) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        inp.focus();
+        inp.select();
+        document.execCommand('copy');
+      }
+      showToast('Link copiado! Cole no WhatsApp do cliente.', 'success');
+    } catch (_) {
+      inp.focus();
+      inp.select();
+      showToast('Selecione o link acima e copie manualmente (Ctrl+C).', 'warning');
+    }
+  });
+}
+
 function reservaFidHtmlPagamentosRegistrados(pagamentos) {
   if (!pagamentos || !pagamentos.length) return '';
   return '<ul class="reserva-fid__pag-list">' + pagamentos.map(function(p) {
@@ -19028,6 +19068,7 @@ async function renderReservaFidelidade(reservaId) {
       ? data.formas_pagamento_cadastro
       : (data.formas_pagamento_cadastro ? Object.values(data.formas_pagamento_cadastro) : []);
     var pagamentosReg = data.pagamentos_conta || [];
+    var vitrine = data.vitrine_fidelidade || {};
 
     if (statusEl) {
       if (contaPaga) statusEl.textContent = participa ? (seloOk ? 'Conta paga · selo ok' : 'Conta paga') : 'Conta paga · sem fidelidade';
@@ -19113,14 +19154,19 @@ async function renderReservaFidelidade(reservaId) {
         ? 'Confirme os <strong>dados fidelidade</strong> acima antes de registrar a conta paga.'
         : 'Informe valor e formas de pagamento (só registro). Depois use <strong>Liberar mesa</strong> abaixo.');
 
+    var linkVitrineHtml = (participa && conta && vitrine.url) ? reservaFidHtmlLinkVitrine(vitrine) : '';
+
     bodyEl.innerHTML =
       optinHtml +
       fidSaldoHtml +
+      linkVitrineHtml +
       '<div class="reserva-fid__conta">' +
         '<p class="subtle-text" style="margin:0 0 0.5rem;">' + contaIntro + '</p>' +
         contaHtml +
       '</div>' +
       resgateHtml;
+
+    reservaFidBindLinkVitrine(vitrine);
 
     var chk = document.getElementById('reservaFidParticipa');
     var cadastroWrap = document.getElementById('reservaFidCadastro');

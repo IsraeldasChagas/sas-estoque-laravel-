@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Delivery;
 
 use App\Http\Controllers\Controller;
+use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
 use App\Services\Fidelidade\FidelidadePublicOtpCache;
@@ -32,6 +33,8 @@ class DeliveryFidelidadePublicController extends Controller
 
     private const SESSION_ACESSO = 'sas_fid_acesso';
 
+    private const SESSION_LGPD = 'sas_fid_lgpd_aceite';
+
     public function __construct(
         private FidelidadePublicOtpEntrega $otpEntrega,
         private FidelidadePublicConsultaService $consulta,
@@ -45,14 +48,15 @@ class DeliveryFidelidadePublicController extends Controller
         $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
         abort_unless($programa, 404);
 
+        $lgpdAceito = $this->lgpdAceitoNaSessao($unidadeVitrine);
         $acesso = $this->acessoValido($unidadeVitrine);
-        $otpPending = $this->otpPendenteValido($unidadeVitrine, $config);
+        $otpPending = $lgpdAceito && $this->otpPendenteValido($unidadeVitrine, $config);
 
         $conta = null;
         $mostrarProgresso = false;
         $telefoneMascara = null;
         $unidadeFid = $unidadeFidPadrao;
-        if ($acesso !== null && ! $otpPending) {
+        if ($lgpdAceito && $acesso !== null && ! $otpPending) {
             $norm = $acesso['tel_norm'];
             $telefoneMascara = strlen($norm) >= 4 ? '***'.substr($norm, -4) : $norm;
             $contaId = (int) ($acesso['conta_id'] ?? 0);
@@ -87,7 +91,56 @@ class DeliveryFidelidadePublicController extends Controller
             'mostrar_progresso_selos' => $mostrarProgresso,
             'telefone_selos_mascara' => $telefoneMascara,
             'fidelidade_otp_pending' => $otpPending,
+            'lgpd_aceito' => $lgpdAceito,
+            'lgpd_texto' => FidelidadeLgpdService::textoTermo(
+                trim((string) ($config->nome_loja ?: 'Loja')),
+                $this->nomeUnidade($unidadeFid),
+                $this->contatoLoja($config),
+            ),
         ]);
+    }
+
+    public function privacidade(string $slug): View
+    {
+        $config = $this->config($slug);
+        $unidadeVitrine = (int) $config->unidade_id;
+        $unidadeFidPadrao = $this->consulta->unidadeFidelidade($config);
+        $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
+        abort_unless($programa, 404);
+
+        $nomeUnidade = $this->nomeUnidade($unidadeFidPadrao);
+
+        return view('delivery.public.privacidade-fidelidade', [
+            'config' => $config,
+            'slug' => $slug,
+            'passoAtual' => 'loja',
+            'fidelidadeAtiva' => true,
+            'footerFixed' => false,
+            'unidade_fidelidade_nome' => $nomeUnidade,
+            'politica_secoes' => FidelidadeLgpdService::secoesPolitica(
+                trim((string) ($config->nome_loja ?: 'Loja')),
+                $nomeUnidade,
+                $this->contatoLoja($config),
+            ),
+        ]);
+    }
+
+    public function aceitarLgpd(Request $request, string $slug): RedirectResponse
+    {
+        $config = $this->config($slug);
+        $unidadeVitrine = (int) $config->unidade_id;
+
+        $request->validate([
+            'lgpd_autorizo' => ['accepted'],
+        ]);
+
+        $request->session()->put(self::SESSION_LGPD, [
+            'unidade_id' => $unidadeVitrine,
+            'versao' => FidelidadeLgpdService::VERSAO,
+            'aceite_em' => now()->timestamp,
+        ]);
+
+        return $this->voltar($slug)->with('status', 'Termo aceito. Agora você pode consultar seu cartão.');
     }
 
     public function solicitarCodigo(Request $request, string $slug): RedirectResponse
@@ -98,6 +151,10 @@ class DeliveryFidelidadePublicController extends Controller
         $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
         if (! $programa) {
             return $this->voltar($slug)->with('warning', 'Programa de fidelidade indisponível.');
+        }
+
+        if ($redirect = $this->exigirLgpd($unidadeVitrine, $slug)) {
+            return $redirect;
         }
 
         $data = $request->validate([
@@ -170,6 +227,11 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $unidadeId = (int) $config->unidade_id;
+
+        if ($redirect = $this->exigirLgpd($unidadeId, $slug)) {
+            return $redirect;
+        }
+
         $pending = session(self::SESSION_OTP);
         if (! is_array($pending) || (int) ($pending['unidade_id'] ?? 0) !== $unidadeId || ! is_string($pending['tel_norm'] ?? null)) {
             return $this->voltar($slug)->with('warning', 'Peça um código informando o telefone novamente.');
@@ -273,6 +335,11 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $unidadeId = (int) $config->unidade_id;
+
+        if ($redirect = $this->exigirLgpd($unidadeId, $slug)) {
+            return $redirect;
+        }
+
         $pending = session(self::SESSION_OTP);
         if (! is_array($pending) || (int) ($pending['unidade_id'] ?? 0) !== $unidadeId || ! is_string($pending['tel_norm'] ?? null)) {
             return $this->voltar($slug)->with('warning', 'Peça um novo código antes de continuar.');
@@ -330,6 +397,8 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $request->session()->forget(self::SESSION_OTP);
+        FidelidadeLgpdService::registrarAceite((int) $conta->id, $request->ip());
+
         $request->session()->put(self::SESSION_ACESSO, [
             'unidade_id' => $unidadeId,
             'unidade_fidelidade_id' => (int) $conta->unidade_id,
@@ -346,6 +415,28 @@ class DeliveryFidelidadePublicController extends Controller
         return $this->voltar($slug)->with(
             'warning',
             'O cartão fidelidade não é cadastrado por aqui. Ele é criado automaticamente quando a loja confirma o pagamento da sua reserva de mesa.'
+        );
+    }
+
+    private function lgpdAceitoNaSessao(int $unidadeId): bool
+    {
+        $v = session(self::SESSION_LGPD);
+        if (! is_array($v) || (int) ($v['unidade_id'] ?? 0) !== $unidadeId) {
+            return false;
+        }
+
+        return (string) ($v['versao'] ?? '') === FidelidadeLgpdService::VERSAO;
+    }
+
+    private function exigirLgpd(int $unidadeId, string $slug): ?RedirectResponse
+    {
+        if ($this->lgpdAceitoNaSessao($unidadeId)) {
+            return null;
+        }
+
+        return $this->voltar($slug)->with(
+            'warning',
+            'Leia e aceite o termo LGPD antes de consultar seu cartão.'
         );
     }
 
@@ -550,6 +641,24 @@ class DeliveryFidelidadePublicController extends Controller
         $nome = DB::table('unidades')->where('id', $unidadeId)->value('nome');
 
         return trim((string) $nome);
+    }
+
+    private function contatoLoja(object $config): ?string
+    {
+        $whats = trim((string) ($config->whatsapp ?? ''));
+        if ($whats === '') {
+            $whats = trim((string) ($config->telefone ?? ''));
+        }
+        if ($whats !== '') {
+            return 'WhatsApp/telefone '.$whats;
+        }
+
+        $endereco = trim((string) ($config->endereco_texto ?? ''));
+        if ($endereco !== '') {
+            return 'endereço informado na vitrine';
+        }
+
+        return null;
     }
 
     private function imagemPublica(?string $path, int $unidadeId, string $grupo): ?string

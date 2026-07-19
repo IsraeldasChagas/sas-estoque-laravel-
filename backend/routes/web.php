@@ -15,6 +15,9 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
     Route::get('/', [DeliveryPublicController::class, 'loja'])->name('store');
     Route::get('/produto/{id}', [DeliveryPublicController::class, 'produto'])->whereNumber('id')->name('product');
     Route::get('/fidelidade', [DeliveryFidelidadePublicController::class, 'show'])->name('fidelity');
+    Route::get('/fidelidade/privacidade', [DeliveryFidelidadePublicController::class, 'privacidade'])->name('fidelity.privacy');
+    Route::post('/fidelidade/aceitar-lgpd', [DeliveryFidelidadePublicController::class, 'aceitarLgpd'])
+        ->middleware('throttle:20,1')->name('fidelity.lgpd');
     Route::post('/fidelidade/solicitar-codigo', [DeliveryFidelidadePublicController::class, 'solicitarCodigo'])
         ->middleware('throttle:12,1')->name('fidelity.request');
     Route::post('/fidelidade/reenviar-codigo', [DeliveryFidelidadePublicController::class, 'reenviarCodigo'])
