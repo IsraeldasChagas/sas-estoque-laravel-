@@ -57,11 +57,8 @@
                 <label class="span-2">E-mail <span class="muted">(opcional)</span><input name="cliente_email" type="email" maxlength="190"></label>
                 @if($fidelidadeAtiva && $programaFidelidade)
                 <div class="span-2 fidelidade-opt">
-                    <label class="choice-inline"><input type="checkbox" id="vf-fidelidade-abrir" value="1"> Sim, quero o <strong>{{ $programaFidelidade->nome_exibicao ?? 'Cartão fidelidade' }}</strong> <span class="muted">(1 selo nesta compra)</span></label>
-                    <p class="checkout-freight-note">Ao marcar, abrimos uma janela para confirmar telefone e CPF do cartão.</p>
-                    <input type="hidden" name="fidelidade_quero" id="vf-fidelidade-quero" value="0">
-                    <input type="hidden" name="fidelidade_telefone" id="vf-fidelidade-tel-hidden" value="">
-                    <input type="hidden" name="fidelidade_cpf" id="vf-fidelidade-cpf-hidden" value="">
+                    <label class="choice-inline"><input type="checkbox" id="vf-fidelidade-quero-check" name="fidelidade_quero" value="1"> Sim, quero o <strong>{{ $programaFidelidade->nome_exibicao ?? 'Cartão fidelidade' }}</strong> <span class="muted">(1 selo nesta compra)</span></label>
+                    <p class="checkout-freight-note">Depois de confirmar o pedido, abriremos um formulário para nome completo, e-mail, WhatsApp, CPF e aceite LGPD — igual à reserva de mesa.</p>
                 </div>
                 @endif
             </div>
@@ -149,19 +146,6 @@
     <div class="form-error span-2" data-checkout-error></div>
 </form>
 </div>
-
-@if($fidelidadeAtiva && ($programaFidelidade ?? null))
-<dialog id="vfModalFidelidadeCheckout" class="vf-dialog">
-    <div class="vf-dialog__head"><h2>{{ $programaFidelidade->nome_exibicao ?? 'Cartão fidelidade' }}</h2><button type="button" data-fid-close>×</button></div>
-    <p class="checkout-freight-note">Confirme o telefone do pedido e informe seu CPF para ativar o cartão nesta loja.</p>
-    <label>Telefone / WhatsApp<input type="tel" id="vf-fidelidade-tel-modal" maxlength="32"></label>
-    <label>CPF<input type="text" id="vf-fidelidade-cpf-modal" maxlength="14" placeholder="000.000.000-00" inputmode="numeric"></label>
-    <div class="vf-dialog__foot">
-        <button type="button" class="btn ghost" id="vf-fidelidade-cancelar">Cancelar</button>
-        <button type="button" class="btn primary" id="vf-fidelidade-confirmar">Confirmar</button>
-    </div>
-</dialog>
-@endif
 
 @push('scripts')
 <script>
@@ -313,6 +297,7 @@
       body.forma_pagamento = document.querySelector('.vf-pay-opt:checked')?.value;
       body.pagamento_forma = body.forma_pagamento;
       body.cliente_whatsapp = body.cliente_telefone;
+      body.fidelidade_quero = document.getElementById('vf-fidelidade-quero-check')?.checked ? 1 : 0;
       body.endereco_cep = body.cep_entrega;
       body.endereco_rua = body.endereco;
       body.endereco_numero = body.entrega_numero || '';

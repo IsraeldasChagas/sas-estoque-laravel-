@@ -41,6 +41,8 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
     Route::post('/checkout', [DeliveryPublicController::class, 'finalizar'])->middleware('throttle:10,1')->name('finish');
     Route::get('/sucesso/{codigo}/{token}', [DeliveryPublicController::class, 'sucesso'])
         ->where('token', '[a-f0-9]{64}')->name('success');
+    Route::post('/sucesso/{codigo}/{token}/fidelidade', [DeliveryPublicController::class, 'fidelidadePedido'])
+        ->where('token', '[a-f0-9]{64}')->middleware('throttle:15,1')->name('success.fidelity');
     Route::get('/pedido/{codigo}/{token}', [DeliveryPublicController::class, 'pedido'])
         ->where('token', '[a-f0-9]{64}')->name('order');
     Route::get('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'show'])

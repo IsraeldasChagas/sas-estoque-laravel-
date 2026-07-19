@@ -170,6 +170,9 @@ class DeliveryPedidoService
                 $pedidoData['estoque_baixado_em'] = $publico ? $agora : null;
                 $pedidoData['estoque_restaurado_em'] = null;
             }
+            if (Schema::hasColumn('dlv_pedidos', 'participa_fidelidade')) {
+                $pedidoData['participa_fidelidade'] = filter_var($payload['fidelidade_quero'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            }
             $id = DB::table('dlv_pedidos')->insertGetId($pedidoData);
 
             $codigo = 'DLV-'.str_pad((string) $unidadeId, 3, '0', STR_PAD_LEFT).'-'.$agora->format('Y').'-'.str_pad((string) $id, 5, '0', STR_PAD_LEFT);

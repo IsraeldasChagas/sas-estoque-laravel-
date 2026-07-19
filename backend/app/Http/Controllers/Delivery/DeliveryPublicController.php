@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Delivery;
 use App\Http\Controllers\Controller;
 use App\Services\Delivery\DeliveryFreteService;
 use App\Services\Delivery\DeliveryPedidoService;
+use App\Services\Fidelidade\DeliveryPedidoFidelidadeService;
+use App\Services\Fidelidade\FidelidadeLgpdService;
+use App\Services\Fidelidade\FidelidadePublicConsultaService;
 use App\Support\Delivery\DeliveryLojaCheckoutHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +22,8 @@ class DeliveryPublicController extends Controller
     public function __construct(
         private readonly DeliveryPedidoService $pedidos,
         private readonly DeliveryFreteService $frete,
+        private readonly DeliveryPedidoFidelidadeService $pedidoFidelidade,
+        private readonly FidelidadePublicConsultaService $fidelidadeConsulta,
     ) {}
 
     public function loja(string $slug): View
@@ -43,7 +48,7 @@ class DeliveryPublicController extends Controller
             ->map(fn ($a) => (object) array_merge((array) $a, ['foto_url' => $this->imagem($a->foto_path ?? null, $unidadeId, 'adicionais')]));
         $banners = $this->bannersPublicos($config);
         $passoAtual = 'loja';
-        $fidelidadeAtiva = $this->fidelidadeAtiva($unidadeId);
+        $fidelidadeAtiva = $this->fidelidadeAtiva($config);
         $footerFixed = true;
 
         return view('delivery.public.loja', compact(
@@ -70,7 +75,7 @@ class DeliveryPublicController extends Controller
             ->where('a.ativo', 1)->where('a.tipo', 'acrescentar')
             ->orderBy('a.ordem')->orderBy('a.nome')->get(['a.*']);
         $passoAtual = 'loja';
-        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $fidelidadeAtiva = $this->fidelidadeAtiva($config);
         $footerFixed = false;
 
         return view('delivery.public.produto', compact(
@@ -84,7 +89,7 @@ class DeliveryPublicController extends Controller
         $config = $this->config($slug);
         $prefs = $this->entregaPrefs($slug);
         $passoAtual = 'carrinho';
-        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $fidelidadeAtiva = $this->fidelidadeAtiva($config);
         $footerFixed = false;
         $permiteBalcao = (bool) $config->permite_retirada;
         $freteModo = $this->frete->modoEfetivo($config);
@@ -133,10 +138,8 @@ class DeliveryPublicController extends Controller
         $cepDigits = $prefs['cep'];
         $permiteBalcao = (bool) $config->permite_retirada;
         $passoAtual = 'checkout';
-        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
-        $programaFidelidade = $fidelidadeAtiva
-            ? DB::table('fid_programas')->where('unidade_id', $config->unidade_id)->where('ativo', 1)->first()
-            : null;
+        $fidelidadeAtiva = $this->fidelidadeAtiva($config);
+        $programaFidelidade = $fidelidadeAtiva ? $this->programaFidelidade($config) : null;
         $footerFixed = false;
         $freteModo = $this->frete->modoEfetivo($config);
         $checkoutOsrm = $freteModo === DeliveryFreteService::MODO_OSRM;
@@ -287,6 +290,7 @@ class DeliveryPublicController extends Controller
             'pagamento_dinheiro_modo' => 'nullable|in:exato,com_troco',
             'pagamento_troco_para' => 'nullable|numeric|min:0',
             'observacoes' => 'nullable|string|max:220',
+            'fidelidade_quero' => 'nullable|boolean',
             'itens' => 'required|array|min:1|max:80',
             'itens.*.produto_id' => 'required|integer',
             'itens.*.quantidade' => 'required|integer|min:1|max:99',
@@ -363,12 +367,51 @@ class DeliveryPublicController extends Controller
         [$config, $pedido] = $this->pedidoSeguro($slug, $codigo, $token);
         $passoAtual = 'pedido';
         $pedidoShowUrl = route('delivery.public.order', [$slug, $codigo, $token]);
-        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $fidelidadeAtiva = $this->fidelidadeAtiva($config);
+        $programaFidelidade = $fidelidadeAtiva ? $this->programaFidelidade($config) : null;
+        $fidelidadeSnap = $this->pedidoFidelidade->snapshot($pedido, $config);
+        $unidadeFidelidadeNome = $this->nomeUnidadeFidelidade($config);
+        $lgpdTexto = FidelidadeLgpdService::textoTermo(
+            (string) ($config->nome_loja ?: 'Loja'),
+            $unidadeFidelidadeNome,
+            $config->whatsapp ?? $config->telefone ?? null
+        );
         $footerFixed = false;
 
         return view('delivery.public.sucesso', compact(
-            'config', 'slug', 'pedido', 'token', 'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed'
+            'config', 'slug', 'pedido', 'token', 'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed',
+            'programaFidelidade', 'fidelidadeSnap', 'lgpdTexto', 'unidadeFidelidadeNome'
         ));
+    }
+
+    public function fidelidadePedido(Request $request, string $slug, string $codigo, string $token): JsonResponse
+    {
+        [$config, $pedido] = $this->pedidoSeguro($slug, $codigo, $token);
+
+        $validator = Validator::make($request->all(), [
+            'fidelidade_nome' => 'required|string|min:3|max:160',
+            'fidelidade_cpf' => 'required|string|max:20',
+            'fidelidade_email' => 'required|email|max:160',
+            'fidelidade_whatsapp' => 'required|string|max:30',
+            'lgpd_autorizo' => 'required|accepted',
+        ]);
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $data = $validator->validated();
+        $result = $this->pedidoFidelidade->concluirCadastro(
+            $pedido,
+            $config,
+            $data['fidelidade_nome'],
+            $data['fidelidade_cpf'],
+            $data['fidelidade_email'],
+            $data['fidelidade_whatsapp'],
+            true,
+            $request->ip()
+        );
+
+        return response()->json(array_merge(['ok' => true], $result));
     }
 
     public function pedido(string $slug, string $codigo, string $token): View
@@ -378,7 +421,7 @@ class DeliveryPublicController extends Controller
         $historico = DB::table('dlv_pedido_historico')->where('pedido_id', $pedido->id)->orderBy('id')->get();
         $passoAtual = 'pedido';
         $pedidoShowUrl = route('delivery.public.order', [$slug, $codigo, $token]);
-        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $fidelidadeAtiva = $this->fidelidadeAtiva($config);
         $footerFixed = false;
 
         return view('delivery.public.pedido', compact(
@@ -398,13 +441,36 @@ class DeliveryPublicController extends Controller
         return $config;
     }
 
-    private function fidelidadeAtiva(int $unidadeId): bool
+    private function fidelidadeAtiva(object $config): bool
+    {
+        return $this->programaFidelidade($config) !== null;
+    }
+
+    private function programaFidelidade(object $config): ?object
     {
         if (! \Illuminate\Support\Facades\Schema::hasTable('fid_programas')) {
-            return false;
+            return null;
         }
 
-        return DB::table('fid_programas')->where('unidade_id', $unidadeId)->where('ativo', 1)->exists();
+        $unidadeFid = $this->fidelidadeConsulta->unidadeFidelidade($config);
+
+        return DB::table('fid_programas')
+            ->where('unidade_id', $unidadeFid)
+            ->where('ativo', 1)
+            ->first();
+    }
+
+    private function nomeUnidadeFidelidade(object $config): string
+    {
+        $unidadeFid = $this->fidelidadeConsulta->unidadeFidelidade($config);
+        if (\Illuminate\Support\Facades\Schema::hasTable('unidades')) {
+            $nome = DB::table('unidades')->where('id', $unidadeFid)->value('nome');
+            if (is_string($nome) && trim($nome) !== '') {
+                return trim($nome);
+            }
+        }
+
+        return (string) ($config->nome_loja ?: 'Loja');
     }
 
     /** @return \Illuminate\Support\Collection<int, array{url:string,alt:?string}> */

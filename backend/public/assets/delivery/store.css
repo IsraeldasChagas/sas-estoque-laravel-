@@ -646,6 +646,10 @@ input:focus,textarea:focus,select:focus{outline:2px solid #bfdbfe;border-color:v
 .vf-dialog::backdrop{background:rgba(15,23,42,.5)}
 .vf-dialog__head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .vf-dialog__foot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.vf-dialog--fidelidade{max-width:480px}
+.vf-fid-form-stack{display:grid;gap:10px}
+.vf-fid-form-stack label{display:grid;gap:4px;font-size:.88rem;font-weight:600;color:#334155}
+.vf-fid-form-stack input{width:100%;padding:10px 12px;border:1px solid var(--line,#e2e8f0);border-radius:8px;font:inherit}
 .uppercase{text-transform:uppercase}
 #vf-checkout-entrega-fields.is-hidden{display:none}
 
