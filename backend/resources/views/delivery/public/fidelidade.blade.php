@@ -166,7 +166,7 @@
 
         <h2 class="vf-fid-subtitle">Ver meus selos</h2>
 
-        @if(!($lgpd_aceito ?? false))
+        @if($mostrar_lgpd ?? false)
             <div class="vf-fid-lgpd">
                 <h3>Termo de consentimento (LGPD)</h3>
                 <div class="vf-fid-lgpd__text">
@@ -185,7 +185,7 @@
                     <button type="submit" class="btn primary">Autorizo e continuar</button>
                 </form>
             </div>
-        @else
+        @elseif($lgpd_aceito ?? false)
         @if($fidelidade_otp_pending ?? false)
             @php
                 $pend = session('sas_fid_otp_pending', []);

@@ -2,6 +2,7 @@
 
 namespace App\Services\Fidelidade;
 
+use App\Http\Controllers\Delivery\DeliveryFidelidadePublicController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -158,6 +159,7 @@ final class DeliveryPedidoFidelidadeService
 
         $conta = $this->garantirConta($pedido, $config, $unidadeFid, $tel, $dados);
         FidelidadeLgpdService::registrarAceite((int) $conta->id, $ip);
+        DeliveryFidelidadePublicController::limparOrigemCompraSessao((int) $config->unidade_id);
 
         $credito = $this->creditarSelo($pedido, $config, $programa, $conta);
 

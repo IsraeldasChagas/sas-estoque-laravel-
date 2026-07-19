@@ -58,6 +58,25 @@ class FidelidadeLgpdService
         ]);
     }
 
+    public static function contaJaAceitou(?object $conta): bool
+    {
+        if (! $conta || ! Schema::hasColumn('fid_contas', 'lgpd_aceite_em')) {
+            return false;
+        }
+
+        return ! empty($conta->lgpd_aceite_em)
+            && (string) ($conta->lgpd_aceite_versao ?? '') === self::VERSAO;
+    }
+
+    public static function marcarSessaoAceite(int $unidadeId): array
+    {
+        return [
+            'unidade_id' => $unidadeId,
+            'versao' => self::VERSAO,
+            'aceite_em' => now()->timestamp,
+        ];
+    }
+
     private static function fraseContato(?string $contatoLoja, bool $completa = false): string
     {
         $contato = trim((string) $contatoLoja);

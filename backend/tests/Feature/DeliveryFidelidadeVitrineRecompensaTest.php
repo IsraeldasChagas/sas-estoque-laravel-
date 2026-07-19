@@ -263,8 +263,7 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
 
     private function aceitarLgpd(): void
     {
-        $this->from('/loja/'.$this->slug.'/fidelidade')
-            ->post('/loja/'.$this->slug.'/fidelidade/aceitar-lgpd', ['lgpd_autorizo' => '1'])
-            ->assertRedirect('/loja/'.$this->slug.'/fidelidade');
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk();
     }
 }

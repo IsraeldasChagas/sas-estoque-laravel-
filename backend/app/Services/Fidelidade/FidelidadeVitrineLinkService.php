@@ -23,7 +23,7 @@ final class FidelidadeVitrineLinkService
             return $this->vazio();
         }
 
-        $url = $base.'/loja/'.$loja->slug.'/fidelidade';
+        $url = $base.'/loja/'.$loja->slug.'/fidelidade?origem=reserva';
         $nomeCliente = trim((string) ($reserva->fidelidade_nome ?: $reserva->nome_cliente ?: ''));
         $saudacao = $nomeCliente !== '' ? 'Olá, '.$nomeCliente.'!' : 'Olá!';
         $nomeLoja = trim((string) ($loja->nome_loja ?: 'Sabor Paraense'));

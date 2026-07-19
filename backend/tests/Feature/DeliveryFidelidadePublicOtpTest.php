@@ -106,26 +106,42 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
     {
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
-            ->assertSee('Termo de consentimento (LGPD)')
-            ->assertDontSee('Solicitar código')
+            ->assertDontSee('Termo de consentimento (LGPD)')
+            ->assertSee('Solicitar código')
             ->assertDontSee('Seu progresso');
     }
 
-    public function test_sem_lgpd_bloqueia_solicitar_codigo(): void
+    public function test_origem_reserva_mostra_lgpd(): void
     {
-        $this->from('/loja/'.$this->slug.'/fidelidade')
+        $this->get('/loja/'.$this->slug.'/fidelidade?origem=reserva')
+            ->assertOk()
+            ->assertSee('Termo de consentimento (LGPD)')
+            ->assertDontSee('Solicitar código');
+    }
+
+    public function test_sem_lgpd_bloqueia_solicitar_codigo_apenas_com_origem(): void
+    {
+        $this->get('/loja/'.$this->slug.'/fidelidade?origem=reserva')->assertOk();
+
+        $this->from('/loja/'.$this->slug.'/fidelidade?origem=reserva')
             ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
                 'telefone' => '(69) 99999-8888',
             ])
             ->assertRedirect('/loja/'.$this->slug.'/fidelidade')
             ->assertSessionHas('warning');
+
+        $this->from('/loja/'.$this->slug.'/fidelidade')
+            ->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+                'telefone' => '(69) 99999-8888',
+            ])
+            ->assertRedirect('/loja/'.$this->slug.'/fidelidade');
     }
 
     public function test_aceite_lgpd_libera_formulario_telefone(): void
     {
         $this->aceitarLgpd();
 
-        $this->get('/loja/'.$this->slug.'/fidelidade')
+        $this->get('/loja/'.$this->slug.'/fidelidade?origem=reserva')
             ->assertOk()
             ->assertSee('Solicitar código')
             ->assertDontSee('Termo de consentimento (LGPD)');
@@ -381,7 +397,11 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
 
     private function aceitarLgpd(): void
     {
-        $this->from('/loja/'.$this->slug.'/fidelidade')
+        $this->from('/loja/'.$this->slug.'/fidelidade?origem=reserva')
+            ->get('/loja/'.$this->slug.'/fidelidade?origem=reserva')
+            ->assertOk();
+
+        $this->from('/loja/'.$this->slug.'/fidelidade?origem=reserva')
             ->post('/loja/'.$this->slug.'/fidelidade/aceitar-lgpd', [
                 'lgpd_autorizo' => '1',
             ])

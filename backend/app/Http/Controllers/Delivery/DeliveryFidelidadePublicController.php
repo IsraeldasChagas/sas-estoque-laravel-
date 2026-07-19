@@ -39,6 +39,8 @@ class DeliveryFidelidadePublicController extends Controller
 
     private const SESSION_LGPD = 'sas_fid_lgpd_aceite';
 
+    private const SESSION_ORIGEM = 'sas_fid_origem';
+
     public function __construct(
         private FidelidadePublicOtpEntrega $otpEntrega,
         private FidelidadePublicConsultaService $consulta,
@@ -47,15 +49,17 @@ class DeliveryFidelidadePublicController extends Controller
         private FidelidadeResgateService $resgate,
     ) {}
 
-    public function show(string $slug): View
+    public function show(Request $request, string $slug): View
     {
         $config = $this->config($slug);
         $unidadeVitrine = (int) $config->unidade_id;
+        $this->capturarOrigem($request, $unidadeVitrine);
         $unidadeFidPadrao = $this->consulta->unidadeFidelidade($config);
         $programa = $this->programaParaVitrine($config);
         abort_unless($programa, 404);
 
-        $lgpdAceito = $this->lgpdAceitoNaSessao($unidadeVitrine);
+        $mostrarLgpd = $this->mostrarLgpd($unidadeVitrine);
+        $lgpdAceito = $this->fluxoLgpdLiberado($unidadeVitrine);
         $acesso = $this->acessoValido($unidadeVitrine);
         $otpPending = $lgpdAceito && $this->otpPendenteValido($unidadeVitrine, $config);
 
@@ -99,6 +103,7 @@ class DeliveryFidelidadePublicController extends Controller
             'telefone_selos_mascara' => $telefoneMascara,
             'fidelidade_otp_pending' => $otpPending,
             'lgpd_aceito' => $lgpdAceito,
+            'mostrar_lgpd' => $mostrarLgpd,
             'lgpd_texto' => FidelidadeLgpdService::textoTermo(
                 trim((string) ($config->nome_loja ?: 'Loja')),
                 $this->nomeUnidade($unidadeFid),
@@ -210,11 +215,7 @@ class DeliveryFidelidadePublicController extends Controller
             'lgpd_autorizo' => ['accepted'],
         ]);
 
-        $request->session()->put(self::SESSION_LGPD, [
-            'unidade_id' => $unidadeVitrine,
-            'versao' => FidelidadeLgpdService::VERSAO,
-            'aceite_em' => now()->timestamp,
-        ]);
+        $request->session()->put(self::SESSION_LGPD, FidelidadeLgpdService::marcarSessaoAceite($unidadeVitrine));
 
         return $this->voltar($slug)->with('status', 'Termo aceito. Agora você pode consultar seu cartão.');
     }
@@ -244,6 +245,9 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $conta = $this->consulta->buscarContaAtiva($config, $norm);
+        if ($conta && FidelidadeLgpdService::contaJaAceitou($conta)) {
+            $request->session()->put(self::SESSION_LGPD, FidelidadeLgpdService::marcarSessaoAceite($unidadeVitrine));
+        }
         if (! $conta) {
             $this->limparSessaoConsulta($unidadeVitrine);
 
@@ -473,7 +477,10 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         $request->session()->forget(self::SESSION_OTP);
-        FidelidadeLgpdService::registrarAceite((int) $conta->id, $request->ip());
+        if (! FidelidadeLgpdService::contaJaAceitou($conta)
+            && ($this->lgpdObrigatorio($unidadeId) || $this->lgpdAceitoNaSessao($unidadeId))) {
+            FidelidadeLgpdService::registrarAceite((int) $conta->id, $request->ip());
+        }
 
         $request->session()->put(self::SESSION_ACESSO, [
             'unidade_id' => $unidadeId,
@@ -506,7 +513,7 @@ class DeliveryFidelidadePublicController extends Controller
 
     private function exigirLgpd(int $unidadeId, string $slug): ?RedirectResponse
     {
-        if ($this->lgpdAceitoNaSessao($unidadeId)) {
+        if ($this->fluxoLgpdLiberado($unidadeId)) {
             return null;
         }
 
@@ -514,6 +521,68 @@ class DeliveryFidelidadePublicController extends Controller
             'warning',
             'Leia e aceite o termo LGPD antes de consultar seu cartão.'
         );
+    }
+
+    private function capturarOrigem(Request $request, int $unidadeId): void
+    {
+        $origem = strtolower(trim((string) $request->query('origem', '')));
+        if (! in_array($origem, ['reserva', 'compra'], true)) {
+            return;
+        }
+
+        $request->session()->put(self::SESSION_ORIGEM, [
+            'unidade_id' => $unidadeId,
+            'origem' => $origem,
+        ]);
+    }
+
+    private function origemAtiva(int $unidadeId): ?string
+    {
+        $v = session(self::SESSION_ORIGEM);
+        if (! is_array($v) || (int) ($v['unidade_id'] ?? 0) !== $unidadeId) {
+            return null;
+        }
+        $origem = (string) ($v['origem'] ?? '');
+
+        return in_array($origem, ['reserva', 'compra'], true) ? $origem : null;
+    }
+
+    private function lgpdObrigatorio(int $unidadeId): bool
+    {
+        return in_array($this->origemAtiva($unidadeId), ['reserva', 'compra'], true);
+    }
+
+    private function fluxoLgpdLiberado(int $unidadeId): bool
+    {
+        if (! $this->lgpdObrigatorio($unidadeId)) {
+            return true;
+        }
+
+        return $this->lgpdAceitoNaSessao($unidadeId);
+    }
+
+    private function mostrarLgpd(int $unidadeId): bool
+    {
+        return $this->lgpdObrigatorio($unidadeId) && ! $this->lgpdAceitoNaSessao($unidadeId);
+    }
+
+    public static function marcarOrigemCompraSessao(int $unidadeVitrineId): void
+    {
+        session([self::SESSION_ORIGEM => [
+            'unidade_id' => $unidadeVitrineId,
+            'origem' => 'compra',
+        ]]);
+    }
+
+    public static function limparOrigemCompraSessao(int $unidadeVitrineId): void
+    {
+        $v = session(self::SESSION_ORIGEM);
+        if (! is_array($v) || (int) ($v['unidade_id'] ?? 0) !== $unidadeVitrineId) {
+            return;
+        }
+        if ((string) ($v['origem'] ?? '') === 'compra') {
+            session()->forget(self::SESSION_ORIGEM);
+        }
     }
 
     private function acessoValido(int $unidadeId): ?array

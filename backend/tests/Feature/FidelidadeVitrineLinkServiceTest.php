@@ -80,7 +80,7 @@ class FidelidadeVitrineLinkServiceTest extends TestCase
         $request = Request::create('https://api.gruposaborparaense.com.br/api/reservas-mesas/1/fidelidade', 'GET');
         $info = app(FidelidadeVitrineLinkService::class)->paraReserva($reserva, $request);
 
-        $this->assertSame('https://api.gruposaborparaense.com.br/loja/sabor-paraense-2/fidelidade', $info['url']);
+        $this->assertSame('https://api.gruposaborparaense.com.br/loja/sabor-paraense-2/fidelidade?origem=reserva', $info['url']);
         $this->assertStringContainsString('wa.me/5569984639070', (string) $info['whatsapp_url']);
         $this->assertStringContainsString('sabor-paraense-2/fidelidade', (string) $info['mensagem_whatsapp']);
     }

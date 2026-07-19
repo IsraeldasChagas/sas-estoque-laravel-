@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Delivery;
 use App\Http\Controllers\Controller;
 use App\Services\Delivery\DeliveryFreteService;
 use App\Services\Delivery\DeliveryPedidoService;
+use App\Http\Controllers\Delivery\DeliveryFidelidadePublicController;
 use App\Services\Fidelidade\DeliveryPedidoFidelidadeService;
 use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
@@ -395,6 +396,9 @@ class DeliveryPublicController extends Controller
         $programaFidelidade = $fidelidadeAtiva ? $this->programaFidelidade($config) : null;
         $fidelidadeSnap = $this->pedidoFidelidade->snapshot($pedido, $config);
         $unidadeFidelidadeNome = $this->nomeUnidadeFidelidade($config);
+        if (($fidelidadeSnap['precisa_formulario'] ?? false) && $programaFidelidade) {
+            DeliveryFidelidadePublicController::marcarOrigemCompraSessao((int) $config->unidade_id);
+        }
         $lgpdTexto = FidelidadeLgpdService::textoTermo(
             (string) ($config->nome_loja ?: 'Loja'),
             $unidadeFidelidadeNome,
