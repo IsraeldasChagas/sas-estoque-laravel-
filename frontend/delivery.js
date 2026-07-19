@@ -420,6 +420,8 @@
       + `<div class="orc-grid orc-grid--2"><form id="dlvVitrineForm" class="orc-card"><div class="orc-section-title"><h3>Identidade da loja</h3></div>
       <div class="orc-form-grid"><label>Nome da loja<input name="nome_loja" value="${esc(c.nome_loja || "")}"></label><label>Slug público<input name="slug" value="${esc(c.slug || "")}"></label>
       <label>Cor principal<input name="cor_primaria" type="color" value="${esc(c.cor_primaria || "#e85d24")}"></label><label>WhatsApp<input name="whatsapp" value="${esc(c.whatsapp || "")}"></label>
+      <label>Instagram (URL)<input name="instagram_url" value="${esc(c.instagram_url || "")}" placeholder="https://instagram.com/sualoja"></label>
+      <label>Facebook (URL)<input name="facebook_url" value="${esc(c.facebook_url || "")}" placeholder="https://facebook.com/sualoja"></label>
       <label class="checkbox-label"><input name="ativo" type="checkbox" ${c.ativo ? "checked" : ""}> Vitrine ativa</label><label class="checkbox-label"><input name="aberta" type="checkbox" ${c.aberta ? "checked" : ""}> Loja aberta</label></div>
       <label>Descrição<textarea name="descricao" rows="3">${esc(c.descricao || "")}</textarea></label><label>Endereço exibido<textarea name="endereco_texto" rows="2">${esc(c.endereco_texto || "")}</textarea></label>
       <button class="btn primary">Salvar vitrine</button></form>
@@ -428,7 +430,7 @@
       <button class="btn secondary" type="button" data-go="deliveryCatalogo">Consultar catálogo publicado</button></article></div>`);
     $("dlvVitrineForm").onsubmit = async (e) => {
       e.preventDefault(); const f = e.currentTarget;
-      await api("/vitrine", { method: "PUT", body: JSON.stringify({ ...formJson(f, ["nome_loja", "slug", "cor_primaria", "whatsapp", "descricao", "endereco_texto"]), ativo: bool(f, "ativo"), aberta: bool(f, "aberta") }) });
+      await api("/vitrine", { method: "PUT", body: JSON.stringify({ ...formJson(f, ["nome_loja", "slug", "cor_primaria", "whatsapp", "instagram_url", "facebook_url", "descricao", "endereco_texto"]), ativo: bool(f, "ativo"), aberta: bool(f, "aberta") }) });
       toast("Vitrine atualizada.", "success"); await loadVitrine();
     };
     root.querySelector("[data-go]").onclick = () => window.navigateTo?.("deliveryCatalogo");

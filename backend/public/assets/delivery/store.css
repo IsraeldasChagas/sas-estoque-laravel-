@@ -410,6 +410,36 @@ a.btn.ghost.vf-back-after-action:hover,
 .muted,.description{color:var(--muted)}
 .description{white-space:pre-wrap}
 .detail-price{font-size:25px;color:var(--success);font-weight:800}
+.detail-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.detail-head h1{margin:0;flex:1 1 220px}
+.vf-produto-share-bloco{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px 12px;flex:1 1 280px;max-width:100%}
+.vf-produto-share-legenda{font-weight:700;font-size:14px;color:var(--text);white-space:nowrap}
+.vf-produto-share{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 auto}
+.vf-produto-share .vf-produto-share__btn{
+  min-height:46px;padding:8px 14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  font-weight:600;font-size:14px;line-height:1.2;text-decoration:none;border-radius:12px;cursor:pointer;
+}
+.vf-produto-share .vf-produto-share__ico{flex-shrink:0}
+.vf-produto-share__btn.vf-share-instagram{
+  color:#fff;border:none;background:linear-gradient(45deg,#f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
+}
+.vf-produto-estrelas{margin:8px 0 14px}
+.vf-produto-estrelas__label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.vf-estrelas-grupo{display:inline-flex;align-items:center;gap:2px}
+.vf-estrela-produto-btn{
+  border:0;background:transparent;padding:4px;cursor:pointer;line-height:1;color:#f59e0b;font-size:22px;
+}
+.vf-estrela-produto-btn.is-active,.vf-estrela-produto-btn:hover{transform:scale(1.05)}
+.detail-field{display:grid;gap:6px;margin:14px 0}
+.detail-field__label{font-size:14px;font-weight:600;color:#334155}
+.detail-field textarea{
+  width:100%;min-height:88px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
+  font:inherit;resize:vertical;
+}
+.detail-qty-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 14px}
+.detail-qty-row .quantity{margin:0}
+.detail-wa-loja{text-align:center;text-decoration:none}
+.cart-obs{display:block;margin-top:4px;color:var(--muted)}
 .stock{color:#15803d}
 .unavailable,.form-error{color:#b91c1c}
 .option-card,.form-card,.order-summary{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:16px 0}

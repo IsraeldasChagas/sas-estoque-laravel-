@@ -6,14 +6,71 @@
     $maxEsc = $produto->acrescimo_escolhas_max !== null ? max(0, (int) $produto->acrescimo_escolhas_max) : null;
     $maxEscForm = $maxEsc ?? 9999;
     $uiAd = (string) ($produto->acrescimos_loja_ui ?? 'stepper');
+    if ($maxEsc !== null) {
+        $uiAd = 'stepper';
+    }
     $uiRem = (string) ($produto->ingredientes_retirar_ui ?? 'stepper');
     $maxRem = max(0, (int) ($produto->max_ingredientes_retirar ?? 0));
+    $whatsRaw = trim((string) ($config->whatsapp ?? ''));
+    if ($whatsRaw === '') {
+        $whatsRaw = trim((string) ($config->telefone ?? ''));
+    }
+    $whatsDigits = $whatsRaw !== '' ? preg_replace('/\D+/', '', $whatsRaw) : '';
+    if (is_string($whatsDigits) && $whatsDigits !== '' && (strlen($whatsDigits) === 10 || strlen($whatsDigits) === 11)) {
+        $whatsDigits = '55'.$whatsDigits;
+    }
+    $igUrl = trim((string) ($config->instagram_url ?? ''));
+    $fbUrl = trim((string) ($config->facebook_url ?? ''));
+    $productUrl = url()->current();
+    $shareNome = trim((string) ($produto->nome ?? 'Produto'));
+    $shareLoja = trim((string) ($config->nome_loja ?? 'Loja'));
+    $shareText = $shareNome.' — '.$shareLoja.' '.$productUrl;
+    $waShareUrl = 'https://wa.me/?text='.rawurlencode($shareText);
+    $waLojaUrl = $whatsDigits !== '' ? 'https://wa.me/'.$whatsDigits.'?text='.rawurlencode('Olá! Tenho interesse no produto: '.$shareNome) : null;
+    $fbShareUrl = 'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($productUrl);
 @endphp
 <nav class="breadcrumb"><a href="{{ route('delivery.public.store', $slug) }}">Cardápio</a> / {{ $produto->nome }}</nav>
 <div class="detail-grid">
     <div class="detail-photo">@if($produto->foto_url)<img src="{{ $produto->foto_url }}" alt="{{ $produto->nome }}">@else<span>▧</span>@endif</div>
     <section>
-        <h1>{{ $produto->nome }}</h1>
+        <div class="detail-head">
+            <h1>{{ $produto->nome }}</h1>
+            <div class="vf-produto-share-bloco">
+                <span id="vf-share-produto-legenda" class="vf-produto-share-legenda">Compartilhar</span>
+                <div class="vf-produto-share" role="group" aria-labelledby="vf-share-produto-legenda">
+                    <a href="{{ $waShareUrl }}" target="_blank" rel="noopener noreferrer"
+                       class="btn success vf-produto-share__btn" title="WhatsApp" aria-label="Compartilhar no WhatsApp">
+                        <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.43 17.5 2 12.04 2zm5.83 14.1c-.24.68-1.41 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.66-.62-2.92-1.26-4.82-4.2-4.96-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07.99-2.35.26-.28.57-.35.76-.35h.55c.17 0 .4-.06.63.48.24.56.8 1.95.87 2.09.07.14.12.3.02.49-.1.19-.14.3-.28.47-.14.16-.3.36-.42.49-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.94 1.22 2.22 1.36.28.14.44.12.6-.07.17-.19.7-.81.89-1.09.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.7-.17 1.38z"/></svg>
+                        <span class="vf-produto-share__label">WhatsApp</span>
+                    </a>
+                    <a href="{{ $fbShareUrl }}" target="_blank" rel="noopener noreferrer"
+                       class="btn primary vf-produto-share__btn" title="Facebook" aria-label="Compartilhar no Facebook">
+                        <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.8-4.7 4.54-4.7 1.32 0 2.7.24 2.7.24v2.97h-1.52c-1.5 0-1.97.93-1.97 1.89v2.26h3.35l-.54 3.49h-2.81V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+                        <span class="vf-produto-share__label">Facebook</span>
+                    </a>
+                    <button type="button" class="btn vf-produto-share__btn vf-share-instagram"
+                            data-share-url="{{ $productUrl }}"
+                            title="Instagram — copia o link para você colar no app"
+                            aria-label="Copiar link do produto para compartilhar no Instagram">
+                        <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
+                        <span class="vf-produto-share__label vf-share-instagram-label">Instagram</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        @if($produto->estoque > 0)
+            <div class="vf-produto-estrelas" id="vf-produto-estrelas-wrap">
+                <span class="vf-produto-estrelas__label">Sua nota <span class="muted">(opcional)</span></span>
+                <div class="vf-estrelas-grupo" role="group" aria-label="Dar de 1 a 5 estrelas">
+                    @for($s = 1; $s <= 5; $s++)
+                        <button type="button" class="vf-estrela-produto-btn" data-vf-estrela="{{ $s }}" aria-label="{{ $s }} estrela{{ $s > 1 ? 's' : '' }}">
+                            <span class="vf-estrela-produto-ico" aria-hidden="true">☆</span>
+                        </button>
+                    @endfor
+                </div>
+                <input type="hidden" name="nota_produto" id="vf_nota_produto" value="">
+            </div>
+        @endif
         @if($produto->categoria_nome)<p class="muted">{{ $produto->categoria_nome }}</p>@endif
         <p class="description">{{ $produto->descricao ?: 'Sem descrição cadastrada.' }}</p>
         <div class="detail-price">R$ {{ number_format((float)$produto->preco, 2, ',', '.') }}</div>
@@ -30,7 +87,8 @@
                 <h2>Personalizar</h2>
                 <p class="personalize-hint">
                     @if($maxEsc !== null && $minEsc === $maxEsc)
-                        Escolha {{ $maxEsc }} opções: Mínimo: {{ $minEsc }} - Máximo: {{ $maxEsc }}
+                        Escolha {{ $maxEsc }} opções: Mínimo: {{ $minEsc }} - Máximo: {{ $maxEsc }}.
+                        Pode repetir a mesma opção (ex.: 3× {{ $adicionais->first()->nome ?? 'um item' }}).
                     @elseif($maxEsc !== null && $minEsc > 0)
                         Escolha entre {{ $minEsc }} e {{ $maxEsc }} opções.
                     @elseif($maxEsc !== null)
@@ -112,9 +170,19 @@
                 </div>
             </div>
             @endif
-            <div class="quantity"><button type="button" data-main-minus>−</button><input type="number" value="1" min="1" max="{{ $produto->estoque }}" data-main-qty><button type="button" data-main-plus>+</button></div>
+            <label class="detail-field">
+                <span class="detail-field__label">Observação (opcional)</span>
+                <textarea name="observacao" rows="3" maxlength="500" placeholder="Ex.: ponto da carne, sem cebola…" data-product-obs></textarea>
+            </label>
+            <div class="detail-qty-row">
+                <span class="detail-field__label">Quantidade</span>
+                <div class="quantity"><button type="button" data-main-minus>−</button><input type="number" value="1" min="1" max="{{ $produto->estoque }}" data-main-qty><button type="button" data-main-plus>+</button></div>
+            </div>
             <p class="form-error" data-product-error></p>
-            <button class="btn success wide" type="submit">Adicionar ao carrinho</button>
+            <button class="btn primary wide" type="submit">Adicionar ao carrinho</button>
+            @if($waLojaUrl)
+                <a class="btn success wide detail-wa-loja" href="{{ $waLojaUrl }}" target="_blank" rel="noopener noreferrer">WhatsApp da loja</a>
+            @endif
             <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
         </form>
         @else
@@ -319,6 +387,9 @@
     }
 
     error.textContent = '';
+    const obs = (form.querySelector('[data-product-obs]')?.value || '').trim();
+    const notaRaw = document.getElementById('vf_nota_produto')?.value || '';
+    const nota = parseInt(notaRaw, 10);
     DeliveryCart.add({
       key: Date.now().toString(36) + Math.random().toString(36).slice(2),
       produto_id: {{ $produto->id }},
@@ -326,9 +397,67 @@
       foto: @json($produto->foto_url),
       preco: {{ (float) $produto->preco }},
       quantidade: Math.max(1, +qty.value),
-      opcoes: { adicionais: additions, retiradas: removals },
+      opcoes: {
+        adicionais: additions,
+        retiradas: removals,
+        observacao: obs !== '' ? obs : null,
+        nota_produto: !isNaN(nota) && nota >= 1 && nota <= 5 ? nota : null,
+      },
     });
     document.querySelector('[data-cart-open]').click();
+  });
+})();
+
+(function(){
+  const hid = document.getElementById('vf_nota_produto');
+  const btns = document.querySelectorAll('.vf-estrela-produto-btn');
+  if (!hid || !btns.length) return;
+
+  function paintEstrelas(valor) {
+    let n = parseInt(String(valor || ''), 10);
+    if (isNaN(n) || n < 1 || n > 5) n = 0;
+    btns.forEach((btn, i) => {
+      const alvo = i + 1;
+      const ico = btn.querySelector('.vf-estrela-produto-ico');
+      if (ico) ico.textContent = n >= 1 && alvo <= n ? '★' : '☆';
+      btn.classList.toggle('is-active', n >= 1 && alvo <= n);
+    });
+  }
+
+  btns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const val = parseInt(btn.getAttribute('data-vf-estrela'), 10);
+      const cur = parseInt(String(hid.value || ''), 10);
+      if (!isNaN(cur) && cur === val) {
+        hid.value = cur <= 1 ? '' : String(cur - 1);
+      } else {
+        hid.value = String(val);
+      }
+      paintEstrelas(hid.value);
+    });
+  });
+  paintEstrelas(hid.value);
+})();
+
+(function(){
+  const btn = document.querySelector('.vf-share-instagram');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const u = btn.getAttribute('data-share-url');
+    if (!u) return;
+    function feedback() {
+      const sp = btn.querySelector('.vf-share-instagram-label');
+      if (sp) {
+        const t = sp.textContent;
+        sp.textContent = 'Copiado!';
+        setTimeout(() => { sp.textContent = t; }, 2000);
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(u).then(feedback).catch(() => window.prompt('Copie o link do produto:', u));
+    } else {
+      window.prompt('Copie o link do produto:', u);
+    }
   });
 })();
 </script>

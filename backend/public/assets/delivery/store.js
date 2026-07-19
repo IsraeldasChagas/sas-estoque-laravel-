@@ -33,11 +33,12 @@
         ...(item.opcoes?.adicionais || []).map(a => `${a.quantidade}× ${a.nome}`),
         ...(item.opcoes?.retiradas || []).map(r => `Sem ${r.nome}`)
       ].map(escape).join(', ');
+      const obs = item.opcoes?.observacao ? `<small class="cart-obs">Obs: ${escape(item.opcoes.observacao)}</small>` : '';
       const photo = item.foto
         ? `<img src="${escape(item.foto)}" alt="">`
         : '<span class="cart-thumb"></span>';
       return `<div class="cart-line">${photo}<div><strong>${escape(item.nome)}</strong>` +
-        `<small>${options}</small><b>${money(unit(item) * item.quantidade)}</b>` +
+        `<small>${options}</small>${obs}<b>${money(unit(item) * item.quantidade)}</b>` +
         `<div class="cart-controls"><button data-cart-minus="${index}">−</button><span>${item.quantidade}</span>` +
         `<button data-cart-plus="${index}">+</button><button class="remove" data-cart-remove="${index}">Remover</button></div>` +
         '</div></div>';

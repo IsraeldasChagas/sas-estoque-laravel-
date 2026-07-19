@@ -395,10 +395,16 @@ class DeliveryPedidoService
 
         return [
             'preco_adicionais' => round($precoAdicionais, 2),
-            'snapshot' => [
+            'snapshot' => array_filter([
                 'adicionais' => $snapshotAdicionais,
                 'retiradas' => $snapshotRetiradas,
-            ],
+                'observacao' => ($obs = trim((string) ($opcoes['observacao'] ?? ''))) !== ''
+                    ? mb_substr($obs, 0, 500)
+                    : null,
+                'nota_produto' => ($nota = (int) ($opcoes['nota_produto'] ?? 0)) >= 1 && $nota <= 5
+                    ? $nota
+                    : null,
+            ], fn ($v) => $v !== null && $v !== []),
         ];
     }
 
