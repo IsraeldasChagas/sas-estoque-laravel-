@@ -183,6 +183,28 @@ class DeliveryFidelidadePublicOtpTest extends TestCase
             ->assertDontSee('Seu progresso');
     }
 
+    public function test_otp_pendente_some_apos_excluir_cartao(): void
+    {
+        config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);
+
+        $this->post('/loja/'.$this->slug.'/fidelidade/solicitar-codigo', [
+            'telefone' => '(69) 99999-8888',
+        ])->assertRedirect('/loja/'.$this->slug.'/fidelidade');
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('***8888')
+            ->assertSee('Confirmar e ver selos');
+
+        DB::table('fid_contas')->where('telefone_normalizado', '69999998888')->delete();
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Não encontramos cartão fidelidade')
+            ->assertSee('Solicitar código')
+            ->assertDontSee('Confirmar e ver selos');
+    }
+
     public function test_encontra_cartao_de_outra_unidade_vinculada_a_vitrine(): void
     {
         config(['services.fidelidade_otp.email_fallback' => false, 'services.fidelidade_otp.wa_me_fallback' => true]);

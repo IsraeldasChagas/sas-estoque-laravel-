@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Fidelidade;
 
 use App\Http\Controllers\Controller;
+use App\Services\Fidelidade\FidelidadePublicOtpCache;
 use App\Services\Fidelidade\FidelidadeCodigoService;
 use App\Services\Fidelidade\FidelidadeLedgerService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
@@ -258,6 +259,11 @@ class FidelidadeController extends Controller
             }
             DB::table('fid_contas')->where('id', $conta->id)->delete();
         });
+
+        FidelidadePublicOtpCache::invalidarTelefone(
+            (int) $conta->unidade_id,
+            (string) $conta->telefone_normalizado
+        );
 
         return response()->json([
             'message' => 'Cartão excluído. Se o cliente for cadastrado de novo, começa do zero.',

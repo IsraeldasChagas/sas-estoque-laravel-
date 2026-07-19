@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Delivery;
 use App\Http\Controllers\Controller;
 use App\Services\Fidelidade\FidelidadeNormalizer;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
+use App\Services\Fidelidade\FidelidadePublicOtpCache;
 use App\Services\Fidelidade\FidelidadePublicOtpEntrega;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -149,6 +150,7 @@ class DeliveryFidelidadePublicController extends Controller
         $request->session()->put(self::SESSION_OTP, [
             'unidade_id' => $unidadeVitrine,
             'unidade_fidelidade_id' => $unidadeFid,
+            'conta_id' => (int) $conta->id,
             'tel_norm' => $norm,
             'telefone_input' => $data['telefone'],
             'tipo' => self::OTP_TIPO_CONSULTA,
@@ -377,8 +379,12 @@ class DeliveryFidelidadePublicController extends Controller
 
             return false;
         }
-        if (! $this->consulta->buscarContaAtiva($config, $tel)) {
+        if (! $this->contaOtpAindaValida($config, $pending, $tel)) {
             $this->limparSessaoConsulta($unidadeId);
+            session()->flash(
+                'warning',
+                'Não encontramos cartão fidelidade para este telefone. O cartão é criado após a reserva de mesa e o pagamento da conta — use o mesmo telefone informado na reserva.'
+            );
 
             return false;
         }
@@ -392,6 +398,16 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         return true;
+    }
+
+    private function contaOtpAindaValida(object $config, array $pending, string $telNorm): bool
+    {
+        $contaId = (int) ($pending['conta_id'] ?? 0);
+        if ($contaId > 0) {
+            return $this->consulta->buscarContaPorId($contaId, $telNorm) !== null;
+        }
+
+        return $this->consulta->buscarContaAtiva($config, $telNorm) !== null;
     }
 
     /** @return array{0:string,1:string} */
@@ -468,10 +484,7 @@ class DeliveryFidelidadePublicController extends Controller
         $pending = session(self::SESSION_OTP);
         if (is_array($pending) && (int) ($pending['unidade_id'] ?? 0) === $unidadeId) {
             if (is_string($pending['tel_norm'] ?? null)) {
-                $tipo = (string) ($pending['tipo'] ?? self::OTP_TIPO_CONSULTA);
-                [$ck, $fk] = $this->chaves($unidadeId, $pending['tel_norm'], $tipo);
-                Cache::forget($ck);
-                Cache::forget($fk);
+                FidelidadePublicOtpCache::limparUnidade($unidadeId, $pending['tel_norm']);
             }
             session()->forget(self::SESSION_OTP);
         }
