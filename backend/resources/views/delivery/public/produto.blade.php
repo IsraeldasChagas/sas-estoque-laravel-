@@ -6,7 +6,8 @@
     $maxEsc = $produto->acrescimo_escolhas_max !== null ? max(0, (int) $produto->acrescimo_escolhas_max) : null;
     $maxEscForm = $maxEsc ?? 9999;
     $uiAd = (string) ($produto->acrescimos_loja_ui ?? 'stepper');
-    if ($maxEsc !== null) {
+    $temLimiteAcrescimo = $maxEsc !== null || $minEsc > 0;
+    if ($temLimiteAcrescimo) {
         $uiAd = 'stepper';
     }
     $uiRem = (string) ($produto->ingredientes_retirar_ui ?? 'stepper');
@@ -39,27 +40,21 @@
                 <span id="vf-share-produto-legenda" class="vf-produto-share-legenda">Compartilhar</span>
                 <div class="vf-produto-share" role="group" aria-labelledby="vf-share-produto-legenda">
                     <a href="{{ $waShareUrl }}" target="_blank" rel="noopener noreferrer"
-                       class="vf-produto-share__item vf-produto-share__item--wa" title="WhatsApp" aria-label="Compartilhar no WhatsApp">
+                       class="vf-produto-share__btn vf-produto-share__btn--wa" title="WhatsApp" aria-label="Compartilhar no WhatsApp">
+                        <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.43 17.5 2 12.04 2zm5.83 14.1c-.24.68-1.41 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.66-.62-2.92-1.26-4.82-4.2-4.96-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07.99-2.35.26-.28.57-.35.76-.35h.55c.17 0 .4-.06.63.48.24.56.8 1.95.87 2.09.07.14.12.3.02.49-.1.19-.14.3-.28.47-.14.16-.3.36-.42.49-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.94 1.22 2.22 1.36.28.14.44.12.6-.07.17-.19.7-.81.89-1.09.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.7-.17 1.38z"/></svg>
                         <span class="vf-produto-share__label">WhatsApp</span>
-                        <span class="vf-produto-share__ico-wrap" aria-hidden="true">
-                            <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.43 17.5 2 12.04 2zm5.83 14.1c-.24.68-1.41 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.66-.62-2.92-1.26-4.82-4.2-4.96-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07.99-2.35.26-.28.57-.35.76-.35h.55c.17 0 .4-.06.63.48.24.56.8 1.95.87 2.09.07.14.12.3.02.49-.1.19-.14.3-.28.47-.14.16-.3.36-.42.49-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.94 1.22 2.22 1.36.28.14.44.12.6-.07.17-.19.7-.81.89-1.09.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.7-.17 1.38z"/></svg>
-                        </span>
                     </a>
                     <a href="{{ $fbShareUrl }}" target="_blank" rel="noopener noreferrer"
-                       class="vf-produto-share__item vf-produto-share__item--fb" title="Facebook" aria-label="Compartilhar no Facebook">
+                       class="vf-produto-share__btn vf-produto-share__btn--fb" title="Facebook" aria-label="Compartilhar no Facebook">
+                        <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.8-4.7 4.54-4.7 1.32 0 2.7.24 2.7.24v2.97h-1.52c-1.5 0-1.97.93-1.97 1.89v2.26h3.35l-.54 3.49h-2.81V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
                         <span class="vf-produto-share__label">Facebook</span>
-                        <span class="vf-produto-share__ico-wrap" aria-hidden="true">
-                            <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.8-4.7 4.54-4.7 1.32 0 2.7.24 2.7.24v2.97h-1.52c-1.5 0-1.97.93-1.97 1.89v2.26h3.35l-.54 3.49h-2.81V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
-                        </span>
                     </a>
-                    <button type="button" class="vf-produto-share__item vf-produto-share__item--ig vf-share-instagram"
+                    <button type="button" class="vf-produto-share__btn vf-produto-share__btn--ig vf-share-instagram"
                             data-share-url="{{ $productUrl }}"
                             title="Instagram — copia o link para você colar no app"
                             aria-label="Copiar link do produto para compartilhar no Instagram">
+                        <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
                         <span class="vf-produto-share__label vf-share-instagram-label">Instagram</span>
-                        <span class="vf-produto-share__ico-wrap" aria-hidden="true">
-                            <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="22" height="22" fill="none"><rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
-                        </span>
                     </button>
                 </div>
             </div>
@@ -89,57 +84,90 @@
               data-ui-additional="{{ $uiAd }}"
               data-ui-removal="{{ $uiRem }}">
             @if($adicionais->isNotEmpty())
-            <div class="option-card option-card--personalizar">
+            <div class="option-card option-card--personalizar vf-card-personalizar-produto">
                 <h2>Personalizar</h2>
-                <p class="personalize-hint">
-                    @if($maxEsc !== null && $minEsc === $maxEsc)
-                        Escolha {{ $maxEsc }} opções: Mínimo: {{ $minEsc }} - Máximo: {{ $maxEsc }}.
-                        Pode repetir a mesma opção (ex.: 3× {{ $adicionais->first()->nome ?? 'um item' }}).
-                    @elseif($maxEsc !== null && $minEsc > 0)
-                        Escolha entre {{ $minEsc }} e {{ $maxEsc }} opções.
-                    @elseif($maxEsc !== null)
-                        Escolha até {{ $maxEsc }} opções.
-                    @elseif($minEsc > 0)
-                        Escolha pelo menos {{ $minEsc }} opções.
-                    @else
-                        Escolha as opções desejadas.
-                    @endif
-                </p>
-                @if($maxEsc !== null)
-                    <p class="selection-counter" data-selection-counter aria-live="polite">0/{{ $maxEsc }} selecionado(s)</p>
+                @if($temLimiteAcrescimo && $maxEsc !== null && $minEsc === $maxEsc)
+                    <p class="personalize-limit-line">
+                        <span class="personalize-limit-line__title">Escolha {{ $maxEsc }} opções</span>
+                        <span class="vf-personalizar-limite-chip">Mínimo: {{ $minEsc }} · Máximo: {{ $maxEsc }}</span>
+                    </p>
+                @elseif($temLimiteAcrescimo && $maxEsc !== null)
+                    <p class="personalize-limit-line">
+                        <span class="personalize-limit-line__title">Opções</span>
+                        @if($minEsc > 0)
+                            <span class="vf-personalizar-limite-chip">Mínimo: {{ $minEsc }} · Máximo: {{ $maxEsc }}</span>
+                        @else
+                            <span class="vf-personalizar-limite-chip">Máximo: {{ $maxEsc }}</span>
+                        @endif
+                    </p>
                 @endif
-                <div class="personalize-grid">
+                @if($uiAd === 'checkbox')
+                <div class="vf-personalizar-grid vf-acrescimo-checkbox-grid personalize-grid"
+                     data-usa-limite="{{ $temLimiteAcrescimo ? '1' : '0' }}"
+                     data-min="{{ $temLimiteAcrescimo ? $minEsc : 0 }}"
+                     data-max="{{ $temLimiteAcrescimo && $maxEsc !== null ? $maxEsc : 99999 }}">
                     @foreach($adicionais as $ad)
-                    <div class="option-row-vf" data-additional-item>
-                        <span class="option-row-vf__name">
-                            <strong>{{ $ad->nome }}</strong>
-                            @if((float) $ad->preco > 0)
-                                <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }}</small>
-                            @endif
-                        </span>
-                        @if($uiAd === 'checkbox')
-                            <label class="option-check">
+                    <div class="vf-escolha-card vf-escolha-card--acrescimo-chk" data-additional-item>
+                        <div class="vf-escolha-card-inner vf-escolha-card-inner--retirar-chk">
+                            <span class="vf-escolha-bar" aria-hidden="true"></span>
+                            <label class="vf-retirar-chk-wrap">
                                 <input type="checkbox"
+                                       class="vf-acrescimo-chk"
                                        data-additional="{{ $ad->id }}"
                                        data-name="{{ $ad->nome }}"
-                                       data-price="{{ $ad->preco }}"
-                                       value="1">
+                                       data-price="{{ $ad->preco }}">
+                                <span class="vf-personalizar-nome">
+                                    {{ $ad->nome }}
+                                    @if((float) $ad->preco > 0)
+                                        <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }} @if($temLimiteAcrescimo)<span class="muted">cada</span>@endif</small>
+                                    @endif
+                                </span>
                             </label>
-                        @else
-                            <div class="option-stepper" data-additional-stepper>
-                                <button type="button" data-additional-minus aria-label="Diminuir {{ $ad->nome }}">−</button>
-                                <span data-additional-qty>0</span>
-                                <button type="button" data-additional-plus aria-label="Aumentar {{ $ad->nome }}">+</button>
-                            </div>
                             <input type="hidden"
+                                   class="vf-acrescimo-qty-input"
                                    data-additional="{{ $ad->id }}"
                                    data-name="{{ $ad->nome }}"
                                    data-price="{{ $ad->preco }}"
                                    value="0">
-                        @endif
+                        </div>
                     </div>
                     @endforeach
                 </div>
+                @else
+                <div class="vf-personalizar-grid vf-acrescimo-stepper-grid"
+                     id="vf-acrescimos-stepper"
+                     data-usa-limite="{{ $temLimiteAcrescimo ? '1' : '0' }}"
+                     data-min="{{ $temLimiteAcrescimo ? $minEsc : 0 }}"
+                     data-max="{{ $temLimiteAcrescimo && $maxEsc !== null ? $maxEsc : ($maxEscForm) }}">
+                    @foreach($adicionais as $ad)
+                    <div class="vf-escolha-card" data-additional-item data-ad-id="{{ $ad->id }}">
+                        <div class="vf-escolha-card-inner">
+                            <span class="vf-escolha-bar" aria-hidden="true"></span>
+                            <div class="vf-escolha-textos">
+                                <span class="vf-personalizar-nome">
+                                    {{ $ad->nome }}
+                                    @if((float) $ad->preco > 0)
+                                        <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }} @if($temLimiteAcrescimo)<span class="muted">cada</span>@endif</small>
+                                    @endif
+                                </span>
+                                <span class="vf-escolha-badge">✓ Selecionado</span>
+                            </div>
+                            <div class="vf-escolha-stepper" role="group" aria-label="Quantidade {{ $ad->nome }}">
+                                <button type="button" class="vf-escolha-btn vf-escolha-btn--menos" data-additional-minus aria-label="Diminuir {{ $ad->nome }}">−</button>
+                                <span class="vf-escolha-qty-wrap"><span class="vf-escolha-qty-disp" data-additional-qty>0</span></span>
+                                <input type="hidden"
+                                       class="vf-acrescimo-qty-input"
+                                       data-additional="{{ $ad->id }}"
+                                       data-name="{{ $ad->nome }}"
+                                       data-price="{{ $ad->preco }}"
+                                       value="0">
+                                <button type="button" class="vf-escolha-btn vf-escolha-btn--mais" data-additional-plus aria-label="Aumentar {{ $ad->nome }}">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
             </div>
             @endif
             @if($ingredientes->isNotEmpty() && $maxRem > 0)
@@ -204,28 +232,103 @@
 
   const qty = form.querySelector('[data-main-qty]');
   const error = form.querySelector('[data-product-error]');
-  const minChoices = Math.max(0, +form.dataset.min || 0);
-  const maxChoices = Math.max(minChoices, +form.dataset.max || 9999);
+  const stepperWrap = document.getElementById('vf-acrescimos-stepper');
+  const usaLimite = stepperWrap ? stepperWrap.dataset.usaLimite === '1' : true;
+  const minChoices = stepperWrap
+    ? Math.max(0, +stepperWrap.dataset.min || 0)
+    : Math.max(0, +form.dataset.min || 0);
+  const maxChoices = stepperWrap
+    ? Math.max(minChoices, +stepperWrap.dataset.max || 9999)
+    : Math.max(minChoices, +form.dataset.max || 9999);
   const maxRemovals = Math.max(0, +form.dataset.removeMax || 9999);
   const uiAdditional = form.dataset.uiAdditional || 'stepper';
   const uiRemoval = form.dataset.uiRemoval || 'stepper';
-  const counterAdd = form.querySelector('[data-selection-counter]');
-  const counterRem = form.querySelector('[data-removal-counter]');
+  const maxPorOpcao = 999;
 
   form.querySelector('[data-main-minus]').onclick = () => { qty.value = Math.max(1, +qty.value - 1); };
   form.querySelector('[data-main-plus]').onclick = () => { qty.value = Math.min(+qty.max, +qty.value + 1); };
 
-  function additionalTotal() {
-    if (uiAdditional === 'checkbox') {
-      return form.querySelectorAll('[data-additional]:checked').length;
-    }
+  function somaAcrescimos() {
     let total = 0;
-    form.querySelectorAll('[data-additional-item]').forEach((row) => {
-      const hidden = row.querySelector('[data-additional][type="hidden"]');
-      if (hidden) total += Math.max(0, +hidden.value || 0);
+    form.querySelectorAll('.vf-acrescimo-qty-input').forEach((inp) => {
+      total += Math.max(0, +inp.value || 0);
     });
     return total;
   }
+
+  function additionalTotal() {
+    if (uiAdditional === 'checkbox') {
+      let total = 0;
+      form.querySelectorAll('.vf-acrescimo-chk:checked').forEach(() => { total += 1; });
+      return total;
+    }
+    return somaAcrescimos();
+  }
+
+  function atualizarCardAcrescimo(card) {
+    const inp = card.querySelector('.vf-acrescimo-qty-input');
+    if (!inp) return;
+    const q = Math.max(0, +inp.value || 0);
+    const disp = card.querySelector('[data-additional-qty]');
+    const btnMais = card.querySelector('[data-additional-plus]');
+    const btnMenos = card.querySelector('[data-additional-minus]');
+    if (disp) disp.textContent = String(q);
+    card.classList.toggle('vf-escolha-card--ativo', q > 0);
+    if (btnMenos) btnMenos.disabled = q < 1;
+    const total = somaAcrescimos();
+    let podeMais = q < maxPorOpcao;
+    if (usaLimite && podeMais && total >= maxChoices) podeMais = false;
+    if (btnMais) btnMais.disabled = !podeMais;
+  }
+
+  function syncAllAcrescimoCards() {
+    form.querySelectorAll('#vf-acrescimos-stepper .vf-escolha-card').forEach(atualizarCardAcrescimo);
+  }
+
+  if (stepperWrap) {
+    stepperWrap.querySelectorAll('.vf-escolha-card').forEach((card) => {
+      const inp = card.querySelector('.vf-acrescimo-qty-input');
+      const btnMais = card.querySelector('[data-additional-plus]');
+      const btnMenos = card.querySelector('[data-additional-minus]');
+
+      function setQ(novo) {
+        const q = Math.max(0, Math.min(maxPorOpcao, +novo || 0));
+        if (inp) inp.value = String(q);
+        syncAllAcrescimoCards();
+      }
+
+      btnMais?.addEventListener('click', () => {
+        const q = Math.max(0, +inp?.value || 0);
+        if (q >= maxPorOpcao) return;
+        if (usaLimite && somaAcrescimos() >= maxChoices) {
+          error.textContent = 'Você já atingiu o máximo de ' + maxChoices + ' opções (somando as quantidades).';
+          return;
+        }
+        error.textContent = '';
+        setQ(q + 1);
+      });
+
+      btnMenos?.addEventListener('click', () => {
+        setQ(Math.max(0, (+inp?.value || 0) - 1));
+        error.textContent = '';
+      });
+
+      atualizarCardAcrescimo(card);
+    });
+  }
+
+  form.querySelectorAll('.vf-acrescimo-chk').forEach((chk) => {
+    chk.addEventListener('change', () => {
+      const card = chk.closest('[data-additional-item]');
+      const hid = card?.querySelector('.vf-acrescimo-qty-input');
+      if (hid) hid.value = chk.checked ? '1' : '0';
+      card?.classList.toggle('vf-escolha-card--ativo', chk.checked);
+      const total = additionalTotal();
+      form.querySelectorAll('.vf-acrescimo-chk').forEach((el) => {
+        if (!el.checked && usaLimite) el.disabled = total >= maxChoices;
+      });
+    });
+  });
 
   function removalTotal() {
     if (uiRemoval === 'checkbox') {
@@ -239,14 +342,6 @@
     return total;
   }
 
-  function setAdditionalQty(row, value) {
-    const qtyVal = Math.max(0, value);
-    const hidden = row.querySelector('[data-additional][type="hidden"]');
-    const span = row.querySelector('[data-additional-qty]');
-    if (hidden) hidden.value = String(qtyVal);
-    if (span) span.textContent = String(qtyVal);
-  }
-
   function setRemovalQty(row, value) {
     const qtyVal = value > 0 ? 1 : 0;
     const hidden = row.querySelector('[data-removal][type="hidden"]');
@@ -255,31 +350,8 @@
     if (span) span.textContent = String(qtyVal);
   }
 
-  function syncAdditionalLimits() {
-    const total = additionalTotal();
-    if (counterAdd) counterAdd.textContent = total + '/' + maxChoices + ' selecionado(s)';
-
-    if (uiAdditional === 'checkbox') {
-      form.querySelectorAll('[data-additional]').forEach((el) => {
-        if (!el.checked) el.disabled = total >= maxChoices;
-      });
-      return;
-    }
-
-    form.querySelectorAll('[data-additional-item]').forEach((row) => {
-      const hidden = row.querySelector('[data-additional][type="hidden"]');
-      const current = hidden ? Math.max(0, +hidden.value || 0) : 0;
-      const minus = row.querySelector('[data-additional-minus]');
-      const plus = row.querySelector('[data-additional-plus]');
-      if (minus) minus.disabled = current <= 0;
-      if (plus) plus.disabled = total >= maxChoices;
-    });
-  }
-
   function syncRemovalLimits() {
     const total = removalTotal();
-    if (counterRem) counterRem.textContent = total + '/' + maxRemovals + ' selecionado(s)';
-
     if (uiRemoval === 'checkbox') {
       form.querySelectorAll('[data-removal]').forEach((el) => {
         if (!el.checked) el.disabled = total >= maxRemovals;
@@ -296,26 +368,6 @@
       if (plus) plus.disabled = current >= 1 || total >= maxRemovals;
     });
   }
-
-  form.querySelectorAll('[data-additional-item]').forEach((row) => {
-    row.querySelector('[data-additional-minus]')?.addEventListener('click', () => {
-      const hidden = row.querySelector('[data-additional][type="hidden"]');
-      setAdditionalQty(row, Math.max(0, (+hidden?.value || 0) - 1));
-      syncAdditionalLimits();
-    });
-    row.querySelector('[data-additional-plus]')?.addEventListener('click', () => {
-      if (additionalTotal() >= maxChoices) return;
-      const hidden = row.querySelector('[data-additional][type="hidden"]');
-      setAdditionalQty(row, (+hidden?.value || 0) + 1);
-      syncAdditionalLimits();
-    });
-  });
-
-  form.querySelectorAll('[data-additional]').forEach((el) => {
-    if (el.type === 'checkbox') {
-      el.addEventListener('change', syncAdditionalLimits);
-    }
-  });
 
   form.querySelectorAll('[data-removal-item]').forEach((row) => {
     row.querySelector('[data-removal-minus]')?.addEventListener('click', () => {
@@ -335,7 +387,6 @@
     }
   });
 
-  syncAdditionalLimits();
   syncRemovalLimits();
 
   form.addEventListener('submit', function(e) {
@@ -345,7 +396,7 @@
     let choices = additionalTotal();
 
     if (uiAdditional === 'checkbox') {
-      form.querySelectorAll('[data-additional]:checked').forEach((el) => {
+      form.querySelectorAll('.vf-acrescimo-chk:checked').forEach((el) => {
         additions.push({
           id: +el.dataset.additional,
           nome: el.dataset.name,
@@ -354,9 +405,8 @@
         });
       });
     } else {
-      form.querySelectorAll('[data-additional-item]').forEach((row) => {
-        const hidden = row.querySelector('[data-additional][type="hidden"]');
-        const q = hidden ? Math.max(0, +hidden.value || 0) : 0;
+      form.querySelectorAll('.vf-acrescimo-qty-input').forEach((hidden) => {
+        const q = Math.max(0, +hidden.value || 0);
         if (q > 0) {
           additions.push({
             id: +hidden.dataset.additional,
@@ -381,10 +431,10 @@
       });
     }
 
-    if (choices < minChoices || choices > maxChoices) {
+    if (usaLimite && (choices < minChoices || choices > maxChoices)) {
       error.textContent = minChoices === maxChoices
-        ? 'Escolha exatamente ' + maxChoices + ' opções.'
-        : 'Escolha entre ' + minChoices + ' e ' + maxChoices + ' opções.';
+        ? 'Escolha exatamente ' + maxChoices + ' opções (somando as quantidades).'
+        : 'Escolha entre ' + minChoices + ' e ' + maxChoices + ' opções (somando as quantidades).';
       return;
     }
     if (removals.length > maxRemovals) {

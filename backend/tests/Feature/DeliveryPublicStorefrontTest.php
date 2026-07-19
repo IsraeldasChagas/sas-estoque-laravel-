@@ -88,14 +88,14 @@ class DeliveryPublicStorefrontTest extends TestCase
         $this->get("/loja/teste/produto/{$product}")
             ->assertOk()
             ->assertSee('Personalizar')
-            ->assertSee('Escolha 3 opções: Mínimo: 3 - Máximo: 3')
-            ->assertSee('Pode repetir a mesma opção')
+            ->assertSee('Escolha 3 opções')
+            ->assertSee('Mínimo: 3 · Máximo: 3')
             ->assertSee('Compartilhar')
             ->assertSee('Sua nota')
             ->assertSee('Observação (opcional)')
-            ->assertSee('option-stepper')
+            ->assertSee('vf-escolha-card')
             ->assertSee('data-additional-plus')
-            ->assertSee('0/3 selecionado(s)')
+            ->assertSee('✓ Selecionado')
             ->assertDontSee('Adicionais');
     }
 
