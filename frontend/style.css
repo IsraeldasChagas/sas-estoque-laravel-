@@ -8078,6 +8078,25 @@ select[size]:not([size="1"]) {
   }
   .reserva-fid__pag-remove { grid-column: 2; justify-self: end; }
 }
+
+.fid-cartoes-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  min-width: 10.5rem;
+}
+.fid-cartoes-actions__main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.fid-cartoes-actions__delete {
+  width: 100%;
+  justify-content: center;
+  font-weight: 600;
+}
+
 .reserva-meios-panel {
   margin: 0.75rem 0 1rem;
   border: 1px solid rgba(31, 107, 69, 0.15);

@@ -165,13 +165,15 @@
     if (!items.length) return `<tr><td colspan="7">${empty("Cadastre o primeiro cartão para iniciar o programa.")}</td></tr>`;
     return items.map((c) => `<tr><td><strong>${esc(c.nome || "Cliente sem nome")}</strong></td><td>${esc(c.codigo_fidelidade)}</td>
       <td>${esc(c.telefone_normalizado)}<small>${esc(c.email || "")}</small></td><td><strong>${Number(c.saldo_selos || 0)}</strong></td>
-      <td>${Number(c.saldo_pontos || 0)}</td><td>${badge(c.status)}</td><td><div class="orc-row-actions">
+      <td>${Number(c.saldo_pontos || 0)}</td><td>${badge(c.status)}</td><td><div class="fid-cartoes-actions">
+      <div class="fid-cartoes-actions__main">
       <button class="btn small primary" data-fid-action="selo" data-id="${c.id}">+ Selo</button>
       <button class="btn small secondary" data-fid-action="ajuste" data-id="${c.id}">Ajustar</button>
       <button class="btn small secondary" data-fid-action="resgatar" data-id="${c.id}">Resgatar</button>
       <button class="btn small neutral" data-fid-action="extrato" data-id="${c.id}">Extrato</button>
       <button class="btn small neutral" data-fid-action="status" data-id="${c.id}" data-status="${c.status}">${c.status === "ativo" ? "Bloquear" : "Ativar"}</button>
-      <button class="btn small danger" data-fid-action="excluir" data-id="${c.id}" data-nome="${esc(c.nome || c.telefone_normalizado || "cliente")}" title="Apaga cartão, selos e extrato">Excluir cartão</button>
+      </div>
+      <button class="btn small danger fid-cartoes-actions__delete" data-fid-action="excluir" data-id="${c.id}" data-nome="${esc(c.nome || c.telefone_normalizado || "cliente")}" title="Apaga cartão, selos e extrato">Excluir</button>
       </div></td></tr>`).join("");
   }
 
