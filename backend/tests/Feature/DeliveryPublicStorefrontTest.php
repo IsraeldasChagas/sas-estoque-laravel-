@@ -42,16 +42,22 @@ class DeliveryPublicStorefrontTest extends TestCase
         $category = $this->category();
         $visible = $this->product($category, ['nome' => 'Produto público']);
         $this->product($category, ['nome' => 'Produto oculto', 'visivel_loja' => false]);
-        $this->product($category, ['nome' => 'Produto inativo', 'ativo' => false]);
+        $this->product($category, ['nome' => 'Produto inativo', 'ativo' => false, 'visivel_loja' => false]);
+        $indisponivel = $this->product($category, ['nome' => 'Produto indisponível', 'ativo' => false, 'visivel_loja' => true]);
         $inactiveCategory = $this->category(['nome' => 'Categoria inativa', 'ativo' => false]);
         $this->product($inactiveCategory, ['nome' => 'Produto categoria inativa']);
 
         $this->get('/loja/teste')->assertOk()
             ->assertSee('Produto público')
+            ->assertSee('Produto indisponível')
+            ->assertSee('Indisponível')
             ->assertDontSee('Produto oculto')
             ->assertDontSee('Produto inativo')
             ->assertDontSee('Produto categoria inativa');
         $this->get("/loja/teste/produto/{$visible}")->assertOk();
+        $this->get("/loja/teste/produto/{$indisponivel}")->assertOk()
+            ->assertSee('Indisponível no momento')
+            ->assertDontSee('Adicionar ao carrinho');
     }
 
     public function test_product_detail_exposes_only_linked_active_options(): void
@@ -100,10 +106,10 @@ class DeliveryPublicStorefrontTest extends TestCase
             ->assertDontSee('Adicionais');
     }
 
-    public function test_checkout_recalculates_totals_decrements_stock_and_secures_tracking(): void
+    public function test_checkout_recalculates_totals_and_secures_tracking(): void
     {
         $this->store();
-        $product = $this->product($this->category(), ['preco' => 20, 'estoque' => 3]);
+        $product = $this->product($this->category(), ['preco' => 20]);
 
         $response = $this->postJson('/loja/teste/checkout', $this->checkoutPayload($product, 2))
             ->assertCreated();
@@ -111,7 +117,6 @@ class DeliveryPublicStorefrontTest extends TestCase
 
         $this->assertSame(40.0, (float) $pedido->subtotal);
         $this->assertSame(45.0, (float) $pedido->total);
-        $this->assertSame(1, (int) DB::table('dlv_produtos')->where('id', $product)->value('estoque'));
         $this->assertSame('loja', $pedido->canal);
         $this->assertNotSame($pedido->entregador_token, $pedido->cliente_token);
         $this->get("/loja/teste/pedido/{$pedido->codigo_publico}/".str_repeat('0', 64))->assertNotFound();
@@ -120,15 +125,14 @@ class DeliveryPublicStorefrontTest extends TestCase
         $this->assertStringContainsString('/loja/teste/sucesso/', $response->json('redirect_url'));
     }
 
-    public function test_checkout_rejects_insufficient_stock_and_unlinked_addition(): void
+    public function test_checkout_rejects_unlinked_addition(): void
     {
         $this->store();
-        $product = $this->product($this->category(), ['estoque' => 1, 'permite_adicionais' => true]);
+        $product = $this->product($this->category(), ['permite_adicionais' => true]);
         $addition = DB::table('dlv_adicionais')->insertGetId($this->timestamps([
             'unidade_id' => 1, 'nome' => 'Inválido', 'tipo' => 'acrescentar', 'preco' => 999, 'ativo' => true, 'ordem' => 0,
         ]));
 
-        $this->postJson('/loja/teste/checkout', $this->checkoutPayload($product, 2))->assertUnprocessable();
         $payload = $this->checkoutPayload($product);
         $payload['itens'][0]['opcoes']['adicionais'] = [['id' => $addition, 'quantidade' => 1, 'preco' => 0]];
         $this->postJson('/loja/teste/checkout', $payload)->assertUnprocessable();
@@ -187,10 +191,10 @@ class DeliveryPublicStorefrontTest extends TestCase
             ->assertUnprocessable();
     }
 
-    public function test_cancellation_restores_delivery_stock_only_once(): void
+    public function test_cancellation_updates_status_without_delivery_stock(): void
     {
         $this->store();
-        $product = $this->product($this->category(), ['estoque' => 2]);
+        $product = $this->product($this->category());
         $this->postJson('/loja/teste/checkout', $this->checkoutPayload($product))->assertCreated();
         $pedido = DB::table('dlv_pedidos')->first();
         $service = app(DeliveryPedidoService::class);
@@ -198,8 +202,7 @@ class DeliveryPublicStorefrontTest extends TestCase
         $service->alterarStatus($pedido, 'cancelado', null);
         $service->alterarStatus($pedido, 'cancelado', null);
 
-        $this->assertSame(2, (int) DB::table('dlv_produtos')->where('id', $product)->value('estoque'));
-        $this->assertNotNull(DB::table('dlv_pedidos')->where('id', $pedido->id)->value('estoque_restaurado_em'));
+        $this->assertSame('cancelado', DB::table('dlv_pedidos')->where('id', $pedido->id)->value('status'));
     }
 
     public function test_carrinho_and_checkout_pages_follow_vf_flow(): void

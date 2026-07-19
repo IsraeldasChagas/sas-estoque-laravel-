@@ -105,7 +105,7 @@ class DeliveryCatalogoService
             'foto_url' => $this->fotoUrl($fotoPath),
             'ativo' => (bool) $produto->ativo,
             'visivel_loja' => (bool) $produto->visivel_loja,
-            'disponivel' => (int) ($produto->estoque ?? 0) > 0,
+            'disponivel' => (bool) $produto->ativo && (bool) $produto->visivel_loja,
             'permite_adicionais' => (bool) $produto->permite_adicionais,
             'apresentacao' => $produto->apresentacao,
         ];

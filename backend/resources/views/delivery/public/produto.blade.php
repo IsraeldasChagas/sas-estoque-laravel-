@@ -18,6 +18,7 @@
     $temRetirarIng = $ingredientes->isNotEmpty() && $maxRem > 0;
     $temPersonalizar = $adicionais->isNotEmpty() || $temRetirarIng;
     $escolhaSoIngredientes = $adicionais->isEmpty() && $temRetirarIng;
+    $vendaDisponivel = (int) ($produto->ativo ?? 1) === 1;
     $whatsRaw = trim((string) ($config->whatsapp ?? ''));
     if ($whatsRaw === '') {
         $whatsRaw = trim((string) ($config->telefone ?? ''));
@@ -65,7 +66,7 @@
                 </div>
             </div>
         </div>
-        @if($produto->estoque > 0)
+        @if($vendaDisponivel)
             <div class="vf-produto-estrelas" id="vf-produto-estrelas-wrap">
                 <span class="vf-produto-estrelas__label">Sua nota <span class="muted">(opcional)</span></span>
                 <div class="vf-estrelas-grupo" role="group" aria-label="Dar de 1 a 5 estrelas">
@@ -81,8 +82,14 @@
         @if($produto->categoria_nome)<p class="muted">{{ $produto->categoria_nome }}</p>@endif
         <p class="description">{{ $produto->descricao ?: 'Sem descrição cadastrada.' }}</p>
         <div class="detail-price">R$ {{ number_format((float)$produto->preco, 2, ',', '.') }}</div>
-        <p class="{{ $produto->estoque > 0 ? 'stock' : 'unavailable' }}">{{ $produto->estoque > 0 ? $produto->estoque.' unidade(s) disponível(is)' : 'Indisponível no momento' }}</p>
-        @if($produto->estoque > 0)
+        <p class="{{ $vendaDisponivel ? 'stock' : 'unavailable' }}">
+            @if($vendaDisponivel)
+                Disponível para pedido
+            @else
+                Indisponível no momento
+            @endif
+        </p>
+        @if($vendaDisponivel)
         <form data-product-form
               data-min="{{ $minEsc }}"
               data-max="{{ $maxEscForm }}"
@@ -244,7 +251,7 @@
             </label>
             <div class="detail-qty-row">
                 <span class="detail-field__label">Quantidade</span>
-                <div class="quantity"><button type="button" data-main-minus>−</button><input type="number" value="1" min="1" max="{{ $produto->estoque }}" data-main-qty><button type="button" data-main-plus>+</button></div>
+                <div class="quantity"><button type="button" data-main-minus>−</button><input type="number" value="1" min="1" max="99" data-main-qty><button type="button" data-main-plus>+</button></div>
             </div>
             <p class="form-error" data-product-error></p>
             <div class="detail-actions">

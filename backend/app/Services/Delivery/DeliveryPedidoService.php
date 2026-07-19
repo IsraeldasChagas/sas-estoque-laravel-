@@ -55,12 +55,6 @@ class DeliveryPedidoService
                     "itens.$index.produto_id" => 'Produto delivery inválido ou inativo.',
                 ]);
             }
-            if ($publico && (int) $produto->estoque < (int) $quantidade) {
-                throw ValidationException::withMessages([
-                    "itens.$index.quantidade" => "Estoque insuficiente para {$produto->nome}.",
-                ]);
-            }
-
             $opcoes = $this->validarOpcoes($produto, $item['opcoes'] ?? [], $unidadeId);
             $precoUnitario = round((float) $produto->preco, 2);
             $precoAdicionais = round((float) $opcoes['preco_adicionais'], 2);
@@ -192,16 +186,6 @@ class DeliveryPedidoService
                     'created_at' => $agora,
                     'updated_at' => $agora,
                 ]);
-                if ($publico) {
-                    $afetadas = DB::table('dlv_produtos')
-                        ->where('id', $linha['produto_id'])
-                        ->where('unidade_id', $unidadeId)
-                        ->where('estoque', '>=', (int) $linha['quantidade'])
-                        ->decrement('estoque', (int) $linha['quantidade']);
-                    if ($afetadas !== 1) {
-                        throw ValidationException::withMessages(['itens' => "Estoque insuficiente para {$linha['nome_produto']}."]);
-                    }
-                }
             }
 
             $this->registrarHistorico($id, null, 'pendente_loja', 'criado', ['total' => $totais['total']], $usuarioId);
@@ -224,21 +208,6 @@ class DeliveryPedidoService
                 'status' => $novoStatus,
                 'updated_at' => now(),
             ];
-            if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em')
-                && in_array($novoStatus, ['cancelado', 'endereco_nao_encontrado'], true)
-                && $atual->estoque_baixado_em !== null
-                && $atual->estoque_restaurado_em === null) {
-                $itens = DB::table('dlv_pedido_itens')->where('pedido_id', $atual->id)->get();
-                foreach ($itens as $item) {
-                    if ($item->produto_id !== null) {
-                        DB::table('dlv_produtos')
-                            ->where('id', $item->produto_id)
-                            ->where('unidade_id', $atual->unidade_id)
-                            ->increment('estoque', (int) $item->quantidade);
-                    }
-                }
-                $update['estoque_restaurado_em'] = now();
-            }
             DB::table('dlv_pedidos')->where('id', $pedido->id)->update($update);
             $this->registrarHistorico(
                 (int) $pedido->id,

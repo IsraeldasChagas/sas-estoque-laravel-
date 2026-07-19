@@ -68,7 +68,7 @@
       $("vfCatalogGrid").innerHTML = shown.length ? shown.map((product) => {
         const photo = imageUrl(product.foto_url);
         const category = groups.find((group) => Number(group.id) === Number(product.categoria_id));
-        const available = product.disponivel !== false && Number(product.estoque || 0) > 0;
+        const available = product.disponivel !== false;
         return `<article class="vf-catalog-product">
           <div class="vf-catalog-product__photo">${photo
             ? `<img src="${esc(photo)}" alt="${esc(product.nome)}">`
@@ -79,7 +79,7 @@
             ${product.sku ? `<code>${esc(product.sku)}</code>` : ""}
             <div class="vf-catalog-product__footer">
               <strong>${money(product.preco)}</strong>
-              <span class="${available ? "is-available" : "is-unavailable"}">${available ? `${Number(product.estoque)} em estoque` : "Indisponível"}</span>
+              <span class="${available ? "is-available" : "is-unavailable"}">${available ? "Disponível" : "Indisponível"}</span>
             </div>
           </div>
         </article>`;

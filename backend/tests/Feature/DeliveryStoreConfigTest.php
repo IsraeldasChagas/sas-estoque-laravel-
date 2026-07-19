@@ -117,6 +117,31 @@ class DeliveryStoreConfigTest extends TestCase
             ->assertJsonPath('produtos.0.nome', 'Publicado');
     }
 
+    public function test_produtos_api_filtra_indisponivel(): void
+    {
+        DB::table('dlv_categorias')->insert([
+            'id' => 10, 'unidade_id' => 1, 'nome' => 'Lanches', 'ordem' => 1, 'ativo' => true,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('dlv_produtos')->insert([
+            [
+                'unidade_id' => 1, 'categoria_id' => 10, 'sku' => 'ATV-1', 'nome' => 'Ativo',
+                'preco' => 10, 'estoque' => 2, 'ativo' => true, 'visivel_loja' => true,
+                'created_at' => now(), 'updated_at' => now(),
+            ],
+            [
+                'unidade_id' => 1, 'categoria_id' => 10, 'sku' => 'IND-1', 'nome' => 'Indisponível',
+                'preco' => 12, 'estoque' => 1, 'ativo' => false, 'visivel_loja' => true,
+                'created_at' => now(), 'updated_at' => now(),
+            ],
+        ]);
+
+        $this->withHeaders($this->headers())->getJson('/api/delivery/produtos?unidade_id=1&indisponivel=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.nome', 'Indisponível');
+    }
+
     public function test_vitrine_salva_substitui_e_remove_imagens_da_unidade(): void
     {
         $first = $this->withHeaders($this->headers())->putJson('/api/delivery/vitrine?unidade_id=1', [

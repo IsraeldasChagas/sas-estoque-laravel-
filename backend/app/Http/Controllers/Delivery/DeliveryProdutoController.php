@@ -33,7 +33,9 @@ class DeliveryProdutoController extends DeliveryBaseController
             ->select('p.*', 'c.nome as categoria_nome');
         $this->access->aplicarEscopo($query, $usuario, $request, 'p.unidade_id');
 
-        if ($request->has('ativo')) {
+        if ($request->boolean('indisponivel')) {
+            $query->where('p.ativo', 0)->where('p.visivel_loja', 1);
+        } elseif ($request->has('ativo')) {
             $query->where('p.ativo', filter_var($request->query('ativo'), FILTER_VALIDATE_BOOLEAN) ? 1 : 0);
         }
         if ($request->has('visivel_loja')) {

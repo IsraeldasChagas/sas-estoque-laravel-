@@ -134,7 +134,9 @@
 }
 .vf-badge--active { background: #dcfce7; color: #15803d; }
 .vf-badge--inactive { background: #fee2e2; color: #b91c1c; }
+.vf-badge--unavailable { background: #fef3c7; color: #b45309; }
 .vf-badge--hidden { margin-left: .25rem; background: #e5e7eb; color: #4b5563; }
+.vf-products .hidden { display: none !important; }
 .vf-empty { padding: 3rem 1rem !important; color: var(--vf-muted); text-align: center; }
 
 .vf-product-editor { max-width: 1060px; }

@@ -40,11 +40,11 @@ class DeliveryPublicController extends Controller
             ->where('c.unidade_id', $unidadeId)->where('c.ativo', 1)
             ->whereExists(fn ($q) => $q->selectRaw('1')->from('dlv_produtos as p')
                 ->whereColumn('p.categoria_id', 'c.id')->where('p.unidade_id', $unidadeId)
-                ->where('p.ativo', 1)->where('p.visivel_loja', 1))
+                ->where('p.visivel_loja', 1))
             ->orderBy('c.ordem')->orderBy('c.nome')->get();
         $produtos = DB::table('dlv_produtos as p')
             ->leftJoin('dlv_categorias as c', 'c.id', '=', 'p.categoria_id')
-            ->where('p.unidade_id', $unidadeId)->where('p.ativo', 1)->where('p.visivel_loja', 1)
+            ->where('p.unidade_id', $unidadeId)->where('p.visivel_loja', 1)
             ->where(fn ($q) => $q->whereNull('p.categoria_id')->orWhere('c.ativo', 1))
             ->orderBy('p.ordem')->orderBy('p.nome')
             ->get(['p.*', 'c.nome as categoria_nome'])
@@ -68,7 +68,7 @@ class DeliveryPublicController extends Controller
         $config = $this->config($slug);
         $produto = DB::table('dlv_produtos as p')->leftJoin('dlv_categorias as c', 'c.id', '=', 'p.categoria_id')
             ->where('p.id', $id)->where('p.unidade_id', $config->unidade_id)
-            ->where('p.ativo', 1)->where('p.visivel_loja', 1)
+            ->where('p.visivel_loja', 1)
             ->where(fn ($q) => $q->whereNull('p.categoria_id')->orWhere('c.ativo', 1))
             ->select('p.*', 'c.nome as categoria_nome')->first();
         abort_unless($produto, 404);

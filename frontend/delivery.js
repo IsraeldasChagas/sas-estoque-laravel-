@@ -122,6 +122,49 @@
     return `<span class="vf-product-thumb">${url ? `<img src="${esc(url)}" alt="">` : "▧"}</span>`;
   }
 
+  function produtoStatusBadges(p) {
+    if (Number(p.ativo)) {
+      const badges = [`<span class="vf-badge vf-badge--active">Ativo</span>`];
+      if (!Number(p.visivel_loja)) badges.push('<span class="vf-badge vf-badge--hidden">Oculto</span>');
+      return badges.join("");
+    }
+    if (Number(p.visivel_loja)) {
+      return `<span class="vf-badge vf-badge--unavailable">Indisponível</span>`;
+    }
+    return `<span class="vf-badge vf-badge--inactive">Inativo</span>`;
+  }
+
+  function produtoStatusFromRecord(produto) {
+    if (!produto) {
+      return { ativa: true, indisponivel: false, visivel_loja: true };
+    }
+    if (Number(produto.ativo)) {
+      return { ativa: true, indisponivel: false, visivel_loja: Number(produto.visivel_loja) !== 0 };
+    }
+    return {
+      ativa: false,
+      indisponivel: Number(produto?.visivel_loja) !== 0,
+      visivel_loja: Number(produto?.visivel_loja) !== 0,
+    };
+  }
+
+  function syncProdutoStatusFields(form, fromToggle) {
+    const ativa = form.elements.ativa?.checked ?? true;
+    const indWrap = form.querySelector("#vfProdutoIndisponivelWrap");
+    const visWrap = form.querySelector("#vfProdutoVisivelWrap");
+    const indInput = form.elements.indisponivel;
+    if (!indWrap || !visWrap || !indInput) return;
+    if (ativa) {
+      indWrap.classList.add("hidden");
+      visWrap.classList.remove("hidden");
+      indInput.checked = false;
+      return;
+    }
+    indWrap.classList.remove("hidden");
+    visWrap.classList.add("hidden");
+    if (fromToggle === "ativa") indInput.checked = true;
+  }
+
   function renderProdutosList(root, items, q, ativo) {
     root.innerHTML = `<div class="vf-products">
       <div class="vf-products__breadcrumb"><button type="button" data-vf-go-dashboard>Dashboard</button> / Produtos</div>
@@ -134,11 +177,11 @@
       </div>
       <form class="vf-filter-bar" id="vfProdutosFiltro">
         <label class="vf-field"><span>Buscar</span><input type="search" name="q" value="${esc(q)}" placeholder="Nome, código interno, categoria..."></label>
-        <label class="vf-field"><span>Status</span><select name="ativo"><option value="">Todos</option><option value="1" ${ativo === "1" ? "selected" : ""}>Ativo</option><option value="0" ${ativo === "0" ? "selected" : ""}>Inativo</option></select></label>
+        <label class="vf-field"><span>Status</span><select name="ativo"><option value="">Todos</option><option value="1" ${ativo === "1" ? "selected" : ""}>Ativo</option><option value="indisponivel" ${ativo === "indisponivel" ? "selected" : ""}>Indisponível</option><option value="0" ${ativo === "0" ? "selected" : ""}>Inativo</option></select></label>
         <div class="vf-filter-bar__buttons"><button class="vf-btn" type="submit">Filtrar</button><button class="vf-btn" type="button" data-vf-clear-filter>Limpar</button></div>
       </form>
       <div class="vf-card vf-table-card"><div class="vf-table-wrap"><table class="vf-table">
-        <thead><tr><th style="width:3.5rem"></th><th>Cód. interno</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th><th class="vf-table__right">Ações</th></tr></thead>
+        <thead><tr><th style="width:3.5rem"></th><th>Cód. interno</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Status</th><th class="vf-table__right">Ações</th></tr></thead>
         <tbody id="vfProdutosBody">${renderProdutosRows(items)}</tbody>
       </table></div></div>
     </div>`;
@@ -153,7 +196,8 @@
       const status = val(form, "ativo");
       const query = new URLSearchParams();
       if (busca) query.set("q", busca);
-      if (status !== "") query.set("ativo", status);
+      if (status === "indisponivel") query.set("indisponivel", "1");
+      else if (status !== "") query.set("ativo", status);
       const data = await api(`/produtos${query.toString() ? `?${query}` : ""}`);
       renderProdutosList(root, data.items || [], busca, status);
     };
@@ -169,7 +213,7 @@
 
   function renderProdutosRows(items) {
     if (!items.length) {
-      return `<tr><td colspan="8" class="vf-empty">Nenhum produto cadastrado. <button type="button" class="vf-btn vf-btn--link" data-vf-new-product>Criar primeiro</button></td></tr>`;
+      return `<tr><td colspan="7" class="vf-empty">Nenhum produto cadastrado. <button type="button" class="vf-btn vf-btn--link" data-vf-new-product>Criar primeiro</button></td></tr>`;
     }
     return items.map((p) => `<tr>
       <td>${produtoThumb(p)}</td>
@@ -177,8 +221,7 @@
       <td><strong>${esc(p.nome)}</strong></td>
       <td>${esc(p.categoria_nome || "—")}</td>
       <td>${money(p.preco)}</td>
-      <td>${Number(p.estoque || 0)}</td>
-      <td><span class="vf-badge ${Number(p.ativo) ? "vf-badge--active" : "vf-badge--inactive"}">${Number(p.ativo) ? "Ativo" : "Inativo"}</span>${Number(p.visivel_loja) ? "" : `<span class="vf-badge vf-badge--hidden">Oculto</span>`}</td>
+      <td>${produtoStatusBadges(p)}</td>
       <td class="vf-table__right"><button class="vf-btn" type="button" data-vf-edit-product="${p.id}">Editar</button></td>
     </tr>`).join("");
   }
@@ -200,11 +243,12 @@
     const adicionaisSelecionados = new Set((produto?.adicionais || []).map((a) => Number(a.id)));
     const ingredientes = produto?.ingredientes || [];
     const fotoUrl = deliveryImageUrl(produto?.foto_url);
+    const status = produtoStatusFromRecord(produto);
     root.innerHTML = `<div class="vf-products vf-product-editor ${editando ? "vf-product-editor--edit" : ""}">
       <div class="vf-products__breadcrumb"><button type="button" data-vf-back-products>Produtos</button> / ${editando ? `Editar #${produto.id}` : "Novo"}</div>
       <div class="vf-card vf-product-form-card">
         ${editando ? `<div class="vf-editor-head"><div><h2>${esc(produto.nome)}</h2><div class="vf-help">Código interno: <code class="vf-code">${esc(produto.sku)}</code></div></div>
-          <span class="vf-badge ${Number(produto.ativo) ? "vf-badge--active" : "vf-badge--inactive"}">${Number(produto.ativo) ? "Ativo" : "Inativo"}</span></div>` : `<h2>Dados do produto</h2>`}
+          ${produtoStatusBadges(produto)}</div>` : `<h2>Dados do produto</h2>`}
         <form id="vfProdutoEditorForm">
           <div class="vf-form-grid">
             <label class="vf-field vf-col-12"><span>Foto do produto</span>
@@ -216,8 +260,7 @@
               ${editando ? "" : `<small>O <strong>código interno</strong> será gerado automaticamente ao salvar.</small>`}
             </label>
             <label class="vf-field vf-col-6"><span>Categoria</span><select name="categoria_id">${categoriaOptions(produto?.categoria_id)}</select><small><button class="vf-btn vf-btn--link" type="button" data-vf-go-categorias>Gerenciar categorias</button></small></label>
-            <label class="vf-field vf-col-3"><span>Preço (R$)</span><input name="preco" type="number" min="0" step="0.01" value="${esc(produto?.preco ?? "")}" required></label>
-            <label class="vf-field vf-col-3"><span>Estoque</span><input name="estoque" type="number" min="0" step="1" value="${esc(produto?.estoque ?? 0)}" required></label>
+            <label class="vf-field vf-col-6"><span>Preço (R$)</span><input name="preco" type="number" min="0" step="0.01" value="${esc(produto?.preco ?? "")}" required></label>
             <label class="vf-field vf-col-12"><span>Descrição</span><textarea name="descricao" rows="3">${esc(produto?.descricao || "")}</textarea></label>
 
             <fieldset class="vf-fieldset vf-col-12"><legend>Na vitrine da loja — retirar ingredientes</legend>
@@ -262,9 +305,15 @@
               </div>
             </div>
 
-            <div class="vf-col-12 vf-choice-stack">
-              <label class="vf-check"><input type="checkbox" name="visivel_loja" ${produto ? (Number(produto.visivel_loja) ? "checked" : "") : "checked"}> Visível na loja pública</label>
-              <label class="vf-check"><input type="checkbox" name="ativo" ${produto ? (Number(produto.ativo) ? "checked" : "") : "checked"}> ${editando ? "Ativo" : "Ativo (disponível para venda)"}</label>
+            <div class="vf-col-12 vf-choice-stack" id="vfProdutoStatusOpts">
+              <label class="vf-check"><input type="checkbox" name="ativa" ${status.ativa ? "checked" : ""}> Ativa</label>
+              <label class="vf-check ${status.ativa ? "hidden" : ""}" id="vfProdutoIndisponivelWrap">
+                <input type="checkbox" name="indisponivel" ${status.indisponivel ? "checked" : ""}> Indisponível na loja
+              </label>
+              <label class="vf-check ${status.ativa ? "" : "hidden"}" id="vfProdutoVisivelWrap">
+                <input type="checkbox" name="visivel_loja" ${status.visivel_loja ? "checked" : ""}> Visível na loja pública
+              </label>
+              <small class="vf-help">Desmarque <strong>Ativa</strong> para pausar a venda. Com <strong>Indisponível</strong>, o item continua no cardápio, mas o cliente não consegue comprar.</small>
             </div>
             <div class="vf-form-actions vf-col-12">
               <button class="vf-btn vf-btn--primary" type="submit">${editando ? "Atualizar" : "Salvar"}</button>
@@ -299,6 +348,9 @@
   }
 
   function bindProdutoEditor(root, produto) {
+    const form = $("vfProdutoEditorForm");
+    syncProdutoStatusFields(form);
+    form.elements.ativa?.addEventListener("change", () => syncProdutoStatusFields(form, "ativa"));
     root.querySelectorAll("[data-vf-back-products]").forEach((b) => { b.onclick = () => loadProdutos(); });
     root.querySelector("[data-vf-go-categorias]").onclick = () => window.navigateTo?.("deliveryCategorias");
     root.querySelector("[data-vf-add-ingredient]").onclick = () => {
@@ -351,7 +403,6 @@
           nome: val(form, "nome").trim(),
           categoria_id: val(form, "categoria_id") ? Number(val(form, "categoria_id")) : null,
           preco: Number(val(form, "preco")),
-          estoque: Number(val(form, "estoque")),
           descricao: val(form, "descricao") || null,
           foto_base64: mainFile ? await fileToDataUrl(mainFile, 3 * 1024 * 1024, "Foto do produto") : null,
           foto_path: produto?.foto_path || null,
@@ -363,8 +414,14 @@
           permite_adicionais: bool(form, "permite_adicionais"),
           adicional_ids: [...form.querySelectorAll('input[name="adicional_ids"]:checked')].map((x) => Number(x.value)),
           ingredientes: ingredientesValidos,
-          visivel_loja: bool(form, "visivel_loja"),
-          ativo: bool(form, "ativo"),
+          ...(function () {
+            const ativa = bool(form, "ativa");
+            if (ativa) {
+              return { ativo: true, visivel_loja: bool(form, "visivel_loja") };
+            }
+            const indisponivel = bool(form, "indisponivel");
+            return { ativo: false, visivel_loja: indisponivel };
+          })(),
         };
         await api(produto ? `/produtos/${produto.id}` : "/produtos", { method: produto ? "PUT" : "POST", body: JSON.stringify(payload) });
         toast(produto ? "Produto atualizado." : "Produto cadastrado.", "success");

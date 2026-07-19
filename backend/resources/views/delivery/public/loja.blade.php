@@ -46,10 +46,11 @@
     </div>
     <div class="vf-product-grid" data-products>
         @foreach($produtos as $produto)
+        @php $vendaDisponivel = (int) $produto->ativo === 1; @endphp
         <a class="vf-product-card" data-category="cat-{{ $produto->categoria_id }}" href="{{ route('delivery.public.product', [$slug, $produto->id]) }}">
             <div class="vf-product-card__photo">
                 @if($produto->foto_url)<img src="{{ $produto->foto_url }}" alt="" loading="lazy">@else<span aria-hidden="true">▧</span>@endif
-                @if((int)$produto->estoque <= 0)<b class="sold-out">Esgotado</b>@endif
+                @if(!$vendaDisponivel)<b class="sold-out">Indisponível</b>@endif
             </div>
             <div class="vf-product-card__body">
                 <strong>{{ $produto->nome }}</strong>
