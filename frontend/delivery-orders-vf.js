@@ -76,14 +76,18 @@
     return headers;
   }
 
+  function printCupomUrl(orderId, auto, order) {
+    const path = order?.url_imprimir || `/delivery/pedidos/${orderId}/imprimir`;
+    const base = `${API_URL}${String(path).startsWith("/") ? path : `/${path}`}`;
+    return auto ? `${base}?auto=1` : base;
+  }
+
   function printCupomHref(orderId, auto, order) {
     const uid = currentSessionUser()?.id;
     if (uid == null || uid === "") return "";
-    const path = order?.url_imprimir || `/delivery/pedidos/${orderId}/imprimir`;
     const params = new URLSearchParams({ x_usuario_id: String(uid) });
     if (auto) params.set("auto", "1");
-    const base = `${API_URL}${String(path).startsWith("/") ? path : `/${path}`}`;
-    return `${base}?${params.toString()}`;
+    return `${printCupomUrl(orderId, false, order)}?${params.toString()}`;
   }
 
   function publicStoreUrl(order, vitrine) {
@@ -95,10 +99,52 @@
   }
 
   async function openPrint(orderId, auto, order) {
-    const href = printCupomHref(orderId, auto, order);
-    if (!href) throw new Error("Faça login novamente para abrir o cupom.");
-    const win = window.open(href, "_blank");
+    if (!currentSessionUser()?.id) {
+      throw new Error("Faça login novamente para abrir o cupom.");
+    }
+
+    const win = window.open("", "_blank");
     if (!win) throw new Error("Permita pop-ups para imprimir o cupom.");
+
+    win.document.open();
+    win.document.write("<!DOCTYPE html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>Cupom</title></head><body style=\"font-family:sans-serif;padding:24px;text-align:center\"><p>Carregando cupom…</p></body></html>");
+    win.document.close();
+
+    try {
+      const res = await fetch(printCupomUrl(orderId, auto, order), {
+        headers: authHeaders(),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        let msg = "Não foi possível abrir o cupom para impressão.";
+        try {
+          const payload = await res.json();
+          if (payload?.error) msg = payload.error;
+        } catch (_) {
+          /* ignore */
+        }
+        throw new Error(msg);
+      }
+
+      let html = await res.text();
+      const baseHref = `${apiOrigin()}/`;
+      if (!/<base\b/i.test(html)) {
+        html = html.replace(/<head(\b[^>]*)>/i, `<head$1><base href="${baseHref}">`);
+      }
+
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+
+      if (auto) {
+        window.setTimeout(() => {
+          try { win.print(); } catch (_) { /* ignore */ }
+        }, 400);
+      }
+    } catch (error) {
+      win.close();
+      throw error;
+    }
   }
 
   function rotuloCanal(canal) {
@@ -191,15 +237,14 @@
   function renderCupomActions(order) {
     const wa = order.cupom_whatsapp_url;
     const printEnabled = order.impressao_habilitada !== false;
-    const printUrl = printCupomHref(order.id, false, order);
-    const printAutoUrl = printCupomHref(order.id, true, order);
+    const canPrint = printEnabled && Boolean(currentSessionUser()?.id);
     return `<div class="vf-show-card vf-show-card--sidebar">
       <h3 class="vf-show-card__title">Cupom do cliente</h3>
       <p class="vf-show-help">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> pelo navegador ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
       <div class="vf-show-stack">
-        ${printEnabled && printUrl
-          ? `<a href="${esc(printUrl)}" target="_blank" rel="noopener noreferrer" class="vf-show-btn vf-show-btn--dark vf-show-btn--block"><i class="bi bi-printer"></i>Abrir cupom / imprimir</a>
-          <a href="${esc(printAutoUrl)}" target="_blank" rel="noopener noreferrer" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</a>`
+        ${canPrint
+          ? `<a href="#" class="vf-show-btn vf-show-btn--dark vf-show-btn--block" data-vf-print="0" role="button"><i class="bi bi-printer"></i>Abrir cupom / imprimir</a>
+          <a href="#" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block" data-vf-print="1" role="button"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</a>`
           : printEnabled
             ? `<p class="vf-show-warn">Faça login novamente para abrir o cupom.</p>`
             : `<p class="vf-show-help">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
@@ -694,6 +739,13 @@
         });
       };
     }
+    root.querySelectorAll("[data-vf-print]").forEach((button) => {
+      button.onclick = async (event) => {
+        event.preventDefault();
+        try { await openPrint(order.id, button.dataset.vfPrint === "1", order); }
+        catch (error) { toast(error?.message || "Não foi possível imprimir o cupom.", "error"); }
+      };
+    });
     const confirmPix = root.querySelector("[data-vf-confirm-pix]");
     if (confirmPix) {
       confirmPix.onclick = async () => {

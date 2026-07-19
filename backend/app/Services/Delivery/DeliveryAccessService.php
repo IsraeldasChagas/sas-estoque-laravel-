@@ -12,7 +12,12 @@ class DeliveryAccessService
 
     public function usuario(Request $request): object
     {
-        $usuario = DB::table('usuarios')->where('id', $request->header('X-Usuario-Id'))->where('ativo', 1)->first();
+        $uid = $request->header('X-Usuario-Id');
+        if (! $uid && $request->isMethod('GET')) {
+            $uid = $request->query('x_usuario_id');
+        }
+
+        $usuario = DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first();
         abort_unless($usuario, 401, 'Usuário não identificado.');
 
         return $usuario;
