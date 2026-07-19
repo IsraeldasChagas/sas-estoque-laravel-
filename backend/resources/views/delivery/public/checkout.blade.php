@@ -41,7 +41,7 @@
 (function(){
  const form=document.querySelector('[data-checkout-form]'), items=DeliveryCart.items();
  if(!items.length){location.href=@json(route('delivery.public.store',$slug));return}
- const apiItems=()=>items.map(i=>({produto_id:i.produto_id,quantidade:i.quantidade,opcoes:{adicionais:(i.opcoes.adicionais||[]).map(a=>({id:a.id,quantidade:a.quantidade})),retiradas:(i.opcoes.retiradas||[]).map(r=>({id:r.id}))}}));
+ const apiItems=()=>items.map(i=>({produto_id:i.produto_id,quantidade:i.quantidade,opcoes:{adicionais:(i.opcoes.adicionais||[]).map(a=>({id:a.id,quantidade:a.quantidade})),retiradas:(i.opcoes.retiradas||[]).map(r=>({id:r.id,quantidade:r.quantidade||1})),observacao:i.opcoes.observacao||null,nota_produto:i.opcoes.nota_produto||null}}));
  const subtotal=items.reduce((s,i)=>s+(i.preco+(i.opcoes.adicionais||[]).reduce((a,x)=>a+x.preco*x.quantidade,0))*i.quantidade,0);
  document.querySelector('[data-checkout-items]').innerHTML=items.map(i=>'<p><strong>'+DeliveryCart.escape(i.nome)+'</strong><small>'+i.quantidade+'×</small></p>').join('');
  document.querySelector('[data-summary-subtotal]').textContent=DeliveryCart.money(subtotal);

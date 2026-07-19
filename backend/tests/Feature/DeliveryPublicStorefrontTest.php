@@ -134,6 +134,46 @@ class DeliveryPublicStorefrontTest extends TestCase
         $this->assertDatabaseCount('dlv_pedidos', 0);
     }
 
+    public function test_checkout_aceita_personalizar_ingredientes_sem_permite_adicionais(): void
+    {
+        $this->store();
+        $product = $this->product($this->category(), [
+            'nome' => 'Menu Degustação 3 Opções',
+            'preco' => 90,
+            'permite_adicionais' => false,
+            'max_ingredientes_retirar' => 3,
+            'ingredientes_retirar_ui' => 'stepper',
+        ]);
+        $ing1 = DB::table('dlv_produto_ingredientes')->insertGetId($this->timestamps([
+            'produto_id' => $product, 'nome' => 'Arroz Paraense', 'ordem' => 0,
+        ]));
+        $ing2 = DB::table('dlv_produto_ingredientes')->insertGetId($this->timestamps([
+            'produto_id' => $product, 'nome' => 'Feijão Tropeiro', 'ordem' => 1,
+        ]));
+        $ing3 = DB::table('dlv_produto_ingredientes')->insertGetId($this->timestamps([
+            'produto_id' => $product, 'nome' => 'Carne de Sol', 'ordem' => 2,
+        ]));
+
+        $payload = $this->checkoutPayload($product);
+        $payload['pagamento_forma'] = 'pix';
+        $payload['itens'][0]['opcoes'] = [
+            'retiradas' => [
+                ['id' => $ing1, 'quantidade' => 1],
+                ['id' => $ing2, 'quantidade' => 1],
+                ['id' => $ing3, 'quantidade' => 1],
+            ],
+            'observacao' => 'Sem pimenta',
+        ];
+
+        $this->postJson('/loja/teste/checkout', $payload)
+            ->assertCreated()
+            ->assertJsonStructure(['redirect_url']);
+
+        $item = DB::table('dlv_pedido_itens')->first();
+        $opcoes = json_decode((string) $item->opcoes_json, true);
+        $this->assertCount(3, $opcoes['retiradas'] ?? []);
+    }
+
     public function test_freight_and_pickup_follow_store_configuration(): void
     {
         $this->store(['permite_retirada' => false]);

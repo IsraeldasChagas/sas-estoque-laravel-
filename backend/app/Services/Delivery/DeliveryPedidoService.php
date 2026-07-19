@@ -323,8 +323,20 @@ class DeliveryPedidoService
         $adicionaisSelecionados = collect($opcoes['adicionais'] ?? []);
         $retiradas = collect($opcoes['retiradas'] ?? []);
 
-        if (! (bool) $produto->permite_adicionais && ($adicionaisSelecionados->isNotEmpty() || $retiradas->isNotEmpty())) {
-            throw ValidationException::withMessages(['opcoes' => 'Este produto não permite adicionais/retiradas.']);
+        $temIngredientes = DB::table('dlv_produto_ingredientes')
+            ->where('produto_id', $produto->id)
+            ->exists();
+        $temAdicionaisVinculados = DB::table('dlv_produto_adicional')
+            ->where('produto_id', $produto->id)
+            ->exists();
+        $permiteAdicionaisPagos = (bool) $produto->permite_adicionais || $temAdicionaisVinculados;
+
+        if ($adicionaisSelecionados->isNotEmpty() && ! $permiteAdicionaisPagos) {
+            throw ValidationException::withMessages(['opcoes' => 'Este produto não permite adicionais.']);
+        }
+
+        if ($retiradas->isNotEmpty() && ! $temIngredientes) {
+            throw ValidationException::withMessages(['opcoes' => 'Este produto não permite personalização de ingredientes.']);
         }
 
         $snapshotAdicionais = [];
