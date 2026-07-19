@@ -4,7 +4,7 @@
 (function () {
   "use strict";
 
-  const state = { cartoes: [], recompensas: [], cartaoId: null, unidades: [], unidadeId: "", catalogoConsultaSuportado: true };
+  const state = { cartoes: [], recompensas: [], cartaoId: null, unidades: [], unidadeId: "", catalogoConsultaSuportado: true, catalogoPickerDocClose: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -218,14 +218,78 @@
     });
   }
 
-  function catalogoProdutosSelect(form) {
-    return form?.querySelector("#fidCatalogoProdutosSelect") || null;
+  function selectedCatalogoProdutoIds(form) {
+    if (!form) return [];
+    return Array.from(form.querySelectorAll('input[name="catalogo_produtos_ids[]"]:checked'))
+      .map((el) => Number(el.value))
+      .filter((id) => id > 0);
   }
 
-  function selectedCatalogoProdutoIds(form) {
-    const sel = catalogoProdutosSelect(form);
-    if (!sel) return [];
-    return Array.from(sel.selectedOptions).map((el) => Number(el.value)).filter((id) => id > 0);
+  function closeCatalogoPicker() {
+    $("fidCatalogoPickerPanel")?.classList.add("hidden");
+    const toggle = $("fidCatalogoPickerToggle");
+    toggle?.setAttribute("aria-expanded", "false");
+    toggle?.classList.remove("is-open");
+  }
+
+  function syncCatalogoPickerLabel(form) {
+    const text = $("fidCatalogoPickerText");
+    if (!text || !form) return;
+    const ids = selectedCatalogoProdutoIds(form);
+    if (!ids.length) {
+      text.textContent = "Selecionar produtos…";
+      return;
+    }
+    if (ids.length === 1) {
+      const row = form.querySelector(`input[name="catalogo_produtos_ids[]"][value="${ids[0]}"]`);
+      const nome = row?.closest("label")?.querySelector(".fid-catalogo-picker__nome")?.textContent?.trim();
+      text.textContent = nome || "1 produto selecionado";
+      return;
+    }
+    text.textContent = `${ids.length} produtos selecionados`;
+  }
+
+  function bindCatalogoPicker(form) {
+    const picker = $("fidCatalogoPicker");
+    const toggle = $("fidCatalogoPickerToggle");
+    const panel = $("fidCatalogoPickerPanel");
+    const done = $("fidCatalogoPickerDone");
+    if (!picker || !toggle || !panel || !form) return;
+
+    toggle.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (panel.classList.contains("hidden")) {
+        panel.classList.remove("hidden");
+        toggle.setAttribute("aria-expanded", "true");
+        toggle.classList.add("is-open");
+      } else {
+        closeCatalogoPicker();
+      }
+    };
+
+    done.onclick = (event) => {
+      event.preventDefault();
+      closeCatalogoPicker();
+      enforceCatalogoProdutosLimit(form);
+    };
+
+    panel.querySelectorAll('input[name="catalogo_produtos_ids[]"]').forEach((el) => {
+      el.addEventListener("change", () => {
+        syncCatalogoPickerLabel(form);
+        syncCatalogoConsultaHint(form);
+      });
+    });
+
+    if (state.catalogoPickerDocClose) {
+      document.removeEventListener("click", state.catalogoPickerDocClose);
+    }
+    state.catalogoPickerDocClose = (event) => {
+      if (!picker.contains(event.target)) closeCatalogoPicker();
+    };
+    document.addEventListener("click", state.catalogoPickerDocClose);
+
+    syncCatalogoPickerLabel(form);
   }
 
   function syncProgramaRecompensaFields(form) {
@@ -258,6 +322,7 @@
   }
 
   function enforceCatalogoProdutosLimit(form) {
+    syncCatalogoPickerLabel(form);
     syncCatalogoConsultaHint(form);
   }
 
@@ -391,20 +456,31 @@
         return;
       }
       const selected = new Set((selectedIds || []).map(Number));
-      const listSize = Math.min(12, Math.max(5, items.length));
-      list.innerHTML = `<label class="fid-catalogo-produtos-select-label">
-        Produtos do cardápio
-        <select id="fidCatalogoProdutosSelect" name="catalogo_produtos_ids[]" multiple size="${listSize}" class="fid-catalogo-produtos-select">
-          ${items.map((item) => {
-            const id = Number(item.id);
-            const selectedAttr = selected.has(id) ? " selected" : "";
-            const visivel = item.visivel_loja ? "" : " · só consulta";
-            return `<option value="${id}"${selectedAttr}>${esc(item.nome)} — ${money(item.preco)}${visivel}</option>`;
-          }).join("")}
-        </select>
-      </label>
-      <p class="subtle-text fid-catalogo-produtos-select-hint">Segure <strong>Ctrl</strong> (Windows) ou <strong>Cmd</strong> (Mac) para selecionar vários produtos.</p>`;
-      catalogoProdutosSelect($("fidProgramaForm"))?.addEventListener("change", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
+      list.innerHTML = `<div class="fid-catalogo-picker" id="fidCatalogoPicker">
+        <span class="fid-catalogo-picker__label">Produtos do cardápio</span>
+        <button type="button" class="fid-catalogo-picker__toggle" id="fidCatalogoPickerToggle" aria-expanded="false" aria-controls="fidCatalogoPickerPanel">
+          <span class="fid-catalogo-picker__text" id="fidCatalogoPickerText">Selecionar produtos…</span>
+          <span class="fid-catalogo-picker__arrow" aria-hidden="true">▾</span>
+        </button>
+        <div class="fid-catalogo-picker__panel hidden" id="fidCatalogoPickerPanel">
+          <div class="fid-catalogo-picker__list">
+            ${items.map((item) => {
+              const id = Number(item.id);
+              const checkedAttr = selected.has(id) ? " checked" : "";
+              const visivel = item.visivel_loja ? "" : " · só consulta";
+              return `<label class="fid-catalogo-picker__item">
+                <input type="checkbox" name="catalogo_produtos_ids[]" value="${id}"${checkedAttr}>
+                <span class="fid-catalogo-picker__item-body">
+                  <span class="fid-catalogo-picker__nome">${esc(item.nome)}</span>
+                  <small>${money(item.preco)}${visivel}</small>
+                </span>
+              </label>`;
+            }).join("")}
+          </div>
+          <button type="button" class="btn secondary fid-catalogo-picker__done" id="fidCatalogoPickerDone">Pronto</button>
+        </div>
+      </div>`;
+      bindCatalogoPicker($("fidProgramaForm"));
       enforceCatalogoProdutosLimit($("fidProgramaForm"));
     } catch (error) {
       list.innerHTML = `<p class="subtle-text">${esc(error.message || "Não foi possível carregar o cardápio.")}</p>`;
