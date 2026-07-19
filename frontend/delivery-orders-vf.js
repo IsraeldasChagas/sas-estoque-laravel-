@@ -50,19 +50,40 @@
     return order.cliente_whatsapp || order.cliente_telefone || "";
   }
 
+  function currentSessionUser() {
+    if (typeof window.getUser === "function") {
+      const user = window.getUser();
+      if (user?.id != null) return user;
+    }
+    if (window.currentUser?.id != null) return window.currentUser;
+    try {
+      const raw = localStorage.getItem("sas-estoque-user");
+      if (raw) {
+        const user = JSON.parse(raw);
+        if (user?.id != null) return user;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return null;
+  }
+
   function authHeaders(extra) {
+    const user = currentSessionUser();
     const headers = { ...(extra || {}) };
-    if (window.currentUser?.token) headers.Authorization = `Bearer ${window.currentUser.token}`;
-    if (window.currentUser?.id != null) headers["X-Usuario-Id"] = String(window.currentUser.id);
+    if (user?.token) headers.Authorization = `Bearer ${user.token}`;
+    if (user?.id != null) headers["X-Usuario-Id"] = String(user.id);
     return headers;
   }
 
-  function printCupomHref(orderId, auto) {
-    const uid = window.currentUser?.id;
+  function printCupomHref(orderId, auto, order) {
+    const uid = currentSessionUser()?.id;
     if (uid == null || uid === "") return "";
+    const path = order?.url_imprimir || `/delivery/pedidos/${orderId}/imprimir`;
     const params = new URLSearchParams({ x_usuario_id: String(uid) });
     if (auto) params.set("auto", "1");
-    return `${API_URL}/delivery/pedidos/${orderId}/imprimir?${params.toString()}`;
+    const base = `${API_URL}${String(path).startsWith("/") ? path : `/${path}`}`;
+    return `${base}?${params.toString()}`;
   }
 
   function publicStoreUrl(order, vitrine) {
@@ -73,8 +94,8 @@
     return `${apiOrigin()}${String(path).startsWith("/") ? path : `/${path}`}`;
   }
 
-  async function openPrint(orderId, auto) {
-    const href = printCupomHref(orderId, auto);
+  async function openPrint(orderId, auto, order) {
+    const href = printCupomHref(orderId, auto, order);
     if (!href) throw new Error("Faça login novamente para abrir o cupom.");
     const win = window.open(href, "_blank");
     if (!win) throw new Error("Permita pop-ups para imprimir o cupom.");
@@ -170,8 +191,8 @@
   function renderCupomActions(order) {
     const wa = order.cupom_whatsapp_url;
     const printEnabled = order.impressao_habilitada !== false;
-    const printUrl = printCupomHref(order.id, false);
-    const printAutoUrl = printCupomHref(order.id, true);
+    const printUrl = printCupomHref(order.id, false, order);
+    const printAutoUrl = printCupomHref(order.id, true, order);
     return `<div class="vf-show-card vf-show-card--sidebar">
       <h3 class="vf-show-card__title">Cupom do cliente</h3>
       <p class="vf-show-help">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> pelo navegador ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
