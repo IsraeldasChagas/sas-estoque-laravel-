@@ -9,6 +9,7 @@ Route::prefix('fidelidade')->middleware('sas.usuario')->group(function () {
 
     Route::get('/programa', [FidelidadeController::class, 'getPrograma']);
     Route::put('/programa', [FidelidadeController::class, 'putPrograma']);
+    Route::get('/catalogo-consulta/produtos', [FidelidadeController::class, 'catalogoConsultaProdutos']);
 
     Route::get('/cartoes', [FidelidadeController::class, 'listCartoes']);
     Route::post('/cartoes', [FidelidadeController::class, 'storeCartao']);

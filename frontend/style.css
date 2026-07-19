@@ -8207,6 +8207,38 @@ select[size]:not([size="1"]) {
   border-color: #b91c1c;
 }
 
+.fid-catalogo-produtos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+.fid-catalogo-produto-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+.fid-catalogo-produto-item input {
+  margin-top: 0.2rem;
+}
+.fid-catalogo-produto-item span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.fid-catalogo-produto-item small {
+  color: #64748b;
+}
+.fid-catalogo-consulta-wrap {
+  margin-top: 0.75rem;
+}
+
 .reserva-fid__link-vitrine {
   margin: 0.75rem 0;
   padding: 0.85rem 1rem;

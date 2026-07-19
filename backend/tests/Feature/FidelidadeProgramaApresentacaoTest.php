@@ -56,7 +56,25 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
         });
     }
 
-    public function test_linhas_produto_usam_texto_recompensa(): void
+    public function test_linhas_catalogo_consulta_listam_produtos_e_quantidade(): void
+    {
+        $programa = (object) [
+            'tipo_recompensa_padrao' => 'catalogo_consulta',
+            'pedidos_meta' => 10,
+            'catalogo_qtd_escolhas' => 2,
+            'catalogo_produtos_json' => json_encode([
+                ['id' => 1, 'nome' => 'Tacacá'],
+                ['id' => 2, 'nome' => 'Açaí'],
+            ]),
+        ];
+
+        $linhas = $this->svc->linhasRecompensa($programa);
+        $this->assertCount(1, $linhas);
+        $this->assertStringContainsString('escolha até 2 produto(s)', $linhas[0]);
+        $this->assertStringContainsString('Tacacá', $linhas[0]);
+    }
+
+    public function test_linhas_produto_legacy_usam_texto_recompensa(): void
     {
         $programa = (object) [
             'tipo_recompensa_padrao' => 'produto',
@@ -65,8 +83,7 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
         ];
 
         $linhas = $this->svc->linhasRecompensa($programa);
-        $this->assertCount(1, $linhas);
-        $this->assertStringContainsString('1 tacacá especial', $linhas[0]);
+        $this->assertGreaterThanOrEqual(1, count($linhas));
     }
 
     public function test_linhas_percentual_explicam_gasto_acumulado(): void

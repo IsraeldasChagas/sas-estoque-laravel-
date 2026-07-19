@@ -70,6 +70,9 @@ class FidelidadeApiTest extends TestCase
         $pctMigration = require database_path('migrations/2026_07_18_220000_add_desconto_percentual_to_fid_programas.php');
         $pctMigration->up();
 
+        $catalogoMigration = require database_path('migrations/2026_07_19_180000_add_catalogo_consulta_to_fid_programas.php');
+        $catalogoMigration->up();
+
         $this->ensureFidelidadeRoutes();
     }
 
@@ -123,6 +126,48 @@ class FidelidadeApiTest extends TestCase
             ->assertJsonPath('programa.nome_exibicao', 'Cartão do lanche');
 
         $this->assertDatabaseCount('fid_programas', 1);
+    }
+
+    public function test_programa_catalogo_consulta_salva_produtos_e_quantidade(): void
+    {
+        Schema::dropIfExists('dlv_produtos');
+        Schema::create('dlv_produtos', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('unidade_id');
+            $table->string('nome');
+            $table->decimal('preco', 14, 2)->default(0);
+            $table->boolean('ativo')->default(true);
+            $table->boolean('visivel_loja')->default(true);
+        });
+
+        DB::table('dlv_produtos')->insert([
+            ['id' => 501, 'unidade_id' => 1, 'nome' => 'Tacacá', 'preco' => 18.00, 'ativo' => 1, 'visivel_loja' => 1],
+            ['id' => 502, 'unidade_id' => 1, 'nome' => 'Açaí 500ml', 'preco' => 22.00, 'ativo' => 1, 'visivel_loja' => 1],
+        ]);
+
+        $this->withHeaders($this->headers())->putJson('/api/fidelidade/programa', [
+            'unidade_id' => 1,
+            'nome_exibicao' => 'Cartão consulta',
+            'pedidos_meta' => 10,
+            'tipo_recompensa_padrao' => 'catalogo_consulta',
+            'catalogo_qtd_escolhas' => 2,
+            'catalogo_produtos_ids' => [501, 502],
+            'ativo' => true,
+        ])->assertOk()
+            ->assertJsonPath('programa.tipo_recompensa_padrao', 'catalogo_consulta')
+            ->assertJsonPath('programa.catalogo_qtd_escolhas', 2)
+            ->assertJsonCount(2, 'programa.catalogo_produtos');
+
+        $this->withHeaders($this->headers())->getJson('/api/fidelidade/catalogo-consulta/produtos?unidade_id=1')
+            ->assertOk()
+            ->assertJsonCount(2, 'items')
+            ->assertJsonPath('delivery_disponivel', true);
+
+        $nomes = collect($this->withHeaders($this->headers())->getJson('/api/fidelidade/catalogo-consulta/produtos?unidade_id=1')->json('items'))
+            ->pluck('nome')
+            ->all();
+        $this->assertContains('Tacacá', $nomes);
+        $this->assertContains('Açaí 500ml', $nomes);
     }
 
     public function test_cartao_enrollment_normalizes_phone_and_cpf(): void

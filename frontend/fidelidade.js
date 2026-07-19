@@ -130,7 +130,10 @@
       return;
     }
     const p = data.programa || {};
-    const tipoRec = p.tipo_recompensa_padrao || "produto";
+    let tipoRec = p.tipo_recompensa_padrao || "catalogo_consulta";
+    if (tipoRec === "produto") tipoRec = "catalogo_consulta";
+    const catalogoQtd = Number(p.catalogo_qtd_escolhas || 1);
+    const catalogoSelecionados = Array.isArray(p.catalogo_produtos_ids) ? p.catalogo_produtos_ids.map(Number) : [];
     root.innerHTML = shell(header("Programa", "Defina como os clientes acumulam e trocam benefícios.", "🎁")
       + unidadeBar()
       + `<form id="fidProgramaForm" class="orc-card">
@@ -141,12 +144,13 @@
           <label>Meta de selos<input name="pedidos_meta" type="number" min="1" value="${esc(p.pedidos_meta || 10)}" required></label>
           <label>Pontos por selo<input name="pontos_por_selo" type="number" min="0" value="${esc(p.pontos_por_selo ?? 1)}"></label>
           <label>Recompensa padrão<select name="tipo_recompensa_padrao" id="fidTipoRecompensa">
-            <option value="produto" ${tipoRec === "produto" ? "selected" : ""}>Produto (descrever)</option>
+            <option value="catalogo_consulta" ${tipoRec === "catalogo_consulta" ? "selected" : ""}>Catálogo (consulta)</option>
             <option value="brinde" ${tipoRec === "brinde" ? "selected" : ""}>Brinde (descrever)</option>
             <option value="desconto_valor" ${tipoRec === "desconto_valor" ? "selected" : ""}>Desconto em valor (R$)</option>
             <option value="desconto_percentual" ${tipoRec === "desconto_percentual" ? "selected" : ""}>Desconto percentual (%)</option>
-            <option value="catalogo" ${tipoRec === "catalogo" ? "selected" : ""}>Catálogo de recompensas</option>
+            <option value="catalogo" ${tipoRec === "catalogo" ? "selected" : ""}>Catálogo de recompensas (lista manual)</option>
           </select></label>
+          <label class="fid-rec-field fid-rec-field--catalogo-qtd" data-fid-rec-show="catalogo_consulta">Qtd. que o cliente pode escolher<input name="catalogo_qtd_escolhas" id="fidCatalogoQtd" type="number" min="1" max="20" value="${esc(catalogoQtd)}"></label>
           <label class="fid-rec-field fid-rec-field--valor" data-fid-rec-show="desconto_valor">Valor do desconto (R$)<input name="valor_desconto" type="number" min="0" step="0.01" value="${esc(p.valor_desconto || "")}"></label>
           <label class="fid-rec-field fid-rec-field--pct" data-fid-rec-show="desconto_percentual">Desconto percentual (%)<input name="desconto_percentual" type="number" min="0" max="100" step="0.01" value="${esc(p.desconto_percentual || "")}"></label>
           <label class="fid-rec-field fid-rec-field--pct" data-fid-rec-show="desconto_percentual">Base do percentual<select name="base_desconto_percentual">
@@ -156,7 +160,12 @@
           <label class="checkbox-label"><input name="ativo" type="checkbox" ${p.ativo ? "checked" : ""}> Programa ativo nesta unidade</label>
           <label class="checkbox-label"><input name="permite_ajuste_manual" type="checkbox" ${p.permite_ajuste_manual !== false && Number(p.permite_ajuste_manual) !== 0 ? "checked" : ""}> Permitir ajustes manuais</label>
         </div>
-        <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="produto brinde">Descrição da recompensa (produto/brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de tacacá ou sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
+        <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="brinde">Descrição da recompensa (brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
+        <div class="orc-card fid-rec-field fid-catalogo-consulta-wrap" data-fid-rec-show="catalogo_consulta">
+          <div class="orc-section-title"><div><h3>Produtos do cardápio (Delivery)</h3><p>Marque os itens disponíveis para o resgate. O cliente poderá escolher até a quantidade informada acima.</p></div></div>
+          <p class="subtle-text" id="fidCatalogoConsultaHint"></p>
+          <div id="fidCatalogoProdutosList" class="fid-catalogo-produtos-list"></div>
+        </div>
         <p class="subtle-text fid-rec-hint fid-rec-field" data-fid-rec-show="desconto_percentual">O percentual incide sobre a soma do valor pago em cada conta das visitas que geraram os selos desde o último resgate (até a meta).</p>
         <p class="subtle-text fid-rec-hint fid-rec-field" data-fid-rec-show="desconto_valor">Desconto fixo em reais aplicado na conta ao resgatar os selos.</p>
         <div class="orc-actions"><button class="btn primary" type="submit">Salvar programa</button></div>
@@ -164,19 +173,26 @@
     bindUnidadeSelect(loadPrograma);
     syncProgramaRecompensaFields($("fidProgramaForm"));
     $("fidTipoRecompensa")?.addEventListener("change", () => syncProgramaRecompensaFields($("fidProgramaForm")));
+    $("fidCatalogoQtd")?.addEventListener("change", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
+    await renderCatalogoConsultaProdutos(catalogoSelecionados, catalogoQtd);
     $("fidProgramaForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const f = event.currentTarget;
       const tipo = value(f, "tipo_recompensa_padrao");
+      const catalogoIds = tipo === "catalogo_consulta"
+        ? Array.from(f.querySelectorAll('input[name="catalogo_produtos_ids[]"]:checked')).map((el) => Number(el.value))
+        : [];
       await api("/programa", { method: "PUT", body: JSON.stringify({
         nome_exibicao: value(f, "nome_exibicao"), modo: value(f, "modo"),
         pedidos_meta: Number(value(f, "pedidos_meta")), pontos_por_selo: Number(value(f, "pontos_por_selo")),
         tipo_recompensa_padrao: tipo,
+        catalogo_qtd_escolhas: tipo === "catalogo_consulta" ? Number(value(f, "catalogo_qtd_escolhas") || 1) : null,
+        catalogo_produtos_ids: tipo === "catalogo_consulta" ? catalogoIds : [],
         valor_desconto: tipo === "desconto_valor" && value(f, "valor_desconto") !== "" ? Number(value(f, "valor_desconto")) : null,
         desconto_percentual: tipo === "desconto_percentual" && value(f, "desconto_percentual") !== "" ? Number(value(f, "desconto_percentual")) : null,
         base_desconto_percentual: tipo === "desconto_percentual" ? (value(f, "base_desconto_percentual") || "gasto_acumulado_meta") : null,
         dias_expiracao_credito: value(f, "dias_expiracao_credito") === "" ? null : Number(value(f, "dias_expiracao_credito")),
-        texto_recompensa: (tipo === "produto" || tipo === "brinde") ? (value(f, "texto_recompensa") || null) : null,
+        texto_recompensa: tipo === "brinde" ? (value(f, "texto_recompensa") || null) : null,
         ativo: checked(f, "ativo"), permite_ajuste_manual: checked(f, "permite_ajuste_manual"),
         unidade_id: state.unidadeId ? Number(state.unidadeId) : undefined,
       }) });
@@ -187,11 +203,66 @@
 
   function syncProgramaRecompensaFields(form) {
     if (!form) return;
-    const tipo = value(form, "tipo_recompensa_padrao") || "produto";
+    const tipo = value(form, "tipo_recompensa_padrao") || "catalogo_consulta";
     form.querySelectorAll("[data-fid-rec-show]").forEach((el) => {
       const tipos = String(el.dataset.fidRecShow || "").split(/\s+/).filter(Boolean);
       el.classList.toggle("hidden", !tipos.includes(tipo));
     });
+    if (tipo === "catalogo_consulta") {
+      enforceCatalogoProdutosLimit(form);
+    }
+  }
+
+  function catalogoQtdMax(form) {
+    const raw = Number(value(form, "catalogo_qtd_escolhas") || 1);
+    return Math.max(1, Math.min(20, Number.isFinite(raw) ? raw : 1));
+  }
+
+  function enforceCatalogoProdutosLimit(form) {
+    if (!form) return;
+    const max = catalogoQtdMax(form);
+    const checks = Array.from(form.querySelectorAll('input[name="catalogo_produtos_ids[]"]'));
+    const checked = checks.filter((el) => el.checked);
+    if (checked.length > max) {
+      checked.slice(max).forEach((el) => { el.checked = false; });
+    }
+    const hint = $("fidCatalogoConsultaHint");
+    if (hint) {
+      const total = checks.filter((el) => el.checked).length;
+      hint.textContent = `Selecionados: ${total} de até ${max} produto(s) para o cliente escolher no resgate.`;
+    }
+  }
+
+  async function renderCatalogoConsultaProdutos(selectedIds, qtdMax) {
+    const list = $("fidCatalogoProdutosList");
+    const hint = $("fidCatalogoConsultaHint");
+    if (!list) return;
+    list.innerHTML = `<p class="subtle-text">Carregando cardápio…</p>`;
+    try {
+      const data = await api("/catalogo-consulta/produtos");
+      const items = data.items || [];
+      if (!data.delivery_disponivel || !items.length) {
+        list.innerHTML = `<p class="subtle-text">Nenhum produto no Delivery para esta unidade. Cadastre em Delivery → Catálogo (consulta).</p>`;
+        if (hint) hint.textContent = "";
+        return;
+      }
+      const selected = new Set((selectedIds || []).map(Number));
+      list.innerHTML = `<div class="fid-catalogo-produtos-grid">${items.map((item) => {
+        const id = Number(item.id);
+        const checkedAttr = selected.has(id) ? "checked" : "";
+        return `<label class="fid-catalogo-produto-item">
+          <input type="checkbox" name="catalogo_produtos_ids[]" value="${id}" ${checkedAttr}>
+          <span><strong>${esc(item.nome)}</strong><small>${money(item.preco)}</small></span>
+        </label>`;
+      }).join("")}</div>`;
+      list.querySelectorAll('input[name="catalogo_produtos_ids[]"]').forEach((el) => {
+        el.addEventListener("change", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
+      });
+      enforceCatalogoProdutosLimit($("fidProgramaForm"));
+    } catch (error) {
+      list.innerHTML = `<p class="subtle-text">${esc(error.message || "Não foi possível carregar o cardápio.")}</p>`;
+      if (hint) hint.textContent = "";
+    }
   }
 
   async function loadCartoes() {

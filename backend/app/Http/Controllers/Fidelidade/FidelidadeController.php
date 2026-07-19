@@ -19,7 +19,7 @@ class FidelidadeController extends Controller
 {
     private const MODOS = ['selos', 'pontos'];
 
-    private const RECOMPENSA_TIPOS = ['produto', 'desconto_valor', 'desconto_percentual', 'brinde', 'catalogo'];
+    private const RECOMPENSA_TIPOS = ['catalogo_consulta', 'desconto_valor', 'desconto_percentual', 'brinde', 'catalogo', 'produto'];
 
     private const STATUS_CONTA = ['ativo', 'inativo', 'bloqueado'];
 
@@ -39,7 +39,33 @@ class FidelidadeController extends Controller
 
         $programa = DB::table('fid_programas')->where('unidade_id', $unidadeId)->first();
 
-        return response()->json(['programa' => $programa]);
+        return response()->json(['programa' => $this->serializarPrograma($programa)]);
+    }
+
+    public function catalogoConsultaProdutos(Request $request): JsonResponse
+    {
+        $usuario = $this->autorizar($request, 'fidelidadePrograma');
+        $this->verificarTabelas();
+        $unidadeId = $this->resolverUnidade($usuario, $request);
+        abort_unless($unidadeId, 422, 'unidade_id obrigatório.');
+
+        if (! Schema::hasTable('dlv_produtos')) {
+            return response()->json(['items' => [], 'delivery_disponivel' => false]);
+        }
+
+        $items = DB::table('dlv_produtos')
+            ->where('unidade_id', $unidadeId)
+            ->where('ativo', 1)
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'preco', 'visivel_loja'])
+            ->map(fn ($row) => [
+                'id' => (int) $row->id,
+                'nome' => (string) $row->nome,
+                'preco' => (float) $row->preco,
+                'visivel_loja' => (bool) $row->visivel_loja,
+            ])->values();
+
+        return response()->json(['items' => $items, 'delivery_disponivel' => true]);
     }
 
     public function putPrograma(Request $request): JsonResponse
@@ -61,28 +87,52 @@ class FidelidadeController extends Controller
             'desconto_percentual' => 'nullable|numeric|min:0|max:100',
             'base_desconto_percentual' => 'nullable|string|max:40',
             'texto_recompensa' => 'nullable|string|max:500',
+            'catalogo_qtd_escolhas' => 'nullable|integer|min:1|max:20',
+            'catalogo_produtos_ids' => 'nullable|array|max:50',
+            'catalogo_produtos_ids.*' => 'integer|min:1',
             'dias_expiracao_credito' => 'nullable|integer|min:1|max:3650',
             'permite_ajuste_manual' => 'sometimes|boolean',
         ])->validate();
 
         $agora = now();
         $existente = DB::table('fid_programas')->where('unidade_id', $unidadeId)->first();
+        $tipo = $data['tipo_recompensa_padrao'] ?? ($existente->tipo_recompensa_padrao ?? 'catalogo_consulta');
+        if ($tipo === 'produto') {
+            $tipo = 'catalogo_consulta';
+        }
         $payload = [
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : ($existente->ativo ?? false),
             'nome_exibicao' => $data['nome_exibicao'] ?? ($existente->nome_exibicao ?? 'Cartão fidelidade'),
             'modo' => $data['modo'] ?? ($existente->modo ?? 'selos'),
             'pedidos_meta' => $data['pedidos_meta'] ?? ($existente->pedidos_meta ?? 10),
             'pontos_por_selo' => $data['pontos_por_selo'] ?? ($existente->pontos_por_selo ?? 1),
-            'tipo_recompensa_padrao' => $data['tipo_recompensa_padrao'] ?? ($existente->tipo_recompensa_padrao ?? 'produto'),
+            'tipo_recompensa_padrao' => $tipo,
             'produto_id' => array_key_exists('produto_id', $data) ? $data['produto_id'] : ($existente->produto_id ?? null),
             'valor_desconto' => array_key_exists('valor_desconto', $data) ? $data['valor_desconto'] : ($existente->valor_desconto ?? null),
-            'texto_recompensa' => array_key_exists('texto_recompensa', $data) ? $data['texto_recompensa'] : ($existente->texto_recompensa ?? null),
+            'texto_recompensa' => $tipo === 'brinde' && array_key_exists('texto_recompensa', $data)
+                ? $data['texto_recompensa']
+                : ($tipo === 'brinde' ? ($existente->texto_recompensa ?? null) : null),
             'dias_expiracao_credito' => array_key_exists('dias_expiracao_credito', $data) ? $data['dias_expiracao_credito'] : ($existente->dias_expiracao_credito ?? null),
             'permite_ajuste_manual' => array_key_exists('permite_ajuste_manual', $data)
                 ? (bool) $data['permite_ajuste_manual']
                 : ($existente->permite_ajuste_manual ?? true),
             'updated_at' => $agora,
         ];
+
+        if (Schema::hasColumn('fid_programas', 'catalogo_qtd_escolhas')) {
+            if ($tipo === 'catalogo_consulta') {
+                $payload['catalogo_qtd_escolhas'] = array_key_exists('catalogo_qtd_escolhas', $data)
+                    ? max(1, min(20, (int) $data['catalogo_qtd_escolhas']))
+                    : max(1, (int) ($existente->catalogo_qtd_escolhas ?? 1));
+                $ids = array_key_exists('catalogo_produtos_ids', $data)
+                    ? (array) $data['catalogo_produtos_ids']
+                    : $this->idsCatalogoProdutos($existente->catalogo_produtos_json ?? null);
+                $payload['catalogo_produtos_json'] = $this->normalizarCatalogoProdutosJson($unidadeId, $ids);
+            } else {
+                $payload['catalogo_qtd_escolhas'] = null;
+                $payload['catalogo_produtos_json'] = null;
+            }
+        }
 
         if (Schema::hasColumn('fid_programas', 'desconto_percentual')) {
             $payload['desconto_percentual'] = array_key_exists('desconto_percentual', $data)
@@ -104,7 +154,7 @@ class FidelidadeController extends Controller
         }
 
         return response()->json([
-            'programa' => DB::table('fid_programas')->where('id', $id)->first(),
+            'programa' => $this->serializarPrograma(DB::table('fid_programas')->where('id', $id)->first()),
         ]);
     }
 
@@ -758,5 +808,95 @@ class FidelidadeController extends Controller
             503,
             'Módulo Fidelidade indisponível. Execute as migrations.'
         );
+    }
+
+    private function serializarPrograma(?object $programa): ?object
+    {
+        if (! $programa) {
+            return null;
+        }
+
+        $tipo = (string) ($programa->tipo_recompensa_padrao ?? '');
+        if ($tipo === 'produto') {
+            $programa->tipo_recompensa_padrao = 'catalogo_consulta';
+        }
+
+        $produtos = $this->decodificarCatalogoProdutos($programa->catalogo_produtos_json ?? null);
+        $programa->catalogo_produtos = $produtos;
+        $programa->catalogo_produtos_ids = array_map(fn ($item) => (int) ($item['id'] ?? 0), $produtos);
+
+        return $programa;
+    }
+
+    /** @return list<int> */
+    private function idsCatalogoProdutos(mixed $json): array
+    {
+        return array_values(array_filter(array_map(
+            fn ($item) => (int) ($item['id'] ?? 0),
+            $this->decodificarCatalogoProdutos($json)
+        ), fn ($id) => $id > 0));
+    }
+
+    /** @return list<array{id:int,nome:string,preco?:float}> */
+    private function decodificarCatalogoProdutos(mixed $json): array
+    {
+        if ($json === null || $json === '') {
+            return [];
+        }
+        if (is_string($json)) {
+            $json = json_decode($json, true);
+        }
+        if (! is_array($json)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($json as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $id = (int) ($item['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $row = ['id' => $id, 'nome' => trim((string) ($item['nome'] ?? 'Produto'))];
+            if (array_key_exists('preco', $item)) {
+                $row['preco'] = (float) $item['preco'];
+            }
+            $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    /** @param  list<int|string>  $ids */
+    private function normalizarCatalogoProdutosJson(int $unidadeId, array $ids): ?string
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn ($id) => $id > 0)));
+        if ($ids === []) {
+            return null;
+        }
+
+        if (! Schema::hasTable('dlv_produtos')) {
+            return json_encode(array_map(fn ($id) => ['id' => $id, 'nome' => 'Produto #'.$id], $ids), JSON_UNESCAPED_UNICODE);
+        }
+
+        $rows = DB::table('dlv_produtos')
+            ->where('unidade_id', $unidadeId)
+            ->whereIn('id', $ids)
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'preco']);
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $payload = $rows->map(fn ($row) => [
+            'id' => (int) $row->id,
+            'nome' => (string) $row->nome,
+            'preco' => (float) $row->preco,
+        ])->values()->all();
+
+        return json_encode($payload, JSON_UNESCAPED_UNICODE);
     }
 }
