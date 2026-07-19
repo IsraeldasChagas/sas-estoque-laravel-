@@ -13,7 +13,7 @@
 <div class="checkout-grid">
 <form class="checkout-form" data-checkout-form id="vf-checkout-form">
     <div class="checkout-main">
-        <section class="form-card">
+        <section class="form-card form-card--compact">
             <h2>Seus dados e entrega</h2>
             <div class="field-block">
                 <span class="field-label">Como deseja receber</span>
@@ -67,57 +67,69 @@
             </div>
         </section>
 
-        <section class="form-card">
+        <section class="form-card form-card--compact">
             <h2>Pagamento</h2>
-            <div class="payment-list vf-pay-list">
+            <div id="vf-pay-choices" class="vf-pay-grid">
                 @foreach($formasCheckout as $val => $rotulo)
-                    <label><input class="vf-pay-opt" type="radio" name="forma_pagamento" value="{{ $val }}" @checked($loop->first)> {{ $rotulo }}</label>
+                    <label class="vf-pay-chip" data-pay-val="{{ $val }}">
+                        <input class="vf-pay-opt" type="radio" name="forma_pagamento" value="{{ $val }}" @checked($loop->first)>
+                        <span>{{ $rotulo }}</span>
+                    </label>
                 @endforeach
             </div>
-
+            <div id="vf-pay-selected" class="vf-pay-selected is-hidden">
+                <div class="vf-pay-selected__head">
+                    <strong id="vf-pay-selected-label"></strong>
+                    <button type="button" class="vf-pay-change" id="vf-pay-change">Alterar forma</button>
+                </div>
+                <div id="vf-pay-panels">
             @if($pixConfigurada)
-            <div id="vf-pay-pix-extra" class="pay-extra-panel {{ $primeiraForma === DeliveryLojaCheckoutHelper::PAGAMENTO_PIX ? '' : 'is-hidden' }}">
+            <div id="vf-pay-pix-extra" class="pay-extra-panel pay-extra-panel--compact is-hidden">
                 <h3>Pague com PIX</h3>
                 @if(trim((string)($config->pix_chave ?? '')) !== '')
-                <label class="field-block">Chave PIX ({{ DeliveryLojaCheckoutHelper::pixChaveRotuloTipo($config) }})
+                <label class="field-block field-block--compact">Chave PIX ({{ DeliveryLojaCheckoutHelper::pixChaveRotuloTipo($config) }})
                     <div class="input-group-inline">
                         <input readonly id="field-pix-chave" value="{{ $config->pix_chave }}">
-                        <button type="button" class="btn" onclick="navigator.clipboard.writeText(document.getElementById('field-pix-chave').value).then(()=>alert('Chave PIX copiada.'))">Copiar</button>
+                        <button type="button" class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('field-pix-chave').value).then(()=>alert('Chave PIX copiada.'))">Copiar</button>
                     </div>
                     @if(trim((string)($config->pix_banco ?? '')) !== '')<small class="muted">Banco: {{ $config->pix_banco }}</small>@endif
                 </label>
                 @endif
                 @if(trim((string)($config->pix_instrucoes ?? '')) !== '')
-                    <div class="pix-instructions">{!! nl2br(e($config->pix_instrucoes)) !!}</div>
+                    <div class="pix-instructions pix-instructions--compact">{!! nl2br(e($config->pix_instrucoes)) !!}</div>
                 @endif
                 @if(trim((string)($config->pix_copia_cola ?? '')) !== '')
-                <label class="field-block">Pix copia e cola<textarea readonly rows="4" id="field-pix-copia">{{ $config->pix_copia_cola }}</textarea></label>
-                <button type="button" class="btn" onclick="(function(){const t=document.getElementById('field-pix-copia');navigator.clipboard.writeText(t.value).then(()=>alert('Código PIX copiado.'));})();">Copiar código PIX</button>
+                <label class="field-block field-block--compact">Pix copia e cola<textarea readonly rows="2" id="field-pix-copia">{{ $config->pix_copia_cola }}</textarea></label>
+                <button type="button" class="btn btn-sm" onclick="(function(){const t=document.getElementById('field-pix-copia');navigator.clipboard.writeText(t.value).then(()=>alert('Código PIX copiado.'));})();">Copiar código PIX</button>
                 @endif
                 @if($pixQrDataUri)
-                    <div class="pix-qr-wrap"><p class="checkout-freight-note">Escaneie com o app do banco</p><img src="{{ $pixQrDataUri }}" alt="QR Code PIX" class="pix-qr"></div>
+                    <div class="pix-qr-wrap pix-qr-wrap--compact"><p class="checkout-freight-note">Escaneie com o app do banco</p><img src="{{ $pixQrDataUri }}" alt="QR Code PIX" class="pix-qr pix-qr--compact"></div>
                 @endif
             </div>
             @endif
 
-            <div id="vf-pay-dinheiro-extra" class="pay-extra-panel {{ $primeiraForma === DeliveryLojaCheckoutHelper::PAGAMENTO_DINHEIRO ? '' : 'is-hidden' }}">
+            <div id="vf-pay-dinheiro-extra" class="pay-extra-panel pay-extra-panel--compact is-hidden">
                 <h3>Pagamento em dinheiro</h3>
-                <span class="field-label">Vai precisar de troco?</span>
-                <label class="choice-inline"><input class="vf-dinheiro-modo" type="radio" name="pagamento_dinheiro_modo" value="exato" checked> Não — tenho o valor exato (sem troco)</label>
-                <label class="choice-inline"><input class="vf-dinheiro-modo" type="radio" name="pagamento_dinheiro_modo" value="com_troco"> Sim — preciso de troco</label>
-                <div id="vf-dinheiro-valor-wrap" class="is-hidden">
-                    <label>Com quanto vai pagar? <span class="danger-text">*</span>
-                        <div class="input-group-inline"><span class="input-prefix">R$</span><input type="number" name="pagamento_troco_para" id="pagamento_troco_para" min="0" step="0.01" placeholder="0,00"></div>
-                    </label>
-                    <p class="checkout-freight-note">Informe o valor da nota ou montante (deve ser igual ou maior ao total <span id="vf-dinheiro-min-total">R$ 0,00</span>).</p>
+                <div class="vf-dinheiro-compact">
+                    <label class="choice-inline choice-inline--compact"><input class="vf-dinheiro-modo" type="radio" name="pagamento_dinheiro_modo" value="exato" checked> Valor exato (sem troco)</label>
+                    <label class="choice-inline choice-inline--compact"><input class="vf-dinheiro-modo" type="radio" name="pagamento_dinheiro_modo" value="com_troco"> Preciso de troco</label>
                 </div>
-                <p id="vf-dinheiro-ajuda-exato" class="checkout-freight-note">Leve dinheiro trocado para o valor exato do pedido na entrega ou retirada.</p>
+                <div id="vf-dinheiro-valor-wrap" class="is-hidden">
+                    <label class="field-block--compact">Com quanto vai pagar? <span class="danger-text">*</span>
+                        <div class="input-group-inline input-group-inline--compact"><span class="input-prefix">R$</span><input type="number" name="pagamento_troco_para" id="pagamento_troco_para" min="0" step="0.01" placeholder="0,00"></div>
+                    </label>
+                    <p class="checkout-freight-note">Igual ou maior ao total <span id="vf-dinheiro-min-total">R$ 0,00</span>.</p>
+                </div>
+                <p id="vf-dinheiro-ajuda-exato" class="checkout-freight-note">Leve o valor exato na entrega ou retirada.</p>
+            </div>
+            <p id="vf-pay-cartao-hint" class="checkout-freight-note is-hidden">Pagamento na maquininha na entrega ou retirada.</p>
+                </div>
             </div>
         </section>
 
-        <section class="form-card">
-            <h2>Observação <span class="muted">(opcional, uma só)</span></h2>
-            <p class="checkout-freight-note">Até 220 caracteres — ex.: interfone, referência, melhor horário.</p>
+        <section class="form-card form-card--compact">
+            <h2>Observação <span class="muted">(opcional)</span></h2>
+            <p class="checkout-freight-note">Até 220 caracteres.</p>
             <textarea name="observacoes" rows="2" maxlength="220" placeholder="Ex.: portão azul, interfone 12…"></textarea>
         </section>
     </div>
@@ -173,6 +185,8 @@
 
   const DIN = @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_DINHEIRO);
   const PIX = @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_PIX);
+  const CARTAO = [@json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_CARTAO_CREDITO), @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_CARTAO_DEBITO)];
+  const payLabels = @json($formasCheckout);
   const ENTREGA = 'entrega';
   let taxaEnt = 0, rotuloEnt = '', entregaBloq = false, debounceTimer = null;
   const freteResumoUrl = @json($freteResumoUrl);
@@ -182,13 +196,42 @@
   const fmt = n => n.toFixed(2).replace('.', ',');
   const gv = id => { const e = document.getElementById(id); return e ? (e.value||'').trim() : ''; };
 
+  let payLocked = false;
+  function syncPayExtras(v){
+    document.getElementById('vf-pay-dinheiro-extra')?.classList.toggle('is-hidden', v !== DIN);
+    document.getElementById('vf-pay-pix-extra')?.classList.toggle('is-hidden', v !== PIX);
+    document.getElementById('vf-pay-cartao-hint')?.classList.toggle('is-hidden', !CARTAO.includes(v));
+  }
   function syncPayPanels(){
     const sel = document.querySelector('.vf-pay-opt:checked');
     const v = sel ? sel.value : '';
-    document.getElementById('vf-pay-dinheiro-extra')?.classList.toggle('is-hidden', v !== DIN);
-    document.getElementById('vf-pay-pix-extra')?.classList.toggle('is-hidden', v !== PIX);
+    const choices = document.getElementById('vf-pay-choices');
+    const selected = document.getElementById('vf-pay-selected');
+    const label = document.getElementById('vf-pay-selected-label');
+    if (payLocked && v && choices && selected) {
+      choices.classList.add('is-hidden');
+      selected.classList.remove('is-hidden');
+      if (label) label.textContent = payLabels[v] || v;
+      syncPayExtras(v);
+    } else if (!payLocked) {
+      selected?.classList.add('is-hidden');
+      choices?.classList.remove('is-hidden');
+    }
   }
-  document.querySelectorAll('.vf-pay-opt').forEach(r => r.onchange = syncPayPanels);
+  function resetPayChoice(){
+    payLocked = false;
+    document.getElementById('vf-pay-choices')?.classList.remove('is-hidden');
+    document.getElementById('vf-pay-selected')?.classList.add('is-hidden');
+    document.querySelectorAll('#vf-pay-panels .pay-extra-panel, #vf-pay-cartao-hint').forEach(el => el.classList.add('is-hidden'));
+  }
+  document.querySelectorAll('.vf-pay-opt').forEach(r => r.onchange = () => { payLocked = true; syncPayPanels(); });
+  document.querySelectorAll('.vf-pay-chip').forEach(chip => {
+    chip.addEventListener('click', () => { payLocked = true; setTimeout(syncPayPanels, 0); });
+  });
+  document.getElementById('vf-pay-change')?.addEventListener('click', () => {
+    resetPayChoice();
+    document.querySelector('.vf-pay-opt:checked')?.focus();
+  });
   function syncDinheiroModo(){
     const troco = document.getElementById('din-mod-troco') || document.querySelector('.vf-dinheiro-modo[value=com_troco]');
     const precisa = troco && troco.checked;
@@ -251,7 +294,7 @@
   ['endereco','entrega_numero','entrega_bairro','entrega_cidade','entrega_estado'].forEach(id=>{
     document.getElementById(id)?.addEventListener('input', ()=>{ if(document.querySelector('.vf-tipo-entrega:checked')?.value===ENTREGA && osrmCheckout) agendarFrete(); });
   });
-  syncEntregaFields(); syncPayPanels(); syncDinheiroModo();
+  syncEntregaFields(); syncDinheiroModo();
 
   form.onsubmit = async function(e){
     e.preventDefault();

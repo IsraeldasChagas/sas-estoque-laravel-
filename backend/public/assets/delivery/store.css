@@ -598,9 +598,33 @@ input:focus,textarea:focus,select:focus{outline:2px solid #bfdbfe;border-color:v
 .checkout-item-line small{display:block;color:var(--muted);font-weight:400}
 .summary-line{display:flex;justify-content:space-between;padding:6px 0}
 .pay-extra-panel{background:#f8fafc;border:1px solid var(--line);border-radius:.5rem;padding:14px;margin-top:12px}
+.pay-extra-panel--compact{padding:10px 12px;margin-top:8px}
 .pay-extra-panel.is-hidden{display:none}
 .pay-extra-panel h3{margin:0 0 10px;font-size:15px}
+.pay-extra-panel--compact h3{margin:0 0 8px;font-size:14px}
 .vf-pay-list{flex-direction:column;align-items:flex-start}
+.vf-pay-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:4px}
+.vf-pay-chip{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #dbeafe;background:#fff;border-radius:.5rem;padding:10px 8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;min-height:44px}
+.vf-pay-chip:has(input:checked){border-color:var(--primary);background:#eff6ff;color:#1d4ed8}
+.vf-pay-chip input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.vf-pay-selected{border:1px solid #dbeafe;background:#f8fafc;border-radius:.5rem;padding:10px 12px}
+.vf-pay-selected__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.vf-pay-selected__head strong{font-size:14px}
+.vf-pay-change{background:none;border:0;color:var(--primary);cursor:pointer;font-size:12px;font-weight:700;padding:0;text-decoration:underline}
+.vf-dinheiro-compact{display:flex;flex-wrap:wrap;gap:8px 14px;margin:6px 0}
+.choice-inline--compact{margin:0;font-size:12px}
+.field-block--compact{margin-bottom:8px;gap:4px}
+.field-block--compact textarea{min-height:48px}
+.input-group-inline--compact input{padding:7px 8px}
+.pix-instructions--compact{font-size:12px;margin:6px 0}
+.pix-qr-wrap--compact{margin-top:8px}
+.pix-qr--compact{max-width:140px}
+.form-card--compact{padding:12px 14px}
+.form-card--compact h2{font-size:16px;margin-bottom:10px}
+.form-card--compact .form-grid{gap:8px}
+.form-card--compact input,.form-card--compact textarea{padding:8px 10px}
+.form-card--compact .section-sep{margin:10px 0}
+.btn-sm{padding:6px 10px;font-size:12px}
 .choice-inline{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-weight:500}
 .input-group-inline{display:flex;gap:8px;align-items:center}
 .input-group-inline input,.input-group-inline textarea{flex:1}

@@ -319,6 +319,62 @@
 
 .vf-cupom-actions__buttons,
 .vf-entregadores__grid { display: grid; gap: 10px; }
+.vf-card-body { padding: 14px 17px; }
+.vf-card-title--plain { border-bottom: 1px solid #eef0f2; padding: 12px 17px; }
+.vf-card-title--plain h3 { font-size: 14px; }
+.vf-cupom-desc { margin-bottom: 12px; }
+.vf-entregadores__head {
+  background: color-mix(in srgb, var(--vf-primary) 12%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--vf-primary) 25%, white);
+  padding: 12px 17px;
+}
+.vf-entregadores__head h3 { font-size: 14px; margin: 0; }
+.vf-token-field__row { display: flex; gap: 8px; }
+.vf-token-field__row input { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 11px; }
+.vf-pending-alert {
+  align-items: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+}
+.vf-pending-alert p { color: #7f1d1d; font-size: 12px; margin: 6px 0 0; }
+.vf-pending-alert__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vf-alert {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+}
+.vf-alert--wa { background: #ecfdf5; border: 1px solid #86efac; }
+.vf-alert--warn { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; font-size: 13px; }
+.vf-order-main__head {
+  align-items: flex-start;
+  border-bottom: 1px solid #eef0f2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 15px 17px;
+}
+.vf-order-main__head h2 { font-size: 18px; margin: 0 0 4px; }
+.vf-order-main__head p { color: var(--vf-muted); font-size: 12px; margin: 0; }
+.vf-items-table--vf tfoot th { font-weight: 700; text-align: right; }
+.vf-items-table--vf tfoot tr.is-total th { color: #15803d; font-size: 15px; }
+.vf-col-qty { text-align: center; width: 70px; }
+.vf-col-money { text-align: right; width: 110px; }
+.vf-cliente-block p { margin: 0 0 6px; }
+.vf-cliente-nome { font-weight: 700; margin-bottom: 4px !important; }
+.vf-status-form select { width: 100%; }
 .vf-btn--block { display: block; text-align: center; text-decoration: none; width: 100%; margin-top: 8px; }
 .vf-muted-note { color: var(--vf-muted); font-size: 12px; margin: 0; }
 .vf-entregadores { border: 2px solid color-mix(in srgb, var(--vf-primary) 35%, white); }

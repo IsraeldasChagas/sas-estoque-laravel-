@@ -219,9 +219,9 @@ class DeliveryPublicStorefrontTest extends TestCase
 
         $this->get('/loja/teste/checkout')->assertOk()
             ->assertSee('Finalizar pedido')
-            ->assertSee('Cartão de crédito (na maquininha)')
-            ->assertSee('Cartão de débito (na maquininha)')
-            ->assertSee('Pix copia e cola');
+            ->assertSee('vf-pay-grid')
+            ->assertSee('Alterar forma')
+            ->assertSee('Cartão de crédito (na maquininha)');
     }
 
     public function test_checkout_dinheiro_com_troco_persiste_valor(): void

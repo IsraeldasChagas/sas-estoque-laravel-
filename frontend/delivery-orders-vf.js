@@ -42,45 +42,99 @@
     win.document.close();
   }
 
+  function renderCupomActions(order) {
+    const wa = order.cupom_whatsapp_url;
+    const printEnabled = order.impressao_habilitada !== false;
+    return `<section class="vf-card vf-cupom-actions">
+      <div class="vf-card-title vf-card-title--plain"><h3>Cupom do cliente</h3></div>
+      <div class="vf-card-body">
+        <p class="vf-muted-note vf-cupom-desc">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
+        <div class="vf-cupom-actions__buttons">
+          ${printEnabled ? `<button type="button" class="vf-btn" data-vf-print="0">Abrir cupom / imprimir</button>
+            <button type="button" class="vf-btn" data-vf-print="1">Abrir e pedir impressão</button>`
+            : `<p class="vf-muted-note">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
+          ${wa
+            ? `<a class="vf-btn vf-btn--success" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">Enviar cupom no WhatsApp</a>`
+            : `<p class="vf-entregador-card__warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
+        </div>
+      </div>
+    </section>`;
+  }
+
   function renderEntregadores(order) {
     const list = order.entregadores || [];
     if (order.fulfillment !== "entrega" || !list.length) return "";
     return `<section class="vf-card vf-entregadores">
-      <div class="vf-card-title"><h3>Seus entregadores</h3><p>Chame no WhatsApp antes de enviar o link da entrega.</p></div>
+      <div class="vf-entregadores__head"><h3>Seus entregadores — chame primeiro</h3></div>
       <div class="vf-entregadores__grid">${list.map((ent) => `<article class="vf-entregador-card">
         ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-entregador-card__photo">` : `<span class="vf-entregador-card__photo vf-entregador-card__photo--empty">👤</span>`}
         <strong>${esc(ent.nome)}</strong>
         ${ent.whatsapp_url
           ? `<a class="vf-btn vf-btn--success vf-entregador-card__wa" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer">Chamar no WhatsApp</a>`
-          : `<p class="vf-entregador-card__warn">Configure o WhatsApp do entregador.</p>`}
+          : `<p class="vf-entregador-card__warn">Ajuste o WhatsApp do entregador.</p>`}
       </article>`).join("")}</div>
-    </section>`;
-  }
-
-  function renderCupomActions(order) {
-    const wa = order.cupom_whatsapp_url;
-    const printEnabled = order.impressao_habilitada !== false;
-    return `<section class="vf-card vf-cupom-actions">
-      <div class="vf-card-title"><h3>Cupom / comanda</h3><p>Imprima na térmica ou envie o resumo ao cliente.</p></div>
-      <div class="vf-cupom-actions__buttons">
-        ${printEnabled ? `<button type="button" class="vf-btn" data-vf-print="0">Abrir cupom / imprimir</button>
-          <button type="button" class="vf-btn" data-vf-print="1">Abrir e pedir impressão</button>`
-          : `<p class="vf-muted-note">Impressão desativada nas configurações. Ainda pode enviar pelo WhatsApp.</p>`}
-        ${wa
-          ? `<a class="vf-btn vf-btn--success" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">Enviar cupom no WhatsApp</a>`
-          : `<p class="vf-entregador-card__warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
-      </div>
     </section>`;
   }
 
   function renderEntregadorLink(order) {
     if (order.fulfillment !== "entrega" || !order.url_entregador) return "";
     return `<section class="vf-card vf-entregador-link">
-      <div class="vf-card-title"><h3>Link do entregador</h3><p>Mostra endereço, itens, pagamento e o código do pedido. O entregador pode marcar entregue, cancelado ou endereço não encontrado.</p></div>
-      <label class="vf-token-field"><span>URL da entrega</span>
-        <div><input readonly value="${esc(order.url_entregador)}"><button class="vf-btn" type="button" data-vf-copy-url>Copiar</button></div>
-      </label>
-      <a class="vf-btn vf-btn--block" href="${esc(order.url_entregador)}" target="_blank" rel="noopener noreferrer">Abrir página do entregador</a>
+      <div class="vf-card-title vf-card-title--plain"><h3>Link do entregador</h3></div>
+      <div class="vf-card-body">
+        <p class="vf-muted-note">Mostra endereço, itens, pagamento e o <strong>código do pedido</strong>. O entregador pode marcar <strong>entregue</strong>, <strong>cancelado</strong> ou <strong>endereço não encontrado</strong>.</p>
+        <label class="vf-token-field"><span>URL da entrega</span>
+          <div class="vf-token-field__row"><input readonly id="vf-url-entregador" value="${esc(order.url_entregador)}"><button class="vf-btn" type="button" data-vf-copy-url>Copiar</button></div>
+        </label>
+        <a class="vf-btn vf-btn--block" href="${esc(order.url_entregador)}" target="_blank" rel="noopener noreferrer">Abrir página do entregador</a>
+      </div>
+    </section>`;
+  }
+
+  function renderWhatsAppAlerts(order) {
+    const parts = [];
+    if (order._whatsapp_aviso_url) {
+      parts.push(`<div class="vf-alert vf-alert--wa">
+        <div><strong>Avisar o cliente no WhatsApp</strong> — status e link para acompanhar o pedido.</div>
+        <a class="vf-btn vf-btn--success" href="${esc(order._whatsapp_aviso_url)}" target="_blank" rel="noopener noreferrer">Abrir WhatsApp do cliente</a>
+      </div>`);
+    }
+    if (order._whatsapp_indisponivel) {
+      parts.push(`<div class="vf-alert vf-alert--warn">${esc(order._whatsapp_indisponivel)}</div>`);
+    }
+    return parts.join("");
+  }
+
+  function renderPendingBanner(isPending) {
+    if (!isPending) return "";
+    return `<section class="vf-pending-alert">
+      <div><strong>Novo pedido — precisa da sua confirmação</strong>
+        <p>O cliente já finalizou na vitrine. Só avance o preparo depois que você <strong>aceitar</strong>. Se recusar, o pedido é cancelado e o estoque volta.</p></div>
+      <div class="vf-pending-alert__actions">
+        <button class="vf-btn vf-btn--success" type="button" data-vf-detail-status="recebido">Aceitar pedido</button>
+        <button class="vf-btn vf-btn--danger" type="button" data-vf-detail-status="cancelado">Recusar</button>
+      </div>
+    </section>`;
+  }
+
+  function renderStatusForm(order) {
+    if (order.status === "pendente_loja") {
+      return `<section class="vf-card vf-status-form">
+        <div class="vf-card-title vf-card-title--plain"><h3>Status do pedido</h3></div>
+        <div class="vf-card-body"><p class="vf-muted-note">Enquanto o pedido não for aceito, use <strong>Aceitar pedido</strong> ou <strong>Recusar</strong> no aviso acima.</p></div>
+      </section>`;
+    }
+    const options = Object.entries(labels).map(([value, label]) =>
+      `<option value="${esc(value)}" ${order.status === value ? "selected" : ""}>${esc(label)}</option>`).join("");
+    return `<section class="vf-card vf-status-form">
+      <div class="vf-card-title vf-card-title--plain"><h3>Status do pedido</h3></div>
+      <div class="vf-card-body">
+        <form id="vfStatusForm">
+          <label class="vf-field"><span>Novo status</span>
+            <select name="status" required>${options}</select>
+          </label>
+          <button class="vf-btn vf-btn--primary vf-btn--block" type="submit">Atualizar status</button>
+        </form>
+      </div>
     </section>`;
   }
 
@@ -283,14 +337,18 @@
 
   async function changeStatus(id, status, after) {
     try {
-      await api(`/pedidos/${id}/status`, {
+      const result = await api(`/pedidos/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
       });
       toast("Status do pedido atualizado.", "success");
-      await after();
+      if (typeof after === "function") {
+        await after(result);
+      }
+      return result;
     } catch (error) {
       toast(error?.message || "Não foi possível atualizar o pedido.", "error");
+      return null;
     }
   }
 
@@ -301,71 +359,65 @@
     return [additions, removals].filter(Boolean).join(" · ") || "—";
   }
 
-  async function openOrder(id) {
+  async function openOrder(id, extras) {
     const root = $("deliveryPedidosRoot");
     if (!root) return;
     try {
       const order = await api(`/pedidos/${id}`);
+      if (extras?.whatsapp_aviso_url) order._whatsapp_aviso_url = extras.whatsapp_aviso_url;
+      if (extras?.whatsapp_indisponivel) order._whatsapp_indisponivel = extras.whatsapp_indisponivel;
       const address = order.endereco || {};
       const addressLine = address.texto || [
         address.rua, address.numero, address.bairro, address.cidade,
         address.uf, address.complemento,
       ].filter(Boolean).join(", ");
-      const transitions = nextStatuses[order.status] || [];
       const isPending = order.status === "pendente_loja";
+      const freteLabel = order.fulfillment === "retirada" ? "Retirada" : "Taxa entrega";
 
       root.innerHTML = `<div class="vf-orders vf-order-detail">
         ${breadcrumb(order.codigo_publico, true)}
-        <header class="vf-order-detail__head">
-          <div><div class="vf-order-detail__title"><h2>${esc(order.codigo_publico)}</h2>${badge(order.status)}</div>
-            <p>${dateTime(order.created_at)} · ${esc(order.canal || "admin")} · ${esc(order.fulfillment || "—")}
-            ${address.cep ? ` · CEP ${esc(address.cep)}` : ""}</p></div>
-          <button class="vf-btn" type="button" data-vf-orders>← Voltar</button>
-        </header>
-        ${isPending ? `<section class="vf-pending-warning"><div><strong>Este pedido aguarda confirmação</strong>
-          <p>Confira os itens antes de aceitar ou recusar.</p></div>
-          <div><button class="vf-btn vf-btn--success" data-vf-detail-status="recebido">Aceitar</button>
-          <button class="vf-btn vf-btn--danger" data-vf-detail-status="cancelado">Recusar</button></div></section>` : ""}
+        ${renderWhatsAppAlerts(order)}
+        ${renderPendingBanner(isPending)}
         <div class="vf-order-detail__grid">
           <main>
-            <section class="vf-card">
-              <div class="vf-card-title"><h3>Itens do pedido</h3></div>
-              <div class="vf-table-wrap"><table class="vf-orders-table vf-items-table"><thead><tr>
-                <th>Produto / opções</th><th>Qtd.</th><th>Unitário</th><th>Adicionais</th><th>Subtotal</th>
-              </tr></thead><tbody>${(order.itens || []).map((item) => `<tr>
-                <td><strong>${esc(item.nome_produto)}</strong><small>${esc(optionsText(item.opcoes))}</small></td>
-                <td>${number(item.quantidade)}</td><td>${money(item.preco_unitario)}</td>
-                <td>${money(item.preco_adicionais)}</td><td class="vf-money">${money(item.subtotal)}</td>
-              </tr>`).join("")}</tbody></table></div>
-              <div class="vf-order-totals"><span>Subtotal <strong>${money(order.subtotal)}</strong></span>
-                <span>Frete <strong>${money(order.frete_valor)}</strong></span>
-                <span class="is-total">Total <strong>${money(order.total)}</strong></span></div>
-            </section>
-            <section class="vf-card vf-history"><div class="vf-card-title"><h3>Histórico completo</h3></div>
-              <ol>${(order.historico || []).slice().reverse().map((event) => `<li>
-                <i></i><div><strong>${esc(labels[event.status_novo] || event.status_novo)}</strong>
-                <span>${dateTime(event.created_at)} · ${esc(event.acao || "alteração")}</span>
-                ${event.detalhes?.detalhe ? `<p>${esc(event.detalhes.detalhe)}</p>` : ""}</div>
-              </li>`).join("")}</ol>
+            <section class="vf-card vf-order-main">
+              <div class="vf-order-main__head">
+                <div><h2>${esc(order.codigo_publico)}</h2>
+                  <p>${dateTime(order.created_at)} · ${esc(order.canal || "admin")} · ${esc(order.fulfillment === "retirada" ? "Retirada no balcão" : "Entrega")}${address.cep ? ` · CEP ${esc(address.cep)}` : ""}</p></div>
+                ${badge(order.status)}
+              </div>
+              <div class="vf-table-wrap"><table class="vf-orders-table vf-items-table vf-items-table--vf">
+                <thead><tr><th>Item</th><th class="vf-col-qty">Qtd.</th><th class="vf-col-money">Total</th></tr></thead>
+                <tbody>${(order.itens || []).map((item) => `<tr>
+                  <td><strong>${esc(item.nome_produto)}</strong>${optionsText(item.opcoes) !== "—" ? `<small>${esc(optionsText(item.opcoes))}</small>` : ""}</td>
+                  <td class="vf-col-qty">${number(item.quantidade)}</td>
+                  <td class="vf-col-money vf-money">${money(item.subtotal)}</td>
+                </tr>`).join("")}</tbody>
+                <tfoot>
+                  <tr><th colspan="2">Subtotal</th><th class="vf-money">${money(order.subtotal)}</th></tr>
+                  <tr><th colspan="2">${esc(freteLabel)}</th><th class="vf-money">${money(order.frete_valor)}</th></tr>
+                  <tr class="is-total"><th colspan="2">Total</th><th class="vf-money">${money(order.total)}</th></tr>
+                </tfoot>
+              </table></div>
             </section>
           </main>
-          <aside>
-            <section class="vf-card vf-order-info"><h3>Cliente e entrega</h3>
-              <dl><dt>Cliente</dt><dd>${esc(order.cliente_nome)}</dd>
-                <dt>Telefone</dt><dd>${esc(order.cliente_telefone || "—")}</dd>
-                <dt>WhatsApp</dt><dd>${esc(order.cliente_whatsapp || "—")}</dd>
-                <dt>Endereço</dt><dd>${esc(addressLine || (order.fulfillment === "entrega" ? "Não informado" : "Retirada na loja"))}</dd>
-                <dt>CEP</dt><dd>${esc(address.cep || "—")}</dd>
-                <dt>Pagamento</dt><dd>${esc(order.pagamento_descricao || order.pagamento_forma || "—")}${order.pagamento_troco_para ? ` · Troco para ${money(order.pagamento_troco_para)}` : ""}</dd>
-                <dt>Observações</dt><dd>${esc(order.observacoes || "Nenhuma")}</dd></dl>
-            </section>
+          <aside class="vf-order-detail__aside">
             ${renderCupomActions(order)}
             ${renderEntregadores(order)}
             ${renderEntregadorLink(order)}
-            ${transitions.length ? `<section class="vf-card vf-status-actions"><h3>Atualizar status</h3>
-              ${transitions.filter((status) => !(isPending && ["recebido", "cancelado"].includes(status))).map((status) =>
-                `<button class="vf-btn ${status === "cancelado" ? "vf-btn--danger" : "vf-btn--primary"}" data-vf-detail-status="${status}">${esc(actionLabels[status])}</button>`).join("")}
-            </section>` : ""}
+            <section class="vf-card vf-order-info">
+              <div class="vf-card-title vf-card-title--plain"><h3>Cliente</h3></div>
+              <div class="vf-card-body vf-cliente-block">
+                <p class="vf-cliente-nome">${esc(order.cliente_nome)}</p>
+                <p class="vf-muted-note">${esc(order.cliente_telefone || "—")}</p>
+                ${order.cliente_email ? `<p class="vf-muted-note">${esc(order.cliente_email)}</p>` : ""}
+                <p class="vf-muted-note">${esc(addressLine || (order.fulfillment === "entrega" ? "Endereço não informado" : "Retirada na loja"))}</p>
+                <p class="vf-muted-note"><strong>Pagamento:</strong> ${esc(order.pagamento_descricao || order.pagamento_forma || "—")}</p>
+                ${order.observacoes ? `<p class="vf-muted-note"><strong>Obs.:</strong> ${esc(order.observacoes)}</p>` : ""}
+              </div>
+            </section>
+            ${renderStatusForm(order)}
+            <button class="vf-btn vf-btn--block" type="button" data-vf-orders>← Voltar à lista</button>
           </aside>
         </div>
       </div>`;
@@ -373,10 +425,30 @@
       root.querySelectorAll("[data-vf-detail-status]").forEach((button) => {
         button.onclick = async () => {
           const status = button.dataset.vfDetailStatus;
-          if (status === "cancelado" && !confirm("Cancelar este pedido? Essa ação não poderá ser desfeita.")) return;
-          await changeStatus(order.id, status, () => openOrder(order.id));
+          if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado.")) return;
+          const result = await changeStatus(order.id, status);
+          if (result) await openOrder(order.id, {
+            whatsapp_aviso_url: result.whatsapp_aviso_url,
+            whatsapp_indisponivel: result.whatsapp_indisponivel,
+          });
         };
       });
+      const statusForm = root.querySelector("#vfStatusForm");
+      if (statusForm) {
+        statusForm.onsubmit = async (event) => {
+          event.preventDefault();
+          const status = statusForm.elements.status.value;
+          if (status === order.status) {
+            toast("O status já estava assim. Escolha outro para atualizar.", "warning");
+            return;
+          }
+          const result = await changeStatus(order.id, status);
+          if (result) await openOrder(order.id, {
+            whatsapp_aviso_url: result.whatsapp_aviso_url,
+            whatsapp_indisponivel: result.whatsapp_indisponivel,
+          });
+        };
+      }
       root.querySelectorAll("[data-vf-print]").forEach((button) => {
         button.onclick = async () => {
           try {
@@ -388,12 +460,12 @@
       });
       const copyUrl = root.querySelector("[data-vf-copy-url]");
       if (copyUrl) copyUrl.onclick = async () => {
-        const input = copyUrl.previousElementSibling;
+        const input = root.querySelector("#vf-url-entregador");
         try {
-          await navigator.clipboard.writeText(order.url_entregador);
+          await navigator.clipboard.writeText(input?.value || order.url_entregador);
           toast("Link copiado.", "success");
         } catch (_) {
-          input.select();
+          input?.select();
           document.execCommand("copy");
           toast("Link copiado.", "success");
         }

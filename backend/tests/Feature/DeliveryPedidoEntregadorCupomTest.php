@@ -136,6 +136,20 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
         $this->get('/loja/loja-teste/entrega/DLV-TEST-906/token-errado')->assertNotFound();
     }
 
+    public function test_status_update_retorna_whatsapp_aviso_para_pedido_loja(): void
+    {
+        $this->insertOrder(907, 'recebido', 'tok-status', str_repeat('a', 64));
+
+        $response = $this->withHeaders($this->headers())
+            ->patchJson('/api/delivery/pedidos/907/status', ['status' => 'preparo'])
+            ->assertOk();
+
+        $url = $response->json('whatsapp_aviso_url');
+        $this->assertNotNull($url);
+        $this->assertStringContainsString('wa.me/', $url);
+        $this->assertStringContainsString('text=', $url);
+    }
+
     private function headers(): array
     {
         return ['X-Usuario-Id' => '90'];

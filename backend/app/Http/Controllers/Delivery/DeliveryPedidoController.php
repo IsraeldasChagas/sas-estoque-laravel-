@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Support\Delivery\DeliveryWhatsAppAvisoStatus;
 use App\Services\Delivery\DeliveryAccessService;
 use App\Services\Delivery\DeliveryPedidoService;
 use Illuminate\Http\JsonResponse;
@@ -138,14 +139,24 @@ class DeliveryPedidoController extends DeliveryBaseController
             throw new ValidationException($validator);
         }
 
+        $novoStatus = (string) $validator->validated()['status'];
         $atualizado = $this->pedidos->alterarStatus(
             $pedido,
-            (string) $validator->validated()['status'],
+            $novoStatus,
             (int) $usuario->id,
             $validator->validated()['detalhe'] ?? null
         );
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $atualizado->unidade_id)->first();
+        $payload = $this->pedidos->completo($atualizado);
+        if ($config) {
+            $waUrl = DeliveryWhatsAppAvisoStatus::url($atualizado, $config, $novoStatus);
+            $payload['whatsapp_aviso_url'] = $waUrl;
+            if ($waUrl === null && strtolower(trim((string) ($atualizado->canal ?? 'loja'))) === 'loja') {
+                $payload['whatsapp_indisponivel'] = 'Não foi possível gerar o link do WhatsApp. Confira se o telefone do cliente tem DDD e número corretos.';
+            }
+        }
 
-        return response()->json($this->pedidos->completo($atualizado));
+        return response()->json($payload);
     }
 
     public function pollPendentes(Request $request): JsonResponse
