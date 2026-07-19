@@ -403,7 +403,6 @@
           pararAlarmePedido();
           result = await postDecisaoPendente(Number(id), "aceitar");
         } else if (status === "cancelado") {
-          pararAlarmePedido();
           result = await postDecisaoPendente(Number(id), "recusar");
         } else {
           result = await changeStatus(Number(id), status);
@@ -512,7 +511,7 @@
           id: order.id,
           codigo_publico: order.codigo_publico,
         };
-        iniciarAlarmePedido();
+        sincronizarAlarmePedido();
       }
     } catch (error) {
       toast(error?.message || "Não foi possível abrir o pedido.", "error");
@@ -524,7 +523,7 @@
       button.onclick = async () => {
         const status = button.dataset.vfDetailStatus;
         if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
-        if (status === "recebido" || status === "cancelado") pararAlarmePedido();
+        if (status === "recebido") pararAlarmePedido();
         const result = status === "recebido" || status === "cancelado"
           ? await postDecisaoPendente(order.id, status === "recebido" ? "aceitar" : "recusar")
           : await changeStatus(order.id, status);
@@ -752,7 +751,42 @@
   let pollSubmitting = false;
   let pollAlarmTimer = null;
   let pollCurrent = null;
+  let alarmAudioCtx = null;
+  let alarmListenersReady = false;
   const INTERVALO_ALARM_SEG = 2.35;
+
+  function janelaInativaParaAlarme() {
+    return document.hidden || !document.hasFocus();
+  }
+
+  function deveTocarAlarmePedido() {
+    return Boolean(pollCurrent) && janelaInativaParaAlarme();
+  }
+
+  function unlockAlarmAudio() {
+    try {
+      if (!alarmAudioCtx) {
+        alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (alarmAudioCtx.state === "suspended") {
+        alarmAudioCtx.resume().catch(() => {});
+      }
+    } catch (_) {}
+  }
+
+  function ensureAlarmListeners() {
+    if (alarmListenersReady) return;
+    alarmListenersReady = true;
+    ["click", "keydown", "touchstart"].forEach((eventName) => {
+      document.addEventListener(eventName, unlockAlarmAudio, { passive: true });
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (deveTocarAlarmePedido()) tocarSomAlarmePedido();
+    });
+    window.addEventListener("blur", () => {
+      if (deveTocarAlarmePedido()) tocarSomAlarmePedido();
+    });
+  }
 
   function pararAlarmePedido() {
     if (pollAlarmTimer) {
@@ -762,8 +796,11 @@
   }
 
   function tocarSomAlarmePedido() {
+    if (!deveTocarAlarmePedido()) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      unlockAlarmAudio();
+      if (!alarmAudioCtx) return;
+      const ctx = alarmAudioCtx;
       const t = ctx.currentTime;
       [
         { f: 1046, d: 0.11, off: 0 },
@@ -781,17 +818,22 @@
         o.start(st);
         o.stop(st + s.d);
       });
-      setTimeout(() => ctx.close(), 900);
     } catch (_) {}
   }
 
-  function iniciarAlarmePedido() {
+  function sincronizarAlarmePedido() {
     pararAlarmePedido();
+    if (!pollCurrent) return;
+    ensureAlarmListeners();
     const tick = () => {
-      if (pollCurrent) tocarSomAlarmePedido();
+      if (deveTocarAlarmePedido()) tocarSomAlarmePedido();
     };
-    tick();
+    if (deveTocarAlarmePedido()) tick();
     pollAlarmTimer = setInterval(tick, INTERVALO_ALARM_SEG * 1000);
+  }
+
+  function iniciarAlarmePedido() {
+    sincronizarAlarmePedido();
   }
 
   async function postDecisaoPendente(id, decisao) {
@@ -873,16 +915,16 @@
   }
 
   function hidePendingModal() {
-    pararAlarmePedido();
     pollModalOpen = false;
     pollCurrent = null;
+    pararAlarmePedido();
     const modal = document.getElementById("vfModalPedidoPendente");
     if (modal) modal.hidden = true;
   }
 
   async function decidePending(decisao) {
     if (!pollCurrent || pollSubmitting) return;
-    pararAlarmePedido();
+    if (decisao === "aceitar") pararAlarmePedido();
     pollSubmitting = true;
     document.getElementById("vf-modal-btn-aceitar").disabled = true;
     document.getElementById("vf-modal-btn-recusar").disabled = true;
@@ -928,6 +970,7 @@
   function startPendingPoll() {
     if (pollTimer) return;
     ensurePollModal();
+    ensureAlarmListeners();
     pollPendentes();
     pollTimer = setInterval(pollPendentes, 10000);
   }
