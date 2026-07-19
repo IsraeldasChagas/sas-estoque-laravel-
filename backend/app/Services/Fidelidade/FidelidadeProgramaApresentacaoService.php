@@ -152,7 +152,7 @@ class FidelidadeProgramaApresentacaoService
             self::TIPO_DESCONTO_PERCENTUAL => 'Desconto percentual',
             self::TIPO_BRINDE => 'Brinde',
             self::TIPO_CATALOGO => 'Catálogo de recompensas',
-            self::TIPO_CATALOGO_CONSULTA => 'Catálogo (consulta)',
+            self::TIPO_CATALOGO_CONSULTA => 'Recompensa do Cartão Fidelidade',
             default => 'Produto / benefício',
         };
 
@@ -307,7 +307,7 @@ class FidelidadeProgramaApresentacaoService
             self::TIPO_DESCONTO_PERCENTUAL => 'Desconto percentual',
             self::TIPO_BRINDE => 'Brinde',
             self::TIPO_CATALOGO => 'Catálogo de recompensas',
-            self::TIPO_CATALOGO_CONSULTA => 'Catálogo (consulta)',
+            self::TIPO_CATALOGO_CONSULTA => 'Recompensa do Cartão Fidelidade',
             default => 'Recompensa',
         };
     }

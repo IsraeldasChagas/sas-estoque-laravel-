@@ -86,7 +86,7 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Como funciona')
-            ->assertSee('Catálogo (consulta)')
+            ->assertSee('Recompensa do Cartão Fidelidade')
             ->assertSee('1 caldo de pato')
             ->assertDontSee('Desconto percentual');
     }
@@ -122,7 +122,7 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
 
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
-            ->assertSee('Catálogo (consulta)')
+            ->assertSee('Recompensa do Cartão Fidelidade')
             ->assertSee('Entre estes produtos')
             ->assertSee('completar os')
             ->assertSee('10')

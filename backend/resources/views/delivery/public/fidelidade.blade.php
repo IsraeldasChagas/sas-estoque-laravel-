@@ -274,7 +274,7 @@
             @if($cheio && ! $podeResgatarCat)
                 <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa.</div>
             @elseif($cheio && $podeResgatarCat)
-                <p class="vf-fid-catalogo-nota muted">Sua recompensa está disponível no card <strong>Catálogo (consulta)</strong> acima — escolha o produto e confirme.</p>
+                <p class="vf-fid-catalogo-nota muted">Sua recompensa está disponível no card <strong>Recompensa do Cartão Fidelidade</strong> acima — escolha o produto e confirme.</p>
             @endif
             <form method="post" action="{{ route('delivery.public.fidelity.logout', $slug) }}" class="vf-fid-form-inline">
                 @csrf
