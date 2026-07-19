@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Fidelidade;
 
 use App\Http\Controllers\Controller;
+use App\Services\Fidelidade\FidelidadeCatalogoConsultaService;
 use App\Services\Fidelidade\FidelidadePublicOtpCache;
 use App\Services\Fidelidade\FidelidadeCodigoService;
 use App\Services\Fidelidade\FidelidadeLedgerService;
@@ -27,7 +28,8 @@ class FidelidadeController extends Controller
 
     public function __construct(
         private FidelidadeLedgerService $ledger,
-        private FidelidadeResgateService $resgate
+        private FidelidadeResgateService $resgate,
+        private FidelidadeCatalogoConsultaService $catalogoConsulta,
     ) {}
 
     public function getPrograma(Request $request): JsonResponse
@@ -39,7 +41,10 @@ class FidelidadeController extends Controller
 
         $programa = DB::table('fid_programas')->where('unidade_id', $unidadeId)->first();
 
-        return response()->json(['programa' => $this->serializarPrograma($programa)]);
+        return response()->json([
+            'programa' => $this->serializarPrograma($programa),
+            'catalogo_consulta_suportado' => $this->catalogoConsulta->colunasDisponiveis(),
+        ]);
     }
 
     public function catalogoConsultaProdutos(Request $request): JsonResponse
@@ -49,23 +54,19 @@ class FidelidadeController extends Controller
         $unidadeId = $this->resolverUnidade($usuario, $request);
         abort_unless($unidadeId, 422, 'unidade_id obrigatório.');
 
-        if (! Schema::hasTable('dlv_produtos')) {
-            return response()->json(['items' => [], 'delivery_disponivel' => false]);
-        }
+        $loja = $this->catalogoConsulta->lojaVinculada($unidadeId);
+        $deliveryUnidadeId = $this->catalogoConsulta->unidadeDeliveryParaFidelidade($unidadeId);
+        $items = $this->catalogoConsulta->produtosAtivos($unidadeId);
 
-        $items = DB::table('dlv_produtos')
-            ->where('unidade_id', $unidadeId)
-            ->where('ativo', 1)
-            ->orderBy('nome')
-            ->get(['id', 'nome', 'preco', 'visivel_loja'])
-            ->map(fn ($row) => [
-                'id' => (int) $row->id,
-                'nome' => (string) $row->nome,
-                'preco' => (float) $row->preco,
-                'visivel_loja' => (bool) $row->visivel_loja,
-            ])->values();
-
-        return response()->json(['items' => $items, 'delivery_disponivel' => true]);
+        return response()->json([
+            'items' => $items,
+            'delivery_disponivel' => Schema::hasTable('dlv_produtos'),
+            'unidade_fidelidade_id' => $unidadeId,
+            'unidade_delivery_id' => $deliveryUnidadeId,
+            'loja_nome' => $loja->nome_loja ?? null,
+            'loja_slug' => $loja->slug ?? null,
+            'catalogo_consulta_suportado' => $this->catalogoConsulta->colunasDisponiveis(),
+        ]);
     }
 
     public function putPrograma(Request $request): JsonResponse
@@ -119,19 +120,24 @@ class FidelidadeController extends Controller
             'updated_at' => $agora,
         ];
 
-        if (Schema::hasColumn('fid_programas', 'catalogo_qtd_escolhas')) {
+        if ($this->catalogoConsulta->colunasDisponiveis()) {
             if ($tipo === 'catalogo_consulta') {
                 $payload['catalogo_qtd_escolhas'] = array_key_exists('catalogo_qtd_escolhas', $data)
                     ? max(1, min(20, (int) $data['catalogo_qtd_escolhas']))
                     : max(1, (int) ($existente->catalogo_qtd_escolhas ?? 1));
                 $ids = array_key_exists('catalogo_produtos_ids', $data)
                     ? (array) $data['catalogo_produtos_ids']
-                    : $this->idsCatalogoProdutos($existente->catalogo_produtos_json ?? null);
-                $payload['catalogo_produtos_json'] = $this->normalizarCatalogoProdutosJson($unidadeId, $ids);
+                    : array_map(
+                        fn ($item) => (int) ($item['id'] ?? 0),
+                        $this->catalogoConsulta->decodificarProdutosJson($existente->catalogo_produtos_json ?? null)
+                    );
+                $payload['catalogo_produtos_json'] = $this->catalogoConsulta->normalizarProdutosJson($unidadeId, $ids);
             } else {
                 $payload['catalogo_qtd_escolhas'] = null;
                 $payload['catalogo_produtos_json'] = null;
             }
+        } elseif ($tipo === 'catalogo_consulta') {
+            abort(503, 'Execute php artisan migrate para salvar produtos do catálogo (consulta).');
         }
 
         if (Schema::hasColumn('fid_programas', 'desconto_percentual')) {
@@ -821,82 +827,10 @@ class FidelidadeController extends Controller
             $programa->tipo_recompensa_padrao = 'catalogo_consulta';
         }
 
-        $produtos = $this->decodificarCatalogoProdutos($programa->catalogo_produtos_json ?? null);
+        $produtos = $this->catalogoConsulta->decodificarProdutosJson($programa->catalogo_produtos_json ?? null);
         $programa->catalogo_produtos = $produtos;
         $programa->catalogo_produtos_ids = array_map(fn ($item) => (int) ($item['id'] ?? 0), $produtos);
 
         return $programa;
-    }
-
-    /** @return list<int> */
-    private function idsCatalogoProdutos(mixed $json): array
-    {
-        return array_values(array_filter(array_map(
-            fn ($item) => (int) ($item['id'] ?? 0),
-            $this->decodificarCatalogoProdutos($json)
-        ), fn ($id) => $id > 0));
-    }
-
-    /** @return list<array{id:int,nome:string,preco?:float}> */
-    private function decodificarCatalogoProdutos(mixed $json): array
-    {
-        if ($json === null || $json === '') {
-            return [];
-        }
-        if (is_string($json)) {
-            $json = json_decode($json, true);
-        }
-        if (! is_array($json)) {
-            return [];
-        }
-
-        $out = [];
-        foreach ($json as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-            $id = (int) ($item['id'] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-            $row = ['id' => $id, 'nome' => trim((string) ($item['nome'] ?? 'Produto'))];
-            if (array_key_exists('preco', $item)) {
-                $row['preco'] = (float) $item['preco'];
-            }
-            $out[] = $row;
-        }
-
-        return $out;
-    }
-
-    /** @param  list<int|string>  $ids */
-    private function normalizarCatalogoProdutosJson(int $unidadeId, array $ids): ?string
-    {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn ($id) => $id > 0)));
-        if ($ids === []) {
-            return null;
-        }
-
-        if (! Schema::hasTable('dlv_produtos')) {
-            return json_encode(array_map(fn ($id) => ['id' => $id, 'nome' => 'Produto #'.$id], $ids), JSON_UNESCAPED_UNICODE);
-        }
-
-        $rows = DB::table('dlv_produtos')
-            ->where('unidade_id', $unidadeId)
-            ->whereIn('id', $ids)
-            ->orderBy('nome')
-            ->get(['id', 'nome', 'preco']);
-
-        if ($rows->isEmpty()) {
-            return null;
-        }
-
-        $payload = $rows->map(fn ($row) => [
-            'id' => (int) $row->id,
-            'nome' => (string) $row->nome,
-            'preco' => (float) $row->preco,
-        ])->values()->all();
-
-        return json_encode($payload, JSON_UNESCAPED_UNICODE);
     }
 }

@@ -170,6 +170,53 @@ class FidelidadeApiTest extends TestCase
         $this->assertContains('Açaí 500ml', $nomes);
     }
 
+    public function test_catalogo_consulta_usa_loja_vinculada_por_unidade_fidelidade(): void
+    {
+        Schema::dropIfExists('dlv_loja_config');
+        Schema::dropIfExists('dlv_produtos');
+        Schema::create('dlv_loja_config', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('unidade_id');
+            $table->unsignedBigInteger('unidade_fidelidade_id')->nullable();
+            $table->string('slug')->unique();
+            $table->string('nome_loja')->nullable();
+            $table->boolean('ativo')->default(1);
+        });
+        Schema::create('dlv_produtos', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('unidade_id');
+            $table->string('nome');
+            $table->decimal('preco', 14, 2)->default(0);
+            $table->boolean('ativo')->default(true);
+            $table->boolean('visivel_loja')->default(true);
+            $table->unsignedInteger('ordem')->default(0);
+        });
+
+        DB::table('dlv_loja_config')->insert([
+            'unidade_id' => 99,
+            'unidade_fidelidade_id' => 1,
+            'slug' => 'loja-delivery-teste',
+            'nome_loja' => 'Loja Delivery Teste',
+            'ativo' => 1,
+        ]);
+        DB::table('dlv_produtos')->insert([
+            'id' => 777,
+            'unidade_id' => 99,
+            'nome' => 'Produto vinculado',
+            'preco' => 10,
+            'ativo' => 1,
+            'visivel_loja' => 1,
+            'ordem' => 0,
+        ]);
+
+        $this->withHeaders($this->headers())->getJson('/api/fidelidade/catalogo-consulta/produtos?unidade_id=1')
+            ->assertOk()
+            ->assertJsonPath('unidade_delivery_id', 99)
+            ->assertJsonPath('loja_nome', 'Loja Delivery Teste')
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.nome', 'Produto vinculado');
+    }
+
     public function test_cartao_enrollment_normalizes_phone_and_cpf(): void
     {
         $response = $this->withHeaders($this->headers())->postJson('/api/fidelidade/cartoes', [

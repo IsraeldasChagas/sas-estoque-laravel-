@@ -4,7 +4,7 @@
 (function () {
   "use strict";
 
-  const state = { cartoes: [], recompensas: [], cartaoId: null, unidades: [], unidadeId: "" };
+  const state = { cartoes: [], recompensas: [], cartaoId: null, unidades: [], unidadeId: "", catalogoConsultaSuportado: true };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -77,7 +77,12 @@
       state.unidades = [];
     }
     if (!state.unidadeId && state.unidades.length) {
-      const userU = window.currentUser?.unidade_id ? String(window.currentUser.unidade_id) : "";
+      let userU = "";
+      if (typeof window.getUser === "function") {
+        userU = String(window.getUser()?.unidade_id || "");
+      } else if (window.currentUser?.unidade_id != null) {
+        userU = String(window.currentUser.unidade_id);
+      }
       const match = userU && state.unidades.find((u) => String(u.id) === userU);
       state.unidadeId = match ? String(match.id) : String(state.unidades[0].id);
     }
@@ -130,6 +135,7 @@
       return;
     }
     const p = data.programa || {};
+    state.catalogoConsultaSuportado = data.catalogo_consulta_suportado !== false;
     let tipoRec = p.tipo_recompensa_padrao || "catalogo_consulta";
     if (tipoRec === "produto") tipoRec = "catalogo_consulta";
     const catalogoQtd = Number(p.catalogo_qtd_escolhas || 1);
@@ -162,7 +168,9 @@
         </div>
         <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="brinde">Descrição da recompensa (brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
         <div class="orc-card fid-rec-field fid-catalogo-consulta-wrap" data-fid-rec-show="catalogo_consulta">
-          <div class="orc-section-title"><div><h3>Produtos do cardápio (Delivery)</h3><p>Marque os itens disponíveis para o resgate. O cliente poderá escolher até a quantidade informada acima.</p></div></div>
+          <div class="orc-section-title"><div><h3>Produtos do cardápio (Delivery)</h3><p>Marque os produtos que entram na recompensa. A quantidade acima define quantos o cliente poderá escolher no resgate.</p></div></div>
+          ${state.catalogoConsultaSuportado ? "" : `<p class="vf-show-warn">Atualização do banco pendente: peça ao administrador para rodar <code>php artisan migrate</code> antes de salvar os produtos.</p>`}
+          <p class="subtle-text" id="fidCatalogoConsultaMeta"></p>
           <p class="subtle-text" id="fidCatalogoConsultaHint"></p>
           <div id="fidCatalogoProdutosList" class="fid-catalogo-produtos-list"></div>
         </div>
@@ -172,8 +180,15 @@
       </form>`);
     bindUnidadeSelect(loadPrograma);
     syncProgramaRecompensaFields($("fidProgramaForm"));
-    $("fidTipoRecompensa")?.addEventListener("change", () => syncProgramaRecompensaFields($("fidProgramaForm")));
+    $("fidTipoRecompensa")?.addEventListener("change", async () => {
+      syncProgramaRecompensaFields($("fidProgramaForm"));
+      if (value($("fidProgramaForm"), "tipo_recompensa_padrao") === "catalogo_consulta") {
+        const selected = Array.from($("fidProgramaForm").querySelectorAll('input[name="catalogo_produtos_ids[]"]:checked')).map((el) => Number(el.value));
+        await renderCatalogoConsultaProdutos(selected.length ? selected : catalogoSelecionados, catalogoQtdMax($("fidProgramaForm")));
+      }
+    });
     $("fidCatalogoQtd")?.addEventListener("change", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
+    $("fidCatalogoQtd")?.addEventListener("input", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
     await renderCatalogoConsultaProdutos(catalogoSelecionados, catalogoQtd);
     $("fidProgramaForm").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -182,6 +197,14 @@
       const catalogoIds = tipo === "catalogo_consulta"
         ? Array.from(f.querySelectorAll('input[name="catalogo_produtos_ids[]"]:checked')).map((el) => Number(el.value))
         : [];
+      if (tipo === "catalogo_consulta" && !catalogoIds.length) {
+        toast("Marque pelo menos 1 produto do cardápio para a recompensa.", "warning");
+        return;
+      }
+      if (tipo === "catalogo_consulta" && catalogoIds.length > Number(value(f, "catalogo_qtd_escolhas") || 1)) {
+        toast("Marque no máximo a mesma quantidade informada em “Qtd. que o cliente pode escolher”.", "warning");
+        return;
+      }
       await api("/programa", { method: "PUT", body: JSON.stringify({
         nome_exibicao: value(f, "nome_exibicao"), modo: value(f, "modo"),
         pedidos_meta: Number(value(f, "pedidos_meta")), pontos_por_selo: Number(value(f, "pontos_por_selo")),
@@ -233,16 +256,61 @@
     }
   }
 
+  async function fetchDeliveryCatalogoFallback() {
+    if (typeof window.fetchJSON !== "function" || !state.unidadeId) return null;
+    try {
+      const data = await window.fetchJSON(`/delivery/catalogo?unidade_id=${encodeURIComponent(state.unidadeId)}`);
+      const items = (Array.isArray(data.produtos) ? data.produtos : []).map((item) => ({
+        id: Number(item.id),
+        nome: String(item.nome || ""),
+        preco: Number(item.preco || 0),
+        visivel_loja: Boolean(item.visivel_loja),
+      }));
+      if (!items.length) return null;
+      return { items, delivery_disponivel: true, fallback: true };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function fetchCatalogoConsultaProdutos() {
+    let data = await api("/catalogo-consulta/produtos");
+    if ((!data.items || !data.items.length) && data.delivery_disponivel !== false) {
+      const fallback = await fetchDeliveryCatalogoFallback();
+      if (fallback?.items?.length) {
+        data = { ...data, ...fallback };
+      }
+    }
+    return data;
+  }
+
   async function renderCatalogoConsultaProdutos(selectedIds, qtdMax) {
     const list = $("fidCatalogoProdutosList");
     const hint = $("fidCatalogoConsultaHint");
+    const meta = $("fidCatalogoConsultaMeta");
     if (!list) return;
     list.innerHTML = `<p class="subtle-text">Carregando cardápio…</p>`;
+    if (meta) meta.textContent = "";
     try {
-      const data = await api("/catalogo-consulta/produtos");
+      const data = await fetchCatalogoConsultaProdutos();
+      state.catalogoConsultaSuportado = data.catalogo_consulta_suportado !== false;
       const items = data.items || [];
-      if (!data.delivery_disponivel || !items.length) {
-        list.innerHTML = `<p class="subtle-text">Nenhum produto no Delivery para esta unidade. Cadastre em Delivery → Catálogo (consulta).</p>`;
+      if (meta) {
+        const partes = [];
+        if (data.loja_nome) partes.push(`Loja Delivery: ${data.loja_nome}`);
+        if (data.unidade_delivery_id && data.unidade_fidelidade_id && Number(data.unidade_delivery_id) !== Number(data.unidade_fidelidade_id)) {
+          partes.push(`cardápio da unidade ${data.unidade_delivery_id} vinculada à fidelidade ${data.unidade_fidelidade_id}`);
+        }
+        if (data.fallback) partes.push("lista carregada pelo catálogo Delivery");
+        meta.textContent = partes.join(" · ");
+      }
+      if (!data.delivery_disponivel) {
+        list.innerHTML = `<p class="subtle-text">Módulo Delivery não encontrado. Cadastre produtos em Delivery → Catálogo (consulta).</p>`;
+        if (hint) hint.textContent = "";
+        return;
+      }
+      if (!items.length) {
+        list.innerHTML = `<p class="subtle-text">Nenhum produto ativo no Delivery para esta unidade. Cadastre em <strong>Delivery → Catálogo (consulta)</strong> e confira se a loja está vinculada à mesma unidade de fidelidade (Configurações → unidade fidelidade).</p>`;
         if (hint) hint.textContent = "";
         return;
       }
@@ -250,9 +318,10 @@
       list.innerHTML = `<div class="fid-catalogo-produtos-grid">${items.map((item) => {
         const id = Number(item.id);
         const checkedAttr = selected.has(id) ? "checked" : "";
+        const visivel = item.visivel_loja ? "" : " · só consulta";
         return `<label class="fid-catalogo-produto-item">
           <input type="checkbox" name="catalogo_produtos_ids[]" value="${id}" ${checkedAttr}>
-          <span><strong>${esc(item.nome)}</strong><small>${money(item.preco)}</small></span>
+          <span><strong>${esc(item.nome)}</strong><small>${money(item.preco)}${visivel}</small></span>
         </label>`;
       }).join("")}</div>`;
       list.querySelectorAll('input[name="catalogo_produtos_ids[]"]').forEach((el) => {
