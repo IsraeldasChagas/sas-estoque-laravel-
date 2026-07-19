@@ -30,6 +30,18 @@
     return `${location.origin.replace(/\/$/, "")}/api`;
   })();
 
+  function mediaUrl(url) {
+    if (typeof window.deliveryMediaUrl === "function") return window.deliveryMediaUrl(url);
+    if (!url) return "";
+    if (/^(https?:|data:)/i.test(url)) return url;
+    const base = String(window.APP_CONFIG?.API_URL || "").replace(/\/api\/?$/, "");
+    return `${base}${String(url).startsWith("/") ? "" : "/"}${url}`;
+  }
+
+  function clienteTelefoneExibicao(order) {
+    return order.cliente_whatsapp || order.cliente_telefone || "";
+  }
+
   function authHeaders(extra) {
     const headers = { ...(extra || {}) };
     if (window.currentUser?.token) headers.Authorization = `Bearer ${window.currentUser.token}`;
@@ -99,13 +111,16 @@
     if (order.fulfillment !== "entrega" || !list.length) return "";
     return `<div class="vf-show-card vf-show-card--sidebar vf-show-card--entregadores">
       <div class="vf-show-entregadores-head"><h3><i class="bi bi-person-badge"></i> Seus entregadores — chame primeiro</h3></div>
-      <div class="vf-show-entregadores-body">${list.map((ent) => `<div class="vf-show-entregador">
-        ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty"><i class="bi bi-person"></i></span>`}
+      <div class="vf-show-entregadores-body">${list.map((ent) => {
+        const photo = mediaUrl(ent.foto_url || ent.foto_path);
+        return `<div class="vf-show-entregador">
+        ${photo ? `<img src="${esc(photo)}" alt="${esc(ent.nome)}" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty"><i class="bi bi-person"></i></span>`}
         <div class="vf-show-entregador__nome">${esc(ent.nome)}</div>
         ${ent.whatsapp_url
           ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Chamar no WhatsApp</a>`
           : `<p class="vf-show-warn">Ajuste o WhatsApp em editar entregador.</p>`}
-      </div>`).join("")}</div>
+      </div>`;
+      }).join("")}</div>
     </div>`;
   }
 
@@ -170,10 +185,16 @@
   }
 
   function renderClienteBlock(order, addressLine) {
+    const telefone = clienteTelefoneExibicao(order);
+    const waCliente = order.cliente_whatsapp_url || null;
     return `<div class="vf-show-card vf-show-card--sidebar">
       <h3 class="vf-show-card__title">Cliente</h3>
-      <p class="vf-show-cliente-nome">${esc(order.cliente_nome)}</p>
-      <p class="vf-show-help">${esc(order.cliente_telefone || "—")}</p>
+      <p class="vf-show-cliente-nome">${esc(order.cliente_nome || "—")}</p>
+      ${telefone
+        ? (waCliente
+          ? `<p class="vf-show-help"><a href="${esc(waCliente)}" target="_blank" rel="noopener noreferrer">${esc(telefone)}</a></p>`
+          : `<p class="vf-show-help">${esc(telefone)}</p>`)
+        : `<p class="vf-show-help">—</p>`}
       ${order.cliente_email ? `<p class="vf-show-help">${esc(order.cliente_email)}</p>` : ""}
       <p class="vf-show-help">${esc(addressLine || (order.fulfillment === "entrega" ? "" : "Retirada na loja"))}${order.endereco?.complemento ? `<br>${esc(order.endereco.complemento)}` : ""}</p>
       <p class="vf-show-help vf-show-help--tight"><strong>Pagamento:</strong> ${esc(order.pagamento_descricao || order.pagamento_forma || "—")}</p>
@@ -220,7 +241,7 @@
     const sub = [order.cliente_nome, order.cliente_email].filter(Boolean).join(" · ");
     const slug = vitrine?.slug || "";
     const vitrineUrl = slug ? `${location.origin.replace(/\/$/, "")}/loja/${encodeURIComponent(slug)}` : "";
-    const logo = vitrine?.logo_url || "";
+    const logo = mediaUrl(vitrine?.logo_url || vitrine?.logo_path);
     return `<div class="vf-order-page-topbar">
       <div class="vf-order-page-topbar__left">
         <button type="button" class="vf-order-page-topbar__back" data-vf-orders aria-label="Voltar"><i class="bi bi-arrow-left"></i></button>

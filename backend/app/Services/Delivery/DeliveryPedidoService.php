@@ -4,6 +4,7 @@ namespace App\Services\Delivery;
 
 use App\Support\Delivery\DeliveryCupomPedido;
 use App\Support\Delivery\DeliveryLojaCheckoutHelper;
+use App\Support\Delivery\DeliveryMediaUrl;
 use App\Support\Delivery\DeliveryPedidoPresenter;
 use App\Support\Delivery\DeliveryWhatsAppHelper;
 use Illuminate\Support\Facades\DB;
@@ -302,6 +303,7 @@ class DeliveryPedidoService
             'cliente_telefone' => $pedido->cliente_telefone,
             'cliente_whatsapp' => $pedido->cliente_whatsapp,
             'cliente_email' => $pedido->cliente_email ?? null,
+            'cliente_whatsapp_url' => DeliveryWhatsAppHelper::urlContato($pedido->cliente_whatsapp ?: $pedido->cliente_telefone),
             'endereco' => [
                 'texto' => $pedido->endereco_texto,
                 'cep' => $pedido->endereco_cep,
@@ -363,8 +365,9 @@ class DeliveryPedidoService
                     'nome' => (string) $row->nome,
                     'whatsapp' => $row->whatsapp,
                     'telefone' => $row->telefone,
-                    'foto_url' => empty($row->foto_path) ? null : '/'.ltrim((string) $row->foto_path, '/'),
-                    'whatsapp_url' => DeliveryWhatsAppHelper::urlContato($row->whatsapp),
+                    'foto_path' => $row->foto_path ?? null,
+                    'foto_url' => DeliveryMediaUrl::fromPublicPath($row->foto_path ?? null),
+                    'whatsapp_url' => DeliveryWhatsAppHelper::urlContato($row->whatsapp ?: $row->telefone),
                 ])->values()->all();
         }
 

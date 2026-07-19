@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Support\Delivery\DeliveryMediaUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -170,7 +171,7 @@ class DeliveryEntregadorController extends DeliveryBaseController
     private function serializar(object $row): array
     {
         return array_merge((array) $row, [
-            'foto_url' => empty($row->foto_path) ? null : '/'.ltrim((string) $row->foto_path, '/'),
+            'foto_url' => DeliveryMediaUrl::fromPublicPath($row->foto_path ?? null),
         ]);
     }
 

@@ -563,4 +563,5 @@
   window.loadDeliveryFretes = loadFretes;
   window.loadDeliveryEntregadores = loadEntregadores;
   window.loadDeliveryConfiguracoes = loadConfiguracoes;
+  window.deliveryMediaUrl = deliveryImageUrl;
 })();

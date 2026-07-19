@@ -64,11 +64,20 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
             'unidade_id' => 7,
             'nome' => 'João Entregador',
             'whatsapp' => '91988887777',
+            'foto_path' => 'uploads/delivery/entregadores/7/foto-teste.png',
             'ativo' => 1,
             'ordem' => 0,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $fotoDir = public_path('uploads/delivery/entregadores/7');
+        if (! is_dir($fotoDir)) {
+            mkdir($fotoDir, 0755, true);
+        }
+        file_put_contents(public_path('uploads/delivery/entregadores/7/foto-teste.png'), base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+        ));
     }
 
     protected function tearDown(): void
@@ -89,6 +98,11 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
         $response->assertJsonPath('entregadores.0.nome', 'João Entregador')
             ->assertJsonPath('entregadores.0.whatsapp_url', 'https://wa.me/5591988887777')
             ->assertJsonStructure(['url_imprimir', 'url_entregador', 'cupom_whatsapp_url', 'status_rotulo']);
+
+        $fotoUrl = $response->json('entregadores.0.foto_url');
+        $this->assertNotNull($fotoUrl);
+        $this->assertStringContainsString('/uploads/delivery/entregadores/7/foto-teste.png', $fotoUrl);
+        $this->assertStringContainsString('wa.me/', $response->json('cliente_whatsapp_url'));
 
         $this->assertStringContainsString('/loja/loja-teste/entrega/', $response->json('url_entregador'));
     }

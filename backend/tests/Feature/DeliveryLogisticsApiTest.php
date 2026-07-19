@@ -142,7 +142,8 @@ class DeliveryLogisticsApiTest extends TestCase
             ->json();
 
         $this->assertNotEmpty($driver['foto_path']);
-        $this->assertSame('/'.$driver['foto_path'], $driver['foto_url']);
+        $this->assertNotNull($driver['foto_url']);
+        $this->assertStringContainsString('/'.$driver['foto_path'], $driver['foto_url']);
         $this->assertStringStartsWith('uploads/delivery/entregadores/1/', $driver['foto_path']);
         $this->assertFileExists(public_path($driver['foto_path']));
         $firstPath = $driver['foto_path'];
