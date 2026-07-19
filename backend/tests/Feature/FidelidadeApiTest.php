@@ -67,6 +67,9 @@ class FidelidadeApiTest extends TestCase
         $migration = require database_path('migrations/2026_07_17_140000_create_fidelidade_tables.php');
         $migration->up();
 
+        $pctMigration = require database_path('migrations/2026_07_18_220000_add_desconto_percentual_to_fid_programas.php');
+        $pctMigration->up();
+
         $this->ensureFidelidadeRoutes();
     }
 

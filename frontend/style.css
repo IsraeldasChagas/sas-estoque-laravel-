@@ -7853,6 +7853,26 @@ select[size]:not([size="1"]) {
   font-size: 1.2rem;
   color: #14261c;
 }
+.reserva-fid__recompensa {
+  margin: 0.65rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #1e293b;
+}
+.reserva-fid__recompensa strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #1e3a8a;
+}
+.reserva-fid__recompensa ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.reserva-fid__recompensa li { margin-bottom: 0.2rem; }
 .reserva-fid__acoes {
   display: flex;
   flex-wrap: wrap;

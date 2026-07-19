@@ -687,6 +687,10 @@ class ReservaMesaController extends Controller
             'recompensas' => $recompensas,
             'reserva_id' => (int) $reserva->id,
             'vitrine_fidelidade' => $vitrine,
+            'recompensa_programa' => ($snap['programa'] ?? null)
+                ? app(\App\Services\Fidelidade\FidelidadeProgramaApresentacaoService::class)
+                    ->resumoRecompensa($snap['programa'], $snap['conta'] ? (int) $snap['conta']->id : null)
+                : null,
         ]));
     }
 

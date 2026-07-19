@@ -130,6 +130,7 @@
       return;
     }
     const p = data.programa || {};
+    const tipoRec = p.tipo_recompensa_padrao || "produto";
     root.innerHTML = shell(header("Programa", "Defina como os clientes acumulam e trocam benefícios.", "🎁")
       + unidadeBar()
       + `<form id="fidProgramaForm" class="orc-card">
@@ -139,35 +140,57 @@
           <label>Modo<select name="modo"><option value="selos" ${p.modo !== "pontos" ? "selected" : ""}>Selos</option><option value="pontos" ${p.modo === "pontos" ? "selected" : ""}>Pontos</option></select></label>
           <label>Meta de selos<input name="pedidos_meta" type="number" min="1" value="${esc(p.pedidos_meta || 10)}" required></label>
           <label>Pontos por selo<input name="pontos_por_selo" type="number" min="0" value="${esc(p.pontos_por_selo ?? 1)}"></label>
-          <label>Recompensa padrão<select name="tipo_recompensa_padrao">
-            <option value="produto" ${p.tipo_recompensa_padrao === "produto" ? "selected" : ""}>Produto</option>
-            <option value="desconto_valor" ${p.tipo_recompensa_padrao === "desconto_valor" ? "selected" : ""}>Desconto em valor</option>
-            <option value="catalogo" ${p.tipo_recompensa_padrao === "catalogo" ? "selected" : ""}>Catálogo de recompensas</option>
+          <label>Recompensa padrão<select name="tipo_recompensa_padrao" id="fidTipoRecompensa">
+            <option value="produto" ${tipoRec === "produto" ? "selected" : ""}>Produto (descrever)</option>
+            <option value="brinde" ${tipoRec === "brinde" ? "selected" : ""}>Brinde (descrever)</option>
+            <option value="desconto_valor" ${tipoRec === "desconto_valor" ? "selected" : ""}>Desconto em valor (R$)</option>
+            <option value="desconto_percentual" ${tipoRec === "desconto_percentual" ? "selected" : ""}>Desconto percentual (%)</option>
+            <option value="catalogo" ${tipoRec === "catalogo" ? "selected" : ""}>Catálogo de recompensas</option>
           </select></label>
-          <label>Valor do desconto<input name="valor_desconto" type="number" min="0" step="0.01" value="${esc(p.valor_desconto || "")}"></label>
+          <label class="fid-rec-field fid-rec-field--valor" data-fid-rec-show="desconto_valor">Valor do desconto (R$)<input name="valor_desconto" type="number" min="0" step="0.01" value="${esc(p.valor_desconto || "")}"></label>
+          <label class="fid-rec-field fid-rec-field--pct" data-fid-rec-show="desconto_percentual">Desconto percentual (%)<input name="desconto_percentual" type="number" min="0" max="100" step="0.01" value="${esc(p.desconto_percentual || "")}"></label>
+          <label class="fid-rec-field fid-rec-field--pct" data-fid-rec-show="desconto_percentual">Base do percentual<select name="base_desconto_percentual">
+            <option value="gasto_acumulado_meta" ${(p.base_desconto_percentual || "gasto_acumulado_meta") === "gasto_acumulado_meta" ? "selected" : ""}>Total gasto nas reservas que geraram os selos do ciclo</option>
+          </select></label>
           <label>Validade dos créditos (dias)<input name="dias_expiracao_credito" type="number" min="1" value="${esc(p.dias_expiracao_credito || "")}" placeholder="Sem expiração"></label>
           <label class="checkbox-label"><input name="ativo" type="checkbox" ${p.ativo ? "checked" : ""}> Programa ativo nesta unidade</label>
           <label class="checkbox-label"><input name="permite_ajuste_manual" type="checkbox" ${p.permite_ajuste_manual !== false && Number(p.permite_ajuste_manual) !== 0 ? "checked" : ""}> Permitir ajustes manuais</label>
         </div>
-        <label>Mensagem da recompensa<textarea name="texto_recompensa" rows="3">${esc(p.texto_recompensa || "")}</textarea></label>
+        <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="produto brinde">Descrição da recompensa (produto/brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de tacacá ou sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
+        <p class="subtle-text fid-rec-hint fid-rec-field" data-fid-rec-show="desconto_percentual">O percentual incide sobre a soma do valor pago em cada conta das visitas que geraram os selos desde o último resgate (até a meta).</p>
+        <p class="subtle-text fid-rec-hint fid-rec-field" data-fid-rec-show="desconto_valor">Desconto fixo em reais aplicado na conta ao resgatar os selos.</p>
         <div class="orc-actions"><button class="btn primary" type="submit">Salvar programa</button></div>
       </form>`);
     bindUnidadeSelect(loadPrograma);
+    syncProgramaRecompensaFields($("fidProgramaForm"));
+    $("fidTipoRecompensa")?.addEventListener("change", () => syncProgramaRecompensaFields($("fidProgramaForm")));
     $("fidProgramaForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const f = event.currentTarget;
+      const tipo = value(f, "tipo_recompensa_padrao");
       await api("/programa", { method: "PUT", body: JSON.stringify({
         nome_exibicao: value(f, "nome_exibicao"), modo: value(f, "modo"),
         pedidos_meta: Number(value(f, "pedidos_meta")), pontos_por_selo: Number(value(f, "pontos_por_selo")),
-        tipo_recompensa_padrao: value(f, "tipo_recompensa_padrao"),
-        valor_desconto: value(f, "valor_desconto") === "" ? null : Number(value(f, "valor_desconto")),
+        tipo_recompensa_padrao: tipo,
+        valor_desconto: tipo === "desconto_valor" && value(f, "valor_desconto") !== "" ? Number(value(f, "valor_desconto")) : null,
+        desconto_percentual: tipo === "desconto_percentual" && value(f, "desconto_percentual") !== "" ? Number(value(f, "desconto_percentual")) : null,
+        base_desconto_percentual: tipo === "desconto_percentual" ? (value(f, "base_desconto_percentual") || "gasto_acumulado_meta") : null,
         dias_expiracao_credito: value(f, "dias_expiracao_credito") === "" ? null : Number(value(f, "dias_expiracao_credito")),
-        texto_recompensa: value(f, "texto_recompensa") || null,
+        texto_recompensa: (tipo === "produto" || tipo === "brinde") ? (value(f, "texto_recompensa") || null) : null,
         ativo: checked(f, "ativo"), permite_ajuste_manual: checked(f, "permite_ajuste_manual"),
         unidade_id: state.unidadeId ? Number(state.unidadeId) : undefined,
       }) });
       toast("Programa de fidelidade salvo.", "success");
       await loadPrograma();
+    });
+  }
+
+  function syncProgramaRecompensaFields(form) {
+    if (!form) return;
+    const tipo = value(form, "tipo_recompensa_padrao") || "produto";
+    form.querySelectorAll("[data-fid-rec-show]").forEach((el) => {
+      const tipos = String(el.dataset.fidRecShow || "").split(/\s+/).filter(Boolean);
+      el.classList.toggle("hidden", !tipos.includes(tipo));
     });
   }
 
@@ -284,17 +307,20 @@
     root.innerHTML = shell(header("Recompensas", "Monte o catálogo e acompanhe a entrega dos benefícios.", "★")
       + unidadeBar()
       + `<form id="fidRecompensaForm" class="orc-card"><div class="orc-section-title"><h3>Nova recompensa</h3></div><div class="orc-form-grid">
-        <label>Título<input name="titulo" required></label><label>Tipo<select name="tipo"><option value="produto">Produto</option><option value="desconto_valor">Desconto</option><option value="brinde">Brinde</option></select></label>
+        <label>Título<input name="titulo" required></label><label>Tipo<select name="tipo" id="fidCatTipo"><option value="produto">Produto</option><option value="brinde">Brinde</option><option value="desconto_valor">Desconto em valor</option></select></label>
         <label>Custo em selos<input name="custo_selos" type="number" min="0" value="10"></label><label>Custo em pontos<input name="custo_pontos" type="number" min="0" value="0"></label>
-        <label>Valor do desconto<input name="valor_desconto" type="number" min="0" step="0.01"></label></div><button class="btn primary" type="submit">Adicionar recompensa</button></form>
+        <label class="fid-rec-field fid-rec-field--valor hidden" data-fid-rec-show="desconto_valor">Valor do desconto (R$)<input name="valor_desconto" type="number" min="0" step="0.01"></label></div><button class="btn primary" type="submit">Adicionar recompensa</button></form>
       <div class="orc-grid orc-grid--2"><div class="orc-table-card"><div class="orc-section-title"><h3>Catálogo</h3></div><div class="table-scroll"><table><thead><tr><th>Recompensa</th><th>Tipo</th><th>Custo</th><th>Status</th></tr></thead><tbody>
       ${state.recompensas.map((x) => `<tr><td><strong>${esc(x.titulo)}</strong></td><td>${esc(x.tipo)}</td><td>${Number(x.custo_selos || 0)} selos / ${Number(x.custo_pontos || 0)} pts</td><td>${badge(Number(x.ativo) ? "ativo" : "inativo")}</td></tr>`).join("") || `<tr><td colspan="4">Sem recompensas.</td></tr>`}</tbody></table></div></div>
       <div class="orc-table-card"><div class="orc-section-title"><h3>Resgates</h3></div><div class="table-scroll"><table><thead><tr><th>#</th><th>Cartão</th><th>Status</th><th>Ação</th></tr></thead><tbody>
       ${(q.items || []).map((x) => `<tr><td>#${x.id}</td><td>${x.conta_id}</td><td>${badge(x.status)}</td><td>${x.status === "pendente" ? `<button class="btn small primary" data-entregar="${x.id}">Marcar entregue</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="4">Sem resgates.</td></tr>`}</tbody></table></div></div></div>`);
     bindUnidadeSelect(loadRecompensas);
+    syncProgramaRecompensaFields($("fidRecompensaForm"));
+    $("fidCatTipo")?.addEventListener("change", () => syncProgramaRecompensaFields($("fidRecompensaForm")));
     $("fidRecompensaForm").onsubmit = async (e) => {
       e.preventDefault(); const f = e.currentTarget;
-      await api("/recompensas", { method: "POST", body: JSON.stringify({ titulo: value(f, "titulo"), tipo: value(f, "tipo"), custo_selos: Number(value(f, "custo_selos")), custo_pontos: Number(value(f, "custo_pontos")), valor_desconto: value(f, "valor_desconto") === "" ? null : Number(value(f, "valor_desconto")), ativo: true }) });
+      const tipo = value(f, "tipo");
+      await api("/recompensas", { method: "POST", body: JSON.stringify({ titulo: value(f, "titulo"), tipo, custo_selos: Number(value(f, "custo_selos")), custo_pontos: Number(value(f, "custo_pontos")), valor_desconto: tipo === "desconto_valor" && value(f, "valor_desconto") !== "" ? Number(value(f, "valor_desconto")) : null, ativo: true }) });
       toast("Recompensa cadastrada.", "success"); await loadRecompensas();
     };
     root.onclick = async (e) => {

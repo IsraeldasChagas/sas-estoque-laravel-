@@ -19069,6 +19069,7 @@ async function renderReservaFidelidade(reservaId) {
       : (data.formas_pagamento_cadastro ? Object.values(data.formas_pagamento_cadastro) : []);
     var pagamentosReg = data.pagamentos_conta || [];
     var vitrine = data.vitrine_fidelidade || {};
+    var recompensaProg = data.recompensa_programa || null;
 
     if (statusEl) {
       if (contaPaga) statusEl.textContent = participa ? (seloOk ? 'Conta paga · selo ok' : 'Conta paga') : 'Conta paga · sem fidelidade';
@@ -19156,9 +19157,19 @@ async function renderReservaFidelidade(reservaId) {
 
     var linkVitrineHtml = (participa && conta && vitrine.url) ? reservaFidHtmlLinkVitrine(vitrine) : '';
 
+    var recompensaHtml = '';
+    if (participa && programaAtivo && recompensaProg && Array.isArray(recompensaProg.linhas) && recompensaProg.linhas.length) {
+      recompensaHtml =
+        '<div class="reserva-fid__recompensa">' +
+          '<strong>' + escapeHtml(recompensaProg.titulo || 'Recompensa do programa') + '</strong>' +
+          '<ul>' + recompensaProg.linhas.map(function(l) { return '<li>' + escapeHtml(l) + '</li>'; }).join('') + '</ul>' +
+        '</div>';
+    }
+
     bodyEl.innerHTML =
       optinHtml +
       fidSaldoHtml +
+      recompensaHtml +
       linkVitrineHtml +
       '<div class="reserva-fid__conta">' +
         '<p class="subtle-text" style="margin:0 0 0.5rem;">' + contaIntro + '</p>' +

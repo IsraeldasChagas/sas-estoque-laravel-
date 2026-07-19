@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Delivery;
 use App\Http\Controllers\Controller;
 use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
+use App\Services\Fidelidade\FidelidadeProgramaApresentacaoService;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
 use App\Services\Fidelidade\FidelidadePublicOtpCache;
 use App\Services\Fidelidade\FidelidadePublicOtpEntrega;
@@ -38,6 +39,7 @@ class DeliveryFidelidadePublicController extends Controller
     public function __construct(
         private FidelidadePublicOtpEntrega $otpEntrega,
         private FidelidadePublicConsultaService $consulta,
+        private FidelidadeProgramaApresentacaoService $programaApresentacao,
     ) {}
 
     public function show(string $slug): View
@@ -96,6 +98,14 @@ class DeliveryFidelidadePublicController extends Controller
                 trim((string) ($config->nome_loja ?: 'Loja')),
                 $this->nomeUnidade($unidadeFid),
                 $this->contatoLoja($config),
+            ),
+            'linhas_como_funciona' => $this->programaApresentacao->linhasComoFunciona(
+                $programa,
+                $this->nomeUnidade($unidadeFid),
+            ),
+            'recompensa_resumo' => $this->programaApresentacao->resumoRecompensa(
+                $programa,
+                $conta ? (int) $conta->id : null,
             ),
         ]);
     }

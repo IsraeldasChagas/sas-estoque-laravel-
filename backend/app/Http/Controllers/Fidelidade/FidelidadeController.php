@@ -19,7 +19,7 @@ class FidelidadeController extends Controller
 {
     private const MODOS = ['selos', 'pontos'];
 
-    private const RECOMPENSA_TIPOS = ['produto', 'desconto_valor', 'brinde', 'catalogo'];
+    private const RECOMPENSA_TIPOS = ['produto', 'desconto_valor', 'desconto_percentual', 'brinde', 'catalogo'];
 
     private const STATUS_CONTA = ['ativo', 'inativo', 'bloqueado'];
 
@@ -58,6 +58,8 @@ class FidelidadeController extends Controller
             'tipo_recompensa_padrao' => 'sometimes|in:'.implode(',', self::RECOMPENSA_TIPOS),
             'produto_id' => 'nullable|integer',
             'valor_desconto' => 'nullable|numeric|min:0',
+            'desconto_percentual' => 'nullable|numeric|min:0|max:100',
+            'base_desconto_percentual' => 'nullable|string|max:40',
             'texto_recompensa' => 'nullable|string|max:500',
             'dias_expiracao_credito' => 'nullable|integer|min:1|max:3650',
             'permite_ajuste_manual' => 'sometimes|boolean',
@@ -81,6 +83,15 @@ class FidelidadeController extends Controller
                 : ($existente->permite_ajuste_manual ?? true),
             'updated_at' => $agora,
         ];
+
+        if (Schema::hasColumn('fid_programas', 'desconto_percentual')) {
+            $payload['desconto_percentual'] = array_key_exists('desconto_percentual', $data)
+                ? $data['desconto_percentual']
+                : ($existente->desconto_percentual ?? null);
+            $payload['base_desconto_percentual'] = array_key_exists('base_desconto_percentual', $data)
+                ? $data['base_desconto_percentual']
+                : ($existente->base_desconto_percentual ?? null);
+        }
 
         if ($existente) {
             DB::table('fid_programas')->where('id', $existente->id)->update($payload);

@@ -23,13 +23,9 @@
     <div class="vf-fidelity-card">
         <h2>Como funciona</h2>
         <ul>
-            <li>A cada <strong>reserva de mesa</strong> no Sabor Paraense, na unidade <strong>{{ $nomeUnidade }}</strong> em que você reservou, você ganha selos após o <strong>pagamento da conta</strong>.</li>
-            <li>O cartão é criado automaticamente pela loja na reserva — não é possível cadastrar por aqui.</li>
-            <li>Meta: <strong>{{ $meta }}</strong> selos para a recompensa.</li>
-            @if(! empty($programa->texto_recompensa))
-                <li>{{ $programa->texto_recompensa }}</li>
-            @endif
-            <li>Use o <strong>mesmo telefone da reserva</strong> e confirme com um código de 6 dígitos para ver seu saldo.</li>
+            @foreach(($linhas_como_funciona ?? []) as $linha)
+                <li>{{ $linha }}</li>
+            @endforeach
         </ul>
 
         <h2 class="vf-fid-subtitle">Ver meus selos</h2>
@@ -146,6 +142,17 @@
                 @endif
                 @if($cheio)
                     <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa.</div>
+                @endif
+                @php $rec = is_array($recompensa_resumo ?? null) ? $recompensa_resumo : []; @endphp
+                @if(! empty($rec['linhas']))
+                    <div class="vf-fid-recompensa">
+                        <h3 class="vf-fid-recompensa__titulo">{{ $rec['titulo'] ?? 'Sua recompensa' }}</h3>
+                        <ul class="vf-fid-recompensa__lista">
+                            @foreach($rec['linhas'] as $rl)
+                                <li>{{ $rl }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 @endif
                 <form method="post" action="{{ route('delivery.public.fidelity.logout', $slug) }}" class="vf-fid-form-inline">
                     @csrf
