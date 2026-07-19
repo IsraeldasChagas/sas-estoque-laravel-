@@ -168,7 +168,7 @@
         </div>
         <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="brinde">Descrição da recompensa (brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
         <div class="orc-card fid-rec-field fid-catalogo-consulta-wrap" data-fid-rec-show="catalogo_consulta">
-          <div class="orc-section-title"><div><h3>Opções no card da recompensa (Delivery)</h3><p>Marque quantos produtos quiser — todos aparecem no card Catálogo (consulta). O campo acima define quantos o cliente escolhe ao completar a meta (ex.: 3 opções visíveis, escolhe 1).</p></div></div>
+          <div class="orc-section-title"><div><h3>Opções no card da recompensa (Delivery)</h3><p>Selecione os produtos no campo abaixo — todos aparecem no card da recompensa. O campo acima define quantos o cliente escolhe ao completar a meta (ex.: 3 opções visíveis, escolhe 1).</p></div></div>
           ${state.catalogoConsultaSuportado ? "" : `<p class="vf-show-warn">Atualização do banco pendente: peça ao administrador para rodar <code>php artisan migrate</code> antes de salvar os produtos.</p>`}
           <p class="subtle-text" id="fidCatalogoConsultaMeta"></p>
           <p class="subtle-text" id="fidCatalogoConsultaHint"></p>
@@ -183,7 +183,7 @@
     $("fidTipoRecompensa")?.addEventListener("change", async () => {
       syncProgramaRecompensaFields($("fidProgramaForm"));
       if (value($("fidProgramaForm"), "tipo_recompensa_padrao") === "catalogo_consulta") {
-        const selected = Array.from($("fidProgramaForm").querySelectorAll('input[name="catalogo_produtos_ids[]"]:checked')).map((el) => Number(el.value));
+        const selected = selectedCatalogoProdutoIds($("fidProgramaForm"));
         await renderCatalogoConsultaProdutos(selected.length ? selected : catalogoSelecionados, catalogoQtdMax($("fidProgramaForm")));
       }
     });
@@ -194,11 +194,9 @@
       event.preventDefault();
       const f = event.currentTarget;
       const tipo = value(f, "tipo_recompensa_padrao");
-      const catalogoIds = tipo === "catalogo_consulta"
-        ? Array.from(f.querySelectorAll('input[name="catalogo_produtos_ids[]"]:checked')).map((el) => Number(el.value))
-        : [];
+      const catalogoIds = tipo === "catalogo_consulta" ? selectedCatalogoProdutoIds(f) : [];
       if (tipo === "catalogo_consulta" && !catalogoIds.length) {
-        toast("Marque pelo menos 1 produto do cardápio para a recompensa.", "warning");
+        toast("Selecione pelo menos 1 produto do cardápio para a recompensa.", "warning");
         return;
       }
       await api("/programa", { method: "PUT", body: JSON.stringify({
@@ -218,6 +216,16 @@
       toast("Programa de fidelidade salvo.", "success");
       await loadPrograma();
     });
+  }
+
+  function catalogoProdutosSelect(form) {
+    return form?.querySelector("#fidCatalogoProdutosSelect") || null;
+  }
+
+  function selectedCatalogoProdutoIds(form) {
+    const sel = catalogoProdutosSelect(form);
+    if (!sel) return [];
+    return Array.from(sel.selectedOptions).map((el) => Number(el.value)).filter((id) => id > 0);
   }
 
   function syncProgramaRecompensaFields(form) {
@@ -240,13 +248,12 @@
   function syncCatalogoConsultaHint(form) {
     if (!form) return;
     const qtd = catalogoQtdMax(form);
-    const checks = form.querySelectorAll('input[name="catalogo_produtos_ids[]"]');
-    const total = Array.from(checks).filter((el) => el.checked).length;
+    const total = selectedCatalogoProdutoIds(form).length;
     const hint = $("fidCatalogoConsultaHint");
     if (hint) {
       hint.textContent = total
         ? `${total} opção(ões) no card da recompensa · o cliente escolhe ${qtd} ao completar a meta.`
-        : `Marque as opções do cardápio · o cliente escolhe ${qtd} ao completar a meta.`;
+        : `Selecione as opções do cardápio · o cliente escolhe ${qtd} ao completar a meta.`;
     }
   }
 
@@ -384,18 +391,20 @@
         return;
       }
       const selected = new Set((selectedIds || []).map(Number));
-      list.innerHTML = `<div class="fid-catalogo-produtos-grid">${items.map((item) => {
-        const id = Number(item.id);
-        const checkedAttr = selected.has(id) ? "checked" : "";
-        const visivel = item.visivel_loja ? "" : " · só consulta";
-        return `<label class="fid-catalogo-produto-item">
-          <input type="checkbox" name="catalogo_produtos_ids[]" value="${id}" ${checkedAttr}>
-          <span><strong>${esc(item.nome)}</strong><small>${money(item.preco)}${visivel}</small></span>
-        </label>`;
-      }).join("")}</div>`;
-      list.querySelectorAll('input[name="catalogo_produtos_ids[]"]').forEach((el) => {
-        el.addEventListener("change", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
-      });
+      const listSize = Math.min(12, Math.max(5, items.length));
+      list.innerHTML = `<label class="fid-catalogo-produtos-select-label">
+        Produtos do cardápio
+        <select id="fidCatalogoProdutosSelect" name="catalogo_produtos_ids[]" multiple size="${listSize}" class="fid-catalogo-produtos-select">
+          ${items.map((item) => {
+            const id = Number(item.id);
+            const selectedAttr = selected.has(id) ? " selected" : "";
+            const visivel = item.visivel_loja ? "" : " · só consulta";
+            return `<option value="${id}"${selectedAttr}>${esc(item.nome)} — ${money(item.preco)}${visivel}</option>`;
+          }).join("")}
+        </select>
+      </label>
+      <p class="subtle-text fid-catalogo-produtos-select-hint">Segure <strong>Ctrl</strong> (Windows) ou <strong>Cmd</strong> (Mac) para selecionar vários produtos.</p>`;
+      catalogoProdutosSelect($("fidProgramaForm"))?.addEventListener("change", () => enforceCatalogoProdutosLimit($("fidProgramaForm")));
       enforceCatalogoProdutosLimit($("fidProgramaForm"));
     } catch (error) {
       list.innerHTML = `<p class="subtle-text">${esc(error.message || "Não foi possível carregar o cardápio.")}</p>`;

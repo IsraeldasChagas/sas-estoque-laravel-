@@ -8207,6 +8207,32 @@ select[size]:not([size="1"]) {
   border-color: #b91c1c;
 }
 
+.fid-catalogo-produtos-select-label {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+}
+.fid-catalogo-produtos-select {
+  width: 100%;
+  min-height: 9rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+.fid-catalogo-produtos-select option {
+  padding: 0.35rem 0.4rem;
+  white-space: normal;
+}
+.fid-catalogo-produtos-select-hint {
+  margin: 0.45rem 0 0;
+}
 .fid-catalogo-produtos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
