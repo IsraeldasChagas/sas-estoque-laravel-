@@ -82,7 +82,7 @@
             </div>
             <div class="vf-header-actions">
                 @if($temContato)
-                    <button class="btn ghost vf-contact-toggle" type="button" data-contact-toggle aria-expanded="true" aria-controls="vf-store-info" title="Ver contato">
+                    <button class="btn ghost vf-contact-toggle" type="button" data-contact-toggle aria-expanded="false" aria-controls="vf-store-info" title="Ver contato">
                         <svg class="vf-contact-toggle__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
                             <path fill="currentColor" d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
                         </svg>
@@ -107,7 +107,7 @@
         </div>
 
         @if($temContato)
-            <div class="vf-store-info" id="vf-store-info" data-store-info>
+            <div class="vf-store-info is-collapsed" id="vf-store-info" data-store-info>
                 @if($endereco !== '')
                     <div class="vf-info-line"><span class="vf-ico" aria-hidden="true">📍</span><div>{{ $endereco }}</div></div>
                 @endif
@@ -169,7 +169,7 @@
 </footer>
 
 <script>window.deliveryStore={slug:@json($slug),checkout:@json(route('delivery.public.checkout',$slug)),cart:@json(route('delivery.public.cart',$slug)),csrf:@json(csrf_token())};</script>
-<script src="{{ asset('assets/delivery/store.js') }}?v=20260719-vf-produto-social"></script>
+<script src="{{ asset('assets/delivery/store.js') }}?v=20260719-contact-collapsed"></script>
 @stack('scripts')
 </body>
 </html>

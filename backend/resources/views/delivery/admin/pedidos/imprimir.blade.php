@@ -55,8 +55,14 @@
         @if (trim((string) ($config->endereco_texto ?? '')))
             <p class="cupom-meta mb-0">{{ $config->endereco_texto }}</p>
         @endif
+        @if (! empty($cepLoja))
+            <p class="cupom-meta mb-0">CEP {{ substr($cepLoja, 0, 5) }}-{{ substr($cepLoja, 5) }}</p>
+        @endif
         @if (trim((string) ($config->whatsapp ?? '')))
             <p class="cupom-meta mb-0">WhatsApp loja: {{ $config->whatsapp }}</p>
+        @endif
+        @if (! empty($cnpjLoja))
+            <p class="cupom-meta mb-0">CNPJ {{ $cnpjLoja }}</p>
         @endif
     </div>
 

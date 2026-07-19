@@ -17,11 +17,12 @@ $order=array_keys($steps); $current=array_search($pedido->status,$order,true);
 <hr><div class="line-item"><span>Subtotal</span><strong>R$ {{ number_format((float)$pedido->subtotal,2,',','.') }}</strong></div><div class="line-item"><span>Frete</span><strong>R$ {{ number_format((float)$pedido->frete_valor,2,',','.') }}</strong></div><div class="line-item grand-total"><span>Total</span><strong>R$ {{ number_format((float)$pedido->total,2,',','.') }}</strong></div></section>
 <section class="form-card"><h2>Entrega e pagamento</h2><p><strong>{{ $pedido->fulfillment === 'entrega' ? 'Entrega' : 'Retirada na loja' }}</strong></p>@if($pedido->endereco_texto)<p>{{ $pedido->endereco_texto }}@if($pedido->endereco_complemento)<br>{{ $pedido->endereco_complemento }}@endif</p>@endif<p>Pagamento: {{ ucfirst($pedido->pagamento_forma) }}</p>@if($pedido->observacoes)<p>Observações: {{ $pedido->observacoes }}</p>@endif</section>
 @include('delivery.partials.pix-publico', compact('config', 'pedido', 'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl'))
+@include('delivery.partials.cartao-online-publico', compact('pedido', 'cartaoCheckoutUrl', 'cartaoOnlinePendente', 'cartaoOnlinePago', 'cartaoPollUrl'))
 </div>
 <p class="refresh-note">Esta página é atualizada automaticamente.</p>
 <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
 @push('scripts')
-@if(empty($pixPollUrl))
+@if(empty($pixPollUrl) && empty($cartaoPollUrl ?? null))
 <script>setTimeout(()=>location.reload(),30000);</script>
 @endif
 @endpush

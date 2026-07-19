@@ -128,8 +128,13 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
             ->get('/api/delivery/pedidos/904/imprimir');
 
         $response->assertOk();
-        $this->assertStringContainsString('Cupom fiscal simplificado / comanda', $response->getContent());
-        $this->assertStringContainsString('DLV-TEST-904', $response->getContent());
+        $html = $response->getContent();
+        $this->assertStringContainsString('Cupom fiscal simplificado / comanda', $html);
+        $this->assertStringContainsString('DLV-TEST-904', $html);
+        $this->assertStringContainsString('WhatsApp loja:', $html);
+        $this->assertStringContainsString('Imprimir na térmica', $html);
+        $this->assertStringContainsString('Enviar cupom no WhatsApp', $html);
+        $this->assertStringContainsString('Recebido', $html);
     }
 
     public function test_entregador_publico_marca_pedido_como_entregue(): void

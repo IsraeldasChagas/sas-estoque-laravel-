@@ -258,8 +258,17 @@ class DeliveryPedidoService
         if (! DeliveryPedidoPresenter::isPix($pedido)) {
             throw ValidationException::withMessages(['pagamento' => 'Este pedido não é PIX.']);
         }
-        if (DeliveryPedidoPresenter::isPixPago($pedido)) {
-            throw ValidationException::withMessages(['pagamento' => 'Pagamento PIX já confirmado para este pedido.']);
+
+        return $this->confirmarPagamentoGateway($pedido, $usuarioId, $origem);
+    }
+
+    public function confirmarPagamentoGateway(object $pedido, ?int $usuarioId, string $origem = 'operador'): object
+    {
+        if (! DeliveryPedidoPresenter::isPagamentoGateway($pedido)) {
+            throw ValidationException::withMessages(['pagamento' => 'Este pedido não usa confirmação de gateway.']);
+        }
+        if (DeliveryPedidoPresenter::pagamentoGatewayPago($pedido)) {
+            throw ValidationException::withMessages(['pagamento' => 'Pagamento já confirmado para este pedido.']);
         }
 
         $agora = now();
@@ -282,7 +291,7 @@ class DeliveryPedidoService
             (string) ($pedido->pagamento_status ?? DeliveryPedidoPresenter::PAGAMENTO_STATUS_PENDENTE),
             DeliveryPedidoPresenter::PAGAMENTO_STATUS_PAGO,
             'pagamento_confirmado',
-            ['forma' => DeliveryPedidoPresenter::PAGAMENTO_PIX, 'origem' => $origem],
+            ['forma' => (string) $pedido->pagamento_forma, 'origem' => $origem],
             $usuarioId
         );
 
@@ -296,7 +305,7 @@ class DeliveryPedidoService
         }
 
         throw ValidationException::withMessages([
-            'pagamento' => 'Confirme o pagamento PIX antes de aceitar o pedido.',
+            'pagamento' => 'Confirme o pagamento online antes de aceitar o pedido.',
         ]);
     }
 
@@ -372,6 +381,9 @@ class DeliveryPedidoService
             'pagamento_status_rotulo' => DeliveryPedidoPresenter::rotuloPagamentoStatus($pedido),
             'pix_pendente' => DeliveryPedidoPresenter::pixPendenteConfirmacao($pedido),
             'pix_pago' => DeliveryPedidoPresenter::isPixPago($pedido),
+            'cartao_online_pendente' => DeliveryPedidoPresenter::cartaoOnlinePendente($pedido),
+            'cartao_online_pago' => DeliveryPedidoPresenter::isCartaoOnlinePago($pedido),
+            'pagamento_checkout_url' => $pedido->pagamento_checkout_url ?? null,
             'subtotal' => (float) $pedido->subtotal,
             'frete_valor' => (float) $pedido->frete_valor,
             'total' => (float) $pedido->total,
@@ -431,7 +443,8 @@ class DeliveryPedidoService
             'confirmar_pedidos' => (bool) ($config->confirmar_pedidos ?? true),
             'exigir_pix_confirmado' => DeliveryPedidoPresenter::exigirPixConfirmado($config),
             'pagamento_bloqueia_aceite' => DeliveryPedidoPresenter::bloqueiaAceitePorPix($pedido, $config),
-            'pode_confirmar_pix' => DeliveryPedidoPresenter::pixPendenteConfirmacao($pedido),
+            'pode_confirmar_pix' => DeliveryPedidoPresenter::pagamentoGatewayPendente($pedido),
+            'pode_confirmar_pagamento' => DeliveryPedidoPresenter::pagamentoGatewayPendente($pedido),
             'impressao_habilitada' => true,
             'url_imprimir' => '/delivery/pedidos/'.(int) $pedido->id.'/imprimir',
             'url_entregador' => $urlEntregador,

@@ -8,6 +8,7 @@ use App\Services\Delivery\DeliveryPedidoService;
 use App\Services\Fidelidade\DeliveryPedidoFidelidadeService;
 use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
+use App\Services\Payments\DeliveryCardGatewayService;
 use App\Services\Payments\DeliveryPixGatewayService;
 use App\Support\Delivery\DeliveryLojaCheckoutHelper;
 use App\Support\Delivery\DeliveryPedidoPresenter;
@@ -27,6 +28,7 @@ class DeliveryPublicController extends Controller
         private readonly DeliveryPedidoFidelidadeService $pedidoFidelidade,
         private readonly FidelidadePublicConsultaService $fidelidadeConsulta,
         private readonly DeliveryPixGatewayService $pixGateway,
+        private readonly DeliveryCardGatewayService $cardGateway,
     ) {}
 
     public function loja(string $slug): View
@@ -358,10 +360,18 @@ class DeliveryPublicController extends Controller
         ]);
         $id = $this->pedidos->criar((int) $config->unidade_id, $data, null);
         $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
-        $pixResumo = DeliveryPedidoPresenter::isPix($pedido)
-            ? $this->pixGateway->iniciarPix($pedido, $config)
-            : null;
-        if ($pixResumo !== null) {
+        $pixResumo = null;
+        $cartaoResumo = null;
+        if (DeliveryPedidoPresenter::isPix($pedido)) {
+            $pixResumo = $this->pixGateway->iniciarPix($pedido, $config);
+        } elseif (DeliveryPedidoPresenter::isCartaoOnline($pedido)) {
+            $cartaoResumo = $this->cardGateway->iniciarCheckout($pedido, $config, [
+                'success' => route('delivery.public.success', [$slug, $pedido->codigo_publico, $pedido->cliente_token]),
+                'failure' => route('delivery.public.order', [$slug, $pedido->codigo_publico, $pedido->cliente_token]),
+                'pending' => route('delivery.public.order', [$slug, $pedido->codigo_publico, $pedido->cliente_token]),
+            ]);
+        }
+        if ($pixResumo !== null || $cartaoResumo !== null) {
             $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
         }
         $url = route('delivery.public.success', [$slug, $pedido->codigo_publico, $pedido->cliente_token]);
@@ -371,6 +381,7 @@ class DeliveryPublicController extends Controller
                 'codigo' => $pedido->codigo_publico,
                 'redirect_url' => $url,
                 'pix' => $pixResumo,
+                'cartao_online' => $cartaoResumo,
             ], 201)
             : redirect()->to($url);
     }
@@ -390,12 +401,13 @@ class DeliveryPublicController extends Controller
             $config->whatsapp ?? $config->telefone ?? null
         );
         $footerFixed = false;
-        extract($this->dadosPixPublico($config, $pedido, $slug, $token));
+        extract($this->dadosPagamentoPublico($config, $pedido, $slug, $token));
 
         return view('delivery.public.sucesso', compact(
             'config', 'slug', 'pedido', 'token', 'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed',
             'programaFidelidade', 'fidelidadeSnap', 'lgpdTexto', 'unidadeFidelidadeNome',
-            'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl'
+            'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl',
+            'cartaoCheckoutUrl', 'cartaoOnlinePendente', 'cartaoOnlinePago', 'cartaoPollUrl'
         ));
     }
 
@@ -438,12 +450,13 @@ class DeliveryPublicController extends Controller
         $pedidoShowUrl = route('delivery.public.order', [$slug, $codigo, $token]);
         $fidelidadeAtiva = $this->fidelidadeAtiva($config);
         $footerFixed = false;
-        extract($this->dadosPixPublico($config, $pedido, $slug, $token));
+        extract($this->dadosPagamentoPublico($config, $pedido, $slug, $token));
 
         return view('delivery.public.pedido', compact(
             'config', 'slug', 'pedido', 'token', 'itens', 'historico',
             'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed',
-            'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl'
+            'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl',
+            'cartaoCheckoutUrl', 'cartaoOnlinePendente', 'cartaoOnlinePago', 'cartaoPollUrl'
         ));
     }
 
@@ -451,7 +464,27 @@ class DeliveryPublicController extends Controller
     {
         [$config, $pedido] = $this->pedidoSeguro($slug, $codigo, $token);
 
+        if (DeliveryPedidoPresenter::isCartaoOnline($pedido)) {
+            return response()->json($this->cardGateway->statusPublico($pedido, $config));
+        }
+
         return response()->json($this->pixGateway->statusPublico($pedido, $config));
+    }
+
+    /** @return array<string, mixed> */
+    private function dadosPagamentoPublico(object $config, object $pedido, string $slug, string $token): array
+    {
+        $pix = $this->dadosPixPublico($config, $pedido, $slug, $token);
+        $cartaoCheckoutUrl = trim((string) ($pedido->pagamento_checkout_url ?? '')) ?: null;
+        $cartaoOnlinePendente = DeliveryPedidoPresenter::cartaoOnlinePendente($pedido);
+        $cartaoOnlinePago = DeliveryPedidoPresenter::isCartaoOnlinePago($pedido);
+        $cartaoPollUrl = ($cartaoOnlinePendente && $cartaoCheckoutUrl !== null)
+            ? route('delivery.public.payment.status', [$slug, $pedido->codigo_publico, $token])
+            : null;
+
+        return array_merge($pix, compact(
+            'cartaoCheckoutUrl', 'cartaoOnlinePendente', 'cartaoOnlinePago', 'cartaoPollUrl'
+        ));
     }
 
     /** @return array{pixConfigurada:bool,pixQrDataUri:?string,pixPayload:?string,pixAutomatico:bool,pixPollUrl:?string} */

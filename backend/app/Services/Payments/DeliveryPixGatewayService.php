@@ -96,7 +96,7 @@ final class DeliveryPixGatewayService
             if ($provider) {
                 $consulta = $provider->consultarCobranca($pedido, DeliveryGatewayConfig::credenciais($config));
                 if (($consulta['pago'] ?? false) === true) {
-                    $pedido = $this->pedidos->confirmarPagamentoPix($pedido, null, 'webhook');
+                    $pedido = $this->pedidos->confirmarPagamentoGateway($pedido, null, 'webhook');
 
                     return array_merge($base, [
                         'pagamento_status' => $pedido->pagamento_status,
@@ -139,14 +139,20 @@ final class DeliveryPixGatewayService
         $pedido = null;
         if ($externoHint !== '') {
             $pedido = DB::table('dlv_pedidos')
-                ->where('pagamento_forma', DeliveryPedidoPresenter::PAGAMENTO_PIX)
+                ->whereIn('pagamento_forma', [
+                    DeliveryPedidoPresenter::PAGAMENTO_PIX,
+                    DeliveryPedidoPresenter::PAGAMENTO_CARTAO_ONLINE,
+                ])
                 ->where('pagamento_externo_id', $externoHint)
                 ->first();
         }
 
         $config = $pedido
             ? DB::table('dlv_loja_config')->where('unidade_id', $pedido->unidade_id)->first()
-            : null;
+            : DB::table('dlv_loja_config')
+                ->where('pagamento_gateway', $providerCode)
+                ->whereNotNull('pagamento_gateway_token')
+                ->first();
         $credenciais = $config ? DeliveryGatewayConfig::credenciais($config) : [];
 
         $interpretado = $provider->interpretarWebhook($payload, $credenciais, $signature);
@@ -162,28 +168,38 @@ final class DeliveryPixGatewayService
         $referencia = trim((string) ($interpretado['referencia'] ?? ''));
 
         if (! $pedido) {
-            $query = DB::table('dlv_pedidos')->where('pagamento_forma', DeliveryPedidoPresenter::PAGAMENTO_PIX);
-            if ($externoId !== '') {
-                $query->where('pagamento_externo_id', $externoId);
-            } elseif ($referencia !== '') {
-                $query->where('codigo_publico', $referencia);
-            } else {
+            $formas = [
+                DeliveryPedidoPresenter::PAGAMENTO_PIX,
+                DeliveryPedidoPresenter::PAGAMENTO_CARTAO_ONLINE,
+            ];
+            if ($referencia !== '') {
+                $pedido = DB::table('dlv_pedidos')
+                    ->whereIn('pagamento_forma', $formas)
+                    ->where('codigo_publico', $referencia)
+                    ->first();
+            }
+            if (! $pedido && $externoId !== '') {
+                $pedido = DB::table('dlv_pedidos')
+                    ->whereIn('pagamento_forma', $formas)
+                    ->where('pagamento_externo_id', $externoId)
+                    ->first();
+            }
+            if (! $pedido) {
                 return ['ok' => false, 'mensagem' => 'Pedido não identificado no webhook.'];
             }
-            $pedido = $query->first();
         }
 
         if (! $pedido) {
             return ['ok' => false, 'mensagem' => 'Pedido não encontrado para este pagamento.'];
         }
 
-        if (DeliveryPedidoPresenter::isPixPago($pedido)) {
+        if (DeliveryPedidoPresenter::pagamentoGatewayPago($pedido)) {
             return ['ok' => true, 'mensagem' => 'Pagamento já confirmado.', 'pedido_id' => (int) $pedido->id];
         }
 
-        $this->pedidos->confirmarPagamentoPix($pedido, null, 'webhook');
+        $this->pedidos->confirmarPagamentoGateway($pedido, null, 'webhook');
 
-        return ['ok' => true, 'mensagem' => 'Pagamento PIX confirmado automaticamente.', 'pedido_id' => (int) $pedido->id];
+        return ['ok' => true, 'mensagem' => 'Pagamento confirmado automaticamente.', 'pedido_id' => (int) $pedido->id];
     }
 
     /** @param  array<string, mixed>  $result */

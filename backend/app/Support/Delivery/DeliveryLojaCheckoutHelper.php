@@ -115,6 +115,7 @@ final class DeliveryLojaCheckoutHelper
             'credito', 'cartao_credito_maquininha' => self::PAGAMENTO_CARTAO_CREDITO,
             'debito', 'cartao_debito_maquininha' => self::PAGAMENTO_CARTAO_DEBITO,
             'cartao' => self::PAGAMENTO_CARTAO_CREDITO,
+            self::PAGAMENTO_CARTAO_ONLINE => self::PAGAMENTO_CARTAO_ONLINE,
             default => $forma,
         };
     }

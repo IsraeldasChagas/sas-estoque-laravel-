@@ -241,13 +241,16 @@ class DeliveryPedidoController extends DeliveryBaseController
         abort_unless($pedido, 404, 'Pedido não encontrado.');
         $this->access->autorizarRegistro($usuario, $pedido, 'Sem permissão para este pedido.');
 
-        $atualizado = $this->pedidos->confirmarPagamentoPix($pedido, (int) $usuario->id);
+        $atualizado = $this->pedidos->confirmarPagamentoGateway($pedido, (int) $usuario->id);
+        $msg = DeliveryPedidoPresenter::isCartaoOnline($pedido)
+            ? 'Pagamento online confirmado.'
+            : 'Pagamento PIX confirmado.';
 
         return response()->json(array_merge(
             $this->pedidos->completo($atualizado),
             [
                 'ok' => true,
-                'mensagem' => 'Pagamento PIX confirmado.',
+                'mensagem' => $msg,
             ]
         ));
     }
@@ -268,7 +271,22 @@ class DeliveryPedidoController extends DeliveryBaseController
             ->orderBy('id')
             ->get();
 
-        return view('delivery.admin.pedidos.imprimir', compact('config', 'pedido', 'itens'));
+        $cnpjLoja = null;
+        $cepLoja = null;
+        if (\Illuminate\Support\Facades\Schema::hasTable('unidades')) {
+            $unidade = DB::table('unidades')->where('id', $pedido->unidade_id)->first();
+            if ($unidade) {
+                $cnpjLoja = trim((string) ($unidade->cnpj ?? '')) ?: null;
+                $cepDigits = preg_replace('/\D+/', '', (string) ($unidade->cep ?? ''));
+                $cepLoja = strlen($cepDigits) === 8 ? $cepDigits : null;
+            }
+        }
+        if ($cnpjLoja === null && \Illuminate\Support\Facades\Schema::hasTable('sistema_configuracoes')) {
+            $cnpjCfg = trim((string) DB::table('sistema_configuracoes')->where('chave', 'empresa_cnpj')->value('valor'));
+            $cnpjLoja = $cnpjCfg !== '' ? $cnpjCfg : null;
+        }
+
+        return view('delivery.admin.pedidos.imprimir', compact('config', 'pedido', 'itens', 'cnpjLoja', 'cepLoja'));
     }
 
     private function validar(Request $request): array

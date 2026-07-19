@@ -120,6 +120,10 @@
                 <p id="vf-dinheiro-ajuda-exato" class="checkout-freight-note">Leve o valor exato na entrega ou retirada.</p>
             </div>
             <p id="vf-pay-cartao-hint" class="checkout-freight-note is-hidden">Pagamento na maquininha na entrega ou retirada.</p>
+            <div id="vf-pay-cartao-online-extra" class="pay-extra-panel pay-extra-panel--compact is-hidden">
+                <h3>Cartão online</h3>
+                <p class="checkout-freight-note">Após confirmar o pedido, você receberá um botão para pagar com <strong>cartão de crédito ou débito</strong> no ambiente seguro do Mercado Pago (ou gateway configurado).</p>
+            </div>
                 </div>
             </div>
         </section>
@@ -169,6 +173,7 @@
 
   const DIN = @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_DINHEIRO);
   const PIX = @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_PIX);
+  const CARTAO_ONLINE = @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_CARTAO_ONLINE);
   const CARTAO = [@json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_CARTAO_CREDITO), @json(\App\Support\Delivery\DeliveryLojaCheckoutHelper::PAGAMENTO_CARTAO_DEBITO)];
   const payLabels = @json($formasCheckout);
   const ENTREGA = 'entrega';
@@ -188,6 +193,7 @@
   function syncPayExtras(v){
     document.getElementById('vf-pay-dinheiro-extra')?.classList.toggle('is-hidden', v !== DIN);
     document.getElementById('vf-pay-pix-extra')?.classList.toggle('is-hidden', v !== PIX);
+    document.getElementById('vf-pay-cartao-online-extra')?.classList.toggle('is-hidden', v !== CARTAO_ONLINE);
     document.getElementById('vf-pay-cartao-hint')?.classList.toggle('is-hidden', !CARTAO.includes(v));
   }
 

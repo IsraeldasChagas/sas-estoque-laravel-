@@ -87,8 +87,9 @@
       contactToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
       contactToggle.title = collapsed ? 'Ver contato' : 'Ocultar contato';
     };
-    // Começa expandido (como hoje), seta para baixo.
-    syncToggle(false);
+    // Começa recolhido; clique expande/oculta o contato.
+    storeInfo.classList.add('is-collapsed');
+    syncToggle(true);
     contactToggle.addEventListener('click', () => {
       const collapsed = storeInfo.classList.toggle('is-collapsed');
       syncToggle(collapsed);

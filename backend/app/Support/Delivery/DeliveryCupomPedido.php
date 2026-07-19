@@ -3,6 +3,8 @@
 namespace App\Support\Delivery;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 final class DeliveryCupomPedido
 {
@@ -30,6 +32,19 @@ final class DeliveryCupomPedido
         $end = trim((string) ($config->endereco_texto ?? ''));
         if ($end !== '') {
             $lines[] = $end;
+        }
+
+        $cepLoja = self::cepLoja((int) ($pedido->unidade_id ?? 0));
+        if ($cepLoja !== null) {
+            $lines[] = 'CEP '.substr($cepLoja, 0, 5).'-'.substr($cepLoja, 5);
+        }
+        $waLoja = trim((string) ($config->whatsapp ?? ''));
+        if ($waLoja !== '') {
+            $lines[] = 'WhatsApp loja: '.$waLoja;
+        }
+        $cnpjLoja = self::cnpjLoja((int) ($pedido->unidade_id ?? 0));
+        if ($cnpjLoja !== null) {
+            $lines[] = 'CNPJ '.$cnpjLoja;
         }
 
         $lines[] = self::linhaTracejada($larguraLinha);
@@ -185,6 +200,35 @@ final class DeliveryCupomPedido
         }
 
         return $out;
+    }
+
+    private static function cepLoja(int $unidadeId): ?string
+    {
+        if ($unidadeId <= 0 || ! Schema::hasTable('unidades') || ! Schema::hasColumn('unidades', 'cep')) {
+            return null;
+        }
+
+        $cepDigits = preg_replace('/\D+/', '', (string) DB::table('unidades')->where('id', $unidadeId)->value('cep'));
+
+        return strlen($cepDigits) === 8 ? $cepDigits : null;
+    }
+
+    private static function cnpjLoja(int $unidadeId): ?string
+    {
+        if ($unidadeId > 0 && Schema::hasTable('unidades') && Schema::hasColumn('unidades', 'cnpj')) {
+            $cnpj = trim((string) DB::table('unidades')->where('id', $unidadeId)->value('cnpj'));
+            if ($cnpj !== '') {
+                return $cnpj;
+            }
+        }
+
+        if (! Schema::hasTable('sistema_configuracoes')) {
+            return null;
+        }
+
+        $cnpjCfg = trim((string) DB::table('sistema_configuracoes')->where('chave', 'empresa_cnpj')->value('valor'));
+
+        return $cnpjCfg !== '' ? $cnpjCfg : null;
     }
 
     private static function fixUpperNomeLoja(string $nome): string

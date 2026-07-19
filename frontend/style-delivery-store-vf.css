@@ -180,6 +180,16 @@
 .vf-preview-path > div { display: flex; gap: .4rem; }
 
 .vf-config { max-width: 980px; }
+.vf-config-hint {
+  margin: 0 0 .85rem;
+  padding: .75rem 1rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: .82rem;
+}
+.vf-config-hint a { color: #1d4ed8; font-weight: 700; }
 .vf-config form { display: grid; gap: .85rem; }
 .vf-config-card {
   overflow: hidden;

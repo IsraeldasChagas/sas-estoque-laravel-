@@ -50,14 +50,30 @@
   }
 
   async function openPrint(orderId, auto) {
-    const path = `/delivery/pedidos/${orderId}/imprimir${auto ? "?auto=1" : ""}`;
+    const path = `/delivery/pedidos/${orderId}/imprimir`;
     const res = await fetch(`${API_URL}${path}`, { headers: authHeaders(), cache: "no-store" });
     if (!res.ok) throw new Error("Não foi possível abrir o cupom para impressão.");
-    const html = await res.text();
-    const win = window.open("", "_blank");
-    if (!win) throw new Error("Permita pop-ups para imprimir o cupom.");
-    win.document.write(html);
-    win.document.close();
+    let html = await res.text();
+    const baseHref = `${location.origin.replace(/\/$/, "")}/`;
+    if (!/<base\b/i.test(html)) {
+      html = html.replace(/<head(\b[^>]*)>/i, `<head$1><base href="${baseHref}">`);
+    }
+    if (auto) {
+      html = html.replace(
+        /<\/body>/i,
+        '<script>window.addEventListener("load",function(){window.print();});<\/script></body>'
+      );
+    }
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
+    const win = window.open(blobUrl, "_blank", "noopener,noreferrer");
+    if (!win) {
+      URL.revokeObjectURL(blobUrl);
+      throw new Error("Permita pop-ups para imprimir o cupom.");
+    }
+    win.addEventListener("load", () => {
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    }, { once: true });
   }
 
   function rotuloCanal(canal) {
@@ -89,36 +105,60 @@
     return map[status] || "vf-bs-badge--primary";
   }
 
+  function pagamentoGatewayPendente(order) {
+    const forma = String(order?.pagamento_forma || "").toLowerCase();
+    const pago = String(order?.pagamento_status || "").toLowerCase() === "pago";
+    if (forma === "pix") return Boolean(order?.pix_pendente || !pago);
+    if (forma === "cartao_online") return Boolean(order?.cartao_online_pendente || !pago);
+    return false;
+  }
+
+  function pagamentoGatewayPago(order) {
+    const forma = String(order?.pagamento_forma || "").toLowerCase();
+    const pago = String(order?.pagamento_status || "").toLowerCase() === "pago";
+    if (forma === "pix") return Boolean(order?.pix_pago || pago);
+    if (forma === "cartao_online") return Boolean(order?.cartao_online_pago || pago);
+    return false;
+  }
+
   function pixPendente(order) {
-    return Boolean(order?.pix_pendente || (String(order?.pagamento_forma || "").toLowerCase() === "pix"
-      && String(order?.pagamento_status || "").toLowerCase() !== "pago"));
+    return pagamentoGatewayPendente(order) && String(order?.pagamento_forma || "").toLowerCase() === "pix";
   }
 
   function pixPago(order) {
-    return Boolean(order?.pix_pago || (String(order?.pagamento_forma || "").toLowerCase() === "pix"
-      && String(order?.pagamento_status || "").toLowerCase() === "pago"));
+    return pagamentoGatewayPago(order) && String(order?.pagamento_forma || "").toLowerCase() === "pix";
   }
 
   function renderPixBadge(order) {
-    if (String(order?.pagamento_forma || "").toLowerCase() !== "pix") return "";
-    if (pixPago(order)) {
-      return `<span class="vf-pix-badge vf-pix-badge--ok">PIX confirmado</span>`;
+    const forma = String(order?.pagamento_forma || "").toLowerCase();
+    if (!["pix", "cartao_online"].includes(forma)) return "";
+    if (pagamentoGatewayPago(order)) {
+      return `<span class="vf-pix-badge vf-pix-badge--ok">${forma === "cartao_online" ? "Cartão online confirmado" : "PIX confirmado"}</span>`;
     }
-    return `<span class="vf-pix-badge vf-pix-badge--warn">PIX pendente</span>`;
+    return `<span class="vf-pix-badge vf-pix-badge--warn">${forma === "cartao_online" ? "Cartão online pendente" : "PIX pendente"}</span>`;
   }
 
   function renderPixPagamentoCard(order) {
-    if (String(order?.pagamento_forma || "").toLowerCase() !== "pix") return "";
+    const forma = String(order?.pagamento_forma || "").toLowerCase();
+    if (!["pix", "cartao_online"].includes(forma)) return "";
     const bloqueia = Boolean(order.pagamento_bloqueia_aceite);
-    const confirmBtn = order.pode_confirmar_pix
-      ? `<button class="vf-show-btn vf-show-btn--success vf-show-btn--block" type="button" data-vf-confirm-pix><i class="bi bi-check2-circle"></i>Confirmar pagamento PIX</button>`
+    const podeConfirmar = Boolean(order.pode_confirmar_pagamento || order.pode_confirmar_pix);
+    const titulo = forma === "cartao_online" ? "Pagamento online" : "Pagamento PIX";
+    const pendente = forma === "cartao_online" ? "Pagamento online pendente" : "PIX pendente";
+    const confirmado = forma === "cartao_online" ? "Pagamento online confirmado" : "PIX confirmado";
+    const confirmBtn = podeConfirmar
+      ? `<button class="vf-show-btn vf-show-btn--success vf-show-btn--block" type="button" data-vf-confirm-pix><i class="bi bi-check2-circle"></i>Confirmar pagamento${forma === "cartao_online" ? " online" : " PIX"}</button>`
       : "";
-    const statusHtml = pixPago(order)
-      ? `<div class="vf-show-alert vf-show-alert--success"><strong>PIX confirmado</strong> em ${dateTimeShort(order.pagamento_confirmado_em || order.updated_at)}.</div>`
-      : `<div class="vf-show-alert vf-show-alert--warn"><strong>PIX pendente</strong> — confira o extrato e clique abaixo quando o valor cair.${bloqueia ? " O pedido só pode ser aceito depois da confirmação." : ""}</div>`;
+    const checkoutLink = forma === "cartao_online" && order.pagamento_checkout_url && !pagamentoGatewayPago(order)
+      ? `<a class="vf-show-btn vf-show-btn--primary vf-show-btn--block" href="${esc(order.pagamento_checkout_url)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-credit-card"></i>Abrir link de pagamento</a>`
+      : "";
+    const statusHtml = pagamentoGatewayPago(order)
+      ? `<div class="vf-show-alert vf-show-alert--success"><strong>${confirmado}</strong> em ${dateTimeShort(order.pagamento_confirmado_em || order.updated_at)}.</div>`
+      : `<div class="vf-show-alert vf-show-alert--warn"><strong>${pendente}</strong>${forma === "pix" ? " — confira o extrato e clique abaixo quando o valor cair." : " — aguardando aprovação do cartão no gateway."}${bloqueia ? " O pedido só pode ser aceito depois da confirmação." : ""}</div>`;
     return `<div class="vf-show-card vf-show-card--sidebar">
-      <h3 class="vf-show-card__title">Pagamento PIX</h3>
+      <h3 class="vf-show-card__title">${titulo}</h3>
       ${statusHtml}
+      ${checkoutLink}
       ${confirmBtn}
     </div>`;
   }
@@ -130,8 +170,8 @@
       <h3 class="vf-show-card__title">Cupom do cliente</h3>
       <p class="vf-show-help">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> pelo navegador ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
       <div class="vf-show-stack">
-        ${printEnabled ? `<button type="button" class="vf-show-btn vf-show-btn--dark vf-show-btn--block" data-vf-print="0"><i class="bi bi-printer"></i>Abrir cupom / imprimir</button>
-          <button type="button" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block" data-vf-print="1"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</button>`
+        ${printEnabled ? `<a href="#" class="vf-show-btn vf-show-btn--dark vf-show-btn--block" data-vf-print="0" role="button"><i class="bi bi-printer"></i>Abrir cupom / imprimir</a>
+          <a href="#" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block" data-vf-print="1" role="button"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</a>`
           : `<p class="vf-show-help">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
         ${wa
           ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(wa)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Enviar cupom no WhatsApp</a>`
@@ -190,9 +230,9 @@
     if (!isPending) return "";
     const bloqueiaPix = Boolean(order.pagamento_bloqueia_aceite);
     const pixNote = bloqueiaPix
-      ? `<span class="vf-show-help vf-show-help--tight">Este pedido é <strong>PIX</strong>. Confirme o pagamento na barra lateral antes de aceitar.</span>`
+      ? `<span class="vf-show-help vf-show-help--tight">Confirme o pagamento online na barra lateral antes de aceitar.</span>`
       : "";
-    const disabledAttr = bloqueiaPix ? " disabled title=\"Confirme o pagamento PIX antes de aceitar\"" : "";
+    const disabledAttr = bloqueiaPix ? " disabled title=\"Confirme o pagamento online antes de aceitar\"" : "";
     return `<div class="vf-show-alert vf-show-alert--danger">
       <div class="vf-show-alert__text">
         <strong><i class="bi bi-bell-fill"></i> Novo pedido — precisa da sua confirmação</strong>
@@ -461,7 +501,7 @@
       button.onclick = async () => {
         const [id, status] = button.dataset.vfStatus.split(":");
         if (status === "recebido" && button.disabled) {
-          toast("Confirme o pagamento PIX antes de aceitar o pedido.", "warning");
+          toast("Confirme o pagamento online antes de aceitar o pedido.", "warning");
           return;
         }
         if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
@@ -592,7 +632,7 @@
       button.onclick = async () => {
         const status = button.dataset.vfDetailStatus;
         if (status === "recebido" && order.pagamento_bloqueia_aceite) {
-          toast("Confirme o pagamento PIX antes de aceitar o pedido.", "warning");
+          toast("Confirme o pagamento online antes de aceitar o pedido.", "warning");
           return;
         }
         if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
@@ -626,7 +666,8 @@
       };
     }
     root.querySelectorAll("[data-vf-print]").forEach((button) => {
-      button.onclick = async () => {
+      button.onclick = async (event) => {
+        event.preventDefault();
         try { await openPrint(order.id, button.dataset.vfPrint === "1"); }
         catch (error) { toast(error?.message || "Não foi possível imprimir o cupom.", "error"); }
       };

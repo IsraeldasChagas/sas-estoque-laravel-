@@ -104,6 +104,7 @@ final class DeliveryGatewayConfig
                 : null,
             'gateway_configurado' => self::gatewayConfigurado($config),
             'pagamento_online_ativo' => self::pagamentoOnlineAtivo($config),
+            'cartao_online_pronto' => self::pagamentoOnlineAtivo($config),
             'usa_pix_automatico' => self::usaPixAutomatico($config),
             'pix_expiracao_minutos' => self::pixExpiracaoMinutos($config),
             'pagamento_gateway_token_configurado' => trim((string) ($config->pagamento_gateway_token ?? '')) !== '',

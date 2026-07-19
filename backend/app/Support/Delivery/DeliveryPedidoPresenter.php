@@ -7,7 +7,7 @@ final class DeliveryPedidoPresenter
     /** @var array<string, string> */
     public const STATUS_ROTULOS = [
         'pendente_loja' => 'Pendente da loja',
-        'recebido' => 'Aceito',
+        'recebido' => 'Recebido',
         'preparo' => 'Em preparo',
         'pronto' => 'Pronto',
         'rota' => 'Em rota',
@@ -17,6 +17,8 @@ final class DeliveryPedidoPresenter
     ];
 
     public const PAGAMENTO_PIX = 'pix';
+
+    public const PAGAMENTO_CARTAO_ONLINE = 'cartao_online';
 
     public const PAGAMENTO_STATUS_PENDENTE = 'pendente';
 
@@ -33,6 +35,7 @@ final class DeliveryPedidoPresenter
         'credito' => 'Cartão de crédito (na maquininha)',
         'debito' => 'Cartão de débito (na maquininha)',
         'dinheiro' => 'Dinheiro',
+        'cartao_online' => 'Cartão online',
         'entrega' => 'Na entrega (combinar)',
     ];
 
@@ -139,6 +142,16 @@ final class DeliveryPedidoPresenter
         return strtolower(trim((string) ($pedido->pagamento_forma ?? ''))) === self::PAGAMENTO_PIX;
     }
 
+    public static function isCartaoOnline(object $pedido): bool
+    {
+        return strtolower(trim((string) ($pedido->pagamento_forma ?? ''))) === self::PAGAMENTO_CARTAO_ONLINE;
+    }
+
+    public static function isPagamentoGateway(object $pedido): bool
+    {
+        return self::isPix($pedido) || self::isCartaoOnline($pedido);
+    }
+
     public static function isPixPago(object $pedido): bool
     {
         if (! self::isPix($pedido)) {
@@ -148,18 +161,47 @@ final class DeliveryPedidoPresenter
         return strtolower(trim((string) ($pedido->pagamento_status ?? ''))) === self::PAGAMENTO_STATUS_PAGO;
     }
 
+    public static function isCartaoOnlinePago(object $pedido): bool
+    {
+        if (! self::isCartaoOnline($pedido)) {
+            return false;
+        }
+
+        return strtolower(trim((string) ($pedido->pagamento_status ?? ''))) === self::PAGAMENTO_STATUS_PAGO;
+    }
+
+    public static function pagamentoGatewayPago(object $pedido): bool
+    {
+        return strtolower(trim((string) ($pedido->pagamento_status ?? ''))) === self::PAGAMENTO_STATUS_PAGO
+            && self::isPagamentoGateway($pedido);
+    }
+
     public static function pixPendenteConfirmacao(object $pedido): bool
     {
         return self::isPix($pedido) && ! self::isPixPago($pedido);
     }
 
+    public static function cartaoOnlinePendente(object $pedido): bool
+    {
+        return self::isCartaoOnline($pedido) && ! self::isCartaoOnlinePago($pedido);
+    }
+
+    public static function pagamentoGatewayPendente(object $pedido): bool
+    {
+        return self::isPagamentoGateway($pedido) && ! self::pagamentoGatewayPago($pedido);
+    }
+
     public static function rotuloPagamentoStatus(?object $pedido): ?string
     {
-        if ($pedido === null || ! self::isPix($pedido)) {
+        if ($pedido === null || ! self::isPagamentoGateway($pedido)) {
             return null;
         }
 
-        return self::isPixPago($pedido) ? 'PIX confirmado' : 'PIX pendente';
+        if (self::pagamentoGatewayPago($pedido)) {
+            return self::isCartaoOnline($pedido) ? 'Cartão online confirmado' : 'PIX confirmado';
+        }
+
+        return self::isCartaoOnline($pedido) ? 'Cartão online pendente' : 'PIX pendente';
     }
 
     public static function exigirPixConfirmado(object $config): bool
@@ -173,7 +215,7 @@ final class DeliveryPedidoPresenter
             return false;
         }
 
-        return self::pixPendenteConfirmacao($pedido);
+        return self::pagamentoGatewayPendente($pedido);
     }
 
     public static function logoUrl(?object $config): ?string
