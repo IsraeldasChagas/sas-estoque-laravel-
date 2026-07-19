@@ -50,6 +50,9 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $catalogoMigration = require database_path('migrations/2026_07_19_180000_add_catalogo_consulta_to_fid_programas.php');
         $catalogoMigration->up();
 
+        $resgateCatalogoMigration = require database_path('migrations/2026_07_19_200000_add_catalogo_escolhas_json_to_fid_resgates.php');
+        $resgateCatalogoMigration->up();
+
         $unidadeFidMigration = require database_path('migrations/2026_07_18_180000_add_unidade_fidelidade_id_to_dlv_loja_config.php');
         $unidadeFidMigration->up();
 
@@ -120,8 +123,8 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Catálogo (consulta)')
-            ->assertSee('Forma de recompensa')
-            ->assertSee('escolha até')
+            ->assertSee('opção(ões) na vitrine')
+            ->assertSee('no resgate, escolha')
             ->assertSee('3')
             ->assertSee('Tacacá')
             ->assertSee('Açaí 500ml')
@@ -182,8 +185,50 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
             ->assertOk()
             ->assertSee('Maracujá 300 ml')
             ->assertSee('Menu Degustação Pavulagem 3 Opções')
-            ->assertSee('escolha até')
+            ->assertSee('no resgate, escolha')
             ->assertSee('2');
+    }
+
+    public function test_vitrine_resgate_catalogo_escolhe_uma_de_tres_opcoes(): void
+    {
+        $this->seedPrograma('catalogo_consulta', [
+            'pedidos_meta' => 10,
+            'catalogo_qtd_escolhas' => 1,
+            'catalogo_produtos_json' => json_encode([
+                ['id' => 1, 'nome' => 'Maracujá 300 ml'],
+                ['id' => 2, 'nome' => 'Menu Degustação Pavulagem 3 Opções'],
+                ['id' => 3, 'nome' => 'Monster'],
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $contaId = (int) DB::table('fid_contas')->where('telefone_normalizado', '69999998888')->value('id');
+        DB::table('fid_contas')->where('id', $contaId)->update(['saldo_selos' => 10, 'saldo_pontos' => 10]);
+
+        $this->aceitarLgpd();
+        session([
+            'sas_fid_acesso' => [
+                'unidade_id' => $this->unidadeId,
+                'unidade_fidelidade_id' => $this->unidadeId,
+                'conta_id' => $contaId,
+                'tel_norm' => '69999998888',
+                'exp' => now()->addHour()->timestamp,
+            ],
+        ]);
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Resgatar recompensa')
+            ->assertSee('Confirmar resgate');
+
+        $this->post('/loja/'.$this->slug.'/fidelidade/resgatar', [
+            'catalogo_produto_id' => 3,
+        ])->assertRedirect('/loja/'.$this->slug.'/fidelidade');
+
+        $this->assertDatabaseHas('fid_resgates', [
+            'conta_id' => $contaId,
+            'titulo_snapshot' => 'Monster',
+        ]);
+        $this->assertSame(0, (int) DB::table('fid_contas')->where('id', $contaId)->value('saldo_selos'));
     }
 
     private function seedPrograma(string $tipo, array $extra = []): void

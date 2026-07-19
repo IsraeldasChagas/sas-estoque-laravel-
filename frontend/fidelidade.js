@@ -156,7 +156,7 @@
             <option value="desconto_percentual" ${tipoRec === "desconto_percentual" ? "selected" : ""}>Desconto percentual (%)</option>
             <option value="catalogo" ${tipoRec === "catalogo" ? "selected" : ""}>Catálogo de recompensas (lista manual)</option>
           </select></label>
-          <label class="fid-rec-field fid-rec-field--catalogo-qtd" data-fid-rec-show="catalogo_consulta">Qtd. que o cliente pode escolher<input name="catalogo_qtd_escolhas" id="fidCatalogoQtd" type="number" min="1" max="20" value="${esc(catalogoQtd)}"></label>
+          <label class="fid-rec-field fid-rec-field--catalogo-qtd" data-fid-rec-show="catalogo_consulta">Itens que o cliente escolhe no resgate<input name="catalogo_qtd_escolhas" id="fidCatalogoQtd" type="number" min="1" max="20" value="${esc(catalogoQtd)}" title="Quantos produtos o cliente leva ao resgatar (ex.: 1 entre 3 opções)"></label>
           <label class="fid-rec-field fid-rec-field--valor" data-fid-rec-show="desconto_valor">Valor do desconto (R$)<input name="valor_desconto" type="number" min="0" step="0.01" value="${esc(p.valor_desconto || "")}"></label>
           <label class="fid-rec-field fid-rec-field--pct" data-fid-rec-show="desconto_percentual">Desconto percentual (%)<input name="desconto_percentual" type="number" min="0" max="100" step="0.01" value="${esc(p.desconto_percentual || "")}"></label>
           <label class="fid-rec-field fid-rec-field--pct" data-fid-rec-show="desconto_percentual">Base do percentual<select name="base_desconto_percentual">
@@ -168,7 +168,7 @@
         </div>
         <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="brinde">Descrição da recompensa (brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
         <div class="orc-card fid-rec-field fid-catalogo-consulta-wrap" data-fid-rec-show="catalogo_consulta">
-          <div class="orc-section-title"><div><h3>Produtos do cardápio (Delivery)</h3><p>Marque todos os produtos que o cliente poderá escolher no resgate. A quantidade acima define quantos itens ele leva (pode repetir o mesmo produto).</p></div></div>
+          <div class="orc-section-title"><div><h3>Opções na vitrine (Delivery)</h3><p>Marque quantos produtos quiser — todos aparecem na vitrine. O campo acima define quantos o cliente escolhe ao resgatar (ex.: 3 opções visíveis, escolhe 1).</p></div></div>
           ${state.catalogoConsultaSuportado ? "" : `<p class="vf-show-warn">Atualização do banco pendente: peça ao administrador para rodar <code>php artisan migrate</code> antes de salvar os produtos.</p>`}
           <p class="subtle-text" id="fidCatalogoConsultaMeta"></p>
           <p class="subtle-text" id="fidCatalogoConsultaHint"></p>
@@ -245,13 +245,84 @@
     const hint = $("fidCatalogoConsultaHint");
     if (hint) {
       hint.textContent = total
-        ? `${total} produto(s) disponível(is) na recompensa · o cliente escolhe até ${qtd} item(ns) no resgate.`
-        : `Marque os produtos do cardápio · o cliente escolherá até ${qtd} item(ns) entre eles.`;
+        ? `${total} opção(ões) na vitrine · no resgate, o cliente escolhe ${qtd} item(ns).`
+        : `Marque as opções do cardápio · no resgate, o cliente escolhe ${qtd} item(ns).`;
     }
   }
 
   function enforceCatalogoProdutosLimit(form) {
     syncCatalogoConsultaHint(form);
+  }
+
+  function promptCatalogoEscolhasResgate(produtos, qtdLimite) {
+    return new Promise((resolve) => {
+      const limite = Math.max(1, Math.min(20, Number(qtdLimite) || 1));
+      const overlay = document.createElement("div");
+      overlay.className = "fid-modal-overlay";
+      overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;";
+      overlay.innerHTML = `<div class="orc-card fid-modal" role="dialog" aria-modal="true" style="width:min(480px,100%);max-height:90vh;overflow:auto;">
+        <div class="orc-section-title"><h3>Escolher produto(s) do resgate</h3>
+        <p class="subtle-text">Selecione exatamente ${limite} item(ns) entre as opções configuradas.</p></div>
+        <div class="fid-catalogo-produtos-grid fid-resgate-pick-grid">${produtos.map((item) => {
+          const id = Number(item.id);
+          const input = limite === 1
+            ? `<input type="radio" name="fid_resgate_pick" value="${id}">`
+            : `<input type="number" name="fid_resgate_qty_${id}" min="0" max="${limite}" value="0" inputmode="numeric">`;
+          return `<label class="fid-catalogo-produto-item fid-resgate-pick-item">${input}
+            <span><strong>${esc(item.nome)}</strong>${item.preco != null ? `<small>${money(item.preco)}</small>` : ""}</span></label>`;
+        }).join("")}</div>
+        <div class="orc-actions">
+          <button type="button" class="btn primary" id="fidResgatePickOk">Confirmar</button>
+          <button type="button" class="btn neutral" id="fidResgatePickCancel">Cancelar</button>
+        </div>
+      </div>`;
+      const close = (value) => { overlay.remove(); resolve(value); };
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
+      overlay.querySelector("#fidResgatePickCancel").onclick = () => close(null);
+      overlay.querySelector("#fidResgatePickOk").onclick = () => {
+        if (limite === 1) {
+          const picked = overlay.querySelector('input[name="fid_resgate_pick"]:checked');
+          if (!picked) { toast("Escolha 1 produto para o resgate.", "warning"); return; }
+          close([Number(picked.value)]);
+          return;
+        }
+        const escolhas = [];
+        let total = 0;
+        produtos.forEach((item) => {
+          const id = Number(item.id);
+          const qty = Math.max(0, Number(overlay.querySelector(`input[name="fid_resgate_qty_${id}"]`)?.value || 0));
+          if (qty > 0) { escolhas.push({ produto_id: id, qtd: qty }); total += qty; }
+        });
+        if (total !== limite) {
+          toast(`Escolha exatamente ${limite} item(ns) (total selecionado: ${total}).`, "warning");
+          return;
+        }
+        close(escolhas);
+      };
+      document.body.appendChild(overlay);
+      overlay.querySelector(".fid-modal")?.querySelector("input")?.focus();
+    });
+  }
+
+  async function resgatarCartao(contaId) {
+    const body = { idempotency_key: uid() };
+    if (state.unidadeId) {
+      try {
+        const data = await api("/programa");
+        const p = data?.programa || data;
+        let tipo = String(p?.tipo_recompensa_padrao || "");
+        if (tipo === "produto") tipo = "catalogo_consulta";
+        const produtos = Array.isArray(p?.catalogo_produtos) ? p.catalogo_produtos : [];
+        const qtd = Math.max(1, Number(p?.catalogo_qtd_escolhas || 1));
+        if (tipo === "catalogo_consulta" && produtos.length) {
+          const escolhas = await promptCatalogoEscolhasResgate(produtos, qtd);
+          if (!escolhas) return false;
+          body.catalogo_escolhas = escolhas;
+        }
+      } catch (_) { /* resgate padrão sem catálogo */ }
+    }
+    await api(`/cartoes/${contaId}/resgatar`, { method: "POST", body: JSON.stringify(body) });
+    return true;
   }
 
   async function fetchDeliveryCatalogoFallback() {
@@ -401,9 +472,15 @@
         const descricao = prompt("Motivo do ajuste:", "Ajuste administrativo"); if (!Number.isFinite(Number(delta))) return;
         await api(`/cartoes/${id}/ajuste`, { method: "POST", body: JSON.stringify({ delta_selos: Number(delta), descricao, idempotency_key: uid() }) });
       }
-      if (action === "resgatar") await api(`/cartoes/${id}/resgatar`, { method: "POST", body: JSON.stringify({ idempotency_key: uid() }) });
+      if (action === "resgatar") {
+        const ok = await resgatarCartao(id);
+        if (!ok) return;
+        toast("Resgate registrado.", "success");
+        await loadCartoes();
+        return;
+      }
       if (action === "status") await api(`/cartoes/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: b.dataset.status === "ativo" ? "bloqueado" : "ativo", idempotency_key: uid() }) });
-      toast(action === "resgatar" ? "Resgate registrado." : "Cartão atualizado.", "success"); await loadCartoes();
+      toast("Cartão atualizado.", "success"); await loadCartoes();
     };
   }
 

@@ -7,6 +7,7 @@ use App\Services\Fidelidade\FidelidadeCatalogoConsultaService;
 use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
 use App\Services\Fidelidade\FidelidadeProgramaApresentacaoService;
+use App\Services\Fidelidade\FidelidadeResgateService;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
 use App\Services\Fidelidade\FidelidadePublicOtpCache;
 use App\Services\Fidelidade\FidelidadePublicOtpEntrega;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -42,6 +44,7 @@ class DeliveryFidelidadePublicController extends Controller
         private FidelidadePublicConsultaService $consulta,
         private FidelidadeProgramaApresentacaoService $programaApresentacao,
         private FidelidadeCatalogoConsultaService $catalogoConsulta,
+        private FidelidadeResgateService $resgate,
     ) {}
 
     public function show(string $slug): View
@@ -112,7 +115,65 @@ class DeliveryFidelidadePublicController extends Controller
                 $conta ? (int) $conta->id : null,
                 $unidadeFidPadrao,
             ),
+            'resgate_catalogo' => $this->dadosResgateCatalogo($programa, $conta, $unidadeFidPadrao),
         ]);
+    }
+
+    public function resgatar(Request $request, string $slug): RedirectResponse
+    {
+        $config = $this->config($slug);
+        $unidadeVitrine = (int) $config->unidade_id;
+
+        if ($redirect = $this->exigirLgpd($unidadeVitrine, $slug)) {
+            return $redirect;
+        }
+
+        $acesso = $this->acessoValido($unidadeVitrine);
+        if ($acesso === null) {
+            return $this->voltar($slug)->with('warning', 'Confirme seu telefone antes de resgatar.');
+        }
+
+        $norm = $acesso['tel_norm'];
+        $contaId = (int) ($acesso['conta_id'] ?? 0);
+        $conta = $contaId > 0
+            ? $this->consulta->buscarContaPorId($contaId, $norm)
+            : $this->consulta->buscarContaAtiva($config, $norm);
+        if (! $conta) {
+            return $this->voltar($slug)->with('warning', 'Cartão não encontrado para resgate.');
+        }
+
+        $unidadeFid = (int) $conta->unidade_id;
+        $programa = $this->programaParaVitrine($config, $unidadeFid);
+        if (! $programa) {
+            return $this->voltar($slug)->with('warning', 'Programa de fidelidade indisponível.');
+        }
+
+        $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
+        $modo = (string) ($programa->modo ?? 'selos');
+        $saldoOk = $modo === 'pontos'
+            ? (int) ($conta->saldo_pontos ?? 0) >= $meta
+            : (int) ($conta->saldo_selos ?? 0) >= $meta;
+        if (! $saldoOk) {
+            return $this->voltar($slug)->with('warning', 'Você ainda não completou a meta para resgatar.');
+        }
+
+        try {
+            $escolhas = $this->parseEscolhasResgate($request, $programa);
+            $this->resgate->resgatar(
+                (int) $conta->id,
+                null,
+                null,
+                'vitrine-'.$slug.'-'.$conta->id.'-'.time(),
+                'Resgate solicitado na vitrine',
+                $escolhas,
+            );
+        } catch (ValidationException $e) {
+            return $this->voltar($slug)
+                ->withErrors($e->errors())
+                ->with('warning', collect($e->errors())->flatten()->first());
+        }
+
+        return $this->voltar($slug)->with('status', 'Resgate registrado! A loja preparará sua recompensa.');
     }
 
     public function privacidade(string $slug): View
@@ -621,6 +682,57 @@ class DeliveryFidelidadePublicController extends Controller
         $progDelivery = $unidadeVitrine !== $unidadeFid ? $this->programaAtivo($unidadeVitrine) : null;
 
         return $this->catalogoConsulta->mesclarProgramaVitrine($progFid, $progDelivery);
+    }
+
+    /** @return array{ativo:bool,qtd:int,produtos:list<array<string,mixed>>} */
+    private function dadosResgateCatalogo(object $programa, ?object $conta, int $unidadeFidelidade): array
+    {
+        $tipo = (string) ($programa->tipo_recompensa_padrao ?? '');
+        if ($tipo === 'produto') {
+            $tipo = 'catalogo_consulta';
+        }
+        $produtos = $tipo === 'catalogo_consulta'
+            ? $this->catalogoConsulta->produtosDoPrograma($programa, $unidadeFidelidade)
+            : [];
+        $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
+        $modo = (string) ($programa->modo ?? 'selos');
+        $saldo = $conta
+            ? ($modo === 'pontos' ? (int) ($conta->saldo_pontos ?? 0) : (int) ($conta->saldo_selos ?? 0))
+            : 0;
+        $qtd = max(1, (int) ($programa->catalogo_qtd_escolhas ?? 1));
+
+        return [
+            'ativo' => $tipo === 'catalogo_consulta' && $produtos !== [] && $saldo >= $meta,
+            'qtd' => $qtd,
+            'produtos' => $produtos,
+            'modo' => $modo,
+        ];
+    }
+
+    /** @return list<int>|list<array{produto_id:int,qtd:int}> */
+    private function parseEscolhasResgate(Request $request, object $programa): array
+    {
+        $limite = max(1, (int) ($programa->catalogo_qtd_escolhas ?? 1));
+        $produtoId = (int) $request->input('catalogo_produto_id', 0);
+        if ($produtoId > 0 && $limite === 1) {
+            return [$produtoId];
+        }
+
+        $raw = $request->input('catalogo_qtd', []);
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $escolhas = [];
+        foreach ($raw as $id => $qtd) {
+            $pid = (int) $id;
+            $qty = max(0, (int) $qtd);
+            if ($pid > 0 && $qty > 0) {
+                $escolhas[] = ['produto_id' => $pid, 'qtd' => $qty];
+            }
+        }
+
+        return $escolhas;
     }
 
     private function config(string $slug): object

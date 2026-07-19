@@ -4,6 +4,7 @@ namespace App\Services\Fidelidade;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 final class FidelidadeCatalogoConsultaService
 {
@@ -12,6 +13,80 @@ final class FidelidadeCatalogoConsultaService
         return Schema::hasTable('fid_programas')
             && Schema::hasColumn('fid_programas', 'catalogo_qtd_escolhas')
             && Schema::hasColumn('fid_programas', 'catalogo_produtos_json');
+    }
+
+    public function resgateColunasDisponiveis(): bool
+    {
+        return Schema::hasTable('fid_resgates')
+            && Schema::hasColumn('fid_resgates', 'catalogo_escolhas_json');
+    }
+
+    /**
+     * Valida e normaliza a escolha do cliente no resgate.
+     *
+     * @param  array<int, array{produto_id?:int,id?:int,qtd?:int}>|list<int>  $escolhas
+     * @return array{json:string,linhas:list<array{id:int,nome:string,qtd:int}>,titulo:string}
+     */
+    public function normalizarEscolhasResgate(object $programa, int $unidadeFidelidadeId, array $escolhas): array
+    {
+        $limite = max(1, (int) ($programa->catalogo_qtd_escolhas ?? 1));
+        $permitidos = collect($this->produtosDoPrograma($programa, $unidadeFidelidadeId))->keyBy('id');
+        if ($permitidos->isEmpty()) {
+            throw ValidationException::withMessages([
+                'catalogo_escolhas' => ['Nenhum produto configurado na recompensa do programa.'],
+            ]);
+        }
+
+        $map = [];
+        foreach ($escolhas as $item) {
+            if (is_numeric($item)) {
+                $id = (int) $item;
+                $qtd = 1;
+            } elseif (is_array($item)) {
+                $id = (int) ($item['produto_id'] ?? $item['id'] ?? 0);
+                $qtd = max(1, (int) ($item['qtd'] ?? 1));
+            } else {
+                continue;
+            }
+            if ($id <= 0 || ! $permitidos->has($id)) {
+                throw ValidationException::withMessages([
+                    'catalogo_escolhas' => ['Produto escolhido não faz parte das opções da recompensa.'],
+                ]);
+            }
+            $map[$id] = ($map[$id] ?? 0) + $qtd;
+        }
+
+        $total = array_sum($map);
+        if ($total <= 0) {
+            throw ValidationException::withMessages([
+                'catalogo_escolhas' => ['Escolha pelo menos 1 produto para resgatar.'],
+            ]);
+        }
+        if ($total > $limite) {
+            throw ValidationException::withMessages([
+                'catalogo_escolhas' => ['Você pode escolher no máximo '.$limite.' item(ns) no resgate.'],
+            ]);
+        }
+        if ($total < $limite) {
+            throw ValidationException::withMessages([
+                'catalogo_escolhas' => ['Escolha exatamente '.$limite.' item(ns) para concluir o resgate.'],
+            ]);
+        }
+
+        $linhas = [];
+        $partesTitulo = [];
+        foreach ($map as $id => $qtd) {
+            $prod = $permitidos->get($id);
+            $nome = (string) ($prod['nome'] ?? 'Produto');
+            $linhas[] = ['id' => (int) $id, 'nome' => $nome, 'qtd' => (int) $qtd];
+            $partesTitulo[] = $qtd > 1 ? ($qtd.'× '.$nome) : $nome;
+        }
+
+        return [
+            'json' => json_encode($linhas, JSON_UNESCAPED_UNICODE),
+            'linhas' => $linhas,
+            'titulo' => implode(' + ', $partesTitulo),
+        ];
     }
 
     public function unidadeDeliveryParaFidelidade(int $unidadeFidelidadeId): int

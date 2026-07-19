@@ -73,6 +73,9 @@ class FidelidadeApiTest extends TestCase
         $catalogoMigration = require database_path('migrations/2026_07_19_180000_add_catalogo_consulta_to_fid_programas.php');
         $catalogoMigration->up();
 
+        $resgateCatalogoMigration = require database_path('migrations/2026_07_19_200000_add_catalogo_escolhas_json_to_fid_resgates.php');
+        $resgateCatalogoMigration->up();
+
         $this->ensureFidelidadeRoutes();
     }
 
@@ -380,6 +383,47 @@ class FidelidadeApiTest extends TestCase
         $this->assertDatabaseCount('fid_resgates', 1);
     }
 
+    public function test_resgate_catalogo_consulta_grava_escolha(): void
+    {
+        DB::table('fid_programas')->where('unidade_id', 1)->delete();
+        DB::table('fid_programas')->insert([
+            'unidade_id' => 1,
+            'ativo' => 1,
+            'nome_exibicao' => 'Programa catálogo',
+            'modo' => 'selos',
+            'pedidos_meta' => 2,
+            'pontos_por_selo' => 1,
+            'tipo_recompensa_padrao' => 'catalogo_consulta',
+            'catalogo_qtd_escolhas' => 1,
+            'catalogo_produtos_json' => json_encode([
+                ['id' => 1, 'nome' => 'Maracujá 300 ml'],
+                ['id' => 2, 'nome' => 'Monster'],
+                ['id' => 3, 'nome' => 'Menu Degustação'],
+            ], JSON_UNESCAPED_UNICODE),
+            'permite_ajuste_manual' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $contaId = $this->criarCartao();
+        foreach (['a', 'b'] as $k) {
+            $this->withHeaders($this->headers())->postJson("/api/fidelidade/cartoes/{$contaId}/selo", [
+                'idempotency_key' => 'selo-cat-'.$k,
+            ])->assertCreated();
+        }
+
+        $this->withHeaders($this->headers())->postJson("/api/fidelidade/cartoes/{$contaId}/resgatar", [
+            'idempotency_key' => 'redeem-cat-1',
+            'catalogo_escolhas' => [2],
+        ])->assertCreated()
+            ->assertJsonPath('resgate.titulo_snapshot', 'Monster');
+
+        $this->assertDatabaseHas('fid_resgates', [
+            'conta_id' => $contaId,
+            'titulo_snapshot' => 'Monster',
+        ]);
+    }
+
     public function test_estorno_restaura_saldo(): void
     {
         $this->seedPrograma(1, 10);
@@ -493,7 +537,7 @@ class FidelidadeApiTest extends TestCase
             'modo' => 'selos',
             'pedidos_meta' => $meta,
             'pontos_por_selo' => 1,
-            'tipo_recompensa_padrao' => 'produto',
+            'tipo_recompensa_padrao' => 'brinde',
             'texto_recompensa' => 'Brinde',
             'permite_ajuste_manual' => 1,
             'created_at' => now(),

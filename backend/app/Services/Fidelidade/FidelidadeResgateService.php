@@ -7,11 +7,15 @@ use Illuminate\Validation\ValidationException;
 
 final class FidelidadeResgateService
 {
-    public function __construct(private FidelidadeLedgerService $ledger) {}
+    public function __construct(
+        private FidelidadeLedgerService $ledger,
+        private FidelidadeCatalogoConsultaService $catalogoConsulta,
+    ) {}
 
     /**
      * Redeem program meta or a catalog reward.
      *
+     * @param  list<int>|list<array{produto_id?:int,id?:int,qtd?:int}>|null  $catalogoEscolhas
      * @return array{resgate:object, ledger:object, conta:object, replayed:bool}
      */
     public function resgatar(
@@ -19,9 +23,10 @@ final class FidelidadeResgateService
         ?int $recompensaId,
         ?int $usuarioId,
         ?string $idempotencyKey,
-        ?string $observacao = null
+        ?string $observacao = null,
+        ?array $catalogoEscolhas = null,
     ): array {
-        return DB::transaction(function () use ($contaId, $recompensaId, $usuarioId, $idempotencyKey, $observacao) {
+        return DB::transaction(function () use ($contaId, $recompensaId, $usuarioId, $idempotencyKey, $observacao, $catalogoEscolhas) {
             $conta = DB::table('fid_contas')->where('id', $contaId)->lockForUpdate()->first();
             if (! $conta) {
                 throw ValidationException::withMessages(['conta_id' => 'Cartão não encontrado.']);
@@ -56,9 +61,13 @@ final class FidelidadeResgateService
 
             $titulo = (string) ($programa->texto_recompensa ?: $programa->nome_exibicao);
             $tipo = (string) $programa->tipo_recompensa_padrao;
+            if ($tipo === 'produto') {
+                $tipo = 'catalogo_consulta';
+            }
             $custoSelos = 0;
             $custoPontos = 0;
             $recompensa = null;
+            $catalogoEscolhasJson = null;
 
             if ($recompensaId) {
                 $recompensa = DB::table('fid_recompensas')
@@ -79,6 +88,23 @@ final class FidelidadeResgateService
                     $custoPontos = (int) $programa->pedidos_meta;
                 } else {
                     $custoSelos = (int) $programa->pedidos_meta;
+                }
+            }
+
+            if (! $recompensaId && $tipo === 'catalogo_consulta') {
+                if ($catalogoEscolhas === null || $catalogoEscolhas === []) {
+                    throw ValidationException::withMessages([
+                        'catalogo_escolhas' => ['Escolha o(s) produto(s) da recompensa antes de resgatar.'],
+                    ]);
+                }
+                $normalizado = $this->catalogoConsulta->normalizarEscolhasResgate(
+                    $programa,
+                    (int) $conta->unidade_id,
+                    $catalogoEscolhas
+                );
+                $titulo = $normalizado['titulo'];
+                if ($this->catalogoConsulta->resgateColunasDisponiveis()) {
+                    $catalogoEscolhasJson = $normalizado['json'];
                 }
             }
 
@@ -121,7 +147,7 @@ final class FidelidadeResgateService
             }
 
             $agora = now();
-            $resgateId = DB::table('fid_resgates')->insertGetId([
+            $insert = [
                 'unidade_id' => (int) $conta->unidade_id,
                 'conta_id' => $contaId,
                 'recompensa_id' => $recompensa ? (int) $recompensa->id : null,
@@ -135,7 +161,11 @@ final class FidelidadeResgateService
                 'observacao' => $observacao,
                 'created_at' => $agora,
                 'updated_at' => $agora,
-            ]);
+            ];
+            if ($catalogoEscolhasJson !== null && $this->catalogoConsulta->resgateColunasDisponiveis()) {
+                $insert['catalogo_escolhas_json'] = $catalogoEscolhasJson;
+            }
+            $resgateId = DB::table('fid_resgates')->insertGetId($insert);
 
             $resgate = DB::table('fid_resgates')->where('id', $resgateId)->first();
 

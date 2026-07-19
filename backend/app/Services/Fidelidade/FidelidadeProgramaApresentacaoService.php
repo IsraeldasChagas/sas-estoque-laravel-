@@ -264,12 +264,12 @@ class FidelidadeProgramaApresentacaoService
 
         if ($nomes === []) {
             return [
-                'Forma de recompensa: Catálogo (consulta) — escolha até '.$qtd.' item(ns) entre os produtos do cardápio listados abaixo.',
+                'Forma de recompensa: Catálogo (consulta) — no resgate, escolha '.$qtd.' item(ns) entre as opções abaixo.',
             ];
         }
 
         $linhas = [
-            'Forma de recompensa: Catálogo (consulta) — ao completar a meta, escolha até '.$qtd.' item(ns) entre:',
+            'Forma de recompensa: Catálogo (consulta) — '.count($nomes).' opção(ões) abaixo; no resgate, escolha '.$qtd.' item(ns).',
         ];
         foreach ($nomes as $nome) {
             $linhas[] = $nome;

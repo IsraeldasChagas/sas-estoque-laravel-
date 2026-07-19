@@ -71,7 +71,7 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
         $linhas = $this->svc->linhasRecompensa($programa);
         $this->assertGreaterThanOrEqual(3, count($linhas));
         $this->assertStringContainsString('Catálogo (consulta)', $linhas[0]);
-        $this->assertStringContainsString('escolha até 2 item(ns)', $linhas[0]);
+        $this->assertStringContainsString('no resgate, escolha 2 item(ns)', $linhas[0]);
         $this->assertSame('Tacacá', $linhas[1]);
         $this->assertSame('Açaí', $linhas[2]);
         $this->assertStringContainsString('repetir o mesmo produto', $linhas[3]);

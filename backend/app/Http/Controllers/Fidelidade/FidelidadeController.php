@@ -605,14 +605,19 @@ class FidelidadeController extends Controller
         $data = Validator::make($request->all(), [
             'recompensa_id' => 'nullable|integer',
             'observacao' => 'nullable|string|max:500',
+            'catalogo_escolhas' => 'nullable|array|max:20',
+            'catalogo_escolhas.*' => 'nullable',
         ])->validate();
+
+        $catalogoEscolhas = is_array($data['catalogo_escolhas'] ?? null) ? $data['catalogo_escolhas'] : null;
 
         $result = $this->resgate->resgatar(
             (int) $conta->id,
             isset($data['recompensa_id']) ? (int) $data['recompensa_id'] : null,
             (int) $usuario->id,
             $this->idempotencyKey($request),
-            $data['observacao'] ?? null
+            $data['observacao'] ?? null,
+            $catalogoEscolhas,
         );
 
         return response()->json([

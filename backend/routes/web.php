@@ -30,6 +30,8 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
         ->middleware('throttle:20,1')->name('fidelity.logout');
     Route::post('/fidelidade/verificar-codigo', [DeliveryFidelidadePublicController::class, 'verificarCodigo'])
         ->middleware('throttle:30,1')->name('fidelity.verify');
+    Route::post('/fidelidade/resgatar', [DeliveryFidelidadePublicController::class, 'resgatar'])
+        ->middleware('throttle:10,1')->name('fidelity.redeem');
     Route::post('/fidelidade/cadastro', [DeliveryFidelidadePublicController::class, 'cadastrar'])
         ->middleware('throttle:15,1')->name('fidelity.register');
     Route::get('/checkout', [DeliveryPublicController::class, 'checkout'])->name('checkout');
