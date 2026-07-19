@@ -372,24 +372,40 @@ class DeliveryPedidoService
 
         $snapshotRetiradas = [];
         if ($retiradas->isNotEmpty()) {
-            $retiradas = $retiradas->unique(fn ($ret) => (int) ($ret['id'] ?? $ret['ingrediente_id'] ?? 0))->values();
             $maxRetirar = $produto->max_ingredientes_retirar !== null ? (int) $produto->max_ingredientes_retirar : null;
-            if ($maxRetirar !== null && $retiradas->count() > $maxRetirar) {
-                throw ValidationException::withMessages(['opcoes.retiradas' => "Retire no máximo {$maxRetirar} ingrediente(s)."]);
-            }
+            $qtdRetiradas = 0;
+            $porIngrediente = [];
+
             foreach ($retiradas as $idx => $ret) {
                 $ingredienteId = (int) ($ret['id'] ?? $ret['ingrediente_id'] ?? 0);
+                $qtd = max(1, (int) ($ret['quantidade'] ?? 1));
+                if (! isset($porIngrediente[$ingredienteId])) {
+                    $porIngrediente[$ingredienteId] = 0;
+                }
+                $porIngrediente[$ingredienteId] += $qtd;
+            }
+
+            foreach ($porIngrediente as $ingredienteId => $qtd) {
                 $ing = DB::table('dlv_produto_ingredientes')
                     ->where('id', $ingredienteId)
                     ->where('produto_id', $produto->id)
                     ->first();
                 if (! $ing) {
-                    throw ValidationException::withMessages(["opcoes.retiradas.$idx" => 'Ingrediente inválido.']);
+                    throw ValidationException::withMessages(['opcoes.retiradas' => 'Ingrediente inválido.']);
                 }
+                $qtdRetiradas += $qtd;
                 $snapshotRetiradas[] = [
                     'id' => (int) $ing->id,
                     'nome' => (string) $ing->nome,
+                    'quantidade' => $qtd,
                 ];
+            }
+
+            if ($maxRetirar !== null && $qtdRetiradas > $maxRetirar) {
+                throw ValidationException::withMessages(['opcoes.retiradas' => "Selecione no máximo {$maxRetirar} opção(ões)."]);
+            }
+            if ($maxRetirar !== null && $qtdRetiradas < $maxRetirar && $adicionaisSelecionados->isEmpty()) {
+                throw ValidationException::withMessages(['opcoes.retiradas' => "Selecione exatamente {$maxRetirar} opção(ões)."]);
             }
         }
 

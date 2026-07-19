@@ -463,7 +463,13 @@ a.btn.ghost.vf-back-after-action:hover,
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   font-weight:600;font-size:14px;margin:0 0 12px;
 }
-.personalize-limit-line__title{font-weight:700;color:#1f2937}
+.personalize-limit-line--spaced{margin-top:16px}
+.vf-retirar-stepper-grid--after-acrescimo{margin-top:4px}
+.vf-escolha-card--retirar.vf-escolha-card--ativo .vf-escolha-card-inner{
+  background:rgba(254,243,199,.85);border-color:rgba(217,119,6,.4);
+}
+.vf-escolha-card--retirar.vf-escolha-card--ativo .vf-escolha-bar{background:#ea580c}
+.vf-escolha-badge--retirar{color:#9a3412;background:rgba(251,191,36,.5)}
 .vf-personalizar-limite-chip{
   padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:rgba(0,0,0,.035);
   font-size:12px;font-weight:500;color:var(--muted);line-height:1.3;white-space:nowrap;

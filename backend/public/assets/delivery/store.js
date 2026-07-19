@@ -31,7 +31,13 @@
     target.innerHTML = items.length ? items.map((item, index) => {
       const options = [
         ...(item.opcoes?.adicionais || []).map(a => `${a.quantidade}× ${a.nome}`),
-        ...(item.opcoes?.retiradas || []).map(r => `Sem ${r.nome}`)
+        ...(item.opcoes?.retiradas || []).map(r => {
+          if (r.quantidade != null) {
+            const q = Math.max(1, +r.quantidade || 1);
+            return `${q}× ${r.nome}`;
+          }
+          return `Sem ${r.nome}`;
+        })
       ].map(escape).join(', ');
       const obs = item.opcoes?.observacao ? `<small class="cart-obs">Obs: ${escape(item.opcoes.observacao)}</small>` : '';
       const photo = item.foto

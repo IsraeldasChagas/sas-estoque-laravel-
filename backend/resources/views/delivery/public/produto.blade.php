@@ -12,6 +12,12 @@
     }
     $uiRem = (string) ($produto->ingredientes_retirar_ui ?? 'stepper');
     $maxRem = max(0, (int) ($produto->max_ingredientes_retirar ?? 0));
+    if ($maxRem > 0) {
+        $uiRem = 'stepper';
+    }
+    $temRetirarIng = $ingredientes->isNotEmpty() && $maxRem > 0;
+    $temPersonalizar = $adicionais->isNotEmpty() || $temRetirarIng;
+    $escolhaSoIngredientes = $adicionais->isEmpty() && $temRetirarIng;
     $whatsRaw = trim((string) ($config->whatsapp ?? ''));
     if ($whatsRaw === '') {
         $whatsRaw = trim((string) ($config->telefone ?? ''));
@@ -83,125 +89,153 @@
               data-remove-max="{{ $maxRem > 0 ? $maxRem : 9999 }}"
               data-ui-additional="{{ $uiAd }}"
               data-ui-removal="{{ $uiRem }}">
-            @if($adicionais->isNotEmpty())
+            @if($temPersonalizar)
             <div class="option-card option-card--personalizar vf-card-personalizar-produto">
                 <h2>Personalizar</h2>
-                @if($temLimiteAcrescimo && $maxEsc !== null && $minEsc === $maxEsc)
-                    <p class="personalize-limit-line">
-                        <span class="personalize-limit-line__title">Escolha {{ $maxEsc }} opções</span>
-                        <span class="vf-personalizar-limite-chip">Mínimo: {{ $minEsc }} · Máximo: {{ $maxEsc }}</span>
-                    </p>
-                @elseif($temLimiteAcrescimo && $maxEsc !== null)
-                    <p class="personalize-limit-line">
-                        <span class="personalize-limit-line__title">Opções</span>
-                        @if($minEsc > 0)
+
+                @if($adicionais->isNotEmpty())
+                    @if($temLimiteAcrescimo && $maxEsc !== null && $minEsc === $maxEsc)
+                        <p class="personalize-limit-line">
+                            <span class="personalize-limit-line__title">Escolha {{ $maxEsc }} opções</span>
                             <span class="vf-personalizar-limite-chip">Mínimo: {{ $minEsc }} · Máximo: {{ $maxEsc }}</span>
-                        @else
-                            <span class="vf-personalizar-limite-chip">Máximo: {{ $maxEsc }}</span>
-                        @endif
-                    </p>
-                @endif
-                @if($uiAd === 'checkbox')
-                <div class="vf-personalizar-grid vf-acrescimo-checkbox-grid personalize-grid"
-                     data-usa-limite="{{ $temLimiteAcrescimo ? '1' : '0' }}"
-                     data-min="{{ $temLimiteAcrescimo ? $minEsc : 0 }}"
-                     data-max="{{ $temLimiteAcrescimo && $maxEsc !== null ? $maxEsc : 99999 }}">
-                    @foreach($adicionais as $ad)
-                    <div class="vf-escolha-card vf-escolha-card--acrescimo-chk" data-additional-item>
-                        <div class="vf-escolha-card-inner vf-escolha-card-inner--retirar-chk">
-                            <span class="vf-escolha-bar" aria-hidden="true"></span>
-                            <label class="vf-retirar-chk-wrap">
-                                <input type="checkbox"
-                                       class="vf-acrescimo-chk"
-                                       data-additional="{{ $ad->id }}"
-                                       data-name="{{ $ad->nome }}"
-                                       data-price="{{ $ad->preco }}">
-                                <span class="vf-personalizar-nome">
-                                    {{ $ad->nome }}
-                                    @if((float) $ad->preco > 0)
-                                        <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }} @if($temLimiteAcrescimo)<span class="muted">cada</span>@endif</small>
-                                    @endif
-                                </span>
-                            </label>
-                            <input type="hidden"
-                                   class="vf-acrescimo-qty-input"
-                                   data-additional="{{ $ad->id }}"
-                                   data-name="{{ $ad->nome }}"
-                                   data-price="{{ $ad->preco }}"
-                                   value="0">
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-                @else
-                <div class="vf-personalizar-grid vf-acrescimo-stepper-grid"
-                     id="vf-acrescimos-stepper"
-                     data-usa-limite="{{ $temLimiteAcrescimo ? '1' : '0' }}"
-                     data-min="{{ $temLimiteAcrescimo ? $minEsc : 0 }}"
-                     data-max="{{ $temLimiteAcrescimo && $maxEsc !== null ? $maxEsc : ($maxEscForm) }}">
-                    @foreach($adicionais as $ad)
-                    <div class="vf-escolha-card" data-additional-item data-ad-id="{{ $ad->id }}">
-                        <div class="vf-escolha-card-inner">
-                            <span class="vf-escolha-bar" aria-hidden="true"></span>
-                            <div class="vf-escolha-textos">
-                                <span class="vf-personalizar-nome">
-                                    {{ $ad->nome }}
-                                    @if((float) $ad->preco > 0)
-                                        <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }} @if($temLimiteAcrescimo)<span class="muted">cada</span>@endif</small>
-                                    @endif
-                                </span>
-                                <span class="vf-escolha-badge">✓ Selecionado</span>
-                            </div>
-                            <div class="vf-escolha-stepper" role="group" aria-label="Quantidade {{ $ad->nome }}">
-                                <button type="button" class="vf-escolha-btn vf-escolha-btn--menos" data-additional-minus aria-label="Diminuir {{ $ad->nome }}">−</button>
-                                <span class="vf-escolha-qty-wrap"><span class="vf-escolha-qty-disp" data-additional-qty>0</span></span>
-                                <input type="hidden"
-                                       class="vf-acrescimo-qty-input"
+                        </p>
+                    @elseif($temLimiteAcrescimo && $maxEsc !== null)
+                        <p class="personalize-limit-line">
+                            <span class="personalize-limit-line__title">Opções</span>
+                            @if($minEsc > 0)
+                                <span class="vf-personalizar-limite-chip">Mínimo: {{ $minEsc }} · Máximo: {{ $maxEsc }}</span>
+                            @else
+                                <span class="vf-personalizar-limite-chip">Máximo: {{ $maxEsc }}</span>
+                            @endif
+                        </p>
+                    @endif
+                    @if($uiAd === 'checkbox')
+                    <div class="vf-personalizar-grid vf-acrescimo-checkbox-grid"
+                         data-usa-limite="{{ $temLimiteAcrescimo ? '1' : '0' }}"
+                         data-min="{{ $temLimiteAcrescimo ? $minEsc : 0 }}"
+                         data-max="{{ $temLimiteAcrescimo && $maxEsc !== null ? $maxEsc : 99999 }}">
+                        @foreach($adicionais as $ad)
+                        <div class="vf-escolha-card vf-escolha-card--acrescimo-chk" data-additional-item>
+                            <div class="vf-escolha-card-inner vf-escolha-card-inner--retirar-chk">
+                                <span class="vf-escolha-bar" aria-hidden="true"></span>
+                                <label class="vf-retirar-chk-wrap">
+                                    <input type="checkbox" class="vf-acrescimo-chk"
+                                           data-additional="{{ $ad->id }}"
+                                           data-name="{{ $ad->nome }}"
+                                           data-price="{{ $ad->preco }}">
+                                    <span class="vf-personalizar-nome">
+                                        {{ $ad->nome }}
+                                        @if((float) $ad->preco > 0)
+                                            <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }} @if($temLimiteAcrescimo)<span class="muted">cada</span>@endif</small>
+                                        @endif
+                                    </span>
+                                </label>
+                                <input type="hidden" class="vf-acrescimo-qty-input"
                                        data-additional="{{ $ad->id }}"
                                        data-name="{{ $ad->nome }}"
                                        data-price="{{ $ad->preco }}"
                                        value="0">
-                                <button type="button" class="vf-escolha-btn vf-escolha-btn--mais" data-additional-plus aria-label="Aumentar {{ $ad->nome }}">+</button>
                             </div>
                         </div>
+                        @endforeach
                     </div>
-                    @endforeach
-                </div>
+                    @else
+                    <div class="vf-personalizar-grid vf-acrescimo-stepper-grid"
+                         id="vf-acrescimos-stepper"
+                         data-usa-limite="{{ $temLimiteAcrescimo ? '1' : '0' }}"
+                         data-min="{{ $temLimiteAcrescimo ? $minEsc : 0 }}"
+                         data-max="{{ $temLimiteAcrescimo && $maxEsc !== null ? $maxEsc : ($maxEscForm) }}">
+                        @foreach($adicionais as $ad)
+                        <div class="vf-escolha-card" data-additional-item data-ad-id="{{ $ad->id }}">
+                            <div class="vf-escolha-card-inner">
+                                <span class="vf-escolha-bar" aria-hidden="true"></span>
+                                <div class="vf-escolha-textos">
+                                    <span class="vf-personalizar-nome">
+                                        {{ $ad->nome }}
+                                        @if((float) $ad->preco > 0)
+                                            <small>+ R$ {{ number_format((float) $ad->preco, 2, ',', '.') }} @if($temLimiteAcrescimo)<span class="muted">cada</span>@endif</small>
+                                        @endif
+                                    </span>
+                                    <span class="vf-escolha-badge">✓ Selecionado</span>
+                                </div>
+                                <div class="vf-escolha-stepper" role="group" aria-label="Quantidade {{ $ad->nome }}">
+                                    <button type="button" class="vf-escolha-btn vf-escolha-btn--menos" data-additional-minus aria-label="Diminuir {{ $ad->nome }}">−</button>
+                                    <span class="vf-escolha-qty-wrap"><span class="vf-escolha-qty-disp" data-additional-qty>0</span></span>
+                                    <input type="hidden" class="vf-acrescimo-qty-input"
+                                           data-additional="{{ $ad->id }}"
+                                           data-name="{{ $ad->nome }}"
+                                           data-price="{{ $ad->preco }}"
+                                           value="0">
+                                    <button type="button" class="vf-escolha-btn vf-escolha-btn--mais" data-additional-plus aria-label="Aumentar {{ $ad->nome }}">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
                 @endif
-            </div>
-            @endif
-            @if($ingredientes->isNotEmpty() && $maxRem > 0)
-            <div class="option-card option-card--remover">
-                <h2>Retirar ingredientes</h2>
-                <p class="personalize-hint">Você pode retirar até {{ $maxRem }}.</p>
-                @if($uiRem !== 'checkbox')
-                    <p class="selection-counter" data-removal-counter aria-live="polite">0/{{ $maxRem }} selecionado(s)</p>
-                @endif
-                <div class="personalize-grid">
-                    @foreach($ingredientes as $ing)
-                    <div class="option-row-vf" data-removal-item>
-                        <span class="option-row-vf__name">{{ $ing->nome }}</span>
-                        @if($uiRem === 'checkbox')
-                            <label class="option-check">
-                                <input type="checkbox"
+
+                @if($temRetirarIng)
+                    <p class="personalize-limit-line {{ $adicionais->isNotEmpty() ? 'personalize-limit-line--spaced' : '' }}">
+                        @if($escolhaSoIngredientes || $uiRem === 'stepper')
+                            <span class="personalize-limit-line__title">Escolha {{ $maxRem }} {{ $maxRem === 1 ? 'opção' : 'opções' }}</span>
+                            <span class="vf-personalizar-limite-chip">Mínimo: {{ $maxRem }} · Máximo: {{ $maxRem }}</span>
+                        @else
+                            <span class="personalize-limit-line__title">Retirar ingredientes</span>
+                            <span class="vf-personalizar-limite-chip">Até {{ $maxRem }}</span>
+                        @endif
+                    </p>
+                    @if($uiRem === 'checkbox')
+                    <div class="vf-personalizar-grid vf-retirar-checkbox-grid"
+                         id="vf-retirar-checkbox"
+                         data-min-total="{{ $maxRem }}"
+                         data-max-total="{{ $maxRem }}">
+                        @foreach($ingredientes as $ing)
+                        <div class="vf-escolha-card vf-escolha-card--retirar vf-escolha-card--retirar-chk" data-removal-item>
+                            <div class="vf-escolha-card-inner vf-escolha-card-inner--retirar-chk">
+                                <span class="vf-escolha-bar" aria-hidden="true"></span>
+                                <label class="vf-retirar-chk-wrap">
+                                    <input type="checkbox" class="vf-retirar-chk"
+                                           data-removal="{{ $ing->id }}"
+                                           data-name="{{ $ing->nome }}">
+                                    <span class="vf-personalizar-nome">{{ $ing->nome }}</span>
+                                </label>
+                                <input type="hidden" class="vf-retirar-qty-input"
                                        data-removal="{{ $ing->id }}"
                                        data-name="{{ $ing->nome }}"
-                                       value="1">
-                            </label>
-                        @else
-                            <div class="option-stepper" data-removal-stepper>
-                                <button type="button" data-removal-minus aria-label="Manter {{ $ing->nome }}">−</button>
-                                <span data-removal-qty>0</span>
-                                <button type="button" data-removal-plus aria-label="Retirar {{ $ing->nome }}">+</button>
+                                       value="0">
                             </div>
-                            <input type="hidden"
-                                   data-removal="{{ $ing->id }}"
-                                   data-name="{{ $ing->nome }}"
-                                   value="0">
-                        @endif
+                        </div>
+                        @endforeach
                     </div>
-                    @endforeach
-                </div>
+                    @else
+                    <div class="vf-personalizar-grid vf-acrescimo-stepper-grid vf-retirar-stepper-grid {{ $adicionais->isNotEmpty() ? 'vf-retirar-stepper-grid--after-acrescimo' : '' }}"
+                         id="vf-retirar-stepper"
+                         data-min-total="{{ $maxRem }}"
+                         data-max-total="{{ $maxRem }}">
+                        @foreach($ingredientes as $ing)
+                        <div class="vf-escolha-card vf-escolha-card--retirar" data-removal-item data-ing-id="{{ $ing->id }}">
+                            <div class="vf-escolha-card-inner">
+                                <span class="vf-escolha-bar" aria-hidden="true"></span>
+                                <div class="vf-escolha-textos">
+                                    <span class="vf-personalizar-nome">{{ $ing->nome }}</span>
+                                    <span class="vf-escolha-badge vf-escolha-badge--retirar">✓ Selecionado</span>
+                                </div>
+                                <div class="vf-escolha-stepper" role="group" aria-label="Quantidade {{ $ing->nome }}">
+                                    <button type="button" class="vf-escolha-btn vf-escolha-btn--menos" data-removal-minus aria-label="Diminuir {{ $ing->nome }}">−</button>
+                                    <span class="vf-escolha-qty-wrap"><span class="vf-escolha-qty-disp" data-removal-qty>0</span></span>
+                                    <input type="hidden" class="vf-retirar-qty-input"
+                                           data-removal="{{ $ing->id }}"
+                                           data-name="{{ $ing->nome }}"
+                                           value="0">
+                                    <button type="button" class="vf-escolha-btn vf-escolha-btn--mais" data-removal-plus aria-label="Aumentar {{ $ing->nome }}">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
+                @endif
             </div>
             @endif
             <label class="detail-field">
@@ -330,64 +364,91 @@
     });
   });
 
-  function removalTotal() {
-    if (uiRemoval === 'checkbox') {
-      return form.querySelectorAll('[data-removal]:checked').length;
-    }
+  const retirarWrap = document.getElementById('vf-retirar-stepper');
+  const minRemTotal = retirarWrap ? Math.max(0, +retirarWrap.dataset.minTotal || 0) : 0;
+  const maxRemTotal = retirarWrap ? Math.max(minRemTotal, +retirarWrap.dataset.maxTotal || maxRemovals) : maxRemovals;
+
+  function somaRetiradas() {
     let total = 0;
-    form.querySelectorAll('[data-removal-item]').forEach((row) => {
-      const hidden = row.querySelector('[data-removal][type="hidden"]');
-      if (hidden) total += Math.max(0, +hidden.value || 0);
+    form.querySelectorAll('.vf-retirar-qty-input').forEach((inp) => {
+      total += Math.max(0, +inp.value || 0);
     });
     return total;
   }
 
-  function setRemovalQty(row, value) {
-    const qtyVal = value > 0 ? 1 : 0;
-    const hidden = row.querySelector('[data-removal][type="hidden"]');
-    const span = row.querySelector('[data-removal-qty]');
-    if (hidden) hidden.value = String(qtyVal);
-    if (span) span.textContent = String(qtyVal);
-  }
-
-  function syncRemovalLimits() {
-    const total = removalTotal();
+  function removalTotal() {
     if (uiRemoval === 'checkbox') {
-      form.querySelectorAll('[data-removal]').forEach((el) => {
-        if (!el.checked) el.disabled = total >= maxRemovals;
-      });
-      return;
+      let total = 0;
+      form.querySelectorAll('.vf-retirar-chk:checked').forEach(() => { total += 1; });
+      return total;
     }
+    return somaRetiradas();
+  }
 
-    form.querySelectorAll('[data-removal-item]').forEach((row) => {
-      const hidden = row.querySelector('[data-removal][type="hidden"]');
-      const current = hidden ? Math.max(0, +hidden.value || 0) : 0;
-      const minus = row.querySelector('[data-removal-minus]');
-      const plus = row.querySelector('[data-removal-plus]');
-      if (minus) minus.disabled = current <= 0;
-      if (plus) plus.disabled = current >= 1 || total >= maxRemovals;
+  function atualizarCardRetirada(card) {
+    const inp = card.querySelector('.vf-retirar-qty-input');
+    if (!inp) return;
+    const q = Math.max(0, +inp.value || 0);
+    const disp = card.querySelector('[data-removal-qty]');
+    const btnMais = card.querySelector('[data-removal-plus]');
+    const btnMenos = card.querySelector('[data-removal-minus]');
+    if (disp) disp.textContent = String(q);
+    card.classList.toggle('vf-escolha-card--ativo', q > 0);
+    if (btnMenos) btnMenos.disabled = q < 1;
+    const total = somaRetiradas();
+    let podeMais = q < maxPorOpcao;
+    if (podeMais && total >= maxRemTotal) podeMais = false;
+    if (btnMais) btnMais.disabled = !podeMais;
+  }
+
+  function syncAllRetiradaCards() {
+    form.querySelectorAll('#vf-retirar-stepper .vf-escolha-card--retirar').forEach(atualizarCardRetirada);
+  }
+
+  if (retirarWrap) {
+    retirarWrap.querySelectorAll('.vf-escolha-card--retirar').forEach((card) => {
+      const inp = card.querySelector('.vf-retirar-qty-input');
+      const btnMais = card.querySelector('[data-removal-plus]');
+      const btnMenos = card.querySelector('[data-removal-minus]');
+
+      function setQ(novo) {
+        const q = Math.max(0, Math.min(maxPorOpcao, +novo || 0));
+        if (inp) inp.value = String(q);
+        syncAllRetiradaCards();
+      }
+
+      btnMais?.addEventListener('click', () => {
+        const q = Math.max(0, +inp?.value || 0);
+        if (q >= maxPorOpcao) return;
+        if (somaRetiradas() >= maxRemTotal) {
+          error.textContent = 'Você já atingiu o máximo de ' + maxRemTotal + ' opções (somando as quantidades).';
+          return;
+        }
+        error.textContent = '';
+        setQ(q + 1);
+      });
+
+      btnMenos?.addEventListener('click', () => {
+        setQ(Math.max(0, (+inp?.value || 0) - 1));
+        error.textContent = '';
+      });
+
+      atualizarCardRetirada(card);
     });
   }
 
-  form.querySelectorAll('[data-removal-item]').forEach((row) => {
-    row.querySelector('[data-removal-minus]')?.addEventListener('click', () => {
-      setRemovalQty(row, 0);
-      syncRemovalLimits();
-    });
-    row.querySelector('[data-removal-plus]')?.addEventListener('click', () => {
-      if (removalTotal() >= maxRemovals) return;
-      setRemovalQty(row, 1);
-      syncRemovalLimits();
+  form.querySelectorAll('.vf-retirar-chk').forEach((chk) => {
+    chk.addEventListener('change', () => {
+      const card = chk.closest('[data-removal-item]');
+      const hid = card?.querySelector('.vf-retirar-qty-input');
+      if (hid) hid.value = chk.checked ? '1' : '0';
+      card?.classList.toggle('vf-escolha-card--ativo', chk.checked);
+      const total = removalTotal();
+      form.querySelectorAll('.vf-retirar-chk').forEach((el) => {
+        if (!el.checked) el.disabled = total >= maxRemTotal;
+      });
     });
   });
-
-  form.querySelectorAll('[data-removal]').forEach((el) => {
-    if (el.type === 'checkbox') {
-      el.addEventListener('change', syncRemovalLimits);
-    }
-  });
-
-  syncRemovalLimits();
 
   form.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -419,25 +480,36 @@
     }
 
     if (uiRemoval === 'checkbox') {
-      form.querySelectorAll('[data-removal]:checked').forEach((el) => {
-        removals.push({ id: +el.dataset.removal, nome: el.dataset.name });
+      form.querySelectorAll('.vf-retirar-chk:checked').forEach((el) => {
+        removals.push({ id: +el.dataset.removal, nome: el.dataset.name, quantidade: 1 });
       });
     } else {
-      form.querySelectorAll('[data-removal-item]').forEach((row) => {
-        const hidden = row.querySelector('[data-removal][type="hidden"]');
-        if (hidden && +hidden.value > 0) {
-          removals.push({ id: +hidden.dataset.removal, nome: hidden.dataset.name });
+      form.querySelectorAll('.vf-retirar-qty-input').forEach((hidden) => {
+        const q = Math.max(0, +hidden.value || 0);
+        if (q > 0) {
+          removals.push({
+            id: +hidden.dataset.removal,
+            nome: hidden.dataset.name,
+            quantidade: q,
+          });
         }
       });
     }
 
-    if (usaLimite && (choices < minChoices || choices > maxChoices)) {
+    const temAcrescimos = !!stepperWrap || form.querySelector('.vf-acrescimo-chk');
+    if (usaLimite && temAcrescimos && (choices < minChoices || choices > maxChoices)) {
       error.textContent = minChoices === maxChoices
         ? 'Escolha exatamente ' + maxChoices + ' opções (somando as quantidades).'
         : 'Escolha entre ' + minChoices + ' e ' + maxChoices + ' opções (somando as quantidades).';
       return;
     }
-    if (removals.length > maxRemovals) {
+    if (retirarWrap && (removalTotal() < minRemTotal || removalTotal() > maxRemTotal)) {
+      error.textContent = minRemTotal === maxRemTotal
+        ? 'Escolha exatamente ' + maxRemTotal + ' opções (somando as quantidades).'
+        : 'Escolha entre ' + minRemTotal + ' e ' + maxRemTotal + ' opções (somando as quantidades).';
+      return;
+    }
+    if (!retirarWrap && removals.length > maxRemovals) {
       error.textContent = 'Você excedeu o limite de ingredientes para retirar.';
       return;
     }
