@@ -121,7 +121,7 @@ final class DeliveryCupomPedido
 
         $lines[] = self::linhaTracejada($larguraLinha);
         $lines[] = 'Obrigado pela preferência!';
-        $lines[] = '_'.config('app.name').'_';
+        $lines[] = '_'.self::fixUpperNomeLoja($nomeLoja).'_';
 
         return implode("\n", $lines);
     }

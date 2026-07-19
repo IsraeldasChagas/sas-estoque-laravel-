@@ -129,7 +129,7 @@
         <p class="cupom-link mb-0">{{ route('delivery.public.order', ['slug' => $config->slug, 'codigo' => $pedido->codigo_publico, 'token' => $pedido->cliente_token], absolute: true) }}</p>
     @endif
 
-    <div class="cupom-rodape">Obrigado pela preferência!<br>{{ config('app.name') }}</div>
+    <div class="cupom-rodape">Obrigado pela preferência!<br>{{ $nomeLoja }}</div>
 
     <div class="no-print">
         <button type="button" onclick="window.print()">Imprimir na térmica</button>
