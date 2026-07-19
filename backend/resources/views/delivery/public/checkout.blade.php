@@ -72,12 +72,12 @@
             <div id="vf-pay-choices" class="vf-pay-grid">
                 @foreach($formasCheckout as $val => $rotulo)
                     <label class="vf-pay-chip" data-pay-val="{{ $val }}">
-                        <input class="vf-pay-opt" type="radio" name="forma_pagamento" value="{{ $val }}" @checked($loop->first)>
+                        <input class="vf-pay-opt" type="radio" name="forma_pagamento" value="{{ $val }}" required>
                         <span>{{ $rotulo }}</span>
                     </label>
                 @endforeach
             </div>
-            <div id="vf-pay-selected" class="vf-pay-selected is-hidden">
+            <div id="vf-pay-selected" class="vf-pay-selected is-hidden" aria-live="polite">
                 <div class="vf-pay-selected__head">
                     <strong id="vf-pay-selected-label"></strong>
                     <button type="button" class="vf-pay-change" id="vf-pay-change">Alterar forma</button>
@@ -196,41 +196,42 @@
   const fmt = n => n.toFixed(2).replace('.', ',');
   const gv = id => { const e = document.getElementById(id); return e ? (e.value||'').trim() : ''; };
 
-  let payLocked = false;
+  let payChosen = false;
+  const payChoices = document.getElementById('vf-pay-choices');
+  const paySelected = document.getElementById('vf-pay-selected');
+  const paySelectedLabel = document.getElementById('vf-pay-selected-label');
+
   function syncPayExtras(v){
     document.getElementById('vf-pay-dinheiro-extra')?.classList.toggle('is-hidden', v !== DIN);
     document.getElementById('vf-pay-pix-extra')?.classList.toggle('is-hidden', v !== PIX);
     document.getElementById('vf-pay-cartao-hint')?.classList.toggle('is-hidden', !CARTAO.includes(v));
   }
-  function syncPayPanels(){
-    const sel = document.querySelector('.vf-pay-opt:checked');
-    const v = sel ? sel.value : '';
-    const choices = document.getElementById('vf-pay-choices');
-    const selected = document.getElementById('vf-pay-selected');
-    const label = document.getElementById('vf-pay-selected-label');
-    if (payLocked && v && choices && selected) {
-      choices.classList.add('is-hidden');
-      selected.classList.remove('is-hidden');
-      if (label) label.textContent = payLabels[v] || v;
-      syncPayExtras(v);
-    } else if (!payLocked) {
-      selected?.classList.add('is-hidden');
-      choices?.classList.remove('is-hidden');
-    }
+
+  function showOnlyPayment(v){
+    if (!v || !payChoices || !paySelected) return;
+    payChosen = true;
+    payChoices.classList.add('is-hidden');
+    paySelected.classList.remove('is-hidden');
+    if (paySelectedLabel) paySelectedLabel.textContent = payLabels[v] || v;
+    syncPayExtras(v);
+    syncDinheiroModo();
   }
-  function resetPayChoice(){
-    payLocked = false;
-    document.getElementById('vf-pay-choices')?.classList.remove('is-hidden');
-    document.getElementById('vf-pay-selected')?.classList.add('is-hidden');
+
+  function showPaymentPicker(){
+    payChosen = false;
+    payChoices?.classList.remove('is-hidden');
+    paySelected?.classList.add('is-hidden');
     document.querySelectorAll('#vf-pay-panels .pay-extra-panel, #vf-pay-cartao-hint').forEach(el => el.classList.add('is-hidden'));
   }
-  document.querySelectorAll('.vf-pay-opt').forEach(r => r.onchange = () => { payLocked = true; syncPayPanels(); });
-  document.querySelectorAll('.vf-pay-chip').forEach(chip => {
-    chip.addEventListener('click', () => { payLocked = true; setTimeout(syncPayPanels, 0); });
+
+  document.querySelectorAll('.vf-pay-opt').forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (radio.checked) showOnlyPayment(radio.value);
+    });
   });
-  document.getElementById('vf-pay-change')?.addEventListener('click', () => {
-    resetPayChoice();
-    document.querySelector('.vf-pay-opt:checked')?.focus();
+  document.getElementById('vf-pay-change')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showPaymentPicker();
   });
   function syncDinheiroModo(){
     const troco = document.getElementById('din-mod-troco') || document.querySelector('.vf-dinheiro-modo[value=com_troco]');
@@ -303,6 +304,8 @@
     error.textContent = ''; btn.disabled = true;
     try {
       if (document.querySelector('.vf-tipo-entrega:checked')?.value === ENTREGA && entregaBloq) throw new Error('Entrega indisponível para este endereço.');
+      const payRadio = document.querySelector('.vf-pay-opt:checked');
+      if (!payRadio) throw new Error('Escolha uma forma de pagamento.');
       const tipo = document.querySelector('.vf-tipo-entrega:checked')?.value || 'entrega';
       const fulfillment = tipo === 'balcao' ? 'retirada' : 'entrega';
       const body = Object.fromEntries(new FormData(form).entries());

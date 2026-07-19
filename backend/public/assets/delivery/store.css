@@ -604,8 +604,10 @@ input:focus,textarea:focus,select:focus{outline:2px solid #bfdbfe;border-color:v
 .pay-extra-panel--compact h3{margin:0 0 8px;font-size:14px}
 .vf-pay-list{flex-direction:column;align-items:flex-start}
 .vf-pay-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:4px}
-.vf-pay-chip{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #dbeafe;background:#fff;border-radius:.5rem;padding:10px 8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;min-height:44px}
+.vf-pay-grid.is-hidden{display:none!important}
+.vf-pay-chip{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #dbeafe;background:#fff;border-radius:.5rem;padding:10px 8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;min-height:44px;position:relative}
 .vf-pay-chip:has(input:checked){border-color:var(--primary);background:#eff6ff;color:#1d4ed8}
+.vf-pay-grid--single .vf-pay-chip:not(:has(input:checked)){display:none!important}
 .vf-pay-chip input{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
 .vf-pay-selected{border:1px solid #dbeafe;background:#f8fafc;border-radius:.5rem;padding:10px 12px}
 .vf-pay-selected__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
