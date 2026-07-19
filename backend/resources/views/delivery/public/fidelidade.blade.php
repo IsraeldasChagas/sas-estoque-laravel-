@@ -22,11 +22,28 @@
 
     <div class="vf-fidelity-card">
         <h2>Como funciona</h2>
-        <ul>
-            @foreach(($linhas_como_funciona ?? []) as $linha)
+        @php
+            $cf = is_array($linhas_como_funciona ?? null) ? $linhas_como_funciona : [];
+            $regrasCf = $cf['regras'] ?? [];
+            $recTitulo = trim((string) ($cf['recompensa_titulo'] ?? ''));
+            $recLinhas = $cf['recompensa_linhas'] ?? [];
+        @endphp
+        <ul class="vf-fid-como-regras">
+            @foreach($regrasCf as $linha)
                 <li>{{ $linha }}</li>
             @endforeach
         </ul>
+
+        @if(! empty($recLinhas))
+            <div class="vf-fid-como-recompensa" data-tipo="{{ $cf['tipo'] ?? '' }}">
+                <h3 class="vf-fid-como-recompensa__titulo">{{ $recTitulo !== '' ? $recTitulo : 'Recompensa' }}</h3>
+                <ul>
+                    @foreach($recLinhas as $rl)
+                        <li>{{ $rl }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <h2 class="vf-fid-subtitle">Ver meus selos</h2>
 
@@ -142,17 +159,6 @@
                 @endif
                 @if($cheio)
                     <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa.</div>
-                @endif
-                @php $rec = is_array($recompensa_resumo ?? null) ? $recompensa_resumo : []; @endphp
-                @if(! empty($rec['linhas']))
-                    <div class="vf-fid-recompensa">
-                        <h3 class="vf-fid-recompensa__titulo">{{ $rec['titulo'] ?? 'Sua recompensa' }}</h3>
-                        <ul class="vf-fid-recompensa__lista">
-                            @foreach($rec['linhas'] as $rl)
-                                <li>{{ $rl }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
                 @endif
                 <form method="post" action="{{ route('delivery.public.fidelity.logout', $slug) }}" class="vf-fid-form-inline">
                     @csrf

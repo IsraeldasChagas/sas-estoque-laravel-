@@ -23,22 +23,43 @@ class FidelidadeProgramaApresentacaoService
     public const TIPO_CATALOGO = 'catalogo';
 
     /**
-     * @return list<string>
+     * Bloco "Como funciona" da vitrine — regras gerais + recompensa conforme tipo configurado.
+     *
+     * @return array{
+     *   tipo:string,
+     *   regras:list<string>,
+     *   recompensa_titulo:string,
+     *   recompensa_linhas:list<string>
+     * }
      */
-    public function linhasComoFunciona(object $programa, string $nomeUnidade): array
+    public function comoFuncionaVitrine(object $programa, string $nomeUnidade, ?int $contaId = null): array
     {
         $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
         $unidade = trim($nomeUnidade) !== '' ? trim($nomeUnidade) : 'unidade';
+        $resumo = $this->resumoRecompensa($programa, $contaId);
 
-        $linhas = [
-            'A cada reserva de mesa na unidade '.$unidade.', você ganha 1 selo após o pagamento da conta.',
-            'O cartão e os selos pertencem ao cliente que fez a reserva (mesmo telefone, CPF e e-mail informados na reserva).',
-            'O cartão é criado automaticamente pela loja na reserva — não é possível cadastrar por aqui.',
-            'Meta: '.$meta.' selo(s) para resgatar a recompensa.',
-            'Use o mesmo telefone da reserva e confirme com um código de 6 dígitos para consultar seu saldo.',
+        return [
+            'tipo' => $resumo['tipo'],
+            'regras' => [
+                'A cada reserva de mesa na unidade '.$unidade.', você ganha 1 selo após o pagamento da conta.',
+                'O cartão e os selos pertencem ao cliente que fez a reserva (mesmo telefone, CPF e e-mail informados na reserva).',
+                'O cartão é criado automaticamente pela loja na reserva — não é possível cadastrar por aqui.',
+                'Meta: '.$meta.' selo(s) para resgatar a recompensa.',
+                'Use o mesmo telefone da reserva e confirme com um código de 6 dígitos para consultar seu saldo.',
+            ],
+            'recompensa_titulo' => $this->tituloRecompensaVitrine($resumo['tipo']),
+            'recompensa_linhas' => $resumo['linhas'],
         ];
+    }
 
-        foreach ($this->linhasRecompensa($programa) as $linha) {
+    /**
+     * @return list<string>
+     */
+    public function linhasComoFunciona(object $programa, string $nomeUnidade, ?int $contaId = null): array
+    {
+        $bloco = $this->comoFuncionaVitrine($programa, $nomeUnidade, $contaId);
+        $linhas = $bloco['regras'];
+        foreach ($bloco['recompensa_linhas'] as $linha) {
             $linhas[] = $linha;
         }
 
@@ -200,5 +221,16 @@ class FidelidadeProgramaApresentacaoService
     private function valorDesconto(object $programa): float
     {
         return max(0.0, (float) ($programa->valor_desconto ?? 0));
+    }
+
+    private function tituloRecompensaVitrine(string $tipo): string
+    {
+        return match ($tipo) {
+            self::TIPO_DESCONTO_VALOR => 'Desconto na conta',
+            self::TIPO_DESCONTO_PERCENTUAL => 'Desconto percentual',
+            self::TIPO_BRINDE => 'Brinde',
+            self::TIPO_CATALOGO => 'Catálogo de recompensas',
+            default => 'Recompensa',
+        };
     }
 }

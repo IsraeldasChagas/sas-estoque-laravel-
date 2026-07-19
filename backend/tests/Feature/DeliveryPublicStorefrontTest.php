@@ -66,6 +66,35 @@ class DeliveryPublicStorefrontTest extends TestCase
         $this->get("/loja/teste/produto/{$product}")->assertOk()->assertSee('Bacon')->assertSee('Cebola');
     }
 
+    public function test_product_detail_personalizar_usa_stepper_e_limite_configurado(): void
+    {
+        $this->store();
+        $product = $this->product($this->category(), [
+            'permite_adicionais' => true,
+            'acrescimo_escolhas_min' => 3,
+            'acrescimo_escolhas_max' => 3,
+            'acrescimos_loja_ui' => 'stepper',
+            'ingredientes_retirar_ui' => 'stepper',
+            'max_ingredientes_retirar' => 2,
+        ]);
+
+        foreach (['Arroz Paraense', 'Maniçoba com arroz', 'Açaí'] as $i => $nome) {
+            $addition = DB::table('dlv_adicionais')->insertGetId($this->timestamps([
+                'unidade_id' => 1, 'nome' => $nome, 'tipo' => 'acrescentar', 'preco' => 0, 'ativo' => true, 'ordem' => $i,
+            ]));
+            DB::table('dlv_produto_adicional')->insert($this->timestamps(['produto_id' => $product, 'adicional_id' => $addition]));
+        }
+
+        $this->get("/loja/teste/produto/{$product}")
+            ->assertOk()
+            ->assertSee('Personalizar')
+            ->assertSee('Escolha 3 opções: Mínimo: 3 - Máximo: 3')
+            ->assertSee('option-stepper')
+            ->assertSee('data-additional-plus')
+            ->assertSee('0/3 selecionado(s)')
+            ->assertDontSee('Adicionais');
+    }
+
     public function test_checkout_recalculates_totals_decrements_stock_and_secures_tracking(): void
     {
         $this->store();

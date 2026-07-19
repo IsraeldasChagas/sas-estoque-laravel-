@@ -99,9 +99,10 @@ class DeliveryFidelidadePublicController extends Controller
                 $this->nomeUnidade($unidadeFid),
                 $this->contatoLoja($config),
             ),
-            'linhas_como_funciona' => $this->programaApresentacao->linhasComoFunciona(
+            'linhas_como_funciona' => $this->programaApresentacao->comoFuncionaVitrine(
                 $programa,
                 $this->nomeUnidade($unidadeFid),
+                $conta ? (int) $conta->id : null,
             ),
             'recompensa_resumo' => $this->programaApresentacao->resumoRecompensa(
                 $programa,

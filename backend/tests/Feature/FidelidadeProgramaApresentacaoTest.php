@@ -121,8 +121,26 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
             'texto_recompensa' => 'Sobremesa',
         ];
 
-        $linhas = $this->svc->linhasComoFunciona($programa, 'Unidade Centro');
-        $this->assertTrue(collect($linhas)->contains(fn ($l) => str_contains($l, 'cliente que fez a reserva')));
-        $this->assertTrue(collect($linhas)->contains(fn ($l) => str_contains($l, 'Sobremesa')));
+        $bloco = $this->svc->comoFuncionaVitrine($programa, 'Unidade Centro');
+        $this->assertSame('brinde', $bloco['tipo']);
+        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'cliente que fez a reserva')));
+        $this->assertSame('Brinde', $bloco['recompensa_titulo']);
+        $this->assertTrue(collect($bloco['recompensa_linhas'])->contains(fn ($l) => str_contains($l, 'Sobremesa')));
+    }
+
+    public function test_como_funciona_percentual_nao_mostra_texto_produto(): void
+    {
+        $programa = (object) [
+            'tipo_recompensa_padrao' => 'desconto_percentual',
+            'pedidos_meta' => 10,
+            'desconto_percentual' => 12,
+            'texto_recompensa' => 'Isso nao deve aparecer',
+        ];
+
+        $bloco = $this->svc->comoFuncionaVitrine($programa, 'Unidade Centro');
+        $this->assertSame('desconto_percentual', $bloco['tipo']);
+        $this->assertSame('Desconto percentual', $bloco['recompensa_titulo']);
+        $this->assertTrue(collect($bloco['recompensa_linhas'])->contains(fn ($l) => str_contains($l, '12%')));
+        $this->assertFalse(collect($bloco['recompensa_linhas'])->contains(fn ($l) => str_contains($l, 'Isso nao deve aparecer')));
     }
 }
