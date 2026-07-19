@@ -169,6 +169,7 @@
         @if($mostrar_lgpd ?? false)
             <div class="vf-fid-lgpd">
                 <h3>Termo de consentimento (LGPD)</h3>
+                <p class="muted vf-fid-lgpd__contexto">Mesma regra da reserva de mesa e da primeira compra no delivery de <strong>{{ $config->nome_loja ?: 'Loja' }}</strong>: pedimos este aceite só na primeira vez.</p>
                 <div class="vf-fid-lgpd__text">
                     <p>{{ $lgpd_texto ?? '' }}</p>
                     <p class="muted">
@@ -227,7 +228,7 @@
                 <button type="submit" class="btn link">Usar outro telefone</button>
             </form>
         @else
-            <p class="muted">Digite o celular usado na <strong>reserva de mesa</strong> e solicite o código. Sem o código, o saldo não aparece — medida de segurança.</p>
+            <p class="muted">Digite o celular usado na <strong>reserva de mesa</strong> ou na <strong>compra delivery</strong> desta loja e solicite o código. Sem o código, o saldo não aparece — medida de segurança.</p>
             <form method="post" action="{{ route('delivery.public.fidelity.request', $slug) }}" class="vf-fid-form">
                 @csrf
                 <label>Seu celular
@@ -282,7 +283,7 @@
             </form>
         </div>
     @elseif(($lgpd_aceito ?? false) && ($mostrar_progresso_selos ?? false))
-        <div class="vf-fid-alert vf-fid-alert--warn">Ainda não há selos neste telefone. Após a loja confirmar o pagamento da sua reserva de mesa, o selo aparece aqui.</div>
+        <div class="vf-fid-alert vf-fid-alert--warn">Ainda não há selos neste telefone. Após a loja confirmar o pagamento da sua reserva de mesa ou concluir seu pedido delivery nesta unidade, o selo aparece aqui.</div>
     @endif
 
     <p class="vf-fid-back">

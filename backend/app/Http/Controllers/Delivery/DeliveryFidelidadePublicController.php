@@ -114,6 +114,7 @@ class DeliveryFidelidadePublicController extends Controller
                 $this->nomeUnidade($unidadeFid),
                 $conta ? (int) $conta->id : null,
                 $unidadeFidPadrao,
+                trim((string) ($config->nome_loja ?: 'Loja')),
             ),
             'recompensa_resumo' => $this->programaApresentacao->resumoRecompensa(
                 $programa,

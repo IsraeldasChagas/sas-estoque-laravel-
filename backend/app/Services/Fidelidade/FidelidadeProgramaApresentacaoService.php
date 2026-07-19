@@ -40,20 +40,27 @@ class FidelidadeProgramaApresentacaoService
      *   catalogo_produtos:list<array{id:int,nome:string}>
      * }
      */
-    public function comoFuncionaVitrine(object $programa, string $nomeUnidade, ?int $contaId = null, ?int $unidadeFidelidadeContexto = null): array
-    {
+    public function comoFuncionaVitrine(
+        object $programa,
+        string $nomeUnidade,
+        ?int $contaId = null,
+        ?int $unidadeFidelidadeContexto = null,
+        ?string $nomeLoja = null,
+    ): array {
         $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
         $unidade = trim($nomeUnidade) !== '' ? trim($nomeUnidade) : 'unidade';
+        $loja = trim((string) ($nomeLoja ?? '')) !== '' ? trim((string) $nomeLoja) : $unidade;
         $resumo = $this->resumoRecompensa($programa, $contaId, $unidadeFidelidadeContexto);
 
         return [
             'tipo' => $resumo['tipo'],
             'regras' => [
                 'A cada reserva de mesa na unidade '.$unidade.', você ganha 1 selo após o pagamento da conta.',
-                'O cartão e os selos pertencem ao cliente que fez a reserva (mesmo telefone, CPF e e-mail informados na reserva).',
-                'O cartão é criado automaticamente pela loja na reserva — não é possível cadastrar por aqui.',
+                'Compras no delivery da loja '.$loja.' (esta vitrine) também geram 1 selo — na primeira compra pedimos nome, CPF, e-mail, WhatsApp e aceite LGPD, igual à reserva.',
+                'O cartão é criado pela loja na reserva ou ativado na primeira compra delivery — não é possível cadastrar manualmente por aqui.',
+                'O termo LGPD nesta página só aparece na primeira consulta pelo link da reserva ou se você ainda não aceitou na compra delivery.',
                 'Meta: '.$meta.' selo(s) para resgatar a recompensa.',
-                'Use o mesmo telefone da reserva e confirme com um código de 6 dígitos para consultar seu saldo.',
+                'Use o mesmo telefone da reserva ou do pedido delivery e confirme com um código de 6 dígitos para consultar seu saldo.',
             ],
             'recompensa_titulo' => $this->tituloRecompensaVitrine($resumo['tipo']),
             'recompensa_linhas' => $resumo['linhas'],
