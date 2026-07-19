@@ -8079,6 +8079,50 @@ select[size]:not([size="1"]) {
   .reserva-fid__pag-remove { grid-column: 2; justify-self: end; }
 }
 
+.fid-cliente-cell {
+  min-width: 15rem;
+  max-width: 22rem;
+  vertical-align: middle;
+}
+.fid-cliente-info__nome {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+.fid-cliente-info__grid {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+.fid-cliente-info__grid > div {
+  display: grid;
+  grid-template-columns: 4.1rem minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: baseline;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.fid-cliente-info__grid dt {
+  margin: 0;
+  color: #64748b;
+  font-weight: 600;
+}
+.fid-cliente-info__grid dd {
+  margin: 0;
+  color: #334155;
+  word-break: break-word;
+}
+.fid-cliente-info__email {
+  font-size: 0.76rem;
+}
+.fid-codigo {
+  font-size: 0.82rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
 .fid-cartoes-acoes-cell {
   width: 252px;
   min-width: 252px;

@@ -40,6 +40,34 @@
   const value = (form, name) => form.elements[name]?.value ?? "";
   const checked = (form, name) => !!form.elements[name]?.checked;
 
+  function formatCpf(raw) {
+    const d = String(raw || "").replace(/\D/g, "");
+    if (d.length !== 11) return raw ? esc(raw) : "—";
+    return esc(`${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`);
+  }
+
+  function formatTel(raw) {
+    const d = String(raw || "").replace(/\D/g, "");
+    if (d.length === 11) return esc(`(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`);
+    if (d.length === 10) return esc(`(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`);
+    return raw ? esc(raw) : "—";
+  }
+
+  function clienteCell(c) {
+    const nome = esc(c.nome || "Cliente sem nome");
+    const cpf = formatCpf(c.cpf_normalizado);
+    const tel = formatTel(c.telefone_normalizado);
+    const email = c.email ? esc(c.email) : "—";
+    return `<td class="fid-cliente-cell"><div class="fid-cliente-info">
+      <strong class="fid-cliente-info__nome">${nome}</strong>
+      <dl class="fid-cliente-info__grid">
+        <div><dt>CPF</dt><dd>${cpf}</dd></div>
+        <div><dt>Telefone</dt><dd>${tel}</dd></div>
+        <div><dt>E-mail</dt><dd class="fid-cliente-info__email">${email}</dd></div>
+      </dl>
+    </div></td>`;
+  }
+
   async function ensureUnidades() {
     if (state.unidades.length) return state.unidades;
     try {
@@ -155,16 +183,16 @@
         <label>Status<select name="status"><option value="">Todos</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option><option value="bloqueado">Bloqueados</option></select></label>
         <button class="btn secondary" type="submit">Filtrar</button></form>
       <div id="fidCadastroWrap"></div>
-      <div class="orc-table-card"><div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Código</th><th>Contato</th><th>Selos</th><th>Pontos</th><th>Status</th><th>Ações</th></tr></thead>
+      <div class="orc-table-card"><div class="table-scroll"><table><thead><tr><th>Cliente</th><th>Código</th><th>Selos</th><th>Pontos</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="fidCartoesBody">${cardsRows(state.cartoes)}</tbody></table></div></div>`);
     bindUnidadeSelect(loadCartoes);
     bindCartoes();
   }
 
   function cardsRows(items) {
-    if (!items.length) return `<tr><td colspan="7">${empty("Cadastre o primeiro cartão para iniciar o programa.")}</td></tr>`;
-    return items.map((c) => `<tr><td><strong>${esc(c.nome || "Cliente sem nome")}</strong></td><td>${esc(c.codigo_fidelidade)}</td>
-      <td>${esc(c.telefone_normalizado)}<small>${esc(c.email || "")}</small></td><td><strong>${Number(c.saldo_selos || 0)}</strong></td>
+    if (!items.length) return `<tr><td colspan="6">${empty("Cadastre o primeiro cartão para iniciar o programa.")}</td></tr>`;
+    return items.map((c) => `<tr>${clienteCell(c)}<td><code class="fid-codigo">${esc(c.codigo_fidelidade)}</code></td>
+      <td><strong>${Number(c.saldo_selos || 0)}</strong></td>
       <td>${Number(c.saldo_pontos || 0)}</td><td>${badge(c.status)}</td><td class="fid-cartoes-acoes-cell"><div class="fid-cartoes-actions">
       <button type="button" class="fid-act-btn fid-act-btn--primary" data-fid-action="selo" data-id="${c.id}">+ Selo</button>
       <button type="button" class="fid-act-btn fid-act-btn--secondary" data-fid-action="ajuste" data-id="${c.id}">Ajustar</button>
