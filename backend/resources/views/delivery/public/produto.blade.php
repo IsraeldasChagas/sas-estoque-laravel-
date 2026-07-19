@@ -247,11 +247,13 @@
                 <div class="quantity"><button type="button" data-main-minus>−</button><input type="number" value="1" min="1" max="{{ $produto->estoque }}" data-main-qty><button type="button" data-main-plus>+</button></div>
             </div>
             <p class="form-error" data-product-error></p>
-            <button class="btn primary wide" type="submit">Adicionar ao carrinho</button>
-            @if($waLojaUrl)
-                <a class="btn success wide detail-wa-loja" href="{{ $waLojaUrl }}" target="_blank" rel="noopener noreferrer">WhatsApp da loja</a>
-            @endif
-            <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
+            <div class="detail-actions">
+                <button class="btn primary wide" type="submit">Adicionar ao carrinho</button>
+                @if($waLojaUrl)
+                    <a class="btn success wide detail-wa-loja" href="{{ $waLojaUrl }}" target="_blank" rel="noopener noreferrer">WhatsApp da loja</a>
+                @endif
+                <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
+            </div>
         </form>
         @else
             <a class="btn ghost wide" href="{{ route('delivery.public.store', $slug) }}">← Voltar ao cardápio</a>
