@@ -27,25 +27,158 @@ final class FidelidadeCatalogoConsultaService
             return null;
         }
 
-        $loja = DB::table('dlv_loja_config')
+        if (Schema::hasColumn('dlv_loja_config', 'unidade_fidelidade_id')) {
+            $porFidelidade = DB::table('dlv_loja_config')
+                ->where('unidade_fidelidade_id', $unidadeFidelidadeId)
+                ->where('ativo', 1)
+                ->orderBy('id')
+                ->first();
+            if ($porFidelidade) {
+                return $porFidelidade;
+            }
+        }
+
+        return DB::table('dlv_loja_config')
             ->where('unidade_id', $unidadeFidelidadeId)
             ->orderByDesc('ativo')
             ->orderBy('id')
             ->first();
+    }
 
-        if ($loja) {
-            return $loja;
+    /**
+     * Unidade onde o programa de fidelidade deve ser gravado/consultado.
+     * Se a unidade informada for a do Delivery com unidade_fidelidade_id, usa a de fidelidade.
+     */
+    public function unidadeFidelidadeCanonica(int $unidadeId): int
+    {
+        if ($unidadeId <= 0 || ! Schema::hasTable('dlv_loja_config')) {
+            return $unidadeId;
         }
 
         if (! Schema::hasColumn('dlv_loja_config', 'unidade_fidelidade_id')) {
+            return $unidadeId;
+        }
+
+        $loja = DB::table('dlv_loja_config')
+            ->where('unidade_id', $unidadeId)
+            ->orderByDesc('ativo')
+            ->orderBy('id')
+            ->first();
+
+        $fid = (int) ($loja->unidade_fidelidade_id ?? 0);
+        if ($loja && $fid > 0 && $fid !== $unidadeId) {
+            return $fid;
+        }
+
+        return $unidadeId;
+    }
+
+    /**
+     * Mescla catálogo (consulta) entre programa da unidade fidelidade e da loja Delivery.
+     */
+    public function mesclarProgramaVitrine(?object $programaFidelidade, ?object $programaDelivery): ?object
+    {
+        $base = $programaFidelidade ?? $programaDelivery;
+        if (! $base) {
             return null;
         }
 
-        return DB::table('dlv_loja_config')
-            ->where('unidade_fidelidade_id', $unidadeFidelidadeId)
-            ->where('ativo', 1)
-            ->orderBy('id')
-            ->first();
+        $fonteCatalogo = $this->fonteCatalogoConsulta($programaFidelidade, $programaDelivery);
+        if (! $fonteCatalogo || $fonteCatalogo === $base) {
+            return $base;
+        }
+
+        $mesclado = clone $base;
+        if ($this->colunasDisponiveis()) {
+            $mesclado->catalogo_qtd_escolhas = $fonteCatalogo->catalogo_qtd_escolhas ?? $base->catalogo_qtd_escolhas ?? null;
+            $mesclado->catalogo_produtos_json = $fonteCatalogo->catalogo_produtos_json ?? $base->catalogo_produtos_json ?? null;
+        }
+        $tipoFonte = (string) ($fonteCatalogo->tipo_recompensa_padrao ?? '');
+        if (in_array($tipoFonte, ['catalogo_consulta', 'produto'], true)) {
+            $mesclado->tipo_recompensa_padrao = 'catalogo_consulta';
+        }
+
+        return $mesclado;
+    }
+
+    /**
+     * @return list<array{id:int,nome:string,preco?:float}>
+     */
+    public function produtosDoPrograma(object $programa, ?int $unidadeFidelidadeContexto = null): array
+    {
+        $unidadeId = $unidadeFidelidadeContexto > 0
+            ? $unidadeFidelidadeContexto
+            : (int) ($programa->unidade_id ?? 0);
+        $itens = $this->decodificarProdutosJson($programa->catalogo_produtos_json ?? null);
+        if ($itens === [] && $unidadeId > 0) {
+            return [];
+        }
+
+        return $this->hydrateProdutos($unidadeId, $itens);
+    }
+
+    /**
+     * @param  list<array{id:int,nome?:string,preco?:float}>  $itens
+     * @return list<array{id:int,nome:string,preco?:float}>
+     */
+    public function hydrateProdutos(int $unidadeFidelidadeId, array $itens): array
+    {
+        if ($itens === []) {
+            return [];
+        }
+
+        $map = collect($this->produtosAtivos($unidadeFidelidadeId))->keyBy('id');
+        $out = [];
+        foreach ($itens as $item) {
+            $id = (int) ($item['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $live = $map->get($id);
+            $nome = trim((string) ($live['nome'] ?? $item['nome'] ?? ''));
+            if ($nome === '') {
+                continue;
+            }
+            $row = ['id' => $id, 'nome' => $nome];
+            if ($live !== null) {
+                $row['preco'] = (float) $live['preco'];
+            } elseif (array_key_exists('preco', $item)) {
+                $row['preco'] = (float) $item['preco'];
+            }
+            $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    private function fonteCatalogoConsulta(?object $programaFidelidade, ?object $programaDelivery): ?object
+    {
+        $candidatos = array_filter([$programaFidelidade, $programaDelivery]);
+        $melhor = null;
+        $melhorScore = -1;
+        foreach ($candidatos as $programa) {
+            $score = $this->scoreCatalogoConsulta($programa);
+            if ($score > $melhorScore) {
+                $melhorScore = $score;
+                $melhor = $programa;
+            }
+        }
+
+        return $melhorScore > 0 ? $melhor : null;
+    }
+
+    private function scoreCatalogoConsulta(?object $programa): int
+    {
+        if (! $programa) {
+            return 0;
+        }
+        $tipo = (string) ($programa->tipo_recompensa_padrao ?? '');
+        if (! in_array($tipo, ['catalogo_consulta', 'produto'], true)) {
+            return 0;
+        }
+        $produtos = $this->decodificarProdutosJson($programa->catalogo_produtos_json ?? null);
+
+        return count($produtos) > 0 ? 10 + count($produtos) : 0;
     }
 
     /**
@@ -127,11 +260,14 @@ final class FidelidadeCatalogoConsultaService
                 continue;
             }
             $id = (int) ($item['id'] ?? 0);
-            $nome = trim((string) ($item['nome'] ?? ''));
-            if ($id <= 0 || $nome === '') {
+            if ($id <= 0) {
                 continue;
             }
-            $row = ['id' => $id, 'nome' => $nome];
+            $nome = trim((string) ($item['nome'] ?? ''));
+            $row = ['id' => $id];
+            if ($nome !== '') {
+                $row['nome'] = $nome;
+            }
             if (array_key_exists('preco', $item)) {
                 $row['preco'] = (float) $item['preco'];
             }

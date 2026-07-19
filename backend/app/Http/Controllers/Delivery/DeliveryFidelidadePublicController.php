@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Delivery;
 
 use App\Http\Controllers\Controller;
+use App\Services\Fidelidade\FidelidadeCatalogoConsultaService;
 use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadeNormalizer;
 use App\Services\Fidelidade\FidelidadeProgramaApresentacaoService;
@@ -40,6 +41,7 @@ class DeliveryFidelidadePublicController extends Controller
         private FidelidadePublicOtpEntrega $otpEntrega,
         private FidelidadePublicConsultaService $consulta,
         private FidelidadeProgramaApresentacaoService $programaApresentacao,
+        private FidelidadeCatalogoConsultaService $catalogoConsulta,
     ) {}
 
     public function show(string $slug): View
@@ -47,7 +49,7 @@ class DeliveryFidelidadePublicController extends Controller
         $config = $this->config($slug);
         $unidadeVitrine = (int) $config->unidade_id;
         $unidadeFidPadrao = $this->consulta->unidadeFidelidade($config);
-        $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
+        $programa = $this->programaParaVitrine($config);
         abort_unless($programa, 404);
 
         $lgpdAceito = $this->lgpdAceitoNaSessao($unidadeVitrine);
@@ -70,7 +72,7 @@ class DeliveryFidelidadePublicController extends Controller
             }
             if ($conta) {
                 $unidadeFid = (int) $conta->unidade_id;
-                $programa = $this->programaAtivo($unidadeFid) ?? $programa;
+                $programa = $this->programaParaVitrine($config, $unidadeFid) ?? $programa;
                 $mostrarProgresso = true;
             } else {
                 $this->limparSessaoConsulta($unidadeVitrine);
@@ -103,10 +105,12 @@ class DeliveryFidelidadePublicController extends Controller
                 $programa,
                 $this->nomeUnidade($unidadeFid),
                 $conta ? (int) $conta->id : null,
+                $unidadeFidPadrao,
             ),
             'recompensa_resumo' => $this->programaApresentacao->resumoRecompensa(
                 $programa,
                 $conta ? (int) $conta->id : null,
+                $unidadeFidPadrao,
             ),
         ]);
     }
@@ -116,7 +120,7 @@ class DeliveryFidelidadePublicController extends Controller
         $config = $this->config($slug);
         $unidadeVitrine = (int) $config->unidade_id;
         $unidadeFidPadrao = $this->consulta->unidadeFidelidade($config);
-        $programa = $this->programaAtivo($unidadeFidPadrao) ?? $this->programaAtivo($unidadeVitrine);
+        $programa = $this->programaParaVitrine($config);
         abort_unless($programa, 404);
 
         $nomeUnidade = $this->nomeUnidade($unidadeFidPadrao);
@@ -604,6 +608,19 @@ class DeliveryFidelidadePublicController extends Controller
         }
 
         return DB::table('fid_programas')->where('unidade_id', $unidadeId)->where('ativo', 1)->first();
+    }
+
+    private function programaParaVitrine(object $config, ?int $unidadeConta = null): ?object
+    {
+        $unidadeVitrine = (int) $config->unidade_id;
+        $unidadeFid = $unidadeConta > 0
+            ? $unidadeConta
+            : $this->consulta->unidadeFidelidade($config);
+
+        $progFid = $this->programaAtivo($unidadeFid);
+        $progDelivery = $unidadeVitrine !== $unidadeFid ? $this->programaAtivo($unidadeVitrine) : null;
+
+        return $this->catalogoConsulta->mesclarProgramaVitrine($progFid, $progDelivery);
     }
 
     private function config(string $slug): object

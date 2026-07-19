@@ -50,6 +50,9 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $catalogoMigration = require database_path('migrations/2026_07_19_180000_add_catalogo_consulta_to_fid_programas.php');
         $catalogoMigration->up();
 
+        $unidadeFidMigration = require database_path('migrations/2026_07_18_180000_add_unidade_fidelidade_id_to_dlv_loja_config.php');
+        $unidadeFidMigration->up();
+
         $this->unidadeId = (int) DB::table('unidades')->insertGetId([
             'nome' => 'Unidade Vitrine',
             'created_at' => now(),
@@ -117,11 +120,70 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Catálogo (consulta)')
+            ->assertSee('Forma de recompensa')
             ->assertSee('escolha até')
             ->assertSee('3')
             ->assertSee('Tacacá')
             ->assertSee('Açaí 500ml')
             ->assertSee('Pode repetir o mesmo produto');
+    }
+
+    public function test_vitrine_usa_catalogo_salvo_na_unidade_delivery_quando_fidelidade_esta_vazia(): void
+    {
+        $unidadeFid = $this->unidadeId + 100;
+        DB::table('unidades')->insert([
+            'id' => $unidadeFid,
+            'nome' => 'Unidade Fidelidade Vitrine',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('dlv_loja_config')->where('slug', $this->slug)->update([
+            'unidade_fidelidade_id' => $unidadeFid,
+        ]);
+
+        DB::table('fid_programas')->insert([
+            [
+                'unidade_id' => $unidadeFid,
+                'ativo' => 1,
+                'nome_exibicao' => 'Cartão fidelidade reserva',
+                'modo' => 'selos',
+                'pedidos_meta' => 10,
+                'pontos_por_selo' => 1,
+                'tipo_recompensa_padrao' => 'catalogo_consulta',
+                'catalogo_qtd_escolhas' => 1,
+                'catalogo_produtos_json' => null,
+                'permite_ajuste_manual' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'unidade_id' => $this->unidadeId,
+                'ativo' => 1,
+                'nome_exibicao' => 'Cartão delivery',
+                'modo' => 'selos',
+                'pedidos_meta' => 10,
+                'pontos_por_selo' => 1,
+                'tipo_recompensa_padrao' => 'catalogo_consulta',
+                'catalogo_qtd_escolhas' => 2,
+                'catalogo_produtos_json' => json_encode([
+                    ['id' => 10, 'nome' => 'Maracujá 300 ml'],
+                    ['id' => 11, 'nome' => 'Menu Degustação Pavulagem 3 Opções'],
+                ], JSON_UNESCAPED_UNICODE),
+                'permite_ajuste_manual' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->aceitarLgpd();
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Maracujá 300 ml')
+            ->assertSee('Menu Degustação Pavulagem 3 Opções')
+            ->assertSee('escolha até')
+            ->assertSee('2');
     }
 
     private function seedPrograma(string $tipo, array $extra = []): void

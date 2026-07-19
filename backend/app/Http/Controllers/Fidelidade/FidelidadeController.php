@@ -38,6 +38,7 @@ class FidelidadeController extends Controller
         $this->verificarTabelas();
         $unidadeId = $this->resolverUnidade($usuario, $request);
         abort_unless($unidadeId, 422, 'unidade_id obrigatório.');
+        $unidadeId = $this->catalogoConsulta->unidadeFidelidadeCanonica($unidadeId);
 
         $programa = DB::table('fid_programas')->where('unidade_id', $unidadeId)->first();
 
@@ -53,6 +54,7 @@ class FidelidadeController extends Controller
         $this->verificarTabelas();
         $unidadeId = $this->resolverUnidade($usuario, $request);
         abort_unless($unidadeId, 422, 'unidade_id obrigatório.');
+        $unidadeId = $this->catalogoConsulta->unidadeFidelidadeCanonica($unidadeId);
 
         $loja = $this->catalogoConsulta->lojaVinculada($unidadeId);
         $deliveryUnidadeId = $this->catalogoConsulta->unidadeDeliveryParaFidelidade($unidadeId);
@@ -75,6 +77,7 @@ class FidelidadeController extends Controller
         $this->verificarTabelas();
         $unidadeId = $this->resolverUnidade($usuario, $request, true);
         abort_unless($unidadeId, 422, 'unidade_id obrigatório.');
+        $unidadeId = $this->catalogoConsulta->unidadeFidelidadeCanonica($unidadeId);
 
         $data = Validator::make($request->all(), [
             'ativo' => 'sometimes|boolean',

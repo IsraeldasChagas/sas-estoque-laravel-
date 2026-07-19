@@ -24,6 +24,10 @@ class FidelidadeProgramaApresentacaoService
 
     public const TIPO_CATALOGO_CONSULTA = 'catalogo_consulta';
 
+    public function __construct(
+        private FidelidadeCatalogoConsultaService $catalogoConsulta,
+    ) {}
+
     /**
      * Bloco "Como funciona" da vitrine — regras gerais + recompensa conforme tipo configurado.
      *
@@ -36,11 +40,11 @@ class FidelidadeProgramaApresentacaoService
      *   catalogo_produtos:list<array{id:int,nome:string}>
      * }
      */
-    public function comoFuncionaVitrine(object $programa, string $nomeUnidade, ?int $contaId = null): array
+    public function comoFuncionaVitrine(object $programa, string $nomeUnidade, ?int $contaId = null, ?int $unidadeFidelidadeContexto = null): array
     {
         $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
         $unidade = trim($nomeUnidade) !== '' ? trim($nomeUnidade) : 'unidade';
-        $resumo = $this->resumoRecompensa($programa, $contaId);
+        $resumo = $this->resumoRecompensa($programa, $contaId, $unidadeFidelidadeContexto);
 
         return [
             'tipo' => $resumo['tipo'],
@@ -75,7 +79,7 @@ class FidelidadeProgramaApresentacaoService
     /**
      * @return list<string>
      */
-    public function linhasRecompensa(object $programa, ?int $contaId = null): array
+    public function linhasRecompensa(object $programa, ?int $contaId = null, ?int $unidadeFidelidadeContexto = null): array
     {
         $tipo = (string) ($programa->tipo_recompensa_padrao ?? self::TIPO_CATALOGO_CONSULTA);
         if ($tipo === self::TIPO_PRODUTO) {
@@ -88,7 +92,7 @@ class FidelidadeProgramaApresentacaoService
             self::TIPO_DESCONTO_VALOR => $this->linhasDescontoValor($programa),
             self::TIPO_DESCONTO_PERCENTUAL => $this->linhasDescontoPercentual($programa, $meta, $contaId),
             self::TIPO_CATALOGO => ['Recompensa: escolha entre as opções do catálogo ao resgatar na loja.'],
-            self::TIPO_CATALOGO_CONSULTA => $this->linhasCatalogoConsulta($programa),
+            self::TIPO_CATALOGO_CONSULTA => $this->linhasCatalogoConsulta($programa, $unidadeFidelidadeContexto),
             self::TIPO_BRINDE => $texto !== ''
                 ? ['Brinde ao completar a meta: '.$texto]
                 : ['Brinde ao completar a meta — a loja informará o item na hora do resgate.'],
@@ -111,14 +115,14 @@ class FidelidadeProgramaApresentacaoService
      *   catalogo_produtos:list<array{id:int,nome:string}>
      * }
      */
-    public function resumoRecompensa(object $programa, ?int $contaId = null): array
+    public function resumoRecompensa(object $programa, ?int $contaId = null, ?int $unidadeFidelidadeContexto = null): array
     {
         $tipo = (string) ($programa->tipo_recompensa_padrao ?? self::TIPO_CATALOGO_CONSULTA);
         if ($tipo === self::TIPO_PRODUTO) {
             $tipo = self::TIPO_CATALOGO_CONSULTA;
         }
         $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
-        $linhas = $this->linhasRecompensa($programa, $contaId);
+        $linhas = $this->linhasRecompensa($programa, $contaId, $unidadeFidelidadeContexto);
         $gasto = null;
         $descontoEstimado = null;
         $pct = $this->percentual($programa);
@@ -128,7 +132,7 @@ class FidelidadeProgramaApresentacaoService
 
         if ($tipo === self::TIPO_CATALOGO_CONSULTA) {
             $catalogoQtd = max(1, (int) ($programa->catalogo_qtd_escolhas ?? 1));
-            $catalogoProdutos = $this->produtosCatalogoConsulta($programa);
+            $catalogoProdutos = $this->produtosCatalogoConsulta($programa, $unidadeFidelidadeContexto);
         }
 
         if ($tipo === self::TIPO_DESCONTO_PERCENTUAL && $contaId > 0 && $pct > 0) {
@@ -249,10 +253,10 @@ class FidelidadeProgramaApresentacaoService
     }
 
     /** @return list<string> */
-    private function linhasCatalogoConsulta(object $programa): array
+    private function linhasCatalogoConsulta(object $programa, ?int $unidadeFidelidadeContexto = null): array
     {
         $qtd = max(1, (int) ($programa->catalogo_qtd_escolhas ?? 1));
-        $produtos = $this->produtosCatalogoConsulta($programa);
+        $produtos = $this->produtosCatalogoConsulta($programa, $unidadeFidelidadeContexto);
         $nomes = array_values(array_filter(array_map(
             fn ($item) => trim((string) ($item['nome'] ?? '')),
             $produtos
@@ -260,13 +264,12 @@ class FidelidadeProgramaApresentacaoService
 
         if ($nomes === []) {
             return [
-                'Ao completar a meta, escolha até '.$qtd.' produto(s) entre as opções do cardápio configuradas pela loja.',
-                'Peça à loja para conferir se os produtos da recompensa já foram salvos no programa de fidelidade.',
+                'Forma de recompensa: Catálogo (consulta) — escolha até '.$qtd.' item(ns) entre os produtos do cardápio listados abaixo.',
             ];
         }
 
         $linhas = [
-            'Ao completar a meta, escolha até '.$qtd.' produto(s) entre:',
+            'Forma de recompensa: Catálogo (consulta) — ao completar a meta, escolha até '.$qtd.' item(ns) entre:',
         ];
         foreach ($nomes as $nome) {
             $linhas[] = $nome;
@@ -278,34 +281,14 @@ class FidelidadeProgramaApresentacaoService
         return $linhas;
     }
 
-    /** @return list<array{id:int,nome:string}> */
-    private function produtosCatalogoConsulta(object $programa): array
+    /** @return list<array{id:int,nome:string,preco?:float}> */
+    private function produtosCatalogoConsulta(object $programa, ?int $unidadeFidelidadeContexto = null): array
     {
-        $json = $programa->catalogo_produtos_json ?? null;
-        if ($json === null || $json === '') {
-            return [];
-        }
-        if (is_string($json)) {
-            $json = json_decode($json, true);
-        }
-        if (! is_array($json)) {
-            return [];
-        }
+        $contexto = $unidadeFidelidadeContexto > 0
+            ? $unidadeFidelidadeContexto
+            : $this->catalogoConsulta->unidadeFidelidadeCanonica((int) ($programa->unidade_id ?? 0));
 
-        $out = [];
-        foreach ($json as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-            $id = (int) ($item['id'] ?? 0);
-            $nome = trim((string) ($item['nome'] ?? ''));
-            if ($id <= 0 || $nome === '') {
-                continue;
-            }
-            $out[] = ['id' => $id, 'nome' => $nome];
-        }
-
-        return $out;
+        return $this->catalogoConsulta->produtosDoPrograma($programa, $contexto);
     }
 
     private function tituloRecompensaVitrine(string $tipo): string

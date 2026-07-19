@@ -44,8 +44,9 @@
 
                 @if($catalogoComProdutos)
                     <p class="vf-fid-catalogo-intro">
-                        Ao completar a meta, escolha até <strong>{{ $catalogoQtd }}</strong>
-                        {{ $catalogoQtd === 1 ? 'produto' : 'produtos' }} entre:
+                        <strong>Forma de recompensa:</strong> Catálogo (consulta) — ao completar a meta, escolha até
+                        <strong>{{ $catalogoQtd }}</strong>
+                        {{ $catalogoQtd === 1 ? 'item' : 'itens' }} entre os produtos abaixo:
                     </p>
                     @if($catalogoQtd > 1)
                         <p class="vf-fid-catalogo-nota muted">Pode repetir o mesmo produto até atingir o limite.</p>
