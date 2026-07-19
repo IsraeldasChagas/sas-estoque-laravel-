@@ -12,9 +12,12 @@ final class DeliveryLojaCheckoutHelper
 
     public const PAGAMENTO_DINHEIRO = 'dinheiro';
 
+    public const PAGAMENTO_CARTAO_ONLINE = 'cartao_online';
+
     /** @var array<string, string> */
     public const FORMAS_ROTULOS = [
         self::PAGAMENTO_PIX => 'PIX',
+        self::PAGAMENTO_CARTAO_ONLINE => 'Cartão online',
         self::PAGAMENTO_CARTAO_CREDITO => 'Cartão de crédito (na maquininha)',
         self::PAGAMENTO_CARTAO_DEBITO => 'Cartão de débito (na maquininha)',
         self::PAGAMENTO_DINHEIRO => 'Dinheiro',
@@ -26,16 +29,40 @@ final class DeliveryLojaCheckoutHelper
     /** @return array<string, string> */
     public static function formasPagamentoLojaPublica(object $config): array
     {
-        $opcoes = collect(self::FORMAS_ROTULOS)
-            ->only([
-                self::PAGAMENTO_PIX,
+        $habilitadas = collect(explode(',', strtolower((string) ($config->formas_pagamento ?? 'pix,cartao_credito,cartao_debito,dinheiro'))))
+            ->map(fn ($f) => trim($f))
+            ->filter()
+            ->values();
+
+        $opcoes = collect(self::FORMAS_ROTULOS)->only([
+            self::PAGAMENTO_PIX,
+            self::PAGAMENTO_CARTAO_CREDITO,
+            self::PAGAMENTO_CARTAO_DEBITO,
+            self::PAGAMENTO_DINHEIRO,
+        ]);
+
+        if ($habilitadas->contains('cartao')) {
+            $opcoes = $opcoes->merge(collect(self::FORMAS_ROTULOS)->only(['cartao_credito', 'cartao_debito']));
+        }
+
+        if (DeliveryGatewayConfig::pagamentoOnlineAtivo($config) && $habilitadas->contains(self::PAGAMENTO_CARTAO_ONLINE)) {
+            $opcoes[self::PAGAMENTO_CARTAO_ONLINE] = self::FORMAS_ROTULOS[self::PAGAMENTO_CARTAO_ONLINE];
+        }
+
+        if (self::pixConfiguradaParaCheckout($config) && $habilitadas->contains(self::PAGAMENTO_PIX)) {
+            $opcoes[self::PAGAMENTO_PIX] = self::FORMAS_ROTULOS[self::PAGAMENTO_PIX];
+        } else {
+            $opcoes = $opcoes->except([self::PAGAMENTO_PIX]);
+        }
+
+        $opcoes = $opcoes->only($habilitadas->merge(['cartao_credito', 'cartao_debito', 'pix', 'dinheiro', self::PAGAMENTO_CARTAO_ONLINE])->unique()->all());
+
+        if ($opcoes->isEmpty()) {
+            return collect(self::FORMAS_ROTULOS)->only([
                 self::PAGAMENTO_CARTAO_CREDITO,
                 self::PAGAMENTO_CARTAO_DEBITO,
                 self::PAGAMENTO_DINHEIRO,
-            ]);
-
-        if (! self::pixConfiguradaParaCheckout($config)) {
-            $opcoes = $opcoes->except([self::PAGAMENTO_PIX]);
+            ])->all();
         }
 
         return $opcoes->all();
@@ -43,6 +70,10 @@ final class DeliveryLojaCheckoutHelper
 
     public static function pixConfiguradaParaCheckout(object $config): bool
     {
+        if (DeliveryGatewayConfig::usaPixAutomatico($config)) {
+            return true;
+        }
+
         $instrucoes = trim((string) ($config->pix_instrucoes ?? ''));
         $copia = trim((string) ($config->pix_copia_cola ?? ''));
         $chave = trim((string) ($config->pix_chave ?? ''));

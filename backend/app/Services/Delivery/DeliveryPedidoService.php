@@ -253,6 +253,53 @@ class DeliveryPedidoService
         return DB::table('dlv_pedidos')->where('id', $pedido->id)->first();
     }
 
+    public function confirmarPagamentoPix(object $pedido, ?int $usuarioId, string $origem = 'operador'): object
+    {
+        if (! DeliveryPedidoPresenter::isPix($pedido)) {
+            throw ValidationException::withMessages(['pagamento' => 'Este pedido não é PIX.']);
+        }
+        if (DeliveryPedidoPresenter::isPixPago($pedido)) {
+            throw ValidationException::withMessages(['pagamento' => 'Pagamento PIX já confirmado para este pedido.']);
+        }
+
+        $agora = now();
+        $update = [
+            'pagamento_status' => DeliveryPedidoPresenter::PAGAMENTO_STATUS_PAGO,
+            'updated_at' => $agora,
+        ];
+        if (Schema::hasColumn('dlv_pedidos', 'pagamento_confirmado_em')) {
+            $update['pagamento_confirmado_em'] = $agora;
+        }
+        if (Schema::hasColumn('dlv_pedidos', 'pagamento_confirmado_origem')) {
+            $update['pagamento_confirmado_origem'] = in_array($origem, ['operador', 'webhook', 'manual'], true) ? $origem : 'operador';
+        }
+        if (Schema::hasColumn('dlv_pedidos', 'pagamento_gateway_status')) {
+            $update['pagamento_gateway_status'] = 'approved';
+        }
+        DB::table('dlv_pedidos')->where('id', $pedido->id)->update($update);
+        $this->registrarHistorico(
+            (int) $pedido->id,
+            (string) ($pedido->pagamento_status ?? DeliveryPedidoPresenter::PAGAMENTO_STATUS_PENDENTE),
+            DeliveryPedidoPresenter::PAGAMENTO_STATUS_PAGO,
+            'pagamento_confirmado',
+            ['forma' => DeliveryPedidoPresenter::PAGAMENTO_PIX, 'origem' => $origem],
+            $usuarioId
+        );
+
+        return DB::table('dlv_pedidos')->where('id', $pedido->id)->first();
+    }
+
+    public function validarAceitePix(object $pedido, ?object $config): void
+    {
+        if (! DeliveryPedidoPresenter::bloqueiaAceitePorPix($pedido, $config)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'pagamento' => 'Confirme o pagamento PIX antes de aceitar o pedido.',
+        ]);
+    }
+
     public function completo(object $pedido): array
     {
         $itens = DB::table('dlv_pedido_itens')->where('pedido_id', $pedido->id)->orderBy('ordem')->orderBy('id')->get()
@@ -319,8 +366,12 @@ class DeliveryPedidoService
             ],
             'pagamento_forma' => $pedido->pagamento_forma,
             'pagamento_status' => $pedido->pagamento_status,
+            'pagamento_confirmado_em' => $pedido->pagamento_confirmado_em ?? null,
             'pagamento_troco_para' => isset($pedido->pagamento_troco_para) ? (float) $pedido->pagamento_troco_para : null,
             'pagamento_descricao' => DeliveryPedidoPresenter::descricaoPagamento($pedido),
+            'pagamento_status_rotulo' => DeliveryPedidoPresenter::rotuloPagamentoStatus($pedido),
+            'pix_pendente' => DeliveryPedidoPresenter::pixPendenteConfirmacao($pedido),
+            'pix_pago' => DeliveryPedidoPresenter::isPixPago($pedido),
             'subtotal' => (float) $pedido->subtotal,
             'frete_valor' => (float) $pedido->frete_valor,
             'total' => (float) $pedido->total,
@@ -378,6 +429,9 @@ class DeliveryPedidoService
             'loja_slug' => $slug !== '' ? $slug : null,
             'loja_nome' => $config->nome_loja ?? null,
             'confirmar_pedidos' => (bool) ($config->confirmar_pedidos ?? true),
+            'exigir_pix_confirmado' => DeliveryPedidoPresenter::exigirPixConfirmado($config),
+            'pagamento_bloqueia_aceite' => DeliveryPedidoPresenter::bloqueiaAceitePorPix($pedido, $config),
+            'pode_confirmar_pix' => DeliveryPedidoPresenter::pixPendenteConfirmacao($pedido),
             'impressao_habilitada' => true,
             'url_imprimir' => '/delivery/pedidos/'.(int) $pedido->id.'/imprimir',
             'url_entregador' => $urlEntregador,

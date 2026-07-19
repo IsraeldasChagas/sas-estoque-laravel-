@@ -16,6 +16,12 @@ final class DeliveryPedidoPresenter
         'endereco_nao_encontrado' => 'Endereço não encontrado',
     ];
 
+    public const PAGAMENTO_PIX = 'pix';
+
+    public const PAGAMENTO_STATUS_PENDENTE = 'pendente';
+
+    public const PAGAMENTO_STATUS_PAGO = 'pago';
+
     /** @var array<string, string> */
     public const PAGAMENTO_ROTULOS = [
         'pix' => 'PIX',
@@ -111,6 +117,63 @@ final class DeliveryPedidoPresenter
         $status = strtolower(trim((string) $status));
 
         return in_array($status, ['pronto', 'rota'], true);
+    }
+
+    public static function normalizarCodigoPublico(string $codigo): string
+    {
+        $codigo = strtoupper(trim($codigo));
+
+        return ltrim($codigo, '#');
+    }
+
+    public static function codigoPublicoConfere(string $informado, string $esperado): bool
+    {
+        $a = self::normalizarCodigoPublico($informado);
+        $b = self::normalizarCodigoPublico($esperado);
+
+        return $a !== '' && hash_equals($b, $a);
+    }
+
+    public static function isPix(object $pedido): bool
+    {
+        return strtolower(trim((string) ($pedido->pagamento_forma ?? ''))) === self::PAGAMENTO_PIX;
+    }
+
+    public static function isPixPago(object $pedido): bool
+    {
+        if (! self::isPix($pedido)) {
+            return false;
+        }
+
+        return strtolower(trim((string) ($pedido->pagamento_status ?? ''))) === self::PAGAMENTO_STATUS_PAGO;
+    }
+
+    public static function pixPendenteConfirmacao(object $pedido): bool
+    {
+        return self::isPix($pedido) && ! self::isPixPago($pedido);
+    }
+
+    public static function rotuloPagamentoStatus(?object $pedido): ?string
+    {
+        if ($pedido === null || ! self::isPix($pedido)) {
+            return null;
+        }
+
+        return self::isPixPago($pedido) ? 'PIX confirmado' : 'PIX pendente';
+    }
+
+    public static function exigirPixConfirmado(object $config): bool
+    {
+        return (bool) ($config->exigir_pix_confirmado ?? false);
+    }
+
+    public static function bloqueiaAceitePorPix(object $pedido, ?object $config): bool
+    {
+        if ($config === null || ! self::exigirPixConfirmado($config)) {
+            return false;
+        }
+
+        return self::pixPendenteConfirmacao($pedido);
     }
 
     public static function logoUrl(?object $config): ?string

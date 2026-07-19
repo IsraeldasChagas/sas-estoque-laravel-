@@ -79,6 +79,20 @@
 .vf-bs-badge--info { background: #e0f2fe; color: #0369a1; }
 .vf-bs-badge--secondary { background: #f3f4f6; color: #4b5563; }
 
+.vf-pix-badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 3px 8px;
+}
+.vf-pix-badge--warn { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.vf-pix-badge--ok { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.vf-order-pix-badge { margin-top: 6px; }
+.vf-show-main-head .vf-pix-badge { margin-left: 8px; vertical-align: middle; }
+.vf-show-btn:disabled { cursor: not-allowed; opacity: .55; }
+
 .vf-orders__breadcrumb {
   align-items: center;
   color: #98a1aa;

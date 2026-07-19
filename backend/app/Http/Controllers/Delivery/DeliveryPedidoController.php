@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Support\Delivery\DeliveryPedidoPresenter;
 use App\Support\Delivery\DeliveryWhatsAppAvisoStatus;
 use App\Services\Delivery\DeliveryAccessService;
 use App\Services\Delivery\DeliveryPedidoService;
@@ -41,9 +42,16 @@ class DeliveryPedidoController extends DeliveryBaseController
 
         $limit = max(1, min(200, (int) $request->query('limit', 100)));
         $rows = $query->orderByDesc('id')->limit($limit)->get();
+        $configs = DB::table('dlv_loja_config')
+            ->whereIn('unidade_id', $rows->pluck('unidade_id')->unique()->filter()->values())
+            ->get()
+            ->keyBy('unidade_id');
 
         return response()->json([
-            'items' => $rows->map(fn ($row) => [
+            'items' => $rows->map(function ($row) use ($configs) {
+                $config = $configs->get($row->unidade_id);
+
+                return [
                 'id' => (int) $row->id,
                 'unidade_id' => (int) $row->unidade_id,
                 'codigo_publico' => (string) $row->codigo_publico,
@@ -51,11 +59,17 @@ class DeliveryPedidoController extends DeliveryBaseController
                 'canal' => (string) $row->canal,
                 'fulfillment' => (string) $row->fulfillment,
                 'cliente_nome' => (string) $row->cliente_nome,
+                'pagamento_forma' => (string) ($row->pagamento_forma ?? ''),
+                'pagamento_status' => (string) ($row->pagamento_status ?? ''),
+                'pix_pendente' => DeliveryPedidoPresenter::pixPendenteConfirmacao($row),
+                'pix_pago' => DeliveryPedidoPresenter::isPixPago($row),
+                'pagamento_bloqueia_aceite' => DeliveryPedidoPresenter::bloqueiaAceitePorPix($row, $config),
                 'subtotal' => (float) $row->subtotal,
                 'frete_valor' => (float) $row->frete_valor,
                 'total' => (float) $row->total,
                 'created_at' => $row->created_at,
-            ])->values(),
+                ];
+            })->values(),
         ]);
     }
 
@@ -140,13 +154,16 @@ class DeliveryPedidoController extends DeliveryBaseController
         }
 
         $novoStatus = (string) $validator->validated()['status'];
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $pedido->unidade_id)->first();
+        if ($novoStatus === 'recebido' && ($pedido->status ?? '') === 'pendente_loja') {
+            $this->pedidos->validarAceitePix($pedido, $config);
+        }
         $atualizado = $this->pedidos->alterarStatus(
             $pedido,
             $novoStatus,
             (int) $usuario->id,
             $validator->validated()['detalhe'] ?? null
         );
-        $config = DB::table('dlv_loja_config')->where('unidade_id', $atualizado->unidade_id)->first();
         $payload = $this->pedidos->completo($atualizado);
         if ($config) {
             $waUrl = DeliveryWhatsAppAvisoStatus::url($atualizado, $config, $novoStatus);
@@ -196,9 +213,13 @@ class DeliveryPedidoController extends DeliveryBaseController
             ], 422);
         }
 
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $pedido->unidade_id)->first();
+        if ($data['decisao'] === 'aceitar') {
+            $this->pedidos->validarAceitePix($pedido, $config);
+        }
+
         $novoStatus = $data['decisao'] === 'aceitar' ? 'recebido' : 'cancelado';
         $atualizado = $this->pedidos->alterarStatus($pedido, $novoStatus, (int) $usuario->id);
-        $config = DB::table('dlv_loja_config')->where('unidade_id', $atualizado->unidade_id)->first();
         $waUrl = $config
             ? DeliveryWhatsAppAvisoStatus::url($atualizado, $config, $novoStatus)
             : null;
@@ -211,6 +232,24 @@ class DeliveryPedidoController extends DeliveryBaseController
             'proximo' => $this->pedidos->proximoPedidoPendentePoll((int) $atualizado->unidade_id),
             'whatsapp_aviso_url' => $waUrl,
         ]);
+    }
+
+    public function confirmarPagamento(Request $request, int $id): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryPedidos');
+        $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        abort_unless($pedido, 404, 'Pedido não encontrado.');
+        $this->access->autorizarRegistro($usuario, $pedido, 'Sem permissão para este pedido.');
+
+        $atualizado = $this->pedidos->confirmarPagamentoPix($pedido, (int) $usuario->id);
+
+        return response()->json(array_merge(
+            $this->pedidos->completo($atualizado),
+            [
+                'ok' => true,
+                'mensagem' => 'Pagamento PIX confirmado.',
+            ]
+        ));
     }
 
     public function imprimir(Request $request, int $id): View

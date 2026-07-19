@@ -558,7 +558,9 @@
       <form id="vfConfigForm">
         ${configCard("Pedidos na vitrine", "Escolha como novos pedidos entram na operação.", `
           <label class="vf-setting-switch"><input name="confirmar_pedidos" type="checkbox" ${config.confirmar_pedidos ? "checked" : ""}>
-          <span><strong>Confirmar pedidos manualmente</strong><small>Pedidos aguardam a confirmação da loja antes do preparo.</small></span></label>`)}
+          <span><strong>Confirmar pedidos manualmente</strong><small>Pedidos aguardam a confirmação da loja antes do preparo.</small></span></label>
+          <label class="vf-setting-switch"><input name="exigir_pix_confirmado" type="checkbox" ${config.exigir_pix_confirmado ? "checked" : ""}>
+          <span><strong>Exigir PIX confirmado antes de aceitar</strong><small>Pedidos PIX só entram no preparo depois que você confirmar o pagamento no painel.</small></span></label>`)}
         ${configCard("Loja aberta ou fechada", "Controle imediatamente se a loja aceita novos pedidos.", `
           <div class="vf-large-radios">
             <label class="${config.aberta ? "is-selected" : ""}"><input type="radio" name="aberta" value="1" ${config.aberta ? "checked" : ""}><span><strong>Loja aberta</strong><small>Aceitando pedidos na vitrine.</small></span></label>
@@ -584,11 +586,32 @@
             <label class="vf-store-field vf-span-2"><span>Texto para o cliente</span><textarea name="pix_instrucoes" rows="3" maxlength="4000" placeholder="Ex.: Nome na chave, telefone para envio do comprovante…">${esc(config.pix_instrucoes || "")}</textarea></label>
             <label class="vf-store-field vf-span-2"><span>Pix copia e cola</span><textarea name="pix_copia_cola" rows="3" maxlength="8192" placeholder="Payload do app do banco (gera QR Code no checkout)">${esc(config.pix_copia_cola || "")}</textarea></label>
           </div>`)}
+        ${configCard("Pagamento online (gateway)", "Configure depois: PIX automático por pedido e cartão online. Deixe em branco para usar só PIX manual.", `
+          <div class="vf-store-form-grid">
+            <label class="vf-store-field"><span>Modo PIX</span><select name="pix_modo">
+              ${[["manual","Manual (chave/QR da loja)"],["automatico","Automático (gateway confirma)"],["hibrido","Híbrido (gateway + fallback manual)"]].map(([val, label]) =>
+                `<option value="${val}" ${(config.pix_modo || config.gateway?.pix_modo || "manual") === val ? "selected" : ""}>${label}</option>`).join("")}
+            </select></label>
+            <label class="vf-store-field"><span>Provedor</span><select name="pagamento_gateway">
+              <option value="">Nenhum</option>
+              ${[["mercado_pago","Mercado Pago"],["asaas","Asaas"],["pagbank","PagBank / PagSeguro"]].map(([val, label]) =>
+                `<option value="${val}" ${(config.pagamento_gateway || config.gateway?.pagamento_gateway || "") === val ? "selected" : ""}>${label}</option>`).join("")}
+            </select></label>
+            <label class="vf-store-field"><span>Token / Access token</span><input name="pagamento_gateway_token" type="password" autocomplete="new-password" placeholder="${config.gateway?.pagamento_gateway_token_configurado ? "•••••••• (deixe em branco para manter)" : "Cole o token do provedor"}"></label>
+            <label class="vf-store-field"><span>Chave pública (opcional)</span><input name="pagamento_gateway_public_key" maxlength="255" value="${esc(config.pagamento_gateway_public_key || "")}" placeholder="Para cartão online no futuro"></label>
+            <label class="vf-store-field"><span>Segredo do webhook</span><input name="pagamento_gateway_webhook_secret" type="password" autocomplete="new-password" placeholder="${config.gateway?.pagamento_gateway_webhook_secret_configurado ? "•••••••• (deixe em branco para manter)" : "Opcional"}"></label>
+            <label class="vf-store-field"><span>Expiração PIX (minutos)</span><input name="pix_expiracao_minutos" type="number" min="5" max="1440" value="${esc(String(config.pix_expiracao_minutos || config.gateway?.pix_expiracao_minutos || 30))}"></label>
+            <label class="vf-setting-switch vf-span-2"><input name="pagamento_gateway_sandbox" type="checkbox" ${(config.pagamento_gateway_sandbox ?? config.gateway?.pagamento_gateway_sandbox ?? true) ? "checked" : ""}>
+            <span><strong>Ambiente sandbox / testes</strong><small>Use credenciais de homologação enquanto configura.</small></span></label>
+            <label class="vf-setting-switch vf-span-2"><input name="pagamento_online_ativo" type="checkbox" ${(config.pagamento_online_ativo ?? config.gateway?.pagamento_online_ativo) ? "checked" : ""}>
+            <span><strong>Cartão online na vitrine</strong><small>Exibe “Cartão online” no checkout quando o gateway estiver configurado.</small></span></label>
+            ${config.gateway?.webhook_url ? `<p class="vf-help vf-span-2"><strong>URL do webhook:</strong> <code>${esc(config.gateway.webhook_url)}</code><br><small>Cadastre no painel do provedor para confirmar PIX automaticamente.</small></p>` : `<p class="vf-help vf-span-2 muted">Selecione um provedor e salve para ver a URL do webhook.</p>`}
+          </div>`)}
         ${configCard("Frete na loja online", "Taxa base, modos de cálculo, mapa de origem e ferramentas de distância (VendaFácil).", renderFreteConfigBody(config))}
         ${configCard("Formas de pagamento", "Marque as opções aceitas pela loja.", `
           <div class="vf-payment-grid">
-            ${[["pix","PIX"],["cartao_credito","Cartão crédito (maquininha)"],["cartao_debito","Cartão débito (maquininha)"],["dinheiro","Dinheiro"]].map(([key, label]) =>
-              `<label><input type="checkbox" name="payment" value="${key}" ${payments.has(key) || (key.startsWith("cartao_") && payments.has("cartao")) ? "checked" : ""}><span>${label}</span></label>`).join("")}
+            ${[["pix","PIX"],["cartao_credito","Cartão crédito (maquininha)"],["cartao_debito","Cartão débito (maquininha)"],["cartao_online","Cartão online (gateway)"],["dinheiro","Dinheiro"]].map(([key, label]) =>
+              `<label><input type="checkbox" name="payment" value="${key}" ${payments.has(key) || (key.startsWith("cartao_") && key !== "cartao_online" && payments.has("cartao")) ? "checked" : ""}><span>${label}</span></label>`).join("")}
           </div>`)}
         <div class="vf-config-save"><button class="vf-store-btn vf-store-btn--primary" type="submit">Salvar configurações</button></div>
       </form>
@@ -620,6 +643,7 @@
         await api("/configuracoes", { method: "PUT", body: JSON.stringify({
           aberta: value(form, "aberta") === "1",
           confirmar_pedidos: checked(form, "confirmar_pedidos"),
+          exigir_pix_confirmado: checked(form, "exigir_pix_confirmado"),
           nome_loja: value(form, "nome_loja") || null,
           whatsapp: value(form, "whatsapp") || null,
           telefone: value(form, "telefone") || null,
@@ -631,6 +655,14 @@
           pix_banco: value(form, "pix_banco") || null,
           pix_instrucoes: value(form, "pix_instrucoes") || null,
           pix_copia_cola: value(form, "pix_copia_cola") || null,
+          pix_modo: value(form, "pix_modo") || "manual",
+          pagamento_gateway: value(form, "pagamento_gateway") || null,
+          pagamento_gateway_token: value(form, "pagamento_gateway_token") || null,
+          pagamento_gateway_public_key: value(form, "pagamento_gateway_public_key") || null,
+          pagamento_gateway_webhook_secret: value(form, "pagamento_gateway_webhook_secret") || null,
+          pagamento_gateway_sandbox: checked(form, "pagamento_gateway_sandbox"),
+          pagamento_online_ativo: checked(form, "pagamento_online_ativo"),
+          pix_expiracao_minutos: Number(value(form, "pix_expiracao_minutos") || 30),
           frete_modo: value(form, "frete_modo"),
           frete_taxa_fixa: Number(value(form, "frete_taxa_fixa") || 0),
           frete_gratis_acima: value(form, "frete_gratis_acima") === "" ? null : Number(value(form, "frete_gratis_acima")),

@@ -89,6 +89,40 @@
     return map[status] || "vf-bs-badge--primary";
   }
 
+  function pixPendente(order) {
+    return Boolean(order?.pix_pendente || (String(order?.pagamento_forma || "").toLowerCase() === "pix"
+      && String(order?.pagamento_status || "").toLowerCase() !== "pago"));
+  }
+
+  function pixPago(order) {
+    return Boolean(order?.pix_pago || (String(order?.pagamento_forma || "").toLowerCase() === "pix"
+      && String(order?.pagamento_status || "").toLowerCase() === "pago"));
+  }
+
+  function renderPixBadge(order) {
+    if (String(order?.pagamento_forma || "").toLowerCase() !== "pix") return "";
+    if (pixPago(order)) {
+      return `<span class="vf-pix-badge vf-pix-badge--ok">PIX confirmado</span>`;
+    }
+    return `<span class="vf-pix-badge vf-pix-badge--warn">PIX pendente</span>`;
+  }
+
+  function renderPixPagamentoCard(order) {
+    if (String(order?.pagamento_forma || "").toLowerCase() !== "pix") return "";
+    const bloqueia = Boolean(order.pagamento_bloqueia_aceite);
+    const confirmBtn = order.pode_confirmar_pix
+      ? `<button class="vf-show-btn vf-show-btn--success vf-show-btn--block" type="button" data-vf-confirm-pix><i class="bi bi-check2-circle"></i>Confirmar pagamento PIX</button>`
+      : "";
+    const statusHtml = pixPago(order)
+      ? `<div class="vf-show-alert vf-show-alert--success"><strong>PIX confirmado</strong> em ${dateTimeShort(order.pagamento_confirmado_em || order.updated_at)}.</div>`
+      : `<div class="vf-show-alert vf-show-alert--warn"><strong>PIX pendente</strong> — confira o extrato e clique abaixo quando o valor cair.${bloqueia ? " O pedido só pode ser aceito depois da confirmação." : ""}</div>`;
+    return `<div class="vf-show-card vf-show-card--sidebar">
+      <h3 class="vf-show-card__title">Pagamento PIX</h3>
+      ${statusHtml}
+      ${confirmBtn}
+    </div>`;
+  }
+
   function renderCupomActions(order) {
     const wa = order.cupom_whatsapp_url;
     const printEnabled = order.impressao_habilitada !== false;
@@ -154,13 +188,19 @@
 
   function renderPendingBanner(order, isPending) {
     if (!isPending) return "";
+    const bloqueiaPix = Boolean(order.pagamento_bloqueia_aceite);
+    const pixNote = bloqueiaPix
+      ? `<span class="vf-show-help vf-show-help--tight">Este pedido é <strong>PIX</strong>. Confirme o pagamento na barra lateral antes de aceitar.</span>`
+      : "";
+    const disabledAttr = bloqueiaPix ? " disabled title=\"Confirme o pagamento PIX antes de aceitar\"" : "";
     return `<div class="vf-show-alert vf-show-alert--danger">
       <div class="vf-show-alert__text">
         <strong><i class="bi bi-bell-fill"></i> Novo pedido — precisa da sua confirmação</strong>
         <span>O cliente já finalizou na vitrine. Só avance o preparo depois que você <strong>aceitar</strong>. Se recusar, o pedido é cancelado e o estoque volta.</span>
+        ${pixNote}
       </div>
       <div class="vf-show-alert__actions">
-        <button class="vf-show-btn vf-show-btn--success vf-show-btn--sm" type="button" data-vf-detail-status="recebido"><i class="bi bi-check-lg"></i>Aceitar pedido</button>
+        <button class="vf-show-btn vf-show-btn--success vf-show-btn--sm" type="button" data-vf-detail-status="recebido"${disabledAttr}><i class="bi bi-check-lg"></i>Aceitar pedido</button>
         <button class="vf-show-btn vf-show-btn--danger-outline vf-show-btn--sm" type="button" data-vf-detail-status="cancelado"><i class="bi bi-x-lg"></i>Recusar</button>
       </div>
     </div>`;
@@ -198,6 +238,7 @@
       ${order.cliente_email ? `<p class="vf-show-help">${esc(order.cliente_email)}</p>` : ""}
       <p class="vf-show-help">${esc(addressLine || (order.fulfillment === "entrega" ? "" : "Retirada na loja"))}${order.endereco?.complemento ? `<br>${esc(order.endereco.complemento)}` : ""}</p>
       <p class="vf-show-help vf-show-help--tight"><strong>Pagamento:</strong> ${esc(order.pagamento_descricao || order.pagamento_forma || "—")}</p>
+      ${renderPixBadge(order) ? `<p class="vf-show-help vf-show-help--tight">${renderPixBadge(order)}</p>` : ""}
       ${order.observacoes ? `<p class="vf-show-help vf-show-help--tight"><strong>Obs.:</strong> ${esc(order.observacoes)}</p>` : ""}
     </div>`;
   }
@@ -270,15 +311,16 @@
     }
     return items.map((order) => {
       const pending = order.status === "pendente_loja";
+      const bloqueiaPix = pending && Boolean(order.pagamento_bloqueia_aceite);
       return `<tr class="${pending ? "is-pending" : ""}">
         <td><strong class="vf-order-code">${esc(order.codigo_publico)}</strong></td>
         <td>${esc(order.cliente_nome || "Consumidor")}</td>
         <td>${esc(order.canal || "—")}</td>
         <td>${dateTime(order.created_at)}</td>
-        <td>${badge(order.status)}</td>
+        <td>${badge(order.status)}${renderPixBadge(order) ? `<div class="vf-order-pix-badge">${renderPixBadge(order)}</div>` : ""}</td>
         <td class="vf-money">${money(order.total)}</td>
         <td class="vf-orders-actions">
-          ${pending ? `<button class="vf-btn vf-btn--success" data-vf-status="${order.id}:recebido">Aceitar</button>
+          ${pending ? `<button class="vf-btn vf-btn--success" data-vf-status="${order.id}:recebido"${bloqueiaPix ? ' disabled title="Confirme o PIX antes"' : ""}>Aceitar</button>
             <button class="vf-btn vf-btn--danger" data-vf-status="${order.id}:cancelado">Recusar</button>` : ""}
           <button class="vf-btn" data-vf-open="${order.id}">Abrir</button>
         </td>
@@ -418,6 +460,10 @@
     root.querySelectorAll("[data-vf-status]").forEach((button) => {
       button.onclick = async () => {
         const [id, status] = button.dataset.vfStatus.split(":");
+        if (status === "recebido" && button.disabled) {
+          toast("Confirme o pagamento PIX antes de aceitar o pedido.", "warning");
+          return;
+        }
         if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
         let result = null;
         if (status === "recebido") {
@@ -497,6 +543,7 @@
                   <p class="vf-show-meta">Criado em ${dateTimeShort(order.created_at)} · Canal ${esc(rotuloCanal(order.canal))} · ${esc(tipoEntrega)}${cepFmt}</p>
                 </div>
                 ${badge(order.status)}
+                ${renderPixBadge(order)}
               </div>
               <div class="vf-show-table-wrap">
                 <table class="vf-show-table">
@@ -517,6 +564,7 @@
           </div>
           <aside class="vf-order-show__aside">
             ${renderCupomActions(order)}
+            ${renderPixPagamentoCard(order)}
             ${renderEntregadores(order)}
             ${renderEntregadorLink(order)}
             ${renderClienteBlock(order, addressLine)}
@@ -543,6 +591,10 @@
     root.querySelectorAll("[data-vf-detail-status]").forEach((button) => {
       button.onclick = async () => {
         const status = button.dataset.vfDetailStatus;
+        if (status === "recebido" && order.pagamento_bloqueia_aceite) {
+          toast("Confirme o pagamento PIX antes de aceitar o pedido.", "warning");
+          return;
+        }
         if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
         if (status === "recebido") pararAlarmePedido();
         const result = status === "recebido" || status === "cancelado"
@@ -579,6 +631,19 @@
         catch (error) { toast(error?.message || "Não foi possível imprimir o cupom.", "error"); }
       };
     });
+    const confirmPix = root.querySelector("[data-vf-confirm-pix]");
+    if (confirmPix) {
+      confirmPix.onclick = async () => {
+        if (!confirm("Confirmar que o PIX deste pedido foi recebido?")) return;
+        try {
+          const result = await api(`/pedidos/${order.id}/pagamento/confirmar`, { method: "POST", body: "{}" });
+          toast(result.mensagem || "Pagamento PIX confirmado.", "success");
+          await openOrder(order.id);
+        } catch (error) {
+          toast(error?.message || "Não foi possível confirmar o PIX.", "error");
+        }
+      };
+    }
     const copyUrl = root.querySelector("[data-vf-copy-url]");
     if (copyUrl) copyUrl.onclick = async () => {
       const input = root.querySelector("#vf-url-entregador");

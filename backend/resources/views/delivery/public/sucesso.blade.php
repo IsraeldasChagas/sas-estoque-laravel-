@@ -26,6 +26,7 @@
             Você pediu o <strong>{{ $nomeProg }}</strong>. Complete seus dados na janela abaixo para ganhar o selo desta compra.
         </div>
     @endif
+    @include('delivery.partials.pix-publico', compact('config', 'pedido', 'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl'))
     <a class="btn primary" href="{{ route('delivery.public.order', [$slug, $pedido->codigo_publico, $token]) }}">Acompanhar pedido</a>
     <a class="btn ghost" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
 </section>

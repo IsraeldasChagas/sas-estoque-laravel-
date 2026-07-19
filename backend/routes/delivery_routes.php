@@ -58,6 +58,7 @@ Route::prefix('delivery')->middleware('sas.usuario')->group(function () {
 
     Route::get('/pedidos/pendentes-poll', [DeliveryPedidoController::class, 'pollPendentes']);
     Route::post('/pedidos/{id}/pendente', [DeliveryPedidoController::class, 'decisaoPendente'])->whereNumber('id');
+    Route::post('/pedidos/{id}/pagamento/confirmar', [DeliveryPedidoController::class, 'confirmarPagamento'])->whereNumber('id');
     Route::get('/pedidos/{id}/imprimir', [DeliveryPedidoController::class, 'imprimir'])->whereNumber('id');
     Route::get('/pedidos', [DeliveryPedidoController::class, 'index']);
     Route::post('/pedidos', [DeliveryPedidoController::class, 'store']);

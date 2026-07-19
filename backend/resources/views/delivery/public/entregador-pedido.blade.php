@@ -6,6 +6,7 @@
     $podeRegistrar = DeliveryPedidoPresenter::entregadorPodeRegistrarResultado($pedido->status ?? null);
     $statusRotulo = DeliveryPedidoPresenter::rotuloStatus($pedido->status ?? null);
     $createdAt = \Illuminate\Support\Carbon::parse($pedido->created_at ?? now());
+    $codigoEsperadoJs = DeliveryPedidoPresenter::normalizarCodigoPublico((string) $pedido->codigo_publico);
 @endphp
 <!doctype html>
 <html lang="pt-BR">
@@ -35,6 +36,16 @@
         .opcoes { margin-top: 6px; padding-left: 10px; border-left: 2px solid #e5e7eb; font-size: 12px; color: #6b7280; }
         .total { font-weight: 700; font-size: 18px; color: #059669; }
         form { display: grid; gap: 8px; }
+        .field { display: grid; gap: 6px; margin-bottom: 4px; }
+        .field label { font-size: 13px; font-weight: 600; color: #374151; }
+        .field input {
+            width: 100%; box-sizing: border-box; padding: 12px 14px;
+            border: 1px solid #d1d5db; border-radius: 10px; font: inherit;
+            font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .04em;
+        }
+        .field input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .field-error { color: #dc2626; font-size: 13px; margin: 0; }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -50,7 +61,7 @@
     @endif
 
     <div class="card highlight">
-        <div class="muted">Confirme com o cliente</div>
+        <div class="muted">Código desta entrega</div>
         <div class="code">{{ $pedido->codigo_publico }}</div>
         <p class="muted" style="margin:8px 0 0">
             Pedido em {{ $createdAt->format('d/m/Y H:i') }}
@@ -110,13 +121,47 @@
     <div style="margin-bottom:12px"><span class="badge">{{ $statusRotulo }}</span></div>
 
     @if ($podeRegistrar)
-        <form action="{{ route('delivery.public.entregador.registrar', ['slug' => $slug, 'codigo' => $pedido->codigo_publico, 'token' => $token]) }}" method="post">
+        <form id="form-entregador" action="{{ route('delivery.public.entregador.registrar', ['slug' => $slug, 'codigo' => $pedido->codigo_publico, 'token' => $token]) }}" method="post">
             @csrf
-            <button type="submit" name="resultado" value="entregue" class="btn btn-success">Entregue</button>
-            <button type="submit" name="resultado" value="endereco" class="btn btn-warning">Não encontrei o endereço</button>
-            <button type="submit" name="resultado" value="cancelado" class="btn btn-danger">Cancelado</button>
+            <div class="field">
+                <label for="codigo_confirmado">Peça o código ao cliente e confirme aqui</label>
+                <input
+                    type="text"
+                    id="codigo_confirmado"
+                    name="codigo_confirmado"
+                    maxlength="64"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    placeholder="Ex.: {{ $pedido->codigo_publico }}"
+                    value="{{ old('codigo_confirmado') }}"
+                    required
+                >
+                @error('codigo_confirmado')
+                    <p class="field-error">{{ $message }}</p>
+                @enderror
+            </div>
+            <button type="submit" name="resultado" value="entregue" class="btn btn-success" disabled>Entregue</button>
+            <button type="submit" name="resultado" value="endereco" class="btn btn-warning" disabled>Não encontrei o endereço</button>
+            <button type="submit" name="resultado" value="cancelado" class="btn btn-danger" disabled>Cancelado</button>
         </form>
-        <p class="muted" style="margin-top:12px">Ao confirmar, a loja verá o novo status no painel.</p>
+        <p class="muted" style="margin-top:12px">Digite o código informado pelo cliente para liberar as opções. A loja verá o novo status no painel.</p>
+        <script>
+        (function () {
+            const esperado = @json($codigoEsperadoJs);
+            const input = document.getElementById('codigo_confirmado');
+            const botoes = document.querySelectorAll('#form-entregador button[type="submit"]');
+            function normalizar(v) {
+                return String(v || '').trim().toUpperCase().replace(/^#+/, '');
+            }
+            function atualizar() {
+                const ok = normalizar(input?.value) === normalizar(esperado);
+                botoes.forEach((btn) => { btn.disabled = !ok; });
+            }
+            input?.addEventListener('input', atualizar);
+            atualizar();
+        })();
+        </script>
     @else
         <div class="card muted">Resultado já registrado ou pedido não está pronto/em rota.</div>
     @endif

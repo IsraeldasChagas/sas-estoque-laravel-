@@ -138,9 +138,35 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
 
         $this->post('/loja/loja-teste/entrega/DLV-TEST-905/entregador-publico-token', [
             'resultado' => 'entregue',
+            'codigo_confirmado' => 'DLV-TEST-905',
         ])->assertRedirect();
 
         $this->assertSame('entregue', DB::table('dlv_pedidos')->where('id', 905)->value('status'));
+    }
+
+    public function test_entregador_publico_rejeita_codigo_incorreto(): void
+    {
+        $this->insertOrder(910, 'rota', 'entregador-token-codigo');
+
+        $this->post('/loja/loja-teste/entrega/DLV-TEST-910/entregador-token-codigo', [
+            'resultado' => 'entregue',
+            'codigo_confirmado' => 'CODIGO-ERRADO',
+        ])->assertRedirect()
+            ->assertSessionHasErrors('codigo_confirmado');
+
+        $this->assertSame('rota', DB::table('dlv_pedidos')->where('id', 910)->value('status'));
+    }
+
+    public function test_entregador_publico_aceita_codigo_com_hash_e_maiusculas(): void
+    {
+        $this->insertOrder(911, 'pronto', 'entregador-token-hash');
+
+        $this->post('/loja/loja-teste/entrega/DLV-TEST-911/entregador-token-hash', [
+            'resultado' => 'entregue',
+            'codigo_confirmado' => '#dlv-test-911',
+        ])->assertRedirect();
+
+        $this->assertSame('entregue', DB::table('dlv_pedidos')->where('id', 911)->value('status'));
     }
 
     public function test_entregador_publico_rejeita_token_invalido(): void

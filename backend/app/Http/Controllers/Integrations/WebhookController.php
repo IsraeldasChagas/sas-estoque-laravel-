@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Integrations;
 
+use App\Services\Payments\DeliveryPixGatewayService;
 use Illuminate\Http\Request;
 
-/**
- * Webhooks — Fase 1: estrutura reservada para expansão futura.
- */
 class WebhookController extends IntegrationBaseController
 {
+    public function __construct(
+        private readonly DeliveryPixGatewayService $pixGateway,
+    ) {}
+
     public function index(Request $request)
     {
         $u = $this->authUsuario($request);
@@ -17,20 +19,29 @@ class WebhookController extends IntegrationBaseController
         }
 
         return $this->json([
-            'fase' => 1,
-            'implementado' => false,
-            'mensagem' => 'Módulo de webhooks preparado para expansão futura.',
-            'webhooks' => [],
+            'implementado' => true,
+            'mensagem' => 'Webhooks de pagamento delivery (PIX automático).',
+            'provedores' => [
+                'mercado_pago' => url('/api/integracoes/webhooks/mercado_pago'),
+                'asaas' => url('/api/integracoes/webhooks/asaas'),
+            ],
         ]);
     }
 
     public function receive(Request $request, string $provider)
     {
-        return $this->json([
-            'fase' => 1,
-            'implementado' => false,
-            'mensagem' => 'Recebimento de webhooks será implementado em fase posterior.',
-            'provider' => $provider,
-        ], 501);
+        $signature = $request->header('X-Signature')
+            ?? $request->header('X-Hub-Signature')
+            ?? $request->header('X-Request-Id');
+
+        $result = $this->pixGateway->processarWebhook(
+            $provider,
+            $request->all(),
+            is_string($signature) ? $signature : null
+        );
+
+        $status = ($result['ok'] ?? false) ? 200 : 422;
+
+        return $this->json($result, $status);
     }
 }

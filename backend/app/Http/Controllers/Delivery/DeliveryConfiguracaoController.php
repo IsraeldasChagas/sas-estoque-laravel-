@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Delivery;
 
 use App\Services\Delivery\DeliveryAccessService;
 use App\Services\Delivery\DeliveryLojaFreteHelper;
+use App\Support\Delivery\DeliveryGatewayConfig;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,6 +62,7 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'ativo' => array_key_exists('ativo', $data) ? (bool) $data['ativo'] : (bool) $config->ativo,
             'aberta' => array_key_exists('aberta', $data) ? (bool) $data['aberta'] : (bool) $config->aberta,
             'confirmar_pedidos' => array_key_exists('confirmar_pedidos', $data) ? (bool) $data['confirmar_pedidos'] : (bool) $config->confirmar_pedidos,
+            'exigir_pix_confirmado' => array_key_exists('exigir_pix_confirmado', $data) ? (bool) $data['exigir_pix_confirmado'] : (bool) ($config->exigir_pix_confirmado ?? false),
             'permite_retirada' => array_key_exists('permite_retirada', $data) ? (bool) $data['permite_retirada'] : (bool) $config->permite_retirada,
             'frete_modo' => $data['frete_modo'] ?? $config->frete_modo,
             'frete_taxa_fixa' => array_key_exists('frete_taxa_fixa', $data) ? round((float) $data['frete_taxa_fixa'], 2) : $config->frete_taxa_fixa,
@@ -81,6 +83,22 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'pix_instrucoes' => array_key_exists('pix_instrucoes', $data) ? $data['pix_instrucoes'] : ($config->pix_instrucoes ?? null),
             'pix_copia_cola' => array_key_exists('pix_copia_cola', $data) ? $data['pix_copia_cola'] : ($config->pix_copia_cola ?? null),
             'pix_banco' => array_key_exists('pix_banco', $data) ? $data['pix_banco'] : ($config->pix_banco ?? null),
+            'pix_modo' => array_key_exists('pix_modo', $data) ? $data['pix_modo'] : ($config->pix_modo ?? DeliveryGatewayConfig::PIX_MODO_MANUAL),
+            'pagamento_gateway' => array_key_exists('pagamento_gateway', $data)
+                ? (($data['pagamento_gateway'] ?? '') !== '' ? $data['pagamento_gateway'] : null)
+                : ($config->pagamento_gateway ?? null),
+            'pagamento_gateway_public_key' => array_key_exists('pagamento_gateway_public_key', $data)
+                ? $data['pagamento_gateway_public_key']
+                : ($config->pagamento_gateway_public_key ?? null),
+            'pagamento_gateway_sandbox' => array_key_exists('pagamento_gateway_sandbox', $data)
+                ? (bool) $data['pagamento_gateway_sandbox']
+                : (bool) ($config->pagamento_gateway_sandbox ?? true),
+            'pagamento_online_ativo' => array_key_exists('pagamento_online_ativo', $data)
+                ? (bool) $data['pagamento_online_ativo']
+                : (bool) ($config->pagamento_online_ativo ?? false),
+            'pix_expiracao_minutos' => array_key_exists('pix_expiracao_minutos', $data)
+                ? max(5, min(1440, (int) $data['pix_expiracao_minutos']))
+                : (int) ($config->pix_expiracao_minutos ?? 30),
             'formas_pagamento' => array_key_exists('formas_pagamento', $data) ? $data['formas_pagamento'] : $config->formas_pagamento,
             'nome_loja' => array_key_exists('nome_loja', $data) ? $data['nome_loja'] : $config->nome_loja,
             'logo_path' => $imagens['logo_path'],
@@ -97,6 +115,13 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'entrega_texto' => array_key_exists('entrega_texto', $data) ? $data['entrega_texto'] : ($config->entrega_texto ?? null),
             'updated_at' => now(),
         ];
+
+        if (array_key_exists('pagamento_gateway_token', $data) && trim((string) $data['pagamento_gateway_token']) !== '') {
+            $update['pagamento_gateway_token'] = trim((string) $data['pagamento_gateway_token']);
+        }
+        if (array_key_exists('pagamento_gateway_webhook_secret', $data) && trim((string) $data['pagamento_gateway_webhook_secret']) !== '') {
+            $update['pagamento_gateway_webhook_secret'] = trim((string) $data['pagamento_gateway_webhook_secret']);
+        }
 
         try {
             DB::table('dlv_loja_config')->where('id', $config->id)->update($this->somenteColunasExistentes($update));
@@ -285,6 +310,7 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'ativo' => (bool) $config->ativo,
             'aberta' => (bool) $config->aberta,
             'confirmar_pedidos' => (bool) $config->confirmar_pedidos,
+            'exigir_pix_confirmado' => (bool) ($config->exigir_pix_confirmado ?? false),
             'permite_retirada' => (bool) $config->permite_retirada,
             'frete_modo' => (string) $config->frete_modo,
             'frete_taxa_fixa' => (float) $config->frete_taxa_fixa,
@@ -326,6 +352,13 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'frete_google_checklist' => $this->freteHelper->googleChecklist($config),
             'frete_osrm_checklist' => $this->freteHelper->osrmChecklist($config),
             'frete_preview_mapa_origem' => $this->freteHelper->previewMapaOrigem($config),
+            'gateway' => DeliveryGatewayConfig::resumoAdmin($config),
+            'pix_modo' => DeliveryGatewayConfig::pixModo($config),
+            'pagamento_gateway' => DeliveryGatewayConfig::provedor($config),
+            'pagamento_gateway_public_key' => $config->pagamento_gateway_public_key ?? null,
+            'pagamento_gateway_sandbox' => (bool) ($config->pagamento_gateway_sandbox ?? true),
+            'pagamento_online_ativo' => (bool) ($config->pagamento_online_ativo ?? false),
+            'pix_expiracao_minutos' => DeliveryGatewayConfig::pixExpiracaoMinutos($config),
         ];
     }
 
@@ -336,6 +369,7 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'ativo' => 'nullable|boolean',
             'aberta' => 'nullable|boolean',
             'confirmar_pedidos' => 'nullable|boolean',
+            'exigir_pix_confirmado' => 'nullable|boolean',
             'permite_retirada' => 'nullable|boolean',
             'frete_modo' => 'nullable|in:fixed,cep_band,padrao_unico,faixas_cep,google_distancia,osrm_distancia',
             'frete_taxa_fixa' => 'nullable|numeric|min:0',
@@ -356,6 +390,14 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'pix_instrucoes' => 'nullable|string|max:4000',
             'pix_copia_cola' => 'nullable|string|max:8192',
             'pix_banco' => 'nullable|string|max:120',
+            'pix_modo' => 'nullable|in:manual,automatico,hibrido',
+            'pagamento_gateway' => 'nullable|string|max:40',
+            'pagamento_gateway_token' => 'nullable|string|max:500',
+            'pagamento_gateway_public_key' => 'nullable|string|max:255',
+            'pagamento_gateway_webhook_secret' => 'nullable|string|max:255',
+            'pagamento_gateway_sandbox' => 'nullable|boolean',
+            'pagamento_online_ativo' => 'nullable|boolean',
+            'pix_expiracao_minutos' => 'nullable|integer|min:5|max:1440',
             'formas_pagamento' => 'nullable|string|max:255',
             'nome_loja' => 'nullable|string|max:160',
             'logo_base64' => 'nullable|string',

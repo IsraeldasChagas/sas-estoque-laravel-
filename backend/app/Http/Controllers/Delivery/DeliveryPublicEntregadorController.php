@@ -48,7 +48,18 @@ class DeliveryPublicEntregadorController extends DeliveryBaseController
 
         $data = $request->validate([
             'resultado' => ['required', 'string', 'in:entregue,cancelado,endereco'],
+            'codigo_confirmado' => ['required', 'string', 'max:64'],
         ]);
+
+        if (! DeliveryPedidoPresenter::codigoPublicoConfere(
+            $data['codigo_confirmado'],
+            (string) ($pedido->codigo_publico ?? '')
+        )) {
+            return redirect()
+                ->route('delivery.public.entregador.show', ['slug' => $slug, 'codigo' => $codigo, 'token' => $token])
+                ->withInput()
+                ->withErrors(['codigo_confirmado' => 'Código do pedido não confere. Peça ao cliente o código correto.']);
+        }
 
         $novoStatus = match ($data['resultado']) {
             'entregue' => 'entregue',
@@ -75,8 +86,7 @@ class DeliveryPublicEntregadorController extends DeliveryBaseController
             return null;
         }
 
-        $codigoNorm = strtoupper(trim($codigo));
-        $codigoNorm = ltrim($codigoNorm, '#');
+        $codigoNorm = DeliveryPedidoPresenter::normalizarCodigoPublico($codigo);
 
         $pedido = DB::table('dlv_pedidos')
             ->where('unidade_id', $config->unidade_id)

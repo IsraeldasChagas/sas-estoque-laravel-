@@ -8,7 +8,9 @@ use App\Services\Delivery\DeliveryPedidoService;
 use App\Services\Fidelidade\DeliveryPedidoFidelidadeService;
 use App\Services\Fidelidade\FidelidadeLgpdService;
 use App\Services\Fidelidade\FidelidadePublicConsultaService;
+use App\Services\Payments\DeliveryPixGatewayService;
 use App\Support\Delivery\DeliveryLojaCheckoutHelper;
+use App\Support\Delivery\DeliveryPedidoPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +26,7 @@ class DeliveryPublicController extends Controller
         private readonly DeliveryFreteService $frete,
         private readonly DeliveryPedidoFidelidadeService $pedidoFidelidade,
         private readonly FidelidadePublicConsultaService $fidelidadeConsulta,
+        private readonly DeliveryPixGatewayService $pixGateway,
     ) {}
 
     public function loja(string $slug): View
@@ -355,10 +358,20 @@ class DeliveryPublicController extends Controller
         ]);
         $id = $this->pedidos->criar((int) $config->unidade_id, $data, null);
         $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        $pixResumo = DeliveryPedidoPresenter::isPix($pedido)
+            ? $this->pixGateway->iniciarPix($pedido, $config)
+            : null;
+        if ($pixResumo !== null) {
+            $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        }
         $url = route('delivery.public.success', [$slug, $pedido->codigo_publico, $pedido->cliente_token]);
 
         return $request->expectsJson()
-            ? response()->json(['codigo' => $pedido->codigo_publico, 'redirect_url' => $url], 201)
+            ? response()->json([
+                'codigo' => $pedido->codigo_publico,
+                'redirect_url' => $url,
+                'pix' => $pixResumo,
+            ], 201)
             : redirect()->to($url);
     }
 
@@ -377,10 +390,12 @@ class DeliveryPublicController extends Controller
             $config->whatsapp ?? $config->telefone ?? null
         );
         $footerFixed = false;
+        extract($this->dadosPixPublico($config, $pedido, $slug, $token));
 
         return view('delivery.public.sucesso', compact(
             'config', 'slug', 'pedido', 'token', 'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed',
-            'programaFidelidade', 'fidelidadeSnap', 'lgpdTexto', 'unidadeFidelidadeNome'
+            'programaFidelidade', 'fidelidadeSnap', 'lgpdTexto', 'unidadeFidelidadeNome',
+            'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl'
         ));
     }
 
@@ -423,11 +438,36 @@ class DeliveryPublicController extends Controller
         $pedidoShowUrl = route('delivery.public.order', [$slug, $codigo, $token]);
         $fidelidadeAtiva = $this->fidelidadeAtiva($config);
         $footerFixed = false;
+        extract($this->dadosPixPublico($config, $pedido, $slug, $token));
 
         return view('delivery.public.pedido', compact(
             'config', 'slug', 'pedido', 'token', 'itens', 'historico',
-            'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed'
+            'passoAtual', 'pedidoShowUrl', 'fidelidadeAtiva', 'footerFixed',
+            'pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl'
         ));
+    }
+
+    public function pagamentoStatus(string $slug, string $codigo, string $token): JsonResponse
+    {
+        [$config, $pedido] = $this->pedidoSeguro($slug, $codigo, $token);
+
+        return response()->json($this->pixGateway->statusPublico($pedido, $config));
+    }
+
+    /** @return array{pixConfigurada:bool,pixQrDataUri:?string,pixPayload:?string,pixAutomatico:bool,pixPollUrl:?string} */
+    private function dadosPixPublico(object $config, object $pedido, string $slug, string $token): array
+    {
+        $pixPayload = trim((string) ($pedido->pagamento_pix_payload ?? '')) ?: null;
+        $pixAutomatico = trim((string) ($pedido->pagamento_externo_id ?? '')) !== '';
+        $pixConfigurada = DeliveryLojaCheckoutHelper::pixConfiguradaParaCheckout($config) || $pixPayload !== null;
+        $pixQrDataUri = $pixPayload !== null
+            ? DeliveryLojaCheckoutHelper::pixQrCodeDataUri((object) ['pix_copia_cola' => $pixPayload])
+            : DeliveryLojaCheckoutHelper::pixQrCodeDataUri($config);
+        $pixPollUrl = ($pixAutomatico && DeliveryPedidoPresenter::isPix($pedido) && ! DeliveryPedidoPresenter::isPixPago($pedido))
+            ? route('delivery.public.payment.status', [$slug, $pedido->codigo_publico, $token])
+            : null;
+
+        return compact('pixConfigurada', 'pixQrDataUri', 'pixPayload', 'pixAutomatico', 'pixPollUrl');
     }
 
     private function config(string $slug): object

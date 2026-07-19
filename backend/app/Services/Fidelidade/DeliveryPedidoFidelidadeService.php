@@ -68,7 +68,7 @@ final class DeliveryPedidoFidelidadeService
         $programa = $this->programaAtivo($config);
         $unidadeFid = $this->unidadeFidelidade($config);
         $tel = FidelidadeNormalizer::telefone($pedido->fidelidade_whatsapp ?? $pedido->cliente_whatsapp ?? $pedido->cliente_telefone);
-        $conta = ($tel !== '' && strlen($tel) >= 10)
+        $conta = ($this->tabelasDisponiveis() && $tel !== '' && strlen($tel) >= 10)
             ? $this->consulta->buscarContaAtivaNaUnidade($unidadeFid, $tel)
             : null;
 

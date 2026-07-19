@@ -45,6 +45,8 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
         ->where('token', '[a-f0-9]{64}')->middleware('throttle:15,1')->name('success.fidelity');
     Route::get('/pedido/{codigo}/{token}', [DeliveryPublicController::class, 'pedido'])
         ->where('token', '[a-f0-9]{64}')->name('order');
+    Route::get('/pedido/{codigo}/{token}/pagamento-status', [DeliveryPublicController::class, 'pagamentoStatus'])
+        ->where('token', '[a-f0-9]{64}')->middleware('throttle:60,1')->name('payment.status');
     Route::get('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'show'])
         ->name('entregador.show');
     Route::post('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'registrar'])
