@@ -19,9 +19,13 @@ final class DeliveryPedidoPresenter
     /** @var array<string, string> */
     public const PAGAMENTO_ROTULOS = [
         'pix' => 'PIX',
-        'cartao' => 'Cartão',
+        'cartao' => 'Cartão na entrega',
+        'cartao_credito' => 'Cartão de crédito (na maquininha)',
+        'cartao_debito' => 'Cartão de débito (na maquininha)',
         'cartao_credito_maquininha' => 'Cartão de crédito (na maquininha)',
         'cartao_debito_maquininha' => 'Cartão de débito (na maquininha)',
+        'credito' => 'Cartão de crédito (na maquininha)',
+        'debito' => 'Cartão de débito (na maquininha)',
         'dinheiro' => 'Dinheiro',
         'entrega' => 'Na entrega (combinar)',
     ];
@@ -49,7 +53,19 @@ final class DeliveryPedidoPresenter
 
     public static function descricaoPagamento(object $pedido): string
     {
-        return self::rotuloFormaPagamento($pedido->pagamento_forma ?? null);
+        $forma = strtolower(trim((string) ($pedido->pagamento_forma ?? '')));
+        $rotulo = self::rotuloFormaPagamento($pedido->pagamento_forma ?? null);
+
+        if ($forma !== 'dinheiro') {
+            return $rotulo;
+        }
+
+        $troco = $pedido->pagamento_troco_para ?? null;
+        if ($troco === null || $troco === '') {
+            return $rotulo.' — valor exato (sem troco)';
+        }
+
+        return $rotulo.' — troco para R$ '.number_format((float) $troco, 2, ',', '.');
     }
 
     public static function enderecoLinha(object $pedido): string

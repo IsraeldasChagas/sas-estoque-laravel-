@@ -356,7 +356,7 @@
                 <dt>WhatsApp</dt><dd>${esc(order.cliente_whatsapp || "—")}</dd>
                 <dt>Endereço</dt><dd>${esc(addressLine || (order.fulfillment === "entrega" ? "Não informado" : "Retirada na loja"))}</dd>
                 <dt>CEP</dt><dd>${esc(address.cep || "—")}</dd>
-                <dt>Pagamento</dt><dd>${esc(order.pagamento_forma || "—")} · ${esc(order.pagamento_status || "pendente")}</dd>
+                <dt>Pagamento</dt><dd>${esc(order.pagamento_descricao || order.pagamento_forma || "—")}${order.pagamento_troco_para ? ` · Troco para ${money(order.pagamento_troco_para)}` : ""}</dd>
                 <dt>Observações</dt><dd>${esc(order.observacoes || "Nenhuma")}</dd></dl>
             </section>
             ${renderCupomActions(order)}
@@ -462,9 +462,11 @@
               <label class="vf-field vf-col-2"><span>UF</span><input name="endereco_uf" maxlength="2"></label>
               <label class="vf-field vf-col-3"><span>Referência</span><input name="endereco_texto"></label>
             </div>
-            <label class="vf-field vf-col-6"><span>Pagamento</span><select name="pagamento_forma">
-              <option value="pix">PIX</option><option value="cartao">Cartão</option><option value="dinheiro">Dinheiro</option>
+            <label class="vf-field vf-col-6"><span>Pagamento</span><select name="pagamento_forma" id="vfPagamentoForma">
+              <option value="pix">PIX</option><option value="cartao_credito">Cartão crédito (maquininha)</option>
+              <option value="cartao_debito">Cartão débito (maquininha)</option><option value="dinheiro">Dinheiro</option>
             </select></label>
+            <label class="vf-field vf-col-6 vf-troco-field" hidden><span>Troco para (R$)</span><input name="pagamento_troco_para" type="number" min="0" step="0.01" placeholder="Valor que o cliente vai pagar"></label>
             <label class="vf-field vf-col-6"><span>Status do pagamento</span><select name="pagamento_status">
               <option value="pendente">Pendente</option><option value="pago">Pago</option>
             </select></label>
@@ -524,8 +526,14 @@
       button.onclick = () => { cart.splice(Number(button.dataset.vfCartRemove), 1); rerender(preserveValues()); };
     });
     const form = $("vfNewOrderForm");
+    const toggleTroco = () => {
+      const field = form.querySelector(".vf-troco-field");
+      if (field) field.hidden = form.elements.pagamento_forma?.value !== "dinheiro";
+    };
     form.elements.fulfillment.onchange = () => toggleAddress(form);
+    form.elements.pagamento_forma.onchange = toggleTroco;
     toggleAddress(form);
+    toggleTroco();
     form.onsubmit = async (event) => {
       event.preventDefault();
       if (!cart.length) return;
@@ -551,6 +559,7 @@
             endereco_texto: value("endereco_texto"),
             pagamento_forma: value("pagamento_forma"),
             pagamento_status: value("pagamento_status"),
+            pagamento_troco_para: value("pagamento_forma") === "dinheiro" ? (value("pagamento_troco_para") ? Number(value("pagamento_troco_para")) : null) : null,
             observacoes: value("observacoes"),
             itens: cart.map((item) => ({ produto_id: Number(item.product.id), quantidade: item.quantity })),
           }),

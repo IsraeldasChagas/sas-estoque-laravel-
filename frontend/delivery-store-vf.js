@@ -580,12 +580,15 @@
             </select></label>
             <label class="vf-store-field"><span>Chave PIX</span><input name="pix_chave" maxlength="180" value="${esc(config.pix_chave || "")}"></label>
             <label class="vf-store-field vf-span-2"><span>Nome do beneficiário</span><input name="pix_beneficiario" maxlength="160" value="${esc(config.pix_beneficiario || "")}"></label>
+            <label class="vf-store-field"><span>Banco</span><input name="pix_banco" maxlength="120" value="${esc(config.pix_banco || "")}"></label>
+            <label class="vf-store-field vf-span-2"><span>Texto para o cliente</span><textarea name="pix_instrucoes" rows="3" maxlength="4000" placeholder="Ex.: Nome na chave, telefone para envio do comprovante…">${esc(config.pix_instrucoes || "")}</textarea></label>
+            <label class="vf-store-field vf-span-2"><span>Pix copia e cola</span><textarea name="pix_copia_cola" rows="3" maxlength="8192" placeholder="Payload do app do banco (gera QR Code no checkout)">${esc(config.pix_copia_cola || "")}</textarea></label>
           </div>`)}
         ${configCard("Frete na loja online", "Taxa base, modos de cálculo, mapa de origem e ferramentas de distância (VendaFácil).", renderFreteConfigBody(config))}
         ${configCard("Formas de pagamento", "Marque as opções aceitas pela loja.", `
           <div class="vf-payment-grid">
-            ${[["pix","PIX"],["cartao","Cartão"],["dinheiro","Dinheiro"]].map(([key, label]) =>
-              `<label><input type="checkbox" name="payment" value="${key}" ${payments.has(key) ? "checked" : ""}><span>${label}</span></label>`).join("")}
+            ${[["pix","PIX"],["cartao_credito","Cartão crédito (maquininha)"],["cartao_debito","Cartão débito (maquininha)"],["dinheiro","Dinheiro"]].map(([key, label]) =>
+              `<label><input type="checkbox" name="payment" value="${key}" ${payments.has(key) || (key.startsWith("cartao_") && payments.has("cartao")) ? "checked" : ""}><span>${label}</span></label>`).join("")}
           </div>`)}
         <div class="vf-config-save"><button class="vf-store-btn vf-store-btn--primary" type="submit">Salvar configurações</button></div>
       </form>
@@ -625,6 +628,9 @@
           pix_tipo: value(form, "pix_tipo") || null,
           pix_chave: value(form, "pix_chave") || null,
           pix_beneficiario: value(form, "pix_beneficiario") || null,
+          pix_banco: value(form, "pix_banco") || null,
+          pix_instrucoes: value(form, "pix_instrucoes") || null,
+          pix_copia_cola: value(form, "pix_copia_cola") || null,
           frete_modo: value(form, "frete_modo"),
           frete_taxa_fixa: Number(value(form, "frete_taxa_fixa") || 0),
           frete_gratis_acima: value(form, "frete_gratis_acima") === "" ? null : Number(value(form, "frete_gratis_acima")),

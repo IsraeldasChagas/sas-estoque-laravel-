@@ -149,7 +149,7 @@
     <div class="drawer-head"><strong>Seu carrinho</strong><button type="button" data-cart-close>×</button></div>
     <div data-cart-items></div>
     <div class="drawer-total"><span>Subtotal</span><strong data-cart-total>R$ 0,00</strong></div>
-    <a class="btn success wide" href="{{ route('delivery.public.checkout', $slug) }}">Ir para checkout</a>
+    <a class="btn success wide" href="{{ route('delivery.public.cart', $slug) }}">Ver carrinho</a>
     <a class="btn ghost wide vf-back-after-action" href="{{ route('delivery.public.store', $slug) }}">← Continuar comprando</a>
 </aside>
 <div class="backdrop" data-cart-close></div>
@@ -168,7 +168,7 @@
     </div>
 </footer>
 
-<script>window.deliveryStore={slug:@json($slug),checkout:@json(route('delivery.public.checkout',$slug)),csrf:@json(csrf_token())};</script>
+<script>window.deliveryStore={slug:@json($slug),checkout:@json(route('delivery.public.checkout',$slug)),cart:@json(route('delivery.public.cart',$slug)),csrf:@json(csrf_token())};</script>
 <script src="{{ asset('assets/delivery/store.js') }}?v=20260719-vf-produto-social"></script>
 @stack('scripts')
 </body>

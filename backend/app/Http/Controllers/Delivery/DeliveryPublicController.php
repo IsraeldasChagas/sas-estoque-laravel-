@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Delivery;
 use App\Http\Controllers\Controller;
 use App\Services\Delivery\DeliveryFreteService;
 use App\Services\Delivery\DeliveryPedidoService;
+use App\Support\Delivery\DeliveryLojaCheckoutHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,21 +79,77 @@ class DeliveryPublicController extends Controller
         ));
     }
 
-    public function checkout(string $slug): View
+    public function carrinho(string $slug): View
     {
         $config = $this->config($slug);
-        $pagamentos = $this->pagamentos($config);
-        $passoAtual = 'checkout';
+        $prefs = $this->entregaPrefs($slug);
+        $passoAtual = 'carrinho';
         $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
         $footerFixed = false;
+        $permiteBalcao = (bool) $config->permite_retirada;
         $freteModo = $this->frete->modoEfetivo($config);
-        $checkoutOsrm = $freteModo === \App\Services\Delivery\DeliveryFreteService::MODO_OSRM;
+        $freteResumoUrl = route('delivery.public.freight.summary', [$slug]);
+        $prefsUrl = route('delivery.public.cart.prefs', [$slug]);
+
+        return view('delivery.public.carrinho', compact(
+            'config', 'slug', 'prefs', 'passoAtual', 'fidelidadeAtiva', 'footerFixed',
+            'permiteBalcao', 'freteModo', 'freteResumoUrl', 'prefsUrl'
+        ));
+    }
+
+    public function carrinhoEntregaPrefs(Request $request, string $slug): JsonResponse
+    {
+        $config = $this->config($slug);
+        $data = $request->validate([
+            'modo' => 'required|in:entrega,balcao,retirada',
+            'cep' => 'nullable|string|max:16',
+            'subtotal' => 'nullable|numeric|min:0|max:99999999.99',
+        ]);
+        $modo = DeliveryLojaCheckoutHelper::fulfillmentFromTipoEntrega($data['modo']);
+        $cep = preg_replace('/\D+/', '', (string) ($data['cep'] ?? ''));
+        session()->put($this->entregaPrefsKey($slug), ['modo' => $modo, 'cep' => $cep]);
+        $subtotal = (float) ($data['subtotal'] ?? 0);
+        $resumo = $this->resumoFreteCheckout($config, $modo, $modo === 'entrega' && strlen($cep) === 8 ? $cep : null, $subtotal);
+
+        return response()->json([
+            'ok' => true,
+            'prefs' => ['modo' => DeliveryLojaCheckoutHelper::tipoEntregaFromFulfillment($modo), 'cep' => $cep],
+            'taxa' => $resumo['taxa'],
+            'rotulo' => $resumo['rotulo'],
+            'entrega_bloqueada' => (bool) ($resumo['entrega_bloqueada'] ?? false),
+            'total' => $resumo['total'],
+        ]);
+    }
+
+    public function checkout(string $slug): View|RedirectResponse
+    {
+        $config = $this->config($slug);
+        $formasCheckout = DeliveryLojaCheckoutHelper::formasPagamentoLojaPublica($config);
+        $prefs = $this->entregaPrefs($slug);
+        $tipoCheckout = DeliveryLojaCheckoutHelper::tipoEntregaFromFulfillment($prefs['modo']);
+        if ($tipoCheckout === 'balcao' && ! (bool) $config->permite_retirada) {
+            $tipoCheckout = 'entrega';
+        }
+        $cepDigits = $prefs['cep'];
+        $permiteBalcao = (bool) $config->permite_retirada;
+        $passoAtual = 'checkout';
+        $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
+        $programaFidelidade = $fidelidadeAtiva
+            ? DB::table('fid_programas')->where('unidade_id', $config->unidade_id)->where('ativo', 1)->first()
+            : null;
+        $footerFixed = false;
+        $freteModo = $this->frete->modoEfetivo($config);
+        $checkoutOsrm = $freteModo === DeliveryFreteService::MODO_OSRM;
         $freteResumoUrl = route('delivery.public.freight.summary', [$slug]);
         $calcularEntregaApiUrl = route('delivery.public.calcular-entrega');
+        $pixQrDataUri = DeliveryLojaCheckoutHelper::pixQrCodeDataUri($config);
+        $pixConfigurada = DeliveryLojaCheckoutHelper::pixConfiguradaParaCheckout($config);
+        $cartUrl = route('delivery.public.cart', [$slug]);
 
         return view('delivery.public.checkout', compact(
-            'config', 'slug', 'pagamentos', 'passoAtual', 'fidelidadeAtiva', 'footerFixed',
-            'freteModo', 'checkoutOsrm', 'freteResumoUrl', 'calcularEntregaApiUrl'
+            'config', 'slug', 'formasCheckout', 'passoAtual', 'fidelidadeAtiva', 'programaFidelidade',
+            'footerFixed', 'freteModo', 'checkoutOsrm', 'freteResumoUrl', 'calcularEntregaApiUrl',
+            'tipoCheckout', 'cepDigits', 'permiteBalcao', 'pixQrDataUri', 'pixConfigurada', 'cartUrl', 'prefs'
         ));
     }
 
@@ -181,6 +238,38 @@ class DeliveryPublicController extends Controller
         if (is_string($payload['itens'] ?? null)) {
             $payload['itens'] = json_decode($payload['itens'], true);
         }
+        if (! empty($payload['tipo_entrega']) && empty($payload['fulfillment'])) {
+            $payload['fulfillment'] = DeliveryLojaCheckoutHelper::fulfillmentFromTipoEntrega((string) $payload['tipo_entrega']);
+        }
+        if (! empty($payload['forma_pagamento']) && empty($payload['pagamento_forma'])) {
+            $payload['pagamento_forma'] = DeliveryLojaCheckoutHelper::normalizarFormaPagamento((string) $payload['forma_pagamento']);
+        }
+        if (! empty($payload['cep_entrega']) && empty($payload['endereco_cep'])) {
+            $payload['endereco_cep'] = $payload['cep_entrega'];
+        }
+        if (! empty($payload['endereco']) && empty($payload['endereco_rua'])) {
+            $payload['endereco_rua'] = $payload['endereco'];
+        }
+        if (! empty($payload['entrega_numero']) && empty($payload['endereco_numero'])) {
+            $payload['endereco_numero'] = $payload['entrega_numero'];
+        }
+        if (! empty($payload['entrega_bairro']) && empty($payload['endereco_bairro'])) {
+            $payload['endereco_bairro'] = $payload['entrega_bairro'];
+        }
+        if (! empty($payload['entrega_cidade']) && empty($payload['endereco_cidade'])) {
+            $payload['endereco_cidade'] = $payload['entrega_cidade'];
+        }
+        if (! empty($payload['entrega_estado']) && empty($payload['endereco_uf'])) {
+            $payload['endereco_uf'] = strtoupper((string) $payload['entrega_estado']);
+        }
+        if (! empty($payload['complemento']) && empty($payload['endereco_complemento'])) {
+            $payload['endereco_complemento'] = $payload['complemento'];
+        }
+        if (empty($payload['cliente_whatsapp']) && ! empty($payload['cliente_telefone'])) {
+            $payload['cliente_whatsapp'] = $payload['cliente_telefone'];
+        }
+
+        $formasCheckout = array_keys(DeliveryLojaCheckoutHelper::formasPagamentoLojaPublica($config));
         $validator = Validator::make($payload, [
             'cliente_nome' => 'required|string|max:160',
             'cliente_telefone' => 'required|string|max:30',
@@ -192,10 +281,12 @@ class DeliveryPublicController extends Controller
             'endereco_numero' => 'nullable|string|max:40',
             'endereco_bairro' => 'nullable|string|max:120',
             'endereco_cidade' => 'nullable|string|max:120',
-            'endereco_uf' => 'nullable|string|size:2',
+            'endereco_uf' => 'nullable|string|max:2',
             'endereco_complemento' => 'nullable|string|max:500',
             'pagamento_forma' => 'required|string|max:40',
-            'observacoes' => 'nullable|string|max:1000',
+            'pagamento_dinheiro_modo' => 'nullable|in:exato,com_troco',
+            'pagamento_troco_para' => 'nullable|numeric|min:0',
+            'observacoes' => 'nullable|string|max:220',
             'itens' => 'required|array|min:1|max:80',
             'itens.*.produto_id' => 'required|integer',
             'itens.*.quantidade' => 'required|integer|min:1|max:99',
@@ -205,6 +296,7 @@ class DeliveryPublicController extends Controller
             throw new ValidationException($validator);
         }
         $data = $validator->validated();
+        $data['pagamento_forma'] = DeliveryLojaCheckoutHelper::normalizarFormaPagamento($data['pagamento_forma']);
         $this->validarRetirada($config, $data['fulfillment']);
         if ($data['fulfillment'] === 'entrega') {
             foreach (['endereco_cep', 'endereco_rua', 'endereco_numero', 'endereco_bairro', 'endereco_cidade', 'endereco_uf'] as $campo) {
@@ -213,13 +305,50 @@ class DeliveryPublicController extends Controller
                 }
             }
         }
-        if (! in_array($data['pagamento_forma'], array_keys($this->pagamentos($config)), true)) {
+        if (! in_array($data['pagamento_forma'], $formasCheckout, true)) {
             throw ValidationException::withMessages(['pagamento_forma' => 'Forma de pagamento indisponível.']);
         }
+
+        $montagem = $this->pedidos->montarItens((int) $config->unidade_id, $data['itens'], true);
+        $totais = $this->pedidos->calcularTotais((int) $config->unidade_id, $data, $montagem);
+        if (! empty($totais['frete']['bloqueado']) && $data['fulfillment'] === 'entrega') {
+            throw ValidationException::withMessages(['endereco_cep' => $totais['frete']['mensagem'] ?? 'Entrega indisponível para este endereço.']);
+        }
+        $totalPedido = (float) $totais['total'];
+
+        $pagamentoTrocoPara = null;
+        if ($data['pagamento_forma'] === DeliveryLojaCheckoutHelper::PAGAMENTO_DINHEIRO) {
+            $modoDin = $data['pagamento_dinheiro_modo'] ?? 'exato';
+            if ($modoDin === 'com_troco') {
+                $trocoPara = $data['pagamento_troco_para'] ?? null;
+                if ($trocoPara === null || $trocoPara === '') {
+                    throw ValidationException::withMessages([
+                        'pagamento_troco_para' => 'Informe com quanto vai pagar em dinheiro (valor igual ou maior ao total) para levarmos o troco.',
+                    ]);
+                }
+                if ((float) $trocoPara + 0.009 < $totalPedido) {
+                    throw ValidationException::withMessages([
+                        'pagamento_troco_para' => 'O valor deve ser igual ou maior ao total do pedido (R$ '.number_format($totalPedido, 2, ',', '.').').',
+                    ]);
+                }
+                $pagamentoTrocoPara = round((float) $trocoPara, 2);
+            }
+        }
+
         $data['canal'] = 'loja';
+        $data['pagamento_troco_para'] = $pagamentoTrocoPara;
         $data['endereco_texto'] = $data['fulfillment'] === 'entrega'
-            ? trim(implode(', ', array_filter([$data['endereco_rua'], $data['endereco_numero'], $data['endereco_bairro'], $data['endereco_cidade'].'/'.$data['endereco_uf']])))
+            ? trim(implode(', ', array_filter([
+                $data['endereco_rua'],
+                $data['endereco_numero'],
+                $data['endereco_bairro'],
+                $data['endereco_cidade'].'/'.$data['endereco_uf'],
+            ])))
             : null;
+        session()->put($this->entregaPrefsKey($slug), [
+            'modo' => $data['fulfillment'],
+            'cep' => preg_replace('/\D+/', '', (string) ($data['endereco_cep'] ?? '')),
+        ]);
         $id = $this->pedidos->criar((int) $config->unidade_id, $data, null);
         $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
         $url = route('delivery.public.success', [$slug, $pedido->codigo_publico, $pedido->cliente_token]);
@@ -312,22 +441,51 @@ class DeliveryPublicController extends Controller
 
     private function pagamentos(object $config): array
     {
-        $raw = trim((string) ($config->formas_pagamento ?? ''));
-        $itens = $raw !== '' ? preg_split('/[,;|]+/', $raw) : ['dinheiro', 'cartao', 'pix'];
-        $labels = ['dinheiro' => 'Dinheiro', 'cartao' => 'Cartão na entrega', 'credito' => 'Cartão de crédito', 'debito' => 'Cartão de débito', 'pix' => 'PIX'];
-        $result = [];
-        foreach ($itens ?: [] as $item) {
-            $key = strtolower(trim($item));
-            $key = str_replace(['ã', 'é', 'í'], ['a', 'e', 'i'], $key);
-            if ($key === 'pix' && blank($config->pix_chave ?? null)) {
-                continue;
-            }
-            if ($key !== '') {
-                $result[$key] = $labels[$key] ?? ucfirst($key);
-            }
+        return DeliveryLojaCheckoutHelper::formasPagamentoLojaPublica($config);
+    }
+
+    /** @return array{modo:string,cep:string} */
+    private function entregaPrefs(string $slug): array
+    {
+        $stored = session()->get($this->entregaPrefsKey($slug), []);
+        $modo = strtolower(trim((string) ($stored['modo'] ?? 'entrega')));
+        if (! in_array($modo, ['entrega', 'retirada', 'pickup'], true)) {
+            $modo = 'entrega';
         }
 
-        return $result ?: ['dinheiro' => 'Dinheiro'];
+        return [
+            'modo' => $modo,
+            'cep' => preg_replace('/\D+/', '', (string) ($stored['cep'] ?? '')),
+        ];
+    }
+
+    private function entregaPrefsKey(string $slug): string
+    {
+        return 'delivery_entrega_prefs.'.$slug;
+    }
+
+    /** @return array{taxa:float,rotulo:string,entrega_bloqueada:bool,total:float} */
+    private function resumoFreteCheckout(object $config, string $fulfillment, ?string $cep, float $subtotal): array
+    {
+        if ($fulfillment !== 'entrega') {
+            return [
+                'taxa' => 0.0,
+                'rotulo' => 'Retirada no balcão',
+                'entrega_bloqueada' => false,
+                'total' => round($subtotal, 2),
+            ];
+        }
+
+        $resumo = $this->frete->calcularResumo($config, $cep, $subtotal);
+        $bloqueada = (bool) ($resumo['entrega_bloqueada'] ?? false);
+        $taxa = (float) ($resumo['taxa'] ?? 0);
+
+        return [
+            'taxa' => $taxa,
+            'rotulo' => (string) ($resumo['rotulo'] ?? ''),
+            'entrega_bloqueada' => $bloqueada,
+            'total' => $bloqueada ? round($subtotal, 2) : round($subtotal + $taxa, 2),
+        ];
     }
 
     private function pedidoSeguro(string $slug, string $codigo, string $token): array

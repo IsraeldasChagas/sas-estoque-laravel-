@@ -3,6 +3,7 @@
 namespace App\Services\Delivery;
 
 use App\Support\Delivery\DeliveryCupomPedido;
+use App\Support\Delivery\DeliveryLojaCheckoutHelper;
 use App\Support\Delivery\DeliveryPedidoPresenter;
 use App\Support\Delivery\DeliveryWhatsAppHelper;
 use Illuminate\Support\Facades\DB;
@@ -141,7 +142,9 @@ class DeliveryPedidoService
                 'endereco_cidade' => $payload['endereco_cidade'] ?? null,
                 'endereco_uf' => $payload['endereco_uf'] ?? null,
                 'endereco_complemento' => $payload['endereco_complemento'] ?? null,
-                'pagamento_forma' => $payload['pagamento_forma'] ?? null,
+                'pagamento_forma' => isset($payload['pagamento_forma'])
+                    ? DeliveryLojaCheckoutHelper::normalizarFormaPagamento((string) $payload['pagamento_forma'])
+                    : null,
                 'pagamento_status' => $payload['pagamento_status'] ?? 'pendente',
                 'subtotal' => $totais['subtotal'],
                 'frete_valor' => $totais['frete_valor'],
@@ -158,6 +161,9 @@ class DeliveryPedidoService
             }
             if (Schema::hasColumn('dlv_pedidos', 'cliente_token')) {
                 $pedidoData['cliente_token'] = $clienteToken;
+            }
+            if (Schema::hasColumn('dlv_pedidos', 'pagamento_troco_para') && array_key_exists('pagamento_troco_para', $payload)) {
+                $pedidoData['pagamento_troco_para'] = $payload['pagamento_troco_para'];
             }
             if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em')) {
                 $pedidoData['estoque_baixado_em'] = $publico ? $agora : null;
@@ -308,6 +314,7 @@ class DeliveryPedidoService
             ],
             'pagamento_forma' => $pedido->pagamento_forma,
             'pagamento_status' => $pedido->pagamento_status,
+            'pagamento_troco_para' => isset($pedido->pagamento_troco_para) ? (float) $pedido->pagamento_troco_para : null,
             'pagamento_descricao' => DeliveryPedidoPresenter::descricaoPagamento($pedido),
             'subtotal' => (float) $pedido->subtotal,
             'frete_valor' => (float) $pedido->frete_valor,

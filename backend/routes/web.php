@@ -33,6 +33,9 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
     Route::post('/fidelidade/cadastro', [DeliveryFidelidadePublicController::class, 'cadastrar'])
         ->middleware('throttle:15,1')->name('fidelity.register');
     Route::get('/checkout', [DeliveryPublicController::class, 'checkout'])->name('checkout');
+    Route::get('/carrinho', [DeliveryPublicController::class, 'carrinho'])->name('cart');
+    Route::post('/carrinho/entrega-prefs', [DeliveryPublicController::class, 'carrinhoEntregaPrefs'])
+        ->middleware('throttle:30,1')->name('cart.prefs');
     Route::post('/frete', [DeliveryPublicController::class, 'frete'])->middleware('throttle:30,1')->name('freight');
     Route::post('/frete-resumo', [DeliveryPublicController::class, 'freteResumo'])->middleware('throttle:30,1')->name('freight.summary');
     Route::post('/checkout', [DeliveryPublicController::class, 'finalizar'])->middleware('throttle:10,1')->name('finish');

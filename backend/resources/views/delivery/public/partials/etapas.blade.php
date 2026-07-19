@@ -8,7 +8,7 @@
     $pedidoUrl = $pedidoShowUrl ?? null;
     $etapas = [
         ['id' => 'loja', 'label' => 'Cardápio', 'href' => route('delivery.public.store', $slug)],
-        ['id' => 'carrinho', 'label' => 'Carrinho', 'href' => null, 'action' => 'cart'],
+        ['id' => 'carrinho', 'label' => 'Carrinho', 'href' => route('delivery.public.cart', $slug)],
         ['id' => 'checkout', 'label' => 'Checkout', 'href' => route('delivery.public.checkout', $slug)],
         ['id' => 'pedido', 'label' => 'Pedido', 'href' => $pedidoUrl],
     ];

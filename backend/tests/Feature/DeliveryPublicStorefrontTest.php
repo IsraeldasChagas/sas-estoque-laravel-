@@ -18,6 +18,7 @@ class DeliveryPublicStorefrontTest extends TestCase
         (require database_path('migrations/2026_07_17_150000_create_delivery_tables.php'))->up();
         (require database_path('migrations/2026_07_17_160000_add_estoque_to_delivery_products.php'))->up();
         (require database_path('migrations/2026_07_17_180000_add_public_tracking_to_delivery_orders.php'))->up();
+        (require database_path('migrations/2026_07_19_130000_add_vf_checkout_fields_to_delivery.php'))->up();
     }
 
     protected function tearDown(): void
@@ -199,6 +200,68 @@ class DeliveryPublicStorefrontTest extends TestCase
 
         $this->assertSame(2, (int) DB::table('dlv_produtos')->where('id', $product)->value('estoque'));
         $this->assertNotNull(DB::table('dlv_pedidos')->where('id', $pedido->id)->value('estoque_restaurado_em'));
+    }
+
+    public function test_carrinho_and_checkout_pages_follow_vf_flow(): void
+    {
+        $this->store(['pix_copia_cola' => '00020126580014br.gov.bcb.pix']);
+        $product = $this->product($this->category());
+
+        $this->get('/loja/teste/carrinho')->assertOk()
+            ->assertSee('Carrinho')
+            ->assertSee('Como receber')
+            ->assertSee('Ir para checkout');
+
+        $this->postJson('/loja/teste/carrinho/entrega-prefs', [
+            'modo' => 'balcao',
+            'cep' => '66000000',
+        ])->assertOk()->assertJsonPath('prefs.modo', 'balcao');
+
+        $this->get('/loja/teste/checkout')->assertOk()
+            ->assertSee('Finalizar pedido')
+            ->assertSee('Cartão de crédito (na maquininha)')
+            ->assertSee('Cartão de débito (na maquininha)')
+            ->assertSee('Pix copia e cola');
+    }
+
+    public function test_checkout_dinheiro_com_troco_persiste_valor(): void
+    {
+        $this->store();
+        $product = $this->product($this->category(), ['preco' => 20]);
+
+        $payload = $this->checkoutPayload($product);
+        $payload['pagamento_dinheiro_modo'] = 'com_troco';
+        $payload['pagamento_troco_para'] = 50;
+
+        $this->postJson('/loja/teste/checkout', $payload)->assertCreated();
+        $pedido = DB::table('dlv_pedidos')->first();
+
+        $this->assertSame('dinheiro', $pedido->pagamento_forma);
+        $this->assertSame(50.0, (float) $pedido->pagamento_troco_para);
+    }
+
+    public function test_checkout_dinheiro_com_troco_rejeita_valor_menor_que_total(): void
+    {
+        $this->store();
+        $product = $this->product($this->category(), ['preco' => 20]);
+
+        $payload = $this->checkoutPayload($product);
+        $payload['pagamento_dinheiro_modo'] = 'com_troco';
+        $payload['pagamento_troco_para'] = 10;
+
+        $this->postJson('/loja/teste/checkout', $payload)->assertUnprocessable();
+    }
+
+    public function test_checkout_cartao_credito_normaliza_forma_pagamento(): void
+    {
+        $this->store();
+        $product = $this->product($this->category());
+
+        $payload = $this->checkoutPayload($product);
+        $payload['pagamento_forma'] = 'cartao_credito';
+
+        $this->postJson('/loja/teste/checkout', $payload)->assertCreated();
+        $this->assertSame('cartao_credito', DB::table('dlv_pedidos')->value('pagamento_forma'));
     }
 
     private function store(array $overrides = []): void
