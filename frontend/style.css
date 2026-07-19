@@ -8079,63 +8079,68 @@ select[size]:not([size="1"]) {
   .reserva-fid__pag-remove { grid-column: 2; justify-self: end; }
 }
 
+.fid-cartoes-acoes-cell {
+  width: 252px;
+  min-width: 252px;
+  vertical-align: middle;
+}
 .fid-cartoes-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(4.25rem, 1fr));
-  gap: 0.28rem;
-  width: 100%;
-  max-width: 14.5rem;
-  min-width: 13rem;
+  grid-template-columns: repeat(3, 78px);
+  grid-auto-rows: 30px;
+  gap: 6px;
+  width: 252px;
 }
-.fid-cartoes-actions .btn {
+.fid-act-btn {
+  appearance: none;
+  box-sizing: border-box;
+  width: 78px;
+  height: 30px;
+  min-width: 78px;
+  max-width: 78px;
+  min-height: 30px;
+  max-height: 30px;
   margin: 0;
-  padding: 0.32rem 0.25rem;
-  min-height: 1.65rem;
-  width: 100%;
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: 0.01em;
-  border-radius: 7px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font: 600 11px/1.1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  transition: filter 0.12s ease, box-shadow 0.12s ease;
 }
-.fid-cartoes-actions .btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.1);
+.fid-act-btn:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
 }
-.fid-cartoes-actions .btn:active {
-  transform: translateY(0);
+.fid-act-btn:active {
+  filter: brightness(0.96);
 }
-.fid-cartoes-actions .btn.primary {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+.fid-act-btn--primary {
+  background: #2563eb;
   border-color: #1d4ed8;
 }
-.fid-cartoes-actions .btn.secondary {
-  background: #f8fafc;
+.fid-act-btn--secondary {
+  background: #64748b;
+  border-color: #475569;
+}
+.fid-act-btn--neutral {
+  background: #e2e8f0;
   border-color: #cbd5e1;
   color: #334155;
 }
-.fid-cartoes-actions .btn.neutral {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #475569;
-}
-.fid-cartoes-actions .btn.danger {
-  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+.fid-act-btn--danger {
+  background: #dc2626;
   border-color: #b91c1c;
-}
-@media (max-width: 900px) {
-  .fid-cartoes-actions {
-    grid-template-columns: repeat(2, minmax(4.5rem, 1fr));
-    max-width: 10rem;
-    min-width: 9rem;
-  }
 }
 
 .reserva-meios-panel {
