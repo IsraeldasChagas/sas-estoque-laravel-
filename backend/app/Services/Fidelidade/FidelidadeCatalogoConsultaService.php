@@ -142,8 +142,16 @@ final class FidelidadeCatalogoConsultaService
             $row = ['id' => $id, 'nome' => $nome];
             if ($live !== null) {
                 $row['preco'] = (float) $live['preco'];
-            } elseif (array_key_exists('preco', $item)) {
-                $row['preco'] = (float) $item['preco'];
+                if (! empty($live['foto_url'])) {
+                    $row['foto_url'] = (string) $live['foto_url'];
+                }
+            } else {
+                if (array_key_exists('preco', $item)) {
+                    $row['preco'] = (float) $item['preco'];
+                }
+                if (! empty($item['foto_url'])) {
+                    $row['foto_url'] = (string) $item['foto_url'];
+                }
             }
             $out[] = $row;
         }
@@ -200,14 +208,27 @@ final class FidelidadeCatalogoConsultaService
             $query->orderBy('ordem');
         }
 
+        $cols = ['id', 'nome', 'preco', 'visivel_loja'];
+        if (Schema::hasColumn('dlv_produtos', 'foto_path')) {
+            $cols[] = 'foto_path';
+        }
+
         return $query->orderBy('nome')
-            ->get(['id', 'nome', 'preco', 'visivel_loja'])
-            ->map(fn ($row) => [
-                'id' => (int) $row->id,
-                'nome' => (string) $row->nome,
-                'preco' => (float) $row->preco,
-                'visivel_loja' => (bool) ($row->visivel_loja ?? true),
-            ])->values()->all();
+            ->get($cols)
+            ->map(function ($row) use ($deliveryUnidadeId) {
+                $item = [
+                    'id' => (int) $row->id,
+                    'nome' => (string) $row->nome,
+                    'preco' => (float) $row->preco,
+                    'visivel_loja' => (bool) ($row->visivel_loja ?? true),
+                ];
+                $fotoUrl = $this->fotoUrl($row->foto_path ?? null, $deliveryUnidadeId);
+                if ($fotoUrl !== null) {
+                    $item['foto_url'] = $fotoUrl;
+                }
+
+                return $item;
+            })->values()->all();
     }
 
     /**
@@ -226,11 +247,15 @@ final class FidelidadeCatalogoConsultaService
         foreach ($ids as $id) {
             $item = $map->get($id);
             if ($item) {
-                $payload[] = [
+                $payloadItem = [
                     'id' => (int) $item['id'],
                     'nome' => (string) $item['nome'],
                     'preco' => (float) $item['preco'],
                 ];
+                if (! empty($item['foto_url'])) {
+                    $payloadItem['foto_url'] = (string) $item['foto_url'];
+                }
+                $payload[] = $payloadItem;
             }
         }
 
@@ -271,9 +296,20 @@ final class FidelidadeCatalogoConsultaService
             if (array_key_exists('preco', $item)) {
                 $row['preco'] = (float) $item['preco'];
             }
+            if (! empty($item['foto_url'])) {
+                $row['foto_url'] = (string) $item['foto_url'];
+            }
             $out[] = $row;
         }
 
         return $out;
+    }
+
+    private function fotoUrl(?string $path, int $deliveryUnidadeId): ?string
+    {
+        $rel = ltrim(str_replace('\\', '/', (string) $path), '/');
+        $prefix = "uploads/delivery/produtos/{$deliveryUnidadeId}/";
+
+        return $rel !== '' && ! str_contains($rel, '..') && str_starts_with($rel, $prefix) ? '/'.$rel : null;
     }
 }

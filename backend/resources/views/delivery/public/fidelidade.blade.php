@@ -53,7 +53,21 @@
                     @endif
                     <ul class="vf-fid-catalogo-produtos">
                         @foreach($catalogoProdutos as $prod)
-                            <li>{{ $prod['nome'] ?? '' }}</li>
+                            <li class="vf-fid-catalogo-produto-card">
+                                <div class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
+                                    @if(! empty($prod['foto_url']))
+                                        <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
+                                    @else
+                                        <span>▧</span>
+                                    @endif
+                                </div>
+                                <div class="vf-fid-catalogo-produto-card__body">
+                                    <strong>{{ $prod['nome'] ?? '' }}</strong>
+                                    @if(isset($prod['preco']))
+                                        <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
+                                    @endif
+                                </div>
+                            </li>
                         @endforeach
                     </ul>
                 @else
