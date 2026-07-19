@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Delivery\DeliveryCalcularEntregaController;
 use App\Http\Controllers\Delivery\DeliveryPublicController;
+use App\Http\Controllers\Delivery\DeliveryPublicEntregadorController;
 use App\Http\Controllers\Delivery\DeliveryFidelidadePublicController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhPublicoController;
@@ -39,6 +40,10 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
         ->where('token', '[a-f0-9]{64}')->name('success');
     Route::get('/pedido/{codigo}/{token}', [DeliveryPublicController::class, 'pedido'])
         ->where('token', '[a-f0-9]{64}')->name('order');
+    Route::get('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'show'])
+        ->name('entregador.show');
+    Route::post('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'registrar'])
+        ->middleware('throttle:30,1')->name('entregador.registrar');
 });
 
 Route::post('/api/calcular-entrega', DeliveryCalcularEntregaController::class)

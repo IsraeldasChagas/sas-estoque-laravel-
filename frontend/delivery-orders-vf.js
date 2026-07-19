@@ -19,6 +19,70 @@
     if (typeof window.fetchJSON !== "function") throw new Error("Conexão com a API indisponível.");
     return window.fetchJSON(`/delivery${path}`, options || {});
   };
+  const API_URL = (() => {
+    if (window.APP_CONFIG?.API_URL) return window.APP_CONFIG.API_URL;
+    return `${location.origin.replace(/\/$/, "")}/api`;
+  })();
+
+  function authHeaders(extra) {
+    const headers = { ...(extra || {}) };
+    if (window.currentUser?.token) headers.Authorization = `Bearer ${window.currentUser.token}`;
+    if (window.currentUser?.id != null) headers["X-Usuario-Id"] = String(window.currentUser.id);
+    return headers;
+  }
+
+  async function openPrint(orderId, auto) {
+    const path = `/delivery/pedidos/${orderId}/imprimir${auto ? "?auto=1" : ""}`;
+    const res = await fetch(`${API_URL}${path}`, { headers: authHeaders(), cache: "no-store" });
+    if (!res.ok) throw new Error("Não foi possível abrir o cupom para impressão.");
+    const html = await res.text();
+    const win = window.open("", "_blank");
+    if (!win) throw new Error("Permita pop-ups para imprimir o cupom.");
+    win.document.write(html);
+    win.document.close();
+  }
+
+  function renderEntregadores(order) {
+    const list = order.entregadores || [];
+    if (order.fulfillment !== "entrega" || !list.length) return "";
+    return `<section class="vf-card vf-entregadores">
+      <div class="vf-card-title"><h3>Seus entregadores</h3><p>Chame no WhatsApp antes de enviar o link da entrega.</p></div>
+      <div class="vf-entregadores__grid">${list.map((ent) => `<article class="vf-entregador-card">
+        ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-entregador-card__photo">` : `<span class="vf-entregador-card__photo vf-entregador-card__photo--empty">👤</span>`}
+        <strong>${esc(ent.nome)}</strong>
+        ${ent.whatsapp_url
+          ? `<a class="vf-btn vf-btn--success vf-entregador-card__wa" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer">Chamar no WhatsApp</a>`
+          : `<p class="vf-entregador-card__warn">Configure o WhatsApp do entregador.</p>`}
+      </article>`).join("")}</div>
+    </section>`;
+  }
+
+  function renderCupomActions(order) {
+    const wa = order.cupom_whatsapp_url;
+    const printEnabled = order.impressao_habilitada !== false;
+    return `<section class="vf-card vf-cupom-actions">
+      <div class="vf-card-title"><h3>Cupom / comanda</h3><p>Imprima na térmica ou envie o resumo ao cliente.</p></div>
+      <div class="vf-cupom-actions__buttons">
+        ${printEnabled ? `<button type="button" class="vf-btn" data-vf-print="0">Abrir cupom / imprimir</button>
+          <button type="button" class="vf-btn" data-vf-print="1">Abrir e pedir impressão</button>`
+          : `<p class="vf-muted-note">Impressão desativada nas configurações. Ainda pode enviar pelo WhatsApp.</p>`}
+        ${wa
+          ? `<a class="vf-btn vf-btn--success" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">Enviar cupom no WhatsApp</a>`
+          : `<p class="vf-entregador-card__warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
+      </div>
+    </section>`;
+  }
+
+  function renderEntregadorLink(order) {
+    if (order.fulfillment !== "entrega" || !order.url_entregador) return "";
+    return `<section class="vf-card vf-entregador-link">
+      <div class="vf-card-title"><h3>Link do entregador</h3><p>Mostra endereço, itens, pagamento e o código do pedido. O entregador pode marcar entregue, cancelado ou endereço não encontrado.</p></div>
+      <label class="vf-token-field"><span>URL da entrega</span>
+        <div><input readonly value="${esc(order.url_entregador)}"><button class="vf-btn" type="button" data-vf-copy-url>Copiar</button></div>
+      </label>
+      <a class="vf-btn vf-btn--block" href="${esc(order.url_entregador)}" target="_blank" rel="noopener noreferrer">Abrir página do entregador</a>
+    </section>`;
+  }
 
   const labels = {
     pendente_loja: "Pendente da loja",
@@ -294,9 +358,10 @@
                 <dt>CEP</dt><dd>${esc(address.cep || "—")}</dd>
                 <dt>Pagamento</dt><dd>${esc(order.pagamento_forma || "—")} · ${esc(order.pagamento_status || "pendente")}</dd>
                 <dt>Observações</dt><dd>${esc(order.observacoes || "Nenhuma")}</dd></dl>
-              ${order.fulfillment === "entrega" && order.entregador_token ? `<label class="vf-token-field"><span>Token do entregador</span>
-                <div><input readonly value="${esc(order.entregador_token)}"><button class="vf-btn" data-vf-copy-token>Copiar</button></div></label>` : ""}
             </section>
+            ${renderCupomActions(order)}
+            ${renderEntregadores(order)}
+            ${renderEntregadorLink(order)}
             ${transitions.length ? `<section class="vf-card vf-status-actions"><h3>Atualizar status</h3>
               ${transitions.filter((status) => !(isPending && ["recebido", "cancelado"].includes(status))).map((status) =>
                 `<button class="vf-btn ${status === "cancelado" ? "vf-btn--danger" : "vf-btn--primary"}" data-vf-detail-status="${status}">${esc(actionLabels[status])}</button>`).join("")}
@@ -312,15 +377,25 @@
           await changeStatus(order.id, status, () => openOrder(order.id));
         };
       });
-      const copy = root.querySelector("[data-vf-copy-token]");
-      if (copy) copy.onclick = async () => {
+      root.querySelectorAll("[data-vf-print]").forEach((button) => {
+        button.onclick = async () => {
+          try {
+            await openPrint(order.id, button.dataset.vfPrint === "1");
+          } catch (error) {
+            toast(error?.message || "Não foi possível imprimir o cupom.", "error");
+          }
+        };
+      });
+      const copyUrl = root.querySelector("[data-vf-copy-url]");
+      if (copyUrl) copyUrl.onclick = async () => {
+        const input = copyUrl.previousElementSibling;
         try {
-          await navigator.clipboard.writeText(order.entregador_token);
-          toast("Token copiado.", "success");
+          await navigator.clipboard.writeText(order.url_entregador);
+          toast("Link copiado.", "success");
         } catch (_) {
-          copy.previousElementSibling.select();
+          input.select();
           document.execCommand("copy");
-          toast("Token copiado.", "success");
+          toast("Link copiado.", "success");
         }
       };
     } catch (error) {
@@ -493,6 +568,136 @@
     form.querySelector(".vf-address-fields")?.classList.toggle("is-hidden", form.elements.fulfillment.value !== "entrega");
   }
 
+  let pollTimer = null;
+  let pollModalOpen = false;
+  let pollSubmitting = false;
+  let pollAlarmTimer = null;
+  let pollCurrent = null;
+
+  function ensurePollModal() {
+    if (document.getElementById("vfModalPedidoPendente")) return;
+    document.body.insertAdjacentHTML("beforeend", `<div class="vf-pending-modal" id="vfModalPedidoPendente" hidden>
+      <div class="vf-pending-modal__backdrop"></div>
+      <div class="vf-pending-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="vfModalPedidoPendenteTitulo">
+        <header class="vf-pending-modal__head"><h2 id="vfModalPedidoPendenteTitulo">Pedido aguardando confirmação</h2></header>
+        <div class="vf-pending-modal__body" id="vf-modal-pendente-corpo"></div>
+        <footer class="vf-pending-modal__foot">
+          <button type="button" class="vf-btn" id="vf-modal-pendente-abrir" style="display:none">Abrir pedido completo</button>
+          <div class="vf-pending-modal__actions">
+            <button type="button" class="vf-btn vf-btn--danger" id="vf-modal-btn-recusar" disabled>Recusar pedido</button>
+            <button type="button" class="vf-btn vf-btn--success" id="vf-modal-btn-aceitar" disabled>Aceitar pedido</button>
+          </div>
+        </footer>
+      </div>
+    </div>`);
+    document.getElementById("vf-modal-btn-aceitar").onclick = () => decidePending("recebido");
+    document.getElementById("vf-modal-btn-recusar").onclick = () => {
+      if (!confirm("Recusar este pedido? Essa ação não poderá ser desfeita.")) return;
+      decidePending("cancelado");
+    };
+    document.getElementById("vf-modal-pendente-abrir").onclick = () => {
+      if (!pollCurrent) return;
+      hidePendingModal();
+      window.navigateTo?.("deliveryPedidos");
+      setTimeout(() => openOrder(pollCurrent.id), 0);
+    };
+    document.querySelector("#vfModalPedidoPendente .vf-pending-modal__backdrop").onclick = () => {};
+  }
+
+  function playPendingAlarm() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const t = ctx.currentTime;
+      [{ f: 1046, d: 0.11, off: 0 }, { f: 784, d: 0.11, off: 0.14 }, { f: 1318, d: 0.14, off: 0.32 }].forEach((s) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square";
+        o.frequency.value = s.f;
+        g.gain.value = 0.05;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start(t + s.off);
+        o.stop(t + s.off + s.d);
+      });
+    } catch (_) {}
+  }
+
+  function stopPendingAlarm() {
+    if (pollAlarmTimer) {
+      clearInterval(pollAlarmTimer);
+      pollAlarmTimer = null;
+    }
+  }
+
+  function showPendingModal(pedido, total) {
+    ensurePollModal();
+    pollCurrent = pedido;
+    pollModalOpen = true;
+    const modal = document.getElementById("vfModalPedidoPendente");
+    const body = document.getElementById("vf-modal-pendente-corpo");
+    const titulo = document.getElementById("vfModalPedidoPendenteTitulo");
+    titulo.textContent = total > 1 ? `${total} pedidos aguardando confirmação` : "Pedido aguardando confirmação";
+    body.innerHTML = `<div class="vf-pending-modal__summary">
+      <strong class="vf-order-code">${esc(pedido.codigo_publico)}</strong>
+      <p>${esc(pedido.cliente_nome || "Cliente")} · ${esc(pedido.total_fmt || money(pedido.total || 0))}</p>
+      <p class="vf-muted-note">${dateTime(pedido.created_at)} · ${esc(pedido.fulfillment_rotulo || "Entrega")}</p>
+      <ul>${(pedido.itens || []).map((item) => `<li>${esc(item.qtd)}× ${esc(item.nome)}</li>`).join("")}</ul>
+    </div>`;
+    document.getElementById("vf-modal-btn-aceitar").disabled = false;
+    document.getElementById("vf-modal-btn-recusar").disabled = false;
+    document.getElementById("vf-modal-pendente-abrir").style.display = "";
+    modal.hidden = false;
+    playPendingAlarm();
+    stopPendingAlarm();
+    pollAlarmTimer = setInterval(playPendingAlarm, 2350);
+  }
+
+  function hidePendingModal() {
+    stopPendingAlarm();
+    pollModalOpen = false;
+    pollCurrent = null;
+    const modal = document.getElementById("vfModalPedidoPendente");
+    if (modal) modal.hidden = true;
+  }
+
+  async function decidePending(status) {
+    if (!pollCurrent || pollSubmitting) return;
+    pollSubmitting = true;
+    try {
+      await api(`/pedidos/${pollCurrent.id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      toast(status === "recebido" ? "Pedido aceito." : "Pedido recusado.", "success");
+      hidePendingModal();
+      const data = await api("/pedidos/pendentes-poll");
+      if (data.enabled && (data.pedidos || []).length) showPendingModal(data.pedidos[0], data.pedidos.length);
+      if ($("deliveryPedidosRoot")) loadOrders("");
+      if ($("deliveryDashboardRoot")) loadDashboard();
+    } catch (error) {
+      toast(error?.message || "Não foi possível atualizar o pedido.", "error");
+    } finally {
+      pollSubmitting = false;
+    }
+  }
+
+  async function pollPendentes() {
+    if (pollModalOpen || pollSubmitting) return;
+    try {
+      const data = await api("/pedidos/pendentes-poll");
+      if (!data.enabled || !(data.pedidos || []).length) return;
+      showPendingModal(data.pedidos[0], data.pedidos.length);
+    } catch (_) {}
+  }
+
+  function startPendingPoll() {
+    if (pollTimer) return;
+    ensurePollModal();
+    pollPendentes();
+    pollTimer = setInterval(pollPendentes, 10000);
+  }
+
   window.loadDeliveryDashboard = loadDashboard;
   window.loadDeliveryPedidos = loadOrders;
+  startPendingPoll();
 })();

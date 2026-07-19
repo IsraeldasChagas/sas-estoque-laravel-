@@ -2,6 +2,9 @@
 
 namespace App\Services\Delivery;
 
+use App\Support\Delivery\DeliveryCupomPedido;
+use App\Support\Delivery\DeliveryPedidoPresenter;
+use App\Support\Delivery\DeliveryWhatsAppHelper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -280,13 +283,15 @@ class DeliveryPedidoService
                 ];
             })->values();
 
-        return [
+        $base = [
             'id' => (int) $pedido->id,
             'unidade_id' => (int) $pedido->unidade_id,
             'codigo_publico' => (string) $pedido->codigo_publico,
             'status' => (string) $pedido->status,
+            'status_rotulo' => DeliveryPedidoPresenter::rotuloStatus($pedido->status ?? null),
             'canal' => (string) $pedido->canal,
             'fulfillment' => (string) $pedido->fulfillment,
+            'fulfillment_rotulo' => DeliveryPedidoPresenter::rotuloFulfillment($pedido->fulfillment ?? null),
             'cliente_nome' => (string) $pedido->cliente_nome,
             'cliente_telefone' => $pedido->cliente_telefone,
             'cliente_whatsapp' => $pedido->cliente_whatsapp,
@@ -303,11 +308,13 @@ class DeliveryPedidoService
             ],
             'pagamento_forma' => $pedido->pagamento_forma,
             'pagamento_status' => $pedido->pagamento_status,
+            'pagamento_descricao' => DeliveryPedidoPresenter::descricaoPagamento($pedido),
             'subtotal' => (float) $pedido->subtotal,
             'frete_valor' => (float) $pedido->frete_valor,
             'total' => (float) $pedido->total,
             'entregador_id' => $pedido->entregador_id !== null ? (int) $pedido->entregador_id : null,
             'entregador_token' => $pedido->entregador_token,
+            'entregador_pode_registrar' => DeliveryPedidoPresenter::entregadorPodeRegistrarResultado($pedido->status ?? null),
             'observacoes' => $pedido->observacoes,
             'usuario_id' => $pedido->usuario_id !== null ? (int) $pedido->usuario_id : null,
             'created_at' => $pedido->created_at,
@@ -315,6 +322,89 @@ class DeliveryPedidoService
             'itens' => $itens,
             'historico' => $historico,
         ];
+
+        return array_merge($base, $this->metaOperacao($pedido));
+    }
+
+    /** @return array<string, mixed> */
+    public function metaOperacao(object $pedido): array
+    {
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $pedido->unidade_id)->first();
+        $itensDb = DB::table('dlv_pedido_itens')->where('pedido_id', $pedido->id)->orderBy('ordem')->orderBy('id')->get();
+        $slug = trim((string) ($config->slug ?? ''));
+        $isEntrega = strtolower(trim((string) ($pedido->fulfillment ?? 'entrega'))) === 'entrega';
+
+        $urlEntregador = null;
+        if ($isEntrega && $slug !== '' && ! empty($pedido->entregador_token)) {
+            $urlEntregador = route('delivery.public.entregador.show', [
+                'slug' => $slug,
+                'codigo' => $pedido->codigo_publico,
+                'token' => $pedido->entregador_token,
+            ], absolute: true);
+        }
+
+        $entregadores = [];
+        if ($isEntrega && Schema::hasTable('dlv_entregadores')) {
+            $entregadores = DB::table('dlv_entregadores')
+                ->where('unidade_id', $pedido->unidade_id)
+                ->where('ativo', 1)
+                ->orderBy('ordem')
+                ->orderBy('nome')
+                ->get()
+                ->map(fn ($row) => [
+                    'id' => (int) $row->id,
+                    'nome' => (string) $row->nome,
+                    'whatsapp' => $row->whatsapp,
+                    'telefone' => $row->telefone,
+                    'foto_url' => empty($row->foto_path) ? null : '/'.ltrim((string) $row->foto_path, '/'),
+                    'whatsapp_url' => DeliveryWhatsAppHelper::urlContato($row->whatsapp),
+                ])->values()->all();
+        }
+
+        return [
+            'loja_slug' => $slug !== '' ? $slug : null,
+            'loja_nome' => $config->nome_loja ?? null,
+            'confirmar_pedidos' => (bool) ($config->confirmar_pedidos ?? true),
+            'impressao_habilitada' => true,
+            'url_imprimir' => '/delivery/pedidos/'.(int) $pedido->id.'/imprimir',
+            'url_entregador' => $urlEntregador,
+            'cupom_whatsapp_url' => $config
+                ? DeliveryCupomPedido::urlWhatsAppCupom($pedido, $config, $itensDb)
+                : null,
+            'entregadores' => $entregadores,
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function serializarPedidosPendentesPoll(int $unidadeId): array
+    {
+        return DB::table('dlv_pedidos')
+            ->where('unidade_id', $unidadeId)
+            ->where('status', 'pendente_loja')
+            ->orderBy('created_at')
+            ->limit(20)
+            ->get()
+            ->map(function ($pedido) {
+                $itens = DB::table('dlv_pedido_itens')
+                    ->where('pedido_id', $pedido->id)
+                    ->orderBy('ordem')
+                    ->orderBy('id')
+                    ->get()
+                    ->map(fn ($item) => [
+                        'nome' => (string) $item->nome_produto,
+                        'qtd' => (float) $item->quantidade,
+                    ])->values()->all();
+
+                return [
+                    'id' => (int) $pedido->id,
+                    'codigo_publico' => (string) $pedido->codigo_publico,
+                    'cliente_nome' => (string) $pedido->cliente_nome,
+                    'total_fmt' => 'R$ '.number_format((float) $pedido->total, 2, ',', '.'),
+                    'fulfillment_rotulo' => DeliveryPedidoPresenter::rotuloFulfillment($pedido->fulfillment ?? null),
+                    'created_at' => $pedido->created_at,
+                    'itens' => $itens,
+                ];
+            })->values()->all();
     }
 
     private function validarOpcoes(object $produto, mixed $opcoes, int $unidadeId): array

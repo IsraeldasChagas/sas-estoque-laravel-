@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class DeliveryPedidoController extends DeliveryBaseController
 {
@@ -144,6 +145,44 @@ class DeliveryPedidoController extends DeliveryBaseController
         );
 
         return response()->json($this->pedidos->completo($atualizado));
+    }
+
+    public function pollPendentes(Request $request): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryPedidos');
+        $unidadeId = $this->access->unidadeId($request, $usuario);
+        if (! $unidadeId) {
+            return response()->json(['enabled' => false, 'pedidos' => []]);
+        }
+
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $unidadeId)->first();
+        if (! $config || ! (bool) ($config->confirmar_pedidos ?? true)) {
+            return response()->json(['enabled' => false, 'pedidos' => []]);
+        }
+
+        return response()->json([
+            'enabled' => true,
+            'pedidos' => $this->pedidos->serializarPedidosPendentesPoll($unidadeId),
+        ]);
+    }
+
+    public function imprimir(Request $request, int $id): View
+    {
+        $usuario = $this->auth($request, 'deliveryPedidos');
+        $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        abort_unless($pedido, 404, 'Pedido não encontrado.');
+        $this->access->autorizarRegistro($usuario, $pedido, 'Sem permissão para este pedido.');
+
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $pedido->unidade_id)->first();
+        abort_unless($config, 404, 'Configuração da loja não encontrada.');
+
+        $itens = DB::table('dlv_pedido_itens')
+            ->where('pedido_id', $pedido->id)
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get();
+
+        return view('delivery.admin.pedidos.imprimir', compact('config', 'pedido', 'itens'));
     }
 
     private function validar(Request $request): array
