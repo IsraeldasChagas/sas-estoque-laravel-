@@ -43,33 +43,34 @@
                 <h3 class="vf-fid-como-recompensa__titulo">{{ $recTitulo !== '' ? $recTitulo : 'Recompensa' }}</h3>
 
                 @if($catalogoComProdutos)
-                    <p class="vf-fid-catalogo-intro">
-                        <strong>Forma de recompensa:</strong> Catálogo (consulta) — ao completar a meta, escolha até
-                        <strong>{{ $catalogoQtd }}</strong>
-                        {{ $catalogoQtd === 1 ? 'item' : 'itens' }} entre os produtos abaixo:
-                    </p>
-                    @if($catalogoQtd > 1)
-                        <p class="vf-fid-catalogo-nota muted">Pode repetir o mesmo produto até atingir o limite.</p>
-                    @endif
-                    <ul class="vf-fid-catalogo-produtos">
-                        @foreach($catalogoProdutos as $prod)
-                            <li class="vf-fid-catalogo-produto-card">
-                                <div class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
-                                    @if(! empty($prod['foto_url']))
-                                        <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
-                                    @else
-                                        <span>▧</span>
-                                    @endif
-                                </div>
-                                <div class="vf-fid-catalogo-produto-card__body">
-                                    <strong>{{ $prod['nome'] ?? '' }}</strong>
-                                    @if(isset($prod['preco']))
-                                        <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
-                                    @endif
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
+                    <div class="vf-fid-catalogo-mini">
+                        <p class="vf-fid-catalogo-intro">
+                            Escolha até <strong>{{ $catalogoQtd }}</strong>
+                            {{ $catalogoQtd === 1 ? 'item' : 'itens' }} entre:
+                        </p>
+                        @if($catalogoQtd > 1)
+                            <p class="vf-fid-catalogo-nota muted">Pode repetir o mesmo produto até o limite.</p>
+                        @endif
+                        <ul class="vf-fid-catalogo-produtos">
+                            @foreach($catalogoProdutos as $prod)
+                                <li class="vf-fid-catalogo-produto-card">
+                                    <div class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
+                                        @if(! empty($prod['foto_url']))
+                                            <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
+                                        @else
+                                            <span>▧</span>
+                                        @endif
+                                    </div>
+                                    <div class="vf-fid-catalogo-produto-card__body">
+                                        <strong title="{{ $prod['nome'] ?? '' }}">{{ $prod['nome'] ?? '' }}</strong>
+                                        @if(isset($prod['preco']))
+                                            <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
+                                        @endif
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
                 @else
                     <ul>
                         @foreach($recLinhas as $rl)
