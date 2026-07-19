@@ -14,6 +14,12 @@
   });
   const number = (value) => Number(value || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
   const dateTime = (value) => value ? new Date(value).toLocaleString("pt-BR") : "—";
+  const dateTimeShort = (value) => {
+    if (!value) return "—";
+    const d = new Date(value);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
   const toast = (message, type) => window.showToast?.(message, type || "info");
   const api = (path, options) => {
     if (typeof window.fetchJSON !== "function") throw new Error("Conexão com a API indisponível.");
@@ -43,8 +49,32 @@
   }
 
   function rotuloCanal(canal) {
-    const map = { loja: "Loja online", admin: "Admin", whatsapp: "WhatsApp", pdv: "PDV" };
+    const map = {
+      loja: "Vitrine online",
+      admin: "Admin",
+      whatsapp: "WhatsApp/Telefone",
+      pdv: "Balcão",
+    };
     return map[String(canal || "").toLowerCase()] || canal || "—";
+  }
+
+  let vitrineCache = null;
+  async function getVitrine() {
+    if (!vitrineCache) vitrineCache = await api("/vitrine");
+    return vitrineCache;
+  }
+
+  function badgeClass(status) {
+    const map = {
+      entregue: "vf-bs-badge--success",
+      cancelado: "vf-bs-badge--secondary",
+      endereco_nao_encontrado: "vf-bs-badge--warning",
+      pendente_loja: "vf-bs-badge--danger",
+      rota: "vf-bs-badge--warning",
+      pronto: "vf-bs-badge--warning",
+      preparo: "vf-bs-badge--info",
+    };
+    return map[status] || "vf-bs-badge--primary";
   }
 
   function renderCupomActions(order) {
@@ -54,11 +84,11 @@
       <h3 class="vf-show-card__title">Cupom do cliente</h3>
       <p class="vf-show-help">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> pelo navegador ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
       <div class="vf-show-stack">
-        ${printEnabled ? `<button type="button" class="vf-show-btn vf-show-btn--outline" data-vf-print="0">Abrir cupom / imprimir</button>
-          <button type="button" class="vf-show-btn vf-show-btn--outline-soft" data-vf-print="1">Abrir e pedir impressão</button>`
+        ${printEnabled ? `<button type="button" class="vf-show-btn vf-show-btn--dark vf-show-btn--block" data-vf-print="0"><i class="bi bi-printer"></i>Abrir cupom / imprimir</button>
+          <button type="button" class="vf-show-btn vf-show-btn--secondary vf-show-btn--block" data-vf-print="1"><i class="bi bi-lightning-charge"></i>Abrir e pedir impressão</button>`
           : `<p class="vf-show-help">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
         ${wa
-          ? `<a class="vf-show-btn vf-show-btn--success" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">Enviar cupom no WhatsApp</a>`
+          ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(wa)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Enviar cupom no WhatsApp</a>`
           : `<p class="vf-show-warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
       </div>
     </div>`;
@@ -68,12 +98,12 @@
     const list = order.entregadores || [];
     if (order.fulfillment !== "entrega" || !list.length) return "";
     return `<div class="vf-show-card vf-show-card--sidebar vf-show-card--entregadores">
-      <div class="vf-show-entregadores-head"><h3>Seus entregadores — chame primeiro</h3></div>
+      <div class="vf-show-entregadores-head"><h3><i class="bi bi-person-badge"></i> Seus entregadores — chame primeiro</h3></div>
       <div class="vf-show-entregadores-body">${list.map((ent) => `<div class="vf-show-entregador">
-        ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty">👤</span>`}
+        ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty"><i class="bi bi-person"></i></span>`}
         <div class="vf-show-entregador__nome">${esc(ent.nome)}</div>
         ${ent.whatsapp_url
-          ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer">Chamar no WhatsApp</a>`
+          ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Chamar no WhatsApp</a>`
           : `<p class="vf-show-warn">Ajuste o WhatsApp em editar entregador.</p>`}
       </div>`).join("")}</div>
     </div>`;
@@ -111,12 +141,12 @@
     if (!isPending) return "";
     return `<div class="vf-show-alert vf-show-alert--danger">
       <div class="vf-show-alert__text">
-        <strong><span class="vf-show-bell">🔔</span> Novo pedido — precisa da sua confirmação</strong>
+        <strong><i class="bi bi-bell-fill"></i> Novo pedido — precisa da sua confirmação</strong>
         <span>O cliente já finalizou na vitrine. Só avance o preparo depois que você <strong>aceitar</strong>. Se recusar, o pedido é cancelado e o estoque volta.</span>
       </div>
       <div class="vf-show-alert__actions">
-        <button class="vf-show-btn vf-show-btn--success vf-show-btn--sm" type="button" data-vf-detail-status="recebido">Aceitar pedido</button>
-        <button class="vf-show-btn vf-show-btn--danger-outline vf-show-btn--sm" type="button" data-vf-detail-status="cancelado">Recusar</button>
+        <button class="vf-show-btn vf-show-btn--success vf-show-btn--sm" type="button" data-vf-detail-status="recebido"><i class="bi bi-check-lg"></i>Aceitar pedido</button>
+        <button class="vf-show-btn vf-show-btn--danger-outline vf-show-btn--sm" type="button" data-vf-detail-status="cancelado"><i class="bi bi-x-lg"></i>Recusar</button>
       </div>
     </div>`;
   }
@@ -152,8 +182,8 @@
   }
 
   const labels = {
-    pendente_loja: "Pendente da loja",
-    recebido: "Aceito",
+    pendente_loja: "Aguardando confirmação",
+    recebido: "Recebido",
     preparo: "Em preparo",
     pronto: "Pronto",
     rota: "Em rota",
@@ -179,7 +209,32 @@
   };
 
   function badge(status) {
-    return `<span class="vf-order-status vf-order-status--${esc(status)}">${esc(labels[status] || status)}</span>`;
+    return `<span class="vf-badge ${badgeClass(status)}">${esc(labels[status] || status)}</span>`;
+  }
+
+  function orderPageCrumb(code) {
+    return `<nav class="vf-order-page-crumb"><button type="button" data-vf-orders>Pedidos</button><span>/</span><strong>${esc(code)}</strong></nav>`;
+  }
+
+  function renderOrderTopbar(order, vitrine) {
+    const sub = [order.cliente_nome, order.cliente_email].filter(Boolean).join(" · ");
+    const slug = vitrine?.slug || "";
+    const vitrineUrl = slug ? `${location.origin.replace(/\/$/, "")}/loja/${encodeURIComponent(slug)}` : "";
+    const logo = vitrine?.logo_url || "";
+    return `<div class="vf-order-page-topbar">
+      <div class="vf-order-page-topbar__left">
+        <button type="button" class="vf-order-page-topbar__back" data-vf-orders aria-label="Voltar"><i class="bi bi-arrow-left"></i></button>
+        <div class="min-w-0">
+          <h1 class="vf-order-page-topbar__title">Pedido ${esc(order.codigo_publico)}</h1>
+          ${sub ? `<div class="vf-order-page-topbar__sub">${esc(sub)}</div>` : ""}
+        </div>
+      </div>
+      <div class="vf-order-page-topbar__right">
+        ${logo ? `<img src="${esc(logo)}" alt="" class="vf-order-page-topbar__logo">` : ""}
+        ${vitrine ? `<span class="vf-badge ${vitrine.aberta ? "vf-bs-badge--success" : "vf-bs-badge--danger"}">${vitrine.aberta ? "Loja aberta" : "Loja fechada"}</span>` : ""}
+        ${vitrineUrl ? `<a class="vf-show-btn vf-show-btn--primary vf-show-btn--sm" href="${esc(vitrineUrl)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i>Ver vitrine</a>` : ""}
+      </div>
+    </div>`;
   }
 
   function breadcrumb(current, detail) {
@@ -390,7 +445,10 @@
     const root = $("deliveryPedidosRoot");
     if (!root) return;
     try {
-      const order = await api(`/pedidos/${id}`);
+      const [order, vitrine] = await Promise.all([
+        api(`/pedidos/${id}`),
+        getVitrine().catch(() => null),
+      ]);
       if (extras?.whatsapp_aviso_url) order._whatsapp_aviso_url = extras.whatsapp_aviso_url;
       if (extras?.whatsapp_indisponivel) order._whatsapp_indisponivel = extras.whatsapp_indisponivel;
       const address = order.endereco || {};
@@ -405,8 +463,9 @@
         ? ` · CEP ${String(address.cep).substring(0, 5)}-${String(address.cep).substring(5)}`
         : "";
 
-      root.innerHTML = `<div class="vf-orders vf-order-show">
-        ${breadcrumb(order.codigo_publico, true)}
+      root.innerHTML = `<div class="vf-orders vf-order-show vf-order-show--page">
+        ${renderOrderTopbar(order, vitrine)}
+        ${orderPageCrumb(order.codigo_publico)}
         ${renderWhatsAppAlerts(order)}
         ${renderPendingBanner(order, isPending)}
         <div class="vf-order-show__grid">
@@ -415,7 +474,7 @@
               <div class="vf-show-main-head">
                 <div>
                   <h2 class="vf-show-code">${esc(order.codigo_publico)}</h2>
-                  <p class="vf-show-meta">${dateTime(order.created_at)} · Canal ${esc(rotuloCanal(order.canal))} · ${esc(tipoEntrega)}${cepFmt}</p>
+                  <p class="vf-show-meta">Criado em ${dateTimeShort(order.created_at)} · Canal ${esc(rotuloCanal(order.canal))} · ${esc(tipoEntrega)}${cepFmt}</p>
                 </div>
                 ${badge(order.status)}
               </div>
@@ -442,7 +501,7 @@
             ${renderEntregadorLink(order)}
             ${renderClienteBlock(order, addressLine)}
             ${renderStatusForm(order)}
-            <button class="vf-show-btn vf-show-btn--outline vf-show-btn--block" type="button" data-vf-orders>Voltar à lista</button>
+            <button class="vf-show-btn vf-show-btn--secondary vf-show-btn--block" type="button" data-vf-orders">Voltar à lista</button>
           </aside>
         </div>
       </div>`;
