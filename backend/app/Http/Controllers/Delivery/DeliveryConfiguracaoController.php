@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Services\Delivery\DeliveryAccessService;
+use App\Services\Delivery\DeliveryLojaFreteHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +21,13 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
         'image/webp' => 'webp',
         'image/gif' => 'gif',
     ];
+
+    public function __construct(
+        DeliveryAccessService $access,
+        private readonly DeliveryLojaFreteHelper $freteHelper,
+    ) {
+        parent::__construct($access);
+    }
 
     public function show(Request $request): JsonResponse
     {
@@ -94,7 +103,45 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
         }
         $this->removerArquivos($arquivosAntigos, $unidadeId);
 
-        return response()->json($this->formatar(DB::table('dlv_loja_config')->where('id', $config->id)->first()));
+        return response()->json($this->formatar(
+            DB::table('dlv_loja_config')->where('id', $config->id)->first()
+        ));
+    }
+
+    public function geocodeFreteOrigem(Request $request): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryConfiguracoes');
+        $unidadeId = $this->access->exigirUnidade($request, $usuario, $request->all());
+        $config = $this->obterOuCriar($unidadeId);
+
+        $data = $request->validate([
+            'endereco_texto' => 'nullable|string|max:500',
+            'frete_origem_endereco' => 'nullable|string|max:500',
+            'frete_entrega_lat_origem' => 'nullable|numeric|between:-90,90',
+            'frete_entrega_lng_origem' => 'nullable|numeric|between:-180,180',
+            'unidade_id' => 'nullable|integer',
+        ]);
+
+        $geo = $this->freteHelper->geocodeOrigem(
+            $data['endereco_texto'] ?? $config->endereco_texto,
+            $data['frete_origem_endereco'] ?? ($config->frete_origem_endereco ?? null),
+            isset($data['frete_entrega_lat_origem']) ? (float) $data['frete_entrega_lat_origem'] : null,
+            isset($data['frete_entrega_lng_origem']) ? (float) $data['frete_entrega_lng_origem'] : null,
+        );
+
+        if ($geo === null) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Não foi possível localizar o endereço no mapa. Informe latitude/longitude ou um endereço completo.',
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'lat' => $geo['lat'],
+            'lon' => $geo['lon'],
+            'display_name' => $geo['display_name'] ?? null,
+        ]);
     }
 
     public function vitrineShow(Request $request): JsonResponse
@@ -270,6 +317,9 @@ class DeliveryConfiguracaoController extends DeliveryBaseController
             'filial_nome' => $config->filial_nome ?? null,
             'filial_link_url' => $config->filial_link_url ?? null,
             'entrega_texto' => $config->entrega_texto ?? null,
+            'frete_google_checklist' => $this->freteHelper->googleChecklist($config),
+            'frete_osrm_checklist' => $this->freteHelper->osrmChecklist($config),
+            'frete_preview_mapa_origem' => $this->freteHelper->previewMapaOrigem($config),
         ];
     }
 

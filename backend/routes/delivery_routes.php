@@ -41,6 +41,7 @@ Route::prefix('delivery')->middleware('sas.usuario')->group(function () {
     Route::put('/vitrine', [DeliveryConfiguracaoController::class, 'vitrineUpdate']);
     Route::get('/configuracoes', [DeliveryConfiguracaoController::class, 'show']);
     Route::put('/configuracoes', [DeliveryConfiguracaoController::class, 'update']);
+    Route::post('/configuracoes/frete/geocode-origem', [DeliveryConfiguracaoController::class, 'geocodeFreteOrigem']);
 
     Route::get('/fretes/faixas', [DeliveryFreteController::class, 'index']);
     Route::post('/fretes/faixas', [DeliveryFreteController::class, 'store']);

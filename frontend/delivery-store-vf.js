@@ -311,6 +311,241 @@
     <div class="vf-config-card__body">${body}</div>
   </details>`;
 
+  const freteModoEfetivo = (modo) => {
+    const value = String(modo || "faixas_cep");
+    if (["fixed", "padrao_unico"].includes(value)) return "padrao_unico";
+    if (["cep_band", "faixas_cep"].includes(value)) return "faixas_cep";
+    return value;
+  };
+
+  function renderFreteChecklist(config) {
+    const modo = freteModoEfetivo(config.frete_modo);
+    const google = config.frete_google_checklist || {};
+    const osrm = config.frete_osrm_checklist || {};
+    if (modo === "google_distancia") {
+      if (google.pronto) {
+        return `<div class="vf-frete-alert vf-frete-alert--ok">✓ Frete por distância pronto para usar.</div>`;
+      }
+      const missing = [];
+      if (!google.api_configurada) missing.push("Configure <code>GOOGLE_MAPS_API_KEY</code> no servidor.");
+      if (!google.rs_por_km) missing.push("Preencha <strong>R$ por km</strong> abaixo.");
+      if (!google.origem) missing.push("Informe endereço da loja ou <strong>Saída das entregas</strong>.");
+      return `<div class="vf-frete-alert vf-frete-alert--warn"><strong>Falta configurar:</strong> ${missing.join(" ")}</div>`;
+    }
+    if (modo === "osrm_distancia") {
+      if (osrm.pronto) {
+        return `<div class="vf-frete-alert vf-frete-alert--ok">✓ Frete OSRM / OpenStreetMap pronto para usar.</div>`;
+      }
+      const missing = [];
+      if (!osrm.origem) missing.push("Informe <strong>latitude/longitude de origem</strong> ou endereço da loja.");
+      if (!osrm.user_agent) missing.push("Configure <code>OSM_HTTP_USER_AGENT</code> no <code>.env</code>.");
+      return `<div class="vf-frete-alert vf-frete-alert--warn"><strong>Falta configurar:</strong> ${missing.join(" ")}</div>`;
+    }
+    return "";
+  }
+
+  function renderFreteConfigBody(config) {
+    const modo = freteModoEfetivo(config.frete_modo);
+    const preview = config.frete_preview_mapa_origem;
+    const distKm = modo === "google_distancia" || modo === "osrm_distancia";
+    return `
+      <p class="vf-config-note vf-config-note--lead">Defina o valor base e, abaixo, <strong>como</strong> o sistema calcula na vitrine.</p>
+      <div class="vf-store-form-grid vf-frete-base-grid">
+        <label class="vf-store-field"><span>Taxa de entrega (R$)</span><input name="frete_taxa_fixa" type="number" min="0" step="0.01" value="${esc(config.frete_taxa_fixa ?? 0)}"><small>Valor base (fixo ou taxa base no modo por km).</small></label>
+        <label class="vf-store-field"><span>Entrega grátis acima de (R$)</span><input name="frete_gratis_acima" type="number" min="0" step="0.01" value="${esc(config.frete_gratis_acima ?? "")}" placeholder="Opcional"><small>Vazio = sem frete grátis automático.</small></label>
+        <label class="vf-store-field"><span>Cliente pode retirar na loja?</span><select name="permite_retirada">
+          <option value="1" ${config.permite_retirada ? "selected" : ""}>Sim, sem taxa</option>
+          <option value="0" ${config.permite_retirada ? "" : "selected"}>Não, só entrega</option>
+        </select></label>
+      </div>
+      <div class="vf-frete-chuva">
+        <span class="vf-frete-chuva__title">Chuva — acréscimo no frete de entrega</span>
+        <label class="vf-setting-switch"><input name="frete_chuva_ativa" type="checkbox" ${config.frete_chuva_ativa ? "checked" : ""}>
+        <span><strong>Aplicar acréscimo de chuva</strong><small>Percentual sobre o frete já calculado (faixa, fixo, Google ou OSRM).</small></span></label>
+        <label class="vf-store-field vf-frete-chuva__pct"><span>Acréscimo (%)</span><input name="frete_acrescimo_chuva_percent" type="number" min="0" step="0.01" value="${esc(config.frete_acrescimo_chuva_percent ?? 0)}"></label>
+      </div>
+      <label class="vf-store-field vf-span-2"><span>Como calcular o frete na vitrine</span><select name="frete_modo" data-vf-frete-modo required>
+        <option value="padrao_unico" ${modo === "padrao_unico" ? "selected" : ""}>Taxa fixa (padrão único)</option>
+        <option value="faixas_cep" ${modo === "faixas_cep" ? "selected" : ""}>Faixas de CEP</option>
+        <option value="google_distancia" ${modo === "google_distancia" ? "selected" : ""}>Google Maps (distância × R$/km)</option>
+        <option value="osrm_distancia" ${modo === "osrm_distancia" ? "selected" : ""}>OpenStreetMap / OSRM (rota)</option>
+      </select></label>
+      <div class="vf-frete-modo-ajuda" data-vf-frete-ajuda>
+        <p class="vf-config-note" data-vf-frete-help-faixas ${modo === "faixas_cep" ? "" : "hidden"}>Cadastre faixas em <button type="button" class="vf-link-btn" data-vf-open-fretes>Fretes</button>. Fora das faixas usa a taxa acima.</p>
+        <p class="vf-config-note" data-vf-frete-help-padrao ${modo === "padrao_unico" ? "" : "hidden"}>Todo pedido com entrega usa só o valor em <strong>Taxa de entrega</strong>.</p>
+        <p class="vf-config-note" data-vf-frete-help-google ${modo === "google_distancia" ? "" : "hidden"}>O sistema calcula km pela rota e multiplica pelo valor por km. Confira o endereço da loja em <strong>Dados da loja</strong>.</p>
+        <p class="vf-config-note" data-vf-frete-help-osrm ${modo === "osrm_distancia" ? "" : "hidden"}>Geocoding (Nominatim) + rota OSRM entre coordenadas de origem e o endereço do cliente. Taxa: valor base + km acima do incluso.</p>
+      </div>
+      ${renderFreteChecklist(config)}
+      <details class="vf-frete-tech"><summary>Ajuda técnica — Google Maps no servidor</summary>
+        <p>Chave <code>GOOGLE_MAPS_API_KEY</code> no <code>.env</code>; API <strong>Distance Matrix</strong> ativa no Google Cloud.</p>
+        <p>${config.google_maps_configured ? '<span class="vf-frete-alert vf-frete-alert--ok vf-frete-alert--inline">Neste servidor a chave está configurada.</span>' : '<span class="vf-frete-alert vf-frete-alert--warn vf-frete-alert--inline">Neste servidor a chave ainda não está configurada.</span>'}</p>
+      </details>
+      <details class="vf-frete-tech"><summary>Ajuda técnica — OSRM + OpenStreetMap + Leaflet</summary>
+        <p>No servidor: <code>OSM_OSRM_BASE_URL</code>, <code>OSM_NOMINATIM_BASE_URL</code>, <code>OSM_HTTP_USER_AGENT</code> (obrigatório). O mapa abaixo usa tiles OSM só como visual da origem.</p>
+        <p>${config.osm_user_agent_configured ? '<span class="vf-frete-alert vf-frete-alert--ok vf-frete-alert--inline">User-Agent OSM configurado.</span>' : '<span class="vf-frete-alert vf-frete-alert--warn vf-frete-alert--inline">Configure <code>OSM_HTTP_USER_AGENT</code> no <code>.env</code>.</span>'}</p>
+      </details>
+      <div class="vf-frete-km-campos ${distKm ? "" : "hidden"}" data-vf-frete-km-campos>
+        <h4 class="vf-frete-km-campos__title">Frete por quilômetro rodado</h4>
+        <p class="vf-config-note">No modo <strong>Google Maps</strong> use R$ por km. No modo <strong>OSRM</strong> use taxa base + km incluso + valor por km extra.</p>
+        <div class="vf-store-form-grid">
+          <label class="vf-store-field" data-vf-google-only><span>R$ por km <em class="vf-rs-km-obr">*</em> <small>(Google)</small></span><input name="frete_google_rs_por_km" type="number" min="0" step="0.01" data-vf-google-rs value="${esc(config.frete_google_rs_por_km ?? "")}"></label>
+          <label class="vf-store-field" data-vf-google-only><span>Nunca cobrar menos que (R$) <small>(Google)</small></span><input name="frete_google_taxa_minima" type="number" min="0" step="0.01" value="${esc(config.frete_google_taxa_minima ?? "")}"></label>
+          <label class="vf-store-field" data-vf-km-only><span>Até quantos km entrega</span><input name="frete_google_km_max" type="number" min="0" step="0.1" value="${esc(config.frete_google_km_max ?? "")}"><small>Vazio = sem limite. Acima desse valor, o pedido é bloqueado.</small></label>
+          <label class="vf-store-field vf-span-2" data-vf-km-only><span>Saída das entregas <small>(opcional)</small></span><input name="frete_origem_endereco" maxlength="500" placeholder="Deixe em branco para usar o endereço em Dados da loja" value="${esc(config.frete_origem_endereco || "")}"></label>
+        </div>
+        <div class="vf-frete-osrm-origin" data-vf-osrm-only>
+          <h5>Origem no mapa (OSRM) — recomendado</h5>
+          <p class="vf-config-note">Defina as coordenadas do restaurante para o cálculo da rota sem depender só do geocode do endereço.</p>
+          <div class="vf-store-form-grid">
+            <label class="vf-store-field"><span>Latitude origem</span><input name="frete_entrega_lat_origem" type="number" step="any" data-vf-map-lat value="${esc(config.frete_entrega_lat_origem ?? "")}" placeholder="Ex.: -8.7619"></label>
+            <label class="vf-store-field"><span>Longitude origem</span><input name="frete_entrega_lng_origem" type="number" step="any" data-vf-map-lng value="${esc(config.frete_entrega_lng_origem ?? "")}" placeholder="Ex.: -63.9039"></label>
+            <label class="vf-store-field"><span>Km inclusos na taxa base</span><input name="frete_km_incluso" type="number" min="0" step="0.1" value="${esc(config.frete_km_incluso ?? "")}" placeholder="Padrão 3 km"><small>Se vazio, o sistema usa 3 km.</small></label>
+            <label class="vf-store-field"><span>R$ por km acima do incluso</span><input name="frete_valor_km_extra" type="number" min="0" step="0.01" value="${esc(config.frete_valor_km_extra ?? "")}" placeholder="Padrão R$ 2,00"><small>Se vazio, o sistema usa R$ 2,00.</small></label>
+          </div>
+          <div class="vf-frete-map-tools">
+            <button class="vf-store-btn" type="button" data-vf-geocode-origem>Localizar endereço no mapa</button>
+            <button class="vf-store-btn" type="button" data-vf-use-my-location>Usar minha localização</button>
+            <small data-vf-geocode-status></small>
+          </div>
+          <div class="vf-frete-osrm-mapa-wrap ${modo === "osrm_distancia" ? "" : "hidden"}" data-vf-osrm-mapa-wrap>
+            <p class="vf-config-note">Mapa de referência — origem (Leaflet + tiles © OpenStreetMap). Clique no mapa para ajustar lat/lng.</p>
+            <div id="vfFreteOsrmMapa" class="vf-frete-osrm-mapa" data-vf-lat="${esc(preview?.lat ?? "")}" data-vf-lon="${esc(preview?.lon ?? "")}"></div>
+          </div>
+        </div>
+      </div>
+      <p class="vf-config-note"><button type="button" class="vf-link-btn" data-vf-open-fretes>Frete por CEP</button> — cadastro de faixas (modo “Por CEP”).</p>`;
+  }
+
+  function ensureLeaflet() {
+    if (window.L) return Promise.resolve();
+    if (!document.querySelector('link[data-vf-leaflet-css]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css";
+      link.setAttribute("data-vf-leaflet-css", "1");
+      document.head.appendChild(link);
+    }
+    return new Promise((resolve, reject) => {
+      if (document.querySelector('script[data-vf-leaflet-js]')) {
+        const wait = setInterval(() => {
+          if (window.L) { clearInterval(wait); resolve(); }
+        }, 50);
+        setTimeout(() => { clearInterval(wait); window.L ? resolve() : reject(new Error("Leaflet indisponível.")); }, 5000);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
+      script.crossOrigin = "";
+      script.setAttribute("data-vf-leaflet-js", "1");
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Não foi possível carregar o mapa."));
+      document.body.appendChild(script);
+    });
+  }
+
+  function bindFreteConfigTools(form, config) {
+    let map = null;
+    let marker = null;
+    const mapEl = form.querySelector("#vfFreteOsrmMapa");
+    const statusEl = form.querySelector("[data-vf-geocode-status]");
+    const setCoords = (lat, lon, fit = true) => {
+      if (Number.isNaN(lat) || Number.isNaN(lon)) return;
+      form.elements.frete_entrega_lat_origem.value = String(Number(lat).toFixed(6));
+      form.elements.frete_entrega_lng_origem.value = String(Number(lon).toFixed(6));
+      if (map && marker) {
+        marker.setLatLng([lat, lon]);
+        if (fit) map.setView([lat, lon], 15);
+      }
+    };
+    const initMap = async () => {
+      if (!mapEl || freteModoEfetivo(value(form, "frete_modo")) !== "osrm_distancia") return;
+      await ensureLeaflet();
+      if (map) { map.remove(); map = null; marker = null; }
+      const lat = parseFloat(mapEl.dataset.vfLat || form.elements.frete_entrega_lat_origem.value);
+      const lon = parseFloat(mapEl.dataset.vfLon || form.elements.frete_entrega_lng_origem.value);
+      const center = (!Number.isNaN(lat) && !Number.isNaN(lon)) ? [lat, lon] : [-8.7619, -63.9039];
+      map = window.L.map(mapEl).setView(center, (!Number.isNaN(lat) && !Number.isNaN(lon)) ? 15 : 4);
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap",
+      }).addTo(map);
+      marker = window.L.marker(center, { draggable: true }).addTo(map);
+      marker.on("dragend", () => {
+        const pos = marker.getLatLng();
+        setCoords(pos.lat, pos.lng, false);
+      });
+      map.on("click", (event) => setCoords(event.latlng.lat, event.latlng.lng, false));
+      setTimeout(() => map.invalidateSize(), 300);
+    };
+    const syncFreteModeUi = () => {
+      const modo = freteModoEfetivo(value(form, "frete_modo"));
+      const googleOnly = modo === "google_distancia";
+      const kmOnly = googleOnly || modo === "osrm_distancia";
+      const osrmOnly = modo === "osrm_distancia";
+      form.querySelector("[data-vf-frete-km-campos]")?.classList.toggle("hidden", !kmOnly);
+      form.querySelectorAll("[data-vf-google-only]").forEach((el) => { el.hidden = !googleOnly; });
+      form.querySelectorAll("[data-vf-km-only]").forEach((el) => { el.hidden = !kmOnly; });
+      form.querySelectorAll("[data-vf-osrm-only]").forEach((el) => { el.hidden = !osrmOnly; });
+      form.querySelector("[data-vf-frete-help-faixas]").hidden = modo !== "faixas_cep";
+      form.querySelector("[data-vf-frete-help-padrao]").hidden = modo !== "padrao_unico";
+      form.querySelector("[data-vf-frete-help-google]").hidden = !googleOnly;
+      form.querySelector("[data-vf-frete-help-osrm]").hidden = !osrmOnly;
+      form.querySelector("[data-vf-osrm-mapa-wrap]")?.classList.toggle("hidden", !osrmOnly);
+      const rs = form.querySelector("[data-vf-google-rs]");
+      if (rs) rs.required = googleOnly;
+      form.querySelector(".vf-rs-km-obr")?.classList.toggle("hidden", !googleOnly);
+      if (osrmOnly) initMap().catch((error) => { if (statusEl) statusEl.textContent = error.message; });
+    };
+    form.querySelector("[data-vf-frete-modo]")?.addEventListener("change", syncFreteModeUi);
+    form.querySelectorAll("[data-vf-open-fretes]").forEach((btn) => {
+      btn.onclick = () => window.navigateTo?.("deliveryFretes");
+    });
+    form.querySelector("[data-vf-geocode-origem]")?.addEventListener("click", async () => {
+      if (statusEl) statusEl.textContent = "Localizando…";
+      try {
+        const result = await api("/configuracoes/frete/geocode-origem", { method: "POST", body: JSON.stringify({
+          endereco_texto: value(form, "endereco_texto") || null,
+          frete_origem_endereco: value(form, "frete_origem_endereco") || null,
+          frete_entrega_lat_origem: value(form, "frete_entrega_lat_origem") === "" ? null : Number(value(form, "frete_entrega_lat_origem")),
+          frete_entrega_lng_origem: value(form, "frete_entrega_lng_origem") === "" ? null : Number(value(form, "frete_entrega_lng_origem")),
+        }) });
+        if (mapEl) {
+          mapEl.dataset.vfLat = String(result.lat);
+          mapEl.dataset.vfLon = String(result.lon);
+        }
+        setCoords(result.lat, result.lon);
+        await initMap();
+        if (statusEl) statusEl.textContent = result.display_name ? String(result.display_name).slice(0, 120) : "Origem localizada no mapa.";
+      } catch (error) {
+        if (statusEl) statusEl.textContent = error?.message || "Não foi possível localizar.";
+      }
+    });
+    form.querySelector("[data-vf-use-my-location]")?.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        toast("Geolocalização indisponível neste navegador.", "error");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        if (mapEl) {
+          mapEl.dataset.vfLat = String(pos.coords.latitude);
+          mapEl.dataset.vfLon = String(pos.coords.longitude);
+        }
+        setCoords(pos.coords.latitude, pos.coords.longitude);
+        await initMap();
+        if (statusEl) statusEl.textContent = "Coordenadas da sua localização aplicadas.";
+      }, () => toast("Não foi possível obter sua localização.", "error"), { enableHighAccuracy: true, timeout: 10000 });
+    });
+    form.querySelectorAll("[data-vf-map-lat],[data-vf-map-lng]").forEach((input) => {
+      input.addEventListener("change", () => {
+        const lat = parseFloat(form.elements.frete_entrega_lat_origem.value);
+        const lon = parseFloat(form.elements.frete_entrega_lng_origem.value);
+        if (!Number.isNaN(lat) && !Number.isNaN(lon)) setCoords(lat, lon);
+      });
+    });
+    syncFreteModeUi();
+  }
+
   async function loadDeliveryConfiguracoes() {
     const root = $("deliveryConfiguracoesRoot");
     if (!root) return;
@@ -346,33 +581,7 @@
             <label class="vf-store-field"><span>Chave PIX</span><input name="pix_chave" maxlength="180" value="${esc(config.pix_chave || "")}"></label>
             <label class="vf-store-field vf-span-2"><span>Nome do beneficiário</span><input name="pix_beneficiario" maxlength="160" value="${esc(config.pix_beneficiario || "")}"></label>
           </div>`)}
-        ${configCard("Frete na loja online", "Configure taxa fixa, faixas de CEP, Google Maps ou rota OSRM (VendaFácil).", `
-          <div class="vf-store-form-grid">
-            <label class="vf-store-field vf-span-2"><span>Como calcular o frete na vitrine</span><select name="frete_modo" data-vf-frete-modo>
-              <option value="padrao_unico" ${["fixed","padrao_unico"].includes(config.frete_modo) ? "selected" : ""}>Taxa fixa (padrão único)</option>
-              <option value="faixas_cep" ${["cep_band","faixas_cep"].includes(config.frete_modo) ? "selected" : ""}>Faixas de CEP</option>
-              <option value="google_distancia" ${config.frete_modo === "google_distancia" ? "selected" : ""}>Google Maps (distância × R$/km)</option>
-              <option value="osrm_distancia" ${config.frete_modo === "osrm_distancia" ? "selected" : ""}>OpenStreetMap / OSRM (rota)</option>
-            </select></label>
-            <label class="vf-store-field"><span>Taxa base / entrega (R$)</span><input name="frete_taxa_fixa" type="number" min="0" step="0.01" value="${esc(config.frete_taxa_fixa ?? 0)}"></label>
-            <label class="vf-store-field"><span>Frete grátis acima de (R$)</span><input name="frete_gratis_acima" type="number" min="0" step="0.01" value="${esc(config.frete_gratis_acima ?? "")}"></label>
-            <label class="vf-store-field"><span>Acréscimo de chuva (%)</span><input name="frete_acrescimo_chuva_percent" type="number" min="0" step="0.01" value="${esc(config.frete_acrescimo_chuva_percent ?? 0)}"></label>
-            <label class="vf-store-field" data-vf-google-only><span>R$ por km (Google)</span><input name="frete_google_rs_por_km" type="number" min="0" step="0.01" value="${esc(config.frete_google_rs_por_km ?? "")}"></label>
-            <label class="vf-store-field" data-vf-google-only><span>Taxa mínima Google (R$)</span><input name="frete_google_taxa_minima" type="number" min="0" step="0.01" value="${esc(config.frete_google_taxa_minima ?? "")}"></label>
-            <label class="vf-store-field" data-vf-km-only><span>Até quantos km entrega</span><input name="frete_google_km_max" type="number" min="0" step="0.1" value="${esc(config.frete_google_km_max ?? "")}"></label>
-            <label class="vf-store-field vf-span-2" data-vf-km-only><span>Saída das entregas (opcional)</span><input name="frete_origem_endereco" maxlength="500" placeholder="Deixe em branco para usar o endereço da loja" value="${esc(config.frete_origem_endereco || "")}"></label>
-            <label class="vf-store-field" data-vf-osrm-only><span>Latitude origem (OSRM)</span><input name="frete_entrega_lat_origem" type="number" step="any" value="${esc(config.frete_entrega_lat_origem ?? "")}"></label>
-            <label class="vf-store-field" data-vf-osrm-only><span>Longitude origem (OSRM)</span><input name="frete_entrega_lng_origem" type="number" step="any" value="${esc(config.frete_entrega_lng_origem ?? "")}"></label>
-            <label class="vf-store-field" data-vf-osrm-only><span>Km incluso na taxa base</span><input name="frete_km_incluso" type="number" min="0" step="0.1" value="${esc(config.frete_km_incluso ?? "")}"></label>
-            <label class="vf-store-field" data-vf-osrm-only><span>Valor por km extra (R$)</span><input name="frete_valor_km_extra" type="number" min="0" step="0.01" value="${esc(config.frete_valor_km_extra ?? "")}"></label>
-          </div>
-          <p class="vf-config-note" data-vf-frete-help-faixas>Cadastre faixas na tela <strong>Fretes</strong> quando o modo Faixas de CEP estiver ativo.</p>
-          <p class="vf-config-note" data-vf-frete-help-google hidden>Google Maps: configure <code>GOOGLE_MAPS_API_KEY</code> no servidor${config.google_maps_configured ? " ✓" : " (pendente)"}.</p>
-          <p class="vf-config-note" data-vf-frete-help-osrm hidden>OSRM/Nominatim: configure <code>OSM_HTTP_USER_AGENT</code> no servidor${config.osm_user_agent_configured ? " ✓" : " (pendente)"}.</p>
-          <div class="vf-toggle-row">
-            <label><input name="permite_retirada" type="checkbox" ${config.permite_retirada ? "checked" : ""}><span>Permitir retirada na loja</span></label>
-            <label><input name="frete_chuva_ativa" type="checkbox" ${config.frete_chuva_ativa ? "checked" : ""}><span>Aplicar acréscimo de chuva</span></label>
-          </div>`)}
+        ${configCard("Frete na loja online", "Taxa base, modos de cálculo, mapa de origem e ferramentas de distância (VendaFácil).", renderFreteConfigBody(config))}
         ${configCard("Formas de pagamento", "Marque as opções aceitas pela loja.", `
           <div class="vf-payment-grid">
             ${[["pix","PIX"],["cartao","Cartão"],["dinheiro","Dinheiro"]].map(([key, label]) =>
@@ -384,20 +593,7 @@
 
     bindDashboard(root);
     const form = $("vfConfigForm");
-    const syncFreteModeUi = () => {
-      const modo = value(form, "frete_modo");
-      const googleOnly = modo === "google_distancia";
-      const kmOnly = googleOnly || modo === "osrm_distancia";
-      const osrmOnly = modo === "osrm_distancia";
-      form.querySelectorAll("[data-vf-google-only]").forEach((el) => { el.hidden = !googleOnly; });
-      form.querySelectorAll("[data-vf-km-only]").forEach((el) => { el.hidden = !kmOnly; });
-      form.querySelectorAll("[data-vf-osrm-only]").forEach((el) => { el.hidden = !osrmOnly; });
-      form.querySelector("[data-vf-frete-help-faixas]").hidden = modo !== "faixas_cep";
-      form.querySelector("[data-vf-frete-help-google]").hidden = !googleOnly;
-      form.querySelector("[data-vf-frete-help-osrm]").hidden = !osrmOnly;
-    };
-    form.querySelector("[data-vf-frete-modo]")?.addEventListener("change", syncFreteModeUi);
-    syncFreteModeUi();
+    bindFreteConfigTools(form, config);
     form.onchange = (event) => {
       if (event.target.name === "aberta") {
         form.querySelectorAll(".vf-large-radios label").forEach((label) =>
@@ -441,7 +637,7 @@
           frete_entrega_lng_origem: numOrNull("frete_entrega_lng_origem"),
           frete_km_incluso: numOrNull("frete_km_incluso"),
           frete_valor_km_extra: numOrNull("frete_valor_km_extra"),
-          permite_retirada: checked(form, "permite_retirada"),
+          permite_retirada: value(form, "permite_retirada") === "1",
           frete_chuva_ativa: checked(form, "frete_chuva_ativa"),
           formas_pagamento: selectedPayments.join(","),
         }) });

@@ -217,6 +217,30 @@
 .vf-payment-grid label { display: flex; gap: .5rem; align-items: center; padding: .8rem; border: 1px solid #d0d5dd; border-radius: .45rem; font-size: .84rem; font-weight: 650; }
 .vf-payment-grid input { width: 17px; height: 17px; accent-color: var(--vf-blue); }
 .vf-config-note { margin: .85rem 0 0; color: var(--vf-muted); font-size: .76rem; }
+.vf-config-note--lead { margin-top: 0; margin-bottom: .85rem; }
+.vf-link-btn { border: 0; background: none; padding: 0; color: var(--vf-blue); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.vf-frete-base-grid { margin-bottom: .85rem; padding-bottom: .85rem; border-bottom: 1px solid #dbe7ff; }
+.vf-frete-chuva { margin-bottom: .85rem; padding-bottom: .85rem; border-bottom: 1px solid #dbe7ff; display: grid; gap: .65rem; }
+.vf-frete-chuva__title { font-size: .82rem; font-weight: 700; }
+.vf-frete-chuva__pct { max-width: 220px; }
+.vf-frete-modo-ajuda .vf-config-note { margin-top: .35rem; }
+.vf-frete-alert { border-radius: .45rem; padding: .65rem .8rem; font-size: .76rem; margin: .75rem 0; }
+.vf-frete-alert--ok { background: #ecfdf3; border: 1px solid #abefc6; color: #067647; }
+.vf-frete-alert--warn { background: #fffaeb; border: 1px solid #fedf89; color: #b54708; }
+.vf-frete-alert--inline { display: inline-block; margin: .35rem 0 0; }
+.vf-frete-tech { border: 1px solid #dbe7ff; border-radius: .45rem; padding: .55rem .75rem; margin: .55rem 0; background: #f8fbff; }
+.vf-frete-tech summary { cursor: pointer; font-size: .78rem; font-weight: 700; }
+.vf-frete-tech p { margin: .45rem 0 0; font-size: .74rem; color: var(--vf-muted); }
+.vf-frete-km-campos { border: 2px solid rgba(37, 99, 235, .35); border-radius: .55rem; padding: .85rem; margin: .75rem 0; background: #eff6ff; }
+.vf-frete-km-campos__title { margin: 0 0 .35rem; font-size: .88rem; }
+.vf-frete-osrm-origin { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid #dbe7ff; }
+.vf-frete-osrm-origin h5 { margin: 0 0 .35rem; font-size: .82rem; }
+.vf-frete-map-tools { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .75rem 0; }
+.vf-frete-map-tools small { color: var(--vf-muted); font-size: .72rem; flex: 1 1 100%; }
+.vf-frete-osrm-mapa { height: 220px; border: 1px solid #dbe7ff; border-radius: .45rem; }
+.vf-store-field small { display: block; margin-top: .25rem; color: var(--vf-muted); font-size: .72rem; font-weight: 400; }
+.vf-rs-km-obr { color: #d92d20; font-style: normal; }
+.hidden { display: none !important; }
 .vf-config-save { display: flex; justify-content: flex-end; padding: .35rem 0; }
 
 @media (max-width: 1100px) {

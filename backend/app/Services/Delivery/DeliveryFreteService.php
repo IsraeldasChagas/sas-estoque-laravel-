@@ -468,22 +468,26 @@ class DeliveryFreteService
     private function kmIncluso(object $config): float
     {
         if (Schema::hasColumn('dlv_loja_config', 'frete_km_incluso') && $config->frete_km_incluso !== null) {
-            return max(0.0, (float) $config->frete_km_incluso);
+            $v = (float) $config->frete_km_incluso;
+
+            return $v > 0 ? round($v, 2) : 3.0;
         }
 
-        return 0.0;
+        return 3.0;
     }
 
     private function valorKmExtra(object $config): float
     {
         if (Schema::hasColumn('dlv_loja_config', 'frete_valor_km_extra') && $config->frete_valor_km_extra !== null) {
-            return max(0.0, round((float) $config->frete_valor_km_extra, 2));
+            $v = (float) $config->frete_valor_km_extra;
+
+            return $v >= 0 ? round($v, 2) : 2.0;
         }
         if ($this->rsPorKm($config) !== null) {
             return $this->rsPorKm($config);
         }
 
-        return 0.0;
+        return 2.0;
     }
 
     private function origemEndereco(object $config): ?string
