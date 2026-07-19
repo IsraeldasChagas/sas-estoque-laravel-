@@ -2,12 +2,6 @@
 @section('title', $config->nome_loja ?: 'Loja Delivery')
 @section('content')
 
-@if(! empty($fidelidadeAtiva))
-<div class="vf-fidelity-chip">
-    <a href="{{ route('delivery.public.fidelity', $slug) }}">✦ Cartão fidelidade</a>
-</div>
-@endif
-
 @if($banners->isNotEmpty())
 @php $multiBanner = $banners->count() > 1; @endphp
 <section class="vf-loja-banner vf-loja-banner-card">
