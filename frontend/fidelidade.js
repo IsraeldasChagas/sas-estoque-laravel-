@@ -168,7 +168,7 @@
         </div>
         <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="brinde">Descrição da recompensa (brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
         <div class="orc-card fid-rec-field fid-catalogo-consulta-wrap" data-fid-rec-show="catalogo_consulta">
-          <div class="orc-section-title"><div><h3>Produtos do cardápio (Delivery)</h3><p>Marque os produtos que entram na recompensa. A quantidade acima define quantos o cliente poderá escolher no resgate.</p></div></div>
+          <div class="orc-section-title"><div><h3>Produtos do cardápio (Delivery)</h3><p>Marque todos os produtos que o cliente poderá escolher no resgate. A quantidade acima define quantos itens ele leva (pode repetir o mesmo produto).</p></div></div>
           ${state.catalogoConsultaSuportado ? "" : `<p class="vf-show-warn">Atualização do banco pendente: peça ao administrador para rodar <code>php artisan migrate</code> antes de salvar os produtos.</p>`}
           <p class="subtle-text" id="fidCatalogoConsultaMeta"></p>
           <p class="subtle-text" id="fidCatalogoConsultaHint"></p>
@@ -201,10 +201,6 @@
         toast("Marque pelo menos 1 produto do cardápio para a recompensa.", "warning");
         return;
       }
-      if (tipo === "catalogo_consulta" && catalogoIds.length > Number(value(f, "catalogo_qtd_escolhas") || 1)) {
-        toast("Marque no máximo a mesma quantidade informada em “Qtd. que o cliente pode escolher”.", "warning");
-        return;
-      }
       await api("/programa", { method: "PUT", body: JSON.stringify({
         nome_exibicao: value(f, "nome_exibicao"), modo: value(f, "modo"),
         pedidos_meta: Number(value(f, "pedidos_meta")), pontos_por_selo: Number(value(f, "pontos_por_selo")),
@@ -232,7 +228,7 @@
       el.classList.toggle("hidden", !tipos.includes(tipo));
     });
     if (tipo === "catalogo_consulta") {
-      enforceCatalogoProdutosLimit(form);
+      syncCatalogoConsultaHint(form);
     }
   }
 
@@ -241,19 +237,21 @@
     return Math.max(1, Math.min(20, Number.isFinite(raw) ? raw : 1));
   }
 
-  function enforceCatalogoProdutosLimit(form) {
+  function syncCatalogoConsultaHint(form) {
     if (!form) return;
-    const max = catalogoQtdMax(form);
-    const checks = Array.from(form.querySelectorAll('input[name="catalogo_produtos_ids[]"]'));
-    const checked = checks.filter((el) => el.checked);
-    if (checked.length > max) {
-      checked.slice(max).forEach((el) => { el.checked = false; });
-    }
+    const qtd = catalogoQtdMax(form);
+    const checks = form.querySelectorAll('input[name="catalogo_produtos_ids[]"]');
+    const total = Array.from(checks).filter((el) => el.checked).length;
     const hint = $("fidCatalogoConsultaHint");
     if (hint) {
-      const total = checks.filter((el) => el.checked).length;
-      hint.textContent = `Selecionados: ${total} de até ${max} produto(s) para o cliente escolher no resgate.`;
+      hint.textContent = total
+        ? `${total} produto(s) disponível(is) na recompensa · o cliente escolhe até ${qtd} item(ns) no resgate.`
+        : `Marque os produtos do cardápio · o cliente escolherá até ${qtd} item(ns) entre eles.`;
     }
+  }
+
+  function enforceCatalogoProdutosLimit(form) {
+    syncCatalogoConsultaHint(form);
   }
 
   async function fetchDeliveryCatalogoFallback() {

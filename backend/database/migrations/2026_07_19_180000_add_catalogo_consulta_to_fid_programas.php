@@ -27,6 +27,14 @@ return new class extends Migration
                 ->where('tipo_recompensa_padrao', 'produto')
                 ->update(['tipo_recompensa_padrao' => 'catalogo_consulta']);
         }
+
+        if (Schema::hasColumn('fid_programas', 'texto_recompensa')
+            && Schema::hasColumn('fid_programas', 'tipo_recompensa_padrao')) {
+            DB::table('fid_programas')
+                ->where('tipo_recompensa_padrao', 'catalogo_consulta')
+                ->whereNotNull('texto_recompensa')
+                ->update(['texto_recompensa' => null]);
+        }
     }
 
     public function down(): void

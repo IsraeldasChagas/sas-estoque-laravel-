@@ -68,14 +68,19 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
 
     public function test_vitrine_produto_mostra_descricao_configurada(): void
     {
-        $this->seedPrograma('produto', ['texto_recompensa' => '1 caldo de pato']);
+        $this->seedPrograma('catalogo_consulta', [
+            'catalogo_qtd_escolhas' => 1,
+            'catalogo_produtos_json' => json_encode([
+                ['id' => 1, 'nome' => '1 caldo de pato'],
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
 
         $this->aceitarLgpd();
 
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Como funciona')
-            ->assertSee('Recompensa')
+            ->assertSee('Catálogo (consulta)')
             ->assertSee('1 caldo de pato')
             ->assertDontSee('Desconto percentual');
     }

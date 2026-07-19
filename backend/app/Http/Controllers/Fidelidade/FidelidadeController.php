@@ -131,7 +131,20 @@ class FidelidadeController extends Controller
                         fn ($item) => (int) ($item['id'] ?? 0),
                         $this->catalogoConsulta->decodificarProdutosJson($existente->catalogo_produtos_json ?? null)
                     );
-                $payload['catalogo_produtos_json'] = $this->catalogoConsulta->normalizarProdutosJson($unidadeId, $ids);
+                $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn ($id) => $id > 0)));
+                if ($ids === [] && array_key_exists('catalogo_produtos_ids', $data)) {
+                    throw ValidationException::withMessages([
+                        'catalogo_produtos_ids' => ['Marque pelo menos 1 produto do cardápio Delivery.'],
+                    ]);
+                }
+                $json = $this->catalogoConsulta->normalizarProdutosJson($unidadeId, $ids);
+                if ($ids !== [] && $json === null) {
+                    throw ValidationException::withMessages([
+                        'catalogo_produtos_ids' => ['Não foi possível vincular os produtos marcados. Confira se o Delivery está na mesma unidade (ou unidade vinculada) e se os produtos estão ativos.'],
+                    ]);
+                }
+                $payload['catalogo_produtos_json'] = $json;
+                $payload['texto_recompensa'] = null;
             } else {
                 $payload['catalogo_qtd_escolhas'] = null;
                 $payload['catalogo_produtos_json'] = null;

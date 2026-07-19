@@ -96,7 +96,7 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
         $this->assertTrue(collect($bloco['recompensa_linhas'])->contains(fn ($l) => $l === 'Açaí'));
     }
 
-    public function test_linhas_produto_legacy_usam_texto_recompensa(): void
+    public function test_linhas_produto_legacy_nao_usam_texto_recompensa(): void
     {
         $programa = (object) [
             'tipo_recompensa_padrao' => 'produto',
@@ -106,6 +106,7 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
 
         $linhas = $this->svc->linhasRecompensa($programa);
         $this->assertGreaterThanOrEqual(1, count($linhas));
+        $this->assertFalse(collect($linhas)->contains(fn ($l) => str_contains($l, '1 tacacá especial')));
     }
 
     public function test_linhas_percentual_explicam_gasto_acumulado(): void

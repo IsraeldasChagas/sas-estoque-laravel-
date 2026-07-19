@@ -259,13 +259,9 @@ class FidelidadeProgramaApresentacaoService
         )));
 
         if ($nomes === []) {
-            $texto = trim((string) ($programa->texto_recompensa ?? ''));
-            if ($texto !== '') {
-                return ['Recompensa ao completar a meta: '.$texto];
-            }
-
             return [
-                'Ao completar a meta, escolha até '.$qtd.' produto(s) do cardápio da loja.',
+                'Ao completar a meta, escolha até '.$qtd.' produto(s) entre as opções do cardápio configuradas pela loja.',
+                'Peça à loja para conferir se os produtos da recompensa já foram salvos no programa de fidelidade.',
             ];
         }
 

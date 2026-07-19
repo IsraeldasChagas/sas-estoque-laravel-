@@ -128,6 +128,35 @@ class FidelidadeApiTest extends TestCase
         $this->assertDatabaseCount('fid_programas', 1);
     }
 
+    public function test_programa_catalogo_consulta_permite_mais_produtos_que_qtd_escolha(): void
+    {
+        Schema::dropIfExists('dlv_produtos');
+        Schema::create('dlv_produtos', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('unidade_id');
+            $table->string('nome');
+            $table->decimal('preco', 14, 2)->default(0);
+            $table->boolean('ativo')->default(true);
+            $table->boolean('visivel_loja')->default(true);
+        });
+
+        DB::table('dlv_produtos')->insert([
+            ['id' => 601, 'unidade_id' => 1, 'nome' => 'Produto 1', 'preco' => 10.00, 'ativo' => 1, 'visivel_loja' => 1],
+            ['id' => 602, 'unidade_id' => 1, 'nome' => 'Produto 2', 'preco' => 12.00, 'ativo' => 1, 'visivel_loja' => 1],
+            ['id' => 603, 'unidade_id' => 1, 'nome' => 'Produto 3', 'preco' => 14.00, 'ativo' => 1, 'visivel_loja' => 1],
+        ]);
+
+        $this->withHeaders($this->headers())->putJson('/api/fidelidade/programa', [
+            'unidade_id' => 1,
+            'tipo_recompensa_padrao' => 'catalogo_consulta',
+            'catalogo_qtd_escolhas' => 1,
+            'catalogo_produtos_ids' => [601, 602, 603],
+            'ativo' => true,
+        ])->assertOk()
+            ->assertJsonPath('programa.catalogo_qtd_escolhas', 1)
+            ->assertJsonCount(3, 'programa.catalogo_produtos');
+    }
+
     public function test_programa_catalogo_consulta_salva_produtos_e_quantidade(): void
     {
         Schema::dropIfExists('dlv_produtos');
