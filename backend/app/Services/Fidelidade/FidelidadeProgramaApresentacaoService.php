@@ -264,12 +264,14 @@ class FidelidadeProgramaApresentacaoService
 
         if ($nomes === []) {
             return [
-                'Forma de recompensa: Catálogo (consulta) — no resgate, escolha '.$qtd.' item(ns) entre as opções abaixo.',
+                'Entre os produtos do cardápio abaixo, escolha '.$qtd.' item(ns) como recompensa ao completar a meta.',
             ];
         }
 
+        $meta = max(1, (int) ($programa->pedidos_meta ?? 10));
+        $escolha = $qtd === 1 ? 'um deles' : ($qtd.' deles');
         $linhas = [
-            'Forma de recompensa: Catálogo (consulta) — '.count($nomes).' opção(ões) abaixo; no resgate, escolha '.$qtd.' item(ns).',
+            'Entre estes produtos, você pode escolher '.$escolha.' como sua recompensa ao completar os '.$meta.' selos:',
         ];
         foreach ($nomes as $nome) {
             $linhas[] = $nome;

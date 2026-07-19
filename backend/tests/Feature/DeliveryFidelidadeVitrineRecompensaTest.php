@@ -123,9 +123,10 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
             ->assertSee('Catálogo (consulta)')
-            ->assertSee('opção(ões) na vitrine')
-            ->assertSee('no resgate, escolha')
-            ->assertSee('3')
+            ->assertSee('Entre estes produtos')
+            ->assertSee('completar os')
+            ->assertSee('10')
+            ->assertSee('selos')
             ->assertSee('Tacacá')
             ->assertSee('Açaí 500ml')
             ->assertSee('Pode repetir o mesmo produto');
@@ -185,8 +186,8 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
             ->assertOk()
             ->assertSee('Maracujá 300 ml')
             ->assertSee('Menu Degustação Pavulagem 3 Opções')
-            ->assertSee('no resgate, escolha')
-            ->assertSee('2');
+            ->assertSee('Entre estes produtos')
+            ->assertSee('2 deles');
     }
 
     public function test_vitrine_resgate_catalogo_escolhe_uma_de_tres_opcoes(): void
@@ -217,8 +218,8 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
 
         $this->get('/loja/'.$this->slug.'/fidelidade')
             ->assertOk()
-            ->assertSee('Resgatar recompensa')
-            ->assertSee('Confirmar resgate');
+            ->assertSee('Entre estes produtos')
+            ->assertSee('Confirmar minha recompensa');
 
         $this->post('/loja/'.$this->slug.'/fidelidade/resgatar', [
             'catalogo_produto_id' => 3,

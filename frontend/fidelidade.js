@@ -168,7 +168,7 @@
         </div>
         <label class="fid-rec-field fid-rec-field--texto" data-fid-rec-show="brinde">Descrição da recompensa (brinde)<textarea name="texto_recompensa" rows="3" placeholder="Ex.: 1 porção de sobremesa da casa">${esc(p.texto_recompensa || "")}</textarea></label>
         <div class="orc-card fid-rec-field fid-catalogo-consulta-wrap" data-fid-rec-show="catalogo_consulta">
-          <div class="orc-section-title"><div><h3>Opções na vitrine (Delivery)</h3><p>Marque quantos produtos quiser — todos aparecem na vitrine. O campo acima define quantos o cliente escolhe ao resgatar (ex.: 3 opções visíveis, escolhe 1).</p></div></div>
+          <div class="orc-section-title"><div><h3>Opções no card da recompensa (Delivery)</h3><p>Marque quantos produtos quiser — todos aparecem no card Catálogo (consulta). O campo acima define quantos o cliente escolhe ao completar a meta (ex.: 3 opções visíveis, escolhe 1).</p></div></div>
           ${state.catalogoConsultaSuportado ? "" : `<p class="vf-show-warn">Atualização do banco pendente: peça ao administrador para rodar <code>php artisan migrate</code> antes de salvar os produtos.</p>`}
           <p class="subtle-text" id="fidCatalogoConsultaMeta"></p>
           <p class="subtle-text" id="fidCatalogoConsultaHint"></p>
@@ -245,8 +245,8 @@
     const hint = $("fidCatalogoConsultaHint");
     if (hint) {
       hint.textContent = total
-        ? `${total} opção(ões) na vitrine · no resgate, o cliente escolhe ${qtd} item(ns).`
-        : `Marque as opções do cardápio · no resgate, o cliente escolhe ${qtd} item(ns).`;
+        ? `${total} opção(ões) no card da recompensa · o cliente escolhe ${qtd} ao completar a meta.`
+        : `Marque as opções do cardápio · o cliente escolhe ${qtd} ao completar a meta.`;
     }
   }
 

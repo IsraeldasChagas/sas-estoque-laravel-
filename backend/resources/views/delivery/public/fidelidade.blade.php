@@ -5,6 +5,21 @@
     $meta = (int) ($programa->pedidos_meta ?? 10);
     $nomeProg = $programa->nome_exibicao ?? $programa->nome ?? 'Cartão fidelidade';
     $nomeUnidade = trim((string) ($unidade_fidelidade_nome ?? '')) ?: ($config->nome_loja ?: 'Loja');
+    $modoProg = (string) ($programa->modo ?? 'selos');
+    $contaVisivel = ($lgpd_aceito ?? false) && ($mostrar_progresso_selos ?? false) && ($conta ?? null);
+    $selos = $contaVisivel ? (int) ($conta->saldo_selos ?? 0) : 0;
+    $pontos = $contaVisivel ? (int) ($conta->saldo_pontos ?? 0) : 0;
+    $filled = $contaVisivel
+        ? ($modoProg === 'pontos' ? min($pontos, $meta) : min($selos, $meta))
+        : 0;
+    $cheio = $contaVisivel && ($modoProg === 'pontos'
+        ? ($pontos >= $meta && $meta > 0)
+        : ($selos >= $meta && $meta > 0));
+    $resgateCat = is_array($resgate_catalogo ?? null) ? $resgate_catalogo : [];
+    $podeResgatarCat = ! empty($resgateCat['ativo']);
+    $resgateQtd = max(1, (int) ($resgateCat['qtd'] ?? 1));
+    $resgateProdutos = is_array($resgateCat['produtos'] ?? null) ? $resgateCat['produtos'] : [];
+    $podeEscolherRecompensa = $cheio && $podeResgatarCat && $resgateProdutos !== [];
 @endphp
 <section class="vf-fidelity-page">
     <div class="vf-fidelity-hero">
@@ -31,6 +46,7 @@
             $catalogoQtd = max(1, (int) ($cf['catalogo_qtd_escolhas'] ?? 1));
             $catalogoProdutos = is_array($cf['catalogo_produtos'] ?? null) ? $cf['catalogo_produtos'] : [];
             $catalogoComProdutos = $recTipo === 'catalogo_consulta' && $catalogoProdutos !== [];
+            $escolhaTxt = $catalogoQtd === 1 ? 'um deles' : ($catalogoQtd.' deles');
         @endphp
         <ul class="vf-fid-como-regras">
             @foreach($regrasCf as $linha)
@@ -44,33 +60,99 @@
 
                 @if($catalogoComProdutos)
                     <div class="vf-fid-catalogo-mini">
-                        <p class="vf-fid-catalogo-intro">
-                            {{ count($catalogoProdutos) }} opção(ões) na vitrine · no resgate, escolha
-                            <strong>{{ $catalogoQtd }}</strong>
-                            {{ $catalogoQtd === 1 ? 'item' : 'itens' }}:
-                        </p>
-                        @if($catalogoQtd > 1)
-                            <p class="vf-fid-catalogo-nota muted">Pode repetir o mesmo produto até o limite.</p>
+                        @if($podeEscolherRecompensa)
+                            <p class="vf-fid-catalogo-intro vf-fid-catalogo-intro--ativo">
+                                Você completou os <strong>{{ $meta }}</strong> selos!
+                                Entre estes produtos, escolha {{ $escolhaTxt }} como sua recompensa:
+                            </p>
+                            @error('catalogo_produto_id')<p class="vf-fid-error">{{ $message }}</p>@enderror
+                            @error('catalogo_escolhas')<p class="vf-fid-error">{{ $message }}</p>@enderror
+                            @error('catalogo_qtd')<p class="vf-fid-error">{{ $message }}</p>@enderror
+                            <form method="post" action="{{ route('delivery.public.fidelity.redeem', $slug) }}" class="vf-fid-form vf-fid-form--recompensa">
+                                @csrf
+                                <ul class="vf-fid-catalogo-produtos vf-fid-catalogo-produtos--pick">
+                                    @foreach($resgateProdutos as $prod)
+                                        <li class="vf-fid-catalogo-produto-card">
+                                            @if($resgateQtd === 1)
+                                                <label class="vf-fid-catalogo-produto-card__pick">
+                                                    <input type="radio" name="catalogo_produto_id" value="{{ (int) ($prod['id'] ?? 0) }}" required>
+                                                    <span class="vf-fid-catalogo-produto-card__inner">
+                                                        <span class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
+                                                            @if(! empty($prod['foto_url']))
+                                                                <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
+                                                            @else
+                                                                <span>▧</span>
+                                                            @endif
+                                                        </span>
+                                                        <span class="vf-fid-catalogo-produto-card__body">
+                                                            <strong title="{{ $prod['nome'] ?? '' }}">{{ $prod['nome'] ?? '' }}</strong>
+                                                            @if(isset($prod['preco']))
+                                                                <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
+                                                            @endif
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            @else
+                                                <div class="vf-fid-catalogo-produto-card__inner vf-fid-catalogo-produto-card__inner--qty">
+                                                    <span class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
+                                                        @if(! empty($prod['foto_url']))
+                                                            <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
+                                                        @else
+                                                            <span>▧</span>
+                                                        @endif
+                                                    </span>
+                                                    <span class="vf-fid-catalogo-produto-card__body">
+                                                        <strong title="{{ $prod['nome'] ?? '' }}">{{ $prod['nome'] ?? '' }}</strong>
+                                                        @if(isset($prod['preco']))
+                                                            <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
+                                                        @endif
+                                                    </span>
+                                                    <label class="vf-fid-resgate-qty">
+                                                        Qtd
+                                                        <input type="number" name="catalogo_qtd[{{ (int) ($prod['id'] ?? 0) }}]" min="0" max="{{ $resgateQtd }}" value="0" inputmode="numeric">
+                                                    </label>
+                                                </div>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                @if($resgateQtd > 1)
+                                    <p class="vf-fid-catalogo-nota muted">Escolha exatamente {{ $resgateQtd }} item(ns). Pode repetir o mesmo produto.</p>
+                                @endif
+                                <button type="submit" class="btn primary vf-fid-btn-recompensa">Confirmar minha recompensa</button>
+                            </form>
+                        @else
+                            <p class="vf-fid-catalogo-intro">
+                                Entre estes produtos, você pode escolher {{ $escolhaTxt }} como sua recompensa ao completar os <strong>{{ $meta }}</strong> selos:
+                            </p>
+                            @if($catalogoQtd > 1)
+                                <p class="vf-fid-catalogo-nota muted">Pode repetir o mesmo produto até o limite.</p>
+                            @endif
+                            <ul class="vf-fid-catalogo-produtos">
+                                @foreach($catalogoProdutos as $prod)
+                                    <li class="vf-fid-catalogo-produto-card">
+                                        <div class="vf-fid-catalogo-produto-card__inner">
+                                            <div class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
+                                                @if(! empty($prod['foto_url']))
+                                                    <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
+                                                @else
+                                                    <span>▧</span>
+                                                @endif
+                                            </div>
+                                            <div class="vf-fid-catalogo-produto-card__body">
+                                                <strong title="{{ $prod['nome'] ?? '' }}">{{ $prod['nome'] ?? '' }}</strong>
+                                                @if(isset($prod['preco']))
+                                                    <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                            @if($contaVisivel && ! $cheio)
+                                <p class="vf-fid-catalogo-nota muted">Faltam <strong>{{ max(0, $meta - ($modoProg === 'pontos' ? $pontos : $selos)) }}</strong> selo(s) para liberar a escolha.</p>
+                            @endif
                         @endif
-                        <ul class="vf-fid-catalogo-produtos">
-                            @foreach($catalogoProdutos as $prod)
-                                <li class="vf-fid-catalogo-produto-card">
-                                    <div class="vf-fid-catalogo-produto-card__foto" aria-hidden="true">
-                                        @if(! empty($prod['foto_url']))
-                                            <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
-                                        @else
-                                            <span>▧</span>
-                                        @endif
-                                    </div>
-                                    <div class="vf-fid-catalogo-produto-card__body">
-                                        <strong title="{{ $prod['nome'] ?? '' }}">{{ $prod['nome'] ?? '' }}</strong>
-                                        @if(isset($prod['preco']))
-                                            <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
-                                        @endif
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
                     </div>
                 @else
                     <ul>
@@ -158,123 +240,49 @@
         @endif
     </div>
 
-    @if(($lgpd_aceito ?? false) && ($mostrar_progresso_selos ?? false))
-        @if($conta)
-            @php
-                $selos = (int) ($conta->saldo_selos ?? 0);
-                $pontos = (int) ($conta->saldo_pontos ?? 0);
-                $modoProg = (string) ($programa->modo ?? 'selos');
-                $filled = $modoProg === 'pontos' ? min($pontos, $meta) : min($selos, $meta);
-                $cheio = $modoProg === 'pontos'
-                    ? ($pontos >= $meta && $meta > 0)
-                    : ($selos >= $meta && $meta > 0);
-                $nomeCliente = trim((string) ($conta->nome ?? ''));
-                $telSuf = strlen((string) ($conta->telefone_normalizado ?? '')) >= 4
-                    ? substr((string) $conta->telefone_normalizado, -4)
-                    : null;
-            @endphp
-            <div class="vf-fidelity-card">
-                <h2>Seu progresso</h2>
-                @if($nomeCliente !== '' || $telSuf)
-                    <p class="muted vf-fid-mask">
-                        @if($nomeCliente !== '')
-                            Olá, <strong>{{ $nomeCliente }}</strong>
-                            @if($telSuf) · telefone ***{{ $telSuf }} @endif
-                        @elseif($telSuf)
-                            Telefone ***{{ $telSuf }}
-                        @endif
-                    </p>
-                @endif
-                <div class="vf-fid-stamps" aria-label="Progresso de selos">
-                    @for($i = 1; $i <= $meta; $i++)
-                        <span class="vf-fid-stamp {{ $i <= $filled ? 'is-on' : '' }}">{{ $i <= $filled ? '✓' : $i }}</span>
-                    @endfor
-                </div>
-                <p class="vf-fid-saldo">
-                    <strong>{{ $selos }}</strong> selo(s) · meta <strong>{{ $meta }}</strong>
-                    @if($pontos > 0) · <strong>{{ $pontos }}</strong> ponto(s) @endif
+    @if($contaVisivel)
+        @php
+            $nomeCliente = trim((string) ($conta->nome ?? ''));
+            $telSuf = strlen((string) ($conta->telefone_normalizado ?? '')) >= 4
+                ? substr((string) $conta->telefone_normalizado, -4)
+                : null;
+        @endphp
+        <div class="vf-fidelity-card">
+            <h2>Seu progresso</h2>
+            @if($nomeCliente !== '' || $telSuf)
+                <p class="muted vf-fid-mask">
+                    @if($nomeCliente !== '')
+                        Olá, <strong>{{ $nomeCliente }}</strong>
+                        @if($telSuf) · telefone ***{{ $telSuf }} @endif
+                    @elseif($telSuf)
+                        Telefone ***{{ $telSuf }}
+                    @endif
                 </p>
-                @if($nomeUnidade !== '')
-                    <p class="muted">Unidade: <strong>{{ $nomeUnidade }}</strong></p>
-                @endif
-                @php
-                    $resgateCat = is_array($resgate_catalogo ?? null) ? $resgate_catalogo : [];
-                    $podeResgatarCat = ! empty($resgateCat['ativo']);
-                    $resgateQtd = max(1, (int) ($resgateCat['qtd'] ?? 1));
-                    $resgateProdutos = is_array($resgateCat['produtos'] ?? null) ? $resgateCat['produtos'] : [];
-                @endphp
-                @if($cheio && $podeResgatarCat)
-                    <div class="vf-fid-resgate-catalogo">
-                        <h3 class="vf-fid-resgate-catalogo__titulo">Resgatar recompensa</h3>
-                        <p class="muted">Escolha {{ $resgateQtd === 1 ? '1 opção' : ($resgateQtd.' itens') }} abaixo e confirme. A loja preparará seu pedido.</p>
-                        @error('catalogo_produto_id')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                        @error('catalogo_escolhas')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                        @error('catalogo_qtd')<p class="vf-fid-error">{{ $message }}</p>@enderror
-                        <form method="post" action="{{ route('delivery.public.fidelity.redeem', $slug) }}" class="vf-fid-form">
-                            @csrf
-                            <ul class="vf-fid-resgate-opcoes">
-                                @foreach($resgateProdutos as $prod)
-                                    <li class="vf-fid-resgate-opcao">
-                                        @if($resgateQtd === 1)
-                                            <label class="vf-fid-resgate-opcao__pick">
-                                                <input type="radio" name="catalogo_produto_id" value="{{ (int) ($prod['id'] ?? 0) }}" required>
-                                                <span class="vf-fid-resgate-opcao__card">
-                                                    <span class="vf-fid-resgate-opcao__foto">
-                                                        @if(! empty($prod['foto_url']))
-                                                            <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
-                                                        @else
-                                                            <span>▧</span>
-                                                        @endif
-                                                    </span>
-                                                    <span class="vf-fid-resgate-opcao__info">
-                                                        <strong>{{ $prod['nome'] ?? '' }}</strong>
-                                                        @if(isset($prod['preco']))
-                                                            <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
-                                                        @endif
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        @else
-                                            <div class="vf-fid-resgate-opcao__card vf-fid-resgate-opcao__card--qty">
-                                                <span class="vf-fid-resgate-opcao__foto">
-                                                    @if(! empty($prod['foto_url']))
-                                                        <img src="{{ $prod['foto_url'] }}" alt="" loading="lazy">
-                                                    @else
-                                                        <span>▧</span>
-                                                    @endif
-                                                </span>
-                                                <span class="vf-fid-resgate-opcao__info">
-                                                    <strong>{{ $prod['nome'] ?? '' }}</strong>
-                                                    @if(isset($prod['preco']))
-                                                        <small>R$ {{ number_format((float) $prod['preco'], 2, ',', '.') }}</small>
-                                                    @endif
-                                                </span>
-                                                <label class="vf-fid-resgate-qty">
-                                                    Qtd
-                                                    <input type="number" name="catalogo_qtd[{{ (int) ($prod['id'] ?? 0) }}]" min="0" max="{{ $resgateQtd }}" value="0" inputmode="numeric">
-                                                </label>
-                                            </div>
-                                        @endif
-                                    </li>
-                                @endforeach
-                            </ul>
-                            @if($resgateQtd > 1)
-                                <p class="vf-fid-catalogo-nota muted">Total: escolha exatamente {{ $resgateQtd }} item(ns). Pode repetir o mesmo produto.</p>
-                            @endif
-                            <button type="submit" class="btn primary">Confirmar resgate</button>
-                        </form>
-                    </div>
-                @elseif($cheio)
-                    <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa.</div>
-                @endif
-                <form method="post" action="{{ route('delivery.public.fidelity.logout', $slug) }}" class="vf-fid-form-inline">
-                    @csrf
-                    <button type="submit" class="btn link">Sair / consultar outro telefone</button>
-                </form>
+            @endif
+            <div class="vf-fid-stamps" aria-label="Progresso de selos">
+                @for($i = 1; $i <= $meta; $i++)
+                    <span class="vf-fid-stamp {{ $i <= $filled ? 'is-on' : '' }}">{{ $i <= $filled ? '✓' : $i }}</span>
+                @endfor
             </div>
-        @else
-            <div class="vf-fid-alert vf-fid-alert--warn">Ainda não há selos neste telefone. Após a loja confirmar o pagamento da sua reserva de mesa, o selo aparece aqui.</div>
-        @endif
+            <p class="vf-fid-saldo">
+                <strong>{{ $selos }}</strong> selo(s) · meta <strong>{{ $meta }}</strong>
+                @if($pontos > 0) · <strong>{{ $pontos }}</strong> ponto(s) @endif
+            </p>
+            @if($nomeUnidade !== '')
+                <p class="muted">Unidade: <strong>{{ $nomeUnidade }}</strong></p>
+            @endif
+            @if($cheio && ! $podeResgatarCat)
+                <div class="vf-fid-alert vf-fid-alert--ok">Você completou a meta! Na próxima visita, peça à loja para usar a recompensa.</div>
+            @elseif($cheio && $podeResgatarCat)
+                <p class="vf-fid-catalogo-nota muted">Sua recompensa está disponível no card <strong>Catálogo (consulta)</strong> acima — escolha o produto e confirme.</p>
+            @endif
+            <form method="post" action="{{ route('delivery.public.fidelity.logout', $slug) }}" class="vf-fid-form-inline">
+                @csrf
+                <button type="submit" class="btn link">Sair / consultar outro telefone</button>
+            </form>
+        </div>
+    @elseif(($lgpd_aceito ?? false) && ($mostrar_progresso_selos ?? false))
+        <div class="vf-fid-alert vf-fid-alert--warn">Ainda não há selos neste telefone. Após a loja confirmar o pagamento da sua reserva de mesa, o selo aparece aqui.</div>
     @endif
 
     <p class="vf-fid-back">
