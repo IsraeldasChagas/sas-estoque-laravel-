@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Delivery\DeliveryCalcularEntregaController;
 use App\Http\Controllers\Delivery\DeliveryPublicController;
 use App\Http\Controllers\Delivery\DeliveryFidelidadePublicController;
 use App\Http\Controllers\KanbanTaskController;
@@ -32,12 +33,17 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
         ->middleware('throttle:15,1')->name('fidelity.register');
     Route::get('/checkout', [DeliveryPublicController::class, 'checkout'])->name('checkout');
     Route::post('/frete', [DeliveryPublicController::class, 'frete'])->middleware('throttle:30,1')->name('freight');
+    Route::post('/frete-resumo', [DeliveryPublicController::class, 'freteResumo'])->middleware('throttle:30,1')->name('freight.summary');
     Route::post('/checkout', [DeliveryPublicController::class, 'finalizar'])->middleware('throttle:10,1')->name('finish');
     Route::get('/sucesso/{codigo}/{token}', [DeliveryPublicController::class, 'sucesso'])
         ->where('token', '[a-f0-9]{64}')->name('success');
     Route::get('/pedido/{codigo}/{token}', [DeliveryPublicController::class, 'pedido'])
         ->where('token', '[a-f0-9]{64}')->name('order');
 });
+
+Route::post('/api/calcular-entrega', DeliveryCalcularEntregaController::class)
+    ->middleware('throttle:30,1')
+    ->name('delivery.public.calcular-entrega');
 
 Route::get('/dashboard', function () {
     return view('dashboard.index');

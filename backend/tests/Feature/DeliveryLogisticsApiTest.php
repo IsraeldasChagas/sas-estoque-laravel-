@@ -76,7 +76,7 @@ class DeliveryLogisticsApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('frete_valor', 9.5)
-            ->assertJsonPath('label', 'Frete taxa fixa.')
+            ->assertJsonPath('label', 'Taxa fixa da loja (modo sem faixas)')
             ->assertJsonPath('message', 'Frete taxa fixa.')
             ->assertJsonPath('mensagem', 'Frete taxa fixa.');
 
@@ -90,9 +90,9 @@ class DeliveryLogisticsApiTest extends TestCase
         $this->withHeaders($this->headers(11))
             ->postJson('/api/delivery/fretes/calcular', ['cep' => '67000-000'])
             ->assertOk()
-            ->assertJsonPath('bloqueado', true)
-            ->assertJsonPath('label', 'Entrega indisponível')
-            ->assertJsonPath('message', 'CEP fora das faixas de entrega.');
+            ->assertJsonPath('bloqueado', false)
+            ->assertJsonPath('frete_valor', 9.5)
+            ->assertJsonPath('label', 'Taxa padrão da loja');
     }
 
     public function test_entregador_exige_whatsapp_respeita_limites_e_escopo(): void

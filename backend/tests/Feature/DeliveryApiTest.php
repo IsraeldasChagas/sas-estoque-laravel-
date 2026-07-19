@@ -391,8 +391,8 @@ class DeliveryApiTest extends TestCase
                 'subtotal' => 10,
             ])
             ->assertOk()
-            ->assertJsonPath('bloqueado', true)
-            ->assertJsonPath('frete_valor', 0);
+            ->assertJsonPath('bloqueado', false)
+            ->assertJsonPath('frete_valor', 12);
     }
 
     public function test_status_transicoes_validas_invalidas_e_historico(): void

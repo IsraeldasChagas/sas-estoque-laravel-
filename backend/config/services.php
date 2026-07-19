@@ -54,4 +54,14 @@ return [
         'wa_me_fallback' => (bool) env('FIDELIDADE_OTP_WAME_FALLBACK', true),
     ],
 
+    'google_maps' => [
+        'api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'osm_routing' => [
+        'nominatim_base_url' => env('OSM_NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org'),
+        'osrm_base_url' => env('OSM_OSRM_BASE_URL', 'https://router.project-osrm.org'),
+        'http_user_agent' => env('OSM_HTTP_USER_AGENT', 'SASEstoqueDelivery/1.0 (contact@gruposaborparaense.com.br)'),
+    ],
+
 ];

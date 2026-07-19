@@ -85,9 +85,14 @@ class DeliveryPublicController extends Controller
         $passoAtual = 'checkout';
         $fidelidadeAtiva = $this->fidelidadeAtiva((int) $config->unidade_id);
         $footerFixed = false;
+        $freteModo = $this->frete->modoEfetivo($config);
+        $checkoutOsrm = $freteModo === \App\Services\Delivery\DeliveryFreteService::MODO_OSRM;
+        $freteResumoUrl = route('delivery.public.freight.summary', [$slug]);
+        $calcularEntregaApiUrl = route('delivery.public.calcular-entrega');
 
         return view('delivery.public.checkout', compact(
-            'config', 'slug', 'pagamentos', 'passoAtual', 'fidelidadeAtiva', 'footerFixed'
+            'config', 'slug', 'pagamentos', 'passoAtual', 'fidelidadeAtiva', 'footerFixed',
+            'freteModo', 'checkoutOsrm', 'freteResumoUrl', 'calcularEntregaApiUrl'
         ));
     }
 
@@ -114,6 +119,12 @@ class DeliveryPublicController extends Controller
         $data = $request->validate([
             'fulfillment' => 'required|in:entrega,retirada,pickup',
             'cep' => 'nullable|string|max:12',
+            'endereco_cep' => 'nullable|string|max:12',
+            'endereco_rua' => 'nullable|string|max:180',
+            'endereco_numero' => 'nullable|string|max:40',
+            'endereco_bairro' => 'nullable|string|max:120',
+            'endereco_cidade' => 'nullable|string|max:120',
+            'endereco_uf' => 'nullable|string|size:2',
             'itens' => 'required|array|min:1|max:80',
             'itens.*.produto_id' => 'required|integer',
             'itens.*.quantidade' => 'required|integer|min:1|max:99',
@@ -121,11 +132,46 @@ class DeliveryPublicController extends Controller
         ]);
         $this->validarRetirada($config, $data['fulfillment']);
         $montagem = $this->pedidos->montarItens((int) $config->unidade_id, $data['itens'], true);
-        $resultado = $this->frete->calcular((int) $config->unidade_id, [
-            'fulfillment' => $data['fulfillment'], 'subtotal' => $montagem['subtotal'], 'cep' => $data['cep'] ?? null,
-        ]);
+        $resultado = $this->frete->calcular((int) $config->unidade_id, array_merge($data, [
+            'fulfillment' => $data['fulfillment'],
+            'subtotal' => $montagem['subtotal'],
+            'cep' => $data['cep'] ?? $data['endereco_cep'] ?? null,
+        ]));
 
-        return response()->json(array_merge($resultado, ['subtotal' => $montagem['subtotal']]));
+        return response()->json(array_merge($resultado, [
+            'subtotal' => $montagem['subtotal'],
+            'label' => $resultado['bloqueado'] ?? false
+                ? 'Entrega indisponível'
+                : (($resultado['frete_gratis'] ?? false) ? 'Frete grátis' : ($resultado['rotulo'] ?? $resultado['mensagem'] ?? 'Frete calculado')),
+        ]));
+    }
+
+    public function freteResumo(Request $request, string $slug): JsonResponse
+    {
+        $config = $this->config($slug);
+        $request->validate([
+            'cep' => ['nullable', 'string', 'max:16'],
+            'subtotal' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+        ]);
+        $digits = preg_replace('/\D+/', '', (string) $request->input('cep', ''));
+        if (strlen($digits) > 0 && strlen($digits) < 8) {
+            return response()->json([
+                'ok' => true,
+                'incomplete' => true,
+            ]);
+        }
+        $cepParam = strlen($digits) === 8 ? $digits : null;
+        $sub = $request->input('subtotal');
+        $subF = $sub !== null && $sub !== '' ? (float) $sub : null;
+        $resumo = $this->frete->calcularResumo($config, $cepParam, $subF);
+
+        return response()->json([
+            'ok' => true,
+            'incomplete' => false,
+            'taxa' => $resumo['taxa'],
+            'rotulo' => $resumo['rotulo'],
+            'entrega_bloqueada' => (bool) ($resumo['entrega_bloqueada'] ?? false),
+        ]);
     }
 
     public function finalizar(Request $request, string $slug): JsonResponse|RedirectResponse

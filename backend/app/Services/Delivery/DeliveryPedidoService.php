@@ -87,6 +87,12 @@ class DeliveryPedidoService
             'fulfillment' => $fulfillment,
             'subtotal' => $montagem['subtotal'],
             'cep' => $payload['endereco_cep'] ?? ($payload['cep'] ?? null),
+            'endereco_cep' => $payload['endereco_cep'] ?? null,
+            'endereco_rua' => $payload['endereco_rua'] ?? null,
+            'endereco_numero' => $payload['endereco_numero'] ?? null,
+            'endereco_bairro' => $payload['endereco_bairro'] ?? null,
+            'endereco_cidade' => $payload['endereco_cidade'] ?? null,
+            'endereco_uf' => $payload['endereco_uf'] ?? null,
             'chuva' => $payload['chuva'] ?? null,
         ]);
 

@@ -92,7 +92,15 @@
     if (!root) return;
     const [bandsResponse, config] = await Promise.all([api("/fretes/faixas"), api("/configuracoes")]);
     const bands = bandsResponse.items || [];
-    const modeName = config.frete_modo === "cep_band" ? "Faixas de CEP" : "Taxa fixa";
+    const modeLabels = {
+      padrao_unico: "Taxa fixa",
+      fixed: "Taxa fixa",
+      faixas_cep: "Faixas de CEP",
+      cep_band: "Faixas de CEP",
+      google_distancia: "Google Maps",
+      osrm_distancia: "OSRM / OpenStreetMap",
+    };
+    const modeName = modeLabels[config.frete_modo] || "Taxa fixa";
 
     root.innerHTML = `<div class="vfl-page">
       <nav class="vfl-breadcrumb"><button type="button" data-vfl-dashboard>Pedidos</button><span>/</span><strong>Calcular frete</strong></nav>

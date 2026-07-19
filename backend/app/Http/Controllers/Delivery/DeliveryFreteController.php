@@ -124,7 +124,7 @@ class DeliveryFreteController extends DeliveryBaseController
         $mensagem = (string) ($resultado['mensagem'] ?? '');
         $label = $resultado['bloqueado'] ?? false
             ? 'Entrega indisponível'
-            : (($resultado['frete_gratis'] ?? false) ? 'Frete grátis' : ($mensagem ?: 'Frete calculado'));
+            : (($resultado['frete_gratis'] ?? false) ? 'Frete grátis' : ($resultado['rotulo'] ?? $mensagem ?: 'Frete calculado'));
 
         return response()->json(array_merge($resultado, [
             'label' => $label,

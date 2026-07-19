@@ -346,21 +346,33 @@
             <label class="vf-store-field"><span>Chave PIX</span><input name="pix_chave" maxlength="180" value="${esc(config.pix_chave || "")}"></label>
             <label class="vf-store-field vf-span-2"><span>Nome do beneficiário</span><input name="pix_beneficiario" maxlength="160" value="${esc(config.pix_beneficiario || "")}"></label>
           </div>`)}
-        ${configCard("Frete", "Configure entrega fixa, faixas de CEP e condições especiais.", `
+        ${configCard("Frete na loja online", "Configure taxa fixa, faixas de CEP, Google Maps ou rota OSRM (VendaFácil).", `
           <div class="vf-store-form-grid">
-            <label class="vf-store-field"><span>Cálculo do frete</span><select name="frete_modo">
-              <option value="fixed" ${config.frete_modo === "fixed" ? "selected" : ""}>Taxa fixa</option>
-              <option value="cep_band" ${config.frete_modo === "cep_band" ? "selected" : ""}>Faixas de CEP</option>
+            <label class="vf-store-field vf-span-2"><span>Como calcular o frete na vitrine</span><select name="frete_modo" data-vf-frete-modo>
+              <option value="padrao_unico" ${["fixed","padrao_unico"].includes(config.frete_modo) ? "selected" : ""}>Taxa fixa (padrão único)</option>
+              <option value="faixas_cep" ${["cep_band","faixas_cep"].includes(config.frete_modo) ? "selected" : ""}>Faixas de CEP</option>
+              <option value="google_distancia" ${config.frete_modo === "google_distancia" ? "selected" : ""}>Google Maps (distância × R$/km)</option>
+              <option value="osrm_distancia" ${config.frete_modo === "osrm_distancia" ? "selected" : ""}>OpenStreetMap / OSRM (rota)</option>
             </select></label>
-            <label class="vf-store-field"><span>Taxa base (R$)</span><input name="frete_taxa_fixa" type="number" min="0" step="0.01" value="${esc(config.frete_taxa_fixa ?? 0)}"></label>
+            <label class="vf-store-field"><span>Taxa base / entrega (R$)</span><input name="frete_taxa_fixa" type="number" min="0" step="0.01" value="${esc(config.frete_taxa_fixa ?? 0)}"></label>
             <label class="vf-store-field"><span>Frete grátis acima de (R$)</span><input name="frete_gratis_acima" type="number" min="0" step="0.01" value="${esc(config.frete_gratis_acima ?? "")}"></label>
             <label class="vf-store-field"><span>Acréscimo de chuva (%)</span><input name="frete_acrescimo_chuva_percent" type="number" min="0" step="0.01" value="${esc(config.frete_acrescimo_chuva_percent ?? 0)}"></label>
+            <label class="vf-store-field" data-vf-google-only><span>R$ por km (Google)</span><input name="frete_google_rs_por_km" type="number" min="0" step="0.01" value="${esc(config.frete_google_rs_por_km ?? "")}"></label>
+            <label class="vf-store-field" data-vf-google-only><span>Taxa mínima Google (R$)</span><input name="frete_google_taxa_minima" type="number" min="0" step="0.01" value="${esc(config.frete_google_taxa_minima ?? "")}"></label>
+            <label class="vf-store-field" data-vf-km-only><span>Até quantos km entrega</span><input name="frete_google_km_max" type="number" min="0" step="0.1" value="${esc(config.frete_google_km_max ?? "")}"></label>
+            <label class="vf-store-field vf-span-2" data-vf-km-only><span>Saída das entregas (opcional)</span><input name="frete_origem_endereco" maxlength="500" placeholder="Deixe em branco para usar o endereço da loja" value="${esc(config.frete_origem_endereco || "")}"></label>
+            <label class="vf-store-field" data-vf-osrm-only><span>Latitude origem (OSRM)</span><input name="frete_entrega_lat_origem" type="number" step="any" value="${esc(config.frete_entrega_lat_origem ?? "")}"></label>
+            <label class="vf-store-field" data-vf-osrm-only><span>Longitude origem (OSRM)</span><input name="frete_entrega_lng_origem" type="number" step="any" value="${esc(config.frete_entrega_lng_origem ?? "")}"></label>
+            <label class="vf-store-field" data-vf-osrm-only><span>Km incluso na taxa base</span><input name="frete_km_incluso" type="number" min="0" step="0.1" value="${esc(config.frete_km_incluso ?? "")}"></label>
+            <label class="vf-store-field" data-vf-osrm-only><span>Valor por km extra (R$)</span><input name="frete_valor_km_extra" type="number" min="0" step="0.01" value="${esc(config.frete_valor_km_extra ?? "")}"></label>
           </div>
+          <p class="vf-config-note" data-vf-frete-help-faixas>Cadastre faixas na tela <strong>Fretes</strong> quando o modo Faixas de CEP estiver ativo.</p>
+          <p class="vf-config-note" data-vf-frete-help-google hidden>Google Maps: configure <code>GOOGLE_MAPS_API_KEY</code> no servidor${config.google_maps_configured ? " ✓" : " (pendente)"}.</p>
+          <p class="vf-config-note" data-vf-frete-help-osrm hidden>OSRM/Nominatim: configure <code>OSM_HTTP_USER_AGENT</code> no servidor${config.osm_user_agent_configured ? " ✓" : " (pendente)"}.</p>
           <div class="vf-toggle-row">
             <label><input name="permite_retirada" type="checkbox" ${config.permite_retirada ? "checked" : ""}><span>Permitir retirada na loja</span></label>
             <label><input name="frete_chuva_ativa" type="checkbox" ${config.frete_chuva_ativa ? "checked" : ""}><span>Aplicar acréscimo de chuva</span></label>
-          </div>
-          <p class="vf-config-note">As faixas são cadastradas na tela Fretes quando o modo por CEP estiver selecionado.</p>`)}
+          </div>`)}
         ${configCard("Formas de pagamento", "Marque as opções aceitas pela loja.", `
           <div class="vf-payment-grid">
             ${[["pix","PIX"],["cartao","Cartão"],["dinheiro","Dinheiro"]].map(([key, label]) =>
@@ -372,6 +384,20 @@
 
     bindDashboard(root);
     const form = $("vfConfigForm");
+    const syncFreteModeUi = () => {
+      const modo = value(form, "frete_modo");
+      const googleOnly = modo === "google_distancia";
+      const kmOnly = googleOnly || modo === "osrm_distancia";
+      const osrmOnly = modo === "osrm_distancia";
+      form.querySelectorAll("[data-vf-google-only]").forEach((el) => { el.hidden = !googleOnly; });
+      form.querySelectorAll("[data-vf-km-only]").forEach((el) => { el.hidden = !kmOnly; });
+      form.querySelectorAll("[data-vf-osrm-only]").forEach((el) => { el.hidden = !osrmOnly; });
+      form.querySelector("[data-vf-frete-help-faixas]").hidden = modo !== "faixas_cep";
+      form.querySelector("[data-vf-frete-help-google]").hidden = !googleOnly;
+      form.querySelector("[data-vf-frete-help-osrm]").hidden = !osrmOnly;
+    };
+    form.querySelector("[data-vf-frete-modo]")?.addEventListener("change", syncFreteModeUi);
+    syncFreteModeUi();
     form.onchange = (event) => {
       if (event.target.name === "aberta") {
         form.querySelectorAll(".vf-large-radios label").forEach((label) =>
@@ -388,6 +414,10 @@
       }
       submit.disabled = true;
       try {
+        const numOrNull = (name) => {
+          const raw = value(form, name);
+          return raw === "" ? null : Number(raw);
+        };
         await api("/configuracoes", { method: "PUT", body: JSON.stringify({
           aberta: value(form, "aberta") === "1",
           confirmar_pedidos: checked(form, "confirmar_pedidos"),
@@ -403,6 +433,14 @@
           frete_taxa_fixa: Number(value(form, "frete_taxa_fixa") || 0),
           frete_gratis_acima: value(form, "frete_gratis_acima") === "" ? null : Number(value(form, "frete_gratis_acima")),
           frete_acrescimo_chuva_percent: Number(value(form, "frete_acrescimo_chuva_percent") || 0),
+          frete_google_rs_por_km: numOrNull("frete_google_rs_por_km"),
+          frete_google_taxa_minima: numOrNull("frete_google_taxa_minima"),
+          frete_google_km_max: numOrNull("frete_google_km_max"),
+          frete_origem_endereco: value(form, "frete_origem_endereco") || null,
+          frete_entrega_lat_origem: numOrNull("frete_entrega_lat_origem"),
+          frete_entrega_lng_origem: numOrNull("frete_entrega_lng_origem"),
+          frete_km_incluso: numOrNull("frete_km_incluso"),
+          frete_valor_km_extra: numOrNull("frete_valor_km_extra"),
           permite_retirada: checked(form, "permite_retirada"),
           frete_chuva_ativa: checked(form, "frete_chuva_ativa"),
           formas_pagamento: selectedPayments.join(","),
