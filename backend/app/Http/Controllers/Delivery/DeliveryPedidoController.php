@@ -178,6 +178,41 @@ class DeliveryPedidoController extends DeliveryBaseController
         ]);
     }
 
+    public function decisaoPendente(Request $request, int $id): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryPedidos');
+        $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        abort_unless($pedido, 404, 'Pedido não encontrado.');
+        $this->access->autorizarRegistro($usuario, $pedido, 'Sem permissão para este pedido.');
+
+        $data = $request->validate([
+            'decisao' => 'required|string|in:aceitar,recusar',
+        ]);
+
+        if ($pedido->status !== 'pendente_loja') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este pedido não está aguardando confirmação.',
+            ], 422);
+        }
+
+        $novoStatus = $data['decisao'] === 'aceitar' ? 'recebido' : 'cancelado';
+        $atualizado = $this->pedidos->alterarStatus($pedido, $novoStatus, (int) $usuario->id);
+        $config = DB::table('dlv_loja_config')->where('unidade_id', $atualizado->unidade_id)->first();
+        $waUrl = $config
+            ? DeliveryWhatsAppAvisoStatus::url($atualizado, $config, $novoStatus)
+            : null;
+
+        return response()->json([
+            'ok' => true,
+            'mensagem' => $novoStatus === 'recebido'
+                ? 'Pedido aceito. Você pode seguir com o preparo.'
+                : 'Pedido recusado. O estoque dos itens foi restaurado.',
+            'proximo' => $this->pedidos->proximoPedidoPendentePoll((int) $atualizado->unidade_id),
+            'whatsapp_aviso_url' => $waUrl,
+        ]);
+    }
+
     public function imprimir(Request $request, int $id): View
     {
         $usuario = $this->auth($request, 'deliveryPedidos');

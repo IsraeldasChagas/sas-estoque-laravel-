@@ -442,7 +442,7 @@
 
 @media (max-width: 1100px) {
   .vf-dashboard-kpis { grid-template-columns: repeat(3, 1fr); }
-  .vf-dashboard-grid, .vf-order-detail__grid { grid-template-columns: 1fr; }
+  .vf-dashboard-grid, .vf-order-detail__grid, .vf-order-show__grid { grid-template-columns: 1fr; }
   .vf-dashboard-side { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
@@ -455,4 +455,137 @@
   .vf-sales-bar-column > span { display: none; }
   .vf-form-grid, .vf-address-fields { display: block; }
   .vf-field { margin-bottom: 10px; }
+  .vf-order-show__grid { grid-template-columns: 1fr; }
 }
+
+/* —— Pedido show (paridade VendaFácil) —— */
+.vf-order-show__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, .95fr);
+  align-items: start;
+}
+.vf-order-show__aside { display: flex; flex-direction: column; gap: 12px; }
+.vf-show-card {
+  background: #fff;
+  border: 1px solid var(--vf-line);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(36 49 61 / 4%);
+}
+.vf-show-card--sidebar { padding: 14px 16px; }
+.vf-show-card--main { overflow: hidden; }
+.vf-show-card__title { font-size: 14px; font-weight: 700; margin: 0 0 10px; }
+.vf-show-help { color: var(--vf-muted); font-size: 12px; line-height: 1.45; margin: 0 0 10px; }
+.vf-show-help--tight { margin-top: 8px; margin-bottom: 0; }
+.vf-show-help--total span { color: #15803d; font-weight: 700; }
+.vf-show-warn { color: #b45309; font-size: 12px; margin: 0; }
+.vf-show-stack { display: grid; gap: 8px; }
+.vf-show-btn {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d9dee3;
+  border-radius: 6px;
+  color: #46515c;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  text-decoration: none;
+}
+.vf-show-btn--block { display: flex; width: 100%; }
+.vf-show-btn--sm { min-height: 30px; padding: 5px 12px; }
+.vf-show-btn--outline { border-color: #cfd4da; }
+.vf-show-btn--outline-soft { border-color: #dfe3e6; color: #6b7280; }
+.vf-show-btn--success { background: #2da36a; border-color: #2da36a; color: #fff; }
+.vf-show-btn--primary { background: var(--vf-primary); border-color: var(--vf-primary); color: #fff; }
+.vf-show-btn--danger-outline { background: #fff; border-color: #e5a8a8; color: #c13d3d; }
+.vf-show-main-head {
+  align-items: flex-start;
+  border-bottom: 1px solid #eef0f2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+.vf-show-code { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+.vf-show-meta { color: var(--vf-muted); font-size: 12px; margin: 0; }
+.vf-show-table-wrap { overflow-x: auto; }
+.vf-show-table { border-collapse: collapse; font-size: 13px; width: 100%; }
+.vf-show-table th, .vf-show-table td { border-bottom: 1px solid #eff1f3; padding: 10px 18px; text-align: left; vertical-align: top; }
+.vf-show-table thead th { background: #fafbfc; color: #707b85; font-size: 11px; text-transform: uppercase; }
+.vf-show-table tfoot th { font-weight: 700; text-align: right; }
+.vf-show-table__qty { text-align: center; width: 72px; }
+.vf-show-table__money { text-align: right; white-space: nowrap; width: 110px; }
+.vf-show-table__total th { color: #15803d; font-size: 15px; }
+.vf-show-item-opt { color: var(--vf-muted); font-size: 11px; margin-top: 3px; }
+.vf-show-cliente-nome { font-weight: 700; margin: 0 0 6px; }
+.vf-show-select { background: #fff; border: 1px solid #dce1e5; border-radius: 6px; min-height: 36px; padding: 7px 9px; width: 100%; }
+.vf-show-card--entregadores { padding: 0; overflow: hidden; border: 2px solid color-mix(in srgb, var(--vf-primary) 35%, white); }
+.vf-show-entregadores-head {
+  background: color-mix(in srgb, var(--vf-primary) 12%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--vf-primary) 25%, white);
+  padding: 12px 16px;
+}
+.vf-show-entregadores-head h3 { font-size: 14px; margin: 0; }
+.vf-show-entregadores-body { display: grid; gap: 12px; padding: 14px 16px; }
+.vf-show-entregador {
+  align-items: center;
+  background: color-mix(in srgb, var(--vf-primary) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--vf-primary) 22%, white);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 14px;
+  text-align: center;
+}
+.vf-show-entregador__photo { border: 1px solid #dfe3e6; border-radius: 8px; height: 72px; object-fit: cover; width: 72px; }
+.vf-show-entregador__photo--empty { align-items: center; background: #fff; display: inline-flex; font-size: 28px; height: 72px; justify-content: center; width: 72px; }
+.vf-show-entregador__nome { font-weight: 600; }
+.vf-show-input-group { display: flex; gap: 0; margin-bottom: 8px; }
+.vf-show-input-group__field {
+  border: 1px solid #dce1e5;
+  border-radius: 6px 0 0 6px;
+  flex: 1;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 6px 8px;
+}
+.vf-show-input-group .vf-show-btn { border-radius: 0 6px 6px 0; }
+.vf-show-alert {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+}
+.vf-show-alert--danger { background: #fef2f2; border: 1px solid #fecaca; box-shadow: 0 1px 2px rgb(220 38 38 / 6%); }
+.vf-show-alert--danger .vf-show-alert__text { display: grid; gap: 4px; max-width: 720px; }
+.vf-show-alert--danger .vf-show-alert__text span { color: #7f1d1d; display: block; font-size: 12px; }
+.vf-show-alert--success { background: #ecfdf5; border: 1px solid #86efac; }
+.vf-show-alert--warn { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; font-size: 13px; }
+.vf-show-alert__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vf-show-bell { margin-right: 4px; }
+.vf-show-modal-code { font-size: 24px; font-weight: 700; margin: 0 0 8px; }
+.vf-show-modal-itens { list-style: none; margin: 0; padding: 0; }
+.vf-show-modal-itens li {
+  border-bottom: 1px solid #eff1f3;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+}
+.vf-pending-modal__dialog { border: 2px solid #fecaca; border-radius: 12px; max-width: 640px; }
+.vf-pending-modal__head { background: #fef2f2; border-bottom: 1px solid #fecaca; }
+.vf-pending-modal__head h2 { font-size: 18px; margin: 0; }
+.vf-pending-modal__actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; width: 100%; }

@@ -57,6 +57,7 @@ Route::prefix('delivery')->middleware('sas.usuario')->group(function () {
     Route::delete('/entregadores/{id}', [DeliveryEntregadorController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/pedidos/pendentes-poll', [DeliveryPedidoController::class, 'pollPendentes']);
+    Route::post('/pedidos/{id}/pendente', [DeliveryPedidoController::class, 'decisaoPendente'])->whereNumber('id');
     Route::get('/pedidos/{id}/imprimir', [DeliveryPedidoController::class, 'imprimir'])->whereNumber('id');
     Route::get('/pedidos', [DeliveryPedidoController::class, 'index']);
     Route::post('/pedidos', [DeliveryPedidoController::class, 'store']);

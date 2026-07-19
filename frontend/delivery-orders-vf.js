@@ -42,100 +42,113 @@
     win.document.close();
   }
 
+  function rotuloCanal(canal) {
+    const map = { loja: "Loja online", admin: "Admin", whatsapp: "WhatsApp", pdv: "PDV" };
+    return map[String(canal || "").toLowerCase()] || canal || "—";
+  }
+
   function renderCupomActions(order) {
     const wa = order.cupom_whatsapp_url;
     const printEnabled = order.impressao_habilitada !== false;
-    return `<section class="vf-card vf-cupom-actions">
-      <div class="vf-card-title vf-card-title--plain"><h3>Cupom do cliente</h3></div>
-      <div class="vf-card-body">
-        <p class="vf-muted-note vf-cupom-desc">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
-        <div class="vf-cupom-actions__buttons">
-          ${printEnabled ? `<button type="button" class="vf-btn" data-vf-print="0">Abrir cupom / imprimir</button>
-            <button type="button" class="vf-btn" data-vf-print="1">Abrir e pedir impressão</button>`
-            : `<p class="vf-muted-note">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
-          ${wa
-            ? `<a class="vf-btn vf-btn--success" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">Enviar cupom no WhatsApp</a>`
-            : `<p class="vf-entregador-card__warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
-        </div>
+    return `<div class="vf-show-card vf-show-card--sidebar">
+      <h3 class="vf-show-card__title">Cupom do cliente</h3>
+      <p class="vf-show-help">Cupom estilo comanda (80&nbsp;mm): loja, pedido, itens com extras, valores e link para acompanhar. Use na <strong>impressora térmica</strong> pelo navegador ou envie o <strong>mesmo texto</strong> pelo WhatsApp.</p>
+      <div class="vf-show-stack">
+        ${printEnabled ? `<button type="button" class="vf-show-btn vf-show-btn--outline" data-vf-print="0">Abrir cupom / imprimir</button>
+          <button type="button" class="vf-show-btn vf-show-btn--outline-soft" data-vf-print="1">Abrir e pedir impressão</button>`
+          : `<p class="vf-show-help">Impressão desativada em Configurações. Ainda pode enviar pelo WhatsApp.</p>`}
+        ${wa
+          ? `<a class="vf-show-btn vf-show-btn--success" href="${esc(wa)}" target="_blank" rel="noopener noreferrer">Enviar cupom no WhatsApp</a>`
+          : `<p class="vf-show-warn">WhatsApp: confira o telefone do cliente (DDD + número).</p>`}
       </div>
-    </section>`;
+    </div>`;
   }
 
   function renderEntregadores(order) {
     const list = order.entregadores || [];
     if (order.fulfillment !== "entrega" || !list.length) return "";
-    return `<section class="vf-card vf-entregadores">
-      <div class="vf-entregadores__head"><h3>Seus entregadores — chame primeiro</h3></div>
-      <div class="vf-entregadores__grid">${list.map((ent) => `<article class="vf-entregador-card">
-        ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-entregador-card__photo">` : `<span class="vf-entregador-card__photo vf-entregador-card__photo--empty">👤</span>`}
-        <strong>${esc(ent.nome)}</strong>
+    return `<div class="vf-show-card vf-show-card--sidebar vf-show-card--entregadores">
+      <div class="vf-show-entregadores-head"><h3>Seus entregadores — chame primeiro</h3></div>
+      <div class="vf-show-entregadores-body">${list.map((ent) => `<div class="vf-show-entregador">
+        ${ent.foto_url ? `<img src="${esc(ent.foto_url)}" alt="" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty">👤</span>`}
+        <div class="vf-show-entregador__nome">${esc(ent.nome)}</div>
         ${ent.whatsapp_url
-          ? `<a class="vf-btn vf-btn--success vf-entregador-card__wa" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer">Chamar no WhatsApp</a>`
-          : `<p class="vf-entregador-card__warn">Ajuste o WhatsApp do entregador.</p>`}
-      </article>`).join("")}</div>
-    </section>`;
+          ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer">Chamar no WhatsApp</a>`
+          : `<p class="vf-show-warn">Ajuste o WhatsApp em editar entregador.</p>`}
+      </div>`).join("")}</div>
+    </div>`;
   }
 
   function renderEntregadorLink(order) {
     if (order.fulfillment !== "entrega" || !order.url_entregador) return "";
-    return `<section class="vf-card vf-entregador-link">
-      <div class="vf-card-title vf-card-title--plain"><h3>Link do entregador</h3></div>
-      <div class="vf-card-body">
-        <p class="vf-muted-note">Mostra endereço, itens, pagamento e o <strong>código do pedido</strong>. O entregador pode marcar <strong>entregue</strong>, <strong>cancelado</strong> ou <strong>endereço não encontrado</strong>.</p>
-        <label class="vf-token-field"><span>URL da entrega</span>
-          <div class="vf-token-field__row"><input readonly id="vf-url-entregador" value="${esc(order.url_entregador)}"><button class="vf-btn" type="button" data-vf-copy-url>Copiar</button></div>
-        </label>
-        <a class="vf-btn vf-btn--block" href="${esc(order.url_entregador)}" target="_blank" rel="noopener noreferrer">Abrir página do entregador</a>
+    return `<div class="vf-show-card vf-show-card--sidebar">
+      <h3 class="vf-show-card__title">Link do entregador</h3>
+      <p class="vf-show-help">Mostra endereço, itens, pagamento e o <strong>código do pedido</strong> para conferir com o cliente. O entregador pode marcar <strong>entregue</strong>, <strong>cancelado</strong> ou <strong>endereço não encontrado</strong>.</p>
+      <div class="vf-show-input-group">
+        <input readonly id="vf-url-entregador" class="vf-show-input-group__field" value="${esc(order.url_entregador)}">
+        <button class="vf-show-btn vf-show-btn--outline" type="button" data-vf-copy-url>Copiar</button>
       </div>
-    </section>`;
+      <a class="vf-show-btn vf-show-btn--outline vf-show-btn--block" href="${esc(order.url_entregador)}" target="_blank" rel="noopener noreferrer">Abrir página do entregador</a>
+    </div>`;
   }
 
   function renderWhatsAppAlerts(order) {
-    const parts = [];
+    if (!order._whatsapp_aviso_url && !order._whatsapp_indisponivel) return "";
+    let html = "";
     if (order._whatsapp_aviso_url) {
-      parts.push(`<div class="vf-alert vf-alert--wa">
-        <div><strong>Avisar o cliente no WhatsApp</strong> — status e link para acompanhar o pedido.</div>
-        <a class="vf-btn vf-btn--success" href="${esc(order._whatsapp_aviso_url)}" target="_blank" rel="noopener noreferrer">Abrir WhatsApp do cliente</a>
-      </div>`);
+      html += `<div class="vf-show-alert vf-show-alert--success">
+        <div class="vf-show-alert__text"><strong>Avisar o cliente no WhatsApp</strong> — ícone de loja, cliente, sacola com código, status e link para acompanhar.</div>
+        <a class="vf-show-btn vf-show-btn--success" href="${esc(order._whatsapp_aviso_url)}" target="_blank" rel="noopener noreferrer">Abrir WhatsApp do cliente</a>
+      </div>`;
     }
     if (order._whatsapp_indisponivel) {
-      parts.push(`<div class="vf-alert vf-alert--warn">${esc(order._whatsapp_indisponivel)}</div>`);
+      html += `<div class="vf-show-alert vf-show-alert--warn">${esc(order._whatsapp_indisponivel)}</div>`;
     }
-    return parts.join("");
+    return html;
   }
 
-  function renderPendingBanner(isPending) {
+  function renderPendingBanner(order, isPending) {
     if (!isPending) return "";
-    return `<section class="vf-pending-alert">
-      <div><strong>Novo pedido — precisa da sua confirmação</strong>
-        <p>O cliente já finalizou na vitrine. Só avance o preparo depois que você <strong>aceitar</strong>. Se recusar, o pedido é cancelado e o estoque volta.</p></div>
-      <div class="vf-pending-alert__actions">
-        <button class="vf-btn vf-btn--success" type="button" data-vf-detail-status="recebido">Aceitar pedido</button>
-        <button class="vf-btn vf-btn--danger" type="button" data-vf-detail-status="cancelado">Recusar</button>
+    return `<div class="vf-show-alert vf-show-alert--danger">
+      <div class="vf-show-alert__text">
+        <strong><span class="vf-show-bell">🔔</span> Novo pedido — precisa da sua confirmação</strong>
+        <span>O cliente já finalizou na vitrine. Só avance o preparo depois que você <strong>aceitar</strong>. Se recusar, o pedido é cancelado e o estoque volta.</span>
       </div>
-    </section>`;
+      <div class="vf-show-alert__actions">
+        <button class="vf-show-btn vf-show-btn--success vf-show-btn--sm" type="button" data-vf-detail-status="recebido">Aceitar pedido</button>
+        <button class="vf-show-btn vf-show-btn--danger-outline vf-show-btn--sm" type="button" data-vf-detail-status="cancelado">Recusar</button>
+      </div>
+    </div>`;
   }
 
   function renderStatusForm(order) {
     if (order.status === "pendente_loja") {
-      return `<section class="vf-card vf-status-form">
-        <div class="vf-card-title vf-card-title--plain"><h3>Status do pedido</h3></div>
-        <div class="vf-card-body"><p class="vf-muted-note">Enquanto o pedido não for aceito, use <strong>Aceitar pedido</strong> ou <strong>Recusar</strong> no aviso acima.</p></div>
-      </section>`;
+      return `<div class="vf-show-card vf-show-card--sidebar">
+        <h3 class="vf-show-card__title">Status do pedido</h3>
+        <p class="vf-show-help">Enquanto o pedido não for aceito, o status não pode ser alterado aqui. Use <strong>Aceitar pedido</strong> ou <strong>Recusar</strong> no aviso vermelho acima.</p>
+      </div>`;
     }
     const options = Object.entries(labels).map(([value, label]) =>
       `<option value="${esc(value)}" ${order.status === value ? "selected" : ""}>${esc(label)}</option>`).join("");
-    return `<section class="vf-card vf-status-form">
-      <div class="vf-card-title vf-card-title--plain"><h3>Status do pedido</h3></div>
-      <div class="vf-card-body">
-        <form id="vfStatusForm">
-          <label class="vf-field"><span>Novo status</span>
-            <select name="status" required>${options}</select>
-          </label>
-          <button class="vf-btn vf-btn--primary vf-btn--block" type="submit">Atualizar status</button>
-        </form>
-      </div>
-    </section>`;
+    return `<div class="vf-show-card vf-show-card--sidebar">
+      <h3 class="vf-show-card__title">Status do pedido</h3>
+      <form id="vfStatusForm" class="vf-show-stack">
+        <select name="status" class="vf-show-select" required>${options}</select>
+        <button class="vf-show-btn vf-show-btn--primary vf-show-btn--block" type="submit">Atualizar status</button>
+      </form>
+    </div>`;
+  }
+
+  function renderClienteBlock(order, addressLine) {
+    return `<div class="vf-show-card vf-show-card--sidebar">
+      <h3 class="vf-show-card__title">Cliente</h3>
+      <p class="vf-show-cliente-nome">${esc(order.cliente_nome)}</p>
+      <p class="vf-show-help">${esc(order.cliente_telefone || "—")}</p>
+      ${order.cliente_email ? `<p class="vf-show-help">${esc(order.cliente_email)}</p>` : ""}
+      <p class="vf-show-help">${esc(addressLine || (order.fulfillment === "entrega" ? "" : "Retirada na loja"))}${order.endereco?.complemento ? `<br>${esc(order.endereco.complemento)}` : ""}</p>
+      <p class="vf-show-help vf-show-help--tight"><strong>Pagamento:</strong> ${esc(order.pagamento_descricao || order.pagamento_forma || "—")}</p>
+      ${order.observacoes ? `<p class="vf-show-help vf-show-help--tight"><strong>Obs.:</strong> ${esc(order.observacoes)}</p>` : ""}
+    </div>`;
   }
 
   const labels = {
@@ -329,8 +342,22 @@
     root.querySelectorAll("[data-vf-status]").forEach((button) => {
       button.onclick = async () => {
         const [id, status] = button.dataset.vfStatus.split(":");
-        if (status === "cancelado" && !confirm("Recusar este pedido? Essa ação não poderá ser desfeita.")) return;
-        await changeStatus(Number(id), status, refresh || (() => loadOrders()));
+        if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
+        let result = null;
+        if (status === "recebido") {
+          pararAlarmePedido();
+          result = await postDecisaoPendente(Number(id), "aceitar");
+        } else if (status === "cancelado") {
+          pararAlarmePedido();
+          result = await postDecisaoPendente(Number(id), "recusar");
+        } else {
+          result = await changeStatus(Number(id), status);
+        }
+        if (result) {
+          if (status === "recebido" || status === "cancelado") processarPollAposDecisao(result);
+          else toast("Status do pedido atualizado.", "success");
+          await (refresh || (() => loadOrders()))();
+        }
       };
     });
   }
@@ -369,110 +396,122 @@
       const address = order.endereco || {};
       const addressLine = address.texto || [
         address.rua, address.numero, address.bairro, address.cidade,
-        address.uf, address.complemento,
+        address.uf,
       ].filter(Boolean).join(", ");
       const isPending = order.status === "pendente_loja";
       const freteLabel = order.fulfillment === "retirada" ? "Retirada" : "Taxa entrega";
+      const tipoEntrega = order.fulfillment === "retirada" ? "Retirada no balcão" : "Entrega";
+      const cepFmt = address.cep && String(address.cep).length >= 8
+        ? ` · CEP ${String(address.cep).substring(0, 5)}-${String(address.cep).substring(5)}`
+        : "";
 
-      root.innerHTML = `<div class="vf-orders vf-order-detail">
+      root.innerHTML = `<div class="vf-orders vf-order-show">
         ${breadcrumb(order.codigo_publico, true)}
         ${renderWhatsAppAlerts(order)}
-        ${renderPendingBanner(isPending)}
-        <div class="vf-order-detail__grid">
-          <main>
-            <section class="vf-card vf-order-main">
-              <div class="vf-order-main__head">
-                <div><h2>${esc(order.codigo_publico)}</h2>
-                  <p>${dateTime(order.created_at)} · ${esc(order.canal || "admin")} · ${esc(order.fulfillment === "retirada" ? "Retirada no balcão" : "Entrega")}${address.cep ? ` · CEP ${esc(address.cep)}` : ""}</p></div>
+        ${renderPendingBanner(order, isPending)}
+        <div class="vf-order-show__grid">
+          <div class="vf-order-show__main">
+            <div class="vf-show-card vf-show-card--main">
+              <div class="vf-show-main-head">
+                <div>
+                  <h2 class="vf-show-code">${esc(order.codigo_publico)}</h2>
+                  <p class="vf-show-meta">${dateTime(order.created_at)} · Canal ${esc(rotuloCanal(order.canal))} · ${esc(tipoEntrega)}${cepFmt}</p>
+                </div>
                 ${badge(order.status)}
               </div>
-              <div class="vf-table-wrap"><table class="vf-orders-table vf-items-table vf-items-table--vf">
-                <thead><tr><th>Item</th><th class="vf-col-qty">Qtd.</th><th class="vf-col-money">Total</th></tr></thead>
-                <tbody>${(order.itens || []).map((item) => `<tr>
-                  <td><strong>${esc(item.nome_produto)}</strong>${optionsText(item.opcoes) !== "—" ? `<small>${esc(optionsText(item.opcoes))}</small>` : ""}</td>
-                  <td class="vf-col-qty">${number(item.quantidade)}</td>
-                  <td class="vf-col-money vf-money">${money(item.subtotal)}</td>
-                </tr>`).join("")}</tbody>
-                <tfoot>
-                  <tr><th colspan="2">Subtotal</th><th class="vf-money">${money(order.subtotal)}</th></tr>
-                  <tr><th colspan="2">${esc(freteLabel)}</th><th class="vf-money">${money(order.frete_valor)}</th></tr>
-                  <tr class="is-total"><th colspan="2">Total</th><th class="vf-money">${money(order.total)}</th></tr>
-                </tfoot>
-              </table></div>
-            </section>
-          </main>
-          <aside class="vf-order-detail__aside">
+              <div class="vf-show-table-wrap">
+                <table class="vf-show-table">
+                  <thead><tr><th>Item</th><th class="vf-show-table__qty">Qtd</th><th class="vf-show-table__money">Total</th></tr></thead>
+                  <tbody>${(order.itens || []).map((item) => `<tr>
+                    <td>${esc(item.nome_produto)}${optionsText(item.opcoes) !== "—" ? `<div class="vf-show-item-opt">${esc(optionsText(item.opcoes))}</div>` : ""}</td>
+                    <td class="vf-show-table__qty">${number(item.quantidade)}</td>
+                    <td class="vf-show-table__money">${money(item.subtotal)}</td>
+                  </tr>`).join("")}</tbody>
+                  <tfoot>
+                    <tr><th colspan="2">Subtotal</th><th class="vf-show-table__money">${money(order.subtotal)}</th></tr>
+                    <tr><th colspan="2">${esc(freteLabel)}</th><th class="vf-show-table__money">${money(order.frete_valor)}</th></tr>
+                    <tr class="vf-show-table__total"><th colspan="2">Total</th><th class="vf-show-table__money">${money(order.total)}</th></tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+          <aside class="vf-order-show__aside">
             ${renderCupomActions(order)}
             ${renderEntregadores(order)}
             ${renderEntregadorLink(order)}
-            <section class="vf-card vf-order-info">
-              <div class="vf-card-title vf-card-title--plain"><h3>Cliente</h3></div>
-              <div class="vf-card-body vf-cliente-block">
-                <p class="vf-cliente-nome">${esc(order.cliente_nome)}</p>
-                <p class="vf-muted-note">${esc(order.cliente_telefone || "—")}</p>
-                ${order.cliente_email ? `<p class="vf-muted-note">${esc(order.cliente_email)}</p>` : ""}
-                <p class="vf-muted-note">${esc(addressLine || (order.fulfillment === "entrega" ? "Endereço não informado" : "Retirada na loja"))}</p>
-                <p class="vf-muted-note"><strong>Pagamento:</strong> ${esc(order.pagamento_descricao || order.pagamento_forma || "—")}</p>
-                ${order.observacoes ? `<p class="vf-muted-note"><strong>Obs.:</strong> ${esc(order.observacoes)}</p>` : ""}
-              </div>
-            </section>
+            ${renderClienteBlock(order, addressLine)}
             ${renderStatusForm(order)}
-            <button class="vf-btn vf-btn--block" type="button" data-vf-orders>← Voltar à lista</button>
+            <button class="vf-show-btn vf-show-btn--outline vf-show-btn--block" type="button" data-vf-orders>Voltar à lista</button>
           </aside>
         </div>
       </div>`;
       bindSharedNavigation(root);
-      root.querySelectorAll("[data-vf-detail-status]").forEach((button) => {
-        button.onclick = async () => {
-          const status = button.dataset.vfDetailStatus;
-          if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado.")) return;
-          const result = await changeStatus(order.id, status);
-          if (result) await openOrder(order.id, {
-            whatsapp_aviso_url: result.whatsapp_aviso_url,
-            whatsapp_indisponivel: result.whatsapp_indisponivel,
-          });
+      bindOrderDetailActions(root, order);
+      if (isPending) {
+        pollCurrent = pollCurrent?.id === order.id ? pollCurrent : {
+          id: order.id,
+          codigo_publico: order.codigo_publico,
         };
-      });
-      const statusForm = root.querySelector("#vfStatusForm");
-      if (statusForm) {
-        statusForm.onsubmit = async (event) => {
-          event.preventDefault();
-          const status = statusForm.elements.status.value;
-          if (status === order.status) {
-            toast("O status já estava assim. Escolha outro para atualizar.", "warning");
-            return;
-          }
-          const result = await changeStatus(order.id, status);
-          if (result) await openOrder(order.id, {
-            whatsapp_aviso_url: result.whatsapp_aviso_url,
-            whatsapp_indisponivel: result.whatsapp_indisponivel,
-          });
-        };
+        iniciarAlarmePedido();
       }
-      root.querySelectorAll("[data-vf-print]").forEach((button) => {
-        button.onclick = async () => {
-          try {
-            await openPrint(order.id, button.dataset.vfPrint === "1");
-          } catch (error) {
-            toast(error?.message || "Não foi possível imprimir o cupom.", "error");
-          }
-        };
-      });
-      const copyUrl = root.querySelector("[data-vf-copy-url]");
-      if (copyUrl) copyUrl.onclick = async () => {
-        const input = root.querySelector("#vf-url-entregador");
-        try {
-          await navigator.clipboard.writeText(input?.value || order.url_entregador);
-          toast("Link copiado.", "success");
-        } catch (_) {
-          input?.select();
-          document.execCommand("copy");
-          toast("Link copiado.", "success");
-        }
-      };
     } catch (error) {
       toast(error?.message || "Não foi possível abrir o pedido.", "error");
     }
+  }
+
+  function bindOrderDetailActions(root, order) {
+    root.querySelectorAll("[data-vf-detail-status]").forEach((button) => {
+      button.onclick = async () => {
+        const status = button.dataset.vfDetailStatus;
+        if (status === "cancelado" && !confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
+        if (status === "recebido" || status === "cancelado") pararAlarmePedido();
+        const result = status === "recebido" || status === "cancelado"
+          ? await postDecisaoPendente(order.id, status === "recebido" ? "aceitar" : "recusar")
+          : await changeStatus(order.id, status);
+        if (result) {
+          processarPollAposDecisao(result);
+          await openOrder(order.id, {
+            whatsapp_aviso_url: result.whatsapp_aviso_url,
+            whatsapp_indisponivel: result.whatsapp_indisponivel,
+          });
+        }
+      };
+    });
+    const statusForm = root.querySelector("#vfStatusForm");
+    if (statusForm) {
+      statusForm.onsubmit = async (event) => {
+        event.preventDefault();
+        const status = statusForm.elements.status.value;
+        if (status === order.status) {
+          toast("O status já estava assim. Escolha outro para atualizar.", "warning");
+          return;
+        }
+        const result = await changeStatus(order.id, status);
+        if (result) await openOrder(order.id, {
+          whatsapp_aviso_url: result.whatsapp_aviso_url,
+          whatsapp_indisponivel: result.whatsapp_indisponivel,
+        });
+      };
+    }
+    root.querySelectorAll("[data-vf-print]").forEach((button) => {
+      button.onclick = async () => {
+        try { await openPrint(order.id, button.dataset.vfPrint === "1"); }
+        catch (error) { toast(error?.message || "Não foi possível imprimir o cupom.", "error"); }
+      };
+    });
+    const copyUrl = root.querySelector("[data-vf-copy-url]");
+    if (copyUrl) copyUrl.onclick = async () => {
+      const input = root.querySelector("#vf-url-entregador");
+      try {
+        await navigator.clipboard.writeText(input?.value || order.url_entregador);
+        toast("Link copiado.", "success");
+      } catch (_) {
+        input?.select();
+        document.execCommand("copy");
+        toast("Link copiado.", "success");
+      }
+    };
   }
 
   async function openNewOrder() {
@@ -654,120 +693,176 @@
   let pollSubmitting = false;
   let pollAlarmTimer = null;
   let pollCurrent = null;
+  const INTERVALO_ALARM_SEG = 2.35;
 
-  function ensurePollModal() {
-    if (document.getElementById("vfModalPedidoPendente")) return;
-    document.body.insertAdjacentHTML("beforeend", `<div class="vf-pending-modal" id="vfModalPedidoPendente" hidden>
-      <div class="vf-pending-modal__backdrop"></div>
-      <div class="vf-pending-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="vfModalPedidoPendenteTitulo">
-        <header class="vf-pending-modal__head"><h2 id="vfModalPedidoPendenteTitulo">Pedido aguardando confirmação</h2></header>
-        <div class="vf-pending-modal__body" id="vf-modal-pendente-corpo"></div>
-        <footer class="vf-pending-modal__foot">
-          <button type="button" class="vf-btn" id="vf-modal-pendente-abrir" style="display:none">Abrir pedido completo</button>
-          <div class="vf-pending-modal__actions">
-            <button type="button" class="vf-btn vf-btn--danger" id="vf-modal-btn-recusar" disabled>Recusar pedido</button>
-            <button type="button" class="vf-btn vf-btn--success" id="vf-modal-btn-aceitar" disabled>Aceitar pedido</button>
-          </div>
-        </footer>
-      </div>
-    </div>`);
-    document.getElementById("vf-modal-btn-aceitar").onclick = () => decidePending("recebido");
-    document.getElementById("vf-modal-btn-recusar").onclick = () => {
-      if (!confirm("Recusar este pedido? Essa ação não poderá ser desfeita.")) return;
-      decidePending("cancelado");
-    };
-    document.getElementById("vf-modal-pendente-abrir").onclick = () => {
-      if (!pollCurrent) return;
-      hidePendingModal();
-      window.navigateTo?.("deliveryPedidos");
-      setTimeout(() => openOrder(pollCurrent.id), 0);
-    };
-    document.querySelector("#vfModalPedidoPendente .vf-pending-modal__backdrop").onclick = () => {};
-  }
-
-  function playPendingAlarm() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const t = ctx.currentTime;
-      [{ f: 1046, d: 0.11, off: 0 }, { f: 784, d: 0.11, off: 0.14 }, { f: 1318, d: 0.14, off: 0.32 }].forEach((s) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = "square";
-        o.frequency.value = s.f;
-        g.gain.value = 0.05;
-        o.connect(g);
-        g.connect(ctx.destination);
-        o.start(t + s.off);
-        o.stop(t + s.off + s.d);
-      });
-    } catch (_) {}
-  }
-
-  function stopPendingAlarm() {
+  function pararAlarmePedido() {
     if (pollAlarmTimer) {
       clearInterval(pollAlarmTimer);
       pollAlarmTimer = null;
     }
   }
 
-  function showPendingModal(pedido, total) {
-    ensurePollModal();
-    pollCurrent = pedido;
-    pollModalOpen = true;
-    const modal = document.getElementById("vfModalPedidoPendente");
+  function tocarSomAlarmePedido() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const t = ctx.currentTime;
+      [
+        { f: 1046, d: 0.11, off: 0 },
+        { f: 784, d: 0.11, off: 0.14 },
+        { f: 1318, d: 0.14, off: 0.32 },
+      ].forEach((s) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square";
+        o.frequency.value = s.f;
+        g.gain.value = 0.055;
+        o.connect(g);
+        g.connect(ctx.destination);
+        const st = t + s.off;
+        o.start(st);
+        o.stop(st + s.d);
+      });
+      setTimeout(() => ctx.close(), 900);
+    } catch (_) {}
+  }
+
+  function iniciarAlarmePedido() {
+    pararAlarmePedido();
+    const tick = () => {
+      if (pollCurrent) tocarSomAlarmePedido();
+    };
+    tick();
+    pollAlarmTimer = setInterval(tick, INTERVALO_ALARM_SEG * 1000);
+  }
+
+  async function postDecisaoPendente(id, decisao) {
+    return api(`/pedidos/${id}/pendente`, {
+      method: "POST",
+      body: JSON.stringify({ decisao }),
+    });
+  }
+
+  function processarPollAposDecisao(result) {
+    toast(result.mensagem || "Pedido atualizado.", "success");
+    if (result.proximo) {
+      renderModalCorpo(result.proximo);
+      showPendingModalShell();
+      iniciarAlarmePedido();
+    } else {
+      hidePendingModal();
+    }
+    if ($("deliveryPedidosRoot")) loadOrders("");
+    if ($("deliveryDashboardRoot")) loadDashboard();
+  }
+
+  function ensurePollModal() {
+    if (document.getElementById("vfModalPedidoPendente")) return;
+    document.body.insertAdjacentHTML("beforeend", `<div class="vf-pending-modal" id="vfModalPedidoPendente" hidden>
+      <div class="vf-pending-modal__backdrop"></div>
+      <div class="vf-pending-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="vfModalPedidoPendenteTitulo">
+        <header class="vf-pending-modal__head">
+          <h2 id="vfModalPedidoPendenteTitulo"><span class="vf-show-bell">🔔</span> <span id="vf-modal-pendente-titulo-texto">Pedido aguardando confirmação</span></h2>
+        </header>
+        <div class="vf-pending-modal__body" id="vf-modal-pendente-corpo"><p class="vf-show-help">Carregando…</p></div>
+        <footer class="vf-pending-modal__foot">
+          <button type="button" class="vf-show-btn vf-show-btn--outline vf-show-btn--sm" id="vf-modal-pendente-abrir" style="display:none">Abrir pedido completo</button>
+          <div class="vf-pending-modal__actions">
+            <button type="button" class="vf-show-btn vf-show-btn--danger-outline" id="vf-modal-btn-recusar" disabled>Recusar pedido</button>
+            <button type="button" class="vf-show-btn vf-show-btn--success" id="vf-modal-btn-aceitar" disabled>Aceitar pedido</button>
+          </div>
+        </footer>
+      </div>
+    </div>`);
+    document.getElementById("vf-modal-btn-aceitar").onclick = () => decidePending("aceitar");
+    document.getElementById("vf-modal-btn-recusar").onclick = () => {
+      if (!confirm("Recusar este pedido? O cliente verá como cancelado e o estoque volta.")) return;
+      decidePending("recusar");
+    };
+    document.getElementById("vf-modal-pendente-abrir").onclick = () => {
+      if (!pollCurrent) return;
+      const id = pollCurrent.id;
+      document.getElementById("vfModalPedidoPendente").hidden = true;
+      window.navigateTo?.("deliveryPedidos");
+      setTimeout(() => openOrder(id), 0);
+    };
+  }
+
+  function renderModalCorpo(p) {
     const body = document.getElementById("vf-modal-pendente-corpo");
-    const titulo = document.getElementById("vfModalPedidoPendenteTitulo");
-    titulo.textContent = total > 1 ? `${total} pedidos aguardando confirmação` : "Pedido aguardando confirmação";
-    body.innerHTML = `<div class="vf-pending-modal__summary">
-      <strong class="vf-order-code">${esc(pedido.codigo_publico)}</strong>
-      <p>${esc(pedido.cliente_nome || "Cliente")} · ${esc(pedido.total_fmt || money(pedido.total || 0))}</p>
-      <p class="vf-muted-note">${dateTime(pedido.created_at)} · ${esc(pedido.fulfillment_rotulo || "Entrega")}</p>
-      <ul>${(pedido.itens || []).map((item) => `<li>${esc(item.qtd)}× ${esc(item.nome)}</li>`).join("")}</ul>
-    </div>`;
+    const titulo = document.getElementById("vf-modal-pendente-titulo-texto");
+    if (!body || !titulo) return;
+    titulo.textContent = `Confirmar: ${p.codigo_publico || ""}`;
+    body.innerHTML = `<p class="vf-show-help">${esc(String(p.created_at || ""))} · ${esc(String(p.tipo_entrega || p.fulfillment_rotulo || ""))}</p>
+      <p class="vf-show-modal-code">${esc(String(p.codigo_publico || ""))}</p>
+      <p class="vf-show-help"><strong>Cliente:</strong> ${esc(String(p.cliente_nome || ""))}</p>
+      <p class="vf-show-help vf-show-help--total"><strong>Total:</strong> <span>${esc(String(p.total_fmt || money(p.total || 0)))}</span></p>
+      <h3 class="vf-show-card__title">Itens</h3>
+      <ul class="vf-show-modal-itens">${(p.itens || []).map((it) =>
+        `<li><span>${esc(it.nome)}</span><span>× ${esc(String(it.qtd))}</span></li>`).join("")}</ul>`;
     document.getElementById("vf-modal-btn-aceitar").disabled = false;
     document.getElementById("vf-modal-btn-recusar").disabled = false;
-    document.getElementById("vf-modal-pendente-abrir").style.display = "";
-    modal.hidden = false;
-    playPendingAlarm();
-    stopPendingAlarm();
-    pollAlarmTimer = setInterval(playPendingAlarm, 2350);
+    const abrir = document.getElementById("vf-modal-pendente-abrir");
+    abrir.style.display = "";
+    pollCurrent = p;
+  }
+
+  function showPendingModalShell() {
+    ensurePollModal();
+    pollModalOpen = true;
+    document.getElementById("vfModalPedidoPendente").hidden = false;
+    iniciarAlarmePedido();
   }
 
   function hidePendingModal() {
-    stopPendingAlarm();
+    pararAlarmePedido();
     pollModalOpen = false;
     pollCurrent = null;
     const modal = document.getElementById("vfModalPedidoPendente");
     if (modal) modal.hidden = true;
   }
 
-  async function decidePending(status) {
+  async function decidePending(decisao) {
     if (!pollCurrent || pollSubmitting) return;
+    pararAlarmePedido();
     pollSubmitting = true;
+    document.getElementById("vf-modal-btn-aceitar").disabled = true;
+    document.getElementById("vf-modal-btn-recusar").disabled = true;
     try {
-      await api(`/pedidos/${pollCurrent.id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
-      toast(status === "recebido" ? "Pedido aceito." : "Pedido recusado.", "success");
-      hidePendingModal();
-      const data = await api("/pedidos/pendentes-poll");
-      if (data.enabled && (data.pedidos || []).length) showPendingModal(data.pedidos[0], data.pedidos.length);
-      if ($("deliveryPedidosRoot")) loadOrders("");
-      if ($("deliveryDashboardRoot")) loadDashboard();
+      const result = await postDecisaoPendente(pollCurrent.id, decisao);
+      processarPollAposDecisao(result);
     } catch (error) {
       toast(error?.message || "Não foi possível atualizar o pedido.", "error");
+      if (pollCurrent) renderModalCorpo(pollCurrent);
+      if (pollModalOpen && pollCurrent) iniciarAlarmePedido();
     } finally {
       pollSubmitting = false;
     }
   }
 
+  function processarPoll(data) {
+    const lista = data.pedidos || [];
+    if (!data.enabled || lista.length === 0) {
+      pararAlarmePedido();
+      if (pollModalOpen) hidePendingModal();
+      return;
+    }
+    const primeiro = lista[0];
+    if (!pollModalOpen) {
+      renderModalCorpo(primeiro);
+      showPendingModalShell();
+      return;
+    }
+    if (!pollCurrent || pollCurrent.id !== primeiro.id) {
+      renderModalCorpo(primeiro);
+      iniciarAlarmePedido();
+    }
+  }
+
   async function pollPendentes() {
-    if (pollModalOpen || pollSubmitting) return;
+    if (pollSubmitting) return;
     try {
       const data = await api("/pedidos/pendentes-poll");
-      if (!data.enabled || !(data.pedidos || []).length) return;
-      showPendingModal(data.pedidos[0], data.pedidos.length);
+      processarPoll(data);
     } catch (_) {}
   }
 

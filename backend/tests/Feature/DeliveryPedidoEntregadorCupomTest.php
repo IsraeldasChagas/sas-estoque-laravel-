@@ -150,6 +150,21 @@ class DeliveryPedidoEntregadorCupomTest extends TestCase
         $this->assertStringContainsString('text=', $url);
     }
 
+    public function test_decisao_pendente_aceitar_retorna_proximo_e_para_fluxo(): void
+    {
+        $this->insertOrder(908, 'pendente_loja', 'tok-a');
+        $this->insertOrder(909, 'pendente_loja', 'tok-b');
+
+        $response = $this->withHeaders($this->headers())
+            ->postJson('/api/delivery/pedidos/908/pendente', ['decisao' => 'aceitar'])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $this->assertSame('recebido', DB::table('dlv_pedidos')->where('id', 908)->value('status'));
+        $this->assertSame(909, $response->json('proximo.id'));
+        $this->assertArrayHasKey('pendente_post_url', $response->json('proximo'));
+    }
+
     private function headers(): array
     {
         return ['X-Usuario-Id' => '90'];

@@ -391,27 +391,52 @@ class DeliveryPedidoService
             ->orderBy('created_at')
             ->limit(20)
             ->get()
-            ->map(function ($pedido) {
-                $itens = DB::table('dlv_pedido_itens')
-                    ->where('pedido_id', $pedido->id)
-                    ->orderBy('ordem')
-                    ->orderBy('id')
-                    ->get()
-                    ->map(fn ($item) => [
-                        'nome' => (string) $item->nome_produto,
-                        'qtd' => (float) $item->quantidade,
-                    ])->values()->all();
+            ->map(fn ($pedido) => $this->serializarPedidoPendentePoll($pedido))
+            ->values()
+            ->all();
+    }
 
-                return [
-                    'id' => (int) $pedido->id,
-                    'codigo_publico' => (string) $pedido->codigo_publico,
-                    'cliente_nome' => (string) $pedido->cliente_nome,
-                    'total_fmt' => 'R$ '.number_format((float) $pedido->total, 2, ',', '.'),
-                    'fulfillment_rotulo' => DeliveryPedidoPresenter::rotuloFulfillment($pedido->fulfillment ?? null),
-                    'created_at' => $pedido->created_at,
-                    'itens' => $itens,
-                ];
-            })->values()->all();
+    /** @return array<string, mixed>|null */
+    public function proximoPedidoPendentePoll(int $unidadeId): ?array
+    {
+        $proximo = DB::table('dlv_pedidos')
+            ->where('unidade_id', $unidadeId)
+            ->where('status', 'pendente_loja')
+            ->orderBy('created_at')
+            ->first();
+
+        return $proximo ? $this->serializarPedidoPendentePoll($proximo) : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function serializarPedidoPendentePoll(object $pedido): array
+    {
+        $itens = DB::table('dlv_pedido_itens')
+            ->where('pedido_id', $pedido->id)
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($item) => [
+                'nome' => (string) $item->nome_produto,
+                'qtd' => (float) $item->quantidade,
+            ])->values()->all();
+
+        $createdAt = $pedido->created_at
+            ? \Illuminate\Support\Carbon::parse($pedido->created_at)->format('d/m/Y H:i')
+            : '';
+
+        return [
+            'id' => (int) $pedido->id,
+            'codigo_publico' => (string) $pedido->codigo_publico,
+            'cliente_nome' => (string) $pedido->cliente_nome,
+            'total_fmt' => 'R$ '.number_format((float) $pedido->total, 2, ',', '.'),
+            'tipo_entrega' => DeliveryPedidoPresenter::rotuloFulfillment($pedido->fulfillment ?? null),
+            'fulfillment_rotulo' => DeliveryPedidoPresenter::rotuloFulfillment($pedido->fulfillment ?? null),
+            'created_at' => $createdAt,
+            'pendente_post_url' => '/delivery/pedidos/'.(int) $pedido->id.'/pendente',
+            'show_url' => null,
+            'itens' => $itens,
+        ];
     }
 
     private function validarOpcoes(object $produto, mixed $opcoes, int $unidadeId): array
