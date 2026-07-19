@@ -27,6 +27,10 @@
             $regrasCf = $cf['regras'] ?? [];
             $recTitulo = trim((string) ($cf['recompensa_titulo'] ?? ''));
             $recLinhas = $cf['recompensa_linhas'] ?? [];
+            $recTipo = (string) ($cf['tipo'] ?? '');
+            $catalogoQtd = max(1, (int) ($cf['catalogo_qtd_escolhas'] ?? 1));
+            $catalogoProdutos = is_array($cf['catalogo_produtos'] ?? null) ? $cf['catalogo_produtos'] : [];
+            $catalogoComProdutos = $recTipo === 'catalogo_consulta' && $catalogoProdutos !== [];
         @endphp
         <ul class="vf-fid-como-regras">
             @foreach($regrasCf as $linha)
@@ -34,14 +38,30 @@
             @endforeach
         </ul>
 
-        @if(! empty($recLinhas))
-            <div class="vf-fid-como-recompensa" data-tipo="{{ $cf['tipo'] ?? '' }}">
+        @if($catalogoComProdutos || ! empty($recLinhas))
+            <div class="vf-fid-como-recompensa" data-tipo="{{ $recTipo }}">
                 <h3 class="vf-fid-como-recompensa__titulo">{{ $recTitulo !== '' ? $recTitulo : 'Recompensa' }}</h3>
-                <ul>
-                    @foreach($recLinhas as $rl)
-                        <li>{{ $rl }}</li>
-                    @endforeach
-                </ul>
+
+                @if($catalogoComProdutos)
+                    <p class="vf-fid-catalogo-intro">
+                        Ao completar a meta, escolha até <strong>{{ $catalogoQtd }}</strong>
+                        {{ $catalogoQtd === 1 ? 'produto' : 'produtos' }} entre:
+                    </p>
+                    @if($catalogoQtd > 1)
+                        <p class="vf-fid-catalogo-nota muted">Pode repetir o mesmo produto até atingir o limite.</p>
+                    @endif
+                    <ul class="vf-fid-catalogo-produtos">
+                        @foreach($catalogoProdutos as $prod)
+                            <li>{{ $prod['nome'] ?? '' }}</li>
+                        @endforeach
+                    </ul>
+                @else
+                    <ul>
+                        @foreach($recLinhas as $rl)
+                            <li>{{ $rl }}</li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
         @endif
 

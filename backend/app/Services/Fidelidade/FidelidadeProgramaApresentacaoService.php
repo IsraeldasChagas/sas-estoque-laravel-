@@ -31,7 +31,9 @@ class FidelidadeProgramaApresentacaoService
      *   tipo:string,
      *   regras:list<string>,
      *   recompensa_titulo:string,
-     *   recompensa_linhas:list<string>
+     *   recompensa_linhas:list<string>,
+     *   catalogo_qtd_escolhas:?int,
+     *   catalogo_produtos:list<array{id:int,nome:string}>
      * }
      */
     public function comoFuncionaVitrine(object $programa, string $nomeUnidade, ?int $contaId = null): array
@@ -51,6 +53,8 @@ class FidelidadeProgramaApresentacaoService
             ],
             'recompensa_titulo' => $this->tituloRecompensaVitrine($resumo['tipo']),
             'recompensa_linhas' => $resumo['linhas'],
+            'catalogo_qtd_escolhas' => $resumo['catalogo_qtd_escolhas'],
+            'catalogo_produtos' => $resumo['catalogo_produtos'],
         ];
     }
 
@@ -102,7 +106,9 @@ class FidelidadeProgramaApresentacaoService
      *   desconto_percentual:?float,
      *   valor_desconto:?float,
      *   gasto_acumulado:?float,
-     *   desconto_estimado:?float
+     *   desconto_estimado:?float,
+     *   catalogo_qtd_escolhas:?int,
+     *   catalogo_produtos:list<array{id:int,nome:string}>
      * }
      */
     public function resumoRecompensa(object $programa, ?int $contaId = null): array
@@ -117,6 +123,13 @@ class FidelidadeProgramaApresentacaoService
         $descontoEstimado = null;
         $pct = $this->percentual($programa);
         $valorFixo = $this->valorDesconto($programa);
+        $catalogoQtd = null;
+        $catalogoProdutos = [];
+
+        if ($tipo === self::TIPO_CATALOGO_CONSULTA) {
+            $catalogoQtd = max(1, (int) ($programa->catalogo_qtd_escolhas ?? 1));
+            $catalogoProdutos = $this->produtosCatalogoConsulta($programa);
+        }
 
         if ($tipo === self::TIPO_DESCONTO_PERCENTUAL && $contaId > 0 && $pct > 0) {
             $gasto = $this->gastoAcumuladoSelos($contaId, $meta);
@@ -140,6 +153,8 @@ class FidelidadeProgramaApresentacaoService
             'valor_desconto' => $tipo === self::TIPO_DESCONTO_VALOR ? $valorFixo : null,
             'gasto_acumulado' => $gasto,
             'desconto_estimado' => $descontoEstimado,
+            'catalogo_qtd_escolhas' => $catalogoQtd,
+            'catalogo_produtos' => $catalogoProdutos,
         ];
     }
 
@@ -250,13 +265,21 @@ class FidelidadeProgramaApresentacaoService
             }
 
             return [
-                'Recompensa: ao completar a meta, escolha até '.$qtd.' produto(s) do cardápio da loja.',
+                'Ao completar a meta, escolha até '.$qtd.' produto(s) do cardápio da loja.',
             ];
         }
 
-        return [
-            'Recompensa: ao completar a meta, escolha até '.$qtd.' produto(s) entre: '.implode(', ', $nomes).'.',
+        $linhas = [
+            'Ao completar a meta, escolha até '.$qtd.' produto(s) entre:',
         ];
+        foreach ($nomes as $nome) {
+            $linhas[] = $nome;
+        }
+        if ($qtd > 1) {
+            $linhas[] = 'Pode repetir o mesmo produto até atingir o limite de '.$qtd.'.';
+        }
+
+        return $linhas;
     }
 
     /** @return list<array{id:int,nome:string}> */

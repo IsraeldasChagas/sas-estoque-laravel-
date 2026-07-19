@@ -366,6 +366,15 @@ a{color:inherit}
 .vf-fid-como-recompensa__titulo{margin:0 0 8px;font-size:.95rem;color:#0f172a}
 .vf-fid-como-recompensa ul{margin:0;padding-left:1.1rem;font-size:.9rem;line-height:1.45;color:#334155}
 .vf-fid-como-recompensa li{margin-bottom:4px}
+.vf-fid-catalogo-intro{margin:0 0 8px;font-size:.9rem;line-height:1.45;color:#334155}
+.vf-fid-catalogo-nota{margin:0 0 8px;font-size:.82rem;line-height:1.4}
+.vf-fid-catalogo-produtos{
+  margin:0;padding:0;list-style:none;display:grid;gap:6px;
+}
+.vf-fid-catalogo-produtos li{
+  padding:8px 10px;border-radius:8px;background:#fff;border:1px solid var(--line,#e2e8f0);
+  font-size:.9rem;color:#0f172a;
+}
 .vf-fid-recompensa{margin-top:12px;padding:12px 14px;border-radius:.75rem;background:#f8fafc;border:1px solid var(--line,#e2e8f0)}
 .vf-fid-recompensa__titulo{margin:0 0 8px;font-size:.95rem;color:#0f172a}
 .vf-fid-recompensa__lista{margin:0;padding-left:1.1rem;font-size:.88rem;line-height:1.45;color:#334155}

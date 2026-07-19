@@ -69,9 +69,31 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
         ];
 
         $linhas = $this->svc->linhasRecompensa($programa);
-        $this->assertCount(1, $linhas);
+        $this->assertGreaterThanOrEqual(3, count($linhas));
         $this->assertStringContainsString('escolha até 2 produto(s)', $linhas[0]);
-        $this->assertStringContainsString('Tacacá', $linhas[0]);
+        $this->assertSame('Tacacá', $linhas[1]);
+        $this->assertSame('Açaí', $linhas[2]);
+        $this->assertStringContainsString('repetir o mesmo produto', $linhas[3]);
+    }
+
+    public function test_como_funciona_catalogo_consulta_expoe_produtos_na_vitrine(): void
+    {
+        $programa = (object) [
+            'tipo_recompensa_padrao' => 'catalogo_consulta',
+            'pedidos_meta' => 10,
+            'catalogo_qtd_escolhas' => 3,
+            'catalogo_produtos_json' => json_encode([
+                ['id' => 1, 'nome' => 'Tacacá'],
+                ['id' => 2, 'nome' => 'Açaí'],
+            ]),
+        ];
+
+        $bloco = $this->svc->comoFuncionaVitrine($programa, 'Unidade Centro');
+        $this->assertSame('catalogo_consulta', $bloco['tipo']);
+        $this->assertSame(3, $bloco['catalogo_qtd_escolhas']);
+        $this->assertCount(2, $bloco['catalogo_produtos']);
+        $this->assertSame('Tacacá', $bloco['catalogo_produtos'][0]['nome']);
+        $this->assertTrue(collect($bloco['recompensa_linhas'])->contains(fn ($l) => $l === 'Açaí'));
     }
 
     public function test_linhas_produto_legacy_usam_texto_recompensa(): void

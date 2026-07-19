@@ -47,6 +47,9 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
         $pctMigration = require database_path('migrations/2026_07_18_220000_add_desconto_percentual_to_fid_programas.php');
         $pctMigration->up();
 
+        $catalogoMigration = require database_path('migrations/2026_07_19_180000_add_catalogo_consulta_to_fid_programas.php');
+        $catalogoMigration->up();
+
         $this->unidadeId = (int) DB::table('unidades')->insertGetId([
             'nome' => 'Unidade Vitrine',
             'created_at' => now(),
@@ -92,6 +95,28 @@ class DeliveryFidelidadeVitrineRecompensaTest extends TestCase
             ->assertSee('15%')
             ->assertDontSee('Texto de produto ignorado')
             ->assertDontSee('Desconto na conta');
+    }
+
+    public function test_vitrine_catalogo_consulta_mostra_escolha_e_produtos(): void
+    {
+        $this->seedPrograma('catalogo_consulta', [
+            'catalogo_qtd_escolhas' => 3,
+            'catalogo_produtos_json' => json_encode([
+                ['id' => 1, 'nome' => 'Tacacá'],
+                ['id' => 2, 'nome' => 'Açaí 500ml'],
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $this->aceitarLgpd();
+
+        $this->get('/loja/'.$this->slug.'/fidelidade')
+            ->assertOk()
+            ->assertSee('Catálogo (consulta)')
+            ->assertSee('escolha até')
+            ->assertSee('3')
+            ->assertSee('Tacacá')
+            ->assertSee('Açaí 500ml')
+            ->assertSee('Pode repetir o mesmo produto');
     }
 
     private function seedPrograma(string $tipo, array $extra = []): void
