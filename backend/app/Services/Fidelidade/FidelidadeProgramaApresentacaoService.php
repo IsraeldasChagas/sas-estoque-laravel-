@@ -55,12 +55,12 @@ class FidelidadeProgramaApresentacaoService
         return [
             'tipo' => $resumo['tipo'],
             'regras' => [
+                'Você pode ter o cartão fidelidade tanto na reserva de mesa quanto nas compras no delivery da loja '.$loja.'.',
                 'A cada reserva de mesa na unidade '.$unidade.', você ganha 1 selo após o pagamento da conta.',
-                'Compras no delivery da loja '.$loja.' (esta vitrine) também geram 1 selo — na primeira compra pedimos nome, CPF, e-mail, WhatsApp e aceite LGPD, igual à reserva.',
-                'O cartão é criado pela loja na reserva ou ativado na primeira compra delivery — não é possível cadastrar manualmente por aqui.',
-                'O termo LGPD nesta página só aparece na primeira consulta pelo link da reserva ou se você ainda não aceitou na compra delivery.',
+                'A cada compra no delivery da loja '.$loja.', você também ganha 1 selo.',
+                'O cartão e os selos pertencem ao cliente (mesmo telefone, CPF e e-mail informados na reserva ou no pedido).',
                 'Meta: '.$meta.' selo(s) para resgatar a recompensa.',
-                'Use o mesmo telefone da reserva ou do pedido delivery e confirme com um código de 6 dígitos para consultar seu saldo.',
+                'Use o mesmo telefone da reserva ou do pedido e confirme com um código de 6 dígitos para consultar seu saldo.',
             ],
             'recompensa_titulo' => $this->tituloRecompensaVitrine($resumo['tipo']),
             'recompensa_linhas' => $resumo['linhas'],

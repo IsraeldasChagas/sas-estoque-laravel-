@@ -169,7 +169,6 @@
         @if($mostrar_lgpd ?? false)
             <div class="vf-fid-lgpd">
                 <h3>Termo de consentimento (LGPD)</h3>
-                <p class="muted vf-fid-lgpd__contexto">Mesma regra da reserva de mesa e da primeira compra no delivery de <strong>{{ $config->nome_loja ?: 'Loja' }}</strong>: pedimos este aceite só na primeira vez.</p>
                 <div class="vf-fid-lgpd__text">
                     <p>{{ $lgpd_texto ?? '' }}</p>
                     <p class="muted">

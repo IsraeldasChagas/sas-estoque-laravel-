@@ -37,7 +37,7 @@
     <div class="vf-dialog__head">
         <h2>{{ $nomeProg }}</h2>
     </div>
-    <p class="checkout-freight-note">Informe seus dados para ativar o cartão e receber <strong>1 selo</strong> desta compra no delivery de {{ $config->nome_loja ?: 'Loja' }} — mesmo procedimento da reserva de mesa.</p>
+    <p class="checkout-freight-note">Informe seus dados para ativar o cartão e receber <strong>1 selo</strong> desta compra — como na reserva de mesa.</p>
     <form id="vf-fidelidade-sucesso-form" class="vf-fid-form-stack">
         <label>Nome completo
             <input type="text" name="fidelidade_nome" id="vf-fid-nome" maxlength="160" required autocomplete="name" value="{{ old('fidelidade_nome', $pedido->cliente_nome) }}">

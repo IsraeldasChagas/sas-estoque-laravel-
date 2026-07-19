@@ -58,7 +58,7 @@
                 @if($fidelidadeAtiva && $programaFidelidade)
                 <div class="span-2 fidelidade-opt">
                     <label class="choice-inline"><input type="checkbox" id="vf-fidelidade-quero-check" name="fidelidade_quero" value="1"> Sim, quero o <strong>{{ $programaFidelidade->nome_exibicao ?? 'Cartão fidelidade' }}</strong> <span class="muted">(1 selo nesta compra)</span></label>
-                    <p class="checkout-freight-note">Depois de confirmar o pedido, abriremos um formulário para nome completo, e-mail, WhatsApp, CPF e aceite LGPD — o mesmo procedimento da reserva de mesa nesta unidade.</p>
+                    <p class="checkout-freight-note">Depois de confirmar o pedido, abriremos um formulário para ativar seu cartão fidelidade — como na reserva de mesa.</p>
                 </div>
                 @endif
             </div>

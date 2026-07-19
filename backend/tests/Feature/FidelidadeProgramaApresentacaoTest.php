@@ -162,8 +162,8 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
         ];
 
         $bloco = $this->svc->comoFuncionaVitrine($programa, 'Unidade Centro', null, null, 'SaborParaense 2');
-        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'delivery da loja SaborParaense 2')));
-        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'LGPD')));
+        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'tanto na reserva de mesa quanto nas compras no delivery')));
+        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'SaborParaense 2')));
     }
 
     public function test_como_funciona_inclui_regra_do_cliente_da_reserva(): void
@@ -176,7 +176,7 @@ class FidelidadeProgramaApresentacaoTest extends TestCase
 
         $bloco = $this->svc->comoFuncionaVitrine($programa, 'Unidade Centro');
         $this->assertSame('brinde', $bloco['tipo']);
-        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'cliente que fez a reserva') || str_contains($l, 'delivery')));
+        $this->assertTrue(collect($bloco['regras'])->contains(fn ($l) => str_contains($l, 'tanto na reserva de mesa quanto nas compras no delivery')));
         $this->assertSame('Brinde', $bloco['recompensa_titulo']);
         $this->assertTrue(collect($bloco['recompensa_linhas'])->contains(fn ($l) => str_contains($l, 'Sobremesa')));
     }
