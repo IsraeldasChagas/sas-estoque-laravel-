@@ -39,7 +39,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260719-fid-nome-completo">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/store.css') }}?v=20260719-footer-delivery-moto">
     <style>:root{--primary:{{ $primary }};--primary-soft:color-mix(in srgb, {{ $primary }} 14%, white);}</style>
 </head>
 <body class="vf-body {{ $footerFixed ? 'vf-body--footer-fixed' : '' }}" data-store="{{ $slug }}">
@@ -161,8 +161,22 @@
 
 <footer class="vf-publico-footer {{ $footerFixed ? 'vf-publico-footer--fixed' : '' }}">
     <div class="shell footer-inner">
-        <span class="vf-moto" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M5 17a2.5 2.5 0 1 0 0 .01M19 17a2.5 2.5 0 1 0 0 .01M5 17H3l1.5-5h4L10 17m9 0h-3l-1.2-4H19l1.5 1.5M8.5 12l1.5-4h4l2 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="vf-delivery-illust" aria-hidden="true">
+            <svg viewBox="0 0 72 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+                <title>Entrega</title>
+                <path d="M3 22h7M1 28h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".35"/>
+                <circle cx="15" cy="34" r="6.5" stroke="currentColor" stroke-width="1.8"/>
+                <circle cx="15" cy="34" r="2.2" fill="currentColor" opacity=".3"/>
+                <circle cx="54" cy="34" r="6.5" stroke="currentColor" stroke-width="1.8"/>
+                <circle cx="54" cy="34" r="2.2" fill="currentColor" opacity=".3"/>
+                <path d="M21 28h27l5-9H31l-3-7h-9l-2 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M38 12h10M43 12v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="40" cy="9.5" r="4" fill="currentColor"/>
+                <path d="M40 13.5v7.5M36.5 21h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="44.5" y="13" width="11" height="13" rx="2.2" fill="currentColor" opacity=".92"/>
+                <path d="M47 13V10.5a2.2 2.2 0 0 1 4.4 0V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M46.5 18h7M46.5 21.5h7" stroke="#fff" stroke-width="1.1" stroke-linecap="round" opacity=".85"/>
+            </svg>
         </span>
         <span>{{ $entregaTexto }}</span>
     </div>
