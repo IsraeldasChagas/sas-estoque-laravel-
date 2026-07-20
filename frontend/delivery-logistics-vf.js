@@ -303,7 +303,7 @@
     return items.map((driver) => {
       const photo = imageUrl(driver.foto_url);
       const initials = String(driver.nome || "?").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-      const waApp = driver.url_app_whatsapp || "";
+      const waApp = driver.pin_disponivel && driver.url_app_whatsapp ? driver.url_app_whatsapp : "";
       return `<tr><td><div class="vfl-driver"><span class="vfl-avatar">${photo ? `<img src="${esc(photo)}" alt="">` : esc(initials)}</span>
           <span><strong>${esc(driver.nome)}</strong><small>${esc(driver.whatsapp || "Sem WhatsApp")}</small></span></div></td>
         <td><strong>${esc(driver.moto_modelo || "—")}</strong><small>${esc(driver.moto_cor || "Cor não informada")}</small></td>
@@ -318,6 +318,30 @@
 
   async function openDriverEditor(root, id) {
     renderDriverEditor(root, await api(`/entregadores/${id}`));
+  }
+
+  function renderDriverPinBlock(driver) {
+    const pin = driver?.acesso_pin || "";
+    const disponivel = !!driver?.pin_disponivel;
+    const usado = !!driver?.pin_usado;
+    let status = "Sem PIN — gere um agora.";
+    let statusColor = "#b45309";
+    if (disponivel) {
+      status = "PIN ativo (uso único). Envie só para o WhatsApp cadastrado.";
+      statusColor = "#166534";
+    } else if (usado) {
+      status = "PIN já usado. Gere outro para o motoboy entrar de novo.";
+      statusColor = "#b45309";
+    }
+    return `<div style="margin:8px 0 12px;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
+      <strong style="display:block;margin-bottom:6px">🔐 PIN do app (6 dígitos · uso único)</strong>
+      <p style="margin:0 0 10px;font-size:13px;color:${statusColor}">${status}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input readonly style="flex:0 0 120px;font-size:22px;letter-spacing:.2em;text-align:center;font-weight:700" id="vflDriverPin" value="${esc(pin || "——————")}">
+        <button class="vfl-btn vfl-btn--primary" type="button" data-vfl-gerar-pin>Gerar novo PIN</button>
+        ${pin ? `<button class="vfl-btn" type="button" data-vfl-copy-pin>Copiar PIN</button>` : ""}
+      </div>
+    </div>`;
   }
 
   function renderDriverEditor(root, driver) {
@@ -336,28 +360,23 @@
           <div class="vfl-form-grid">
             <label class="vfl-field vfl-span-12"><span>Nome <b>*</b></span><input name="nome" maxlength="255" value="${esc(driver?.nome || "")}" required></label>
             <label class="vfl-field vfl-span-12"><span>WhatsApp <b>*</b></span><input name="whatsapp" data-vfl-phone maxlength="20" value="${esc(whatsappMask(driver?.whatsapp || ""))}" required></label>
-            <label class="vfl-field vfl-span-6"><span>PIN do app <b>*</b></span>
-              <input name="acesso_pin" type="text" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off"
-                value="${esc(driver?.acesso_pin || "")}" ${editing && driver?.tem_pin ? "" : "required"}
-                placeholder="${editing && driver?.tem_pin ? "Deixe igual ou digite um novo" : "4 a 6 dígitos"}">
-              <small style="display:block;margin-top:4px;color:#64748b">O motoboy digita este PIN ao abrir o app. Não compartilhe o PIN com outras pessoas.</small>
-            </label>
-            <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-field vfl-span-6"><span>Modelo da moto</span><input name="moto_modelo" maxlength="120" value="${esc(driver?.moto_modelo || "")}"></label>
             <label class="vfl-field vfl-span-6"><span>Cor</span><input name="moto_cor" maxlength="64" value="${esc(driver?.moto_cor || "")}"></label>
             <label class="vfl-field vfl-span-6"><span>Placa</span><input name="moto_placa" maxlength="16" value="${esc(driver?.moto_placa || "")}"></label>
+            <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-check vfl-span-12"><input name="ativo" type="checkbox" ${driver ? (Number(driver.ativo) ? "checked" : "") : "checked"}> Entregador ativo</label>
           </div>
+          ${editing ? renderDriverPinBlock(driver) : `<div style="margin:8px 0 12px;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc"><strong>PIN do app</strong><p style="margin:6px 0 0;font-size:13px;color:#64748b">Ao salvar, o sistema gera um PIN de 6 dígitos (uso único) para enviar no WhatsApp cadastrado.</p></div>`}
           ${editing && driver?.url_app ? `<div style="margin:8px 0 12px;padding:14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4">
             <strong style="display:block;margin-bottom:6px">📱 App do motoboy</strong>
-            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie pelo WhatsApp cadastrado. Ele abre o link, digita o PIN do cadastro, instala o app e acompanha as entregas.</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie só para o WhatsApp cadastrado. O PIN funciona <strong>uma vez</strong>; se ele sair do app ou precisar entrar de novo, gere outro PIN.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
               <input readonly style="flex:1;min-width:180px" id="vflDriverAppUrl" value="${esc(driver.url_app)}">
               <button class="vfl-btn" type="button" data-vfl-copy-app>Copiar link</button>
             </div>
-            ${driver.url_app_whatsapp
-              ? `<a class="vfl-btn vfl-btn--primary" style="background:#16a34a;border-color:#16a34a;color:#fff" href="${esc(driver.url_app_whatsapp)}" target="_blank" rel="noopener noreferrer">Enviar app no WhatsApp</a>`
-              : `<p style="margin:0;font-size:13px;color:#b45309">Salve um WhatsApp válido para liberar o envio.</p>`}
+            ${driver.pin_disponivel && driver.url_app_whatsapp
+              ? `<a class="vfl-btn vfl-btn--primary" style="background:#16a34a;border-color:#16a34a;color:#fff" href="${esc(driver.url_app_whatsapp)}" target="_blank" rel="noopener noreferrer">Enviar link + PIN no WhatsApp</a>`
+              : `<p style="margin:0;font-size:13px;color:#b45309">${driver.pin_usado ? "PIN já usado — gere outro para enviar." : "Gere um PIN para liberar o envio no WhatsApp."}</p>`}
           </div>` : ""}
           <div class="vfl-form-actions"><button class="vfl-btn vfl-btn--primary" type="submit">Salvar</button><button class="vfl-btn" type="button" data-vfl-back-drivers>Cancelar</button></div>
         </form>
@@ -375,6 +394,27 @@
         toast("Link do app copiado.", "success");
       } catch (_) {
         window.prompt("Copie o link do app:", url);
+      }
+    });
+    root.querySelector("[data-vfl-copy-pin]")?.addEventListener("click", async () => {
+      const pin = driver?.acesso_pin || "";
+      if (!pin) return;
+      try {
+        await navigator.clipboard.writeText(pin);
+        toast("PIN copiado.", "success");
+      } catch (_) {
+        window.prompt("Copie o PIN:", pin);
+      }
+    });
+    root.querySelector("[data-vfl-gerar-pin]")?.addEventListener("click", async () => {
+      if (!driver?.id) return;
+      if (!confirm("Gerar um novo PIN de 6 dígitos? O PIN anterior deixa de valer.")) return;
+      try {
+        const updated = await api(`/entregadores/${driver.id}/gerar-pin`, { method: "POST", body: "{}" });
+        toast("Novo PIN gerado. Envie no WhatsApp cadastrado.", "success");
+        renderDriverEditor(root, updated);
+      } catch (error) {
+        toast(error?.message || "Não foi possível gerar o PIN.", "error");
       }
     });
     $("vflDriverFile").onchange = (event) => {
@@ -407,23 +447,10 @@
           ordem: Number(value(form, "ordem") || 0), ativo: checked(form, "ativo"), remover_foto: removePhoto,
           foto_base64: selectedFile ? await fileDataUrl(selectedFile) : null,
         };
-        const pin = digits(value(form, "acesso_pin"));
-        if (pin) {
-          if (pin.length < 4 || pin.length > 6) {
-            toast("O PIN deve ter de 4 a 6 dígitos.", "error");
-            submit.disabled = false;
-            return;
-          }
-          payload.acesso_pin = pin;
-        } else if (!editing || !driver?.tem_pin) {
-          toast("Informe um PIN de 4 a 6 dígitos.", "error");
-          submit.disabled = false;
-          return;
-        }
         const saved = await api(editing ? `/entregadores/${driver.id}` : "/entregadores", {
           method: editing ? "PUT" : "POST", body: JSON.stringify(payload),
         });
-        toast(editing ? "Entregador atualizado." : "Entregador cadastrado. Agora envie o app no WhatsApp.", "success");
+        toast(editing ? "Entregador atualizado." : "Entregador cadastrado. PIN gerado — envie no WhatsApp.", "success");
         const id = Number(saved?.id || driver?.id || 0);
         if (id) {
           await openDriverEditor(root, id);

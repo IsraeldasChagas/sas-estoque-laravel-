@@ -54,6 +54,7 @@ Route::prefix('delivery')->middleware('sas.usuario')->group(function () {
     Route::post('/entregadores', [DeliveryEntregadorController::class, 'store']);
     Route::get('/entregadores/{id}', [DeliveryEntregadorController::class, 'show'])->whereNumber('id');
     Route::put('/entregadores/{id}', [DeliveryEntregadorController::class, 'update'])->whereNumber('id');
+    Route::post('/entregadores/{id}/gerar-pin', [DeliveryEntregadorController::class, 'gerarPin'])->whereNumber('id');
     Route::delete('/entregadores/{id}', [DeliveryEntregadorController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/pedidos/pendentes-poll', [DeliveryPedidoController::class, 'pollPendentes']);

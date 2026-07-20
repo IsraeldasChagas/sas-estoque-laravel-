@@ -153,9 +153,9 @@
       pinError.hidden = true;
       pinError.textContent = "";
     }
-    if (pin.length < 4 || pin.length > 6) {
+    if (pin.length !== 6) {
       if (pinError) {
-        pinError.textContent = "Informe o PIN de 4 a 6 dígitos.";
+        pinError.textContent = "Informe o PIN de 6 dígitos.";
         pinError.hidden = false;
       }
       return;
@@ -182,7 +182,7 @@
       await postJson(cfg.bloquearUrl);
     } catch (_) {}
     setUnlocked(false);
-    toast("App bloqueado. Digite o PIN para entrar.");
+    toast("Saiu do app. Peça um PIN novo à loja para entrar de novo.");
   });
 
   listEl?.addEventListener("click", async (ev) => {

@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}?v=20260720-esp">
     <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}?v=20260720-esp">
     <title>{{ $appNome }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m4">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m5">
 </head>
 <body>
 <header class="mb-head">
@@ -29,9 +29,9 @@
 <main class="mb-main">
     <section id="mbPinGate" class="mb-pin" {{ $desbloqueado ? 'hidden' : '' }}>
         <h2>Digite seu PIN</h2>
-        <p>Só quem tem o PIN cadastrado na loja consegue ver e aceitar entregas.</p>
+        <p>PIN de 6 dígitos, uso único, enviado no WhatsApp cadastrado. Depois de usar, peça outro à loja.</p>
         <form id="mbPinForm" class="mb-pin-form" autocomplete="off">
-            <input id="mbPinInput" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" placeholder="PIN" required>
+            <input id="mbPinInput" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="••••••" required>
             <button class="mb-btn mb-btn--primary" type="submit">Entrar</button>
         </form>
         <p id="mbPinError" class="mb-pin-error" hidden></p>
@@ -74,10 +74,10 @@
     csrf: @json(csrf_token()),
   };
 </script>
-<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m4"></script>
+<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m5"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m4').catch(function () {});
+    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m5').catch(function () {});
   }
 </script>
 </body>

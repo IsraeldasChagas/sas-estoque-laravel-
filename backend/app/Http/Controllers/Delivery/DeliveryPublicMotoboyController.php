@@ -76,7 +76,8 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         return response()->json([
             'ok' => true,
             'desbloqueado' => $this->estaDesbloqueado($ctx['entregador']),
-            'tem_pin' => $this->temPin($ctx['entregador']),
+            'tem_pin' => $this->temPinDisponivel($ctx['entregador']),
+            'pin_usado' => $this->pinJaUsado($ctx['entregador']),
             'entregador' => [
                 'id' => (int) $ctx['entregador']->id,
                 'nome' => (string) $ctx['entregador']->nome,
@@ -89,20 +90,33 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         $ctx = $this->resolverEntregador($slug, $acessoToken);
         abort_unless($ctx, 404);
 
-        if (! $this->temPin($ctx['entregador'])) {
+        if (! $this->temPinDisponivel($ctx['entregador'])) {
+            if ($this->pinJaUsado($ctx['entregador'])) {
+                throw ValidationException::withMessages([
+                    'pin' => 'Este PIN já foi usado. Peça um PIN novo à loja.',
+                ]);
+            }
             throw ValidationException::withMessages([
-                'pin' => 'PIN ainda não cadastrado. Peça à loja para definir o PIN no cadastro.',
+                'pin' => 'Não há PIN ativo. Peça à loja para gerar um PIN novo.',
             ]);
         }
 
         $pin = preg_replace('/\D+/', '', (string) $request->input('pin', '')) ?? '';
-        if (strlen($pin) < 4 || strlen($pin) > 6) {
-            throw ValidationException::withMessages(['pin' => 'Informe o PIN de 4 a 6 dígitos.']);
+        if (strlen($pin) !== 6) {
+            throw ValidationException::withMessages(['pin' => 'Informe o PIN de 6 dígitos.']);
         }
 
         $esperado = (string) ($ctx['entregador']->acesso_pin ?? '');
         if (! hash_equals($esperado, $pin)) {
             throw ValidationException::withMessages(['pin' => 'PIN incorreto.']);
+        }
+
+        // Uso único: marca como usado neste momento.
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')) {
+            DB::table('dlv_entregadores')->where('id', $ctx['entregador']->id)->update([
+                'acesso_pin_usado_em' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         $request->session()->put($this->sessionKey($ctx['entregador']), [
@@ -114,7 +128,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         return response()->json([
             'ok' => true,
             'desbloqueado' => true,
-            'mensagem' => 'Acesso liberado.',
+            'mensagem' => 'Acesso liberado. Este PIN não poderá ser usado de novo.',
         ]);
     }
 
@@ -230,7 +244,18 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
 
         $pin = preg_replace('/\D+/', '', (string) ($entregador->acesso_pin ?? '')) ?? '';
 
-        return strlen($pin) >= 4;
+        return strlen($pin) === 6;
+    }
+
+    private function pinJaUsado(object $entregador): bool
+    {
+        return Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')
+            && ! empty($entregador->acesso_pin_usado_em);
+    }
+
+    private function temPinDisponivel(object $entregador): bool
+    {
+        return $this->temPin($entregador) && ! $this->pinJaUsado($entregador);
     }
 
     private function estaDesbloqueado(object $entregador): bool
