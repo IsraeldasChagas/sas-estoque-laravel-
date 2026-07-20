@@ -51,6 +51,11 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
                 'slug' => $slug,
                 'acessoToken' => $acessoToken,
             ]),
+            'recebendoUrl' => route('delivery.public.motoboy.recebendo', [
+                'slug' => $slug,
+                'acessoToken' => $acessoToken,
+            ]),
+            'recebendoEntregas' => $this->estaRecebendo($ctx['entregador']),
             'manifestUrl' => route('delivery.public.motoboy.manifest', [
                 'slug' => $slug,
                 'acessoToken' => $acessoToken,
@@ -76,8 +81,9 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         return response()->json([
             'ok' => true,
             'desbloqueado' => $this->estaDesbloqueado($ctx['entregador']),
-            'tem_pin' => $this->temPinDisponivel($ctx['entregador']),
-            'pin_usado' => $this->pinJaUsado($ctx['entregador']),
+            'tem_pin' => $this->temPin($ctx['entregador']),
+            'pin_vinculado' => $this->temInstallVinculado($ctx['entregador']),
+            'recebendo_entregas' => $this->estaRecebendo($ctx['entregador']),
             'entregador' => [
                 'id' => (int) $ctx['entregador']->id,
                 'nome' => (string) $ctx['entregador']->nome,
@@ -90,14 +96,9 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         $ctx = $this->resolverEntregador($slug, $acessoToken);
         abort_unless($ctx, 404);
 
-        if (! $this->temPinDisponivel($ctx['entregador'])) {
-            if ($this->pinJaUsado($ctx['entregador'])) {
-                throw ValidationException::withMessages([
-                    'pin' => 'Este PIN já foi usado. Peça um PIN novo à loja.',
-                ]);
-            }
+        if (! $this->temPin($ctx['entregador'])) {
             throw ValidationException::withMessages([
-                'pin' => 'Não há PIN ativo. Peça à loja para gerar um PIN novo.',
+                'pin' => 'Não há PIN ativo. Peça à loja para gerar um PIN.',
             ]);
         }
 
@@ -111,24 +112,42 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
             throw ValidationException::withMessages(['pin' => 'PIN incorreto.']);
         }
 
-        // Uso único: marca como usado neste momento.
-        if (Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')) {
-            DB::table('dlv_entregadores')->where('id', $ctx['entregador']->id)->update([
-                'acesso_pin_usado_em' => now(),
-                'updated_at' => now(),
+        $installId = trim((string) $request->input('install_id', ''));
+        if (! preg_match('/^[a-zA-Z0-9_-]{16,64}$/', $installId)) {
+            throw ValidationException::withMessages([
+                'pin' => 'Não foi possível validar esta instalação. Abra o app pelo link da loja.',
             ]);
+        }
+
+        $vinculado = trim((string) ($ctx['entregador']->acesso_install_id ?? ''));
+        if ($vinculado !== '' && ! hash_equals($vinculado, $installId)) {
+            throw ValidationException::withMessages([
+                'pin' => 'Este PIN já está vinculado a outra instalação. Se desinstalou o app, peça um PIN novo à loja.',
+            ]);
+        }
+
+        $update = ['updated_at' => now()];
+        if ($vinculado === '' && Schema::hasColumn('dlv_entregadores', 'acesso_install_id')) {
+            $update['acesso_install_id'] = $installId;
+        }
+        if (count($update) > 1) {
+            DB::table('dlv_entregadores')->where('id', $ctx['entregador']->id)->update($update);
         }
 
         $request->session()->put($this->sessionKey($ctx['entregador']), [
             'entregador_id' => (int) $ctx['entregador']->id,
             'pin_hash' => hash('sha256', $pin),
+            'install_id' => $installId,
             'at' => now()->toIso8601String(),
         ]);
 
         return response()->json([
             'ok' => true,
             'desbloqueado' => true,
-            'mensagem' => 'Acesso liberado. Este PIN não poderá ser usado de novo.',
+            'recebendo_entregas' => $this->estaRecebendo(
+                DB::table('dlv_entregadores')->where('id', $ctx['entregador']->id)->first() ?: $ctx['entregador']
+            ),
+            'mensagem' => 'Acesso liberado. Pode sair e voltar com o mesmo PIN neste aparelho.',
         ]);
     }
 
@@ -141,11 +160,33 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         return response()->json(['ok' => true, 'desbloqueado' => false]);
     }
 
+    public function recebendo(Request $request, string $slug, string $acessoToken): JsonResponse
+    {
+        $ctx = $this->exigirDesbloqueado($slug, $acessoToken);
+        abort_unless(Schema::hasColumn('dlv_entregadores', 'recebendo_entregas'), 422, 'Recurso indisponível.');
+
+        $recebendo = filter_var($request->input('recebendo', true), FILTER_VALIDATE_BOOLEAN);
+        DB::table('dlv_entregadores')->where('id', $ctx['entregador']->id)->update([
+            'recebendo_entregas' => $recebendo,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'recebendo_entregas' => $recebendo,
+            'mensagem' => $recebendo
+                ? 'Você voltou a receber entregas.'
+                : 'Entregas pausadas. Ative de novo quando quiser trabalhar.',
+        ]);
+    }
+
     public function ofertas(string $slug, string $acessoToken): JsonResponse
     {
         $ctx = $this->exigirDesbloqueado($slug, $acessoToken);
-
-        $items = $this->ofertas->listarOfertasAbertas($ctx['config'], $ctx['entregador']);
+        $recebendo = $this->estaRecebendo($ctx['entregador']);
+        $items = $recebendo
+            ? $this->ofertas->listarOfertasAbertas($ctx['config'], $ctx['entregador'])
+            : [];
 
         return response()->json([
             'entregador' => [
@@ -153,6 +194,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
                 'nome' => (string) $ctx['entregador']->nome,
             ],
             'loja' => (string) ($ctx['config']->nome_loja ?? 'Loja'),
+            'recebendo_entregas' => $recebendo,
             'count' => count($items),
             'items' => $items,
             'agora' => now()->toIso8601String(),
@@ -162,6 +204,11 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
     public function aceitar(Request $request, string $slug, string $acessoToken, int $pedidoId): JsonResponse
     {
         $ctx = $this->exigirDesbloqueado($slug, $acessoToken);
+        if (! $this->estaRecebendo($ctx['entregador'])) {
+            throw ValidationException::withMessages([
+                'oferta' => 'Você pausou as entregas. Ative novamente para aceitar.',
+            ]);
+        }
         $result = $this->ofertas->aceitarOferta($ctx['config'], $ctx['entregador'], $pedidoId);
 
         return response()->json($result);
@@ -247,15 +294,19 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         return strlen($pin) === 6;
     }
 
-    private function pinJaUsado(object $entregador): bool
+    private function temInstallVinculado(object $entregador): bool
     {
-        return Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')
-            && ! empty($entregador->acesso_pin_usado_em);
+        return Schema::hasColumn('dlv_entregadores', 'acesso_install_id')
+            && trim((string) ($entregador->acesso_install_id ?? '')) !== '';
     }
 
-    private function temPinDisponivel(object $entregador): bool
+    private function estaRecebendo(object $entregador): bool
     {
-        return $this->temPin($entregador) && ! $this->pinJaUsado($entregador);
+        if (! Schema::hasColumn('dlv_entregadores', 'recebendo_entregas')) {
+            return true;
+        }
+
+        return (bool) ($entregador->recebendo_entregas ?? true);
     }
 
     private function estaDesbloqueado(object $entregador): bool
@@ -274,8 +325,18 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
 
         $pin = (string) ($entregador->acesso_pin ?? '');
         $esperado = hash('sha256', $pin);
+        if (! hash_equals($esperado, (string) ($sess['pin_hash'] ?? ''))) {
+            return false;
+        }
 
-        return hash_equals($esperado, (string) ($sess['pin_hash'] ?? ''));
+        // Se o PIN foi regenerado e a instalação limpa, a sessão antiga cai.
+        $vinculado = trim((string) ($entregador->acesso_install_id ?? ''));
+        $sessInstall = trim((string) ($sess['install_id'] ?? ''));
+        if ($vinculado !== '' && $sessInstall !== '' && ! hash_equals($vinculado, $sessInstall)) {
+            return false;
+        }
+
+        return true;
     }
 
     private function sessionKey(object $entregador): string

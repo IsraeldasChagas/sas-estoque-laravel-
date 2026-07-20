@@ -2,6 +2,7 @@
   const cfg = window.MOTOBOY_APP || {};
   const listEl = document.getElementById("mbList");
   const emptyEl = document.getElementById("mbEmpty");
+  const pausedEl = document.getElementById("mbPaused");
   const toastEl = document.getElementById("mbToast");
   const dialog = document.getElementById("mbDialog");
   const installBtn = document.getElementById("mbInstall");
@@ -11,10 +12,16 @@
   const pinForm = document.getElementById("mbPinForm");
   const pinInput = document.getElementById("mbPinInput");
   const pinError = document.getElementById("mbPinError");
+  const recebendoChk = document.getElementById("mbRecebendo");
+  const statusLabel = document.getElementById("mbStatusLabel");
+  const statusHint = document.getElementById("mbStatusHint");
   let deferredPrompt = null;
   let busy = false;
   let unlocked = !!cfg.desbloqueado;
+  let recebendo = cfg.recebendo !== false;
   let pollTimer = null;
+
+  const INSTALL_KEY = "motoboy_install_id_v1";
 
   function money(v) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -34,6 +41,39 @@
   function escapeHtml(s) {
     return String(s ?? "")
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function getInstallId() {
+    try {
+      let id = localStorage.getItem(INSTALL_KEY);
+      if (id && /^[a-zA-Z0-9_-]{16,64}$/.test(id)) return id;
+      const bytes = new Uint8Array(24);
+      crypto.getRandomValues(bytes);
+      id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem(INSTALL_KEY, id);
+      return id;
+    } catch (_) {
+      return ("tmp" + Date.now() + Math.random().toString(16).slice(2)).slice(0, 32);
+    }
+  }
+
+  function setRecebendoUi(value) {
+    recebendo = !!value;
+    if (recebendoChk) recebendoChk.checked = recebendo;
+    if (statusLabel) statusLabel.textContent = recebendo ? "Recebendo entregas" : "Descansando";
+    if (statusHint) {
+      statusHint.textContent = recebendo
+        ? "Desative se for descansar."
+        : "Ative quando quiser voltar a receber pedidos.";
+    }
+    if (pausedEl) pausedEl.hidden = recebendo;
+    if (!recebendo) {
+      if (emptyEl) emptyEl.hidden = true;
+      if (listEl) {
+        listEl.hidden = true;
+        listEl.innerHTML = "";
+      }
+    }
   }
 
   function setUnlocked(value) {
@@ -77,7 +117,9 @@
     return data;
   }
 
-  function render(items) {
+  function render(items, stillRecebendo) {
+    setRecebendoUi(stillRecebendo !== false);
+    if (!recebendo) return;
     if (!items.length) {
       emptyEl.hidden = false;
       listEl.hidden = true;
@@ -130,7 +172,7 @@
       }
       if (!res.ok) throw new Error("poll");
       const data = await res.json();
-      render(data.items || []);
+      render(data.items || [], data.recebendo_entregas !== false);
     } catch (_) {}
   }
 
@@ -163,10 +205,14 @@
     const btn = pinForm.querySelector('[type="submit"]');
     if (btn) btn.disabled = true;
     try {
-      await postJson(cfg.desbloquearUrl, { pin });
+      const data = await postJson(cfg.desbloquearUrl, {
+        pin,
+        install_id: getInstallId(),
+      });
       if (pinInput) pinInput.value = "";
+      setRecebendoUi(data.recebendo_entregas !== false);
       setUnlocked(true);
-      toast("Acesso liberado.");
+      toast(data.mensagem || "Acesso liberado.");
     } catch (err) {
       if (pinError) {
         pinError.textContent = err.message || "PIN incorreto.";
@@ -182,14 +228,30 @@
       await postJson(cfg.bloquearUrl);
     } catch (_) {}
     setUnlocked(false);
-    toast("Saiu do app. Peça um PIN novo à loja para entrar de novo.");
+    toast("Saiu do app. Pode voltar com o mesmo PIN neste aparelho.");
+  });
+
+  recebendoChk?.addEventListener("change", async () => {
+    const next = !!recebendoChk.checked;
+    recebendoChk.disabled = true;
+    try {
+      const data = await postJson(cfg.recebendoUrl, { recebendo: next });
+      setRecebendoUi(data.recebendo_entregas !== false);
+      toast(data.mensagem || (next ? "Recebendo entregas." : "Entregas pausadas."));
+      await poll();
+    } catch (err) {
+      recebendoChk.checked = !next;
+      toast(err.message || "Não foi possível atualizar.");
+    } finally {
+      recebendoChk.disabled = false;
+    }
   });
 
   listEl?.addEventListener("click", async (ev) => {
     const aceitar = ev.target.closest("[data-aceitar]");
     const recusar = ev.target.closest("[data-recusar]");
     if (!aceitar && !recusar) return;
-    if (busy || !unlocked) return;
+    if (busy || !unlocked || !recebendo) return;
     busy = true;
     try {
       if (aceitar) {
@@ -206,9 +268,6 @@
         await poll();
       }
     } catch (err) {
-      if (String(err.message || "").toLowerCase().includes("pin")) {
-        setUnlocked(false);
-      }
       toast(err.message || "Erro");
       await poll();
     } finally {
@@ -260,6 +319,7 @@
 
   window.addEventListener("appinstalled", () => {
     hideInstall();
+    toast("App instalado. O botão Instalar some daqui.");
   });
 
   installBtn?.addEventListener("click", async () => {
@@ -273,6 +333,7 @@
   });
 
   if (isInstalled()) hideInstall();
-
+  getInstallId();
+  setRecebendoUi(recebendo);
   setUnlocked(unlocked);
 })();

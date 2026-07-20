@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}?v=20260720-esp">
     <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}?v=20260720-esp">
     <title>{{ $appNome }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m5">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m6">
 </head>
 <body>
 <header class="mb-head">
@@ -29,7 +29,7 @@
 <main class="mb-main">
     <section id="mbPinGate" class="mb-pin" {{ $desbloqueado ? 'hidden' : '' }}>
         <h2>Digite seu PIN</h2>
-        <p>PIN de 6 dígitos, uso único, enviado no WhatsApp cadastrado. Depois de usar, peça outro à loja.</p>
+        <p>PIN de 6 dígitos do WhatsApp da loja. Pode sair e voltar com o mesmo PIN. Se desinstalar o app, peça um PIN novo.</p>
         <form id="mbPinForm" class="mb-pin-form" autocomplete="off">
             <input id="mbPinInput" name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="••••••" required>
             <button class="mb-btn mb-btn--primary" type="submit">Entrar</button>
@@ -38,7 +38,22 @@
     </section>
 
     <div id="mbAppBody" {{ $desbloqueado ? '' : 'hidden' }}>
-        <div id="mbEmpty" class="mb-empty">
+        <div class="mb-status-bar" id="mbStatusBar">
+            <div>
+                <strong id="mbStatusLabel">Recebendo entregas</strong>
+                <p id="mbStatusHint" class="mb-muted">Desative se for descansar.</p>
+            </div>
+            <label class="mb-switch">
+                <input type="checkbox" id="mbRecebendo" {{ $recebendoEntregas ? 'checked' : '' }}>
+                <span>Ativo</span>
+            </label>
+        </div>
+        <div id="mbPaused" class="mb-empty" {{ $recebendoEntregas ? 'hidden' : '' }}>
+            <div class="mb-empty__icon">😴</div>
+            <h2>Entregas pausadas</h2>
+            <p>Ative o recebimento acima quando quiser voltar a trabalhar.</p>
+        </div>
+        <div id="mbEmpty" class="mb-empty" {{ $recebendoEntregas ? '' : 'hidden' }}>
             <div class="mb-empty__icon">🛵</div>
             <h2>Nenhuma entrega no momento</h2>
             <p>Quando a loja oferecer um pedido, ele aparece aqui para você aceitar.</p>
@@ -67,17 +82,19 @@
     sessaoUrl: @json($sessaoUrl),
     desbloquearUrl: @json($desbloquearUrl),
     bloquearUrl: @json($bloquearUrl),
+    recebendoUrl: @json($recebendoUrl),
     aceitarUrlTpl: @json($aceitarUrlTpl),
     recusarUrlTpl: @json($recusarUrlTpl),
     appNome: @json($appNome),
     desbloqueado: @json((bool) $desbloqueado),
+    recebendo: @json((bool) $recebendoEntregas),
     csrf: @json(csrf_token()),
   };
 </script>
-<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m5"></script>
+<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m6"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m5').catch(function () {});
+    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m6').catch(function () {});
   }
 </script>
 </body>

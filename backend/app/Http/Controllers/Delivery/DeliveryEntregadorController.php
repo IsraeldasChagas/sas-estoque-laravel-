@@ -69,6 +69,12 @@ class DeliveryEntregadorController extends DeliveryBaseController
             if (Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')) {
                 $payload['acesso_pin_usado_em'] = null;
             }
+            if (Schema::hasColumn('dlv_entregadores', 'acesso_install_id')) {
+                $payload['acesso_install_id'] = null;
+            }
+        }
+        if (Schema::hasColumn('dlv_entregadores', 'recebendo_entregas')) {
+            $payload['recebendo_entregas'] = true;
         }
 
         try {
@@ -170,6 +176,9 @@ class DeliveryEntregadorController extends DeliveryBaseController
         if (Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')) {
             $payload['acesso_pin_usado_em'] = null;
         }
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_install_id')) {
+            $payload['acesso_install_id'] = null;
+        }
 
         DB::table('dlv_entregadores')->where('id', $id)->update($payload);
 
@@ -214,13 +223,18 @@ class DeliveryEntregadorController extends DeliveryBaseController
 
         if (Schema::hasColumn('dlv_entregadores', 'acesso_pin')) {
             $pin = preg_replace('/\D+/', '', (string) ($row->acesso_pin ?? '')) ?? '';
-            $usado = Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em')
-                && ! empty($row->acesso_pin_usado_em);
             $pinOk = strlen($pin) === 6;
+            $vinculado = Schema::hasColumn('dlv_entregadores', 'acesso_install_id')
+                && trim((string) ($row->acesso_install_id ?? '')) !== '';
             $data['acesso_pin'] = $pinOk ? $pin : '';
             $data['tem_pin'] = $pinOk;
-            $data['pin_usado'] = $pinOk && $usado;
-            $data['pin_disponivel'] = $pinOk && ! $usado;
+            $data['pin_vinculado'] = $pinOk && $vinculado;
+            // PIN pode ser reenviado enquanto existir; novo PIN só se desinstalar.
+            $data['pin_disponivel'] = $pinOk;
+            $data['pin_usado'] = false;
+        }
+        if (Schema::hasColumn('dlv_entregadores', 'recebendo_entregas')) {
+            $data['recebendo_entregas'] = (bool) ($row->recebendo_entregas ?? true);
         }
 
         if (Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
@@ -246,22 +260,24 @@ class DeliveryEntregadorController extends DeliveryBaseController
             $nomeLoja = trim((string) ($config->nome_loja ?? 'nossa loja')) ?: 'nossa loja';
             $nomeMotoboy = trim((string) ($row->nome ?? 'motoboy')) ?: 'motoboy';
             $pin = preg_replace('/\D+/', '', (string) ($row->acesso_pin ?? '')) ?? '';
-            $pinDisponivel = strlen($pin) === 6
-                && (! Schema::hasColumn('dlv_entregadores', 'acesso_pin_usado_em') || empty($row->acesso_pin_usado_em));
+            $pinOk = strlen($pin) === 6;
             $whatsappCadastro = trim((string) ($row->whatsapp ?? '')) !== ''
                 ? $row->whatsapp
                 : ($row->telefone ?? null);
             $textoApp = "Olá, {$nomeMotoboy}! Aqui está o app de entregas da {$nomeLoja}.\n\n"
-                ."Abra o link no celular (use o WhatsApp cadastrado), instale o app e digite o PIN uma vez:\n\n"
+                ."1) Abra o link no celular\n"
+                ."2) Toque em Instalar / Adicionar à tela inicial\n"
+                ."3) Digite o PIN\n\n"
                 .($appUrl ?: '');
-            if ($pinDisponivel) {
-                $textoApp .= "\n\nPIN de uso único: {$pin}\n"
-                    ."Este PIN funciona só uma vez. Se precisar entrar de novo, peça outro PIN à loja.\n"
-                    .'(Não encaminhe o link nem o PIN.)';
+            if ($pinOk) {
+                $textoApp .= "\n\nPIN: {$pin}\n"
+                    ."Pode sair e voltar com o mesmo PIN.\n"
+                    ."Se desinstalar o app, peça um PIN novo à loja.\n"
+                    .'(Envie só para o WhatsApp cadastrado — não encaminhe.)';
             } else {
-                $textoApp .= "\n\nPeça à loja um PIN novo (uso único) para entrar no app.";
+                $textoApp .= "\n\nPeça à loja um PIN para entrar no app.";
             }
-            $data['url_app_whatsapp'] = ($appUrl && $pinDisponivel)
+            $data['url_app_whatsapp'] = ($appUrl && $pinOk)
                 ? \App\Support\Delivery\DeliveryWhatsAppHelper::urlComTexto($whatsappCadastro, $textoApp)
                 : null;
             $data['whatsapp_cadastro'] = $whatsappCadastro;

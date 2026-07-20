@@ -323,18 +323,18 @@
   function renderDriverPinBlock(driver) {
     const pin = driver?.acesso_pin || "";
     const disponivel = !!driver?.pin_disponivel;
-    const usado = !!driver?.pin_usado;
+    const vinculado = !!driver?.pin_vinculado;
     let status = "Sem PIN — gere um agora.";
     let statusColor = "#b45309";
-    if (disponivel) {
-      status = "PIN ativo (uso único). Envie só para o WhatsApp cadastrado.";
+    if (disponivel && vinculado) {
+      status = "PIN vinculado a uma instalação. Sair/voltar usa o mesmo PIN. Se desinstalar, gere outro.";
       statusColor = "#166534";
-    } else if (usado) {
-      status = "PIN já usado. Gere outro para o motoboy entrar de novo.";
-      statusColor = "#b45309";
+    } else if (disponivel) {
+      status = "PIN pronto. Envie no WhatsApp cadastrado. Ele instala e digita o PIN.";
+      statusColor = "#166534";
     }
     return `<div style="margin:8px 0 12px;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
-      <strong style="display:block;margin-bottom:6px">🔐 PIN do app (6 dígitos · uso único)</strong>
+      <strong style="display:block;margin-bottom:6px">🔐 PIN do app (6 dígitos)</strong>
       <p style="margin:0 0 10px;font-size:13px;color:${statusColor}">${status}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input readonly style="flex:0 0 120px;font-size:22px;letter-spacing:.2em;text-align:center;font-weight:700" id="vflDriverPin" value="${esc(pin || "——————")}">
@@ -366,17 +366,17 @@
             <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-check vfl-span-12"><input name="ativo" type="checkbox" ${driver ? (Number(driver.ativo) ? "checked" : "") : "checked"}> Entregador ativo</label>
           </div>
-          ${editing ? renderDriverPinBlock(driver) : `<div style="margin:8px 0 12px;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc"><strong>PIN do app</strong><p style="margin:6px 0 0;font-size:13px;color:#64748b">Ao salvar, o sistema gera um PIN de 6 dígitos (uso único) para enviar no WhatsApp cadastrado.</p></div>`}
+          ${editing ? renderDriverPinBlock(driver) : `<div style="margin:8px 0 12px;padding:12px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc"><strong>PIN do app</strong><p style="margin:6px 0 0;font-size:13px;color:#64748b">Ao salvar, o sistema gera um PIN de 6 dígitos para enviar no WhatsApp cadastrado.</p></div>`}
           ${editing && driver?.url_app ? `<div style="margin:8px 0 12px;padding:14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4">
             <strong style="display:block;margin-bottom:6px">📱 App do motoboy</strong>
-            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie só para o WhatsApp cadastrado. O PIN funciona <strong>uma vez</strong>; se ele sair do app ou precisar entrar de novo, gere outro PIN.</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie só para o WhatsApp cadastrado. Mesmo PIN ao sair/voltar. Se desinstalar, gere outro PIN.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
               <input readonly style="flex:1;min-width:180px" id="vflDriverAppUrl" value="${esc(driver.url_app)}">
               <button class="vfl-btn" type="button" data-vfl-copy-app>Copiar link</button>
             </div>
             ${driver.pin_disponivel && driver.url_app_whatsapp
               ? `<a class="vfl-btn vfl-btn--primary" style="background:#16a34a;border-color:#16a34a;color:#fff" href="${esc(driver.url_app_whatsapp)}" target="_blank" rel="noopener noreferrer">Enviar link + PIN no WhatsApp</a>`
-              : `<p style="margin:0;font-size:13px;color:#b45309">${driver.pin_usado ? "PIN já usado — gere outro para enviar." : "Gere um PIN para liberar o envio no WhatsApp."}</p>`}
+              : `<p style="margin:0;font-size:13px;color:#b45309">Gere um PIN para liberar o envio no WhatsApp.</p>`}
           </div>` : ""}
           <div class="vfl-form-actions"><button class="vfl-btn vfl-btn--primary" type="submit">Salvar</button><button class="vfl-btn" type="button" data-vfl-back-drivers>Cancelar</button></div>
         </form>

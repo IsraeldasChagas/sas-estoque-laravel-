@@ -64,6 +64,8 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
         ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:20,1')->name('motoboy.desbloquear');
     Route::post('/motoboy/{acessoToken}/bloquear', [DeliveryPublicMotoboyController::class, 'bloquear'])
         ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:20,1')->name('motoboy.bloquear');
+    Route::post('/motoboy/{acessoToken}/recebendo', [DeliveryPublicMotoboyController::class, 'recebendo'])
+        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:30,1')->name('motoboy.recebendo');
     Route::get('/motoboy/{acessoToken}/ofertas.json', [DeliveryPublicMotoboyController::class, 'ofertas'])
         ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:60,1')->name('motoboy.ofertas');
     Route::post('/motoboy/{acessoToken}/aceitar/{pedidoId}', [DeliveryPublicMotoboyController::class, 'aceitar'])
