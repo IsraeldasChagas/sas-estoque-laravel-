@@ -51,12 +51,12 @@
       emptyEl.hidden = false;
       listEl.hidden = true;
       listEl.innerHTML = "";
-      document.title = "Motoboy · sem entregas";
+      document.title = (cfg.appNome || "Entrega") + " · sem entregas";
       return;
     }
     emptyEl.hidden = true;
     listEl.hidden = false;
-    document.title = "Motoboy · " + items.length + " entrega" + (items.length > 1 ? "s" : "");
+    document.title = (cfg.appNome || "Entrega") + " · " + items.length + " entrega" + (items.length > 1 ? "s" : "");
     listEl.innerHTML = items.map((it) => `
       <article class="mb-card" data-id="${it.id}">
         <h3>Pedido ${escapeHtml(it.codigo_publico)}</h3>
@@ -138,19 +138,52 @@
     }
   });
 
+  function isInstalled() {
+    if (window.matchMedia("(display-mode: standalone)").matches) return true;
+    if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+    if (window.navigator.standalone === true) return true;
+    return false;
+  }
+
+  function hideInstall() {
+    if (installBtn) installBtn.hidden = true;
+    deferredPrompt = null;
+  }
+
+  function showInstallIfNeeded() {
+    if (!installBtn) return;
+    if (isInstalled() || !deferredPrompt) {
+      hideInstall();
+      return;
+    }
+    installBtn.hidden = false;
+  }
+
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
+    if (isInstalled()) {
+      hideInstall();
+      return;
+    }
     deferredPrompt = e;
-    if (installBtn) installBtn.hidden = false;
+    showInstallIfNeeded();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    hideInstall();
   });
 
   installBtn?.addEventListener("click", async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt || isInstalled()) {
+      hideInstall();
+      return;
+    }
     deferredPrompt.prompt();
     await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    installBtn.hidden = true;
+    hideInstall();
   });
+
+  if (isInstalled()) hideInstall();
 
   poll();
   setInterval(poll, 8000);

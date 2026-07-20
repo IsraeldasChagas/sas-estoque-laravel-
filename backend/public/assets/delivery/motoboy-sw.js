@@ -1,9 +1,9 @@
 /* Motoboy PWA — cache leve da casca do app */
-const CACHE = "sas-motoboy-v1";
+const CACHE = "sas-motoboy-v3";
 const ASSETS = [
-  "/assets/delivery/motoboy-app.css?v=20260720-m1",
-  "/assets/delivery/motoboy-app.js?v=20260720-m1",
-  "/assets/delivery/motoboy-icon-192.png",
+  "/assets/delivery/motoboy-app.css?v=20260720-m3",
+  "/assets/delivery/motoboy-app.js?v=20260720-m3",
+  "/assets/delivery/motoboy-icon-192.png?v=20260720-esp",
 ];
 
 self.addEventListener("install", (event) => {
