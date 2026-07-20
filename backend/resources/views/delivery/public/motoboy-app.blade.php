@@ -17,7 +17,7 @@
 <body>
 <header class="mb-head">
     <div>
-        <p class="mb-kicker">{{ $appNome }}</p>
+        <p class="mb-kicker">{{ $appUnidade }}</p>
         <h1>Olá, {{ $entregador->nome }}</h1>
     </div>
     <div class="mb-head-actions">

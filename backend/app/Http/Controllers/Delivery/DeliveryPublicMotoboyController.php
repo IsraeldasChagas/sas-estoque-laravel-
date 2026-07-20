@@ -34,6 +34,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
             'acessoToken' => $acessoToken,
             'appNome' => $appNome['name'],
             'appNomeCurto' => $appNome['short_name'],
+            'appUnidade' => $appNome['unidade'],
             'desbloqueado' => $desbloqueado,
             'ofertasUrl' => route('delivery.public.motoboy.ofertas', [
                 'slug' => $slug,
@@ -356,15 +357,17 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
             $unidade = trim((string) ($config->nome_loja ?? ''));
         }
         if ($unidade === '') {
-            $unidade = 'Unidade';
+            $unidade = 'Sabor Paraense';
         }
 
-        $name = 'Entrega Sabor Paraense · '.$unidade;
-        $shortBase = 'Entrega Sabor Paraense';
-        $shortName = $shortBase.' · '.$unidade;
-        if (mb_strlen($shortName) > 30) {
-            $uniShort = mb_strlen($unidade) <= 12 ? $unidade : (mb_substr($unidade, 0, 10).'…');
-            $shortName = 'Entrega · '.$uniShort;
+        // Evita "Sabor Paraense · Sabor Paraense" quando a unidade já traz a marca.
+        $jaTemMarca = mb_stripos($unidade, 'Sabor Paraense') !== false;
+        if ($jaTemMarca) {
+            $name = 'Entrega · '.$unidade;
+            $shortName = mb_strlen($unidade) <= 18 ? $unidade : ('Entrega · '.mb_substr($unidade, 0, 12).'…');
+        } else {
+            $name = 'Entrega Sabor Paraense · '.$unidade;
+            $shortName = 'Entrega · '.(mb_strlen($unidade) <= 12 ? $unidade : (mb_substr($unidade, 0, 10).'…'));
         }
 
         return [
