@@ -6,6 +6,8 @@ use App\Services\Delivery\DeliveryEntregadorOfertaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class DeliveryPublicMotoboyController extends DeliveryBaseController
@@ -23,6 +25,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         abort_unless($ctx, 404);
 
         $appNome = $this->nomeAppInstalado($ctx['config']);
+        $desbloqueado = $this->estaDesbloqueado($ctx['entregador']);
 
         return view('delivery.public.motoboy-app', [
             'slug' => $slug,
@@ -31,7 +34,20 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
             'acessoToken' => $acessoToken,
             'appNome' => $appNome['name'],
             'appNomeCurto' => $appNome['short_name'],
+            'desbloqueado' => $desbloqueado,
             'ofertasUrl' => route('delivery.public.motoboy.ofertas', [
+                'slug' => $slug,
+                'acessoToken' => $acessoToken,
+            ]),
+            'sessaoUrl' => route('delivery.public.motoboy.sessao', [
+                'slug' => $slug,
+                'acessoToken' => $acessoToken,
+            ]),
+            'desbloquearUrl' => route('delivery.public.motoboy.desbloquear', [
+                'slug' => $slug,
+                'acessoToken' => $acessoToken,
+            ]),
+            'bloquearUrl' => route('delivery.public.motoboy.bloquear', [
                 'slug' => $slug,
                 'acessoToken' => $acessoToken,
             ]),
@@ -52,10 +68,68 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         ]);
     }
 
-    public function ofertas(string $slug, string $acessoToken): JsonResponse
+    public function sessao(string $slug, string $acessoToken): JsonResponse
     {
         $ctx = $this->resolverEntregador($slug, $acessoToken);
         abort_unless($ctx, 404);
+
+        return response()->json([
+            'ok' => true,
+            'desbloqueado' => $this->estaDesbloqueado($ctx['entregador']),
+            'tem_pin' => $this->temPin($ctx['entregador']),
+            'entregador' => [
+                'id' => (int) $ctx['entregador']->id,
+                'nome' => (string) $ctx['entregador']->nome,
+            ],
+        ]);
+    }
+
+    public function desbloquear(Request $request, string $slug, string $acessoToken): JsonResponse
+    {
+        $ctx = $this->resolverEntregador($slug, $acessoToken);
+        abort_unless($ctx, 404);
+
+        if (! $this->temPin($ctx['entregador'])) {
+            throw ValidationException::withMessages([
+                'pin' => 'PIN ainda não cadastrado. Peça à loja para definir o PIN no cadastro.',
+            ]);
+        }
+
+        $pin = preg_replace('/\D+/', '', (string) $request->input('pin', '')) ?? '';
+        if (strlen($pin) < 4 || strlen($pin) > 6) {
+            throw ValidationException::withMessages(['pin' => 'Informe o PIN de 4 a 6 dígitos.']);
+        }
+
+        $esperado = (string) ($ctx['entregador']->acesso_pin ?? '');
+        if (! hash_equals($esperado, $pin)) {
+            throw ValidationException::withMessages(['pin' => 'PIN incorreto.']);
+        }
+
+        $request->session()->put($this->sessionKey($ctx['entregador']), [
+            'entregador_id' => (int) $ctx['entregador']->id,
+            'pin_hash' => hash('sha256', $pin),
+            'at' => now()->toIso8601String(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'desbloqueado' => true,
+            'mensagem' => 'Acesso liberado.',
+        ]);
+    }
+
+    public function bloquear(Request $request, string $slug, string $acessoToken): JsonResponse
+    {
+        $ctx = $this->resolverEntregador($slug, $acessoToken);
+        abort_unless($ctx, 404);
+        $request->session()->forget($this->sessionKey($ctx['entregador']));
+
+        return response()->json(['ok' => true, 'desbloqueado' => false]);
+    }
+
+    public function ofertas(string $slug, string $acessoToken): JsonResponse
+    {
+        $ctx = $this->exigirDesbloqueado($slug, $acessoToken);
 
         $items = $this->ofertas->listarOfertasAbertas($ctx['config'], $ctx['entregador']);
 
@@ -73,9 +147,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
 
     public function aceitar(Request $request, string $slug, string $acessoToken, int $pedidoId): JsonResponse
     {
-        $ctx = $this->resolverEntregador($slug, $acessoToken);
-        abort_unless($ctx, 404);
-
+        $ctx = $this->exigirDesbloqueado($slug, $acessoToken);
         $result = $this->ofertas->aceitarOferta($ctx['config'], $ctx['entregador'], $pedidoId);
 
         return response()->json($result);
@@ -83,9 +155,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
 
     public function recusar(Request $request, string $slug, string $acessoToken, int $pedidoId): JsonResponse
     {
-        $ctx = $this->resolverEntregador($slug, $acessoToken);
-        abort_unless($ctx, 404);
-
+        $ctx = $this->exigirDesbloqueado($slug, $acessoToken);
         $result = $this->ofertas->recusarOferta($ctx['config'], $ctx['entregador'], $pedidoId);
 
         return response()->json($result);
@@ -135,12 +205,65 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         ])->header('Content-Type', 'application/manifest+json');
     }
 
+    /** @return array{config: object, entregador: object} */
+    private function exigirDesbloqueado(string $slug, string $acessoToken): array
+    {
+        $ctx = $this->resolverEntregador($slug, $acessoToken);
+        abort_unless($ctx, 404);
+
+        if (! $this->estaDesbloqueado($ctx['entregador'])) {
+            abort(response()->json([
+                'ok' => false,
+                'desbloqueado' => false,
+                'message' => 'Digite o PIN para continuar.',
+            ], 401));
+        }
+
+        return $ctx;
+    }
+
+    private function temPin(object $entregador): bool
+    {
+        if (! Schema::hasColumn('dlv_entregadores', 'acesso_pin')) {
+            return false;
+        }
+
+        $pin = preg_replace('/\D+/', '', (string) ($entregador->acesso_pin ?? '')) ?? '';
+
+        return strlen($pin) >= 4;
+    }
+
+    private function estaDesbloqueado(object $entregador): bool
+    {
+        if (! $this->temPin($entregador)) {
+            return false;
+        }
+
+        $sess = session($this->sessionKey($entregador));
+        if (! is_array($sess)) {
+            return false;
+        }
+        if ((int) ($sess['entregador_id'] ?? 0) !== (int) $entregador->id) {
+            return false;
+        }
+
+        $pin = (string) ($entregador->acesso_pin ?? '');
+        $esperado = hash('sha256', $pin);
+
+        return hash_equals($esperado, (string) ($sess['pin_hash'] ?? ''));
+    }
+
+    private function sessionKey(object $entregador): string
+    {
+        return 'motoboy_pin_'.$entregador->id;
+    }
+
     /** @return array{name: string, short_name: string, unidade: string} */
     private function nomeAppInstalado(object $config): array
     {
         $unidade = '';
         $unidadeId = (int) ($config->unidade_id ?? 0);
-        if ($unidadeId > 0 && \Illuminate\Support\Facades\Schema::hasTable('unidades')) {
+        if ($unidadeId > 0 && Schema::hasTable('unidades')) {
             $unidade = trim((string) DB::table('unidades')->where('id', $unidadeId)->value('nome'));
         }
         if ($unidade === '') {
@@ -151,7 +274,6 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
         }
 
         $name = 'Entrega Sabor Paraense · '.$unidade;
-        // short_name: texto sob o ícone na tela inicial
         $shortBase = 'Entrega Sabor Paraense';
         $shortName = $shortBase.' · '.$unidade;
         if (mb_strlen($shortName) > 30) {
@@ -179,7 +301,7 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
             return null;
         }
 
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
+        if (! Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
             return null;
         }
 

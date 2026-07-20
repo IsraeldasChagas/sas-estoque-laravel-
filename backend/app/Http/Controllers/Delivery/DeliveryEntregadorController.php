@@ -64,6 +64,9 @@ class DeliveryEntregadorController extends DeliveryBaseController
         if (Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
             $payload['acesso_token'] = Str::lower(Str::random(48));
         }
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_pin')) {
+            $payload['acesso_pin'] = $data['acesso_pin'];
+        }
 
         try {
             $id = DB::table('dlv_entregadores')->insertGetId($payload);
@@ -95,6 +98,16 @@ class DeliveryEntregadorController extends DeliveryBaseController
         $this->access->autorizarRegistro($usuario, $row);
         $data = $this->validar($request, false);
 
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_pin')) {
+            $pinAtual = preg_replace('/\D+/', '', (string) ($row->acesso_pin ?? '')) ?? '';
+            $pinNovo = array_key_exists('acesso_pin', $data) ? ($data['acesso_pin'] ?? null) : null;
+            if (strlen($pinAtual) < 4 && ($pinNovo === null || strlen((string) $pinNovo) < 4)) {
+                throw ValidationException::withMessages([
+                    'acesso_pin' => 'Defina um PIN de 4 a 6 dígitos para o app do motoboy.',
+                ]);
+            }
+        }
+
         $novaFoto = null;
         $fotoPath = $row->foto_path ?? null;
         if (! empty($data['foto_base64'])) {
@@ -119,6 +132,9 @@ class DeliveryEntregadorController extends DeliveryBaseController
             $payload['moto_cor'] = array_key_exists('moto_cor', $data)
                 ? $data['moto_cor']
                 : ($row->moto_cor ?? null);
+        }
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_pin') && array_key_exists('acesso_pin', $data) && $data['acesso_pin'] !== null) {
+            $payload['acesso_pin'] = $data['acesso_pin'];
         }
 
         try {
@@ -162,13 +178,23 @@ class DeliveryEntregadorController extends DeliveryBaseController
             'ativo' => 'nullable|boolean',
             'ordem' => 'nullable|integer|min:0|max:99999',
             'unidade_id' => 'nullable|integer',
+            'acesso_pin' => ($criar ? 'required' : 'nullable').'|string|regex:/^\d{4,6}$/',
         ];
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), $rules, [
+            'acesso_pin.required' => 'Informe um PIN de 4 a 6 dígitos para o app do motoboy.',
+            'acesso_pin.regex' => 'O PIN deve ter de 4 a 6 dígitos numéricos.',
+        ]);
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
 
-        return $validator->validated();
+        $data = $validator->validated();
+        if (array_key_exists('acesso_pin', $data)) {
+            $pin = preg_replace('/\D+/', '', (string) ($data['acesso_pin'] ?? '')) ?? '';
+            $data['acesso_pin'] = $pin !== '' ? $pin : null;
+        }
+
+        return $data;
     }
 
     private function serializar(object $row): array
@@ -176,6 +202,13 @@ class DeliveryEntregadorController extends DeliveryBaseController
         $data = array_merge((array) $row, [
             'foto_url' => DeliveryMediaUrl::fromPublicPath($row->foto_path ?? null),
         ]);
+
+        // PIN só para o admin no cadastro; não expor em listagens públicas.
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_pin')) {
+            $pin = preg_replace('/\D+/', '', (string) ($row->acesso_pin ?? '')) ?? '';
+            $data['acesso_pin'] = strlen($pin) >= 4 ? $pin : '';
+            $data['tem_pin'] = strlen($pin) >= 4;
+        }
 
         if (Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
             $token = trim((string) ($row->acesso_token ?? ''));
@@ -199,9 +232,13 @@ class DeliveryEntregadorController extends DeliveryBaseController
 
             $nomeLoja = trim((string) ($config->nome_loja ?? 'nossa loja')) ?: 'nossa loja';
             $nomeMotoboy = trim((string) ($row->nome ?? 'motoboy')) ?: 'motoboy';
+            $pin = preg_replace('/\D+/', '', (string) ($row->acesso_pin ?? '')) ?? '';
             $textoApp = "Olá, {$nomeMotoboy}! Aqui está o app de entregas da {$nomeLoja}.\n\n"
                 ."Abra o link no celular, toque em Instalar/Adicionar à tela inicial e acompanhe os pedidos por lá:\n\n"
                 .($appUrl ?: '');
+            if (strlen($pin) >= 4) {
+                $textoApp .= "\n\nSeu PIN de acesso: {$pin}\n(Não compartilhe o link nem o PIN.)";
+            }
             $fone = trim((string) ($row->whatsapp ?? '')) !== ''
                 ? $row->whatsapp
                 : ($row->telefone ?? null);

@@ -78,6 +78,28 @@ body {
   padding: 12px; font-size: 11px; white-space: pre-wrap; max-height: 220px; overflow: auto;
 }
 .mb-muted { color: var(--muted); margin: 0; }
+.mb-head-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.mb-pin {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 22px 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+  text-align: center;
+}
+.mb-pin h2 { margin: 0 0 8px; font-size: 20px; }
+.mb-pin > p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+.mb-pin-form { display: grid; gap: 10px; }
+.mb-pin-form input {
+  width: 100%;
+  font-size: 28px;
+  letter-spacing: .35em;
+  text-align: center;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.mb-pin-error { color: var(--danger); font-size: 13px; margin: 10px 0 0; font-weight: 600; }
 @media (max-width: 420px) {
   .mb-actions { grid-template-columns: 1fr; }
 }

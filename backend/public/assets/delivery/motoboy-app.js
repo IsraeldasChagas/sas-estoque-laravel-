@@ -5,8 +5,16 @@
   const toastEl = document.getElementById("mbToast");
   const dialog = document.getElementById("mbDialog");
   const installBtn = document.getElementById("mbInstall");
+  const lockBtn = document.getElementById("mbLock");
+  const pinGate = document.getElementById("mbPinGate");
+  const appBody = document.getElementById("mbAppBody");
+  const pinForm = document.getElementById("mbPinForm");
+  const pinInput = document.getElementById("mbPinInput");
+  const pinError = document.getElementById("mbPinError");
   let deferredPrompt = null;
   let busy = false;
+  let unlocked = !!cfg.desbloqueado;
+  let pollTimer = null;
 
   function money(v) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -28,19 +36,42 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  async function postJson(url) {
+  function setUnlocked(value) {
+    unlocked = !!value;
+    if (pinGate) pinGate.hidden = unlocked;
+    if (appBody) appBody.hidden = !unlocked;
+    if (lockBtn) lockBtn.hidden = !unlocked;
+    if (!unlocked && listEl) {
+      listEl.hidden = true;
+      listEl.innerHTML = "";
+    }
+    if (unlocked) {
+      startPolling();
+      poll();
+    } else {
+      stopPolling();
+    }
+  }
+
+  async function postJson(url, body) {
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Accept": "application/json",
+        "Content-Type": "application/json",
         "X-CSRF-TOKEN": cfg.csrf || "",
         "X-Requested-With": "XMLHttpRequest",
       },
       credentials: "same-origin",
+      body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const msg = data?.message || data?.errors?.oferta?.[0] || data?.mensagem || "Falha na operação.";
+      const msg = data?.message
+        || data?.errors?.pin?.[0]
+        || data?.errors?.oferta?.[0]
+        || data?.mensagem
+        || "Falha na operação.";
       throw new Error(msg);
     }
     return data;
@@ -90,20 +121,75 @@
   }
 
   async function poll() {
-    if (busy) return;
+    if (busy || !unlocked) return;
     try {
       const res = await fetch(cfg.ofertasUrl, { headers: { Accept: "application/json" }, credentials: "same-origin" });
+      if (res.status === 401) {
+        setUnlocked(false);
+        return;
+      }
       if (!res.ok) throw new Error("poll");
       const data = await res.json();
       render(data.items || []);
     } catch (_) {}
   }
 
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(poll, 8000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  pinForm?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const pin = String(pinInput?.value || "").replace(/\D/g, "");
+    if (pinError) {
+      pinError.hidden = true;
+      pinError.textContent = "";
+    }
+    if (pin.length < 4 || pin.length > 6) {
+      if (pinError) {
+        pinError.textContent = "Informe o PIN de 4 a 6 dígitos.";
+        pinError.hidden = false;
+      }
+      return;
+    }
+    const btn = pinForm.querySelector('[type="submit"]');
+    if (btn) btn.disabled = true;
+    try {
+      await postJson(cfg.desbloquearUrl, { pin });
+      if (pinInput) pinInput.value = "";
+      setUnlocked(true);
+      toast("Acesso liberado.");
+    } catch (err) {
+      if (pinError) {
+        pinError.textContent = err.message || "PIN incorreto.";
+        pinError.hidden = false;
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  lockBtn?.addEventListener("click", async () => {
+    try {
+      await postJson(cfg.bloquearUrl);
+    } catch (_) {}
+    setUnlocked(false);
+    toast("App bloqueado. Digite o PIN para entrar.");
+  });
+
   listEl?.addEventListener("click", async (ev) => {
     const aceitar = ev.target.closest("[data-aceitar]");
     const recusar = ev.target.closest("[data-recusar]");
     if (!aceitar && !recusar) return;
-    if (busy) return;
+    if (busy || !unlocked) return;
     busy = true;
     try {
       if (aceitar) {
@@ -120,6 +206,9 @@
         await poll();
       }
     } catch (err) {
+      if (String(err.message || "").toLowerCase().includes("pin")) {
+        setUnlocked(false);
+      }
       toast(err.message || "Erro");
       await poll();
     } finally {
@@ -185,6 +274,5 @@
 
   if (isInstalled()) hideInstall();
 
-  poll();
-  setInterval(poll, 8000);
+  setUnlocked(unlocked);
 })();

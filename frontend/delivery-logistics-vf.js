@@ -336,15 +336,21 @@
           <div class="vfl-form-grid">
             <label class="vfl-field vfl-span-12"><span>Nome <b>*</b></span><input name="nome" maxlength="255" value="${esc(driver?.nome || "")}" required></label>
             <label class="vfl-field vfl-span-12"><span>WhatsApp <b>*</b></span><input name="whatsapp" data-vfl-phone maxlength="20" value="${esc(whatsappMask(driver?.whatsapp || ""))}" required></label>
+            <label class="vfl-field vfl-span-6"><span>PIN do app <b>*</b></span>
+              <input name="acesso_pin" type="text" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off"
+                value="${esc(driver?.acesso_pin || "")}" ${editing && driver?.tem_pin ? "" : "required"}
+                placeholder="${editing && driver?.tem_pin ? "Deixe igual ou digite um novo" : "4 a 6 dígitos"}">
+              <small style="display:block;margin-top:4px;color:#64748b">O motoboy digita este PIN ao abrir o app. Não compartilhe o PIN com outras pessoas.</small>
+            </label>
+            <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-field vfl-span-6"><span>Modelo da moto</span><input name="moto_modelo" maxlength="120" value="${esc(driver?.moto_modelo || "")}"></label>
             <label class="vfl-field vfl-span-6"><span>Cor</span><input name="moto_cor" maxlength="64" value="${esc(driver?.moto_cor || "")}"></label>
             <label class="vfl-field vfl-span-6"><span>Placa</span><input name="moto_placa" maxlength="16" value="${esc(driver?.moto_placa || "")}"></label>
-            <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-check vfl-span-12"><input name="ativo" type="checkbox" ${driver ? (Number(driver.ativo) ? "checked" : "") : "checked"}> Entregador ativo</label>
           </div>
           ${editing && driver?.url_app ? `<div style="margin:8px 0 12px;padding:14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4">
             <strong style="display:block;margin-bottom:6px">📱 App do motoboy</strong>
-            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie pelo WhatsApp cadastrado. Ele abre o link no celular, instala o app e acompanha as entregas por lá.</p>
+            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie pelo WhatsApp cadastrado. Ele abre o link, digita o PIN do cadastro, instala o app e acompanha as entregas.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
               <input readonly style="flex:1;min-width:180px" id="vflDriverAppUrl" value="${esc(driver.url_app)}">
               <button class="vfl-btn" type="button" data-vfl-copy-app>Copiar link</button>
@@ -401,6 +407,19 @@
           ordem: Number(value(form, "ordem") || 0), ativo: checked(form, "ativo"), remover_foto: removePhoto,
           foto_base64: selectedFile ? await fileDataUrl(selectedFile) : null,
         };
+        const pin = digits(value(form, "acesso_pin"));
+        if (pin) {
+          if (pin.length < 4 || pin.length > 6) {
+            toast("O PIN deve ter de 4 a 6 dígitos.", "error");
+            submit.disabled = false;
+            return;
+          }
+          payload.acesso_pin = pin;
+        } else if (!editing || !driver?.tem_pin) {
+          toast("Informe um PIN de 4 a 6 dígitos.", "error");
+          submit.disabled = false;
+          return;
+        }
         const saved = await api(editing ? `/entregadores/${driver.id}` : "/entregadores", {
           method: editing ? "PUT" : "POST", body: JSON.stringify(payload),
         });
