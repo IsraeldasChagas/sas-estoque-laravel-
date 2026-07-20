@@ -32,8 +32,8 @@
     $shareNome = trim((string) ($produto->nome ?? 'Produto'));
     $shareLoja = trim((string) ($config->nome_loja ?? 'Loja'));
     $sharePreco = 'R$ '.number_format((float) ($produto->preco ?? 0), 2, ',', '.');
-    $shareText = $shareNome.' — '.$shareLoja."\n".$sharePreco."\n\n".$productUrl;
-    $waShareUrl = 'https://wa.me/?text='.rawurlencode($shareText);
+    // Só o link: a prévia do WhatsApp (og:image/title) vira o cartão, sem texto duplicado acima.
+    $waShareUrl = 'https://wa.me/?text='.rawurlencode($productUrl);
     $waLojaUrl = $whatsDigits !== '' ? 'https://wa.me/'.$whatsDigits.'?text='.rawurlencode('Olá! Tenho interesse no produto: '.$shareNome) : null;
     $fbShareUrl = 'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($productUrl);
     $ogTitle = $shareNome.' — '.$shareLoja;
