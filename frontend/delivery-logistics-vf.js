@@ -284,7 +284,7 @@
     const items = (await api("/entregadores")).items || [];
     root.innerHTML = `<div class="vfl-page vfl-drivers">
       <nav class="vfl-breadcrumb"><button type="button" data-vfl-orders>Pedidos</button><span>/</span><strong>Meus entregadores</strong></nav>
-      <header class="vfl-heading"><div><h2>Meus entregadores</h2><p>Cadastre e organize os entregadores disponíveis para os pedidos.</p></div>
+      <header class="vfl-heading"><div><h2>Meus entregadores</h2><p>Cadastre o motoboy e envie o link do app pelo WhatsApp dele. Ele instala no celular e acompanha as entregas.</p></div>
         <button class="vfl-btn vfl-btn--primary" type="button" data-vfl-new-driver>＋ Novo entregador</button></header>
       <div class="vfl-table-card"><div class="vfl-table-wrap"><table class="vfl-table vfl-driver-table">
         <thead><tr><th>Entregador</th><th>Moto</th><th>Placa</th><th>Ordem</th><th>Status</th><th>Ações</th></tr></thead>
@@ -303,12 +303,16 @@
     return items.map((driver) => {
       const photo = imageUrl(driver.foto_url);
       const initials = String(driver.nome || "?").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+      const waApp = driver.url_app_whatsapp || "";
       return `<tr><td><div class="vfl-driver"><span class="vfl-avatar">${photo ? `<img src="${esc(photo)}" alt="">` : esc(initials)}</span>
           <span><strong>${esc(driver.nome)}</strong><small>${esc(driver.whatsapp || "Sem WhatsApp")}</small></span></div></td>
         <td><strong>${esc(driver.moto_modelo || "—")}</strong><small>${esc(driver.moto_cor || "Cor não informada")}</small></td>
         <td><span class="vfl-plate">${esc(driver.moto_placa || "—")}</span></td><td>${Number(driver.ordem || 0)}</td>
         <td><span class="vfl-pill ${Number(driver.ativo) ? "is-active" : "is-inactive"}">${Number(driver.ativo) ? "Ativo" : "Inativo"}</span></td>
-        <td><button class="vfl-btn vfl-btn--small" type="button" data-vfl-driver-edit="${driver.id}">Editar</button></td></tr>`;
+        <td style="white-space:nowrap">
+          ${waApp ? `<a class="vfl-btn vfl-btn--small vfl-btn--success" href="${esc(waApp)}" target="_blank" rel="noopener noreferrer" title="Enviar app no WhatsApp">WhatsApp app</a> ` : ""}
+          <button class="vfl-btn vfl-btn--small" type="button" data-vfl-driver-edit="${driver.id}">Editar</button>
+        </td></tr>`;
     }).join("");
   }
 
@@ -338,12 +342,16 @@
             <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-check vfl-span-12"><input name="ativo" type="checkbox" ${driver ? (Number(driver.ativo) ? "checked" : "") : "checked"}> Entregador ativo</label>
           </div>
-          ${editing && driver?.url_app ? `<div style="margin:8px 0 12px;padding:12px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff">
-            <strong>App do motoboy (instalar no celular)</strong>
-            <p style="margin:6px 0;font-size:13px;color:#475569">Envie este link para o entregador. Ele vê só as entregas oferecidas e pode aceitar.</p>
-            <div style="display:flex;gap:8px;flex-wrap:wrap"><input readonly style="flex:1;min-width:180px" id="vflDriverAppUrl" value="${esc(driver.url_app)}">
-            <button class="vfl-btn" type="button" data-vfl-copy-app>Copiar link</button>
-            <a class="vfl-btn vfl-btn--primary" href="${esc(driver.url_app)}" target="_blank" rel="noopener">Abrir</a></div>
+          ${editing && driver?.url_app ? `<div style="margin:8px 0 12px;padding:14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4">
+            <strong style="display:block;margin-bottom:6px">📱 App do motoboy</strong>
+            <p style="margin:0 0 10px;font-size:13px;color:#166534">Envie pelo WhatsApp cadastrado. Ele abre o link no celular, instala o app e acompanha as entregas por lá.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+              <input readonly style="flex:1;min-width:180px" id="vflDriverAppUrl" value="${esc(driver.url_app)}">
+              <button class="vfl-btn" type="button" data-vfl-copy-app>Copiar link</button>
+            </div>
+            ${driver.url_app_whatsapp
+              ? `<a class="vfl-btn vfl-btn--primary" style="background:#16a34a;border-color:#16a34a;color:#fff" href="${esc(driver.url_app_whatsapp)}" target="_blank" rel="noopener noreferrer">Enviar app no WhatsApp</a>`
+              : `<p style="margin:0;font-size:13px;color:#b45309">Salve um WhatsApp válido para liberar o envio.</p>`}
           </div>` : ""}
           <div class="vfl-form-actions"><button class="vfl-btn vfl-btn--primary" type="submit">Salvar</button><button class="vfl-btn" type="button" data-vfl-back-drivers>Cancelar</button></div>
         </form>
@@ -393,10 +401,15 @@
           ordem: Number(value(form, "ordem") || 0), ativo: checked(form, "ativo"), remover_foto: removePhoto,
           foto_base64: selectedFile ? await fileDataUrl(selectedFile) : null,
         };
-        await api(editing ? `/entregadores/${driver.id}` : "/entregadores", {
+        const saved = await api(editing ? `/entregadores/${driver.id}` : "/entregadores", {
           method: editing ? "PUT" : "POST", body: JSON.stringify(payload),
         });
-        toast(editing ? "Entregador atualizado." : "Entregador cadastrado.", "success");
+        toast(editing ? "Entregador atualizado." : "Entregador cadastrado. Agora envie o app no WhatsApp.", "success");
+        const id = Number(saved?.id || driver?.id || 0);
+        if (id) {
+          await openDriverEditor(root, id);
+          return;
+        }
         await loadDeliveryEntregadores();
       } catch (error) {
         toast(error?.message || "Não foi possível salvar o entregador.", "error");

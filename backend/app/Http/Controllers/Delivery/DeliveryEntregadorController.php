@@ -188,12 +188,26 @@ class DeliveryEntregadorController extends DeliveryBaseController
                 $data['acesso_token'] = $token;
             }
             $config = DB::table('dlv_loja_config')->where('unidade_id', $row->unidade_id)->first();
+            $appUrl = null;
             if ($config && trim((string) ($config->slug ?? '')) !== '') {
-                $data['url_app'] = route('delivery.public.motoboy.app', [
+                $appUrl = route('delivery.public.motoboy.app', [
                     'slug' => $config->slug,
                     'acessoToken' => $token,
                 ], absolute: true);
+                $data['url_app'] = $appUrl;
             }
+
+            $nomeLoja = trim((string) ($config->nome_loja ?? 'nossa loja')) ?: 'nossa loja';
+            $nomeMotoboy = trim((string) ($row->nome ?? 'motoboy')) ?: 'motoboy';
+            $textoApp = "Olá, {$nomeMotoboy}! Aqui está o app de entregas da {$nomeLoja}.\n\n"
+                ."Abra o link no celular, toque em Instalar/Adicionar à tela inicial e acompanhe os pedidos por lá:\n\n"
+                .($appUrl ?: '');
+            $fone = trim((string) ($row->whatsapp ?? '')) !== ''
+                ? $row->whatsapp
+                : ($row->telefone ?? null);
+            $data['url_app_whatsapp'] = $appUrl
+                ? \App\Support\Delivery\DeliveryWhatsAppHelper::urlComTexto($fone, $textoApp)
+                : null;
         }
 
         return $data;
