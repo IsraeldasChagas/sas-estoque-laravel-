@@ -85,6 +85,7 @@ class FidelidadeController extends Controller
             'modo' => 'sometimes|in:'.implode(',', self::MODOS),
             'pedidos_meta' => 'sometimes|integer|min:1|max:1000',
             'pontos_por_selo' => 'sometimes|integer|min:0|max:100000',
+            'selo_valor_minimo' => 'sometimes|numeric|min:0|max:9999999.99',
             'tipo_recompensa_padrao' => 'sometimes|in:'.implode(',', self::RECOMPENSA_TIPOS),
             'produto_id' => 'nullable|integer',
             'valor_desconto' => 'nullable|numeric|min:0',
@@ -163,6 +164,12 @@ class FidelidadeController extends Controller
             $payload['base_desconto_percentual'] = array_key_exists('base_desconto_percentual', $data)
                 ? $data['base_desconto_percentual']
                 : ($existente->base_desconto_percentual ?? null);
+        }
+
+        if (Schema::hasColumn('fid_programas', 'selo_valor_minimo')) {
+            $payload['selo_valor_minimo'] = array_key_exists('selo_valor_minimo', $data)
+                ? round((float) $data['selo_valor_minimo'], 2)
+                : round((float) ($existente->selo_valor_minimo ?? 100), 2);
         }
 
         if ($existente) {

@@ -1,0 +1,197 @@
+@startuml RESERVA_FIDELIDADE_UML_CASOS_DE_USO
+title Reserva ↔ Fidelidade — Casos de uso (treinamento)
+
+left to right direction
+
+actor "Cliente" as Cliente
+actor "Staff salão" as Staff
+actor "Admin Fidelidade" as AdminFid
+actor "Sistema" as Sistema
+
+rectangle "Reserva ↔ Fidelidade" {
+  usecase "UC1 Opt-in na reserva" as UC1
+  usecase "UC2 Confirmar identidade" as UC2
+  usecase "UC3 Registrar conta paga" as UC3
+  usecase "UC4 Resgatar selos no salão" as UC4
+  usecase "UC5 Enviar link vitrine" as UC5
+  usecase "UC6 Consultar cartão (OTP/LGPD)" as UC6
+  usecase "UC7 Configurar programa\n(Libera selo a partir de)" as UC7
+  usecase "UC8 Creditar selo idempotente" as UC8
+}
+
+Staff --> UC1
+Staff --> UC2
+Staff --> UC3
+Staff --> UC4
+Staff --> UC5
+Cliente --> UC6
+AdminFid --> UC7
+Sistema --> UC8
+UC3 ..> UC8 : inclui se valor >= mínimo
+UC7 ..> UC8 : define selo_valor_minimo
+
+note right of UC3
+  Gates:
+  - participa_fidelidade
+  - telefone válido
+  - identidade completa
+  - programa ativo
+  - valor_conta >= selo_valor_minimo
+    (padrão R$ 100; 0 = sempre libera)
+end note
+
+@enduml
+
+
+@startuml RESERVA_FIDELIDADE_UML_CLASSES
+title Reserva ↔ Fidelidade — Classes
+
+package "Reserva" {
+  class ReservaMesa {
+    +unidade_id
+    +telefone_cliente
+    +participa_fidelidade
+    +fidelidade_nome
+    +fidelidade_cpf
+    +fidelidade_email
+    +conta_paga
+    +valor_conta
+    +pagamentos_conta
+  }
+  class ReservaMesaController {
+    +fidelidade()
+    +participaFidelidade()
+    +fidelidadeDados()
+    +fidelidadeContaPaga()
+    +fidelidadeResgatar()
+  }
+  class ReservaMeioPagamentoService
+}
+
+package "Fidelidade" {
+  class FidPrograma {
+    +meta_selos
+    +pontos_por_selo
+    +selo_valor_minimo
+    +ativo
+  }
+  class ReservaFidelidadeService {
+    +snapshot()
+    +salvarDadosFidelidade()
+    +garantirConta()
+    +creditarSelo()
+    +registrarContaPaga()
+    +pagarComSelos()
+    -seloValorMinimo()
+  }
+  class FidelidadeIdentidadeService
+  class FidelidadeLedgerService
+  class FidelidadeResgateService
+  class FidelidadeVitrineLinkService
+  class "fid_contas" as FidContas
+  class "fid_ledger" as FidLedger
+}
+
+ReservaMesaController --> ReservaFidelidadeService
+ReservaMesaController --> FidelidadeVitrineLinkService
+ReservaFidelidadeService --> ReservaMesa
+ReservaFidelidadeService --> FidPrograma
+ReservaFidelidadeService --> FidelidadeIdentidadeService
+ReservaFidelidadeService --> FidelidadeLedgerService
+ReservaFidelidadeService --> FidelidadeResgateService
+ReservaFidelidadeService --> ReservaMeioPagamentoService
+FidelidadeLedgerService --> FidLedger
+ReservaFidelidadeService --> FidContas
+
+@enduml
+
+
+@startuml RESERVA_FIDELIDADE_SEQ_CONTA_PAGA
+title Sequência — Conta paga com fidelidade (valor mínimo do selo)
+
+actor Staff
+participant "app.js\nrenderReservaFidelidade" as UI
+participant "ReservaMesaController" as API
+participant "ReservaFidelidadeService" as Svc
+participant "FidelidadeIdentidadeService" as Id
+participant "FidelidadeLedgerService" as Led
+database "reservas_mesas / fid_*" as DB
+
+Staff -> UI : Opt-in + nome/CPF/e-mail
+UI -> API : PATCH .../fidelidade-dados
+API -> Svc : salvarDadosFidelidade()
+Svc -> Id : validarCadastro()
+Svc -> DB : update fidelidade_* / participa=true
+
+Staff -> UI : Informa pagamentos e confirma conta paga
+UI -> API : POST .../fidelidade/conta-paga
+API -> Svc : registrarContaPaga(valor, pagamentos)
+
+alt participa_fidelidade
+  Svc -> Svc : garantirConta()
+  alt valor >= selo_valor_minimo
+    Svc -> Led : selo (+1)\nidempotency reserva-{id}-selo
+    Led -> DB : fid_ledger tipo=selo\nreferencia_tipo=reserva_mesa
+    Note right of Led : selo_liberado = true
+  else valor abaixo do mínimo
+    Note right of Svc : Conta paga + cartão\nSEM selo\nselo_motivo explicativo
+  end
+end
+
+Svc -> DB : conta_paga, valor_conta, pagamentos_conta
+API --> UI : selo_liberado / selo_motivo
+UI --> Staff : toast sucesso ou aviso
+
+@enduml
+
+
+@startuml RESERVA_FIDELIDADE_SEQ_RESGATE
+title Sequência — Resgate de selos no salão
+
+actor Staff
+participant "app.js" as UI
+participant "ReservaMesaController" as API
+participant "ReservaFidelidadeService" as Svc
+participant "FidelidadeResgateService" as Rsg
+database "fid_ledger / fid_resgates" as DB
+
+Staff -> UI : Escolhe recompensa
+UI -> API : POST .../fidelidade/resgatar
+API -> Svc : pagarComSelos()
+Svc -> Rsg : resgatar()
+Rsg -> DB : debito_resgate + fid_resgates (entregue)
+note right of DB
+  Observação:
+  "Entregue na reserva #id"
+end note
+API --> UI : saldo atualizado
+
+@enduml
+
+
+@startuml RESERVA_FIDELIDADE_ATIVIDADE_SELO
+title Atividade — Decisão de liberar selo na conta paga
+
+start
+:Staff confirma conta paga;
+if (participa_fidelidade?) then (não)
+  :Grava conta paga sem cartão;
+  stop
+else (sim)
+  if (programa ativo + telefone OK\n+ identidade completa?) then (não)
+    :Erro / bloqueio;
+    stop
+  else (sim)
+    :garantirConta (fid_contas);
+    if (valor_conta >= selo_valor_minimo?) then (sim)
+      :Creditar 1 selo\n(idempotency reserva-id-selo);
+      :Retorno: selo_liberado = true;
+    else (não)
+      :Conta paga sem selo;
+      :Retorno: selo_motivo;
+    endif
+    stop
+  endif
+endif
+
+@enduml

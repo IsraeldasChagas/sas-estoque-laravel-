@@ -728,11 +728,13 @@ class ReservaMesaController extends Controller
         }
 
         $msg = $result['replayed']
-            ? 'Conta já estava paga.'.($result['conta'] ? ' Selo desta reserva já havia sido creditado.' : '')
+            ? 'Conta já estava paga.'.($result['selo_liberado'] ? ' Selo desta reserva já havia sido creditado.' : '')
             : ((bool) ($result['reserva']->participa_fidelidade ?? false)
-                ? ($result['criado_conta']
-                    ? 'Conta paga registrada. Cartão criado e selo liberado.'
-                    : 'Conta paga registrada. Selo liberado.')
+                ? ($result['selo_liberado']
+                    ? ($result['criado_conta']
+                        ? 'Conta paga registrada. Cartão criado e selo liberado.'
+                        : 'Conta paga registrada. Selo liberado.')
+                    : ($result['selo_motivo'] ?: 'Conta paga registrada. Selo não liberado (valor abaixo do mínimo).'))
                 : 'Conta paga registrada. Você já pode liberar a mesa.');
 
         return response()->json([
@@ -742,6 +744,8 @@ class ReservaMesaController extends Controller
             'ledger' => $result['ledger'],
             'replayed' => $result['replayed'],
             'criado_conta' => $result['criado_conta'],
+            'selo_liberado' => (bool) ($result['selo_liberado'] ?? false),
+            'selo_motivo' => $result['selo_motivo'] ?? null,
             'vitrine_fidelidade' => app(\App\Services\Fidelidade\FidelidadeVitrineLinkService::class)
                 ->paraReserva($result['reserva'], $request),
         ], $result['replayed'] ? 200 : 201);

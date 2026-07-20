@@ -149,6 +149,7 @@
           <label>Modo<select name="modo"><option value="selos" ${p.modo !== "pontos" ? "selected" : ""}>Selos</option><option value="pontos" ${p.modo === "pontos" ? "selected" : ""}>Pontos</option></select></label>
           <label>Meta de selos<input name="pedidos_meta" type="number" min="1" value="${esc(p.pedidos_meta || 10)}" required></label>
           <label>Pontos por selo<input name="pontos_por_selo" type="number" min="0" value="${esc(p.pontos_por_selo ?? 1)}"></label>
+          <label>Libera selo a partir de (R$)<input name="selo_valor_minimo" type="number" min="0" step="0.01" value="${esc(p.selo_valor_minimo ?? 100)}" title="Na Reserva, a conta precisa atingir este valor para liberar 1 selo. Use 0 para liberar sempre."></label>
           <label>Recompensa padrão<select name="tipo_recompensa_padrao" id="fidTipoRecompensa">
             <option value="catalogo_consulta" ${tipoRec === "catalogo_consulta" ? "selected" : ""}>Catálogo (consulta)</option>
             <option value="brinde" ${tipoRec === "brinde" ? "selected" : ""}>Brinde (descrever)</option>
@@ -176,6 +177,7 @@
         </div>
         <p class="subtle-text fid-rec-hint fid-rec-field" data-fid-rec-show="desconto_percentual">O percentual incide sobre a soma do valor pago em cada conta das visitas que geraram os selos desde o último resgate (até a meta).</p>
         <p class="subtle-text fid-rec-hint fid-rec-field" data-fid-rec-show="desconto_valor">Desconto fixo em reais aplicado na conta ao resgatar os selos.</p>
+        <p class="subtle-text">Na <strong>Reserva</strong>, o selo só é liberado quando o valor da conta for <strong>igual ou maior</strong> que “Libera selo a partir de”. Use <strong>0</strong> para liberar sempre.</p>
         <div class="orc-actions"><button class="btn primary" type="submit">Salvar programa</button></div>
       </form>`);
     bindUnidadeSelect(loadPrograma);
@@ -202,6 +204,7 @@
       await api("/programa", { method: "PUT", body: JSON.stringify({
         nome_exibicao: value(f, "nome_exibicao"), modo: value(f, "modo"),
         pedidos_meta: Number(value(f, "pedidos_meta")), pontos_por_selo: Number(value(f, "pontos_por_selo")),
+        selo_valor_minimo: value(f, "selo_valor_minimo") === "" ? 100 : Number(value(f, "selo_valor_minimo")),
         tipo_recompensa_padrao: tipo,
         catalogo_qtd_escolhas: tipo === "catalogo_consulta" ? Number(value(f, "catalogo_qtd_escolhas") || 1) : null,
         catalogo_produtos_ids: tipo === "catalogo_consulta" ? catalogoIds : [],

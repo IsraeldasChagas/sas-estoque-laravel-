@@ -190,6 +190,7 @@ final class ReservaFidelidadeService
                 'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
                 'formas_pagamento_cadastro' => $this->formasPagamentoCadastro($unidadeId),
                 'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
+                'selo_valor_minimo' => $this->seloValorMinimo($programa),
                 'mensagem' => 'Informe um telefone válido na reserva para usar fidelidade.',
             ];
         }
@@ -230,6 +231,7 @@ final class ReservaFidelidadeService
             'pagamentos_conta' => $this->pagamentosContaReserva($reserva),
             'formas_pagamento_cadastro' => $this->formasPagamentoCadastro($unidadeId),
             'meta_selos' => (int) ($programa->pedidos_meta ?? 10),
+            'selo_valor_minimo' => $this->seloValorMinimo($programa),
             'mensagem' => $programaAtivo
                 ? null
                 : 'Programa de fidelidade inativo nesta unidade. Ative em Fidelidade → Programa.',
@@ -356,10 +358,11 @@ final class ReservaFidelidadeService
 
     /**
      * Credita 1 selo pela reserva (idempotente por reserva).
+     * Exige valor da conta >= selo_valor_minimo do programa (padrão R$ 100).
      *
-     * @return array{conta:object, ledger:object, replayed:bool, criado_conta:bool}
+     * @return array{conta:object, ledger:?object, replayed:bool, criado_conta:bool, selo_liberado:bool, selo_motivo:?string}
      */
-    public function creditarSelo(ReservaMesa $reserva, ?int $usuarioId, bool $criarConta = true): array
+    public function creditarSelo(ReservaMesa $reserva, ?int $usuarioId, bool $criarConta = true, ?float $valorConta = null): array
     {
         $snap = $this->snapshot($reserva);
         if (! $snap['disponivel']) {
@@ -383,6 +386,18 @@ final class ReservaFidelidadeService
         }
 
         $programa = $snap['programa'];
+        $minimo = $this->seloValorMinimo($programa);
+        $valor = $valorConta;
+        if ($valor === null && $reserva->valor_conta !== null) {
+            $valor = (float) $reserva->valor_conta;
+        }
+        if ($valor === null || $valor < $minimo) {
+            $motivo = $minimo > 0
+                ? 'Selo não liberado: a conta precisa ser a partir de R$ '.number_format($minimo, 2, ',', '.').'.'
+                : 'Selo não liberado: informe o valor da conta.';
+            throw ValidationException::withMessages(['valor_conta' => $motivo]);
+        }
+
         $pontosPorSelo = (int) ($programa->pontos_por_selo ?? 1);
         $expiraEm = null;
         if ($programa && ! empty($programa->dias_expiracao_credito)) {
@@ -394,7 +409,7 @@ final class ReservaFidelidadeService
             'tipo' => 'selo',
             'delta_selos' => 1,
             'delta_pontos' => $pontosPorSelo,
-            'descricao' => 'Selo pela reserva #'.$reserva->id.' ('.$reserva->nome_cliente.')',
+            'descricao' => 'Selo pela reserva #'.$reserva->id.' ('.$reserva->nome_cliente.') · R$ '.number_format($valor, 2, ',', '.'),
             'referencia_tipo' => 'reserva_mesa',
             'referencia_id' => (int) $reserva->id,
             'idempotency_key' => 'reserva-'.$reserva->id.'-selo',
@@ -407,6 +422,8 @@ final class ReservaFidelidadeService
             'ledger' => $result['ledger'],
             'replayed' => $result['replayed'],
             'criado_conta' => $criado,
+            'selo_liberado' => true,
+            'selo_motivo' => null,
         ];
     }
 
@@ -503,14 +520,24 @@ final class ReservaFidelidadeService
             'pagamentos_conta' => [],
             'formas_pagamento_cadastro' => [],
             'meta_selos' => 10,
+            'selo_valor_minimo' => 100.0,
             'mensagem' => $mensagem,
         ];
     }
 
     /**
-     * Marca conta paga na reserva: gera cartão (se preciso) e libera 1 selo.
+     * Marca conta paga na reserva: gera cartão (se preciso) e libera 1 selo
+     * quando o valor atingir o mínimo configurado no programa.
      *
-     * @return array{reserva:ReservaMesa,conta:object,ledger:object,replayed:bool,criado_conta:bool}
+     * @return array{
+     *   reserva:ReservaMesa,
+     *   conta:?object,
+     *   ledger:?object,
+     *   replayed:bool,
+     *   criado_conta:bool,
+     *   selo_liberado:bool,
+     *   selo_motivo:?string
+     * }
      */
     public function registrarContaPaga(ReservaMesa $reserva, float $valorConta, array $pagamentos, ?int $usuarioId): array
     {
@@ -530,6 +557,8 @@ final class ReservaFidelidadeService
                 'ledger' => null,
                 'replayed' => true,
                 'criado_conta' => false,
+                'selo_liberado' => (bool) ($snap['selo_ja_creditado'] ?? false),
+                'selo_motivo' => null,
             ];
         }
 
@@ -548,6 +577,8 @@ final class ReservaFidelidadeService
                 'ledger' => null,
                 'replayed' => false,
                 'criado_conta' => false,
+                'selo_liberado' => false,
+                'selo_motivo' => null,
             ];
         }
 
@@ -568,9 +599,25 @@ final class ReservaFidelidadeService
         }
 
         $criado = ! $snap['conta'];
-        $this->garantirConta($reserva, $usuarioId);
+        $conta = $this->garantirConta($reserva, $usuarioId);
+        $minimo = $this->seloValorMinimo($snap['programa'] ?? null);
+        $seloLiberado = false;
+        $seloMotivo = null;
+        $ledger = null;
+        $replayed = false;
 
-        $credito = $this->creditarSelo($reserva, $usuarioId, false);
+        if ($valorConta >= $minimo) {
+            $credito = $this->creditarSelo($reserva, $usuarioId, false, $valorConta);
+            $conta = $credito['conta'];
+            $ledger = $credito['ledger'];
+            $replayed = $credito['replayed'];
+            $criado = $criado || $credito['criado_conta'];
+            $seloLiberado = true;
+        } else {
+            $seloMotivo = $minimo > 0
+                ? 'Conta registrada. Selo não liberado: valor mínimo é R$ '.number_format($minimo, 2, ',', '.').'.'
+                : 'Conta registrada. Selo não liberado.';
+        }
 
         $reserva->conta_paga = true;
         $reserva->valor_conta = round($valorConta, 2);
@@ -580,11 +627,25 @@ final class ReservaFidelidadeService
 
         return [
             'reserva' => $reserva->fresh(['mesa', 'usuario']),
-            'conta' => $credito['conta'],
-            'ledger' => $credito['ledger'],
-            'replayed' => $credito['replayed'],
-            'criado_conta' => $criado || $credito['criado_conta'],
+            'conta' => $conta,
+            'ledger' => $ledger,
+            'replayed' => $replayed,
+            'criado_conta' => $criado,
+            'selo_liberado' => $seloLiberado,
+            'selo_motivo' => $seloMotivo,
         ];
+    }
+
+    private function seloValorMinimo(?object $programa): float
+    {
+        if (! $programa) {
+            return 100.0;
+        }
+        if (! Schema::hasColumn('fid_programas', 'selo_valor_minimo')) {
+            return 100.0;
+        }
+
+        return max(0, round((float) ($programa->selo_valor_minimo ?? 100), 2));
     }
 
     private function dadosFidelidadeOk(ReservaMesa $reserva): bool

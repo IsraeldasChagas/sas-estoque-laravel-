@@ -18148,35 +18148,45 @@ function getMensagemReservaWhatsAppEmpresa(r) {
   var horaStr = formatHora(r.hora_reserva);
   var criadoPor = (r.usuario && r.usuario.nome) ? r.usuario.nome : '';
   var unidadeNome = (r.unidade && r.unidade.nome) ? r.unidade.nome : '';
+  var unidadeEndereco = (r.unidade && r.unidade.endereco) ? r.unidade.endereco.trim() : '';
   var status = (r.status || '').replace(/_/g, ' ');
   var obs = stripReservaMovMarkers(r.observacao || '').trim();
   var icone = {
-    reserva: '\uD83D\uDCCB',
-    cliente: '\uD83D\uDC64',
-    telefone: '\uD83D\uDCF1',
+    local: '\uD83D\uDCCD',
+    endereco: '\uD83D\uDDFA\uFE0F',
     data: '\uD83D\uDCC5',
     horario: '\u23F0',
     mesa: '\uD83C\uDF7D\uFE0F',
     pessoas: '\uD83D\uDC65',
+    cliente: '\uD83D\uDC64',
+    telefone: '\uD83D\uDCF1',
     status: '\uD83D\uDCCC',
-    unidade: '\uD83C\uDFE2',
-    registradoPor: '\u270D\uFE0F',
+    atendimento: '\uD83D\uDC64',
     observacao: '\uD83D\uDCDD',
+    reserva: '\uD83D\uDCCB',
+    alerta: '\uD83D\uDD14',
   };
-  var linhas = [
-    icone.reserva + ' Nova reserva de mesa',
-    '',
-    icone.cliente + ' Cliente: ' + (r.nome_cliente || '-'),
-    icone.telefone + ' Telefone: ' + (r.telefone_cliente || '-'),
-    icone.data + ' Data: ' + dataStr,
-    icone.horario + ' Horário: ' + horaStr,
-    icone.mesa + ' Mesa: ' + mesaNome,
-    icone.pessoas + ' Pessoas: ' + String(r.qtd_pessoas || '-'),
-    icone.status + ' Status: ' + (status || '-'),
-  ];
-  if (unidadeNome) linhas.push(icone.unidade + ' Unidade: ' + unidadeNome);
-  if (criadoPor) linhas.push(icone.registradoPor + ' Registrado por: ' + criadoPor);
-  if (obs) linhas.push(icone.observacao + ' Obs.: ' + obs);
+  var pad = function(lbl) { return (lbl + ':').padEnd(13, ' '); };
+  var linhas = [];
+  linhas.push(icone.alerta + ' Nova reserva de mesa');
+  linhas.push('');
+  linhas.push(icone.cliente + ' ' + pad('Cliente') + (r.nome_cliente || '-'));
+  linhas.push(icone.telefone + ' ' + pad('Telefone') + (r.telefone_cliente || '-'));
+  linhas.push('');
+  if (unidadeNome) {
+    linhas.push(icone.local + ' ' + pad('Local') + unidadeNome);
+    if (unidadeEndereco) linhas.push(icone.endereco + ' ' + pad('Endereço') + unidadeEndereco);
+    linhas.push('');
+  }
+  linhas.push(icone.data + ' ' + pad('Data') + dataStr);
+  linhas.push(icone.horario + ' ' + pad('Horário') + horaStr);
+  linhas.push(icone.mesa + ' ' + pad('Mesa') + mesaNome);
+  linhas.push(icone.pessoas + ' ' + pad('Pessoas') + String(r.qtd_pessoas || '-'));
+  linhas.push(icone.status + ' ' + pad('Status') + (status || '-'));
+  if (criadoPor) linhas.push(icone.atendimento + ' ' + pad('Atendimento') + criadoPor);
+  if (obs) linhas.push(icone.observacao + ' ' + pad('Obs.') + obs);
+  linhas.push('');
+  linhas.push(icone.reserva + ' Favor preparar a mesa para o horário.');
   return linhas.join('\n');
 }
 
@@ -19064,6 +19074,7 @@ async function renderReservaFidelidade(reservaId) {
     var seloOk = !!data.selo_ja_creditado;
     var contaPaga = !!data.conta_paga;
     var valorConta = data.valor_conta != null ? Number(data.valor_conta) : '';
+    var seloMinimo = Number(data.selo_valor_minimo != null ? data.selo_valor_minimo : 100);
     var cadastroFormas = Array.isArray(data.formas_pagamento_cadastro)
       ? data.formas_pagamento_cadastro
       : (data.formas_pagamento_cadastro ? Object.values(data.formas_pagamento_cadastro) : []);
@@ -19072,10 +19083,14 @@ async function renderReservaFidelidade(reservaId) {
     var recompensaProg = data.recompensa_programa || null;
 
     if (statusEl) {
-      if (contaPaga) statusEl.textContent = participa ? (seloOk ? 'Conta paga · selo ok' : 'Conta paga') : 'Conta paga · sem fidelidade';
+      if (contaPaga) statusEl.textContent = participa ? (seloOk ? 'Conta paga · selo ok' : 'Conta paga · sem selo') : 'Conta paga · sem fidelidade';
       else if (participa) statusEl.textContent = 'Com fidelidade';
       else statusEl.textContent = 'Só pagamento';
     }
+
+    var regraSeloHtml = (participa && programaAtivo)
+      ? ('<p class="subtle-text reserva-fid__regra-selo">Selo liberado em contas a partir de <strong>R$ ' + reservaFidMoeda(seloMinimo) + '</strong>' + (seloMinimo <= 0 ? ' (sem mínimo)' : '') + '. Configurável em Fidelidade → Programa.</p>')
+      : '';
 
     var optinHtml = '';
     if (!contaPaga && programaAtivo) {
@@ -19150,7 +19165,7 @@ async function renderReservaFidelidade(reservaId) {
     }
 
     var contaIntro = participa && programaAtivo && telefoneOk && fidDadosOk
-      ? 'O selo só libera quando a <strong>conta for paga</strong>. Informe valor e formas de pagamento (só registro).'
+      ? ('O selo libera quando a <strong>conta for paga</strong> e o valor for a partir de <strong>R$ ' + reservaFidMoeda(seloMinimo) + '</strong>. Informe valor e formas de pagamento.')
       : (participa && programaAtivo && telefoneOk
         ? 'Confirme os <strong>dados fidelidade</strong> acima antes de registrar a conta paga.'
         : 'Informe valor e formas de pagamento (só registro). Depois use <strong>Liberar mesa</strong> abaixo.');
@@ -19166,14 +19181,21 @@ async function renderReservaFidelidade(reservaId) {
         '</div>';
     }
 
+    var contaPagaExtra = '';
+    if (contaPaga && participa && !seloOk && seloMinimo > 0) {
+      contaPagaExtra = '<p class="reserva-fid__cadastro-warn">Selo não liberado nesta reserva (valor abaixo de R$ ' + reservaFidMoeda(seloMinimo) + ').</p>';
+    }
+
     bodyEl.innerHTML =
       optinHtml +
       fidSaldoHtml +
+      regraSeloHtml +
       recompensaHtml +
       linkVitrineHtml +
       '<div class="reserva-fid__conta">' +
         '<p class="subtle-text" style="margin:0 0 0.5rem;">' + contaIntro + '</p>' +
         contaHtml +
+        contaPagaExtra +
       '</div>' +
       resgateHtml;
 
@@ -19279,7 +19301,11 @@ async function renderReservaFidelidade(reservaId) {
         return (p.rotulo ? p.rotulo + ': ' : '') + reservaFidLabelCadastro(cadastroFormas, p.meio_id) + ' R$ ' + reservaFidMoeda(p.valor);
       }).join('\n');
       var confirmMsg = querFidelidade && programaAtivo && telefoneOk && fidDadosOk
-        ? ('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nIsso cria o cartão com os dados confirmados e libera 1 selo.')
+        ? ('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag +
+            '\n\nSelo: ' + (valor >= seloMinimo
+              ? 'será liberado (mínimo R$ ' + reservaFidMoeda(seloMinimo) + ').'
+              : 'NÃO será liberado (mínimo R$ ' + reservaFidMoeda(seloMinimo) + ').') +
+            '\nCria/atualiza o cartão com os dados confirmados.')
         : ('Confirmar conta paga em R$ ' + reservaFidMoeda(valor) + '?\n\n' + resumoPag + '\n\nDepois clique em Liberar mesa.');
       if (!confirm(confirmMsg)) return;
       try {
@@ -19287,7 +19313,8 @@ async function renderReservaFidelidade(reservaId) {
           method: 'POST',
           body: JSON.stringify({ valor_conta: valor, pagamentos: pagamentos })
         });
-        showToast(resp.message || 'Conta paga registrada.', 'success');
+        var toastType = (resp.selo_liberado === false && querFidelidade) ? 'warning' : 'success';
+        showToast(resp.message || 'Conta paga registrada.', toastType);
         await renderReservaFidelidade(reservaId);
       } catch (e) {
         showToast(e.message || 'Erro ao registrar conta paga.', 'error');
