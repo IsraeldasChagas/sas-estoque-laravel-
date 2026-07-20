@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}?v=20260720-esp">
     <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}?v=20260720-esp">
     <title>{{ $appNome }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m6">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m7">
 </head>
 <body>
 <header class="mb-head">
@@ -22,7 +22,7 @@
     </div>
     <div class="mb-head-actions">
         <button type="button" class="mb-btn mb-btn--ghost" id="mbLock" {{ $desbloqueado ? '' : 'hidden' }}>Sair</button>
-        <button type="button" class="mb-btn mb-btn--ghost" id="mbInstall" hidden>Instalar app</button>
+        <button type="button" class="mb-btn mb-btn--ghost" id="mbInstall" hidden style="display:none">Instalar app</button>
     </div>
 </header>
 
@@ -91,10 +91,10 @@
     csrf: @json(csrf_token()),
   };
 </script>
-<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m6"></script>
+<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m7"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m6').catch(function () {});
+    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m7').catch(function () {});
   }
 </script>
 </body>

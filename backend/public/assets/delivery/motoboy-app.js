@@ -286,30 +286,54 @@
     }
   });
 
+  const INSTALL_FLAG_KEY = "motoboy_pwa_installed_v1";
+
+  function markInstalled() {
+    try { localStorage.setItem(INSTALL_FLAG_KEY, "1"); } catch (_) {}
+    hideInstall();
+  }
+
+  function wasInstalledBefore() {
+    try { return localStorage.getItem(INSTALL_FLAG_KEY) === "1"; } catch (_) { return false; }
+  }
+
   function isInstalled() {
+    if (wasInstalledBefore()) return true;
     if (window.matchMedia("(display-mode: standalone)").matches) return true;
     if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+    if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
     if (window.navigator.standalone === true) return true;
+    // Android/Chrome: aberto pelo ícone do app instalado
+    try {
+      const ref = document.referrer || "";
+      if (ref.includes("android-app://")) return true;
+    } catch (_) {}
     return false;
   }
 
   function hideInstall() {
-    if (installBtn) installBtn.hidden = true;
+    if (!installBtn) return;
+    installBtn.hidden = true;
+    installBtn.style.display = "none";
+    installBtn.setAttribute("aria-hidden", "true");
     deferredPrompt = null;
   }
 
   function showInstallIfNeeded() {
     if (!installBtn) return;
-    if (isInstalled() || !deferredPrompt) {
+    if (isInstalled() || wasInstalledBefore() || !deferredPrompt) {
       hideInstall();
       return;
     }
     installBtn.hidden = false;
+    installBtn.style.display = "";
+    installBtn.removeAttribute("aria-hidden");
   }
 
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
-    if (isInstalled()) {
+    // Já instalou antes neste celular: nunca mostrar de novo
+    if (isInstalled() || wasInstalledBefore()) {
       hideInstall();
       return;
     }
@@ -318,21 +342,39 @@
   });
 
   window.addEventListener("appinstalled", () => {
-    hideInstall();
-    toast("App instalado. O botão Instalar some daqui.");
+    markInstalled();
   });
 
   installBtn?.addEventListener("click", async () => {
     if (!deferredPrompt || isInstalled()) {
-      hideInstall();
+      markInstalled();
       return;
     }
     deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    hideInstall();
+    const choice = await deferredPrompt.userChoice.catch(() => null);
+    if (!choice || choice.outcome === "accepted") {
+      markInstalled();
+    } else {
+      hideInstall();
+    }
   });
 
-  if (isInstalled()) hideInstall();
+  // Se já está no modo app / já instalou, some o botão e grava a flag
+  if (isInstalled()) {
+    markInstalled();
+  } else {
+    hideInstall();
+  }
+
+  // getInstalledRelatedApps (quando o navegador suportar)
+  try {
+    if (navigator.getInstalledRelatedApps) {
+      navigator.getInstalledRelatedApps().then((apps) => {
+        if (Array.isArray(apps) && apps.length > 0) markInstalled();
+      }).catch(() => {});
+    }
+  } catch (_) {}
+
   getInstallId();
   setRecebendoUi(recebendo);
   setUnlocked(unlocked);
