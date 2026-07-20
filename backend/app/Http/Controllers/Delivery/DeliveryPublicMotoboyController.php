@@ -35,6 +35,16 @@ class DeliveryPublicMotoboyController extends DeliveryBaseController
                 'slug' => $slug,
                 'acessoToken' => $acessoToken,
             ]),
+            'aceitarUrlTpl' => route('delivery.public.motoboy.aceitar', [
+                'slug' => $slug,
+                'acessoToken' => $acessoToken,
+                'pedidoId' => 999999,
+            ]),
+            'recusarUrlTpl' => route('delivery.public.motoboy.recusar', [
+                'slug' => $slug,
+                'acessoToken' => $acessoToken,
+                'pedidoId' => 999999,
+            ]),
         ]);
     }
 

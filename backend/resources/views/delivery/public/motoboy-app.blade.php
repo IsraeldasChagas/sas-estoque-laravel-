@@ -10,7 +10,7 @@
     <link rel="manifest" href="{{ $manifestUrl }}">
     <link rel="apple-touch-icon" href="{{ asset('assets/delivery/motoboy-icon-192.png') }}">
     <title>Motoboy · {{ $config->nome_loja ?? 'Delivery' }}</title>
-    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m1">
+    <link rel="stylesheet" href="{{ asset('assets/delivery/motoboy-app.css') }}?v=20260720-m2">
 </head>
 <body>
 <header class="mb-head">
@@ -47,15 +47,15 @@
 <script>
   window.MOTOBOY_APP = {
     ofertasUrl: @json($ofertasUrl),
-    aceitarUrlTpl: @json(route('delivery.public.motoboy.aceitar', ['slug' => $slug, 'acessoToken' => $acessoToken, 'pedidoId' => 999999])),
-    recusarUrlTpl: @json(route('delivery.public.motoboy.recusar', ['slug' => $slug, 'acessoToken' => $acessoToken, 'pedidoId' => 999999])),
+    aceitarUrlTpl: @json($aceitarUrlTpl),
+    recusarUrlTpl: @json($recusarUrlTpl),
     csrf: @json(csrf_token()),
   };
 </script>
-<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m1"></script>
+<script src="{{ asset('assets/delivery/motoboy-app.js') }}?v=20260720-m2"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m1').catch(function () {});
+    navigator.serviceWorker.register(@json(asset('assets/delivery/motoboy-sw.js')) + '?v=20260720-m2').catch(function () {});
   }
 </script>
 </body>
