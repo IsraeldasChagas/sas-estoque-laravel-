@@ -1,6 +1,5 @@
 @extends('delivery.public.layout')
 @section('title', $produto->nome.' · '.($config->nome_loja ?: 'Loja'))
-@section('content')
 @php
     $minEsc = max(0, (int) ($produto->acrescimo_escolhas_min ?? 0));
     $maxEsc = $produto->acrescimo_escolhas_max !== null ? max(0, (int) $produto->acrescimo_escolhas_max) : null;
@@ -32,11 +31,50 @@
     $productUrl = url()->current();
     $shareNome = trim((string) ($produto->nome ?? 'Produto'));
     $shareLoja = trim((string) ($config->nome_loja ?? 'Loja'));
-    $shareText = $shareNome.' — '.$shareLoja.' '.$productUrl;
+    $sharePreco = 'R$ '.number_format((float) ($produto->preco ?? 0), 2, ',', '.');
+    $shareText = $shareNome.' — '.$shareLoja."\n".$sharePreco."\n\n".$productUrl;
     $waShareUrl = 'https://wa.me/?text='.rawurlencode($shareText);
     $waLojaUrl = $whatsDigits !== '' ? 'https://wa.me/'.$whatsDigits.'?text='.rawurlencode('Olá! Tenho interesse no produto: '.$shareNome) : null;
     $fbShareUrl = 'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($productUrl);
+    $ogTitle = $shareNome.' — '.$shareLoja;
+    $ogDescBase = trim((string) ($produto->descricao ?? ''));
+    if ($ogDescBase === '') {
+        $ogDescBase = 'Confira este produto na '.$shareLoja.'.';
+    }
+    $ogDesc = $sharePreco.' · '.$ogDescBase;
+    if (mb_strlen($ogDesc) > 180) {
+        $ogDesc = mb_substr($ogDesc, 0, 177).'…';
+    }
+    $ogImage = trim((string) ($produto->foto_url ?? ''));
+    if ($ogImage !== '' && ! preg_match('#^https?://#i', $ogImage)) {
+        $ogImage = url($ogImage);
+    }
+    if ($ogImage === '') {
+        $logoFallback = trim((string) ($config->logo_url ?? $config->filial_logo_url ?? ''));
+        if ($logoFallback !== '') {
+            $ogImage = preg_match('#^https?://#i', $logoFallback) ? $logoFallback : url($logoFallback);
+        }
+    }
 @endphp
+@push('head_meta')
+    <meta property="og:title" content="{{ $ogTitle }}">
+    <meta property="og:description" content="{{ $ogDesc }}">
+    <meta property="og:type" content="product">
+    <meta property="og:url" content="{{ $productUrl }}">
+    <meta property="og:site_name" content="{{ $shareLoja }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $ogTitle }}">
+    <meta name="twitter:description" content="{{ $ogDesc }}">
+    @if ($ogImage !== '')
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:secure_url" content="{{ $ogImage }}">
+        <meta property="og:image:alt" content="{{ $shareNome }}">
+        <meta name="twitter:image" content="{{ $ogImage }}">
+        <link rel="image_src" href="{{ $ogImage }}">
+    @endif
+    <meta name="description" content="{{ $ogDesc }}">
+@endpush
+@section('content')
 <nav class="breadcrumb"><a href="{{ route('delivery.public.store', $slug) }}">Cardápio</a> / {{ $produto->nome }}</nav>
 <div class="detail-grid">
     <div class="detail-photo">@if($produto->foto_url)<img src="{{ $produto->foto_url }}" alt="{{ $produto->nome }}">@else<span>▧</span>@endif</div>
