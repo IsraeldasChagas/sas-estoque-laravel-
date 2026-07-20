@@ -338,6 +338,13 @@
             <label class="vfl-field vfl-span-6"><span>Ordem</span><input name="ordem" type="number" min="0" max="99999" value="${Number(driver?.ordem || 0)}"></label>
             <label class="vfl-check vfl-span-12"><input name="ativo" type="checkbox" ${driver ? (Number(driver.ativo) ? "checked" : "") : "checked"}> Entregador ativo</label>
           </div>
+          ${editing && driver?.url_app ? `<div style="margin:8px 0 12px;padding:12px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff">
+            <strong>App do motoboy (instalar no celular)</strong>
+            <p style="margin:6px 0;font-size:13px;color:#475569">Envie este link para o entregador. Ele vê só as entregas oferecidas e pode aceitar.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><input readonly style="flex:1;min-width:180px" id="vflDriverAppUrl" value="${esc(driver.url_app)}">
+            <button class="vfl-btn" type="button" data-vfl-copy-app>Copiar link</button>
+            <a class="vfl-btn vfl-btn--primary" href="${esc(driver.url_app)}" target="_blank" rel="noopener">Abrir</a></div>
+          </div>` : ""}
           <div class="vfl-form-actions"><button class="vfl-btn vfl-btn--primary" type="submit">Salvar</button><button class="vfl-btn" type="button" data-vfl-back-drivers>Cancelar</button></div>
         </form>
         ${editing ? `<div class="vfl-delete-zone"><button class="vfl-btn vfl-btn--danger" type="button" data-vfl-delete-driver>Excluir entregador</button></div>` : ""}
@@ -347,6 +354,15 @@
     let removePhoto = false;
     let selectedFile = null;
     root.querySelectorAll("[data-vfl-back-drivers]").forEach((button) => { button.onclick = () => loadDeliveryEntregadores(); });
+    root.querySelector("[data-vfl-copy-app]")?.addEventListener("click", async () => {
+      const url = $("vflDriverAppUrl")?.value || driver?.url_app || "";
+      try {
+        await navigator.clipboard.writeText(url);
+        toast("Link do app copiado.", "success");
+      } catch (_) {
+        window.prompt("Copie o link do app:", url);
+      }
+    });
     $("vflDriverFile").onchange = (event) => {
       selectedFile = event.target.files?.[0] || null;
       if (!selectedFile) return;

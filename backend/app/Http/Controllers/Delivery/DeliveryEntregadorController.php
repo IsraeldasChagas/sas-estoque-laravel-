@@ -61,6 +61,9 @@ class DeliveryEntregadorController extends DeliveryBaseController
         if (Schema::hasColumn('dlv_entregadores', 'moto_cor')) {
             $payload['moto_cor'] = $data['moto_cor'] ?? null;
         }
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
+            $payload['acesso_token'] = Str::lower(Str::random(48));
+        }
 
         try {
             $id = DB::table('dlv_entregadores')->insertGetId($payload);
@@ -170,9 +173,30 @@ class DeliveryEntregadorController extends DeliveryBaseController
 
     private function serializar(object $row): array
     {
-        return array_merge((array) $row, [
+        $data = array_merge((array) $row, [
             'foto_url' => DeliveryMediaUrl::fromPublicPath($row->foto_path ?? null),
         ]);
+
+        if (Schema::hasColumn('dlv_entregadores', 'acesso_token')) {
+            $token = trim((string) ($row->acesso_token ?? ''));
+            if ($token === '') {
+                $token = Str::lower(Str::random(48));
+                DB::table('dlv_entregadores')->where('id', $row->id)->update([
+                    'acesso_token' => $token,
+                    'updated_at' => now(),
+                ]);
+                $data['acesso_token'] = $token;
+            }
+            $config = DB::table('dlv_loja_config')->where('unidade_id', $row->unidade_id)->first();
+            if ($config && trim((string) ($config->slug ?? '')) !== '') {
+                $data['url_app'] = route('delivery.public.motoboy.app', [
+                    'slug' => $config->slug,
+                    'acessoToken' => $token,
+                ], absolute: true);
+            }
+        }
+
+        return $data;
     }
 
     private function salvarFotoBase64(?string $dataUrl, int $unidadeId): ?string

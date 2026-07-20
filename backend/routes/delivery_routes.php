@@ -60,6 +60,8 @@ Route::prefix('delivery')->middleware('sas.usuario')->group(function () {
     Route::post('/pedidos/{id}/pendente', [DeliveryPedidoController::class, 'decisaoPendente'])->whereNumber('id');
     Route::post('/pedidos/{id}/pagamento/confirmar', [DeliveryPedidoController::class, 'confirmarPagamento'])->whereNumber('id');
     Route::get('/pedidos/{id}/imprimir', [DeliveryPedidoController::class, 'imprimir'])->whereNumber('id');
+    Route::post('/pedidos/{id}/oferta', [DeliveryPedidoController::class, 'abrirOferta'])->whereNumber('id');
+    Route::post('/pedidos/{id}/oferta/cancelar', [DeliveryPedidoController::class, 'cancelarOferta'])->whereNumber('id');
     Route::get('/pedidos', [DeliveryPedidoController::class, 'index']);
     Route::post('/pedidos', [DeliveryPedidoController::class, 'store']);
     Route::get('/pedidos/{id}', [DeliveryPedidoController::class, 'show'])->whereNumber('id');

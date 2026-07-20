@@ -389,21 +389,51 @@ class DeliveryPedidoService
 
         $entregadores = [];
         if ($isEntrega && Schema::hasTable('dlv_entregadores')) {
+            $configForApp = $config;
+            $ofertaService = app(\App\Services\Delivery\DeliveryEntregadorOfertaService::class);
             $entregadores = DB::table('dlv_entregadores')
                 ->where('unidade_id', $pedido->unidade_id)
                 ->where('ativo', 1)
                 ->orderBy('ordem')
                 ->orderBy('nome')
                 ->get()
-                ->map(fn ($row) => [
-                    'id' => (int) $row->id,
-                    'nome' => (string) $row->nome,
-                    'whatsapp' => $row->whatsapp,
-                    'telefone' => $row->telefone,
-                    'foto_path' => $row->foto_path ?? null,
-                    'foto_url' => DeliveryMediaUrl::fromPublicPath($row->foto_path ?? null),
-                    'whatsapp_url' => DeliveryWhatsAppHelper::urlContato($row->whatsapp ?: $row->telefone),
-                ])->values()->all();
+                ->map(function ($row) use ($configForApp, $ofertaService, $urlEntregador, $pedido) {
+                    $appUrl = $configForApp ? $ofertaService->urlAppEntregador($configForApp, $row) : null;
+                    $waMsg = 'Olá! Tem entrega disponível no app do motoboy.';
+                    if ($appUrl) {
+                        $waMsg .= "\n\n".$appUrl;
+                    } elseif ($urlEntregador) {
+                        $waMsg .= "\n\nPedido ".$pedido->codigo_publico."\n".$urlEntregador;
+                    }
+
+                    return [
+                        'id' => (int) $row->id,
+                        'nome' => (string) $row->nome,
+                        'whatsapp' => $row->whatsapp,
+                        'telefone' => $row->telefone,
+                        'foto_path' => $row->foto_path ?? null,
+                        'foto_url' => DeliveryMediaUrl::fromPublicPath($row->foto_path ?? null),
+                        'acesso_token' => $row->acesso_token ?? null,
+                        'url_app' => $appUrl,
+                        'whatsapp_url' => DeliveryWhatsAppHelper::urlComTexto($row->whatsapp ?: $row->telefone, $waMsg)
+                            ?: DeliveryWhatsAppHelper::urlContato($row->whatsapp ?: $row->telefone),
+                    ];
+                })->values()->all();
+        }
+
+        $ofertaStatus = Schema::hasColumn('dlv_pedidos', 'oferta_status')
+            ? ($pedido->oferta_status ?? null)
+            : null;
+        $entregadorAceito = null;
+        if (! empty($pedido->entregador_id) && Schema::hasTable('dlv_entregadores')) {
+            $ent = DB::table('dlv_entregadores')->where('id', $pedido->entregador_id)->first();
+            if ($ent) {
+                $entregadorAceito = [
+                    'id' => (int) $ent->id,
+                    'nome' => (string) $ent->nome,
+                    'whatsapp' => $ent->whatsapp,
+                ];
+            }
         }
 
         return [
@@ -421,6 +451,10 @@ class DeliveryPedidoService
                 ? DeliveryCupomPedido::urlWhatsAppCupom($pedido, $config, $itensDb)
                 : null,
             'entregadores' => $entregadores,
+            'oferta_status' => $ofertaStatus,
+            'oferta_aberta_em' => $pedido->oferta_aberta_em ?? null,
+            'oferta_aceita_em' => $pedido->oferta_aceita_em ?? null,
+            'entregador_aceito' => $entregadorAceito,
         ];
     }
 

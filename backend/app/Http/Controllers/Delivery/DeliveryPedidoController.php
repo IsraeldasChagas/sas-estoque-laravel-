@@ -18,6 +18,7 @@ class DeliveryPedidoController extends DeliveryBaseController
     public function __construct(
         DeliveryAccessService $access,
         private readonly DeliveryPedidoService $pedidos,
+        private readonly \App\Services\Delivery\DeliveryEntregadorOfertaService $ofertas,
     ) {
         parent::__construct($access);
     }
@@ -287,6 +288,36 @@ class DeliveryPedidoController extends DeliveryBaseController
         }
 
         return view('delivery.admin.pedidos.imprimir', compact('config', 'pedido', 'itens', 'cnpjLoja', 'cepLoja'));
+    }
+
+    public function abrirOferta(Request $request, int $id): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryPedidos');
+        $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        abort_unless($pedido, 404, 'Pedido não encontrado.');
+        $this->access->autorizarRegistro($usuario, $pedido, 'Sem permissão para este pedido.');
+
+        $atualizado = $this->ofertas->abrirOferta($pedido, (int) $usuario->id);
+
+        return response()->json(array_merge(
+            $this->pedidos->completo($atualizado),
+            ['ok' => true, 'mensagem' => 'Oferta enviada aos motoboys disponíveis.']
+        ));
+    }
+
+    public function cancelarOferta(Request $request, int $id): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryPedidos');
+        $pedido = DB::table('dlv_pedidos')->where('id', $id)->first();
+        abort_unless($pedido, 404, 'Pedido não encontrado.');
+        $this->access->autorizarRegistro($usuario, $pedido, 'Sem permissão para este pedido.');
+
+        $atualizado = $this->ofertas->cancelarOferta($pedido);
+
+        return response()->json(array_merge(
+            $this->pedidos->completo($atualizado),
+            ['ok' => true, 'mensagem' => 'Oferta cancelada. Você pode chamar um entregador de fora.']
+        ));
     }
 
     private function validar(Request $request): array

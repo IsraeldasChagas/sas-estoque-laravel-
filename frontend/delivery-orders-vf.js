@@ -256,20 +256,44 @@
   }
 
   function renderEntregadores(order) {
+    if (order.fulfillment !== "entrega") return "";
     const list = order.entregadores || [];
-    if (order.fulfillment !== "entrega" || !list.length) return "";
+    const oferta = String(order.oferta_status || "");
+    const aceito = order.entregador_aceito;
+    let statusHtml = "";
+    if (oferta === "aberta") {
+      statusHtml = `<div class="vf-show-alert vf-show-alert--warn" style="margin-bottom:10px"><strong>Oferta aberta</strong> — aguardando um motoboy aceitar no app.</div>
+        <button class="vf-show-btn vf-show-btn--danger-outline vf-show-btn--block" type="button" data-vf-oferta-cancelar>Cancelar oferta (chamar de fora)</button>`;
+    } else if (oferta === "aceita" && aceito) {
+      statusHtml = `<div class="vf-show-alert vf-show-alert--success" style="margin-bottom:10px"><strong>Aceito por ${esc(aceito.nome)}</strong> — pedido em rota.</div>`;
+    } else if (oferta === "cancelada") {
+      statusHtml = `<div class="vf-show-alert vf-show-alert--warn" style="margin-bottom:10px"><strong>Oferta cancelada</strong> — chame um entregador de fora pelo WhatsApp.</div>`;
+    }
+
+    const abrirBtn = (!oferta || oferta === "cancelada")
+      ? `<button class="vf-show-btn vf-show-btn--primary vf-show-btn--block" type="button" data-vf-oferta-abrir style="margin-bottom:10px"><i class="bi bi-broadcast"></i> Oferecer aos motoboys (app)</button>`
+      : "";
+
+    const drivers = list.length
+      ? `<div class="vf-show-entregadores-body">${list.map((ent) => {
+          const photo = mediaUrl(ent.foto_url || ent.foto_path);
+          return `<div class="vf-show-entregador">
+          ${photo ? `<img src="${esc(photo)}" alt="${esc(ent.nome)}" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty"><i class="bi bi-person"></i></span>`}
+          <div class="vf-show-entregador__nome">${esc(ent.nome)}</div>
+          ${ent.url_app ? `<div class="vf-show-input-group" style="margin:6px 0"><input readonly class="vf-show-input-group__field" value="${esc(ent.url_app)}"><button class="vf-show-btn vf-show-btn--outline" type="button" data-vf-copy-app="${esc(ent.url_app)}">Copiar app</button></div>` : ""}
+          ${ent.whatsapp_url
+            ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Avisar no WhatsApp</a>`
+            : `<p class="vf-show-warn">Ajuste o WhatsApp em editar entregador.</p>`}
+        </div>`;
+        }).join("")}</div>`
+      : `<p class="vf-show-help">Cadastre motoboys em Delivery → Entregadores para usar o app.</p>`;
+
     return `<div class="vf-show-card vf-show-card--sidebar vf-show-card--entregadores">
-      <div class="vf-show-entregadores-head"><h3><i class="bi bi-person-badge"></i> Seus entregadores — chame primeiro</h3></div>
-      <div class="vf-show-entregadores-body">${list.map((ent) => {
-        const photo = mediaUrl(ent.foto_url || ent.foto_path);
-        return `<div class="vf-show-entregador">
-        ${photo ? `<img src="${esc(photo)}" alt="${esc(ent.nome)}" class="vf-show-entregador__photo">` : `<span class="vf-show-entregador__photo vf-show-entregador__photo--empty"><i class="bi bi-person"></i></span>`}
-        <div class="vf-show-entregador__nome">${esc(ent.nome)}</div>
-        ${ent.whatsapp_url
-          ? `<a class="vf-show-btn vf-show-btn--success vf-show-btn--block" href="${esc(ent.whatsapp_url)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i>Chamar no WhatsApp</a>`
-          : `<p class="vf-show-warn">Ajuste o WhatsApp em editar entregador.</p>`}
-      </div>`;
-      }).join("")}</div>
+      <div class="vf-show-entregadores-head"><h3><i class="bi bi-person-badge"></i> Motoboys</h3></div>
+      <p class="vf-show-help">Ofereça a entrega no app. Quem aceitar recebe o pedido + cupom. Se ninguém puder, cancele a oferta e chame de fora.</p>
+      ${statusHtml}
+      ${abrirBtn}
+      ${drivers}
     </div>`;
   }
 
@@ -771,6 +795,46 @@
         toast("Link copiado.", "success");
       }
     };
+
+    const abrirOferta = root.querySelector("[data-vf-oferta-abrir]");
+    if (abrirOferta) {
+      abrirOferta.onclick = async () => {
+        if (!confirm("Oferecer esta entrega aos motoboys no app? Quem aceitar primeiro fica com o pedido.")) return;
+        try {
+          const result = await api(`/pedidos/${order.id}/oferta`, { method: "POST", body: "{}" });
+          toast(result.mensagem || "Oferta aberta.", "success");
+          await openOrder(order.id);
+        } catch (error) {
+          toast(error?.message || "Não foi possível abrir a oferta.", "error");
+        }
+      };
+    }
+
+    const cancelarOferta = root.querySelector("[data-vf-oferta-cancelar]");
+    if (cancelarOferta) {
+      cancelarOferta.onclick = async () => {
+        if (!confirm("Cancelar a oferta? O pedido deixa de aparecer no app dos motoboys.")) return;
+        try {
+          const result = await api(`/pedidos/${order.id}/oferta/cancelar`, { method: "POST", body: "{}" });
+          toast(result.mensagem || "Oferta cancelada.", "success");
+          await openOrder(order.id);
+        } catch (error) {
+          toast(error?.message || "Não foi possível cancelar a oferta.", "error");
+        }
+      };
+    }
+
+    root.querySelectorAll("[data-vf-copy-app]").forEach((button) => {
+      button.onclick = async () => {
+        const url = button.getAttribute("data-vf-copy-app") || "";
+        try {
+          await navigator.clipboard.writeText(url);
+          toast("Link do app do motoboy copiado.", "success");
+        } catch (_) {
+          window.prompt("Copie o link do app:", url);
+        }
+      };
+    });
   }
 
   async function openNewOrder() {

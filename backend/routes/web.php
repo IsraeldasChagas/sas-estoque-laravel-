@@ -3,6 +3,7 @@
 use App\Http\Controllers\Delivery\DeliveryCalcularEntregaController;
 use App\Http\Controllers\Delivery\DeliveryPublicController;
 use App\Http\Controllers\Delivery\DeliveryPublicEntregadorController;
+use App\Http\Controllers\Delivery\DeliveryPublicMotoboyController;
 use App\Http\Controllers\Delivery\DeliveryFidelidadePublicController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhPublicoController;
@@ -53,6 +54,16 @@ Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
         ->name('entregador.show');
     Route::post('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'registrar'])
         ->middleware('throttle:30,1')->name('entregador.registrar');
+    Route::get('/motoboy/{acessoToken}', [DeliveryPublicMotoboyController::class, 'app'])
+        ->where('acessoToken', '[a-z0-9]{20,64}')->name('motoboy.app');
+    Route::get('/motoboy/{acessoToken}/manifest.webmanifest', [DeliveryPublicMotoboyController::class, 'manifest'])
+        ->where('acessoToken', '[a-z0-9]{20,64}')->name('motoboy.manifest');
+    Route::get('/motoboy/{acessoToken}/ofertas.json', [DeliveryPublicMotoboyController::class, 'ofertas'])
+        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:60,1')->name('motoboy.ofertas');
+    Route::post('/motoboy/{acessoToken}/aceitar/{pedidoId}', [DeliveryPublicMotoboyController::class, 'aceitar'])
+        ->where('acessoToken', '[a-z0-9]{20,64}')->whereNumber('pedidoId')->middleware('throttle:30,1')->name('motoboy.aceitar');
+    Route::post('/motoboy/{acessoToken}/recusar/{pedidoId}', [DeliveryPublicMotoboyController::class, 'recusar'])
+        ->where('acessoToken', '[a-z0-9]{20,64}')->whereNumber('pedidoId')->middleware('throttle:30,1')->name('motoboy.recusar');
 });
 
 Route::post('/api/calcular-entrega', DeliveryCalcularEntregaController::class)
