@@ -1,8 +1,8 @@
-/* Motoboy PWA — cache leve da casca do app */
-const CACHE = "sas-motoboy-v7";
+/* Motoboy PWA — cache leve + notificações */
+const CACHE = "sas-motoboy-v9";
 const ASSETS = [
-  "/assets/delivery/motoboy-app.css?v=20260720-m7",
-  "/assets/delivery/motoboy-app.js?v=20260720-m7",
+  "/assets/delivery/motoboy-app.css?v=20260720-m9",
+  "/assets/delivery/motoboy-app.js?v=20260720-m9",
   "/assets/delivery/motoboy-icon-192.png?v=20260720-esp",
 ];
 
@@ -18,6 +18,27 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification && event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : self.registration.scope;
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ("focus" in client) {
+          client.focus();
+          if (client.url && client.navigate) {
+            try { client.navigate(target); } catch (_) {}
+          }
+          return;
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(target);
+    })
+  );
 });
 
 self.addEventListener("fetch", (event) => {

@@ -20,8 +20,11 @@
   let unlocked = !!cfg.desbloqueado;
   let recebendo = cfg.recebendo !== false;
   let pollTimer = null;
+  let lastOfferIds = null; // null = ainda não fez o 1º poll (não notifica)
+  let audioCtx = null;
 
   const INSTALL_KEY = "motoboy_install_id_v1";
+  const INSTALL_FLAG_KEY = "motoboy_pwa_installed_v1";
 
   function money(v) {
     return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -41,6 +44,112 @@
   function escapeHtml(s) {
     return String(s ?? "")
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  async function pedirPermissaoAviso() {
+    try {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") return;
+      if (Notification.permission === "denied") return;
+      await Notification.requestPermission();
+    } catch (_) {}
+  }
+
+  function atualizarBadge(count) {
+    const n = Math.max(0, Number(count) || 0);
+    try {
+      if (n > 0 && navigator.setAppBadge) navigator.setAppBadge(n);
+      else if (n === 0 && navigator.clearAppBadge) navigator.clearAppBadge();
+    } catch (_) {}
+  }
+
+  function tocarAvisoUnico() {
+    try {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = new Ctx();
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.18);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch (_) {}
+    try {
+      if (navigator.vibrate) navigator.vibrate(120);
+    } catch (_) {}
+  }
+
+  async function avisarEntregas(count, items) {
+    atualizarBadge(count);
+    if (count <= 0) return;
+
+    const titulo = count === 1 ? "1 entrega disponível" : count + " entregas disponíveis";
+    const primeiro = items[0] || {};
+    const corpo = primeiro.codigo_publico
+      ? ("Pedido " + primeiro.codigo_publico + (primeiro.endereco ? " · " + primeiro.endereco : ""))
+      : "Abra o app para aceitar.";
+
+    tocarAvisoUnico();
+
+    try {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const opts = {
+        body: corpo,
+        tag: "motoboy-ofertas",
+        renotify: true,
+        silent: true, // som nosso (um só); evita som duplo do sistema
+        badge: "/assets/delivery/motoboy-icon-192.png?v=20260720-esp",
+        icon: "/assets/delivery/motoboy-icon-192.png?v=20260720-esp",
+        data: { url: location.href },
+      };
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(titulo, opts);
+      } else {
+        new Notification(titulo, opts);
+      }
+    } catch (_) {}
+  }
+
+  function processarAvisos(items) {
+    const ids = (items || []).map((it) => String(it.id));
+    const count = ids.length;
+
+    if (!recebendo) {
+      atualizarBadge(0);
+      lastOfferIds = ids;
+      return;
+    }
+
+    if (lastOfferIds === null) {
+      // 1º poll após entrar: só atualiza badge, sem som
+      lastOfferIds = ids;
+      atualizarBadge(count);
+      return;
+    }
+
+    const prev = new Set(lastOfferIds);
+    const novas = ids.filter((id) => !prev.has(id));
+    lastOfferIds = ids;
+    atualizarBadge(count);
+
+    if (novas.length > 0) {
+      const novosItens = (items || []).filter((it) => novas.includes(String(it.id)));
+      avisarEntregas(count, novosItens.length ? novosItens : items);
+    } else if (count === 0) {
+      atualizarBadge(0);
+    }
   }
 
   function getInstallId() {
@@ -73,6 +182,7 @@
         listEl.hidden = true;
         listEl.innerHTML = "";
       }
+      atualizarBadge(0);
     }
   }
 
@@ -86,10 +196,14 @@
       listEl.innerHTML = "";
     }
     if (unlocked) {
+      lastOfferIds = null;
+      pedirPermissaoAviso();
       startPolling();
       poll();
     } else {
       stopPolling();
+      lastOfferIds = null;
+      atualizarBadge(0);
     }
   }
 
@@ -119,6 +233,7 @@
 
   function render(items, stillRecebendo) {
     setRecebendoUi(stillRecebendo !== false);
+    processarAvisos(stillRecebendo === false ? [] : (items || []));
     if (!recebendo) return;
     if (!items.length) {
       emptyEl.hidden = false;
@@ -129,14 +244,17 @@
     }
     emptyEl.hidden = true;
     listEl.hidden = false;
-    document.title = (cfg.appNome || "Entrega") + " · " + items.length + " entrega" + (items.length > 1 ? "s" : "");
+    document.title = "(" + items.length + ") " + (cfg.appNome || "Entrega");
     listEl.innerHTML = items.map((it) => `
       <article class="mb-card" data-id="${it.id}">
         <h3>Pedido ${escapeHtml(it.codigo_publico)}</h3>
         <p class="mb-meta">${escapeHtml(it.status_rotulo || "")} · ${escapeHtml(it.loja_nome || "")}</p>
         <p class="mb-addr">${escapeHtml(it.endereco || "Endereço não informado")}</p>
         <ul class="mb-itens">${(it.itens_resumo || []).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
-        <div class="mb-total">${money(it.total)}</div>
+        <div class="mb-money-row">
+          <span class="mb-frete">Entrega <strong>${money(it.frete_valor)}</strong></span>
+          <span class="mb-total">Total ${money(it.total)}</span>
+        </div>
         <div class="mb-actions">
           <button type="button" class="mb-btn mb-btn--primary" data-aceitar="${it.id}">Aceitar entrega</button>
           <button type="button" class="mb-btn mb-btn--danger" data-recusar="${it.id}">Não posso</button>
@@ -236,6 +354,7 @@
     recebendoChk.disabled = true;
     try {
       const data = await postJson(cfg.recebendoUrl, { recebendo: next });
+      lastOfferIds = null; // não dispara som ao ligar/desligar
       setRecebendoUi(data.recebendo_entregas !== false);
       toast(data.mensagem || (next ? "Recebendo entregas." : "Entregas pausadas."));
       await poll();
@@ -285,8 +404,6 @@
       window.prompt("Copie o cupom:", txt);
     }
   });
-
-  const INSTALL_FLAG_KEY = "motoboy_pwa_installed_v1";
 
   function markInstalled() {
     try { localStorage.setItem(INSTALL_FLAG_KEY, "1"); } catch (_) {}

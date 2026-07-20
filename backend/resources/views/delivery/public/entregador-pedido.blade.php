@@ -6,7 +6,7 @@
     $podeRegistrar = DeliveryPedidoPresenter::entregadorPodeRegistrarResultado($pedido->status ?? null);
     $statusRotulo = DeliveryPedidoPresenter::rotuloStatus($pedido->status ?? null);
     $createdAt = \Illuminate\Support\Carbon::parse($pedido->created_at ?? now());
-    $codigoEsperadoJs = DeliveryPedidoPresenter::normalizarCodigoPublico((string) $pedido->codigo_publico);
+    $codigoEsperadoJs = (string) $pedido->codigo_publico;
 @endphp
 <!doctype html>
 <html lang="pt-BR">
@@ -41,9 +41,18 @@
         .field input {
             width: 100%; box-sizing: border-box; padding: 12px 14px;
             border: 1px solid #d1d5db; border-radius: 10px; font: inherit;
-            font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .04em;
+            font-family: ui-monospace, monospace; font-size: 20px; letter-spacing: .08em;
+            text-transform: uppercase;
         }
         .field input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .field-hint { margin: 0; font-size: 12px; color: #6b7280; }
+        .frete-destaque {
+            margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+            background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 600;
+        }
+        .frete-destaque strong { font-size: 18px; }
         .field-error { color: #dc2626; font-size: 13px; margin: 0; }
         .btn:disabled { opacity: .45; cursor: not-allowed; }
     </style>
@@ -67,6 +76,10 @@
             Pedido em {{ $createdAt->format('d/m/Y H:i') }}
             · {{ DeliveryPedidoPresenter::rotuloFulfillment($pedido->fulfillment ?? null) }}
         </p>
+        <div class="frete-destaque">
+            Valor da entrega
+            <strong>R$ {{ number_format((float) ($pedido->frete_valor ?? 0), 2, ',', '.') }}</strong>
+        </div>
     </div>
 
     <div class="card">
@@ -129,14 +142,16 @@
                     type="text"
                     id="codigo_confirmado"
                     name="codigo_confirmado"
-                    maxlength="64"
+                    inputmode="text"
+                    maxlength="{{ max(8, strlen((string) $pedido->codigo_publico)) }}"
                     autocomplete="off"
                     autocapitalize="characters"
                     spellcheck="false"
-                    placeholder="Ex.: {{ $pedido->codigo_publico }}"
+                    placeholder="{{ $pedido->codigo_publico }}"
                     value="{{ old('codigo_confirmado') }}"
                     required
                 >
+                <p class="field-hint">Digite só letras e números — os traços entram sozinhos.</p>
                 @error('codigo_confirmado')
                     <p class="field-error">{{ $message }}</p>
                 @enderror
@@ -151,14 +166,52 @@
             const esperado = @json($codigoEsperadoJs);
             const input = document.getElementById('codigo_confirmado');
             const botoes = document.querySelectorAll('#form-entregador button[type="submit"]');
-            function normalizar(v) {
-                return String(v || '').trim().toUpperCase().replace(/^#+/, '');
+
+            function soAlnum(v) {
+                return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             }
+
+            function mascaraCodigo(template, digitado) {
+                const limpo = soAlnum(digitado);
+                let i = 0;
+                let out = '';
+                for (let t = 0; t < template.length; t++) {
+                    const ch = template[t];
+                    if (ch === '-') {
+                        if (i > 0 && i <= limpo.length) out += '-';
+                        continue;
+                    }
+                    if (i >= limpo.length) break;
+                    out += limpo[i++];
+                }
+                return out;
+            }
+
+            function normalizar(v) {
+                return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            }
+
             function atualizar() {
-                const ok = normalizar(input?.value) === normalizar(esperado);
+                if (!input) return;
+                const formatado = mascaraCodigo(esperado, input.value);
+                if (input.value !== formatado) {
+                    const end = formatado.length;
+                    input.value = formatado;
+                    try { input.setSelectionRange(end, end); } catch (_) {}
+                }
+                const ok = normalizar(input.value) === normalizar(esperado);
                 botoes.forEach((btn) => { btn.disabled = !ok; });
             }
+
             input?.addEventListener('input', atualizar);
+            input?.addEventListener('keydown', (ev) => {
+                // Bloqueia caracteres que não são letra/número (exceto controle/backspace)
+                if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+                const k = ev.key;
+                if (k.length === 1 && !/[A-Za-z0-9]/.test(k)) {
+                    ev.preventDefault();
+                }
+            });
             atualizar();
         })();
         </script>

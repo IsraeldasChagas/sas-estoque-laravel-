@@ -131,8 +131,8 @@ final class DeliveryPedidoPresenter
 
     public static function codigoPublicoConfere(string $informado, string $esperado): bool
     {
-        $a = self::normalizarCodigoPublico($informado);
-        $b = self::normalizarCodigoPublico($esperado);
+        $a = preg_replace('/[^A-Z0-9]+/', '', self::normalizarCodigoPublico($informado)) ?? '';
+        $b = preg_replace('/[^A-Z0-9]+/', '', self::normalizarCodigoPublico($esperado)) ?? '';
 
         return $a !== '' && hash_equals($b, $a);
     }

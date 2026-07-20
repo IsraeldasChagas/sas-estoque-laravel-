@@ -42,7 +42,24 @@ body {
 .mb-meta { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
 .mb-addr { font-weight: 600; margin: 0 0 8px; }
 .mb-itens { margin: 0 0 12px; padding-left: 18px; color: #334155; font-size: 14px; }
-.mb-total { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 12px; }
+.mb-money-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.mb-frete {
+  font-size: 15px;
+  color: #0f766e;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.mb-frete strong { font-size: 17px; }
+.mb-total { font-size: 18px; font-weight: 800; color: var(--primary); }
 .mb-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mb-btn {
   border: 0;
