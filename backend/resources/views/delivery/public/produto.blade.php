@@ -32,19 +32,11 @@
     $shareNome = trim((string) ($produto->nome ?? 'Produto'));
     $shareLoja = trim((string) ($config->nome_loja ?? 'Loja'));
     $sharePreco = 'R$ '.number_format((float) ($produto->preco ?? 0), 2, ',', '.');
-    // Só o URL: a prévia (og:image + título + preço) aparece no card, sem texto duplicado acima.
-    $waShareUrl = 'https://wa.me/?text='.rawurlencode($productUrl);
     $waLojaUrl = $whatsDigits !== '' ? 'https://wa.me/'.$whatsDigits.'?text='.rawurlencode('Olá! Tenho interesse no produto: '.$shareNome) : null;
     $fbShareUrl = 'https://www.facebook.com/sharer/sharer.php?u='.rawurlencode($productUrl);
-    $ogTitle = $shareNome.' — '.$shareLoja;
-    $ogDescBase = trim((string) ($produto->descricao ?? ''));
-    if ($ogDescBase === '') {
-        $ogDescBase = 'Confira este produto na '.$shareLoja.'.';
-    }
-    $ogDesc = $sharePreco.' · '.$ogDescBase;
-    if (mb_strlen($ogDesc) > 180) {
-        $ogDesc = mb_substr($ogDesc, 0, 177).'…';
-    }
+    // Card limpo: nome + preço (sem descrição longa / sem repetir a loja).
+    $ogTitle = $shareNome;
+    $ogDesc = $sharePreco;
     $ogImage = trim((string) ($produto->foto_url ?? ''));
     if ($ogImage !== '' && ! preg_match('#^https?://#i', $ogImage)) {
         $ogImage = url($ogImage);
@@ -72,7 +64,7 @@
         <meta name="twitter:image" content="{{ $ogImage }}">
         <link rel="image_src" href="{{ $ogImage }}">
     @endif
-    <meta name="description" content="{{ $ogDesc }}">
+    <meta name="description" content="{{ $ogTitle }} · {{ $ogDesc }}">
 @endpush
 @section('content')
 <nav class="breadcrumb"><a href="{{ route('delivery.public.store', $slug) }}">Cardápio</a> / {{ $produto->nome }}</nav>
@@ -84,11 +76,14 @@
             <div class="vf-produto-share-bloco">
                 <span id="vf-share-produto-legenda" class="vf-produto-share-legenda">Compartilhar</span>
                 <div class="vf-produto-share" role="group" aria-labelledby="vf-share-produto-legenda">
-                    <a href="{{ $waShareUrl }}" target="_blank" rel="noopener noreferrer"
-                       class="vf-produto-share__btn vf-produto-share__btn--wa" title="WhatsApp" aria-label="Compartilhar no WhatsApp">
+                    <button type="button"
+                       class="vf-produto-share__btn vf-produto-share__btn--wa vf-share-whatsapp"
+                       data-share-url="{{ $productUrl }}"
+                       title="WhatsApp"
+                       aria-label="Compartilhar no WhatsApp">
                         <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12.04 2c-5.46 0-9.91 4.43-9.91 9.9 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.9-4.44 9.9-9.9C21.94 6.43 17.5 2 12.04 2zm5.83 14.1c-.24.68-1.41 1.25-1.96 1.33-.5.07-1.14.1-1.84-.12-.42-.13-.97-.32-1.66-.62-2.92-1.26-4.82-4.2-4.96-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07.99-2.35.26-.28.57-.35.76-.35h.55c.17 0 .4-.06.63.48.24.56.8 1.95.87 2.09.07.14.12.3.02.49-.1.19-.14.3-.28.47-.14.16-.3.36-.42.49-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.94 1.22 2.22 1.36.28.14.44.12.6-.07.17-.19.7-.81.89-1.09.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.7-.17 1.38z"/></svg>
                         <span class="vf-produto-share__label">WhatsApp</span>
-                    </a>
+                    </button>
                     <a href="{{ $fbShareUrl }}" target="_blank" rel="noopener noreferrer"
                        class="vf-produto-share__btn vf-produto-share__btn--fb" title="Facebook" aria-label="Compartilhar no Facebook">
                         <svg class="vf-produto-share__ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.8-4.7 4.54-4.7 1.32 0 2.7.24 2.7.24v2.97h-1.52c-1.5 0-1.97.93-1.97 1.89v2.26h3.35l-.54 3.49h-2.81V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
@@ -615,6 +610,26 @@
 })();
 
 (function(){
+  const btnWa = document.querySelector('.vf-share-whatsapp');
+  if (btnWa) {
+    btnWa.addEventListener('click', () => {
+      const url = btnWa.getAttribute('data-share-url');
+      if (!url) return;
+      // Só a URL — sem texto. O WhatsApp monta o card (imagem + nome + preço).
+      const abrirWa = () => {
+        window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank', 'noopener,noreferrer');
+      };
+      if (typeof navigator.share === 'function') {
+        navigator.share({ url }).then(() => {}).catch((err) => {
+          if (err && err.name === 'AbortError') return;
+          abrirWa();
+        });
+        return;
+      }
+      abrirWa();
+    });
+  }
+
   const btn = document.querySelector('.vf-share-instagram');
   if (!btn) return;
   btn.addEventListener('click', () => {
