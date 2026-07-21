@@ -18572,11 +18572,12 @@ async function loadReservasMesas() {
     var reservasQuery = '/reservas-mesas?unidade_id=' + unidadeId + '&data_reserva=' + dataFiltro;
     var reservasListaQuery = reservasQuery + (turno ? '&turno=' + turno : '') + (statusFiltro ? '&status=' + encodeURIComponent(statusFiltro) : '');
 
-    const [mesas, reservasDia, reservasLista] = await Promise.all([
+    const [mesasRaw, reservasDia, reservasLista] = await Promise.all([
       fetchJSON('/mesas?unidade_id=' + unidadeId),
       fetchJSON(reservasQuery),
       fetchJSON(reservasListaQuery)
     ]);
+    const mesas = ordenarMesasPorNumero(mesasRaw || []);
 
     const reservasPorMesa = montarMapaReservasPorMesa(reservasDia);
 
@@ -18594,7 +18595,7 @@ async function loadReservasMesas() {
       var btnDeletar = (statusClass === 'livre') ? '<button type="button" class="mesa-card__del" title="Excluir mesa" data-mesa-del="' + m.id + '" aria-label="Excluir mesa">🗑️</button>' : '';
       return '<div class="mesa-card mesa-card--' + statusClass + '" data-mesa-id="' + m.id + '" data-reserva-id="' + (res ? res.id : '') + '">' +
         btnDeletar +
-        '<div class="mesa-card__numero">' + (m.nome_mesa || m.numero_mesa || 'Mesa ' + m.id) + '</div>' +
+        '<div class="mesa-card__numero">' + escapeHtml(String(m.numero_mesa || m.nome_mesa || ('Mesa ' + m.id))) + '</div>' +
         '<div class="mesa-card__info">' + formatCapacidadeMesaLabel(m) + (m.localizacao ? ' • ' + m.localizacao : '') + (m.cadastro_emergencial ? ' • emergencial' : '') + '</div>' +
         (cliente ? '<div class="mesa-card__cliente">' + cliente + (horario ? ' • ' + horario : '') + (qtd ? ' (' + qtd + ' p.)' : '') + '</div>' : '') +
         '</div>';
@@ -18629,26 +18630,23 @@ async function loadReservasMesas() {
         '</td></tr>';
     }).join('') || '<tr class="reserva-row reserva-row-empty"><td colspan="8" class="reservas-empty" data-label="">Nenhuma reserva para esta data.</td></tr>';
 
-    var livreDom = cardsEl.querySelectorAll('.mesa-card--livre').length;
-    var reservadaDom = cardsEl.querySelectorAll('.mesa-card--reservada').length;
-    var ocupadaDom = cardsEl.querySelectorAll('.mesa-card--ocupada').length;
-    var bloqueadaDom = cardsEl.querySelectorAll('.mesa-card--bloqueada').length;
-    var semReservaDom = livreDom + bloqueadaDom;
+    var statsMesas = contarStatusMesasReserva(mesas, reservasPorMesa);
+    var semReservaDom = statsMesas.livre + statsMesas.bloqueada;
+    var totalMesas = statsMesas.total;
 
     document.getElementById('reservasMesasLivres').textContent = semReservaDom;
-    document.getElementById('reservasMesasReservadas').textContent = reservadaDom;
-    document.getElementById('reservasMesasOcupadas').textContent = ocupadaDom;
+    document.getElementById('reservasMesasReservadas').textContent = statsMesas.reservada;
+    document.getElementById('reservasMesasOcupadas').textContent = statsMesas.ocupada;
     document.getElementById('reservasTotalDia').textContent = (reservasDia || []).length;
 
     var livreHint = document.getElementById('reservasMesasLivresHint');
     if (livreHint) {
-      var totalMesas = (mesas || []).length;
       if (!totalMesas) {
         livreHint.textContent = '';
-      } else if (bloqueadaDom > 0) {
-        livreHint.textContent = livreDom + ' disponíveis · ' + bloqueadaDom + ' bloqueada(s) · ' + totalMesas + ' mesas';
+      } else if (statsMesas.bloqueada > 0) {
+        livreHint.textContent = statsMesas.livre + ' disponíveis · ' + statsMesas.bloqueada + ' bloqueada(s) · ' + totalMesas + ' cadastradas';
       } else {
-        livreHint.textContent = semReservaDom + ' de ' + totalMesas + ' mesas';
+        livreHint.textContent = semReservaDom + ' de ' + totalMesas + ' mesas cadastradas';
       }
     }
 
@@ -18751,6 +18749,16 @@ function montarMapaReservasPorMesa(reservas) {
 function reservaAtivaNaMesa(mapa, mesaId) {
   if (!mapa || mesaId == null || mesaId === '') return null;
   return mapa[String(mesaId)] || null;
+}
+
+function numeroMesaParaInt(valor) {
+  return parseInt(String(valor || '').replace(/\D/g, ''), 10) || 0;
+}
+
+function ordenarMesasPorNumero(mesas) {
+  return (mesas || []).slice().sort(function(a, b) {
+    return numeroMesaParaInt(a.numero_mesa || a.nome_mesa) - numeroMesaParaInt(b.numero_mesa || b.nome_mesa);
+  });
 }
 
 function contarStatusMesasReserva(mesas, reservasPorMesa) {
@@ -20084,7 +20092,7 @@ function setupReservasMesasModule() {
         })
       });
       var mesaNova = resp.mesa || resp;
-      showToast('Mesa criada.', 'success');
+      showToast('Mesa ' + numero + ' cadastrada.', 'success');
       await loadReservasMesas();
       await popularMesasReserva(unidadeId);
       var select = document.getElementById('reservaMesaSelect');

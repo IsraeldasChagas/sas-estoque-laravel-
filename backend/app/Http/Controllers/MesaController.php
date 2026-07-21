@@ -40,7 +40,7 @@ class MesaController extends Controller
         }
         $query->where('unidade_id', $unidadeId);
 
-        $mesas = $query->orderBy('numero_mesa')->get();
+        $mesas = $this->ordenarMesasPorNumero($query->get());
         return response()->json($mesas);
     }
 
@@ -258,5 +258,17 @@ class MesaController extends Controller
     public function inativar($id)
     {
         return $this->destroy($id);
+    }
+
+    private function ordenarMesasPorNumero($mesas)
+    {
+        return $mesas->sortBy(function ($mesa) {
+            return $this->numeroMesaParaInt($mesa->numero_mesa ?? '');
+        })->values();
+    }
+
+    private function numeroMesaParaInt($numero): int
+    {
+        return (int) preg_replace('/\D/', '', (string) $numero);
     }
 }
