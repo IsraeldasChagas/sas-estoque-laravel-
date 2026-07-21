@@ -18324,6 +18324,61 @@ function rdashGarantirDatasPadrao() {
   };
 }
 
+function rdashRenderSerieTendencia(serie) {
+  if (!serie || !serie.length) {
+    return '<p class="reservas-empty">Sem dados no período.</p>';
+  }
+
+  var stepPx = 34;
+  var width = Math.max(280, serie.length * stepPx);
+  var height = 118;
+  var padX = 14;
+  var padTop = 12;
+  var padBottom = 8;
+  var innerW = width - padX * 2;
+  var innerH = height - padTop - padBottom;
+  var maxVal = Math.max(1, ...serie.map(function(d) { return Number(d.ativas) || 0; }));
+
+  var points = serie.map(function(d, i) {
+    var x = padX + (serie.length === 1 ? innerW / 2 : (i / (serie.length - 1)) * innerW);
+    var y = padTop + innerH - ((Number(d.ativas) || 0) / maxVal) * innerH;
+    return { x: x, y: y, d: d };
+  });
+
+  var path = points.map(function(p, i) {
+    return (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+  }).join(' ');
+
+  var dots = points.map(function(p) {
+    var noshow = Number(p.d.no_show) || 0;
+    var title = p.d.label + ': ' + (p.d.ativas || 0) + ' ativas' + (noshow ? ', ' + noshow + ' no-show' : '');
+    return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.5" class="rdash-line__dot">' +
+      '<title>' + rdashEsc(title) + '</title></circle>';
+  }).join('');
+
+  var labelEvery = serie.length > 20 ? Math.ceil(serie.length / 14) : (serie.length > 10 ? 2 : 1);
+  var labels = points.map(function(p, i) {
+    var show = i === 0 || i === points.length - 1 || i % labelEvery === 0;
+    return '<span class="rdash-line__label' + (show ? '' : ' rdash-line__label--skip') + '">' +
+      (show ? rdashEsc(p.d.label) : '') + '</span>';
+  }).join('');
+
+  var values = points.map(function(p) {
+    return '<span class="rdash-line__value">' + (p.d.ativas || 0) + '</span>';
+  }).join('');
+
+  return '<div class="rdash-line-wrap" style="--rdash-line-width:' + width + 'px">' +
+    '<div class="rdash-line-scroll">' +
+      '<svg class="rdash-line" viewBox="0 0 ' + width + ' ' + height + '" width="' + width + '" height="' + height + '" aria-hidden="true">' +
+        '<path d="' + path + '" class="rdash-line__path" fill="none"></path>' +
+        dots +
+      '</svg>' +
+      '<div class="rdash-line__labels">' + labels + '</div>' +
+      '<div class="rdash-line__values">' + values + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
 async function loadReservaDashboard() {
   rdashGarantirDatasPadrao();
   var sel = document.getElementById('rdashUnidadeFiltro');
@@ -18416,20 +18471,8 @@ async function loadReservaDashboard() {
     }
 
     var serie = data.serie_dias || [];
-    var maxBar = Math.max(1, ...serie.map(function(d) { return Number(d.ativas) || 0; }));
     if (barsEl) {
-      barsEl.innerHTML = serie.map(function(d) {
-        var h = Math.round(((Number(d.ativas) || 0) / maxBar) * 100);
-        var noshow = Number(d.no_show) || 0;
-        return '<div class="rdash-bar" title="' + rdashEsc(d.label) + ': ' + (d.ativas || 0) + ' ativas, ' + noshow + ' no-show">' +
-          '<div class="rdash-bar__stack">' +
-            '<span class="rdash-bar__fill" style="height:' + h + '%"></span>' +
-            (noshow > 0 ? '<span class="rdash-bar__noshow" style="height:' + Math.max(8, Math.round((noshow / maxBar) * 100)) + '%"></span>' : '') +
-          '</div>' +
-          '<span class="rdash-bar__label">' + rdashEsc(d.label) + '</span>' +
-          '<span class="rdash-bar__n">' + (d.ativas || 0) + '</span>' +
-        '</div>';
-      }).join('');
+      barsEl.innerHTML = rdashRenderSerieTendencia(serie);
     }
 
     var porStatus = data.por_status || [];
