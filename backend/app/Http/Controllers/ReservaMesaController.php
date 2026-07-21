@@ -111,6 +111,7 @@ class ReservaMesaController extends Controller
         }
 
         $reservas = $query->orderBy('data_reserva')->orderBy('hora_reserva')->get();
+        $reservas->each(fn (ReservaMesa $r) => $this->anexarMesasCompostas($r));
 
         return response()->json($reservas);
     }
@@ -128,6 +129,7 @@ class ReservaMesaController extends Controller
             return response()->json([
                 'total_mesas' => 0,
                 'mesas_livres' => 0,
+                'mesas_bloqueadas' => 0,
                 'mesas_reservadas' => 0,
                 'mesas_ocupadas' => 0,
                 'mesas_aguardando_cliente' => 0,
@@ -137,23 +139,20 @@ class ReservaMesaController extends Controller
 
         $dataReserva = $request->get('data_reserva', date('Y-m-d'));
 
-        $queryMesas = Mesa::where('ativo', true)->where('unidade_id', $unidadeId);
-        $totalMesas = $queryMesas->count();
-
-        $queryReservas = ReservaMesa::where('unidade_id', $unidadeId)
+        $reservasAtivas = ReservaMesa::where('unidade_id', $unidadeId)
             ->where('data_reserva', $dataReserva)
-            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
-        $reservasAtivas = $queryReservas->get();
+            ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+            ->get(['id', 'mesa_id', 'status']);
 
-        $mesasIdsComReserva = $reservasAtivas->pluck('mesa_id')->unique();
-        $livres = $totalMesas - $mesasIdsComReserva->count();
+        $stats = $this->estatisticasMesasOperacionais($unidadeId, $dataReserva, $reservasAtivas);
         $reservadas = $reservasAtivas->whereIn('status', ['pendente', 'confirmada'])->count();
         $ocupadas = $reservasAtivas->where('status', 'cliente_chegou')->count();
         $aguardando = $reservasAtivas->whereIn('status', ['pendente', 'confirmada'])->count();
 
         return response()->json([
-            'total_mesas' => $totalMesas,
-            'mesas_livres' => max(0, $livres),
+            'total_mesas' => $stats['total_mesas'],
+            'mesas_livres' => $stats['mesas_livres'],
+            'mesas_bloqueadas' => $stats['mesas_bloqueadas'],
             'mesas_reservadas' => $reservadas,
             'mesas_ocupadas' => $ocupadas,
             'mesas_aguardando_cliente' => $aguardando,
@@ -213,8 +212,8 @@ class ReservaMesaController extends Controller
             ->get();
 
         $ativasHoje = $reservasHoje->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
-        $mesasOcupadasIds = $ativasHoje->pluck('mesa_id')->unique()->count();
-        $livres = max(0, $mesasTotal - $mesasOcupadasIds);
+        $statsMesas = $this->estatisticasMesasOperacionais($unidadeId, $hoje, $ativasHoje);
+        $livres = $statsMesas['mesas_livres'];
 
         $countStatus = function ($status) use ($reservasHoje) {
             return $reservasHoje->where('status', $status)->count();
@@ -320,7 +319,9 @@ class ReservaMesaController extends Controller
             ->take(5)
             ->values();
 
-        $ocupacaoPct = $mesasTotal > 0 ? round(($mesasOcupadasIds / $mesasTotal) * 100) : 0;
+        $ocupacaoPct = $mesasTotal > 0
+            ? round(($statsMesas['mesas_com_reserva'] / $mesasTotal) * 100)
+            : 0;
         $insights = [];
         if ($ativasHoje->count() === 0) {
             $insights[] = 'Nenhuma reserva ativa para hoje — boa hora para campanha no WhatsApp.';
@@ -1167,6 +1168,79 @@ class ReservaMesaController extends Controller
         $emerg = collect($vinculos)->contains(fn ($v) => ! empty($v['configuracao_emergencial']));
         $reserva->setAttribute('alerta_preparo_fisico', $composicao || $extras || $emerg);
         $reserva->setAttribute('composicao', $composicao);
+    }
+
+    /**
+     * Contagem alinhada aos cards da tela (livre = sem reserva, operacional e não bloqueada).
+     *
+     * @param  \Illuminate\Support\Collection<int, ReservaMesa>|null  $reservasAtivas
+     * @return array{
+     *   total_mesas:int,
+     *   mesas_livres:int,
+     *   mesas_bloqueadas:int,
+     *   mesas_com_reserva:int,
+     *   mesas_ocupadas:int
+     * }
+     */
+    private function estatisticasMesasOperacionais(int $unidadeId, string $dataReserva, $reservasAtivas = null): array
+    {
+        $mesas = Mesa::where('ativo', true)->where('unidade_id', $unidadeId)->get(['id', 'status']);
+
+        if ($reservasAtivas === null) {
+            $reservasAtivas = ReservaMesa::where('unidade_id', $unidadeId)
+                ->where('data_reserva', $dataReserva)
+                ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
+                ->get(['id', 'mesa_id', 'status']);
+        }
+
+        $reservaPorMesa = [];
+        foreach ($reservasAtivas as $reserva) {
+            $mesaIds = [(int) $reserva->mesa_id];
+            if (Schema::hasTable('reserva_mesas')) {
+                $vinculadas = DB::table('reserva_mesas')
+                    ->where('reserva_id', $reserva->id)
+                    ->pluck('mesa_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+                $mesaIds = array_values(array_unique(array_merge($mesaIds, $vinculadas)));
+            }
+            foreach ($mesaIds as $mesaId) {
+                if ($mesaId > 0) {
+                    $reservaPorMesa[$mesaId] = $reserva;
+                }
+            }
+        }
+
+        $livres = 0;
+        $bloqueadas = 0;
+        $comReserva = 0;
+        $ocupadas = 0;
+
+        foreach ($mesas as $mesa) {
+            if ($mesa->status === Mesa::STATUS_BLOQUEADA) {
+                $bloqueadas++;
+                continue;
+            }
+
+            $reserva = $reservaPorMesa[(int) $mesa->id] ?? null;
+            if (! $reserva) {
+                $livres++;
+                continue;
+            }
+
+            $comReserva++;
+            if ($reserva->status === ReservaMesa::STATUS_CLIENTE_CHEGOU) {
+                $ocupadas++;
+            }
+        }
+
+        return [
+            'total_mesas' => $mesas->count(),
+            'mesas_livres' => $livres,
+            'mesas_bloqueadas' => $bloqueadas,
+            'mesas_com_reserva' => $comReserva,
+            'mesas_ocupadas' => $ocupadas,
+        ];
     }
 
     public function meiosPagamentoIndex(Request $request)

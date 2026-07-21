@@ -18575,13 +18575,8 @@ async function loadReservasMesas() {
       fetchJSON('/reservas-mesas/resumo?unidade_id=' + unidadeId + '&data_reserva=' + dataFiltro)
     ]);
 
-    const reservasPorMesa = {};
-    (reservas || []).forEach(function(r) {
-      if (['cancelada', 'no_show', 'finalizada'].indexOf(r.status) === -1) {
-        const mid = r.mesa_id || (r.mesa && r.mesa.id);
-        if (mid) reservasPorMesa[mid] = r;
-      }
-    });
+    const reservasPorMesa = montarMapaReservasPorMesa(reservas);
+    const statsMesas = contarStatusMesasReserva(mesas, reservasPorMesa);
 
     const cardsEl = document.getElementById('reservasMesasCards');
     cardsEl.innerHTML = (mesas || []).map(function(m) {
@@ -18632,9 +18627,9 @@ async function loadReservasMesas() {
         '</td></tr>';
     }).join('') || '<tr class="reserva-row reserva-row-empty"><td colspan="8" class="reservas-empty" data-label="">Nenhuma reserva para esta data.</td></tr>';
 
-    document.getElementById('reservasMesasLivres').textContent = resumo.mesas_livres ?? 0;
-    document.getElementById('reservasMesasReservadas').textContent = resumo.mesas_reservadas ?? 0;
-    document.getElementById('reservasMesasOcupadas').textContent = (resumo.mesas_ocupadas ?? 0) + (resumo.mesas_aguardando_cliente ?? 0);
+    document.getElementById('reservasMesasLivres').textContent = statsMesas.livre;
+    document.getElementById('reservasMesasReservadas').textContent = statsMesas.reservada;
+    document.getElementById('reservasMesasOcupadas').textContent = statsMesas.ocupada;
     document.getElementById('reservasTotalDia').textContent = resumo.total_reservas_dia ?? 0;
 
     _reservasMesasCache = { mesas: mesas || [], reservas: reservas || [], unidadeId: unidadeId };
@@ -18713,6 +18708,40 @@ function capacidadeMaximaMesa(m) {
 function formatCapacidadeMesaLabel(m) {
   var base = capacidadeBaseMesa(m);
   return 'Capacidade: ' + (base || '-') + ' (+ cadeiras liberadas)';
+}
+
+function montarMapaReservasPorMesa(reservas) {
+  var mapa = {};
+  (reservas || []).forEach(function(r) {
+    if (['cancelada', 'no_show', 'finalizada'].indexOf(r.status) === -1) {
+      var ids = [];
+      var mid = r.mesa_id || (r.mesa && r.mesa.id);
+      if (mid) ids.push(Number(mid));
+      (r.mesas_vinculadas || []).forEach(function(v) {
+        if (v.mesa_id) ids.push(Number(v.mesa_id));
+      });
+      ids.forEach(function(id) {
+        if (id > 0) mapa[id] = r;
+      });
+    }
+  });
+  return mapa;
+}
+
+function contarStatusMesasReserva(mesas, reservasPorMesa) {
+  var stats = { livre: 0, reservada: 0, ocupada: 0, bloqueada: 0, total: (mesas || []).length };
+  (mesas || []).forEach(function(m) {
+    var res = reservasPorMesa[m.id];
+    if (m.status === 'bloqueada' || !m.ativo) {
+      stats.bloqueada++;
+    } else if (res) {
+      if (res.status === 'cliente_chegou') stats.ocupada++;
+      else stats.reservada++;
+    } else {
+      stats.livre++;
+    }
+  });
+  return stats;
 }
 
 function mesaSelecionadaReservaForm(form) {
