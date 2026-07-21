@@ -163,4 +163,80 @@ class ReservaFidelidadeIdentidadeTest extends TestCase
         $this->assertSame('52998224725', $conta->cpf_normalizado);
         $this->assertSame('israel@gruposaborparaense.com.br', $conta->email);
     }
+
+    public function test_snapshot_reutiliza_cartao_existente_na_segunda_reserva(): void
+    {
+        DB::table('fid_contas')->insert([
+            'unidade_id' => $this->unidadeId,
+            'telefone_normalizado' => '69984639070',
+            'cpf_normalizado' => '52998224725',
+            'email' => 'israel@gruposaborparaense.com.br',
+            'nome' => 'Israel das Chagas',
+            'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
+            'status' => 'ativo',
+            'saldo_selos' => 3,
+            'saldo_pontos' => 3,
+            'total_resgates' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $segundaReserva = ReservaMesa::create([
+            'unidade_id' => $this->unidadeId,
+            'nome_cliente' => 'Israel',
+            'telefone_cliente' => '69984639070',
+            'data_reserva' => now()->addDay()->toDateString(),
+            'hora_reserva' => '20:00',
+            'qtd_pessoas' => 2,
+            'status' => 'cliente_chegou',
+            'participa_fidelidade' => false,
+        ]);
+
+        $snap = app(ReservaFidelidadeService::class)->snapshot($segundaReserva);
+
+        $this->assertTrue($snap['cartao_existente']);
+        $this->assertTrue($snap['participa_fidelidade']);
+        $this->assertTrue($snap['fidelidade_dados_ok']);
+        $this->assertSame('Israel das Chagas', $snap['fidelidade_nome']);
+        $this->assertSame(3, (int) $snap['conta']->saldo_selos);
+
+        $segundaReserva->refresh();
+        $this->assertTrue($segundaReserva->participa_fidelidade);
+        $this->assertSame('Israel das Chagas', $segundaReserva->fidelidade_nome);
+    }
+
+    public function test_aplicar_participante_existente_ao_criar_reserva(): void
+    {
+        DB::table('fid_contas')->insert([
+            'unidade_id' => $this->unidadeId,
+            'telefone_normalizado' => '69984639070',
+            'cpf_normalizado' => '52998224725',
+            'email' => 'israel@gruposaborparaense.com.br',
+            'nome' => 'Israel das Chagas',
+            'codigo_fidelidade' => FidelidadeCodigoService::gerar(),
+            'status' => 'ativo',
+            'saldo_selos' => 1,
+            'saldo_pontos' => 1,
+            'total_resgates' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $reserva = ReservaMesa::create([
+            'unidade_id' => $this->unidadeId,
+            'nome_cliente' => 'Israel',
+            'telefone_cliente' => '69984639070',
+            'data_reserva' => now()->addDays(2)->toDateString(),
+            'hora_reserva' => '21:00',
+            'qtd_pessoas' => 2,
+            'status' => 'pendente',
+            'participa_fidelidade' => false,
+        ]);
+
+        $reserva = app(ReservaFidelidadeService::class)->aplicarParticipanteExistente($reserva);
+
+        $this->assertTrue($reserva->participa_fidelidade);
+        $this->assertSame('Israel das Chagas', $reserva->fidelidade_nome);
+        $this->assertSame('52998224725', $reserva->fidelidade_cpf);
+    }
 }

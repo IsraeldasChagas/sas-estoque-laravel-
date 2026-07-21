@@ -175,6 +175,7 @@ final class ReservaFidelidadeService
                 'programa_ativo' => $programaAtivo,
                 'programa' => $programa,
                 'conta' => null,
+                'cartao_existente' => false,
                 'telefone_ok' => false,
                 'selo_ja_creditado' => false,
                 'participa_fidelidade' => (bool) ($reserva->participa_fidelidade ?? false),
@@ -200,6 +201,11 @@ final class ReservaFidelidadeService
             ->where('telefone_normalizado', $tel)
             ->first();
 
+        $cartaoExistente = $conta !== null;
+        if ($cartaoExistente && ! (bool) ($reserva->conta_paga ?? false)) {
+            $reserva = $this->sincronizarReservaComCartaoExistente($reserva, $conta);
+        }
+
         $seloJa = false;
         if ($conta && Schema::hasTable('fid_ledger')) {
             $seloJa = DB::table('fid_ledger')
@@ -216,6 +222,7 @@ final class ReservaFidelidadeService
             'programa_ativo' => $programaAtivo,
             'programa' => $programa,
             'conta' => $conta,
+            'cartao_existente' => $cartaoExistente,
             'telefone_ok' => true,
             'selo_ja_creditado' => $seloJa,
             'participa_fidelidade' => (bool) ($reserva->participa_fidelidade ?? false),
@@ -507,6 +514,7 @@ final class ReservaFidelidadeService
             'programa_ativo' => false,
             'programa' => null,
             'conta' => null,
+            'cartao_existente' => false,
             'telefone_ok' => false,
             'selo_ja_creditado' => false,
             'participa_fidelidade' => false,
@@ -665,5 +673,82 @@ final class ReservaFidelidadeService
         }
 
         return true;
+    }
+
+    /**
+     * Cliente com cartão ativo na unidade: participação automática na reserva.
+     */
+    public function aplicarParticipanteExistente(ReservaMesa $reserva): ReservaMesa
+    {
+        if ((bool) ($reserva->conta_paga ?? false) || ! $this->tabelasDisponiveis()) {
+            return $reserva;
+        }
+
+        $conta = $this->buscarContaPorTelefoneReserva($reserva);
+        if (! $conta) {
+            return $reserva;
+        }
+
+        return $this->sincronizarReservaComCartaoExistente($reserva, $conta);
+    }
+
+    public function reservaTemCartaoExistente(ReservaMesa $reserva): bool
+    {
+        return $this->buscarContaPorTelefoneReserva($reserva) !== null;
+    }
+
+    private function buscarContaPorTelefoneReserva(ReservaMesa $reserva): ?object
+    {
+        if (! $this->tabelasDisponiveis()) {
+            return null;
+        }
+
+        $tel = FidelidadeNormalizer::telefone($reserva->telefone_cliente);
+        if ($tel === '' || strlen($tel) < 10) {
+            return null;
+        }
+
+        return DB::table('fid_contas')
+            ->where('unidade_id', (int) $reserva->unidade_id)
+            ->where('telefone_normalizado', $tel)
+            ->first() ?: null;
+    }
+
+    /**
+     * Cliente recorrente: reutiliza cartão existente sem pedir cadastro novamente.
+     */
+    private function sincronizarReservaComCartaoExistente(ReservaMesa $reserva, object $conta): ReservaMesa
+    {
+        $changed = false;
+
+        if (! (bool) ($reserva->participa_fidelidade ?? false)) {
+            $reserva->participa_fidelidade = true;
+            $changed = true;
+        }
+
+        $nomeConta = trim((string) ($conta->nome ?? ''));
+        if ($nomeConta !== '' && trim((string) ($reserva->fidelidade_nome ?? '')) === '') {
+            $reserva->fidelidade_nome = $nomeConta;
+            $changed = true;
+        }
+
+        $cpfConta = trim((string) ($conta->cpf_normalizado ?? ''));
+        if ($cpfConta !== '' && trim((string) ($reserva->fidelidade_cpf ?? '')) === '') {
+            $reserva->fidelidade_cpf = $cpfConta;
+            $changed = true;
+        }
+
+        $emailConta = trim((string) ($conta->email ?? ''));
+        if ($emailConta !== '' && trim((string) ($reserva->fidelidade_email ?? '')) === '') {
+            $reserva->fidelidade_email = $emailConta;
+            $changed = true;
+        }
+
+        if ($changed) {
+            $reserva->save();
+            $reserva->refresh();
+        }
+
+        return $reserva;
     }
 }

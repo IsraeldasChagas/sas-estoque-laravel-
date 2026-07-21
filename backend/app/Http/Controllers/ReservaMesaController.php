@@ -477,6 +477,8 @@ class ReservaMesaController extends Controller
 
         $reserva = ReservaMesa::create($data);
 
+        $reserva = app(ReservaFidelidadeService::class)->aplicarParticipanteExistente($reserva);
+
         $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
         $this->sincronizarVinculoPrincipal($reserva, $extrasReq);
 
@@ -590,7 +592,9 @@ class ReservaMesaController extends Controller
             'hora_reserva', 'qtd_pessoas', 'status', 'observacao', 'local', 'ocasiao'
         ]));
 
-        $this->sincronizarVinculoPrincipal($reserva->fresh(), $extrasEfetivas);
+        $reserva = app(ReservaFidelidadeService::class)->aplicarParticipanteExistente($reserva->fresh());
+
+        $this->sincronizarVinculoPrincipal($reserva, $extrasEfetivas);
         $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,permite_cadeiras_extras,cadeiras_extras_max', 'usuario:id,nome']);
         $this->anexarMesasCompostas($reserva);
         return response()->json(['message' => 'Reserva atualizada', 'reserva' => $reserva]);
@@ -804,6 +808,12 @@ class ReservaMesaController extends Controller
         ])->validate();
 
         $participa = (bool) $data['participa_fidelidade'];
+
+        if (! $participa && app(ReservaFidelidadeService::class)->reservaTemCartaoExistente($reserva)) {
+            return response()->json([
+                'message' => 'Cliente já possui cartão fidelidade. A participação é automática nesta reserva.',
+            ], 422);
+        }
 
         if (! $participa) {
             $reserva->participa_fidelidade = false;
