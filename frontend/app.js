@@ -18558,8 +18558,8 @@ async function loadReservasMesas() {
   const statusFiltro = document.getElementById('reservasStatusFiltro')?.value || '';
 
   if (!unidadeId) {
-    var cardsEl = document.getElementById('reservasMesasCards');
-    if (cardsEl) cardsEl.innerHTML = '<p class="reservas-empty">Selecione uma unidade acima para ver as mesas e reservas.</p>';
+    var cardsElEmpty = document.getElementById('reservasMesasCards');
+    if (cardsElEmpty) cardsElEmpty.innerHTML = '<p class="reservas-empty">Selecione uma unidade acima para ver as mesas e reservas.</p>';
     var tbody = document.getElementById('reservasTableBody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="reservas-empty">Selecione uma unidade.</td></tr>';
     _reservasMesasCache = { mesas: [], reservas: [], unidadeId: '' };
@@ -18569,18 +18569,20 @@ async function loadReservasMesas() {
   document.getElementById('reservasDataFiltro').value = dataFiltro;
 
   try {
-    const [mesas, reservas, resumo] = await Promise.all([
+    var reservasQuery = '/reservas-mesas?unidade_id=' + unidadeId + '&data_reserva=' + dataFiltro;
+    var reservasListaQuery = reservasQuery + (turno ? '&turno=' + turno : '') + (statusFiltro ? '&status=' + encodeURIComponent(statusFiltro) : '');
+
+    const [mesas, reservasDia, reservasLista] = await Promise.all([
       fetchJSON('/mesas?unidade_id=' + unidadeId),
-      fetchJSON('/reservas-mesas?unidade_id=' + unidadeId + '&data_reserva=' + dataFiltro + (turno ? '&turno=' + turno : '') + (statusFiltro ? '&status=' + statusFiltro : '')),
-      fetchJSON('/reservas-mesas/resumo?unidade_id=' + unidadeId + '&data_reserva=' + dataFiltro)
+      fetchJSON(reservasQuery),
+      fetchJSON(reservasListaQuery)
     ]);
 
-    const reservasPorMesa = montarMapaReservasPorMesa(reservas);
-    const statsMesas = contarStatusMesasReserva(mesas, reservasPorMesa);
+    const reservasPorMesa = montarMapaReservasPorMesa(reservasDia);
 
     const cardsEl = document.getElementById('reservasMesasCards');
     cardsEl.innerHTML = (mesas || []).map(function(m) {
-      const res = reservasPorMesa[m.id];
+      const res = reservaAtivaNaMesa(reservasPorMesa, m.id);
       var statusClass = 'livre';
       if (m.status === 'bloqueada' || !m.ativo) statusClass = 'bloqueada';
       else if (res) {
@@ -18599,7 +18601,7 @@ async function loadReservasMesas() {
     }).join('') || '<p class="reservas-empty">Nenhuma mesa cadastrada.</p>';
 
     const tbody = document.getElementById('reservasTableBody');
-    const reservasOrdenadas = (reservas || []).slice().sort(function(a, b) {
+    const reservasOrdenadas = (reservasLista || []).slice().sort(function(a, b) {
       var ha = String(a.hora_reserva || '').replace(/^(\d{1,2}):(\d{2}).*/, function(_, h, m) { return parseInt(h, 10) * 60 + parseInt(m, 10); });
       var hb = String(b.hora_reserva || '').replace(/^(\d{1,2}):(\d{2}).*/, function(_, h, m) { return parseInt(h, 10) * 60 + parseInt(m, 10); });
       return (ha || 0) - (hb || 0);
@@ -18627,12 +18629,30 @@ async function loadReservasMesas() {
         '</td></tr>';
     }).join('') || '<tr class="reserva-row reserva-row-empty"><td colspan="8" class="reservas-empty" data-label="">Nenhuma reserva para esta data.</td></tr>';
 
-    document.getElementById('reservasMesasLivres').textContent = statsMesas.livre;
-    document.getElementById('reservasMesasReservadas').textContent = statsMesas.reservada;
-    document.getElementById('reservasMesasOcupadas').textContent = statsMesas.ocupada;
-    document.getElementById('reservasTotalDia').textContent = resumo.total_reservas_dia ?? 0;
+    var livreDom = cardsEl.querySelectorAll('.mesa-card--livre').length;
+    var reservadaDom = cardsEl.querySelectorAll('.mesa-card--reservada').length;
+    var ocupadaDom = cardsEl.querySelectorAll('.mesa-card--ocupada').length;
+    var bloqueadaDom = cardsEl.querySelectorAll('.mesa-card--bloqueada').length;
+    var semReservaDom = livreDom + bloqueadaDom;
 
-    _reservasMesasCache = { mesas: mesas || [], reservas: reservas || [], unidadeId: unidadeId };
+    document.getElementById('reservasMesasLivres').textContent = semReservaDom;
+    document.getElementById('reservasMesasReservadas').textContent = reservadaDom;
+    document.getElementById('reservasMesasOcupadas').textContent = ocupadaDom;
+    document.getElementById('reservasTotalDia').textContent = (reservasDia || []).length;
+
+    var livreHint = document.getElementById('reservasMesasLivresHint');
+    if (livreHint) {
+      var totalMesas = (mesas || []).length;
+      if (!totalMesas) {
+        livreHint.textContent = '';
+      } else if (bloqueadaDom > 0) {
+        livreHint.textContent = livreDom + ' disponíveis · ' + bloqueadaDom + ' bloqueada(s) · ' + totalMesas + ' mesas';
+      } else {
+        livreHint.textContent = semReservaDom + ' de ' + totalMesas + ' mesas';
+      }
+    }
+
+    _reservasMesasCache = { mesas: mesas || [], reservas: reservasDia || [], unidadeId: unidadeId };
     cardsEl.querySelectorAll('.mesa-card').forEach(function(c) { c.style.cursor = 'pointer'; });
     document.querySelectorAll('#reservasTableBody .btn-icon').forEach(function(btn) {
       btn.addEventListener('click', async function(e) {
@@ -18716,22 +18736,27 @@ function montarMapaReservasPorMesa(reservas) {
     if (['cancelada', 'no_show', 'finalizada'].indexOf(r.status) === -1) {
       var ids = [];
       var mid = r.mesa_id || (r.mesa && r.mesa.id);
-      if (mid) ids.push(Number(mid));
+      if (mid) ids.push(String(mid));
       (r.mesas_vinculadas || []).forEach(function(v) {
-        if (v.mesa_id) ids.push(Number(v.mesa_id));
+        if (v.mesa_id) ids.push(String(v.mesa_id));
       });
       ids.forEach(function(id) {
-        if (id > 0) mapa[id] = r;
+        if (id) mapa[id] = r;
       });
     }
   });
   return mapa;
 }
 
+function reservaAtivaNaMesa(mapa, mesaId) {
+  if (!mapa || mesaId == null || mesaId === '') return null;
+  return mapa[String(mesaId)] || null;
+}
+
 function contarStatusMesasReserva(mesas, reservasPorMesa) {
   var stats = { livre: 0, reservada: 0, ocupada: 0, bloqueada: 0, total: (mesas || []).length };
   (mesas || []).forEach(function(m) {
-    var res = reservasPorMesa[m.id];
+    var res = reservaAtivaNaMesa(reservasPorMesa, m.id);
     if (m.status === 'bloqueada' || !m.ativo) {
       stats.bloqueada++;
     } else if (res) {

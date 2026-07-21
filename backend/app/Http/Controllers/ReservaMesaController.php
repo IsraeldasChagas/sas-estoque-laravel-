@@ -93,7 +93,7 @@ class ReservaMesaController extends Controller
             ->where('unidade_id', '=', $unidadeId);
 
         if ($request->filled('data_reserva')) {
-            $query->where('data_reserva', $request->data_reserva);
+            $query->whereDate('data_reserva', $request->data_reserva);
         }
 
         if ($request->filled('status')) {
@@ -140,7 +140,7 @@ class ReservaMesaController extends Controller
         $dataReserva = $request->get('data_reserva', date('Y-m-d'));
 
         $reservasAtivas = ReservaMesa::where('unidade_id', $unidadeId)
-            ->where('data_reserva', $dataReserva)
+            ->whereDate('data_reserva', $dataReserva)
             ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
             ->get(['id', 'mesa_id', 'status']);
 
@@ -1188,7 +1188,7 @@ class ReservaMesaController extends Controller
 
         if ($reservasAtivas === null) {
             $reservasAtivas = ReservaMesa::where('unidade_id', $unidadeId)
-                ->where('data_reserva', $dataReserva)
+                ->whereDate('data_reserva', $dataReserva)
                 ->whereNotIn('status', ['cancelada', 'no_show', 'finalizada'])
                 ->get(['id', 'mesa_id', 'status']);
         }
@@ -1215,28 +1215,34 @@ class ReservaMesaController extends Controller
         $bloqueadas = 0;
         $comReserva = 0;
         $ocupadas = 0;
+        $disponiveis = 0;
 
         foreach ($mesas as $mesa) {
-            if ($mesa->status === Mesa::STATUS_BLOQUEADA) {
+            $mesaId = (int) $mesa->id;
+            $reserva = $reservaPorMesa[$mesaId] ?? null;
+            $isBloqueada = $mesa->status === Mesa::STATUS_BLOQUEADA;
+
+            if ($isBloqueada) {
                 $bloqueadas++;
-                continue;
             }
 
-            $reserva = $reservaPorMesa[(int) $mesa->id] ?? null;
-            if (! $reserva) {
+            if ($reserva) {
+                $comReserva++;
+                if ($reserva->status === ReservaMesa::STATUS_CLIENTE_CHEGOU) {
+                    $ocupadas++;
+                }
+            } else {
                 $livres++;
-                continue;
-            }
-
-            $comReserva++;
-            if ($reserva->status === ReservaMesa::STATUS_CLIENTE_CHEGOU) {
-                $ocupadas++;
+                if (! $isBloqueada) {
+                    $disponiveis++;
+                }
             }
         }
 
         return [
             'total_mesas' => $mesas->count(),
             'mesas_livres' => $livres,
+            'mesas_disponiveis' => $disponiveis,
             'mesas_bloqueadas' => $bloqueadas,
             'mesas_com_reserva' => $comReserva,
             'mesas_ocupadas' => $ocupadas,
