@@ -7477,6 +7477,26 @@ select[size]:not([size="1"]) {
   gap: 0.65rem;
   align-items: flex-end;
 }
+.rdash__dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: flex-end;
+}
+.rdash__filter--date {
+  min-width: 0;
+}
+.rdash-date-input {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.28rem 0.35rem;
+  width: 8.35rem;
+  max-width: 100%;
+  border: 1px solid var(--rdash-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--rdash-ink);
+}
 .rdash__filter {
   display: flex;
   flex-direction: column;

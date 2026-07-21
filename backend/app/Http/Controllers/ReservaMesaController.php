@@ -173,13 +173,15 @@ class ReservaMesaController extends Controller
 
         $unidadeId = $this->resolveUnidadeId($request, $usuario);
         $hoje = Carbon::today()->toDateString();
-        $dias = max(7, min(30, (int) $request->get('dias', 14)));
-        $inicio = Carbon::today()->subDays($dias - 1)->toDateString();
+        [$inicio, $fim] = $this->resolverPeriodoDashboard($request, $hoje);
+        $diaRef = $fim;
 
         if (! $unidadeId) {
             return response()->json([
                 'unidade_id' => null,
                 'hoje' => $hoje,
+                'data_inicio' => $inicio,
+                'data_fim' => $fim,
                 'kpis' => [
                     'reservas_hoje' => 0,
                     'pessoas_hoje' => 0,
@@ -207,12 +209,12 @@ class ReservaMesaController extends Controller
 
         $reservasHoje = ReservaMesa::with(['mesa:id,numero_mesa,nome_mesa'])
             ->where('unidade_id', $unidadeId)
-            ->whereDate('data_reserva', $hoje)
+            ->whereDate('data_reserva', $diaRef)
             ->orderBy('hora_reserva')
             ->get();
 
         $ativasHoje = $reservasHoje->whereNotIn('status', ['cancelada', 'no_show', 'finalizada']);
-        $statsMesas = $this->estatisticasMesasOperacionais($unidadeId, $hoje, $ativasHoje);
+        $statsMesas = $this->estatisticasMesasOperacionais($unidadeId, $diaRef, $ativasHoje);
         $livres = $statsMesas['mesas_livres'];
 
         $countStatus = function ($status) use ($reservasHoje) {
@@ -229,7 +231,7 @@ class ReservaMesaController extends Controller
 
         $periodo = ReservaMesa::where('unidade_id', $unidadeId)
             ->whereDate('data_reserva', '>=', $inicio)
-            ->whereDate('data_reserva', '<=', $hoje)
+            ->whereDate('data_reserva', '<=', $fim)
             ->get(['data_reserva', 'status', 'qtd_pessoas', 'nome_cliente', 'telefone_cliente', 'hora_reserva']);
 
         $totalPeriodo = $periodo->count();
@@ -237,23 +239,28 @@ class ReservaMesaController extends Controller
         $cancelPeriodo = $periodo->where('status', 'cancelada')->count();
 
         $serie = [];
-        for ($i = $dias - 1; $i >= 0; $i--) {
-            $dia = Carbon::today()->subDays($i)->toDateString();
+        $cursor = Carbon::parse($inicio)->startOfDay();
+        $fimCarbon = Carbon::parse($fim)->startOfDay();
+        while ($cursor->lte($fimCarbon)) {
+            $dia = $cursor->toDateString();
             $doDia = $periodo->filter(fn ($r) => Carbon::parse($r->data_reserva)->toDateString() === $dia);
             $serie[] = [
                 'data' => $dia,
-                'label' => Carbon::parse($dia)->format('d/m'),
+                'label' => $cursor->format('d/m'),
                 'total' => $doDia->count(),
                 'ativas' => $doDia->whereNotIn('status', ['cancelada', 'no_show'])->count(),
                 'pessoas' => (int) $doDia->whereNotIn('status', ['cancelada', 'no_show'])->sum('qtd_pessoas'),
                 'no_show' => $doDia->where('status', 'no_show')->count(),
                 'canceladas' => $doDia->where('status', 'cancelada')->count(),
             ];
+            $cursor->addDay();
         }
 
         $horaAgora = Carbon::now()->format('H:i:s');
-        $proximas = $ativasHoje
-            ->filter(fn ($r) => (string) $r->hora_reserva >= $horaAgora)
+        $proximasQuery = $diaRef === $hoje
+            ? $ativasHoje->filter(fn ($r) => (string) $r->hora_reserva >= $horaAgora)
+            : $ativasHoje;
+        $proximas = $proximasQuery
             ->take(8)
             ->values()
             ->map(function ($r) {
@@ -323,10 +330,13 @@ class ReservaMesaController extends Controller
             ? round(($statsMesas['mesas_com_reserva'] / $mesasTotal) * 100)
             : 0;
         $insights = [];
+        $refHoje = $diaRef === $hoje;
         if ($ativasHoje->count() === 0) {
-            $insights[] = 'Nenhuma reserva ativa para hoje — boa hora para campanha no WhatsApp.';
+            $insights[] = $refHoje
+                ? 'Nenhuma reserva ativa para hoje — boa hora para campanha no WhatsApp.'
+                : 'Nenhuma reserva ativa no dia '.Carbon::parse($diaRef)->format('d/m/Y').'.';
         } elseif ($ocupacaoPct >= 80) {
-            $insights[] = 'Ocupação alta hoje ('.$ocupacaoPct.'%). Prepare mesas emergenciais se precisar.';
+            $insights[] = ($refHoje ? 'Ocupação alta hoje' : 'Ocupação alta no dia selecionado').' ('.$ocupacaoPct.'%). Prepare mesas emergenciais se precisar.';
         } elseif ($ocupacaoPct <= 30 && $ativasHoje->count() > 0) {
             $insights[] = 'Ainda há bastante mesa livre ('.$livres.'). Dá para aceitar walk-ins.';
         }
@@ -337,9 +347,9 @@ class ReservaMesaController extends Controller
             $insights[] = 'No-show no período: '.round(($noShowPeriodo / $totalPeriodo) * 100).'% — reforçar lembrete no WhatsApp.';
         }
         if ($turno['noite'] > $turno['almoco'] && $turno['noite'] > $turno['tarde']) {
-            $insights[] = 'Hoje o pico está à noite — alinhe equipe e salão para o jantar.';
+            $insights[] = ($refHoje ? 'Hoje o pico está à noite' : 'No dia selecionado o pico está à noite').' — alinhe equipe e salão para o jantar.';
         } elseif ($turno['almoco'] >= $turno['noite'] && $turno['almoco'] > 0) {
-            $insights[] = 'Almoço concentra a maior parte das reservas de hoje.';
+            $insights[] = ($refHoje ? 'Almoço concentra a maior parte das reservas de hoje.' : 'Almoço concentra a maior parte das reservas do dia selecionado.');
         }
         if ($insights === []) {
             $insights[] = 'Operação estável. Acompanhe as próximas chegadas na lista ao lado.';
@@ -348,6 +358,9 @@ class ReservaMesaController extends Controller
         return response()->json([
             'unidade_id' => $unidadeId,
             'hoje' => $hoje,
+            'data_inicio' => $inicio,
+            'data_fim' => $fim,
+            'dia_referencia' => $diaRef,
             'kpis' => [
                 'reservas_hoje' => $ativasHoje->count(),
                 'pessoas_hoje' => $pessoasHoje,
@@ -1168,6 +1181,33 @@ class ReservaMesaController extends Controller
         $emerg = collect($vinculos)->contains(fn ($v) => ! empty($v['configuracao_emergencial']));
         $reserva->setAttribute('alerta_preparo_fisico', $composicao || $extras || $emerg);
         $reserva->setAttribute('composicao', $composicao);
+    }
+
+    /**
+     * @return array{0:string,1:string}
+     */
+    private function resolverPeriodoDashboard(Request $request, string $hoje): array
+    {
+        $inicio = $request->get('data_inicio', $hoje);
+        $fim = $request->get('data_fim', $hoje);
+
+        try {
+            $inicioCarbon = Carbon::parse($inicio)->startOfDay();
+            $fimCarbon = Carbon::parse($fim)->startOfDay();
+        } catch (\Throwable $e) {
+            $inicioCarbon = Carbon::parse($hoje)->startOfDay();
+            $fimCarbon = $inicioCarbon->copy();
+        }
+
+        if ($inicioCarbon->gt($fimCarbon)) {
+            [$inicioCarbon, $fimCarbon] = [$fimCarbon, $inicioCarbon];
+        }
+
+        if ($inicioCarbon->diffInDays($fimCarbon) > 60) {
+            $inicioCarbon = $fimCarbon->copy()->subDays(60);
+        }
+
+        return [$inicioCarbon->toDateString(), $fimCarbon->toDateString()];
     }
 
     /**

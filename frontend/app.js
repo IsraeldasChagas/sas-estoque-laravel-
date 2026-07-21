@@ -18303,10 +18303,44 @@ function rdashStatusLabel(status) {
   return map[status] || status || '—';
 }
 
+function rdashHojeIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function rdashFormatDataBr(iso) {
+  if (!iso || iso.length < 10) return '—';
+  return iso.slice(8, 10) + '/' + iso.slice(5, 7);
+}
+
+function rdashGarantirDatasPadrao() {
+  var ini = document.getElementById('rdashDataInicio');
+  var fim = document.getElementById('rdashDataFim');
+  var hoje = rdashHojeIso();
+  if (ini && !ini.value) ini.value = hoje;
+  if (fim && !fim.value) fim.value = hoje;
+  return {
+    inicio: (ini && ini.value) || hoje,
+    fim: (fim && fim.value) || hoje
+  };
+}
+
 async function loadReservaDashboard() {
+  rdashGarantirDatasPadrao();
   var sel = document.getElementById('rdashUnidadeFiltro');
   await fillReservaUnidadeSelect(sel);
   var unidadeId = sel && sel.value ? String(sel.value).trim() : '';
+  var datas = rdashGarantirDatasPadrao();
+  var dataInicio = datas.inicio;
+  var dataFim = datas.fim;
+  if (dataInicio > dataFim) {
+    var tmp = dataInicio;
+    dataInicio = dataFim;
+    dataFim = tmp;
+    var iniEl = document.getElementById('rdashDataInicio');
+    var fimEl = document.getElementById('rdashDataFim');
+    if (iniEl) iniEl.value = dataInicio;
+    if (fimEl) fimEl.value = dataFim;
+  }
   var lead = document.getElementById('rdashLead');
   var insightsEl = document.getElementById('rdashInsights');
   var barsEl = document.getElementById('rdashBars');
@@ -18331,12 +18365,36 @@ async function loadReservaDashboard() {
   }
 
   try {
-    var data = await fetchJSON('/reservas-mesas/dashboard?unidade_id=' + encodeURIComponent(unidadeId) + '&dias=14');
+    var q = 'unidade_id=' + encodeURIComponent(unidadeId) +
+      '&data_inicio=' + encodeURIComponent(dataInicio) +
+      '&data_fim=' + encodeURIComponent(dataFim);
+    var data = await fetchJSON('/reservas-mesas/dashboard?' + q);
     var k = data.kpis || {};
-    var hojeFmt = (data.hoje || '').slice(8, 10) + '/' + (data.hoje || '').slice(5, 7);
+    var diaRef = data.dia_referencia || data.data_fim || data.hoje || dataFim;
+    var hojeIso = data.hoje || rdashHojeIso();
+    var mesmoDia = dataInicio === dataFim;
+    var refFmt = rdashFormatDataBr(diaRef);
+    var periodoFmt = mesmoDia
+      ? ('Dia ' + refFmt + (diaRef === hojeIso ? ' (hoje)' : ''))
+      : (rdashFormatDataBr(dataInicio) + ' – ' + rdashFormatDataBr(dataFim));
     if (lead) {
-      lead.textContent = 'Hoje ' + (hojeFmt || '—') + ' · ' + (k.reservas_hoje || 0) + ' ativas · ocupação ' + (k.ocupacao_pct || 0) + '%';
+      lead.textContent = periodoFmt + ' · ' + (k.reservas_hoje || 0) + ' ativas no dia · ocupação ' + (k.ocupacao_pct || 0) + '%';
     }
+
+    var trendTitle = document.getElementById('rdashTrendTitle');
+    if (trendTitle) {
+      trendTitle.textContent = mesmoDia
+        ? ('Tendência · ' + refFmt)
+        : ('Tendência · ' + rdashFormatDataBr(dataInicio) + ' a ' + rdashFormatDataBr(dataFim));
+    }
+    var statusTitle = document.getElementById('rdashStatusTitle');
+    if (statusTitle) statusTitle.textContent = 'Status · ' + refFmt;
+    var turnosTitle = document.getElementById('rdashTurnosTitle');
+    if (turnosTitle) turnosTitle.textContent = 'Turnos · ' + refFmt;
+    var proximasTitle = document.getElementById('rdashProximasTitle');
+    if (proximasTitle) proximasTitle.textContent = diaRef === hojeIso ? 'Próximas chegadas' : ('Reservas · ' + refFmt);
+    var proximasSub = document.getElementById('rdashProximasSub');
+    if (proximasSub) proximasSub.textContent = diaRef === hojeIso ? 'Fila do dia' : 'Reservas ativas do dia selecionado';
 
     var setTxt = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
     setTxt('rdashKpiReservas', String(k.reservas_hoje != null ? k.reservas_hoje : '—'));
@@ -18406,7 +18464,7 @@ async function loadReservaDashboard() {
     var proximas = data.proximas || [];
     if (proximasEl) {
       if (!proximas.length) {
-        proximasEl.innerHTML = '<p class="reservas-empty">Nenhuma reserva ativa para hoje.</p>';
+        proximasEl.innerHTML = '<p class="reservas-empty">' + (diaRef === hojeIso ? 'Nenhuma reserva ativa para hoje.' : 'Nenhuma reserva ativa neste dia.') + '</p>';
       } else {
         proximasEl.innerHTML = proximas.map(function(p) {
           return '<article class="rdash-prox">' +
@@ -20050,6 +20108,7 @@ async function abrirEditarReserva(id) {
 }
 
 function setupReservasMesasModule() {
+  rdashGarantirDatasPadrao();
   var unidadeSelect = document.getElementById('reservasUnidadeFiltro');
   var dataInput = document.getElementById('reservasDataFiltro');
   if (dataInput) dataInput.value = new Date().toISOString().slice(0, 10);
@@ -20255,6 +20314,8 @@ function setupReservasMesasModule() {
   document.getElementById('reservasAtualizar') && document.getElementById('reservasAtualizar').addEventListener('click', function() { loadReservasMesas(); });
 
   document.getElementById('rdashUnidadeFiltro') && document.getElementById('rdashUnidadeFiltro').addEventListener('change', function() { loadReservaDashboard(); });
+  document.getElementById('rdashDataInicio') && document.getElementById('rdashDataInicio').addEventListener('change', function() { loadReservaDashboard(); });
+  document.getElementById('rdashDataFim') && document.getElementById('rdashDataFim').addEventListener('change', function() { loadReservaDashboard(); });
   document.getElementById('rdashAtualizar') && document.getElementById('rdashAtualizar').addEventListener('click', function() { loadReservaDashboard(); });
   document.getElementById('rdashIrMesas') && document.getElementById('rdashIrMesas').addEventListener('click', function() {
     var u = document.getElementById('rdashUnidadeFiltro');

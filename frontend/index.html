@@ -1137,6 +1137,16 @@
                   <p class="rdash__lead" id="rdashLead">Visão rápida do salão: ocupação, chegadas e tendência.</p>
                 </div>
                 <div class="rdash__hero-actions">
+                  <div class="rdash__dates">
+                    <label class="rdash__filter rdash__filter--date">
+                      Início
+                      <input type="date" id="rdashDataInicio" class="rdash-date-input" />
+                    </label>
+                    <label class="rdash__filter rdash__filter--date">
+                      Fim
+                      <input type="date" id="rdashDataFim" class="rdash-date-input" />
+                    </label>
+                  </div>
                   <label class="rdash__filter">
                     Unidade
                     <select id="rdashUnidadeFiltro" class="reservas-select">
@@ -1182,7 +1192,7 @@
               <div class="rdash__grid">
                 <div class="rdash-panel rdash-panel--trend">
                   <header class="rdash-panel__head">
-                    <h3>Tendência · últimos 14 dias</h3>
+                    <h3 id="rdashTrendTitle">Tendência · período</h3>
                     <p class="subtle-text">Reservas ativas e no-shows por dia</p>
                   </header>
                   <div class="rdash-bars" id="rdashBars" role="img" aria-label="Gráfico de tendência de reservas"></div>
@@ -1190,15 +1200,15 @@
 
                 <div class="rdash-panel">
                   <header class="rdash-panel__head">
-                    <h3>Status de hoje</h3>
-                    <p class="subtle-text">Distribuição do dia</p>
+                    <h3 id="rdashStatusTitle">Status do dia</h3>
+                    <p class="subtle-text">Distribuição do dia de referência</p>
                   </header>
                   <ul class="rdash-status" id="rdashStatus"></ul>
                 </div>
 
                 <div class="rdash-panel">
                   <header class="rdash-panel__head">
-                    <h3>Turnos de hoje</h3>
+                    <h3 id="rdashTurnosTitle">Turnos do dia</h3>
                     <p class="subtle-text">Almoço · tarde · noite</p>
                   </header>
                   <div class="rdash-turnos" id="rdashTurnos"></div>
@@ -1206,8 +1216,8 @@
 
                 <div class="rdash-panel rdash-panel--lista">
                   <header class="rdash-panel__head">
-                    <h3>Próximas chegadas</h3>
-                    <p class="subtle-text">Fila do dia</p>
+                    <h3 id="rdashProximasTitle">Próximas chegadas</h3>
+                    <p class="subtle-text" id="rdashProximasSub">Fila do dia de referência</p>
                   </header>
                   <div class="rdash-proximas" id="rdashProximas"></div>
                 </div>
@@ -7772,7 +7782,7 @@
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260719-sem-estoque-delivery"></script>
-    <script src="app.js?v=20260721-reserva-qtd-extras"></script>
+    <script src="app.js?v=20260721-rdash-datas"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
