@@ -1027,6 +1027,17 @@ class ReservaMesaController extends Controller
             ->orderBy('hora_reserva', 'desc')
             ->get();
 
+        if ($request->filled('telefone_cliente')) {
+            $telFiltro = preg_replace('/\D/', '', (string) $request->telefone_cliente);
+            if ($telFiltro !== '') {
+                $reservas = $reservas->filter(function ($r) use ($telFiltro) {
+                    $tel = preg_replace('/\D/', '', (string) ($r->telefone_cliente ?? ''));
+
+                    return $tel !== '' && $tel === $telFiltro;
+                })->values();
+            }
+        }
+
         $chaveCliente = function ($r) {
             $tel = preg_replace('/\D/', '', $r->telefone_cliente ?? '');
             return $tel ? $tel : ($r->nome_cliente ?? '');
@@ -1038,7 +1049,9 @@ class ReservaMesaController extends Controller
             $contagemPorCliente[$key] = ($contagemPorCliente[$key] ?? 0) + 1;
         }
 
-        $result = $reservas->map(function ($r) use ($chaveCliente, $contagemPorCliente) {
+        $fid = app(ReservaFidelidadeService::class);
+
+        $result = $reservas->map(function ($r) use ($chaveCliente, $contagemPorCliente, $fid) {
             $key = $chaveCliente($r);
             return [
                 'id' => $r->id,
@@ -1051,6 +1064,10 @@ class ReservaMesaController extends Controller
                 'mesa' => $r->mesa,
                 'unidade' => $r->unidade,
                 'total_reservas_cliente' => $contagemPorCliente[$key] ?? 1,
+                'conta_paga' => (bool) $r->conta_paga,
+                'valor_conta' => $r->valor_conta !== null ? round((float) $r->valor_conta, 2) : null,
+                'conta_paga_em' => $r->conta_paga_em,
+                'pagamentos_conta' => $fid->pagamentosContaReserva($r),
             ];
         });
 

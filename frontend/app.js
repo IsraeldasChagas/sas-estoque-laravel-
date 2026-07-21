@@ -18449,7 +18449,7 @@ async function loadHistoricoReservas() {
   var tbody = document.getElementById('historicoReservasTableBody');
   if (!tbody) return;
     if (!unidadeId) {
-    tbody.innerHTML = '<tr class="reserva-row reserva-row-empty"><td colspan="9" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>';
+    tbody.innerHTML = '<tr class="reserva-row reserva-row-empty"><td colspan="11" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>';
     return;
   }
   var params = 'unidade_id=' + unidadeId;
@@ -18459,7 +18459,7 @@ async function loadHistoricoReservas() {
   try {
     var lista = await fetchJSON('/reservas-mesas/historico?' + params);
     if (!lista || lista.length === 0) {
-      tbody.innerHTML = '<tr class="reserva-row reserva-row-empty"><td colspan="9" class="reservas-empty">Nenhuma reserva encontrada no período.</td></tr>';
+      tbody.innerHTML = '<tr class="reserva-row reserva-row-empty"><td colspan="11" class="reservas-empty">Nenhuma reserva encontrada no período.</td></tr>';
       return;
     }
     tbody.innerHTML = lista.map(function(r) {
@@ -18468,22 +18468,44 @@ async function loadHistoricoReservas() {
       var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || '-';
       var statusClass = (r.status || '').replace(/_/g, '-');
       var btnWhatsApp = r.telefone_cliente ? '<button class="btn-icon" title="WhatsApp cliente" data-id="' + r.id + '" data-action="whatsapp-historico">📱</button> ' : '';
+      var nomeCliente = escapeHtml(r.nome_cliente || '-');
+      var clienteCell = (r.telefone_cliente || r.nome_cliente)
+        ? '<button type="button" class="reserva-hist-cliente-link" data-action="pagamentos-cliente" data-nome="' + escapeHtml(r.nome_cliente || '') + '" data-telefone="' + escapeHtml(r.telefone_cliente || '') + '" title="Ver histórico de pagamentos do cliente">' + nomeCliente + '</button>'
+        : nomeCliente;
       return '<tr class="reserva-row">' +
         '<td data-label="Data">' + escapeHtml(dataStr) + '</td>' +
         '<td data-label="Horário">' + escapeHtml(horaStr) + '</td>' +
-        '<td data-label="Cliente">' + escapeHtml(r.nome_cliente || '-') + '</td>' +
+        '<td data-label="Cliente">' + clienteCell + '</td>' +
         '<td data-label="WhatsApp">' + escapeHtml(r.telefone_cliente || '-') + (btnWhatsApp ? ' ' + btnWhatsApp : '') + '</td>' +
         '<td data-label="Pessoas">' + (r.qtd_pessoas || '-') + '</td>' +
         '<td data-label="Mesa">' + escapeHtml(mesaNome) + '</td>' +
         '<td data-label="Status"><span class="status-reserva status-reserva--' + statusClass + '">' + (r.status || '').replace(/_/g, ' ') + '</span></td>' +
+        '<td data-label="Conta">' + reservaHistoricoContaBadge(r) + '</td>' +
+        '<td data-label="Valor">' + escapeHtml(reservaHistoricoValorCell(r)) + '</td>' +
         '<td data-label="Total reservas (cliente)">' + (r.total_reservas_cliente || 1) + '</td>' +
-        '<td data-label="Ações" class="reserva-row-acoes"><button type="button" class="btn-icon btn-icon--danger" title="Excluir reserva do histórico" aria-label="Excluir reserva do histórico" data-id="' + r.id + '" data-action="excluir-historico">🗑️</button></td></tr>';
+        '<td data-label="Ações" class="reserva-row-acoes">' +
+        '<button type="button" class="btn-icon" title="Detalhes" data-id="' + r.id + '" data-action="detalhes-historico">👁️</button> ' +
+        '<button type="button" class="btn-icon btn-icon--danger" title="Excluir reserva do histórico" aria-label="Excluir reserva do histórico" data-id="' + r.id + '" data-action="excluir-historico">🗑️</button></td></tr>';
     }).join('');
     tbody.querySelectorAll('[data-action="whatsapp-historico"]').forEach(function(btn) {
       btn.addEventListener('click', async function() {
         var id = btn.getAttribute('data-id');
         var r = await fetchJSON('/reservas-mesas/' + id);
         abrirWhatsAppReserva(r);
+      });
+    });
+    tbody.querySelectorAll('[data-action="detalhes-historico"]').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        await abrirDetalhesReserva(btn.getAttribute('data-id'));
+      });
+    });
+    tbody.querySelectorAll('[data-action="pagamentos-cliente"]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        abrirHistoricoPagamentosCliente(
+          btn.getAttribute('data-nome') || '',
+          btn.getAttribute('data-telefone') || '',
+          unidadeId
+        );
       });
     });
     tbody.querySelectorAll('[data-action="excluir-historico"]').forEach(function(btn) {
@@ -18506,7 +18528,7 @@ async function loadHistoricoReservas() {
     });
   } catch (err) {
     showToast(err.message || 'Erro ao carregar histórico.', 'error');
-    tbody.innerHTML = '<tr class="reserva-row reserva-row-empty"><td colspan="9" class="reservas-empty">Erro ao carregar.</td></tr>';
+    tbody.innerHTML = '<tr class="reserva-row reserva-row-empty"><td colspan="11" class="reservas-empty">Erro ao carregar.</td></tr>';
   }
 }
 
@@ -18519,6 +18541,12 @@ function setupHistoricoReservas() {
   });
   document.getElementById('historicoUnidadeFiltro') && document.getElementById('historicoUnidadeFiltro').addEventListener('change', function() {
     loadHistoricoReservas();
+  });
+  document.getElementById('closeReservaClientePagamentos') && document.getElementById('closeReservaClientePagamentos').addEventListener('click', function() {
+    document.getElementById('reservaClientePagamentosModal').classList.remove('active');
+  });
+  document.getElementById('reservaClientePagamentosModal') && document.getElementById('reservaClientePagamentosModal').addEventListener('click', function(e) {
+    if (e.target.id === 'reservaClientePagamentosModal') e.target.classList.remove('active');
   });
 }
 
@@ -18957,6 +18985,89 @@ function reservaFidHtmlPagamentosRegistrados(pagamentos) {
     var txt = quem + escapeHtml(formaTxt) + ' · R$ ' + reservaFidMoeda(p.valor);
     return '<li>' + txt + '</li>';
   }).join('') + '</ul>';
+}
+
+function reservaHtmlResumoContaPaga(r) {
+  if (!r || !r.conta_paga) return '';
+  var valor = r.valor_conta != null ? (' · R$ ' + reservaFidMoeda(Number(r.valor_conta))) : '';
+  var pag = Array.isArray(r.pagamentos_conta) ? r.pagamentos_conta : [];
+  return '<div class="reserva-hist-pagamento-resumo">' +
+    '<p class="reserva-fid__conta-ok" style="margin:0;">✓ Conta paga' + valor + '</p>' +
+    reservaFidHtmlPagamentosRegistrados(pag) +
+  '</div>';
+}
+
+function reservaHistoricoContaBadge(r) {
+  if (r.conta_paga) return '<span class="reserva-hist-conta reserva-hist-conta--paga">Paga</span>';
+  if (['finalizada', 'cliente_chegou'].indexOf(r.status || '') !== -1) {
+    return '<span class="reserva-hist-conta reserva-hist-conta--pendente">Sem registro</span>';
+  }
+  return '<span class="reserva-hist-conta reserva-hist-conta--na">—</span>';
+}
+
+function reservaHistoricoValorCell(r) {
+  if (r.conta_paga && r.valor_conta != null) return 'R$ ' + reservaFidMoeda(Number(r.valor_conta));
+  return '—';
+}
+
+async function abrirHistoricoPagamentosCliente(nome, telefone, unidadeId) {
+  var modal = document.getElementById('reservaClientePagamentosModal');
+  var content = document.getElementById('reservaClientePagamentosContent');
+  var title = document.getElementById('reservaClientePagamentosTitle');
+  if (!modal || !content) return;
+  title.textContent = '💳 Pagamentos — ' + (nome || 'Cliente');
+  content.innerHTML = '<p class="subtle-text">Carregando…</p>';
+  modal.classList.add('active');
+  try {
+    var params = 'unidade_id=' + encodeURIComponent(unidadeId || '');
+    if (telefone) params += '&telefone_cliente=' + encodeURIComponent(telefone);
+    var lista = await fetchJSON('/reservas-mesas/historico?' + params);
+    if (!telefone && nome) {
+      lista = (lista || []).filter(function(r) { return (r.nome_cliente || '') === nome; });
+    }
+    if (!lista || !lista.length) {
+      content.innerHTML = '<p class="subtle-text">Nenhuma visita encontrada para este cliente.</p>';
+      return;
+    }
+    var visitasPagas = lista.filter(function(r) { return r.conta_paga; });
+    var totalPago = visitasPagas.reduce(function(s, r) { return s + Number(r.valor_conta || 0); }, 0);
+    content.innerHTML =
+      '<div class="reserva-hist-cliente-resumo">' +
+        '<p style="margin:0 0 0.35rem;"><strong>' + escapeHtml(nome || '-') + '</strong>' +
+        (telefone ? ' · ' + escapeHtml(telefone) : '') + '</p>' +
+        '<p class="subtle-text" style="margin:0;">' + lista.length + ' visita(s) · ' + visitasPagas.length +
+        ' conta(s) paga(s) · Total R$ ' + reservaFidMoeda(totalPago) + '</p>' +
+      '</div>' +
+      '<div class="reserva-hist-cliente-lista">' +
+        lista.map(function(r) {
+          var dataStr = formatDataBrasil(r.data_reserva);
+          var horaStr = formatHora(r.hora_reserva);
+          var mesaNome = (r.mesa && (r.mesa.nome_mesa || r.mesa.numero_mesa)) || '-';
+          var statusClass = (r.status || '').replace(/_/g, '-');
+          var contaHtml = r.conta_paga
+            ? ('<p class="reserva-fid__conta-ok" style="margin:0.35rem 0 0;">✓ R$ ' + reservaFidMoeda(Number(r.valor_conta || 0)) + '</p>' +
+              reservaFidHtmlPagamentosRegistrados(r.pagamentos_conta || []))
+            : '<p class="subtle-text" style="margin:0.35rem 0 0;">Conta não registrada</p>';
+          return '<article class="reserva-hist-cliente-item">' +
+            '<div class="reserva-hist-cliente-item__head">' +
+              '<strong>' + escapeHtml(dataStr) + ' · ' + escapeHtml(horaStr) + '</strong>' +
+              '<span class="status-reserva status-reserva--' + statusClass + '">' + escapeHtml((r.status || '').replace(/_/g, ' ')) + '</span>' +
+            '</div>' +
+            '<p class="subtle-text" style="margin:0.25rem 0;">Mesa ' + escapeHtml(String(mesaNome)) + ' · ' + (r.qtd_pessoas || '-') + ' pessoa(s)</p>' +
+            contaHtml +
+            '<button type="button" class="btn neutral reserva-hist-btn-detalhes" data-reserva-id="' + r.id + '">Ver reserva completa</button>' +
+          '</article>';
+        }).join('') +
+      '</div>';
+    content.querySelectorAll('.reserva-hist-btn-detalhes').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        modal.classList.remove('active');
+        abrirDetalhesReserva(btn.getAttribute('data-reserva-id'));
+      });
+    });
+  } catch (e) {
+    content.innerHTML = '<p class="subtle-text">' + escapeHtml(e.message || 'Erro ao carregar histórico do cliente.') + '</p>';
+  }
 }
 
 async function popularSelectUnidadeReserva(selectEl) {
@@ -19421,6 +19532,7 @@ async function abrirDetalhesReserva(id) {
       alertaPrep +
       '<p><strong>Cliente:</strong> ' + escapeHtml(r.nome_cliente) + '</p>' +
       '<p><strong>Telefone:</strong> ' + escapeHtml(r.telefone_cliente || '-') + '</p>' +
+      reservaHtmlResumoContaPaga(r) +
       '<p><strong>Data:</strong> ' + formatDataBrasil(r.data_reserva) + ' | <strong>Horário:</strong> ' + formatHora(r.hora_reserva) + '</p>' +
       '<p><strong>Pessoas:</strong> <span id="detQtdPessoas">' + qtd + '</span></p>' +
       '<p><strong>Status:</strong> ' + (r.status || '').replace(/_/g, ' ') + '</p>' +

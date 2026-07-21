@@ -1417,12 +1417,14 @@
                       <th>Pessoas</th>
                       <th>Mesa</th>
                       <th>Status</th>
+                      <th>Conta</th>
+                      <th>Valor</th>
                       <th>Total reservas (cliente)</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody id="historicoReservasTableBody">
-                    <tr><td colspan="9" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>
+                    <tr><td colspan="11" class="reservas-empty">Selecione uma unidade e clique em Atualizar.</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1521,6 +1523,17 @@
                 <button type="button" class="close-btn" id="closeReservaDetalhes" aria-label="Fechar">×</button>
               </header>
               <div id="reservaDetalhesContent" style="padding: 1.5rem;"></div>
+            </div>
+          </div>
+
+          <!-- Modal Histórico de pagamentos do cliente (Reserva) -->
+          <div class="modal-backdrop" id="reservaClientePagamentosModal">
+            <div class="modal modal--wide">
+              <header>
+                <h2 id="reservaClientePagamentosTitle">💳 Histórico de pagamentos</h2>
+                <button type="button" class="close-btn" id="closeReservaClientePagamentos" aria-label="Fechar">×</button>
+              </header>
+              <div id="reservaClientePagamentosContent" style="padding: 1.5rem;"></div>
             </div>
           </div>
 
@@ -7762,7 +7775,7 @@
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260719-sem-estoque-delivery"></script>
-    <script src="app.js?v=20260720-reserva-wa-empresa"></script>
+    <script src="app.js?v=20260721-historico-pagamentos-reserva"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
