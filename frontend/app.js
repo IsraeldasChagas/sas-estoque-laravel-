@@ -18800,7 +18800,7 @@ function atualizarCampoCadeirasReservaForm(form, extrasPreferido) {
     return;
   }
   if (hint) {
-    hint.textContent = 'Capacidade base: ' + info.base + ' pessoa(s). Cadeiras extras podem ser ajustadas depois nos detalhes da reserva.';
+    hint.textContent = 'Capacidade base: ' + info.base + ' pessoa(s). Se passar disso, informe o total em Quantidade de pessoas (até ' + info.max + ').';
   }
 }
 
@@ -18811,7 +18811,7 @@ function aplicarLimiteCapacidadeReservaForm(form) {
   atualizarCampoCadeirasReservaForm(form);
   var qtdIn = form.querySelector('[name="qtd_pessoas"]');
   var info = mesaSelecionadaReservaForm(form);
-  var cap = info ? info.base : NaN;
+  var cap = info ? info.max : NaN;
   if (!qtdIn) return;
   if (!Number.isFinite(cap) || cap < 1) {
     qtdIn.setAttribute('max', '99');
@@ -20211,11 +20211,13 @@ function setupReservasMesasModule() {
       return;
     }
     var infoMesa = mesaSelecionadaReservaForm(form);
-    if (infoMesa && data.qtd_pessoas > infoMesa.base) {
-      showToast('Na criação, informe até ' + infoMesa.base + ' pessoa(s) (capacidade base). Depois, nos detalhes da reserva, use ➕ Mais pessoa ou cadeiras se precisar.', 'error');
-      return;
-    }
-    if (!id) {
+    if (infoMesa) {
+      if (data.qtd_pessoas > infoMesa.max) {
+        showToast('Esta mesa comporta até ' + infoMesa.max + ' pessoa(s) (base ' + infoMesa.base + ' + extras).', 'error');
+        return;
+      }
+      data.cadeiras_extras_utilizadas = Math.max(0, data.qtd_pessoas - infoMesa.base);
+    } else if (!id) {
       data.cadeiras_extras_utilizadas = 0;
     }
     try {
