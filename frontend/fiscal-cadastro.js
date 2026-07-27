@@ -155,7 +155,7 @@
   ];
 
   function empresaRegimeCardsMarkup() {
-    return `<div class="fiscal-regime-cards fiscal-regime-cards--grid" role="radiogroup" aria-label="Regime tributário da empresa">
+    return `<div class="fiscal-regime-cards" role="radiogroup" aria-label="Regime tributário da empresa">
       ${EMPRESA_REGIMES.map(
         (r) => `<button type="button" class="fiscal-regime-card" data-regime="${r.value}" role="radio" aria-checked="false">
           <span class="fiscal-regime-card__title">${esc(r.title)}</span>
@@ -178,13 +178,14 @@
   }
 
   function empresaCrtFieldMarkup() {
-    return `<div class="fiscal-form-block fiscal-form-block--tributacao fiscal-form-block--crt fiscal-form-block--compact">
-      <label class="fiscal-field-full">Código CRT (NF-e)
+    return `<div class="fiscal-form-block fiscal-form-block--tributacao fiscal-form-block--crt">
+      <p class="fiscal-form-block__title">CRT na NF-e (opcional agora)</p>
+      <label>Código CRT
         <select name="crt">
-          <option value="">Sugerir pelo regime</option>
+          <option value="">Sugerir automaticamente ao escolher o regime</option>
           <option value="1">1 — Simples Nacional</option>
-          <option value="2">2 — Simples (excesso sublimite)</option>
-          <option value="3">3 — Regime Normal</option>
+          <option value="2">2 — Simples Nacional (excesso sublimite)</option>
+          <option value="3">3 — Regime Normal (Lucro Presumido ou Real)</option>
         </select>
       </label>
     </div>`;
@@ -276,12 +277,13 @@
     form.querySelectorAll("[data-empresa-step]").forEach((el) => {
       const n = Number(el.dataset.empresaStep);
       if (isEdit) {
-        el.classList.toggle("hidden", n === 1);
+        el.classList.remove("hidden");
         return;
       }
       el.classList.toggle("hidden", n !== step);
     });
     form.querySelector("#fiscalEmpresaEditRegimeBlock")?.classList.toggle("hidden", !isEdit);
+    form.classList.toggle("fiscal-empresa-form--edit-layout", isEdit);
     const btnContinuar = form.querySelector("#fiscalEmpresaBtnContinuar");
     const btnVoltar = form.querySelector("#fiscalEmpresaBtnVoltar");
     const btnSalvar = form.querySelector("#fiscalEmpresaBtnSalvar");
@@ -437,30 +439,36 @@
         </div>
 
         <section class="fiscal-empresa-step-panel" data-empresa-step="1">
-          <h3 class="fiscal-empresa-step-title">Regime tributário</h3>
-          <p class="fiscal-empresa-step-lead">Escolha uma opção — obrigatório para vincular unidades.</p>
+          <h3 class="fiscal-empresa-step-title">Qual é o regime tributário desta empresa?</h3>
+          <p class="fiscal-empresa-step-lead">Selecione uma opção na lista. É obrigatório para vincular unidades e uso fiscal futuro.</p>
           ${empresaRegimeCardsMarkup()}
+          ${empresaCrtFieldMarkup()}
         </section>
 
         <section class="fiscal-empresa-step-panel hidden" data-empresa-step="2">
           ${empresaRegimeSelectMarkup()}
           <h3 class="fiscal-empresa-step-title fiscal-empresa-step-title--create">Dados da pessoa jurídica</h3>
-          <p class="fiscal-empresa-step-lead fiscal-empresa-step-lead--create">CNPJ, razão social e inscrições.</p>
+          <p class="fiscal-empresa-step-lead fiscal-empresa-step-lead--create">CNPJ, razão social e inscrições. O regime já foi definido no passo anterior.</p>
           <div class="fiscal-empresa-regime-chip-wrap hidden" id="fiscalEmpresaRegimeChipWrap">
             <span class="fiscal-empresa-regime-chip" id="fiscalEmpresaRegimeChip"></span>
             <button type="button" class="btn link-like" id="fiscalEmpresaAlterarRegime">Alterar regime</button>
           </div>
-          <div class="fiscal-form-grid-2 fiscal-form-grid-2--compact">
+          <div class="fiscal-form-grid-2">
             <label class="fiscal-field-full">Razão social *<input name="razao_social" required maxlength="255" /></label>
+          </div>
+          <div class="fiscal-form-grid-2">
             <label>Nome fantasia<input name="nome_fantasia" maxlength="255" /></label>
             <label>CNPJ<input name="cnpj" placeholder="00.000.000/0000-00" maxlength="20" /></label>
+          </div>
+          <div class="fiscal-form-grid-2">
             <label>Inscrição estadual<input name="inscricao_estadual" maxlength="30" /></label>
             <label>Inscrição municipal<input name="inscricao_municipal" maxlength="30" /></label>
+          </div>
+          <div class="fiscal-form-grid-2">
             <label>UF<input name="uf" maxlength="2" placeholder="PA" /></label>
             <label>Município<input name="municipio" maxlength="120" /></label>
             <label>Status<select name="ativo"><option value="1">Ativa</option><option value="0">Inativa</option></select></label>
           </div>
-          ${empresaCrtFieldMarkup()}
         </section>
       </form></div></div>`;
 
@@ -632,20 +640,26 @@
           ${fiscalPodeEditar ? '<button type="submit" form="fiscalPerfilForm" class="btn primary" id="fiscalPerfilBtnSalvar">Salvar perfil</button>' : ""}
         </div>
       </div>
-      <form id="fiscalPerfilForm" class="fiscal-modal-form fiscal-perfil-form fiscal-perfil-form--grid"><input type="hidden" name="id" />
-        <label class="fiscal-field-full">Nome *<input name="nome" required maxlength="150" /></label>
-        <label class="fiscal-field-full">Descrição<textarea name="descricao" rows="2"></textarea></label>
+      <form id="fiscalPerfilForm" class="fiscal-modal-form fiscal-perfil-form"><input type="hidden" name="id" />
+        <label>Nome *<input name="nome" required maxlength="150" /></label>
+        <label>Descrição<textarea name="descricao" rows="2"></textarea></label>
         <label>Tipo fiscal padrão<select name="tipo_fiscal_padrao"><option value="">—</option>
           <option value="producao_propria">Produção própria</option><option value="revenda">Revenda</option>
           <option value="insumo">Insumo</option><option value="uso_consumo">Uso e consumo</option></select></label>
+        <div class="grid-two">
+          <label>NCM padrão<input name="ncm_padrao" maxlength="12" class="fiscal-ncm-mask" /></label>
+          <label>CEST padrão<input name="cest_padrao" maxlength="10" /></label>
+        </div>
+        <div class="grid-two">
+          <label>CST ICMS<input name="cst_icms" maxlength="5" /></label>
+          <label>CSOSN<input name="csosn" maxlength="6" /></label>
+        </div>
+        <div class="grid-two">
+          <label>CFOP entrada<input name="cfop_entrada_padrao" maxlength="6" /></label>
+          <label>CFOP saída<input name="cfop_saida_padrao" maxlength="6" /></label>
+        </div>
         <label>Status<select name="ativo"><option value="1">Ativo</option><option value="0">Inativo</option></select></label>
-        <label>NCM padrão<input name="ncm_padrao" maxlength="12" class="fiscal-ncm-mask" /></label>
-        <label>CEST padrão<input name="cest_padrao" maxlength="10" /></label>
-        <label>CST ICMS<input name="cst_icms" maxlength="5" /></label>
-        <label>CSOSN<input name="csosn" maxlength="6" /></label>
-        <label>CFOP entrada<input name="cfop_entrada_padrao" maxlength="6" /></label>
-        <label>CFOP saída<input name="cfop_saida_padrao" maxlength="6" /></label>
-        <label class="fiscal-field-full">Observações<textarea name="observacoes" rows="2"></textarea></label>
+        <label>Observações<textarea name="observacoes" rows="2"></textarea></label>
       </form></div></div>`;
 
     root.querySelectorAll(".fiscal-ncm-mask").forEach(maskNcmInput);
