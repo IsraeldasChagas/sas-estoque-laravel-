@@ -199,7 +199,7 @@ final class VendaFiscalSupport
             $descontoTotal = 0.0;
             $custoTotalVenda = 0.0;
 
-            $vendaId = DB::table('vendas')->insertGetId([
+            $insertVenda = [
                 'empresa_id' => $empresaId,
                 'unidade_id' => $unidadeId,
                 'usuario_id' => $usuarioId,
@@ -216,7 +216,20 @@ final class VendaFiscalSupport
                 'observacao' => $payload['observacao'] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            if (Schema::hasColumn('vendas', 'mesa_id') && ! empty($payload['mesa_id'])) {
+                $insertVenda['mesa_id'] = (int) $payload['mesa_id'];
+            }
+            if (Schema::hasColumn('vendas', 'comanda_id') && ! empty($payload['comanda_id'])) {
+                $insertVenda['comanda_id'] = (int) $payload['comanda_id'];
+            }
+            if (Schema::hasColumn('vendas', 'reserva_mesa_id') && ! empty($payload['reserva_mesa_id'])) {
+                $insertVenda['reserva_mesa_id'] = (int) $payload['reserva_mesa_id'];
+            }
+            if (Schema::hasColumn('vendas', 'origem_venda') && ! empty($payload['origem_venda'])) {
+                $insertVenda['origem_venda'] = (string) $payload['origem_venda'];
+            }
+            $vendaId = DB::table('vendas')->insertGetId($insertVenda);
 
             foreach ($itens as $raw) {
                 $produtoId = (int) $raw['produto_id'];

@@ -1,9 +1,19 @@
 /**
- * Comercial / PDV — PROTÓTIPO VISUAL APENAS.
- * Sem chamadas de API, sem persistência. Ações simuladas em memória.
+ * Comercial / PDV — integrado ao estoque e venda fiscal (API /pdv, /fiscal/vendas).
  */
 (function () {
   "use strict";
+
+  async function cpdvFetch(path, opts = {}) {
+    const base = window.API_BASE || "/api";
+    const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+    const uid = window.getUser?.()?.id;
+    if (uid) headers["X-Usuario-Id"] = String(uid);
+    const res = await fetch(`${base}${path}`, { ...opts, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+    return data;
+  }
 
   const DADOS_DEMONSTRACAO_PDV = {
     unidades: [
@@ -109,6 +119,11 @@
     garcomId: null,
     suspensas: [],
     busca: "",
+    unidadeId: null,
+    apiReady: false,
+    produtosApi: [],
+    salaoMesas: [],
+    comandaAtual: null,
   };
 
   let cpdvModalBound = false;
@@ -148,7 +163,73 @@
   }
 
   function cpdvAvisoProto() {
-    return '<p class="cpdv-aviso-proto">Protótipo visual — dados fictícios em memória. Nenhuma alteração é salva no servidor.</p>';
+    if (cpdvState.apiReady) {
+      return '<p class="cpdv-aviso-proto cpdv-aviso-proto--ok">PDV operacional — vendas gravam estoque e registro fiscal (mesmo CNPJ da unidade).</p>';
+    }
+    return '<p class="cpdv-aviso-proto">Carregando API ou módulo indisponível — algumas ações usam dados demo.</p>';
+  }
+
+  async function cpdvInitApi() {
+    try {
+      const meta = await cpdvFetch("/pdv/meta");
+      cpdvState.apiReady = !!(meta.modulo_venda_fiscal || meta.modulo_comandas);
+    } catch {
+      cpdvState.apiReady = false;
+    }
+    if (!cpdvState.unidadeId) {
+      const u = window.getUser?.()?.unidade_id || window.state?.unidadeAtual?.id;
+      if (u) cpdvState.unidadeId = Number(u);
+    }
+  }
+
+  async function cpdvLoadUnidadesOptions(selectedId) {
+    let unis = window.state?.unidades;
+    if (!unis?.length) {
+      try {
+        unis = await cpdvFetch("/unidades");
+      } catch {
+        unis = DADOS_DEMONSTRACAO_PDV.unidades.map((u) => ({ id: u.id, nome: u.nome }));
+      }
+    }
+    return (unis || [])
+      .map((u) => `<option value="${escHtml(u.id)}"${String(selectedId) === String(u.id) ? " selected" : ""}>${escHtml(u.nome)}</option>`)
+      .join("");
+  }
+
+  async function cpdvLoadProdutosApi() {
+    if (!cpdvState.unidadeId || !cpdvState.apiReady) {
+      cpdvState.produtosApi = [];
+      return;
+    }
+    try {
+      const q = cpdvState.busca ? `&search=${encodeURIComponent(cpdvState.busca)}` : "";
+      cpdvState.produtosApi = await cpdvFetch(`/pdv/produtos?unidade_id=${cpdvState.unidadeId}${q}`);
+    } catch {
+      cpdvState.produtosApi = [];
+    }
+  }
+
+  function cpdvProdutosAtivos() {
+    if (cpdvState.apiReady && cpdvState.produtosApi.length) {
+      return cpdvState.produtosApi.map((p) => ({
+        id: p.id,
+        nome: p.nome,
+        categoria: (p.categoria || "geral").toLowerCase(),
+        preco: Number(p.preco) || 0,
+        favorito: false,
+        disponivel: p.disponivel !== false && (p.saldo == null || p.saldo > 0),
+        estoqueProdutoId: p.id,
+      }));
+    }
+    return DADOS_DEMONSTRACAO_PDV.produtos;
+  }
+
+  function cpdvCategoriasAtivas() {
+    if (cpdvState.apiReady && cpdvState.produtosApi.length) {
+      const set = new Set(cpdvState.produtosApi.map((p) => (p.categoria || "geral").toLowerCase()));
+      return [{ id: "todos", nome: "Todos" }].concat([...set].sort().map((c) => ({ id: c, nome: c.charAt(0).toUpperCase() + c.slice(1) })));
+    }
+    return DADOS_DEMONSTRACAO_PDV.categorias;
   }
 
   function cpdvDestroyCharts() {
@@ -204,11 +285,17 @@
   }
 
   function cpdvAddCart(prodId) {
-    const p = DADOS_DEMONSTRACAO_PDV.produtos.find((x) => x.id === prodId);
+    const p = cpdvProdutosAtivos().find((x) => x.id === prodId);
     if (!p || !p.disponivel) return;
     const ex = cpdvState.cart.find((c) => c.produtoId === prodId);
     if (ex) ex.qtd += 1;
-    else cpdvState.cart.push({ produtoId: p.id, nome: p.nome, preco: p.preco, qtd: 1 });
+    else cpdvState.cart.push({
+      produtoId: p.id,
+      estoqueProdutoId: p.estoqueProdutoId || p.id,
+      nome: p.nome,
+      preco: p.preco,
+      qtd: 1,
+    });
     cpdvSyncCarrinhoMemoria();
     loadComercialPdv();
   }
@@ -230,7 +317,7 @@
 
   function cpdvFiltrarProdutos() {
     const q = (cpdvState.busca || "").toLowerCase().trim();
-    return DADOS_DEMONSTRACAO_PDV.produtos.filter((p) => {
+    return cpdvProdutosAtivos().filter((p) => {
       if (cpdvState.cat !== "todos" && p.categoria !== cpdvState.cat) return false;
       if (q && !p.nome.toLowerCase().includes(q)) return false;
       return true;
@@ -279,11 +366,13 @@
     }
   }
 
-  function cpdvRenderPdv() {
+  async function cpdvRenderPdv() {
     const root = cpdvRoot("comercialPdvRoot");
     if (!root) return;
+    await cpdvInitApi();
+    await cpdvLoadProdutosApi();
     const prods = cpdvFiltrarProdutos();
-    const cats = DADOS_DEMONSTRACAO_PDV.categorias.map((c) =>
+    const cats = cpdvCategoriasAtivas().map((c) =>
       `<button type="button" class="cpdv-chip${cpdvState.cat === c.id ? " active" : ""}" data-cpdv-cat="${escHtml(c.id)}">${escHtml(c.nome)}</button>`
     ).join("");
     const grid = prods.map((p) => {
@@ -311,8 +400,14 @@
       .concat(DADOS_DEMONSTRACAO_PDV.clientes.map((c) =>
         `<option value="${c.id}"${String(cpdvState.cliente) === String(c.id) ? " selected" : ""}>${escHtml(c.nome)}</option>`
       )).join("");
+    const uniOpts = await cpdvLoadUnidadesOptions(cpdvState.unidadeId);
     root.innerHTML = `
       ${cpdvAvisoProto()}
+      <div class="cpdv-form-body table-card" style="margin-bottom:.75rem">
+        <label>Unidade (PDV / estoque)
+          <select id="cpdvUnidadeFiscal"><option value="">— Selecione —</option>${uniOpts}</select>
+        </label>
+      </div>
       <div class="cpdv-pdv-layout">
         <div class="table-card">
           <header><h3>Produtos</h3></header>
@@ -328,10 +423,7 @@
             <label>Cliente
               <select id="cpdvClienteSel">${cliOpts}</select>
             </label>
-            <label>Unidade fiscal (estoque real)
-              <select id="cpdvUnidadeFiscal"><option value="">— Simulação demo —</option></select>
-            </label>
-            <p class="form-hint" style="font-size:0.8rem;margin:0 0 0.5rem">Com unidade selecionada, o pagamento usa API fiscal (mesmo CNPJ). Produtos do carrinho devem ser IDs reais do estoque.</p>
+            <p class="form-hint" style="font-size:0.8rem;margin:0 0 0.5rem">Produtos com estoque na unidade. Pagamento baixa estoque e registra venda fiscal.</p>
             ${cart}
             <div class="cpdv-cart-totais">
               <div>Subtotal: <strong>${moeda(cpdvSubtotal())}</strong></div>
@@ -343,7 +435,7 @@
               <button type="button" class="btn neutral" data-cpdv-proto="Desconto aplicado">Desconto</button>
               <button type="button" class="btn neutral" data-cpdv-proto="Acréscimo aplicado">Acréscimo</button>
               <button type="button" class="btn neutral" data-cpdv-proto="Venda suspensa">Suspender</button>
-              <button type="button" class="btn primary" data-cpdv-proto="Pagamento iniciado">Pagar</button>
+              <button type="button" class="btn primary" id="cpdvPagarBtn">Pagar</button>
               <button type="button" class="btn danger" data-cpdv-proto="Carrinho limpo" id="cpdvLimparCart">Limpar</button>
             </div>
           </div>
@@ -353,75 +445,208 @@
       cpdvState.cart = [];
       cpdvSyncCarrinhoMemoria();
       loadComercialPdv();
-      protoToast("Carrinho limpo");
     });
+    const uniEl = root.querySelector("#cpdvUnidadeFiscal");
+    if (uniEl) {
+      if (cpdvState.unidadeId) uniEl.value = String(cpdvState.unidadeId);
+      uniEl.onchange = async () => {
+        cpdvState.unidadeId = uniEl.value ? Number(uniEl.value) : null;
+        await cpdvLoadProdutosApi();
+        loadComercialPdv();
+      };
+    }
+    root.querySelector("#cpdvPagarBtn")?.addEventListener("click", cpdvAbrirModalPagamento);
     cpdvBindPdvEvents(root);
+  }
+
+  const CPDV_MESA_LABEL_API = {
+    livre: "Livre",
+    ocupada: "Ocupada",
+    reservada: "Reservada",
+    aguardando_pagamento: "Aguardando pagamento",
+    bloqueada: "Bloqueada",
+  };
+
+  async function cpdvAbrirComandaMesa(mesaCard) {
+    if (!cpdvState.unidadeId) {
+      toast("Selecione a unidade no PDV/Caixa ou abaixo.", "error");
+      return;
+    }
+    await cpdvLoadProdutosApi();
+    let comandaId = mesaCard.comanda_id;
+    try {
+      if (!comandaId) {
+        const ab = await cpdvFetch("/pdv/comandas/abrir", {
+          method: "POST",
+          body: JSON.stringify({
+            unidade_id: cpdvState.unidadeId,
+            mesa_id: mesaCard.mesa_id,
+            reserva_mesa_id: mesaCard.reserva_id || null,
+            pessoas: 2,
+          }),
+        });
+        comandaId = ab.comanda?.id;
+        cpdvState.comandaAtual = ab;
+      } else {
+        cpdvState.comandaAtual = await cpdvFetch(`/pdv/comandas/${comandaId}`);
+      }
+    } catch (e) {
+      toast(e.message, "error");
+      return;
+    }
+    cpdvRenderModalComanda(mesaCard);
+  }
+
+  function cpdvRenderModalComanda(mesaCard) {
+    const data = cpdvState.comandaAtual;
+    if (!data?.comanda) return;
+    const itens = data.itens || [];
+    const lista = itens.length
+      ? itens.map((i) =>
+          `<div class="cpdv-cart-item"><div><strong>${escHtml(i.produto_nome)}</strong> · ${i.quantidade} × ${moeda(i.preco_unitario)} = ${moeda(i.valor_total)}</div>
+          <button type="button" class="btn danger btn-sm" data-cpdv-rm-item="${i.id}">✕</button></div>`
+        ).join("")
+      : '<p class="subtle-text">Nenhum item — adicione abaixo.</p>';
+    const prods = cpdvProdutosAtivos().slice(0, 80);
+    const prodOpts = prods.map((p) => `<option value="${p.id}" data-preco="${p.preco}">${escHtml(p.nome)} (${moeda(p.preco)})</option>`).join("");
+    const body = `
+      <p><strong>Mesa ${escHtml(mesaCard.numero)}</strong> · Comanda #${data.comanda.id}</p>
+      <p>Total: <strong>${moeda(data.comanda.valor_total)}</strong></p>
+      ${lista}
+      <hr />
+      <label>Produto <select id="cpdvComProd">${prodOpts}</select></label>
+      <label>Qtd <input type="number" id="cpdvComQtd" min="0.001" step="0.001" value="1" /></label>
+      <button type="button" class="btn" id="cpdvComAdd">Lançar item</button>`;
+    const acts = `<button type="button" class="btn primary" id="cpdvComPagar">Fechar conta / pagar</button>
+      <button type="button" class="btn neutral" id="cpdvComFechar">Fechar</button>`;
+    openCpdvModal(`Comanda — Mesa ${mesaCard.numero}`, body, acts);
+    document.getElementById("cpdvComAdd")?.addEventListener("click", async () => {
+      const pid = Number(document.getElementById("cpdvComProd")?.value);
+      const qtd = Number(document.getElementById("cpdvComQtd")?.value || 1);
+      const opt = document.getElementById("cpdvComProd")?.selectedOptions?.[0];
+      const preco = Number(opt?.dataset?.preco || 0);
+      try {
+        cpdvState.comandaAtual = await cpdvFetch(`/pdv/comandas/${data.comanda.id}/itens`, {
+          method: "POST",
+          body: JSON.stringify({ produto_id: pid, quantidade: qtd, preco_unitario: preco }),
+        });
+        cpdvRenderModalComanda(mesaCard);
+      } catch (e) {
+        toast(e.message, "error");
+      }
+    });
+    document.getElementById("cpdvModalBody")?.querySelectorAll("[data-cpdv-rm-item]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        try {
+          cpdvState.comandaAtual = await cpdvFetch(`/pdv/comandas/${data.comanda.id}/itens/${btn.dataset.cpdvRmItem}`, { method: "DELETE" });
+          cpdvRenderModalComanda(mesaCard);
+        } catch (e) {
+          toast(e.message, "error");
+        }
+      });
+    });
+    document.getElementById("cpdvComPagar")?.addEventListener("click", () => {
+      closeCpdvModal();
+      cpdvState.cart = (cpdvState.comandaAtual.itens || []).map((i) => ({
+        produtoId: i.produto_id,
+        estoqueProdutoId: i.produto_id,
+        nome: i.produto_nome,
+        preco: Number(i.preco_unitario),
+        qtd: Number(i.quantidade),
+      }));
+      cpdvState._comandaPagamentoId = data.comanda.id;
+      cpdvAbrirModalPagamentoComanda();
+    });
+    document.getElementById("cpdvComFechar")?.addEventListener("click", closeCpdvModal);
+  }
+
+  function cpdvAbrirModalPagamentoComanda() {
+    const total = cpdvState.cart.reduce((s, i) => s + i.preco * i.qtd, 0) || cpdvTotal();
+    const body = `
+      <p>Total comanda: <strong>${moeda(total)}</strong></p>
+      <label>Forma<select id="cpdvPgtoForma">
+        <option>PIX</option><option>Dinheiro</option><option>Débito</option><option>Crédito</option>
+      </select></label>`;
+    openCpdvModal("Pagamento — mesa", body, `<button type="button" class="btn primary" id="cpdvPgtoConfirmCom">Confirmar</button>`);
+    document.getElementById("cpdvPgtoConfirmCom")?.addEventListener("click", async () => {
+      const comId = cpdvState._comandaPagamentoId;
+      const forma = document.getElementById("cpdvPgtoForma")?.value || "PDV";
+      if (!comId) return;
+      try {
+        const r = await cpdvFetch(`/pdv/comandas/${comId}/finalizar`, {
+          method: "POST",
+          body: JSON.stringify({ forma_pagamento: forma, pdv_terminal: "PDV-MESA" }),
+        });
+        toast(`Conta fechada — venda #${r.venda_id}`, "success");
+        cpdvState.cart = [];
+        cpdvState._comandaPagamentoId = null;
+        cpdvState.comandaAtual = null;
+        closeCpdvModal();
+        loadComercialMesas?.();
+      } catch (e) {
+        toast(e.message, "error");
+      }
+    });
   }
 
   function cpdvAbrirModalMesa(mesaId) {
     const m = DADOS_DEMONSTRACAO_PDV.mesas.find((x) => x.id === mesaId);
     if (!m) return;
     cpdvState.mesaSel = m.id;
-    const garcom = DADOS_DEMONSTRACAO_PDV.garcons.find((g) => g.id === m.garcomId);
-    const body = `
-      <p><strong>Mesa ${escHtml(m.numero)}</strong> — ${escHtml(CPDV_MESA_LABEL[m.status] || m.status)}</p>
-      <p>Capacidade: ${m.capacidade} · Pessoas: ${m.pessoas}</p>
-      ${garcom ? `<p>Garçom: ${escHtml(garcom.nome)}</p>` : ""}
-      ${m.reserva ? `<p>Reserva: ${escHtml(m.reserva)}</p>` : ""}
-      ${m.pedidoId ? `<p>Pedido #${m.pedidoId}</p>` : ""}`;
-    const acts = [
-      ["Abrir mesa", "abrir"],
-      ["+ Pessoas", "+pessoas"],
-      ["Lançar pedido", "lançar pedido"],
-      ["Comanda", "comanda"],
-      ["Transferir", "transferir"],
-      ["Juntar", "juntar"],
-      ["Dividir", "dividir"],
-      ["Pré-conta", "pré-conta"],
-      ["Fechar mesa", "fechar mesa"],
-    ].map(([lbl, act]) =>
-      `<button type="button" class="btn primary" data-cpdv-mesa-act="${escHtml(act)}">${escHtml(lbl)}</button>`
-    ).join("");
-    openCpdvModal(`Mesa ${m.numero}`, body, acts);
-    document.getElementById("cpdvModalActions").querySelectorAll("[data-cpdv-mesa-act]").forEach((btn) => {
-      btn.addEventListener("click", () => protoToast(`${btn.dataset.cpdvMesaAct} — mesa ${m.numero}`));
-    });
+    protoToast(`Use Mesas com API — mesa demo ${m.numero}`);
   }
 
-  function cpdvRenderMesas() {
+  async function cpdvRenderMesas() {
     const root = cpdvRoot("comercialMesasRoot");
     if (!root) return;
-    const garOpts = ['<option value="">— Selecione —</option>']
-      .concat(DADOS_DEMONSTRACAO_PDV.garcons.map((g) =>
-        `<option value="${g.id}"${String(cpdvState.garcomId) === String(g.id) ? " selected" : ""}>${escHtml(g.nome)}</option>`
-      )).join("");
-    const cards = DADOS_DEMONSTRACAO_PDV.mesas.map((m) => {
-      const st = CPDV_MESA_LABEL[m.status] || m.status;
-      const gar = DADOS_DEMONSTRACAO_PDV.garcons.find((g) => g.id === m.garcomId);
-      const und = DADOS_DEMONSTRACAO_PDV.unidades.find((u) => u.id === m.unidadeId);
-      return `<button type="button" class="cpdv-mesa cpdv-mesa--${escHtml(m.status)}" data-cpdv-mesa="${m.id}">
-        <h4>Mesa ${escHtml(m.numero)}</h4>
-        <span class="cpdv-badge">${escHtml(st)}</span>
-        <small>${escHtml(und ? und.nome : "—")}</small>
-        <small>Pessoas: ${m.pessoas}</small>
-        ${gar ? `<small>Garçom: ${escHtml(gar.nome)}</small>` : ""}
-        <small>Abertura: ${escHtml(m.abertoEm || "—")}</small>
-        <small>Total parcial: ${moeda(m.totalParcial || 0)}</small>
-      </button>`;
-    }).join("");
+    await cpdvInitApi();
+    const uniOpts = await cpdvLoadUnidadesOptions(cpdvState.unidadeId);
+    let cardsHtml = "";
+    if (cpdvState.apiReady && cpdvState.unidadeId) {
+      try {
+        const salao = await cpdvFetch(`/pdv/salao?unidade_id=${cpdvState.unidadeId}`);
+        cpdvState.salaoMesas = salao.mesas || [];
+        cardsHtml = cpdvState.salaoMesas.map((m) => {
+          const st = CPDV_MESA_LABEL_API[m.status_operacional] || m.status_operacional;
+          return `<button type="button" class="cpdv-mesa cpdv-mesa--${escHtml(m.status_operacional)}" data-cpdv-mesa-api="${escHtml(m.mesa_id)}">
+            <h4>Mesa ${escHtml(String(m.numero))}</h4>
+            <span class="cpdv-badge">${escHtml(st)}</span>
+            ${m.reserva_cliente ? `<small>Reserva: ${escHtml(m.reserva_cliente)}</small>` : ""}
+            <small>Total: ${moeda(m.total_parcial || 0)}</small>
+          </button>`;
+        }).join("") || '<p class="subtle-text">Nenhuma mesa cadastrada nesta unidade.</p>';
+      } catch (e) {
+        cardsHtml = `<p class="subtle-text">${escHtml(e.message)}</p>`;
+      }
+    } else {
+      cardsHtml = DADOS_DEMONSTRACAO_PDV.mesas.map((m) => {
+        const st = CPDV_MESA_LABEL[m.status] || m.status;
+        return `<button type="button" class="cpdv-mesa cpdv-mesa--${escHtml(m.status)}" data-cpdv-mesa="${m.id}">
+          <h4>Mesa ${escHtml(m.numero)}</h4><span class="cpdv-badge">${escHtml(st)}</span></button>`;
+      }).join("");
+    }
     root.innerHTML = `
       ${cpdvAvisoProto()}
       <div class="cpdv-garcom-bar table-card cpdv-form-body">
-        <label>Modo garçom
-          <select id="cpdvGarcomSel">${garOpts}</select>
+        <label>Unidade
+          <select id="cpdvMesasUnidade"><option value="">—</option>${uniOpts}</select>
         </label>
-        <button type="button" class="btn primary" id="cpdvGarcomAtivar">Ativar modo garçom</button>
+        <button type="button" class="btn primary" id="cpdvMesasReload">Atualizar salão</button>
       </div>
-      <div class="cpdv-mesas-grid">${cards}</div>`;
-    root.querySelector("#cpdvGarcomSel").onchange = (e) => { cpdvState.garcomId = e.target.value || null; };
-    root.querySelector("#cpdvGarcomAtivar").addEventListener("click", () => {
-      const g = DADOS_DEMONSTRACAO_PDV.garcons.find((x) => String(x.id) === String(cpdvState.garcomId));
-      protoToast(g ? `Modo garçom: ${g.nome}` : "Selecione um garçom");
+      <div class="cpdv-mesas-grid">${cardsHtml}</div>`;
+    const uSel = root.querySelector("#cpdvMesasUnidade");
+    if (uSel && cpdvState.unidadeId) uSel.value = String(cpdvState.unidadeId);
+    uSel?.addEventListener("change", () => {
+      cpdvState.unidadeId = uSel.value ? Number(uSel.value) : null;
+      loadComercialMesas();
+    });
+    root.querySelector("#cpdvMesasReload")?.addEventListener("click", () => loadComercialMesas());
+    root.querySelectorAll("[data-cpdv-mesa-api]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const mid = Number(el.dataset.cpdvMesaApi);
+        const card = cpdvState.salaoMesas.find((x) => x.mesa_id === mid);
+        if (card) cpdvAbrirComandaMesa(card);
+      });
     });
     root.querySelectorAll("[data-cpdv-mesa]").forEach((el) => {
       el.addEventListener("click", () => cpdvAbrirModalMesa(Number(el.dataset.cpdvMesa)));
@@ -592,9 +817,36 @@
       <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>`;
     openCpdvModal("Simular pagamento", body, acts);
     document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", async () => {
-      const unidadeEl = document.getElementById("cpdvUnidadeFiscal");
-      const unidadeId = unidadeEl ? Number(unidadeEl.value) : 0;
+      const unidadeId = cpdvState.unidadeId || Number(document.getElementById("cpdvUnidadeFiscal")?.value || 0);
       const forma = document.getElementById("cpdvPgtoForma")?.value || "PDV";
+      if (unidadeId > 0 && cpdvState.cart.length && cpdvState.apiReady) {
+        try {
+          const itens = cpdvState.cart.map((i) => ({
+            produto_id: i.estoqueProdutoId || i.produtoId,
+            quantidade: i.qtd,
+            preco_unitario: i.preco,
+            desconto: 0,
+          }));
+          const r = await cpdvFetch("/pdv/vendas/balcao", {
+            method: "POST",
+            body: JSON.stringify({
+              unidade_id: unidadeId,
+              forma_pagamento: forma,
+              pdv_terminal: "PDV-WEB",
+              itens,
+            }),
+          });
+          toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).`, "success");
+          cpdvState.cart = [];
+          cpdvSyncCarrinhoMemoria();
+          closeCpdvModal();
+          loadComercialPdv?.();
+          return;
+        } catch (e) {
+          toast(e.message || "Venda bloqueada.", "error");
+          return;
+        }
+      }
       if (unidadeId > 0 && cpdvState.cart.length && typeof window.fiscalPdvConfirmarPagamento === "function") {
         try {
           const itens = cpdvState.cart.map((i) => ({
@@ -614,7 +866,7 @@
           return;
         }
       }
-      protoToast("Pagamento confirmado (simulado)");
+      protoToast("Selecione a unidade e itens com estoque.");
       closeCpdvModal();
     });
     document.getElementById("cpdvPgtoCancel")?.addEventListener("click", closeCpdvModal);
@@ -729,45 +981,44 @@
     });
   }
 
-  function cpdvRenderHistorico() {
+  async function cpdvRenderHistorico() {
     const root = cpdvRoot("comercialHistoricoRoot");
     if (!root) return;
-    const rows = DADOS_DEMONSTRACAO_PDV.vendas.map((v) =>
-      `<tr>
-        <td>#${v.id}</td><td>${escHtml(v.data)} ${escHtml(v.hora)}</td><td>${escHtml(v.unidade)}</td>
-        <td>${v.mesa}</td><td>${escHtml(v.cliente)}</td><td>${escHtml(v.operador)}</td>
-        <td>${moeda(v.total)}</td><td>${escHtml(v.forma)}</td>
-        <td>${cpdvStatusBadge(v.status)}</td>
-        <td class="cpdv-actions" style="margin:0">
-          <button type="button" class="btn neutral btn-sm" data-cpdv-proto="Ver venda #${v.id}">Ver</button>
-          <button type="button" class="btn neutral btn-sm" data-cpdv-proto="Imprimir #${v.id}">Imprimir</button>
-          <button type="button" class="btn neutral btn-sm" data-cpdv-proto="Reabrir #${v.id}">Reabrir</button>
-          <button type="button" class="btn danger btn-sm" data-cpdv-proto="Cancelar #${v.id}">Cancelar</button>
-          <button type="button" class="btn secondary btn-sm" disabled title="Futuro">Fiscal</button>
-        </td>
-      </tr>`
-    ).join("");
+    await cpdvInitApi();
+    let rows = "";
+    if (cpdvState.apiReady) {
+      try {
+        const vendas = await cpdvFetch("/pdv/vendas?limit=50");
+        rows = (vendas || []).map((v) =>
+          `<tr>
+            <td>#${v.id}</td><td>${escHtml(String(v.data_venda || "").slice(0, 16))}</td><td>${escHtml(v.unidade_nome || "")}</td>
+            <td>${escHtml(v.numero_mesa || v.nome_mesa || "—")}</td><td>${escHtml(v.origem_venda || "pdv")}</td><td>—</td>
+            <td>${moeda(v.valor_liquido)}</td><td>${escHtml(v.forma_pagamento || "")}</td>
+            <td>${cpdvStatusBadge(v.status === "cancelada" ? "fechamento" : "aberto")}</td>
+            <td class="cpdv-actions" style="margin:0"><button type="button" class="btn neutral btn-sm" data-cpdv-proto="Ver venda #${v.id}">Ver</button></td>
+          </tr>`
+        ).join("") || '<tr><td colspan="10">Nenhuma venda registrada.</td></tr>';
+      } catch {
+        rows = "";
+      }
+    }
+    if (!rows) {
+      rows = DADOS_DEMONSTRACAO_PDV.vendas.map((v) =>
+        `<tr>
+          <td>#${v.id}</td><td>${escHtml(v.data)} ${escHtml(v.hora)}</td><td>${escHtml(v.unidade)}</td>
+          <td>${v.mesa}</td><td>${escHtml(v.cliente)}</td><td>${escHtml(v.operador)}</td>
+          <td>${moeda(v.total)}</td><td>${escHtml(v.forma)}</td>
+          <td>${cpdvStatusBadge(v.status)}</td>
+          <td class="cpdv-actions" style="margin:0"><button type="button" class="btn neutral btn-sm" data-cpdv-proto="Ver venda #${v.id}">Ver</button></td>
+        </tr>`
+      ).join("");
+    }
     root.innerHTML = `
       ${cpdvAvisoProto()}
-      <div class="table-card cpdv-form-body">
-        <div class="filters-grid">
-          <label>Período<input type="date" value="2026-07-01" /></label>
-          <label>até<input type="date" value="2026-07-15" /></label>
-          <label>Unidade<select><option>Todas</option><option>Matriz — Centro</option></select></label>
-          <label>Operador<input /></label>
-          <label>Garçom<input /></label>
-          <label>Mesa<input /></label>
-          <label>Cliente<input /></label>
-          <label>Produto<input /></label>
-          <label>Pagamento<select><option>Todas</option><option>PIX</option><option>Dinheiro</option></select></label>
-          <label>Status<select><option>Todos</option><option>finalizada</option><option>cancelada</option></select></label>
-          <label><button type="button" class="btn primary" data-cpdv-proto="Filtro aplicado">Filtrar</button></label>
-        </div>
-      </div>
       <div class="table-card">
-        <header><h3>Histórico de vendas</h3></header>
+        <header><h3>Histórico de vendas (PDV / mesa)</h3></header>
         <div class="table-wrap"><table class="data-table">
-          <thead><tr><th>Nº</th><th>Data/hora</th><th>Unidade</th><th>Mesa</th><th>Cliente</th><th>Operador</th><th>Total</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Nº</th><th>Data/hora</th><th>Unidade</th><th>Mesa</th><th>Origem</th><th>Operador</th><th>Total</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
       </div>`;
