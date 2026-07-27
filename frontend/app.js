@@ -1598,7 +1598,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs",
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
-  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv",
+  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
@@ -5411,7 +5411,7 @@ function applyPermissions() {
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
-  ["fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv"].forEach((s) => {
+  ["fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07"].forEach((s) => {
     if ((perfilCfgAuto === "ADMIN" || perfilCfgAuto === "GERENTE") && !sections.includes(s)) {
       sections = [...sections, s];
     }
@@ -5818,7 +5818,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalVendaPdv") {
+    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalVendaPdv" || section === "fiscalPainelModulo07") {
       configuracoesNavSubmenuNav.classList.add("open");
     } else {
       configuracoesNavSubmenuNav.classList.remove("open");
@@ -5907,6 +5907,8 @@ function navigateTo(section) {
     window.loadFiscalProducao?.().catch((e) => showToast(e?.message || "Falha ao carregar produção fiscal.", "error"));
   } else if (section === "fiscalVendaPdv") {
     window.loadFiscalVendaPdv?.().catch((e) => showToast(e?.message || "Falha ao carregar vendas fiscais.", "error"));
+  } else if (section === "fiscalPainelModulo07") {
+    window.loadFiscalPainelModulo07?.().catch((e) => showToast(e?.message || "Falha ao carregar painel fiscal M7.", "error"));
   }
   else if (section === "integracaoVendafacil") loadIntegracaoVendafacil?.().catch(() => {});
   else if (section === "integracaoAplicacoes") loadIntegracaoAplicacoes?.().catch(() => {});

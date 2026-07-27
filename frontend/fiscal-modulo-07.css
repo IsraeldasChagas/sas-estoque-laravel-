@@ -1,0 +1,15 @@
+.fiscal-m7-wrap { padding: 0.5rem 0; }
+.fiscal-m7-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1rem; }
+.fiscal-m7-tabs button { font-size: 0.85rem; padding: 0.4rem 0.75rem; border: 1px solid var(--border, #ccc); background: var(--surface, #fff); cursor: pointer; border-radius: 6px; }
+.fiscal-m7-tabs button.active { background: var(--primary, #2563eb); color: #fff; border-color: transparent; }
+.fiscal-m7-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem; }
+.fiscal-m7-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.fiscal-m7-card { border: 1px solid var(--border, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--surface, #fff); }
+.fiscal-m7-card strong { display: block; font-size: 1.1rem; margin-top: 0.25rem; }
+.fiscal-m7-disclaimer { font-size: 0.8rem; opacity: 0.85; margin: 0.5rem 0 1rem; }
+.fiscal-m7-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.fiscal-m7-table th, .fiscal-m7-table td { border-bottom: 1px solid #eee; padding: 0.4rem 0.5rem; text-align: left; }
+.fiscal-m7-sim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.fiscal-m7-cenario { border: 1px solid #ddd; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; }
+.fiscal-m7-cenario--best { border-color: #16a34a; box-shadow: 0 0 0 1px #16a34a; }
+.fiscal-m7-cenario h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }

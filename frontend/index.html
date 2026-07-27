@@ -54,6 +54,7 @@
     <link rel="stylesheet" href="fiscal-movimentacoes.css?v=20260727-fiscal-m3" />
     <link rel="stylesheet" href="fiscal-producao.css?v=20260727-fiscal-m5" />
     <link rel="stylesheet" href="fiscal-venda-pdv.css?v=20260727-fiscal-m6" />
+    <link rel="stylesheet" href="fiscal-modulo-07.css?v=20260727-fiscal-m7" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
@@ -378,6 +379,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="fiscalMovimentacoesRelatorio"><span class="nav-icon" aria-hidden="true">📤</span><span class="nav-label">Movimentações e eventos fiscais</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalProducao"><span class="nav-icon" aria-hidden="true">🍳</span><span class="nav-label">Produção (ficha técnica)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalVendaPdv"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Vendas PDV (fiscal)</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalPainelModulo07"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Fiscal — consolidação (M7)</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
@@ -4833,6 +4835,10 @@
             <div class="cfg-section-head"><div><h2>🛒 Vendas PDV (fiscal)</h2><p class="subtle-text">Venda com baixa de estoque — trava CNPJ do PDV × estoque. Integração opcional no PDV/Caixa.</p></div></div>
             <div id="fiscalVendaPdvRoot" class="int-page-wrap"></div>
           </section>
+          <section id="fiscalPainelModulo07Section" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>📊 Fiscal — consolidação (M7)</h2><p class="subtle-text">Visão gerencial, apuração estimada e simulador tributário (não substitui escrituração oficial).</p></div></div>
+            <div id="fiscalPainelModulo07Root" class="int-page-wrap"></div>
+          </section>
 
           <!-- Configurações — Integrações — OpenClaw -->
           <section id="openClawIntegracaoSection" class="view-section hidden">
@@ -7953,6 +7959,7 @@
     <script src="fiscal-movimentacoes.js?v=20260727-fiscal-m3"></script>
     <script src="fiscal-producao.js?v=20260727-fiscal-m5"></script>
     <script src="fiscal-venda-pdv.js?v=20260727-fiscal-m6"></script>
+    <script src="fiscal-modulo-07.js?v=20260727-fiscal-m7"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>
