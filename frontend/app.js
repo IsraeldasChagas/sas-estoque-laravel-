@@ -3116,6 +3116,7 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+window.escapeHtml = escapeHtml;
 
 function formatCurrency(value) {
   return `R$ ${formatNumber(value, 2)}`;
@@ -3834,6 +3835,7 @@ async function fetchJSON(path, options = {}) {
     throw error;
   }
 }
+window.fetchJSON = fetchJSON;
 
 /**
  * Registra entrada de estoque via API centralizada (gera lote automaticamente se numero_lote não informado).
@@ -5403,6 +5405,11 @@ function applyPermissions() {
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
+  ["fiscalEmpresas", "fiscalPerfisTributarios"].forEach((s) => {
+    if ((perfilCfgAuto === "ADMIN" || perfilCfgAuto === "GERENTE") && !sections.includes(s)) {
+      sections = [...sections, s];
+    }
+  });
   const integracoesSecoes = ["integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes"];
   if (perfilCfgAuto === "ADMIN") {
     integracoesSecoes.forEach((s) => { if (!sections.includes(s)) sections = [...sections, s]; });
@@ -5881,8 +5888,11 @@ function navigateTo(section) {
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
   else if (section === "openClawIntegracao") loadOpenClawIntegracao?.().catch(() => {});
-  else if (section === "fiscalEmpresas") window.loadFiscalEmpresas?.().catch(() => {});
-  else if (section === "fiscalPerfisTributarios") window.loadFiscalPerfisTributarios?.().catch(() => {});
+  else if (section === "fiscalEmpresas") {
+    window.loadFiscalEmpresas?.().catch((e) => showToast(e?.message || "Falha ao carregar empresas fiscais.", "error"));
+  } else if (section === "fiscalPerfisTributarios") {
+    window.loadFiscalPerfisTributarios?.().catch((e) => showToast(e?.message || "Falha ao carregar perfis tributários.", "error"));
+  }
   else if (section === "integracaoVendafacil") loadIntegracaoVendafacil?.().catch(() => {});
   else if (section === "integracaoAplicacoes") loadIntegracaoAplicacoes?.().catch(() => {});
   else if (section === "integracaoHealthCheck") loadIntegracaoHealthCheck?.().catch(() => {});

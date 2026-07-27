@@ -119,20 +119,26 @@ Route::get('/fiscal/meta', function () use ($fiscalJson) {
 });
 
 Route::get('/fiscal/empresas', function (Request $request) use ($fiscalAuth, $fiscalPodeVer, $fiscalJson, $mapEmpresa) {
-    $u = $fiscalAuth($request);
-    if (! $fiscalPodeVer($u)) {
-        return $fiscalJson(['error' => 'Não autorizado'], 401);
-    }
-    if (! Schema::hasTable('empresas')) {
-        return $fiscalJson([]);
-    }
-    $rows = DB::table('empresas')->orderBy('razao_social')->get();
-    $out = [];
-    foreach ($rows as $row) {
-        $out[] = $mapEmpresa($row);
-    }
+    try {
+        $u = $fiscalAuth($request);
+        if (! $fiscalPodeVer($u)) {
+            return $fiscalJson(['error' => 'Não autorizado'], 401);
+        }
+        if (! Schema::hasTable('empresas')) {
+            return $fiscalJson(['error' => 'Módulo fiscal não instalado. Execute php artisan migrate.', 'empresas' => []], 503);
+        }
+        $rows = DB::table('empresas')->orderBy('razao_social')->get();
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = $mapEmpresa($row);
+        }
 
-    return $fiscalJson($out);
+        return $fiscalJson($out);
+    } catch (\Throwable $e) {
+        report($e);
+
+        return $fiscalJson(['error' => 'Falha ao listar empresas', 'message' => $e->getMessage()], 500);
+    }
 });
 
 Route::post('/fiscal/empresas', function (Request $request) use ($fiscalAuth, $fiscalPodeEditar, $fiscalJson, $mapEmpresa) {
