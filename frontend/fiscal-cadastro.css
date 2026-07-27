@@ -74,13 +74,23 @@
   line-height: 1.45;
 }
 
-#fiscalEmpresaModal .modal {
-  max-height: min(92vh, 720px);
-  overflow-y: auto;
+#fiscalEmpresaModal .modal,
+#fiscalPerfilModal .modal {
+  /* sobrescreve .modal global — sem barra de rolagem interna */
+}
+
+.modal.modal-fiscal-fit {
+  width: min(620px, 94vw);
+  max-width: calc(100vw - 24px);
+  max-height: none;
+  overflow: visible;
+  overflow-x: hidden;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .fiscal-empresa-modal {
-  max-width: 520px;
+  max-width: 620px;
 }
 
 .fiscal-empresa-wizard-head {
@@ -115,30 +125,42 @@
 }
 
 .fiscal-empresa-step-title {
-  margin: 0 0 0.35rem;
-  font-size: 1.15rem;
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 
 .fiscal-empresa-step-lead {
-  margin: 0 0 1rem;
-  font-size: 0.92rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.86rem;
   color: #546e7a;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .fiscal-regime-cards {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  margin-bottom: 0.75rem;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.fiscal-regime-cards--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+@media (max-width: 520px) {
+  .fiscal-regime-cards--grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .fiscal-regime-card {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 0.75rem 0.85rem;
+  padding: 0.55rem 0.65rem;
   border: 2px solid rgba(0, 0, 0, 0.12);
   border-radius: 10px;
   background: #fff;
@@ -146,6 +168,7 @@
   font: inherit;
   color: inherit;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  min-width: 0;
 }
 
 .fiscal-regime-card:hover {
@@ -167,9 +190,13 @@
 
 .fiscal-regime-card__desc {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #607d8b;
-  line-height: 1.35;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .fiscal-regime-resumo {
@@ -187,7 +214,29 @@
 .fiscal-form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
+  gap: 0.55rem 0.65rem;
+}
+
+.fiscal-form-grid-2--compact {
+  gap: 0.5rem 0.65rem;
+}
+
+.fiscal-form-block--compact {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.65rem;
+}
+
+.fiscal-empresa-form--edit .fiscal-empresa-step-title--create,
+.fiscal-empresa-form--edit .fiscal-empresa-step-lead--create {
+  display: none;
+}
+
+.fiscal-empresa-edit-regime {
+  margin-bottom: 0.65rem;
+}
+
+.fiscal-empresa-edit-regime select {
+  width: 100%;
 }
 
 @media (max-width: 480px) {
@@ -596,18 +645,52 @@
 }
 
 .fiscal-modal-form {
-  padding: 0 1.25rem 1.25rem;
-  max-height: min(58vh, 480px);
-  overflow-y: auto;
+  padding: 0 1.15rem 1.1rem;
+  max-height: none;
+  overflow: visible;
+  gap: 0.55rem;
+}
+
+.fiscal-modal-form label {
+  margin-bottom: 0;
+  font-size: 0.88rem;
+  gap: 0.35rem;
+}
+
+.fiscal-modal-form input,
+.fiscal-modal-form select,
+.fiscal-modal-form textarea {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+}
+
+.fiscal-perfil-form--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.75rem;
+  align-items: start;
+}
+
+@media (max-width: 560px) {
+  .fiscal-perfil-form--grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 #fiscalPerfilModal .modal,
 #fiscalEmpresaModal .modal {
   display: flex;
   flex-direction: column;
-  max-height: min(92vh, 720px);
+  max-height: none;
+  overflow: visible;
 }
 
 .fiscal-perfil-modal {
   max-width: 640px;
+}
+
+#fiscalEmpresaModal.modal-backdrop.active,
+#fiscalPerfilModal.modal-backdrop.active {
+  align-items: center;
+  overflow: hidden;
 }
