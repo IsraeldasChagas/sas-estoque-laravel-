@@ -7604,14 +7604,18 @@ const atualizarObservacoesListaDebounced = debounce(async (listaId, observacoes)
 async function loadListasCompras() {
   const statusFiltro = state.listaComprasFiltroStatus || "ativas";
   if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = statusFiltro;
-  if (dom.listaCompraFiltroEmpresa) {
-    await window.populateListaCompraFiltroEmpresas?.(dom.listaCompraFiltroEmpresa);
-    dom.listaCompraFiltroEmpresa.value = state.listaComprasFiltroEmpresa || "";
-  }
+  try {
+    if (dom.listaCompraFiltroEmpresa) {
+      try {
+        await window.populateListaCompraFiltroEmpresas?.(dom.listaCompraFiltroEmpresa);
+      } catch (err) {
+        console.warn("Filtro empresas fiscal:", err);
+      }
+      dom.listaCompraFiltroEmpresa.value = state.listaComprasFiltroEmpresa || "";
+    }
   if (dom.listaCompraFiltroStatusFiscal) {
     dom.listaCompraFiltroStatusFiscal.value = state.listaComprasFiltroStatusFiscal || "";
   }
-  try {
     const params = new URLSearchParams();
     if (state.listaComprasFiltroEmpresa) params.set("empresa_id", state.listaComprasFiltroEmpresa);
     if (state.listaComprasFiltroStatusFiscal) params.set("status_fiscal", state.listaComprasFiltroStatusFiscal);

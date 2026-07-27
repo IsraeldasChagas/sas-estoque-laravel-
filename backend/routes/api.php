@@ -4445,6 +4445,7 @@ Route::get('/lotes-a-vencer', function (Request $request) {
 // ============================================
 
 Route::get('/listas', function (Request $request) {
+    try {
     $query = DB::table('listas_compras')
         ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
         ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id');
@@ -4497,10 +4498,11 @@ Route::get('/listas', function (Request $request) {
             $nota = DB::table('notas_fiscais_entrada')
                 ->where('lista_compra_id', $lista->id)
                 ->first(['numero', 'chave_acesso', 'valor_total', 'status']);
-            $lista->nf_numero = $nota->numero ?? null;
-            $lista->nf_chave_resumo = $nota->chave_acesso ? substr($nota->chave_acesso, 0, 8).'…' : null;
-            $lista->nf_valor_total = $nota->valor_total ?? null;
-            $lista->nf_status = $nota->status ?? null;
+            $lista->nf_numero = $nota?->numero ?? null;
+            $chave = $nota?->chave_acesso ?? null;
+            $lista->nf_chave_resumo = $chave ? substr($chave, 0, 8).'…' : null;
+            $lista->nf_valor_total = $nota?->valor_total ?? null;
+            $lista->nf_status = $nota?->status ?? null;
         }
         
         return $lista;
@@ -4522,6 +4524,11 @@ Route::get('/listas', function (Request $request) {
     }
     
     return response()->json($listas);
+    } catch (\Throwable $e) {
+        \Log::error('GET /listas: '.$e->getMessage());
+
+        return response()->json(['error' => 'Erro ao listar compras: '.$e->getMessage()], 500);
+    }
 });
 
 Route::get('/listas/{id}', function ($id) {
