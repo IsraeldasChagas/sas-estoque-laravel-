@@ -240,6 +240,32 @@
   border-bottom: 1px dashed rgba(0, 0, 0, 0.12);
 }
 
+.fiscal-unidade-callout {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(222, 67, 9, 0.35);
+  background: rgba(222, 67, 9, 0.06);
+}
+
+.fiscal-unidade-callout--ok {
+  border-color: rgba(46, 125, 50, 0.4);
+  background: rgba(46, 125, 50, 0.06);
+}
+
+.fiscal-unidade-callout__title {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.fiscal-unidade-callout__text {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: #455a64;
+  line-height: 1.45;
+}
+
 .fiscal-badge {
   display: inline-block;
   padding: 0.15rem 0.45rem;

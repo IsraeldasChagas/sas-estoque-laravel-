@@ -50,7 +50,7 @@
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
-    <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-empresa-wizard" />
+    <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-unidade-hint" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
     <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto3" />
@@ -1551,6 +1551,14 @@
           <!-- Cadastro e listagem de unidades operacionais -->
           <section id="unidadesSection" class="view-section hidden">
             <div class="unidades-container">
+              <div class="fiscal-unidade-callout" id="unidadeFiscalCallout">
+                <p class="fiscal-unidade-callout__title">Onde cadastrar o regime tributário?</p>
+                <p class="fiscal-unidade-callout__text">
+                  O <strong>regime tributário</strong> (Simples, Lucro Presumido, Lucro Real) é definido na
+                  <strong>empresa (CNPJ)</strong>, não neste formulário de unidade. Aqui você só <strong>vincula</strong> a unidade à empresa já cadastrada.
+                </p>
+                <button type="button" class="btn secondary" id="btnIrCadastroEmpresaFiscal">Ir para Empresas (CNPJ) — cadastrar regime</button>
+              </div>
               <div class="actions">
                 <button class="btn primary" id="openUnidade">+ Nova Unidade</button>
               </div>
@@ -1578,7 +1586,7 @@
                         <select name="empresa_id">
                           <option value="">— Sem vínculo —</option>
                         </select>
-                        <small id="unidadeInlineEmpresaHint" class="subtle-text">Vincule a unidade à pessoa jurídica responsável.</small>
+                        <small id="unidadeInlineEmpresaHint" class="subtle-text">Escolha a empresa cadastrada em Configurações → Empresas. O regime tributário aparece aqui ao selecionar.</small>
                       </label>
                     </div>
                     <div class="form-card__row">
@@ -7896,8 +7904,8 @@
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
-    <script src="app.js?v=20260727-fiscal-empresa-wizard"></script>
-    <script src="fiscal-cadastro.js?v=20260727-fiscal-empresa-wizard"></script>
+    <script src="app.js?v=20260727-fiscal-unidade-hint"></script>
+    <script src="fiscal-cadastro.js?v=20260727-fiscal-unidade-hint"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

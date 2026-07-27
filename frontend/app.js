@@ -27239,7 +27239,10 @@ async function init() {
         
         await loadEstoqueProdutos();
       }
-      else if (section === "unidades") await Promise.all([loadUnidades(), loadUsuarios()]);
+      else if (section === "unidades") {
+        await Promise.all([loadUnidades(), loadUsuarios()]);
+        window.fiscalOnUnidadesSectionOpen?.().catch(() => {});
+      }
       else if (section === "usuarios") await loadUsuarios();
       else if (section === "lotes") {
         document.querySelector(".content .view-section")?.classList.remove("hidden");

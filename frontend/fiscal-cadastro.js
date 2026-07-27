@@ -748,18 +748,40 @@
   }
 
   function updateUnidadeEmpresaHint() {
-    const sel =
-      document.querySelector('#unidadeForm select[name="empresa_id"]') ||
-      document.querySelector('#unidadeInlineForm select[name="empresa_id"]');
-    const hint =
-      document.getElementById("unidadeEmpresaHint") || document.getElementById("unidadeInlineEmpresaHint");
-    if (!sel || !hint) return;
-    const emp = fiscalEmpresas.find((e) => String(e.id) === String(sel.value));
-    if (!emp) {
-      hint.textContent = "Vincule a unidade à pessoa jurídica (CNPJ) responsável pelo estoque fiscal futuro.";
-      return;
+    const selects = document.querySelectorAll('#unidadeForm select[name="empresa_id"], #unidadeInlineForm select[name="empresa_id"]');
+    if (!selects.length) return;
+    const activeSel = [...selects].find((s) => s.offsetParent !== null) || selects[0];
+    const hints = [
+      document.getElementById("unidadeEmpresaHint"),
+      document.getElementById("unidadeInlineEmpresaHint"),
+    ].filter(Boolean);
+    const emp = fiscalEmpresas.find((e) => String(e.id) === String(activeSel.value));
+    let msg;
+    if (emp) {
+      msg = `Empresa: ${emp.razao_social} · CNPJ ${fmtCnpj(emp.cnpj)} · Regime tributário: ${labelRegime(emp.regime_tributario)}`;
+    } else if (!(fiscalEmpresas || []).filter((e) => e.ativo).length) {
+      msg =
+        "Nenhuma empresa cadastrada. Clique em “Ir para Empresas (CNPJ)” acima, cadastre a empresa e escolha o regime (Passo 1).";
+    } else {
+      msg = "Selecione a empresa (CNPJ). O regime tributário vem do cadastro da empresa, não da unidade.";
     }
-    hint.textContent = `Empresa: ${emp.razao_social} · CNPJ ${fmtCnpj(emp.cnpj)} · Regime: ${labelRegime(emp.regime_tributario)}`;
+    hints.forEach((hint) => {
+      hint.textContent = msg;
+    });
+    const callout = document.getElementById("unidadeFiscalCallout");
+    if (callout) {
+      callout.classList.toggle("fiscal-unidade-callout--ok", !!emp?.regime_tributario);
+    }
+  }
+
+  function initUnidadeFiscalCallout() {
+    const btn = document.getElementById("btnIrCadastroEmpresaFiscal");
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      if (typeof window.navigateTo === "function") window.navigateTo("fiscalEmpresas");
+      else showToast("Abra Configurações → Empresas (CNPJ) no menu.", "info");
+    });
   }
 
   function initProdutoFiscalUi() {
@@ -784,7 +806,13 @@
     }
     void refreshProdutoPerfilSelect();
     void refreshUnidadeEmpresaSelect();
+    initUnidadeFiscalCallout();
   }
+
+  window.fiscalOnUnidadesSectionOpen = function () {
+    initUnidadeFiscalCallout();
+    return refreshUnidadeEmpresaSelect();
+  };
 
   window.loadFiscalEmpresas = renderEmpresasPage;
   window.loadFiscalPerfisTributarios = renderPerfisPage;
