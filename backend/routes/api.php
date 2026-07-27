@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
+use App\Support\FiscalCadastroSupport;
 use App\Support\AuditLog;
 use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Support\Rh\RhRescisaoCalculo;
@@ -224,7 +225,72 @@ $salvarFotoProduto = function (Request $request, $produtoExistente = null): arra
     return $data;
 };
 
-Route::get('/produtos', function (Request $request) {
+$regrasValidacaoProdutoFiscal = static function () {
+    if (! Schema::hasColumn('produtos', 'tipo_fiscal')) {
+        return [];
+    }
+
+    return [
+        'tipo_fiscal' => ['nullable', 'string', \Illuminate\Validation\Rule::in(FiscalCadastroSupport::TIPOS_FISCAIS)],
+        'perfil_tributario_id' => 'nullable|integer',
+        'ncm' => 'nullable|string|max:12',
+        'cest' => 'nullable|string|max:10',
+        'origem_mercadoria' => ['nullable', 'string', \Illuminate\Validation\Rule::in(FiscalCadastroSupport::ORIGENS_MERCADORIA)],
+        'cst_icms' => 'nullable|string|max:5',
+        'csosn' => 'nullable|string|max:6',
+        'cfop_entrada_padrao' => 'nullable|string|max:6',
+        'cfop_saida_padrao' => 'nullable|string|max:6',
+        'tratamento_icms' => 'nullable|string|max:80',
+        'tratamento_pis' => 'nullable|string|max:80',
+        'tratamento_cofins' => 'nullable|string|max:80',
+        'tratamento_ipi' => 'nullable|string|max:80',
+        'tratamento_cbs' => 'nullable|string|max:80',
+        'tratamento_ibs' => 'nullable|string|max:80',
+        'monofasico' => 'nullable|boolean',
+        'substituicao_tributaria' => 'nullable|boolean',
+        'gera_credito_icms' => 'nullable|boolean',
+        'gera_credito_pis' => 'nullable|boolean',
+        'gera_credito_cofins' => 'nullable|boolean',
+        'observacao_fiscal' => 'nullable|string',
+    ];
+};
+
+$mesclarProdutoFiscalValidado = static function (array $data) {
+    if (! Schema::hasColumn('produtos', 'tipo_fiscal')) {
+        return [];
+    }
+    $fiscal = FiscalCadastroSupport::sanitizarCamposProdutoFiscal($data);
+    if (isset($fiscal['perfil_tributario_id']) && $fiscal['perfil_tributario_id']) {
+        if (! Schema::hasTable('perfis_tributarios')
+            || ! DB::table('perfis_tributarios')->where('id', $fiscal['perfil_tributario_id'])->exists()) {
+            throw new \InvalidArgumentException('Perfil tributário não encontrado.');
+        }
+    }
+    if (array_key_exists('ncm', $data) && trim((string) ($data['ncm'] ?? '')) !== '' && empty($fiscal['ncm'])) {
+        throw new \InvalidArgumentException('NCM inválido. Informe 8 dígitos.');
+    }
+    if (array_key_exists('cest', $data) && trim((string) ($data['cest'] ?? '')) !== '' && empty($fiscal['cest'])) {
+        throw new \InvalidArgumentException('CEST inválido.');
+    }
+
+    return $fiscal;
+};
+
+$decorarProdutoComFiscal = static function ($produto) {
+    if (! $produto) {
+        return $produto;
+    }
+    if (Schema::hasColumn('produtos', 'tipo_fiscal')) {
+        $status = FiscalCadastroSupport::statusFiscalProduto($produto);
+        $produto->status_fiscal = $status;
+        $produto->status_fiscal_label = FiscalCadastroSupport::labelStatusFiscal($status);
+        $produto->tipo_fiscal_label = FiscalCadastroSupport::labelTipoFiscal($produto->tipo_fiscal ?? null);
+    }
+
+    return $produto;
+};
+
+Route::get('/produtos', function (Request $request) use ($decorarProdutoComFiscal) {
     try {
         // Faz join com unidades para trazer o nome da unidade responsável
         $query = DB::table('produtos')
@@ -233,6 +299,10 @@ Route::get('/produtos', function (Request $request) {
                 'produtos.*',
                 'unidades.nome as unidade_nome'  // Adiciona o nome da unidade
             );
+        if (Schema::hasTable('perfis_tributarios') && Schema::hasColumn('produtos', 'perfil_tributario_id')) {
+            $query->leftJoin('perfis_tributarios', 'produtos.perfil_tributario_id', '=', 'perfis_tributarios.id')
+                ->addSelect('perfis_tributarios.nome as perfil_tributario_nome');
+        }
         
         $temUnidadeId = $request->has('unidade_id') && $request->unidade_id;
         $temComEstoque = $request->has('com_estoque') && $request->com_estoque == '1';
@@ -281,7 +351,7 @@ Route::get('/produtos', function (Request $request) {
         $produtos = $query->orderBy('produtos.nome')->get();
         
         // Garante que o campo 'ativo' existe e está no formato correto
-        $produtos = $produtos->map(function($produto) {
+        $produtos = $produtos->map(function ($produto) use ($decorarProdutoComFiscal) {
             // Se ativo não existir, verifica se a coluna existe na tabela
             if (!isset($produto->ativo)) {
                 // Tenta verificar se a coluna existe no banco
@@ -305,8 +375,13 @@ Route::get('/produtos', function (Request $request) {
             } else {
                 $produto->ativo = is_numeric($produto->ativo) ? (int)$produto->ativo : ($produto->ativo ? 1 : 0);
             }
-            return $produto;
+            return $decorarProdutoComFiscal($produto);
         });
+
+        $filtroFiscal = strtolower(trim((string) $request->query('status_fiscal', '')));
+        if ($filtroFiscal !== '' && in_array($filtroFiscal, ['pendente', 'incompleto', 'completo'], true)) {
+            $produtos = $produtos->filter(fn ($p) => ($p->status_fiscal ?? 'pendente') === $filtroFiscal)->values();
+        }
         
         return response()->json($produtos);
     } catch (\Exception $e) {
@@ -318,21 +393,24 @@ Route::get('/produtos', function (Request $request) {
     }
 });
 
-Route::get('/produtos/{id}', function ($id) {
+Route::get('/produtos/{id}', function ($id) use ($decorarProdutoComFiscal) {
     // Busca produto com join na tabela unidades para trazer o nome da unidade
-    $produto = DB::table('produtos')
+    $query = DB::table('produtos')
         ->leftJoin('unidades', 'produtos.unidade_id', '=', 'unidades.id')
         ->select(
             'produtos.*',
             'unidades.nome as unidade_nome'  // Adiciona o nome da unidade
-        )
-        ->where('produtos.id', $id)
-        ->first();
+        );
+    if (Schema::hasTable('perfis_tributarios') && Schema::hasColumn('produtos', 'perfil_tributario_id')) {
+        $query->leftJoin('perfis_tributarios', 'produtos.perfil_tributario_id', '=', 'perfis_tributarios.id')
+            ->addSelect('perfis_tributarios.nome as perfil_tributario_nome');
+    }
+    $produto = $query->where('produtos.id', $id)->first();
     
     if (!$produto) {
         return response()->json(['error' => 'Produto não encontrado'], 404);
     }
-    return response()->json($produto);
+    return response()->json($decorarProdutoComFiscal($produto));
 });
 
 Route::get('/estoque/resumo', function (Request $request) {
@@ -466,7 +544,7 @@ Route::get('/produtos/{id}/estoque', function ($id) {
     }
 });
 
-Route::post('/produtos', function (Request $request) use ($salvarFotoProduto) {
+Route::post('/produtos', function (Request $request) use ($salvarFotoProduto, $regrasValidacaoProdutoFiscal, $mesclarProdutoFiscalValidado) {
     \Log::info('📦 POST /produtos - Requisição recebida', [
         'payload' => $request->except(['foto']),
         'has_foto' => $request->hasFile('foto'),
@@ -474,7 +552,7 @@ Route::post('/produtos', function (Request $request) use ($salvarFotoProduto) {
     
     try {
         $input = $request->all();
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'nome' => 'required|string',
             'categoria' => 'required|string',
             'unidade_base' => 'required|string',
@@ -484,7 +562,13 @@ Route::post('/produtos', function (Request $request) use ($salvarFotoProduto) {
             'custo_medio' => 'nullable|numeric',
             'estoque_minimo' => 'nullable|numeric',
             'ativo' => 'nullable|integer',
-        ]);
+        ], $regrasValidacaoProdutoFiscal()));
+        
+        try {
+            $data = array_merge($data, $mesclarProdutoFiscalValidado($data));
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage(), 'message' => $e->getMessage()], 422);
+        }
         
         \Log::info('✅ Dados validados:', $data);
         
@@ -546,14 +630,14 @@ Route::post('/produtos', function (Request $request) use ($salvarFotoProduto) {
     }
 });
 
-$atualizarProduto = function (Request $request, $id, bool $permitirFoto = false) use ($salvarFotoProduto) {
+$atualizarProduto = function (Request $request, $id, bool $permitirFoto = false) use ($salvarFotoProduto, $regrasValidacaoProdutoFiscal, $mesclarProdutoFiscalValidado) {
     try {
         $produto = DB::table('produtos')->where('id', $id)->first();
         if (!$produto) {
             return response()->json(['error' => 'Produto não encontrado', 'message' => 'Produto não encontrado'], 404);
         }
 
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'nome' => 'sometimes|required|string',
             'categoria' => 'sometimes|required|string',
             'unidade_base' => 'sometimes|required|string',
@@ -563,7 +647,13 @@ $atualizarProduto = function (Request $request, $id, bool $permitirFoto = false)
             'custo_medio' => 'nullable|numeric',
             'estoque_minimo' => 'nullable|numeric',
             'ativo' => 'nullable|integer',
-        ]);
+        ], $regrasValidacaoProdutoFiscal()));
+
+        try {
+            $data = array_merge($data, $mesclarProdutoFiscalValidado($data));
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage(), 'message' => $e->getMessage()], 422);
+        }
 
         if (!empty($data['nome'])) {
             $nomeNorm = strtolower(trim($data['nome']));
@@ -1019,6 +1109,49 @@ Route::delete('/produtos/{id}', function (Request $request, $id) {
 // FICHAS TÉCNICAS (pratos — persistência no banco)
 // ============================================
 
+$sanitizeFichaTecnicaIngredientes = static function ($raw): array {
+    if (! is_array($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach ($raw as $it) {
+        if (! is_array($it)) {
+            continue;
+        }
+        $nome = isset($it['nome']) ? trim((string) $it['nome']) : '';
+        if ($nome === '') {
+            continue;
+        }
+        $q = $it['quantidade'] ?? null;
+        $cu = $it['custo_unitario'] ?? null;
+        $ct = $it['custo_total'] ?? null;
+        $out[] = [
+            'id' => $it['id'] ?? null,
+            'nome' => mb_substr($nome, 0, 255),
+            'quantidade' => ($q !== null && $q !== '' && is_numeric($q)) ? (float) $q : null,
+            'unidade_medida' => mb_substr(trim((string) ($it['unidade_medida'] ?? '')), 0, 40),
+            'custo_unitario' => ($cu !== null && $cu !== '' && is_numeric($cu)) ? (float) $cu : null,
+            'custo_total' => ($ct !== null && $ct !== '' && is_numeric($ct)) ? (float) $ct : null,
+        ];
+    }
+
+    return $out;
+};
+
+$encodeFichaTecnicaIngredientesJson = static function (array $ingredientes) use ($sanitizeFichaTecnicaIngredientes): string {
+    $clean = $sanitizeFichaTecnicaIngredientes($ingredientes);
+    $flags = JSON_UNESCAPED_UNICODE;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    $json = json_encode($clean, $flags);
+    if ($json === false) {
+        throw new \JsonException(json_last_error_msg() ?: 'Erro ao serializar ingredientes');
+    }
+
+    return $json;
+};
+
 $mapFichaTecnicaRow = static function ($row) {
     $ing = [];
     if (!empty($row->ingredientes_json)) {
@@ -1041,7 +1174,16 @@ $mapFichaTecnicaRow = static function ($row) {
         'sugestao_venda' => $row->sugestao_venda !== null ? (float) $row->sugestao_venda : null,
         'modo_preparo' => $row->modo_preparo,
         'ingredientes' => $ing,
-        'updatedAt' => $row->updated_at ? \Illuminate\Support\Carbon::parse($row->updated_at)->toIso8601String() : null,
+        'updatedAt' => (static function () use ($row) {
+            if (empty($row->updated_at)) {
+                return null;
+            }
+            try {
+                return \Illuminate\Support\Carbon::parse($row->updated_at)->toIso8601String();
+            } catch (\Throwable $e) {
+                return null;
+            }
+        })(),
     ];
 };
 
@@ -1062,7 +1204,7 @@ Route::get('/fichas-tecnicas', function () use ($mapFichaTecnicaRow) {
     }
 });
 
-Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnicaRow) {
+Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnicaRow, $encodeFichaTecnicaIngredientesJson) {
     if (!Schema::hasTable('fichas_tecnicas')) {
         return response()->json([
             'error' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
@@ -1084,14 +1226,27 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
             $rules['data_ficha'] = 'nullable|date';
         }
         $data = $request->validate($rules);
-        $ingredientes = $data['ingredientes'] ?? [];
-        $ingJson = json_encode($ingredientes, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $fotoBase64 = $data['foto_base64'] ?? null;
+        if (is_string($fotoBase64) && strlen($fotoBase64) > 2500000) {
+            return response()->json([
+                'error' => 'Imagem muito grande',
+                'message' => 'A foto do prato é grande demais para salvar. Use uma imagem menor.',
+            ], 422);
+        }
+        try {
+            $ingJson = $encodeFichaTecnicaIngredientesJson($data['ingredientes'] ?? []);
+        } catch (\JsonException $e) {
+            return response()->json([
+                'error' => 'Ingredientes inválidos',
+                'message' => 'Não foi possível gravar a lista de ingredientes. Revise os nomes e tente de novo.',
+            ], 422);
+        }
         $now = now();
         $insertRow = [
             'nome_prato' => $data['nome_prato'],
             'tempo_preparo' => $data['tempo_preparo'] ?? null,
             'responsavel_tecnico' => $data['responsavel_tecnico'] ?? null,
-            'foto_base64' => $data['foto_base64'] ?? null,
+            'foto_base64' => $fotoBase64,
             'preco_prato' => isset($data['preco_prato']) ? $data['preco_prato'] : null,
             'sugestao_venda' => isset($data['sugestao_venda']) ? $data['sugestao_venda'] : null,
             'modo_preparo' => $data['modo_preparo'] ?? null,
@@ -1115,7 +1270,7 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
     }
 });
 
-Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFichaTecnicaRow) {
+Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFichaTecnicaRow, $encodeFichaTecnicaIngredientesJson) {
     if (!Schema::hasTable('fichas_tecnicas')) {
         return response()->json([
             'error' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
@@ -1142,13 +1297,26 @@ Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFi
             $rules['data_ficha'] = 'nullable|date';
         }
         $data = $request->validate($rules);
-        $ingredientes = $data['ingredientes'] ?? [];
-        $ingJson = json_encode($ingredientes, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        $fotoBase64 = array_key_exists('foto_base64', $data) ? $data['foto_base64'] : $existing->foto_base64;
+        if (is_string($fotoBase64) && strlen($fotoBase64) > 2500000) {
+            return response()->json([
+                'error' => 'Imagem muito grande',
+                'message' => 'A foto do prato é grande demais para salvar. Use uma imagem menor.',
+            ], 422);
+        }
+        try {
+            $ingJson = $encodeFichaTecnicaIngredientesJson($data['ingredientes'] ?? []);
+        } catch (\JsonException $e) {
+            return response()->json([
+                'error' => 'Ingredientes inválidos',
+                'message' => 'Não foi possível gravar a lista de ingredientes. Revise os nomes e tente de novo.',
+            ], 422);
+        }
         $updateRow = [
             'nome_prato' => $data['nome_prato'],
             'tempo_preparo' => $data['tempo_preparo'] ?? null,
             'responsavel_tecnico' => $data['responsavel_tecnico'] ?? null,
-            'foto_base64' => array_key_exists('foto_base64', $data) ? $data['foto_base64'] : $existing->foto_base64,
+            'foto_base64' => $fotoBase64,
             'preco_prato' => array_key_exists('preco_prato', $data) ? $data['preco_prato'] : $existing->preco_prato,
             'sugestao_venda' => array_key_exists('sugestao_venda', $data) ? $data['sugestao_venda'] : $existing->sugestao_venda,
             'modo_preparo' => $data['modo_preparo'] ?? null,
@@ -1427,6 +1595,15 @@ Route::get('/unidades', function (Request $request) {
             'unidades.*',
             'usuarios.nome as gerente_nome'
         );
+    if (Schema::hasTable('empresas') && Schema::hasColumn('unidades', 'empresa_id')) {
+        $query->leftJoin('empresas', 'unidades.empresa_id', '=', 'empresas.id')
+            ->addSelect(
+                'empresas.razao_social as empresa_razao_social',
+                'empresas.nome_fantasia as empresa_nome_fantasia',
+                'empresas.cnpj as empresa_cnpj',
+                'empresas.regime_tributario as empresa_regime_tributario'
+            );
+    }
     
     // Se não tiver filtro, retorna todas (quando ?todas=1)
     $unidades = $query->orderBy('unidades.nome')->get();
@@ -11163,6 +11340,7 @@ require __DIR__ . '/patrimonio_routes.php';
 require __DIR__ . '/investimento_routes.php';
 require __DIR__ . '/financeiro_routes.php';
 require __DIR__ . '/configuracoes_routes.php';
+require __DIR__ . '/fiscal_cadastro_routes.php';
 require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';

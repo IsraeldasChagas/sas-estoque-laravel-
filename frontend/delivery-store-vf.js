@@ -126,8 +126,8 @@
     const primary = /^#[0-9a-f]{6}$/i.test(config.cor_primaria || "") ? config.cor_primaria : "#2563eb";
 
     root.innerHTML = `<main class="vf-store">
-      ${breadcrumb("Vitrine")}
-      ${heading("Vitrine da loja", "Personalize como sua loja será apresentada aos clientes.")}
+      ${breadcrumb("Página de Venda")}
+      ${heading("Página de Venda", "Personalize como sua loja será apresentada aos clientes.")}
       <div class="vf-vitrine-layout">
         <form class="vf-store-card vf-vitrine-form" id="vfVitrineForm">
           <div class="vf-store-card__title"><h3>Identidade da loja</h3><p>Informações, imagens e disponibilidade.</p></div>
@@ -296,7 +296,7 @@
           banners_remove: [...bannersRemove],
         };
         await api("/vitrine", { method: "PUT", body: JSON.stringify(payload) });
-        toast("Vitrine atualizada.", "success");
+        toast("Página de venda atualizada.", "success");
         await loadDeliveryVitrine();
       } catch (error) {
         toast(error?.message || "Não foi possível salvar a vitrine.", "error");

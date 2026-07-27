@@ -473,7 +473,7 @@
   async function loadVitrine() {
     const root = $("deliveryVitrineRoot"); if (!root) return;
     const c = await api("/vitrine");
-    root.innerHTML = shell(header("Vitrine", "Personalize a identidade e a disponibilidade da loja.", "▤")
+    root.innerHTML = shell(header("Página de Venda", "Personalize a identidade e a disponibilidade da loja.", "▤")
       + `<div class="orc-grid orc-grid--2"><form id="dlvVitrineForm" class="orc-card"><div class="orc-section-title"><h3>Identidade da loja</h3></div>
       <div class="orc-form-grid"><label>Nome da loja<input name="nome_loja" value="${esc(c.nome_loja || "")}"></label><label>Slug público<input name="slug" value="${esc(c.slug || "")}"></label>
       <label>Cor principal<input name="cor_primaria" type="color" value="${esc(c.cor_primaria || "#e85d24")}"></label><label>WhatsApp<input name="whatsapp" value="${esc(c.whatsapp || "")}"></label>
@@ -488,7 +488,7 @@
     $("dlvVitrineForm").onsubmit = async (e) => {
       e.preventDefault(); const f = e.currentTarget;
       await api("/vitrine", { method: "PUT", body: JSON.stringify({ ...formJson(f, ["nome_loja", "slug", "cor_primaria", "whatsapp", "instagram_url", "facebook_url", "descricao", "endereco_texto"]), ativo: bool(f, "ativo"), aberta: bool(f, "aberta") }) });
-      toast("Vitrine atualizada.", "success"); await loadVitrine();
+      toast("Página de venda atualizada.", "success"); await loadVitrine();
     };
     root.querySelector("[data-go]").onclick = () => window.navigateTo?.("deliveryCatalogo");
   }

@@ -1598,7 +1598,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs",
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
-  "openClawIntegracao",
+  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
@@ -1969,7 +1969,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1977,7 +1977,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalEmpresas", "fiscalPerfisTributarios", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -5555,6 +5555,8 @@ function applyPermissions() {
     const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
     const temConfigMenu =
       regras.sections.includes("openClawIntegracao") ||
+      regras.sections.includes("fiscalEmpresas") ||
+      regras.sections.includes("fiscalPerfisTributarios") ||
       perfilCfg === "ADMIN";
     configuracoesNavSubmenu.classList.toggle("hidden", !temConfigMenu);
   }
@@ -5802,8 +5804,11 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "openClawIntegracao") configuracoesNavSubmenuNav.classList.add("open");
-    else configuracoesNavSubmenuNav.classList.remove("open");
+    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios") {
+      configuracoesNavSubmenuNav.classList.add("open");
+    } else {
+      configuracoesNavSubmenuNav.classList.remove("open");
+    }
   }
   const aylaNavSubmenuNav = document.getElementById("aylaMenu")?.closest(".nav-submenu");
   if (aylaNavSubmenuNav) {
@@ -5876,6 +5881,8 @@ function navigateTo(section) {
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
   else if (section === "openClawIntegracao") loadOpenClawIntegracao?.().catch(() => {});
+  else if (section === "fiscalEmpresas") window.loadFiscalEmpresas?.().catch(() => {});
+  else if (section === "fiscalPerfisTributarios") window.loadFiscalPerfisTributarios?.().catch(() => {});
   else if (section === "integracaoVendafacil") loadIntegracaoVendafacil?.().catch(() => {});
   else if (section === "integracaoAplicacoes") loadIntegracaoAplicacoes?.().catch(() => {});
   else if (section === "integracaoHealthCheck") loadIntegracaoHealthCheck?.().catch(() => {});
@@ -5908,7 +5915,7 @@ function navigateTo(section) {
   else if (section === "deliveryCategorias") Promise.resolve(loadDeliveryCategorias?.()).catch((e) => showToast(e?.message || "Falha ao carregar categorias.", "error"));
   else if (section === "deliveryProdutos") Promise.resolve(loadDeliveryProdutos?.()).catch((e) => showToast(e?.message || "Falha ao carregar produtos.", "error"));
   else if (section === "deliveryAdicionais") Promise.resolve(loadDeliveryAdicionais?.()).catch((e) => showToast(e?.message || "Falha ao carregar adicionais.", "error"));
-  else if (section === "deliveryVitrine") Promise.resolve(loadDeliveryVitrine?.()).catch((e) => showToast(e?.message || "Falha ao carregar a vitrine.", "error"));
+  else if (section === "deliveryVitrine") Promise.resolve(loadDeliveryVitrine?.()).catch((e) => showToast(e?.message || "Falha ao carregar a página de venda.", "error"));
   else if (section === "deliveryPedidos") Promise.resolve(loadDeliveryPedidos?.()).catch((e) => showToast(e?.message || "Falha ao carregar pedidos.", "error"));
   else if (section === "deliveryFretes") Promise.resolve(loadDeliveryFretes?.()).catch((e) => showToast(e?.message || "Falha ao carregar fretes.", "error"));
   else if (section === "deliveryEntregadores") Promise.resolve(loadDeliveryEntregadores?.()).catch((e) => showToast(e?.message || "Falha ao carregar entregadores.", "error"));
@@ -6456,6 +6463,12 @@ function renderProdutos(lista) {
     const fotoCell = fotoUrl
       ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto img-lightbox-trigger" loading="lazy" title="Clique para ampliar" />`
       : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
+    const tipoFiscal = produto.tipo_fiscal_label || (typeof window.fiscalLabelTipo === "function" ? window.fiscalLabelTipo(produto.tipo_fiscal) : produto.tipo_fiscal) || "--";
+    const perfilFiscal = produto.perfil_tributario_nome || "--";
+    const fiscalBadge =
+      typeof window.fiscalBadgeStatus === "function"
+        ? window.fiscalBadgeStatus(produto.status_fiscal)
+        : escapeHtml(produto.status_fiscal_label || produto.status_fiscal || "--");
     
     return `<tr data-id="${produto.id}"${rowClass}>
         <td data-label="Foto">${fotoCell}</td>
@@ -6467,11 +6480,14 @@ function renderProdutos(lista) {
         <td data-label="Estoque minimo">${formatNumber(produto.estoque_minimo, 3)}${badge}</td>
         <td data-label="Unidade">${escapeHtml(produto.unidade_nome || "--")}</td>
         <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${ativo ? "Ativo" : "Inativo"}</span></td>
+        <td data-label="Tipo fiscal">${escapeHtml(tipoFiscal)}</td>
+        <td data-label="Perfil trib.">${escapeHtml(perfilFiscal)}</td>
+        <td data-label="Fiscal">${fiscalBadge}</td>
         ${colunaAcoes}
       </tr>`;
   }).join("");
   
-  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", 10);
+  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", 13);
 }
 
 function renderProdutosDashboard(lista) {
@@ -9690,6 +9706,8 @@ async function loadProdutos(search) {
     const params = new URLSearchParams();
     params.set('todas', '1');
     if (termo) params.set('search', termo);
+    const statusFiscal = document.getElementById("produtoFiscalFiltro")?.value?.trim();
+    if (statusFiscal) params.set("status_fiscal", statusFiscal);
     const produtos = await fetchJSON(`/produtos?${params}`);
 
     if (!Array.isArray(produtos)) {
@@ -12319,6 +12337,14 @@ async function submitProduto(event) {
     return;
   }
 
+  const isNewProduto = !id;
+  if (typeof window.fiscalProdutoValidate === "function" && !window.fiscalProdutoValidate(isNewProduto)) {
+    return;
+  }
+  const fiscalPayload =
+    typeof window.fiscalProdutoCollectPayload === "function" ? window.fiscalProdutoCollectPayload() : {};
+  Object.assign(payload, fiscalPayload);
+
   const temFoto = !!produtoFotoFile;
   const temRemoverFoto = !!produtoFotoRemovida;
 
@@ -12344,6 +12370,7 @@ async function submitProduto(event) {
       formData.append("ativo", String(payload.ativo));
       if (payload.unidade_id != null) formData.append("unidade_id", String(payload.unidade_id));
       if (payload.codigo_barras) formData.append("codigo_barras", payload.codigo_barras);
+      if (typeof window.fiscalProdutoAppendFormData === "function") window.fiscalProdutoAppendFormData(formData);
       if (produtoFotoRemovida) formData.append("remove_foto", "1");
       if (produtoFotoFile) formData.append("foto", produtoFotoFile);
       result = await fetchForm(
@@ -12374,6 +12401,7 @@ async function submitProduto(event) {
     toggleModal(dom.produtosModal, false);
     form.reset();
     resetProdutoFotoForm();
+    if (typeof window.fiscalProdutoResetForm === "function") window.fiscalProdutoResetForm();
 
     const searchEl = document.getElementById("produtoSearch");
     if (searchEl) searchEl.value = "";
@@ -12428,6 +12456,18 @@ async function submitUnidade(event, formOverride = null) {
       return;
     }
     data.gerente_usuario_id = numero;
+  }
+
+  const empresaRaw = (data.empresa_id ?? "").toString().trim();
+  if (!empresaRaw) {
+    data.empresa_id = null;
+  } else {
+    const empresaNum = Number(empresaRaw);
+    if (Number.isNaN(empresaNum)) {
+      showToast("Selecione uma empresa valida.", "error");
+      return;
+    }
+    data.empresa_id = empresaNum;
   }
 
   try {
@@ -13369,6 +13409,9 @@ function setupTables() {
     }
     if (action === "edit") {
       await loadUnidades(false);
+      if (typeof window.fiscalRefreshUnidadeEmpresas === "function") {
+        await window.fiscalRefreshUnidadeEmpresas().catch(() => {});
+      }
       dom.produtoModalTitle.textContent = "Editar produto";
       dom.produtosForm.elements.id.value = produto.id;
       dom.produtosForm.elements.nome.value = produto.nome || "";
@@ -13381,6 +13424,7 @@ function setupTables() {
       dom.produtosForm.elements.unidade_id.value = produto.unidade_id || "";
       dom.produtosForm.elements.ativo.value = Number(produto.ativo) === 1 ? "1" : "0";
       resetProdutoFotoForm();
+      if (typeof window.fiscalProdutoFillForm === "function") window.fiscalProdutoFillForm(produto);
       if (dom.produtoFotoPreview) {
         const fotoUrl = getUsuarioFotoUrl(produto.foto);
         dom.produtoFotoPreview.innerHTML = fotoUrl
@@ -13528,6 +13572,9 @@ function setupTables() {
       }
       state.unidadeInlineVisivel = true;
       applyPermissions();
+      if (typeof window.fiscalRefreshUnidadeEmpresas === "function") {
+        await window.fiscalRefreshUnidadeEmpresas().catch(() => {});
+      }
       if (dom.unidadeInlineForm) {
         dom.unidadeInlineForm.reset();
         if (dom.unidadeInlineForm.elements.id) dom.unidadeInlineForm.elements.id.value = unidade.id;
@@ -13537,6 +13584,8 @@ function setupTables() {
         dom.unidadeInlineForm.elements.telefone.value = unidade.telefone || "";
         dom.unidadeInlineForm.elements.email.value = unidade.email || "";
         dom.unidadeInlineForm.elements.observacoes.value = unidade.observacoes || "";
+        const empSel = dom.unidadeInlineForm.elements.empresa_id;
+        if (empSel) empSel.value = unidade.empresa_id != null ? String(unidade.empresa_id) : "";
       }
       try {
         await loadUsuarios(true);
@@ -14048,6 +14097,7 @@ function setupModals() {
     dom.produtoModalTitle.textContent = "Cadastrar produto";
     dom.produtosForm?.reset();
     resetProdutoFotoForm();
+    if (typeof window.fiscalProdutoResetForm === "function") window.fiscalProdutoResetForm();
     await loadUnidades(false);
     toggleModal(dom.produtosModal, true);
   });
@@ -15501,6 +15551,9 @@ function setupModals() {
     }
     state.unidadeInlineVisivel = true;
     applyPermissions();
+    if (typeof window.fiscalRefreshUnidadeEmpresas === "function") {
+      await window.fiscalRefreshUnidadeEmpresas().catch(() => {});
+    }
     if (dom.unidadeInlineForm) {
       dom.unidadeInlineForm.reset();
       if (dom.unidadeInlineForm.elements.id) dom.unidadeInlineForm.elements.id.value = "";
@@ -25668,9 +25721,20 @@ function setupFichaTecnicaForm() {
   const listaEmpty = document.getElementById('fichaTecnicaListaEmpty');
   const btnNova = document.getElementById('fichaTecnicaBtnNova');
   const btnVoltar = document.getElementById('fichaTecnicaVoltarLista');
+  const btnVerPdf = document.getElementById('fichaTecnicaVerPdfBtn');
   const editIdEl = document.getElementById('fichaTecnicaEditId');
   const formTitulo = document.getElementById('fichaTecnicaFormTitulo');
   if (!form) return;
+
+  const fichaTecnicaIdServidorValido = (idRaw) => {
+    const id = parseInt(String(idRaw ?? ''), 10);
+    return Number.isFinite(id) && id >= 1;
+  };
+
+  const atualizarVisibilidadeBtnPdfFicha = () => {
+    if (!btnVerPdf) return;
+    btnVerPdf.hidden = !fichaTecnicaIdServidorValido(editIdEl?.value);
+  };
 
   let pratoModalAtual = null;
   let fichaTecnicaPdfPendente = null;
@@ -25957,7 +26021,14 @@ function setupFichaTecnicaForm() {
     if (t.tagName === 'TEXTAREA') return;
     if (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') return;
     const ingRoot = document.getElementById('fichaTecnicaIngredienteForm');
-    if (ingRoot && ingRoot.contains(t)) e.preventDefault();
+    if (ingRoot && ingRoot.contains(t)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
   });
 
   const ingForm = document.getElementById('fichaTecnicaIngredienteForm');
@@ -26265,6 +26336,7 @@ function setupFichaTecnicaForm() {
     fecharFormularioIngrediente();
     const dataEl = document.getElementById('fichaTecnicaData');
     if (dataEl) dataEl.value = dataHojeIsoLocalFichaTecnica();
+    atualizarVisibilidadeBtnPdfFicha();
   };
 
   /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). tipo: completa | ingredientes */
@@ -26402,6 +26474,7 @@ function setupFichaTecnicaForm() {
     }
     if (formTitulo) formTitulo.textContent = 'Editar ficha técnica';
     syncFichaTecnicaVisaoPrecos();
+    atualizarVisibilidadeBtnPdfFicha();
   };
 
   onNavigateFichaTecnicaCallback = () => {
@@ -26492,6 +26565,13 @@ function setupFichaTecnicaForm() {
     if (salvandoFichaTecnica) return;
     normalizarCamposTempoAoSair();
     sincronizarModoPreparoOculto();
+    sincronizarTempoPreparoOculto();
+    const tempoOk = String(document.getElementById('fichaTecnicaTempoPreparo')?.value || '').trim();
+    if (!tempoOk) {
+      showToast('Informe o tempo de preparo (horas ou minutos).', 'warning');
+      tempoHoras?.focus();
+      return;
+    }
     if (!form.checkValidity()) {
       form.reportValidity();
       showToast('Preencha os campos obrigatórios da ficha técnica.', 'warning');
@@ -26576,8 +26656,12 @@ function setupFichaTecnicaForm() {
       if (!persistirFichas()) return;
 
       if (editIdEl && saved?.id != null) editIdEl.value = String(saved.id);
+      atualizarVisibilidadeBtnPdfFicha();
 
       showToast(editId ? 'Ficha técnica atualizada.' : 'Ficha técnica salva.', 'success');
+      if (saved && fichaTecnicaIdServidorValido(saved.id)) {
+        abrirModalPdfOpcaoFicha(saved);
+      }
       limparFormulario();
       await mostrarVistaLista();
     } finally {
@@ -26585,20 +26669,31 @@ function setupFichaTecnicaForm() {
     }
   };
 
-  form.addEventListener('submit', (e) => {
+  document.getElementById('fichaTecnicaSalvarBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     salvarFichaTecnica().catch((err) => {
       console.error('Ficha técnica — salvar:', err);
-      showToast('Não foi possível salvar a ficha técnica.', 'error');
+      const msg =
+        err?.message ||
+        (err?.status === 500 ? 'Erro no servidor ao salvar a ficha. Tente de novo.' : 'Não foi possível salvar a ficha técnica.');
+      showToast(msg, 'error');
     });
   });
 
-  document.getElementById('fichaTecnicaSalvarBtn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    salvarFichaTecnica().catch((err) => {
-      console.error('Ficha técnica — salvar:', err);
-      showToast('Não foi possível salvar a ficha técnica.', 'error');
-    });
+  btnVerPdf?.addEventListener('click', () => {
+    const idRaw = (editIdEl?.value || '').trim();
+    if (!fichaTecnicaIdServidorValido(idRaw)) {
+      showToast('Salve a ficha no servidor antes de visualizar o PDF.', 'info');
+      return;
+    }
+    const p =
+      obterPratoPorId(idRaw) ||
+      {
+        id: parseInt(idRaw, 10),
+        nome_prato: document.getElementById('fichaTecnicaNomePrato')?.value?.trim() || 'Ficha técnica',
+      };
+    abrirModalPdfOpcaoFicha(p);
   });
 
   if (fotoInput && preview && previewWrap) {
@@ -26669,7 +26764,9 @@ function setupFichaTecnicaForm() {
 
   renderListaIngredientesFichaTecnica();
 
-  ingAdicionarBtn?.addEventListener('click', () => {
+  ingAdicionarBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!ingForm) return;
     if (!(ingNome?.value || '').trim()) {
       showToast('Informe o nome do ingrediente.', 'error');
@@ -26690,36 +26787,41 @@ function setupFichaTecnicaForm() {
       quantidade != null && custo_unitario != null
         ? Math.round(quantidade * custo_unitario * 100) / 100
         : null;
-    if (fichaTecnicaIngredienteEditId != null) {
-      const ix = state.fichaTecnicaIngredientes.findIndex(
-        (x) => String(x.id) === String(fichaTecnicaIngredienteEditId)
-      );
-      if (ix >= 0) {
-        const prevId = state.fichaTecnicaIngredientes[ix].id;
-        state.fichaTecnicaIngredientes[ix] = {
-          id: prevId,
+    try {
+      if (fichaTecnicaIngredienteEditId != null) {
+        const ix = state.fichaTecnicaIngredientes.findIndex(
+          (x) => String(x.id) === String(fichaTecnicaIngredienteEditId)
+        );
+        if (ix >= 0) {
+          const prevId = state.fichaTecnicaIngredientes[ix].id;
+          state.fichaTecnicaIngredientes[ix] = {
+            id: prevId,
+            nome,
+            quantidade,
+            unidade_medida,
+            custo_unitario,
+            custo_total,
+          };
+        }
+        renderListaIngredientesFichaTecnica();
+        fecharFormularioIngrediente();
+        showToast('Ingrediente atualizado.', 'success');
+      } else {
+        state.fichaTecnicaIngredientes.push({
+          id: Date.now(),
           nome,
           quantidade,
           unidade_medida,
           custo_unitario,
           custo_total,
-        };
+        });
+        renderListaIngredientesFichaTecnica();
+        fecharFormularioIngrediente();
+        showToast('Ingrediente adicionado à lista.', 'success');
       }
-      renderListaIngredientesFichaTecnica();
-      fecharFormularioIngrediente();
-      showToast('Ingrediente atualizado.', 'success');
-    } else {
-      state.fichaTecnicaIngredientes.push({
-        id: Date.now(),
-        nome,
-        quantidade,
-        unidade_medida,
-        custo_unitario,
-        custo_total,
-      });
-      renderListaIngredientesFichaTecnica();
-      fecharFormularioIngrediente();
-      showToast('Ingrediente adicionado à lista.', 'success');
+    } catch (err) {
+      console.error('Ficha técnica — adicionar ingrediente:', err);
+      showToast('Não foi possível atualizar a lista de ingredientes na tela.', 'error');
     }
   });
 }

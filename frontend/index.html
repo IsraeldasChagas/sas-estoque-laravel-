@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
+    <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-m1b" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
     <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto3" />
@@ -220,7 +221,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="deliveryCategorias"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label">Categorias</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="deliveryProdutos"><span class="nav-icon" aria-hidden="true">◆</span><span class="nav-label">Produtos Delivery</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="deliveryAdicionais"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">Adicionais</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryVitrine"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label">Vitrine</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="deliveryVitrine"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label">Página de Venda</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="deliveryPedidos"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Pedidos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="deliveryFretes"><span class="nav-icon" aria-hidden="true">📍</span><span class="nav-label">Fretes</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="deliveryEntregadores"><span class="nav-icon" aria-hidden="true">◎</span><span class="nav-label">Entregadores</span></a>
@@ -366,6 +367,9 @@
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
+              <div class="nav-submenu-divider-label">Fiscal — cadastro</div>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalEmpresas"><span class="nav-icon" aria-hidden="true">🏢</span><span class="nav-label">Empresas (CNPJ)</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalPerfisTributarios"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Perfis tributários</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
@@ -1567,7 +1571,17 @@
                       <label class="form-card__field">
                         CNPJ
                         <input name="cnpj" placeholder="00.000.000/0000-00" />
+                        <small class="subtle-text">Legado: preferir vincular a empresa abaixo.</small>
                       </label>
+                      <label class="form-card__field">
+                        Empresa responsável (CNPJ)
+                        <select name="empresa_id">
+                          <option value="">— Sem vínculo —</option>
+                        </select>
+                        <small id="unidadeInlineEmpresaHint" class="subtle-text">Vincule a unidade à pessoa jurídica responsável.</small>
+                      </label>
+                    </div>
+                    <div class="form-card__row">
                       <label class="form-card__field">
                         Gerente responsavel
                         <select name="gerente_usuario_id">
@@ -1654,6 +1668,15 @@
                   value=""
                   style="max-width: 280px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem;"
                 />
+                <label class="produto-fiscal-filtro-label">
+                  <span class="sr-only">Status fiscal</span>
+                  <select id="produtoFiscalFiltro" aria-label="Filtrar por status fiscal">
+                    <option value="">Fiscal: todos</option>
+                    <option value="completo">Fiscal completo</option>
+                    <option value="incompleto">Fiscal incompleto</option>
+                    <option value="pendente">Fiscal pendente</option>
+                  </select>
+                </label>
               </form>
             </div>
             <div class="table-card">
@@ -1671,12 +1694,15 @@
                       <th>Estoque minimo</th>
                       <th>Unidade</th>
                       <th>Status</th>
+                      <th>Tipo fiscal</th>
+                      <th>Perfil trib.</th>
+                      <th>Fiscal</th>
                       <th>Acoes</th>
                     </tr>
                   </thead>
                   <tbody id="produtosTable">
                     <tr>
-                      <td colspan="10" style="text-align: center; color: #607d8b">Carregando...</td>
+                      <td colspan="13" style="text-align: center; color: #607d8b">Carregando...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1917,7 +1943,8 @@
                 </div>
 
                 <footer class="ficha-tecnica-form__footer ficha-tecnica-form__footer--row">
-                  <button type="submit" class="btn primary" id="fichaTecnicaSalvarBtn">Salvar ficha técnica</button>
+                  <button type="button" class="btn secondary" id="fichaTecnicaVerPdfBtn" hidden title="Abre a ficha em PDF (mesmo visualizador do Alvará)">Ver PDF</button>
+                  <button type="button" class="btn primary" id="fichaTecnicaSalvarBtn">Salvar ficha técnica</button>
                 </footer>
               </form>
               </div>
@@ -4753,6 +4780,15 @@
             <div id="integracaoConfiguracoesRoot" class="int-page-wrap"></div>
           </section>
 
+          <section id="fiscalEmpresasSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>🏢 Empresas (CNPJ)</h2><p class="subtle-text">Pessoa jurídica responsável pelo estoque e regime tributário.</p></div></div>
+            <div id="fiscalEmpresasRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="fiscalPerfisTributariosSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>📋 Perfis tributários</h2><p class="subtle-text">Classificações fiscais reutilizáveis entre produtos.</p></div></div>
+            <div id="fiscalPerfisRoot" class="int-page-wrap"></div>
+          </section>
+
           <!-- Configurações — Integrações — OpenClaw -->
           <section id="openClawIntegracaoSection" class="view-section hidden">
             <div class="cfg-section-head">
@@ -5884,6 +5920,11 @@
         <form id="produtoForm">
           <input type="hidden" name="id" />
           <div id="produtoFormFeedback" class="form-feedback hidden"></div>
+          <div class="produto-modal-tabs" role="tablist">
+            <button type="button" class="produto-modal-tab active" id="produtoTabBtnGeral" role="tab">Dados gerais</button>
+            <button type="button" class="produto-modal-tab" id="produtoTabBtnFiscal" role="tab">Dados fiscais</button>
+          </div>
+          <div id="produtoTabPainelGeral" class="produto-tab-painel">
           <div class="avatar-upload produto-foto-upload">
             <div class="avatar-preview produto-foto-preview" id="produtoFotoPreview">
               <span class="avatar-placeholder">?</span>
@@ -5959,6 +6000,71 @@
               <option value="0">Inativo</option>
             </select>
           </label>
+          </div>
+          <div id="produtoTabPainelFiscal" class="produto-tab-painel hidden">
+            <p class="subtle-text produto-fiscal-intro">Classificação fiscal do produto (sem cálculo de imposto nesta fase).</p>
+            <div class="fiscal-form-block">
+              <h4 class="fiscal-form-block__title">Classificação</h4>
+              <label>Tipo fiscal *
+                <select id="produtoFiscalTipo">
+                  <option value="">Selecione</option>
+                  <option value="producao_propria">Produção própria</option>
+                  <option value="revenda">Revenda</option>
+                  <option value="insumo">Insumo</option>
+                  <option value="uso_consumo">Uso e consumo</option>
+                </select>
+                <small class="subtle-text">Define como o produto é usado na operação.</small>
+              </label>
+              <label>Perfil tributário
+                <div class="produto-fiscal-perfil-linha">
+                  <select id="produtoFiscalPerfil"><option value="">— Nenhum —</option></select>
+                  <button type="button" class="btn secondary" id="produtoFiscalAplicarPerfil">Aplicar perfil</button>
+                </div>
+              </label>
+              <div class="grid-two">
+                <label>NCM<input id="produtoFiscalNcm" maxlength="12" placeholder="0000.00.00" autocomplete="off" /></label>
+                <label>CEST<input id="produtoFiscalCest" maxlength="10" autocomplete="off" /></label>
+              </div>
+              <label>Origem da mercadoria
+                <select id="produtoFiscalOrigem">
+                  <option value="">—</option>
+                  <option value="0">0 — Nacional</option>
+                  <option value="1">1 — Estrangeira (importação direta)</option>
+                  <option value="2">2 — Estrangeira (mercado interno)</option>
+                  <option value="3">3 — Nacional (&gt; 40% importado)</option>
+                  <option value="4">4 — Nacional (PPB)</option>
+                  <option value="5">5 — Nacional (&lt; 40% importado)</option>
+                  <option value="6">6 — Estrangeira (import. direta, sem similar)</option>
+                  <option value="7">7 — Estrangeira (mercado interno, sem similar)</option>
+                  <option value="8">8 — Nacional (&gt; 70% importado)</option>
+                </select>
+              </label>
+            </div>
+            <div class="fiscal-form-block">
+              <h4 class="fiscal-form-block__title">Operação fiscal</h4>
+              <div class="grid-two">
+                <label>CST ICMS<input id="produtoFiscalCst" maxlength="5" /></label>
+                <label>CSOSN<input id="produtoFiscalCsosn" maxlength="6" /></label>
+              </div>
+              <div class="grid-two">
+                <label>CFOP entrada<input id="produtoFiscalCfopEntrada" maxlength="6" /></label>
+                <label>CFOP saída<input id="produtoFiscalCfopSaida" maxlength="6" /></label>
+              </div>
+            </div>
+            <div class="fiscal-form-block">
+              <h4 class="fiscal-form-block__title">Características</h4>
+              <div class="grid-two">
+                <label>Monofásico<select id="produtoFiscalMonofasico"><option value="">—</option><option value="1">Sim</option><option value="0">Não</option></select></label>
+                <label>Subst. tributária<select id="produtoFiscalSt"><option value="">—</option><option value="1">Sim</option><option value="0">Não</option></select></label>
+              </div>
+              <div class="grid-two">
+                <label>Crédito ICMS<select id="produtoFiscalCreditoIcms"><option value="">—</option><option value="1">Sim</option><option value="0">Não</option></select></label>
+                <label>Crédito PIS<select id="produtoFiscalCreditoPis"><option value="">—</option><option value="1">Sim</option><option value="0">Não</option></select></label>
+              </div>
+              <label>Crédito COFINS<select id="produtoFiscalCreditoCofins"><option value="">—</option><option value="1">Sim</option><option value="0">Não</option></select></label>
+            </div>
+            <label>Observações fiscais<textarea id="produtoFiscalObs" rows="2"></textarea></label>
+          </div>
           <footer>
             <button type="button" class="btn neutral" id="cancelProduto">Limpar</button>
             <button type="submit" class="btn primary">Salvar</button>
@@ -6000,6 +6106,14 @@
           <label>
             CNPJ
             <input name="cnpj" />
+            <small class="subtle-text">Legado: preferir vincular a empresa abaixo.</small>
+          </label>
+          <label>
+            Empresa responsável (CNPJ)
+            <select name="empresa_id">
+              <option value="">— Sem vínculo —</option>
+            </select>
+            <small id="unidadeEmpresaHint" class="subtle-text">Vincule a unidade à pessoa jurídica responsável.</small>
           </label>
           <label>
             Gerente Responsavel
@@ -6154,7 +6268,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCategorias" /> Delivery — Categorias</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryProdutos" /> Delivery — Produtos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryAdicionais" /> Delivery — Adicionais</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryVitrine" /> Delivery — Vitrine</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryVitrine" /> Delivery — Página de Venda</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryPedidos" /> Delivery — Pedidos</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryFretes" /> Delivery — Fretes</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryEntregadores" /> Delivery — Entregadores</label>
@@ -7775,14 +7889,15 @@
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="comercial-pdv.js?v=20260715-proto2"></script>
     <script src="integracoes.js?v=20260716-int1"></script>
+    <script src="fiscal-cadastro.js?v=20260727-fiscal-m1b"></script>
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
-    <script src="delivery.js?v=20260719-sem-estoque-delivery"></script>
+    <script src="delivery.js?v=20260724-pagina-venda-menu"></script>
     <script src="delivery-catalog-admin.js?v=20260717-vf1"></script>
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
-    <script src="delivery-store-vf.js?v=20260719-sem-estoque-delivery"></script>
-    <script src="app.js?v=20260721-rdash-linha"></script>
+    <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
+    <script src="app.js?v=20260727-fiscal-m1b"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

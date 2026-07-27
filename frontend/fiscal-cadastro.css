@@ -1,0 +1,103 @@
+.produto-modal-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  padding-bottom: 0.35rem;
+}
+
+.produto-modal-tab {
+  border: none;
+  background: transparent;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.produto-modal-tab.active {
+  opacity: 1;
+  font-weight: 600;
+  background: rgba(222, 67, 9, 0.08);
+  color: var(--primary, #de4309);
+}
+
+.produto-tab-painel.hidden {
+  display: none;
+}
+
+.produto-fiscal-perfil-linha {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.produto-fiscal-perfil-linha select {
+  flex: 1;
+  min-width: 140px;
+}
+
+.produto-fiscal-filtro-label select {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  font-size: 0.95rem;
+}
+
+.fiscal-form-block {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.fiscal-form-block__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.92rem;
+  color: #546e7a;
+}
+
+.fiscal-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.fiscal-badge--ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.fiscal-badge--warn {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.fiscal-badge--pend {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.modal.modal--wide {
+  max-width: 640px;
+}
+
+.fiscal-perfil-form label {
+  display: block;
+  margin-bottom: 0.65rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
