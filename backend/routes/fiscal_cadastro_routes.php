@@ -29,73 +29,85 @@ $fiscalPodeVer = function ($u) {
     }
     $p = strtoupper(trim((string) ($u->perfil ?? '')));
 
-    return in_array($p, ['ADMIN', 'GERENTE'], true);
+    return in_array($p, ['ADMIN', 'ADMINISTRADOR', 'GERENTE'], true);
 };
 
 $fiscalPodeEditar = function ($u) {
     if (! $u) {
         return false;
     }
+    $p = strtoupper(trim((string) ($u->perfil ?? '')));
 
-    return strtoupper(trim((string) ($u->perfil ?? ''))) === 'ADMIN';
+    return in_array($p, ['ADMIN', 'ADMINISTRADOR'], true);
 };
 
 $fiscalJson = fn ($data, int $code = 200) => response()->json($data, $code)
     ->header('Access-Control-Allow-Origin', '*');
 
-$mapEmpresa = static function ($row) {
+$fiscalRowGet = static function ($row, string $key, $default = null) {
+    if ($row === null) {
+        return $default;
+    }
+    if (is_array($row)) {
+        return $row[$key] ?? $default;
+    }
+
+    return property_exists($row, $key) ? $row->{$key} : $default;
+};
+
+$mapEmpresa = static function ($row) use ($fiscalRowGet) {
     if (! $row) {
         return null;
     }
 
     return [
-        'id' => (int) $row->id,
-        'razao_social' => $row->razao_social,
-        'nome_fantasia' => $row->nome_fantasia,
-        'cnpj' => $row->cnpj,
-        'inscricao_estadual' => $row->inscricao_estadual,
-        'inscricao_municipal' => $row->inscricao_municipal,
-        'regime_tributario' => $row->regime_tributario,
-        'crt' => $row->crt,
-        'uf' => $row->uf,
-        'municipio' => $row->municipio,
-        'ativo' => (bool) ($row->ativo ?? true),
-        'created_at' => $row->created_at,
-        'updated_at' => $row->updated_at,
+        'id' => (int) $fiscalRowGet($row, 'id', 0),
+        'razao_social' => $fiscalRowGet($row, 'razao_social'),
+        'nome_fantasia' => $fiscalRowGet($row, 'nome_fantasia'),
+        'cnpj' => $fiscalRowGet($row, 'cnpj'),
+        'inscricao_estadual' => $fiscalRowGet($row, 'inscricao_estadual'),
+        'inscricao_municipal' => $fiscalRowGet($row, 'inscricao_municipal'),
+        'regime_tributario' => $fiscalRowGet($row, 'regime_tributario'),
+        'crt' => $fiscalRowGet($row, 'crt'),
+        'uf' => $fiscalRowGet($row, 'uf'),
+        'municipio' => $fiscalRowGet($row, 'municipio'),
+        'ativo' => (bool) ($fiscalRowGet($row, 'ativo', true)),
+        'created_at' => $fiscalRowGet($row, 'created_at'),
+        'updated_at' => $fiscalRowGet($row, 'updated_at'),
     ];
 };
 
-$mapPerfil = static function ($row) {
+$mapPerfil = static function ($row) use ($fiscalRowGet) {
     if (! $row) {
         return null;
     }
 
     return [
-        'id' => (int) $row->id,
-        'nome' => $row->nome,
-        'descricao' => $row->descricao,
-        'tipo_fiscal_padrao' => $row->tipo_fiscal_padrao,
-        'ncm_padrao' => $row->ncm_padrao,
-        'cest_padrao' => $row->cest_padrao,
-        'cst_icms' => $row->cst_icms,
-        'csosn' => $row->csosn,
-        'cfop_entrada_padrao' => $row->cfop_entrada_padrao,
-        'cfop_saida_padrao' => $row->cfop_saida_padrao,
-        'tratamento_icms' => $row->tratamento_icms,
-        'tratamento_pis' => $row->tratamento_pis,
-        'tratamento_cofins' => $row->tratamento_cofins,
-        'tratamento_ipi' => $row->tratamento_ipi,
-        'tratamento_cbs' => $row->tratamento_cbs,
-        'tratamento_ibs' => $row->tratamento_ibs,
-        'monofasico' => (bool) ($row->monofasico ?? false),
-        'substituicao_tributaria' => (bool) ($row->substituicao_tributaria ?? false),
-        'gera_credito_icms' => (bool) ($row->gera_credito_icms ?? false),
-        'gera_credito_pis' => (bool) ($row->gera_credito_pis ?? false),
-        'gera_credito_cofins' => (bool) ($row->gera_credito_cofins ?? false),
-        'ativo' => (bool) ($row->ativo ?? true),
-        'observacoes' => $row->observacoes,
-        'created_at' => $row->created_at,
-        'updated_at' => $row->updated_at,
+        'id' => (int) $fiscalRowGet($row, 'id', 0),
+        'nome' => $fiscalRowGet($row, 'nome'),
+        'descricao' => $fiscalRowGet($row, 'descricao'),
+        'tipo_fiscal_padrao' => $fiscalRowGet($row, 'tipo_fiscal_padrao'),
+        'ncm_padrao' => $fiscalRowGet($row, 'ncm_padrao'),
+        'cest_padrao' => $fiscalRowGet($row, 'cest_padrao'),
+        'cst_icms' => $fiscalRowGet($row, 'cst_icms'),
+        'csosn' => $fiscalRowGet($row, 'csosn'),
+        'cfop_entrada_padrao' => $fiscalRowGet($row, 'cfop_entrada_padrao'),
+        'cfop_saida_padrao' => $fiscalRowGet($row, 'cfop_saida_padrao'),
+        'tratamento_icms' => $fiscalRowGet($row, 'tratamento_icms'),
+        'tratamento_pis' => $fiscalRowGet($row, 'tratamento_pis'),
+        'tratamento_cofins' => $fiscalRowGet($row, 'tratamento_cofins'),
+        'tratamento_ipi' => $fiscalRowGet($row, 'tratamento_ipi'),
+        'tratamento_cbs' => $fiscalRowGet($row, 'tratamento_cbs'),
+        'tratamento_ibs' => $fiscalRowGet($row, 'tratamento_ibs'),
+        'monofasico' => (bool) ($fiscalRowGet($row, 'monofasico', false)),
+        'substituicao_tributaria' => (bool) ($fiscalRowGet($row, 'substituicao_tributaria', false)),
+        'gera_credito_icms' => (bool) ($fiscalRowGet($row, 'gera_credito_icms', false)),
+        'gera_credito_pis' => (bool) ($fiscalRowGet($row, 'gera_credito_pis', false)),
+        'gera_credito_cofins' => (bool) ($fiscalRowGet($row, 'gera_credito_cofins', false)),
+        'ativo' => (bool) ($fiscalRowGet($row, 'ativo', true)),
+        'observacoes' => $fiscalRowGet($row, 'observacoes'),
+        'created_at' => $fiscalRowGet($row, 'created_at'),
+        'updated_at' => $fiscalRowGet($row, 'updated_at'),
     ];
 };
 
