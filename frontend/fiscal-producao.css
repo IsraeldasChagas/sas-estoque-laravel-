@@ -1,0 +1,37 @@
+.fiscal-producao-wrap {
+  display: grid;
+  gap: 1rem;
+}
+
+.fiscal-producao-panel {
+  padding: 1rem;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  background: var(--surface-alt, #fafafa);
+}
+
+.fiscal-producao-panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.fiscal-producao-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.fiscal-producao-sim-table td,
+.fiscal-producao-sim-table th {
+  font-size: 0.85rem;
+}
+
+.fiscal-producao-alert {
+  color: #c62828;
+  font-size: 0.9rem;
+}
+
+.fiscal-producao-ok {
+  color: #2e7d32;
+  font-size: 0.9rem;
+}

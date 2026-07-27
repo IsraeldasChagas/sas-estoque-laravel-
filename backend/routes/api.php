@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
 use App\Support\FiscalCadastroSupport;
 use App\Support\FiscalCompraEntradaSupport;
+use App\Support\FiscalMovimentacaoSupport;
 use App\Support\AuditLog;
 use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Support\Rh\RhRescisaoCalculo;
@@ -1128,6 +1129,7 @@ $sanitizeFichaTecnicaIngredientes = static function ($raw): array {
         $ct = $it['custo_total'] ?? null;
         $out[] = [
             'id' => $it['id'] ?? null,
+            'produto_id' => (isset($it['produto_id']) && is_numeric($it['produto_id'])) ? (int) $it['produto_id'] : null,
             'nome' => mb_substr($nome, 0, 255),
             'quantidade' => ($q !== null && $q !== '' && is_numeric($q)) ? (float) $q : null,
             'unidade_medida' => mb_substr(trim((string) ($it['unidade_medida'] ?? '')), 0, 40),
@@ -1175,6 +1177,11 @@ $mapFichaTecnicaRow = static function ($row) {
         'sugestao_venda' => $row->sugestao_venda !== null ? (float) $row->sugestao_venda : null,
         'modo_preparo' => $row->modo_preparo,
         'ingredientes' => $ing,
+        'produto_final_id' => Schema::hasColumn('fichas_tecnicas', 'produto_final_id') && $row->produto_final_id ? (int) $row->produto_final_id : null,
+        'rendimento_quantidade' => Schema::hasColumn('fichas_tecnicas', 'rendimento_quantidade') && $row->rendimento_quantidade !== null ? (float) $row->rendimento_quantidade : null,
+        'rendimento_unidade' => Schema::hasColumn('fichas_tecnicas', 'rendimento_unidade') ? $row->rendimento_unidade : null,
+        'versao' => Schema::hasColumn('fichas_tecnicas', 'versao') ? (int) ($row->versao ?? 1) : 1,
+        'empresa_id' => Schema::hasColumn('fichas_tecnicas', 'empresa_id') && $row->empresa_id ? (int) $row->empresa_id : null,
         'updatedAt' => (static function () use ($row) {
             if (empty($row->updated_at)) {
                 return null;
@@ -3544,6 +3551,10 @@ Route::get('/movimentacoes', function (Request $request) {
         if ($request->has('data_fim') && $request->data_fim) {
             $query->where('movimentacoes.data_mov', '<=', $request->data_fim);
         }
+
+        if ($request->filled('tipo_movimentacao') && Schema::hasColumn('movimentacoes', 'tipo_movimentacao')) {
+            $query->where('movimentacoes.tipo_movimentacao', $request->tipo_movimentacao);
+        }
         
         $limit = $request->has('limit') ? (int)$request->limit : 50;
         $movimentacoes = $query->orderBy('movimentacoes.id', 'desc')->orderBy('movimentacoes.data_mov', 'desc')->limit($limit)->get();
@@ -3598,6 +3609,18 @@ Route::get('/movimentacoes', function (Request $request) {
                         ->format('Y-m-d\TH:i:sP');
                 } catch (\Exception $e) {
                     // mantém o valor original em caso de erro
+                }
+            }
+            if (Schema::hasTable('eventos_fiscais')) {
+                $ev = DB::table('eventos_fiscais')
+                    ->where('movimentacao_id', $mov->id)
+                    ->whereNotIn('status', ['cancelado'])
+                    ->orderByDesc('id')
+                    ->first(['id', 'tipo_evento', 'status']);
+                if ($ev) {
+                    $mov->evento_fiscal_id = $ev->id;
+                    $mov->evento_fiscal_tipo = $ev->tipo_evento;
+                    $mov->evento_fiscal_status = $ev->status;
                 }
             }
             return $mov;
@@ -3794,6 +3817,7 @@ Route::delete('/movimentacoes/{id}', function (Request $request, $id) {
             return response()->json(['error' => 'Tipo de movimentação não suportado para exclusão'], 400);
         }
 
+        FiscalMovimentacaoSupport::cancelarEventosPorMovimentacao((int) $id);
         DB::table('movimentacoes')->where('id', $id)->delete();
         DB::commit();
 
@@ -3912,12 +3936,18 @@ Route::post('/saida', function (Request $request) {
             'produto_id' => 'required|integer|exists:produtos,id',
             'de_unidade_id' => 'required|integer|exists:unidades,id',
             'qtd' => 'required|numeric|min:0.001',
-            'motivo' => 'required|string|in:PRODUCAO,CONSUMO,PERDA,TRANSFERENCIA',
+            'motivo' => 'required|string|in:PRODUCAO,CONSUMO,PERDA,AVARIA,VENCIMENTO,EXTRAVIO,FURTO,TRANSFERENCIA',
             'para_unidade_id' => 'nullable|integer|exists:unidades,id|required_if:motivo,TRANSFERENCIA',
             'usuario_id' => 'required|integer|exists:usuarios,id',
             'forcar' => 'nullable|boolean',
             'codigo_lote' => 'nullable|string|max:255',
             'unidade_informada' => 'nullable|string|in:UND,UN,UNID,G,KG,K,ML,L,KL',
+            'motivo_detalhe' => 'nullable|string|max:2000',
+            'setor_destino' => 'nullable|string|max:120',
+            'numero_documento' => 'nullable|string|max:60',
+            'chave_acesso_documento' => 'nullable|string|max:44',
+            'modelo_documento' => 'nullable|string|max:4',
+            'numero_ocorrencia' => 'nullable|string|max:60',
         ]);
         
         $produtoId = $data['produto_id'];
@@ -3967,6 +3997,17 @@ Route::post('/saida', function (Request $request) {
         $isTransferencia = $motivo === 'TRANSFERENCIA';
         $paraUnidadeId = $isTransferencia ? $data['para_unidade_id'] : null;
         $codigoLoteFiltro = isset($data['codigo_lote']) ? trim($data['codigo_lote']) : null;
+
+        $errFiscal = FiscalMovimentacaoSupport::validarPayloadSaida(
+            $data,
+            $isTransferencia,
+            (int) $unidadeId,
+            $paraUnidadeId ? (int) $paraUnidadeId : null
+        );
+        if ($errFiscal) {
+            DB::rollBack();
+            return response()->json(['error' => 'Validação fiscal', 'message' => $errFiscal], 422);
+        }
         
         // Verifica se o produto está ativo
         $produtoAtivo = isset($produto->ativo) ? (int)$produto->ativo : 1;
@@ -4320,7 +4361,7 @@ Route::post('/saida', function (Request $request) {
         $qtdMovimentacao = $quantidadeSolicitada;
         $unidadeMovimentacao = $unidadeBase;
         
-        $movimentacaoId = DB::table('movimentacoes')->insertGetId([
+        $movimentacaoId = DB::table('movimentacoes')->insertGetId(array_merge([
             'produto_id' => $produtoId,
             'lote_id' => $loteIdUsado,
             'usuario_id' => $usuarioId,
@@ -4333,7 +4374,19 @@ Route::post('/saida', function (Request $request) {
             'observacao' => $observacoes,
             'de_unidade_id' => $unidadeId,
             'para_unidade_id' => $isTransferencia ? $paraUnidadeId : null,
-        ]);
+        ], FiscalMovimentacaoSupport::buildCamposMovimentacao(
+            $data,
+            $isTransferencia,
+            (int) $unidadeId,
+            $paraUnidadeId ? (int) $paraUnidadeId : null,
+            (float) $custoMedio,
+            (float) $quantidadeSolicitada
+        )));
+
+        $movFiscalRow = DB::table('movimentacoes')->where('id', $movimentacaoId)->first();
+        if ($movFiscalRow) {
+            FiscalMovimentacaoSupport::posRegistrarSaida($movimentacaoId, $movFiscalRow);
+        }
         
         // NOTA: Uma transferência gera apenas UMA movimentação do tipo TRANSFERENCIA
         // que já contém as informações de origem (de_unidade_id) e destino (para_unidade_id)
@@ -11590,6 +11643,9 @@ require __DIR__ . '/financeiro_routes.php';
 require __DIR__ . '/configuracoes_routes.php';
 require __DIR__ . '/fiscal_cadastro_routes.php';
 require __DIR__ . '/fiscal_compras_entrada_routes.php';
+require __DIR__ . '/fiscal_movimentacao_routes.php';
+require __DIR__ . '/producao_fiscal_routes.php';
+require __DIR__ . '/venda_fiscal_routes.php';
 require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';

@@ -1,0 +1,13 @@
+.fiscal-venda-wrap { display: grid; gap: 1rem; }
+.fiscal-venda-panel {
+  padding: 1rem;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  background: var(--surface-alt, #fafafa);
+}
+.fiscal-venda-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.fiscal-venda-alert { color: #c62828; font-size: 0.9rem; }

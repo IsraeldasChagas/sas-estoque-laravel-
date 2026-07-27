@@ -266,6 +266,17 @@
       cliSel.value = cpdvState.cliente || "";
       cliSel.onchange = () => { cpdvState.cliente = cliSel.value || null; };
     }
+    const uniFiscal = root.querySelector("#cpdvUnidadeFiscal");
+    if (uniFiscal && !uniFiscal.dataset.loaded) {
+      uniFiscal.dataset.loaded = "1";
+      const unis = window.state?.unidades || [];
+      unis.forEach((u) => {
+        const o = document.createElement("option");
+        o.value = String(u.id);
+        o.textContent = u.nome || `Unidade ${u.id}`;
+        uniFiscal.appendChild(o);
+      });
+    }
   }
 
   function cpdvRenderPdv() {
@@ -317,6 +328,10 @@
             <label>Cliente
               <select id="cpdvClienteSel">${cliOpts}</select>
             </label>
+            <label>Unidade fiscal (estoque real)
+              <select id="cpdvUnidadeFiscal"><option value="">— Simulação demo —</option></select>
+            </label>
+            <p class="form-hint" style="font-size:0.8rem;margin:0 0 0.5rem">Com unidade selecionada, o pagamento usa API fiscal (mesmo CNPJ). Produtos do carrinho devem ser IDs reais do estoque.</p>
             ${cart}
             <div class="cpdv-cart-totais">
               <div>Subtotal: <strong>${moeda(cpdvSubtotal())}</strong></div>
@@ -576,7 +591,29 @@
     const acts = `<button type="button" class="btn primary" id="cpdvPgtoConfirm">Confirmar pagamento</button>
       <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>`;
     openCpdvModal("Simular pagamento", body, acts);
-    document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", () => {
+    document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", async () => {
+      const unidadeEl = document.getElementById("cpdvUnidadeFiscal");
+      const unidadeId = unidadeEl ? Number(unidadeEl.value) : 0;
+      const forma = document.getElementById("cpdvPgtoForma")?.value || "PDV";
+      if (unidadeId > 0 && cpdvState.cart.length && typeof window.fiscalPdvConfirmarPagamento === "function") {
+        try {
+          const itens = cpdvState.cart.map((i) => ({
+            produto_id: i.estoqueProdutoId || i.produtoId,
+            quantidade: i.qtd,
+            preco_unitario: i.preco,
+          }));
+          const r = await window.fiscalPdvConfirmarPagamento({ unidadeId, formaPagamento: forma, itens });
+          toast(`Venda fiscal #${r.venda_id} registrada.`, "success");
+          cpdvState.cart = [];
+          cpdvSyncCarrinhoMemoria();
+          closeCpdvModal();
+          loadComercialPdv?.();
+          return;
+        } catch (e) {
+          toast(e.message || "Venda fiscal bloqueada.", "error");
+          return;
+        }
+      }
       protoToast("Pagamento confirmado (simulado)");
       closeCpdvModal();
     });

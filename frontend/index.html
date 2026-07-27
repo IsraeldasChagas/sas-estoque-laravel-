@@ -51,6 +51,9 @@
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
     <link rel="stylesheet" href="fiscal-compras.css?v=20260727-fiscal-m2-ready" />
+    <link rel="stylesheet" href="fiscal-movimentacoes.css?v=20260727-fiscal-m3" />
+    <link rel="stylesheet" href="fiscal-producao.css?v=20260727-fiscal-m5" />
+    <link rel="stylesheet" href="fiscal-venda-pdv.css?v=20260727-fiscal-m6" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
@@ -372,6 +375,9 @@
               <a href="#" class="nav-link nav-link-child" data-section="fiscalEmpresas"><span class="nav-icon" aria-hidden="true">🏢</span><span class="nav-label">Empresas (CNPJ)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalPerfisTributarios"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Perfis tributários</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalComprasRelatorio"><span class="nav-icon" aria-hidden="true">📥</span><span class="nav-label">Entradas fiscais (compras)</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalMovimentacoesRelatorio"><span class="nav-icon" aria-hidden="true">📤</span><span class="nav-label">Movimentações e eventos fiscais</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalProducao"><span class="nav-icon" aria-hidden="true">🍳</span><span class="nav-label">Produção (ficha técnica)</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalVendaPdv"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Vendas PDV (fiscal)</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
@@ -4815,6 +4821,18 @@
             <div class="cfg-section-head"><div><h2>📥 Entradas fiscais (compras)</h2><p class="subtle-text">Notas de entrada, tributos destacados e créditos potenciais.</p></div></div>
             <div id="fiscalComprasRelatorioRoot" class="int-page-wrap"></div>
           </section>
+          <section id="fiscalMovimentacoesRelatorioSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>📤 Movimentações e eventos fiscais</h2><p class="subtle-text">Perdas, transferências internas e operações entre CNPJs (sem apuração tributária).</p></div></div>
+            <div id="fiscalMovimentacoesRelatorioRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="fiscalProducaoSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>🍳 Produção fiscal</h2><p class="subtle-text">Ordem de produção a partir da ficha técnica — baixa de insumos, entrada do produto final e evento fiscal.</p></div></div>
+            <div id="fiscalProducaoRoot" class="int-page-wrap"></div>
+          </section>
+          <section id="fiscalVendaPdvSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>🛒 Vendas PDV (fiscal)</h2><p class="subtle-text">Venda com baixa de estoque — trava CNPJ do PDV × estoque. Integração opcional no PDV/Caixa.</p></div></div>
+            <div id="fiscalVendaPdvRoot" class="int-page-wrap"></div>
+          </section>
 
           <!-- Configurações — Integrações — OpenClaw -->
           <section id="openClawIntegracaoSection" class="view-section hidden">
@@ -7932,6 +7950,9 @@
     <script src="app.js?v=20260727-fiscal-getuser-fix"></script>
     <script src="fiscal-cadastro.js?v=20260727-fiscal-modal-space"></script>
     <script src="fiscal-compras.js?v=20260727-fiscal-m2-ready"></script>
+    <script src="fiscal-movimentacoes.js?v=20260727-fiscal-m3"></script>
+    <script src="fiscal-producao.js?v=20260727-fiscal-m5"></script>
+    <script src="fiscal-venda-pdv.js?v=20260727-fiscal-m6"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

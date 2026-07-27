@@ -1598,7 +1598,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs",
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
-  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio",
+  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
@@ -3711,12 +3711,14 @@ function collectLotesFiltros() {
 }
 
 function collectMovimentacoesFiltros() {
+  const tipoMovEl = document.getElementById("movFiltroTipoMovimentacao");
   return {
     tipo: dom.movFiltroTipo?.value || "",
     produto_id: dom.movFiltroProduto?.value || "",
     unidade_id: dom.movFiltroUnidade?.value || "",
     data_ini: dom.movFiltroDataDe?.value || "",
     data_fim: dom.movFiltroDataAte?.value || "",
+    tipo_movimentacao: tipoMovEl?.value || "",
   };
 }
 
@@ -5409,7 +5411,7 @@ function applyPermissions() {
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
-  ["fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio"].forEach((s) => {
+  ["fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv"].forEach((s) => {
     if ((perfilCfgAuto === "ADMIN" || perfilCfgAuto === "GERENTE") && !sections.includes(s)) {
       sections = [...sections, s];
     }
@@ -5816,7 +5818,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio") {
+    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalVendaPdv") {
       configuracoesNavSubmenuNav.classList.add("open");
     } else {
       configuracoesNavSubmenuNav.classList.remove("open");
@@ -5899,6 +5901,12 @@ function navigateTo(section) {
     window.loadFiscalPerfisTributarios?.().catch((e) => showToast(e?.message || "Falha ao carregar perfis tributários.", "error"));
   } else if (section === "fiscalComprasRelatorio") {
     window.loadFiscalComprasRelatorio?.().catch((e) => showToast(e?.message || "Falha ao carregar relatório fiscal de compras.", "error"));
+  } else if (section === "fiscalMovimentacoesRelatorio") {
+    window.loadFiscalMovimentacoesRelatorio?.().catch((e) => showToast(e?.message || "Falha ao carregar relatório fiscal de movimentações.", "error"));
+  } else if (section === "fiscalProducao") {
+    window.loadFiscalProducao?.().catch((e) => showToast(e?.message || "Falha ao carregar produção fiscal.", "error"));
+  } else if (section === "fiscalVendaPdv") {
+    window.loadFiscalVendaPdv?.().catch((e) => showToast(e?.message || "Falha ao carregar vendas fiscais.", "error"));
   }
   else if (section === "integracaoVendafacil") loadIntegracaoVendafacil?.().catch(() => {});
   else if (section === "integracaoAplicacoes") loadIntegracaoAplicacoes?.().catch(() => {});
@@ -6009,6 +6017,9 @@ function renderMovimentacoes(lista, target, emptyMessage) {
       motivo = "Lista de compras";
     }
     motivo = escapeHtml(motivo);
+    if (typeof window.fiscalMovMotivoHtml === "function" && item.tipo_movimentacao) {
+      motivo = window.fiscalMovMotivoHtml(item);
+    }
     const tipo = (item.tipo || "").trim().toUpperCase();
     
     // Formata unidade para transferências - forma simples
@@ -13257,7 +13268,7 @@ async function submitSaida(event) {
     showToast("Erro: Efetue login primeiro.", "error");
     return;
   }
-  const motivosValidos = new Set(["PRODUCAO", "CONSUMO", "PERDA", "TRANSFERENCIA"]);
+  const motivosValidos = new Set(["PRODUCAO", "CONSUMO", "PERDA", "AVARIA", "VENCIMENTO", "EXTRAVIO", "FURTO", "TRANSFERENCIA"]);
   if (!motivosValidos.has(data.motivo)) {
     submittingSaida = false;
     showToast("Erro: Informe o motivo da saída.", "error");
@@ -13300,6 +13311,7 @@ async function submitSaida(event) {
     showToast("Erro: Efetue login primeiro.", "error");
     return;
   }
+  Object.assign(data, window.collectSaidaFiscalExtras?.() || {});
   const movFiltrosAtuais = collectMovimentacoesFiltros();
   const relFiltrosAtuais = dom.relatorioFilterForm ? collectRelatorioFiltros() : null;
   if (submitButton) {
@@ -26879,6 +26891,10 @@ function setupFichaTecnicaForm() {
       quantidade != null && custo_unitario != null
         ? Math.round(quantidade * custo_unitario * 100) / 100
         : null;
+    const produtoMatch = (state.produtos || []).find(
+      (p) => String(p.nome || "").trim().toLowerCase() === nome.toLowerCase()
+    );
+    const produto_id = produtoMatch?.id ? Number(produtoMatch.id) : null;
     try {
       if (fichaTecnicaIngredienteEditId != null) {
         const ix = state.fichaTecnicaIngredientes.findIndex(
@@ -26886,8 +26902,10 @@ function setupFichaTecnicaForm() {
         );
         if (ix >= 0) {
           const prevId = state.fichaTecnicaIngredientes[ix].id;
+          const prevProdutoId = state.fichaTecnicaIngredientes[ix].produto_id ?? produto_id;
           state.fichaTecnicaIngredientes[ix] = {
             id: prevId,
+            produto_id: prevProdutoId,
             nome,
             quantidade,
             unidade_medida,
@@ -26901,6 +26919,7 @@ function setupFichaTecnicaForm() {
       } else {
         state.fichaTecnicaIngredientes.push({
           id: Date.now(),
+          produto_id,
           nome,
           quantidade,
           unidade_medida,

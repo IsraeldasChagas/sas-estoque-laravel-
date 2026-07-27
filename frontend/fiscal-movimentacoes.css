@@ -1,0 +1,49 @@
+.fiscal-mov-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(25, 118, 210, 0.12);
+  color: #1565c0;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+.fiscal-mov-pill--muted {
+  background: rgba(96, 125, 139, 0.15);
+  color: #546e7a;
+}
+
+.fiscal-saida-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 8px;
+  background: var(--surface-alt, #fafafa);
+}
+
+.fiscal-saida-extras.hidden {
+  display: none;
+}
+
+.fiscal-saida-doc label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.fiscal-mov-relatorio-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 1100px) {
+  .fiscal-mov-relatorio-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .fiscal-mov-relatorio-grid .table-card:first-child {
+    grid-column: 1 / -1;
+  }
+}
