@@ -135,22 +135,44 @@
       <div class="actions">${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovaEmpresa">+ Nova empresa</button>' : ""}</div>
       <div class="table-card"><header>Empresas (CNPJ)</header>
       <div class="table-wrapper"><table><thead><tr>
-        <th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Regime</th><th>Status</th><th>Ações</th>
+        <th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Regime tributário</th><th>Status</th><th>Ações</th>
       </tr></thead><tbody id="fiscalEmpresasTbody">${rows || '<tr><td colspan="6">Nenhuma empresa cadastrada.</td></tr>'}</tbody></table></div></div>
       <div class="modal-backdrop" id="fiscalEmpresaModal"><div class="modal"><header><h2 id="fiscalEmpresaModalTitle">Empresa</h2>
       <button type="button" class="close-btn" id="fiscalEmpresaModalClose">×</button></header>
       <form id="fiscalEmpresaForm"><input type="hidden" name="id" />
-        <label>Razão social *<input name="razao_social" required maxlength="255" /></label>
-        <label>Nome fantasia<input name="nome_fantasia" maxlength="255" /></label>
-        <label>CNPJ<input name="cnpj" placeholder="00.000.000/0000-00" maxlength="20" /></label>
-        <label>Inscrição estadual<input name="inscricao_estadual" maxlength="30" /></label>
-        <label>Inscrição municipal<input name="inscricao_municipal" maxlength="30" /></label>
-        <label>UF<input name="uf" maxlength="2" placeholder="PA" /></label>
-        <label>Município<input name="municipio" maxlength="120" /></label>
-        <label>Regime tributário<select name="regime_tributario"><option value="">—</option>
-          <option value="simples_nacional">Simples Nacional</option><option value="lucro_presumido">Lucro Presumido</option>
-          <option value="lucro_real">Lucro Real</option><option value="outro">Outro</option></select></label>
-        <label>CRT<input name="crt" maxlength="2" placeholder="1–3" /></label>
+        <p class="fiscal-form-intro">Dados da pessoa jurídica (CNPJ). O <strong>regime tributário</strong> define como a empresa é tributada no Simples, Lucro Presumido ou Lucro Real.</p>
+        <div class="fiscal-form-block">
+          <p class="fiscal-form-block__title">Identificação</p>
+          <label>Razão social *<input name="razao_social" required maxlength="255" /></label>
+          <label>Nome fantasia<input name="nome_fantasia" maxlength="255" /></label>
+          <label>CNPJ<input name="cnpj" placeholder="00.000.000/0000-00" maxlength="20" /></label>
+          <label>Inscrição estadual<input name="inscricao_estadual" maxlength="30" /></label>
+          <label>Inscrição municipal<input name="inscricao_municipal" maxlength="30" /></label>
+          <label>UF<input name="uf" maxlength="2" placeholder="PA" /></label>
+          <label>Município<input name="municipio" maxlength="120" /></label>
+        </div>
+        <div class="fiscal-form-block fiscal-form-block--tributacao">
+          <p class="fiscal-form-block__title">Tributação da empresa</p>
+          <label>Tipo / regime tributário *
+            <select name="regime_tributario" required aria-describedby="fiscalEmpresaRegimeHint">
+              <option value="">Selecione o regime</option>
+              <option value="simples_nacional">Simples Nacional</option>
+              <option value="lucro_presumido">Lucro Presumido</option>
+              <option value="lucro_real">Lucro Real</option>
+              <option value="outro">Outro / indefinido</option>
+            </select>
+            <small id="fiscalEmpresaRegimeHint" class="subtle-text">Obrigatório para uso fiscal futuro (NF, apuração). Aparece na listagem e ao vincular unidades.</small>
+          </label>
+          <label>CRT (código regime tributário — NF-e)
+            <select name="crt">
+              <option value="">— Automático / informar depois —</option>
+              <option value="1">1 — Simples Nacional</option>
+              <option value="2">2 — Simples Nacional (excesso sublimite)</option>
+              <option value="3">3 — Regime Normal (Lucro Presumido ou Real)</option>
+            </select>
+            <small class="subtle-text">Sugestão: Simples → 1; Lucro Presumido/Real → 3. Pode ajustar manualmente.</small>
+          </label>
+        </div>
         <label>Status<select name="ativo"><option value="1">Ativa</option><option value="0">Inativa</option></select></label>
         <footer><button type="button" class="btn neutral" id="fiscalEmpresaCancelar">Cancelar</button>
         ${fiscalPodeEditar ? '<button type="submit" class="btn primary">Salvar</button>' : ""}</footer>
@@ -167,6 +189,27 @@
     root.querySelector("#fiscalEmpresaModalClose")?.addEventListener("click", closeEmpresaModal);
     root.querySelector("#fiscalEmpresaCancelar")?.addEventListener("click", closeEmpresaModal);
     root.querySelector("#fiscalEmpresaForm")?.addEventListener("submit", submitEmpresaForm);
+    const regimeSel = root.querySelector('#fiscalEmpresaForm select[name="regime_tributario"]');
+    const crtSel = root.querySelector('#fiscalEmpresaForm select[name="crt"]');
+    regimeSel?.addEventListener("change", () => suggestEmpresaCrtFromRegime(regimeSel, crtSel, false));
+  }
+
+  function suggestEmpresaCrtFromRegime(regimeSel, crtSel, force) {
+    if (!regimeSel || !crtSel) return;
+    const r = regimeSel.value;
+    if (!r) return;
+    if (!force && crtSel.value !== "") return;
+    if (r === "simples_nacional") crtSel.value = "1";
+    else if (r === "lucro_presumido" || r === "lucro_real") crtSel.value = "3";
+    else crtSel.value = "";
+  }
+
+  function setEmpresaCrtSelect(form, crtValue) {
+    const crtSel = form.elements.crt;
+    if (!crtSel) return;
+    const v = String(crtValue ?? "").trim();
+    if (v === "1" || v === "2" || v === "3") crtSel.value = v;
+    else crtSel.value = "";
   }
 
   function openEmpresaModal(emp) {
@@ -185,8 +228,10 @@
       form.elements.uf.value = emp.uf || "";
       form.elements.municipio.value = emp.municipio || "";
       form.elements.regime_tributario.value = emp.regime_tributario || "";
-      form.elements.crt.value = emp.crt || "";
+      setEmpresaCrtSelect(form, emp.crt);
       form.elements.ativo.value = emp.ativo ? "1" : "0";
+    } else {
+      suggestEmpresaCrtFromRegime(form.elements.regime_tributario, form.elements.crt, false);
     }
     modal.classList.add("active");
   }
@@ -212,6 +257,11 @@
       crt: form.elements.crt.value.trim() || null,
       ativo: form.elements.ativo.value === "1",
     };
+    if (!payload.regime_tributario) {
+      toast("Selecione o tipo / regime tributário da empresa.", "warning");
+      form.elements.regime_tributario.focus();
+      return;
+    }
     try {
       if (id) await fFetch(`/fiscal/empresas/${id}`, { method: "PUT", body: JSON.stringify(payload) });
       else await fFetch("/fiscal/empresas", { method: "POST", body: JSON.stringify(payload) });

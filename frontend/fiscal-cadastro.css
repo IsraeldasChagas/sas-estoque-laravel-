@@ -56,7 +56,27 @@
 .fiscal-form-block__title {
   margin: 0 0 0.5rem;
   font-size: 0.92rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.fiscal-form-block--tributacao {
+  background: rgba(222, 67, 9, 0.04);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+.fiscal-form-intro {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
   color: #546e7a;
+  line-height: 1.45;
+}
+
+#fiscalEmpresaModal .modal {
+  max-height: min(92vh, 720px);
+  overflow-y: auto;
 }
 
 .fiscal-badge {
