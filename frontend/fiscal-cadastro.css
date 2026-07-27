@@ -266,6 +266,20 @@
   line-height: 1.45;
 }
 
+.fiscal-empty-cell {
+  text-align: center;
+  padding: 1.5rem 1rem !important;
+  color: #455a64;
+}
+
+.fiscal-empty-cell p {
+  margin: 0.35rem 0;
+}
+
+.fiscal-empty-cta {
+  margin-top: 0.85rem;
+}
+
 .fiscal-badge {
   display: inline-block;
   padding: 0.15rem 0.45rem;

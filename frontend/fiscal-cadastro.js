@@ -26,13 +26,18 @@
     return d.innerHTML;
   }
 
+  function getCurrentUser() {
+    if (typeof window.getUser === "function") return window.getUser();
+    return window.currentUser || null;
+  }
+
   function isAdmin() {
-    const p = (window.currentUser?.perfil || "").toString().trim().toUpperCase();
+    const p = (getCurrentUser()?.perfil || "").toString().trim().toUpperCase();
     return p === "ADMIN" || p === "ADMINISTRADOR";
   }
 
   function isAdminOrGerente() {
-    const p = (window.currentUser?.perfil || "").toString().trim().toUpperCase();
+    const p = (getCurrentUser()?.perfil || "").toString().trim().toUpperCase();
     return p === "ADMIN" || p === "ADMINISTRADOR" || p === "GERENTE";
   }
 
@@ -62,7 +67,20 @@
       lucro_real: "Lucro Real",
       outro: "Outro",
     };
-    return map[v] || v || "—";
+    if (!v) return "Regime não informado";
+    return map[v] || v || "Regime não informado";
+  }
+
+  function empresaTemRegime(emp) {
+    return !!(emp && emp.regime_tributario);
+  }
+
+  /** Texto do select de vínculo unidade → empresa (CNPJ + regime visíveis). */
+  function empresaOptionLabel(emp) {
+    const nome = emp.nome_fantasia || emp.razao_social || "Empresa";
+    const cnpj = emp.cnpj ? fmtCnpj(emp.cnpj) : "sem CNPJ";
+    const regime = empresaTemRegime(emp) ? labelRegime(emp.regime_tributario) : "regime pendente";
+    return `${nome} · ${cnpj} · ${regime}`;
   }
 
   function labelTipo(v) {
@@ -270,13 +288,24 @@
     if (!root) return;
     fiscalPodeEditar = isAdmin();
     await loadEmpresasList();
+    const emptyMsg = fiscalPodeEditar
+      ? `<tr><td colspan="6" class="fiscal-empty-cell">
+          <p><strong>Nenhuma empresa cadastrada ainda.</strong></p>
+          <p class="subtle-text">Clique em <strong>+ Nova empresa</strong> acima: no passo 1 escolha o regime (Simples, Presumido ou Real); no passo 2 informe razão social e CNPJ.</p>
+          <button type="button" class="btn primary fiscal-empty-cta" id="fiscalBtnNovaEmpresaEmpty">+ Cadastrar primeira empresa</button>
+        </td></tr>`
+      : '<tr><td colspan="6">Nenhuma empresa cadastrada.</td></tr>';
     const rows = (fiscalEmpresas || [])
       .map(
         (e) => `<tr data-id="${e.id}">
         <td>${esc(e.razao_social)}</td>
         <td>${esc(e.nome_fantasia || "—")}</td>
         <td>${esc(fmtCnpj(e.cnpj))}</td>
-        <td>${esc(labelRegime(e.regime_tributario))}</td>
+        <td>${
+          empresaTemRegime(e)
+            ? esc(labelRegime(e.regime_tributario))
+            : '<span class="fiscal-badge fiscal-badge--warn" title="Edite a empresa e escolha o regime">Regime pendente</span>'
+        }</td>
         <td>${e.ativo ? "Ativa" : "Inativa"}</td>
         <td class="table-actions">${fiscalPodeEditar ? `<button type="button" class="table-action" data-acao="editar">Editar</button>` : ""}</td>
       </tr>`
@@ -287,7 +316,7 @@
       <div class="table-card"><header>Empresas (CNPJ)</header>
       <div class="table-wrapper"><table><thead><tr>
         <th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Regime tributário</th><th>Status</th><th>Ações</th>
-      </tr></thead><tbody id="fiscalEmpresasTbody">${rows || '<tr><td colspan="6">Nenhuma empresa cadastrada.</td></tr>'}</tbody></table></div></div>
+      </tr></thead><tbody id="fiscalEmpresasTbody">${rows || emptyMsg}</tbody></table></div></div>
       <div class="modal-backdrop" id="fiscalEmpresaModal"><div class="modal modal--wide fiscal-empresa-modal"><header><h2 id="fiscalEmpresaModalTitle">Nova empresa</h2>
       <button type="button" class="close-btn" id="fiscalEmpresaModalClose">×</button></header>
       <form id="fiscalEmpresaForm" data-empresa-step="1" data-empresa-mode="create"><input type="hidden" name="id" />
@@ -353,6 +382,7 @@
       if (emp) openEmpresaModal(emp);
     });
     root.querySelector("#fiscalBtnNovaEmpresa")?.addEventListener("click", () => openEmpresaModal(null));
+    root.querySelector("#fiscalBtnNovaEmpresaEmpty")?.addEventListener("click", () => openEmpresaModal(null));
     root.querySelector("#fiscalEmpresaModalClose")?.addEventListener("click", closeEmpresaModal);
     root.querySelector("#fiscalEmpresaCancelar")?.addEventListener("click", closeEmpresaModal);
     root.querySelector("#fiscalEmpresaForm")?.addEventListener("submit", submitEmpresaForm);
@@ -737,12 +767,16 @@
       '<option value="">— Sem vínculo —</option>' +
       (fiscalEmpresas || [])
         .filter((e) => e.ativo)
-        .map((e) => `<option value="${e.id}">${esc(e.nome_fantasia || e.razao_social)}</option>`)
+        .map((e) => `<option value="${e.id}">${esc(empresaOptionLabel(e))}</option>`)
         .join("");
     selects.forEach((sel) => {
       const cur = sel.value;
       sel.innerHTML = optionsHtml;
       if (cur) sel.value = cur;
+      if (!sel.dataset.fiscalEmpresaBound) {
+        sel.dataset.fiscalEmpresaBound = "1";
+        sel.addEventListener("change", updateUnidadeEmpresaHint);
+      }
     });
     updateUnidadeEmpresaHint();
   }
@@ -758,7 +792,12 @@
     const emp = fiscalEmpresas.find((e) => String(e.id) === String(activeSel.value));
     let msg;
     if (emp) {
-      msg = `Empresa: ${emp.razao_social} · CNPJ ${fmtCnpj(emp.cnpj)} · Regime tributário: ${labelRegime(emp.regime_tributario)}`;
+      const regimeTxt = labelRegime(emp.regime_tributario);
+      if (empresaTemRegime(emp)) {
+        msg = `Empresa: ${emp.razao_social} · CNPJ ${fmtCnpj(emp.cnpj)} · Regime tributário: ${regimeTxt}`;
+      } else {
+        msg = `Empresa: ${emp.razao_social} · CNPJ ${fmtCnpj(emp.cnpj)} · ${regimeTxt}. Abra Configurações → Empresas (CNPJ), edite esta empresa e escolha o regime na lista.`;
+      }
     } else if (!(fiscalEmpresas || []).filter((e) => e.ativo).length) {
       msg =
         "Nenhuma empresa cadastrada. Clique em “Ir para Empresas (CNPJ)” acima, cadastre a empresa e escolha o regime (Passo 1).";
