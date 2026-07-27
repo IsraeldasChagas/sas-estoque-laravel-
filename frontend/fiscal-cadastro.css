@@ -79,6 +79,167 @@
   overflow-y: auto;
 }
 
+.fiscal-empresa-modal {
+  max-width: 520px;
+}
+
+.fiscal-empresa-wizard-head {
+  margin-bottom: 0.85rem;
+}
+
+.fiscal-empresa-step-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary, #de4309);
+}
+
+.fiscal-empresa-step-dots {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.fiscal-empresa-step-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.fiscal-empresa-step-dot--active {
+  background: var(--primary, #de4309);
+}
+
+.fiscal-empresa-step-dot--done {
+  background: rgba(222, 67, 9, 0.45);
+}
+
+.fiscal-empresa-step-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.fiscal-empresa-step-lead {
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+  color: #546e7a;
+  line-height: 1.45;
+}
+
+.fiscal-regime-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.fiscal-regime-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 0.85rem;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.fiscal-regime-card:hover {
+  border-color: rgba(222, 67, 9, 0.45);
+}
+
+.fiscal-regime-card--selected {
+  border-color: var(--primary, #de4309);
+  background: rgba(222, 67, 9, 0.06);
+  box-shadow: 0 0 0 1px rgba(222, 67, 9, 0.15);
+}
+
+.fiscal-regime-card__title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.98rem;
+  margin-bottom: 0.2rem;
+}
+
+.fiscal-regime-card__desc {
+  display: block;
+  font-size: 0.82rem;
+  color: #607d8b;
+  line-height: 1.35;
+}
+
+.fiscal-regime-resumo {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.fiscal-form-block--crt {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.fiscal-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 480px) {
+  .fiscal-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fiscal-empresa-regime-chip-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.fiscal-empresa-regime-chip {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(222, 67, 9, 0.12);
+  color: var(--primary, #de4309);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.btn.link-like {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary, #de4309);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.fiscal-empresa-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.fiscal-empresa-form--edit [data-empresa-step="1"] {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.12);
+}
+
 .fiscal-badge {
   display: inline-block;
   padding: 0.15rem 0.45rem;
