@@ -1588,7 +1588,36 @@ Route::options('/unidades/{id}', function () {
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
 
-Route::get('/unidades', function (Request $request) {
+$unidadePayloadFromRequest = static function (Request $request): array {
+    $allowed = ['nome', 'endereco', 'cnpj', 'telefone', 'email', 'observacoes', 'gerente_usuario_id', 'ativo'];
+    if (Schema::hasColumn('unidades', 'empresa_id')) {
+        $allowed[] = 'empresa_id';
+    }
+    $data = array_intersect_key($request->all(), array_flip($allowed));
+    if (isset($data['nome'])) {
+        $data['nome'] = trim((string) $data['nome']);
+    }
+    foreach (['endereco', 'cnpj', 'telefone', 'email', 'observacoes'] as $k) {
+        if (array_key_exists($k, $data) && ($data[$k] === '' || $data[$k] === null)) {
+            $data[$k] = null;
+        }
+    }
+    if (array_key_exists('gerente_usuario_id', $data)) {
+        $v = $data['gerente_usuario_id'];
+        $data['gerente_usuario_id'] = ($v === '' || $v === null) ? null : (int) $v;
+    }
+    if (array_key_exists('empresa_id', $data)) {
+        $v = $data['empresa_id'];
+        $data['empresa_id'] = ($v === '' || $v === null) ? null : (int) $v;
+    }
+    if (array_key_exists('ativo', $data)) {
+        $data['ativo'] = (int) (bool) $data['ativo'];
+    }
+
+    return $data;
+};
+
+$unidadeListQuery = static function () {
     $query = DB::table('unidades')
         ->leftJoin('usuarios', 'unidades.gerente_usuario_id', '=', 'usuarios.id')
         ->select(
@@ -1596,17 +1625,36 @@ Route::get('/unidades', function (Request $request) {
             'usuarios.nome as gerente_nome'
         );
     if (Schema::hasTable('empresas') && Schema::hasColumn('unidades', 'empresa_id')) {
-        $query->leftJoin('empresas', 'unidades.empresa_id', '=', 'empresas.id')
-            ->addSelect(
-                'empresas.razao_social as empresa_razao_social',
-                'empresas.nome_fantasia as empresa_nome_fantasia',
-                'empresas.cnpj as empresa_cnpj',
-                'empresas.regime_tributario as empresa_regime_tributario'
-            );
+        $query->leftJoin('empresas', 'unidades.empresa_id', '=', 'empresas.id');
+        $empresaCols = [];
+        if (Schema::hasColumn('empresas', 'razao_social')) {
+            $empresaCols[] = 'empresas.razao_social as empresa_razao_social';
+        }
+        if (Schema::hasColumn('empresas', 'nome_fantasia')) {
+            $empresaCols[] = 'empresas.nome_fantasia as empresa_nome_fantasia';
+        }
+        if (Schema::hasColumn('empresas', 'cnpj')) {
+            $empresaCols[] = 'empresas.cnpj as empresa_cnpj';
+        }
+        if (Schema::hasColumn('empresas', 'regime_tributario')) {
+            $empresaCols[] = 'empresas.regime_tributario as empresa_regime_tributario';
+        }
+        if ($empresaCols !== []) {
+            $query->addSelect($empresaCols);
+        }
     }
-    
-    // Se não tiver filtro, retorna todas (quando ?todas=1)
-    $unidades = $query->orderBy('unidades.nome')->get();
+
+    return $query;
+};
+
+Route::get('/unidades', function (Request $request) use ($unidadeListQuery) {
+    try {
+        $unidades = $unidadeListQuery()->orderBy('unidades.nome')->get();
+    } catch (\Throwable $e) {
+        report($e);
+        $unidades = DB::table('unidades')->orderBy('nome')->get();
+    }
+
     return response()->json($unidades);
 });
 
@@ -1625,7 +1673,7 @@ Route::get('/unidades/{id}', function ($id) {
     return response()->json($unidade);
 });
 
-Route::post('/unidades', function (Request $request) {
+Route::post('/unidades', function (Request $request) use ($unidadePayloadFromRequest) {
     // Verifica se o usuário está autenticado
     $usuarioId = $request->header('X-Usuario-Id');
     if (!$usuarioId) {
@@ -1653,15 +1701,30 @@ Route::post('/unidades', function (Request $request) {
             ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
     }
     
-    $data = $request->all();
-    $id = DB::table('unidades')->insertGetId($data);
+    $data = $unidadePayloadFromRequest($request);
+    if (($data['nome'] ?? '') === '') {
+        return response()->json(['error' => 'Informe o nome da unidade.'], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    try {
+        $id = DB::table('unidades')->insertGetId($data);
+    } catch (\Throwable $e) {
+        report($e);
+
+        return response()->json(['error' => 'Falha ao criar unidade', 'message' => $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
     return response()->json(DB::table('unidades')->where('id', $id)->first(), 201)
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
 });
 
-Route::put('/unidades/{id}', function (Request $request, $id) {
+Route::put('/unidades/{id}', function (Request $request, $id) use ($unidadePayloadFromRequest) {
     // Verifica se o usuário está autenticado
     $usuarioId = $request->header('X-Usuario-Id');
     if (!$usuarioId) {
@@ -1689,8 +1752,23 @@ Route::put('/unidades/{id}', function (Request $request, $id) {
             ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
     }
     
-    $data = $request->all();
-    DB::table('unidades')->where('id', $id)->update($data);
+    $data = $unidadePayloadFromRequest($request);
+    if ($data === []) {
+        return response()->json(['error' => 'Nenhum campo válido para atualizar.'], 422)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
+    try {
+        DB::table('unidades')->where('id', $id)->update($data);
+    } catch (\Throwable $e) {
+        report($e);
+
+        return response()->json(['error' => 'Falha ao atualizar unidade', 'message' => $e->getMessage()], 500)
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
+            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
+    }
     return response()->json(DB::table('unidades')->where('id', $id)->first())
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
