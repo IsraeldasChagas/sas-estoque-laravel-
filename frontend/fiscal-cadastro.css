@@ -322,3 +322,292 @@
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+/* —— Páginas fiscal (empresas / perfis) —— */
+.fiscal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 1.5rem;
+}
+
+.fiscal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(222, 67, 9, 0.07) 0%, rgba(255, 255, 255, 0.95) 55%);
+  border: 1px solid rgba(222, 67, 9, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.fiscal-toolbar__label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary, #de4309);
+}
+
+.fiscal-toolbar__hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.92rem;
+  color: #546e7a;
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
+.fiscal-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.fiscal-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .fiscal-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fiscal-kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 1rem 1.15rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.fiscal-kpi-card__n {
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #263238;
+}
+
+.fiscal-kpi-card__l {
+  font-size: 0.82rem;
+  color: #78909c;
+  font-weight: 500;
+}
+
+.fiscal-panel-card {
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.fiscal-panel-card__head {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.fiscal-panel-card__head h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.fiscal-panel-card__body {
+  padding: 1.25rem;
+}
+
+.fiscal-entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.fiscal-entity-grid--perfis {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.fiscal-entity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1.15rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  background: #fafafa;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.fiscal-entity-card:hover {
+  border-color: rgba(222, 67, 9, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.fiscal-entity-card__head {
+  margin: 0;
+}
+
+.fiscal-entity-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #263238;
+}
+
+.fiscal-entity-card__sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #607d8b;
+}
+
+.fiscal-entity-card__desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #546e7a;
+  line-height: 1.45;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fiscal-entity-card__meta {
+  margin: 0;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+}
+
+.fiscal-entity-card__meta div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fiscal-entity-card__meta dt {
+  margin: 0;
+  font-weight: 500;
+  color: #78909c;
+}
+
+.fiscal-entity-card__meta dd {
+  margin: 0;
+  text-align: right;
+  color: #37474f;
+}
+
+.fiscal-entity-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.fiscal-entity-card__btn {
+  margin-left: auto;
+}
+
+.fiscal-empty-card {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  border-radius: 12px;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.fiscal-empty-card__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.fiscal-empty-card__text {
+  margin: 0 auto 1rem;
+  max-width: 28rem;
+  font-size: 0.9rem;
+  color: #607d8b;
+  line-height: 1.5;
+}
+
+.fiscal-field-full {
+  grid-column: 1 / -1;
+}
+
+/* Modal fiscal — ações no topo */
+.fiscal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0.65rem;
+  border-bottom: none;
+}
+
+.fiscal-modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.fiscal-modal-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.88rem;
+  color: #607d8b;
+}
+
+.fiscal-modal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 1.25rem 1rem;
+  margin: 0 1.25rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.fiscal-modal-toolbar__right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.fiscal-modal-form {
+  padding: 0 1.25rem 1.25rem;
+  max-height: min(58vh, 480px);
+  overflow-y: auto;
+}
+
+#fiscalPerfilModal .modal,
+#fiscalEmpresaModal .modal {
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 720px);
+}
+
+.fiscal-perfil-modal {
+  max-width: 640px;
+}

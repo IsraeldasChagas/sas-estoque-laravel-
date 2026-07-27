@@ -266,6 +266,7 @@
     }
     updateEmpresaStepIndicator(form);
     refreshEmpresaRegimeChip(form);
+    syncEmpresaModalSub(form);
   }
 
   function updateEmpresaStepIndicator(form) {
@@ -282,44 +283,120 @@
     }
   }
 
+  function renderEmpresaCardsHtml(list, podeEditar) {
+    if (!list.length) return "";
+    return `<div class="fiscal-entity-grid">${list
+      .map((e) => {
+        const regime = empresaTemRegime(e)
+          ? `<span class="fiscal-badge fiscal-badge--ok">${esc(labelRegime(e.regime_tributario))}</span>`
+          : `<span class="fiscal-badge fiscal-badge--warn">Regime pendente</span>`;
+        return `<article class="fiscal-entity-card" data-id="${e.id}">
+          <header class="fiscal-entity-card__head">
+            <h3 class="fiscal-entity-card__title">${esc(e.razao_social)}</h3>
+            ${e.nome_fantasia ? `<p class="fiscal-entity-card__sub">${esc(e.nome_fantasia)}</p>` : ""}
+          </header>
+          <dl class="fiscal-entity-card__meta">
+            <div><dt>CNPJ</dt><dd>${esc(fmtCnpj(e.cnpj) || "—")}</dd></div>
+            <div><dt>Regime</dt><dd>${regime}</dd></div>
+            <div><dt>Status</dt><dd>${e.ativo ? "Ativa" : "Inativa"}</dd></div>
+          </dl>
+          ${
+            podeEditar
+              ? `<footer class="fiscal-entity-card__foot"><button type="button" class="btn secondary fiscal-entity-card__btn" data-acao="editar">Editar</button></footer>`
+              : ""
+          }
+        </article>`;
+      })
+      .join("")}</div>`;
+  }
+
+  function renderPerfilCardsHtml(list, podeEditar) {
+    if (!list.length) return "";
+    return `<div class="fiscal-entity-grid fiscal-entity-grid--perfis">${list
+      .map(
+        (p) => `<article class="fiscal-entity-card fiscal-entity-card--perfil" data-id="${p.id}">
+          <header class="fiscal-entity-card__head">
+            <h3 class="fiscal-entity-card__title">${esc(p.nome)}</h3>
+            <p class="fiscal-entity-card__sub">${esc(labelTipo(p.tipo_fiscal_padrao))}</p>
+          </header>
+          <p class="fiscal-entity-card__desc">${esc(p.descricao || "Sem descrição.")}</p>
+          <footer class="fiscal-entity-card__foot">
+            <span class="fiscal-badge ${p.ativo ? "fiscal-badge--ok" : "fiscal-badge--pend"}">${p.ativo ? "Ativo" : "Inativo"}</span>
+            ${podeEditar ? `<button type="button" class="btn secondary fiscal-entity-card__btn" data-acao="editar">Editar</button>` : ""}
+          </footer>
+        </article>`
+      )
+      .join("")}</div>`;
+  }
+
+  function bindFiscalCardEdit(root, selector, onEdit) {
+    root.querySelector(selector)?.addEventListener("click", (ev) => {
+      const btn = ev.target.closest('[data-acao="editar"]');
+      if (!btn) return;
+      const id = btn.closest("[data-id]")?.dataset?.id;
+      if (id) onEdit(id);
+    });
+  }
+
   // —— Empresas ——
   async function renderEmpresasPage() {
     const root = document.getElementById("fiscalEmpresasRoot");
     if (!root) return;
     fiscalPodeEditar = isAdmin();
     await loadEmpresasList();
-    const emptyMsg = fiscalPodeEditar
-      ? `<tr><td colspan="6" class="fiscal-empty-cell">
-          <p><strong>Nenhuma empresa cadastrada ainda.</strong></p>
-          <p class="subtle-text">Clique em <strong>+ Nova empresa</strong> acima: no passo 1 escolha o regime (Simples, Presumido ou Real); no passo 2 informe razão social e CNPJ.</p>
-          <button type="button" class="btn primary fiscal-empty-cta" id="fiscalBtnNovaEmpresaEmpty">+ Cadastrar primeira empresa</button>
-        </td></tr>`
-      : '<tr><td colspan="6">Nenhuma empresa cadastrada.</td></tr>';
-    const rows = (fiscalEmpresas || [])
-      .map(
-        (e) => `<tr data-id="${e.id}">
-        <td>${esc(e.razao_social)}</td>
-        <td>${esc(e.nome_fantasia || "—")}</td>
-        <td>${esc(fmtCnpj(e.cnpj))}</td>
-        <td>${
-          empresaTemRegime(e)
-            ? esc(labelRegime(e.regime_tributario))
-            : '<span class="fiscal-badge fiscal-badge--warn" title="Edite a empresa e escolha o regime">Regime pendente</span>'
-        }</td>
-        <td>${e.ativo ? "Ativa" : "Inativa"}</td>
-        <td class="table-actions">${fiscalPodeEditar ? `<button type="button" class="table-action" data-acao="editar">Editar</button>` : ""}</td>
-      </tr>`
-      )
-      .join("");
+    const list = fiscalEmpresas || [];
+    const countAtivas = list.filter((e) => e.ativo).length;
+    const cardsHtml = renderEmpresaCardsHtml(list, fiscalPodeEditar);
+    const emptyBlock = fiscalPodeEditar
+      ? `<div class="fiscal-empty-card">
+          <p class="fiscal-empty-card__title">Nenhuma empresa cadastrada</p>
+          <p class="fiscal-empty-card__text">Comece pelo regime tributário (Simples, Presumido ou Real) e depois informe CNPJ e razão social.</p>
+          <button type="button" class="btn primary" id="fiscalBtnNovaEmpresaEmpty">+ Cadastrar primeira empresa</button>
+        </div>`
+      : `<div class="fiscal-empty-card"><p>Nenhuma empresa cadastrada.</p></div>`;
+
     root.innerHTML = `
-      <div class="actions">${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovaEmpresa">+ Nova empresa</button>' : ""}</div>
-      <div class="table-card"><header>Empresas (CNPJ)</header>
-      <div class="table-wrapper"><table><thead><tr>
-        <th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Regime tributário</th><th>Status</th><th>Ações</th>
-      </tr></thead><tbody id="fiscalEmpresasTbody">${rows || emptyMsg}</tbody></table></div></div>
-      <div class="modal-backdrop" id="fiscalEmpresaModal"><div class="modal modal--wide fiscal-empresa-modal"><header><h2 id="fiscalEmpresaModalTitle">Nova empresa</h2>
-      <button type="button" class="close-btn" id="fiscalEmpresaModalClose">×</button></header>
-      <form id="fiscalEmpresaForm" data-empresa-step="1" data-empresa-mode="create"><input type="hidden" name="id" />
+      <div class="fiscal-page">
+        <div class="fiscal-toolbar">
+          <div class="fiscal-toolbar__info">
+            <p class="fiscal-toolbar__label">Cadastro fiscal</p>
+            <p class="fiscal-toolbar__hint">CNPJ e regime por pessoa jurídica — vincule nas unidades depois.</p>
+          </div>
+          <div class="fiscal-toolbar__actions">
+            ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovaEmpresa">+ Nova empresa</button>' : ""}
+          </div>
+        </div>
+
+        <div class="fiscal-kpi-row">
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.length}</span><span class="fiscal-kpi-card__l">Empresas</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${countAtivas}</span><span class="fiscal-kpi-card__l">Ativas</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.filter((e) => empresaTemRegime(e)).length}</span><span class="fiscal-kpi-card__l">Com regime</span></div>
+        </div>
+
+        <div class="fiscal-panel-card">
+          <header class="fiscal-panel-card__head">
+            <h3>Lista de empresas</h3>
+          </header>
+          <div class="fiscal-panel-card__body" id="fiscalEmpresasCardsWrap">
+            ${cardsHtml || emptyBlock}
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop" id="fiscalEmpresaModal"><div class="modal modal--wide fiscal-empresa-modal"><header class="fiscal-modal-header">
+        <div><h2 id="fiscalEmpresaModalTitle">Nova empresa</h2>
+        <p class="fiscal-modal-sub" id="fiscalEmpresaModalSub">Passo 1 — escolha o regime tributário</p></div>
+        <button type="button" class="close-btn" id="fiscalEmpresaModalClose">×</button>
+      </header>
+      <div class="fiscal-modal-toolbar" id="fiscalEmpresaModalToolbar">
+        <button type="button" class="btn neutral" id="fiscalEmpresaCancelar">Cancelar</button>
+        <div class="fiscal-modal-toolbar__right">
+          <button type="button" class="btn neutral hidden" id="fiscalEmpresaBtnVoltar">Voltar</button>
+          ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalEmpresaBtnContinuar">Continuar</button>' : ""}
+          ${fiscalPodeEditar ? '<button type="submit" form="fiscalEmpresaForm" class="btn primary hidden" id="fiscalEmpresaBtnSalvar">Salvar empresa</button>' : ""}
+        </div>
+      </div>
+      <form id="fiscalEmpresaForm" class="fiscal-modal-form" data-empresa-step="1" data-empresa-mode="create"><input type="hidden" name="id" />
         <div class="fiscal-empresa-wizard-head" id="fiscalEmpresaWizardHead">
           <p class="fiscal-empresa-step-label" id="fiscalEmpresaStepLabel">Passo 1 de 2 — Regime tributário</p>
           <div class="fiscal-empresa-step-dots" aria-hidden="true">
@@ -352,9 +429,13 @@
             <span class="fiscal-empresa-regime-chip" id="fiscalEmpresaRegimeChip"></span>
             <button type="button" class="btn link-like" id="fiscalEmpresaAlterarRegime">Alterar regime</button>
           </div>
-          <label>Razão social *<input name="razao_social" required maxlength="255" /></label>
-          <label>Nome fantasia<input name="nome_fantasia" maxlength="255" /></label>
-          <label>CNPJ<input name="cnpj" placeholder="00.000.000/0000-00" maxlength="20" /></label>
+          <div class="fiscal-form-grid-2">
+            <label class="fiscal-field-full">Razão social *<input name="razao_social" required maxlength="255" /></label>
+          </div>
+          <div class="fiscal-form-grid-2">
+            <label>Nome fantasia<input name="nome_fantasia" maxlength="255" /></label>
+            <label>CNPJ<input name="cnpj" placeholder="00.000.000/0000-00" maxlength="20" /></label>
+          </div>
           <div class="fiscal-form-grid-2">
             <label>Inscrição estadual<input name="inscricao_estadual" maxlength="30" /></label>
             <label>Inscrição municipal<input name="inscricao_municipal" maxlength="30" /></label>
@@ -362,22 +443,12 @@
           <div class="fiscal-form-grid-2">
             <label>UF<input name="uf" maxlength="2" placeholder="PA" /></label>
             <label>Município<input name="municipio" maxlength="120" /></label>
+            <label>Status<select name="ativo"><option value="1">Ativa</option><option value="0">Inativa</option></select></label>
           </div>
-          <label>Status<select name="ativo"><option value="1">Ativa</option><option value="0">Inativa</option></select></label>
         </section>
-
-        <footer class="fiscal-empresa-form-footer">
-          <button type="button" class="btn neutral" id="fiscalEmpresaCancelar">Cancelar</button>
-          <button type="button" class="btn neutral hidden" id="fiscalEmpresaBtnVoltar">Voltar</button>
-          ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalEmpresaBtnContinuar">Continuar</button>' : ""}
-          ${fiscalPodeEditar ? '<button type="submit" class="btn primary hidden" id="fiscalEmpresaBtnSalvar">Salvar empresa</button>' : ""}
-        </footer>
       </form></div></div>`;
 
-    root.querySelector("#fiscalEmpresasTbody")?.addEventListener("click", (ev) => {
-      const btn = ev.target.closest('[data-acao="editar"]');
-      if (!btn) return;
-      const id = btn.closest("tr")?.dataset?.id;
+    bindFiscalCardEdit(root, "#fiscalEmpresasCardsWrap", (id) => {
       const emp = fiscalEmpresas.find((x) => String(x.id) === String(id));
       if (emp) openEmpresaModal(emp);
     });
@@ -387,6 +458,15 @@
     root.querySelector("#fiscalEmpresaCancelar")?.addEventListener("click", closeEmpresaModal);
     root.querySelector("#fiscalEmpresaForm")?.addEventListener("submit", submitEmpresaForm);
     bindEmpresaFormUi(root);
+  }
+
+  function syncEmpresaModalSub(form) {
+    const sub = document.getElementById("fiscalEmpresaModalSub");
+    if (!sub || !form) return;
+    const step = Number(form.dataset.empresaStep || 1);
+    const isEdit = form.dataset.empresaMode === "edit";
+    if (isEdit) sub.textContent = "Revise regime e dados da empresa";
+    else sub.textContent = step === 1 ? "Passo 1 — escolha o regime tributário" : "Passo 2 — dados da pessoa jurídica";
   }
 
   function setEmpresaCrtSelect(form, crtValue) {
@@ -485,25 +565,58 @@
     fiscalPodeEditar = isAdmin();
     await ensureMeta();
     await loadPerfisList(false);
-    const rows = (fiscalPerfis || [])
-      .map(
-        (p) => `<tr data-id="${p.id}">
-        <td>${esc(p.nome)}</td>
-        <td>${esc(labelTipo(p.tipo_fiscal_padrao))}</td>
-        <td>${p.ativo ? "Ativo" : "Inativo"}</td>
-        <td class="table-actions">${fiscalPodeEditar ? `<button type="button" class="table-action" data-acao="editar">Editar</button>` : ""}</td>
-      </tr>`
-      )
-      .join("");
+    const list = fiscalPerfis || [];
+    const cardsHtml = renderPerfilCardsHtml(list, fiscalPodeEditar);
+    const countAtivos = list.filter((p) => p.ativo).length;
+    const emptyBlock = fiscalPodeEditar
+      ? `<div class="fiscal-empty-card">
+          <p class="fiscal-empty-card__title">Nenhum perfil cadastrado</p>
+          <p class="fiscal-empty-card__text">Crie perfis com NCM, CFOP e CST padrão para aplicar rapidamente em produtos parecidos.</p>
+          <button type="button" class="btn primary" id="fiscalBtnNovoPerfilEmpty">+ Cadastrar primeiro perfil</button>
+        </div>`
+      : `<div class="fiscal-empty-card"><p>Nenhum perfil cadastrado.</p></div>`;
+
     root.innerHTML = `
-      <div class="actions">${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovoPerfil">+ Novo perfil</button>' : ""}</div>
-      <div class="table-card"><header>Perfis tributários</header>
-      <p class="subtle-text">Conjuntos reutilizáveis de classificação fiscal para produtos semelhantes.</p>
-      <div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Tipo fiscal padrão</th><th>Status</th><th>Ações</th></tr></thead>
-      <tbody id="fiscalPerfisTbody">${rows || '<tr><td colspan="4">Nenhum perfil cadastrado.</td></tr>'}</tbody></table></div></div>
-      <div class="modal-backdrop" id="fiscalPerfilModal"><div class="modal modal--wide"><header><h2 id="fiscalPerfilModalTitle">Perfil tributário</h2>
-      <button type="button" class="close-btn" id="fiscalPerfilModalClose">×</button></header>
-      <form id="fiscalPerfilForm" class="fiscal-perfil-form"><input type="hidden" name="id" />
+      <div class="fiscal-page">
+        <div class="fiscal-toolbar">
+          <div class="fiscal-toolbar__info">
+            <p class="fiscal-toolbar__label">Cadastro fiscal</p>
+            <p class="fiscal-toolbar__hint">Modelos reutilizáveis de classificação — vincule na aba fiscal do produto.</p>
+          </div>
+          <div class="fiscal-toolbar__actions">
+            ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovoPerfil">+ Novo perfil</button>' : ""}
+          </div>
+        </div>
+
+        <div class="fiscal-kpi-row">
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.length}</span><span class="fiscal-kpi-card__l">Perfis</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${countAtivos}</span><span class="fiscal-kpi-card__l">Ativos</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.filter((p) => p.ncm_padrao).length}</span><span class="fiscal-kpi-card__l">Com NCM</span></div>
+        </div>
+
+        <div class="fiscal-panel-card">
+          <header class="fiscal-panel-card__head">
+            <h3>Perfis tributários</h3>
+          </header>
+          <div class="fiscal-panel-card__body" id="fiscalPerfisCardsWrap">
+            ${cardsHtml || emptyBlock}
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop" id="fiscalPerfilModal"><div class="modal modal--wide fiscal-perfil-modal">
+      <header class="fiscal-modal-header">
+        <div><h2 id="fiscalPerfilModalTitle">Perfil tributário</h2>
+        <p class="fiscal-modal-sub" id="fiscalPerfilModalSub">NCM, CFOP e CST padrão para produtos</p></div>
+        <button type="button" class="close-btn" id="fiscalPerfilModalClose">×</button>
+      </header>
+      <div class="fiscal-modal-toolbar">
+        <button type="button" class="btn neutral" id="fiscalPerfilCancelar">Cancelar</button>
+        <div class="fiscal-modal-toolbar__right">
+          ${fiscalPodeEditar ? '<button type="submit" form="fiscalPerfilForm" class="btn primary" id="fiscalPerfilBtnSalvar">Salvar perfil</button>' : ""}
+        </div>
+      </div>
+      <form id="fiscalPerfilForm" class="fiscal-modal-form fiscal-perfil-form"><input type="hidden" name="id" />
         <label>Nome *<input name="nome" required maxlength="150" /></label>
         <label>Descrição<textarea name="descricao" rows="2"></textarea></label>
         <label>Tipo fiscal padrão<select name="tipo_fiscal_padrao"><option value="">—</option>
@@ -523,19 +636,15 @@
         </div>
         <label>Status<select name="ativo"><option value="1">Ativo</option><option value="0">Inativo</option></select></label>
         <label>Observações<textarea name="observacoes" rows="2"></textarea></label>
-        <footer><button type="button" class="btn neutral" id="fiscalPerfilCancelar">Cancelar</button>
-        ${fiscalPodeEditar ? '<button type="submit" class="btn primary">Salvar</button>' : ""}</footer>
       </form></div></div>`;
 
     root.querySelectorAll(".fiscal-ncm-mask").forEach(maskNcmInput);
-    root.querySelector("#fiscalPerfisTbody")?.addEventListener("click", (ev) => {
-      const btn = ev.target.closest('[data-acao="editar"]');
-      if (!btn) return;
-      const id = btn.closest("tr")?.dataset?.id;
+    bindFiscalCardEdit(root, "#fiscalPerfisCardsWrap", (id) => {
       const p = fiscalPerfis.find((x) => String(x.id) === String(id));
       if (p) openPerfilModal(p);
     });
     root.querySelector("#fiscalBtnNovoPerfil")?.addEventListener("click", () => openPerfilModal(null));
+    root.querySelector("#fiscalBtnNovoPerfilEmpty")?.addEventListener("click", () => openPerfilModal(null));
     root.querySelector("#fiscalPerfilModalClose")?.addEventListener("click", closePerfilModal);
     root.querySelector("#fiscalPerfilCancelar")?.addEventListener("click", closePerfilModal);
     root.querySelector("#fiscalPerfilForm")?.addEventListener("submit", submitPerfilForm);
