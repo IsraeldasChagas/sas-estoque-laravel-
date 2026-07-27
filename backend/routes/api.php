@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
 use App\Support\FiscalCadastroSupport;
+use App\Support\FiscalCompraEntradaSupport;
 use App\Support\AuditLog;
 use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Support\Rh\RhRescisaoCalculo;
@@ -4443,16 +4444,23 @@ Route::get('/lotes-a-vencer', function (Request $request) {
 // LISTAS DE COMPRAS
 // ============================================
 
-Route::get('/listas', function () {
-    // Busca todas as listas com informações da unidade e responsável
-    $listas = DB::table('listas_compras')
+Route::get('/listas', function (Request $request) {
+    $query = DB::table('listas_compras')
         ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
-        ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id')
-        ->select(
-            'listas_compras.*',
-            'unidades.nome as unidade_nome',
-            'usuarios.nome as responsavel_nome'
-        )
+        ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id');
+    if (Schema::hasTable('empresas') && Schema::hasColumn('listas_compras', 'empresa_id')) {
+        $query->leftJoin('empresas', 'listas_compras.empresa_id', '=', 'empresas.id');
+    }
+    $select = [
+        'listas_compras.*',
+        'unidades.nome as unidade_nome',
+        'usuarios.nome as responsavel_nome',
+    ];
+    if (Schema::hasTable('empresas') && Schema::hasColumn('listas_compras', 'empresa_id')) {
+        $select[] = 'empresas.razao_social as empresa_nome';
+        $select[] = 'empresas.cnpj as empresa_cnpj';
+    }
+    $listas = $query->select($select)
         ->orderBy('listas_compras.criado_em', 'desc')
         ->get();
     
@@ -4470,9 +4478,48 @@ Route::get('/listas', function () {
         $lista->itens_comprados = $itensComprados->count();
         $lista->total_planejado = $itens->sum('valor_planejado') ?? 0;
         $lista->total_realizado = $itens->sum('valor_total') ?? 0;
+
+        if (! isset($lista->status_fiscal) || $lista->status_fiscal === '') {
+            $lista->status_fiscal = 'pendente';
+        }
+        if (empty($lista->empresa_nome) && Schema::hasColumn('unidades', 'empresa_id') && ! empty($lista->unidade_id)) {
+            $empId = DB::table('unidades')->where('id', $lista->unidade_id)->value('empresa_id');
+            if ($empId && Schema::hasTable('empresas')) {
+                $e = DB::table('empresas')->where('id', $empId)->first();
+                if ($e) {
+                    $lista->empresa_resolvida_id = (int) $empId;
+                    $lista->empresa_nome = $lista->empresa_nome ?? $e->razao_social;
+                    $lista->empresa_cnpj = $lista->empresa_cnpj ?? $e->cnpj;
+                }
+            }
+        }
+        if (Schema::hasTable('notas_fiscais_entrada')) {
+            $nota = DB::table('notas_fiscais_entrada')
+                ->where('lista_compra_id', $lista->id)
+                ->first(['numero', 'chave_acesso', 'valor_total', 'status']);
+            $lista->nf_numero = $nota->numero ?? null;
+            $lista->nf_chave_resumo = $nota->chave_acesso ? substr($nota->chave_acesso, 0, 8).'…' : null;
+            $lista->nf_valor_total = $nota->valor_total ?? null;
+            $lista->nf_status = $nota->status ?? null;
+        }
         
         return $lista;
     });
+
+    $empresaFiltro = $request->query('empresa_id');
+    if ($empresaFiltro !== null && $empresaFiltro !== '') {
+        $eid = (int) $empresaFiltro;
+        $listas = $listas->filter(function ($l) use ($eid) {
+            $direct = (int) ($l->empresa_id ?? 0);
+            $resolved = (int) ($l->empresa_resolvida_id ?? 0);
+
+            return $direct === $eid || $resolved === $eid;
+        })->values();
+    }
+    $statusFiscalFiltro = strtolower(trim((string) $request->query('status_fiscal', '')));
+    if ($statusFiscalFiltro !== '' && in_array($statusFiscalFiltro, FiscalCompraEntradaSupport::STATUS_FISCAL_LISTA, true)) {
+        $listas = $listas->filter(fn ($l) => ($l->status_fiscal ?? 'pendente') === $statusFiscalFiltro)->values();
+    }
     
     return response()->json($listas);
 });
@@ -4552,6 +4599,18 @@ Route::post('/listas', function (Request $request) {
                 return response()->json(['error' => 'Unidade não encontrada'], 400);
             }
         }
+
+        $empresaIdLista = isset($data['empresa_id']) && $data['empresa_id'] !== null ? (int) $data['empresa_id'] : null;
+        if ($empresaIdLista && Schema::hasTable('empresas') && ! DB::table('empresas')->where('id', $empresaIdLista)->exists()) {
+            return response()->json(['error' => 'Empresa não encontrada'], 400);
+        }
+        $errEmpresaUnidade = FiscalCompraEntradaSupport::validarEmpresaUnidade(
+            $empresaIdLista,
+            isset($data['unidade_id']) ? (int) $data['unidade_id'] : null
+        );
+        if ($errEmpresaUnidade) {
+            return response()->json(['error' => $errEmpresaUnidade], 400);
+        }
         
         // Valida responsavel_id se fornecido
         if (isset($data['responsavel_id']) && $data['responsavel_id'] !== null) {
@@ -4570,6 +4629,12 @@ Route::post('/listas', function (Request $request) {
             'observacoes' => isset($data['observacoes']) && trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null,
             'criado_em' => now(),
         ];
+        if (Schema::hasColumn('listas_compras', 'empresa_id')) {
+            $insertData['empresa_id'] = $empresaIdLista;
+        }
+        if (Schema::hasColumn('listas_compras', 'status_fiscal')) {
+            $insertData['status_fiscal'] = 'pendente';
+        }
         
         \Log::info('POST /listas - Dados para inserção:', $insertData);
         
@@ -4636,10 +4701,39 @@ Route::put('/listas/{id}', function (Request $request, $id) {
         // Prepara dados para atualização - apenas campos permitidos (sem updated_at que não existe na tabela)
         $updateData = [];
         if (isset($data['nome'])) $updateData['nome'] = trim($data['nome']);
-        if (isset($data['unidade_id'])) $updateData['unidade_id'] = $data['unidade_id'] !== null ? (int)$data['unidade_id'] : null;
+        if (isset($data['unidade_id'])) {
+            $updateData['unidade_id'] = $data['unidade_id'] !== null ? (int) $data['unidade_id'] : null;
+            if (Schema::hasColumn('listas_compras', 'empresa_id')) {
+                $empCheck = array_key_exists('empresa_id', $updateData)
+                    ? $updateData['empresa_id']
+                    : ($lista->empresa_id ?? null);
+                $errUni = FiscalCompraEntradaSupport::validarEmpresaUnidade(
+                    $empCheck ? (int) $empCheck : null,
+                    $updateData['unidade_id'] ? (int) $updateData['unidade_id'] : null
+                );
+                if ($errUni) {
+                    return response()->json(['error' => $errUni], 400)
+                        ->header('Access-Control-Allow-Origin', '*');
+                }
+            }
+        }
         if (isset($data['responsavel_id'])) $updateData['responsavel_id'] = $data['responsavel_id'] !== null ? (int)$data['responsavel_id'] : null;
         if (isset($data['status'])) $updateData['status'] = $data['status'];
         if (isset($data['observacoes'])) $updateData['observacoes'] = trim($data['observacoes']) !== '' ? trim($data['observacoes']) : null;
+        if (Schema::hasColumn('listas_compras', 'empresa_id') && array_key_exists('empresa_id', $data)) {
+            $empresaIdLista = $data['empresa_id'] !== null ? (int) $data['empresa_id'] : null;
+            if ($empresaIdLista && Schema::hasTable('empresas') && ! DB::table('empresas')->where('id', $empresaIdLista)->exists()) {
+                return response()->json(['error' => 'Empresa não encontrada'], 400)
+                    ->header('Access-Control-Allow-Origin', '*');
+            }
+            $unidadeCheck = isset($data['unidade_id']) ? (int) $data['unidade_id'] : (int) ($lista->unidade_id ?? 0);
+            $errEmpresaUnidade = FiscalCompraEntradaSupport::validarEmpresaUnidade($empresaIdLista, $unidadeCheck ?: null);
+            if ($errEmpresaUnidade) {
+                return response()->json(['error' => $errEmpresaUnidade], 400)
+                    ->header('Access-Control-Allow-Origin', '*');
+            }
+            $updateData['empresa_id'] = $empresaIdLista;
+        }
         
         DB::table('listas_compras')->where('id', $id)->update($updateData);
         
@@ -4889,6 +4983,15 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
         }
         
         $unidadeId = $lista->unidade_id;
+        $empresaIdFiscal = FiscalCompraEntradaSupport::resolverEmpresaIdLista($lista);
+        $errEmpresaUnidade = FiscalCompraEntradaSupport::validarEmpresaUnidade(
+            $empresaIdFiscal,
+            $unidadeId ? (int) $unidadeId : null
+        );
+        if ($errEmpresaUnidade) {
+            DB::rollBack();
+            return response()->json(['error' => $errEmpresaUnidade], 400);
+        }
         
         // Valida unidade_id da lista antes de processar
         if (!$unidadeId || $unidadeId <= 0) {
@@ -4898,6 +5001,10 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
         
         $entradasCriadas = [];
         $erros = [];
+        $notaFiscalId = Schema::hasTable('notas_fiscais_entrada')
+            ? DB::table('notas_fiscais_entrada')->where('lista_compra_id', $id)->value('id')
+            : null;
+        $notaFiscalId = $notaFiscalId ? (int) $notaFiscalId : null;
 
         // Processa cada item: soma direto no stock_lotes existente, sem criar lote novo
         foreach ($itens as $item) {
@@ -4948,7 +5055,22 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
 
                     // Atualiza qtd_atual do lote pai se existir
                     if ($loteId) {
-                        DB::table('lotes')->where('id', $loteId)->update(['qtd_atual' => $novaQtd]);
+                        $loteFiscalUpd = [];
+                        if (Schema::hasColumn('lotes', 'qtd_atual')) {
+                            $loteFiscalUpd['qtd_atual'] = $novaQtd;
+                        }
+                        if ($empresaIdFiscal && Schema::hasColumn('lotes', 'empresa_id')) {
+                            $loteFiscalUpd['empresa_id'] = $empresaIdFiscal;
+                        }
+                        if (Schema::hasColumn('lotes', 'lista_compra_id')) {
+                            $loteFiscalUpd['lista_compra_id'] = (int) $id;
+                        }
+                        if ($notaFiscalId && Schema::hasColumn('lotes', 'nota_fiscal_entrada_id')) {
+                            $loteFiscalUpd['nota_fiscal_entrada_id'] = $notaFiscalId;
+                        }
+                        if (! empty($loteFiscalUpd)) {
+                            DB::table('lotes')->where('id', $loteId)->update($loteFiscalUpd);
+                        }
                     }
                 } else {
                     // Não existe stock ainda — cria um registro novo com código único
@@ -4965,7 +5087,7 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
                         ]);
                     }
 
-                    $loteId = DB::table('lotes')->insertGetId([
+                    $loteInsert = [
                         'produto_id'     => $item->produto_id,
                         'unidade_id'     => $unidadeId,
                         'numero_lote'    => $codigoLote,
@@ -4976,7 +5098,17 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
                         'local_id'       => $localId,
                         'ativo'          => 1,
                         'criado_em'      => now(),
-                    ]);
+                    ];
+                    if ($empresaIdFiscal && Schema::hasColumn('lotes', 'empresa_id')) {
+                        $loteInsert['empresa_id'] = $empresaIdFiscal;
+                    }
+                    if (Schema::hasColumn('lotes', 'lista_compra_id')) {
+                        $loteInsert['lista_compra_id'] = (int) $id;
+                    }
+                    if ($notaFiscalId && Schema::hasColumn('lotes', 'nota_fiscal_entrada_id')) {
+                        $loteInsert['nota_fiscal_entrada_id'] = $notaFiscalId;
+                    }
+                    $loteId = DB::table('lotes')->insertGetId($loteInsert);
 
                     DB::table('stock_lotes')->insert([
                         'produto_id'     => $item->produto_id,
@@ -4990,7 +5122,7 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
                 }
 
                 // Registra a movimentação de ENTRADA
-                $movimentacaoId = DB::table('movimentacoes')->insertGetId([
+                $movInsert = [
                     'produto_id'    => $item->produto_id,
                     'lote_id'       => $loteId ?? null,
                     'usuario_id'    => $usuarioId,
@@ -5002,7 +5134,36 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
                     'motivo'        => 'Lista de compras',
                     'observacao'    => "Lista de compras #{$id}",
                     'de_unidade_id' => $unidadeId,
-                ]);
+                ];
+                if (Schema::hasColumn('movimentacoes', 'origem')) {
+                    $movInsert['origem'] = 'LISTA_COMPRAS';
+                }
+                if ($empresaIdFiscal && Schema::hasColumn('movimentacoes', 'empresa_id')) {
+                    $movInsert['empresa_id'] = $empresaIdFiscal;
+                }
+                if (Schema::hasColumn('movimentacoes', 'lista_compra_id')) {
+                    $movInsert['lista_compra_id'] = (int) $id;
+                }
+                if ($notaFiscalId && Schema::hasColumn('movimentacoes', 'nota_fiscal_entrada_id')) {
+                    $movInsert['nota_fiscal_entrada_id'] = $notaFiscalId;
+                }
+                $itemNotaFiscalId = null;
+                if ($notaFiscalId) {
+                    $itemNotaFiscalId = DB::table('itens_notas_fiscais_entrada')
+                        ->where('nota_fiscal_entrada_id', $notaFiscalId)
+                        ->where('produto_id', $item->produto_id)
+                        ->value('id');
+                }
+                if ($itemNotaFiscalId && Schema::hasColumn('movimentacoes', 'item_nota_fiscal_entrada_id')) {
+                    $movInsert['item_nota_fiscal_entrada_id'] = (int) $itemNotaFiscalId;
+                }
+                if ($itemNotaFiscalId && $loteId && Schema::hasColumn('lotes', 'item_nota_fiscal_entrada_id')) {
+                    DB::table('lotes')->where('id', $loteId)->update(['item_nota_fiscal_entrada_id' => (int) $itemNotaFiscalId]);
+                }
+                if (Schema::hasColumn('movimentacoes', 'tipo_entrada_fiscal')) {
+                    $movInsert['tipo_entrada_fiscal'] = 'ENTRADA_COMPRA';
+                }
+                $movimentacaoId = DB::table('movimentacoes')->insertGetId($movInsert);
 
                 $entradasCriadas[] = [
                     'item_id'        => $item->id,
@@ -5032,6 +5193,8 @@ Route::post('/listas/{id}/estoque', function (Request $request, $id) {
             ->update([
                 'estoque_lancado_em' => now(),
             ]);
+
+        FiscalCompraEntradaSupport::posLancamentoEstoque((int) $id, $lista, $empresaIdFiscal, $entradasCriadas);
         
         DB::commit();
         
@@ -11419,6 +11582,7 @@ require __DIR__ . '/investimento_routes.php';
 require __DIR__ . '/financeiro_routes.php';
 require __DIR__ . '/configuracoes_routes.php';
 require __DIR__ . '/fiscal_cadastro_routes.php';
+require __DIR__ . '/fiscal_compras_entrada_routes.php';
 require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';

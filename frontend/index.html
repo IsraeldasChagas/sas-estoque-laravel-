@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
+    <link rel="stylesheet" href="fiscal-compras.css?v=20260727-fiscal-m2-ready" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260715-proto1" />
@@ -370,6 +371,7 @@
               <div class="nav-submenu-divider-label">Fiscal — cadastro</div>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalEmpresas"><span class="nav-icon" aria-hidden="true">🏢</span><span class="nav-label">Empresas (CNPJ)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalPerfisTributarios"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Perfis tributários</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalComprasRelatorio"><span class="nav-icon" aria-hidden="true">📥</span><span class="nav-label">Entradas fiscais (compras)</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
               <button type="button" id="btnAbrirBackup" class="nav-link nav-link-child nav-submenu-btn nav-submenu-btn--backup" onclick="abrirBackupModal()" style="display:none;">
@@ -695,6 +697,16 @@
                 <option value="todas">Todas</option>
                 <option value="finalizadas">Finalizadas</option>
               </select>
+              <select id="listaCompraFiltroEmpresa" class="lista-compras__filtro" title="Filtrar por CNPJ">
+                <option value="">Todas empresas</option>
+              </select>
+              <select id="listaCompraFiltroStatusFiscal" class="lista-compras__filtro" title="Status fiscal">
+                <option value="">Status fiscal</option>
+                <option value="pendente">Pendente</option>
+                <option value="com_alerta">Com alerta</option>
+                <option value="validada">Validada</option>
+                <option value="processada">Processada</option>
+              </select>
             </div>
             <div class="compras-grid">
               <div class="table-card compras-listas-card">
@@ -704,9 +716,11 @@
                     <thead>
                       <tr>
                         <th>Lista</th>
+                        <th>Empresa</th>
                         <th>Unidade</th>
+                        <th>NF</th>
                         <th>Status</th>
-                        <th>Planejado</th>
+                        <th>Fiscal</th>
                         <th>Realizado</th>
                         <th>Itens</th>
                         <th>Ações</th>
@@ -752,6 +766,7 @@
                     Observacoes gerais
                     <textarea id="listaCompraObservacoes" rows="3" placeholder="Instrucoes, fornecedores preferenciais, alertas..."></textarea>
                   </label>
+                  <div id="fiscalCompraPanel" class="hidden"></div>
                   <div class="compras-detalhes-acoes">
                     <button type="button" class="btn secondary" id="listaCompraAdicionarItem">Adicionar Item</button>
                     <button type="button" class="btn secondary" id="listaCompraAdicionarEstabelecimento">Adicionar Estabelecimento</button>
@@ -4796,6 +4811,10 @@
             <div class="cfg-section-head"><div><h2>📋 Perfis tributários</h2><p class="subtle-text">Classificações fiscais reutilizáveis entre produtos.</p></div></div>
             <div id="fiscalPerfisRoot" class="int-page-wrap"></div>
           </section>
+          <section id="fiscalComprasRelatorioSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>📥 Entradas fiscais (compras)</h2><p class="subtle-text">Notas de entrada, tributos destacados e créditos potenciais.</p></div></div>
+            <div id="fiscalComprasRelatorioRoot" class="int-page-wrap"></div>
+          </section>
 
           <!-- Configurações — Integrações — OpenClaw -->
           <section id="openClawIntegracaoSection" class="view-section hidden">
@@ -6771,6 +6790,12 @@
             </select>
           </label>
           <label>
+            Empresa compradora (CNPJ)
+            <select name="empresa_id" id="listaCompraEmpresaId">
+              <option value="">— Usar empresa da unidade —</option>
+            </select>
+          </label>
+          <label>
             Observacoes
             <textarea name="observacoes" rows="3" placeholder="Instrucoes gerais para a compra."></textarea>
           </label>
@@ -7906,6 +7931,7 @@
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script src="app.js?v=20260727-fiscal-getuser-fix"></script>
     <script src="fiscal-cadastro.js?v=20260727-fiscal-modal-space"></script>
+    <script src="fiscal-compras.js?v=20260727-fiscal-m2-ready"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

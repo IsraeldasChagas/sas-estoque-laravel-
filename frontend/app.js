@@ -1598,7 +1598,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs",
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
-  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios",
+  "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
@@ -1813,6 +1813,8 @@ const dom = {
   listaCompraPdf: document.getElementById("listaCompraPdf"),
   listaCompraLancarEstoque: document.getElementById("listaCompraLancarEstoque"),
   listaCompraFiltroStatus: document.getElementById("listaCompraFiltroStatus"),
+  listaCompraFiltroEmpresa: document.getElementById("listaCompraFiltroEmpresa"),
+  listaCompraFiltroStatusFiscal: document.getElementById("listaCompraFiltroStatusFiscal"),
   locaisTable: document.getElementById("locaisTable"),
   openLocalModalBtn: document.getElementById("openLocalModal"),
   localModal: document.getElementById("localModal"),
@@ -1969,7 +1971,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1977,7 +1979,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalEmpresas", "fiscalPerfisTributarios", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2143,6 +2145,8 @@ const state = {
   listasCompras: [],
   listaCompraAtual: null,
   listaComprasFiltroStatus: "ativas",
+  listaComprasFiltroEmpresa: "",
+  listaComprasFiltroStatusFiscal: "",
   listasComprasAtivasSnapshot: [],
   estabelecimentosGlobais: [],
   unidadeInlineVisivel: false,
@@ -5405,7 +5409,7 @@ function applyPermissions() {
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
-  ["fiscalEmpresas", "fiscalPerfisTributarios"].forEach((s) => {
+  ["fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio"].forEach((s) => {
     if ((perfilCfgAuto === "ADMIN" || perfilCfgAuto === "GERENTE") && !sections.includes(s)) {
       sections = [...sections, s];
     }
@@ -5564,6 +5568,7 @@ function applyPermissions() {
       regras.sections.includes("openClawIntegracao") ||
       regras.sections.includes("fiscalEmpresas") ||
       regras.sections.includes("fiscalPerfisTributarios") ||
+      regras.sections.includes("fiscalComprasRelatorio") ||
       perfilCfg === "ADMIN";
     configuracoesNavSubmenu.classList.toggle("hidden", !temConfigMenu);
   }
@@ -5811,7 +5816,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios") {
+    if (section === "openClawIntegracao" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio") {
       configuracoesNavSubmenuNav.classList.add("open");
     } else {
       configuracoesNavSubmenuNav.classList.remove("open");
@@ -5892,6 +5897,8 @@ function navigateTo(section) {
     window.loadFiscalEmpresas?.().catch((e) => showToast(e?.message || "Falha ao carregar empresas fiscais.", "error"));
   } else if (section === "fiscalPerfisTributarios") {
     window.loadFiscalPerfisTributarios?.().catch((e) => showToast(e?.message || "Falha ao carregar perfis tributários.", "error"));
+  } else if (section === "fiscalComprasRelatorio") {
+    window.loadFiscalComprasRelatorio?.().catch((e) => showToast(e?.message || "Falha ao carregar relatório fiscal de compras.", "error"));
   }
   else if (section === "integracaoVendafacil") loadIntegracaoVendafacil?.().catch(() => {});
   else if (section === "integracaoAplicacoes") loadIntegracaoAplicacoes?.().catch(() => {});
@@ -7232,6 +7239,20 @@ function buildEstabelecimentoOptions(selectedId) {
   return ['<option value="">Sem vinculo</option>', ...opts].join("");
 }
 
+function buildListaStatusFiscalPill(status) {
+  const s = (status || "pendente").toLowerCase();
+  const labels = { pendente: "Pendente", com_alerta: "Alerta", validada: "Validada", processada: "Processada" };
+  const cls =
+    s === "com_alerta" ? "status-pill--warn" : s === "validada" || s === "processada" ? "status-pill--ok" : "status-pill--muted";
+  return `<span class="status-pill ${cls}">${escapeHtml(labels[s] || s)}</span>`;
+}
+
+function formatCnpjLista(cnpj) {
+  const d = String(cnpj || "").replace(/\D/g, "");
+  if (d.length !== 14) return cnpj || "—";
+  return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
+
 function renderListasCompras(listas) {
   const rows = (listas || []).map((lista) => {
     const selecionada = state.listaCompraAtual && Number(state.listaCompraAtual.id) === Number(lista.id);
@@ -7240,17 +7261,22 @@ function renderListasCompras(listas) {
     const btnExcluir = podeExcluir
       ? `<button type="button" class="table-action danger" data-action="delete-lista" data-id="${lista.id}" title="Excluir lista">Excluir</button>`
       : `<span class="subtle-text">—</span>`;
+    const empresaLabel = lista.empresa_nome
+      ? `${escapeHtml(lista.empresa_nome)}<br><small class="subtle-text">${escapeHtml(formatCnpjLista(lista.empresa_cnpj))}</small>`
+      : "—";
     return `<tr data-id="${lista.id}" class="${classe}">
       <td data-label="Lista">${escapeHtml(lista.nome)}</td>
+      <td data-label="Empresa">${empresaLabel}</td>
       <td data-label="Unidade">${escapeHtml(lista.unidade_nome || "--")}</td>
+      <td data-label="NF">${escapeHtml(lista.nf_numero || "—")}</td>
       <td data-label="Status">${buildListaStatusPill(lista.status)}</td>
-      <td data-label="Planejado">${formatCurrency(lista.total_planejado || 0)}</td>
+      <td data-label="Fiscal">${buildListaStatusFiscalPill(lista.status_fiscal)}</td>
       <td data-label="Realizado">${formatCurrency(lista.total_realizado || 0)}</td>
       <td data-label="Itens">${Number(lista.itens_comprados || 0)} / ${Number(lista.itens_total || 0)}</td>
       <td data-label="Ações" class="table-actions">${btnExcluir}</td>
     </tr>`;
   }).join("");
-  renderTable(dom.listasComprasTable, rows, "Nenhuma lista de compras cadastrada.", 7);
+  renderTable(dom.listasComprasTable, rows, "Nenhuma lista de compras cadastrada.", 9);
 }
 
 function renderListaCompraDetalhes(lista) {
@@ -7286,6 +7312,7 @@ function renderListaCompraDetalhes(lista) {
     renderListaCompraAnexos([]);
     updateListaStatusButtons(null);
     updateNovaListaButton();
+    window.renderFiscalCompraPanel?.(null);
     return;
   }
   dom.listaCompraTitulo.textContent = lista.nome;
@@ -7355,6 +7382,7 @@ function renderListaCompraDetalhes(lista) {
   renderListaCompraAnexos(lista.anexos || []);
   updateListaStatusButtons(lista);
   updateNovaListaButton();
+  window.renderFiscalCompraPanel?.(lista);
 }
 
 function renderListaCompraItens(itens) {
@@ -7576,8 +7604,19 @@ const atualizarObservacoesListaDebounced = debounce(async (listaId, observacoes)
 async function loadListasCompras() {
   const statusFiltro = state.listaComprasFiltroStatus || "ativas";
   if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = statusFiltro;
+  if (dom.listaCompraFiltroEmpresa) {
+    await window.populateListaCompraFiltroEmpresas?.(dom.listaCompraFiltroEmpresa);
+    dom.listaCompraFiltroEmpresa.value = state.listaComprasFiltroEmpresa || "";
+  }
+  if (dom.listaCompraFiltroStatusFiscal) {
+    dom.listaCompraFiltroStatusFiscal.value = state.listaComprasFiltroStatusFiscal || "";
+  }
   try {
-    const todas = await fetchJSON("/listas");
+    const params = new URLSearchParams();
+    if (state.listaComprasFiltroEmpresa) params.set("empresa_id", state.listaComprasFiltroEmpresa);
+    if (state.listaComprasFiltroStatusFiscal) params.set("status_fiscal", state.listaComprasFiltroStatusFiscal);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const todas = await fetchJSON(`/listas${qs}`);
     const listas = Array.isArray(todas) ? todas : [];
     const ativas = listas.filter((item) => (item.status || "").toUpperCase() !== "FINALIZADA");
     const finalizadas = listas.filter((item) => (item.status || "").toUpperCase() === "FINALIZADA");
@@ -7706,6 +7745,27 @@ async function abrirListaCompraModal(lista = null) {
   dom.listaCompraModalTitle.textContent = lista ? "Editar lista" : "Nova lista";
   
   const unidadeSelect = dom.listaCompraForm.elements.unidade_id;
+  const empresaSelect = dom.listaCompraForm.elements.empresa_id || document.getElementById("listaCompraEmpresaId");
+  if (empresaSelect && typeof fetchJSON === "function") {
+    try {
+      const empresas = await fetchJSON("/fiscal/empresas");
+      empresaSelect.innerHTML = '<option value="">— Usar empresa da unidade —</option>';
+      (empresas || []).forEach((e) => {
+        const opt = document.createElement("option");
+        opt.value = String(e.id);
+        opt.textContent = `${e.razao_social || "Empresa"}${e.cnpj ? " — " + e.cnpj : ""}`;
+        empresaSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.warn("Empresas fiscais não carregadas:", err);
+    }
+  }
+  if (empresaSelect && !empresaSelect.dataset.fiscalBound) {
+    empresaSelect.dataset.fiscalBound = "1";
+    empresaSelect.addEventListener("change", () => {
+      window.fiscalCompraFiltrarUnidadesPorEmpresa?.(empresaSelect.value, unidadeSelect, state.unidades || []);
+    });
+  }
   const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
   const isCozinhaOuBar = perfil === "COZINHA" || perfil === "BAR" || perfil === "ATENDENTE";
   
@@ -7714,6 +7774,9 @@ async function abrirListaCompraModal(lista = null) {
     dom.listaCompraForm.elements.nome.value = lista.nome || "";
     dom.listaCompraForm.elements.unidade_id.value = lista.unidade_id || "";
     dom.listaCompraForm.elements.observacoes.value = lista.observacoes || "";
+    if (empresaSelect && lista.empresa_id) {
+      empresaSelect.value = String(lista.empresa_id);
+    }
     
     // COZINHA e BAR não podem editar unidade mesmo ao editar (se tivesse permissão)
     if (isCozinhaOuBar && unidadeSelect) {
@@ -7834,6 +7897,9 @@ async function submitListaCompra(event) {
   // Adiciona observações apenas se não estiver vazia
   if (payload.observacoes && String(payload.observacoes).trim()) {
     dataToSend.observacoes = String(payload.observacoes).trim();
+  }
+  if (payload.empresa_id && String(payload.empresa_id).trim()) {
+    dataToSend.empresa_id = Number(payload.empresa_id);
   }
   
   // Desabilita o botão de submit para evitar duplo envio
@@ -15946,6 +16012,18 @@ function setupModals() {
     const selecionado = allowed.includes(value) ? value : "ativas";
     if (state.listaComprasFiltroStatus === selecionado) return;
     state.listaComprasFiltroStatus = selecionado;
+    state.listaCompraAtual = null;
+    renderListaCompraDetalhes(null);
+    loadListasCompras();
+  });
+  dom.listaCompraFiltroEmpresa?.addEventListener("change", (event) => {
+    state.listaComprasFiltroEmpresa = (event.target.value || "").toString();
+    state.listaCompraAtual = null;
+    renderListaCompraDetalhes(null);
+    loadListasCompras();
+  });
+  dom.listaCompraFiltroStatusFiscal?.addEventListener("change", (event) => {
+    state.listaComprasFiltroStatusFiscal = (event.target.value || "").toString();
     state.listaCompraAtual = null;
     renderListaCompraDetalhes(null);
     loadListasCompras();

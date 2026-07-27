@@ -1,0 +1,86 @@
+.fiscal-compra-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.fiscal-compra-card__body {
+  padding: 1rem 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fiscal-compra-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.fiscal-compra-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .fiscal-compra-grid,
+  .fiscal-compra-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fiscal-compra-readonly {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  font-size: 0.88rem;
+}
+
+.fiscal-compra-readonly__label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #78909c;
+  margin-bottom: 0.2rem;
+}
+
+.fiscal-compra-tributos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.35rem 0.75rem;
+}
+
+.fiscal-compra-tributos li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.fiscal-compra-tributos-wrap h4 {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.92rem;
+}
+
+.fiscal-compra-itens-table .fiscal-compra-inp {
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.85rem;
+}
+
+.fiscal-compra-itens-table .fiscal-compra-inp--num {
+  max-width: 5.5rem;
+}
+
+#fiscalCompraPanel {
+  margin-top: 1rem;
+}
+
+#fiscalCompraPanel.hidden {
+  display: none;
+}
