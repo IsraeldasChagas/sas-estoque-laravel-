@@ -37,9 +37,34 @@ class DeliveryAccessService
             $permissoes = json_decode($permissoes, true);
         }
 
-        abort_unless(is_array($permissoes) && in_array($modulo, $permissoes, true), 403, 'Sem permissão para este módulo.');
+        abort_unless(is_array($permissoes) && $this->temModulo($permissoes, $modulo), 403, 'Sem permissão para este módulo.');
 
         return $usuario;
+    }
+
+    /** @param  array<int, string>  $permissoes */
+    private function temModulo(array $permissoes, string $modulo): bool
+    {
+        foreach ($this->modulosAceitos($modulo) as $aceito) {
+            if (in_array($aceito, $permissoes, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return list<string> */
+    private function modulosAceitos(string $modulo): array
+    {
+        $aliases = [
+            'deliveryProdutos' => ['deliveryProdutos', 'cardapioItens'],
+            'deliveryCategorias' => ['deliveryCategorias', 'cardapioCategorias'],
+            'deliveryCatalogo' => ['deliveryCatalogo', 'cardapioConsulta'],
+            'deliveryAdicionais' => ['deliveryAdicionais', 'cardapioAdicionais'],
+        ];
+
+        return $aliases[$modulo] ?? [$modulo];
     }
 
     public function unidadeId(Request $request, object $usuario, ?array $payload = null): ?int

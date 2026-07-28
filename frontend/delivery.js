@@ -172,11 +172,25 @@
     if (fromToggle === "ativa") indInput.checked = true;
   }
 
+  function isCardapioNavContext() {
+    try {
+      const s = localStorage.getItem("sas-estoque-current-section") || "";
+      return s.startsWith("cardapio");
+    } catch {
+      return false;
+    }
+  }
+
+  function navCardapioOuDelivery(cardapioSection, deliverySection) {
+    return isCardapioNavContext() ? cardapioSection : deliverySection;
+  }
+
   function renderProdutosList(root, items, q, ativo) {
+    const ctxCardapio = isCardapioNavContext();
     root.innerHTML = `<div class="vf-products">
-      <div class="vf-products__breadcrumb"><button type="button" data-vf-go-dashboard>Dashboard</button> / Produtos</div>
+      <div class="vf-products__breadcrumb"><button type="button" data-vf-go-dashboard>${ctxCardapio ? "Cardápio" : "Dashboard"}</button> / ${ctxCardapio ? "Itens" : "Produtos"}</div>
       <div class="vf-products__toolbar">
-        <h2>Catálogo</h2>
+        <h2>${ctxCardapio ? "Itens do cardápio" : "Catálogo"}</h2>
         <div class="vf-products__actions">
           <button class="vf-btn" type="button" data-vf-go-categorias>Categorias</button>
           <button class="vf-btn vf-btn--primary" type="button" data-vf-new-product>＋ Novo produto</button>
@@ -193,8 +207,8 @@
       </table></div></div>
     </div>`;
 
-    root.querySelector("[data-vf-go-dashboard]").onclick = () => window.navigateTo?.("deliveryDashboard");
-    root.querySelector("[data-vf-go-categorias]").onclick = () => window.navigateTo?.("deliveryCategorias");
+    root.querySelector("[data-vf-go-dashboard]").onclick = () => window.navigateTo?.(navCardapioOuDelivery("cardapioItens", "deliveryDashboard"));
+    root.querySelector("[data-vf-go-categorias]").onclick = () => window.navigateTo?.(navCardapioOuDelivery("cardapioCategorias", "deliveryCategorias"));
     root.querySelector("[data-vf-clear-filter]").onclick = () => renderProdutosList(root, state.produtos, "", "");
     $("vfProdutosFiltro").onsubmit = async (e) => {
       e.preventDefault();

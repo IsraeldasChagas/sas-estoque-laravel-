@@ -215,6 +215,18 @@
               <a href="#" class="nav-link nav-link-child" data-section="fidelidadeRelatorios"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Relatórios</span></a>
             </div>
           </div>
+          <div class="nav-submenu nav-submenu--cardapio">
+            <a href="#" class="nav-link nav-link-parent" id="cardapioMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Cardápio</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="cardapioItens" title="Itens, preços e visibilidade PDV/delivery"><span class="nav-icon" aria-hidden="true">◆</span><span class="nav-label">Itens</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="cardapioCategorias"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label">Categorias</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="cardapioConsulta"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Consulta</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="cardapioAdicionais"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">Adicionais</span></a>
+            </div>
+          </div>
           <div class="nav-submenu nav-submenu--delivery">
             <a href="#" class="nav-link nav-link-parent" id="deliveryMenu">
               <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🛵</span><span class="nav-label">Delivery</span></span>
@@ -6315,6 +6327,12 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeRelatorios" /> Fidelidade — Relatórios</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Delivery</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryDashboard" /> Delivery — Dashboard</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Cardápio (PDV, mesas e delivery)</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioItens" /> Cardápio — Itens</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioCategorias" /> Cardápio — Categorias</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioConsulta" /> Cardápio — Consulta</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioAdicionais" /> Cardápio — Adicionais</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Delivery</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCatalogo" /> Delivery — Catálogo (Consulta)</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCategorias" /> Delivery — Categorias</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryProdutos" /> Delivery — Produtos</label>
@@ -7948,7 +7966,7 @@
     <script src="integracoes.js?v=20260716-int1"></script>
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
-    <script src="delivery.js?v=20260728-cardapio-pdv"></script>
+    <script src="delivery.js?v=20260728-cardapio-menu"></script>
     <script src="delivery-catalog-admin.js?v=20260717-vf1"></script>
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>

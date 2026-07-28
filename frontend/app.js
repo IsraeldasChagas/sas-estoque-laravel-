@@ -1583,6 +1583,19 @@ const DELIVERY_SECTION_IDS = [
   "deliveryDashboard", "deliveryCatalogo", "deliveryCategorias", "deliveryProdutos", "deliveryAdicionais",
   "deliveryVitrine", "deliveryPedidos", "deliveryFretes", "deliveryEntregadores", "deliveryConfiguracoes",
 ];
+const CARDAPIO_SECTION_IDS = [
+  "cardapioItens", "cardapioCategorias", "cardapioConsulta", "cardapioAdicionais",
+];
+/** Seções Cardápio reutilizam telas do Delivery (mesmo DOM). */
+const CARDAPIO_VIEW_SECTION = {
+  cardapioItens: "deliveryProdutos",
+  cardapioCategorias: "deliveryCategorias",
+  cardapioConsulta: "deliveryCatalogo",
+  cardapioAdicionais: "deliveryAdicionais",
+};
+function cardapioContentSection(section) {
+  return CARDAPIO_VIEW_SECTION[section] || section;
+}
 const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
   "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
@@ -1606,6 +1619,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
   ...DELIVERY_SECTION_IDS,
+  ...CARDAPIO_SECTION_IDS,
 ]);
 
 function syncUrlSectionHash(section) {
@@ -2098,6 +2112,9 @@ const PERMISSOES = {
     if (!sections.includes(section)) sections.push(section);
   });
   DELIVERY_SECTION_IDS.forEach((section) => {
+    if (!sections.includes(section)) sections.push(section);
+  });
+  CARDAPIO_SECTION_IDS.forEach((section) => {
     if (!sections.includes(section)) sections.push(section);
   });
 });
@@ -5369,6 +5386,24 @@ function applyPermissions() {
   if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
     sections = [...sections, "fechamento"];
   }
+  const cardapioAuto = (modulos) => modulos.some((m) => sections.includes(m));
+  if (
+    cardapioAuto(["deliveryProdutos", "deliveryCategorias", "deliveryCatalogo", "deliveryAdicionais", "comercialPdv", "comercialMesas"])
+  ) {
+    CARDAPIO_SECTION_IDS.forEach((s) => {
+      if (!sections.includes(s)) sections = [...sections, s];
+    });
+  }
+  if (cardapioAuto(CARDAPIO_SECTION_IDS)) {
+    [
+      ["cardapioItens", "deliveryProdutos"],
+      ["cardapioCategorias", "deliveryCategorias"],
+      ["cardapioConsulta", "deliveryCatalogo"],
+      ["cardapioAdicionais", "deliveryAdicionais"],
+    ].forEach(([cardapio, delivery]) => {
+      if (sections.includes(cardapio) && !sections.includes(delivery)) sections = [...sections, delivery];
+    });
+  }
   // Investimento: quem já tem acesso financeiro ganha o submenu novo (permissoes_menu antigas).
   const invSectionsAuto = ["investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios"];
   const temBaseFinanceiroInv =
@@ -5407,7 +5442,7 @@ function applyPermissions() {
   const perfilCfgAuto = (currentUser?.perfil || "").toString().trim().toUpperCase();
   // ADMIN sempre visualiza o protótipo completo, inclusive com permissões antigas personalizadas.
   if (perfilCfgAuto === "ADMIN") {
-    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS, ...DELIVERY_SECTION_IDS].forEach((s) => {
+    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS, ...DELIVERY_SECTION_IDS, ...CARDAPIO_SECTION_IDS].forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
   }
@@ -5545,6 +5580,10 @@ function applyPermissions() {
   const deliveryNavSubmenu = document.getElementById("deliveryMenu")?.closest(".nav-submenu");
   if (deliveryNavSubmenu) {
     deliveryNavSubmenu.classList.toggle("hidden", !DELIVERY_SECTION_IDS.some((s) => regras.sections.includes(s)));
+  }
+  const cardapioNavSubmenu = document.getElementById("cardapioMenu")?.closest(".nav-submenu");
+  if (cardapioNavSubmenu) {
+    cardapioNavSubmenu.classList.toggle("hidden", !CARDAPIO_SECTION_IDS.some((s) => regras.sections.includes(s)));
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
@@ -5713,6 +5752,7 @@ function applyPermissions() {
 
 function navigateTo(section) {
   if (section === "rhDocumentos") section = "rhCandidatos";
+  const contentSection = cardapioContentSection(section);
   refreshDomShellNav();
   if (!dom.sections.length) {
     refreshDomShellNav();
@@ -5731,7 +5771,7 @@ function navigateTo(section) {
   const sidebarNavScroll = document.querySelector(".sidebar-nav-scroll");
   const sidebarScrollTop = sidebarNavScroll ? sidebarNavScroll.scrollTop : 0;
   dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
-  dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+  dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${contentSection}Section`));
   window.cpdvSyncTopbarFocus?.(section);
   const contentScroll = document.querySelector(".content");
   if (contentScroll) contentScroll.scrollTop = 0;
@@ -5858,6 +5898,10 @@ function navigateTo(section) {
   if (deliveryNavSubmenuNav) {
     deliveryNavSubmenuNav.classList.toggle("open", DELIVERY_SECTION_IDS.includes(section));
   }
+  const cardapioNavSubmenuNav = document.getElementById("cardapioMenu")?.closest(".nav-submenu");
+  if (cardapioNavSubmenuNav) {
+    cardapioNavSubmenuNav.classList.toggle("open", CARDAPIO_SECTION_IDS.includes(section));
+  }
   const integracoesNavSubmenuNav = document.getElementById("integracoesMenu")?.closest(".nav-submenu");
   if (integracoesNavSubmenuNav) {
     const intSections = ["integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes"];
@@ -5942,10 +5986,10 @@ function navigateTo(section) {
   else if (section === "fidelidadeRecompensas") Promise.resolve(loadFidelidadeRecompensas?.()).catch((e) => showToast(e?.message || "Falha ao carregar recompensas.", "error"));
   else if (section === "fidelidadeRelatorios") Promise.resolve(loadFidelidadeRelatorios?.()).catch((e) => showToast(e?.message || "Falha ao carregar relatórios.", "error"));
   else if (section === "deliveryDashboard") Promise.resolve(loadDeliveryDashboard?.()).catch((e) => showToast(e?.message || "Falha ao carregar Delivery.", "error"));
-  else if (section === "deliveryCatalogo") Promise.resolve(loadDeliveryCatalogo?.()).catch((e) => showToast(e?.message || "Falha ao carregar o catálogo.", "error"));
-  else if (section === "deliveryCategorias") Promise.resolve(loadDeliveryCategorias?.()).catch((e) => showToast(e?.message || "Falha ao carregar categorias.", "error"));
-  else if (section === "deliveryProdutos") Promise.resolve(loadDeliveryProdutos?.()).catch((e) => showToast(e?.message || "Falha ao carregar produtos.", "error"));
-  else if (section === "deliveryAdicionais") Promise.resolve(loadDeliveryAdicionais?.()).catch((e) => showToast(e?.message || "Falha ao carregar adicionais.", "error"));
+  else if (section === "deliveryCatalogo" || section === "cardapioConsulta") Promise.resolve(loadDeliveryCatalogo?.()).catch((e) => showToast(e?.message || "Falha ao carregar o catálogo.", "error"));
+  else if (section === "deliveryCategorias" || section === "cardapioCategorias") Promise.resolve(loadDeliveryCategorias?.()).catch((e) => showToast(e?.message || "Falha ao carregar categorias.", "error"));
+  else if (section === "deliveryProdutos" || section === "cardapioItens") Promise.resolve(loadDeliveryProdutos?.()).catch((e) => showToast(e?.message || "Falha ao carregar produtos.", "error"));
+  else if (section === "deliveryAdicionais" || section === "cardapioAdicionais") Promise.resolve(loadDeliveryAdicionais?.()).catch((e) => showToast(e?.message || "Falha ao carregar adicionais.", "error"));
   else if (section === "deliveryVitrine") Promise.resolve(loadDeliveryVitrine?.()).catch((e) => showToast(e?.message || "Falha ao carregar a página de venda.", "error"));
   else if (section === "deliveryPedidos") Promise.resolve(loadDeliveryPedidos?.()).catch((e) => showToast(e?.message || "Falha ao carregar pedidos.", "error"));
   else if (section === "deliveryFretes") Promise.resolve(loadDeliveryFretes?.()).catch((e) => showToast(e?.message || "Falha ao carregar fretes.", "error"));
