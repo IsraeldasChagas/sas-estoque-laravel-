@@ -297,3 +297,18 @@
 .vf-ficha-nota {
   margin-top: 0.35rem;
 }
+
+.vf-ficha-resumo__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.vf-ficha-resumo__sub {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--vf-muted, #555);
+}
+
+#vfVinculoPrato .vf-ficha-resumo {
+  margin-top: 0.75rem;
+}

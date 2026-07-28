@@ -413,16 +413,18 @@
         </label>
       </div>
       <div id="vfVinculoPrato" class="vf-vinculo-pane" ${tipo === "prato" ? "" : "hidden"}>
-        <label class="vf-field vf-mt"><span>Ficha técnica (receita)</span>
+        <label class="vf-field vf-mt"><span>Ficha técnica (receita do restaurante)</span>
           <input type="search" id="vfFichaBusca" placeholder="Buscar receita…" autocomplete="off" value="">
           <select name="ficha_tecnica_id" id="vfFichaSelect" size="6" class="vf-estoque-select">
             <option value="">— Carregando fichas… —</option>
           </select>
-          <small class="vf-help">Cadastre a receita em <strong>Ficha técnica</strong> com insumos ligados a <strong>Produtos</strong>.</small>
+          <small class="vf-help">Escolha a receita cadastrada em <strong>Ficha técnica</strong>.</small>
         </label>
+        <div id="vfFichaResumo" class="vf-ficha-resumo vf-ficha-resumo--muted" ${tipo === "prato" ? "" : "hidden"} aria-live="polite">
+          <p class="vf-help">Selecione a ficha acima para ver os ingredientes que baixam no estoque.</p>
+        </div>
       </div>
       <p class="vf-help" id="vfEstoqueDica"></p>
-      <div id="vfFichaResumo" class="vf-ficha-resumo" hidden aria-live="polite"></div>
     </fieldset>`;
   }
 
@@ -439,7 +441,7 @@
     if (tipo === "prato") {
       if (dica) dica.textContent = "O cliente pede pelo cardápio; na venda o sistema usa os insumos desta ficha.";
       await refreshFichaSelect(root, produto);
-      await refreshFichaResumo(root, form);
+      await refreshFichaResumo(root, form, produto);
       return;
     }
     if (dica) dica.textContent = "Escolha o mesmo produto que você dá entrada no estoque (revenda).";
@@ -480,6 +482,17 @@
       const sel = Number(it.id) === current ? " selected" : "";
       return `<option value="${it.id}"${sel}>${esc(it.nome)}${ins}</option>`;
     })).join("");
+    if (form && current > 0) {
+      await refreshFichaResumo(root, form);
+    }
+  }
+
+  function fichaResumoQuery(form, produto) {
+    const fichaId = Number(form?.elements.ficha_tecnica_id?.value || produto?.ficha_tecnica_id || 0);
+    if (fichaId > 0) return `ficha_id=${fichaId}`;
+    const legado = Number(form?.elements.estoque_produto_id?.value || produto?.estoque_produto_id || 0);
+    if (legado > 0) return `produto_id=${legado}`;
+    return null;
   }
 
   function tipoVendaAtual(form) {
@@ -498,11 +511,14 @@
       box.hidden = true;
       return box;
     }
-    if (!data?.tem_ficha) {
+    if (!data?.tem_ficha && !(data?.ingredientes && data.ingredientes.length)) {
       box.hidden = false;
       box.className = "vf-ficha-resumo vf-ficha-resumo--warn";
-      box.innerHTML = `<p><strong>Sem ficha técnica</strong> para este produto.</p><p class="vf-help">${esc(data?.mensagem || "Cadastre a ficha apontando para o mesmo prato em Produtos / estoque.")}</p>`;
+      box.innerHTML = `<p><strong>Receita sem insumos no estoque</strong></p><p class="vf-help">${esc(data?.mensagem || "Na ficha técnica, vincule cada ingrediente a um produto de estoque (arroz, carne…).")}</p>`;
       return box;
+    }
+    if (data.tem_ficha === undefined && (data.ingredientes || []).length) {
+      data = { ...data, tem_ficha: true };
     }
     const ing = data.ingredientes || [];
     const rows = ing.map((it) => {
@@ -519,15 +535,15 @@
     box.hidden = false;
     box.className = "vf-ficha-resumo";
     box.innerHTML = `
-      <p><strong>Insumos na ficha técnica</strong> (${esc(data.nome_prato || "")}${data.rendimento_quantidade ? ` · rendimento ${Number(data.rendimento_quantidade).toLocaleString("pt-BR")}` : ""})</p>
-      <p class="vf-help">${esc(data.mensagem || "")}</p>
+      <h4 class="vf-ficha-resumo__title">Ingredientes que baixam no estoque</h4>
+      <p class="vf-ficha-resumo__sub">${esc(data.nome_prato || "")}${data.rendimento_quantidade ? ` · rendimento ${Number(data.rendimento_quantidade).toLocaleString("pt-BR")} porção(ões)` : ""}</p>
       ${data.nota_semi_acabado ? `<p class="vf-help vf-ficha-nota">${esc(data.nota_semi_acabado)}</p>` : ""}
       ${ing.length ? `<div class="vf-ficha-table-wrap"><table class="vf-ficha-table"><thead><tr><th>Produto / insumo</th><th>Qtd padrão</th><th>Tipo</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="vf-help">A ficha não tem ingredientes com produto de estoque vinculado. Revise a ficha técnica.</p>`}
     `;
     return box;
   }
 
-  async function refreshFichaResumo(root, form) {
+  async function refreshFichaResumo(root, form, produto) {
     const host = root.querySelector("#vfFichaResumo");
     if (!host) return;
     const tipo = tipoVendaAtual(form);
@@ -536,28 +552,32 @@
       host.innerHTML = "";
       return;
     }
-    const fichaId = Number(form.elements.ficha_tecnica_id?.value || 0);
-    if (!fichaId) {
-      host.hidden = false;
+    host.hidden = false;
+    const q = fichaResumoQuery(form, produto);
+    if (!q) {
       host.className = "vf-ficha-resumo vf-ficha-resumo--muted";
-      host.innerHTML = `<p class="vf-help">Selecione a ficha técnica para ver os insumos que saem do estoque.</p>`;
+      host.innerHTML = `<p class="vf-help">Selecione a ficha técnica acima para listar os ingredientes.</p>`;
       return;
     }
-    host.hidden = false;
     host.className = "vf-ficha-resumo vf-ficha-resumo--loading";
-    host.textContent = "Carregando receita…";
+    host.innerHTML = `<p class="vf-help">Carregando ingredientes…</p>`;
     try {
-      const data = await api(`/produtos-estoque-ficha?ficha_id=${fichaId}`);
-      const rendered = renderFichaResumoHtml(data, tipo);
-      host.replaceWith(rendered);
-      rendered.id = "vfFichaResumo";
+      const data = await api(`/produtos-estoque-ficha?${q}`);
+      const html = renderFichaResumoHtml(data, tipo);
+      host.className = html.className;
+      host.innerHTML = html.innerHTML;
+      host.hidden = html.hidden;
     } catch (e) {
       host.className = "vf-ficha-resumo vf-ficha-resumo--warn";
-      host.innerHTML = `<p class="vf-help">${esc(e?.message || "Não foi possível carregar a ficha.")}</p>`;
+      host.innerHTML = `<p class="vf-help">${esc(e?.message || "Não foi possível carregar os ingredientes.")}</p>`;
     }
   }
 
   function bindEstoqueVendaPicker(root, produto, unidadeDono) {
+    const form = root.querySelector("#vfProdutoEditorForm");
+    const onFichaPick = () => {
+      if (form) refreshFichaResumo(root, form, produto);
+    };
     refreshEstoqueSelect(root, produto, unidadeDono).catch((e) => toast(e?.message || "Não foi possível carregar produtos do estoque.", "error"));
     root.querySelectorAll('input[name="tipo_venda"]').forEach((r) => {
       r.addEventListener("change", () => refreshEstoqueSelect(root, produto, unidadeDono));
@@ -566,15 +586,15 @@
       clearTimeout(vfEstoqueBuscaTimer);
       vfEstoqueBuscaTimer = setTimeout(() => refreshEstoqueSelect(root, produto, unidadeDono), 300);
     });
-    root.querySelector("#vfEstoqueMostrarTodos")?.addEventListener("change", () => refreshEstoqueSelect(root, produto, unidadeDono));
-    root.querySelector("#vfEstoqueSelect")?.addEventListener("change", () => {});
-    root.querySelector("#vfFichaSelect")?.addEventListener("change", () => {
-      const form = root.querySelector("#vfProdutoEditorForm");
-      if (form) refreshFichaResumo(root, form);
-    });
+    root.querySelector("#vfFichaSelect")?.addEventListener("change", onFichaPick);
+    root.querySelector("#vfFichaSelect")?.addEventListener("input", onFichaPick);
+    root.querySelector("#vfFichaSelect")?.addEventListener("click", onFichaPick);
     root.querySelector("#vfFichaBusca")?.addEventListener("input", () => {
       clearTimeout(vfFichaBuscaTimer);
-      vfFichaBuscaTimer = setTimeout(() => refreshFichaSelect(root, produto), 300);
+      vfFichaBuscaTimer = setTimeout(async () => {
+        await refreshFichaSelect(root, produto);
+        onFichaPick();
+      }, 300);
     });
   }
 
