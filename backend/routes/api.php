@@ -11683,6 +11683,7 @@ require __DIR__ . '/fiscal_movimentacao_routes.php';
 require __DIR__ . '/producao_fiscal_routes.php';
 require __DIR__ . '/venda_fiscal_routes.php';
 require __DIR__ . '/fiscal_modulo_07_routes.php';
+require __DIR__ . '/fiscal_emissao_config_routes.php';
 require __DIR__ . '/pdv_routes.php';
 require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/tema_routes.php';

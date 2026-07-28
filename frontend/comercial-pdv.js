@@ -1249,6 +1249,7 @@
         <button type="button" class="btn primary" data-cpdv-fiscal-tab="visao" role="tab">Visão geral</button>
         <button type="button" class="btn neutral" data-cpdv-fiscal-tab="m7" role="tab">Consolidação (M7)</button>
         <button type="button" class="btn neutral" data-cpdv-fiscal-tab="pdv" role="tab">Vendas PDV (fiscal)</button>
+        <button type="button" class="btn neutral" data-cpdv-fiscal-tab="emissao" role="tab">Emissão (NF)</button>
         <button type="button" class="btn neutral" data-cpdv-fiscal-tab="emp" role="tab">Empresas / CNPJ</button>
       </nav>
       <div id="comercialFiscalPanel" class="cpdv-fiscal-panel"></div>`;
@@ -1297,6 +1298,7 @@
           <li>Cardápio e PDV registram venda; estoque baixa conforme revenda ou ficha técnica.</li>
           <li>Use <strong>Consolidação (M7)</strong> para entradas, saídas, créditos e apuração estimada.</li>
           <li>Use <strong>Vendas PDV (fiscal)</strong> para conferir vendas com trava de CNPJ/unidade.</li>
+          <li>Cadastre credenciais em <strong>Emissão (NF)</strong> ou Configurações → Emissão NF-e / NFC-e.</li>
           <li>Cadastre CNPJs em <strong>Empresas / CNPJ</strong> antes de operar.</li>
         </ul>
         ${visao?.disclaimer ? `<p class="subtle-text cpdv-fiscal-disclaimer">${visao.disclaimer}</p>` : ""}
@@ -1314,11 +1316,12 @@
       await cpdvRenderFiscalVisao(root);
       return;
     }
-    const embedId = { m7: "fiscalPainelModulo07Root", pdv: "fiscalVendaPdvRoot", emp: "fiscalEmpresasRoot" }[tab];
+    const embedId = { m7: "fiscalPainelModulo07Root", pdv: "fiscalVendaPdvRoot", emp: "fiscalEmpresasRoot", emissao: "fiscalEmissaoConfigEmbedRoot" }[tab];
     const load = {
       m7: () => window.loadFiscalPainelModulo07?.(),
       pdv: () => window.loadFiscalVendaPdv?.(),
       emp: () => window.loadFiscalEmpresas?.(),
+      emissao: () => window.loadFiscalEmissaoConfig?.({ rootId: "fiscalEmissaoConfigEmbedRoot" }),
     }[tab];
     const panel = root.querySelector("#comercialFiscalPanel");
     if (!panel || !embedId) return;

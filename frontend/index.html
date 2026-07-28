@@ -55,6 +55,7 @@
     <link rel="stylesheet" href="fiscal-producao.css?v=20260728-ficha-vinculo" />
     <link rel="stylesheet" href="fiscal-venda-pdv.css?v=20260727-fiscal-m6" />
     <link rel="stylesheet" href="fiscal-modulo-07.css?v=20260727-fiscal-m7" />
+    <link rel="stylesheet" href="fiscal-emissao-config.css?v=20260728-emissao" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
     <link rel="stylesheet" href="comercial-pdv.css?v=20260728-fiscal-fase" />
@@ -385,6 +386,7 @@
             </a>
             <div class="nav-submenu-content">
               <div class="nav-submenu-divider-label">Fiscal — cadastro</div>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalEmissaoConfig"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Emissão NF-e / NFC-e</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalEmpresas"><span class="nav-icon" aria-hidden="true">🏢</span><span class="nav-label">Empresas (CNPJ)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalPerfisTributarios"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Perfis tributários</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalComprasRelatorio"><span class="nav-icon" aria-hidden="true">📥</span><span class="nav-label">Entradas fiscais (compras)</span></a>
@@ -4823,6 +4825,10 @@
             <div id="integracaoConfiguracoesRoot" class="int-page-wrap"></div>
           </section>
 
+          <section id="fiscalEmissaoConfigSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>🧾 Emissão NF-e / NFC-e</h2><p class="subtle-text">Homologação ou produção, token do emissor, CSC e séries — pronto para ligar a SEFAZ na próxima fase.</p></div></div>
+            <div id="fiscalEmissaoConfigRoot" class="int-page-wrap"></div>
+          </section>
           <section id="fiscalEmpresasSection" class="view-section hidden">
             <div class="cfg-section-head"><div><h2>🏢 Empresas (CNPJ)</h2><p class="subtle-text">Pessoa jurídica responsável pelo estoque e regime tributário.</p></div></div>
             <div id="fiscalEmpresasRoot" class="int-page-wrap"></div>
@@ -7962,7 +7968,7 @@
     <script src="ayla-ia.js?v=20260714-ayla-padrao"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
-    <script src="comercial-pdv.js?v=20260728-fiscal-fase"></script>
+    <script src="comercial-pdv.js?v=20260728-emissao-tab"></script>
     <script src="integracoes.js?v=20260716-int1"></script>
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
@@ -7972,6 +7978,7 @@
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script src="app.js?v=20260728-cardapio-ficha"></script>
+    <script src="fiscal-emissao-config.js?v=20260728-emissao"></script>
     <script src="fiscal-cadastro.js?v=20260727-fiscal-modal-space"></script>
     <script src="fiscal-compras.js?v=20260727-fiscal-m2-ready"></script>
     <script src="fiscal-movimentacoes.js?v=20260727-fiscal-m3"></script>

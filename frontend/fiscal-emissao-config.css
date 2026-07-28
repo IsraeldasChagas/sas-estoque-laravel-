@@ -1,0 +1,115 @@
+/* Configuração de emissão NF-e / NFC-e — credenciais, homologação, CSC, séries */
+
+.fem-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 960px;
+}
+
+.fem-empresa-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+}
+
+.fem-empresa-bar label {
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.fem-checklist {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.fem-checklist li {
+  margin: 0.35rem 0;
+}
+
+.fem-checklist li.fem-ok {
+  color: var(--success-text, #0d6832);
+}
+
+.fem-checklist li.fem-pend {
+  color: var(--warn-text, #9a6700);
+}
+
+.fem-badge {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.fem-badge--ready {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.fem-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.fem-badge--off {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.fem-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem 1rem;
+}
+
+.fem-block {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.fem-block h4 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.fem-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.fem-resumo-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.fem-resumo-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  background: var(--card-bg, #fff);
+}
+
+.fem-resumo-card:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.fem-resumo-card strong {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.fem-file-hint {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
