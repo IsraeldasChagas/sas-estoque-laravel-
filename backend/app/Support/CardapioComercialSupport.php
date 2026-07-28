@@ -69,6 +69,18 @@ final class CardapioComercialSupport
             }
             $preco = round((float) ($p->preco ?? 0), 2);
             $estoqueOk = $estoqueId > 0 && $saldo !== null && $saldo > 0.0001;
+            $tipoVenda = Schema::hasColumn('dlv_produtos', 'tipo_venda')
+                ? (string) ($p->tipo_venda ?? 'revenda')
+                : 'revenda';
+            if ($estoqueId <= 0) {
+                $aviso = $tipoVenda === 'prato'
+                    ? 'No cardápio: escolha o prato no estoque (não o insumo).'
+                    : 'No cardápio: escolha o produto que você revende.';
+            } elseif (! $estoqueOk) {
+                $aviso = 'Sem saldo nesta unidade — dê entrada no estoque.';
+            } else {
+                $aviso = null;
+            }
 
             $out[] = [
                 'id' => (int) $p->id,
@@ -81,9 +93,8 @@ final class CardapioComercialSupport
                 'saldo' => $saldo,
                 'disponivel' => true,
                 'estoque_ok' => $estoqueOk,
-                'aviso' => $estoqueId <= 0
-                    ? 'Vincule o ID produto estoque no cardápio.'
-                    : ($estoqueOk ? null : 'Sem saldo nesta unidade — confira o estoque.'),
+                'tipo_venda' => $tipoVenda,
+                'aviso' => $aviso,
                 'fonte' => 'cardapio',
             ];
         }

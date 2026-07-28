@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Delivery;
 
 use App\Support\Delivery\CardapioProdutoUnidadeSupport;
+use App\Support\ProducaoEstoqueSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -25,6 +27,60 @@ class DeliveryProdutoController extends DeliveryBaseController
         'image/webp' => 'webp',
         'image/gif' => 'gif',
     ];
+
+    private const TIPOS_VENDA = ['revenda', 'prato'];
+
+    public function produtosEstoqueOpcoes(Request $request): JsonResponse
+    {
+        $usuario = $this->auth($request, 'deliveryProdutos');
+        $tipo = in_array($request->query('tipo'), self::TIPOS_VENDA, true) ? (string) $request->query('tipo') : 'revenda';
+        $q = trim((string) $request->query('q', ''));
+        $unidadeId = (int) ($request->query('unidade_id') ?: $this->access->unidadeId($request, $usuario) ?: 0);
+
+        $query = DB::table('produtos as p')->select('p.id', 'p.nome', 'p.unidade_id');
+        if (Schema::hasColumn('produtos', 'ativo')) {
+            $query->where(function ($w) {
+                $w->where('p.ativo', 1)->orWhere('p.ativo', true);
+            });
+        }
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $query->where('p.nome', 'like', $like);
+        }
+
+        $hasFicha = Schema::hasTable('fichas_tecnicas') && Schema::hasColumn('fichas_tecnicas', 'produto_final_id');
+        if ($tipo === 'prato' && $hasFicha && ! $request->boolean('todos')) {
+            $query->whereExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('fichas_tecnicas as f')
+                    ->whereColumn('f.produto_final_id', 'p.id');
+            });
+        }
+
+        $rows = $query->orderBy('p.nome')->limit(100)->get();
+
+        $items = $rows->map(function ($row) use ($unidadeId, $hasFicha) {
+            $temFicha = $hasFicha && DB::table('fichas_tecnicas')->where('produto_final_id', (int) $row->id)->exists();
+            $saldo = $unidadeId > 0 ? ProducaoEstoqueSupport::saldoDisponivel((int) $row->id, $unidadeId) : null;
+
+            return [
+                'id' => (int) $row->id,
+                'nome' => (string) $row->nome,
+                'tem_ficha_tecnica' => $temFicha,
+                'saldo_unidade' => $saldo,
+            ];
+        })->values();
+
+        return response()->json([
+            'tipo' => $tipo,
+            'unidade_id' => $unidadeId > 0 ? $unidadeId : null,
+            'items' => $items,
+            'dica' => $tipo === 'prato'
+                ? 'Prato ou produção feita por vocês. Escolha o cadastro do prato pronto (ex.: Arroz paraense), não o arroz cru. Ingredientes saem na ficha técnica / produção.'
+                : 'Produto que você compra pronto para revender: água, refrigerante, cerveja…',
+            'mostrando_só_com_ficha' => $tipo === 'prato' && $hasFicha && ! $request->boolean('todos'),
+        ]);
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -270,6 +326,8 @@ class DeliveryProdutoController extends DeliveryBaseController
             'adicionais' => $adicionais,
             'ingredientes' => $ingredientes,
             'unidades_venda_ids' => CardapioProdutoUnidadeSupport::unidadesDoProduto($id, (int) $produto->unidade_id),
+            'tipo_venda' => $this->normalizarTipoVenda($produto->tipo_venda ?? null),
+            'estoque_produto_nome' => $this->nomeProdutoEstoque($produto->estoque_produto_id ?? null),
         ]);
     }
 
@@ -325,7 +383,9 @@ class DeliveryProdutoController extends DeliveryBaseController
             'acrescimos_loja_ui' => $this->uiMode($data['acrescimos_loja_ui'] ?? null, 'stepper'),
             'apresentacao' => $data['apresentacao'] ?? null,
             'ordem' => (int) ($data['ordem'] ?? 0),
-        ];
+        ] + (Schema::hasColumn('dlv_produtos', 'tipo_venda')
+            ? ['tipo_venda' => $this->normalizarTipoVenda($data['tipo_venda'] ?? null)]
+            : []);
     }
 
     private function uiMode(mixed $value, string $default): string
@@ -352,6 +412,7 @@ class DeliveryProdutoController extends DeliveryBaseController
             'estoque' => 'nullable|integer|min:0',
             'categoria_id' => 'nullable|integer',
             'estoque_produto_id' => 'nullable|integer',
+            'tipo_venda' => ['nullable', 'string', Rule::in(self::TIPOS_VENDA)],
             'sku' => 'nullable|string|max:80',
             'descricao' => 'nullable|string',
             'foto_path' => 'nullable|string|max:255',
@@ -781,5 +842,22 @@ class DeliveryProdutoController extends DeliveryBaseController
 
         CardapioProdutoUnidadeSupport::validarUnidadesExistem($ids);
         CardapioProdutoUnidadeSupport::sincronizar($produtoId, $ids, $unidadeDono);
+    }
+
+    private function normalizarTipoVenda(mixed $tipo): string
+    {
+        $t = is_string($tipo) ? strtolower(trim($tipo)) : '';
+
+        return in_array($t, self::TIPOS_VENDA, true) ? $t : 'revenda';
+    }
+
+    private function nomeProdutoEstoque(mixed $produtoId): ?string
+    {
+        $id = (int) $produtoId;
+        if ($id <= 0) {
+            return null;
+        }
+
+        return DB::table('produtos')->where('id', $id)->value('nome');
     }
 }

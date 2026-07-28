@@ -238,7 +238,7 @@
         <div class="vf-filter-bar__buttons"><button class="vf-btn" type="submit">Filtrar</button><button class="vf-btn" type="button" data-vf-clear-filter>Limpar</button></div>
       </form>
       <div class="vf-card vf-table-card"><div class="vf-table-wrap"><table class="vf-table">
-        <thead><tr><th style="width:3.5rem"></th><th>Cód. interno</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Status</th><th class="vf-table__right">Ações</th></tr></thead>
+        <thead><tr><th style="width:3.5rem"></th><th>Cód. interno</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Tipo / Status</th><th class="vf-table__right">Ações</th></tr></thead>
         <tbody id="vfProdutosBody">${renderProdutosRows(items)}</tbody>
       </table></div></div>
     </div>`;
@@ -278,7 +278,7 @@
       <td><strong>${esc(p.nome)}</strong></td>
       <td>${esc(p.categoria_nome || "—")}</td>
       <td>${money(p.preco)}</td>
-      <td><small>${esc(unidadesVendaLabels(p.unidades_venda_ids))}</small><br>${produtoStatusBadges(p)}</td>
+      <td><span class="vf-badge vf-badge--neutral">${p.tipo_venda === "prato" ? "Prato" : "Revenda"}</span><br>${produtoStatusBadges(p)}</td>
       <td class="vf-table__right"><button class="vf-btn" type="button" data-vf-edit-product="${p.id}">Editar</button></td>
     </tr>`).join("");
   }
@@ -320,8 +320,7 @@
             </label>
             <label class="vf-field vf-col-6"><span>Categoria</span><select name="categoria_id">${categoriaOptions(produto?.categoria_id)}</select><small><button class="vf-btn vf-btn--link" type="button" data-vf-go-categorias>Gerenciar categorias</button></small></label>
             <label class="vf-field vf-col-6"><span>Preço (R$)</span><input name="preco" type="number" min="0" step="0.01" value="${esc(produto?.preco ?? "")}" required></label>
-            <label class="vf-field vf-col-6"><span>ID produto estoque</span><input name="estoque_produto_id" type="number" min="1" step="1" value="${esc(produto?.estoque_produto_id ?? "")}" placeholder="Obrigatório p/ PDV">
-              <small>Vincula ao cadastro de estoque para baixa no PDV, mesas e fiscal.</small></label>
+            ${renderEstoqueVendaFieldset(produto)}
             <label class="vf-field vf-col-12"><span>Descrição</span><textarea name="descricao" rows="3">${esc(produto?.descricao || "")}</textarea></label>
 
             <fieldset class="vf-fieldset vf-col-12"><legend>Disponível para venda nas unidades</legend>
@@ -393,7 +392,74 @@
         ${editando ? `<div class="vf-delete-zone"><button class="vf-btn vf-btn--danger" type="button" data-vf-delete-product="${produto.id}">Excluir produto</button></div>` : ""}
       </div>
     </div>`;
-    bindProdutoEditor(root, produto);
+    bindProdutoEditor(root, produto, unidadeDono);
+  }
+
+  function renderEstoqueVendaFieldset(produto) {
+    const tipo = produto?.tipo_venda === "prato" ? "prato" : "revenda";
+    return `<fieldset class="vf-fieldset vf-col-12" id="vfEstoqueVendaFieldset">
+      <legend>O que baixa no estoque quando vender?</legend>
+      <p class="vf-help">O cardápio é o que o cliente pede. Aqui você escolhe qual cadastro de <strong>Produtos / estoque</strong> desconta na venda.</p>
+      <div class="vf-choice-stack">
+        <label class="vf-check"><input type="radio" name="tipo_venda" value="revenda" ${tipo === "revenda" ? "checked" : ""}> <strong>Revenda</strong> — compro pronto (água, Coca, Monster…)</label>
+        <label class="vf-check"><input type="radio" name="tipo_venda" value="prato" ${tipo === "prato" ? "checked" : ""}> <strong>Prato / produção nossa</strong> — prato feito por nós (ex.: arroz paraense). Insumos (arroz cru) saem na ficha técnica.</label>
+      </div>
+      <label class="vf-field vf-mt"><span>Produto no estoque</span>
+        <input type="search" id="vfEstoqueBusca" placeholder="Digite o nome para buscar…" autocomplete="off" value="">
+        <select name="estoque_produto_id" id="vfEstoqueSelect" size="7" class="vf-estoque-select">
+          <option value="">— Carregando lista… —</option>
+        </select>
+      </label>
+      <p class="vf-help" id="vfEstoqueDica"></p>
+      <label class="vf-check" id="vfEstoqueTodosWrap" hidden>
+        <input type="checkbox" id="vfEstoqueMostrarTodos"> Mostrar também produtos sem receita (ficha técnica)
+      </label>
+    </fieldset>`;
+  }
+
+  let vfEstoqueBuscaTimer = null;
+
+  async function refreshEstoqueSelect(root, produto, unidadeDono) {
+    const form = root.querySelector("#vfProdutoEditorForm");
+    if (!form) return;
+    const tipo = form.querySelector('input[name="tipo_venda"]:checked')?.value || "revenda";
+    const q = root.querySelector("#vfEstoqueBusca")?.value.trim() || "";
+    const todos = root.querySelector("#vfEstoqueMostrarTodos")?.checked;
+    const params = new URLSearchParams({ tipo });
+    if (unidadeDono > 0) params.set("unidade_id", String(unidadeDono));
+    if (q) params.set("q", q);
+    if (todos) params.set("todos", "1");
+    const data = await api(`/produtos-estoque-opcoes?${params.toString()}`);
+    const select = root.querySelector("#vfEstoqueSelect");
+    const dica = root.querySelector("#vfEstoqueDica");
+    const todosWrap = root.querySelector("#vfEstoqueTodosWrap");
+    if (dica) dica.textContent = data.dica || "";
+    if (todosWrap) todosWrap.hidden = tipo !== "prato";
+    const current = Number(form.elements.estoque_produto_id?.value || produto?.estoque_produto_id || 0);
+    const items = data.items || [];
+    if (!select) return;
+    const options = ['<option value="">— Selecione o produto —</option>'].concat(items.map((it) => {
+      const saldo = it.saldo_unidade != null ? ` · saldo ${Number(it.saldo_unidade).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}` : "";
+      const ficha = it.tem_ficha_tecnica ? " · receita cadastrada" : "";
+      const sel = Number(it.id) === current ? " selected" : "";
+      return `<option value="${it.id}"${sel}>${esc(it.nome)}${ficha}${saldo}</option>`;
+    }));
+    select.innerHTML = options.join("");
+    if (current > 0 && !items.some((it) => Number(it.id) === current) && produto?.estoque_produto_nome) {
+      select.insertAdjacentHTML("afterbegin", `<option value="${current}" selected>${esc(produto.estoque_produto_nome)} (atual)</option>`);
+    }
+  }
+
+  function bindEstoqueVendaPicker(root, produto, unidadeDono) {
+    refreshEstoqueSelect(root, produto, unidadeDono).catch((e) => toast(e?.message || "Não foi possível carregar produtos do estoque.", "error"));
+    root.querySelectorAll('input[name="tipo_venda"]').forEach((r) => {
+      r.addEventListener("change", () => refreshEstoqueSelect(root, produto, unidadeDono));
+    });
+    root.querySelector("#vfEstoqueBusca")?.addEventListener("input", () => {
+      clearTimeout(vfEstoqueBuscaTimer);
+      vfEstoqueBuscaTimer = setTimeout(() => refreshEstoqueSelect(root, produto, unidadeDono), 300);
+    });
+    root.querySelector("#vfEstoqueMostrarTodos")?.addEventListener("change", () => refreshEstoqueSelect(root, produto, unidadeDono));
   }
 
   function renderIngredienteRow(ingrediente) {
@@ -416,8 +482,9 @@
     }).join("");
   }
 
-  function bindProdutoEditor(root, produto) {
+  function bindProdutoEditor(root, produto, unidadeDono) {
     const form = $("vfProdutoEditorForm");
+    bindEstoqueVendaPicker(root, produto, unidadeDono || 0);
     syncProdutoStatusFields(form);
     form.elements.ativa?.addEventListener("change", () => syncProdutoStatusFields(form, "ativa"));
     root.querySelectorAll("[data-vf-back-products]").forEach((b) => { b.onclick = () => loadProdutos(); });
@@ -468,11 +535,17 @@
           throw new Error("Informe o máximo de ingredientes que o cliente pode retirar.");
         }
         const mainFile = form.elements.foto?.files?.[0];
+        const estoqueId = val(form, "estoque_produto_id") === "" ? null : Number(val(form, "estoque_produto_id"));
+        if (!estoqueId) {
+          throw new Error("Escolha qual produto do estoque baixa na venda (lista acima).");
+        }
+        const tipoVenda = form.querySelector('input[name="tipo_venda"]:checked')?.value || "revenda";
         const payload = {
           nome: val(form, "nome").trim(),
           categoria_id: val(form, "categoria_id") ? Number(val(form, "categoria_id")) : null,
           preco: Number(val(form, "preco")),
-          estoque_produto_id: val(form, "estoque_produto_id") === "" ? null : Number(val(form, "estoque_produto_id")),
+          estoque_produto_id: estoqueId,
+          tipo_venda: tipoVenda,
           unidades_venda_ids: [...form.querySelectorAll('input[name="unidades_venda_ids"]:checked')].map((x) => Number(x.value)),
           descricao: val(form, "descricao") || null,
           foto_base64: mainFile ? await fileToDataUrl(mainFile, 3 * 1024 * 1024, "Foto do produto") : null,
