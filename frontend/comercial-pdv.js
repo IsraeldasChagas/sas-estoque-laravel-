@@ -241,15 +241,21 @@
 
   function cpdvProdutosAtivos() {
     if (cpdvState.apiReady && cpdvState.produtosApi.length) {
-      return cpdvState.produtosApi.map((p) => ({
-        id: p.id,
-        nome: p.nome,
-        categoria: (p.categoria || "geral").toLowerCase(),
-        preco: Number(p.preco) || 0,
-        favorito: false,
-        disponivel: p.disponivel !== false && (p.saldo == null || p.saldo > 0),
-        estoqueProdutoId: p.id,
-      }));
+      return cpdvState.produtosApi.map((p) => {
+        const cardapioId = p.cardapio_produto_id != null ? Number(p.cardapio_produto_id) : Number(p.id);
+        const estoqueId = p.estoque_produto_id != null ? Number(p.estoque_produto_id) : Number(p.id);
+        return {
+          id: cardapioId,
+          cardapioProdutoId: cardapioId,
+          nome: p.nome,
+          categoria: (p.categoria || "geral").toLowerCase(),
+          preco: Number(p.preco) || 0,
+          favorito: false,
+          disponivel: p.disponivel !== false && (p.saldo == null || p.saldo > 0),
+          estoqueProdutoId: estoqueId,
+          fonte: p.fonte || "estoque",
+        };
+      });
     }
     return DADOS_DEMONSTRACAO_PDV.produtos;
   }
@@ -321,10 +327,12 @@
     if (ex) ex.qtd += 1;
     else cpdvState.cart.push({
       produtoId: p.id,
+      cardapioProdutoId: p.cardapioProdutoId || p.id,
       estoqueProdutoId: p.estoqueProdutoId || p.id,
       nome: p.nome,
       preco: p.preco,
       qtd: 1,
+      fonte: p.fonte || "estoque",
     });
     cpdvSyncCarrinhoMemoria();
     loadComercialPdv();
@@ -587,7 +595,7 @@
           return `<button type="button" class="cpdv-prod cpdv-prod--sm${off}" ${p.disponivel ? `data-cpdv-mesa-add="${p.id}" data-preco="${p.preco}"` : "disabled"}>
             <span>${escHtml(p.nome)}</span><small>${moeda(p.preco)}</small></button>`;
         }).join("")
-      : '<p class="subtle-text">Cadastre produtos com estoque/preço na unidade.</p>';
+      : '<p class="subtle-text">Cadastre itens no cardápio (Delivery → Produtos) com estoque vinculado.</p>';
     const lista = itens.length
       ? itens.map((i) =>
           `<div class="cpdv-cart-item"><div><strong>${escHtml(i.produto_nome)}</strong><br>${i.quantidade} × ${moeda(i.preco_unitario)} = ${moeda(i.valor_total)}</div>
@@ -647,7 +655,7 @@
           cpdvState.comandaAtual = await cpdvFetch(`/pdv/comandas/${com.id}/itens`, {
             method: "POST",
             body: JSON.stringify({
-              produto_id: Number(btn.dataset.cpdvMesaAdd),
+              cardapio_produto_id: Number(btn.dataset.cpdvMesaAdd),
               quantidade: 1,
               preco_unitario: Number(btn.dataset.preco || 0),
             }),
@@ -922,6 +930,7 @@
       if (unidadeId > 0 && cpdvState.cart.length && cpdvState.apiReady) {
         try {
           const itens = cpdvState.cart.map((i) => ({
+            cardapio_produto_id: i.fonte === "cardapio" || i.cardapioProdutoId ? (i.cardapioProdutoId || i.produtoId) : undefined,
             produto_id: i.estoqueProdutoId || i.produtoId,
             quantidade: i.qtd,
             preco_unitario: i.preco,
@@ -950,6 +959,7 @@
       if (unidadeId > 0 && cpdvState.cart.length && typeof window.fiscalPdvConfirmarPagamento === "function") {
         try {
           const itens = cpdvState.cart.map((i) => ({
+            cardapio_produto_id: i.fonte === "cardapio" || i.cardapioProdutoId ? (i.cardapioProdutoId || i.produtoId) : undefined,
             produto_id: i.estoqueProdutoId || i.produtoId,
             quantidade: i.qtd,
             preco_unitario: i.preco,

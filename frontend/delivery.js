@@ -59,7 +59,7 @@
   async function loadCatalogo() {
     const root = $("deliveryCatalogoRoot"); if (!root) return;
     const data = await api("/catalogo");
-    root.innerHTML = shell(header("Catálogo (Consulta)", "Visualize exatamente os itens ativos e publicados na vitrine.", "🔎",
+    root.innerHTML = shell(header("Catálogo (Consulta)", "Cardápio da unidade: vitrine do cliente, PDV e mesas usam os mesmos itens cadastrados em Produtos.", "🔎",
       `<button class="btn secondary" type="button" data-go="deliveryProdutos">Gerenciar produtos</button>`)
       + `<form id="dlvCatalogoBusca" class="orc-filterbar"><label>Buscar no catálogo<input name="busca" placeholder="Produto, SKU ou descrição"></label><button class="btn primary">Buscar</button><span class="orc-badge orc-badge--neutral">${Number(data.total_produtos || 0)} produtos publicados</span></form>
       <div id="dlvCatalogoGrupos">${renderCatalogo(data.categorias || [])}</div>`);
@@ -125,7 +125,8 @@
   function produtoStatusBadges(p) {
     if (Number(p.ativo)) {
       const badges = [`<span class="vf-badge vf-badge--active">Ativo</span>`];
-      if (!Number(p.visivel_loja)) badges.push('<span class="vf-badge vf-badge--hidden">Oculto</span>');
+      if (!Number(p.visivel_loja)) badges.push('<span class="vf-badge vf-badge--hidden">Oculto loja</span>');
+      if (p.visivel_pdv != null && !Number(p.visivel_pdv)) badges.push('<span class="vf-badge vf-badge--hidden">Oculto PDV</span>');
       return badges.join("");
     }
     if (Number(p.visivel_loja)) {
@@ -136,15 +137,21 @@
 
   function produtoStatusFromRecord(produto) {
     if (!produto) {
-      return { ativa: true, indisponivel: false, visivel_loja: true };
+      return { ativa: true, indisponivel: false, visivel_loja: true, visivel_pdv: true };
     }
     if (Number(produto.ativo)) {
-      return { ativa: true, indisponivel: false, visivel_loja: Number(produto.visivel_loja) !== 0 };
+      return {
+        ativa: true,
+        indisponivel: false,
+        visivel_loja: Number(produto.visivel_loja) !== 0,
+        visivel_pdv: produto.visivel_pdv == null ? true : Number(produto.visivel_pdv) !== 0,
+      };
     }
     return {
       ativa: false,
       indisponivel: Number(produto?.visivel_loja) !== 0,
       visivel_loja: Number(produto?.visivel_loja) !== 0,
+      visivel_pdv: produto?.visivel_pdv == null ? true : Number(produto.visivel_pdv) !== 0,
     };
   }
 
@@ -261,6 +268,8 @@
             </label>
             <label class="vf-field vf-col-6"><span>Categoria</span><select name="categoria_id">${categoriaOptions(produto?.categoria_id)}</select><small><button class="vf-btn vf-btn--link" type="button" data-vf-go-categorias>Gerenciar categorias</button></small></label>
             <label class="vf-field vf-col-6"><span>Preço (R$)</span><input name="preco" type="number" min="0" step="0.01" value="${esc(produto?.preco ?? "")}" required></label>
+            <label class="vf-field vf-col-6"><span>ID produto estoque</span><input name="estoque_produto_id" type="number" min="1" step="1" value="${esc(produto?.estoque_produto_id ?? "")}" placeholder="Obrigatório p/ PDV">
+              <small>Vincula ao cadastro de estoque para baixa no PDV, mesas e fiscal.</small></label>
             <label class="vf-field vf-col-12"><span>Descrição</span><textarea name="descricao" rows="3">${esc(produto?.descricao || "")}</textarea></label>
 
             <fieldset class="vf-fieldset vf-col-12"><legend>Na vitrine da loja — retirar ingredientes</legend>
@@ -311,9 +320,12 @@
                 <input type="checkbox" name="indisponivel" ${status.indisponivel ? "checked" : ""}> Indisponível na loja
               </label>
               <label class="vf-check ${status.ativa ? "" : "hidden"}" id="vfProdutoVisivelWrap">
-                <input type="checkbox" name="visivel_loja" ${status.visivel_loja ? "checked" : ""}> Visível na loja pública
+                <input type="checkbox" name="visivel_loja" ${status.visivel_loja ? "checked" : ""}> Visível na loja pública (delivery)
               </label>
-              <small class="vf-help">Desmarque <strong>Ativa</strong> para pausar a venda. Com <strong>Indisponível</strong>, o item continua no cardápio, mas o cliente não consegue comprar.</small>
+              <label class="vf-check ${status.ativa ? "" : "hidden"}" id="vfProdutoVisivelPdvWrap">
+                <input type="checkbox" name="visivel_pdv" ${status.visivel_pdv ? "checked" : ""}> Visível no PDV e mesas
+              </label>
+              <small class="vf-help">O cardápio é único: cadastre aqui e use em delivery, balcão e salão. Desmarque <strong>Ativa</strong> para pausar. <strong>Indisponível</strong> mantém na vitrine sem venda online.</small>
             </div>
             <div class="vf-form-actions vf-col-12">
               <button class="vf-btn vf-btn--primary" type="submit">${editando ? "Atualizar" : "Salvar"}</button>
@@ -403,6 +415,7 @@
           nome: val(form, "nome").trim(),
           categoria_id: val(form, "categoria_id") ? Number(val(form, "categoria_id")) : null,
           preco: Number(val(form, "preco")),
+          estoque_produto_id: val(form, "estoque_produto_id") === "" ? null : Number(val(form, "estoque_produto_id")),
           descricao: val(form, "descricao") || null,
           foto_base64: mainFile ? await fileToDataUrl(mainFile, 3 * 1024 * 1024, "Foto do produto") : null,
           foto_path: produto?.foto_path || null,
@@ -417,10 +430,14 @@
           ...(function () {
             const ativa = bool(form, "ativa");
             if (ativa) {
-              return { ativo: true, visivel_loja: bool(form, "visivel_loja") };
+              return {
+                ativo: true,
+                visivel_loja: bool(form, "visivel_loja"),
+                visivel_pdv: bool(form, "visivel_pdv"),
+              };
             }
             const indisponivel = bool(form, "indisponivel");
-            return { ativo: false, visivel_loja: indisponivel };
+            return { ativo: false, visivel_loja: indisponivel, visivel_pdv: bool(form, "visivel_pdv") };
           })(),
         };
         await api(produto ? `/produtos/${produto.id}` : "/produtos", { method: produto ? "PUT" : "POST", body: JSON.stringify(payload) });

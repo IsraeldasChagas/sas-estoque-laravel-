@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\CardapioComercialSupport;
 use App\Support\PdvComercialSupport;
 use App\Support\VendaFiscalSupport;
 use Illuminate\Http\Request;
@@ -10,6 +11,8 @@ Route::get('/pdv/meta', function () {
     return response()->json([
         'modulo_comandas' => PdvComercialSupport::moduloAtivo(),
         'modulo_venda_fiscal' => VendaFiscalSupport::moduloAtivo(),
+        'cardapio_tabela' => CardapioComercialSupport::tabelaDisponivel(),
+        'cardapio_fonte' => 'delivery',
     ]);
 });
 
@@ -92,12 +95,16 @@ Route::post('/pdv/comandas/abrir', function (Request $request) {
 
 Route::post('/pdv/comandas/{id}/itens', function (Request $request, int $id) {
     $data = $request->validate([
-        'produto_id' => 'required|integer',
+        'produto_id' => 'nullable|integer',
+        'cardapio_produto_id' => 'nullable|integer',
         'quantidade' => 'required|numeric|min:0.001',
         'preco_unitario' => 'nullable|numeric|min:0',
         'desconto' => 'nullable|numeric|min:0',
         'observacao' => 'nullable|string',
     ]);
+    if (empty($data['produto_id']) && empty($data['cardapio_produto_id'])) {
+        return response()->json(['error' => 'Informe cardapio_produto_id ou produto_id.'], 422);
+    }
     try {
         return response()->json(PdvComercialSupport::adicionarItem($id, $data));
     } catch (\Throwable $e) {
@@ -142,11 +149,17 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'pdv_terminal' => 'nullable|string|max:64',
             'observacao' => 'nullable|string',
             'itens' => 'required|array|min:1',
-            'itens.*.produto_id' => 'required|integer|exists:produtos,id',
+            'itens.*.produto_id' => 'nullable|integer',
+            'itens.*.cardapio_produto_id' => 'nullable|integer',
             'itens.*.quantidade' => 'required|numeric|min:0.001',
-            'itens.*.preco_unitario' => 'required|numeric|min:0',
+            'itens.*.preco_unitario' => 'nullable|numeric|min:0',
             'itens.*.desconto' => 'nullable|numeric|min:0',
         ]);
+        foreach ($payload['itens'] as $idx => $linha) {
+            if (empty($linha['produto_id']) && empty($linha['cardapio_produto_id'])) {
+                return response()->json(['error' => "Item {$idx}: informe cardapio_produto_id ou produto_id."], 422);
+            }
+        }
 
         return response()->json(PdvComercialSupport::vendaBalcao($payload, $uid), 201);
     } catch (\Throwable $e) {

@@ -47,6 +47,10 @@ final class PdvComercialSupport
     /** @return array<int, array<string, mixed>> */
     public static function listarProdutosPdv(int $unidadeId, ?string $search = null): array
     {
+        if (CardapioComercialSupport::usaCardapioNaUnidade($unidadeId)) {
+            return CardapioComercialSupport::listarParaPdv($unidadeId, $search);
+        }
+
         $q = DB::table('produtos');
         if (Schema::hasColumn('produtos', 'ativo')) {
             $q->where(function ($w) {
@@ -103,6 +107,9 @@ final class PdvComercialSupport
                 'preco' => round($preco, 2),
                 'saldo' => $saldo,
                 'disponivel' => $saldo > 0.0001,
+                'fonte' => 'estoque',
+                'cardapio_produto_id' => null,
+                'estoque_produto_id' => (int) $p->id,
             ];
         }
 
@@ -228,16 +235,15 @@ final class PdvComercialSupport
         if (! $com || ! in_array($com->status, ['aberta', 'aguardando_pagamento'], true)) {
             throw new \RuntimeException('Comanda não está aberta.');
         }
-        $produtoId = (int) $item['produto_id'];
         $qtd = (float) $item['quantidade'];
-        if ($produtoId <= 0 || $qtd <= 0) {
-            throw new \InvalidArgumentException('Produto e quantidade obrigatórios.');
-        }
-        $preco = isset($item['preco_unitario']) ? (float) $item['preco_unitario'] : self::precoSugeridoProduto($produtoId);
-        if ($preco <= 0) {
-            throw new \InvalidArgumentException('Informe preço unitário — produto sem preço cadastrado.');
+        if ($qtd <= 0) {
+            throw new \InvalidArgumentException('Quantidade obrigatória.');
         }
         $unidadeId = (int) $com->unidade_id;
+        $resolvido = CardapioComercialSupport::resolverLinhaVenda($unidadeId, $item);
+        $produtoId = (int) $resolvido['produto_id'];
+        $preco = (float) $resolvido['preco_unitario'];
+        $cardapioProdutoId = $resolvido['cardapio_produto_id'] ?? null;
         if (VendaFiscalSupport::moduloAtivo()) {
             $val = VendaFiscalSupport::validarPropriedadeFiscal(null, $unidadeId, $produtoId, $qtd);
             if (! ($val['ok'] ?? false)) {
@@ -246,7 +252,7 @@ final class PdvComercialSupport
         }
         $desc = (float) ($item['desconto'] ?? 0);
         $valor = round($preco * $qtd - $desc, 2);
-        DB::table('pdv_comanda_itens')->insert([
+        $insert = [
             'comanda_id' => $comandaId,
             'produto_id' => $produtoId,
             'quantidade' => $qtd,
@@ -256,7 +262,11 @@ final class PdvComercialSupport
             'observacao' => $item['observacao'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+        if ($cardapioProdutoId && Schema::hasColumn('pdv_comanda_itens', 'cardapio_produto_id')) {
+            $insert['cardapio_produto_id'] = $cardapioProdutoId;
+        }
+        DB::table('pdv_comanda_itens')->insert($insert);
         self::recalcularComanda($comandaId);
 
         return self::comandaCompleta($comandaId);
@@ -298,13 +308,22 @@ final class PdvComercialSupport
         if (! $com) {
             throw new \RuntimeException('Comanda não encontrada.');
         }
-        $itens = DB::table('pdv_comanda_itens')
-            ->join('produtos', 'pdv_comanda_itens.produto_id', '=', 'produtos.id')
+        $itensQuery = DB::table('pdv_comanda_itens')
+            ->leftJoin('produtos', 'pdv_comanda_itens.produto_id', '=', 'produtos.id')
             ->where('pdv_comanda_itens.comanda_id', $comandaId)
-            ->where('pdv_comanda_itens.status', 'ativo')
-            ->select('pdv_comanda_itens.*', 'produtos.nome as produto_nome')
-            ->orderBy('pdv_comanda_itens.id')
-            ->get();
+            ->where('pdv_comanda_itens.status', 'ativo');
+
+        if (Schema::hasTable('dlv_produtos') && Schema::hasColumn('pdv_comanda_itens', 'cardapio_produto_id')) {
+            $itensQuery->leftJoin('dlv_produtos as dlv', 'pdv_comanda_itens.cardapio_produto_id', '=', 'dlv.id');
+            $itensQuery->select(
+                'pdv_comanda_itens.*',
+                DB::raw('COALESCE(dlv.nome, produtos.nome) as produto_nome')
+            );
+        } else {
+            $itensQuery->select('pdv_comanda_itens.*', 'produtos.nome as produto_nome');
+        }
+
+        $itens = $itensQuery->orderBy('pdv_comanda_itens.id')->get();
 
         return [
             'comanda' => $com,
@@ -434,6 +453,16 @@ final class PdvComercialSupport
     {
         $payload['origem_venda'] = $payload['origem_venda'] ?? 'balcao';
         $payload['pdv_terminal'] = $payload['pdv_terminal'] ?? 'PDV-BALCAO';
+        $unidadeId = (int) ($payload['unidade_id'] ?? 0);
+        if ($unidadeId > 0 && isset($payload['itens']) && is_array($payload['itens'])) {
+            $normalizados = CardapioComercialSupport::normalizarItensVenda($unidadeId, $payload['itens']);
+            $payload['itens'] = array_map(static fn (array $i) => [
+                'produto_id' => $i['produto_id'],
+                'quantidade' => $i['quantidade'],
+                'preco_unitario' => $i['preco_unitario'],
+                'desconto' => $i['desconto'] ?? 0,
+            ], $normalizados);
+        }
 
         return VendaFiscalSupport::finalizarVenda($payload, $usuarioId);
     }
