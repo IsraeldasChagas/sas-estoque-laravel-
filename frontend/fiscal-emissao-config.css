@@ -113,3 +113,25 @@
   font-size: 0.82rem;
   opacity: 0.85;
 }
+
+.fem-focus-guide {
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin: 1rem 0 0;
+}
+
+.fem-focus-guide h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.fem-focus-guide ol {
+  margin: 0.35rem 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.fem-btn-inline {
+  margin-top: 0.5rem;
+}

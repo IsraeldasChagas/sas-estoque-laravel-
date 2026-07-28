@@ -76,6 +76,7 @@ Route::get('/fiscal/emissao/meta', function () use ($fiscalEmJson) {
     return $fiscalEmJson([
         'providers' => FiscalEmissaoConfigSupport::PROVIDERS,
         'environments' => FiscalEmissaoConfigSupport::ENVIRONMENTS,
+        'focus_urls' => FiscalEmissaoConfigSupport::FOCUS_API_URL,
         'fase_emissao' => 'config_ready',
         'mensagem' => 'Salve credenciais e séries aqui. A chamada SEFAZ/emissor será ligada na próxima fase.',
     ]);
@@ -179,7 +180,11 @@ Route::put('/fiscal/emissao/config/{empresaId}', function (Request $request, $em
 
     $cfg->provider = $data['provider'];
     $cfg->environment = $data['environment'];
-    $cfg->api_url = $data['api_url'] ?? null;
+    $apiUrl = isset($data['api_url']) ? trim((string) $data['api_url']) : '';
+    if ($apiUrl === '' && $data['provider'] === 'focus_nfe') {
+        $apiUrl = FiscalEmissaoConfigSupport::focusBaseUrl($data['environment']);
+    }
+    $cfg->api_url = $apiUrl !== '' ? $apiUrl : null;
 
     if (! empty($data['api_token']) && ! HttpIntegrationClient::isMaskedSecret($data['api_token'])) {
         $cfg->api_token = $data['api_token'];

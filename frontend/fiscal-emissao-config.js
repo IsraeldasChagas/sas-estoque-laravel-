@@ -9,6 +9,27 @@
   let femEmpresaId = null;
   let femBusy = false;
 
+  const FOCUS_URL = {
+    homologation: "https://homologacao.focusnfe.com.br",
+    production: "https://api.focusnfe.com.br",
+  };
+
+  function focusBaseUrl(env) {
+    return FOCUS_URL[env] || FOCUS_URL.homologation;
+  }
+
+  function applyFocusUrlIfEmpty(root, force) {
+    if (root.querySelector("#femProvider")?.value !== "focus_nfe") return;
+    const env = root.querySelector("#femAmbiente")?.value || "homologation";
+    const urlEl = root.querySelector("#femApiUrl");
+    if (!urlEl) return;
+    const cur = urlEl.value.trim().replace(/\/$/, "");
+    const known = Object.values(FOCUS_URL).map((u) => u.replace(/\/$/, ""));
+    if (force || !cur || known.includes(cur)) {
+      urlEl.value = focusBaseUrl(env);
+    }
+  }
+
   function toast(msg, type) {
     const fn = typeof showToast === "function" ? showToast : window.showToast;
     if (typeof fn === "function") fn(msg, type || "info");
@@ -86,6 +107,9 @@
     root.querySelector("#femBlocoCert")?.classList.toggle("hidden", p !== "certificado_a1");
     const vfHint = root.querySelector("#femVfHint");
     if (vfHint) vfHint.classList.toggle("hidden", p !== "vendafacil");
+    const focusGuide = root.querySelector("#femFocusGuide");
+    if (focusGuide) focusGuide.classList.toggle("hidden", p !== "focus_nfe");
+    if (p === "focus_nfe") applyFocusUrlIfEmpty(root, false);
   }
 
   async function loadCertBase64(file) {
@@ -133,17 +157,31 @@
           </div>
           <p id="femVfHint" class="subtle-text hidden">Para VendaFácil, configure também <strong>Integrações → VendaFácil</strong> (token e ambiente).</p>
 
+          <div id="femFocusGuide" class="fem-focus-guide ${prov === "focus_nfe" ? "" : "hidden"}">
+            <h4>Passo a passo Focus NFe</h4>
+            <ol class="subtle-text">
+              <li>Crie conta em <a href="https://focusnfe.com.br" target="_blank" rel="noopener">focusnfe.com.br</a> e acesse o painel.</li>
+              <li><strong>Empresas → Adicionar</strong> — mesmo CNPJ do SAS; informe certificado <strong>A1</strong> (.pfx) e senha no painel Focus (obrigatório lá).</li>
+              <li><strong>Painel API → Tokens</strong> — copie o <strong>Token de Homologação</strong> (testes) ou <strong>Token de Produção</strong> (notas válidas).</li>
+              <li>Cole o token abaixo. A URL muda só com o ambiente (homologação × produção).</li>
+              <li>CSC NFC-e: portal SEFAZ do estado (ex. PA) → cadastro NFC-e → gerar CSC → preencher ID e código nesta tela.</li>
+            </ol>
+            <p class="subtle-text">Documentação: <a href="https://doc.focusnfe.com.br/reference/ambiente" target="_blank" rel="noopener">ambientes e URLs</a> · Autenticação HTTP Basic (usuário = token, senha vazia).</p>
+          </div>
+
           <div id="femBlocoApi" class="fem-block">
-            <h4>API do emissor</h4>
+            <h4>API Focus NFe</h4>
             <div class="fem-grid-2">
               <label>URL da API
-                <input type="url" id="femApiUrl" placeholder="https://homologacao.focusnfe.com.br" value="${esc(cfg.api_url || "")}" ${femPodeEditar ? "" : "disabled"} />
+                <input type="url" id="femApiUrl" placeholder="${esc(focusBaseUrl(env))}" value="${esc(cfg.api_url || "")}" ${femPodeEditar ? "" : "disabled"} />
               </label>
-              <label>Token / API key
-                <input type="password" id="femApiToken" autocomplete="new-password" placeholder="${cfg.api_token_configurado ? "Deixe vazio para manter" : "Cole o token"}" ${femPodeEditar ? "" : "disabled"} />
+              <label>Token Focus (homologação ou produção)
+                <input type="password" id="femApiToken" autocomplete="new-password" placeholder="${cfg.api_token_configurado ? "Deixe vazio para manter" : "Token do Painel API → Tokens"}" ${femPodeEditar ? "" : "disabled"} />
               </label>
             </div>
+            ${femPodeEditar ? `<button type="button" class="btn neutral fem-btn-inline" id="femFocusUrlPadrao">Usar URL padrão Focus</button>` : ""}
             ${cfg.api_token_configurado ? `<p class="subtle-text">Token atual: ${esc(cfg.api_token_mascarado)}</p>` : ""}
+            <p class="subtle-text fem-file-hint">Homologação: ${esc(FOCUS_URL.homologation)} · Produção: ${esc(FOCUS_URL.production)}</p>
           </div>
 
           <div id="femBlocoCert" class="fem-block hidden">
@@ -192,7 +230,10 @@
       </div>`;
 
     root.querySelector("#femProvider")?.addEventListener("change", () => toggleProviderBlocks(root));
+    root.querySelector("#femAmbiente")?.addEventListener("change", () => applyFocusUrlIfEmpty(root, true));
+    root.querySelector("#femFocusUrlPadrao")?.addEventListener("click", () => applyFocusUrlIfEmpty(root, true));
     toggleProviderBlocks(root);
+    if (prov === "focus_nfe" && !cfg.api_url) applyFocusUrlIfEmpty(root, true);
 
     root.querySelector("#femSalvar")?.addEventListener("click", () => saveConfig(root));
     root.querySelector("#femValidar")?.addEventListener("click", () => validar(root));

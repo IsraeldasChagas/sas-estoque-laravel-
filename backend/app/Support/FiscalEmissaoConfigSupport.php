@@ -19,6 +19,16 @@ final class FiscalEmissaoConfigSupport
         'production' => 'Produção',
     ];
 
+    public const FOCUS_API_URL = [
+        'homologation' => 'https://homologacao.focusnfe.com.br',
+        'production' => 'https://api.focusnfe.com.br',
+    ];
+
+    public static function focusBaseUrl(string $environment): string
+    {
+        return self::FOCUS_API_URL[$environment] ?? self::FOCUS_API_URL['homologation'];
+    }
+
     /**
      * @param  array<string, mixed>|null  $empresa  linha empresas (cnpj, regime, ie, uf…)
      * @return array{pronto: bool, status: string, itens: list<array{ok: bool, label: string, hint?: string}>}
@@ -70,7 +80,14 @@ final class FiscalEmissaoConfigSupport
                 'ok' => $tokenOk,
                 'label' => 'Token / API key do emissor',
             ];
-            if ($provider !== 'vendafacil') {
+            if ($provider === 'focus_nfe') {
+                $urlOk = ! empty($config->api_url) || isset(self::FOCUS_API_URL[$config->environment ?? 'homologation']);
+                $itens[] = [
+                    'ok' => $urlOk,
+                    'label' => 'URL Focus NFe (homologação ou produção)',
+                    'hint' => 'Padrão: '.self::focusBaseUrl((string) ($config->environment ?? 'homologation')),
+                ];
+            } elseif ($provider !== 'vendafacil') {
                 $itens[] = [
                     'ok' => ! empty($config->api_url),
                     'label' => 'URL da API do emissor',
