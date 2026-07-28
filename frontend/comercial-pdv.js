@@ -153,6 +153,18 @@
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
+  function msgEmissao(em) {
+    if (!em) return "";
+    if (em.emitida) {
+      const ch = em.chave ? ` Chave: ${String(em.chave).slice(0, 12)}…` : "";
+      const danfe = em.url_danfe ? " DANFE disponível." : "";
+      return ` NFC-e autorizada.${ch}${danfe}`;
+    }
+    if (em.skipped && em.motivo_skip) return ` (Sem NFC-e: ${em.motivo_skip})`;
+    if (em.mensagem) return ` NFC-e não emitida: ${em.mensagem}`;
+    return "";
+  }
+
   function toast(msg, type) {
     const fn = typeof showToast === "function" ? showToast : window.showToast;
     if (typeof fn === "function") fn(msg, type || "info");
@@ -948,7 +960,7 @@
               itens,
             }),
           });
-          toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).`, "success");
+          toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "info");
           cpdvState.cart = [];
           cpdvSyncCarrinhoMemoria();
           closeCpdvModal();
@@ -968,7 +980,7 @@
             preco_unitario: i.preco,
           }));
           const r = await window.fiscalPdvConfirmarPagamento({ unidadeId, formaPagamento: forma, itens });
-          toast(`Venda fiscal #${r.venda_id} registrada.`, "success");
+          toast(`Venda fiscal #${r.venda_id} registrada.${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : r.emissao?.skipped ? "info" : "warning");
           cpdvState.cart = [];
           cpdvSyncCarrinhoMemoria();
           closeCpdvModal();

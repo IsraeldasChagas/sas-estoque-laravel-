@@ -55,6 +55,7 @@
     <link rel="stylesheet" href="fiscal-producao.css?v=20260728-ficha-vinculo" />
     <link rel="stylesheet" href="fiscal-venda-pdv.css?v=20260727-fiscal-m6" />
     <link rel="stylesheet" href="fiscal-modulo-07.css?v=20260727-fiscal-m7" />
+    <link rel="stylesheet" href="fiscal-pacote-contador.css?v=20260728-pacote" />
     <link rel="stylesheet" href="fiscal-emissao-config.css?v=20260728-focus" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
@@ -386,6 +387,7 @@
             </a>
             <div class="nav-submenu-content">
               <div class="nav-submenu-divider-label">Fiscal — cadastro</div>
+              <a href="#" class="nav-link nav-link-child" data-section="fiscalPacoteContador"><span class="nav-icon" aria-hidden="true">📦</span><span class="nav-label">Pacote contador</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalEmissaoConfig"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Emissão NF-e / NFC-e</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalEmpresas"><span class="nav-icon" aria-hidden="true">🏢</span><span class="nav-label">Empresas (CNPJ)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalPerfisTributarios"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Perfis tributários</span></a>
@@ -4825,6 +4827,10 @@
             <div id="integracaoConfiguracoesRoot" class="int-page-wrap"></div>
           </section>
 
+          <section id="fiscalPacoteContadorSection" class="view-section hidden">
+            <div class="cfg-section-head"><div><h2>📦 Pacote contador</h2><p class="subtle-text">Exportação mensal por CNPJ (CSV + JSON) para o escritório contábil — não substitui SPED/PGDAS.</p></div></div>
+            <div id="fiscalPacoteContadorRoot" class="int-page-wrap"></div>
+          </section>
           <section id="fiscalEmissaoConfigSection" class="view-section hidden">
             <div class="cfg-section-head"><div><h2>🧾 Emissão NF-e / NFC-e</h2><p class="subtle-text">Homologação ou produção, token do emissor, CSC e séries — pronto para ligar a SEFAZ na próxima fase.</p></div></div>
             <div id="fiscalEmissaoConfigRoot" class="int-page-wrap"></div>
@@ -7968,7 +7974,7 @@
     <script src="ayla-ia.js?v=20260714-ayla-padrao"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
-    <script src="comercial-pdv.js?v=20260728-emissao-tab"></script>
+    <script src="comercial-pdv.js?v=20260728-focus-emissao"></script>
     <script src="integracoes.js?v=20260716-int1"></script>
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
@@ -7978,6 +7984,7 @@
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script src="app.js?v=20260728-cardapio-ficha"></script>
+    <script src="fiscal-pacote-contador.js?v=20260728-pacote"></script>
     <script src="fiscal-emissao-config.js?v=20260728-focus"></script>
     <script src="fiscal-cadastro.js?v=20260727-fiscal-modal-space"></script>
     <script src="fiscal-compras.js?v=20260727-fiscal-m2-ready"></script>

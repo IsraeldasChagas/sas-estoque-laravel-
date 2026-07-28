@@ -1614,7 +1614,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs",
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
-  "openClawIntegracao", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07",
+  "openClawIntegracao", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
@@ -1988,7 +1988,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -1996,7 +1996,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -5449,7 +5449,7 @@ function applyPermissions() {
   if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
-  ["fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07"].forEach((s) => {
+  ["fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07"].forEach((s) => {
     if ((perfilCfgAuto === "ADMIN" || perfilCfgAuto === "GERENTE") && !sections.includes(s)) {
       sections = [...sections, s];
     }
@@ -5610,6 +5610,7 @@ function applyPermissions() {
     const perfilCfg = (currentUser?.perfil || "").toString().trim().toUpperCase();
     const temConfigMenu =
       regras.sections.includes("openClawIntegracao") ||
+      regras.sections.includes("fiscalPacoteContador") ||
       regras.sections.includes("fiscalEmissaoConfig") ||
       regras.sections.includes("fiscalEmpresas") ||
       regras.sections.includes("fiscalPerfisTributarios") ||
@@ -5863,7 +5864,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "openClawIntegracao" || section === "fiscalEmissaoConfig" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalVendaPdv" || section === "fiscalPainelModulo07") {
+    if (section === "openClawIntegracao" || section === "fiscalPacoteContador" || section === "fiscalEmissaoConfig" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalVendaPdv" || section === "fiscalPainelModulo07") {
       configuracoesNavSubmenuNav.classList.add("open");
     } else {
       configuracoesNavSubmenuNav.classList.remove("open");
@@ -5944,7 +5945,9 @@ function navigateTo(section) {
   else if (section === "financeiroOrcamento") loadFinanceiroOrcamento?.().catch(() => {});
   else if (section === "financeiroIndicadores") loadFinanceiroIndicadores?.().catch(() => {});
   else if (section === "openClawIntegracao") loadOpenClawIntegracao?.().catch(() => {});
-  else if (section === "fiscalEmissaoConfig") {
+  else if (section === "fiscalPacoteContador") {
+    window.loadFiscalPacoteContador?.().catch((e) => showToast(e?.message || "Falha ao carregar pacote contador.", "error"));
+  } else if (section === "fiscalEmissaoConfig") {
     window.loadFiscalEmissaoConfig?.().catch((e) => showToast(e?.message || "Falha ao carregar emissão fiscal.", "error"));
   } else if (section === "fiscalEmpresas") {
     window.loadFiscalEmpresas?.().catch((e) => showToast(e?.message || "Falha ao carregar empresas fiscais.", "error"));

@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Fiscal\FiscalEmissaoService;
 use App\Support\VendaFiscalSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,6 +70,8 @@ Route::post('/fiscal/vendas', function (Request $request) {
             'itens.*.desconto' => 'nullable|numeric|min:0',
         ]);
         $result = VendaFiscalSupport::finalizarVenda($payload, $usuarioId);
+        $semEmissao = filter_var($request->input('sem_emissao', false), FILTER_VALIDATE_BOOLEAN);
+        $result = FiscalEmissaoService::anexarEmissaoAoResultado($result, ! $semEmissao);
 
         return response()->json($result, 201);
     } catch (\Throwable $e) {

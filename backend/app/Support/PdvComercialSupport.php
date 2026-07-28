@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Mesa;
 use App\Models\ReservaMesa;
+use App\Services\Fiscal\FiscalEmissaoService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -416,6 +417,7 @@ final class PdvComercialSupport
             throw new \RuntimeException('Módulo fiscal de vendas indisponível.');
         }
         $venda = VendaFiscalSupport::finalizarVenda($vendaPayload, $usuarioId);
+        $venda = FiscalEmissaoService::anexarEmissaoAoResultado($venda);
 
         DB::table('pdv_comandas')->where('id', $comandaId)->update([
             'status' => 'fechada',
@@ -459,6 +461,8 @@ final class PdvComercialSupport
             ], $normalizados);
         }
 
-        return VendaFiscalSupport::finalizarVenda($payload, $usuarioId);
+        return FiscalEmissaoService::anexarEmissaoAoResultado(
+            VendaFiscalSupport::finalizarVenda($payload, $usuarioId)
+        );
     }
 }

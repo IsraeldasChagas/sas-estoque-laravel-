@@ -1,8 +1,7 @@
 <?php
 
 /**
- * Configuração de emissão NF-e / NFC-e (credenciais e séries).
- * A transmissão SEFAZ será plugada em App\Services\Fiscal\FiscalDocumentEmitter (próxima fase).
+ * Configuração e emissão NFC-e (Focus NFe) integrada ao PDV.
  */
 
 use App\Models\FiscalEmissaoConfig;
@@ -68,6 +67,7 @@ foreach ([
     '/fiscal/emissao/config/{empresaId}',
     '/fiscal/emissao/config/{empresaId}/validar',
     '/fiscal/emissao/config/{empresaId}/testar',
+    '/fiscal/emissao/vendas/{vendaId}/nfce',
 ] as $p) {
     Route::options($p, $fiscalEmCors);
 }
@@ -77,8 +77,8 @@ Route::get('/fiscal/emissao/meta', function () use ($fiscalEmJson) {
         'providers' => FiscalEmissaoConfigSupport::PROVIDERS,
         'environments' => FiscalEmissaoConfigSupport::ENVIRONMENTS,
         'focus_urls' => FiscalEmissaoConfigSupport::FOCUS_API_URL,
-        'fase_emissao' => 'config_ready',
-        'mensagem' => 'Salve credenciais e séries aqui. A chamada SEFAZ/emissor será ligada na próxima fase.',
+        'fase_emissao' => 'focus_nfce_pdv',
+        'mensagem' => 'Com emissão ativa, vendas PDV disparam NFC-e Focus automaticamente após a baixa de estoque.',
     ]);
 });
 
@@ -310,4 +310,14 @@ Route::post('/fiscal/emissao/config/{empresaId}/testar', function (Request $requ
         'environment' => $cfg->environment,
         'provider' => $provider,
     ]);
+});
+
+Route::post('/fiscal/emissao/vendas/{vendaId}/nfce', function (Request $request, $vendaId) use ($fiscalEmPodeEditar, $fiscalEmAuth, $fiscalEmJson) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeEditar($u)) {
+        return $fiscalEmJson(['error' => 'Somente administrador.'], 403);
+    }
+    $result = \App\Services\Fiscal\FiscalEmissaoService::emitirNfceParaVenda((int) $vendaId, true);
+
+    return $fiscalEmJson($result);
 });

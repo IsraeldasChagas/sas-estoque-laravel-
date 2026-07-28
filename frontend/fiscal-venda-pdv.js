@@ -113,7 +113,7 @@
       try {
         const r = await window.fiscalPdvConfirmarPagamento({ unidadeId, formaPagamento: "PDV", itens: cart });
         msg.className = "";
-        msg.textContent = `Venda #${r.venda_id} — ${r.valor_liquido}`;
+        msg.textContent = `Venda #${r.venda_id} — ${r.valor_liquido}${r.emissao?.emitida ? " · NFC-e OK" : r.emissao?.mensagem ? " · " + r.emissao.mensagem : r.emissao?.motivo_skip ? " · " + r.emissao.motivo_skip : ""}`;
         cart = [];
         renderCart();
         loadPainel();
