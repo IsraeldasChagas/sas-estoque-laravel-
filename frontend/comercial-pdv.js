@@ -1243,6 +1243,60 @@
     });
   }
 
+  const CPDV_FOCUS_SECTIONS = new Set(["comercialPdv", "comercialMesas"]);
+
+  function cpdvUpdateTopbarRevealPosition() {
+    const btn = document.getElementById("cpdvTopbarRevealBtn");
+    const sidebar = document.getElementById("sidebar");
+    if (!btn) return;
+    const collapsed = sidebar?.classList.contains("is-collapsed");
+    btn.style.left = collapsed ? "88px" : "calc(var(--sidebar-width, 240px) + 8px)";
+  }
+
+  function cpdvEnsureTopbarRevealBtn() {
+    let btn = document.getElementById("cpdvTopbarRevealBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "cpdvTopbarRevealBtn";
+      btn.type = "button";
+      btn.className = "cpdv-topbar-reveal";
+      btn.textContent = "▼";
+      btn.title = "Mostrar barra superior";
+      btn.setAttribute("aria-label", "Mostrar barra superior");
+      btn.addEventListener("click", () => {
+        const expanded = document.body.classList.toggle("cpdv-topbar-expanded");
+        btn.textContent = expanded ? "▲" : "▼";
+        btn.title = expanded ? "Ocultar barra superior" : "Mostrar barra superior";
+        btn.setAttribute("aria-label", btn.title);
+        cpdvUpdateTopbarRevealPosition();
+      });
+      document.body.appendChild(btn);
+      const sidebar = document.getElementById("sidebar");
+      if (sidebar && !sidebar.dataset.cpdvRevealObs) {
+        sidebar.dataset.cpdvRevealObs = "1";
+        new MutationObserver(() => cpdvUpdateTopbarRevealPosition()).observe(sidebar, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
+      }
+    }
+    document.body.classList.remove("cpdv-topbar-expanded");
+    btn.textContent = "▼";
+    cpdvUpdateTopbarRevealPosition();
+  }
+
+  function cpdvRemoveTopbarRevealBtn() {
+    document.getElementById("cpdvTopbarRevealBtn")?.remove();
+    document.body.classList.remove("cpdv-topbar-expanded");
+  }
+
+  window.cpdvSyncTopbarFocus = function cpdvSyncTopbarFocus(section) {
+    const on = CPDV_FOCUS_SECTIONS.has(section);
+    document.body.classList.toggle("cpdv-focus-mode", on);
+    if (on) cpdvEnsureTopbarRevealBtn();
+    else cpdvRemoveTopbarRevealBtn();
+  };
+
   async function loadComercialDashboard() { cpdvRenderDashboard(); }
   async function loadComercialPdv() { cpdvRenderPdv(); }
   async function loadComercialMesas() { cpdvRenderMesas(); }

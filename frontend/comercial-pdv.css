@@ -337,6 +337,65 @@
   .cpdv-pdv-layout { grid-template-columns: 1fr; }
   .cpdv-kds { grid-template-columns: 1fr 1fr; }
 }
+.cpdv-mesa-painel-empty { padding: 1.5rem 0.5rem; text-align: center; }
+
+/* Modo foco PDV / mesas — oculta topbar (desktop) */
+@media (min-width: 1025px) {
+  body.cpdv-focus-mode .topbar {
+    display: none !important;
+  }
+  body.cpdv-focus-mode.cpdv-topbar-expanded .topbar {
+    display: flex !important;
+  }
+  body.cpdv-focus-mode .content {
+    padding-top: 10px;
+  }
+}
+@media (max-width: 1024px) {
+  body.cpdv-focus-mode .cpdv-topbar-reveal {
+    display: none !important;
+  }
+}
+body.cpdv-focus-mode #comercialPdvSection .cpdv-aviso-proto,
+body.cpdv-focus-mode #comercialMesasSection .cpdv-aviso-proto {
+  margin-top: 0;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.5rem;
+}
+.cpdv-topbar-reveal {
+  position: fixed;
+  top: 6px;
+  left: calc(var(--sidebar-width, 240px) + 8px);
+  z-index: 1100;
+  width: 30px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #b0bec5;
+  background: #ffffff;
+  color: #37474f;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+.cpdv-topbar-reveal:hover {
+  background: #eceff1;
+}
+body.cpdv-topbar-expanded .cpdv-topbar-reveal {
+  top: 62px;
+}
+@media (max-width: 1024px) {
+  .cpdv-topbar-reveal {
+    left: 8px !important;
+    top: 6px;
+  }
+  body.cpdv-topbar-expanded .cpdv-topbar-reveal {
+    top: 56px;
+  }
+}
+
 @media (max-width: 900px) {
   .cpdv-mesas-layout { grid-template-columns: 1fr; }
   .cpdv-mesa-painel-wrap { position: static; max-height: none; }

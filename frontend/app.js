@@ -5732,6 +5732,7 @@ function navigateTo(section) {
   const sidebarScrollTop = sidebarNavScroll ? sidebarNavScroll.scrollTop : 0;
   dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
   dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${section}Section`));
+  window.cpdvSyncTopbarFocus?.(section);
   const contentScroll = document.querySelector(".content");
   if (contentScroll) contentScroll.scrollTop = 0;
   if (sidebarNavScroll) sidebarNavScroll.scrollTop = sidebarScrollTop;
