@@ -25,6 +25,7 @@ Route::prefix('delivery')->middleware('sas.usuario')->group(function () {
     Route::delete('/categorias/{id}', [DeliveryCategoriaController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/produtos-estoque-opcoes', [DeliveryProdutoController::class, 'produtosEstoqueOpcoes']);
+    Route::get('/produtos-estoque-ficha', [DeliveryProdutoController::class, 'produtosEstoqueFicha']);
     Route::get('/produtos', [DeliveryProdutoController::class, 'index']);
     Route::post('/produtos', [DeliveryProdutoController::class, 'store']);
     Route::get('/produtos/{id}', [DeliveryProdutoController::class, 'show'])->whereNumber('id');

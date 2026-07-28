@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Support\Delivery\CardapioFichaEstoqueSupport;
 use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use App\Support\ProducaoEstoqueSupport;
 use Illuminate\Http\JsonResponse;
@@ -76,10 +77,30 @@ class DeliveryProdutoController extends DeliveryBaseController
             'unidade_id' => $unidadeId > 0 ? $unidadeId : null,
             'items' => $items,
             'dica' => $tipo === 'prato'
-                ? 'Prato ou produção feita por vocês. Escolha o cadastro do prato pronto (ex.: Arroz paraense), não o arroz cru. Ingredientes saem na ficha técnica / produção.'
+                ? 'Escolha um único prato cadastrado em Produtos / estoque (produto final). A lista de insumos vem da ficha técnica — não selecione tomate, arroz cru etc. aqui.'
                 : 'Produto que você compra pronto para revender: água, refrigerante, cerveja…',
             'mostrando_só_com_ficha' => $tipo === 'prato' && $hasFicha && ! $request->boolean('todos'),
         ]);
+    }
+
+    public function produtosEstoqueFicha(Request $request): JsonResponse
+    {
+        $this->auth($request, 'deliveryProdutos');
+        $produtoId = (int) $request->query('produto_id', 0);
+        if ($produtoId <= 0) {
+            return response()->json(['error' => 'Informe produto_id.'], 422);
+        }
+
+        $resumo = CardapioFichaEstoqueSupport::resumoPorProdutoFinal($produtoId);
+        if ($resumo === null) {
+            return response()->json([
+                'produto_id' => $produtoId,
+                'tem_ficha' => false,
+                'mensagem' => CardapioFichaEstoqueSupport::mensagemSeSemFicha($produtoId),
+            ]);
+        }
+
+        return response()->json(['produto_id' => $produtoId, 'tem_ficha' => true] + $resumo);
     }
 
     public function index(Request $request): JsonResponse
@@ -481,6 +502,8 @@ class DeliveryProdutoController extends DeliveryBaseController
         }
 
         if (! $ingredientesEnviados) {
+            $this->validarVinculoEstoque($data, $existente);
+
             return;
         }
 
@@ -503,6 +526,29 @@ class DeliveryProdutoController extends DeliveryBaseController
                         'max_ingredientes_retirar' => 'O máximo para retirar deve ser entre 0 e o total de ingredientes.',
                     ]);
                 }
+            }
+        }
+
+        $this->validarVinculoEstoque($data, $existente);
+    }
+
+    private function validarVinculoEstoque(array $data, ?object $existente): void
+    {
+        $tipo = $this->normalizarTipoVenda($data['tipo_venda'] ?? ($existente->tipo_venda ?? null));
+        $estoqueId = array_key_exists('estoque_produto_id', $data)
+            ? (int) ($data['estoque_produto_id'] ?? 0)
+            : (int) ($existente->estoque_produto_id ?? 0);
+
+        if ($estoqueId <= 0) {
+            throw ValidationException::withMessages([
+                'estoque_produto_id' => 'Escolha qual produto do estoque está ligado à venda.',
+            ]);
+        }
+
+        if ($tipo === 'prato') {
+            $msg = CardapioFichaEstoqueSupport::mensagemSeSemFicha($estoqueId);
+            if ($msg !== null) {
+                throw ValidationException::withMessages(['estoque_produto_id' => $msg]);
             }
         }
     }

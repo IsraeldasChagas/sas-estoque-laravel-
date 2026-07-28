@@ -397,20 +397,22 @@
 
   function renderEstoqueVendaFieldset(produto) {
     const tipo = produto?.tipo_venda === "prato" ? "prato" : "revenda";
+    const labelProduto = tipo === "prato" ? "Prato no estoque (produto final)" : "Produto no estoque (revenda)";
     return `<fieldset class="vf-fieldset vf-col-12" id="vfEstoqueVendaFieldset">
       <legend>O que baixa no estoque quando vender?</legend>
-      <p class="vf-help">O cardápio é o que o cliente pede. Aqui você escolhe qual cadastro de <strong>Produtos / estoque</strong> desconta na venda.</p>
+      <p class="vf-help">O cardápio é o nome que o cliente vê. Aqui você liga a venda ao cadastro de <strong>Produtos / estoque</strong>.</p>
       <div class="vf-choice-stack">
         <label class="vf-check"><input type="radio" name="tipo_venda" value="revenda" ${tipo === "revenda" ? "checked" : ""}> <strong>Revenda</strong> — compro pronto (água, Coca, Monster…)</label>
-        <label class="vf-check"><input type="radio" name="tipo_venda" value="prato" ${tipo === "prato" ? "checked" : ""}> <strong>Prato / produção nossa</strong> — prato feito por nós (ex.: arroz paraense). Insumos (arroz cru) saem na ficha técnica.</label>
+        <label class="vf-check"><input type="radio" name="tipo_venda" value="prato" ${tipo === "prato" ? "checked" : ""}> <strong>Prato / produção nossa</strong> — um prato cadastrado; insumos saem da <strong>ficha técnica</strong> (não escolha um por um aqui).</label>
       </div>
-      <label class="vf-field vf-mt"><span>Produto no estoque</span>
-        <input type="search" id="vfEstoqueBusca" placeholder="Digite o nome para buscar…" autocomplete="off" value="">
+      <label class="vf-field vf-mt"><span id="vfEstoqueSelectLabel">${labelProduto}</span>
+        <input type="search" id="vfEstoqueBusca" placeholder="Digite o nome do prato ou produto…" autocomplete="off" value="">
         <select name="estoque_produto_id" id="vfEstoqueSelect" size="7" class="vf-estoque-select">
           <option value="">— Carregando lista… —</option>
         </select>
       </label>
       <p class="vf-help" id="vfEstoqueDica"></p>
+      <div id="vfFichaResumo" class="vf-ficha-resumo" hidden aria-live="polite"></div>
       <label class="vf-check" id="vfEstoqueTodosWrap" hidden>
         <input type="checkbox" id="vfEstoqueMostrarTodos"> Mostrar também produtos sem receita (ficha técnica)
       </label>
@@ -448,6 +450,84 @@
     if (current > 0 && !items.some((it) => Number(it.id) === current) && produto?.estoque_produto_nome) {
       select.insertAdjacentHTML("afterbegin", `<option value="${current}" selected>${esc(produto.estoque_produto_nome)} (atual)</option>`);
     }
+    await refreshFichaResumo(root, form);
+  }
+
+  function tipoVendaAtual(form) {
+    return form?.querySelector('input[name="tipo_venda"]:checked')?.value || "revenda";
+  }
+
+  function fmtQtdFicha(q, un) {
+    const n = Number(q);
+    const txt = Number.isFinite(n) ? n.toLocaleString("pt-BR", { maximumFractionDigits: 4 }) : String(q);
+    return un ? `${txt} ${un}` : txt;
+  }
+
+  function renderFichaResumoHtml(data, tipo) {
+    const box = document.createElement("div");
+    if (tipo !== "prato") {
+      box.hidden = true;
+      return box;
+    }
+    if (!data?.tem_ficha) {
+      box.hidden = false;
+      box.className = "vf-ficha-resumo vf-ficha-resumo--warn";
+      box.innerHTML = `<p><strong>Sem ficha técnica</strong> para este produto.</p><p class="vf-help">${esc(data?.mensagem || "Cadastre a ficha apontando para o mesmo prato em Produtos / estoque.")}</p>`;
+      return box;
+    }
+    const ing = data.ingredientes || [];
+    const rows = ing.map((it) => {
+      const badge = it.tipo === "semi_acabado" ? "Semi-acabado" : it.tipo === "revenda" ? "Comprado" : "Insumo";
+      const sub = (it.semi_acabado || []).length
+        ? `<ul class="vf-ficha-sub">${it.semi_acabado.map((s) => `<li>${esc(s.nome)} — ${esc(fmtQtdFicha(s.quantidade_padrao, s.unidade_medida))}</li>`).join("")}</ul>`
+        : "";
+      return `<tr>
+        <td>${esc(it.nome)}</td>
+        <td>${esc(fmtQtdFicha(it.quantidade_padrao, it.unidade_medida))}</td>
+        <td><span class="vf-badge vf-badge--neutral">${badge}</span>${sub}</td>
+      </tr>`;
+    }).join("");
+    box.hidden = false;
+    box.className = "vf-ficha-resumo";
+    box.innerHTML = `
+      <p><strong>Insumos na ficha técnica</strong> (${esc(data.nome_prato || "")}${data.rendimento_quantidade ? ` · rendimento ${Number(data.rendimento_quantidade).toLocaleString("pt-BR")}` : ""})</p>
+      <p class="vf-help">${esc(data.mensagem || "")}</p>
+      ${data.nota_semi_acabado ? `<p class="vf-help vf-ficha-nota">${esc(data.nota_semi_acabado)}</p>` : ""}
+      ${ing.length ? `<div class="vf-ficha-table-wrap"><table class="vf-ficha-table"><thead><tr><th>Produto / insumo</th><th>Qtd padrão</th><th>Tipo</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="vf-help">A ficha não tem ingredientes com produto de estoque vinculado. Revise a ficha técnica.</p>`}
+    `;
+    return box;
+  }
+
+  async function refreshFichaResumo(root, form) {
+    const host = root.querySelector("#vfFichaResumo");
+    if (!host) return;
+    const tipo = tipoVendaAtual(form);
+    const label = root.querySelector("#vfEstoqueSelectLabel");
+    if (label) label.textContent = tipo === "prato" ? "Prato no estoque (produto final)" : "Produto no estoque (revenda)";
+    if (tipo !== "prato") {
+      host.hidden = true;
+      host.innerHTML = "";
+      return;
+    }
+    const pid = Number(form.elements.estoque_produto_id?.value || 0);
+    if (!pid) {
+      host.hidden = false;
+      host.className = "vf-ficha-resumo vf-ficha-resumo--muted";
+      host.innerHTML = `<p class="vf-help">Selecione o prato acima para ver os insumos da ficha técnica.</p>`;
+      return;
+    }
+    host.hidden = false;
+    host.className = "vf-ficha-resumo vf-ficha-resumo--loading";
+    host.textContent = "Carregando receita…";
+    try {
+      const data = await api(`/produtos-estoque-ficha?produto_id=${pid}`);
+      const rendered = renderFichaResumoHtml(data, tipo);
+      host.replaceWith(rendered);
+      rendered.id = "vfFichaResumo";
+    } catch (e) {
+      host.className = "vf-ficha-resumo vf-ficha-resumo--warn";
+      host.innerHTML = `<p class="vf-help">${esc(e?.message || "Não foi possível carregar a ficha.")}</p>`;
+    }
   }
 
   function bindEstoqueVendaPicker(root, produto, unidadeDono) {
@@ -460,6 +540,10 @@
       vfEstoqueBuscaTimer = setTimeout(() => refreshEstoqueSelect(root, produto, unidadeDono), 300);
     });
     root.querySelector("#vfEstoqueMostrarTodos")?.addEventListener("change", () => refreshEstoqueSelect(root, produto, unidadeDono));
+    root.querySelector("#vfEstoqueSelect")?.addEventListener("change", () => {
+      const form = root.querySelector("#vfProdutoEditorForm");
+      if (form) refreshFichaResumo(root, form);
+    });
   }
 
   function renderIngredienteRow(ingrediente) {
@@ -537,9 +621,15 @@
         const mainFile = form.elements.foto?.files?.[0];
         const estoqueId = val(form, "estoque_produto_id") === "" ? null : Number(val(form, "estoque_produto_id"));
         if (!estoqueId) {
-          throw new Error("Escolha qual produto do estoque baixa na venda (lista acima).");
+          throw new Error("Escolha o produto ou prato do estoque vinculado à venda.");
         }
         const tipoVenda = form.querySelector('input[name="tipo_venda"]:checked')?.value || "revenda";
+        if (tipoVenda === "prato") {
+          const ficha = await api(`/produtos-estoque-ficha?produto_id=${estoqueId}`);
+          if (!ficha?.tem_ficha) {
+            throw new Error(ficha?.mensagem || "Prato sem ficha técnica. Cadastre a receita no mesmo produto final.");
+          }
+        }
         const payload = {
           nome: val(form, "nome").trim(),
           categoria_id: val(form, "categoria_id") ? Number(val(form, "categoria_id")) : null,

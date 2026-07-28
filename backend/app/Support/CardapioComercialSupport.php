@@ -74,7 +74,7 @@ final class CardapioComercialSupport
                 : 'revenda';
             if ($estoqueId <= 0) {
                 $aviso = $tipoVenda === 'prato'
-                    ? 'No cardápio: escolha o prato no estoque (não o insumo).'
+                    ? 'No cardápio: escolha o prato final (com ficha técnica); insumos vêm da receita.'
                     : 'No cardápio: escolha o produto que você revende.';
             } elseif (! $estoqueOk) {
                 $aviso = 'Sem saldo nesta unidade — dê entrada no estoque.';
