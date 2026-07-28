@@ -241,9 +241,11 @@
 
   function cpdvProdutosAtivos() {
     if (cpdvState.apiReady && cpdvState.produtosApi.length) {
-      return cpdvState.produtosApi.map((p) => {
+        return cpdvState.produtosApi.map((p) => {
         const cardapioId = p.cardapio_produto_id != null ? Number(p.cardapio_produto_id) : Number(p.id);
         const estoqueId = p.estoque_produto_id != null ? Number(p.estoque_produto_id) : Number(p.id);
+        const isCardapio = p.fonte === "cardapio";
+        const estoqueOk = p.estoque_ok !== false && (p.saldo == null || p.saldo > 0);
         return {
           id: cardapioId,
           cardapioProdutoId: cardapioId,
@@ -251,7 +253,9 @@
           categoria: (p.categoria || "geral").toLowerCase(),
           preco: Number(p.preco) || 0,
           favorito: false,
-          disponivel: p.disponivel !== false && (p.saldo == null || p.saldo > 0),
+          disponivel: isCardapio ? p.disponivel !== false : p.disponivel !== false && (p.saldo == null || p.saldo > 0),
+          estoqueOk: isCardapio ? !!p.estoque_ok : estoqueOk,
+          aviso: p.aviso || null,
           estoqueProdutoId: estoqueId,
           fonte: p.fonte || "estoque",
         };
@@ -415,12 +419,14 @@
     ).join("");
     const grid = prods.map((p) => {
       const off = !p.disponivel ? " cpdv-prod--off" : "";
+      const warn = p.disponivel && p.estoqueOk === false ? " cpdv-prod--warn" : "";
       const fav = p.favorito ? '<span class="cpdv-prod__fav">★ Favorito</span>' : "";
       const click = p.disponivel ? `data-cpdv-add="${p.id}"` : "";
-      return `<button type="button" class="cpdv-prod${off}" ${click} ${p.disponivel ? "" : "disabled"}>
+      const aviso = p.disponivel && p.aviso ? `<small class="cpdv-prod__aviso">${escHtml(p.aviso)}</small>` : "";
+      return `<button type="button" class="cpdv-prod${off}${warn}" ${click} ${p.disponivel ? "" : "disabled"}>
         <p class="cpdv-prod__nome">${escHtml(p.nome)}</p>
-        <span class="cpdv-prod__preco">${moeda(p.preco)}</span>${fav}
-        ${!p.disponivel ? '<small>Indisponível</small>' : ""}
+        <span class="cpdv-prod__preco">${moeda(p.preco)}</span>${fav}${aviso}
+        ${!p.disponivel ? "<small>Indisponível</small>" : ""}
       </button>`;
     }).join("") || '<p class="subtle-text">Nenhum produto nesta categoria.</p>';
     const cart = cpdvState.cart.length
@@ -592,8 +598,9 @@
     const grid = prods.length
       ? prods.map((p) => {
           const off = !p.disponivel ? " cpdv-prod--off" : "";
-          return `<button type="button" class="cpdv-prod cpdv-prod--sm${off}" ${p.disponivel ? `data-cpdv-mesa-add="${p.id}" data-preco="${p.preco}"` : "disabled"}>
-            <span>${escHtml(p.nome)}</span><small>${moeda(p.preco)}</small></button>`;
+          const warn = p.disponivel && p.estoqueOk === false ? " cpdv-prod--warn" : "";
+          return `<button type="button" class="cpdv-prod cpdv-prod--sm${off}${warn}" ${p.disponivel ? `data-cpdv-mesa-add="${p.id}" data-preco="${p.preco}"` : "disabled"}>
+            <span>${escHtml(p.nome)}</span><small>${moeda(p.preco)}${p.aviso && p.disponivel ? ` · ${escHtml(p.aviso)}` : ""}</small></button>`;
         }).join("")
       : '<p class="subtle-text">Cadastre itens no cardápio (Delivery → Produtos) com estoque vinculado.</p>';
     const lista = itens.length

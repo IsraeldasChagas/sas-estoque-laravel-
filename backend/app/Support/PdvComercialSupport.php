@@ -244,12 +244,7 @@ final class PdvComercialSupport
         $produtoId = (int) $resolvido['produto_id'];
         $preco = (float) $resolvido['preco_unitario'];
         $cardapioProdutoId = $resolvido['cardapio_produto_id'] ?? null;
-        if (VendaFiscalSupport::moduloAtivo()) {
-            $val = VendaFiscalSupport::validarPropriedadeFiscal(null, $unidadeId, $produtoId, $qtd);
-            if (! ($val['ok'] ?? false)) {
-                throw new \RuntimeException($val['message'] ?? 'Item indisponível para este CNPJ/unidade.');
-            }
-        }
+        // Estoque/CNPJ validados na finalização da venda fiscal, não a cada lançamento na comanda.
         $desc = (float) ($item['desconto'] ?? 0);
         $valor = round($preco * $qtd - $desc, 2);
         $insert = [

@@ -68,7 +68,7 @@ final class CardapioComercialSupport
                 $categoria = 'geral';
             }
             $preco = round((float) ($p->preco ?? 0), 2);
-            $disponivel = $estoqueId > 0 && $saldo !== null && $saldo > 0.0001;
+            $estoqueOk = $estoqueId > 0 && $saldo !== null && $saldo > 0.0001;
 
             $out[] = [
                 'id' => (int) $p->id,
@@ -79,7 +79,11 @@ final class CardapioComercialSupport
                 'categoria_nome' => $catNome,
                 'preco' => $preco,
                 'saldo' => $saldo,
-                'disponivel' => $disponivel,
+                'disponivel' => true,
+                'estoque_ok' => $estoqueOk,
+                'aviso' => $estoqueId <= 0
+                    ? 'Vincule o ID produto estoque no cardápio.'
+                    : ($estoqueOk ? null : 'Sem saldo nesta unidade — confira o estoque.'),
                 'fonte' => 'cardapio',
             ];
         }
