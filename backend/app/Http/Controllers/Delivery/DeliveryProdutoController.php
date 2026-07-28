@@ -98,7 +98,7 @@ class DeliveryProdutoController extends DeliveryBaseController
         $rows = $query->orderBy('nome_prato')->limit(200)->get();
         $items = $rows->map(function ($row) {
             $ficha = (object) ['id' => $row->id, 'ingredientes_json' => $row->ingredientes_json ?? '[]'];
-            $n = count(ProducaoFiscalSupport::itensFicha($ficha));
+            $n = count(CardapioFichaEstoqueSupport::ingredientesDaReceita($ficha));
 
             return [
                 'id' => (int) $row->id,

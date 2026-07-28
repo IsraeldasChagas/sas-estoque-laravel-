@@ -500,6 +500,7 @@
   }
 
   function fmtQtdFicha(q, un) {
+    if (q == null || q === "") return un ? `— ${un}` : "—";
     const n = Number(q);
     const txt = Number.isFinite(n) ? n.toLocaleString("pt-BR", { maximumFractionDigits: 4 }) : String(q);
     return un ? `${txt} ${un}` : txt;
@@ -511,34 +512,36 @@
       box.hidden = true;
       return box;
     }
-    if (!data?.tem_ficha && !(data?.ingredientes && data.ingredientes.length)) {
+    const ing = data?.ingredientes || [];
+    if (!ing.length) {
       box.hidden = false;
       box.className = "vf-ficha-resumo vf-ficha-resumo--warn";
-      box.innerHTML = `<p><strong>Receita sem insumos no estoque</strong></p><p class="vf-help">${esc(data?.mensagem || "Na ficha técnica, vincule cada ingrediente a um produto de estoque (arroz, carne…).")}</p>`;
+      box.innerHTML = `<p><strong>Receita sem ingredientes</strong></p><p class="vf-help">${esc(data?.mensagem || "Cadastre ingredientes na Ficha técnica.")}</p>`;
       return box;
     }
-    if (data.tem_ficha === undefined && (data.ingredientes || []).length) {
-      data = { ...data, tem_ficha: true };
-    }
-    const ing = data.ingredientes || [];
     const rows = ing.map((it) => {
-      const badge = it.tipo === "semi_acabado" ? "Semi-acabado" : it.tipo === "revenda" ? "Comprado" : "Insumo";
+      const semEst = it.vinculo_estoque === "sem_produto";
+      const badge = semEst ? "Sem estoque" : it.tipo === "semi_acabado" ? "Semi-acabado" : it.tipo === "revenda" ? "Comprado" : "Insumo";
+      const badgeClass = semEst ? "vf-badge vf-badge--warn" : "vf-badge vf-badge--neutral";
       const sub = (it.semi_acabado || []).length
         ? `<ul class="vf-ficha-sub">${it.semi_acabado.map((s) => `<li>${esc(s.nome)} — ${esc(fmtQtdFicha(s.quantidade_padrao, s.unidade_medida))}</li>`).join("")}</ul>`
         : "";
       return `<tr>
         <td>${esc(it.nome)}</td>
         <td>${esc(fmtQtdFicha(it.quantidade_padrao, it.unidade_medida))}</td>
-        <td><span class="vf-badge vf-badge--neutral">${badge}</span>${sub}</td>
+        <td><span class="${badgeClass}">${badge}</span>${sub}</td>
       </tr>`;
     }).join("");
+    const avisos = (data.avisos_estoque || []).map((a) => `<p class="vf-help vf-ficha-nota vf-ficha-nota--warn">${esc(a)}</p>`).join("");
     box.hidden = false;
     box.className = "vf-ficha-resumo";
     box.innerHTML = `
-      <h4 class="vf-ficha-resumo__title">Ingredientes que baixam no estoque</h4>
+      <h4 class="vf-ficha-resumo__title">Ingredientes da ficha técnica</h4>
       <p class="vf-ficha-resumo__sub">${esc(data.nome_prato || "")}${data.rendimento_quantidade ? ` · rendimento ${Number(data.rendimento_quantidade).toLocaleString("pt-BR")} porção(ões)` : ""}</p>
+      ${avisos}
       ${data.nota_semi_acabado ? `<p class="vf-help vf-ficha-nota">${esc(data.nota_semi_acabado)}</p>` : ""}
-      ${ing.length ? `<div class="vf-ficha-table-wrap"><table class="vf-ficha-table"><thead><tr><th>Produto / insumo</th><th>Qtd padrão</th><th>Tipo</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="vf-help">A ficha não tem ingredientes com produto de estoque vinculado. Revise a ficha técnica.</p>`}
+      <div class="vf-ficha-table-wrap"><table class="vf-ficha-table"><thead><tr><th>Ingrediente</th><th>Qtd</th><th>Estoque</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="vf-help">Itens <strong>Sem estoque</strong> aparecem na receita; vincule em Produtos para baixa automática.</p>
     `;
     return box;
   }
@@ -679,8 +682,8 @@
         } else {
           if (!fichaId) throw new Error("Escolha a ficha técnica deste prato.");
           const ficha = await api(`/produtos-estoque-ficha?ficha_id=${fichaId}`);
-          if (!ficha?.tem_ficha) {
-            throw new Error(ficha?.mensagem || "Ficha inválida ou sem insumos no estoque.");
+          if (!(ficha?.ingredientes || []).length) {
+            throw new Error("A ficha não tem ingredientes. Cadastre na Ficha técnica.");
           }
         }
         const payload = {
