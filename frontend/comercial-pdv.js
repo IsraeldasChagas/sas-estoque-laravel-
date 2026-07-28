@@ -1242,18 +1242,92 @@
     if (!root) return;
     root.innerHTML = `
       <div class="cpdv-aviso-proto cpdv-aviso-proto--ok">
-        <strong>Fiscal integrado ao estoque.</strong> NFC-e/NF-e oficial continua no módulo fiscal; vendas PDV já geram registro e baixa.
+        <strong>Fase operacional pronta.</strong> Consolidação fiscal, vendas PDV com baixa no estoque e cadastro de empresas/CNPJ.
+        Emissão oficial de NFC-e/NF-e fica no módulo fiscal completo (integração SEFAZ), quando contratada.
       </div>
-      <div class="cpdv-actions">
-        <button type="button" class="btn primary" data-cpdv-goto="fiscalPainelModulo07">Painel fiscal — consolidação (M7)</button>
-        <button type="button" class="btn neutral" data-cpdv-goto="fiscalVendaPdv">Vendas PDV (fiscal)</button>
-        <button type="button" class="btn neutral" data-cpdv-goto="fiscalEmpresas">Empresas / CNPJ</button>
-      </div>`;
-    root.querySelectorAll("[data-cpdv-goto]").forEach((btn) => {
+      <nav class="cpdv-fiscal-tabs" role="tablist" aria-label="Fiscal comercial">
+        <button type="button" class="btn primary" data-cpdv-fiscal-tab="visao" role="tab">Visão geral</button>
+        <button type="button" class="btn neutral" data-cpdv-fiscal-tab="m7" role="tab">Consolidação (M7)</button>
+        <button type="button" class="btn neutral" data-cpdv-fiscal-tab="pdv" role="tab">Vendas PDV (fiscal)</button>
+        <button type="button" class="btn neutral" data-cpdv-fiscal-tab="emp" role="tab">Empresas / CNPJ</button>
+      </nav>
+      <div id="comercialFiscalPanel" class="cpdv-fiscal-panel"></div>`;
+    root.querySelectorAll("[data-cpdv-fiscal-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (typeof navigateTo === "function") navigateTo(btn.dataset.cpdvGoto);
+        cpdvMountFiscalTab(root, btn.dataset.cpdvFiscalTab).catch((e) => {
+          toast(e?.message || "Não foi possível abrir esta aba fiscal.", "error");
+        });
       });
     });
+    cpdvMountFiscalTab(root, "visao").catch(() => {});
+  }
+
+  async function cpdvRenderFiscalVisao(root) {
+    const panel = root.querySelector("#comercialFiscalPanel");
+    if (!panel) return;
+    panel.innerHTML = `<p class="subtle-text">Carregando resumo fiscal…</p>`;
+    const brl = (n) => {
+      const v = Number(n);
+      return Number.isFinite(v) ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
+    };
+    let visao = null;
+    let painel = null;
+    let empresas = [];
+    try {
+      [visao, painel, empresas] = await Promise.all([
+        cpdvFetch("/fiscal/consolidacao/visao-geral").catch(() => null),
+        cpdvFetch("/fiscal/painel/vendas").catch(() => null),
+        cpdvFetch("/fiscal/empresas").catch(() => []),
+      ]);
+    } catch {
+      /* ignore */
+    }
+    const cards = visao?.cards || {};
+    const pend = visao?.pendencias?.length || 0;
+    panel.innerHTML = `
+      <div class="cpdv-fiscal-visao">
+        <div class="cpdv-fiscal-cards">
+          <div class="cpdv-fiscal-card"><span>Saídas / receita (período)</span><strong>${brl(cards.saidas)}</strong></div>
+          <div class="cpdv-fiscal-card"><span>Entradas</span><strong>${brl(cards.entradas)}</strong></div>
+          <div class="cpdv-fiscal-card"><span>Vendas PDV (painel)</span><strong>${brl(painel?.totais?.receita_liquida)}</strong></div>
+          <div class="cpdv-fiscal-card"><span>Empresas cadastradas</span><strong>${Array.isArray(empresas) ? empresas.length : 0}</strong></div>
+          <div class="cpdv-fiscal-card"><span>Pendências</span><strong>${pend}</strong></div>
+        </div>
+        <ul class="cpdv-fiscal-checklist">
+          <li>Cardápio e PDV registram venda; estoque baixa conforme revenda ou ficha técnica.</li>
+          <li>Use <strong>Consolidação (M7)</strong> para entradas, saídas, créditos e apuração estimada.</li>
+          <li>Use <strong>Vendas PDV (fiscal)</strong> para conferir vendas com trava de CNPJ/unidade.</li>
+          <li>Cadastre CNPJs em <strong>Empresas / CNPJ</strong> antes de operar.</li>
+        </ul>
+        ${visao?.disclaimer ? `<p class="subtle-text cpdv-fiscal-disclaimer">${visao.disclaimer}</p>` : ""}
+        ${pend ? `<p class="cpdv-fiscal-warn">Há ${pend} pendência(s) — abra Consolidação (M7) para detalhes.</p>` : ""}
+      </div>`;
+  }
+
+  async function cpdvMountFiscalTab(root, tab) {
+    root.querySelectorAll("[data-cpdv-fiscal-tab]").forEach((b) => {
+      const on = b.dataset.cpdvFiscalTab === tab;
+      b.classList.toggle("primary", on);
+      b.classList.toggle("neutral", !on);
+    });
+    if (tab === "visao") {
+      await cpdvRenderFiscalVisao(root);
+      return;
+    }
+    const embedId = { m7: "fiscalPainelModulo07Root", pdv: "fiscalVendaPdvRoot", emp: "fiscalEmpresasRoot" }[tab];
+    const load = {
+      m7: () => window.loadFiscalPainelModulo07?.(),
+      pdv: () => window.loadFiscalVendaPdv?.(),
+      emp: () => window.loadFiscalEmpresas?.(),
+    }[tab];
+    const panel = root.querySelector("#comercialFiscalPanel");
+    if (!panel || !embedId) return;
+    panel.innerHTML = `<div id="${embedId}" class="cpdv-fiscal-embed"></div>`;
+    if (typeof load === "function") {
+      await load();
+    } else {
+      panel.innerHTML = `<p class="subtle-text">Módulo fiscal não carregado. Recarregue a página.</p>`;
+    }
   }
 
   const CPDV_FOCUS_SECTIONS = new Set(["comercialPdv", "comercialMesas"]);

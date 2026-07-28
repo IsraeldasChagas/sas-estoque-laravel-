@@ -415,3 +415,50 @@ body.cpdv-topbar-expanded .cpdv-topbar-reveal {
   border-color: #a5d6a7;
   color: #1b5e20;
 }
+
+.cpdv-fiscal-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.75rem;
+}
+
+.cpdv-fiscal-panel {
+  min-height: 120px;
+}
+
+.cpdv-fiscal-embed {
+  margin-top: 0.25rem;
+}
+
+.cpdv-fiscal-cards {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 1rem;
+}
+
+.cpdv-fiscal-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.cpdv-fiscal-card span {
+  display: block;
+  font-size: 0.8rem;
+  color: #555;
+  margin-bottom: 0.25rem;
+}
+
+.cpdv-fiscal-checklist {
+  margin: 0 0 1rem 1.15rem;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.cpdv-fiscal-warn {
+  color: #9a4a00;
+  font-size: 0.9rem;
+}

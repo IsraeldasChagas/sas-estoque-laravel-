@@ -57,7 +57,7 @@
     <link rel="stylesheet" href="fiscal-modulo-07.css?v=20260727-fiscal-m7" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" />
-    <link rel="stylesheet" href="comercial-pdv.css?v=20260728-cardapio-ativo" />
+    <link rel="stylesheet" href="comercial-pdv.css?v=20260728-fiscal-fase" />
     <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto3" />
     <link rel="stylesheet" href="style-delivery.css?v=20260719-prod-indisponivel" />
     <link rel="stylesheet" href="style-delivery-catalog-admin.css?v=20260728-select-compacto" />
@@ -359,7 +359,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="comercialHistorico"><span class="nav-icon" aria-hidden="true">🕘</span><span class="nav-label">Histórico de Vendas</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="comercialRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios Comerciais</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="comercialConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações do PDV</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialFiscal"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Fiscal <em style="opacity:.75;font-size:.8em">(Em desenvolvimento)</em></span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="comercialFiscal"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Fiscal</span></a>
             </div>
           </div>
           <div class="nav-submenu nav-submenu--patrimonio">
@@ -4476,7 +4476,7 @@
             <div class="cpdv-page-wrap" id="comercialConfiguracoesRoot"></div>
           </section>
           <section id="comercialFiscalSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🏛️ Fiscal</h2><p class="subtle-text">Em desenvolvimento — sem emissão nesta fase.</p></div></div>
+            <div class="cpdv-section-head"><div><h2>🏛️ Fiscal</h2><p class="subtle-text">Consolidação, vendas PDV com estoque e empresas (CNPJ). Emissão SEFAZ em fase posterior.</p></div></div>
             <div class="cpdv-page-wrap" id="comercialFiscalRoot"></div>
           </section>
 
@@ -6411,7 +6411,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialHistorico" /> Comercial — Histórico de Vendas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialRelatorios" /> Comercial — Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialConfiguracoes" /> Comercial — Configurações do PDV</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFiscal" /> Comercial — Fiscal (em desenvolvimento)</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFiscal" /> Comercial — Fiscal</label>
             <div style="margin-top:0.5rem;"><strong>Menu: Integrações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoVendafacil" /> Integrações — VendaFácil</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoAplicacoes" /> Integrações — Aplicações Conectadas</label>
@@ -7962,7 +7962,7 @@
     <script src="ayla-ia.js?v=20260714-ayla-padrao"></script>
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
-    <script src="comercial-pdv.js?v=20260728-unidades-dedup"></script>
+    <script src="comercial-pdv.js?v=20260728-fiscal-fase"></script>
     <script src="integracoes.js?v=20260716-int1"></script>
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
