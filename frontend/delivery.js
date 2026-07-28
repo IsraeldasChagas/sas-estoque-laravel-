@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  const state = { categorias: [], produtos: [], adicionais: [] };
+  const state = { categorias: [], produtos: [], adicionais: [], unidades: [] };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -34,6 +34,42 @@
     preparo: ["pronto", "cancelado"], pronto: ["rota", "entregue", "endereco_nao_encontrado", "cancelado"],
     rota: ["entregue", "endereco_nao_encontrado", "cancelado"],
   };
+
+  async function loadUnidadesCardapio() {
+    if (state.unidades.length) return state.unidades;
+    if (window.state?.unidades?.length) {
+      state.unidades = window.state.unidades;
+      return state.unidades;
+    }
+    try {
+      if (typeof window.fetchJSON === "function") {
+        state.unidades = await window.fetchJSON("/unidades");
+      }
+    } catch {
+      state.unidades = [];
+    }
+    return state.unidades;
+  }
+
+  function unidadesVendaLabels(unidadeIds) {
+    const ids = Array.isArray(unidadeIds) ? unidadeIds.map(Number) : [];
+    if (!ids.length || !state.unidades.length) return "—";
+    const map = new Map(state.unidades.map((u) => [Number(u.id), u.nome || u.fantasia || `Unidade #${u.id}`]));
+    return ids.map((id) => map.get(id) || `#${id}`).join(", ");
+  }
+
+  function renderUnidadesVendaCheckboxes(unidades, selectedIds, unidadeDonoId) {
+    if (!unidades.length) {
+      return `<p class="vf-help">Carregue as unidades do sistema para marcar onde o item pode ser vendido.</p>`;
+    }
+    const selected = new Set((selectedIds || []).map(Number));
+    if (unidadeDonoId > 0) selected.add(Number(unidadeDonoId));
+    return `<div class="vf-choice-stack vf-unidades-venda">${unidades.map((u) => {
+      const id = Number(u.id);
+      const checked = selected.has(id) ? "checked" : "";
+      return `<label class="vf-check"><input type="checkbox" name="unidades_venda_ids" value="${id}" ${checked}> ${esc(u.nome || u.fantasia || `Unidade #${id}`)}</label>`;
+    }).join("")}</div>`;
+  }
 
   async function hydrate() {
     const [c, p, a] = await Promise.all([api("/categorias"), api("/produtos"), api("/adicionais")]);
@@ -106,7 +142,7 @@
 
   async function loadProdutos() {
     const root = $("deliveryProdutosRoot"); if (!root) return;
-    await hydrate();
+    await Promise.all([hydrate(), loadUnidadesCardapio()]);
     renderProdutosList(root, state.produtos, "", "");
   }
 
@@ -242,14 +278,14 @@
       <td><strong>${esc(p.nome)}</strong></td>
       <td>${esc(p.categoria_nome || "—")}</td>
       <td>${money(p.preco)}</td>
-      <td>${produtoStatusBadges(p)}</td>
+      <td><small>${esc(unidadesVendaLabels(p.unidades_venda_ids))}</small><br>${produtoStatusBadges(p)}</td>
       <td class="vf-table__right"><button class="vf-btn" type="button" data-vf-edit-product="${p.id}">Editar</button></td>
     </tr>`).join("");
   }
 
   async function openProdutoEditor(id) {
     const root = $("deliveryProdutosRoot"); if (!root) return;
-    await hydrate();
+    await Promise.all([hydrate(), loadUnidadesCardapio()]);
     const produto = id ? await api(`/produtos/${id}`) : null;
     renderProdutoEditor(root, produto);
   }
@@ -265,6 +301,8 @@
     const ingredientes = produto?.ingredientes || [];
     const fotoUrl = deliveryImageUrl(produto?.foto_url);
     const status = produtoStatusFromRecord(produto);
+    const unidadeDono = Number(produto?.unidade_id || window.getUser?.()?.unidade_id || window.currentUser?.unidade_id || state.unidades[0]?.id || 0);
+    const unidadesSelecionadas = produto?.unidades_venda_ids || (unidadeDono ? [unidadeDono] : []);
     root.innerHTML = `<div class="vf-products vf-product-editor ${editando ? "vf-product-editor--edit" : ""}">
       <div class="vf-products__breadcrumb"><button type="button" data-vf-back-products>Produtos</button> / ${editando ? `Editar #${produto.id}` : "Novo"}</div>
       <div class="vf-card vf-product-form-card">
@@ -285,6 +323,11 @@
             <label class="vf-field vf-col-6"><span>ID produto estoque</span><input name="estoque_produto_id" type="number" min="1" step="1" value="${esc(produto?.estoque_produto_id ?? "")}" placeholder="Obrigatório p/ PDV">
               <small>Vincula ao cadastro de estoque para baixa no PDV, mesas e fiscal.</small></label>
             <label class="vf-field vf-col-12"><span>Descrição</span><textarea name="descricao" rows="3">${esc(produto?.descricao || "")}</textarea></label>
+
+            <fieldset class="vf-fieldset vf-col-12"><legend>Disponível para venda nas unidades</legend>
+              <p class="vf-help">Marque em quais filiais este item aparece no cardápio (delivery, PDV e mesas). A unidade de cadastro do item permanece sempre incluída.</p>
+              ${renderUnidadesVendaCheckboxes(state.unidades, unidadesSelecionadas, unidadeDono)}
+            </fieldset>
 
             <fieldset class="vf-fieldset vf-col-12"><legend>Na vitrine da loja — retirar ingredientes</legend>
               <p class="vf-help">Como o cliente escolhe os ingredientes que deseja retirar do produto.</p>
@@ -430,6 +473,7 @@
           categoria_id: val(form, "categoria_id") ? Number(val(form, "categoria_id")) : null,
           preco: Number(val(form, "preco")),
           estoque_produto_id: val(form, "estoque_produto_id") === "" ? null : Number(val(form, "estoque_produto_id")),
+          unidades_venda_ids: [...form.querySelectorAll('input[name="unidades_venda_ids"]:checked')].map((x) => Number(x.value)),
           descricao: val(form, "descricao") || null,
           foto_base64: mainFile ? await fileToDataUrl(mainFile, 3 * 1024 * 1024, "Foto do produto") : null,
           foto_path: produto?.foto_path || null,

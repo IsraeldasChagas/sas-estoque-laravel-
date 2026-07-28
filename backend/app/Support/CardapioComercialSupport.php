@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -19,7 +20,11 @@ final class CardapioComercialSupport
             return false;
         }
 
-        return DB::table('dlv_produtos')->where('unidade_id', $unidadeId)->exists();
+        return DB::table('dlv_produtos as p')
+            ->where(function ($q) use ($unidadeId) {
+                CardapioProdutoUnidadeSupport::escopoQueryDisponivelNaUnidade($q, $unidadeId, 'p.id', 'p.unidade_id');
+            })
+            ->exists();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -30,12 +35,11 @@ final class CardapioComercialSupport
         }
 
         $q = DB::table('dlv_produtos as p')
-            ->leftJoin('dlv_categorias as c', function ($join) use ($unidadeId) {
-                $join->on('c.id', '=', 'p.categoria_id')
-                    ->where('c.unidade_id', '=', $unidadeId);
-            })
-            ->where('p.unidade_id', $unidadeId)
-            ->where('p.ativo', 1);
+            ->leftJoin('dlv_categorias as c', 'c.id', '=', 'p.categoria_id');
+
+        CardapioProdutoUnidadeSupport::escopoQueryDisponivelNaUnidade($q, $unidadeId, 'p.id', 'p.unidade_id');
+
+        $q->where('p.ativo', 1);
 
         if (Schema::hasColumn('dlv_produtos', 'visivel_pdv')) {
             $q->where('p.visivel_pdv', 1);
@@ -130,7 +134,6 @@ final class CardapioComercialSupport
     {
         $dlv = DB::table('dlv_produtos')
             ->where('id', $cardapioId)
-            ->where('unidade_id', $unidadeId)
             ->first();
 
         if (! $dlv || ! (bool) $dlv->ativo) {
@@ -139,6 +142,10 @@ final class CardapioComercialSupport
 
         if (Schema::hasColumn('dlv_produtos', 'visivel_pdv') && ! (bool) $dlv->visivel_pdv) {
             throw new \InvalidArgumentException('Item não habilitado para PDV/mesas.');
+        }
+
+        if (! CardapioProdutoUnidadeSupport::produtoDisponivelNaUnidade($cardapioId, $unidadeId)) {
+            throw new \InvalidArgumentException('Item do cardápio não disponível nesta unidade.');
         }
 
         $estoqueId = $dlv->estoque_produto_id !== null ? (int) $dlv->estoque_produto_id : 0;

@@ -7,6 +7,7 @@ use App\Support\Delivery\DeliveryLojaCheckoutHelper;
 use App\Support\Delivery\DeliveryMediaUrl;
 use App\Support\Delivery\DeliveryPedidoPresenter;
 use App\Support\Delivery\DeliveryWhatsAppHelper;
+use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -36,8 +37,8 @@ class DeliveryPedidoService
             }
             $produtoQuery = DB::table('dlv_produtos')
                 ->where('id', $produtoId)
-                ->where('unidade_id', $unidadeId)
                 ->where('ativo', 1);
+            CardapioProdutoUnidadeSupport::escopoQueryDisponivelNaUnidade($produtoQuery, $unidadeId, 'dlv_produtos.id', 'dlv_produtos.unidade_id');
             if ($publico) {
                 $produtoQuery->where('visivel_loja', 1)
                     ->where(function ($query) use ($unidadeId) {

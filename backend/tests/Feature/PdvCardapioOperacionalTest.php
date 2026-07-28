@@ -138,4 +138,39 @@ class PdvCardapioOperacionalTest extends TestCase
 
         $this->assertSame([], $lista);
     }
+
+    public function test_produto_multi_unidade_aparece_somente_onde_marcado(): void
+    {
+        $migration = require database_path('migrations/2026_07_28_140000_dlv_produto_unidades.php');
+        $migration->up();
+
+        DB::table('produtos')->insert([
+            ['id' => 20, 'nome' => 'P20', 'ativo' => 1, 'preco' => 1],
+            ['id' => 21, 'nome' => 'P21', 'ativo' => 1, 'preco' => 1],
+        ]);
+        DB::table('stock_lotes')->insert([
+            ['produto_id' => 20, 'unidade_id' => 1, 'quantidade' => 5],
+            ['produto_id' => 21, 'unidade_id' => 2, 'quantidade' => 5],
+        ]);
+        $dlvId = DB::table('dlv_produtos')->insertGetId([
+            'unidade_id' => 1,
+            'estoque_produto_id' => 20,
+            'nome' => 'Compartilhado',
+            'preco' => 15,
+            'ativo' => 1,
+            'visivel_loja' => 1,
+            'visivel_pdv' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('dlv_produto_unidades')->insert([
+            ['produto_id' => $dlvId, 'unidade_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['produto_id' => $dlvId, 'unidade_id' => 2, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->assertCount(1, PdvComercialSupport::listarProdutosPdv(1));
+        $this->assertCount(1, PdvComercialSupport::listarProdutosPdv(2));
+        $nomesUnidade3 = array_column(PdvComercialSupport::listarProdutosPdv(3), 'nome');
+        $this->assertNotContains('Compartilhado', $nomesUnidade3);
+    }
 }

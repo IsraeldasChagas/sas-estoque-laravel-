@@ -2,6 +2,7 @@
 
 namespace App\Services\Delivery;
 
+use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,9 +20,9 @@ class DeliveryCatalogoService
 
         $categorias = $categoriasQuery->orderBy('ordem')->orderBy('nome')->get();
 
-        $produtosQuery = DB::table('dlv_produtos')
-            ->where('unidade_id', $unidadeId)
-            ->where('ativo', 1);
+        $produtosQuery = DB::table('dlv_produtos');
+        CardapioProdutoUnidadeSupport::escopoQueryDisponivelNaUnidade($produtosQuery, $unidadeId, 'dlv_produtos.id', 'dlv_produtos.unidade_id');
+        $produtosQuery->where('ativo', 1);
 
         // A consulta administrativa mostra todo produto ativo. Consumidores
         // públicos devem solicitar explicitamente apenas os publicados.

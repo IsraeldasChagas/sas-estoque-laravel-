@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,12 @@ class DeliveryProdutoController extends DeliveryBaseController
         $query = DB::table('dlv_produtos as p')
             ->leftJoin('dlv_categorias as c', 'c.id', '=', 'p.categoria_id')
             ->select('p.*', 'c.nome as categoria_nome');
-        $this->access->aplicarEscopo($query, $usuario, $request, 'p.unidade_id');
+        $unidadeListagem = $this->access->unidadeId($request, $usuario);
+        if ($unidadeListagem) {
+            CardapioProdutoUnidadeSupport::escopoQueryDisponivelNaUnidade($query, $unidadeListagem, 'p.id', 'p.unidade_id');
+        } else {
+            $this->access->aplicarEscopo($query, $usuario, $request, 'p.unidade_id');
+        }
 
         if ($request->boolean('indisponivel')) {
             $query->where('p.ativo', 0)->where('p.visivel_loja', 1);
@@ -56,7 +62,15 @@ class DeliveryProdutoController extends DeliveryBaseController
         }
 
         $items = $query->orderBy('p.nome')->limit(500)->get()
-            ->map(fn ($row) => $this->formatProdutoListagem($row))
+            ->map(function ($row) {
+                $formatted = $this->formatProdutoListagem($row);
+                $formatted['unidades_venda_ids'] = CardapioProdutoUnidadeSupport::unidadesDoProduto(
+                    (int) $row->id,
+                    (int) $row->unidade_id
+                );
+
+                return $formatted;
+            })
             ->values();
 
         return response()->json(['items' => $items]);
@@ -94,6 +108,7 @@ class DeliveryProdutoController extends DeliveryBaseController
 
             $this->sincronizarAdicionais($id, $unidadeId, $data, $request, true);
             $this->sincronizarIngredientes($id, $unidadeId, $ingredientes);
+            $this->sincronizarUnidadesVenda($id, $unidadeId, $data, $request);
 
             return $id;
         });
@@ -147,6 +162,7 @@ class DeliveryProdutoController extends DeliveryBaseController
             if ($ingredientes !== null) {
                 $this->sincronizarIngredientes($id, $unidadeId, $ingredientes);
             }
+            $this->sincronizarUnidadesVenda($id, $unidadeId, array_merge((array) $row, $data), $request);
         });
 
         return response()->json($this->detalhe($id));
@@ -168,6 +184,9 @@ class DeliveryProdutoController extends DeliveryBaseController
         DB::transaction(function () use ($id) {
             DB::table('dlv_produto_adicional')->where('produto_id', $id)->delete();
             DB::table('dlv_produto_ingredientes')->where('produto_id', $id)->delete();
+            if (CardapioProdutoUnidadeSupport::tabelaAtiva()) {
+                DB::table('dlv_produto_unidades')->where('produto_id', $id)->delete();
+            }
             DB::table('dlv_produtos')->where('id', $id)->delete();
         });
 
@@ -250,6 +269,7 @@ class DeliveryProdutoController extends DeliveryBaseController
             'foto_url' => $this->fotoUrl($produto->foto_path ?? null),
             'adicionais' => $adicionais,
             'ingredientes' => $ingredientes,
+            'unidades_venda_ids' => CardapioProdutoUnidadeSupport::unidadesDoProduto($id, (int) $produto->unidade_id),
         ]);
     }
 
@@ -348,6 +368,8 @@ class DeliveryProdutoController extends DeliveryBaseController
             'apresentacao' => 'nullable|string|max:80',
             'ordem' => 'nullable|integer|min:0',
             'unidade_id' => 'nullable|integer',
+            'unidades_venda_ids' => 'nullable|array|max:80',
+            'unidades_venda_ids.*' => 'integer|min:1',
             'adicional_ids' => 'nullable|array',
             'adicional_ids.*' => 'integer',
             'ingredientes' => 'nullable|array',
@@ -729,5 +751,35 @@ class DeliveryProdutoController extends DeliveryBaseController
         }
 
         return '/'.$rel;
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function sincronizarUnidadesVenda(int $produtoId, int $unidadeDono, array $data, Request $request): void
+    {
+        if (! CardapioProdutoUnidadeSupport::tabelaAtiva()) {
+            return;
+        }
+
+        if (! $request->exists('unidades_venda_ids')) {
+            if ($request->isMethod('post')) {
+                CardapioProdutoUnidadeSupport::sincronizar($produtoId, [$unidadeDono], $unidadeDono);
+            }
+
+            return;
+        }
+
+        $ids = collect($data['unidades_venda_ids'] ?? [])
+            ->map(fn ($v) => (int) $v)
+            ->filter(fn ($v) => $v > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            $ids = [$unidadeDono];
+        }
+
+        CardapioProdutoUnidadeSupport::validarUnidadesExistem($ids);
+        CardapioProdutoUnidadeSupport::sincronizar($produtoId, $ids, $unidadeDono);
     }
 }
