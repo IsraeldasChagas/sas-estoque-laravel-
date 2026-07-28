@@ -221,7 +221,14 @@
         unis = DADOS_DEMONSTRACAO_PDV.unidades.map((u) => ({ id: u.id, nome: u.nome }));
       }
     }
-    return (unis || [])
+    const seen = new Set();
+    const unique = (unis || []).filter((u) => {
+      const id = Number(u.id);
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    return unique
       .map((u) => `<option value="${escHtml(u.id)}"${String(selectedId) === String(u.id) ? " selected" : ""}>${escHtml(u.nome)}</option>`)
       .join("");
   }
@@ -394,17 +401,6 @@
     if (cliSel) {
       cliSel.value = cpdvState.cliente || "";
       cliSel.onchange = () => { cpdvState.cliente = cliSel.value || null; };
-    }
-    const uniFiscal = root.querySelector("#cpdvUnidadeFiscal");
-    if (uniFiscal && !uniFiscal.dataset.loaded) {
-      uniFiscal.dataset.loaded = "1";
-      const unis = window.state?.unidades || [];
-      unis.forEach((u) => {
-        const o = document.createElement("option");
-        o.value = String(u.id);
-        o.textContent = u.nome || `Unidade ${u.id}`;
-        uniFiscal.appendChild(o);
-      });
     }
   }
 
