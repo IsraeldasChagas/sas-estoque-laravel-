@@ -61,8 +61,8 @@
       ["Trib. potencial estoque", cards.tributacao_potencial_estoque],
       ["Pendências", cards.pendencias_count],
     ];
-    return `<div class="fiscal-m7-cards">${entries
-      .map(([l, v]) => `<div class="fiscal-m7-card"><span>${esc(l)}</span><strong>${typeof v === "number" ? brl(v) : esc(v)}</strong></div>`)
+    return `<div class="fiscal-m7-cards fiscal-kpi-row cfg-stats-row">${entries
+      .map(([l, v]) => `<div class="fiscal-m7-card fiscal-kpi-card"><span class="fiscal-kpi-card__l">${esc(l)}</span><strong class="fiscal-kpi-card__n">${typeof v === "number" ? brl(v) : esc(v)}</strong></div>`)
       .join("")}</div>`;
   }
 
@@ -236,12 +236,12 @@
     const fim = today.toISOString().slice(0, 10);
 
     root.innerHTML = `
-      <div class="fiscal-m7-wrap">
-        <div class="fiscal-m7-filters">
+      <div class="fiscal-page fiscal-m7-wrap">
+        <div class="fiscal-m7-filters fiscal-toolbar">
           <label>Empresa (filtro)<select id="fm7Empresa"><option value="">Todas</option>${empresas.map((e) => `<option value="${esc(e.id)}">${esc(e.razao_social)}</option>`).join("")}</select></label>
           <label>De<input type="date" id="fm7Ini" value="${esc(ini)}" /></label>
           <label>Até<input type="date" id="fm7Fim" value="${esc(fim)}" /></label>
-          <button type="button" class="btn" id="fm7Refresh">Atualizar</button>
+          <div class="fiscal-toolbar__actions"><button type="button" class="btn primary" id="fm7Refresh">Atualizar</button></div>
         </div>
         <nav class="fiscal-m7-tabs" id="fm7Tabs">${TABS.map((t) => `<button type="button" data-tab="${t.id}" class="${t.id === activeTab ? "active" : ""}">${esc(t.label)}</button>`).join("")}</nav>
         <div id="fm7Content"></div>

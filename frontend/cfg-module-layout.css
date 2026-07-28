@@ -1,0 +1,353 @@
+/**
+ * Configurações + Fiscal + Integrações — layout padrão (cards no topo, formulários legíveis, botões uniformes).
+ * Mesma linha visual da Ayla IA / OpenClaw.
+ */
+
+.cfg-module-section {
+  padding: 0.25rem 0.35rem 2rem;
+  box-sizing: border-box;
+}
+
+.cfg-module-section .cfg-section-head,
+.cfg-module-section .int-section-head {
+  margin-bottom: 1.35rem;
+  padding: 0 0.35rem;
+}
+
+.cfg-module-section .int-page-wrap,
+.cfg-module-section .fem-page,
+.cfg-module-section .fpc-page,
+.cfg-module-section .fiscal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1100px;
+  padding: 0 0.15rem;
+}
+
+/* —— Cards de resumo sempre no topo —— */
+.cfg-module-section .cfg-stats-row,
+.cfg-module-section .fiscal-kpi-row,
+.cfg-module-section .fem-resumo-cards,
+.cfg-module-section .fpc-preview.cfg-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  order: -2;
+  margin: 0;
+}
+
+.cfg-module-section .cfg-stat-card,
+.cfg-module-section .fiscal-kpi-card,
+.cfg-module-section .fem-resumo-card,
+.cfg-module-section .fpc-preview > div {
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  min-height: 4.5rem;
+}
+
+.cfg-module-section .fem-resumo-card {
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cfg-module-section .fem-resumo-card:hover {
+  border-color: rgba(0, 71, 171, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 71, 171, 0.08);
+}
+
+.cfg-module-section .cfg-stat-card span,
+.cfg-module-section .fpc-preview > div span,
+.cfg-module-section .fiscal-kpi-card__l {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted, #607d8b);
+  margin-bottom: 0.25rem;
+}
+
+.cfg-module-section .cfg-stat-card strong,
+.cfg-module-section .fpc-preview > div strong,
+.cfg-module-section .fiscal-kpi-card__n {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--primary, #0047ab);
+  line-height: 1.15;
+}
+
+.cfg-module-section .fiscal-kpi-card__n {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+/* —— Blocos / cards de conteúdo —— */
+.cfg-module-section .int-card,
+.cfg-module-section .fiscal-panel-card,
+.cfg-module-section .fiscal-compra-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.cfg-module-section .int-card {
+  padding: 1.25rem 1.5rem;
+}
+
+.cfg-module-section .int-card > header,
+.cfg-module-section .int-card > h3:first-child {
+  margin: -1.25rem -1.5rem 1rem;
+  padding: 1.05rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 71, 171, 0.03);
+}
+
+.cfg-module-section .int-card > h3:first-child {
+  margin-bottom: 0.85rem;
+  font-size: 1.05rem;
+}
+
+.cfg-module-section .fiscal-panel-card__head {
+  padding: 1.05rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 71, 171, 0.03);
+}
+
+.cfg-module-section .fiscal-panel-card__body {
+  padding: 1.15rem 1.5rem 1.35rem;
+}
+
+/* —— Toolbar abaixo dos cards —— */
+.cfg-module-section .fiscal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
+  padding: 0 0.15rem;
+  order: -1;
+}
+
+.cfg-module-section .fiscal-toolbar__label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.cfg-module-section .fiscal-toolbar__hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.86rem;
+  color: #607d8b;
+  line-height: 1.45;
+  max-width: 42rem;
+}
+
+/* —— Formulários —— */
+.cfg-module-section .fem-grid-2,
+.cfg-module-section .fem-empresa-bar,
+.cfg-module-section .int-form-grid,
+.cfg-module-section .cfg-form-grid,
+.cfg-module-section .fiscal-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem 1.15rem;
+}
+
+.cfg-module-section .fem-empresa-bar label,
+.cfg-module-section .fem-grid-2 label,
+.cfg-module-section .int-field,
+.cfg-module-section .int-form-grid label,
+.cfg-module-section .cfg-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #263238;
+}
+
+.cfg-module-section .fem-grid-2 input,
+.cfg-module-section .fem-grid-2 select,
+.cfg-module-section .fem-grid-2 textarea,
+.cfg-module-section .fem-empresa-bar input,
+.cfg-module-section .fem-empresa-bar select,
+.cfg-module-section .int-field input,
+.cfg-module-section .int-field select,
+.cfg-module-section .int-field textarea,
+.cfg-module-section .int-form-grid input,
+.cfg-module-section .int-form-grid select,
+.cfg-module-section .int-form-grid textarea {
+  font-weight: 400;
+  padding: 0.7rem 0.85rem;
+  border: 1.5px solid #c5cdd6;
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cfg-module-section .fem-grid-2 input:focus,
+.cfg-module-section .fem-grid-2 select:focus,
+.cfg-module-section .fem-grid-2 textarea:focus,
+.cfg-module-section .int-field input:focus,
+.cfg-module-section .int-field select:focus,
+.cfg-module-section .int-form-grid input:focus,
+.cfg-module-section .int-form-grid select:focus {
+  outline: none;
+  border-color: var(--primary, #0047ab);
+  box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.12);
+}
+
+.cfg-module-section .fem-block {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cfg-module-section .fem-block h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #37474f;
+}
+
+.cfg-module-section .subtle-text {
+  line-height: 1.5;
+}
+
+/* —— Botões de ação (padrão Ayla) —— */
+.cfg-module-section .cfg-form-actions,
+.cfg-module-section .fem-actions,
+.cfg-module-section .int-actions,
+.cfg-module-section .fpc-actions,
+.cfg-module-section .fiscal-toolbar__actions,
+.cfg-module-section .fiscal-modal-toolbar__right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.cfg-module-section .fiscal-toolbar__actions {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.cfg-module-section .cfg-form-actions .btn,
+.cfg-module-section .fem-actions .btn,
+.cfg-module-section .int-actions .btn,
+.cfg-module-section .fpc-actions .btn,
+.cfg-module-section .fiscal-toolbar__actions .btn {
+  min-height: 2.75rem;
+  min-width: 10.5rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.95rem;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.cfg-module-section .fem-btn-inline {
+  min-width: auto;
+  margin-top: 0.35rem;
+}
+
+.cfg-module-section .table-wrapper {
+  overflow-x: auto;
+}
+
+.cfg-module-section .fpc-preview.cfg-stats-row {
+  order: -3;
+}
+
+.cfg-module-section .int-page-wrap > .int-grid-2.cfg-stats-row {
+  order: -2;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.cfg-module-section .fiscal-page,
+.cfg-module-section .fiscal-m7-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.cfg-module-section .fiscal-m7-filters.fiscal-toolbar {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.25rem;
+  order: -1;
+}
+
+.cfg-module-section .fiscal-m7-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.cfg-module-section .fiscal-m7-filters input,
+.cfg-module-section .fiscal-m7-filters select {
+  padding: 0.7rem 0.85rem;
+  border: 1.5px solid #c5cdd6;
+  border-radius: 10px;
+  font-weight: 400;
+}
+
+.cfg-module-section .fiscal-m7-cards .fiscal-m7-card {
+  min-height: 4.5rem;
+}
+
+.cfg-module-section .fiscal-mov-relatorio-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.cfg-module-section .oc-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1100px;
+}
+
+.cfg-module-section .oc-form-actions.cfg-form-actions {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.cfg-module-section .oc-form-actions.cfg-form-actions .btn {
+  min-height: 2.75rem;
+  min-width: 10.5rem;
+}
+
+@media (max-width: 640px) {
+  .cfg-module-section {
+    padding: 0 0 1.5rem;
+  }
+  .cfg-module-section .int-card {
+    padding: 1.1rem 1.1rem;
+  }
+  .cfg-module-section .int-card > header,
+  .cfg-module-section .int-card > h3:first-child {
+    margin: -1.1rem -1.1rem 0.85rem;
+    padding: 0.95rem 1.1rem;
+  }
+  .cfg-module-section .cfg-form-actions .btn,
+  .cfg-module-section .fem-actions .btn,
+  .cfg-module-section .int-actions .btn,
+  .cfg-module-section .fpc-actions .btn,
+  .cfg-module-section .fiscal-toolbar__actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+}

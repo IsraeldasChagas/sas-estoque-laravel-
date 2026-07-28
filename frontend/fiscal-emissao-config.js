@@ -221,7 +221,7 @@
             <label style="margin-top:0.65rem;display:block">Observações<textarea id="femObs" rows="2" ${femPodeEditar ? "" : "disabled"}>${esc(cfg.observacoes || "")}</textarea></label>
           </div>
 
-          <div class="fem-actions">
+          <div class="fem-actions cfg-form-actions">
             <button type="button" class="btn primary" id="femSalvar" ${femPodeEditar ? "" : "disabled"}>Salvar configuração</button>
             <button type="button" class="btn secondary" id="femValidar">Validar checklist</button>
             <button type="button" class="btn neutral" id="femTestar" ${femPodeEditar ? "" : "disabled"}>Testar credenciais</button>
@@ -312,6 +312,7 @@
 
     root.innerHTML = `
       <div class="fem-page">
+        <div class="fem-resumo-cards">${cards}</div>
         <div class="int-card">
           <h3>Emissão de nota fiscal (NF-e / NFC-e)</h3>
           <p class="subtle-text">${esc(femMeta.mensagem || "")}</p>
@@ -327,7 +328,6 @@
             <button type="button" class="btn primary" id="femAbrirEmpresa">Configurar</button>
           </div>
         </div>
-        <div class="fem-resumo-cards">${cards}</div>
         <div id="femDetalhe"></div>
       </div>`;
 

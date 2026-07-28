@@ -71,6 +71,13 @@
 
     root.innerHTML = `
       <div class="fpc-page">
+        <div id="fpcPreviewBox" class="fpc-preview cfg-stats-row" aria-live="polite">
+          <div><span>Vendas</span><strong>—</strong></div>
+          <div><span>NFC-e autorizadas</span><strong>—</strong></div>
+          <div><span>Notas entrada</span><strong>—</strong></div>
+          <div><span>Receita (M7)</span><strong>—</strong></div>
+        </div>
+        <p id="fpcPreviewHint" class="subtle-text">Escolha empresa e mês abaixo e clique em <strong>Ver resumo</strong> para atualizar os cards.</p>
         <div class="int-card">
           <h3>${esc(meta.titulo || "Pacote contador")}</h3>
           <p class="subtle-text">${esc(meta.descricao || "")}</p>
@@ -82,11 +89,10 @@
               <input type="month" id="fpcMes" value="${mesAtual()}" />
             </label>
           </div>
-          <div class="fpc-actions fem-actions" style="margin-top:1rem">
+          <div class="fpc-actions cfg-form-actions fem-actions">
             <button type="button" class="btn secondary" id="fpcPreview">Ver resumo</button>
             <button type="button" class="btn primary" id="fpcDownload">Baixar ZIP</button>
           </div>
-          <div id="fpcPreviewBox"></div>
         </div>
       </div>`;
 
@@ -108,23 +114,30 @@
       return;
     }
     const box = root.querySelector("#fpcPreviewBox");
-    if (box) box.innerHTML = `<p class="subtle-text">Carregando resumo…</p>`;
+    const hint = root.querySelector("#fpcPreviewHint");
+    if (box) {
+      box.querySelectorAll("strong").forEach((el) => {
+        el.textContent = "…";
+      });
+    }
     try {
       const p = await fFetch(`/fiscal/pacote-contador/preview?empresa_id=${empresaId}&mes=${encodeURIComponent(mes)}`);
       const c = p.contagens || {};
       const cards = p.visao_gerencial?.cards || {};
       if (box) {
-        box.innerHTML = `
-          <div class="fpc-preview">
-            <div><span>Vendas</span><strong>${esc(c.vendas ?? 0)}</strong></div>
-            <div><span>NFC-e autorizadas</span><strong>${esc(c.nfce_autorizadas ?? 0)}</strong></div>
-            <div><span>Notas entrada</span><strong>${esc(c.notas_entrada ?? 0)}</strong></div>
-            <div><span>Receita (M7)</span><strong>${Number(cards.receita || cards.saidas || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</strong></div>
-          </div>
-          <p class="subtle-text" style="margin-top:0.75rem">${esc(p.disclaimer || "")}</p>`;
+        const vals = box.querySelectorAll("strong");
+        if (vals[0]) vals[0].textContent = String(c.vendas ?? 0);
+        if (vals[1]) vals[1].textContent = String(c.nfce_autorizadas ?? 0);
+        if (vals[2]) vals[2].textContent = String(c.notas_entrada ?? 0);
+        if (vals[3])
+          vals[3].textContent = Number(cards.receita || cards.saidas || 0).toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          });
       }
+      if (hint) hint.textContent = p.disclaimer || "Resumo atualizado.";
     } catch (e) {
-      if (box) box.innerHTML = `<p class="subtle-text">${esc(e.message)}</p>`;
+      if (hint) hint.textContent = e.message || "Não foi possível carregar o resumo.";
     }
   }
 

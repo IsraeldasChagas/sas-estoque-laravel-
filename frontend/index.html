@@ -50,6 +50,7 @@
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" />
+    <link rel="stylesheet" href="cfg-module-layout.css?v=20260728-cfg-ui2" />
     <link rel="stylesheet" href="fiscal-compras.css?v=20260727-fiscal-m2-ready" />
     <link rel="stylesheet" href="fiscal-movimentacoes.css?v=20260727-fiscal-m3" />
     <link rel="stylesheet" href="fiscal-producao.css?v=20260728-ficha-vinculo" />
@@ -77,7 +78,7 @@
         <!-- Coluna com a identidade visual da aplicacao -->
         <section class="login-hero">
           <div class="login-hero__badge">Gestão inteligente</div>
-          <img src="imagens/logo.png" alt="SAS Estoque" class="login-hero__logo" />
+          <img src="imagens/logosemfundo.png" alt="Grupo Sabor Paraense" class="login-hero__logo" onerror="this.onerror=null;this.src='imagens/logo-sem-fundo.png';this.onerror=function(){this.src='imagens/logo.png';};" />
           <h1>SAS Estoque</h1>
           <p>Organize, monitore e tome decisões rápidas.</p>
         </section>
@@ -4480,7 +4481,7 @@
             <div class="cpdv-page-wrap" id="comercialConfiguracoesRoot"></div>
           </section>
           <section id="comercialFiscalSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🏛️ Fiscal</h2><p class="subtle-text">Consolidação, vendas PDV com estoque e empresas (CNPJ). Emissão SEFAZ em fase posterior.</p></div></div>
+            <div class="cpdv-section-head"><div><h2>🏛️ Fiscal</h2><p class="subtle-text">Consolidação, PDV com estoque, NFC-e Focus (após configuração) e empresas (CNPJ).</p></div></div>
             <div class="cpdv-page-wrap" id="comercialFiscalRoot"></div>
           </section>
 
@@ -4758,7 +4759,7 @@
           </section>
 
           <!-- Módulo Integrações — Fase 1 (infraestrutura) -->
-          <section id="integracaoVendafacilSection" class="view-section hidden">
+          <section id="integracaoVendafacilSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head">
               <div>
                 <h2>🔌 Integrações → VendaFácil</h2>
@@ -4767,7 +4768,7 @@
             </div>
             <div id="integracaoVendafacilRoot" class="int-page-wrap"></div>
           </section>
-          <section id="integracaoAplicacoesSection" class="view-section hidden">
+          <section id="integracaoAplicacoesSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head">
               <div>
                 <h2>📱 Aplicações Conectadas</h2>
@@ -4776,7 +4777,7 @@
             </div>
             <div id="integracaoAplicacoesRoot" class="int-page-wrap"></div>
           </section>
-          <section id="integracaoHealthCheckSection" class="view-section hidden">
+          <section id="integracaoHealthCheckSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head">
               <div>
                 <h2>💚 Health Check</h2>
@@ -4785,7 +4786,7 @@
             </div>
             <div id="integracaoHealthCheckRoot" class="int-page-wrap"></div>
           </section>
-          <section id="integracaoLogsSection" class="view-section hidden">
+          <section id="integracaoLogsSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head">
               <div>
                 <h2>📋 Logs de Integração</h2>
@@ -4814,58 +4815,58 @@
             </div>
             <div id="integracaoLogsRoot" class="hidden"></div>
           </section>
-          <section id="integracaoWebhooksSection" class="view-section hidden">
+          <section id="integracaoWebhooksSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head"><div><h2>🔗 Webhooks</h2></div></div>
             <div id="integracaoWebhooksRoot" class="int-page-wrap"></div>
           </section>
-          <section id="integracaoTokensSection" class="view-section hidden">
+          <section id="integracaoTokensSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head"><div><h2>🔑 Tokens</h2></div></div>
             <div id="integracaoTokensRoot" class="int-page-wrap"></div>
           </section>
-          <section id="integracaoConfiguracoesSection" class="view-section hidden">
+          <section id="integracaoConfiguracoesSection" class="view-section hidden cfg-module-section">
             <div class="int-section-head cfg-section-head"><div><h2>⚙️ Configurações de Integrações</h2></div></div>
             <div id="integracaoConfiguracoesRoot" class="int-page-wrap"></div>
           </section>
 
-          <section id="fiscalPacoteContadorSection" class="view-section hidden">
+          <section id="fiscalPacoteContadorSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>📦 Pacote contador</h2><p class="subtle-text">Exportação mensal por CNPJ (CSV + JSON) para o escritório contábil — não substitui SPED/PGDAS.</p></div></div>
             <div id="fiscalPacoteContadorRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalEmissaoConfigSection" class="view-section hidden">
-            <div class="cfg-section-head"><div><h2>🧾 Emissão NF-e / NFC-e</h2><p class="subtle-text">Homologação ou produção, token do emissor, CSC e séries — pronto para ligar a SEFAZ na próxima fase.</p></div></div>
+          <section id="fiscalEmissaoConfigSection" class="view-section hidden cfg-module-section">
+            <div class="cfg-section-head"><div><h2>🧾 Emissão NF-e / NFC-e</h2><p class="subtle-text">Homologação ou produção, token do emissor, CSC e séries — configure por CNPJ antes de emitir no PDV.</p></div></div>
             <div id="fiscalEmissaoConfigRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalEmpresasSection" class="view-section hidden">
+          <section id="fiscalEmpresasSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>🏢 Empresas (CNPJ)</h2><p class="subtle-text">Pessoa jurídica responsável pelo estoque e regime tributário.</p></div></div>
             <div id="fiscalEmpresasRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalPerfisTributariosSection" class="view-section hidden">
+          <section id="fiscalPerfisTributariosSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>📋 Perfis tributários</h2><p class="subtle-text">Classificações fiscais reutilizáveis entre produtos.</p></div></div>
             <div id="fiscalPerfisRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalComprasRelatorioSection" class="view-section hidden">
+          <section id="fiscalComprasRelatorioSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>📥 Entradas fiscais (compras)</h2><p class="subtle-text">Notas de entrada, tributos destacados e créditos potenciais.</p></div></div>
             <div id="fiscalComprasRelatorioRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalMovimentacoesRelatorioSection" class="view-section hidden">
+          <section id="fiscalMovimentacoesRelatorioSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>📤 Movimentações e eventos fiscais</h2><p class="subtle-text">Perdas, transferências internas e operações entre CNPJs (sem apuração tributária).</p></div></div>
             <div id="fiscalMovimentacoesRelatorioRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalProducaoSection" class="view-section hidden">
+          <section id="fiscalProducaoSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>🍳 Produção fiscal</h2><p class="subtle-text">Ordem de produção a partir da ficha técnica — baixa de insumos, entrada do produto final e evento fiscal.</p></div></div>
             <div id="fiscalProducaoRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalVendaPdvSection" class="view-section hidden">
+          <section id="fiscalVendaPdvSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>🛒 Vendas PDV (fiscal)</h2><p class="subtle-text">Venda com baixa de estoque — trava CNPJ do PDV × estoque. Integração opcional no PDV/Caixa.</p></div></div>
             <div id="fiscalVendaPdvRoot" class="int-page-wrap"></div>
           </section>
-          <section id="fiscalPainelModulo07Section" class="view-section hidden">
+          <section id="fiscalPainelModulo07Section" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>📊 Fiscal — consolidação (M7)</h2><p class="subtle-text">Visão gerencial, apuração estimada e simulador tributário (não substitui escrituração oficial).</p></div></div>
             <div id="fiscalPainelModulo07Root" class="int-page-wrap"></div>
           </section>
 
           <!-- Configurações — Integrações — OpenClaw -->
-          <section id="openClawIntegracaoSection" class="view-section hidden">
+          <section id="openClawIntegracaoSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head">
               <div>
                 <h2>🦞 OpenClaw / Assistente IA</h2>
@@ -4946,7 +4947,7 @@
                     <div id="ocAcoesPermitidas" class="oc-check-grid"></div>
                   </div>
 
-                  <div class="oc-form-actions">
+                  <div class="oc-form-actions cfg-form-actions">
                     <button type="submit" class="btn primary" id="ocSalvarBtn">Salvar configurações</button>
                     <button type="button" class="btn secondary" id="ocBtnTestar">Testar conexão</button>
                   </div>
@@ -5039,7 +5040,7 @@
           </section>
 
           <!-- Ayla IA — Configurações -->
-          <section id="aylaConfiguracoesSection" class="view-section hidden">
+          <section id="aylaConfiguracoesSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head">
               <div>
                 <h2>⚙️ Ayla IA — Configurações</h2>
@@ -7975,7 +7976,7 @@
     <script src="rh-rescisao.js?v=20260608-trct"></script>
     <script src="impostos.js?v=20260622-impostos"></script>
     <script src="comercial-pdv.js?v=20260728-focus-emissao"></script>
-    <script src="integracoes.js?v=20260716-int1"></script>
+    <script src="integracoes.js?v=20260728-cfg-ui2"></script>
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
     <script src="delivery.js?v=20260728-select-compacto"></script>
@@ -7984,14 +7985,14 @@
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script src="app.js?v=20260728-cardapio-ficha"></script>
-    <script src="fiscal-pacote-contador.js?v=20260728-pacote"></script>
-    <script src="fiscal-emissao-config.js?v=20260728-focus"></script>
-    <script src="fiscal-cadastro.js?v=20260727-fiscal-modal-space"></script>
-    <script src="fiscal-compras.js?v=20260727-fiscal-m2-ready"></script>
-    <script src="fiscal-movimentacoes.js?v=20260727-fiscal-m3"></script>
+    <script src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
+    <script src="fiscal-emissao-config.js?v=20260728-cfg-ui2"></script>
+    <script src="fiscal-cadastro.js?v=20260728-cfg-ui2"></script>
+    <script src="fiscal-compras.js?v=20260728-cfg-ui2"></script>
+    <script src="fiscal-movimentacoes.js?v=20260728-cfg-ui2"></script>
     <script src="fiscal-producao.js?v=20260728-cardapio-ficha"></script>
     <script src="fiscal-venda-pdv.js?v=20260727-fiscal-m6"></script>
-    <script src="fiscal-modulo-07.js?v=20260727-fiscal-m7"></script>
+    <script src="fiscal-modulo-07.js?v=20260728-cfg-ui2"></script>
     <script src="financeiro-gerencial.js?v=20260616-saidas-estoque"></script>
      
   </body>

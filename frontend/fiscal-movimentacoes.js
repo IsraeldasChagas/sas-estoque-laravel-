@@ -176,23 +176,33 @@
       ]);
       const rowPerda = (r) =>
         `<tr><td>${esc(r.data_mov)}</td><td>${esc(r.tipo_movimentacao)}</td><td>${esc(r.produto_nome)}</td><td>${esc(r.unidade_nome)}</td><td>${esc(r.qtd)}</td><td>${esc(r.custo_total ?? "—")}</td></tr>`;
+      const nPerdas = (perdas.itens || []).length;
+      const nInternas = (trans.internas || []).length;
+      const nCnpj = (trans.entre_cnpjs || []).length;
       root.innerHTML = `
+        <div class="fiscal-page">
+        <div class="fiscal-kpi-row">
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${nPerdas}</span><span class="fiscal-kpi-card__l">Perdas / baixas</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${nInternas}</span><span class="fiscal-kpi-card__l">Transferências internas</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${nCnpj}</span><span class="fiscal-kpi-card__l">Entre CNPJs</span></div>
+        </div>
         <div class="fiscal-mov-relatorio-grid">
-          <div class="table-card">
+          <div class="fiscal-panel-card table-card">
             <header>Perdas e baixas (${esc(perdas.totais?.quantidade ?? 0)} un — ${esc(perdas.totais?.custo ?? 0)})</header>
             <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Tipo</th><th>Produto</th><th>Unidade</th><th>Qtd</th><th>Custo</th></tr></thead>
             <tbody>${(perdas.itens || []).slice(0, 100).map(rowPerda).join("") || "<tr><td colspan=\"6\">Sem registros</td></tr>"}</tbody></table></div>
           </div>
-          <div class="table-card">
+          <div class="fiscal-panel-card table-card">
             <header>Transferências internas (${(trans.internas || []).length})</header>
             <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Produto</th><th>Origem</th><th>Destino</th><th>Qtd</th></tr></thead>
             <tbody>${(trans.internas || []).slice(0, 50).map((r) => `<tr><td>${esc(r.data_mov)}</td><td>${esc(r.produto_nome)}</td><td>${esc(r.unidade_origem_nome)}</td><td>${esc(r.unidade_destino_nome)}</td><td>${esc(r.qtd)}</td></tr>`).join("") || "<tr><td colspan=\"5\">Sem registros</td></tr>"}</tbody></table></div>
           </div>
-          <div class="table-card">
+          <div class="fiscal-panel-card table-card">
             <header>Operações entre CNPJs (${(trans.entre_cnpjs || []).length})</header>
             <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Produto</th><th>Doc</th><th>Status doc</th><th>Qtd</th></tr></thead>
             <tbody>${(trans.entre_cnpjs || []).slice(0, 50).map((r) => `<tr><td>${esc(r.data_mov)}</td><td>${esc(r.produto_nome)}</td><td>${esc(r.numero_documento || r.chave_acesso_documento || "—")}</td><td>${esc(r.status_documental || "—")}</td><td>${esc(r.qtd)}</td></tr>`).join("") || "<tr><td colspan=\"5\">Sem registros</td></tr>"}</tbody></table></div>
           </div>
+        </div>
         </div>`;
     } catch (e) {
       root.innerHTML = `<p class="subtle-text">${esc(e.message)}</p>`;

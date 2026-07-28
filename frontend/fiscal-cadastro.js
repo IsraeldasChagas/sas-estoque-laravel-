@@ -389,6 +389,11 @@
 
     root.innerHTML = `
       <div class="fiscal-page">
+        <div class="fiscal-kpi-row">
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.length}</span><span class="fiscal-kpi-card__l">Empresas</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${countAtivas}</span><span class="fiscal-kpi-card__l">Ativas</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.filter((e) => empresaTemRegime(e)).length}</span><span class="fiscal-kpi-card__l">Com regime</span></div>
+        </div>
         <div class="fiscal-toolbar">
           <div class="fiscal-toolbar__info">
             <p class="fiscal-toolbar__label">Cadastro fiscal</p>
@@ -397,12 +402,6 @@
           <div class="fiscal-toolbar__actions">
             ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovaEmpresa">+ Nova empresa</button>' : ""}
           </div>
-        </div>
-
-        <div class="fiscal-kpi-row">
-          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.length}</span><span class="fiscal-kpi-card__l">Empresas</span></div>
-          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${countAtivas}</span><span class="fiscal-kpi-card__l">Ativas</span></div>
-          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.filter((e) => empresaTemRegime(e)).length}</span><span class="fiscal-kpi-card__l">Com regime</span></div>
         </div>
 
         <div class="fiscal-panel-card">
@@ -602,6 +601,11 @@
 
     root.innerHTML = `
       <div class="fiscal-page">
+        <div class="fiscal-kpi-row">
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.length}</span><span class="fiscal-kpi-card__l">Perfis</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${countAtivos}</span><span class="fiscal-kpi-card__l">Ativos</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.filter((p) => p.ncm_padrao).length}</span><span class="fiscal-kpi-card__l">Com NCM</span></div>
+        </div>
         <div class="fiscal-toolbar">
           <div class="fiscal-toolbar__info">
             <p class="fiscal-toolbar__label">Cadastro fiscal</p>
@@ -610,12 +614,6 @@
           <div class="fiscal-toolbar__actions">
             ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalBtnNovoPerfil">+ Novo perfil</button>' : ""}
           </div>
-        </div>
-
-        <div class="fiscal-kpi-row">
-          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.length}</span><span class="fiscal-kpi-card__l">Perfis</span></div>
-          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${countAtivos}</span><span class="fiscal-kpi-card__l">Ativos</span></div>
-          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${list.filter((p) => p.ncm_padrao).length}</span><span class="fiscal-kpi-card__l">Com NCM</span></div>
         </div>
 
         <div class="fiscal-panel-card">

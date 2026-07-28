@@ -227,7 +227,7 @@
 
       root.innerHTML = `
         <div class="int-page-wrap">
-          <div class="int-grid-2">
+          <div class="int-grid-2 cfg-stats-row">
             <div class="int-card">
               <header><h3>Status da integração</h3></header>
               <div class="int-status-row">
@@ -306,7 +306,7 @@
                 Integração ativa
               </label>
             </form>
-            <div class="int-actions">
+            <div class="int-actions cfg-form-actions">
               <button type="button" class="btn primary" id="intVfSalvar" data-int-needs-admin="1" ${intPodeConfigurar ? "" : "disabled"}>Salvar</button>
               <button type="button" class="btn secondary" id="intVfTestar" data-int-needs-admin="1" ${intPodeConfigurar ? "" : "disabled"}>Testar conexão</button>
               <button type="button" class="btn secondary" id="intVfSalvarUnidades" data-int-needs-admin="1" ${intPodeConfigurar ? "" : "disabled"}>Salvar unidades</button>

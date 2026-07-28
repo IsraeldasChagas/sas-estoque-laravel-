@@ -280,8 +280,14 @@
       </tr>`
       )
       .join("");
+    const nEnt = (entradas.rows || []).length;
+    const nCred = (creditos.rows || []).length;
     root.innerHTML = `
       <div class="fiscal-page">
+        <div class="fiscal-kpi-row">
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${nEnt}</span><span class="fiscal-kpi-card__l">Linhas de entrada</span></div>
+          <div class="fiscal-kpi-card"><span class="fiscal-kpi-card__n">${nCred}</span><span class="fiscal-kpi-card__l">Créditos potenciais</span></div>
+        </div>
         <div class="fiscal-toolbar">
           <div class="fiscal-toolbar__info">
             <p class="fiscal-toolbar__label">Relatórios</p>

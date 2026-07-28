@@ -1254,8 +1254,7 @@
     if (!root) return;
     root.innerHTML = `
       <div class="cpdv-aviso-proto cpdv-aviso-proto--ok">
-        <strong>Fase operacional pronta.</strong> Consolidação fiscal, vendas PDV com baixa no estoque e cadastro de empresas/CNPJ.
-        Emissão oficial de NFC-e/NF-e fica no módulo fiscal completo (integração SEFAZ), quando contratada.
+        Consolidação fiscal, vendas PDV com baixa no estoque, emissão de <strong>NFC-e (Focus)</strong> após configurar token/CSC, e pacote mensal para o contador.
       </div>
       <nav class="cpdv-fiscal-tabs" role="tablist" aria-label="Fiscal comercial">
         <button type="button" class="btn primary" data-cpdv-fiscal-tab="visao" role="tab">Visão geral</button>
