@@ -26491,6 +26491,7 @@ function setupFichaTecnicaForm() {
     const dataEl = document.getElementById('fichaTecnicaData');
     if (dataEl) dataEl.value = dataHojeIsoLocalFichaTecnica();
     atualizarVisibilidadeBtnPdfFicha();
+    window.limparFichaProducaoVinculo?.();
   };
 
   /** Abre o PDF da ficha no mesmo modal do Alvará (PDF.js + Baixar). tipo: completa | ingredientes */
@@ -26629,6 +26630,9 @@ function setupFichaTecnicaForm() {
     if (formTitulo) formTitulo.textContent = 'Editar ficha técnica';
     syncFichaTecnicaVisaoPrecos();
     atualizarVisibilidadeBtnPdfFicha();
+    void window.ensureFichaProducaoFields?.().then(() => {
+      window.preencherFichaProducaoVinculo?.(p);
+    });
   };
 
   onNavigateFichaTecnicaCallback = () => {
@@ -26777,6 +26781,12 @@ function setupFichaTecnicaForm() {
       const preco_prato = parseMoedaInput(document.getElementById('fichaTecnicaPrecoPrato'));
       const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
       const editId = (editIdEl?.value || '').trim();
+      const vinculo = window.lerFichaProducaoVinculoPayload?.() || {};
+      if (!vinculo.produto_final_id) {
+        showToast('Escolha o prato no estoque (liga ficha, estoque e cardápio).', 'warning');
+        document.getElementById('fichaProdutoFinalId')?.focus();
+        return;
+      }
 
       const apiPayload = {
         nome_prato,
@@ -26788,6 +26798,9 @@ function setupFichaTecnicaForm() {
         sugestao_venda,
         modo_preparo,
         ingredientes,
+        produto_final_id: vinculo.produto_final_id,
+        rendimento_quantidade: vinculo.rendimento_quantidade,
+        rendimento_unidade: vinculo.rendimento_unidade,
       };
 
       let saved;

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\RhRecruitmentMergeController;
+use App\Support\ProducaoFiscalSupport;
 use App\Support\FiscalCadastroSupport;
 use App\Support\FiscalCompraEntradaSupport;
 use App\Support\FiscalMovimentacaoSupport;
@@ -1155,6 +1156,35 @@ $encodeFichaTecnicaIngredientesJson = static function (array $ingredientes) use 
     return $json;
 };
 
+$fichaTecnicaRegrasProducao = static function (): array {
+    $rules = [];
+    if (Schema::hasColumn('fichas_tecnicas', 'produto_final_id')) {
+        $rules['produto_final_id'] = 'nullable|integer|exists:produtos,id';
+    }
+    if (Schema::hasColumn('fichas_tecnicas', 'rendimento_quantidade')) {
+        $rules['rendimento_quantidade'] = 'nullable|numeric|min:0.001';
+    }
+    if (Schema::hasColumn('fichas_tecnicas', 'rendimento_unidade')) {
+        $rules['rendimento_unidade'] = 'nullable|string|max:20';
+    }
+
+    return $rules;
+};
+
+$mesclarProducaoNaFichaRow = static function (array $data, array &$target): void {
+    foreach (['produto_final_id', 'rendimento_quantidade', 'rendimento_unidade'] as $col) {
+        if (Schema::hasColumn('fichas_tecnicas', $col) && array_key_exists($col, $data)) {
+            $target[$col] = $data[$col];
+        }
+    }
+};
+
+$sincronizarFichaAposSalvar = static function (int $fichaId, ?int $produtoFinalId): void {
+    if ($produtoFinalId && $produtoFinalId > 0) {
+        ProducaoFiscalSupport::sincronizarItensFicha($fichaId);
+    }
+};
+
 $mapFichaTecnicaRow = static function ($row) {
     $ing = [];
     if (!empty($row->ingredientes_json)) {
@@ -1212,7 +1242,7 @@ Route::get('/fichas-tecnicas', function () use ($mapFichaTecnicaRow) {
     }
 });
 
-Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnicaRow, $encodeFichaTecnicaIngredientesJson) {
+Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnicaRow, $encodeFichaTecnicaIngredientesJson, $fichaTecnicaRegrasProducao, $mesclarProducaoNaFichaRow, $sincronizarFichaAposSalvar) {
     if (!Schema::hasTable('fichas_tecnicas')) {
         return response()->json([
             'error' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
@@ -1229,7 +1259,7 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
             'preco_prato' => 'nullable|numeric',
             'sugestao_venda' => 'nullable|numeric',
             'ingredientes' => 'nullable|array',
-        ];
+        ] + $fichaTecnicaRegrasProducao();
         if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
             $rules['data_ficha'] = 'nullable|date';
         }
@@ -1265,7 +1295,10 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
         if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
             $insertRow['data_ficha'] = ! empty($data['data_ficha']) ? $data['data_ficha'] : null;
         }
+        $mesclarProducaoNaFichaRow($data, $insertRow);
         $id = DB::table('fichas_tecnicas')->insertGetId($insertRow);
+        $pid = isset($data['produto_final_id']) ? (int) $data['produto_final_id'] : 0;
+        $sincronizarFichaAposSalvar((int) $id, $pid > 0 ? $pid : null);
         $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
         return response()->json($mapFichaTecnicaRow($row), 201);
     } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1278,7 +1311,7 @@ Route::post('/fichas-tecnicas', function (Request $request) use ($mapFichaTecnic
     }
 });
 
-Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFichaTecnicaRow, $encodeFichaTecnicaIngredientesJson) {
+Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFichaTecnicaRow, $encodeFichaTecnicaIngredientesJson, $fichaTecnicaRegrasProducao, $mesclarProducaoNaFichaRow, $sincronizarFichaAposSalvar) {
     if (!Schema::hasTable('fichas_tecnicas')) {
         return response()->json([
             'error' => 'Tabela fichas_tecnicas não existe. Execute: php artisan migrate',
@@ -1300,7 +1333,7 @@ Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFi
             'preco_prato' => 'nullable|numeric',
             'sugestao_venda' => 'nullable|numeric',
             'ingredientes' => 'nullable|array',
-        ];
+        ] + $fichaTecnicaRegrasProducao();
         if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
             $rules['data_ficha'] = 'nullable|date';
         }
@@ -1334,7 +1367,10 @@ Route::put('/fichas-tecnicas/{id}', function (Request $request, $id) use ($mapFi
         if (Schema::hasColumn('fichas_tecnicas', 'data_ficha')) {
             $updateRow['data_ficha'] = ! empty($data['data_ficha']) ? $data['data_ficha'] : null;
         }
+        $mesclarProducaoNaFichaRow($data, $updateRow);
         DB::table('fichas_tecnicas')->where('id', $id)->update($updateRow);
+        $pid = isset($data['produto_final_id']) ? (int) $data['produto_final_id'] : (int) ($existing->produto_final_id ?? 0);
+        $sincronizarFichaAposSalvar($id, $pid > 0 ? $pid : null);
         $row = DB::table('fichas_tecnicas')->where('id', $id)->first();
         return response()->json($mapFichaTecnicaRow($row));
     } catch (\Illuminate\Validation\ValidationException $e) {

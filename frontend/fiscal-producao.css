@@ -35,3 +35,22 @@
   color: #2e7d32;
   font-size: 0.9rem;
 }
+
+.ficha-vinculo-passos {
+  margin: 0 0 1rem 1.1rem;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-muted, #444);
+}
+
+.ficha-vinculo-passos li + li {
+  margin-top: 0.35rem;
+}
+
+.ficha-vinculo-estoque .form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #555);
+}

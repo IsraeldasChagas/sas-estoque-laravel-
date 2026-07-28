@@ -175,43 +175,89 @@
   /** Campos de produção no formulário de ficha (painel opcional) */
   function injectFichaProducaoFields() {
     const formView = document.getElementById("fichaTecnicaFormView");
-    if (!formView || document.getElementById("fichaProducaoMeta")) return;
+    const form = document.getElementById("fichaTecnicaForm");
+    if (!formView || !form || document.getElementById("fichaProducaoMeta")) return;
+    const anchor = form.querySelector(".ficha-tecnica-form__block:nth-of-type(2)");
     const box = document.createElement("div");
     box.id = "fichaProducaoMeta";
-    box.className = "fiscal-producao-panel";
+    box.className = "fiscal-producao-panel ficha-vinculo-estoque";
     box.innerHTML = `
-      <h3>Dados para produção (fiscal)</h3>
+      <h3 class="ficha-tecnica-form__section-title">Ligação com estoque e cardápio</h3>
+      <ol class="ficha-vinculo-passos">
+        <li>Cadastre o <strong>mesmo prato</strong> em <strong>Produtos</strong> (estoque), se ainda não existir.</li>
+        <li>Aqui na ficha, escolha esse produto em <strong>Prato no estoque</strong> e liste os <strong>ingredientes</strong> abaixo (com produto do estoque quando possível).</li>
+        <li>No <strong>Cardápio → Itens</strong>, tipo <strong>Prato / produção nossa</strong>, escolha o <strong>mesmo prato</strong> — os insumos vêm desta ficha.</li>
+      </ol>
       <div class="fiscal-producao-grid">
-        <label>Produto final (estoque) <select id="fichaProdutoFinalId"><option value="">—</option>${optsProdutos()}</select></label>
-        <label>Rendimento (qtd) <input type="number" id="fichaRendimentoQtd" step="0.001" min="0.001" placeholder="10" /></label>
-        <label>Unidade rend. <input type="text" id="fichaRendimentoUn" maxlength="20" placeholder="UND" /></label>
+        <label>Prato no estoque (produto final) *
+          <select id="fichaProdutoFinalId" required><option value="">— Escolha o produto —</option>${optsProdutos()}</select>
+          <small class="form-hint">Deve ser o cadastro do prato pronto, não tomate/arroz solto.</small>
+        </label>
+        <label>Rendimento (quantas porções esta receita rende)
+          <input type="number" id="fichaRendimentoQtd" step="0.001" min="0.001" placeholder="Ex.: 10" value="1" />
+        </label>
+        <label>Unidade do rendimento
+          <input type="text" id="fichaRendimentoUn" maxlength="20" placeholder="UND, porção…" value="porção" />
+        </label>
       </div>
-      <button type="button" class="btn" id="fichaSalvarProducaoMeta">Salvar vínculo produção</button>
-      <p id="fichaProducaoMetaMsg" class="subtle-text"></p>`;
-    formView.querySelector("form")?.prepend(box);
-    box.querySelector("#fichaSalvarProducaoMeta")?.addEventListener("click", async () => {
-      const editId = document.getElementById("fichaTecnicaEditId")?.value;
-      if (!editId) {
-        box.querySelector("#fichaProducaoMetaMsg").textContent = "Salve a ficha antes de vincular produção.";
-        return;
+      <p class="form-hint">Salve tudo de uma vez com o botão <strong>Salvar ficha técnica</strong> (não precisa de outro botão aqui).</p>
+      <p id="fichaProducaoMetaMsg" class="subtle-text" role="status"></p>`;
+    if (anchor) anchor.after(box);
+    else form.prepend(box);
+
+    const nomePrato = document.getElementById("fichaTecnicaNomePrato");
+    const sel = box.querySelector("#fichaProdutoFinalId");
+    nomePrato?.addEventListener("change", () => tentarSugerirProdutoFinal());
+    nomePrato?.addEventListener("blur", () => tentarSugerirProdutoFinal());
+
+    function tentarSugerirProdutoFinal() {
+      if (!sel || sel.value) return;
+      const nome = (nomePrato?.value || "").trim().toLowerCase();
+      if (nome.length < 3) return;
+      const hit = (produtosCache || []).find((p) => String(p.nome || "").trim().toLowerCase() === nome);
+      if (hit) {
+        sel.value = String(hit.id);
+        const msg = box.querySelector("#fichaProducaoMetaMsg");
+        if (msg) msg.textContent = `Sugerimos o produto “${hit.nome}” pelo nome igual ao prato. Confira e salve.`;
       }
-      try {
-        await fFetch(`/fichas-tecnicas/${editId}/producao`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            produto_final_id: Number(box.querySelector("#fichaProdutoFinalId").value) || null,
-            rendimento_quantidade: Number(box.querySelector("#fichaRendimentoQtd").value) || null,
-            rendimento_unidade: box.querySelector("#fichaRendimentoUn").value || null,
-          }),
-        });
-        box.querySelector("#fichaProducaoMetaMsg").textContent = "Vínculo salvo.";
-      } catch (e) {
-        box.querySelector("#fichaProducaoMetaMsg").textContent = e.message;
-      }
-    });
+    }
   }
 
+  window.preencherFichaProducaoVinculo = function (ficha) {
+    const sel = document.getElementById("fichaProdutoFinalId");
+    const rq = document.getElementById("fichaRendimentoQtd");
+    const ru = document.getElementById("fichaRendimentoUn");
+    if (sel && ficha?.produto_final_id) sel.value = String(ficha.produto_final_id);
+    if (rq && ficha?.rendimento_quantidade != null) rq.value = String(ficha.rendimento_quantidade);
+    if (ru && ficha?.rendimento_unidade) ru.value = String(ficha.rendimento_unidade);
+  };
+
+  window.lerFichaProducaoVinculoPayload = function () {
+    const sel = document.getElementById("fichaProdutoFinalId");
+    const rq = document.getElementById("fichaRendimentoQtd");
+    const ru = document.getElementById("fichaRendimentoUn");
+    const produto_final_id = Number(sel?.value || 0) || null;
+    const rendimento_quantidade = rq?.value !== "" && rq?.value != null ? Number(rq.value) : null;
+    const rendimento_unidade = (ru?.value || "").trim() || null;
+    return { produto_final_id, rendimento_quantidade, rendimento_unidade };
+  };
+
+  window.limparFichaProducaoVinculo = function () {
+    const sel = document.getElementById("fichaProdutoFinalId");
+    const rq = document.getElementById("fichaRendimentoQtd");
+    const ru = document.getElementById("fichaRendimentoUn");
+    if (sel) sel.value = "";
+    if (rq) rq.value = "1";
+    if (ru) ru.value = "porção";
+    const msg = document.getElementById("fichaProducaoMetaMsg");
+    if (msg) msg.textContent = "";
+  };
+
+  window.ensureFichaProducaoFields = function () {
+    return loadAux().then(injectFichaProducaoFields);
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
-    loadAux().then(injectFichaProducaoFields);
+    window.ensureFichaProducaoFields();
   });
 })();
