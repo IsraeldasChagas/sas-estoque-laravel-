@@ -406,18 +406,21 @@
       </div>
       <div id="vfVinculoRevenda" class="vf-vinculo-pane" ${tipo === "prato" ? "hidden" : ""}>
         <label class="vf-field vf-mt"><span>Produto no estoque (revenda)</span>
-          <input type="search" id="vfEstoqueBusca" placeholder="Buscar produto…" autocomplete="off" value="">
-          <select name="estoque_produto_id" id="vfEstoqueSelect" size="6" class="vf-estoque-select">
-            <option value="">— Carregando… —</option>
+          <input type="search" id="vfEstoqueBusca" class="vf-vinculo-busca" placeholder="Filtrar produtos…" autocomplete="off" value="">
+          <select name="estoque_produto_id" id="vfEstoqueSelect" class="vf-select-compact">
+            <option value="">— Selecione o produto —</option>
           </select>
         </label>
       </div>
       <div id="vfVinculoPrato" class="vf-vinculo-pane" ${tipo === "prato" ? "" : "hidden"}>
         <label class="vf-field vf-mt"><span>Ficha técnica (receita do restaurante)</span>
-          <input type="search" id="vfFichaBusca" placeholder="Buscar receita…" autocomplete="off" value="">
-          <select name="ficha_tecnica_id" id="vfFichaSelect" size="6" class="vf-estoque-select">
-            <option value="">— Carregando fichas… —</option>
+          <div id="vfFichaBuscaWrap" class="vf-vinculo-busca-wrap">
+            <input type="search" id="vfFichaBusca" class="vf-vinculo-busca" placeholder="Filtrar receitas…" autocomplete="off" value="">
+          </div>
+          <select name="ficha_tecnica_id" id="vfFichaSelect" class="vf-select-compact">
+            <option value="">— Selecione a ficha —</option>
           </select>
+          <button type="button" class="vf-btn vf-btn--link vf-ficha-trocar" id="vfFichaTrocarBtn" hidden>Trocar receita</button>
           <small class="vf-help">Escolha a receita cadastrada em <strong>Ficha técnica</strong>.</small>
         </label>
         <div id="vfFichaResumo" class="vf-ficha-resumo vf-ficha-resumo--muted" ${tipo === "prato" ? "" : "hidden"} aria-live="polite">
@@ -441,6 +444,7 @@
     if (tipo === "prato") {
       if (dica) dica.textContent = "O cliente pede pelo cardápio; na venda o sistema usa os insumos desta ficha.";
       await refreshFichaSelect(root, produto);
+      syncFichaSelectUi(root);
       await refreshFichaResumo(root, form, produto);
       return;
     }
@@ -483,8 +487,20 @@
       return `<option value="${it.id}"${sel}>${esc(it.nome)}${ins}</option>`;
     })).join("");
     if (form && current > 0) {
-      await refreshFichaResumo(root, form);
+      syncFichaSelectUi(root);
+      await refreshFichaResumo(root, form, produto);
+    } else {
+      syncFichaSelectUi(root);
     }
+  }
+
+  function syncFichaSelectUi(root) {
+    const sel = root.querySelector("#vfFichaSelect");
+    const buscaWrap = root.querySelector("#vfFichaBuscaWrap");
+    const trocar = root.querySelector("#vfFichaTrocarBtn");
+    const picked = Number(sel?.value || 0) > 0;
+    if (buscaWrap) buscaWrap.hidden = picked;
+    if (trocar) trocar.hidden = !picked;
   }
 
   function fichaResumoQuery(form, produto) {
@@ -579,6 +595,7 @@
   function bindEstoqueVendaPicker(root, produto, unidadeDono) {
     const form = root.querySelector("#vfProdutoEditorForm");
     const onFichaPick = () => {
+      syncFichaSelectUi(root);
       if (form) refreshFichaResumo(root, form, produto);
     };
     refreshEstoqueSelect(root, produto, unidadeDono).catch((e) => toast(e?.message || "Não foi possível carregar produtos do estoque.", "error"));
@@ -590,13 +607,20 @@
       vfEstoqueBuscaTimer = setTimeout(() => refreshEstoqueSelect(root, produto, unidadeDono), 300);
     });
     root.querySelector("#vfFichaSelect")?.addEventListener("change", onFichaPick);
-    root.querySelector("#vfFichaSelect")?.addEventListener("input", onFichaPick);
-    root.querySelector("#vfFichaSelect")?.addEventListener("click", onFichaPick);
+    root.querySelector("#vfFichaTrocarBtn")?.addEventListener("click", () => {
+      const sel = root.querySelector("#vfFichaSelect");
+      if (sel) sel.value = "";
+      root.querySelector("#vfFichaBuscaWrap")?.removeAttribute("hidden");
+      root.querySelector("#vfFichaBusca")?.focus();
+      syncFichaSelectUi(root);
+      refreshFichaSelect(root, produto).then(() => {
+        if (form) refreshFichaResumo(root, form, produto);
+      });
+    });
     root.querySelector("#vfFichaBusca")?.addEventListener("input", () => {
       clearTimeout(vfFichaBuscaTimer);
       vfFichaBuscaTimer = setTimeout(async () => {
         await refreshFichaSelect(root, produto);
-        onFichaPick();
       }, 300);
     });
   }

@@ -312,3 +312,29 @@
 #vfVinculoPrato .vf-ficha-resumo {
   margin-top: 0.75rem;
 }
+
+.vf-select-compact {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9375rem;
+  border-radius: 6px;
+  border: 1px solid var(--vf-border, #cfd6df);
+  background: #fff;
+}
+
+.vf-vinculo-busca {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--vf-border, #cfd6df);
+}
+
+.vf-ficha-trocar {
+  margin-top: 0.25rem;
+  padding-left: 0;
+}
