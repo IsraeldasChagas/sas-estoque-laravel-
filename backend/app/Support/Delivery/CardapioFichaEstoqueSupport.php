@@ -23,13 +23,51 @@ final class CardapioFichaEstoqueSupport
     public static function mensagemSeSemFicha(int $produtoFinalId): ?string
     {
         if ($produtoFinalId <= 0) {
-            return 'Escolha o prato cadastrado em Produtos / estoque (produto final), não um insumo avulso.';
+            return null;
         }
         if (self::produtoTemFicha($produtoFinalId)) {
             return null;
         }
 
-        return 'Este produto não tem ficha técnica vinculada. Cadastre a receita em Ficha técnica apontando para o mesmo produto final, ou escolha outro prato na lista.';
+        return 'Este produto não tem ficha técnica vinculada.';
+    }
+
+    public static function fichaExiste(int $fichaId): bool
+    {
+        return $fichaId > 0 && Schema::hasTable('fichas_tecnicas')
+            && DB::table('fichas_tecnicas')->where('id', $fichaId)->exists();
+    }
+
+    /** Valida vínculo de item do cardápio tipo prato (ficha direta — fluxo normal). */
+    public static function mensagemSePratoSemReceita(?int $fichaTecnicaId, ?int $estoqueProdutoIdLegado): ?string
+    {
+        if ($fichaTecnicaId && $fichaTecnicaId > 0) {
+            if (! self::fichaExiste($fichaTecnicaId)) {
+                return 'Ficha técnica não encontrada. Escolha outra receita ou cadastre em Ficha técnica.';
+            }
+            $itens = self::resumoPorFichaId($fichaTecnicaId);
+
+            return ($itens && ($itens['ingredientes'] ?? []) !== []) ? null
+                : 'A ficha escolhida não tem insumos ligados a produtos do estoque. Na ficha, vincule arroz, carne etc. (Produtos).';
+        }
+        if ($estoqueProdutoIdLegado && $estoqueProdutoIdLegado > 0) {
+            return self::mensagemSeSemFicha($estoqueProdutoIdLegado);
+        }
+
+        return 'Escolha a ficha técnica deste prato. O estoque baixa os insumos da receita — não cadastre o prato como produto comprado.';
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function resumoPorFichaId(int $fichaId): ?array
+    {
+        if (! self::fichaExiste($fichaId)) {
+            return null;
+        }
+        $ficha = DB::table('fichas_tecnicas')->where('id', $fichaId)->first();
+
+        return self::montarResumo($ficha);
     }
 
     /**
@@ -52,7 +90,45 @@ final class CardapioFichaEstoqueSupport
             return null;
         }
 
-        $prodFinal = DB::table('produtos')->where('id', $produtoFinalId)->first();
+        return self::montarResumo($ficha, $produtoFinalId);
+    }
+
+    /** @return array{estoque_ok: bool, aviso: ?string} */
+    public static function avaliarSaldoInsumos(int $fichaId, int $unidadeId): array
+    {
+        $resumo = self::resumoPorFichaId($fichaId);
+        if (! $resumo || $unidadeId <= 0) {
+            return ['estoque_ok' => false, 'aviso' => 'Vincule a ficha técnica com insumos do estoque.'];
+        }
+        $faltas = [];
+        foreach ($resumo['ingredientes'] ?? [] as $ing) {
+            $pid = (int) ($ing['produto_id'] ?? 0);
+            if ($pid <= 0) {
+                continue;
+            }
+            $saldo = \App\Support\ProducaoEstoqueSupport::saldoDisponivel($pid, $unidadeId);
+            if ($saldo === null || $saldo <= 0.0001) {
+                $faltas[] = (string) ($ing['nome'] ?? $pid);
+            }
+        }
+        if ($faltas === []) {
+            return ['estoque_ok' => true, 'aviso' => null];
+        }
+
+        return [
+            'estoque_ok' => false,
+            'aviso' => 'Insumos sem saldo nesta unidade: '.implode(', ', array_slice($faltas, 0, 5)).(count($faltas) > 5 ? '…' : ''),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function montarResumo(object $ficha, ?int $produtoFinalId = null): array
+    {
+        $pfId = $produtoFinalId ?? (Schema::hasColumn('fichas_tecnicas', 'produto_final_id') && $ficha->produto_final_id
+            ? (int) $ficha->produto_final_id : 0);
+        $prodFinal = $pfId > 0 ? DB::table('produtos')->where('id', $pfId)->first() : null;
         $rendimento = ProducaoFiscalSupport::rendimentoFicha($ficha);
         $ingredientes = [];
 
@@ -60,13 +136,12 @@ final class CardapioFichaEstoqueSupport
             $pid = (int) $it['produto_insumo_id'];
             $prod = DB::table('produtos')->where('id', $pid)->first();
             $nome = $prod->nome ?? $it['nome'] ?? ('#'.$pid);
-            $subFicha = DB::table('fichas_tecnicas')->where('produto_final_id', $pid)->orderByDesc('id')->first();
+            $subFicha = Schema::hasColumn('fichas_tecnicas', 'produto_final_id')
+                ? DB::table('fichas_tecnicas')->where('produto_final_id', $pid)->orderByDesc('id')->first()
+                : null;
 
             $tipo = self::classificarInsumo($prod, $subFicha !== null);
-            $semiAcabado = null;
-            if ($subFicha) {
-                $semiAcabado = self::mapSubIngredientes($subFicha);
-            }
+            $semiAcabado = $subFicha ? self::mapSubIngredientes($subFicha) : null;
 
             $ingredientes[] = [
                 'produto_id' => $pid,
@@ -81,12 +156,12 @@ final class CardapioFichaEstoqueSupport
         return [
             'ficha_id' => (int) $ficha->id,
             'nome_prato' => (string) ($ficha->nome_prato ?? $prodFinal->nome ?? ''),
-            'produto_final_id' => $produtoFinalId,
+            'produto_final_id' => $pfId > 0 ? $pfId : null,
             'produto_final_nome' => $prodFinal->nome ?? null,
             'rendimento_quantidade' => $rendimento,
             'ingredientes' => $ingredientes,
-            'mensagem' => 'Escolha só o prato acima (produto final). Os insumos abaixo vêm da ficha técnica — na venda a baixa segue essa receita (produção / estoque).',
-            'nota_semi_acabado' => 'Itens marcados como semi-acabado (ex.: farofa) podem não aparecer no cardápio: entram como componente deste prato. Produza o semi-acabado antes ou coloque os insumos crus direto na ficha do prato principal.',
+            'mensagem' => 'Na venda, o estoque baixa estes insumos (produtos comprados / produzidos). O cardápio só aponta para esta ficha — não precisa cadastrar o prato como produto de estoque.',
+            'nota_semi_acabado' => 'Semi-acabado (ex.: farofa): pode existir só na ficha, sem item no cardápio.',
         ];
     }
 

@@ -184,14 +184,14 @@
     box.innerHTML = `
       <h3 class="ficha-tecnica-form__section-title">Ligação com estoque e cardápio</h3>
       <ol class="ficha-vinculo-passos">
-        <li>Cadastre o <strong>mesmo prato</strong> em <strong>Produtos</strong> (estoque), se ainda não existir.</li>
-        <li>Aqui na ficha, escolha esse produto em <strong>Prato no estoque</strong> e liste os <strong>ingredientes</strong> abaixo (com produto do estoque quando possível).</li>
-        <li>No <strong>Cardápio → Itens</strong>, tipo <strong>Prato / produção nossa</strong>, escolha o <strong>mesmo prato</strong> — os insumos vêm desta ficha.</li>
+        <li>Cadastre os <strong>insumos</strong> em <strong>Produtos</strong> (arroz, carne, tomate… o que você compra).</li>
+        <li>Aqui monte a <strong>ficha técnica</strong>: ingredientes + quantidades (vincule ao produto do estoque quando puder).</li>
+        <li>No <strong>Cardápio → Itens</strong>, tipo prato, escolha <strong>esta ficha</strong> — não precisa cadastrar o prato como produto de estoque.</li>
       </ol>
       <div class="fiscal-producao-grid">
-        <label>Prato no estoque (produto final) *
-          <select id="fichaProdutoFinalId" required><option value="">— Escolha o produto —</option>${optsProdutos()}</select>
-          <small class="form-hint">Deve ser o cadastro do prato pronto, não tomate/arroz solto.</small>
+        <label>Prato no estoque <em class="form-hint">(opcional)</em>
+          <select id="fichaProdutoFinalId"><option value="">— Só se guarda prato pronto —</option>${optsProdutos()}</select>
+          <small class="form-hint">Use só se produz e estoca o prato pronto. Restaurante comum pode deixar em branco.</small>
         </label>
         <label>Rendimento (quantas porções esta receita rende)
           <input type="number" id="fichaRendimentoQtd" step="0.001" min="0.001" placeholder="Ex.: 10" value="1" />

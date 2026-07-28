@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Support\Delivery\CardapioFichaEstoqueSupport;
 use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -61,31 +62,48 @@ final class CardapioComercialSupport
 
         foreach ($rows as $p) {
             $estoqueId = $p->estoque_produto_id !== null ? (int) $p->estoque_produto_id : 0;
+            $fichaId = Schema::hasColumn('dlv_produtos', 'ficha_tecnica_id') && $p->ficha_tecnica_id
+                ? (int) $p->ficha_tecnica_id : 0;
+            $tipoVenda = Schema::hasColumn('dlv_produtos', 'tipo_venda')
+                ? (string) ($p->tipo_venda ?? 'revenda')
+                : 'revenda';
             $saldo = $estoqueId > 0 ? ProducaoEstoqueSupport::saldoDisponivel($estoqueId, $unidadeId) : null;
+            $estoqueOk = false;
+            $aviso = null;
+            if ($tipoVenda === 'prato') {
+                if ($fichaId > 0) {
+                    $avaliacao = CardapioFichaEstoqueSupport::avaliarSaldoInsumos($fichaId, $unidadeId);
+                    $estoqueOk = $avaliacao['estoque_ok'];
+                    $aviso = $avaliacao['aviso'];
+                } elseif ($estoqueId > 0) {
+                    $estoqueOk = $saldo !== null && $saldo > 0.0001;
+                    $aviso = CardapioFichaEstoqueSupport::mensagemSeSemFicha($estoqueId)
+                        ?? ($estoqueOk ? null : 'Sem saldo nesta unidade — dê entrada no estoque.');
+                } else {
+                    $aviso = 'Vincule a ficha técnica deste prato (Cardápio → receita).';
+                }
+            } else {
+                if ($estoqueId <= 0) {
+                    $aviso = 'No cardápio: escolha o produto que você revende.';
+                } elseif ($saldo === null || $saldo <= 0.0001) {
+                    $aviso = 'Sem saldo nesta unidade — dê entrada no estoque.';
+                } else {
+                    $estoqueOk = true;
+                }
+            }
+
             $catNome = $p->categoria_nome ?? null;
             $categoria = $catNome ? Str::slug(Str::lower($catNome), '_') : 'geral';
             if ($categoria === '') {
                 $categoria = 'geral';
             }
             $preco = round((float) ($p->preco ?? 0), 2);
-            $estoqueOk = $estoqueId > 0 && $saldo !== null && $saldo > 0.0001;
-            $tipoVenda = Schema::hasColumn('dlv_produtos', 'tipo_venda')
-                ? (string) ($p->tipo_venda ?? 'revenda')
-                : 'revenda';
-            if ($estoqueId <= 0) {
-                $aviso = $tipoVenda === 'prato'
-                    ? 'No cardápio: escolha o prato final (com ficha técnica); insumos vêm da receita.'
-                    : 'No cardápio: escolha o produto que você revende.';
-            } elseif (! $estoqueOk) {
-                $aviso = 'Sem saldo nesta unidade — dê entrada no estoque.';
-            } else {
-                $aviso = null;
-            }
 
             $out[] = [
                 'id' => (int) $p->id,
                 'cardapio_produto_id' => (int) $p->id,
                 'estoque_produto_id' => $estoqueId > 0 ? $estoqueId : null,
+                'ficha_tecnica_id' => $fichaId > 0 ? $fichaId : null,
                 'nome' => (string) $p->nome,
                 'categoria' => $categoria,
                 'categoria_nome' => $catNome,
@@ -164,9 +182,24 @@ final class CardapioComercialSupport
         }
 
         $estoqueId = $dlv->estoque_produto_id !== null ? (int) $dlv->estoque_produto_id : 0;
-        if ($estoqueId <= 0) {
-            throw new \InvalidArgumentException('Vincule o item do cardápio a um produto de estoque antes de vender no PDV.');
+        $fichaId = Schema::hasColumn('dlv_produtos', 'ficha_tecnica_id') && $dlv->ficha_tecnica_id
+            ? (int) $dlv->ficha_tecnica_id : 0;
+        $tipoVenda = Schema::hasColumn('dlv_produtos', 'tipo_venda')
+            ? (string) ($dlv->tipo_venda ?? 'revenda')
+            : 'revenda';
+
+        if ($tipoVenda === 'prato') {
+            if ($fichaId <= 0 && $estoqueId <= 0) {
+                throw new \InvalidArgumentException('Vincule a ficha técnica deste prato no cardápio antes de vender.');
+            }
+            if ($fichaId <= 0 && $estoqueId > 0 && CardapioFichaEstoqueSupport::mensagemSeSemFicha($estoqueId)) {
+                throw new \InvalidArgumentException('Vincule a ficha técnica deste prato no cardápio antes de vender.');
+            }
+        } elseif ($estoqueId <= 0) {
+            throw new \InvalidArgumentException('Vincule o item do cardápio a um produto de estoque antes de vender.');
         }
+
+        $produtoLinha = $estoqueId > 0 ? $estoqueId : 0;
 
         $preco = $precoInformado;
         if ($preco === null || $preco <= 0) {
@@ -177,8 +210,9 @@ final class CardapioComercialSupport
         }
 
         return [
-            'produto_id' => $estoqueId,
+            'produto_id' => $produtoLinha,
             'cardapio_produto_id' => $cardapioId,
+            'ficha_tecnica_id' => $fichaId > 0 ? $fichaId : null,
             'preco_unitario' => round($preco, 4),
             'nome' => (string) $dlv->nome,
         ];

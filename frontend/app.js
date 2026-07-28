@@ -26782,11 +26782,6 @@ function setupFichaTecnicaForm() {
       const sugestao_venda = parseMoedaInput(document.getElementById('fichaTecnicaSugestaoVenda'));
       const editId = (editIdEl?.value || '').trim();
       const vinculo = window.lerFichaProducaoVinculoPayload?.() || {};
-      if (!vinculo.produto_final_id) {
-        showToast('Escolha o prato no estoque (liga ficha, estoque e cardápio).', 'warning');
-        document.getElementById('fichaProdutoFinalId')?.focus();
-        return;
-      }
 
       const apiPayload = {
         nome_prato,

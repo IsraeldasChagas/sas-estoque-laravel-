@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Delivery;
 use App\Support\Delivery\CardapioFichaEstoqueSupport;
 use App\Support\Delivery\CardapioProdutoUnidadeSupport;
 use App\Support\ProducaoEstoqueSupport;
+use App\Support\ProducaoFiscalSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -77,18 +78,61 @@ class DeliveryProdutoController extends DeliveryBaseController
             'unidade_id' => $unidadeId > 0 ? $unidadeId : null,
             'items' => $items,
             'dica' => $tipo === 'prato'
-                ? 'Escolha um único prato cadastrado em Produtos / estoque (produto final). A lista de insumos vem da ficha técnica — não selecione tomate, arroz cru etc. aqui.'
+                ? 'Não use aqui insumos (tomate, arroz). No cardápio você escolhe a ficha técnica; o estoque baixa os ingredientes da receita.'
                 : 'Produto que você compra pronto para revender: água, refrigerante, cerveja…',
             'mostrando_só_com_ficha' => $tipo === 'prato' && $hasFicha && ! $request->boolean('todos'),
         ]);
     }
 
+    public function fichasCardapioOpcoes(Request $request): JsonResponse
+    {
+        $this->auth($request, 'deliveryProdutos');
+        if (! Schema::hasTable('fichas_tecnicas')) {
+            return response()->json(['items' => []]);
+        }
+        $q = trim((string) $request->query('q', ''));
+        $query = DB::table('fichas_tecnicas')->select('id', 'nome_prato', 'produto_final_id', 'ingredientes_json', 'updated_at');
+        if ($q !== '') {
+            $query->where('nome_prato', 'like', '%'.$q.'%');
+        }
+        $rows = $query->orderBy('nome_prato')->limit(200)->get();
+        $items = $rows->map(function ($row) {
+            $ficha = (object) ['id' => $row->id, 'ingredientes_json' => $row->ingredientes_json ?? '[]'];
+            $n = count(ProducaoFiscalSupport::itensFicha($ficha));
+
+            return [
+                'id' => (int) $row->id,
+                'nome' => (string) $row->nome_prato,
+                'qtd_insumos' => $n,
+                'produto_final_id' => Schema::hasColumn('fichas_tecnicas', 'produto_final_id') && $row->produto_final_id
+                    ? (int) $row->produto_final_id : null,
+            ];
+        })->values();
+
+        return response()->json(['items' => $items]);
+    }
+
     public function produtosEstoqueFicha(Request $request): JsonResponse
     {
         $this->auth($request, 'deliveryProdutos');
+        $fichaId = (int) $request->query('ficha_id', 0);
         $produtoId = (int) $request->query('produto_id', 0);
+
+        if ($fichaId > 0) {
+            $resumo = CardapioFichaEstoqueSupport::resumoPorFichaId($fichaId);
+            if ($resumo === null) {
+                return response()->json([
+                    'ficha_id' => $fichaId,
+                    'tem_ficha' => false,
+                    'mensagem' => 'Ficha não encontrada.',
+                ]);
+            }
+
+            return response()->json(['ficha_id' => $fichaId, 'tem_ficha' => true] + $resumo);
+        }
+
         if ($produtoId <= 0) {
-            return response()->json(['error' => 'Informe produto_id.'], 422);
+            return response()->json(['error' => 'Informe ficha_id ou produto_id.'], 422);
         }
 
         $resumo = CardapioFichaEstoqueSupport::resumoPorProdutoFinal($produtoId);
@@ -96,7 +140,7 @@ class DeliveryProdutoController extends DeliveryBaseController
             return response()->json([
                 'produto_id' => $produtoId,
                 'tem_ficha' => false,
-                'mensagem' => CardapioFichaEstoqueSupport::mensagemSeSemFicha($produtoId),
+                'mensagem' => CardapioFichaEstoqueSupport::mensagemSeSemFicha($produtoId) ?? 'Sem ficha para este produto.',
             ]);
         }
 
@@ -165,6 +209,7 @@ class DeliveryProdutoController extends DeliveryBaseController
             $data['max_ingredientes_retirar'] = null;
         }
         $this->validarRegrasNegocio($data, $ingredientes, null);
+        $data = $this->normalizarVinculoCardapio($data, null);
 
         $sku = trim((string) ($data['sku'] ?? ''));
         if ($sku === '') {
@@ -225,12 +270,13 @@ class DeliveryProdutoController extends DeliveryBaseController
             $data['max_ingredientes_retirar'] = null;
         }
         $this->validarRegrasNegocio($merged, $ingredientes ?? [], $row, $request->exists('ingredientes'));
+        $data = $this->normalizarVinculoCardapio(array_merge((array) $row, $data), $row);
 
         $fotoPath = $this->resolverFotoProduto($request, $unidadeId, $row);
         $sku = (string) ($row->sku ?? '');
 
         DB::transaction(function () use ($id, $data, $row, $unidadeId, $sku, $fotoPath, $ingredientes, $request) {
-            $update = $this->payload(array_merge((array) $row, $data), $unidadeId, $sku, $fotoPath);
+            $update = $this->payload($data, $unidadeId, $sku, $fotoPath);
             unset($update['unidade_id'], $update['sku']);
             $update['updated_at'] = now();
             DB::table('dlv_produtos')->where('id', $id)->update($update);
@@ -348,6 +394,8 @@ class DeliveryProdutoController extends DeliveryBaseController
             'ingredientes' => $ingredientes,
             'unidades_venda_ids' => CardapioProdutoUnidadeSupport::unidadesDoProduto($id, (int) $produto->unidade_id),
             'tipo_venda' => $this->normalizarTipoVenda($produto->tipo_venda ?? null),
+            'ficha_tecnica_id' => Schema::hasColumn('dlv_produtos', 'ficha_tecnica_id') && $produto->ficha_tecnica_id
+                ? (int) $produto->ficha_tecnica_id : null,
             'estoque_produto_nome' => $this->nomeProdutoEstoque($produto->estoque_produto_id ?? null),
         ]);
     }
@@ -406,7 +454,26 @@ class DeliveryProdutoController extends DeliveryBaseController
             'ordem' => (int) ($data['ordem'] ?? 0),
         ] + (Schema::hasColumn('dlv_produtos', 'tipo_venda')
             ? ['tipo_venda' => $this->normalizarTipoVenda($data['tipo_venda'] ?? null)]
+            : []) + (Schema::hasColumn('dlv_produtos', 'ficha_tecnica_id')
+            ? ['ficha_tecnica_id' => isset($data['ficha_tecnica_id']) && $data['ficha_tecnica_id'] !== '' && $data['ficha_tecnica_id'] !== null
+                ? (int) $data['ficha_tecnica_id'] : null]
             : []);
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function normalizarVinculoCardapio(array $data, ?object $existente): array
+    {
+        $tipo = $this->normalizarTipoVenda($data['tipo_venda'] ?? ($existente->tipo_venda ?? null));
+        if ($tipo === 'prato' && Schema::hasColumn('dlv_produtos', 'ficha_tecnica_id')) {
+            $fichaId = (int) ($data['ficha_tecnica_id'] ?? ($existente->ficha_tecnica_id ?? 0));
+            if ($fichaId > 0) {
+                $data['estoque_produto_id'] = null;
+            }
+        } elseif (Schema::hasColumn('dlv_produtos', 'ficha_tecnica_id')) {
+            $data['ficha_tecnica_id'] = null;
+        }
+
+        return $data;
     }
 
     private function uiMode(mixed $value, string $default): string
@@ -433,6 +500,7 @@ class DeliveryProdutoController extends DeliveryBaseController
             'estoque' => 'nullable|integer|min:0',
             'categoria_id' => 'nullable|integer',
             'estoque_produto_id' => 'nullable|integer',
+            'ficha_tecnica_id' => 'nullable|integer',
             'tipo_venda' => ['nullable', 'string', Rule::in(self::TIPOS_VENDA)],
             'sku' => 'nullable|string|max:80',
             'descricao' => 'nullable|string',
@@ -538,18 +606,26 @@ class DeliveryProdutoController extends DeliveryBaseController
         $estoqueId = array_key_exists('estoque_produto_id', $data)
             ? (int) ($data['estoque_produto_id'] ?? 0)
             : (int) ($existente->estoque_produto_id ?? 0);
+        $fichaId = array_key_exists('ficha_tecnica_id', $data)
+            ? (int) ($data['ficha_tecnica_id'] ?? 0)
+            : (int) ($existente->ficha_tecnica_id ?? 0);
 
-        if ($estoqueId <= 0) {
-            throw ValidationException::withMessages([
-                'estoque_produto_id' => 'Escolha qual produto do estoque está ligado à venda.',
-            ]);
+        if ($tipo === 'revenda') {
+            if ($estoqueId <= 0) {
+                throw ValidationException::withMessages([
+                    'estoque_produto_id' => 'Escolha qual produto de revenda baixa no estoque (água, Coca…).',
+                ]);
+            }
+
+            return;
         }
 
-        if ($tipo === 'prato') {
-            $msg = CardapioFichaEstoqueSupport::mensagemSeSemFicha($estoqueId);
-            if ($msg !== null) {
-                throw ValidationException::withMessages(['estoque_produto_id' => $msg]);
-            }
+        $msg = CardapioFichaEstoqueSupport::mensagemSePratoSemReceita(
+            $fichaId > 0 ? $fichaId : null,
+            $estoqueId > 0 ? $estoqueId : null
+        );
+        if ($msg !== null) {
+            throw ValidationException::withMessages(['ficha_tecnica_id' => $msg]);
         }
     }
 
