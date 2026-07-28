@@ -15,13 +15,15 @@ Publicar backend + frontend; cache `20260727-pdv-op`.
 3. Preço sugerido: ficha técnica (`preco_prato` / `sugestao_venda`) ou campos do produto.
 4. **Pagar** → `POST /api/pdv/vendas/balcao` → baixa FIFO + `vendas` + evento fiscal.
 
-## Fluxo mesa
+## Fluxo mesa (Comercial → Mesas e Comandas)
 
-1. **Comercial → Mesas e Comandas** — mesma unidade.
-2. Mapa via `GET /api/pdv/salao?unidade_id=`.
-3. Toque na mesa → abre comanda (`POST /api/pdv/comandas/abrir`).
-4. Lançar itens (`POST /api/pdv/comandas/{id}/itens`).
-5. **Fechar conta** → `POST /api/pdv/comandas/{id}/finalizar` → venda fiscal + mesa livre + reserva `finalizada` / `conta_paga` se vinculada.
+1. Selecionar **unidade** (mesma do PDV; salva no navegador).
+2. Mapa real (`GET /api/pdv/salao`) — livre / reservada / ocupada / bloqueada.
+3. **Clicar na mesa** → abre comanda (`POST /api/pdv/comandas/abrir`) e painel lateral.
+4. Toque nos **produtos** (valida estoque/CNPJ ao lançar).
+5. **Pré-conta** (impressão) ou **Fechar conta** → venda fiscal + mesa livre + reserva finalizada.
+
+API extra: `PATCH /pdv/comandas/{id}` (pessoas), `GET .../pre-conta`, `GET /pdv/comandas/abertas`.
 
 ## Tabelas
 

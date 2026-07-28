@@ -72,6 +72,26 @@ final class PdvComercialSupport
             });
         }
         $rows = $q->orderBy('produtos.nome')->limit(500)->get();
+        if ($rows->isEmpty()) {
+            $q2 = DB::table('produtos');
+            if (Schema::hasColumn('produtos', 'ativo')) {
+                $q2->where(function ($w) {
+                    $w->where('produtos.ativo', 1)->orWhere('produtos.ativo', true);
+                });
+            }
+            if ($search) {
+                $term = '%' . $search . '%';
+                $q2->where(function ($w) use ($term) {
+                    $w->where('produtos.nome', 'like', $term);
+                });
+            }
+            if ($unidadeId > 0 && Schema::hasColumn('produtos', 'unidade_id')) {
+                $q2->where(function ($w) use ($unidadeId) {
+                    $w->where('produtos.unidade_id', $unidadeId)->orWhereNull('produtos.unidade_id');
+                });
+            }
+            $rows = $q2->orderBy('produtos.nome')->limit(500)->get();
+        }
         $out = [];
         foreach ($rows as $p) {
             $saldo = $unidadeId > 0 ? ProducaoEstoqueSupport::saldoDisponivel((int) $p->id, $unidadeId) : 0;
@@ -82,7 +102,7 @@ final class PdvComercialSupport
                 'categoria' => $p->categoria ?? 'geral',
                 'preco' => round($preco, 2),
                 'saldo' => $saldo,
-                'disponivel' => $saldo > 0 || $unidadeId <= 0,
+                'disponivel' => $saldo > 0.0001,
             ];
         }
 
@@ -153,6 +173,10 @@ final class PdvComercialSupport
         $unidadeId = (int) $data['unidade_id'];
         $mesaId = isset($data['mesa_id']) ? (int) $data['mesa_id'] : null;
         if ($mesaId) {
+            $mesa = Mesa::find($mesaId);
+            if ($mesa && $mesa->status === Mesa::STATUS_BLOQUEADA) {
+                throw new \RuntimeException('Mesa bloqueada — libere no cadastro de mesas.');
+            }
             $existente = DB::table('pdv_comandas')
                 ->where('mesa_id', $mesaId)
                 ->whereIn('status', ['aberta', 'aguardando_pagamento'])
@@ -210,6 +234,16 @@ final class PdvComercialSupport
             throw new \InvalidArgumentException('Produto e quantidade obrigatórios.');
         }
         $preco = isset($item['preco_unitario']) ? (float) $item['preco_unitario'] : self::precoSugeridoProduto($produtoId);
+        if ($preco <= 0) {
+            throw new \InvalidArgumentException('Informe preço unitário — produto sem preço cadastrado.');
+        }
+        $unidadeId = (int) $com->unidade_id;
+        if (VendaFiscalSupport::moduloAtivo()) {
+            $val = VendaFiscalSupport::validarPropriedadeFiscal(null, $unidadeId, $produtoId, $qtd);
+            if (! ($val['ok'] ?? false)) {
+                throw new \RuntimeException($val['message'] ?? 'Item indisponível para este CNPJ/unidade.');
+            }
+        }
         $desc = (float) ($item['desconto'] ?? 0);
         $valor = round($preco * $qtd - $desc, 2);
         DB::table('pdv_comanda_itens')->insert([
@@ -276,6 +310,64 @@ final class PdvComercialSupport
             'comanda' => $com,
             'itens' => $itens,
         ];
+    }
+
+    public static function atualizarComanda(int $comandaId, array $data): array
+    {
+        $com = DB::table('pdv_comandas')->where('id', $comandaId)->first();
+        if (! $com || ! in_array($com->status, ['aberta', 'aguardando_pagamento'], true)) {
+            throw new \RuntimeException('Comanda não editável.');
+        }
+        $upd = [];
+        if (isset($data['pessoas'])) {
+            $upd['pessoas'] = max(1, (int) $data['pessoas']);
+        }
+        if (isset($data['desconto'])) {
+            $upd['desconto'] = max(0, (float) $data['desconto']);
+        }
+        if (isset($data['acrescimo'])) {
+            $upd['acrescimo'] = max(0, (float) $data['acrescimo']);
+        }
+        if (isset($data['status']) && $data['status'] === 'aguardando_pagamento') {
+            $upd['status'] = 'aguardando_pagamento';
+        }
+        if ($upd) {
+            $upd['updated_at'] = now();
+            DB::table('pdv_comandas')->where('id', $comandaId)->update($upd);
+            self::recalcularComanda($comandaId);
+        }
+
+        return self::comandaCompleta($comandaId);
+    }
+
+    /** @return array<int, object> */
+    public static function comandasAbertas(int $unidadeId): array
+    {
+        if (! self::moduloAtivo()) {
+            return [];
+        }
+
+        return DB::table('pdv_comandas')
+            ->where('unidade_id', $unidadeId)
+            ->whereIn('status', ['aberta', 'aguardando_pagamento'])
+            ->orderByDesc('id')
+            ->get()
+            ->all();
+    }
+
+    public static function preContaHtml(int $comandaId): string
+    {
+        $data = self::comandaCompleta($comandaId);
+        $com = $data['comanda'];
+        $mesa = $com->mesa_id ? DB::table('mesas')->where('id', $com->mesa_id)->first() : null;
+        $num = $mesa->numero_mesa ?? $mesa->nome_mesa ?? $com->mesa_id;
+        $lines = ["<h2>Pré-conta — Mesa {$num}</h2>", '<p>Comanda #' . $com->id . '</p>'];
+        foreach ($data['itens'] as $i) {
+            $lines[] = '<div>' . htmlspecialchars($i->produto_nome) . ' · ' . $i->quantidade . ' × R$ ' . number_format((float) $i->preco_unitario, 2, ',', '.') . '</div>';
+        }
+        $lines[] = '<p><strong>Total: R$ ' . number_format((float) $com->valor_total, 2, ',', '.') . '</strong></p>';
+
+        return implode("\n", $lines);
     }
 
     /** @param array<string, mixed> $payload */

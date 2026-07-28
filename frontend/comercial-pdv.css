@@ -174,6 +174,30 @@
 .cpdv-cart-totais .total { font-size: 1.15rem; font-weight: 800; color: #1a237e; }
 .cpdv-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
 
+.cpdv-mesas-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 400px);
+  gap: 1rem;
+  align-items: start;
+}
+.cpdv-mesa-painel-wrap {
+  position: sticky;
+  top: 0.5rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.75rem;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+}
+.cpdv-mesa-painel-head h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.cpdv-mesa-painel-meta { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.cpdv-mesa-itens { max-height: 200px; overflow: auto; margin-bottom: 0.5rem; }
+.cpdv-mesa--selected { outline: 3px solid #1565c0; outline-offset: 2px; }
+.cpdv-prod-grid--mesa { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); max-height: 260px; overflow: auto; margin-top: 0.5rem; }
+.cpdv-prod--sm { padding: 0.4rem; font-size: 0.75rem; min-height: 52px; }
+.cpdv-mesa-painel-empty { padding: 1.5rem 0.5rem; text-align: center; }
+
 .cpdv-mesas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -312,6 +336,10 @@
 @media (max-width: 1024px) {
   .cpdv-pdv-layout { grid-template-columns: 1fr; }
   .cpdv-kds { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .cpdv-mesas-layout { grid-template-columns: 1fr; }
+  .cpdv-mesa-painel-wrap { position: static; max-height: none; }
 }
 @media (max-width: 700px) {
   .cpdv-kds { grid-template-columns: 1fr; }

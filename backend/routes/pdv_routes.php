@@ -33,6 +33,34 @@ Route::get('/pdv/salao', function (Request $request) {
     );
 });
 
+Route::get('/pdv/comandas/abertas', function (Request $request) {
+    $request->validate(['unidade_id' => 'required|integer']);
+
+    return response()->json(PdvComercialSupport::comandasAbertas((int) $request->unidade_id));
+});
+
+Route::patch('/pdv/comandas/{id}', function (Request $request, int $id) {
+    $data = $request->validate([
+        'pessoas' => 'nullable|integer|min:1',
+        'desconto' => 'nullable|numeric|min:0',
+        'acrescimo' => 'nullable|numeric|min:0',
+        'status' => 'nullable|string|in:aguardando_pagamento,aberta',
+    ]);
+    try {
+        return response()->json(PdvComercialSupport::atualizarComanda($id, $data));
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::get('/pdv/comandas/{id}/pre-conta', function (int $id) {
+    try {
+        return response()->json(['html' => PdvComercialSupport::preContaHtml($id)]);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
+});
+
 Route::get('/pdv/comandas/{id}', function (int $id) {
     if (! PdvComercialSupport::moduloAtivo()) {
         return response()->json(['error' => 'Módulo PDV não migrado'], 422);

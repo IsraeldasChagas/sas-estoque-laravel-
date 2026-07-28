@@ -11,6 +11,9 @@ const API_URL = (() => {
   return fallback;
 })();
 
+window.API_URL = API_URL;
+window.API_BASE = API_URL;
+
 // URL base para arquivos estáticos (fotos, uploads) - sem /api
 const BASE_URL = API_URL.replace(/\/api\/?$/, "") || "https://api.gruposaborparaense.com.br";
 
