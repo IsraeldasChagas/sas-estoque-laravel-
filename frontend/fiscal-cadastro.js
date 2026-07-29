@@ -191,15 +191,20 @@
     </div>`;
   }
 
+  /** Botões do modal de empresa ficam na toolbar, fora do &lt;form&gt; */
+  function empresaModalBtn(id) {
+    return document.getElementById(id);
+  }
+
   function bindEmpresaFormUi(root) {
     const form = root.querySelector("#fiscalEmpresaForm");
     if (!form || form.dataset.fiscalEmpresaBound) return;
     form.dataset.fiscalEmpresaBound = "1";
 
     const crtSel = form.elements.crt;
-    const btnContinuar = form.querySelector("#fiscalEmpresaBtnContinuar");
-    const btnVoltar = form.querySelector("#fiscalEmpresaBtnVoltar");
-    const btnSalvar = form.querySelector("#fiscalEmpresaBtnSalvar");
+    const btnContinuar = empresaModalBtn("fiscalEmpresaBtnContinuar");
+    const btnVoltar = empresaModalBtn("fiscalEmpresaBtnVoltar");
+    const btnSalvar = empresaModalBtn("fiscalEmpresaBtnSalvar");
 
     form.querySelector(".fiscal-regime-cards")?.addEventListener("click", (ev) => {
       const card = ev.target.closest(".fiscal-regime-card[data-regime]");
@@ -229,6 +234,12 @@
 
     form.querySelector("#fiscalEmpresaRegimeSelect")?.addEventListener("change", (ev) => {
       setEmpresaRegimeValue(form, ev.target.value, true);
+    });
+
+    btnSalvar?.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (btnSalvar.classList.contains("hidden")) return;
+      form.requestSubmit();
     });
   }
 
@@ -284,9 +295,9 @@
     });
     form.querySelector("#fiscalEmpresaEditRegimeBlock")?.classList.toggle("hidden", !isEdit);
     form.classList.toggle("fiscal-empresa-form--edit-layout", isEdit);
-    const btnContinuar = form.querySelector("#fiscalEmpresaBtnContinuar");
-    const btnVoltar = form.querySelector("#fiscalEmpresaBtnVoltar");
-    const btnSalvar = form.querySelector("#fiscalEmpresaBtnSalvar");
+    const btnContinuar = empresaModalBtn("fiscalEmpresaBtnContinuar");
+    const btnVoltar = empresaModalBtn("fiscalEmpresaBtnVoltar");
+    const btnSalvar = empresaModalBtn("fiscalEmpresaBtnSalvar");
     if (isEdit) {
       btnContinuar?.classList.add("hidden");
       btnVoltar?.classList.add("hidden");
@@ -424,7 +435,7 @@
         <div class="fiscal-modal-toolbar__right">
           <button type="button" class="btn neutral hidden" id="fiscalEmpresaBtnVoltar">Voltar</button>
           ${fiscalPodeEditar ? '<button type="button" class="btn primary" id="fiscalEmpresaBtnContinuar">Continuar</button>' : ""}
-          ${fiscalPodeEditar ? '<button type="submit" form="fiscalEmpresaForm" class="btn primary hidden" id="fiscalEmpresaBtnSalvar">Salvar empresa</button>' : ""}
+          ${fiscalPodeEditar ? '<button type="button" class="btn primary hidden" id="fiscalEmpresaBtnSalvar">Salvar empresa</button>' : ""}
         </div>
       </div>
       <form id="fiscalEmpresaForm" class="fiscal-modal-form fiscal-empresa-form" data-empresa-step="1" data-empresa-mode="create"><input type="hidden" name="id" />
