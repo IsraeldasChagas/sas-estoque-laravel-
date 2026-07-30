@@ -1333,43 +1333,50 @@
       )).join("");
     const uniOpts = await cpdvLoadUnidadesOptions(cpdvState.unidadeId);
     root.innerHTML = `
-      ${cpdvAvisoProto()}
-      <div class="cpdv-form-body table-card" style="margin-bottom:.75rem">
-        <label>Unidade (PDV / estoque)
-          <select id="cpdvUnidadeFiscal"><option value="">— Selecione —</option>${uniOpts}</select>
-        </label>
-      </div>
-      <div class="cpdv-pdv-layout">
-        <div class="table-card">
-          <header><h3>Produtos</h3></header>
-          <div class="cpdv-form-body">
-            <input type="search" id="cpdvBuscaProd" class="full-width" placeholder="Buscar produto…" />
-            <div class="cpdv-pdv-cats">${cats}</div>
-            <div class="cpdv-prod-grid">${grid}</div>
+      <div class="cpdv-local-shell">
+        <div class="cpdv-local-toolbar">
+          <div>
+            <strong>Caixa · SAS Estoque</strong>
+            <small>Produtos, pagamentos e estoque da unidade</small>
           </div>
+          <label class="cpdv-local-unidade">Unidade / estoque
+            <select id="cpdvUnidadeFiscal"><option value="">— Selecione —</option>${uniOpts}</select>
+          </label>
         </div>
-        <div class="table-card">
-          <header><h3>Carrinho / PDV</h3></header>
-          <div class="cpdv-form-body">
-            <label>Cliente
-              <select id="cpdvClienteSel">${cliOpts}</select>
-            </label>
-            <p class="form-hint" style="font-size:0.8rem;margin:0 0 0.5rem">Produtos com estoque na unidade. Pagamento baixa estoque e registra venda fiscal.</p>
-            ${cart}
-            <div class="cpdv-cart-totais">
-              <div>Subtotal: <strong>${moeda(cpdvSubtotal())}</strong></div>
-              <div>Desconto: ${moeda(cpdvState.desconto)}</div>
-              <div>Acréscimo: ${moeda(cpdvState.acrescimo)}</div>
-              <div class="total">Total: ${moeda(cpdvTotal())}</div>
+        ${cpdvAvisoProto()}
+        <div class="cpdv-pdv-layout">
+          <section class="table-card cpdv-local-panel cpdv-local-products">
+            <div class="cpdv-form-body">
+              <div class="cpdv-local-search">
+                <input type="search" id="cpdvBuscaProd" class="full-width" placeholder="Buscar produto…" />
+              </div>
+              <div class="cpdv-pdv-cats">${cats}</div>
+              <div class="cpdv-prod-grid">${grid}</div>
             </div>
-            <div class="cpdv-actions">
-              <button type="button" class="btn neutral" data-cpdv-proto="Desconto aplicado">Desconto</button>
-              <button type="button" class="btn neutral" data-cpdv-proto="Acréscimo aplicado">Acréscimo</button>
-              <button type="button" class="btn neutral" data-cpdv-proto="Venda suspensa">Suspender</button>
-              <button type="button" class="btn primary" id="cpdvPagarBtn" ${cpdvState.cart.length ? "" : "disabled"}>Pagar</button>
-              <button type="button" class="btn danger" data-cpdv-proto="Carrinho limpo" id="cpdvLimparCart">Limpar</button>
+          </section>
+          <section class="table-card cpdv-local-panel cpdv-local-cart">
+            <header><h3>Carrinho</h3></header>
+            <div class="cpdv-form-body">
+              <label>Cliente
+                <select id="cpdvClienteSel">${cliOpts}</select>
+              </label>
+              <p class="cpdv-local-hint">O pagamento baixa o estoque e registra a venda.</p>
+              <div class="cpdv-local-cart-list">${cart}</div>
+              <div class="cpdv-cart-totais">
+                <div>Subtotal <strong>${moeda(cpdvSubtotal())}</strong></div>
+                <div>Desconto <span>${moeda(cpdvState.desconto)}</span></div>
+                <div>Acréscimo <span>${moeda(cpdvState.acrescimo)}</span></div>
+                <div class="total"><span>Total</span><strong>${moeda(cpdvTotal())}</strong></div>
+              </div>
+              <div class="cpdv-actions">
+                <button type="button" class="btn neutral" data-cpdv-proto="Desconto aplicado">Desconto</button>
+                <button type="button" class="btn neutral" data-cpdv-proto="Acréscimo aplicado">Acréscimo</button>
+                <button type="button" class="btn neutral" data-cpdv-proto="Venda suspensa">Suspender</button>
+                <button type="button" class="btn primary" id="cpdvPagarBtn" ${cpdvState.cart.length ? "" : "disabled"}>Confirmar venda</button>
+                <button type="button" class="btn danger" data-cpdv-proto="Carrinho limpo" id="cpdvLimparCart">Limpar</button>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>`;
     root.querySelector("#cpdvLimparCart")?.addEventListener("click", () => {

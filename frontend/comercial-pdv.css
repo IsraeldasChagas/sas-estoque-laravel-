@@ -260,6 +260,183 @@
 .cpdv-cart-totais .total { font-size: 1.15rem; font-weight: 800; color: #1a237e; }
 .cpdv-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
 
+/* Caixa principal com a mesma linguagem visual do PDV local */
+#comercialPdvSection {
+  --cpdv-local-bg: #f4f1ea;
+  --cpdv-local-card: #fffdf8;
+  --cpdv-local-line: #d7d0c4;
+  --cpdv-local-ink: #1f2933;
+  --cpdv-local-muted: #6b7280;
+  --cpdv-local-accent: #0f766e;
+  color: var(--cpdv-local-ink);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, #efe7d8 0, transparent 38%),
+    linear-gradient(180deg, #f7f3eb, #efe8dc);
+  padding: 1rem 1.1rem 1.5rem;
+}
+#comercialPdvSection .cpdv-section-head {
+  margin-bottom: 0.9rem;
+  padding: 0 0.15rem;
+}
+#comercialPdvSection .cpdv-section-head h2 {
+  color: var(--cpdv-local-ink);
+  font-size: 1.3rem;
+  letter-spacing: 0.01em;
+}
+#comercialPdvSection .cpdv-section-head .subtle-text {
+  color: var(--cpdv-local-muted);
+}
+#comercialPdvSection .cpdv-page-wrap {
+  max-width: 1500px;
+  gap: 0.9rem;
+}
+.cpdv-local-shell {
+  display: grid;
+  gap: 0.9rem;
+}
+.cpdv-local-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.cpdv-local-toolbar > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.cpdv-local-toolbar > div > strong {
+  font-size: 1.05rem;
+}
+.cpdv-local-toolbar > div > small {
+  color: var(--cpdv-local-muted);
+}
+.cpdv-local-unidade {
+  width: min(340px, 100%);
+  margin: 0;
+  color: var(--cpdv-local-ink);
+}
+#comercialPdvSection input,
+#comercialPdvSection select {
+  border: 1px solid var(--cpdv-local-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--cpdv-local-ink);
+}
+#comercialPdvSection .cpdv-pdv-layout {
+  grid-template-columns: minmax(0, 1.3fr) minmax(330px, 0.9fr);
+  gap: 1rem;
+}
+#comercialPdvSection .cpdv-local-panel {
+  overflow: hidden;
+  border: 1px solid var(--cpdv-local-line);
+  border-radius: 14px;
+  background: var(--cpdv-local-card);
+  box-shadow: none;
+}
+#comercialPdvSection .cpdv-local-panel > header {
+  padding: 1rem 1rem 0;
+  border: 0;
+  background: transparent;
+}
+#comercialPdvSection .cpdv-local-panel > header h3 {
+  color: var(--cpdv-local-ink);
+  font-size: 1.05rem;
+}
+#comercialPdvSection .cpdv-form-body {
+  padding: 1rem;
+}
+.cpdv-local-search {
+  margin-bottom: 0.75rem;
+}
+#comercialPdvSection .cpdv-pdv-cats {
+  margin-bottom: 0.8rem;
+}
+#comercialPdvSection .cpdv-chip {
+  border-color: var(--cpdv-local-line);
+  background: #fff;
+  color: var(--cpdv-local-ink);
+}
+#comercialPdvSection .cpdv-chip.active {
+  border-color: var(--cpdv-local-accent);
+  background: var(--cpdv-local-accent);
+  color: #fff;
+}
+#comercialPdvSection .cpdv-prod-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+#comercialPdvSection .cpdv-prod {
+  min-height: 86px;
+  border: 1px solid var(--cpdv-local-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--cpdv-local-ink);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+#comercialPdvSection .cpdv-prod:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(31, 41, 51, 0.08);
+}
+#comercialPdvSection .cpdv-prod:active {
+  transform: scale(0.98);
+}
+#comercialPdvSection .cpdv-prod__preco {
+  color: var(--cpdv-local-accent);
+}
+.cpdv-local-cart {
+  position: sticky;
+  top: 0.6rem;
+}
+.cpdv-local-hint {
+  margin: 0 0 0.55rem;
+  color: var(--cpdv-local-muted);
+  font-size: 0.78rem;
+}
+.cpdv-local-cart-list {
+  min-height: 68px;
+  max-height: 35vh;
+  overflow: auto;
+}
+#comercialPdvSection .cpdv-cart-item {
+  border-bottom: 1px dashed var(--cpdv-local-line);
+  padding: 0.6rem 0;
+}
+#comercialPdvSection .cpdv-cart-item span {
+  color: var(--cpdv-local-muted);
+}
+#comercialPdvSection .cpdv-cart-totais {
+  gap: 0.45rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cpdv-local-line);
+}
+#comercialPdvSection .cpdv-cart-totais > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+#comercialPdvSection .cpdv-cart-totais .total {
+  margin-top: 0.2rem;
+  color: var(--cpdv-local-ink);
+  font-size: 1.3rem;
+}
+#comercialPdvSection .cpdv-actions .btn {
+  border-radius: 10px;
+}
+#comercialPdvSection #cpdvPagarBtn {
+  flex: 1 1 100%;
+  order: -1;
+  justify-content: center;
+  min-height: 2.8rem;
+  max-width: none;
+  background: var(--cpdv-local-accent);
+}
+#comercialPdvSection .cpdv-aviso-proto {
+  border-color: #f0d59d;
+  background: #fff8e8;
+}
+
 .cpdv-mesas-layout {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(300px, 400px);
@@ -673,6 +850,7 @@
 
 @media (max-width: 1024px) {
   .cpdv-pdv-layout { grid-template-columns: 1fr; }
+  .cpdv-local-cart { position: static; }
   .cpdv-kds { grid-template-columns: 1fr 1fr; }
 }
 .cpdv-mesa-painel-empty { padding: 1.5rem 0.5rem; text-align: center; }
