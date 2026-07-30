@@ -27,6 +27,7 @@ Route::get('/pdv/meta', function (Request $request) use ($pdvAuth) {
         'emissao_pdv' => FiscalEmissaoConfigSupport::opcoesPdvParaUnidade($unidadeId),
         'modos_emissao_pdv' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV,
         'seguranca_pagamento' => PdvConfigSupport::opcoesPublicas($usuario),
+        'encargos_pdv' => PdvConfigSupport::encargosPublicos(),
     ]);
 });
 
@@ -52,6 +53,18 @@ Route::put('/pdv/config', function (Request $request) use ($pdvAuth) {
         'exigir_autorizacao_cartao' => 'nullable|boolean',
         'exigir_bandeira_cartao' => 'nullable|boolean',
         'exigir_identificador_pix' => 'nullable|boolean',
+        'bandeiras_cartao' => 'nullable|array',
+        'bandeiras_cartao.*' => 'string|max:40',
+        'taxa_servico_ativa' => 'nullable|boolean',
+        'taxa_servico_modo' => 'nullable|string|in:percentual,fixo',
+        'taxa_servico_valor' => 'nullable|numeric|min:0|max:999999',
+        'taxa_servico_padrao_mesa' => 'nullable|boolean',
+        'taxa_servico_padrao_balcao' => 'nullable|boolean',
+        'pagamento_cantor_ativo' => 'nullable|boolean',
+        'pagamento_cantor_modo' => 'nullable|string|in:percentual,fixo',
+        'pagamento_cantor_valor' => 'nullable|numeric|min:0|max:999999',
+        'pagamento_cantor_padrao_mesa' => 'nullable|boolean',
+        'pagamento_cantor_padrao_balcao' => 'nullable|boolean',
     ]);
     try {
         $cfg = PdvConfigSupport::salvar($data, (int) $usuario->id);
@@ -182,6 +195,8 @@ Route::post('/pdv/comandas/{id}/finalizar', function (Request $request, int $id)
         'pagamento_bandeira' => 'nullable|string|max:40',
         'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
         'pagamento_pix_id' => 'nullable|string|max:120',
+        'aplicar_taxa_servico' => 'nullable|boolean',
+        'aplicar_pagamento_cantor' => 'nullable|boolean',
     ]);
     try {
         return response()->json(PdvComercialSupport::finalizarComanda($id, $payload, $uid), 201);
@@ -208,6 +223,8 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'pagamento_bandeira' => 'nullable|string|max:40',
             'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
             'pagamento_pix_id' => 'nullable|string|max:120',
+            'aplicar_taxa_servico' => 'nullable|boolean',
+            'aplicar_pagamento_cantor' => 'nullable|boolean',
             'itens' => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable|integer',
             'itens.*.cardapio_produto_id' => 'nullable|integer',

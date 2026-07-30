@@ -424,6 +424,8 @@ final class PdvComercialSupport
             'pagamento_bandeira',
             'pagamento_parcelas',
             'pagamento_pix_id',
+            'aplicar_taxa_servico',
+            'aplicar_pagamento_cantor',
         ])));
         if (! VendaFiscalSupport::moduloAtivo()) {
             throw new \RuntimeException('Módulo fiscal de vendas indisponível.');

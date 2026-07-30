@@ -230,6 +230,7 @@ final class VendaFiscalSupport
                 $insertVenda['origem_venda'] = (string) $payload['origem_venda'];
             }
             $insertVenda = array_merge($insertVenda, PdvConfigSupport::extrairCamposPagamentoVenda($payload));
+
             $vendaId = DB::table('vendas')->insertGetId($insertVenda);
 
             foreach ($itens as $raw) {
@@ -300,13 +301,18 @@ final class VendaFiscalSupport
             }
 
             $valorLiquido = round($valorBruto - $descontoTotal, 2);
-            DB::table('vendas')->where('id', $vendaId)->update([
+            $encargos = PdvConfigSupport::extrairEncargosVenda($valorLiquido, $payload);
+            $taxaServico = (float) ($encargos['taxa_servico'] ?? 0);
+            $pagamentoCantor = (float) ($encargos['pagamento_cantor'] ?? 0);
+            $valorLiquido = round($valorLiquido + $taxaServico + $pagamentoCantor, 2);
+
+            DB::table('vendas')->where('id', $vendaId)->update(array_merge([
                 'valor_bruto' => $valorBruto,
                 'desconto' => $descontoTotal,
                 'valor_liquido' => $valorLiquido,
                 'custo_total' => $custoTotalVenda,
                 'updated_at' => now(),
-            ]);
+            ], $encargos));
 
             self::criarEventoVenda($vendaId, $empresaId, $unidadeId, $valorLiquido);
 
@@ -314,6 +320,8 @@ final class VendaFiscalSupport
                 'venda_id' => $vendaId,
                 'valor_liquido' => $valorLiquido,
                 'custo_total' => $custoTotalVenda,
+                'taxa_servico' => $taxaServico,
+                'pagamento_cantor' => $pagamentoCantor,
             ];
         });
     }

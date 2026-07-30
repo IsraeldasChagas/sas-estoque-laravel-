@@ -123,6 +123,8 @@
     cart: [],
     desconto: 0,
     acrescimo: 0,
+    pgtoAplicarTaxa: false,
+    pgtoAplicarCantor: false,
     cliente: null,
     charts: {},
     mesaSel: null,
@@ -233,12 +235,155 @@
     return cpdvState.apiMeta?.seguranca_pagamento || {};
   }
 
+  function cpdvEncargosCfg() {
+    return cpdvState.apiMeta?.encargos_pdv || cpdvSegPag().encargos_pdv || {};
+  }
+
+  function cpdvRotuloEncargoCfg(item) {
+    if (!item) return "—";
+    return item.modo === "fixo" ? moeda(item.valor) : `${Number(item.valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+  }
+
+  function cpdvCalcValorEncargo(modo, valor, base) {
+    const v = Number(valor) || 0;
+    const b = Number(base) || 0;
+    if (modo === "fixo") return Math.max(0, v);
+    return Math.max(0, Math.round((b * v) / 100 * 100) / 100);
+  }
+
+  function cpdvBaseEncargos(scope) {
+    if (scope === "mesa") {
+      const com = cpdvState.comandaAtual?.comanda;
+      if (!com) return 0;
+      return Math.max(
+        0,
+        Number(com.valor_subtotal || 0) - Number(com.desconto || 0) + Number(com.acrescimo || 0)
+      );
+    }
+    return Math.max(0, cpdvSubtotal() - cpdvState.desconto + cpdvState.acrescimo);
+  }
+
+  function cpdvLerFlagsEncargos(scope) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    return {
+      aplicar_taxa_servico: !!document.getElementById(`${pre}AplicarTaxa`)?.checked,
+      aplicar_pagamento_cantor: !!document.getElementById(`${pre}AplicarCantor`)?.checked,
+    };
+  }
+
+  function cpdvCalcEncargosValores(scope, flagsOverride) {
+    const cfg = cpdvEncargosCfg();
+    const base = cpdvBaseEncargos(scope);
+    const flags = flagsOverride || cpdvLerFlagsEncargos(scope);
+    let taxa = 0;
+    let cantor = 0;
+    if (flags.aplicar_taxa_servico && cfg.taxa_servico?.ativa) {
+      taxa = cpdvCalcValorEncargo(cfg.taxa_servico.modo, cfg.taxa_servico.valor, base);
+    }
+    if (flags.aplicar_pagamento_cantor && cfg.pagamento_cantor?.ativo) {
+      cantor = cpdvCalcValorEncargo(cfg.pagamento_cantor.modo, cfg.pagamento_cantor.valor, base);
+    }
+    return { base, taxa, cantor, total: base + taxa + cantor };
+  }
+
+  function cpdvHtmlBlocoEncargos(scope) {
+    const cfg = cpdvEncargosCfg();
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    const padraoTaxa = scope === "mesa" ? cfg.taxa_servico?.padrao_mesa : cfg.taxa_servico?.padrao_balcao;
+    const padraoCantor = scope === "mesa" ? cfg.pagamento_cantor?.padrao_mesa : cfg.pagamento_cantor?.padrao_balcao;
+    const parts = [];
+    if (cfg.taxa_servico?.ativa) {
+      parts.push(`<label class="cpdv-pgto-encargo">
+        <input type="checkbox" id="${pre}AplicarTaxa" ${padraoTaxa ? "checked" : ""} />
+        Taxa de serviço (${cpdvRotuloEncargoCfg(cfg.taxa_servico)})
+        <span class="cpdv-pgto-encargo__val" id="${pre}ValTaxa">—</span>
+      </label>`);
+    }
+    if (cfg.pagamento_cantor?.ativo) {
+      parts.push(`<label class="cpdv-pgto-encargo">
+        <input type="checkbox" id="${pre}AplicarCantor" ${padraoCantor ? "checked" : ""} />
+        Pagamento do cantor (${cpdvRotuloEncargoCfg(cfg.pagamento_cantor)})
+        <span class="cpdv-pgto-encargo__val" id="${pre}ValCantor">—</span>
+      </label>`);
+    }
+    if (!parts.length) return "";
+    return `<div class="cpdv-pgto-encargos" id="${pre}Encargos">${parts.join("")}</div>`;
+  }
+
+  function cpdvAtualizarEncargosPagamento(scope) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    const vals = cpdvCalcEncargosValores(scope);
+    const elTaxa = document.getElementById(`${pre}ValTaxa`);
+    const elCantor = document.getElementById(`${pre}ValCantor`);
+    const elTotal = document.getElementById(`${pre}TotalEncargos`);
+    const elHero = document.getElementById("cpdvPgtoHeroValor");
+    if (elTaxa) elTaxa.textContent = vals.taxa > 0 ? moeda(vals.taxa) : "—";
+    if (elCantor) elCantor.textContent = vals.cantor > 0 ? moeda(vals.cantor) : "—";
+    if (elTotal) elTotal.textContent = moeda(vals.total);
+    if (elHero && scope === "balcao") elHero.textContent = moeda(vals.total);
+    const elMesaTotal = document.getElementById("cpdvMesaTotalFinal");
+    if (elMesaTotal && scope === "mesa") elMesaTotal.textContent = moeda(vals.total);
+  }
+
+  function cpdvBindEncargosPagamento(scope) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    ["AplicarTaxa", "AplicarCantor"].forEach((suf) => {
+      document.getElementById(`${pre}${suf}`)?.addEventListener("change", () => cpdvAtualizarEncargosPagamento(scope));
+    });
+    cpdvAtualizarEncargosPagamento(scope);
+  }
+
+  function cpdvPayloadEncargos(scope) {
+    const flags = cpdvLerFlagsEncargos(scope);
+    return {
+      aplicar_taxa_servico: flags.aplicar_taxa_servico,
+      aplicar_pagamento_cantor: flags.aplicar_pagamento_cantor,
+    };
+  }
+
   function cpdvIsCartao(forma) {
     return forma === "Crédito" || forma === "Débito";
   }
 
   function cpdvCampoObrigatorio(exigir) {
     return exigir ? ' <span class="cpdv-req" title="Obrigatório">*</span>' : "";
+  }
+
+  function cpdvListaBandeiras() {
+    return cpdvSegPag().bandeiras_cartao || [];
+  }
+
+  function cpdvHtmlSelectBandeiras(selectId, exigir) {
+    const list = cpdvListaBandeiras();
+    if (!list.length) {
+      return `<select id="${selectId}" disabled><option value="">Cadastre bandeiras em Configurações do PDV</option></select>`;
+    }
+    const opts = list.map((b) => `<option value="${escHtml(b.nome)}">${escHtml(b.nome)}</option>`).join("");
+    return `<select id="${selectId}"><option value="">${exigir ? "Selecione…" : "Opcional"}</option>${opts}</select>`;
+  }
+
+  function cpdvPaintCfgBandeirasList(root, podeEditar) {
+    const ul = root?.querySelector("#cpdvCfgBandeirasList");
+    if (!ul) return;
+    const list = cpdvState.cfgBandeirasDraft || [];
+    ul.innerHTML = list.length
+      ? list.map(
+          (nome, idx) =>
+            `<li class="cpdv-cfg-bandeira-item"><span>${escHtml(nome)}</span>
+            ${podeEditar ? `<button type="button" class="btn danger btn-sm" data-cpdv-rm-bandeira="${idx}">Remover</button>` : ""}</li>`
+        ).join("")
+      : `<li class="subtle-text">Nenhuma bandeira cadastrada.</li>`;
+    ul.querySelectorAll("[data-cpdv-rm-bandeira]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.cpdvRmBandeira);
+        cpdvState.cfgBandeirasDraft = (cpdvState.cfgBandeirasDraft || []).filter((_, i) => i !== idx);
+        cpdvPaintCfgBandeirasList(root, podeEditar);
+      });
+    });
+  }
+
+  function cpdvHintManualCartao() {
+    return '<p class="cpdv-pgto-hint">NSU e autorização são digitados manualmente pelo operador (comprovante da maquininha). Não vêm automaticamente do TEF ainda.</p>';
   }
 
   function cpdvLerDadosPagamento(scope) {
@@ -270,7 +415,13 @@
         return "Informe o código de autorização do cartão.";
       }
       if (cfg.exigir_bandeira_cartao && !dados.pagamento_bandeira) {
-        return "Informe a bandeira do cartão.";
+        return cpdvListaBandeiras().length
+          ? "Selecione a bandeira do cartão."
+          : "Cadastre bandeiras em Configurações do PDV e selecione uma.";
+      }
+      if (dados.pagamento_bandeira && cpdvListaBandeiras().length) {
+        const ok = cpdvListaBandeiras().some((b) => b.nome === dados.pagamento_bandeira);
+        if (!ok) return "Bandeira inválida. Atualize a lista em Configurações do PDV.";
       }
     }
     if (forma === "PIX" && cfg.exigir_identificador_pix && !dados.pagamento_pix_id) {
@@ -302,7 +453,8 @@
     const recebido = cpdvParseMoedaInput(document.getElementById("cpdvPgtoValor")?.value);
     const trocoEl = document.getElementById("cpdvPgtoTroco");
     if (trocoEl && forma === "Dinheiro") {
-      const troco = Math.max(0, recebido - total);
+      const totalPagar = cpdvCalcEncargosValores("balcao").total;
+      const troco = Math.max(0, recebido - totalPagar);
       trocoEl.value = cpdvFormatMoedaInput(troco);
     }
   }
@@ -328,7 +480,8 @@
     }
     if (forma === "Dinheiro") {
       const recebido = cpdvParseMoedaInput(document.getElementById("cpdvPgtoValor")?.value);
-      if (recebido + 0.009 < total) {
+      const totalPagar = cpdvCalcEncargosValores("balcao").total;
+      if (recebido + 0.009 < totalPagar) {
         toast("Valor recebido menor que o total.", "warning");
         return;
       }
@@ -350,6 +503,7 @@
       pdv_terminal: "PDV-WEB",
       observacao: obs || undefined,
       ...cpdvLerDadosPagamento("balcao"),
+      ...cpdvPayloadEncargos("balcao"),
       ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
     };
     const itens = cpdvState.cart.map((i) => ({
@@ -863,6 +1017,7 @@
           forma_pagamento: forma,
           pdv_terminal: "PDV-MESA",
           ...cpdvLerDadosPagamento("mesa"),
+          ...cpdvPayloadEncargos("mesa"),
           ...cpdvPayloadEmitirNota("cpdvMesaEmitirNota"),
         }),
       });
@@ -940,9 +1095,11 @@
         <button type="button" class="btn neutral btn-sm" id="cpdvMesaSavePessoas">OK</button>
       </div>
       <div class="cpdv-mesa-itens">${lista}</div>
-      <div class="cpdv-cart-totais"><div class="total">Total: ${moeda(com.valor_total)}</div></div>
+      <div class="cpdv-cart-totais"><div class="total">Subtotal: ${moeda(com.valor_total)}</div>
+        <div id="cpdvMesaTotalFinal" class="total">Total: ${moeda(com.valor_total)}</div></div>
       <div class="cpdv-pgto-mesa">
         <h4 class="cpdv-pgto-mesa__title">Fechar conta</h4>
+        ${cpdvHtmlBlocoEncargos("mesa")}
         <label class="cpdv-pgto-field">Forma de pagamento
           <select id="cpdvMesaFormaPgto">
             <option value="PIX">PIX</option>
@@ -953,17 +1110,18 @@
         </label>
         <div id="cpdvMesaBlocoCartao" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
           <label class="cpdv-pgto-field">Bandeira${cpdvCampoObrigatorio(seg.exigir_bandeira_cartao)}
-            <input type="text" id="cpdvMesaBandeira" placeholder="Visa, Master…" autocomplete="off" />
+            ${cpdvHtmlSelectBandeiras("cpdvMesaBandeira", seg.exigir_bandeira_cartao)}
           </label>
           <label class="cpdv-pgto-field">Parcelas
             <input type="number" id="cpdvMesaParcelas" min="1" max="12" value="1" />
           </label>
           <label class="cpdv-pgto-field">NSU${cpdvCampoObrigatorio(seg.exigir_nsu_cartao)}
-            <input type="text" id="cpdvMesaNsu" placeholder="${seg.exigir_nsu_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+            <input type="text" id="cpdvMesaNsu" placeholder="${seg.exigir_nsu_cartao ? "Digite o NSU do comprovante" : "Opcional"}" autocomplete="off" />
           </label>
           <label class="cpdv-pgto-field">Autorização${cpdvCampoObrigatorio(seg.exigir_autorizacao_cartao)}
-            <input type="text" id="cpdvMesaAutorizacao" placeholder="${seg.exigir_autorizacao_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+            <input type="text" id="cpdvMesaAutorizacao" placeholder="${seg.exigir_autorizacao_cartao ? "Digite o código do comprovante" : "Opcional"}" autocomplete="off" />
           </label>
+          <div class="cpdv-pgto-field cpdv-pgto-field--full">${cpdvHintManualCartao()}</div>
         </div>
         <div id="cpdvMesaBlocoPix" class="cpdv-pgto-grid" hidden>
           <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(seg.exigir_identificador_pix)}
@@ -1004,6 +1162,7 @@
     });
     host.querySelector("#cpdvMesaPagar")?.addEventListener("click", () => cpdvMesaFinalizarPagamento(com.id));
     host.querySelector("#cpdvMesaFormaPgto")?.addEventListener("change", () => cpdvAtualizarBlocosPagamento("mesa"));
+    cpdvBindEncargosPagamento("mesa");
     cpdvAtualizarBlocosPagamento("mesa");
     host.querySelector("#cpdvMesaBusca")?.addEventListener("input", (e) => {
       cpdvState.mesaBusca = e.target.value;
@@ -1271,14 +1430,19 @@
     const valorInicial = total > 0 ? total.toFixed(2).replace(".", ",") : "0,00";
     const semUnidade = !(cpdvState.unidadeId || document.getElementById("cpdvUnidadeFiscal")?.value);
     const seg = cpdvSegPag();
+    const encVals = cpdvCalcEncargosValores("balcao", {
+      aplicar_taxa_servico: !!(cpdvEncargosCfg().taxa_servico?.ativa && cpdvEncargosCfg().taxa_servico?.padrao_balcao),
+      aplicar_pagamento_cantor: !!(cpdvEncargosCfg().pagamento_cantor?.ativo && cpdvEncargosCfg().pagamento_cantor?.padrao_balcao),
+    });
     const body = `
       <div class="cpdv-pgto">
         ${semUnidade ? '<p class="cpdv-pgto-alerta">Selecione a <strong>unidade</strong> no PDV antes de confirmar.</p>' : ""}
         <div class="cpdv-pgto-hero">
           <span class="cpdv-pgto-hero__label">Total a receber</span>
-          <strong class="cpdv-pgto-hero__valor">${moeda(total)}</strong>
+          <strong class="cpdv-pgto-hero__valor" id="cpdvPgtoHeroValor">${moeda(encVals.total)}</strong>
           <span class="cpdv-pgto-hero__meta">${qtdItens} item(ns) · ${escHtml(cpdvUnidadeLabel())}</span>
         </div>
+        ${cpdvHtmlBlocoEncargos("balcao")}
         <div class="cpdv-pgto-resumo">
           <h4>Resumo do pedido</h4>
           ${cpdvHtmlResumoItensPagamento(6)}
@@ -1306,17 +1470,18 @@
           </div>
           <div id="cpdvPgtoBlocoCartao" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
             <label class="cpdv-pgto-field">Bandeira${cpdvCampoObrigatorio(seg.exigir_bandeira_cartao)}
-              <input type="text" id="cpdvPgtoBandeira" placeholder="Visa, Master, Elo…" autocomplete="off" />
+              ${cpdvHtmlSelectBandeiras("cpdvPgtoBandeira", seg.exigir_bandeira_cartao)}
             </label>
             <label class="cpdv-pgto-field">Parcelas
               <input type="number" id="cpdvPgtoParcelas" min="1" max="12" value="1" />
             </label>
             <label class="cpdv-pgto-field">NSU${cpdvCampoObrigatorio(seg.exigir_nsu_cartao)}
-              <input type="text" id="cpdvPgtoNsu" placeholder="${seg.exigir_nsu_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+              <input type="text" id="cpdvPgtoNsu" placeholder="${seg.exigir_nsu_cartao ? "Digite o NSU do comprovante" : "Opcional"}" autocomplete="off" />
             </label>
             <label class="cpdv-pgto-field">Autorização${cpdvCampoObrigatorio(seg.exigir_autorizacao_cartao)}
-              <input type="text" id="cpdvPgtoAutorizacao" placeholder="${seg.exigir_autorizacao_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+              <input type="text" id="cpdvPgtoAutorizacao" placeholder="${seg.exigir_autorizacao_cartao ? "Digite o código do comprovante" : "Opcional"}" autocomplete="off" />
             </label>
+            <div class="cpdv-pgto-field cpdv-pgto-field--full">${cpdvHintManualCartao()}</div>
           </div>
           <div id="cpdvPgtoBlocoPix" class="cpdv-pgto-grid" hidden>
             <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(seg.exigir_identificador_pix)}
@@ -1333,6 +1498,7 @@
       <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>`;
     openCpdvModal("Pagamento", body, acts, { pagamento: true });
     cpdvBindPagamentoModal();
+    cpdvBindEncargosPagamento("balcao");
     document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", () => cpdvConfirmarPagamentoBalcao());
     document.getElementById("cpdvPgtoCancel")?.addEventListener("click", closeCpdvModal);
   }
@@ -1528,6 +1694,19 @@
       const meta = cpdvState.apiMeta || {};
       const seg = meta.seguranca_pagamento || {};
       const podeEditarSeg = !!seg.pode_editar;
+      cpdvState.cfgBandeirasDraft = (seg.bandeiras_cartao || []).map((b) => b.nome);
+      const bandeirasHtml = cpdvState.cfgBandeirasDraft.length
+        ? cpdvState.cfgBandeirasDraft.map(
+            (nome, idx) =>
+              `<li class="cpdv-cfg-bandeira-item"><span>${escHtml(nome)}</span>
+              ${podeEditarSeg ? `<button type="button" class="btn danger btn-sm" data-cpdv-rm-bandeira="${idx}">Remover</button>` : ""}</li>`
+          ).join("")
+        : `<li class="subtle-text">Nenhuma bandeira cadastrada.</li>`;
+      const enc = meta.encargos_pdv || cpdvEncargosCfg();
+      const taxa = enc.taxa_servico || {};
+      const cantor = enc.pagamento_cantor || {};
+      const selModo = (id, val) =>
+        `<select id="${id}"><option value="percentual" ${val === "percentual" ? "selected" : ""}>% percentual</option><option value="fixo" ${val === "fixo" ? "selected" : ""}>R$ valor fixo</option></select>`;
       root.innerHTML = `
         ${cpdvAvisoProto()}
         <div class="table-card cpdv-form-body">
@@ -1538,21 +1717,56 @@
         </div>
         <div class="table-card cpdv-form-body">
           <h3>Segurança no pagamento (anti-fraude / auditoria)</h3>
-          <p class="subtle-text">Exige comprovantes do cartão ou PIX no caixa e na mesa. Os dados ficam gravados na venda para conciliação com a operadora e reduzem fraude interna.</p>
+          <p class="subtle-text">NSU, autorização e ID PIX <strong>não são automáticos</strong>: o caixa digita conforme o comprovante. Marque abaixo o que será <strong>obrigatório</strong> para confirmar a venda. Os dados ficam gravados na venda para conciliação.</p>
           ${podeEditarSeg ? `
           <div class="cpdv-cfg-checks">
             <label><input type="checkbox" id="cpdvCfgExigirNsu" ${seg.exigir_nsu_cartao ? "checked" : ""} /> Exigir NSU em cartão (crédito/débito)</label>
             <label><input type="checkbox" id="cpdvCfgExigirAut" ${seg.exigir_autorizacao_cartao ? "checked" : ""} /> Exigir código de autorização do cartão</label>
-            <label><input type="checkbox" id="cpdvCfgExigirBandeira" ${seg.exigir_bandeira_cartao ? "checked" : ""} /> Exigir bandeira do cartão</label>
+            <label><input type="checkbox" id="cpdvCfgExigirBandeira" ${seg.exigir_bandeira_cartao ? "checked" : ""} /> Exigir bandeira do cartão (select)</label>
             <label><input type="checkbox" id="cpdvCfgExigirPix" ${seg.exigir_identificador_pix ? "checked" : ""} /> Exigir identificador da transação PIX</label>
           </div>
-          <button type="button" class="btn primary" id="cpdvCfgSaveSeg">Salvar regras de pagamento</button>
+          <h4>Bandeiras de cartão (select no pagamento)</h4>
+          <p class="subtle-text">Cadastre as bandeiras aceitas no caixa. No PDV, o operador escolhe em uma lista — não digita texto livre.</p>
+          <ul id="cpdvCfgBandeirasList" class="cpdv-cfg-bandeiras">${bandeirasHtml}</ul>
+          <div class="cpdv-cfg-bandeira-add">
+            <input type="text" id="cpdvCfgNovaBandeira" placeholder="Ex.: Visa, Mastercard, Elo…" maxlength="40" />
+            <button type="button" class="btn neutral" id="cpdvCfgAddBandeira">Adicionar bandeira</button>
+          </div>
+          <button type="button" class="btn primary" id="cpdvCfgSaveSeg">Salvar regras e bandeiras</button>
           ` : `<p class="subtle-text">Somente administrador ou gerente pode alterar estas regras.</p>
           <ul class="subtle-text">
-            <li>NSU cartão: ${seg.exigir_nsu_cartao ? "exigido" : "opcional"}</li>
-            <li>Autorização cartão: ${seg.exigir_autorizacao_cartao ? "exigida" : "opcional"}</li>
-            <li>Bandeira: ${seg.exigir_bandeira_cartao ? "exigida" : "opcional"}</li>
-            <li>ID PIX: ${seg.exigir_identificador_pix ? "exigido" : "opcional"}</li>
+            <li>NSU cartão: ${seg.exigir_nsu_cartao ? "obrigatório (manual)" : "opcional"}</li>
+            <li>Autorização cartão: ${seg.exigir_autorizacao_cartao ? "obrigatória (manual)" : "opcional"}</li>
+            <li>Bandeira: ${seg.exigir_bandeira_cartao ? "obrigatória (select)" : "opcional"} — ${(seg.bandeiras_cartao || []).map((b) => escHtml(b.nome)).join(", ") || "nenhuma cadastrada"}</li>
+            <li>ID PIX: ${seg.exigir_identificador_pix ? "obrigatório (manual)" : "opcional"}</li>
+          </ul>`}
+        </div>
+        <div class="table-card cpdv-form-body">
+          <h3>Taxa de serviço e pagamento do cantor</h3>
+          <p class="subtle-text">Configure como calcular cada encargo: <strong>percentual</strong> sobre o subtotal da conta ou <strong>valor fixo</strong> por venda. No pagamento, o operador marca se aplica (conforme padrão abaixo).</p>
+          ${podeEditarSeg ? `
+          <div class="cpdv-cfg-encargos-grid">
+            <fieldset class="cpdv-cfg-encargo">
+              <legend>Taxa de serviço</legend>
+              <label><input type="checkbox" id="cpdvCfgTaxaAtiva" ${taxa.ativa ? "checked" : ""} /> Ativa no PDV</label>
+              <label>Modo ${selModo("cpdvCfgTaxaModo", taxa.modo || "percentual")}</label>
+              <label>Valor <input type="text" id="cpdvCfgTaxaValor" inputmode="decimal" value="${String(taxa.valor ?? 10).replace(".", ",")}" /></label>
+              <label><input type="checkbox" id="cpdvCfgTaxaPadraoMesa" ${taxa.padrao_mesa !== false ? "checked" : ""} /> Marcada por padrão na mesa</label>
+              <label><input type="checkbox" id="cpdvCfgTaxaPadraoBalcao" ${taxa.padrao_balcao ? "checked" : ""} /> Marcada por padrão no caixa</label>
+            </fieldset>
+            <fieldset class="cpdv-cfg-encargo">
+              <legend>Pagamento do cantor</legend>
+              <label><input type="checkbox" id="cpdvCfgCantorAtivo" ${cantor.ativo ? "checked" : ""} /> Ativo no PDV</label>
+              <label>Modo ${selModo("cpdvCfgCantorModo", cantor.modo || "percentual")}</label>
+              <label>Valor <input type="text" id="cpdvCfgCantorValor" inputmode="decimal" value="${String(cantor.valor ?? 0).replace(".", ",")}" /></label>
+              <label><input type="checkbox" id="cpdvCfgCantorPadraoMesa" ${cantor.padrao_mesa ? "checked" : ""} /> Marcado por padrão na mesa</label>
+              <label><input type="checkbox" id="cpdvCfgCantorPadraoBalcao" ${cantor.padrao_balcao ? "checked" : ""} /> Marcado por padrão no caixa</label>
+            </fieldset>
+          </div>
+          <button type="button" class="btn primary" id="cpdvCfgSaveEnc">Salvar taxas e cantor</button>
+          ` : `<ul class="subtle-text">
+            <li>Taxa de serviço: ${taxa.ativa ? `${cpdvRotuloEncargoCfg(taxa)} (${taxa.padrao_mesa ? "padrão mesa" : "mesa opt-in"} · ${taxa.padrao_balcao ? "padrão caixa" : "caixa opt-in"})` : "desligada"}</li>
+            <li>Pagamento cantor: ${cantor.ativo ? cpdvRotuloEncargoCfg(cantor) : "desligado"}</li>
           </ul>`}
         </div>
         <div class="cpdv-cards">
@@ -1606,18 +1820,73 @@
               exigir_autorizacao_cartao: !!root.querySelector("#cpdvCfgExigirAut")?.checked,
               exigir_bandeira_cartao: !!root.querySelector("#cpdvCfgExigirBandeira")?.checked,
               exigir_identificador_pix: !!root.querySelector("#cpdvCfgExigirPix")?.checked,
+              bandeiras_cartao: cpdvState.cfgBandeirasDraft || [],
             }),
           });
           if (cpdvState.apiMeta) {
             cpdvState.apiMeta.seguranca_pagamento = cfg;
+            cpdvState.apiMeta.encargos_pdv = cfg.encargos_pdv || cpdvEncargosCfg();
           }
-          toast("Regras de pagamento salvas.", "success");
+          cpdvState.cfgBandeirasDraft = (cfg.bandeiras_cartao || []).map((b) => b.nome);
+          toast("Regras e bandeiras salvas.", "success");
         } catch (e) {
           toast(e.message || "Não foi possível salvar.", "error");
         } finally {
           if (btn) {
             btn.disabled = false;
-            btn.textContent = "Salvar regras de pagamento";
+            btn.textContent = "Salvar regras e bandeiras";
+          }
+        }
+      });
+      root.querySelector("#cpdvCfgAddBandeira")?.addEventListener("click", () => {
+        const inp = root.querySelector("#cpdvCfgNovaBandeira");
+        const nome = inp?.value?.trim();
+        if (!nome) {
+          toast("Informe o nome da bandeira.", "warning");
+          return;
+        }
+        const key = nome.toLowerCase();
+        if ((cpdvState.cfgBandeirasDraft || []).some((n) => n.toLowerCase() === key)) {
+          toast("Esta bandeira já está na lista.", "warning");
+          return;
+        }
+        cpdvState.cfgBandeirasDraft = [...(cpdvState.cfgBandeirasDraft || []), nome];
+        if (inp) inp.value = "";
+        cpdvPaintCfgBandeirasList(root, podeEditarSeg);
+      });
+      root.querySelector("#cpdvCfgSaveEnc")?.addEventListener("click", async () => {
+        const btn = root.querySelector("#cpdvCfgSaveEnc");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Salvando…";
+        }
+        try {
+          const cfg = await cpdvFetch("/pdv/config", {
+            method: "PUT",
+            body: JSON.stringify({
+              taxa_servico_ativa: !!root.querySelector("#cpdvCfgTaxaAtiva")?.checked,
+              taxa_servico_modo: root.querySelector("#cpdvCfgTaxaModo")?.value || "percentual",
+              taxa_servico_valor: cpdvParseMoedaInput(root.querySelector("#cpdvCfgTaxaValor")?.value),
+              taxa_servico_padrao_mesa: !!root.querySelector("#cpdvCfgTaxaPadraoMesa")?.checked,
+              taxa_servico_padrao_balcao: !!root.querySelector("#cpdvCfgTaxaPadraoBalcao")?.checked,
+              pagamento_cantor_ativo: !!root.querySelector("#cpdvCfgCantorAtivo")?.checked,
+              pagamento_cantor_modo: root.querySelector("#cpdvCfgCantorModo")?.value || "percentual",
+              pagamento_cantor_valor: cpdvParseMoedaInput(root.querySelector("#cpdvCfgCantorValor")?.value),
+              pagamento_cantor_padrao_mesa: !!root.querySelector("#cpdvCfgCantorPadraoMesa")?.checked,
+              pagamento_cantor_padrao_balcao: !!root.querySelector("#cpdvCfgCantorPadraoBalcao")?.checked,
+            }),
+          });
+          if (cpdvState.apiMeta) {
+            cpdvState.apiMeta.seguranca_pagamento = cfg;
+            cpdvState.apiMeta.encargos_pdv = cfg.encargos_pdv || cpdvEncargosCfg();
+          }
+          toast("Taxas salvas.", "success");
+        } catch (e) {
+          toast(e.message || "Não foi possível salvar.", "error");
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Salvar taxas e cantor";
           }
         }
       });

@@ -304,6 +304,17 @@
 .cpdv-cfg-card ul { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; color: #546e7a; }
 .cpdv-cfg-checks { display: grid; gap: 0.65rem; margin: 0.75rem 0 1rem; }
 .cpdv-cfg-checks label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem; cursor: pointer; }
+.cpdv-cfg-bandeiras { list-style: none; margin: 0.5rem 0 1rem; padding: 0; display: grid; gap: 0.45rem; }
+.cpdv-cfg-bandeira-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.45rem 0.65rem; border: 1px solid #cfd8dc; border-radius: 8px; background: #fafafa; }
+.cpdv-cfg-bandeira-add { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+.cpdv-cfg-bandeira-add input { flex: 1; min-width: 180px; }
+.cpdv-pgto-hint { margin: 0; font-size: 0.82rem; color: #607d8b; line-height: 1.35; }
+.cpdv-pgto-encargos { display: grid; gap: 0.5rem; margin: 0.75rem 0; padding: 0.75rem; border: 1px dashed #b0bec5; border-radius: 10px; background: #f8fafb; }
+.cpdv-pgto-encargo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; }
+.cpdv-pgto-encargo__val { margin-left: auto; font-weight: 600; color: #1565c0; }
+.cpdv-cfg-encargos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 0.75rem 0 1rem; }
+.cpdv-cfg-encargo { border: 1px solid #cfd8dc; border-radius: 10px; padding: 0.85rem 1rem; display: grid; gap: 0.55rem; }
+.cpdv-cfg-encargo legend { font-weight: 600; padding: 0 0.25rem; }
 .cpdv-req { color: #c62828; font-weight: 700; }
 
 .cpdv-fiscal-grid {

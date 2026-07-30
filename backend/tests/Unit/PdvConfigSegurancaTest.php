@@ -42,4 +42,22 @@ class PdvConfigSegurancaTest extends TestCase
         $this->assertTrue(PdvConfigSupport::isFormaCartao('Débito'));
         $this->assertFalse(PdvConfigSupport::isFormaCartao('PIX'));
     }
+
+    public function test_calcular_encargo_percentual_e_fixo(): void
+    {
+        $cfg = [
+            'taxa_servico_ativa' => true,
+            'taxa_servico_modo' => 'percentual',
+            'taxa_servico_valor' => 10.0,
+            'pagamento_cantor_ativo' => true,
+            'pagamento_cantor_modo' => 'fixo',
+            'pagamento_cantor_valor' => 15.0,
+        ];
+        $r = PdvConfigSupport::calcularEncargos(200, [
+            'aplicar_taxa_servico' => true,
+            'aplicar_pagamento_cantor' => true,
+        ], $cfg);
+        $this->assertSame(20.0, $r['taxa_servico']);
+        $this->assertSame(15.0, $r['pagamento_cantor']);
+    }
 }
