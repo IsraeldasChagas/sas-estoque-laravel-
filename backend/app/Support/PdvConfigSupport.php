@@ -14,6 +14,7 @@ final class PdvConfigSupport
     {
         return array_merge(self::carregar(), [
             'bandeiras_cartao' => self::listarBandeirasAtivas(),
+            'chaves_pix' => self::listarChavesPix(true),
             'encargos_pdv' => self::encargosPublicos(),
             'pode_editar' => self::usuarioPodeEditar($usuario),
         ]);
@@ -133,8 +134,177 @@ final class PdvConfigSupport
         if (array_key_exists('bandeiras_cartao', $data)) {
             self::sincronizarBandeiras(is_array($data['bandeiras_cartao']) ? $data['bandeiras_cartao'] : []);
         }
+        if (array_key_exists('chaves_pix', $data)) {
+            self::sincronizarChavesPix(is_array($data['chaves_pix']) ? $data['chaves_pix'] : []);
+        }
 
         return self::opcoesPublicas(null);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function listarChavesPix(bool $somenteAtivas = true): array
+    {
+        if (! Schema::hasTable('pdv_chaves_pix')) {
+            return [];
+        }
+
+        $q = DB::table('pdv_chaves_pix')->orderByDesc('padrao')->orderBy('ordem')->orderBy('id');
+        if ($somenteAtivas) {
+            $q->where('ativo', true);
+        }
+
+        return $q->get()->map(static function ($r) {
+            return [
+                'id' => (int) $r->id,
+                'apelido' => $r->apelido ? (string) $r->apelido : null,
+                'tipo_pessoa' => (string) ($r->tipo_pessoa ?: 'pj'),
+                'tipo_chave' => (string) $r->tipo_chave,
+                'chave' => (string) $r->chave,
+                'beneficiario' => (string) $r->beneficiario,
+                'cidade' => (string) ($r->cidade ?: 'BELEM'),
+                'documento' => $r->documento ? (string) $r->documento : null,
+                'padrao' => (bool) $r->padrao,
+                'ativo' => (bool) $r->ativo,
+                'rotulo' => self::rotuloChavePix($r),
+            ];
+        })->all();
+    }
+
+    public static function rotuloChavePix(object $r): string
+    {
+        $pessoa = strtoupper((string) ($r->tipo_pessoa ?: 'pj'));
+        $apelido = trim((string) ($r->apelido ?: $r->beneficiario ?: 'PIX'));
+        $tipo = strtoupper((string) $r->tipo_chave);
+        $chave = (string) $r->chave;
+        $mascara = mb_strlen($chave) > 18 ? mb_substr($chave, 0, 10).'…'.mb_substr($chave, -4) : $chave;
+
+        return trim("{$apelido} ({$pessoa} · {$tipo} · {$mascara})");
+    }
+
+    /** @param list<array<string, mixed>> $itens */
+    public static function sincronizarChavesPix(array $itens): void
+    {
+        if (! Schema::hasTable('pdv_chaves_pix')) {
+            throw new \RuntimeException('Cadastro de chaves PIX indisponível (migração pendente).');
+        }
+
+        $mantidos = [];
+        $ordem = 0;
+        $temPadrao = false;
+
+        foreach ($itens as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $tipoPessoa = mb_strtolower(trim((string) ($item['tipo_pessoa'] ?? 'pj')));
+            if (! in_array($tipoPessoa, PdvPixEmvSupport::TIPOS_PESSOA, true)) {
+                $tipoPessoa = 'pj';
+            }
+            $tipoChave = mb_strtolower(trim((string) ($item['tipo_chave'] ?? '')));
+            if (! in_array($tipoChave, PdvPixEmvSupport::TIPOS_CHAVE, true)) {
+                throw new \InvalidArgumentException('Tipo de chave PIX inválido.');
+            }
+            $chave = PdvPixEmvSupport::normalizarChave((string) ($item['chave'] ?? ''), $tipoChave);
+            $beneficiario = trim((string) ($item['beneficiario'] ?? ''));
+            if ($chave === '' || $beneficiario === '') {
+                continue;
+            }
+            $ordem++;
+            $padrao = ! empty($item['padrao']) && ! $temPadrao;
+            if ($padrao) {
+                $temPadrao = true;
+            }
+            $payload = [
+                'apelido' => ($a = trim((string) ($item['apelido'] ?? ''))) !== '' ? mb_substr($a, 0, 80) : null,
+                'tipo_pessoa' => $tipoPessoa,
+                'tipo_chave' => $tipoChave,
+                'chave' => mb_substr($chave, 0, 180),
+                'beneficiario' => mb_substr($beneficiario, 0, 160),
+                'cidade' => mb_substr(trim((string) ($item['cidade'] ?? 'BELEM')) ?: 'BELEM', 0, 40),
+                'documento' => ($d = preg_replace('/\D+/', '', (string) ($item['documento'] ?? ''))) !== '' ? mb_substr($d, 0, 20) : null,
+                'ativo' => true,
+                'padrao' => $padrao,
+                'ordem' => $ordem,
+                'updated_at' => now(),
+            ];
+
+            $id = (int) ($item['id'] ?? 0);
+            if ($id > 0 && DB::table('pdv_chaves_pix')->where('id', $id)->exists()) {
+                DB::table('pdv_chaves_pix')->where('id', $id)->update($payload);
+                $mantidos[] = $id;
+            } else {
+                $payload['created_at'] = now();
+                $mantidos[] = (int) DB::table('pdv_chaves_pix')->insertGetId($payload);
+            }
+        }
+
+        if ($mantidos === []) {
+            DB::table('pdv_chaves_pix')->update(['ativo' => false, 'padrao' => false, 'updated_at' => now()]);
+
+            return;
+        }
+
+        DB::table('pdv_chaves_pix')
+            ->whereNotIn('id', $mantidos)
+            ->update(['ativo' => false, 'padrao' => false, 'updated_at' => now()]);
+
+        if (! $temPadrao) {
+            $primeiro = $mantidos[0];
+            DB::table('pdv_chaves_pix')->where('id', $primeiro)->update(['padrao' => true, 'updated_at' => now()]);
+        }
+    }
+
+    /**
+     * @return array{chave:array<string,mixed>, payload:string, qr_data_uri:?string, valor:float}
+     */
+    public static function gerarQrPix(?int $chaveId, float $valor, ?string $txid = null): array
+    {
+        if (! Schema::hasTable('pdv_chaves_pix')) {
+            throw new \RuntimeException('Cadastro de chaves PIX indisponível (migração pendente).');
+        }
+
+        $q = DB::table('pdv_chaves_pix')->where('ativo', true);
+        if ($chaveId && $chaveId > 0) {
+            $row = $q->where('id', $chaveId)->first();
+        } else {
+            $row = (clone $q)->where('padrao', true)->orderBy('ordem')->first()
+                ?: $q->orderByDesc('padrao')->orderBy('ordem')->orderBy('id')->first();
+        }
+        if (! $row) {
+            throw new \RuntimeException('Nenhuma chave PIX cadastrada. Cadastre em Configurações do PDV.');
+        }
+
+        $valor = max(0, round($valor, 2));
+        $payload = PdvPixEmvSupport::montarPayload([
+            'chave' => (string) $row->chave,
+            'tipo_chave' => (string) $row->tipo_chave,
+            'beneficiario' => (string) $row->beneficiario,
+            'cidade' => (string) ($row->cidade ?: 'BELEM'),
+            'txid' => $txid ?: ('PDV'.now()->format('YmdHis')),
+        ], $valor);
+
+        $qr = null;
+        if (class_exists(\App\Support\Delivery\GeradorQrCodePix::class)) {
+            $qr = \App\Support\Delivery\GeradorQrCodePix::dataUriSvg($payload);
+        }
+
+        return [
+            'chave' => [
+                'id' => (int) $row->id,
+                'apelido' => $row->apelido ? (string) $row->apelido : null,
+                'tipo_pessoa' => (string) $row->tipo_pessoa,
+                'tipo_chave' => (string) $row->tipo_chave,
+                'chave' => (string) $row->chave,
+                'beneficiario' => (string) $row->beneficiario,
+                'cidade' => (string) ($row->cidade ?: 'BELEM'),
+                'rotulo' => self::rotuloChavePix($row),
+            ],
+            'payload' => $payload,
+            'qr_data_uri' => $qr,
+            'valor' => $valor,
+        ];
     }
 
     /** @return list<array{id: int, nome: string}> */
@@ -284,6 +454,10 @@ final class PdvConfigSupport
         if (Schema::hasColumn('vendas', 'pagamento_pix_id') && isset($payload['pagamento_pix_id'])) {
             $v = trim((string) $payload['pagamento_pix_id']);
             $out['pagamento_pix_id'] = $v !== '' ? mb_substr($v, 0, 120) : null;
+        }
+        if (Schema::hasColumn('vendas', 'pagamento_pix_chave_id') && isset($payload['pagamento_pix_chave_id'])) {
+            $id = (int) $payload['pagamento_pix_chave_id'];
+            $out['pagamento_pix_chave_id'] = $id > 0 ? $id : null;
         }
 
         return $out;

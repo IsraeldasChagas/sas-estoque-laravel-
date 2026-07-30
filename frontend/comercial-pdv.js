@@ -333,6 +333,8 @@
     if (elHero && scope === "balcao") elHero.textContent = moeda(vals.total);
     const elMesaTotal = document.getElementById("cpdvMesaTotalFinal");
     if (elMesaTotal && scope === "mesa") elMesaTotal.textContent = moeda(vals.total);
+    const formaEl = document.getElementById(scope === "mesa" ? "cpdvMesaFormaPgto" : "cpdvPgtoForma");
+    if ((formaEl?.value || "") === "PIX") cpdvAtualizarQrPix(scope);
   }
 
   function cpdvBindEncargosPagamento(scope) {
@@ -375,14 +377,14 @@
   function cpdvPaintCfgBandeirasList(root, podeEditar) {
     const ul = root?.querySelector("#cpdvCfgBandeirasList");
     if (!ul) return;
-    const list = cpdvState.cfgBandeirasDraft || [];
-    ul.innerHTML = list.length
-      ? list.map(
+    const bandeirasHtml = (cpdvState.cfgBandeirasDraft || []).length
+      ? (cpdvState.cfgBandeirasDraft || []).map(
           (nome, idx) =>
             `<li class="cpdv-cfg-bandeira-item"><span>${escHtml(nome)}</span>
             ${podeEditar ? `<button type="button" class="btn danger btn-sm" data-cpdv-rm-bandeira="${idx}">Remover</button>` : ""}</li>`
         ).join("")
       : `<li class="subtle-text">Nenhuma bandeira cadastrada.</li>`;
+    ul.innerHTML = bandeirasHtml;
     ul.querySelectorAll("[data-cpdv-rm-bandeira]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const idx = Number(btn.dataset.cpdvRmBandeira);
@@ -392,8 +394,154 @@
     });
   }
 
+  function cpdvHtmlCfgChavesPixList(podeEditar) {
+    const list = cpdvState.cfgPixDraft || [];
+    if (!list.length) return `<li class="subtle-text">Nenhuma chave PIX cadastrada.</li>`;
+    return list.map((c, idx) => {
+      const pessoa = String(c.tipo_pessoa || "pj").toUpperCase();
+      const tipo = String(c.tipo_chave || "").toUpperCase();
+      const titulo = escHtml(c.apelido || c.beneficiario || "PIX");
+      const chave = escHtml(c.chave || "");
+      return `<li class="cpdv-cfg-pix-item">
+        <div>
+          <strong>${titulo}</strong>
+          <small>${pessoa} · ${tipo}${c.padrao ? " · padrão" : ""}</small>
+          <small>${chave}</small>
+        </div>
+        ${podeEditar ? `<button type="button" class="btn danger btn-sm" data-cpdv-rm-pix="${idx}">Remover</button>` : ""}
+      </li>`;
+    }).join("");
+  }
+
+  function cpdvPaintCfgPixList(root, podeEditar) {
+    const ul = root?.querySelector("#cpdvCfgPixList");
+    if (!ul) return;
+    ul.innerHTML = cpdvHtmlCfgChavesPixList(podeEditar);
+    ul.querySelectorAll("[data-cpdv-rm-pix]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.cpdvRmPix);
+        cpdvState.cfgPixDraft = (cpdvState.cfgPixDraft || []).filter((_, i) => i !== idx);
+        cpdvPaintCfgPixList(root, podeEditar);
+      });
+    });
+  }
+
   function cpdvHintManualCartao() {
     return '<p class="cpdv-pgto-hint">NSU e autorização são digitados manualmente pelo operador (comprovante da maquininha). Não vêm automaticamente do TEF ainda.</p>';
+  }
+
+  function cpdvListaChavesPix() {
+    return cpdvState.apiMeta?.chaves_pix
+      || cpdvSegPag().chaves_pix
+      || [];
+  }
+
+  function cpdvHtmlSelectChavesPix(selectId) {
+    const list = cpdvListaChavesPix();
+    if (!list.length) {
+      return `<select id="${selectId}" disabled><option value="">Cadastre chaves PIX em Configurações do PDV</option></select>`;
+    }
+    const opts = list.map((c) => {
+      const sel = c.padrao ? " selected" : "";
+      return `<option value="${c.id}"${sel}>${escHtml(c.rotulo || c.beneficiario || c.chave)}</option>`;
+    }).join("");
+    return `<select id="${selectId}">${opts}</select>`;
+  }
+
+  function cpdvHtmlBlocoPix(scope, exigirId) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    return `<div id="${pre}BlocoPix" class="cpdv-pgto-grid" hidden>
+      <label class="cpdv-pgto-field cpdv-pgto-field--full">Chave PIX (PF / PJ)
+        ${cpdvHtmlSelectChavesPix(`${pre}PixChave`)}
+      </label>
+      <div class="cpdv-pgto-field cpdv-pgto-field--full cpdv-pix-qr" id="${pre}PixQrWrap">
+        <div class="cpdv-pix-qr__box" id="${pre}PixQr"></div>
+        <div class="cpdv-pix-qr__meta">
+          <p class="cpdv-pix-qr__titulo">QR Code PIX</p>
+          <p class="cpdv-pix-qr__valor" id="${pre}PixQrValor">—</p>
+          <p class="cpdv-pix-qr__benef" id="${pre}PixQrBenef">Selecione a chave para gerar</p>
+          <button type="button" class="btn neutral btn-sm" id="${pre}PixCopiar">Copiar código PIX</button>
+        </div>
+      </div>
+      <label class="cpdv-pgto-field cpdv-pgto-field--full">PIX copia e cola
+        <textarea id="${pre}PixCopia" rows="3" readonly placeholder="O código aparece aqui após gerar o QR"></textarea>
+      </label>
+      <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(exigirId)}
+        <input type="text" id="${pre}PixId" placeholder="${exigirId ? "Obrigatório (end-to-end do comprovante)" : "Opcional — informe após o cliente pagar"}" autocomplete="off" />
+      </label>
+      <p class="cpdv-pgto-hint">Mostre o QR ao cliente. Depois confirme o pagamento e, se a regra exigir, digite o ID da transação.</p>
+    </div>`;
+  }
+
+  async function cpdvAtualizarQrPix(scope) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    const formaEl = document.getElementById(scope === "mesa" ? "cpdvMesaFormaPgto" : "cpdvPgtoForma");
+    if ((formaEl?.value || "") !== "PIX") return;
+
+    const sel = document.getElementById(`${pre}PixChave`);
+    const qrBox = document.getElementById(`${pre}PixQr`);
+    const copia = document.getElementById(`${pre}PixCopia`);
+    const elValor = document.getElementById(`${pre}PixQrValor`);
+    const elBenef = document.getElementById(`${pre}PixQrBenef`);
+    const chaveId = Number(sel?.value || 0);
+    const valor = cpdvCalcEncargosValores(scope).total;
+
+    if (!chaveId || valor <= 0) {
+      if (qrBox) qrBox.innerHTML = '<span class="subtle-text">Informe o total e a chave.</span>';
+      if (copia) copia.value = "";
+      if (elValor) elValor.textContent = moeda(valor);
+      if (elBenef) elBenef.textContent = "Cadastre/selecione uma chave PIX";
+      return;
+    }
+
+    if (qrBox) qrBox.innerHTML = '<span class="subtle-text">Gerando QR…</span>';
+    try {
+      const r = await cpdvFetch("/pdv/pix/qrcode", {
+        method: "POST",
+        body: JSON.stringify({ chave_id: chaveId, valor }),
+      });
+      if (copia) copia.value = r.payload || "";
+      if (elValor) elValor.textContent = moeda(r.valor ?? valor);
+      if (elBenef) elBenef.textContent = r.chave?.rotulo || r.chave?.beneficiario || "PIX";
+      if (qrBox) {
+        qrBox.innerHTML = "";
+        if (r.qr_data_uri) {
+          const img = document.createElement("img");
+          img.src = r.qr_data_uri;
+          img.alt = "QR Code PIX";
+          img.width = 180;
+          img.height = 180;
+          qrBox.appendChild(img);
+        } else if (typeof QRCode !== "undefined" && r.payload) {
+          // eslint-disable-next-line no-new
+          new QRCode(qrBox, { text: r.payload, width: 180, height: 180 });
+        } else {
+          qrBox.innerHTML = '<span class="subtle-text">Use o copia e cola abaixo.</span>';
+        }
+      }
+    } catch (e) {
+      if (qrBox) qrBox.innerHTML = `<span class="subtle-text">${escHtml(e.message || "Falha ao gerar QR")}</span>`;
+      if (copia) copia.value = "";
+    }
+  }
+
+  function cpdvBindPixPagamento(scope) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    document.getElementById(`${pre}PixChave`)?.addEventListener("change", () => cpdvAtualizarQrPix(scope));
+    document.getElementById(`${pre}PixCopiar`)?.addEventListener("click", async () => {
+      const txt = document.getElementById(`${pre}PixCopia`)?.value || "";
+      if (!txt) {
+        toast("Gere o QR antes de copiar.", "warning");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(txt);
+        toast("Código PIX copiado.", "success");
+      } catch {
+        document.getElementById(`${pre}PixCopia`)?.select();
+        toast("Selecione e copie o código manualmente.", "info");
+      }
+    });
   }
 
   function cpdvLerDadosPagamento(scope) {
@@ -405,13 +553,13 @@
       out.pagamento_nsu = document.getElementById(`${pre}Nsu`)?.value?.trim() || undefined;
       out.pagamento_autorizacao = document.getElementById(`${pre}Autorizacao`)?.value?.trim() || undefined;
       out.pagamento_bandeira = document.getElementById(`${pre}Bandeira`)?.value?.trim() || undefined;
-      if (forma === "Crédito") {
-        const parc = Number(document.getElementById(`${pre}Parcelas`)?.value || 1);
-        if (parc > 1) out.pagamento_parcelas = parc;
-      }
+      const parc = Number(document.getElementById(`${pre}Parcelas`)?.value || 1);
+      if (parc > 1) out.pagamento_parcelas = parc;
     }
     if (forma === "PIX") {
       out.pagamento_pix_id = document.getElementById(`${pre}PixId`)?.value?.trim() || undefined;
+      const chaveId = Number(document.getElementById(`${pre}PixChave`)?.value || 0);
+      if (chaveId > 0) out.pagamento_pix_chave_id = chaveId;
     }
     return out;
   }
@@ -436,8 +584,16 @@
         if (!ok) return "Bandeira inválida. Atualize a lista em Configurações do PDV.";
       }
     }
-    if (forma === "PIX" && cfg.exigir_identificador_pix && !dados.pagamento_pix_id) {
-      return "Informe o identificador da transação PIX.";
+    if (forma === "PIX") {
+      if (!cpdvListaChavesPix().length) {
+        return "Cadastre ao menos uma chave PIX (PF ou PJ) em Configurações do PDV.";
+      }
+      if (!dados.pagamento_pix_chave_id) {
+        return "Selecione a chave PIX para gerar o QR Code.";
+      }
+      if (cfg.exigir_identificador_pix && !dados.pagamento_pix_id) {
+        return "Informe o identificador da transação PIX.";
+      }
     }
     return null;
   }
@@ -452,7 +608,6 @@
   function cpdvSincronizarCamposCartao(scope, forma) {
     const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
     const ehCartao = cpdvIsCartao(forma);
-    const ehCredito = forma === "Crédito";
     const bandeira = document.getElementById(`${pre}Bandeira`);
     const parcelas = document.getElementById(`${pre}Parcelas`);
     const nsu = document.getElementById(`${pre}Nsu`);
@@ -461,14 +616,13 @@
     cpdvSetCampoPagamentoAtivo(bandeira, ehCartao);
     cpdvSetCampoPagamentoAtivo(nsu, ehCartao);
     cpdvSetCampoPagamentoAtivo(aut, ehCartao);
-    // Parcelas só fazem sentido no crédito.
-    cpdvSetCampoPagamentoAtivo(parcelas, ehCredito);
+    cpdvSetCampoPagamentoAtivo(parcelas, ehCartao);
     if (!ehCartao) {
       if (bandeira) bandeira.value = "";
       if (nsu) nsu.value = "";
       if (aut) aut.value = "";
     }
-    if (parcelas && !ehCredito) parcelas.value = "1";
+    if (parcelas && !ehCartao) parcelas.value = "1";
   }
 
   function cpdvAtualizarBlocosPagamento(scope) {
@@ -480,6 +634,7 @@
     if (blocoCart) blocoCart.hidden = !cpdvIsCartao(forma);
     if (blocoPix) blocoPix.hidden = forma !== "PIX";
     cpdvSincronizarCamposCartao(scope, forma);
+    if (forma === "PIX") cpdvAtualizarQrPix(scope);
     if (scope !== "mesa") cpdvAtualizarTrocoPagamento();
   }
 
@@ -1165,11 +1320,7 @@
           </label>
           <div class="cpdv-pgto-field cpdv-pgto-field--full">${cpdvHintManualCartao()}</div>
         </div>
-        <div id="cpdvMesaBlocoPix" class="cpdv-pgto-grid" hidden>
-          <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(seg.exigir_identificador_pix)}
-            <input type="text" id="cpdvMesaPixId" placeholder="${seg.exigir_identificador_pix ? "Obrigatório" : "Opcional"}" autocomplete="off" />
-          </label>
-        </div>
+        ${cpdvHtmlBlocoPix("mesa", seg.exigir_identificador_pix)}
         ${cpdvMarkupEmitirNota("cpdvMesaEmitirNota")}
         <div class="cpdv-pgto-mesa__actions">
           <button type="button" class="btn neutral" id="cpdvMesaPreConta">Pré-conta</button>
@@ -1205,6 +1356,7 @@
     host.querySelector("#cpdvMesaPagar")?.addEventListener("click", () => cpdvMesaFinalizarPagamento(com.id));
     host.querySelector("#cpdvMesaFormaPgto")?.addEventListener("change", () => cpdvAtualizarBlocosPagamento("mesa"));
     cpdvBindEncargosPagamento("mesa");
+    cpdvBindPixPagamento("mesa");
     cpdvAtualizarBlocosPagamento("mesa");
     host.querySelector("#cpdvMesaBusca")?.addEventListener("input", (e) => {
       cpdvState.mesaBusca = e.target.value;
@@ -1528,11 +1680,7 @@
             </label>
             <div class="cpdv-pgto-field cpdv-pgto-field--full">${cpdvHintManualCartao()}</div>
           </div>
-          <div id="cpdvPgtoBlocoPix" class="cpdv-pgto-grid" hidden>
-            <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(seg.exigir_identificador_pix)}
-              <input type="text" id="cpdvPgtoPixId" placeholder="${seg.exigir_identificador_pix ? "Obrigatório (end-to-end ou copia e cola)" : "Opcional"}" autocomplete="off" />
-            </label>
-          </div>
+          ${cpdvHtmlBlocoPix("balcao", seg.exigir_identificador_pix)}
           <label class="cpdv-pgto-field cpdv-pgto-field--full">Observação
             <input type="text" id="cpdvPgtoObs" placeholder="Ex.: cliente VIP, mesa externa…" maxlength="200" />
           </label>
@@ -1544,6 +1692,7 @@
     openCpdvModal("Pagamento", body, acts, { pagamento: true });
     cpdvBindPagamentoModal();
     cpdvBindEncargosPagamento("balcao");
+    cpdvBindPixPagamento("balcao");
     document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", () => cpdvConfirmarPagamentoBalcao());
     document.getElementById("cpdvPgtoCancel")?.addEventListener("click", closeCpdvModal);
   }
@@ -1740,6 +1889,7 @@
       const seg = meta.seguranca_pagamento || {};
       const podeEditarSeg = !!seg.pode_editar;
       cpdvState.cfgBandeirasDraft = (seg.bandeiras_cartao || []).map((b) => b.nome);
+      cpdvState.cfgPixDraft = (meta.chaves_pix || seg.chaves_pix || []).map((c) => ({ ...c }));
       const bandeirasHtml = cpdvState.cfgBandeirasDraft.length
         ? cpdvState.cfgBandeirasDraft.map(
             (nome, idx) =>
@@ -1747,6 +1897,7 @@
               ${podeEditarSeg ? `<button type="button" class="btn danger btn-sm" data-cpdv-rm-bandeira="${idx}">Remover</button>` : ""}</li>`
           ).join("")
         : `<li class="subtle-text">Nenhuma bandeira cadastrada.</li>`;
+      const pixHtml = cpdvHtmlCfgChavesPixList(podeEditarSeg);
       const enc = meta.encargos_pdv || cpdvEncargosCfg();
       const taxa = enc.taxa_servico || {};
       const cantor = enc.pagamento_cantor || {};
@@ -1785,6 +1936,40 @@
             <li>Bandeira: ${seg.exigir_bandeira_cartao ? "obrigatória (select)" : "opcional"} — ${(seg.bandeiras_cartao || []).map((b) => escHtml(b.nome)).join(", ") || "nenhuma cadastrada"}</li>
             <li>ID PIX: ${seg.exigir_identificador_pix ? "obrigatório (manual)" : "opcional"}</li>
           </ul>`}
+        </div>
+        <div class="table-card cpdv-form-body">
+          <h3>Chaves PIX (pessoa física e jurídica)</h3>
+          <p class="subtle-text">Cadastre as chaves usadas no caixa. No pagamento PIX o PDV gera o <strong>QR Code</strong> e o <strong>copia e cola</strong> com o valor da compra.</p>
+          ${podeEditarSeg ? `
+          <ul id="cpdvCfgPixList" class="cpdv-cfg-pix">${pixHtml}</ul>
+          <div class="cpdv-cfg-pix-form">
+            <label>Apelido <input type="text" id="cpdvCfgPixApelido" maxlength="80" placeholder="Ex.: Caixa matriz PJ" /></label>
+            <label>Tipo pessoa
+              <select id="cpdvCfgPixPessoa">
+                <option value="pj">Pessoa jurídica</option>
+                <option value="pf">Pessoa física</option>
+              </select>
+            </label>
+            <label>Tipo da chave
+              <select id="cpdvCfgPixTipo">
+                <option value="cnpj">CNPJ</option>
+                <option value="cpf">CPF</option>
+                <option value="email">E-mail</option>
+                <option value="telefone">Telefone</option>
+                <option value="aleatoria">Aleatória</option>
+              </select>
+            </label>
+            <label>Chave PIX <input type="text" id="cpdvCfgPixChave" maxlength="180" placeholder="CNPJ, CPF, e-mail, telefone ou aleatória" /></label>
+            <label>Nome do beneficiário <input type="text" id="cpdvCfgPixBenef" maxlength="160" placeholder="Como aparece no app do cliente" /></label>
+            <label>Cidade <input type="text" id="cpdvCfgPixCidade" maxlength="40" value="BELEM" /></label>
+            <label>CPF/CNPJ do recebedor (opcional) <input type="text" id="cpdvCfgPixDoc" maxlength="20" /></label>
+            <label class="cpdv-cfg-pix-padrao"><input type="checkbox" id="cpdvCfgPixPadrao" /> Usar como padrão no pagamento</label>
+          </div>
+          <div class="cpdv-actions" style="margin:0.75rem 0 0">
+            <button type="button" class="btn neutral" id="cpdvCfgAddPix">Adicionar chave</button>
+            <button type="button" class="btn primary" id="cpdvCfgSavePix">Salvar chaves PIX</button>
+          </div>
+          ` : `<ul class="subtle-text">${(meta.chaves_pix || seg.chaves_pix || []).map((c) => `<li>${escHtml(c.rotulo || c.chave)}</li>`).join("") || "<li>Nenhuma chave cadastrada.</li>"}</ul>`}
         </div>
         <div class="table-card cpdv-form-body">
           <h3>Taxa de serviço e pagamento do cantor</h3>
@@ -1867,6 +2052,7 @@
           if (cpdvState.apiMeta) {
             cpdvState.apiMeta.seguranca_pagamento = cfg;
             cpdvState.apiMeta.encargos_pdv = cfg.encargos_pdv || cpdvEncargosCfg();
+            cpdvState.apiMeta.chaves_pix = cfg.chaves_pix || [];
           }
           cpdvState.cfgBandeirasDraft = (cfg.bandeiras_cartao || []).map((b) => b.nome);
           toast("Regras e bandeiras salvas.", "success");
@@ -1894,6 +2080,67 @@
         cpdvState.cfgBandeirasDraft = [...(cpdvState.cfgBandeirasDraft || []), nome];
         if (inp) inp.value = "";
         cpdvPaintCfgBandeirasList(root, podeEditarSeg);
+      });
+      cpdvPaintCfgPixList(root, podeEditarSeg);
+      root.querySelector("#cpdvCfgAddPix")?.addEventListener("click", () => {
+        const tipoPessoa = root.querySelector("#cpdvCfgPixPessoa")?.value || "pj";
+        const tipoChave = root.querySelector("#cpdvCfgPixTipo")?.value || "cnpj";
+        const chave = root.querySelector("#cpdvCfgPixChave")?.value?.trim() || "";
+        const beneficiario = root.querySelector("#cpdvCfgPixBenef")?.value?.trim() || "";
+        if (!chave || !beneficiario) {
+          toast("Informe a chave PIX e o nome do beneficiário.", "warning");
+          return;
+        }
+        const item = {
+          apelido: root.querySelector("#cpdvCfgPixApelido")?.value?.trim() || "",
+          tipo_pessoa: tipoPessoa,
+          tipo_chave: tipoChave,
+          chave,
+          beneficiario,
+          cidade: root.querySelector("#cpdvCfgPixCidade")?.value?.trim() || "BELEM",
+          documento: root.querySelector("#cpdvCfgPixDoc")?.value?.trim() || "",
+          padrao: !!root.querySelector("#cpdvCfgPixPadrao")?.checked,
+        };
+        if (item.padrao) {
+          cpdvState.cfgPixDraft = (cpdvState.cfgPixDraft || []).map((c) => ({ ...c, padrao: false }));
+        }
+        cpdvState.cfgPixDraft = [...(cpdvState.cfgPixDraft || []), item];
+        ["#cpdvCfgPixApelido", "#cpdvCfgPixChave", "#cpdvCfgPixBenef", "#cpdvCfgPixDoc"].forEach((id) => {
+          const el = root.querySelector(id);
+          if (el) el.value = "";
+        });
+        const padrao = root.querySelector("#cpdvCfgPixPadrao");
+        if (padrao) padrao.checked = false;
+        cpdvPaintCfgPixList(root, podeEditarSeg);
+        toast("Chave adicionada na lista. Clique em Salvar chaves PIX.", "info");
+      });
+      root.querySelector("#cpdvCfgSavePix")?.addEventListener("click", async () => {
+        const btn = root.querySelector("#cpdvCfgSavePix");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Salvando…";
+        }
+        try {
+          const cfg = await cpdvFetch("/pdv/config", {
+            method: "PUT",
+            body: JSON.stringify({ chaves_pix: cpdvState.cfgPixDraft || [] }),
+          });
+          if (cpdvState.apiMeta) {
+            cpdvState.apiMeta.seguranca_pagamento = cfg;
+            cpdvState.apiMeta.chaves_pix = cfg.chaves_pix || [];
+            cpdvState.apiMeta.encargos_pdv = cfg.encargos_pdv || cpdvEncargosCfg();
+          }
+          cpdvState.cfgPixDraft = (cfg.chaves_pix || []).map((c) => ({ ...c }));
+          cpdvPaintCfgPixList(root, podeEditarSeg);
+          toast("Chaves PIX salvas.", "success");
+        } catch (e) {
+          toast(e.message || "Não foi possível salvar as chaves PIX.", "error");
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Salvar chaves PIX";
+          }
+        }
       });
       root.querySelector("#cpdvCfgSaveEnc")?.addEventListener("click", async () => {
         const btn = root.querySelector("#cpdvCfgSaveEnc");

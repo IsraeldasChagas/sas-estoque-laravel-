@@ -304,7 +304,25 @@
 .cpdv-cfg-card ul { margin: 0; padding-left: 1.1rem; font-size: 0.85rem; color: #546e7a; }
 .cpdv-cfg-checks { display: grid; gap: 0.65rem; margin: 0.75rem 0 1rem; }
 .cpdv-cfg-checks label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem; cursor: pointer; }
-.cpdv-cfg-bandeiras { list-style: none; margin: 0.5rem 0 1rem; padding: 0; display: grid; gap: 0.45rem; }
+.cpdv-cfg-pix { list-style: none; margin: 0.5rem 0 1rem; padding: 0; display: grid; gap: 0.45rem; }
+.cpdv-cfg-pix-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.55rem 0.7rem; border: 1px solid #cfd8dc; border-radius: 8px; background: #fafafa; }
+.cpdv-cfg-pix-item div { display: grid; gap: 0.15rem; }
+.cpdv-cfg-pix-item small { color: #607d8b; font-size: 0.8rem; }
+.cpdv-cfg-pix-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.65rem 0.85rem; margin-bottom: 0.5rem; }
+.cpdv-cfg-pix-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.86rem; font-weight: 600; }
+.cpdv-cfg-pix-form input,
+.cpdv-cfg-pix-form select { font-weight: 400; }
+.cpdv-cfg-pix-padrao { flex-direction: row !important; align-items: center; gap: 0.45rem !important; }
+.cpdv-pix-qr { display: grid; grid-template-columns: 180px 1fr; gap: 0.85rem; align-items: center; padding: 0.75rem; border: 1px solid #a5d6a7; border-radius: 10px; background: #e8f5e9; }
+.cpdv-pix-qr__box { width: 180px; min-height: 180px; display: grid; place-items: center; background: #fff; border-radius: 8px; border: 1px solid #c8e6c9; padding: 0.35rem; }
+.cpdv-pix-qr__box img { display: block; width: 180px; height: 180px; }
+.cpdv-pix-qr__meta { display: grid; gap: 0.35rem; }
+.cpdv-pix-qr__titulo { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: #2e7d32; font-weight: 700; }
+.cpdv-pix-qr__valor { margin: 0; font-size: 1.25rem; font-weight: 700; color: #1b5e20; }
+.cpdv-pix-qr__benef { margin: 0 0 0.35rem; font-size: 0.86rem; color: #455a64; }
+@media (max-width: 640px) {
+  .cpdv-pix-qr { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+}
 .cpdv-cfg-bandeira-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.45rem 0.65rem; border: 1px solid #cfd8dc; border-radius: 8px; background: #fafafa; }
 .cpdv-cfg-bandeira-add { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
 .cpdv-cfg-bandeira-add input { flex: 1; min-width: 180px; }

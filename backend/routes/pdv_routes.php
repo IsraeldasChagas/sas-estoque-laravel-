@@ -28,6 +28,7 @@ Route::get('/pdv/meta', function (Request $request) use ($pdvAuth) {
         'modos_emissao_pdv' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV,
         'seguranca_pagamento' => PdvConfigSupport::opcoesPublicas($usuario),
         'encargos_pdv' => PdvConfigSupport::encargosPublicos(),
+        'chaves_pix' => PdvConfigSupport::listarChavesPix(true),
     ]);
 });
 
@@ -55,6 +56,16 @@ Route::put('/pdv/config', function (Request $request) use ($pdvAuth) {
         'exigir_identificador_pix' => 'nullable|boolean',
         'bandeiras_cartao' => 'nullable|array',
         'bandeiras_cartao.*' => 'string|max:40',
+        'chaves_pix' => 'nullable|array',
+        'chaves_pix.*.id' => 'nullable|integer',
+        'chaves_pix.*.apelido' => 'nullable|string|max:80',
+        'chaves_pix.*.tipo_pessoa' => 'nullable|string|in:pf,pj',
+        'chaves_pix.*.tipo_chave' => 'required_with:chaves_pix|string|in:cpf,cnpj,email,telefone,aleatoria',
+        'chaves_pix.*.chave' => 'required_with:chaves_pix|string|max:180',
+        'chaves_pix.*.beneficiario' => 'required_with:chaves_pix|string|max:160',
+        'chaves_pix.*.cidade' => 'nullable|string|max:40',
+        'chaves_pix.*.documento' => 'nullable|string|max:20',
+        'chaves_pix.*.padrao' => 'nullable|boolean',
         'taxa_servico_ativa' => 'nullable|boolean',
         'taxa_servico_modo' => 'nullable|string|in:percentual,fixo',
         'taxa_servico_valor' => 'nullable|numeric|min:0|max:999999',
@@ -70,6 +81,27 @@ Route::put('/pdv/config', function (Request $request) use ($pdvAuth) {
         $cfg = PdvConfigSupport::salvar($data, (int) $usuario->id);
 
         return response()->json(array_merge($cfg, ['pode_editar' => true]));
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::post('/pdv/pix/qrcode', function (Request $request) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    $data = $request->validate([
+        'chave_id' => 'nullable|integer',
+        'valor' => 'required|numeric|min:0.01|max:9999999',
+        'txid' => 'nullable|string|max:25',
+    ]);
+    try {
+        return response()->json(PdvConfigSupport::gerarQrPix(
+            isset($data['chave_id']) ? (int) $data['chave_id'] : null,
+            (float) $data['valor'],
+            $data['txid'] ?? null
+        ));
     } catch (\Throwable $e) {
         return response()->json(['error' => $e->getMessage()], 422);
     }
@@ -195,6 +227,7 @@ Route::post('/pdv/comandas/{id}/finalizar', function (Request $request, int $id)
         'pagamento_bandeira' => 'nullable|string|max:40',
         'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
         'pagamento_pix_id' => 'nullable|string|max:120',
+        'pagamento_pix_chave_id' => 'nullable|integer',
         'aplicar_taxa_servico' => 'nullable|boolean',
         'aplicar_pagamento_cantor' => 'nullable|boolean',
     ]);
@@ -223,6 +256,7 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'pagamento_bandeira' => 'nullable|string|max:40',
             'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
             'pagamento_pix_id' => 'nullable|string|max:120',
+            'pagamento_pix_chave_id' => 'nullable|integer',
             'aplicar_taxa_servico' => 'nullable|boolean',
             'aplicar_pagamento_cantor' => 'nullable|boolean',
             'itens' => 'required|array|min:1',
