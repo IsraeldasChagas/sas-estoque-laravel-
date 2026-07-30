@@ -405,8 +405,10 @@
       out.pagamento_nsu = document.getElementById(`${pre}Nsu`)?.value?.trim() || undefined;
       out.pagamento_autorizacao = document.getElementById(`${pre}Autorizacao`)?.value?.trim() || undefined;
       out.pagamento_bandeira = document.getElementById(`${pre}Bandeira`)?.value?.trim() || undefined;
-      const parc = Number(document.getElementById(`${pre}Parcelas`)?.value || 1);
-      if (parc > 1) out.pagamento_parcelas = parc;
+      if (forma === "Crédito") {
+        const parc = Number(document.getElementById(`${pre}Parcelas`)?.value || 1);
+        if (parc > 1) out.pagamento_parcelas = parc;
+      }
     }
     if (forma === "PIX") {
       out.pagamento_pix_id = document.getElementById(`${pre}PixId`)?.value?.trim() || undefined;
@@ -440,6 +442,35 @@
     return null;
   }
 
+  function cpdvSetCampoPagamentoAtivo(el, ativo) {
+    if (!el) return;
+    el.disabled = !ativo;
+    const wrap = el.closest(".cpdv-pgto-field");
+    if (wrap) wrap.classList.toggle("is-inactive", !ativo);
+  }
+
+  function cpdvSincronizarCamposCartao(scope, forma) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    const ehCartao = cpdvIsCartao(forma);
+    const ehCredito = forma === "Crédito";
+    const bandeira = document.getElementById(`${pre}Bandeira`);
+    const parcelas = document.getElementById(`${pre}Parcelas`);
+    const nsu = document.getElementById(`${pre}Nsu`);
+    const aut = document.getElementById(`${pre}Autorizacao`);
+    // PIX / Dinheiro / demais: bandeira e parcelas ficam inativas.
+    cpdvSetCampoPagamentoAtivo(bandeira, ehCartao);
+    cpdvSetCampoPagamentoAtivo(nsu, ehCartao);
+    cpdvSetCampoPagamentoAtivo(aut, ehCartao);
+    // Parcelas só fazem sentido no crédito.
+    cpdvSetCampoPagamentoAtivo(parcelas, ehCredito);
+    if (!ehCartao) {
+      if (bandeira) bandeira.value = "";
+      if (nsu) nsu.value = "";
+      if (aut) aut.value = "";
+    }
+    if (parcelas && !ehCredito) parcelas.value = "1";
+  }
+
   function cpdvAtualizarBlocosPagamento(scope) {
     const formaEl = document.getElementById(scope === "mesa" ? "cpdvMesaFormaPgto" : "cpdvPgtoForma");
     const forma = formaEl?.value || "";
@@ -448,18 +479,19 @@
     const blocoPix = document.getElementById(`${pre}BlocoPix`);
     if (blocoCart) blocoCart.hidden = !cpdvIsCartao(forma);
     if (blocoPix) blocoPix.hidden = forma !== "PIX";
+    cpdvSincronizarCamposCartao(scope, forma);
     if (scope !== "mesa") cpdvAtualizarTrocoPagamento();
   }
 
   function cpdvAtualizarTrocoPagamento() {
-    const total = cpdvTotal();
     const forma = document.getElementById("cpdvPgtoForma")?.value || "";
     const blocoDin = document.getElementById("cpdvPgtoBlocoDinheiro");
     const blocoCart = document.getElementById("cpdvPgtoBlocoCartao");
     const blocoPix = document.getElementById("cpdvPgtoBlocoPix");
     if (blocoDin) blocoDin.hidden = forma !== "Dinheiro";
-    if (blocoCart) blocoCart.hidden = forma !== "Crédito" && forma !== "Débito";
+    if (blocoCart) blocoCart.hidden = !cpdvIsCartao(forma);
     if (blocoPix) blocoPix.hidden = forma !== "PIX";
+    cpdvSincronizarCamposCartao("balcao", forma);
     const recebido = cpdvParseMoedaInput(document.getElementById("cpdvPgtoValor")?.value);
     const trocoEl = document.getElementById("cpdvPgtoTroco");
     if (trocoEl && forma === "Dinheiro") {
