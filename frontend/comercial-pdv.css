@@ -312,10 +312,22 @@
 .cpdv-local-toolbar > div > small {
   color: var(--cpdv-local-muted);
 }
+.cpdv-local-toolbar-actions {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex: 1 1 420px;
+}
 .cpdv-local-unidade {
   width: min(340px, 100%);
   margin: 0;
   color: var(--cpdv-local-ink);
+}
+.cpdv-local-toolbar-actions #cpdvVoltarSistema {
+  flex: 0 0 auto;
+  min-height: 2.45rem;
+  border-radius: 10px;
 }
 #comercialPdvSection input,
 #comercialPdvSection select {
@@ -856,6 +868,18 @@
 .cpdv-mesa-painel-empty { padding: 1.5rem 0.5rem; text-align: center; }
 
 /* Modo foco PDV / mesas — oculta topbar (desktop) */
+body.cpdv-pdv-fullscreen #sidebar,
+body.cpdv-pdv-fullscreen .sidebar-backdrop,
+body.cpdv-pdv-fullscreen .topbar {
+  display: none !important;
+}
+body.cpdv-pdv-fullscreen .main-content {
+  width: 100%;
+  max-width: none;
+}
+body.cpdv-pdv-fullscreen .content {
+  padding: 12px;
+}
 @media (min-width: 1025px) {
   body.cpdv-focus-mode .topbar {
     display: none !important;
@@ -917,6 +941,15 @@ body.cpdv-topbar-expanded .cpdv-topbar-reveal {
   .cpdv-mesa-painel-wrap { position: static; max-height: none; }
 }
 @media (max-width: 700px) {
+  .cpdv-local-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .cpdv-local-unidade,
+  .cpdv-local-toolbar-actions #cpdvVoltarSistema {
+    width: 100%;
+    max-width: none;
+  }
   .cpdv-kds { grid-template-columns: 1fr; }
   .cpdv-mesas-grid { grid-template-columns: 1fr 1fr; }
   .cpdv-section-head .btn,

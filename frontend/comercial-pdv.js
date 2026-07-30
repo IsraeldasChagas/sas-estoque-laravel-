@@ -1293,6 +1293,9 @@
       cliSel.value = cpdvState.cliente || "";
       cliSel.onchange = () => { cpdvState.cliente = cliSel.value || null; };
     }
+    root.querySelector("#cpdvVoltarSistema")?.addEventListener("click", () => {
+      if (typeof navigateTo === "function") navigateTo("comercialDashboard");
+    });
   }
 
   async function cpdvRenderPdv() {
@@ -1339,9 +1342,12 @@
             <strong>Caixa · SAS Estoque</strong>
             <small>Produtos, pagamentos e estoque da unidade</small>
           </div>
-          <label class="cpdv-local-unidade">Unidade / estoque
-            <select id="cpdvUnidadeFiscal"><option value="">— Selecione —</option>${uniOpts}</select>
-          </label>
+          <div class="cpdv-local-toolbar-actions">
+            <label class="cpdv-local-unidade">Unidade / estoque
+              <select id="cpdvUnidadeFiscal"><option value="">— Selecione —</option>${uniOpts}</select>
+            </label>
+            <button type="button" class="btn neutral" id="cpdvVoltarSistema">Voltar ao sistema</button>
+          </div>
         </div>
         ${cpdvAvisoProto()}
         <div class="cpdv-pdv-layout">
@@ -2619,7 +2625,9 @@
   window.cpdvSyncTopbarFocus = function cpdvSyncTopbarFocus(section) {
     const on = CPDV_FOCUS_SECTIONS.has(section);
     document.body.classList.toggle("cpdv-focus-mode", on);
-    if (on) cpdvEnsureTopbarRevealBtn();
+    const pdvFullscreen = section === "comercialPdv";
+    document.body.classList.toggle("cpdv-pdv-fullscreen", pdvFullscreen);
+    if (on && !pdvFullscreen) cpdvEnsureTopbarRevealBtn();
     else cpdvRemoveTopbarRevealBtn();
   };
 
