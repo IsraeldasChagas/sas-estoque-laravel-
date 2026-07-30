@@ -229,6 +229,7 @@ final class VendaFiscalSupport
             if (Schema::hasColumn('vendas', 'origem_venda') && ! empty($payload['origem_venda'])) {
                 $insertVenda['origem_venda'] = (string) $payload['origem_venda'];
             }
+            $insertVenda = array_merge($insertVenda, PdvConfigSupport::extrairCamposPagamentoVenda($payload));
             $vendaId = DB::table('vendas')->insertGetId($insertVenda);
 
             foreach ($itens as $raw) {

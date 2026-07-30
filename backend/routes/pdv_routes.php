@@ -3,13 +3,21 @@
 use App\Support\CardapioComercialSupport;
 use App\Support\FiscalEmissaoConfigSupport;
 use App\Support\PdvComercialSupport;
+use App\Support\PdvConfigSupport;
 use App\Support\VendaFiscalSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-Route::get('/pdv/meta', function (Request $request) {
+$pdvAuth = static function (Request $req) {
+    $uid = $req->header('X-Usuario-Id');
+
+    return $uid ? DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first() : null;
+};
+
+Route::get('/pdv/meta', function (Request $request) use ($pdvAuth) {
     $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+    $usuario = $pdvAuth($request);
 
     return response()->json([
         'modulo_comandas' => PdvComercialSupport::moduloAtivo(),
@@ -18,7 +26,40 @@ Route::get('/pdv/meta', function (Request $request) {
         'cardapio_fonte' => 'delivery',
         'emissao_pdv' => FiscalEmissaoConfigSupport::opcoesPdvParaUnidade($unidadeId),
         'modos_emissao_pdv' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV,
+        'seguranca_pagamento' => PdvConfigSupport::opcoesPublicas($usuario),
     ]);
+});
+
+Route::get('/pdv/config', function (Request $request) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+
+    return response()->json(PdvConfigSupport::opcoesPublicas($usuario));
+});
+
+Route::put('/pdv/config', function (Request $request) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    if (! PdvConfigSupport::usuarioPodeEditar($usuario)) {
+        return response()->json(['error' => 'Sem permissão para alterar configurações do PDV'], 403);
+    }
+    $data = $request->validate([
+        'exigir_nsu_cartao' => 'nullable|boolean',
+        'exigir_autorizacao_cartao' => 'nullable|boolean',
+        'exigir_bandeira_cartao' => 'nullable|boolean',
+        'exigir_identificador_pix' => 'nullable|boolean',
+    ]);
+    try {
+        $cfg = PdvConfigSupport::salvar($data, (int) $usuario->id);
+
+        return response()->json(array_merge($cfg, ['pode_editar' => true]));
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
 });
 
 Route::get('/pdv/produtos', function (Request $request) {
@@ -136,6 +177,11 @@ Route::post('/pdv/comandas/{id}/finalizar', function (Request $request, int $id)
         'observacao' => 'nullable|string',
         'emitir_nota' => 'nullable|boolean',
         'sem_emissao' => 'nullable|boolean',
+        'pagamento_nsu' => 'nullable|string|max:32',
+        'pagamento_autorizacao' => 'nullable|string|max:32',
+        'pagamento_bandeira' => 'nullable|string|max:40',
+        'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
+        'pagamento_pix_id' => 'nullable|string|max:120',
     ]);
     try {
         return response()->json(PdvComercialSupport::finalizarComanda($id, $payload, $uid), 201);
@@ -157,6 +203,11 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'observacao' => 'nullable|string',
             'emitir_nota' => 'nullable|boolean',
             'sem_emissao' => 'nullable|boolean',
+            'pagamento_nsu' => 'nullable|string|max:32',
+            'pagamento_autorizacao' => 'nullable|string|max:32',
+            'pagamento_bandeira' => 'nullable|string|max:40',
+            'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
+            'pagamento_pix_id' => 'nullable|string|max:120',
             'itens' => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable|integer',
             'itens.*.cardapio_produto_id' => 'nullable|integer',

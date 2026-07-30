@@ -388,6 +388,12 @@ final class PdvComercialSupport
     /** @param array<string, mixed> $payload */
     public static function finalizarComanda(int $comandaId, array $payload, int $usuarioId): array
     {
+        $forma = (string) ($payload['forma_pagamento'] ?? 'PDV');
+        $errPg = PdvConfigSupport::validarDadosPagamento($forma, $payload);
+        if ($errPg) {
+            throw new \RuntimeException($errPg);
+        }
+
         $data = self::comandaCompleta($comandaId);
         $com = $data['comanda'];
         if (! in_array($com->status, ['aberta', 'aguardando_pagamento'], true)) {
@@ -402,7 +408,7 @@ final class PdvComercialSupport
         if (! count($itens)) {
             throw new \RuntimeException('Comanda sem itens.');
         }
-        $vendaPayload = [
+        $vendaPayload = array_merge([
             'unidade_id' => (int) $com->unidade_id,
             'forma_pagamento' => $payload['forma_pagamento'] ?? 'PDV',
             'pdv_terminal' => $payload['pdv_terminal'] ?? 'PDV-MESA',
@@ -412,7 +418,13 @@ final class PdvComercialSupport
             'reserva_mesa_id' => $com->reserva_mesa_id ? (int) $com->reserva_mesa_id : null,
             'observacao' => $payload['observacao'] ?? ('Comanda #' . $comandaId),
             'itens' => $itens,
-        ];
+        ], array_intersect_key($payload, array_flip([
+            'pagamento_nsu',
+            'pagamento_autorizacao',
+            'pagamento_bandeira',
+            'pagamento_parcelas',
+            'pagamento_pix_id',
+        ])));
         if (! VendaFiscalSupport::moduloAtivo()) {
             throw new \RuntimeException('Módulo fiscal de vendas indisponível.');
         }
@@ -449,6 +461,12 @@ final class PdvComercialSupport
     /** @param array<string, mixed> $payload */
     public static function vendaBalcao(array $payload, int $usuarioId): array
     {
+        $forma = (string) ($payload['forma_pagamento'] ?? 'PDV');
+        $errPg = PdvConfigSupport::validarDadosPagamento($forma, $payload);
+        if ($errPg) {
+            throw new \RuntimeException($errPg);
+        }
+
         $payload['origem_venda'] = $payload['origem_venda'] ?? 'balcao';
         $payload['pdv_terminal'] = $payload['pdv_terminal'] ?? 'PDV-BALCAO';
         $unidadeId = (int) ($payload['unidade_id'] ?? 0);

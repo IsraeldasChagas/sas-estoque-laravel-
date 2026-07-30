@@ -229,6 +229,67 @@
     return Number(n).toFixed(2).replace(".", ",");
   }
 
+  function cpdvSegPag() {
+    return cpdvState.apiMeta?.seguranca_pagamento || {};
+  }
+
+  function cpdvIsCartao(forma) {
+    return forma === "Crédito" || forma === "Débito";
+  }
+
+  function cpdvCampoObrigatorio(exigir) {
+    return exigir ? ' <span class="cpdv-req" title="Obrigatório">*</span>' : "";
+  }
+
+  function cpdvLerDadosPagamento(scope) {
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    const formaEl = document.getElementById(scope === "mesa" ? "cpdvMesaFormaPgto" : "cpdvPgtoForma");
+    const forma = formaEl?.value || "";
+    const out = {};
+    if (cpdvIsCartao(forma)) {
+      out.pagamento_nsu = document.getElementById(`${pre}Nsu`)?.value?.trim() || undefined;
+      out.pagamento_autorizacao = document.getElementById(`${pre}Autorizacao`)?.value?.trim() || undefined;
+      out.pagamento_bandeira = document.getElementById(`${pre}Bandeira`)?.value?.trim() || undefined;
+      const parc = Number(document.getElementById(`${pre}Parcelas`)?.value || 1);
+      if (parc > 1) out.pagamento_parcelas = parc;
+    }
+    if (forma === "PIX") {
+      out.pagamento_pix_id = document.getElementById(`${pre}PixId`)?.value?.trim() || undefined;
+    }
+    return out;
+  }
+
+  function cpdvValidarPagamentoLocal(forma, scope) {
+    const cfg = cpdvSegPag();
+    const dados = cpdvLerDadosPagamento(scope);
+    if (cpdvIsCartao(forma)) {
+      if (cfg.exigir_nsu_cartao && !dados.pagamento_nsu) {
+        return "Informe o NSU do cartão.";
+      }
+      if (cfg.exigir_autorizacao_cartao && !dados.pagamento_autorizacao) {
+        return "Informe o código de autorização do cartão.";
+      }
+      if (cfg.exigir_bandeira_cartao && !dados.pagamento_bandeira) {
+        return "Informe a bandeira do cartão.";
+      }
+    }
+    if (forma === "PIX" && cfg.exigir_identificador_pix && !dados.pagamento_pix_id) {
+      return "Informe o identificador da transação PIX.";
+    }
+    return null;
+  }
+
+  function cpdvAtualizarBlocosPagamento(scope) {
+    const formaEl = document.getElementById(scope === "mesa" ? "cpdvMesaFormaPgto" : "cpdvPgtoForma");
+    const forma = formaEl?.value || "";
+    const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
+    const blocoCart = document.getElementById(`${pre}BlocoCartao`);
+    const blocoPix = document.getElementById(`${pre}BlocoPix`);
+    if (blocoCart) blocoCart.hidden = !cpdvIsCartao(forma);
+    if (blocoPix) blocoPix.hidden = forma !== "PIX";
+    if (scope !== "mesa") cpdvAtualizarTrocoPagamento();
+  }
+
   function cpdvAtualizarTrocoPagamento() {
     const total = cpdvTotal();
     const forma = document.getElementById("cpdvPgtoForma")?.value || "";
@@ -248,9 +309,9 @@
 
   function cpdvBindPagamentoModal() {
     const forma = document.getElementById("cpdvPgtoForma");
-    forma?.addEventListener("change", cpdvAtualizarTrocoPagamento);
+    forma?.addEventListener("change", () => cpdvAtualizarBlocosPagamento("balcao"));
     document.getElementById("cpdvPgtoValor")?.addEventListener("input", cpdvAtualizarTrocoPagamento);
-    cpdvAtualizarTrocoPagamento();
+    cpdvAtualizarBlocosPagamento("balcao");
   }
 
   async function cpdvConfirmarPagamentoBalcao() {
@@ -272,6 +333,11 @@
         return;
       }
     }
+    const errPg = cpdvValidarPagamentoLocal(forma, "balcao");
+    if (errPg) {
+      toast(errPg, "warning");
+      return;
+    }
     const btn = document.getElementById("cpdvPgtoConfirm");
     if (btn) {
       btn.disabled = true;
@@ -283,6 +349,7 @@
       forma_pagamento: forma,
       pdv_terminal: "PDV-WEB",
       observacao: obs || undefined,
+      ...cpdvLerDadosPagamento("balcao"),
       ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
     };
     const itens = cpdvState.cart.map((i) => ({
@@ -779,6 +846,11 @@
 
   async function cpdvMesaFinalizarPagamento(comandaId) {
     const forma = document.getElementById("cpdvMesaFormaPgto")?.value || "PIX";
+    const errPg = cpdvValidarPagamentoLocal(forma, "mesa");
+    if (errPg) {
+      toast(errPg, "warning");
+      return;
+    }
     const btn = document.getElementById("cpdvMesaPagar");
     if (btn) {
       btn.disabled = true;
@@ -787,7 +859,12 @@
     try {
       const r = await cpdvFetch(`/pdv/comandas/${comandaId}/finalizar`, {
         method: "POST",
-        body: JSON.stringify({ forma_pagamento: forma, pdv_terminal: "PDV-MESA", ...cpdvPayloadEmitirNota("cpdvMesaEmitirNota") }),
+        body: JSON.stringify({
+          forma_pagamento: forma,
+          pdv_terminal: "PDV-MESA",
+          ...cpdvLerDadosPagamento("mesa"),
+          ...cpdvPayloadEmitirNota("cpdvMesaEmitirNota"),
+        }),
       });
       toast(`Conta fechada — venda #${r.venda_id} (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "success");
       await cpdvPosEmissao(r);
@@ -838,6 +915,7 @@
     const com = data.comanda;
     const itens = data.itens || [];
     const prods = cpdvFiltrarProdutosMesa();
+    const seg = cpdvSegPag();
     const grid = prods.length
       ? prods.map((p) => {
           const off = !p.disponivel ? " cpdv-prod--off" : "";
@@ -873,6 +951,25 @@
             <option value="Crédito">Cartão crédito</option>
           </select>
         </label>
+        <div id="cpdvMesaBlocoCartao" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
+          <label class="cpdv-pgto-field">Bandeira${cpdvCampoObrigatorio(seg.exigir_bandeira_cartao)}
+            <input type="text" id="cpdvMesaBandeira" placeholder="Visa, Master…" autocomplete="off" />
+          </label>
+          <label class="cpdv-pgto-field">Parcelas
+            <input type="number" id="cpdvMesaParcelas" min="1" max="12" value="1" />
+          </label>
+          <label class="cpdv-pgto-field">NSU${cpdvCampoObrigatorio(seg.exigir_nsu_cartao)}
+            <input type="text" id="cpdvMesaNsu" placeholder="${seg.exigir_nsu_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+          </label>
+          <label class="cpdv-pgto-field">Autorização${cpdvCampoObrigatorio(seg.exigir_autorizacao_cartao)}
+            <input type="text" id="cpdvMesaAutorizacao" placeholder="${seg.exigir_autorizacao_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+          </label>
+        </div>
+        <div id="cpdvMesaBlocoPix" class="cpdv-pgto-grid" hidden>
+          <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(seg.exigir_identificador_pix)}
+            <input type="text" id="cpdvMesaPixId" placeholder="${seg.exigir_identificador_pix ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+          </label>
+        </div>
         ${cpdvMarkupEmitirNota("cpdvMesaEmitirNota")}
         <div class="cpdv-pgto-mesa__actions">
           <button type="button" class="btn neutral" id="cpdvMesaPreConta">Pré-conta</button>
@@ -906,6 +1003,8 @@
       }
     });
     host.querySelector("#cpdvMesaPagar")?.addEventListener("click", () => cpdvMesaFinalizarPagamento(com.id));
+    host.querySelector("#cpdvMesaFormaPgto")?.addEventListener("change", () => cpdvAtualizarBlocosPagamento("mesa"));
+    cpdvAtualizarBlocosPagamento("mesa");
     host.querySelector("#cpdvMesaBusca")?.addEventListener("input", (e) => {
       cpdvState.mesaBusca = e.target.value;
       cpdvRenderMesaPainel();
@@ -1171,6 +1270,7 @@
     const qtdItens = cpdvState.cart.reduce((s, i) => s + i.qtd, 0);
     const valorInicial = total > 0 ? total.toFixed(2).replace(".", ",") : "0,00";
     const semUnidade = !(cpdvState.unidadeId || document.getElementById("cpdvUnidadeFiscal")?.value);
+    const seg = cpdvSegPag();
     const body = `
       <div class="cpdv-pgto">
         ${semUnidade ? '<p class="cpdv-pgto-alerta">Selecione a <strong>unidade</strong> no PDV antes de confirmar.</p>' : ""}
@@ -1205,19 +1305,22 @@
             </label>
           </div>
           <div id="cpdvPgtoBlocoCartao" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
-            <label class="cpdv-pgto-field">Bandeira
+            <label class="cpdv-pgto-field">Bandeira${cpdvCampoObrigatorio(seg.exigir_bandeira_cartao)}
               <input type="text" id="cpdvPgtoBandeira" placeholder="Visa, Master, Elo…" autocomplete="off" />
             </label>
             <label class="cpdv-pgto-field">Parcelas
               <input type="number" id="cpdvPgtoParcelas" min="1" max="12" value="1" />
             </label>
-            <label class="cpdv-pgto-field">NSU / autorização
-              <input type="text" id="cpdvPgtoNsu" placeholder="Opcional" autocomplete="off" />
+            <label class="cpdv-pgto-field">NSU${cpdvCampoObrigatorio(seg.exigir_nsu_cartao)}
+              <input type="text" id="cpdvPgtoNsu" placeholder="${seg.exigir_nsu_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
+            </label>
+            <label class="cpdv-pgto-field">Autorização${cpdvCampoObrigatorio(seg.exigir_autorizacao_cartao)}
+              <input type="text" id="cpdvPgtoAutorizacao" placeholder="${seg.exigir_autorizacao_cartao ? "Obrigatório" : "Opcional"}" autocomplete="off" />
             </label>
           </div>
           <div id="cpdvPgtoBlocoPix" class="cpdv-pgto-grid" hidden>
-            <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX <small>(opcional)</small>
-              <input type="text" id="cpdvPgtoPixId" placeholder="Copia e cola ou end-to-end" autocomplete="off" />
+            <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(seg.exigir_identificador_pix)}
+              <input type="text" id="cpdvPgtoPixId" placeholder="${seg.exigir_identificador_pix ? "Obrigatório (end-to-end ou copia e cola)" : "Opcional"}" autocomplete="off" />
             </label>
           </div>
           <label class="cpdv-pgto-field cpdv-pgto-field--full">Observação
@@ -1423,6 +1526,8 @@
     cpdvInitApi().then(async () => {
       const uniOpts = await cpdvLoadUnidadesOptions(cpdvState.unidadeId);
       const meta = cpdvState.apiMeta || {};
+      const seg = meta.seguranca_pagamento || {};
+      const podeEditarSeg = !!seg.pode_editar;
       root.innerHTML = `
         ${cpdvAvisoProto()}
         <div class="table-card cpdv-form-body">
@@ -1430,6 +1535,25 @@
           <label>Unidade <select id="cpdvCfgUnidade"><option value="">—</option>${uniOpts}</select></label>
           <p class="subtle-text">Usada no Caixa, Mesas e Comandas. Deve ser a mesma unidade do estoque (CNPJ).</p>
           <button type="button" class="btn primary" id="cpdvCfgSave">Salvar preferência</button>
+        </div>
+        <div class="table-card cpdv-form-body">
+          <h3>Segurança no pagamento (anti-fraude / auditoria)</h3>
+          <p class="subtle-text">Exige comprovantes do cartão ou PIX no caixa e na mesa. Os dados ficam gravados na venda para conciliação com a operadora e reduzem fraude interna.</p>
+          ${podeEditarSeg ? `
+          <div class="cpdv-cfg-checks">
+            <label><input type="checkbox" id="cpdvCfgExigirNsu" ${seg.exigir_nsu_cartao ? "checked" : ""} /> Exigir NSU em cartão (crédito/débito)</label>
+            <label><input type="checkbox" id="cpdvCfgExigirAut" ${seg.exigir_autorizacao_cartao ? "checked" : ""} /> Exigir código de autorização do cartão</label>
+            <label><input type="checkbox" id="cpdvCfgExigirBandeira" ${seg.exigir_bandeira_cartao ? "checked" : ""} /> Exigir bandeira do cartão</label>
+            <label><input type="checkbox" id="cpdvCfgExigirPix" ${seg.exigir_identificador_pix ? "checked" : ""} /> Exigir identificador da transação PIX</label>
+          </div>
+          <button type="button" class="btn primary" id="cpdvCfgSaveSeg">Salvar regras de pagamento</button>
+          ` : `<p class="subtle-text">Somente administrador ou gerente pode alterar estas regras.</p>
+          <ul class="subtle-text">
+            <li>NSU cartão: ${seg.exigir_nsu_cartao ? "exigido" : "opcional"}</li>
+            <li>Autorização cartão: ${seg.exigir_autorizacao_cartao ? "exigida" : "opcional"}</li>
+            <li>Bandeira: ${seg.exigir_bandeira_cartao ? "exigida" : "opcional"}</li>
+            <li>ID PIX: ${seg.exigir_identificador_pix ? "exigido" : "opcional"}</li>
+          </ul>`}
         </div>
         <div class="cpdv-cards">
           <div class="cpdv-card"><span>Venda fiscal</span><strong>${meta.modulo_venda_fiscal ? "Ativo" : "Indisponível"}</strong></div>
@@ -1467,6 +1591,35 @@
         await cpdvLoadProdutosApi();
         const el = root.querySelector("#cpdvCfgProdCount");
         if (el) el.textContent = String(cpdvState.produtosApi.length);
+      });
+      root.querySelector("#cpdvCfgSaveSeg")?.addEventListener("click", async () => {
+        const btn = root.querySelector("#cpdvCfgSaveSeg");
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Salvando…";
+        }
+        try {
+          const cfg = await cpdvFetch("/pdv/config", {
+            method: "PUT",
+            body: JSON.stringify({
+              exigir_nsu_cartao: !!root.querySelector("#cpdvCfgExigirNsu")?.checked,
+              exigir_autorizacao_cartao: !!root.querySelector("#cpdvCfgExigirAut")?.checked,
+              exigir_bandeira_cartao: !!root.querySelector("#cpdvCfgExigirBandeira")?.checked,
+              exigir_identificador_pix: !!root.querySelector("#cpdvCfgExigirPix")?.checked,
+            }),
+          });
+          if (cpdvState.apiMeta) {
+            cpdvState.apiMeta.seguranca_pagamento = cfg;
+          }
+          toast("Regras de pagamento salvas.", "success");
+        } catch (e) {
+          toast(e.message || "Não foi possível salvar.", "error");
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Salvar regras de pagamento";
+          }
+        }
       });
       root.querySelectorAll("[data-cpdv-goto]").forEach((btn) => {
         btn.addEventListener("click", () => {
