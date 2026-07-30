@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\FiscalEmissaoConfig;
+use Illuminate\Support\Facades\DB;
 
 final class FiscalEmissaoConfigSupport
 {
@@ -22,6 +23,13 @@ final class FiscalEmissaoConfigSupport
     public const FOCUS_API_URL = [
         'homologation' => 'https://homologacao.focusnfe.com.br',
         'production' => 'https://api.focusnfe.com.br',
+    ];
+
+    /** automatica = emite em toda venda; opcional = operador marca; desligada = só emissão manual depois */
+    public const MODOS_EMISSAO_PDV = [
+        'automatica' => 'Emitir nota automaticamente em toda venda',
+        'opcional' => 'Operador escolhe por venda (com ou sem nota)',
+        'desligada' => 'Não emitir no PDV (emitir depois se precisar)',
     ];
 
     public static function focusBaseUrl(string $environment): string
@@ -193,5 +201,56 @@ final class FiscalEmissaoConfigSupport
             'error' => 'Erro na validação',
             default => 'Não configurado',
         };
+    }
+
+    /**
+     * Decide se a venda PDV deve disparar emissão NFC-e agora.
+     *
+     * @param  bool|null  $emitirNotaRequest  true/false do operador; null = usar padrão do modo
+     */
+    public static function deveEmitirNoPdv(?FiscalEmissaoConfig $config, ?bool $emitirNotaRequest = null): bool
+    {
+        if (! $config || ! $config->is_active || ! $config->emitir_nfce_pdv) {
+            return false;
+        }
+        $modo = (string) ($config->modo_emissao_pdv ?? 'opcional');
+        if ($modo === 'desligada') {
+            return false;
+        }
+        if ($modo === 'automatica') {
+            return $emitirNotaRequest !== false;
+        }
+
+        return $emitirNotaRequest === true;
+    }
+
+    /** @return array<string, mixed> Metadados para o PDV (checkbox, padrão, etc.) */
+    public static function opcoesPdvParaUnidade(?int $unidadeId): array
+    {
+        $empresaId = $unidadeId ? VendaFiscalSupport::resolverEmpresaUnidade($unidadeId) : null;
+        $config = $empresaId
+            ? FiscalEmissaoConfig::query()->where('empresa_id', (int) $empresaId)->first()
+            : null;
+
+        $modo = (string) ($config?->modo_emissao_pdv ?? 'opcional');
+        $motorAtivo = (bool) ($config?->is_active && $config?->emitir_nfce_pdv && $config?->provider === 'focus_nfe');
+        $empresa = $empresaId ? DB::table('empresas')->where('id', $empresaId)->first() : null;
+        $prontidao = self::avaliarProntidao($config, $empresa ? [
+            'cnpj' => $empresa->cnpj,
+            'regime_tributario' => $empresa->regime_tributario,
+            'inscricao_estadual' => $empresa->inscricao_estadual,
+            'uf' => $empresa->uf,
+        ] : null);
+
+        return [
+            'empresa_id' => $empresaId ? (int) $empresaId : null,
+            'motor_emissao_ativo' => $motorAtivo,
+            'modo_emissao_pdv' => $modo,
+            'modo_label' => self::MODOS_EMISSAO_PDV[$modo] ?? $modo,
+            'mostrar_opcao_nota' => $motorAtivo && $modo !== 'desligada',
+            'emitir_nota_padrao' => $motorAtivo && $modo === 'automatica',
+            'pode_emitir_agora' => $motorAtivo && ($prontidao['pronto'] ?? false),
+            'checklist_pronto' => (bool) ($prontidao['pronto'] ?? false),
+        ];
     }
 }

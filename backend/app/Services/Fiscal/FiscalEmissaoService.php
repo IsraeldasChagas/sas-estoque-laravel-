@@ -27,6 +27,18 @@ final class FiscalEmissaoService
             return self::skip('Venda não encontrada.');
         }
 
+        $stDoc = strtolower(trim((string) ($venda->status_documento ?? '')));
+        if (! $forcar && in_array($stDoc, ['autorizado', 'autorizada'], true)) {
+            return [
+                'emitida' => true,
+                'skipped' => true,
+                'motivo_skip' => 'NFC-e já autorizada para esta venda.',
+                'venda_id' => $vendaId,
+                'chave' => $venda->chave_acesso ?? null,
+                'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
+            ];
+        }
+
         $empresaId = (int) ($venda->empresa_id ?? 0);
         if ($empresaId <= 0) {
             $empresaId = (int) (VendaFiscalSupport::resolverEmpresaUnidade((int) $venda->unidade_id) ?? 0);
@@ -155,12 +167,36 @@ final class FiscalEmissaoService
     /** @param array<string, mixed> $resultadoVenda */
     public static function anexarEmissaoAoResultado(array $resultadoVenda, bool $tentarEmissao = true): array
     {
-        if (! $tentarEmissao || empty($resultadoVenda['venda_id'])) {
+        if (empty($resultadoVenda['venda_id'])) {
+            return $resultadoVenda;
+        }
+        if (! $tentarEmissao) {
+            $resultadoVenda['emissao'] = self::skip('Venda registrada sem emissão de NFC-e.');
+
             return $resultadoVenda;
         }
         $resultadoVenda['emissao'] = self::emitirNfceParaVenda((int) $resultadoVenda['venda_id']);
 
         return $resultadoVenda;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload  pode conter emitir_nota (bool)
+     */
+    public static function deveEmitirParaPayload(int $unidadeId, array $payload): bool
+    {
+        $empresaId = (int) (VendaFiscalSupport::resolverEmpresaUnidade($unidadeId) ?? 0);
+        $config = $empresaId > 0
+            ? FiscalEmissaoConfig::query()->where('empresa_id', $empresaId)->first()
+            : null;
+        $explicit = null;
+        if (array_key_exists('emitir_nota', $payload)) {
+            $explicit = filter_var($payload['emitir_nota'], FILTER_VALIDATE_BOOLEAN);
+        } elseif (array_key_exists('sem_emissao', $payload)) {
+            $explicit = ! filter_var($payload['sem_emissao'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return FiscalEmissaoConfigSupport::deveEmitirNoPdv($config, $explicit);
     }
 
     /** @return array<string, mixed> */

@@ -42,6 +42,15 @@ $fiscalEmPodeEditar = function ($u) {
     return in_array($p, ['ADMIN', 'ADMINISTRADOR'], true);
 };
 
+$fiscalEmPodeEmitir = function ($u) {
+    if (! $u) {
+        return false;
+    }
+    $p = strtoupper(trim((string) ($u->perfil ?? '')));
+
+    return in_array($p, ['ADMIN', 'ADMINISTRADOR', 'GERENTE'], true);
+};
+
 $fiscalEmJson = fn ($data, int $code = 200) => response()->json($data, $code)
     ->header('Access-Control-Allow-Origin', '*');
 
@@ -90,6 +99,7 @@ Route::get('/fiscal/emissao/meta', function () use ($fiscalEmJson) {
         'providers' => FiscalEmissaoConfigSupport::PROVIDERS,
         'environments' => FiscalEmissaoConfigSupport::ENVIRONMENTS,
         'focus_urls' => FiscalEmissaoConfigSupport::FOCUS_API_URL,
+        'modos_emissao_pdv' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV,
         'fase_emissao' => 'focus_nfce_pdv',
         'mensagem' => 'Com emissão ativa, vendas PDV disparam NFC-e Focus automaticamente após a baixa de estoque.',
     ]);
@@ -184,6 +194,7 @@ Route::put('/fiscal/emissao/config/{empresaId}', function (Request $request, $em
         'numero_proximo_nfce' => 'nullable|integer|min:1',
         'numero_proximo_nfe' => 'nullable|integer|min:1',
         'emitir_nfce_pdv' => 'nullable|boolean',
+        'modo_emissao_pdv' => ['nullable', 'string', Rule::in(array_keys(FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV))],
         'emitir_nfe_pedido' => 'nullable|boolean',
         'is_active' => 'nullable|boolean',
         'observacoes' => 'nullable|string|max:2000',
@@ -223,6 +234,9 @@ Route::put('/fiscal/emissao/config/{empresaId}', function (Request $request, $em
 
     if (array_key_exists('emitir_nfce_pdv', $data)) {
         $cfg->emitir_nfce_pdv = (bool) $data['emitir_nfce_pdv'];
+    }
+    if (array_key_exists('modo_emissao_pdv', $data) && $data['modo_emissao_pdv'] !== null && $data['modo_emissao_pdv'] !== '') {
+        $cfg->modo_emissao_pdv = (string) $data['modo_emissao_pdv'];
     }
     if (array_key_exists('emitir_nfe_pedido', $data)) {
         $cfg->emitir_nfe_pedido = (bool) $data['emitir_nfe_pedido'];
@@ -325,10 +339,10 @@ Route::post('/fiscal/emissao/config/{empresaId}/testar', function (Request $requ
     ]);
 });
 
-Route::post('/fiscal/emissao/vendas/{vendaId}/nfce', function (Request $request, $vendaId) use ($fiscalEmPodeEditar, $fiscalEmAuth, $fiscalEmJson) {
+Route::post('/fiscal/emissao/vendas/{vendaId}/nfce', function (Request $request, $vendaId) use ($fiscalEmPodeEmitir, $fiscalEmAuth, $fiscalEmJson) {
     $u = $fiscalEmAuth($request);
-    if (! $fiscalEmPodeEditar($u)) {
-        return $fiscalEmJson(['error' => 'Somente administrador.'], 403);
+    if (! $fiscalEmPodeEmitir($u)) {
+        return $fiscalEmJson(['error' => 'Sem permissão para emitir NFC-e.'], 403);
     }
     $result = \App\Services\Fiscal\FiscalEmissaoService::emitirNfceParaVenda((int) $vendaId, true);
 

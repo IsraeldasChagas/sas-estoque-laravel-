@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FiscalEmissaoConfigSupport;
 use Illuminate\Database\Eloquent\Model;
 
 class FiscalEmissaoConfig extends Model
@@ -23,6 +24,7 @@ class FiscalEmissaoConfig extends Model
         'numero_proximo_nfce',
         'numero_proximo_nfe',
         'emitir_nfce_pdv',
+        'modo_emissao_pdv',
         'emitir_nfe_pedido',
         'is_active',
         'status_emissao',
@@ -92,6 +94,8 @@ class FiscalEmissaoConfig extends Model
             'numero_proximo_nfce' => $this->numero_proximo_nfce,
             'numero_proximo_nfe' => $this->numero_proximo_nfe,
             'emitir_nfce_pdv' => (bool) $this->emitir_nfce_pdv,
+            'modo_emissao_pdv' => $this->modo_emissao_pdv ?? 'opcional',
+            'modo_emissao_pdv_label' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV[$this->modo_emissao_pdv ?? 'opcional'] ?? '',
             'emitir_nfe_pedido' => (bool) $this->emitir_nfe_pedido,
             'is_active' => (bool) $this->is_active,
             'status_emissao' => $this->status_emissao,

@@ -1,18 +1,23 @@
 <?php
 
 use App\Support\CardapioComercialSupport;
+use App\Support\FiscalEmissaoConfigSupport;
 use App\Support\PdvComercialSupport;
 use App\Support\VendaFiscalSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-Route::get('/pdv/meta', function () {
+Route::get('/pdv/meta', function (Request $request) {
+    $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+
     return response()->json([
         'modulo_comandas' => PdvComercialSupport::moduloAtivo(),
         'modulo_venda_fiscal' => VendaFiscalSupport::moduloAtivo(),
         'cardapio_tabela' => CardapioComercialSupport::tabelaDisponivel(),
         'cardapio_fonte' => 'delivery',
+        'emissao_pdv' => FiscalEmissaoConfigSupport::opcoesPdvParaUnidade($unidadeId),
+        'modos_emissao_pdv' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV,
     ]);
 });
 
@@ -129,6 +134,8 @@ Route::post('/pdv/comandas/{id}/finalizar', function (Request $request, int $id)
         'forma_pagamento' => 'nullable|string|max:40',
         'pdv_terminal' => 'nullable|string|max:64',
         'observacao' => 'nullable|string',
+        'emitir_nota' => 'nullable|boolean',
+        'sem_emissao' => 'nullable|boolean',
     ]);
     try {
         return response()->json(PdvComercialSupport::finalizarComanda($id, $payload, $uid), 201);
@@ -148,6 +155,8 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'forma_pagamento' => 'nullable|string|max:40',
             'pdv_terminal' => 'nullable|string|max:64',
             'observacao' => 'nullable|string',
+            'emitir_nota' => 'nullable|boolean',
+            'sem_emissao' => 'nullable|boolean',
             'itens' => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable|integer',
             'itens.*.cardapio_produto_id' => 'nullable|integer',

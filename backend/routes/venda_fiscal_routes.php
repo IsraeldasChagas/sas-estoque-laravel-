@@ -68,10 +68,12 @@ Route::post('/fiscal/vendas', function (Request $request) {
             'itens.*.quantidade' => 'required|numeric|min:0.001',
             'itens.*.preco_unitario' => 'required|numeric|min:0',
             'itens.*.desconto' => 'nullable|numeric|min:0',
+            'emitir_nota' => 'nullable|boolean',
+            'sem_emissao' => 'nullable|boolean',
         ]);
         $result = VendaFiscalSupport::finalizarVenda($payload, $usuarioId);
-        $semEmissao = filter_var($request->input('sem_emissao', false), FILTER_VALIDATE_BOOLEAN);
-        $result = FiscalEmissaoService::anexarEmissaoAoResultado($result, ! $semEmissao);
+        $tentar = FiscalEmissaoService::deveEmitirParaPayload((int) $payload['unidade_id'], $payload);
+        $result = FiscalEmissaoService::anexarEmissaoAoResultado($result, $tentar);
 
         return response()->json($result, 201);
     } catch (\Throwable $e) {

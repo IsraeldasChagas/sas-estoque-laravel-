@@ -95,6 +95,7 @@
       numero_proximo_nfce: g("femNumNfce") ? Number(g("femNumNfce")) : null,
       numero_proximo_nfe: g("femNumNfe") ? Number(g("femNumNfe")) : null,
       emitir_nfce_pdv: chk("femEmitNfce"),
+      modo_emissao_pdv: g("femModoEmissaoPdv") || "opcional",
       emitir_nfe_pedido: chk("femEmitNfe"),
       is_active: chk("femAtivo"),
       observacoes: g("femObs")?.trim() || null,
@@ -197,7 +198,15 @@
 
           <div class="fem-block">
             <h4>NFC-e (PDV / cupom)</h4>
-            <label class="checkbox-label"><input type="checkbox" id="femEmitNfce" ${cfg.emitir_nfce_pdv !== false ? "checked" : ""} ${femPodeEditar ? "" : "disabled"} /> Emitir NFC-e nas vendas PDV (quando motor estiver ativo)</label>
+            <label class="checkbox-label"><input type="checkbox" id="femEmitNfce" ${cfg.emitir_nfce_pdv !== false ? "checked" : ""} ${femPodeEditar ? "" : "disabled"} /> Habilitar emissão NFC-e no PDV (motor Focus)</label>
+            <label style="margin-top:0.75rem">Comportamento no PDV
+              <select id="femModoEmissaoPdv" ${femPodeEditar ? "" : "disabled"}>
+                <option value="automatica" ${(cfg.modo_emissao_pdv || "opcional") === "automatica" ? "selected" : ""}>Emitir nota automaticamente em toda venda</option>
+                <option value="opcional" ${(cfg.modo_emissao_pdv || "opcional") === "opcional" ? "selected" : ""}>Operador escolhe por venda (com ou sem nota)</option>
+                <option value="desligada" ${cfg.modo_emissao_pdv === "desligada" ? "selected" : ""}>Não emitir no PDV (emitir depois se precisar)</option>
+              </select>
+            </label>
+            <p class="subtle-text">Com <strong>opcional</strong>, o caixa marca se emite NFC-e na hora; vendas sem nota podem ser emitidas depois no histórico do PDV.</p>
             <div class="fem-grid-2" style="margin-top:0.65rem">
               <label>Série NFC-e<input type="number" id="femSerieNfce" min="1" max="999" value="${esc(cfg.serie_nfce ?? "1")}" ${femPodeEditar ? "" : "disabled"} /></label>
               <label>Próximo número<input type="number" id="femNumNfce" min="1" value="${esc(cfg.numero_proximo_nfce ?? "1")}" ${femPodeEditar ? "" : "disabled"} /></label>

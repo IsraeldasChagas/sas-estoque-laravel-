@@ -30,23 +30,26 @@
     }
   }
 
-  window.fiscalPdvConfirmarPagamento = async function ({ unidadeId, formaPagamento, itens }) {
+  window.fiscalPdvConfirmarPagamento = async function ({ unidadeId, formaPagamento, itens, emitir_nota, sem_emissao }) {
     if (!unidadeId || !itens?.length) {
       throw new Error("Informe unidade e itens com produto_id do estoque.");
     }
+    const body = {
+      unidade_id: Number(unidadeId),
+      forma_pagamento: formaPagamento || "PDV",
+      pdv_terminal: "PDV-WEB",
+      itens: itens.map((i) => ({
+        produto_id: Number(i.produto_id || i.produtoId),
+        quantidade: Number(i.quantidade || i.qtd),
+        preco_unitario: Number(i.preco_unitario || i.preco),
+        desconto: Number(i.desconto || 0),
+      })),
+    };
+    if (typeof emitir_nota !== "undefined") body.emitir_nota = !!emitir_nota;
+    if (typeof sem_emissao !== "undefined") body.sem_emissao = !!sem_emissao;
     return fFetch("/fiscal/vendas", {
       method: "POST",
-      body: JSON.stringify({
-        unidade_id: Number(unidadeId),
-        forma_pagamento: formaPagamento || "PDV",
-        pdv_terminal: "PDV-WEB",
-        itens: itens.map((i) => ({
-          produto_id: Number(i.produto_id || i.produtoId),
-          quantidade: Number(i.quantidade || i.qtd),
-          preco_unitario: Number(i.preco_unitario || i.preco),
-          desconto: Number(i.desconto || 0),
-        })),
-      }),
+      body: JSON.stringify(body),
     });
   };
 

@@ -417,7 +417,8 @@ final class PdvComercialSupport
             throw new \RuntimeException('Módulo fiscal de vendas indisponível.');
         }
         $venda = VendaFiscalSupport::finalizarVenda($vendaPayload, $usuarioId);
-        $venda = FiscalEmissaoService::anexarEmissaoAoResultado($venda);
+        $tentarEmissao = FiscalEmissaoService::deveEmitirParaPayload((int) $com->unidade_id, $payload);
+        $venda = FiscalEmissaoService::anexarEmissaoAoResultado($venda, $tentarEmissao);
 
         DB::table('pdv_comandas')->where('id', $comandaId)->update([
             'status' => 'fechada',
@@ -462,7 +463,8 @@ final class PdvComercialSupport
         }
 
         return FiscalEmissaoService::anexarEmissaoAoResultado(
-            VendaFiscalSupport::finalizarVenda($payload, $usuarioId)
+            VendaFiscalSupport::finalizarVenda($payload, $usuarioId),
+            FiscalEmissaoService::deveEmitirParaPayload($unidadeId, $payload)
         );
     }
 }
