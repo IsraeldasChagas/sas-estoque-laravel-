@@ -218,19 +218,20 @@ Route::post('/pdv/comandas/{id}/finalizar', function (Request $request, int $id)
     }
     $payload = $request->validate([
         'forma_pagamento' => 'nullable|string|max:40',
-        'pdv_terminal' => 'nullable|string|max:64',
-        'observacao' => 'nullable|string',
-        'emitir_nota' => 'nullable|boolean',
-        'sem_emissao' => 'nullable|boolean',
-        'pagamento_nsu' => 'nullable|string|max:32',
-        'pagamento_autorizacao' => 'nullable|string|max:32',
-        'pagamento_bandeira' => 'nullable|string|max:40',
-        'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
-        'pagamento_pix_id' => 'nullable|string|max:120',
-        'pagamento_pix_chave_id' => 'nullable|integer',
-        'aplicar_taxa_servico' => 'nullable|boolean',
-        'aplicar_pagamento_cantor' => 'nullable|boolean',
-    ]);
+            'pdv_terminal' => 'nullable|string|max:64',
+            'idempotency_key' => 'nullable|string|max:64',
+            'observacao' => 'nullable|string',
+            'emitir_nota' => 'nullable|boolean',
+            'sem_emissao' => 'nullable|boolean',
+            'pagamento_nsu' => 'nullable|string|max:32',
+            'pagamento_autorizacao' => 'nullable|string|max:32',
+            'pagamento_bandeira' => 'nullable|string|max:40',
+            'pagamento_parcelas' => 'nullable|integer|min:1|max:99',
+            'pagamento_pix_id' => 'nullable|string|max:120',
+            'pagamento_pix_chave_id' => 'nullable|integer',
+            'aplicar_taxa_servico' => 'nullable|boolean',
+            'aplicar_pagamento_cantor' => 'nullable|boolean',
+        ]);
     try {
         return response()->json(PdvComercialSupport::finalizarComanda($id, $payload, $uid), 201);
     } catch (\Throwable $e) {
@@ -248,6 +249,7 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'unidade_id' => 'required|integer|exists:unidades,id',
             'forma_pagamento' => 'nullable|string|max:40',
             'pdv_terminal' => 'nullable|string|max:64',
+            'idempotency_key' => 'nullable|string|max:64',
             'observacao' => 'nullable|string',
             'emitir_nota' => 'nullable|boolean',
             'sem_emissao' => 'nullable|boolean',

@@ -46,6 +46,31 @@
   color: #6d4c00;
   font-size: 0.9rem;
 }
+.cpdv-aviso-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.cpdv-aviso-bar .cpdv-aviso-proto {
+  margin: 0;
+  flex: 1 1 280px;
+}
+.cpdv-offline-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #ffe0b2;
+  color: #e65100;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.cpdv-offline-badge[hidden],
+#cpdvSyncOfflineBtn[hidden] {
+  display: none !important;
+}
 
 .cpdv-cards {
   display: grid;

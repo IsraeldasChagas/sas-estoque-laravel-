@@ -25,6 +25,171 @@
     return data;
   }
 
+  const CPDV_OFFLINE_QUEUE_KEY = "cpdv_offline_vendas_v1";
+  let cpdvOfflineSyncing = false;
+
+  function cpdvUuid() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    return `off-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+  }
+
+  function cpdvIsOnline() {
+    return typeof navigator === "undefined" || navigator.onLine !== false;
+  }
+
+  function cpdvIsNetworkError(err) {
+    if (!cpdvIsOnline()) return true;
+    const msg = String(err?.message || err || "").toLowerCase();
+    const status = Number(err?.status || 0);
+    if (status === 0) return true;
+    return /failed to fetch|networkerror|network request failed|load failed|conex[aã]o|offline|timeout|timed out|err_internet|err_network|servidor indispon/i.test(msg);
+  }
+
+  function cpdvLerFilaOffline() {
+    try {
+      const raw = localStorage.getItem(CPDV_OFFLINE_QUEUE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function cpdvSalvarFilaOffline(list) {
+    localStorage.setItem(CPDV_OFFLINE_QUEUE_KEY, JSON.stringify(list || []));
+    cpdvAtualizarBadgeOffline();
+  }
+
+  function cpdvContarPendentesOffline() {
+    return cpdvLerFilaOffline().filter((x) => x.status === "pendente" || x.status === "erro").length;
+  }
+
+  function cpdvEnfileirarVendaOffline(entry) {
+    const list = cpdvLerFilaOffline();
+    list.push({
+      ...entry,
+      id: entry.id || cpdvUuid(),
+      status: "pendente",
+      created_at: entry.created_at || new Date().toISOString(),
+      tentativas: entry.tentativas || 0,
+      ultimo_erro: null,
+    });
+    cpdvSalvarFilaOffline(list);
+    return list[list.length - 1];
+  }
+
+  function cpdvAtualizarBadgeOffline() {
+    const n = cpdvContarPendentesOffline();
+    document.querySelectorAll("[data-cpdv-offline-badge]").forEach((el) => {
+      el.hidden = n <= 0;
+      el.textContent = n <= 0 ? "" : `${n} venda(s) offline pendente(s)`;
+    });
+    const btn = document.getElementById("cpdvSyncOfflineBtn");
+    if (btn) {
+      btn.hidden = n <= 0;
+      btn.textContent = n <= 0 ? "Sincronizar" : `Sincronizar offline (${n})`;
+    }
+  }
+
+  async function cpdvSincronizarFilaOffline(opts = {}) {
+    if (cpdvOfflineSyncing) return { ok: 0, fail: 0, skipped: true };
+    if (!cpdvIsOnline()) {
+      if (!opts.silencioso) toast("Sem internet — sincronização depois.", "warning");
+      return { ok: 0, fail: 0 };
+    }
+    const list = cpdvLerFilaOffline();
+    const pendentes = list.filter((x) => x.status === "pendente" || x.status === "erro");
+    if (!pendentes.length) {
+      cpdvAtualizarBadgeOffline();
+      return { ok: 0, fail: 0 };
+    }
+    cpdvOfflineSyncing = true;
+    let ok = 0;
+    let fail = 0;
+    try {
+      for (const item of list) {
+        if (item.status !== "pendente" && item.status !== "erro") continue;
+        item.tentativas = (item.tentativas || 0) + 1;
+        try {
+          const r = await cpdvFetch(item.path, {
+            method: "POST",
+            body: JSON.stringify(item.payload),
+          });
+          item.status = "sincronizada";
+          item.synced_at = new Date().toISOString();
+          item.venda_id = r.venda_id;
+          item.ultimo_erro = null;
+          item.resultado = {
+            venda_id: r.venda_id,
+            valor_liquido: r.valor_liquido,
+            emissao: r.emissao || null,
+          };
+          ok += 1;
+          if (!opts.silencioso) {
+            toast(
+              `Offline sync: venda #${r.venda_id}${msgEmissao(r.emissao)}`,
+              r.emissao?.emitida ? "success" : "info"
+            );
+          }
+        } catch (e) {
+          if (cpdvIsNetworkError(e)) {
+            item.status = "pendente";
+            item.ultimo_erro = e.message || "Sem conexão";
+            fail += 1;
+            break;
+          }
+          // Comanda já fechada / replay: considera sincronizada
+          const msg = String(e.message || "");
+          if (/já fechada|idempotenc|replay/i.test(msg) && item.payload?.idempotency_key) {
+            item.status = "sincronizada";
+            item.synced_at = new Date().toISOString();
+            item.ultimo_erro = msg;
+            ok += 1;
+            continue;
+          }
+          item.status = "erro";
+          item.ultimo_erro = msg || "Falha ao sincronizar";
+          fail += 1;
+          if (!opts.silencioso) toast(`Falha ao sincronizar venda offline: ${item.ultimo_erro}`, "error");
+        }
+      }
+      // Mantém últimas sincronizadas por auditoria local (máx 30) + todas pendentes/erro
+      const limpas = [];
+      let syncCount = 0;
+      for (let i = list.length - 1; i >= 0; i -= 1) {
+        const it = list[i];
+        if (it.status === "sincronizada") {
+          if (syncCount >= 30) continue;
+          syncCount += 1;
+        }
+        limpas.unshift(it);
+      }
+      cpdvSalvarFilaOffline(limpas);
+    } finally {
+      cpdvOfflineSyncing = false;
+      cpdvAtualizarBadgeOffline();
+    }
+    return { ok, fail };
+  }
+
+  function cpdvBindOfflineListeners() {
+    if (window.__cpdvOfflineBound) return;
+    window.__cpdvOfflineBound = true;
+    window.addEventListener("online", () => {
+      toast("Internet voltou — sincronizando vendas offline…", "info");
+      cpdvSincronizarFilaOffline({ silencioso: false }).catch(() => {});
+    });
+    window.addEventListener("offline", () => {
+      toast("Modo offline: vendas do caixa serão guardadas neste aparelho.", "warning");
+      cpdvAtualizarBadgeOffline();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && cpdvIsOnline()) {
+        cpdvSincronizarFilaOffline({ silencioso: true }).catch(() => {});
+      }
+    });
+  }
+
   const DADOS_DEMONSTRACAO_PDV = {
     unidades: [
       { id: 1, nome: "Matriz — Centro" },
@@ -691,10 +856,12 @@
       btn.textContent = "Processando…";
     }
     const obs = document.getElementById("cpdvPgtoObs")?.value?.trim() || "";
+    const idempotencyKey = cpdvUuid();
     const payloadBase = {
       unidade_id: unidadeId,
       forma_pagamento: forma,
       pdv_terminal: "PDV-WEB",
+      idempotency_key: idempotencyKey,
       observacao: obs || undefined,
       ...cpdvLerDadosPagamento("balcao"),
       ...cpdvPayloadEncargos("balcao"),
@@ -707,11 +874,41 @@
       preco_unitario: i.preco,
       desconto: 0,
     }));
+    const payload = { ...payloadBase, itens };
+    const totalPagar = cpdvCalcEncargosValores("balcao").total;
+
+    const finalizarLocalOffline = () => {
+      cpdvEnfileirarVendaOffline({
+        id: idempotencyKey,
+        tipo: "balcao",
+        path: "/pdv/vendas/balcao",
+        payload,
+        meta: {
+          total: totalPagar,
+          forma,
+          unidade_id: unidadeId,
+          emitir_nota: !!payload.emitir_nota,
+        },
+      });
+      toast(
+        `Venda offline guardada (${moeda(totalPagar)}). Sincroniza e emite nota quando a internet voltar.`,
+        "warning"
+      );
+      cpdvState.cart = [];
+      cpdvSyncCarrinhoMemoria();
+      closeCpdvModal();
+      loadComercialPdv?.();
+    };
+
     try {
+      if (!cpdvIsOnline()) {
+        finalizarLocalOffline();
+        return;
+      }
       if (cpdvState.apiReady) {
         const r = await cpdvFetch("/pdv/vendas/balcao", {
           method: "POST",
-          body: JSON.stringify({ ...payloadBase, itens }),
+          body: JSON.stringify(payload),
         });
         toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "info");
         await cpdvPosEmissao(r);
@@ -725,7 +922,7 @@
         toast(`Venda fiscal #${r.venda_id} registrada.${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : r.emissao?.skipped ? "info" : "warning");
         await cpdvPosEmissao(r);
       } else {
-        toast("API PDV indisponível.", "error");
+        finalizarLocalOffline();
         return;
       }
       cpdvState.cart = [];
@@ -733,6 +930,10 @@
       closeCpdvModal();
       loadComercialPdv?.();
     } catch (e) {
+      if (cpdvIsNetworkError(e)) {
+        finalizarLocalOffline();
+        return;
+      }
       toast(e.message || "Venda bloqueada.", "error");
       if (btn) {
         btn.disabled = false;
@@ -823,23 +1024,37 @@
   }
 
   function cpdvAvisoProto() {
+    const offlineBadge = `<span class="cpdv-offline-badge" data-cpdv-offline-badge hidden></span>
+      <button type="button" class="btn neutral btn-sm" id="cpdvSyncOfflineBtn" hidden>Sincronizar offline</button>`;
     if (cpdvState.apiReady) {
       const m = cpdvState.apiMeta || {};
       const parts = [];
       if (m.modulo_venda_fiscal) parts.push("venda + estoque");
       if (m.modulo_comandas) parts.push("mesas/comandas");
-      return `<p class="cpdv-aviso-proto cpdv-aviso-proto--ok">PDV operacional (${parts.join(" · ") || "API OK"}). Unidade: ${cpdvState.unidadeId ? `#${cpdvState.unidadeId}` : "selecione abaixo"}.</p>`;
+      const net = cpdvIsOnline() ? "" : " · <strong>OFFLINE</strong>";
+      return `<div class="cpdv-aviso-bar"><p class="cpdv-aviso-proto cpdv-aviso-proto--ok">PDV operacional (${parts.join(" · ") || "API OK"}). Unidade: ${cpdvState.unidadeId ? `#${cpdvState.unidadeId}` : "selecione abaixo"}${net}.</p>${offlineBadge}</div>`;
     }
     const err = cpdvState.apiError ? escHtml(cpdvState.apiError) : "verifique login e conexão com a API";
-    return `<p class="cpdv-aviso-proto">API PDV indisponível — ${err}</p>`;
+    return `<div class="cpdv-aviso-bar"><p class="cpdv-aviso-proto">API PDV indisponível — ${err}. Vendas do caixa podem ser guardadas offline.</p>${offlineBadge}</div>`;
+  }
+
+  function cpdvBindAvisoOffline(root) {
+    cpdvAtualizarBadgeOffline();
+    root?.querySelector("#cpdvSyncOfflineBtn")?.addEventListener("click", async () => {
+      const r = await cpdvSincronizarFilaOffline({ silencioso: false });
+      if (!r.ok && !r.fail) toast("Nenhuma venda offline pendente.", "info");
+      else if (r.ok && !r.fail) toast(`${r.ok} venda(s) sincronizada(s).`, "success");
+    });
   }
 
   async function cpdvInitApi() {
+    cpdvBindOfflineListeners();
     cpdvState.apiError = null;
     try {
       const meta = await cpdvFetch("/pdv/meta");
       cpdvState.apiMeta = meta;
       cpdvState.apiReady = !!(meta.modulo_venda_fiscal || meta.modulo_comandas);
+      cpdvSincronizarFilaOffline({ silencioso: true }).catch(() => {});
     } catch (e) {
       cpdvState.apiReady = false;
       cpdvState.apiMeta = null;
@@ -1147,6 +1362,7 @@
     }
     root.querySelector("#cpdvPagarBtn")?.addEventListener("click", cpdvAbrirModalPagamento);
     cpdvBindPdvEvents(root);
+    cpdvBindAvisoOffline(root);
   }
 
   const CPDV_MESA_LABEL_API = {
@@ -1204,16 +1420,33 @@
       btn.disabled = true;
       btn.textContent = "Processando…";
     }
+    const idempotencyKey = cpdvUuid();
+    const payload = {
+      forma_pagamento: forma,
+      pdv_terminal: "PDV-MESA",
+      idempotency_key: idempotencyKey,
+      ...cpdvLerDadosPagamento("mesa"),
+      ...cpdvPayloadEncargos("mesa"),
+      ...cpdvPayloadEmitirNota("cpdvMesaEmitirNota"),
+    };
     try {
+      if (!cpdvIsOnline()) {
+        cpdvEnfileirarVendaOffline({
+          id: idempotencyKey,
+          tipo: "mesa_finalizar",
+          path: `/pdv/comandas/${comandaId}/finalizar`,
+          payload,
+          meta: { comanda_id: comandaId, forma, emitir_nota: !!payload.emitir_nota },
+        });
+        toast("Fechamento da mesa guardado offline. Sincroniza quando a internet voltar.", "warning");
+        cpdvState.comandaAtual = null;
+        cpdvState.mesaCardAtual = null;
+        await loadComercialMesas();
+        return;
+      }
       const r = await cpdvFetch(`/pdv/comandas/${comandaId}/finalizar`, {
         method: "POST",
-        body: JSON.stringify({
-          forma_pagamento: forma,
-          pdv_terminal: "PDV-MESA",
-          ...cpdvLerDadosPagamento("mesa"),
-          ...cpdvPayloadEncargos("mesa"),
-          ...cpdvPayloadEmitirNota("cpdvMesaEmitirNota"),
-        }),
+        body: JSON.stringify(payload),
       });
       toast(`Conta fechada — venda #${r.venda_id} (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "success");
       await cpdvPosEmissao(r);
@@ -1221,6 +1454,20 @@
       cpdvState.mesaCardAtual = null;
       await loadComercialMesas();
     } catch (e) {
+      if (cpdvIsNetworkError(e)) {
+        cpdvEnfileirarVendaOffline({
+          id: idempotencyKey,
+          tipo: "mesa_finalizar",
+          path: `/pdv/comandas/${comandaId}/finalizar`,
+          payload,
+          meta: { comanda_id: comandaId, forma, emitir_nota: !!payload.emitir_nota },
+        });
+        toast("Sem conexão — fechamento guardado offline para sincronizar depois.", "warning");
+        cpdvState.comandaAtual = null;
+        cpdvState.mesaCardAtual = null;
+        await loadComercialMesas();
+        return;
+      }
       toast(e.message, "error");
     } finally {
       if (btn) {
@@ -1470,6 +1717,7 @@
       });
     });
     cpdvRenderMesaPainel();
+    cpdvBindAvisoOffline(root);
   }
 
   function cpdvKdsMover(cardId, novaCol) {

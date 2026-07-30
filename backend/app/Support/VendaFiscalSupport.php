@@ -192,7 +192,22 @@ final class VendaFiscalSupport
             }
         }
 
-        return DB::transaction(function () use ($payload, $usuarioId, $unidadeId, $empresaId, $itens) {
+        $idem = trim((string) ($payload['idempotency_key'] ?? ''));
+        if ($idem !== '' && Schema::hasColumn('vendas', 'idempotency_key')) {
+            $existente = DB::table('vendas')->where('idempotency_key', mb_substr($idem, 0, 64))->first();
+            if ($existente) {
+                return [
+                    'venda_id' => (int) $existente->id,
+                    'valor_liquido' => (float) $existente->valor_liquido,
+                    'custo_total' => (float) ($existente->custo_total ?? 0),
+                    'taxa_servico' => (float) ($existente->taxa_servico ?? 0),
+                    'pagamento_cantor' => (float) ($existente->pagamento_cantor ?? 0),
+                    'replayed' => true,
+                ];
+            }
+        }
+
+        return DB::transaction(function () use ($payload, $usuarioId, $unidadeId, $empresaId, $itens, $idem) {
             require_once dirname(__DIR__, 2) . '/routes/saida_unidade_helpers.php';
 
             $valorBruto = 0.0;
@@ -228,6 +243,9 @@ final class VendaFiscalSupport
             }
             if (Schema::hasColumn('vendas', 'origem_venda') && ! empty($payload['origem_venda'])) {
                 $insertVenda['origem_venda'] = (string) $payload['origem_venda'];
+            }
+            if ($idem !== '' && Schema::hasColumn('vendas', 'idempotency_key')) {
+                $insertVenda['idempotency_key'] = mb_substr($idem, 0, 64);
             }
             $insertVenda = array_merge($insertVenda, PdvConfigSupport::extrairCamposPagamentoVenda($payload));
 

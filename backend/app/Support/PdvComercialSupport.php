@@ -396,6 +396,24 @@ final class PdvComercialSupport
 
         $data = self::comandaCompleta($comandaId);
         $com = $data['comanda'];
+        $idem = trim((string) ($payload['idempotency_key'] ?? ''));
+        if ($idem !== '' && Schema::hasColumn('vendas', 'idempotency_key')) {
+            $existente = DB::table('vendas')->where('idempotency_key', mb_substr($idem, 0, 64))->first();
+            if ($existente) {
+                $venda = [
+                    'venda_id' => (int) $existente->id,
+                    'valor_liquido' => (float) $existente->valor_liquido,
+                    'custo_total' => (float) ($existente->custo_total ?? 0),
+                    'taxa_servico' => (float) ($existente->taxa_servico ?? 0),
+                    'pagamento_cantor' => (float) ($existente->pagamento_cantor ?? 0),
+                    'replayed' => true,
+                ];
+                $tentarEmissao = FiscalEmissaoService::deveEmitirParaPayload((int) $com->unidade_id, $payload);
+                $venda = FiscalEmissaoService::anexarEmissaoAoResultado($venda, $tentarEmissao);
+
+                return array_merge($venda, ['comanda_id' => $comandaId]);
+            }
+        }
         if (! in_array($com->status, ['aberta', 'aguardando_pagamento'], true)) {
             throw new \RuntimeException('Comanda já fechada.');
         }
@@ -419,11 +437,15 @@ final class PdvComercialSupport
             'observacao' => $payload['observacao'] ?? ('Comanda #' . $comandaId),
             'itens' => $itens,
         ], array_intersect_key($payload, array_flip([
+            'idempotency_key',
+            'emitir_nota',
+            'sem_emissao',
             'pagamento_nsu',
             'pagamento_autorizacao',
             'pagamento_bandeira',
             'pagamento_parcelas',
             'pagamento_pix_id',
+            'pagamento_pix_chave_id',
             'aplicar_taxa_servico',
             'aplicar_pagamento_cantor',
         ])));
@@ -431,8 +453,13 @@ final class PdvComercialSupport
             throw new \RuntimeException('Módulo fiscal de vendas indisponível.');
         }
         $venda = VendaFiscalSupport::finalizarVenda($vendaPayload, $usuarioId);
-        $tentarEmissao = FiscalEmissaoService::deveEmitirParaPayload((int) $com->unidade_id, $payload);
+        $tentarEmissao = empty($venda['replayed'])
+            && FiscalEmissaoService::deveEmitirParaPayload((int) $com->unidade_id, $payload);
         $venda = FiscalEmissaoService::anexarEmissaoAoResultado($venda, $tentarEmissao);
+
+        if (! empty($venda['replayed']) && (string) $com->status === 'fechada') {
+            return array_merge($venda, ['comanda_id' => $comandaId]);
+        }
 
         DB::table('pdv_comandas')->where('id', $comandaId)->update([
             'status' => 'fechada',
