@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\CardapioComercialSupport;
+use App\Support\ContaAssinadaSupport;
 use App\Support\FiscalEmissaoConfigSupport;
 use App\Support\PdvComercialSupport;
 use App\Support\PdvConfigSupport;
@@ -231,6 +232,7 @@ Route::post('/pdv/comandas/{id}/finalizar', function (Request $request, int $id)
             'pagamento_pix_chave_id' => 'nullable|integer',
             'aplicar_taxa_servico' => 'nullable|boolean',
             'aplicar_pagamento_cantor' => 'nullable|boolean',
+            'conta_assinada_id' => 'nullable|integer',
         ]);
     try {
         return response()->json(PdvComercialSupport::finalizarComanda($id, $payload, $uid), 201);
@@ -261,6 +263,7 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
             'pagamento_pix_chave_id' => 'nullable|integer',
             'aplicar_taxa_servico' => 'nullable|boolean',
             'aplicar_pagamento_cantor' => 'nullable|boolean',
+            'conta_assinada_id' => 'nullable|integer',
             'itens' => 'required|array|min:1',
             'itens.*.produto_id' => 'nullable|integer',
             'itens.*.cardapio_produto_id' => 'nullable|integer',
@@ -278,6 +281,126 @@ Route::post('/pdv/vendas/balcao', function (Request $request) {
     } catch (\Throwable $e) {
         return response()->json(['error' => $e->getMessage(), 'message' => $e->getMessage()], 422);
     }
+});
+
+Route::get('/pdv/contas-assinadas', function (Request $request) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    if (! ContaAssinadaSupport::moduloAtivo()) {
+        return response()->json([]);
+    }
+    $unidadeId = $request->filled('unidade_id') ? (int) $request->unidade_id : null;
+    $ativas = ! $request->boolean('todas');
+    $busca = $request->input('search');
+
+    return response()->json(ContaAssinadaSupport::listar(
+        $unidadeId,
+        $ativas,
+        is_string($busca) ? $busca : null
+    ));
+});
+
+Route::post('/pdv/contas-assinadas', function (Request $request) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    $data = $request->validate([
+        'nome' => 'nullable|string|max:160',
+        'funcionario_id' => 'nullable|integer',
+        'unidade_id' => 'nullable|integer',
+        'telefone' => 'nullable|string|max:40',
+        'observacao' => 'nullable|string|max:300',
+        'ativo' => 'nullable|boolean',
+    ]);
+    try {
+        return response()->json(ContaAssinadaSupport::criar($data, (int) $usuario->id), 201);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::put('/pdv/contas-assinadas/{id}', function (Request $request, int $id) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    $data = $request->validate([
+        'nome' => 'nullable|string|max:160',
+        'unidade_id' => 'nullable|integer',
+        'telefone' => 'nullable|string|max:40',
+        'observacao' => 'nullable|string|max:300',
+        'ativo' => 'nullable|boolean',
+    ]);
+    try {
+        return response()->json(ContaAssinadaSupport::atualizar($id, $data));
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::get('/pdv/contas-assinadas/{id}/lancamentos', function (Request $request, int $id) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    $conta = ContaAssinadaSupport::obter($id);
+    if (! $conta) {
+        return response()->json(['error' => 'Conta não encontrada'], 404);
+    }
+
+    return response()->json([
+        'conta' => $conta,
+        'lancamentos' => ContaAssinadaSupport::lancamentos($id),
+    ]);
+});
+
+Route::post('/pdv/contas-assinadas/{id}/quitar', function (Request $request, int $id) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    $data = $request->validate([
+        'valor' => 'nullable|numeric|min:0.01',
+        'observacao' => 'nullable|string|max:300',
+    ]);
+    try {
+        return response()->json(ContaAssinadaSupport::quitar($id, $data, (int) $usuario->id));
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::get('/pdv/funcionarios-conta', function (Request $request) use ($pdvAuth) {
+    $usuario = $pdvAuth($request);
+    if (! $usuario) {
+        return response()->json(['error' => 'Usuário não autenticado'], 401);
+    }
+    if (! Schema::hasTable('funcionarios')) {
+        return response()->json([]);
+    }
+    $q = DB::table('funcionarios')
+        ->select(['id', 'nome_completo', 'cargo', 'unidade_id', 'whatsapp', 'status'])
+        ->orderBy('nome_completo')
+        ->limit(400);
+    if (Schema::hasColumn('funcionarios', 'status')) {
+        $q->where('status', 'ativo');
+    }
+    $busca = trim((string) $request->input('search', ''));
+    if ($busca !== '') {
+        $like = '%'.$busca.'%';
+        $q->where(function ($w) use ($like) {
+            $w->where('nome_completo', 'like', $like)
+                ->orWhere('cargo', 'like', $like);
+        });
+    }
+    if ($request->filled('unidade_id') && Schema::hasColumn('funcionarios', 'unidade_id')) {
+        $q->where('unidade_id', (int) $request->unidade_id);
+    }
+
+    return response()->json($q->get());
 });
 
 Route::get('/pdv/vendas', function (Request $request) {

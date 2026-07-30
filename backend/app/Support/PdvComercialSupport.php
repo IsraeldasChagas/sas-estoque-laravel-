@@ -393,6 +393,14 @@ final class PdvComercialSupport
         if ($errPg) {
             throw new \RuntimeException($errPg);
         }
+        $errConta = ContaAssinadaSupport::validarParaPagamento($payload);
+        if ($errConta) {
+            throw new \RuntimeException($errConta);
+        }
+        if (ContaAssinadaSupport::isFormaContaAssinada($forma)) {
+            $payload['sem_emissao'] = true;
+            $payload['emitir_nota'] = false;
+        }
 
         $data = self::comandaCompleta($comandaId);
         $com = $data['comanda'];
@@ -440,6 +448,7 @@ final class PdvComercialSupport
             'idempotency_key',
             'emitir_nota',
             'sem_emissao',
+            'conta_assinada_id',
             'pagamento_nsu',
             'pagamento_autorizacao',
             'pagamento_bandeira',
@@ -453,6 +462,7 @@ final class PdvComercialSupport
             throw new \RuntimeException('Módulo fiscal de vendas indisponível.');
         }
         $venda = VendaFiscalSupport::finalizarVenda($vendaPayload, $usuarioId);
+        ContaAssinadaSupport::registrarConsumoVenda($vendaPayload, $venda, $usuarioId);
         $tentarEmissao = empty($venda['replayed'])
             && FiscalEmissaoService::deveEmitirParaPayload((int) $com->unidade_id, $payload);
         $venda = FiscalEmissaoService::anexarEmissaoAoResultado($venda, $tentarEmissao);
@@ -495,6 +505,14 @@ final class PdvComercialSupport
         if ($errPg) {
             throw new \RuntimeException($errPg);
         }
+        $errConta = ContaAssinadaSupport::validarParaPagamento($payload);
+        if ($errConta) {
+            throw new \RuntimeException($errConta);
+        }
+        if (ContaAssinadaSupport::isFormaContaAssinada($forma)) {
+            $payload['sem_emissao'] = true;
+            $payload['emitir_nota'] = false;
+        }
 
         $payload['origem_venda'] = $payload['origem_venda'] ?? 'balcao';
         $payload['pdv_terminal'] = $payload['pdv_terminal'] ?? 'PDV-BALCAO';
@@ -509,8 +527,11 @@ final class PdvComercialSupport
             ], $normalizados);
         }
 
+        $venda = VendaFiscalSupport::finalizarVenda($payload, $usuarioId);
+        ContaAssinadaSupport::registrarConsumoVenda($payload, $venda, $usuarioId);
+
         return FiscalEmissaoService::anexarEmissaoAoResultado(
-            VendaFiscalSupport::finalizarVenda($payload, $usuarioId),
+            $venda,
             FiscalEmissaoService::deveEmitirParaPayload($unidadeId, $payload)
         );
     }

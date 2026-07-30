@@ -750,12 +750,22 @@
       const chaveId = Number(document.getElementById(`${pre}PixChave`)?.value || 0);
       if (chaveId > 0) out.pagamento_pix_chave_id = chaveId;
     }
+    if (forma === "Conta assinada") {
+      const contaId = Number(document.getElementById(`${pre}ContaAssinada`)?.value || 0);
+      if (contaId > 0) out.conta_assinada_id = contaId;
+      out.sem_emissao = true;
+      out.emitir_nota = false;
+    }
     return out;
   }
 
   function cpdvValidarPagamentoLocal(forma, scope) {
     const cfg = cpdvSegPag();
     const dados = cpdvLerDadosPagamento(scope);
+    if (forma === "Conta assinada") {
+      if (!dados.conta_assinada_id) return "Selecione a conta assinada.";
+      return null;
+    }
     if (cpdvIsCartao(forma)) {
       if (cfg.exigir_nsu_cartao && !dados.pagamento_nsu) {
         return "Informe o NSU do cartão.";
@@ -820,11 +830,23 @@
     const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
     const blocoCart = document.getElementById(`${pre}BlocoCartao`);
     const blocoPix = document.getElementById(`${pre}BlocoPix`);
+    const blocoConta = document.getElementById(`${pre}BlocoContaAssinada`);
     if (blocoCart) blocoCart.hidden = !cpdvIsCartao(forma);
     if (blocoPix) blocoPix.hidden = forma !== "PIX";
+    if (blocoConta) blocoConta.hidden = forma !== "Conta assinada";
     cpdvSincronizarCamposCartao(scope, forma);
     if (forma === "PIX") cpdvAtualizarQrPix(scope);
+    if (forma === "Conta assinada") cpdvCarregarSelectContasAssinadas(pre);
     if (scope !== "mesa") cpdvAtualizarTrocoPagamento();
+    const nota = document.getElementById(scope === "mesa" ? "cpdvMesaEmitirNota" : "cpdvPgtoEmitirNota");
+    if (nota) {
+      if (forma === "Conta assinada") {
+        nota.checked = false;
+        nota.disabled = true;
+      } else {
+        nota.disabled = false;
+      }
+    }
   }
 
   function cpdvAtualizarTrocoPagamento() {
@@ -832,9 +854,11 @@
     const blocoDin = document.getElementById("cpdvPgtoBlocoDinheiro");
     const blocoCart = document.getElementById("cpdvPgtoBlocoCartao");
     const blocoPix = document.getElementById("cpdvPgtoBlocoPix");
+    const blocoConta = document.getElementById("cpdvPgtoBlocoContaAssinada");
     if (blocoDin) blocoDin.hidden = forma !== "Dinheiro";
     if (blocoCart) blocoCart.hidden = !cpdvIsCartao(forma);
     if (blocoPix) blocoPix.hidden = forma !== "PIX";
+    if (blocoConta) blocoConta.hidden = forma !== "Conta assinada";
     cpdvSincronizarCamposCartao("balcao", forma);
     const recebido = cpdvParseMoedaInput(document.getElementById("cpdvPgtoValor")?.value);
     const trocoEl = document.getElementById("cpdvPgtoTroco");
@@ -843,6 +867,46 @@
       const troco = Math.max(0, recebido - totalPagar);
       trocoEl.value = cpdvFormatMoedaInput(troco);
     }
+  }
+
+  async function cpdvCarregarSelectContasAssinadas(pre) {
+    const sel = document.getElementById(`${pre}ContaAssinada`);
+    const meta = document.getElementById(`${pre}ContaAssinadaMeta`);
+    if (!sel) return;
+    const atual = sel.value;
+    try {
+      const unidadeId = cpdvState.unidadeId || Number(document.getElementById("cpdvUnidadeFiscal")?.value || 0);
+      const q = unidadeId ? `?unidade_id=${unidadeId}` : "";
+      const rows = await cpdvFetch(`/pdv/contas-assinadas${q}`);
+      cpdvState.contasAssinadas = rows || [];
+      sel.innerHTML = '<option value="">— Selecione a conta —</option>'
+        + (rows || []).map((c) =>
+          `<option value="${escHtml(c.id)}">${escHtml(c.rotulo || c.nome)} · saldo ${moeda(c.saldo_aberto || 0)}</option>`
+        ).join("");
+      if (atual) sel.value = atual;
+      const syncMeta = () => {
+        const c = (cpdvState.contasAssinadas || []).find((x) => String(x.id) === String(sel.value));
+        if (meta) {
+          meta.textContent = c
+            ? `Saldo em aberto: ${moeda(c.saldo_aberto || 0)}${c.origem === "funcionario" ? " · funcionário" : " · avulsa"}`
+            : "Cadastre contas em Configurações do PDV.";
+        }
+      };
+      sel.onchange = syncMeta;
+      syncMeta();
+    } catch (e) {
+      sel.innerHTML = '<option value="">Sem contas — cadastre em Configurações</option>';
+      if (meta) meta.textContent = e.message || "Não foi possível carregar contas.";
+    }
+  }
+
+  function cpdvHtmlBlocoContaAssinada(pre) {
+    return `<div id="${pre}BlocoContaAssinada" class="cpdv-pgto-grid" hidden>
+      <label class="cpdv-pgto-field cpdv-pgto-field--full">Conta assinada
+        <select id="${pre}ContaAssinada"><option value="">Carregando…</option></select>
+      </label>
+      <p class="subtle-text cpdv-pgto-field--full" id="${pre}ContaAssinadaMeta">O valor fica em aberto nesta conta (sem NFC-e).</p>
+    </div>`;
   }
 
   function cpdvBindPagamentoModal() {
@@ -894,6 +958,10 @@
       ...cpdvPayloadEncargos("balcao"),
       ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
     };
+    if (forma === "Conta assinada") {
+      payloadBase.sem_emissao = true;
+      payloadBase.emitir_nota = false;
+    }
     const itens = cpdvState.cart.map((i) => ({
       cardapio_produto_id: i.fonte === "cardapio" || i.cardapioProdutoId ? (i.cardapioProdutoId || i.produtoId) : undefined,
       produto_id: i.estoqueProdutoId || i.produtoId,
@@ -1497,6 +1565,10 @@
       ...cpdvPayloadEncargos("mesa"),
       ...cpdvPayloadEmitirNota("cpdvMesaEmitirNota"),
     };
+    if (forma === "Conta assinada") {
+      payload.sem_emissao = true;
+      payload.emitir_nota = false;
+    }
     try {
       if (!cpdvIsOnline()) {
         cpdvEnfileirarVendaOffline({
@@ -1615,6 +1687,7 @@
             <option value="Dinheiro">Dinheiro</option>
             <option value="Débito">Cartão débito</option>
             <option value="Crédito">Cartão crédito</option>
+            <option value="Conta assinada">Conta assinada</option>
           </select>
         </label>
         <div id="cpdvMesaBlocoCartao" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
@@ -1632,6 +1705,7 @@
           </label>
           <div class="cpdv-pgto-field cpdv-pgto-field--full">${cpdvHintManualCartao()}</div>
         </div>
+        ${cpdvHtmlBlocoContaAssinada("cpdvMesa")}
         ${cpdvHtmlBlocoPix("mesa", seg.exigir_identificador_pix)}
         ${cpdvMarkupEmitirNota("cpdvMesaEmitirNota")}
         <div class="cpdv-pgto-mesa__actions">
@@ -1965,6 +2039,7 @@
               <option value="Dinheiro">Dinheiro</option>
               <option value="Débito">Cartão débito</option>
               <option value="Crédito">Cartão crédito</option>
+              <option value="Conta assinada">Conta assinada</option>
               <option value="Voucher">Voucher</option>
               <option value="Vale-consumo">Vale-consumo</option>
               <option value="Cortesia">Cortesia</option>
@@ -1994,6 +2069,7 @@
             <div class="cpdv-pgto-field cpdv-pgto-field--full">${cpdvHintManualCartao()}</div>
           </div>
           ${cpdvHtmlBlocoPix("balcao", seg.exigir_identificador_pix)}
+          ${cpdvHtmlBlocoContaAssinada("cpdvPgto")}
           <label class="cpdv-pgto-field cpdv-pgto-field--full">Observação
             <input type="text" id="cpdvPgtoObs" placeholder="Ex.: cliente VIP, mesa externa…" maxlength="200" />
           </label>
@@ -2223,6 +2299,41 @@
           <label>Unidade <select id="cpdvCfgUnidade"><option value="">—</option>${uniOpts}</select></label>
           <p class="subtle-text">Usada no Caixa, Mesas e Comandas. Deve ser a mesma unidade do estoque (CNPJ).</p>
           <button type="button" class="btn primary" id="cpdvCfgSave">Salvar preferência</button>
+        </div>
+        <div class="table-card cpdv-form-body" id="cpdvCfgContasAssinadasCard">
+          <h3>Contas assinadas</h3>
+          <p class="subtle-text">Cadastre funcionários ou pessoas pelo nome. No caixa, a venda fica no saldo da conta com histórico de consumo e quitação.</p>
+          <div class="filters-grid">
+            <label>Origem
+              <select id="cpdvCfgContaOrigem">
+                <option value="nome">Criar só com o nome</option>
+                <option value="funcionario">Puxar funcionário</option>
+              </select>
+            </label>
+            <label id="cpdvCfgContaNomeWrap">Nome
+              <input type="text" id="cpdvCfgContaNome" maxlength="160" placeholder="Ex.: João da limpeza" />
+            </label>
+            <label id="cpdvCfgContaFuncWrap" class="hidden">Funcionário
+              <select id="cpdvCfgContaFuncionario"><option value="">Carregando…</option></select>
+            </label>
+            <label>Telefone
+              <input type="text" id="cpdvCfgContaTel" maxlength="40" placeholder="Opcional" />
+            </label>
+            <label>Obs.
+              <input type="text" id="cpdvCfgContaObs" maxlength="300" placeholder="Opcional" />
+            </label>
+            <label><button type="button" class="btn primary" id="cpdvCfgContaSalvar">Cadastrar conta</button></label>
+          </div>
+          <div class="cpdv-conta-layout">
+            <div>
+              <h4>Contas ativas</h4>
+              <div id="cpdvCfgContasLista" class="cpdv-conta-lista"><p class="subtle-text">Carregando…</p></div>
+            </div>
+            <div>
+              <h4>Histórico / saldo</h4>
+              <div id="cpdvCfgContaHist" class="cpdv-conta-hist"><p class="subtle-text">Selecione uma conta para ver consumos, pagamentos e valor devido.</p></div>
+            </div>
+          </div>
         </div>
         <div class="table-card cpdv-form-body">
           <h3>Segurança no pagamento (anti-fraude / auditoria)</h3>
@@ -2505,7 +2616,150 @@
         const el = root.querySelector("#cpdvCfgProdCount");
         if (el) el.textContent = String(cpdvState.produtosApi.length);
       } catch { /* ignore */ }
+      cpdvBindContasAssinadasConfig(root);
     });
+  }
+
+  async function cpdvBindContasAssinadasConfig(root) {
+    const origem = root.querySelector("#cpdvCfgContaOrigem");
+    const nomeWrap = root.querySelector("#cpdvCfgContaNomeWrap");
+    const funcWrap = root.querySelector("#cpdvCfgContaFuncWrap");
+    const syncOrigem = () => {
+      const isFunc = origem?.value === "funcionario";
+      nomeWrap?.classList.toggle("hidden", !!isFunc);
+      funcWrap?.classList.toggle("hidden", !isFunc);
+    };
+    origem?.addEventListener("change", syncOrigem);
+    syncOrigem();
+
+    try {
+      const funcs = await cpdvFetch("/pdv/funcionarios-conta" + (cpdvState.unidadeId ? `?unidade_id=${cpdvState.unidadeId}` : ""));
+      const selF = root.querySelector("#cpdvCfgContaFuncionario");
+      if (selF) {
+        selF.innerHTML = '<option value="">— Selecione —</option>'
+          + (funcs || []).map((f) =>
+            `<option value="${escHtml(f.id)}">${escHtml(f.nome_completo)}${f.cargo ? ` · ${escHtml(f.cargo)}` : ""}</option>`
+          ).join("");
+      }
+    } catch { /* ignore */ }
+
+    const refreshLista = async () => {
+      const host = root.querySelector("#cpdvCfgContasLista");
+      if (!host) return;
+      try {
+        const q = cpdvState.unidadeId ? `?unidade_id=${cpdvState.unidadeId}&todas=1` : "?todas=1";
+        const rows = await cpdvFetch(`/pdv/contas-assinadas${q}`);
+        cpdvState.contasAssinadasCfg = rows || [];
+        if (!rows?.length) {
+          host.innerHTML = '<p class="subtle-text">Nenhuma conta cadastrada.</p>';
+          return;
+        }
+        host.innerHTML = rows.map((c) => `
+          <button type="button" class="cpdv-conta-item${!c.ativo ? " is-off" : ""}" data-cpdv-conta="${c.id}">
+            <strong>${escHtml(c.rotulo || c.nome)}</strong>
+            <span>${c.origem === "funcionario" ? "Funcionário" : "Avulsa"} · saldo <b>${moeda(c.saldo_aberto || 0)}</b>${c.ativo ? "" : " · inativa"}</span>
+          </button>`).join("");
+        host.querySelectorAll("[data-cpdv-conta]").forEach((btn) => {
+          btn.addEventListener("click", () => cpdvAbrirHistoricoContaAssinada(root, Number(btn.dataset.cpdvConta)));
+        });
+      } catch (e) {
+        host.innerHTML = `<p class="subtle-text">${escHtml(e.message || "Erro ao listar")}</p>`;
+      }
+    };
+
+    root.querySelector("#cpdvCfgContaSalvar")?.addEventListener("click", async () => {
+      const isFunc = origem?.value === "funcionario";
+      const payload = {
+        unidade_id: cpdvState.unidadeId || undefined,
+        telefone: root.querySelector("#cpdvCfgContaTel")?.value || undefined,
+        observacao: root.querySelector("#cpdvCfgContaObs")?.value || undefined,
+      };
+      if (isFunc) {
+        payload.funcionario_id = Number(root.querySelector("#cpdvCfgContaFuncionario")?.value || 0) || undefined;
+        if (!payload.funcionario_id) return toast("Selecione o funcionário.", "warning");
+      } else {
+        payload.nome = root.querySelector("#cpdvCfgContaNome")?.value?.trim() || "";
+        if (!payload.nome) return toast("Informe o nome.", "warning");
+      }
+      try {
+        await cpdvFetch("/pdv/contas-assinadas", { method: "POST", body: JSON.stringify(payload) });
+        toast("Conta assinada cadastrada.", "success");
+        root.querySelector("#cpdvCfgContaNome").value = "";
+        root.querySelector("#cpdvCfgContaTel").value = "";
+        root.querySelector("#cpdvCfgContaObs").value = "";
+        await refreshLista();
+      } catch (e) {
+        toast(e.message || "Não foi possível cadastrar.", "error");
+      }
+    });
+
+    await refreshLista();
+  }
+
+  async function cpdvAbrirHistoricoContaAssinada(root, contaId) {
+    const host = root.querySelector("#cpdvCfgContaHist");
+    if (!host) return;
+    host.innerHTML = '<p class="subtle-text">Carregando histórico…</p>';
+    try {
+      const data = await cpdvFetch(`/pdv/contas-assinadas/${contaId}/lancamentos`);
+      const c = data.conta || {};
+      const rows = data.lancamentos || [];
+      const hist = rows.length
+        ? `<table class="data-table"><thead><tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Obs.</th></tr></thead><tbody>
+          ${rows.map((l) => {
+            const dt = (l.created_at || "").toString().replace("T", " ").slice(0, 16);
+            const tipo = l.tipo === "quitacao" ? "Pagamento" : "Consumo";
+            const sinal = l.tipo === "quitacao" ? "−" : "+";
+            return `<tr><td>${escHtml(dt)}</td><td>${tipo}</td><td>${sinal}${moeda(l.valor)}</td><td>${escHtml(l.observacao || (l.venda_id ? `Venda #${l.venda_id}` : "—"))}</td></tr>`;
+          }).join("")}
+        </tbody></table>`
+        : '<p class="subtle-text">Sem lançamentos ainda.</p>';
+      host.innerHTML = `
+        <div class="cpdv-conta-hist-head">
+          <div>
+            <strong>${escHtml(c.rotulo || c.nome || "Conta")}</strong>
+            <p class="subtle-text">Valor devido: <b>${moeda(c.saldo_aberto || 0)}</b></p>
+          </div>
+          <div class="cpdv-actions">
+            <button type="button" class="btn primary" id="cpdvCfgContaQuitar" ${Number(c.saldo_aberto || 0) <= 0 ? "disabled" : ""}>Quitar saldo</button>
+            <button type="button" class="btn ${c.ativo ? "danger" : "neutral"}" id="cpdvCfgContaToggle">${c.ativo ? "Inativar" : "Reativar"}</button>
+          </div>
+        </div>
+        ${hist}`;
+      host.querySelector("#cpdvCfgContaQuitar")?.addEventListener("click", async () => {
+        const saldo = Number(c.saldo_aberto || 0);
+        const dig = window.prompt(`Valor a quitar (saldo ${moeda(saldo)}):`, String(saldo).replace(".", ","));
+        if (dig == null) return;
+        const valor = cpdvParseMoedaInput(dig);
+        if (valor <= 0) return toast("Valor inválido.", "warning");
+        try {
+          await cpdvFetch(`/pdv/contas-assinadas/${contaId}/quitar`, {
+            method: "POST",
+            body: JSON.stringify({ valor, observacao: "Quitação no PDV" }),
+          });
+          toast("Pagamento registrado na conta.", "success");
+          await cpdvBindContasAssinadasConfig(root);
+          await cpdvAbrirHistoricoContaAssinada(root, contaId);
+        } catch (e) {
+          toast(e.message || "Falha ao quitar.", "error");
+        }
+      });
+      host.querySelector("#cpdvCfgContaToggle")?.addEventListener("click", async () => {
+        try {
+          await cpdvFetch(`/pdv/contas-assinadas/${contaId}`, {
+            method: "PUT",
+            body: JSON.stringify({ ativo: !c.ativo }),
+          });
+          toast(c.ativo ? "Conta inativada." : "Conta reativada.", "success");
+          await cpdvBindContasAssinadasConfig(root);
+          await cpdvAbrirHistoricoContaAssinada(root, contaId);
+        } catch (e) {
+          toast(e.message || "Falha ao atualizar.", "error");
+        }
+      });
+    } catch (e) {
+      host.innerHTML = `<p class="subtle-text">${escHtml(e.message || "Erro")}</p>`;
+    }
   }
 
   function cpdvRenderFiscal() {
