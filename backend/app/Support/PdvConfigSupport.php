@@ -80,25 +80,43 @@ final class PdvConfigSupport
             throw new \RuntimeException('Configuração PDV indisponível (migração pendente).');
         }
 
-        $payload = [
-            'exigir_nsu_cartao' => ! empty($data['exigir_nsu_cartao']),
-            'exigir_autorizacao_cartao' => ! empty($data['exigir_autorizacao_cartao']),
-            'exigir_bandeira_cartao' => ! empty($data['exigir_bandeira_cartao']),
-            'exigir_identificador_pix' => ! empty($data['exigir_identificador_pix']),
-            'updated_at' => now(),
-        ];
+        // A tela salva segurança e encargos em formulários separados. Atualize
+        // somente as chaves enviadas para um formulário não zerar o outro.
+        $payload = ['updated_at' => now()];
+        foreach ([
+            'exigir_nsu_cartao',
+            'exigir_autorizacao_cartao',
+            'exigir_bandeira_cartao',
+            'exigir_identificador_pix',
+        ] as $campo) {
+            if (array_key_exists($campo, $data)) {
+                $payload[$campo] = ! empty($data[$campo]);
+            }
+        }
 
         if (Schema::hasColumn('pdv_configuracoes', 'taxa_servico_ativa')) {
-            $payload['taxa_servico_ativa'] = ! empty($data['taxa_servico_ativa']);
-            $payload['taxa_servico_modo'] = self::normalizarModoEncargo($data['taxa_servico_modo'] ?? 'percentual');
-            $payload['taxa_servico_valor'] = max(0, round((float) ($data['taxa_servico_valor'] ?? 0), 2));
-            $payload['taxa_servico_padrao_mesa'] = ! empty($data['taxa_servico_ativa']);
-            $payload['taxa_servico_padrao_balcao'] = ! empty($data['taxa_servico_ativa']);
-            $payload['pagamento_cantor_ativo'] = ! empty($data['pagamento_cantor_ativo']);
-            $payload['pagamento_cantor_modo'] = self::normalizarModoEncargo($data['pagamento_cantor_modo'] ?? 'percentual');
-            $payload['pagamento_cantor_valor'] = max(0, round((float) ($data['pagamento_cantor_valor'] ?? 0), 2));
-            $payload['pagamento_cantor_padrao_mesa'] = ! empty($data['pagamento_cantor_ativo']);
-            $payload['pagamento_cantor_padrao_balcao'] = ! empty($data['pagamento_cantor_ativo']);
+            foreach ([
+                'taxa_servico_ativa',
+                'taxa_servico_padrao_mesa',
+                'taxa_servico_padrao_balcao',
+                'pagamento_cantor_ativo',
+                'pagamento_cantor_padrao_mesa',
+                'pagamento_cantor_padrao_balcao',
+            ] as $campo) {
+                if (array_key_exists($campo, $data)) {
+                    $payload[$campo] = ! empty($data[$campo]);
+                }
+            }
+            foreach (['taxa_servico_modo', 'pagamento_cantor_modo'] as $campo) {
+                if (array_key_exists($campo, $data)) {
+                    $payload[$campo] = self::normalizarModoEncargo($data[$campo]);
+                }
+            }
+            foreach (['taxa_servico_valor', 'pagamento_cantor_valor'] as $campo) {
+                if (array_key_exists($campo, $data)) {
+                    $payload[$campo] = max(0, round((float) $data[$campo], 2));
+                }
+            }
         }
         if ($usuarioId > 0 && Schema::hasColumn('pdv_configuracoes', 'updated_by')) {
             $payload['updated_by'] = $usuarioId;

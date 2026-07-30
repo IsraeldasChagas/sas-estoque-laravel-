@@ -244,6 +244,12 @@
     return item.modo === "fixo" ? moeda(item.valor) : `${Number(item.valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
   }
 
+  function cpdvEncargoMarcadoPadrao(item, scope) {
+    if (!item) return false;
+    const campo = scope === "mesa" ? "padrao_mesa" : "padrao_balcao";
+    return item[campo] !== false;
+  }
+
   function cpdvCalcValorEncargo(modo, valor, base) {
     const v = Number(valor) || 0;
     const b = Number(base) || 0;
@@ -291,16 +297,18 @@
     const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
     const parts = [];
     if (cfg.taxa_servico?.ativa) {
+      const marcada = cpdvEncargoMarcadoPadrao(cfg.taxa_servico, scope);
       parts.push(`<label class="cpdv-pgto-encargo cpdv-pgto-encargo--on">
-        <input type="checkbox" id="${pre}AplicarTaxa" checked />
+        <input type="checkbox" id="${pre}AplicarTaxa" ${marcada ? "checked" : ""} />
         <span>Taxa de serviço (${cpdvRotuloEncargoCfg(cfg.taxa_servico)})</span>
         <span class="cpdv-pgto-encargo__val" id="${pre}ValTaxa">—</span>
       </label>`);
     }
     if (cfg.pagamento_cantor?.ativo) {
+      const marcado = cpdvEncargoMarcadoPadrao(cfg.pagamento_cantor, scope);
       parts.push(`<label class="cpdv-pgto-encargo cpdv-pgto-encargo--on">
-        <input type="checkbox" id="${pre}AplicarCantor" checked />
-        <span>Pagamento do cantor (${cpdvRotuloEncargoCfg(cfg.pagamento_cantor)})</span>
+        <input type="checkbox" id="${pre}AplicarCantor" ${marcado ? "checked" : ""} />
+        <span>Valor do cantor (${cpdvRotuloEncargoCfg(cfg.pagamento_cantor)})</span>
         <span class="cpdv-pgto-encargo__val" id="${pre}ValCantor">—</span>
       </label>`);
     }
@@ -308,7 +316,7 @@
     return `<div class="cpdv-pgto-encargos" id="${pre}Encargos">
       <p class="cpdv-pgto-encargos__titulo">Encargos incluídos na conta</p>
       ${parts.join("")}
-      <p class="cpdv-pgto-hint">Vêm marcados por padrão. Desmarque <strong>somente se o cliente pedir</strong> para retirar.</p>
+      <p class="cpdv-pgto-hint">Desmarque o item para <strong>retirar da compra</strong>. O total é recalculado na hora.</p>
     </div>`;
   }
 
@@ -1233,11 +1241,11 @@
           const sel = cpdvState.mesaCardAtual?.mesa_id === m.mesa_id ? " cpdv-mesa--selected" : "";
           return `<button type="button" class="cpdv-mesa cpdv-mesa--${escHtml(m.status_operacional)}${sel}" data-cpdv-mesa-api="${escHtml(m.mesa_id)}">
             <h4>Mesa ${escHtml(String(m.numero))}</h4>
-            <span class="cpdv-badge">${escHtml(st)}</span>
+        <span class="cpdv-badge">${escHtml(st)}</span>
             <small>Cap. ${m.capacidade || "—"}</small>
             ${m.reserva_cliente ? `<small>Reserva: ${escHtml(m.reserva_cliente)}</small>` : ""}
             <small>Total: ${moeda(m.total_parcial || 0)}</small>
-          </button>`;
+      </button>`;
         }).join("") || '<p class="subtle-text">Nenhuma mesa — use Reservas → Mesas.</p>';
       } catch (e) {
         cardsHtml = `<p class="subtle-text">${escHtml(e.message)}</p>`;
@@ -1432,9 +1440,12 @@
     const valorInicial = total > 0 ? total.toFixed(2).replace(".", ",") : "0,00";
     const semUnidade = !(cpdvState.unidadeId || document.getElementById("cpdvUnidadeFiscal")?.value);
     const seg = cpdvSegPag();
+    const encargosCfg = cpdvEncargosCfg();
     const encVals = cpdvCalcEncargosValores("balcao", {
-      aplicar_taxa_servico: !!cpdvEncargosCfg().taxa_servico?.ativa,
-      aplicar_pagamento_cantor: !!cpdvEncargosCfg().pagamento_cantor?.ativo,
+      aplicar_taxa_servico: !!encargosCfg.taxa_servico?.ativa
+        && cpdvEncargoMarcadoPadrao(encargosCfg.taxa_servico, "balcao"),
+      aplicar_pagamento_cantor: !!encargosCfg.pagamento_cantor?.ativo
+        && cpdvEncargoMarcadoPadrao(encargosCfg.pagamento_cantor, "balcao"),
     });
     const body = `
       <div class="cpdv-pgto">
@@ -1443,7 +1454,7 @@
           <span class="cpdv-pgto-hero__label">Total a receber</span>
           <strong class="cpdv-pgto-hero__valor" id="cpdvPgtoHeroValor">${moeda(encVals.total)}</strong>
           <span class="cpdv-pgto-hero__meta">${qtdItens} item(ns) · ${escHtml(cpdvUnidadeLabel())}</span>
-        </div>
+      </div>
         ${cpdvHtmlBlocoEncargos("balcao")}
         <div class="cpdv-pgto-resumo">
           <h4>Resumo do pedido</h4>
@@ -1635,14 +1646,14 @@
     }
     if (!rows) {
       rows = DADOS_DEMONSTRACAO_PDV.vendas.map((v) =>
-        `<tr>
-          <td>#${v.id}</td><td>${escHtml(v.data)} ${escHtml(v.hora)}</td><td>${escHtml(v.unidade)}</td>
-          <td>${v.mesa}</td><td>${escHtml(v.cliente)}</td><td>${escHtml(v.operador)}</td>
-          <td>${moeda(v.total)}</td><td>${escHtml(v.forma)}</td>
-          <td>${cpdvStatusBadge(v.status)}</td>
+      `<tr>
+        <td>#${v.id}</td><td>${escHtml(v.data)} ${escHtml(v.hora)}</td><td>${escHtml(v.unidade)}</td>
+        <td>${v.mesa}</td><td>${escHtml(v.cliente)}</td><td>${escHtml(v.operador)}</td>
+        <td>${moeda(v.total)}</td><td>${escHtml(v.forma)}</td>
+        <td>${cpdvStatusBadge(v.status)}</td>
           <td class="cpdv-actions" style="margin:0"><button type="button" class="btn neutral btn-sm" data-cpdv-proto="Ver venda #${v.id}">Ver</button></td>
-        </tr>`
-      ).join("");
+      </tr>`
+    ).join("");
     }
     root.innerHTML = `
       ${cpdvAvisoProto()}
