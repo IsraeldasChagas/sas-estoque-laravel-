@@ -318,6 +318,8 @@
     pgtoAplicarTaxa: false,
     pgtoAplicarCantor: false,
     cliente: null,
+    contaAssinadaRapida: false,
+    contaAssinadaId: null,
     charts: {},
     mesaSel: null,
     garcomId: null,
@@ -873,7 +875,9 @@
     const sel = document.getElementById(`${pre}ContaAssinada`);
     const meta = document.getElementById(`${pre}ContaAssinadaMeta`);
     if (!sel) return;
-    const atual = sel.value;
+    const atual = pre === "cpdvRapida"
+      ? String(cpdvState.contaAssinadaId || "")
+      : sel.value;
     try {
       const unidadeId = cpdvState.unidadeId || Number(document.getElementById("cpdvUnidadeFiscal")?.value || 0);
       const q = unidadeId ? `?unidade_id=${unidadeId}` : "";
@@ -886,6 +890,9 @@
       if (atual) sel.value = atual;
       const syncMeta = () => {
         const c = (cpdvState.contasAssinadas || []).find((x) => String(x.id) === String(sel.value));
+        if (pre === "cpdvRapida") {
+          cpdvState.contaAssinadaId = c ? Number(c.id) : null;
+        }
         if (meta) {
           meta.textContent = c
             ? `Saldo em aberto: ${moeda(c.saldo_aberto || 0)}${c.origem === "funcionario" ? " · funcionário" : " · avulsa"}`
@@ -990,6 +997,8 @@
         "warning"
       );
       cpdvState.cart = [];
+      cpdvState.contaAssinadaRapida = false;
+      cpdvState.contaAssinadaId = null;
       cpdvSyncCarrinhoMemoria();
       closeCpdvModal();
       loadComercialPdv?.();
@@ -1021,6 +1030,8 @@
         return;
       }
       cpdvState.cart = [];
+      cpdvState.contaAssinadaRapida = false;
+      cpdvState.contaAssinadaId = null;
       cpdvSyncCarrinhoMemoria();
       closeCpdvModal();
       loadComercialPdv?.();
@@ -1361,6 +1372,24 @@
       cliSel.value = cpdvState.cliente || "";
       cliSel.onchange = () => { cpdvState.cliente = cliSel.value || null; };
     }
+    const contaCheck = root.querySelector("#cpdvContaAssinadaCheck");
+    const contaRapida = root.querySelector("#cpdvContaAssinadaRapidaWrap");
+    const clienteWrap = root.querySelector("#cpdvClienteWrap");
+    if (contaCheck) {
+      contaCheck.checked = !!cpdvState.contaAssinadaRapida;
+      const syncContaRapida = async () => {
+        cpdvState.contaAssinadaRapida = !!contaCheck.checked;
+        contaRapida?.classList.toggle("hidden", !cpdvState.contaAssinadaRapida);
+        clienteWrap?.classList.toggle("hidden", cpdvState.contaAssinadaRapida);
+        if (cpdvState.contaAssinadaRapida) {
+          await cpdvCarregarSelectContasAssinadas("cpdvRapida");
+        } else {
+          cpdvState.contaAssinadaId = null;
+        }
+      };
+      contaCheck.addEventListener("change", () => syncContaRapida());
+      syncContaRapida();
+    }
     const telaBtn = root.querySelector("#cpdvVoltarSistema");
     if (telaBtn) {
       const atualizarBotaoTela = () => {
@@ -1452,7 +1481,17 @@
           <section class="table-card cpdv-local-panel cpdv-local-cart">
             <header><h3>Carrinho</h3></header>
             <div class="cpdv-form-body">
-              <label>Cliente
+              <label class="cpdv-conta-check">
+                <input type="checkbox" id="cpdvContaAssinadaCheck" ${cpdvState.contaAssinadaRapida ? "checked" : ""} />
+                <span>Conta assinada</span>
+              </label>
+              <div id="cpdvContaAssinadaRapidaWrap" class="cpdv-conta-rapida${cpdvState.contaAssinadaRapida ? "" : " hidden"}">
+                <label>Escolha a conta
+                  <select id="cpdvRapidaContaAssinada"><option value="">Carregando…</option></select>
+                </label>
+                <p class="cpdv-local-hint" id="cpdvRapidaContaAssinadaMeta">Somente contas assinadas aparecem aqui.</p>
+              </div>
+              <label id="cpdvClienteWrap"${cpdvState.contaAssinadaRapida ? ' class="hidden"' : ""}>Cliente
                 <select id="cpdvClienteSel">${cliOpts}</select>
               </label>
               <p class="cpdv-local-hint">O pagamento baixa o estoque e registra a venda.</p>
@@ -2082,6 +2121,18 @@
     cpdvBindPagamentoModal();
     cpdvBindEncargosPagamento("balcao");
     cpdvBindPixPagamento("balcao");
+    if (cpdvState.contaAssinadaRapida) {
+      const formaEl = document.getElementById("cpdvPgtoForma");
+      if (formaEl) formaEl.value = "Conta assinada";
+      cpdvAtualizarBlocosPagamento("balcao");
+      cpdvCarregarSelectContasAssinadas("cpdvPgto").then(() => {
+        const contaEl = document.getElementById("cpdvPgtoContaAssinada");
+        if (contaEl && cpdvState.contaAssinadaId) {
+          contaEl.value = String(cpdvState.contaAssinadaId);
+          contaEl.dispatchEvent(new Event("change"));
+        }
+      });
+    }
     document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", () => cpdvConfirmarPagamentoBalcao());
     document.getElementById("cpdvPgtoCancel")?.addEventListener("click", closeCpdvModal);
   }

@@ -394,6 +394,37 @@
   color: var(--cpdv-local-muted);
   font-size: 0.78rem;
 }
+.cpdv-conta-check {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--cpdv-local-line);
+  border-radius: 10px;
+  background: #f0fdfa;
+  color: var(--cpdv-local-accent);
+  cursor: pointer;
+}
+.cpdv-conta-check input {
+  width: 18px !important;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--cpdv-local-accent);
+}
+.cpdv-conta-check span {
+  font-weight: 800;
+}
+.cpdv-conta-rapida {
+  margin-bottom: 0.65rem;
+  padding: 0.7rem;
+  border: 1px solid #99d5cc;
+  border-radius: 10px;
+  background: #f0fdfa;
+}
+.cpdv-conta-rapida label {
+  margin-bottom: 0.35rem;
+}
 .cpdv-local-cart-list {
   min-height: 68px;
   max-height: 35vh;
