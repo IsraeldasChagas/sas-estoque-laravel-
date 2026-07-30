@@ -157,12 +157,17 @@
     if (!em) return "";
     if (em.emitida) {
       const ch = em.chave ? ` Chave: ${String(em.chave).slice(0, 12)}…` : "";
-      const danfe = em.url_danfe ? " DANFE disponível." : "";
-      return ` NFC-e autorizada.${ch}${danfe}`;
+      return ` NFC-e autorizada.${ch} PDF e XML gerados pelo sistema.`;
     }
     if (em.skipped && em.motivo_skip) return ` (Sem NFC-e: ${em.motivo_skip})`;
     if (em.mensagem) return ` NFC-e não emitida: ${em.mensagem}`;
     return "";
+  }
+
+  async function cpdvPosEmissao(r) {
+    if (r?.emissao?.emitida && r?.venda_id && typeof window.fiscalEntregarDocumentosVenda === "function") {
+      await window.fiscalEntregarDocumentosVenda(r.venda_id);
+    }
   }
 
   function toast(msg, type) {
@@ -561,7 +566,8 @@
         method: "POST",
         body: JSON.stringify({ forma_pagamento: forma, pdv_terminal: "PDV-MESA" }),
       });
-      toast(`Conta fechada — venda #${r.venda_id} (${moeda(r.valor_liquido)})`, "success");
+      toast(`Conta fechada — venda #${r.venda_id} (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "success");
+      await cpdvPosEmissao(r);
       cpdvState.comandaAtual = null;
       cpdvState.mesaCardAtual = null;
       await loadComercialMesas();
@@ -961,6 +967,7 @@
             }),
           });
           toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "info");
+          await cpdvPosEmissao(r);
           cpdvState.cart = [];
           cpdvSyncCarrinhoMemoria();
           closeCpdvModal();
@@ -981,6 +988,7 @@
           }));
           const r = await window.fiscalPdvConfirmarPagamento({ unidadeId, formaPagamento: forma, itens });
           toast(`Venda fiscal #${r.venda_id} registrada.${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : r.emissao?.skipped ? "info" : "warning");
+          await cpdvPosEmissao(r);
           cpdvState.cart = [];
           cpdvSyncCarrinhoMemoria();
           closeCpdvModal();

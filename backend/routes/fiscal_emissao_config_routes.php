@@ -5,6 +5,7 @@
  */
 
 use App\Models\FiscalEmissaoConfig;
+use App\Services\Fiscal\FiscalDocumentoService;
 use App\Services\Integrations\HttpIntegrationClient;
 use App\Support\FiscalEmissaoConfigSupport;
 use Illuminate\Http\Request;
@@ -68,9 +69,21 @@ foreach ([
     '/fiscal/emissao/config/{empresaId}/validar',
     '/fiscal/emissao/config/{empresaId}/testar',
     '/fiscal/emissao/vendas/{vendaId}/nfce',
+    '/fiscal/emissao/vendas/{vendaId}/documentos',
+    '/fiscal/emissao/vendas/{vendaId}/danfe.pdf',
+    '/fiscal/emissao/vendas/{vendaId}/xml',
 ] as $p) {
     Route::options($p, $fiscalEmCors);
 }
+
+$fiscalEmFileResponse = static function (array $bin, string $disposition) {
+    return response($bin['body'], 200, [
+        'Content-Type' => $bin['content_type'],
+        'Content-Disposition' => $disposition.'; filename="'.$bin['filename'].'"',
+        'Access-Control-Allow-Origin' => '*',
+        'Access-Control-Expose-Headers' => 'Content-Disposition, Content-Type',
+    ]);
+};
 
 Route::get('/fiscal/emissao/meta', function () use ($fiscalEmJson) {
     return $fiscalEmJson([
@@ -320,4 +333,44 @@ Route::post('/fiscal/emissao/vendas/{vendaId}/nfce', function (Request $request,
     $result = \App\Services\Fiscal\FiscalEmissaoService::emitirNfceParaVenda((int) $vendaId, true);
 
     return $fiscalEmJson($result);
+});
+
+Route::get('/fiscal/emissao/vendas/{vendaId}/documentos', function (Request $request, $vendaId) use ($fiscalEmAuth, $fiscalEmPodeVer, $fiscalEmJson) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeVer($u)) {
+        return $fiscalEmJson(['error' => 'Não autorizado'], 401);
+    }
+    try {
+        return $fiscalEmJson(FiscalDocumentoService::info((int) $vendaId));
+    } catch (\Throwable $e) {
+        return $fiscalEmJson(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::get('/fiscal/emissao/vendas/{vendaId}/danfe.pdf', function (Request $request, $vendaId) use ($fiscalEmAuth, $fiscalEmPodeVer, $fiscalEmJson, $fiscalEmFileResponse) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeVer($u)) {
+        return $fiscalEmJson(['error' => 'Não autorizado'], 401);
+    }
+    try {
+        $bin = FiscalDocumentoService::obterPdf((int) $vendaId);
+
+        return $fiscalEmFileResponse($bin, 'inline');
+    } catch (\Throwable $e) {
+        return $fiscalEmJson(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::get('/fiscal/emissao/vendas/{vendaId}/xml', function (Request $request, $vendaId) use ($fiscalEmAuth, $fiscalEmPodeVer, $fiscalEmJson, $fiscalEmFileResponse) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeVer($u)) {
+        return $fiscalEmJson(['error' => 'Não autorizado'], 401);
+    }
+    try {
+        $bin = FiscalDocumentoService::obterXml((int) $vendaId);
+
+        return $fiscalEmFileResponse($bin, 'attachment');
+    } catch (\Throwable $e) {
+        return $fiscalEmJson(['error' => $e->getMessage()], 422);
+    }
 });

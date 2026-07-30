@@ -113,7 +113,10 @@
       try {
         const r = await window.fiscalPdvConfirmarPagamento({ unidadeId, formaPagamento: "PDV", itens: cart });
         msg.className = "";
-        msg.textContent = `Venda #${r.venda_id} — ${r.valor_liquido}${r.emissao?.emitida ? " · NFC-e OK" : r.emissao?.mensagem ? " · " + r.emissao.mensagem : r.emissao?.motivo_skip ? " · " + r.emissao.motivo_skip : ""}`;
+        msg.textContent = `Venda #${r.venda_id} — ${r.valor_liquido}${r.emissao?.emitida ? " · NFC-e OK · PDF/XML" : r.emissao?.mensagem ? " · " + r.emissao.mensagem : r.emissao?.motivo_skip ? " · " + r.emissao.motivo_skip : ""}`;
+        if (r.emissao?.emitida && r.venda_id && window.fiscalEntregarDocumentosVenda) {
+          await window.fiscalEntregarDocumentosVenda(r.venda_id);
+        }
         cart = [];
         renderCart();
         loadPainel();

@@ -93,7 +93,7 @@ final class FiscalEmissaoService
         self::registrarLog($vendaId, $empresaId, $ref, $out);
 
         if ($out['success'] ?? false) {
-            DB::table('vendas')->where('id', $vendaId)->update([
+            $update = [
                 'chave_acesso' => $out['chave'] ?? null,
                 'numero_documento' => $out['numero'] ?? null,
                 'serie_documento' => $out['serie'] ?? null,
@@ -102,7 +102,11 @@ final class FiscalEmissaoService
                 'status_documento' => 'autorizado',
                 'emissao_mensagem' => 'NFC-e autorizada via Focus NFe.',
                 'updated_at' => now(),
-            ]);
+            ];
+            if (Schema::hasColumn('vendas', 'url_xml')) {
+                $update['url_xml'] = $out['xml'] ?? null;
+            }
+            DB::table('vendas')->where('id', $vendaId)->update($update);
 
             if ($config->numero_proximo_nfce) {
                 $config->numero_proximo_nfce = (int) $config->numero_proximo_nfce + 1;
@@ -112,6 +116,8 @@ final class FiscalEmissaoService
 
             self::atualizarEventoVenda($vendaId);
 
+            $documentos = FiscalDocumentoService::rotasRelativas($vendaId);
+
             return [
                 'emitida' => true,
                 'skipped' => false,
@@ -120,8 +126,11 @@ final class FiscalEmissaoService
                 'numero' => $out['numero'] ?? null,
                 'serie' => $out['serie'] ?? null,
                 'url_danfe' => $out['danfe_url'] ?? null,
+                'url_xml' => $out['xml'] ?? null,
                 'ref' => $ref,
-                'mensagem' => 'NFC-e autorizada.',
+                'venda_id' => $vendaId,
+                'documentos' => $documentos,
+                'mensagem' => 'NFC-e autorizada. PDF e XML disponíveis no sistema.',
             ];
         }
 
