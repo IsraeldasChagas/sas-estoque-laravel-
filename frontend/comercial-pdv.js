@@ -1293,9 +1293,30 @@
       cliSel.value = cpdvState.cliente || "";
       cliSel.onchange = () => { cpdvState.cliente = cliSel.value || null; };
     }
-    root.querySelector("#cpdvVoltarSistema")?.addEventListener("click", () => {
-      if (typeof navigateTo === "function") navigateTo("comercialDashboard");
-    });
+    const telaBtn = root.querySelector("#cpdvVoltarSistema");
+    if (telaBtn) {
+      const atualizarBotaoTela = () => {
+        const fullscreen = document.body.classList.contains("cpdv-pdv-fullscreen");
+        telaBtn.textContent = fullscreen ? "Voltar ao sistema" : "Tela cheia";
+        telaBtn.title = fullscreen
+          ? "Mostrar menu lateral e barra superior"
+          : "Ocultar menu lateral e barra superior";
+        telaBtn.setAttribute("aria-label", telaBtn.title);
+      };
+      telaBtn.addEventListener("click", () => {
+        const fullscreen = !document.body.classList.contains("cpdv-pdv-fullscreen");
+        document.body.classList.toggle("cpdv-focus-mode", fullscreen);
+        document.body.classList.toggle("cpdv-pdv-fullscreen", fullscreen);
+        document.body.classList.remove("cpdv-topbar-expanded");
+        if (fullscreen) {
+          document.body.classList.remove("sidebar-open");
+          document.getElementById("sidebar")?.classList.remove("is-open");
+          document.querySelector(".sidebar-backdrop")?.classList.remove("is-active");
+        }
+        atualizarBotaoTela();
+      });
+      atualizarBotaoTela();
+    }
   }
 
   async function cpdvRenderPdv() {
@@ -1339,7 +1360,7 @@
       <div class="cpdv-local-shell">
         <div class="cpdv-local-toolbar">
           <div>
-            <strong>Caixa · SAS Estoque</strong>
+            <strong id="cpdvUnidadeTitulo">Caixa · Selecione a unidade</strong>
             <small>Produtos, pagamentos e estoque da unidade</small>
           </div>
           <div class="cpdv-local-toolbar-actions">
@@ -1393,8 +1414,15 @@
     const uniEl = root.querySelector("#cpdvUnidadeFiscal");
     if (uniEl) {
       if (cpdvState.unidadeId) uniEl.value = String(cpdvState.unidadeId);
+      const atualizarTituloUnidade = () => {
+        const titulo = root.querySelector("#cpdvUnidadeTitulo");
+        const nome = uniEl.value ? uniEl.selectedOptions[0]?.textContent?.trim() : "";
+        if (titulo) titulo.textContent = `Caixa · ${nome || "Selecione a unidade"}`;
+      };
+      atualizarTituloUnidade();
       uniEl.onchange = async () => {
         cpdvState.unidadeId = uniEl.value ? Number(uniEl.value) : null;
+        atualizarTituloUnidade();
         await cpdvRefreshEmissaoOpcoes();
         await cpdvLoadProdutosApi();
         loadComercialPdv();
