@@ -826,7 +826,7 @@
     if (parcelas && !ehCartao) parcelas.value = "1";
   }
 
-  function cpdvAtualizarBlocosPagamento(scope) {
+  async function cpdvAtualizarBlocosPagamento(scope) {
     const formaEl = document.getElementById(scope === "mesa" ? "cpdvMesaFormaPgto" : "cpdvPgtoForma");
     const forma = formaEl?.value || "";
     const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
@@ -838,7 +838,7 @@
     if (blocoConta) blocoConta.hidden = forma !== "Conta assinada";
     cpdvSincronizarCamposCartao(scope, forma);
     if (forma === "PIX") cpdvAtualizarQrPix(scope);
-    if (forma === "Conta assinada") cpdvCarregarSelectContasAssinadas(pre);
+    if (forma === "Conta assinada") await cpdvCarregarSelectContasAssinadas(pre);
     if (scope !== "mesa") cpdvAtualizarTrocoPagamento();
     const nota = document.getElementById(scope === "mesa" ? "cpdvMesaEmitirNota" : "cpdvPgtoEmitirNota");
     if (nota) {
@@ -875,7 +875,9 @@
     const sel = document.getElementById(`${pre}ContaAssinada`);
     const meta = document.getElementById(`${pre}ContaAssinadaMeta`);
     if (!sel) return;
-    const atual = pre === "cpdvRapida"
+    const usarSelecaoRapida = pre === "cpdvRapida"
+      || (pre === "cpdvPgto" && cpdvState.contaAssinadaRapida);
+    const atual = usarSelecaoRapida
       ? String(cpdvState.contaAssinadaId || "")
       : sel.value;
     try {
@@ -2124,8 +2126,7 @@
     if (cpdvState.contaAssinadaRapida) {
       const formaEl = document.getElementById("cpdvPgtoForma");
       if (formaEl) formaEl.value = "Conta assinada";
-      cpdvAtualizarBlocosPagamento("balcao");
-      cpdvCarregarSelectContasAssinadas("cpdvPgto").then(() => {
+      cpdvAtualizarBlocosPagamento("balcao").then(() => {
         const contaEl = document.getElementById("cpdvPgtoContaAssinada");
         if (contaEl && cpdvState.contaAssinadaId) {
           contaEl.value = String(cpdvState.contaAssinadaId);
