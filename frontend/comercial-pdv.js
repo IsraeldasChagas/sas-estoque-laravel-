@@ -27,6 +27,29 @@
 
   const CPDV_OFFLINE_QUEUE_KEY = "cpdv_offline_vendas_v1";
   let cpdvOfflineSyncing = false;
+  let cpdvOfflineAvisoFechado = false;
+
+  function cpdvMostrarAvisoOfflinePersistente(forcar = false) {
+    if (cpdvOfflineAvisoFechado || document.getElementById("cpdvOfflineAlert")) return;
+    if (!forcar && cpdvIsOnline()) return;
+
+    const alerta = document.createElement("div");
+    alerta.id = "cpdvOfflineAlert";
+    alerta.className = "cpdv-offline-alert";
+    alerta.setAttribute("role", "alert");
+    alerta.innerHTML = `
+      <div class="cpdv-offline-alert__icon" aria-hidden="true">!</div>
+      <div class="cpdv-offline-alert__texto">
+        <strong>PDV sem internet</strong>
+        <span>As vendas serão guardadas neste aparelho e sincronizadas quando a conexão voltar.</span>
+      </div>
+      <button type="button" class="cpdv-offline-alert__fechar" aria-label="Fechar aviso de falta de internet" title="Fechar">×</button>`;
+    alerta.querySelector(".cpdv-offline-alert__fechar")?.addEventListener("click", () => {
+      cpdvOfflineAvisoFechado = true;
+      alerta.remove();
+    });
+    document.body.appendChild(alerta);
+  }
 
   function cpdvUuid() {
     if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -75,6 +98,7 @@
       ultimo_erro: null,
     });
     cpdvSalvarFilaOffline(list);
+    cpdvMostrarAvisoOfflinePersistente(true);
     return list[list.length - 1];
   }
 
@@ -180,6 +204,8 @@
       cpdvSincronizarFilaOffline({ silencioso: false }).catch(() => {});
     });
     window.addEventListener("offline", () => {
+      cpdvOfflineAvisoFechado = false;
+      cpdvMostrarAvisoOfflinePersistente(true);
       toast("Modo offline: vendas do caixa serão guardadas neste aparelho.", "warning");
       cpdvAtualizarBadgeOffline();
     });
@@ -188,6 +214,7 @@
         cpdvSincronizarFilaOffline({ silencioso: true }).catch(() => {});
       }
     });
+    cpdvMostrarAvisoOfflinePersistente();
   }
 
   const DADOS_DEMONSTRACAO_PDV = {
