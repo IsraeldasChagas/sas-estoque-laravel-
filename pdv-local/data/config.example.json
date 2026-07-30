@@ -1,0 +1,11 @@
+{
+  "porta": 8787,
+  "host": "0.0.0.0",
+  "api_url": "https://api.gruposaborparaense.com.br/api",
+  "unidade_id": null,
+  "unidade_nome": "",
+  "usuario_id": null,
+  "token": "",
+  "loja_nome": "",
+  "sync_intervalo_ms": 30000
+}

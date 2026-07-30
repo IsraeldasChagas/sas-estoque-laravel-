@@ -1,0 +1,22 @@
+{
+  "name": "sas-pdv-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PDV local por loja (unidade) — vende offline e sincroniza com o SAS",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "setup": "node src/cli-setup.js",
+    "pull": "node src/cli-pull.js",
+    "sync": "node src/cli-sync.js",
+    "smoke": "node scripts/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "uuid": "^11.1.0"
+  }
+}

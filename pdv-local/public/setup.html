@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Setup · PDV Local</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="brand">PDV Local · Setup da loja</div>
+        <div class="muted">1 instalável = 1 unidade / estoque</div>
+      </div>
+      <div class="nav">
+        <a class="btn ghost" href="/caixa">Caixa</a>
+        <a class="btn ghost" href="/atendente">Atendente</a>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <section class="card">
+        <h2>Configuração</h2>
+        <label>Nome da loja <input id="loja_nome" /></label>
+        <label>URL API SAS <input id="api_url" /></label>
+        <label>unidade_id <input id="unidade_id" type="number" /></label>
+        <label>Nome da unidade <input id="unidade_nome" /></label>
+        <label>usuario_id (operador sync) <input id="usuario_id" type="number" /></label>
+        <label>Token Bearer <input id="token" placeholder="deixe *** para manter" /></label>
+        <label>Porta <input id="porta" type="number" /></label>
+        <div class="row">
+          <button id="btnSave">Salvar</button>
+          <button class="secondary" id="btnPull">Atualizar catálogo</button>
+          <button class="secondary" id="btnSync">Sincronizar vendas</button>
+        </div>
+        <p class="muted" id="msg"></p>
+      </section>
+
+      <section class="card">
+        <h2>Status</h2>
+        <div id="status" class="muted">Carregando…</div>
+        <h3 style="margin-top:1rem">Acesso intranet</h3>
+        <div id="ips" class="list muted"></div>
+      </section>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    async function load() {
+      const cfg = await api("/api/config");
+      const st = await api("/api/status");
+      qs("#loja_nome").value = cfg.loja_nome || "";
+      qs("#api_url").value = cfg.api_url || "";
+      qs("#unidade_id").value = cfg.unidade_id || "";
+      qs("#unidade_nome").value = cfg.unidade_nome || "";
+      qs("#usuario_id").value = cfg.usuario_id || "";
+      qs("#token").value = cfg.has_token ? "***" : "";
+      qs("#porta").value = cfg.porta || 8787;
+      qs("#status").innerHTML = `
+        <p><strong>${st.loja_nome || "Loja"}</strong></p>
+        <p>Unidade: #${st.unidade_id || "—"} ${st.unidade_nome || ""}</p>
+        <p>Produtos em cache: ${st.produtos}</p>
+        <p>Vendas pendentes de sync: ${st.vendas_pendentes}</p>
+        <p>Último pull: ${st.last_pull_at || "nunca"}</p>`;
+      qs("#ips").innerHTML = (st.ips || []).map((ip) =>
+        `<div class="pedido">
+          Caixa: <a href="http://${ip}:${st.porta}/caixa">http://${ip}:${st.porta}/caixa</a><br/>
+          Atendente: <a href="http://${ip}:${st.porta}/atendente">http://${ip}:${st.porta}/atendente</a>
+        </div>`
+      ).join("") || "<p>Sem IP de rede detectado.</p>";
+    }
+
+    qs("#btnSave").onclick = async () => {
+      try {
+        await api("/api/config", {
+          method: "PUT",
+          body: JSON.stringify({
+            loja_nome: qs("#loja_nome").value,
+            api_url: qs("#api_url").value,
+            unidade_id: qs("#unidade_id").value,
+            unidade_nome: qs("#unidade_nome").value,
+            usuario_id: qs("#usuario_id").value,
+            token: qs("#token").value,
+            porta: qs("#porta").value,
+          }),
+        });
+        toast("Config salva.");
+        qs("#msg").textContent = "Salvo. Reinicie o servidor se mudou a porta.";
+        load();
+      } catch (e) { toast(e.message); }
+    };
+
+    qs("#btnPull").onclick = async () => {
+      try {
+        qs("#btnPull").disabled = true;
+        const r = await api("/api/pull", { method: "POST", body: "{}" });
+        toast(`Catálogo: ${r.produtos} produtos`);
+        load();
+      } catch (e) { toast(e.message); }
+      finally { qs("#btnPull").disabled = false; }
+    };
+
+    qs("#btnSync").onclick = async () => {
+      try {
+        const r = await api("/api/sync", { method: "POST", body: "{}" });
+        toast(`Sync ok=${r.ok} falha=${r.fail}`);
+        load();
+      } catch (e) { toast(e.message); }
+    };
+
+    load().catch((e) => toast(e.message));
+  </script>
+</body>
+</html>

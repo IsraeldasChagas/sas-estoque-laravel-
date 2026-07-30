@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Atendente · PDV Local</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="brand" id="titulo">Atendente</div>
+        <div class="muted">Lançar pedido pela intranet da loja</div>
+      </div>
+      <a class="btn ghost" href="/caixa">Ir ao caixa</a>
+    </div>
+
+    <div class="grid grid-2">
+      <section class="card">
+        <label>Seu nome <input id="atendente" placeholder="Ex.: Ana" /></label>
+        <label>Mesa / local <input id="mesa" placeholder="Ex.: Mesa 4" /></label>
+        <label>Buscar <input id="busca" placeholder="Produto…" /></label>
+        <div class="products" id="produtos"></div>
+      </section>
+      <section class="card">
+        <h2>Pedido</h2>
+        <div id="carrinho" class="list"></div>
+        <p class="total" id="total">R$ 0,00</p>
+        <label>Observação <input id="obs" /></label>
+        <button id="btnEnviar">Enviar ao caixa</button>
+        <p class="muted">O caixa vê o pedido aberto e confirma o pagamento.</p>
+        <h3 style="margin-top:1rem">Seus pedidos abertos</h3>
+        <div id="meus" class="list muted"></div>
+      </section>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    const state = { produtos: [], cart: [] };
+
+    function renderCart() {
+      const el = qs("#carrinho");
+      if (!state.cart.length) el.innerHTML = '<p class="muted">Toque nos produtos.</p>';
+      else el.innerHTML = state.cart.map((i) => `
+        <div class="cart-item">
+          <div><strong>${i.nome}</strong><div class="muted">${i.qtd} × ${moeda(i.preco)}</div></div>
+          <div class="row">
+            <button class="ghost" data-delta="-1" data-id="${i.id}">−</button>
+            <button class="ghost" data-delta="1" data-id="${i.id}">+</button>
+            <button class="danger" data-rm="${i.id}">×</button>
+          </div>
+        </div>`).join("");
+      qs("#total").textContent = moeda(state.cart.reduce((s, i) => s + i.qtd * i.preco, 0));
+      el.onclick = (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const id = Number(btn.dataset.id || btn.dataset.rm);
+        const item = state.cart.find((x) => x.id === id);
+        if (!item) return;
+        if (btn.dataset.rm != null) state.cart = state.cart.filter((x) => x.id !== id);
+        else item.qtd = Math.max(0, item.qtd + Number(btn.dataset.delta || 0));
+        state.cart = state.cart.filter((x) => x.qtd > 0);
+        renderCart();
+      };
+    }
+
+    function renderProdutos() {
+      qs("#produtos").innerHTML = state.produtos.map((p) => `
+        <button class="prod" data-add="${p.id}"><strong>${p.nome}</strong><small>${moeda(p.preco)}</small></button>
+      `).join("") || '<p class="muted">Sem produtos no cache local.</p>';
+      qs("#produtos").onclick = (e) => {
+        const btn = e.target.closest("[data-add]");
+        if (!btn) return;
+        const p = state.produtos.find((x) => x.id === Number(btn.dataset.add));
+        if (!p) return;
+        const found = state.cart.find((x) => x.id === p.id);
+        if (found) found.qtd += 1;
+        else state.cart.push({
+          id: p.id, nome: p.nome, preco: Number(p.preco || 0), qtd: 1,
+          cardapio_produto_id: p.cardapio_produto_id,
+          estoque_produto_id: p.estoque_produto_id || p.id,
+        });
+        renderCart();
+      };
+    }
+
+    async function refresh() {
+      const st = await api("/api/status");
+      qs("#titulo").textContent = `Atendente · ${st.loja_nome || "Loja"}`;
+      state.produtos = await api("/api/produtos" + (qs("#busca").value ? `?q=${encodeURIComponent(qs("#busca").value)}` : ""));
+      renderProdutos();
+      renderCart();
+      const nome = qs("#atendente").value.trim();
+      const pedidos = await api("/api/pedidos?status=aberto");
+      const meus = nome ? pedidos.filter((p) => (p.atendente || "").toLowerCase() === nome.toLowerCase()) : pedidos.slice(0, 8);
+      qs("#meus").innerHTML = meus.length
+        ? meus.map((p) => `<div class="pedido">#${p.id} ${p.mesa_label || ""} · ${moeda(p.total)}</div>`).join("")
+        : '<p class="muted">Nenhum pedido aberto.</p>';
+    }
+
+    qs("#busca").oninput = () => refresh().catch((e) => toast(e.message));
+    qs("#btnEnviar").onclick = async () => {
+      if (!state.cart.length) return toast("Pedido vazio");
+      try {
+        qs("#btnEnviar").disabled = true;
+        const r = await api("/api/pedidos", {
+          method: "POST",
+          body: JSON.stringify({
+            atendente: qs("#atendente").value,
+            mesa_label: qs("#mesa").value,
+            observacao: qs("#obs").value,
+            itens: state.cart.map((i) => ({
+              produto_id: i.id,
+              cardapio_produto_id: i.cardapio_produto_id,
+              estoque_produto_id: i.estoque_produto_id,
+              nome: i.nome,
+              quantidade: i.qtd,
+              preco_unitario: i.preco,
+            })),
+          }),
+        });
+        toast(`Pedido #${r.id} enviado ao caixa`);
+        state.cart = [];
+        qs("#obs").value = "";
+        renderCart();
+        refresh();
+      } catch (e) { toast(e.message); }
+      finally { qs("#btnEnviar").disabled = false; }
+    };
+
+    const saved = localStorage.getItem("pdv_local_atendente");
+    if (saved) qs("#atendente").value = saved;
+    qs("#atendente").onchange = () => localStorage.setItem("pdv_local_atendente", qs("#atendente").value);
+    refresh().catch((e) => toast(e.message));
+  </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Caixa · PDV Local</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="brand" id="titulo">Caixa · PDV Local</div>
+        <div class="muted" id="subtitulo">Venda offline da unidade</div>
+      </div>
+      <div class="row">
+        <span class="badge" id="badgeSync">—</span>
+        <button class="secondary" id="btnSync">Sync</button>
+        <a class="btn ghost" href="/atendente">Atendente</a>
+        <a class="btn ghost" href="/setup">Setup</a>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <section class="card">
+        <div class="row" style="margin-bottom:.75rem">
+          <input id="busca" placeholder="Buscar produto…" />
+        </div>
+        <div class="products" id="produtos"></div>
+      </section>
+
+      <section class="card">
+        <h2>Carrinho</h2>
+        <div id="carrinho" class="list"></div>
+        <p class="total" id="total">R$ 0,00</p>
+        <label>Forma
+          <select id="forma">
+            <option>Dinheiro</option>
+            <option>PIX</option>
+            <option>Débito</option>
+            <option>Crédito</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="emitir_nota" /> Emitir NFC-e quando sincronizar</label>
+        <label>Observação <input id="obs" /></label>
+        <h3>Pedidos do salão</h3>
+        <div id="pedidos" class="list muted">Nenhum pedido aberto.</div>
+        <div class="row" style="margin-top:.8rem">
+          <button id="btnPagar">Confirmar venda</button>
+          <button class="ghost" id="btnLimpar">Limpar</button>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+  <script>
+    const state = { produtos: [], cart: [], pedidos: [] };
+
+    function renderCart() {
+      const el = qs("#carrinho");
+      if (!state.cart.length) {
+        el.innerHTML = '<p class="muted">Toque em um produto.</p>';
+      } else {
+        el.innerHTML = state.cart.map((i) => `
+          <div class="cart-item">
+            <div><strong>${i.nome}</strong><br/><span class="muted">${i.qtd} × ${moeda(i.preco)}</span></div>
+            <div class="row">
+              <button class="ghost" data-delta="-1" data-id="${i.id}">−</button>
+              <button class="ghost" data-delta="1" data-id="${i.id}">+</button>
+              <button class="danger" data-rm="${i.id}">×</button>
+            </div>
+          </div>`).join("");
+      }
+      const total = state.cart.reduce((s, i) => s + i.qtd * i.preco, 0);
+      qs("#total").textContent = moeda(total);
+      el.onclick = (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+        const id = Number(btn.dataset.id || btn.dataset.rm);
+        const item = state.cart.find((x) => x.id === id);
+        if (!item) return;
+        if (btn.dataset.rm != null) state.cart = state.cart.filter((x) => x.id !== id);
+        else item.qtd = Math.max(0, item.qtd + Number(btn.dataset.delta || 0));
+        state.cart = state.cart.filter((x) => x.qtd > 0);
+        renderCart();
+      };
+    }
+
+    function addProd(p) {
+      const found = state.cart.find((x) => x.id === p.id);
+      if (found) found.qtd += 1;
+      else state.cart.push({
+        id: p.id,
+        nome: p.nome,
+        preco: Number(p.preco || 0),
+        qtd: 1,
+        cardapio_produto_id: p.cardapio_produto_id,
+        estoque_produto_id: p.estoque_produto_id || p.id,
+      });
+      renderCart();
+    }
+
+    function renderProdutos() {
+      qs("#produtos").innerHTML = state.produtos.map((p) => `
+        <button class="prod" data-add="${p.id}">
+          <strong>${p.nome}</strong>
+          <small>${moeda(p.preco)}</small>
+        </button>`).join("") || '<p class="muted">Sem produtos. Faça o pull no Setup.</p>';
+      qs("#produtos").onclick = (e) => {
+        const btn = e.target.closest("[data-add]");
+        if (!btn) return;
+        const p = state.produtos.find((x) => x.id === Number(btn.dataset.add));
+        if (p) addProd(p);
+      };
+    }
+
+    function renderPedidos() {
+      const el = qs("#pedidos");
+      if (!state.pedidos.length) {
+        el.innerHTML = '<p class="muted">Nenhum pedido aberto.</p>';
+        return;
+      }
+      el.innerHTML = state.pedidos.map((p) => `
+        <div class="pedido">
+          <strong>#${p.id}</strong> ${p.mesa_label || ""} · ${p.atendente || "atendente"}
+          <div class="muted">${moeda(p.total)} · ${(p.itens || []).length} item(ns)</div>
+          <button data-pagar-pedido="${p.id}">Pagar no caixa</button>
+        </div>`).join("");
+      el.onclick = async (e) => {
+        const btn = e.target.closest("[data-pagar-pedido]");
+        if (!btn) return;
+        try {
+          btn.disabled = true;
+          const r = await api(`/api/pedidos/${btn.dataset.pagarPedido}/pagar`, {
+            method: "POST",
+            body: JSON.stringify({
+              forma_pagamento: qs("#forma").value,
+              emitir_nota: qs("#emitir_nota").checked,
+            }),
+          });
+          toast(`Pedido pago localmente (venda #${r.id}). Sync depois.`);
+          await refresh();
+        } catch (err) { toast(err.message); }
+        finally { btn.disabled = false; }
+      };
+    }
+
+    async function refresh() {
+      const st = await api("/api/status");
+      qs("#titulo").textContent = `Caixa · ${st.loja_nome || "PDV Local"}`;
+      qs("#subtitulo").textContent = `Unidade #${st.unidade_id || "—"} ${st.unidade_nome || ""}`;
+      const badge = qs("#badgeSync");
+      if (st.vendas_pendentes > 0) {
+        badge.className = "badge";
+        badge.textContent = `${st.vendas_pendentes} pendente(s)`;
+      } else {
+        badge.className = "badge ok";
+        badge.textContent = "Sync em dia";
+      }
+      state.produtos = await api("/api/produtos" + (qs("#busca").value ? `?q=${encodeURIComponent(qs("#busca").value)}` : ""));
+      state.pedidos = await api("/api/pedidos?status=aberto");
+      renderProdutos();
+      renderPedidos();
+      renderCart();
+    }
+
+    qs("#busca").oninput = () => refresh().catch((e) => toast(e.message));
+    qs("#btnLimpar").onclick = () => { state.cart = []; renderCart(); };
+    qs("#btnSync").onclick = async () => {
+      try {
+        const r = await api("/api/sync", { method: "POST", body: "{}" });
+        toast(`Sync ok=${r.ok} falha=${r.fail}`);
+        refresh();
+      } catch (e) { toast(e.message); }
+    };
+    qs("#btnPagar").onclick = async () => {
+      if (!state.cart.length) return toast("Carrinho vazio");
+      try {
+        qs("#btnPagar").disabled = true;
+        const r = await api("/api/vendas/balcao", {
+          method: "POST",
+          body: JSON.stringify({
+            forma_pagamento: qs("#forma").value,
+            observacao: qs("#obs").value,
+            emitir_nota: qs("#emitir_nota").checked,
+            itens: state.cart.map((i) => ({
+              produto_id: i.estoque_produto_id || i.id,
+              cardapio_produto_id: i.cardapio_produto_id,
+              estoque_produto_id: i.estoque_produto_id,
+              nome: i.nome,
+              quantidade: i.qtd,
+              preco_unitario: i.preco,
+            })),
+          }),
+        });
+        toast(`Venda local #${r.id} (${moeda(r.total)}) guardada`);
+        state.cart = [];
+        qs("#obs").value = "";
+        await refresh();
+      } catch (e) { toast(e.message); }
+      finally { qs("#btnPagar").disabled = false; }
+    };
+
+    refresh().catch((e) => toast(e.message));
+    setInterval(() => refresh().catch(() => {}), 15000);
+  </script>
+</body>
+</html>
