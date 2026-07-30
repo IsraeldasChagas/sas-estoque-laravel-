@@ -463,9 +463,7 @@
           <button type="button" class="btn neutral btn-sm" id="${pre}PixCopiar">Copiar código PIX</button>
         </div>
       </div>
-      <label class="cpdv-pgto-field cpdv-pgto-field--full">PIX copia e cola
-        <textarea id="${pre}PixCopia" rows="3" readonly placeholder="O código aparece aqui após gerar o QR"></textarea>
-      </label>
+      <input type="hidden" id="${pre}PixCopia" />
       <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX${cpdvCampoObrigatorio(exigirId)}
         <input type="text" id="${pre}PixId" placeholder="${exigirId ? "Obrigatório (end-to-end do comprovante)" : "Opcional — informe após o cliente pagar"}" autocomplete="off" />
       </label>
@@ -538,8 +536,7 @@
         await navigator.clipboard.writeText(txt);
         toast("Código PIX copiado.", "success");
       } catch {
-        document.getElementById(`${pre}PixCopia`)?.select();
-        toast("Selecione e copie o código manualmente.", "info");
+        toast("Não foi possível copiar automaticamente. Use o QR Code.", "warning");
       }
     });
   }
