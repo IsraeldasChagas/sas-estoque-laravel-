@@ -182,17 +182,148 @@
     }
   }
 
-  function cpdvMarkupEmitirNota(inputId) {
+  function cpdvMarkupEmitirNota(inputId, wrapCard) {
     const o = cpdvState.emissaoPdv;
     if (!o?.mostrar_opcao_nota) return "";
     const checked = o.emitir_nota_padrao ? " checked" : "";
     const aviso = o.pode_emitir_agora
-      ? ""
-      : '<p class="subtle-text">Checklist incompleto — venda entra sem nota; emita depois no histórico.</p>';
-    return `<label class="checkbox-label cpdv-emitir-nota" style="margin-top:0.75rem;display:flex;gap:0.5rem;align-items:flex-start">
+      ? "Marque para gerar NFC-e, PDF e XML ao confirmar."
+      : "Checklist fiscal incompleto — venda entra sem nota; emita depois no histórico.";
+    const inner = `<label class="cpdv-pgto-nota__label">
       <input type="checkbox" id="${inputId}"${checked} />
-      <span>Emitir NFC-e (nota fiscal) nesta venda</span>
-    </label>${aviso}`;
+      <span><strong>Emitir NFC-e (cupom fiscal)</strong><small>${aviso}</small></span>
+    </label>`;
+    if (wrapCard === false) return inner;
+    return `<div class="cpdv-pgto-nota">${inner}</div>`;
+  }
+
+  function cpdvUnidadeLabel() {
+    const sel = document.getElementById("cpdvUnidadeFiscal") || document.getElementById("cpdvMesasUnidade");
+    if (sel?.selectedOptions?.[0]?.textContent) return sel.selectedOptions[0].textContent.trim();
+    if (cpdvState.unidadeId) return `Unidade #${cpdvState.unidadeId}`;
+    return "— selecione a unidade —";
+  }
+
+  function cpdvHtmlResumoItensPagamento(maxItems) {
+    const lim = maxItems || 5;
+    const items = cpdvState.cart;
+    if (!items.length) return '<p class="subtle-text">Carrinho vazio.</p>';
+    const rows = items.slice(0, lim).map(
+      (i) =>
+        `<li><span>${escHtml(i.nome)}</span><span>${i.qtd} × ${moeda(i.preco)}</span></li>`
+    );
+    const extra = items.length > lim ? `<li class="cpdv-pgto-resumo__mais">+ ${items.length - lim} item(ns)</li>` : "";
+    return `<ul class="cpdv-pgto-resumo__lista">${rows.join("")}${extra}</ul>`;
+  }
+
+  function cpdvParseMoedaInput(raw) {
+    const s = String(raw ?? "")
+      .replace(/\s/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".");
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function cpdvFormatMoedaInput(n) {
+    return Number(n).toFixed(2).replace(".", ",");
+  }
+
+  function cpdvAtualizarTrocoPagamento() {
+    const total = cpdvTotal();
+    const forma = document.getElementById("cpdvPgtoForma")?.value || "";
+    const blocoDin = document.getElementById("cpdvPgtoBlocoDinheiro");
+    const blocoCart = document.getElementById("cpdvPgtoBlocoCartao");
+    const blocoPix = document.getElementById("cpdvPgtoBlocoPix");
+    if (blocoDin) blocoDin.hidden = forma !== "Dinheiro";
+    if (blocoCart) blocoCart.hidden = forma !== "Crédito" && forma !== "Débito";
+    if (blocoPix) blocoPix.hidden = forma !== "PIX";
+    const recebido = cpdvParseMoedaInput(document.getElementById("cpdvPgtoValor")?.value);
+    const trocoEl = document.getElementById("cpdvPgtoTroco");
+    if (trocoEl && forma === "Dinheiro") {
+      const troco = Math.max(0, recebido - total);
+      trocoEl.value = cpdvFormatMoedaInput(troco);
+    }
+  }
+
+  function cpdvBindPagamentoModal() {
+    const forma = document.getElementById("cpdvPgtoForma");
+    forma?.addEventListener("change", cpdvAtualizarTrocoPagamento);
+    document.getElementById("cpdvPgtoValor")?.addEventListener("input", cpdvAtualizarTrocoPagamento);
+    cpdvAtualizarTrocoPagamento();
+  }
+
+  async function cpdvConfirmarPagamentoBalcao() {
+    const unidadeId = cpdvState.unidadeId || Number(document.getElementById("cpdvUnidadeFiscal")?.value || 0);
+    const forma = document.getElementById("cpdvPgtoForma")?.value || "PDV";
+    const total = cpdvTotal();
+    if (!unidadeId) {
+      toast("Selecione a unidade antes de pagar.", "warning");
+      return;
+    }
+    if (!cpdvState.cart.length) {
+      toast("Carrinho vazio.", "warning");
+      return;
+    }
+    if (forma === "Dinheiro") {
+      const recebido = cpdvParseMoedaInput(document.getElementById("cpdvPgtoValor")?.value);
+      if (recebido + 0.009 < total) {
+        toast("Valor recebido menor que o total.", "warning");
+        return;
+      }
+    }
+    const btn = document.getElementById("cpdvPgtoConfirm");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Processando…";
+    }
+    const obs = document.getElementById("cpdvPgtoObs")?.value?.trim() || "";
+    const payloadBase = {
+      unidade_id: unidadeId,
+      forma_pagamento: forma,
+      pdv_terminal: "PDV-WEB",
+      observacao: obs || undefined,
+      ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
+    };
+    const itens = cpdvState.cart.map((i) => ({
+      cardapio_produto_id: i.fonte === "cardapio" || i.cardapioProdutoId ? (i.cardapioProdutoId || i.produtoId) : undefined,
+      produto_id: i.estoqueProdutoId || i.produtoId,
+      quantidade: i.qtd,
+      preco_unitario: i.preco,
+      desconto: 0,
+    }));
+    try {
+      if (cpdvState.apiReady) {
+        const r = await cpdvFetch("/pdv/vendas/balcao", {
+          method: "POST",
+          body: JSON.stringify({ ...payloadBase, itens }),
+        });
+        toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "info");
+        await cpdvPosEmissao(r);
+      } else if (typeof window.fiscalPdvConfirmarPagamento === "function") {
+        const r = await window.fiscalPdvConfirmarPagamento({
+          unidadeId,
+          formaPagamento: forma,
+          itens,
+          ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
+        });
+        toast(`Venda fiscal #${r.venda_id} registrada.${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : r.emissao?.skipped ? "info" : "warning");
+        await cpdvPosEmissao(r);
+      } else {
+        toast("API PDV indisponível.", "error");
+        return;
+      }
+      cpdvState.cart = [];
+      cpdvSyncCarrinhoMemoria();
+      closeCpdvModal();
+      loadComercialPdv?.();
+    } catch (e) {
+      toast(e.message || "Venda bloqueada.", "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Confirmar pagamento";
+      }
+    }
   }
 
   function cpdvPayloadEmitirNota(inputId) {
@@ -408,12 +539,14 @@
     return el;
   }
 
-  function openCpdvModal(title, bodyHtml, actionsHtml) {
+  function openCpdvModal(title, bodyHtml, actionsHtml, opts) {
     ensureCpdvModal();
+    const modal = document.getElementById("cpdvModal");
     document.getElementById("cpdvModalTitle").textContent = title;
     document.getElementById("cpdvModalBody").innerHTML = bodyHtml;
     document.getElementById("cpdvModalActions").innerHTML = actionsHtml || "";
-    document.getElementById("cpdvModal").classList.add("active");
+    modal?.classList.toggle("cpdv-modal--pgto", !!(opts && opts.pagamento));
+    modal?.classList.add("active");
   }
 
   function closeCpdvModal() {
@@ -576,7 +709,7 @@
               <button type="button" class="btn neutral" data-cpdv-proto="Desconto aplicado">Desconto</button>
               <button type="button" class="btn neutral" data-cpdv-proto="Acréscimo aplicado">Acréscimo</button>
               <button type="button" class="btn neutral" data-cpdv-proto="Venda suspensa">Suspender</button>
-              <button type="button" class="btn primary" id="cpdvPagarBtn">Pagar</button>
+              <button type="button" class="btn primary" id="cpdvPagarBtn" ${cpdvState.cart.length ? "" : "disabled"}>Pagar</button>
               <button type="button" class="btn danger" data-cpdv-proto="Carrinho limpo" id="cpdvLimparCart">Limpar</button>
             </div>
           </div>
@@ -646,6 +779,11 @@
 
   async function cpdvMesaFinalizarPagamento(comandaId) {
     const forma = document.getElementById("cpdvMesaFormaPgto")?.value || "PIX";
+    const btn = document.getElementById("cpdvMesaPagar");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Processando…";
+    }
     try {
       const r = await cpdvFetch(`/pdv/comandas/${comandaId}/finalizar`, {
         method: "POST",
@@ -658,6 +796,11 @@
       await loadComercialMesas();
     } catch (e) {
       toast(e.message, "error");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Confirmar pagamento";
+      }
     }
   }
 
@@ -720,11 +863,21 @@
       </div>
       <div class="cpdv-mesa-itens">${lista}</div>
       <div class="cpdv-cart-totais"><div class="total">Total: ${moeda(com.valor_total)}</div></div>
-      <div class="cpdv-actions">
-        <button type="button" class="btn neutral" id="cpdvMesaPreConta">Pré-conta</button>
-        <label>Forma <select id="cpdvMesaFormaPgto"><option>PIX</option><option>Dinheiro</option><option>Débito</option><option>Crédito</option></select></label>
+      <div class="cpdv-pgto-mesa">
+        <h4 class="cpdv-pgto-mesa__title">Fechar conta</h4>
+        <label class="cpdv-pgto-field">Forma de pagamento
+          <select id="cpdvMesaFormaPgto">
+            <option value="PIX">PIX</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Débito">Cartão débito</option>
+            <option value="Crédito">Cartão crédito</option>
+          </select>
+        </label>
         ${cpdvMarkupEmitirNota("cpdvMesaEmitirNota")}
-        <button type="button" class="btn primary" id="cpdvMesaPagar">Fechar conta</button>
+        <div class="cpdv-pgto-mesa__actions">
+          <button type="button" class="btn neutral" id="cpdvMesaPreConta">Pré-conta</button>
+          <button type="button" class="btn primary" id="cpdvMesaPagar">Confirmar pagamento</button>
+        </div>
       </div>
       <input type="search" id="cpdvMesaBusca" placeholder="Buscar produto…" value="${escHtml(cpdvState.mesaBusca || "")}" class="full-width" />
       <div class="cpdv-prod-grid cpdv-prod-grid--mesa">${grid}</div>`;
@@ -1014,99 +1167,71 @@
   }
 
   function cpdvAbrirModalPagamentoInner() {
-    const total = cpdvTotal() || 189.5;
+    const total = cpdvTotal();
+    const qtdItens = cpdvState.cart.reduce((s, i) => s + i.qtd, 0);
+    const valorInicial = total > 0 ? total.toFixed(2).replace(".", ",") : "0,00";
+    const semUnidade = !(cpdvState.unidadeId || document.getElementById("cpdvUnidadeFiscal")?.value);
     const body = `
-      <p>Total a receber: <strong>${moeda(total)}</strong></p>
-      <div class="filters-grid">
-        <label>Forma<select id="cpdvPgtoForma">
-          <option>Dinheiro</option><option>PIX</option><option>Débito</option><option>Crédito</option>
-          <option>Voucher</option><option>Vale-consumo</option><option>Cortesia</option><option>Múltiplas formas</option>
-        </select></label>
-        <label>Valor recebido<input type="text" id="cpdvPgtoValor" value="${total.toFixed(2)}" /></label>
-        <label>Troco<input type="text" value="0,00" readonly /></label>
-        <label>Bandeira<input type="text" placeholder="Visa / Master" /></label>
-        <label>Operadora<input type="text" placeholder="Rede / Cielo" /></label>
-        <label>Parcelas<input type="number" min="1" value="1" /></label>
-        <label>NSU<input type="text" placeholder="000000" /></label>
-        <label>Autorização<input type="text" /></label>
-        <label>Observação<input type="text" /></label>
-      </div>
-      ${cpdvMarkupEmitirNota("cpdvPgtoEmitirNota")}
-      <div class="cpdv-actions" style="margin-top:.5rem">
-        <button type="button" class="btn neutral" data-cpdv-proto="Pagamento parcial">Parcial</button>
-        <button type="button" class="btn neutral" data-cpdv-proto="Divisão por pessoa">Dividir pessoas</button>
-        <button type="button" class="btn neutral" data-cpdv-proto="Divisão por item">Dividir itens</button>
+      <div class="cpdv-pgto">
+        ${semUnidade ? '<p class="cpdv-pgto-alerta">Selecione a <strong>unidade</strong> no PDV antes de confirmar.</p>' : ""}
+        <div class="cpdv-pgto-hero">
+          <span class="cpdv-pgto-hero__label">Total a receber</span>
+          <strong class="cpdv-pgto-hero__valor">${moeda(total)}</strong>
+          <span class="cpdv-pgto-hero__meta">${qtdItens} item(ns) · ${escHtml(cpdvUnidadeLabel())}</span>
+        </div>
+        <div class="cpdv-pgto-resumo">
+          <h4>Resumo do pedido</h4>
+          ${cpdvHtmlResumoItensPagamento(6)}
+          ${cpdvState.desconto > 0 || cpdvState.acrescimo > 0 ? `<p class="cpdv-pgto-resumo__ajustes">Desconto ${moeda(cpdvState.desconto)} · Acréscimo ${moeda(cpdvState.acrescimo)}</p>` : ""}
+        </div>
+        <div class="cpdv-pgto-form">
+          <label class="cpdv-pgto-field cpdv-pgto-field--full">Forma de pagamento
+            <select id="cpdvPgtoForma">
+              <option value="PIX">PIX</option>
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Débito">Cartão débito</option>
+              <option value="Crédito">Cartão crédito</option>
+              <option value="Voucher">Voucher</option>
+              <option value="Vale-consumo">Vale-consumo</option>
+              <option value="Cortesia">Cortesia</option>
+            </select>
+          </label>
+          <div id="cpdvPgtoBlocoDinheiro" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
+            <label class="cpdv-pgto-field">Valor recebido
+              <input type="text" id="cpdvPgtoValor" inputmode="decimal" value="${valorInicial}" autocomplete="off" />
+            </label>
+            <label class="cpdv-pgto-field">Troco
+              <input type="text" id="cpdvPgtoTroco" value="0,00" readonly />
+            </label>
+          </div>
+          <div id="cpdvPgtoBlocoCartao" class="cpdv-pgto-grid cpdv-pgto-grid--2" hidden>
+            <label class="cpdv-pgto-field">Bandeira
+              <input type="text" id="cpdvPgtoBandeira" placeholder="Visa, Master, Elo…" autocomplete="off" />
+            </label>
+            <label class="cpdv-pgto-field">Parcelas
+              <input type="number" id="cpdvPgtoParcelas" min="1" max="12" value="1" />
+            </label>
+            <label class="cpdv-pgto-field">NSU / autorização
+              <input type="text" id="cpdvPgtoNsu" placeholder="Opcional" autocomplete="off" />
+            </label>
+          </div>
+          <div id="cpdvPgtoBlocoPix" class="cpdv-pgto-grid" hidden>
+            <label class="cpdv-pgto-field cpdv-pgto-field--full">ID transação PIX <small>(opcional)</small>
+              <input type="text" id="cpdvPgtoPixId" placeholder="Copia e cola ou end-to-end" autocomplete="off" />
+            </label>
+          </div>
+          <label class="cpdv-pgto-field cpdv-pgto-field--full">Observação
+            <input type="text" id="cpdvPgtoObs" placeholder="Ex.: cliente VIP, mesa externa…" maxlength="200" />
+          </label>
+        </div>
+        ${cpdvMarkupEmitirNota("cpdvPgtoEmitirNota")}
       </div>`;
     const acts = `<button type="button" class="btn primary" id="cpdvPgtoConfirm">Confirmar pagamento</button>
       <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>`;
-    openCpdvModal("Simular pagamento", body, acts);
-    document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", async () => {
-      const unidadeId = cpdvState.unidadeId || Number(document.getElementById("cpdvUnidadeFiscal")?.value || 0);
-      const forma = document.getElementById("cpdvPgtoForma")?.value || "PDV";
-      if (unidadeId > 0 && cpdvState.cart.length && cpdvState.apiReady) {
-        try {
-          const itens = cpdvState.cart.map((i) => ({
-            cardapio_produto_id: i.fonte === "cardapio" || i.cardapioProdutoId ? (i.cardapioProdutoId || i.produtoId) : undefined,
-            produto_id: i.estoqueProdutoId || i.produtoId,
-            quantidade: i.qtd,
-            preco_unitario: i.preco,
-            desconto: 0,
-          }));
-          const r = await cpdvFetch("/pdv/vendas/balcao", {
-            method: "POST",
-            body: JSON.stringify({
-              unidade_id: unidadeId,
-              forma_pagamento: forma,
-              pdv_terminal: "PDV-WEB",
-              itens,
-              ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
-            }),
-          });
-          toast(`Venda #${r.venda_id} registrada (${moeda(r.valor_liquido)}).${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : "info");
-          await cpdvPosEmissao(r);
-          cpdvState.cart = [];
-          cpdvSyncCarrinhoMemoria();
-          closeCpdvModal();
-          loadComercialPdv?.();
-          return;
-        } catch (e) {
-          toast(e.message || "Venda bloqueada.", "error");
-          return;
-        }
-      }
-      if (unidadeId > 0 && cpdvState.cart.length && typeof window.fiscalPdvConfirmarPagamento === "function") {
-        try {
-          const itens = cpdvState.cart.map((i) => ({
-            cardapio_produto_id: i.fonte === "cardapio" || i.cardapioProdutoId ? (i.cardapioProdutoId || i.produtoId) : undefined,
-            produto_id: i.estoqueProdutoId || i.produtoId,
-            quantidade: i.qtd,
-            preco_unitario: i.preco,
-          }));
-          const r = await window.fiscalPdvConfirmarPagamento({
-            unidadeId,
-            formaPagamento: forma,
-            itens,
-            ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
-          });
-          toast(`Venda fiscal #${r.venda_id} registrada.${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : r.emissao?.skipped ? "info" : "warning");
-          await cpdvPosEmissao(r);
-          cpdvState.cart = [];
-          cpdvSyncCarrinhoMemoria();
-          closeCpdvModal();
-          loadComercialPdv?.();
-          return;
-        } catch (e) {
-          toast(e.message || "Venda fiscal bloqueada.", "error");
-          return;
-        }
-      }
-      protoToast("Selecione a unidade e itens com estoque.");
-      closeCpdvModal();
-    });
+    openCpdvModal("Pagamento", body, acts, { pagamento: true });
+    cpdvBindPagamentoModal();
+    document.getElementById("cpdvPgtoConfirm")?.addEventListener("click", () => cpdvConfirmarPagamentoBalcao());
     document.getElementById("cpdvPgtoCancel")?.addEventListener("click", closeCpdvModal);
-    document.getElementById("cpdvModalBody")?.querySelectorAll("[data-cpdv-proto]").forEach((el) => {
-      el.addEventListener("click", () => protoToast(el.dataset.cpdvProto));
-    });
   }
 
   function cpdvRenderPagamentos() {
