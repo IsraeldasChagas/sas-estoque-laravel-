@@ -289,25 +289,27 @@
   function cpdvHtmlBlocoEncargos(scope) {
     const cfg = cpdvEncargosCfg();
     const pre = scope === "mesa" ? "cpdvMesa" : "cpdvPgto";
-    const padraoTaxa = scope === "mesa" ? cfg.taxa_servico?.padrao_mesa : cfg.taxa_servico?.padrao_balcao;
-    const padraoCantor = scope === "mesa" ? cfg.pagamento_cantor?.padrao_mesa : cfg.pagamento_cantor?.padrao_balcao;
     const parts = [];
     if (cfg.taxa_servico?.ativa) {
-      parts.push(`<label class="cpdv-pgto-encargo">
-        <input type="checkbox" id="${pre}AplicarTaxa" ${padraoTaxa ? "checked" : ""} />
-        Taxa de serviço (${cpdvRotuloEncargoCfg(cfg.taxa_servico)})
+      parts.push(`<label class="cpdv-pgto-encargo cpdv-pgto-encargo--on">
+        <input type="checkbox" id="${pre}AplicarTaxa" checked />
+        <span>Taxa de serviço (${cpdvRotuloEncargoCfg(cfg.taxa_servico)})</span>
         <span class="cpdv-pgto-encargo__val" id="${pre}ValTaxa">—</span>
       </label>`);
     }
     if (cfg.pagamento_cantor?.ativo) {
-      parts.push(`<label class="cpdv-pgto-encargo">
-        <input type="checkbox" id="${pre}AplicarCantor" ${padraoCantor ? "checked" : ""} />
-        Pagamento do cantor (${cpdvRotuloEncargoCfg(cfg.pagamento_cantor)})
+      parts.push(`<label class="cpdv-pgto-encargo cpdv-pgto-encargo--on">
+        <input type="checkbox" id="${pre}AplicarCantor" checked />
+        <span>Pagamento do cantor (${cpdvRotuloEncargoCfg(cfg.pagamento_cantor)})</span>
         <span class="cpdv-pgto-encargo__val" id="${pre}ValCantor">—</span>
       </label>`);
     }
     if (!parts.length) return "";
-    return `<div class="cpdv-pgto-encargos" id="${pre}Encargos">${parts.join("")}</div>`;
+    return `<div class="cpdv-pgto-encargos" id="${pre}Encargos">
+      <p class="cpdv-pgto-encargos__titulo">Encargos incluídos na conta</p>
+      ${parts.join("")}
+      <p class="cpdv-pgto-hint">Vêm marcados por padrão. Desmarque <strong>somente se o cliente pedir</strong> para retirar.</p>
+    </div>`;
   }
 
   function cpdvAtualizarEncargosPagamento(scope) {
@@ -1431,8 +1433,8 @@
     const semUnidade = !(cpdvState.unidadeId || document.getElementById("cpdvUnidadeFiscal")?.value);
     const seg = cpdvSegPag();
     const encVals = cpdvCalcEncargosValores("balcao", {
-      aplicar_taxa_servico: !!(cpdvEncargosCfg().taxa_servico?.ativa && cpdvEncargosCfg().taxa_servico?.padrao_balcao),
-      aplicar_pagamento_cantor: !!(cpdvEncargosCfg().pagamento_cantor?.ativo && cpdvEncargosCfg().pagamento_cantor?.padrao_balcao),
+      aplicar_taxa_servico: !!cpdvEncargosCfg().taxa_servico?.ativa,
+      aplicar_pagamento_cantor: !!cpdvEncargosCfg().pagamento_cantor?.ativo,
     });
     const body = `
       <div class="cpdv-pgto">
@@ -1743,7 +1745,7 @@
         </div>
         <div class="table-card cpdv-form-body">
           <h3>Taxa de serviço e pagamento do cantor</h3>
-          <p class="subtle-text">Configure como calcular cada encargo: <strong>percentual</strong> sobre o subtotal da conta ou <strong>valor fixo</strong> por venda. No pagamento, o operador marca se aplica (conforme padrão abaixo).</p>
+          <p class="subtle-text">Quando ativas, aparecem <strong>marcadas</strong> no pagamento (caixa e mesa). O operador só desmarca se o cliente pedir para retirar.</p>
           ${podeEditarSeg ? `
           <div class="cpdv-cfg-encargos-grid">
             <fieldset class="cpdv-cfg-encargo">
@@ -1751,22 +1753,18 @@
               <label><input type="checkbox" id="cpdvCfgTaxaAtiva" ${taxa.ativa ? "checked" : ""} /> Ativa no PDV</label>
               <label>Modo ${selModo("cpdvCfgTaxaModo", taxa.modo || "percentual")}</label>
               <label>Valor <input type="text" id="cpdvCfgTaxaValor" inputmode="decimal" value="${String(taxa.valor ?? 10).replace(".", ",")}" /></label>
-              <label><input type="checkbox" id="cpdvCfgTaxaPadraoMesa" ${taxa.padrao_mesa !== false ? "checked" : ""} /> Marcada por padrão na mesa</label>
-              <label><input type="checkbox" id="cpdvCfgTaxaPadraoBalcao" ${taxa.padrao_balcao ? "checked" : ""} /> Marcada por padrão no caixa</label>
             </fieldset>
             <fieldset class="cpdv-cfg-encargo">
               <legend>Pagamento do cantor</legend>
               <label><input type="checkbox" id="cpdvCfgCantorAtivo" ${cantor.ativo ? "checked" : ""} /> Ativo no PDV</label>
               <label>Modo ${selModo("cpdvCfgCantorModo", cantor.modo || "percentual")}</label>
               <label>Valor <input type="text" id="cpdvCfgCantorValor" inputmode="decimal" value="${String(cantor.valor ?? 0).replace(".", ",")}" /></label>
-              <label><input type="checkbox" id="cpdvCfgCantorPadraoMesa" ${cantor.padrao_mesa ? "checked" : ""} /> Marcado por padrão na mesa</label>
-              <label><input type="checkbox" id="cpdvCfgCantorPadraoBalcao" ${cantor.padrao_balcao ? "checked" : ""} /> Marcado por padrão no caixa</label>
             </fieldset>
           </div>
           <button type="button" class="btn primary" id="cpdvCfgSaveEnc">Salvar taxas e cantor</button>
           ` : `<ul class="subtle-text">
-            <li>Taxa de serviço: ${taxa.ativa ? `${cpdvRotuloEncargoCfg(taxa)} (${taxa.padrao_mesa ? "padrão mesa" : "mesa opt-in"} · ${taxa.padrao_balcao ? "padrão caixa" : "caixa opt-in"})` : "desligada"}</li>
-            <li>Pagamento cantor: ${cantor.ativo ? cpdvRotuloEncargoCfg(cantor) : "desligado"}</li>
+            <li>Taxa de serviço: ${taxa.ativa ? `${cpdvRotuloEncargoCfg(taxa)} · incluída por padrão no pagamento` : "desligada"}</li>
+            <li>Pagamento cantor: ${cantor.ativo ? `${cpdvRotuloEncargoCfg(cantor)} · incluído por padrão no pagamento` : "desligado"}</li>
           </ul>`}
         </div>
         <div class="cpdv-cards">
@@ -1867,13 +1865,13 @@
               taxa_servico_ativa: !!root.querySelector("#cpdvCfgTaxaAtiva")?.checked,
               taxa_servico_modo: root.querySelector("#cpdvCfgTaxaModo")?.value || "percentual",
               taxa_servico_valor: cpdvParseMoedaInput(root.querySelector("#cpdvCfgTaxaValor")?.value),
-              taxa_servico_padrao_mesa: !!root.querySelector("#cpdvCfgTaxaPadraoMesa")?.checked,
-              taxa_servico_padrao_balcao: !!root.querySelector("#cpdvCfgTaxaPadraoBalcao")?.checked,
+              taxa_servico_padrao_mesa: !!root.querySelector("#cpdvCfgTaxaAtiva")?.checked,
+              taxa_servico_padrao_balcao: !!root.querySelector("#cpdvCfgTaxaAtiva")?.checked,
               pagamento_cantor_ativo: !!root.querySelector("#cpdvCfgCantorAtivo")?.checked,
               pagamento_cantor_modo: root.querySelector("#cpdvCfgCantorModo")?.value || "percentual",
               pagamento_cantor_valor: cpdvParseMoedaInput(root.querySelector("#cpdvCfgCantorValor")?.value),
-              pagamento_cantor_padrao_mesa: !!root.querySelector("#cpdvCfgCantorPadraoMesa")?.checked,
-              pagamento_cantor_padrao_balcao: !!root.querySelector("#cpdvCfgCantorPadraoBalcao")?.checked,
+              pagamento_cantor_padrao_mesa: !!root.querySelector("#cpdvCfgCantorAtivo")?.checked,
+              pagamento_cantor_padrao_balcao: !!root.querySelector("#cpdvCfgCantorAtivo")?.checked,
             }),
           });
           if (cpdvState.apiMeta) {
