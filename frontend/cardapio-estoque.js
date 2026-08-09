@@ -2,7 +2,7 @@
  * Estoque do Cardápio (Estoque B) — abastecimento, saldos e movimentações.
  */
 (function () {
-  const state = {
+  const ce = {
     unidadeId: null,
     itens: [],
     movs: [],
@@ -35,10 +35,51 @@
     return document.getElementById("cardapioEstoqueRoot");
   }
 
+  function appState() {
+    try {
+      return typeof window.state !== "undefined" ? window.state : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function listarUnidades() {
+    const st = appState();
+    if (st && Array.isArray(st.unidades) && st.unidades.length) {
+      return st.unidades;
+    }
+    return [];
+  }
+
+  async function garantirUnidades() {
+    let list = listarUnidades();
+    if (list.length) return list;
+    try {
+      if (typeof loadUnidades === "function") {
+        await loadUnidades(false);
+        list = listarUnidades();
+        if (list.length) return list;
+      }
+    } catch (_) {}
+    try {
+      const data = await api("/unidades?todas=1");
+      const arr = Array.isArray(data) ? data : data?.data || [];
+      const st = appState();
+      if (st) st.unidades = arr;
+      return arr;
+    } catch (_) {
+      return [];
+    }
+  }
+
   function unidadesOptionsHtml(selected) {
-    const list = typeof unidades !== "undefined" && Array.isArray(unidades) ? unidades : [];
-    return list
-      .map((u) => `<option value="${u.id}" ${String(u.id) === String(selected) ? "selected" : ""}>${escapeHtml(u.nome || u.name || `#${u.id}`)}</option>`)
+    return listarUnidades()
+      .map(
+        (u) =>
+          `<option value="${u.id}" ${String(u.id) === String(selected) ? "selected" : ""}>${escapeHtml(
+            u.nome || u.name || `#${u.id}`
+          )}</option>`
+      )
       .join("");
   }
 
@@ -58,34 +99,46 @@
   async function load() {
     const el = root();
     if (!el) return;
-    if (!state.unidadeId) {
-      const first = (typeof unidades !== "undefined" && unidades[0]) ? unidades[0].id : null;
-      state.unidadeId = first;
+    el.innerHTML = `<div class="orc-root"><p>Carregando estoque do cardápio…</p></div>`;
+
+    const lista = await garantirUnidades();
+    if (!ce.unidadeId && lista[0]) {
+      ce.unidadeId = lista[0].id;
     }
-    if (!state.unidadeId) {
-      el.innerHTML = `<div class="orc-root"><p>Cadastre uma unidade para gerenciar o estoque do cardápio.</p></div>`;
+    if (!ce.unidadeId) {
+      el.innerHTML = `<div class="orc-root">
+        <h2>Estoque do Cardápio</h2>
+        <p>Nenhuma unidade encontrada para o seu usuário.</p>
+        <p>Vá em <strong>Unidades</strong> (menu lateral, perto de Produtos / Consulta Estoque) e cadastre ou ative uma unidade. Depois volte aqui.</p>
+        <button type="button" class="btn primary" id="ceIrUnidades">Ir para Unidades</button>
+      </div>`;
+      el.querySelector("#ceIrUnidades")?.addEventListener("click", () => {
+        if (typeof navigateTo === "function") navigateTo("unidades");
+      });
       return;
     }
-    el.innerHTML = `<div class="orc-root"><p>Carregando estoque do cardápio…</p></div>`;
+
     try {
       const [saldo, mov] = await Promise.all([
-        api(`/cardapio-estoque?unidade_id=${state.unidadeId}`),
-        api(`/cardapio-estoque/movimentacoes?unidade_id=${state.unidadeId}&limit=80`),
+        api(`/cardapio-estoque?unidade_id=${ce.unidadeId}`),
+        api(`/cardapio-estoque/movimentacoes?unidade_id=${ce.unidadeId}&limit=80`),
       ]);
-      state.itens = saldo.itens || [];
-      state.movs = mov.movimentacoes || [];
+      ce.itens = saldo.itens || [];
+      ce.movs = mov.movimentacoes || [];
       render();
     } catch (e) {
       el.innerHTML = `<div class="orc-root"><p style="color:#b91c1c">${escapeHtml(e.message)}</p>
-        <p>Se o módulo estiver indisponível, rode: <code>php artisan migrate</code></p></div>`;
+        <p>Se o módulo estiver indisponível no servidor, rode: <code>php artisan migrate</code></p>
+        <button type="button" class="btn" id="ceRefreshErr">Tentar de novo</button></div>`;
+      el.querySelector("#ceRefreshErr")?.addEventListener("click", () => load());
     }
   }
 
   function render() {
     const el = root();
     if (!el) return;
-    const sem = state.itens.filter((i) => i.sem_estoque).length;
-    const rows = state.itens
+    const sem = ce.itens.filter((i) => i.sem_estoque).length;
+    const rows = ce.itens
       .map((i) => {
         const badge = i.sem_estoque
           ? `<span style="color:#b91c1c;font-weight:600">Zerado</span>`
@@ -107,7 +160,7 @@
       })
       .join("");
 
-    const movRows = state.movs
+    const movRows = ce.movs
       .map(
         (m) => `<tr>
         <td>${escapeHtml((m.created_at || "").replace("T", " ").slice(0, 19))}</td>
@@ -130,7 +183,7 @@
         <div style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap">
           <label style="display:flex;flex-direction:column;gap:.25rem;font-size:.85rem">
             Unidade
-            <select id="ceUnidade" style="min-width:220px;padding:.55rem .7rem">${unidadesOptionsHtml(state.unidadeId)}</select>
+            <select id="ceUnidade" style="min-width:220px;padding:.55rem .7rem">${unidadesOptionsHtml(ce.unidadeId)}</select>
           </label>
           <button type="button" class="btn" id="ceRefresh">Atualizar</button>
         </div>
@@ -138,7 +191,7 @@
       <div style="display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0">
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:.85rem 1.1rem;min-width:140px">
           <div style="font-size:.8rem;color:#166534">Itens</div>
-          <div style="font-size:1.4rem;font-weight:700">${state.itens.length}</div>
+          <div style="font-size:1.4rem;font-weight:700">${ce.itens.length}</div>
         </div>
         <div style="background:${sem ? "#fef2f2" : "#f8fafc"};border:1px solid ${sem ? "#fecaca" : "#e2e8f0"};border-radius:8px;padding:.85rem 1.1rem;min-width:140px">
           <div style="font-size:.8rem;color:#64748b">Zerados</div>
@@ -152,7 +205,7 @@
             <thead><tr>
               <th>Item</th><th>Categoria</th><th>Tipo</th><th>Saldo</th><th>Mínimo</th><th>Status</th><th>Ações</th>
             </tr></thead>
-            <tbody>${rows || `<tr><td colspan="7" style="text-align:center;color:#64748b">Nenhum item ativo no cardápio desta unidade.</td></tr>`}</tbody>
+            <tbody>${rows || `<tr><td colspan="7" style="text-align:center;color:#64748b">Nenhum item ativo no cardápio desta unidade. Cadastre em Cardápio → Itens.</td></tr>`}</tbody>
           </table>
         </div>
       </div>
@@ -170,7 +223,7 @@
     `;
 
     el.querySelector("#ceUnidade")?.addEventListener("change", (e) => {
-      state.unidadeId = Number(e.target.value) || null;
+      ce.unidadeId = Number(e.target.value) || null;
       load();
     });
     el.querySelector("#ceRefresh")?.addEventListener("click", () => load());
@@ -201,7 +254,7 @@
       await api("/cardapio-estoque/entrada", {
         method: "POST",
         body: JSON.stringify({
-          unidade_id: state.unidadeId,
+          unidade_id: ce.unidadeId,
           dlv_produto_id: dlvId,
           quantidade: qtd,
           motivo: "Abastecimento manual",
@@ -229,7 +282,7 @@
       await api("/cardapio-estoque/ajuste", {
         method: "POST",
         body: JSON.stringify({
-          unidade_id: state.unidadeId,
+          unidade_id: ce.unidadeId,
           dlv_produto_id: dlvId,
           quantidade: qtd,
           estoque_minimo: Number.isNaN(min) ? 0 : min,
