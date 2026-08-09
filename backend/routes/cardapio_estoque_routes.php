@@ -29,7 +29,9 @@ Route::get('/cardapio-estoque', function (Request $request) use ($cardapioEstoqu
 
     return response()->json([
         'unidade_id' => $unidadeId,
-        'itens' => CardapioEstoqueSupport::listarSaldos($unidadeId, is_string($search) ? $search : null),
+        'itens' => CardapioEstoqueSupport::listarSaldos($unidadeId, is_string($search) ? $search : null, false),
+        'total_itens_sistema' => CardapioEstoqueSupport::contarItensGlobais(),
+        'resumo_por_unidade' => CardapioEstoqueSupport::resumoPorUnidade(),
     ]);
 });
 

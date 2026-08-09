@@ -6,6 +6,8 @@
     unidadeId: null,
     itens: [],
     movs: [],
+    totalSistema: 0,
+    resumoPorUnidade: [],
   };
 
   function apiBase() {
@@ -125,6 +127,8 @@
       ]);
       ce.itens = saldo.itens || [];
       ce.movs = mov.movimentacoes || [];
+      ce.totalSistema = Number(saldo.total_itens_sistema || 0);
+      ce.resumoPorUnidade = Array.isArray(saldo.resumo_por_unidade) ? saldo.resumo_por_unidade : [];
       render();
     } catch (e) {
       el.innerHTML = `<div class="orc-root"><p style="color:#b91c1c">${escapeHtml(e.message)}</p>
@@ -138,15 +142,32 @@
     const el = root();
     if (!el) return;
     const sem = ce.itens.filter((i) => i.sem_estoque).length;
+    const nomeUni = (id) => {
+      const u = listarUnidades().find((x) => String(x.id) === String(id));
+      return u ? u.nome || u.name || `#${id}` : `Unidade #${id}`;
+    };
+    const dicaOutras =
+      !ce.itens.length && ce.totalSistema > 0
+        ? `<div style="margin-top:.75rem;padding:.85rem 1rem;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;text-align:left;max-width:36rem;margin-left:auto;margin-right:auto">
+            <strong>Existem ${ce.totalSistema} item(ns) no cardápio, mas nenhum nesta unidade.</strong>
+            <p style="margin:.4rem 0 0">Troque a <b>Unidade</b> no seletor acima, ou em <b>Cardápio → Itens</b> edite o produto e marque a unidade <b>${escapeHtml(nomeUni(ce.unidadeId))}</b> nas unidades de venda.</p>
+            <ul style="margin:.5rem 0 0;padding-left:1.2rem">${ce.resumoPorUnidade
+              .map((r) => `<li>${escapeHtml(nomeUni(r.unidade_id))}: ${r.total} item(ns) (${r.ativos} ativo(s))</li>`)
+              .join("")}</ul>
+          </div>`
+        : "";
+
     const rows = ce.itens
       .map((i) => {
-        const badge = i.sem_estoque
-          ? `<span style="color:#b91c1c;font-weight:600">Zerado</span>`
-          : i.abaixo_minimo
-            ? `<span style="color:#a16207;font-weight:600">Baixo</span>`
-            : `<span style="color:#15803d">OK</span>`;
+        const badge = !i.ativo
+          ? `<span style="color:#64748b;font-weight:600">Inativo</span>`
+          : i.sem_estoque
+            ? `<span style="color:#b91c1c;font-weight:600">Zerado</span>`
+            : i.abaixo_minimo
+              ? `<span style="color:#a16207;font-weight:600">Baixo</span>`
+              : `<span style="color:#15803d">OK</span>`;
         return `<tr>
-          <td>${escapeHtml(i.nome)}</td>
+          <td>${escapeHtml(i.nome)}${!i.ativo ? ' <small style="color:#94a3b8">(inativo)</small>' : ""}</td>
           <td>${escapeHtml(i.categoria_nome || "—")}</td>
           <td>${escapeHtml(i.tipo_venda || "—")}</td>
           <td style="text-align:right;font-weight:700">${fmtQtd(i.quantidade)}</td>
@@ -205,7 +226,16 @@
             <thead><tr>
               <th>Item</th><th>Categoria</th><th>Tipo</th><th>Saldo</th><th>Mínimo</th><th>Status</th><th>Ações</th>
             </tr></thead>
-            <tbody>${rows || `<tr><td colspan="7" style="text-align:center;color:#64748b">Nenhum item ativo no cardápio desta unidade. Cadastre em Cardápio → Itens.</td></tr>`}</tbody>
+            <tbody>${
+              rows ||
+              `<tr><td colspan="7" style="text-align:center;padding:1.5rem">
+                <p style="margin:0 0 .75rem;color:#64748b"><strong>Nenhum item do cardápio nesta unidade (${escapeHtml(nomeUni(ce.unidadeId))}).</strong></p>
+                <p style="margin:0 0 1rem;color:#64748b">O botão <b>Abastecer</b> só aparece na linha do item.<br>
+                Confira se o produto está liberado para esta unidade em <b>Cardápio → Itens</b>.</p>
+                <button type="button" class="btn primary" id="ceIrItens">Ir para Cardápio → Itens</button>
+                ${dicaOutras}
+              </td></tr>`
+            }</tbody>
           </table>
         </div>
       </div>
@@ -227,6 +257,9 @@
       load();
     });
     el.querySelector("#ceRefresh")?.addEventListener("click", () => load());
+    el.querySelector("#ceIrItens")?.addEventListener("click", () => {
+      if (typeof navigateTo === "function") navigateTo("cardapioItens");
+    });
     el.querySelectorAll("[data-ce-abastecer]").forEach((btn) => {
       btn.addEventListener("click", () => abastecer(Number(btn.dataset.ceAbastecer), btn.dataset.ceNome || ""));
     });

@@ -244,7 +244,7 @@ final class CardapioEstoqueSupport
     /**
      * @return list<array<string, mixed>>
      */
-    public static function listarSaldos(int $unidadeId, ?string $search = null): array
+    public static function listarSaldos(int $unidadeId, ?string $search = null, bool $somenteAtivos = false): array
     {
         if (! self::moduloAtivo() || $unidadeId <= 0 || ! Schema::hasTable('dlv_produtos')) {
             return [];
@@ -254,25 +254,32 @@ final class CardapioEstoqueSupport
             ->leftJoin('dlv_categorias as c', 'c.id', '=', 'p.categoria_id')
             ->leftJoin('cardapio_estoque_saldos as s', function ($j) use ($unidadeId) {
                 $j->on('s.dlv_produto_id', '=', 'p.id')->where('s.unidade_id', '=', $unidadeId);
-            })
-            ->where('p.unidade_id', $unidadeId)
-            ->where('p.ativo', 1);
+            });
+
+        CardapioProdutoUnidadeSupport::escopoQueryDisponivelNaUnidade($q, $unidadeId, 'p.id', 'p.unidade_id');
+
+        // Igual Cardápio → Itens: por padrão lista ativos e inativos (senão some o botão Abastecer).
+        if ($somenteAtivos) {
+            $q->where('p.ativo', 1);
+        }
 
         if ($search) {
             $term = '%' . $search . '%';
             $q->where('p.nome', 'like', $term);
         }
 
-        $rows = $q->orderBy('p.nome')
+        $rows = $q->orderByDesc('p.ativo')->orderBy('p.nome')
             ->limit(800)
             ->get([
                 'p.id',
                 'p.nome',
+                'p.ativo',
                 'p.tipo_venda',
                 'p.controla_estoque_cardapio',
                 'p.estoque_produto_id',
                 'p.ficha_tecnica_id',
                 'p.preco',
+                'p.unidade_id',
                 'c.nome as categoria_nome',
                 's.quantidade',
                 's.estoque_minimo',
@@ -285,9 +292,11 @@ final class CardapioEstoqueSupport
                 : true;
             $qtd = round((float) ($r->quantidade ?? 0), 4);
             $min = round((float) ($r->estoque_minimo ?? 0), 4);
+            $ativo = (bool) ($r->ativo ?? true);
             $out[] = [
                 'dlv_produto_id' => (int) $r->id,
                 'nome' => (string) $r->nome,
+                'ativo' => $ativo,
                 'categoria_nome' => $r->categoria_nome,
                 'tipo_venda' => (string) ($r->tipo_venda ?? 'revenda'),
                 'controla_estoque_cardapio' => $controla,
@@ -298,10 +307,47 @@ final class CardapioEstoqueSupport
                 'estoque_minimo' => $min,
                 'abaixo_minimo' => $controla && $min > 0 && $qtd + 0.0001 < $min,
                 'sem_estoque' => $controla && $qtd <= 0.0001,
+                'unidade_dono_id' => (int) ($r->unidade_id ?? 0),
             ];
         }
 
         return $out;
+    }
+
+    /** Quantos itens do cardápio existem no sistema (diagnóstico quando a unidade selecionada está vazia). */
+    public static function contarItensGlobais(): int
+    {
+        if (! Schema::hasTable('dlv_produtos')) {
+            return 0;
+        }
+
+        return (int) DB::table('dlv_produtos')->count();
+    }
+
+    /**
+     * @return list<array{unidade_id: int, total: int, ativos: int}>
+     */
+    public static function resumoPorUnidade(): array
+    {
+        if (! Schema::hasTable('dlv_produtos')) {
+            return [];
+        }
+
+        return DB::table('dlv_produtos')
+            ->select(
+                'unidade_id',
+                DB::raw('COUNT(*) as total'),
+                DB::raw('SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) as ativos')
+            )
+            ->groupBy('unidade_id')
+            ->orderBy('unidade_id')
+            ->get()
+            ->map(static fn ($r) => [
+                'unidade_id' => (int) $r->unidade_id,
+                'total' => (int) $r->total,
+                'ativos' => (int) $r->ativos,
+            ])
+            ->all();
     }
 
     /**
