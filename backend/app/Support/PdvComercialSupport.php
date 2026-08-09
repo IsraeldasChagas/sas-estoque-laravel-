@@ -245,12 +245,18 @@ final class PdvComercialSupport
         $produtoId = (int) $resolvido['produto_id'];
         $preco = (float) $resolvido['preco_unitario'];
         $cardapioProdutoId = $resolvido['cardapio_produto_id'] ?? null;
-        // Estoque/CNPJ validados na finalização da venda fiscal, não a cada lançamento na comanda.
+        if ($cardapioProdutoId && CardapioEstoqueSupport::moduloAtivo()) {
+            $val = CardapioEstoqueSupport::validarSaldo($unidadeId, (int) $cardapioProdutoId, $qtd);
+            if (! ($val['ok'] ?? false)) {
+                throw new \RuntimeException($val['message'] ?? 'Sem estoque no cardápio.');
+            }
+        }
+        // CNPJ/estoque admin validados na finalização da venda fiscal.
         $desc = (float) ($item['desconto'] ?? 0);
         $valor = round($preco * $qtd - $desc, 2);
         $insert = [
             'comanda_id' => $comandaId,
-            'produto_id' => $produtoId,
+            'produto_id' => $produtoId > 0 ? $produtoId : null,
             'quantidade' => $qtd,
             'preco_unitario' => $preco,
             'desconto' => $desc,
@@ -425,12 +431,19 @@ final class PdvComercialSupport
         if (! in_array($com->status, ['aberta', 'aguardando_pagamento'], true)) {
             throw new \RuntimeException('Comanda já fechada.');
         }
-        $itens = collect($data['itens'])->map(fn ($i) => [
-            'produto_id' => (int) $i->produto_id,
-            'quantidade' => (float) $i->quantidade,
-            'preco_unitario' => (float) $i->preco_unitario,
-            'desconto' => (float) $i->desconto,
-        ])->all();
+        $itens = collect($data['itens'])->map(function ($i) {
+            $row = [
+                'produto_id' => (int) ($i->produto_id ?? 0),
+                'quantidade' => (float) $i->quantidade,
+                'preco_unitario' => (float) $i->preco_unitario,
+                'desconto' => (float) $i->desconto,
+            ];
+            if (! empty($i->cardapio_produto_id)) {
+                $row['cardapio_produto_id'] = (int) $i->cardapio_produto_id;
+            }
+
+            return $row;
+        })->all();
         if (! count($itens)) {
             throw new \RuntimeException('Comanda sem itens.');
         }
@@ -519,12 +532,19 @@ final class PdvComercialSupport
         $unidadeId = (int) ($payload['unidade_id'] ?? 0);
         if ($unidadeId > 0 && isset($payload['itens']) && is_array($payload['itens'])) {
             $normalizados = CardapioComercialSupport::normalizarItensVenda($unidadeId, $payload['itens']);
-            $payload['itens'] = array_map(static fn (array $i) => [
-                'produto_id' => $i['produto_id'],
-                'quantidade' => $i['quantidade'],
-                'preco_unitario' => $i['preco_unitario'],
-                'desconto' => $i['desconto'] ?? 0,
-            ], $normalizados);
+            $payload['itens'] = array_map(static function (array $i) {
+                $row = [
+                    'produto_id' => $i['produto_id'],
+                    'quantidade' => $i['quantidade'],
+                    'preco_unitario' => $i['preco_unitario'],
+                    'desconto' => $i['desconto'] ?? 0,
+                ];
+                if (! empty($i['cardapio_produto_id'])) {
+                    $row['cardapio_produto_id'] = $i['cardapio_produto_id'];
+                }
+
+                return $row;
+            }, $normalizados);
         }
 
         $venda = VendaFiscalSupport::finalizarVenda($payload, $usuarioId);

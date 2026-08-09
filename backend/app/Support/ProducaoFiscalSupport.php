@@ -348,12 +348,26 @@ final class ProducaoFiscalSupport
                 'updated_at' => now(),
             ]);
 
+            $fichaId = Schema::hasColumn('producoes', 'ficha_tecnica_id')
+                ? (int) ($producao->ficha_tecnica_id ?? 0)
+                : 0;
+            $produtoFinalId = (int) ($producao->produto_final_id ?? 0);
+            $cardapioEntradas = CardapioEstoqueSupport::entrarDaProducao(
+                $unidadeId,
+                $qtdProduzida,
+                $producaoId,
+                $fichaId > 0 ? $fichaId : null,
+                $produtoFinalId > 0 ? $produtoFinalId : null,
+                $usuarioId
+            );
+
             return [
                 'producao_id' => $producaoId,
                 'custo_total' => $custoTotal,
                 'custo_unitario' => $custoUnitario,
                 'lote_final_id' => $loteFinalId,
                 'movimentacao_entrada_id' => $movEntradaId,
+                'cardapio_entradas' => $cardapioEntradas,
             ];
         });
     }

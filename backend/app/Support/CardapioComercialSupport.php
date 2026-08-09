@@ -67,16 +67,41 @@ final class CardapioComercialSupport
             $tipoVenda = Schema::hasColumn('dlv_produtos', 'tipo_venda')
                 ? (string) ($p->tipo_venda ?? 'revenda')
                 : 'revenda';
-            $saldo = $estoqueId > 0 ? ProducaoEstoqueSupport::saldoDisponivel($estoqueId, $unidadeId) : null;
+            $saldoAdmin = $estoqueId > 0 ? ProducaoEstoqueSupport::saldoDisponivel($estoqueId, $unidadeId) : null;
+            $saldoCardapio = null;
+            $controlaCardapio = true;
+            if (Schema::hasColumn('dlv_produtos', 'controla_estoque_cardapio')) {
+                $controlaCardapio = (bool) ($p->controla_estoque_cardapio ?? true);
+            }
+            if (CardapioEstoqueSupport::moduloAtivo() && $controlaCardapio) {
+                $saldoCardapio = CardapioEstoqueSupport::saldo($unidadeId, (int) $p->id);
+            }
+
             $estoqueOk = false;
             $aviso = null;
-            if ($tipoVenda === 'prato') {
+            $disponivel = true;
+
+            if ($controlaCardapio && CardapioEstoqueSupport::moduloAtivo()) {
+                $estoqueOk = $saldoCardapio !== null && $saldoCardapio > 0.0001;
+                $disponivel = $estoqueOk;
+                if (! $estoqueOk) {
+                    $aviso = 'Sem estoque no cardápio — abasteça em Cardápio → Estoque.';
+                } elseif ($tipoVenda === 'prato' && $fichaId <= 0 && $estoqueId <= 0) {
+                    $aviso = 'Vincule a ficha técnica deste prato (opcional para custo).';
+                } elseif ($tipoVenda === 'revenda' && $estoqueId <= 0) {
+                    $aviso = 'Revenda sem vínculo ao estoque admin — venda só baixa o cardápio.';
+                } elseif ($tipoVenda === 'revenda' && $estoqueId > 0 && ($saldoAdmin === null || $saldoAdmin <= 0.0001)) {
+                    $aviso = 'Cardápio OK, mas estoque admin (revenda) sem saldo — venda pode falhar na baixa física.';
+                    $estoqueOk = false;
+                    $disponivel = false;
+                }
+            } elseif ($tipoVenda === 'prato') {
                 if ($fichaId > 0) {
                     $avaliacao = CardapioFichaEstoqueSupport::avaliarSaldoInsumos($fichaId, $unidadeId);
                     $estoqueOk = $avaliacao['estoque_ok'];
                     $aviso = $avaliacao['aviso'];
                 } elseif ($estoqueId > 0) {
-                    $estoqueOk = $saldo !== null && $saldo > 0.0001;
+                    $estoqueOk = $saldoAdmin !== null && $saldoAdmin > 0.0001;
                     $aviso = CardapioFichaEstoqueSupport::mensagemSeSemFicha($estoqueId)
                         ?? ($estoqueOk ? null : 'Sem saldo nesta unidade — dê entrada no estoque.');
                 } else {
@@ -85,7 +110,7 @@ final class CardapioComercialSupport
             } else {
                 if ($estoqueId <= 0) {
                     $aviso = 'No cardápio: escolha o produto que você revende.';
-                } elseif ($saldo === null || $saldo <= 0.0001) {
+                } elseif ($saldoAdmin === null || $saldoAdmin <= 0.0001) {
                     $aviso = 'Sem saldo nesta unidade — dê entrada no estoque.';
                 } else {
                     $estoqueOk = true;
@@ -108,8 +133,11 @@ final class CardapioComercialSupport
                 'categoria' => $categoria,
                 'categoria_nome' => $catNome,
                 'preco' => $preco,
-                'saldo' => $saldo,
-                'disponivel' => true,
+                'saldo' => $saldoCardapio ?? $saldoAdmin,
+                'saldo_cardapio' => $saldoCardapio,
+                'saldo_admin' => $saldoAdmin,
+                'controla_estoque_cardapio' => $controlaCardapio,
+                'disponivel' => $disponivel,
                 'estoque_ok' => $estoqueOk,
                 'tipo_venda' => $tipoVenda,
                 'aviso' => $aviso,
@@ -190,13 +218,25 @@ final class CardapioComercialSupport
 
         if ($tipoVenda === 'prato') {
             if ($fichaId <= 0 && $estoqueId <= 0) {
-                throw new \InvalidArgumentException('Vincule a ficha técnica deste prato no cardápio antes de vender.');
+                // Com estoque do cardápio, prato pode vender só com saldo B (ficha opcional).
+                if (! CardapioEstoqueSupport::moduloAtivo() || ! CardapioEstoqueSupport::controlaEstoque($cardapioId)) {
+                    throw new \InvalidArgumentException('Vincule a ficha técnica deste prato no cardápio antes de vender.');
+                }
             }
             if ($fichaId <= 0 && $estoqueId > 0 && CardapioFichaEstoqueSupport::mensagemSeSemFicha($estoqueId)) {
-                throw new \InvalidArgumentException('Vincule a ficha técnica deste prato no cardápio antes de vender.');
+                // aviso legado — não bloqueia se Estoque B estiver ativo
+                if (! CardapioEstoqueSupport::moduloAtivo()) {
+                    throw new \InvalidArgumentException('Vincule a ficha técnica deste prato no cardápio antes de vender.');
+                }
             }
         } elseif ($estoqueId <= 0) {
-            throw new \InvalidArgumentException('Vincule o item do cardápio a um produto de estoque antes de vender.');
+            if (! CardapioEstoqueSupport::moduloAtivo() || ! CardapioEstoqueSupport::controlaEstoque($cardapioId)) {
+                throw new \InvalidArgumentException('Vincule o item do cardápio a um produto de estoque antes de vender.');
+            }
+        }
+
+        if (CardapioEstoqueSupport::moduloAtivo() && CardapioEstoqueSupport::controlaEstoque($cardapioId)) {
+            // Validação de quantidade fica na venda; aqui só garante que o módulo enxerga o item.
         }
 
         $produtoLinha = $estoqueId > 0 ? $estoqueId : 0;

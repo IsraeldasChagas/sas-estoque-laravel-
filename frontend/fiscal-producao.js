@@ -157,8 +157,20 @@
         <button type="button" class="btn primary" id="fpConfirmFinalizar" ${sim.pode_finalizar ? "" : "disabled"}>Confirmar e baixar insumos</button>`;
       panel.querySelector("#fpConfirmFinalizar")?.addEventListener("click", async () => {
         try {
-          await fFetch(`/fiscal/producoes/${id}/finalizar`, { method: "POST", body: "{}" });
-          window.showToast?.("Produção finalizada.", "success");
+          const res = await fFetch(`/fiscal/producoes/${id}/finalizar`, { method: "POST", body: "{}" });
+          const entradas = Array.isArray(res?.cardapio_entradas) ? res.cardapio_entradas : [];
+          if (entradas.length) {
+            const nomes = entradas.map((e) => e.nome || `#${e.dlv_produto_id}`).join(", ");
+            window.showToast?.(
+              `Produção finalizada. Estoque do cardápio abastecido: ${nomes}.`,
+              "success"
+            );
+          } else {
+            window.showToast?.(
+              "Produção finalizada. Nenhum item do cardápio vinculado a esta ficha/produto — abasteça em Cardápio → Estoque se precisar.",
+              "success"
+            );
+          }
           await renderFiscalProducaoPage();
           panel.classList.add("hidden");
         } catch (e) {

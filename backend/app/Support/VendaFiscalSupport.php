@@ -173,22 +173,38 @@ final class VendaFiscalSupport
 
         foreach ($itens as $it) {
             $pid = (int) ($it['produto_id'] ?? 0);
+            $cardapioId = (int) ($it['cardapio_produto_id'] ?? 0);
             $qtd = (float) ($it['quantidade'] ?? 0);
-            if ($pid <= 0 || $qtd <= 0) {
+            if ($qtd <= 0 || ($pid <= 0 && $cardapioId <= 0)) {
                 throw new \InvalidArgumentException('Item de venda inválido.');
             }
-            $val = self::validarPropriedadeFiscal($empresaId, $unidadeId, $pid, $qtd, isset($it['lote_id']) ? (int) $it['lote_id'] : null);
-            if (! ($val['ok'] ?? false)) {
-                self::registrarBloqueio(
-                    $usuarioId,
-                    $empresaId,
-                    $val['empresa_estoque_id'] ?? null,
-                    $unidadeId,
-                    $pid,
-                    $qtd,
-                    $val['message'] ?? 'bloqueio'
-                );
-                throw new \RuntimeException($val['message'] ?? 'Venda bloqueada.');
+
+            if ($cardapioId > 0 && CardapioEstoqueSupport::moduloAtivo()) {
+                $valCard = CardapioEstoqueSupport::validarSaldo($unidadeId, $cardapioId, $qtd);
+                if (! ($valCard['ok'] ?? false)) {
+                    throw new \RuntimeException($valCard['message'] ?? 'Sem estoque no cardápio.');
+                }
+            }
+
+            $politica = CardapioEstoqueSupport::politicaBaixaAdmin($cardapioId > 0 ? $cardapioId : null);
+            $precisaAdmin = $pid > 0 && ($cardapioId <= 0 || ($politica['deve_baixar_admin'] ?? true));
+            if ($precisaAdmin) {
+                $val = self::validarPropriedadeFiscal($empresaId, $unidadeId, $pid, $qtd, isset($it['lote_id']) ? (int) $it['lote_id'] : null);
+                if (! ($val['ok'] ?? false)) {
+                    self::registrarBloqueio(
+                        $usuarioId,
+                        $empresaId,
+                        $val['empresa_estoque_id'] ?? null,
+                        $unidadeId,
+                        $pid,
+                        $qtd,
+                        $val['message'] ?? 'bloqueio'
+                    );
+                    throw new \RuntimeException($val['message'] ?? 'Venda bloqueada.');
+                }
+            } elseif ($pid <= 0 && $cardapioId > 0) {
+                // Prato só no cardápio: ok sem SKU admin.
+                continue;
             }
         }
 
@@ -251,8 +267,11 @@ final class VendaFiscalSupport
 
             $vendaId = DB::table('vendas')->insertGetId($insertVenda);
 
+            $origemVenda = (string) ($payload['origem_venda'] ?? 'balcao');
+
             foreach ($itens as $raw) {
-                $produtoId = (int) $raw['produto_id'];
+                $produtoId = (int) ($raw['produto_id'] ?? 0);
+                $cardapioId = (int) ($raw['cardapio_produto_id'] ?? 0);
                 $qtd = (float) $raw['quantidade'];
                 $preco = (float) ($raw['preco_unitario'] ?? 0);
                 $desc = (float) ($raw['desconto'] ?? 0);
@@ -260,62 +279,96 @@ final class VendaFiscalSupport
                 $valorBruto += round($preco * $qtd, 2);
                 $descontoTotal += $desc;
 
-                $baixa = ProducaoEstoqueSupport::baixarFifo($produtoId, $unidadeId, $qtd, null, false);
-                $produto = DB::table('produtos')->where('id', $produtoId)->first();
-                $unidadeBase = unidadeGravacaoMovimentacao(normalizarUnidadeMedidaSaida($produto->unidade_base ?? 'UND'));
-
-                $movData = array_merge([
-                    'produto_id' => $produtoId,
-                    'lote_id' => $baixa['lote_id'],
-                    'usuario_id' => $usuarioId,
-                    'tipo' => 'SAIDA',
-                    'qtd' => $qtd,
-                    'unidade' => $unidadeBase,
-                    'custo_unitario' => $baixa['custo_medio'],
-                    'data_mov' => now(),
-                    'motivo' => 'VENDA',
-                    'observacao' => 'Venda #' . $vendaId,
-                    'de_unidade_id' => $unidadeId,
-                ], FiscalMovimentacaoSupport::buildCamposMovimentacao(
-                    ['motivo' => 'CONSUMO', 'motivo_detalhe' => 'Venda #' . $vendaId],
-                    false,
-                    $unidadeId,
-                    null,
-                    (float) $baixa['custo_medio'],
-                    $qtd
-                ));
-
-                if (Schema::hasColumn('movimentacoes', 'motivo')) {
-                    $movData['motivo'] = 'VENDA';
-                }
-                if (Schema::hasColumn('movimentacoes', 'tipo_movimentacao')) {
-                    unset($movData['tipo_movimentacao']);
+                $cardapioMovId = null;
+                if ($cardapioId > 0) {
+                    $baixaCard = CardapioEstoqueSupport::baixarVenda($unidadeId, $cardapioId, $qtd, [
+                        'venda_id' => $vendaId,
+                        'comanda_id' => isset($payload['comanda_id']) ? (int) $payload['comanda_id'] : null,
+                        'usuario_id' => $usuarioId,
+                        'origem_venda' => $origemVenda,
+                        'motivo' => 'Venda #' . $vendaId,
+                    ]);
+                    $cardapioMovId = $baixaCard['movimentacao_id'] ?? null;
                 }
 
-                $movId = DB::table('movimentacoes')->insertGetId($movData);
+                $politica = CardapioEstoqueSupport::politicaBaixaAdmin($cardapioId > 0 ? $cardapioId : null);
+                $baixarAdmin = $produtoId > 0 && ($cardapioId <= 0 || ($politica['deve_baixar_admin'] ?? true));
 
-                $custoItem = (float) $baixa['custo_total'];
+                $movId = null;
+                $loteId = null;
+                $custoMedio = 0.0;
+                $custoItem = 0.0;
+                $produto = $produtoId > 0 ? DB::table('produtos')->where('id', $produtoId)->first() : null;
+
+                if ($baixarAdmin) {
+                    $baixa = ProducaoEstoqueSupport::baixarFifo($produtoId, $unidadeId, $qtd, null, false);
+                    $loteId = $baixa['lote_id'];
+                    $custoMedio = (float) $baixa['custo_medio'];
+                    $custoItem = (float) $baixa['custo_total'];
+                    $unidadeBase = unidadeGravacaoMovimentacao(normalizarUnidadeMedidaSaida($produto->unidade_base ?? 'UND'));
+
+                    $movData = array_merge([
+                        'produto_id' => $produtoId,
+                        'lote_id' => $loteId,
+                        'usuario_id' => $usuarioId,
+                        'tipo' => 'SAIDA',
+                        'qtd' => $qtd,
+                        'unidade' => $unidadeBase,
+                        'custo_unitario' => $custoMedio,
+                        'data_mov' => now(),
+                        'motivo' => 'VENDA',
+                        'observacao' => 'Venda #' . $vendaId,
+                        'de_unidade_id' => $unidadeId,
+                    ], FiscalMovimentacaoSupport::buildCamposMovimentacao(
+                        ['motivo' => 'CONSUMO', 'motivo_detalhe' => 'Venda #' . $vendaId],
+                        false,
+                        $unidadeId,
+                        null,
+                        $custoMedio,
+                        $qtd
+                    ));
+
+                    if (Schema::hasColumn('movimentacoes', 'motivo')) {
+                        $movData['motivo'] = 'VENDA';
+                    }
+                    if (Schema::hasColumn('movimentacoes', 'tipo_movimentacao')) {
+                        unset($movData['tipo_movimentacao']);
+                    }
+
+                    $movId = DB::table('movimentacoes')->insertGetId($movData);
+                }
+
                 $custoTotalVenda += $custoItem;
 
-                $itemId = DB::table('venda_itens')->insertGetId([
+                $itemData = [
                     'venda_id' => $vendaId,
-                    'produto_id' => $produtoId,
-                    'lote_id' => $baixa['lote_id'],
+                    'produto_id' => $produtoId > 0 ? $produtoId : null,
+                    'lote_id' => $loteId,
                     'empresa_id' => $empresaId,
                     'unidade_id' => $unidadeId,
                     'quantidade' => $qtd,
                     'preco_unitario' => $preco,
                     'desconto' => $desc,
                     'valor_total' => $valorItem,
-                    'custo_unitario' => $baixa['custo_medio'],
+                    'custo_unitario' => $custoMedio,
                     'custo_total' => $custoItem,
                     'movimentacao_id' => $movId,
-                    'fiscal_snapshot' => json_encode(self::snapshotProduto($produto)),
+                    'fiscal_snapshot' => $produto ? json_encode(self::snapshotProduto($produto)) : null,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ];
+                if (Schema::hasColumn('venda_itens', 'cardapio_produto_id') && $cardapioId > 0) {
+                    $itemData['cardapio_produto_id'] = $cardapioId;
+                }
+                if (Schema::hasColumn('venda_itens', 'cardapio_movimentacao_id') && $cardapioMovId) {
+                    $itemData['cardapio_movimentacao_id'] = $cardapioMovId;
+                }
 
-                self::registrarTributosPotenciaisItem($empresaId, $vendaId, (int) $itemId, $produto, $valorItem);
+                $itemId = DB::table('venda_itens')->insertGetId($itemData);
+
+                if ($produto) {
+                    self::registrarTributosPotenciaisItem($empresaId, $vendaId, (int) $itemId, $produto, $valorItem);
+                }
             }
 
             $valorLiquido = round($valorBruto - $descontoTotal, 2);

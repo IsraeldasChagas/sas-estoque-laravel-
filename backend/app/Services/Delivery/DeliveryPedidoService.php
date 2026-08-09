@@ -2,6 +2,7 @@
 
 namespace App\Services\Delivery;
 
+use App\Support\CardapioEstoqueSupport;
 use App\Support\Delivery\DeliveryCupomPedido;
 use App\Support\Delivery\DeliveryLojaCheckoutHelper;
 use App\Support\Delivery\DeliveryMediaUrl;
@@ -55,6 +56,14 @@ class DeliveryPedidoService
                 throw ValidationException::withMessages([
                     "itens.$index.produto_id" => 'Produto delivery inválido ou inativo.',
                 ]);
+            }
+            if (CardapioEstoqueSupport::moduloAtivo() && CardapioEstoqueSupport::controlaEstoque((int) $produto->id)) {
+                $val = CardapioEstoqueSupport::validarSaldo($unidadeId, (int) $produto->id, $quantidade);
+                if (! ($val['ok'] ?? false)) {
+                    throw ValidationException::withMessages([
+                        "itens.$index.quantidade" => $val['message'] ?? 'Sem estoque no cardápio.',
+                    ]);
+                }
             }
             $opcoes = $this->validarOpcoes($produto, $item['opcoes'] ?? [], $unidadeId);
             $precoUnitario = round((float) $produto->preco, 2);
@@ -162,7 +171,7 @@ class DeliveryPedidoService
                 $pedidoData['pagamento_troco_para'] = $payload['pagamento_troco_para'];
             }
             if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em')) {
-                $pedidoData['estoque_baixado_em'] = $publico ? $agora : null;
+                $pedidoData['estoque_baixado_em'] = null;
                 $pedidoData['estoque_restaurado_em'] = null;
             }
             if (Schema::hasColumn('dlv_pedidos', 'participa_fidelidade')) {
@@ -188,6 +197,8 @@ class DeliveryPedidoService
                     'updated_at' => $agora,
                 ]);
             }
+
+            $this->baixarEstoqueCardapioPedido($id, $unidadeId, $montagem['linhas'], $usuarioId);
 
             $this->registrarHistorico($id, null, 'pendente_loja', 'criado', ['total' => $totais['total']], $usuarioId);
 
@@ -218,6 +229,9 @@ class DeliveryPedidoService
                 $detalhe ? ['detalhe' => $detalhe] : null,
                 $usuarioId
             );
+            if ($novoStatus === 'cancelado') {
+                $this->restaurarEstoqueCardapioPedido((int) $pedido->id, $usuarioId);
+            }
         });
 
         return DB::table('dlv_pedidos')->where('id', $pedido->id)->first();
@@ -652,5 +666,73 @@ class DeliveryPedidoService
             'usuario_id' => $usuarioId,
             'created_at' => now(),
         ]);
+    }
+
+    /** @param list<array{produto_id: int, quantidade: float}> $linhas */
+    private function baixarEstoqueCardapioPedido(int $pedidoId, int $unidadeId, array $linhas, ?int $usuarioId): void
+    {
+        if (! CardapioEstoqueSupport::moduloAtivo()) {
+            return;
+        }
+        foreach ($linhas as $linha) {
+            $dlvId = (int) ($linha['produto_id'] ?? 0);
+            $qtd = (float) ($linha['quantidade'] ?? 0);
+            if ($dlvId <= 0 || $qtd <= 0 || ! CardapioEstoqueSupport::controlaEstoque($dlvId)) {
+                continue;
+            }
+            CardapioEstoqueSupport::saida(
+                $unidadeId,
+                $dlvId,
+                $qtd,
+                CardapioEstoqueSupport::ORIGEM_VENDA_DELIVERY,
+                [
+                    'dlv_pedido_id' => $pedidoId,
+                    'usuario_id' => $usuarioId,
+                    'motivo' => 'Pedido delivery #' . $pedidoId,
+                ]
+            );
+        }
+        if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em')) {
+            DB::table('dlv_pedidos')->where('id', $pedidoId)->update([
+                'estoque_baixado_em' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    private function restaurarEstoqueCardapioPedido(int $pedidoId, ?int $usuarioId): void
+    {
+        if (! CardapioEstoqueSupport::moduloAtivo()) {
+            return;
+        }
+        $pedido = DB::table('dlv_pedidos')->where('id', $pedidoId)->first();
+        if (! $pedido) {
+            return;
+        }
+        if (Schema::hasColumn('dlv_pedidos', 'estoque_baixado_em') && empty($pedido->estoque_baixado_em)) {
+            return;
+        }
+        if (Schema::hasColumn('dlv_pedidos', 'estoque_restaurado_em') && ! empty($pedido->estoque_restaurado_em)) {
+            return;
+        }
+        $unidadeId = (int) $pedido->unidade_id;
+        $itens = DB::table('dlv_pedido_itens')->where('pedido_id', $pedidoId)->get();
+        foreach ($itens as $item) {
+            $dlvId = (int) $item->produto_id;
+            $qtd = (float) $item->quantidade;
+            if ($dlvId <= 0 || $qtd <= 0) {
+                continue;
+            }
+            CardapioEstoqueSupport::estornarSaida($unidadeId, $dlvId, $qtd, [
+                'dlv_pedido_id' => $pedidoId,
+                'usuario_id' => $usuarioId,
+                'motivo' => 'Cancelamento pedido #' . $pedidoId,
+            ]);
+        }
+        $upd = ['updated_at' => now()];
+        if (Schema::hasColumn('dlv_pedidos', 'estoque_restaurado_em')) {
+            $upd['estoque_restaurado_em'] = now();
+        }
+        DB::table('dlv_pedidos')->where('id', $pedidoId)->update($upd);
     }
 }

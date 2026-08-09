@@ -225,6 +225,7 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="cardapioItens" title="Itens, preços e visibilidade PDV/delivery"><span class="nav-icon" aria-hidden="true">◆</span><span class="nav-label">Itens</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="cardapioEstoque" title="Saldo para venda no PDV, mesas e delivery"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Estoque</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="cardapioCategorias"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label">Categorias</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="cardapioConsulta"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Consulta</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="cardapioAdicionais"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">Adicionais</span></a>
@@ -5602,6 +5603,7 @@
         <section id="deliveryFretesSection" class="view-section hidden"><div id="deliveryFretesRoot" class="orc-root"></div></section>
         <section id="deliveryEntregadoresSection" class="view-section hidden"><div id="deliveryEntregadoresRoot" class="orc-root"></div></section>
         <section id="deliveryConfiguracoesSection" class="view-section hidden"><div id="deliveryConfiguracoesRoot" class="orc-root"></div></section>
+        <section id="cardapioEstoqueSection" class="view-section hidden"><div id="cardapioEstoqueRoot" class="orc-root"></div></section>
       </main>
     </div>
 
@@ -6341,6 +6343,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryDashboard" /> Delivery — Dashboard</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Cardápio (PDV, mesas e delivery)</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioItens" /> Cardápio — Itens</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioEstoque" /> Cardápio — Estoque</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioCategorias" /> Cardápio — Categorias</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioConsulta" /> Cardápio — Consulta</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioAdicionais" /> Cardápio — Adicionais</label>
@@ -7980,6 +7983,7 @@
     <script src="orcamentos.js?v=20260717-functional1"></script>
     <script src="fidelidade.js?v=20260720-selo-minimo"></script>
     <script src="delivery.js?v=20260728-select-compacto"></script>
+    <script src="cardapio-estoque.js?v=20260809-estoque-b"></script>
     <script src="delivery-catalog-admin.js?v=20260717-vf1"></script>
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>

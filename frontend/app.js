@@ -1584,11 +1584,12 @@ const DELIVERY_SECTION_IDS = [
   "deliveryVitrine", "deliveryPedidos", "deliveryFretes", "deliveryEntregadores", "deliveryConfiguracoes",
 ];
 const CARDAPIO_SECTION_IDS = [
-  "cardapioItens", "cardapioCategorias", "cardapioConsulta", "cardapioAdicionais",
+  "cardapioItens", "cardapioEstoque", "cardapioCategorias", "cardapioConsulta", "cardapioAdicionais",
 ];
 /** Seções Cardápio reutilizam telas do Delivery (mesmo DOM). */
 const CARDAPIO_VIEW_SECTION = {
   cardapioItens: "deliveryProdutos",
+  cardapioEstoque: "cardapioEstoque",
   cardapioCategorias: "deliveryCategorias",
   cardapioConsulta: "deliveryCatalogo",
   cardapioAdicionais: "deliveryAdicionais",
@@ -5995,6 +5996,7 @@ function navigateTo(section) {
   else if (section === "deliveryCatalogo" || section === "cardapioConsulta") Promise.resolve(loadDeliveryCatalogo?.()).catch((e) => showToast(e?.message || "Falha ao carregar o catálogo.", "error"));
   else if (section === "deliveryCategorias" || section === "cardapioCategorias") Promise.resolve(loadDeliveryCategorias?.()).catch((e) => showToast(e?.message || "Falha ao carregar categorias.", "error"));
   else if (section === "deliveryProdutos" || section === "cardapioItens") Promise.resolve(loadDeliveryProdutos?.()).catch((e) => showToast(e?.message || "Falha ao carregar produtos.", "error"));
+  else if (section === "cardapioEstoque") Promise.resolve(loadCardapioEstoque?.()).catch((e) => showToast(e?.message || "Falha ao carregar estoque do cardápio.", "error"));
   else if (section === "deliveryAdicionais" || section === "cardapioAdicionais") Promise.resolve(loadDeliveryAdicionais?.()).catch((e) => showToast(e?.message || "Falha ao carregar adicionais.", "error"));
   else if (section === "deliveryVitrine") Promise.resolve(loadDeliveryVitrine?.()).catch((e) => showToast(e?.message || "Falha ao carregar a página de venda.", "error"));
   else if (section === "deliveryPedidos") Promise.resolve(loadDeliveryPedidos?.()).catch((e) => showToast(e?.message || "Falha ao carregar pedidos.", "error"));

@@ -1,4 +1,4 @@
-# PDV operacional (2026-07-27)
+# PDV operacional (2026-07-27) — atualizado 2026-08-09
 
 ## Deploy
 
@@ -6,40 +6,54 @@
 cd backend && php artisan migrate --force
 ```
 
-Publicar backend + frontend; cache `20260728-cardapio-pdv`.
+Publicar backend + frontend; cache `20260809-estoque-cardapio`.
+
+## Dois estoques
+
+1. **Estoque Admin** — compras, lotes, produção, CMV (`produtos` / `stock_lotes`) — **inalterado**.
+2. **Estoque do Cardápio** — porções/itens à venda (`cardapio_estoque_saldos`) — **novo**.
+
+Fluxo: abasteça em **Cardápio → Estoque** → venda no PDV/mesa/delivery dá baixa automática e grava movimentação.
+
+- **Revenda:** baixa Estoque do Cardápio **e** estoque admin (FIFO).
+- **Prato:** baixa só Estoque do Cardápio (insumos já saíram na produção).
+- Saldo zerado **bloqueia** a venda.
 
 ## Cardápio único (Delivery + PDV + mesas)
 
-1. Cadastre **categorias** e **produtos** em **Delivery → Produtos** (`dlv_produtos`).
-2. Cada item deve ter **preço** e, para venda no salão/balcão, **produto de estoque vinculado** (`estoque_produto_id`).
-3. Flags por item:
+1. Cadastre **categorias** e **produtos** em **Cardápio → Itens** (`dlv_produtos`).
+2. Cada item deve ter **preço**.
+3. Em **Cardápio → Estoque**, abasteça o saldo do dia (ou ajuste inventário).
+4. Flags por item:
    - **Visível na loja pública** — vitrine delivery (`visivel_loja`)
    - **Visível no PDV e mesas** — balcão e comandas (`visivel_pdv`)
    - **Ativa / indisponível** — pausa ou “sem venda” na loja online
-4. Quando a unidade tem itens no cardápio delivery, o PDV **não** lista mais a tabela `produtos` direto — usa o cardápio.
+5. Quando a unidade tem itens no cardápio delivery, o PDV **não** lista mais a tabela `produtos` direto — usa o cardápio.
 
-API: `GET /api/pdv/produtos?unidade_id=` → itens do cardápio (fallback estoque se a unidade não tiver `dlv_produtos`).
+API: `GET /api/pdv/produtos?unidade_id=` → itens do cardápio com `saldo_cardapio` / `disponivel`.
+API estoque B: `GET/POST /api/cardapio-estoque*`.
 
 ## Fluxo balcão (PDV / Caixa)
 
-1. **Comercial → PDV / Caixa** — selecionar **unidade** (mesmo CNPJ do estoque).
-2. Lista itens do **cardápio** da unidade.
-3. **Pagar** → `POST /api/pdv/vendas/balcao` (aceita `cardapio_produto_id` + `produto_id` de estoque) → baixa FIFO + `vendas`.
+1. **Comercial → PDV / Caixa** — selecionar **unidade**.
+2. Lista itens do **cardápio** (indisponíveis se saldo cardápio = 0).
+3. **Pagar** → `POST /api/pdv/vendas/balcao` → baixa estoque do cardápio (+ admin se revenda) + `vendas`.
 
 ## Fluxo mesa (Comercial → Mesas e Comandas)
 
-1. Selecionar **unidade** (mesma do PDV; salva no navegador).
-2. Mapa real (`GET /api/pdv/salao`).
-3. **Clicar na mesa** → comanda + painel com **mesmos itens do cardápio**.
-4. Lançamento: `POST /pdv/comandas/{id}/itens` com `cardapio_produto_id`.
-5. **Fechar conta** → venda fiscal + mesa livre.
+1. Selecionar **unidade**.
+2. Lançamento valida saldo do cardápio.
+3. **Fechar conta** → venda fiscal + baixa estoque do cardápio.
 
 ## Tabelas
 
 - `dlv_produtos`, `dlv_categorias` — cardápio
+- `cardapio_estoque_saldos`, `cardapio_estoque_movimentacoes` — estoque comercial
 - `pdv_comandas`, `pdv_comanda_itens` (`cardapio_produto_id` opcional)
-- Colunas em `vendas`: `mesa_id`, `comanda_id`, `reserva_mesa_id`, `origem_venda`
+- Colunas em `vendas` / `venda_itens`: `cardapio_produto_id`, `cardapio_movimentacao_id`
 
 ## Pendências (futuro)
 
-Caixa aberto/fechado, KDS persistido, TEF, NFC-e, divisão de conta avançada — ver `PDV_BACKEND_FUTURO.md`.
+Reserva em comanda, explosão de ficha na venda (M2).
+
+**Já feito:** ao finalizar produção fiscal, a quantidade produzida entra automaticamente no Estoque do Cardápio dos itens vinculados à ficha (`ficha_tecnica_id`) ou ao produto final (`estoque_produto_id`).
