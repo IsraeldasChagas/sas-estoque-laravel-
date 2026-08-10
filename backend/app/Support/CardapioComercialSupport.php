@@ -85,15 +85,15 @@ final class CardapioComercialSupport
                 $estoqueOk = $saldoCardapio !== null && $saldoCardapio > 0.0001;
                 $disponivel = $estoqueOk;
                 if (! $estoqueOk) {
-                    $aviso = 'Sem estoque no cardápio — abasteça em Cardápio → Estoque.';
+                    $aviso = 'Sem estoque no cardápio — abasteça em Cardápio → Estoque (mesma unidade do PDV).';
                 } elseif ($tipoVenda === 'prato' && $fichaId <= 0 && $estoqueId <= 0) {
                     $aviso = 'Vincule a ficha técnica deste prato (opcional para custo).';
                 } elseif ($tipoVenda === 'revenda' && $estoqueId <= 0) {
-                    $aviso = 'Revenda sem vínculo ao estoque admin — venda só baixa o cardápio.';
+                    $aviso = 'Revenda sem vínculo ao estoque admin — baixa só o cardápio.';
                 } elseif ($tipoVenda === 'revenda' && $estoqueId > 0 && ($saldoAdmin === null || $saldoAdmin <= 0.0001)) {
-                    $aviso = 'Cardápio OK, mas estoque admin (revenda) sem saldo — venda pode falhar na baixa física.';
+                    // Cardápio tem saldo → pode vender. Admin zerado só gera aviso (baixa física admin é opcional).
+                    $aviso = 'Cardápio OK. Estoque admin (compras/lotes) zerado nesta unidade — a venda baixa o cardápio; dê entrada no estoque admin quando puder.';
                     $estoqueOk = false;
-                    $disponivel = false;
                 }
             } elseif ($tipoVenda === 'prato') {
                 if ($fichaId > 0) {

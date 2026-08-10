@@ -188,6 +188,13 @@ final class VendaFiscalSupport
 
             $politica = CardapioEstoqueSupport::politicaBaixaAdmin($cardapioId > 0 ? $cardapioId : null);
             $precisaAdmin = $pid > 0 && ($cardapioId <= 0 || ($politica['deve_baixar_admin'] ?? true));
+            // Com estoque do cardápio, a venda não é bloqueada se o admin estiver zerado.
+            if ($precisaAdmin && $cardapioId > 0 && CardapioEstoqueSupport::moduloAtivo()) {
+                $saldoA = ProducaoEstoqueSupport::saldoDisponivelValido($pid, $unidadeId);
+                if ($saldoA + 0.0001 < $qtd) {
+                    $precisaAdmin = false;
+                }
+            }
             if ($precisaAdmin) {
                 $val = self::validarPropriedadeFiscal($empresaId, $unidadeId, $pid, $qtd, isset($it['lote_id']) ? (int) $it['lote_id'] : null);
                 if (! ($val['ok'] ?? false)) {
@@ -293,6 +300,12 @@ final class VendaFiscalSupport
 
                 $politica = CardapioEstoqueSupport::politicaBaixaAdmin($cardapioId > 0 ? $cardapioId : null);
                 $baixarAdmin = $produtoId > 0 && ($cardapioId <= 0 || ($politica['deve_baixar_admin'] ?? true));
+                if ($baixarAdmin && $cardapioId > 0 && CardapioEstoqueSupport::moduloAtivo()) {
+                    $saldoA = ProducaoEstoqueSupport::saldoDisponivelValido($produtoId, $unidadeId);
+                    if ($saldoA + 0.0001 < $qtd) {
+                        $baixarAdmin = false;
+                    }
+                }
 
                 $movId = null;
                 $loteId = null;
@@ -301,41 +314,51 @@ final class VendaFiscalSupport
                 $produto = $produtoId > 0 ? DB::table('produtos')->where('id', $produtoId)->first() : null;
 
                 if ($baixarAdmin) {
-                    $baixa = ProducaoEstoqueSupport::baixarFifo($produtoId, $unidadeId, $qtd, null, false);
-                    $loteId = $baixa['lote_id'];
-                    $custoMedio = (float) $baixa['custo_medio'];
-                    $custoItem = (float) $baixa['custo_total'];
-                    $unidadeBase = unidadeGravacaoMovimentacao(normalizarUnidadeMedidaSaida($produto->unidade_base ?? 'UND'));
-
-                    $movData = array_merge([
-                        'produto_id' => $produtoId,
-                        'lote_id' => $loteId,
-                        'usuario_id' => $usuarioId,
-                        'tipo' => 'SAIDA',
-                        'qtd' => $qtd,
-                        'unidade' => $unidadeBase,
-                        'custo_unitario' => $custoMedio,
-                        'data_mov' => now(),
-                        'motivo' => 'VENDA',
-                        'observacao' => 'Venda #' . $vendaId,
-                        'de_unidade_id' => $unidadeId,
-                    ], FiscalMovimentacaoSupport::buildCamposMovimentacao(
-                        ['motivo' => 'CONSUMO', 'motivo_detalhe' => 'Venda #' . $vendaId],
-                        false,
-                        $unidadeId,
-                        null,
-                        $custoMedio,
-                        $qtd
-                    ));
-
-                    if (Schema::hasColumn('movimentacoes', 'motivo')) {
-                        $movData['motivo'] = 'VENDA';
+                    try {
+                        $baixa = ProducaoEstoqueSupport::baixarFifo($produtoId, $unidadeId, $qtd, null, false);
+                    } catch (\Throwable $e) {
+                        if ($cardapioId > 0 && CardapioEstoqueSupport::moduloAtivo()) {
+                            $baixa = null;
+                        } else {
+                            throw $e;
+                        }
                     }
-                    if (Schema::hasColumn('movimentacoes', 'tipo_movimentacao')) {
-                        unset($movData['tipo_movimentacao']);
-                    }
+                    if ($baixa) {
+                        $loteId = $baixa['lote_id'];
+                        $custoMedio = (float) $baixa['custo_medio'];
+                        $custoItem = (float) $baixa['custo_total'];
+                        $unidadeBase = unidadeGravacaoMovimentacao(normalizarUnidadeMedidaSaida($produto->unidade_base ?? 'UND'));
 
-                    $movId = DB::table('movimentacoes')->insertGetId($movData);
+                        $movData = array_merge([
+                            'produto_id' => $produtoId,
+                            'lote_id' => $loteId,
+                            'usuario_id' => $usuarioId,
+                            'tipo' => 'SAIDA',
+                            'qtd' => $qtd,
+                            'unidade' => $unidadeBase,
+                            'custo_unitario' => $custoMedio,
+                            'data_mov' => now(),
+                            'motivo' => 'VENDA',
+                            'observacao' => 'Venda #' . $vendaId,
+                            'de_unidade_id' => $unidadeId,
+                        ], FiscalMovimentacaoSupport::buildCamposMovimentacao(
+                            ['motivo' => 'CONSUMO', 'motivo_detalhe' => 'Venda #' . $vendaId],
+                            false,
+                            $unidadeId,
+                            null,
+                            $custoMedio,
+                            $qtd
+                        ));
+
+                        if (Schema::hasColumn('movimentacoes', 'motivo')) {
+                            $movData['motivo'] = 'VENDA';
+                        }
+                        if (Schema::hasColumn('movimentacoes', 'tipo_movimentacao')) {
+                            unset($movData['tipo_movimentacao']);
+                        }
+
+                        $movId = DB::table('movimentacoes')->insertGetId($movData);
+                    }
                 }
 
                 $custoTotalVenda += $custoItem;

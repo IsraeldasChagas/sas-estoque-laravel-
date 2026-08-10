@@ -129,6 +129,11 @@
     const pr = data.prontidao || {};
     const env = cfg.environment || def.environment || "homologation";
     const prov = cfg.provider || def.provider || "focus_nfe";
+    const envLabel = env === "production" ? "PRODUÇÃO (notas reais)" : "HOMOLOGAÇÃO (testes)";
+    const envBannerStyle =
+      env === "production"
+        ? "background:#ecfdf5;border:1px solid #86efac;color:#14532d"
+        : "background:#fffbeb;border:1px solid #fcd34d;color:#92400e";
 
     root.innerHTML = `
       <div class="fem-page">
@@ -136,6 +141,9 @@
           <header><h3>${esc(emp.nome_fantasia || emp.razao_social)}</h3>
             <p class="subtle-text">CNPJ ${esc(fmtCnpj(emp.cnpj))} · ${esc(emp.uf || "—")} · ${badgeProntidao(pr.status)}</p>
           </header>
+          <div id="femAmbienteBanner" style="margin:0.75rem 0 0;padding:0.75rem 1rem;border-radius:8px;font-weight:700;${envBannerStyle}">
+            Ambiente atual: ${esc(envLabel)}
+          </div>
           ${femMeta?.mensagem ? `<p class="subtle-text">${esc(femMeta.mensagem)}</p>` : ""}
           <div class="fem-block">
             <h4>Checklist para emitir</h4>
@@ -149,7 +157,7 @@
             <label>Provedor de emissão
               <select id="femProvider" ${femPodeEditar ? "" : "disabled"}>${providerOptions(prov)}</select>
             </label>
-            <label>Ambiente SEFAZ
+            <label>Ambiente SEFAZ <span class="subtle-text">(é isto que define homologação × produção)</span>
               <select id="femAmbiente" ${femPodeEditar ? "" : "disabled"}>
                 <option value="homologation" ${env === "homologation" ? "selected" : ""}>Homologação (testes)</option>
                 <option value="production" ${env === "production" ? "selected" : ""}>Produção</option>
@@ -163,11 +171,11 @@
             <ol class="subtle-text">
               <li>Crie conta em <a href="https://focusnfe.com.br" target="_blank" rel="noopener">focusnfe.com.br</a> e acesse o painel.</li>
               <li><strong>Empresas → Adicionar</strong> — mesmo CNPJ do SAS; informe certificado <strong>A1</strong> (.pfx) e senha no painel Focus (obrigatório lá).</li>
-              <li><strong>Painel API → Tokens</strong> — copie o <strong>Token de Homologação</strong> (testes) ou <strong>Token de Produção</strong> (notas válidas).</li>
-              <li>Cole o token abaixo. A URL muda só com o ambiente (homologação × produção).</li>
+              <li><strong>Painel API → Tokens</strong> — copie o token do <strong>mesmo ambiente</strong> escolhido acima (produção ≠ homologação).</li>
+              <li>Cole o token abaixo. A URL acompanha o ambiente.</li>
               <li>CSC NFC-e: portal SEFAZ do estado (ex. PA) → cadastro NFC-e → gerar CSC → preencher ID e código nesta tela.</li>
             </ol>
-            <p class="subtle-text">Documentação: <a href="https://doc.focusnfe.com.br/reference/ambiente" target="_blank" rel="noopener">ambientes e URLs</a> · Autenticação HTTP Basic (usuário = token, senha vazia).</p>
+            <p class="subtle-text">Textos de ajuda abaixo podem citar as duas URLs — isso é só referência, não significa que o ambiente está em homologação.</p>
           </div>
 
           <div id="femBlocoApi" class="fem-block">
@@ -176,13 +184,13 @@
               <label>URL da API
                 <input type="url" id="femApiUrl" placeholder="${esc(focusBaseUrl(env))}" value="${esc(cfg.api_url || "")}" ${femPodeEditar ? "" : "disabled"} />
               </label>
-              <label>Token Focus (homologação ou produção)
+              <label>Token Focus <span class="subtle-text">(cole o token do ambiente selecionado)</span>
                 <input type="password" id="femApiToken" autocomplete="new-password" placeholder="${cfg.api_token_configurado ? "Deixe vazio para manter" : "Token do Painel API → Tokens"}" ${femPodeEditar ? "" : "disabled"} />
               </label>
             </div>
             ${femPodeEditar ? `<button type="button" class="btn neutral fem-btn-inline" id="femFocusUrlPadrao">Usar URL padrão Focus</button>` : ""}
-            ${cfg.api_token_configurado ? `<p class="subtle-text">Token atual: ${esc(cfg.api_token_mascarado)}</p>` : ""}
-            <p class="subtle-text fem-file-hint">Homologação: ${esc(FOCUS_URL.homologation)} · Produção: ${esc(FOCUS_URL.production)}</p>
+            ${cfg.api_token_configurado ? `<p class="subtle-text">Token atual salvo: ${esc(cfg.api_token_mascarado)}</p>` : ""}
+            <p class="subtle-text fem-file-hint">Referência — Homologação: ${esc(FOCUS_URL.homologation)} · Produção: ${esc(FOCUS_URL.production)}</p>
           </div>
 
           <div id="femBlocoCert" class="fem-block hidden">
@@ -239,7 +247,20 @@
       </div>`;
 
     root.querySelector("#femProvider")?.addEventListener("change", () => toggleProviderBlocks(root));
-    root.querySelector("#femAmbiente")?.addEventListener("change", () => applyFocusUrlIfEmpty(root, true));
+    root.querySelector("#femAmbiente")?.addEventListener("change", () => {
+      applyFocusUrlIfEmpty(root, true);
+      const amb = root.querySelector("#femAmbiente")?.value || "homologation";
+      const banner = root.querySelector("#femAmbienteBanner");
+      if (banner) {
+        const prod = amb === "production";
+        banner.textContent = prod
+          ? "Ambiente atual: PRODUÇÃO (notas reais)"
+          : "Ambiente atual: HOMOLOGAÇÃO (testes)";
+        banner.style.background = prod ? "#ecfdf5" : "#fffbeb";
+        banner.style.borderColor = prod ? "#86efac" : "#fcd34d";
+        banner.style.color = prod ? "#14532d" : "#92400e";
+      }
+    });
     root.querySelector("#femFocusUrlPadrao")?.addEventListener("click", () => applyFocusUrlIfEmpty(root, true));
     toggleProviderBlocks(root);
     if (prov === "focus_nfe" && !cfg.api_url) applyFocusUrlIfEmpty(root, true);
@@ -257,9 +278,18 @@
       const file = root.querySelector("#femCertFile")?.files?.[0];
       if (file) body.certificado_pfx_base64 = await loadCertBase64(file);
       const res = await fFetch(`/fiscal/emissao/config/${femEmpresaId}`, { method: "PUT", body: JSON.stringify(body) });
-      toast("Configuração de emissão salva.", "success");
+      toast(
+        body.environment === "production"
+          ? "Salvo em PRODUÇÃO. Textos de ajuda podem ainda citar homologação — ignore; o ambiente ativo é produção."
+          : "Salvo em HOMOLOGAÇÃO (testes).",
+        "success"
+      );
       const cl = root.querySelector("#femChecklist");
       if (cl && res.prontidao) cl.innerHTML = checklistHtml(res.prontidao);
+      // Recarrega formulário para o banner refletir o ambiente salvo
+      if (typeof loadFiscalEmissaoConfig === "function") {
+        await loadFiscalEmissaoConfig();
+      }
     } catch (e) {
       toast(e?.message || "Falha ao salvar.", "error");
     } finally {

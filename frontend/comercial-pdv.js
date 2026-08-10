@@ -1436,7 +1436,7 @@
       return `<button type="button" class="cpdv-prod${off}${warn}" ${click} ${p.disponivel ? "" : "disabled"}>
         <p class="cpdv-prod__nome">${escHtml(p.nome)}</p>
         <span class="cpdv-prod__preco">${moeda(p.preco)}</span>${fav}${aviso}
-        ${!p.disponivel ? "<small>Indisponível</small>" : ""}
+        ${!p.disponivel ? `<small>${escHtml(p.aviso || "Indisponível")}</small>` : ""}
       </button>`;
     }).join("") || '<p class="subtle-text">Nenhum produto nesta categoria.</p>';
     const cart = cpdvState.cart.length

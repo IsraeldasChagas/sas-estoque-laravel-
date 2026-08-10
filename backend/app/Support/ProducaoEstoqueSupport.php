@@ -136,4 +136,30 @@ final class ProducaoEstoqueSupport
             ->where('quantidade', '>', 0)
             ->sum('quantidade');
     }
+
+    /** Saldo considerando apenas lotes não vencidos (mesma regra da baixa FIFO). */
+    public static function saldoDisponivelValido(int $produtoId, int $unidadeId): float
+    {
+        $hoje = now()->format('Y-m-d');
+        $rows = DB::table('stock_lotes')
+            ->leftJoin('lotes', function ($join) use ($produtoId, $unidadeId) {
+                $join->on('lotes.numero_lote', '=', 'stock_lotes.codigo_lote')
+                    ->where('lotes.produto_id', '=', $produtoId)
+                    ->where('lotes.unidade_id', '=', $unidadeId);
+            })
+            ->where('stock_lotes.produto_id', $produtoId)
+            ->where('stock_lotes.unidade_id', $unidadeId)
+            ->where('stock_lotes.quantidade', '>', 0)
+            ->select('stock_lotes.quantidade', 'lotes.data_validade')
+            ->get();
+
+        $total = 0.0;
+        foreach ($rows as $r) {
+            if (! $r->data_validade || $r->data_validade >= $hoje) {
+                $total += (float) $r->quantidade;
+            }
+        }
+
+        return $total;
+    }
 }
