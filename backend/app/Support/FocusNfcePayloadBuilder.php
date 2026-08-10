@@ -72,8 +72,8 @@ final class FocusNfcePayloadBuilder
                 $origem = '0';
             }
 
+            // Simples Nacional (NFC-e Focus): CSOSN de 3 dígitos. Não usar CST (ex.: 060) como CSOSN.
             $csosn = FiscalCadastroSupport::normalizarCsosn($produto->csosn ?? null)
-                ?? FiscalCadastroSupport::normalizarCst($produto->cst_icms ?? null)
                 ?? '102';
 
             $items[] = [

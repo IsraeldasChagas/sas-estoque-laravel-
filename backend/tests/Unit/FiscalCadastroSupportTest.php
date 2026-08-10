@@ -35,4 +35,14 @@ class FiscalCadastroSupportTest extends TestCase
         $this->assertSame('10063021', FiscalCadastroSupport::normalizarNcm('1006.30.21'));
         $this->assertNull(FiscalCadastroSupport::normalizarNcm('123'));
     }
+
+    public function test_normalizar_csosn_tres_digitos(): void
+    {
+        $this->assertSame('102', FiscalCadastroSupport::normalizarCsosn('102'));
+        $this->assertSame('500', FiscalCadastroSupport::normalizarCsosn('500'));
+        $this->assertSame('500', FiscalCadastroSupport::normalizarCsosn('0500'));
+        $this->assertSame('102', FiscalCadastroSupport::normalizarCsosn('0102'));
+        $this->assertNull(FiscalCadastroSupport::normalizarCsosn('060'));
+        $this->assertNull(FiscalCadastroSupport::normalizarCsosn('999'));
+    }
 }

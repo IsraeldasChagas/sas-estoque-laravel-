@@ -86,11 +86,24 @@ final class FiscalCadastroSupport
             return null;
         }
         $digits = preg_replace('/\D+/', '', $csosn);
-        if ($digits === '' || strlen($digits) > 4) {
+        if ($digits === '') {
+            return null;
+        }
+        // CSOSN oficial tem 3 dígitos (ex.: 102, 500). "0500" / "0102" → remove zero à esquerda.
+        $digits = ltrim($digits, '0');
+        if ($digits === '') {
+            return null;
+        }
+        if (strlen($digits) > 3) {
+            return null;
+        }
+        $code = str_pad($digits, 3, '0', STR_PAD_LEFT);
+        $validos = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900'];
+        if (! in_array($code, $validos, true)) {
             return null;
         }
 
-        return str_pad($digits, 4, '0', STR_PAD_LEFT);
+        return $code;
     }
 
     public static function normalizarBool($value): ?bool
