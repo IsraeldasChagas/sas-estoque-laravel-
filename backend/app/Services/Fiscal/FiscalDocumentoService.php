@@ -265,27 +265,35 @@ final class FiscalDocumentoService
     }
 
     /**
-     * Ajusta o HTML Focus para impressão A4: simetria no topo, espaço e texto dentro das bordas.
+     * Ajusta o HTML Focus para impressão A4: logo centralizada, espaço no topo e texto nas bordas.
      */
     private static function prepararHtmlDanfeA4(string $html): string
     {
-        // Logo menor (Focus manda a imagem sem size).
+        // Reescreve o bloco da logo: tamanho fixo + centro (Dompdf ignora max-width em img remota).
         $html = preg_replace_callback(
-            '#(<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?<img)([^>]*)(>)#is',
+            '#<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?</div>#is',
             static function (array $m): string {
-                $attrs = $m[2];
-                $attrs = preg_replace('/\s(width|height|style)\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $attrs) ?? $attrs;
+                if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
+                    return $m[0];
+                }
+                $srcRaw = $img[1];
+                $src = self::logoSrcParaPdf($srcRaw);
+                $src = htmlspecialchars($src, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                // ~3x o tamanho “pequeno” anterior (40×28) → 120×84, forçado em atributos + style.
+                $w = 120;
+                $h = 84;
 
-                return $m[1].$attrs.' width="120" height="120" style="max-width:120px;max-height:84px;width:auto;height:auto;display:block;margin:0 auto;"'.$m[3];
+                return '<div class="logomarca" style="text-align:center;width:100%;margin:0;padding:18px 0 16px 0;">'
+                    .'<table width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%;margin:0 auto;">'
+                    .'<tr><td align="center" valign="middle" style="text-align:center;padding:0 0 8px 0;">'
+                    .'<img src="'.$src.'" width="'.$w.'" height="'.$h.'" '
+                    .'style="width:'.$w.'px;height:'.$h.'px;display:block;margin:0 auto;border:0;" />'
+                    .'</td></tr>'
+                    .'<tr><td align="center" valign="middle" style="text-align:center;padding:0;">'
+                    .'<span style="font-size:12px;font-weight:bold;letter-spacing:0.04em;">NFC-e</span>'
+                    .'</td></tr>'
+                    .'</table></div>';
             },
-            $html,
-            1
-        ) ?? $html;
-
-        // Simetria no cabeçalho: título NFC-e alinhado ao centro como a logo.
-        $html = preg_replace(
-            '#(<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?)align=["\']left["\']#is',
-            '$1align="center"',
             $html,
             1
         ) ?? $html;
@@ -331,7 +339,7 @@ html, body {
   width: 170mm !important;
   max-width: 170mm !important;
   margin: 0 auto !important;
-  padding: 14px 18px 20px 18px !important;
+  padding: 22px 20px 22px 20px !important;
   border: 1px solid #bfbfbf !important;
   box-sizing: border-box;
   text-align: left !important;
@@ -341,32 +349,37 @@ html, body {
 }
 .logomarca {
   text-align: center !important;
-  margin: 0 0 12px 0;
-  padding: 2px 0 10px 0;
+  width: 100% !important;
+  margin: 0 0 14px 0 !important;
+  padding: 18px 0 16px 0 !important;
   border-bottom: 1px solid #dddddd;
 }
 .logomarca table {
   width: 100% !important;
-  margin: 0 auto;
+  margin: 0 auto !important;
 }
 .logomarca td {
   text-align: center !important;
   vertical-align: middle !important;
 }
 .logomarca img {
+  width: 120px !important;
+  height: 84px !important;
   max-width: 120px !important;
   max-height: 84px !important;
-  width: auto !important;
-  height: auto !important;
   display: block !important;
-  margin: 0 auto 6px auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-bottom: 8px !important;
+  border: 0 !important;
 }
 .logomarca span,
 .logomarca strong,
 .logomarca em {
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-style: normal !important;
-  letter-spacing: 0.03em;
+  font-weight: bold !important;
+  letter-spacing: 0.04em;
   color: #222222;
 }
 .dados-da-empresa {
@@ -485,6 +498,37 @@ CSS;
         }
 
         return $css.$html;
+    }
+
+    /** Embute a logo em data-URI para o Dompdf respeitar width/height. */
+    private static function logoSrcParaPdf(string $src): string
+    {
+        $src = trim($src);
+        if ($src === '' || str_starts_with($src, 'data:')) {
+            return $src;
+        }
+        try {
+            $ctx = stream_context_create([
+                'http' => ['timeout' => 8, 'follow_location' => 1],
+                'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+            ]);
+            $bin = @file_get_contents($src, false, $ctx);
+            if (! is_string($bin) || $bin === '') {
+                return $src;
+            }
+            $mime = 'image/png';
+            if (str_starts_with($bin, "\xFF\xD8\xFF")) {
+                $mime = 'image/jpeg';
+            } elseif (str_starts_with($bin, 'RIFF')) {
+                $mime = 'image/webp';
+            } elseif (str_starts_with($bin, '<svg') || str_starts_with($bin, '<?xml')) {
+                return $src;
+            }
+
+            return 'data:'.$mime.';base64,'.base64_encode($bin);
+        } catch (\Throwable) {
+            return $src;
+        }
     }
 
     private static function injetarQrCodeNoHtml(string $html, ?string $qrcodeUrl, ?string $chave): string
