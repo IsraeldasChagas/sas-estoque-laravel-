@@ -276,8 +276,8 @@ final class FiscalDocumentoService
                 if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
                     return $m[0];
                 }
-                // Mesmo tamanho da logo da nota Focus (241×250), sem distorcer.
-                $logo = self::logoParaPdf($img[1], 250);
+                // Metade do tamanho da nota Focus (~241×250 → ~120×125), sem distorcer.
+                $logo = self::logoParaPdf($img[1], 125);
                 $src = htmlspecialchars($logo['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $w = (int) $logo['width'];
                 $h = (int) $logo['height'];
