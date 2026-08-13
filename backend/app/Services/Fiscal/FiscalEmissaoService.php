@@ -172,6 +172,17 @@ final class FiscalEmissaoService
         }
 
         $err = (string) ($out['error'] ?? 'Falha na emissão Focus.');
+
+        // Duplicidade: SEFAZ já usou esse número — avança o próximo no SAS para não travar.
+        if (stripos($err, 'Duplicidade') !== false || stripos($err, 'duplicidade') !== false) {
+            $usado = self::extrairNumeroDaChaveNfce($err);
+            $atual = (int) ($config->numero_proximo_nfce ?? 0);
+            $proximo = max($atual + 1, ($usado ?? $atual) + 1, 2);
+            $config->numero_proximo_nfce = $proximo;
+            $config->save();
+            $err .= " | Numeração avançada automaticamente para o próximo nº {$proximo}. Clique em Emitir nota de novo.";
+        }
+
         DB::table('vendas')->where('id', $vendaId)->update([
             'emissao_ref' => $ref,
             'status_documento' => 'rejeitado',
@@ -187,6 +198,19 @@ final class FiscalEmissaoService
             'mensagem' => $err,
             'venda_id' => $vendaId,
         ];
+    }
+
+    /** Extrai nNF (9 dígitos) de uma chave NFC-e citada na mensagem SEFAZ. */
+    private static function extrairNumeroDaChaveNfce(string $mensagem): ?int
+    {
+        if (! preg_match('/chNFe[:\s]*([0-9]{44})/i', $mensagem, $m)) {
+            return null;
+        }
+        $chave = $m[1];
+        // cUF(2)+AAMM(4)+CNPJ(14)+mod(2)+serie(3)+nNF(9)+…
+        $nNf = substr($chave, 25, 9);
+
+        return ctype_digit($nNf) ? (int) $nNf : null;
     }
 
     /** @param array<string, mixed> $resultadoVenda */
