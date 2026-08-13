@@ -39,26 +39,31 @@ final class FiscalDocumentoService
         $danfeFocus = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null);
         $ref = trim((string) ($venda->emissao_ref ?? ''));
         if ($ref !== '') {
-            $consulta = $client->consultarNfce($ref);
-            $body = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
-            if (! empty($body['qrcode_url']) && is_string($body['qrcode_url'])) {
-                $qrcodeUrl = $body['qrcode_url'];
-            }
-            if (! empty($body['url_consulta_nf']) && is_string($body['url_consulta_nf'])) {
-                $urlConsulta = $body['url_consulta_nf'];
-            }
-            if (! $danfeFocus && ! empty($body['caminho_danfe'])) {
-                $danfeFocus = self::urlAbsolutaFocus($baseUrl, (string) $body['caminho_danfe']);
+            try {
+                $consulta = $client->consultarNfce($ref);
+                $body = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
+                if (! empty($body['qrcode_url']) && is_string($body['qrcode_url'])) {
+                    $qrcodeUrl = $body['qrcode_url'];
+                }
+                if (! empty($body['url_consulta_nf']) && is_string($body['url_consulta_nf'])) {
+                    $urlConsulta = $body['url_consulta_nf'];
+                }
+                if (! $danfeFocus && ! empty($body['caminho_danfe'])) {
+                    $danfeFocus = self::urlAbsolutaFocus($baseUrl, (string) $body['caminho_danfe']);
+                }
+            } catch (\Throwable $e) {
+                report($e);
             }
         }
 
         $chave = preg_replace('/\D+/', '', (string) ($venda->chave_acesso ?? ''));
+        $chave44 = is_string($chave) && strlen($chave) === 44 ? $chave : null;
 
         return [
             'venda_id' => $vendaId,
             'status_documento' => $venda->status_documento ?? null,
             'chave_acesso' => $chave !== '' ? $chave : null,
-            'chave_completa' => is_string($chave) && strlen($chave) === 44,
+            'chave_completa' => $chave44 !== null,
             'numero_documento' => $venda->numero_documento ?? null,
             'serie_documento' => $venda->serie_documento ?? null,
             'emissao_ref' => $venda->emissao_ref ?? null,
@@ -66,6 +71,7 @@ final class FiscalDocumentoService
             'url_xml' => $venda->url_xml ?? null,
             'qrcode_url' => $qrcodeUrl,
             'url_consulta_nf' => $urlConsulta,
+            'consulta_svrs_url' => FiscalNfceCicloService::CONSULTA_SVRS_URL,
             'danfe_focus_url' => $danfeFocus,
             'documentos' => self::rotasRelativas($vendaId),
             'disponivel' => self::documentoDisponivel($venda),
@@ -625,7 +631,7 @@ CSS;
     {
         $st = strtolower(trim((string) ($venda->status_documento ?? '')));
 
-        return in_array($st, ['autorizado', 'autorizada'], true)
+        return in_array($st, ['autorizado', 'autorizada', 'contingencia'], true)
             || ! empty($venda->chave_acesso)
             || ! empty($venda->emissao_ref);
     }

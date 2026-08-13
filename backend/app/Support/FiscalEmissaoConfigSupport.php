@@ -247,7 +247,7 @@ final class FiscalEmissaoConfigSupport
             'motor_emissao_ativo' => $motorAtivo,
             'modo_emissao_pdv' => $modo,
             'modo_label' => self::MODOS_EMISSAO_PDV[$modo] ?? $modo,
-            'mostrar_opcao_nota' => $motorAtivo && $modo !== 'desligada',
+            'mostrar_opcao_nota' => $modo !== 'desligada',
             'emitir_nota_padrao' => $motorAtivo && $modo === 'automatica',
             'pode_emitir_agora' => $motorAtivo && ($prontidao['pronto'] ?? false),
             'checklist_pronto' => (bool) ($prontidao['pronto'] ?? false),

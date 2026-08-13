@@ -134,6 +134,10 @@ final class FiscalMovimentacaoSupport
 
         $numDoc = trim((string) ($payload['numero_documento'] ?? ''));
         $chave = preg_replace('/\D/', '', (string) ($payload['chave_acesso_documento'] ?? ''));
+        $querEmitir = filter_var($payload['emitir_nfe'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($querEmitir) {
+            return null;
+        }
         if ($numDoc === '' && strlen($chave) < 44 && strlen($detalhe) < 10) {
             return 'Operação entre CNPJs diferentes: informe número do documento, chave de acesso (44 dígitos) ou justificativa detalhada (mín. 10 caracteres).';
         }

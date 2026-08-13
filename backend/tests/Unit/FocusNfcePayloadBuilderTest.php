@@ -10,6 +10,7 @@ class FocusNfcePayloadBuilderTest extends TestCase
     public function test_monta_payload_com_item_e_pagamento(): void
     {
         $venda = (object) [
+            'id' => 1,
             'forma_pagamento' => 'PIX',
         ];
         $itens = [
@@ -46,5 +47,6 @@ class FocusNfcePayloadBuilderTest extends TestCase
         $this->assertSame('21069090', $payload['items'][0]['codigo_ncm']);
         $this->assertSame('17', $payload['formas_pagamento'][0]['forma_pagamento']);
         $this->assertSame('100', $payload['numero']);
+        $this->assertSame('00143710', $payload['codigo_unico']);
     }
 }

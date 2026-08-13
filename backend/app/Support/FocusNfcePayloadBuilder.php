@@ -38,6 +38,9 @@ final class FocusNfcePayloadBuilder
         if ($config->numero_proximo_nfce) {
             $payload['numero'] = (string) (int) $config->numero_proximo_nfce;
         }
+        if (! empty($venda->id)) {
+            $payload['codigo_unico'] = self::codigoUnico((int) $venda->id);
+        }
         if (! empty($config->csc_id) && ! empty($config->csc_token)) {
             $payload['id_csc'] = (string) $config->csc_id;
             $payload['csc'] = (string) $config->csc_token;
@@ -102,6 +105,17 @@ final class FocusNfcePayloadBuilder
         ];
 
         return $payload;
+    }
+
+    /** cNF de 8 dígitos — obrigatório na contingência offline Focus. */
+    public static function codigoUnico(int $vendaId): string
+    {
+        $n = ($vendaId * 7919 + 135791) % 100000000;
+        if ($n < 1) {
+            $n = 1;
+        }
+
+        return str_pad((string) $n, 8, '0', STR_PAD_LEFT);
     }
 
     private static function unidadeComercial(?string $u): string

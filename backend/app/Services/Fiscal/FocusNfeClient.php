@@ -13,9 +13,14 @@ final class FocusNfeClient
     ) {}
 
     /** @return array<string, mixed> */
-    public function enviarNfce(string $ref, array $payload): array
+    public function enviarNfce(string $ref, array $payload, bool $contingenciaOffline = false): array
     {
-        return $this->request('POST', '/v2/nfce?ref='.rawurlencode($ref), $payload);
+        $qs = 'ref='.rawurlencode($ref);
+        if ($contingenciaOffline) {
+            $qs .= '&forma_emissao=offline';
+        }
+
+        return $this->request('POST', '/v2/nfce?'.$qs, $payload);
     }
 
     /** @return array<string, mixed> */
@@ -24,10 +29,45 @@ final class FocusNfeClient
         return $this->request('GET', '/v2/nfce/'.rawurlencode($ref), null);
     }
 
+    /** @return array<string, mixed> */
+    public function cancelarNfce(string $ref, string $justificativa): array
+    {
+        return $this->request('DELETE', '/v2/nfce/'.rawurlencode($ref), [
+            'justificativa' => $justificativa,
+        ]);
+    }
+
+    /**
+     * @param  array{cnpj: string, serie: string, numero_inicial: string, numero_final: string, justificativa: string}  $payload
+     * @return array<string, mixed>
+     */
+    public function inutilizarNfce(array $payload): array
+    {
+        return $this->request('POST', '/v2/nfce/inutilizacao', $payload);
+    }
+
+    /** @return array<string, mixed> */
+    public function enviarNfe(string $ref, array $payload): array
+    {
+        return $this->request('POST', '/v2/nfe?ref='.rawurlencode($ref), $payload);
+    }
+
+    /** @return array<string, mixed> */
+    public function consultarNfe(string $ref): array
+    {
+        return $this->request('GET', '/v2/nfe/'.rawurlencode($ref), null);
+    }
+
     /** @return array{http_status: int, body: string, content_type: string|null, ok: bool} */
     public function baixarNfcePdf(string $ref): array
     {
         return $this->requestBinary('GET', '/v2/nfce/'.rawurlencode($ref).'.pdf');
+    }
+
+    /** @return array{http_status: int, body: string, content_type: string|null, ok: bool} */
+    public function baixarNfePdf(string $ref): array
+    {
+        return $this->requestBinary('GET', '/v2/nfe/'.rawurlencode($ref).'.pdf');
     }
 
     /** @return array{http_status: int, body: string, content_type: string|null, ok: bool} */
@@ -103,6 +143,7 @@ final class FocusNfeClient
             'GET' => $pending->get($url),
             'PUT' => $pending->put($url, $body ?? []),
             'POST' => $pending->post($url, $body ?? []),
+            'DELETE' => $pending->withBody(json_encode($body ?? [], JSON_UNESCAPED_UNICODE), 'application/json')->delete($url),
             default => $pending->send($method, $url, ['json' => $body ?? []]),
         };
 

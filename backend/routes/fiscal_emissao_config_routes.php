@@ -82,6 +82,9 @@ foreach ([
     '/fiscal/emissao/vendas/{vendaId}/danfe.pdf',
     '/fiscal/emissao/vendas/{vendaId}/danfe.html',
     '/fiscal/emissao/vendas/{vendaId}/xml',
+    '/fiscal/emissao/vendas/{vendaId}/cancelar',
+    '/fiscal/emissao/vendas/{vendaId}/transmitir-contingencia',
+    '/fiscal/emissao/inutilizacao',
 ] as $p) {
     Route::options($p, $fiscalEmCors);
 }
@@ -102,6 +105,7 @@ Route::get('/fiscal/emissao/meta', function () use ($fiscalEmJson) {
         'focus_urls' => FiscalEmissaoConfigSupport::FOCUS_API_URL,
         'modos_emissao_pdv' => FiscalEmissaoConfigSupport::MODOS_EMISSAO_PDV,
         'fase_emissao' => 'focus_nfce_pdv',
+        'consulta_svrs_url' => \App\Services\Fiscal\FiscalNfceCicloService::CONSULTA_SVRS_URL,
         'mensagem' => 'Com emissão ativa, vendas PDV disparam NFC-e Focus automaticamente após a baixa de estoque.',
     ]);
 });
@@ -424,4 +428,53 @@ Route::get('/fiscal/emissao/vendas/{vendaId}/xml', function (Request $request, $
     } catch (\Throwable $e) {
         return $fiscalEmJson(['error' => $e->getMessage()], 422);
     }
+});
+
+Route::post('/fiscal/emissao/vendas/{vendaId}/cancelar', function (Request $request, $vendaId) use ($fiscalEmPodeEmitir, $fiscalEmAuth, $fiscalEmJson) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeEmitir($u)) {
+        return $fiscalEmJson(['error' => 'Sem permissão para cancelar NFC-e.'], 403);
+    }
+    $justificativa = (string) $request->input('justificativa', '');
+    $result = \App\Services\Fiscal\FiscalNfceCicloService::cancelar((int) $vendaId, $justificativa);
+    if (! ($result['ok'] ?? false) && empty($result['error'])) {
+        $result['error'] = $result['mensagem'] ?? 'Falha ao cancelar NFC-e.';
+    }
+    $code = ($result['ok'] ?? false) ? 200 : 422;
+
+    return $fiscalEmJson($result, $code);
+});
+
+Route::post('/fiscal/emissao/vendas/{vendaId}/transmitir-contingencia', function (Request $request, $vendaId) use ($fiscalEmPodeEmitir, $fiscalEmAuth, $fiscalEmJson) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeEmitir($u)) {
+        return $fiscalEmJson(['error' => 'Sem permissão para transmitir NFC-e.'], 403);
+    }
+    $result = \App\Services\Fiscal\FiscalNfceCicloService::transmitirContingencia((int) $vendaId);
+    if (! ($result['ok'] ?? false) && empty($result['error'])) {
+        $result['error'] = $result['mensagem'] ?? 'Falha ao transmitir contingência.';
+    }
+    $code = ($result['ok'] ?? false) ? 200 : 422;
+
+    return $fiscalEmJson($result, $code);
+});
+
+Route::post('/fiscal/emissao/inutilizacao', function (Request $request) use ($fiscalEmPodeEditar, $fiscalEmAuth, $fiscalEmJson) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeEditar($u)) {
+        return $fiscalEmJson(['error' => 'Somente administrador pode inutilizar numeração.'], 403);
+    }
+    $result = \App\Services\Fiscal\FiscalNfceCicloService::inutilizar(
+        (int) $request->input('empresa_id', 0),
+        (string) $request->input('serie', ''),
+        (string) $request->input('numero_inicial', ''),
+        (string) $request->input('numero_final', ''),
+        (string) $request->input('justificativa', '')
+    );
+    if (! ($result['ok'] ?? false) && empty($result['error'])) {
+        $result['error'] = $result['mensagem'] ?? 'Falha na inutilização.';
+    }
+    $code = ($result['ok'] ?? false) ? 200 : 422;
+
+    return $fiscalEmJson($result, $code);
 });

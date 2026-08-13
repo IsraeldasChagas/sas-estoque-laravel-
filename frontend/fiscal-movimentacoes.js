@@ -80,7 +80,11 @@
         <input type="text" name="setor_destino" id="saidaSetorDestino" maxlength="120" />
       </label>
       <div id="saidaFiscalDocWrapper" class="hidden fiscal-saida-doc">
-        <p class="form-hint">Unidades de empresas (CNPJs) diferentes — informe documento fiscal ou justificativa detalhada.</p>
+        <p class="form-hint">CNPJs diferentes. Marque abaixo se quiser emitir a NF-e agora (origem → destino). Sem marcar, só move o estoque — aí informe nota/chave ou justificativa.</p>
+        <label class="checkbox-label">
+          <input type="checkbox" name="emitir_nfe" id="saidaEmitirNfe" value="1" />
+          Emitir NF-e desta transferência (quando eu quiser)
+        </label>
         <label>Modelo <input type="text" name="modelo_documento" maxlength="4" placeholder="55" /></label>
         <label>Número documento <input type="text" name="numero_documento" maxlength="60" /></label>
         <label>Chave de acesso <input type="text" name="chave_acesso_documento" maxlength="44" /></label>
@@ -142,6 +146,8 @@
       const el = panel.querySelector(`[name="${name}"]`);
       if (el && el.value && String(el.value).trim()) out[name] = String(el.value).trim();
     });
+    const emitir = panel.querySelector('[name="emitir_nfe"]');
+    if (emitir) out.emitir_nfe = !!emitir.checked;
     return out;
   };
 

@@ -13381,8 +13381,14 @@ async function submitSaida(event) {
     const resultado = await fetchJSON("/saida", { method: "POST", body: JSON.stringify(data) });
     console.log("✅ Resposta do servidor:", resultado);
     
-    // Mostra mensagem de sucesso
-    showToast("Feito com sucesso!", "success");
+    if (resultado?.nfe?.emitida) {
+      showToast(resultado.nfe.mensagem || "Transferência e NF-e ok.", "success");
+    } else if (resultado?.nfe && resultado.nfe.emitida === false) {
+      showToast(resultado.message || "Estoque transferido.", "success");
+      showToast(resultado.nfe.mensagem || "A NF-e não foi autorizada. Você pode emitir depois.", "warning");
+    } else {
+      showToast("Feito com sucesso!", "success");
+    }
     
     const possuiFiltros = Object.values(movFiltrosAtuais || {}).some((valor) => Boolean(valor));
     resetSaidaFromQR();

@@ -40,6 +40,12 @@ final class FiscalEmissaoService
                 'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
             ];
         }
+        if (in_array($stDoc, ['cancelado', 'cancelada'], true)) {
+            return self::skip('NFC-e cancelada. Não é possível reemitir o mesmo cupom.');
+        }
+        if ($stDoc === 'contingencia') {
+            return FiscalNfceCicloService::transmitirContingencia($vendaId);
+        }
 
         // Recuperação: autorização ficou só no log (ex.: 500 ao gravar chave).
         if ($forcar) {
@@ -133,6 +139,18 @@ final class FiscalEmissaoService
         $emitter = new FocusNfeDocumentEmitter($client);
         $out = $emitter->emitirNfce($empresaId, $payload);
 
+        if (! ($out['success'] ?? false) && self::sefazIndisponivel($out)) {
+            $payload['_ref'] = $ref;
+            $payload['_contingencia_offline'] = true;
+            $payload['codigo_unico'] = FocusNfcePayloadBuilder::codigoUnico($vendaId);
+            if (empty($payload['serie']) || empty($payload['numero'])) {
+                $out['error'] = (string) ($out['error'] ?? 'SEFAZ indisponível')
+                    .' | Contingência exige série e próximo número NFC-e na configuração.';
+            } else {
+                $out = $emitter->emitirNfce($empresaId, $payload);
+            }
+        }
+
         if (! ($out['success'] ?? false)) {
             $err = (string) ($out['error'] ?? '');
             if (stripos($err, 'CSC') !== false || stripos($err, 'Id Token') !== false) {
@@ -146,13 +164,14 @@ final class FiscalEmissaoService
         self::registrarLog($vendaId, $empresaId, $ref, $out);
 
         if ($out['success'] ?? false) {
+            $statusDoc = self::statusDocumentoDeResposta($out);
             try {
-                self::persistirAutorizacao($vendaId, $config, $ref, $out);
+                self::persistirDocumento($vendaId, $config, $ref, $out);
             } catch (\Throwable $e) {
-                // Nota já autorizada na Focus — não pode “sumir” no SAS.
+                // Nota já autorizada/gerada na Focus — não pode “sumir” no SAS.
                 report($e);
                 try {
-                    self::persistirAutorizacao($vendaId, $config, $ref, $out, true);
+                    self::persistirDocumento($vendaId, $config, $ref, $out, true);
                 } catch (\Throwable $e2) {
                     report($e2);
                 }
@@ -160,7 +179,7 @@ final class FiscalEmissaoService
                 return [
                     'emitida' => true,
                     'skipped' => false,
-                    'status' => 'autorizado',
+                    'status' => $statusDoc,
                     'chave' => self::normalizarChaveAcesso($out['chave'] ?? null),
                     'numero' => $out['numero'] ?? null,
                     'serie' => $out['serie'] ?? null,
@@ -169,7 +188,7 @@ final class FiscalEmissaoService
                     'ref' => $ref,
                     'venda_id' => $vendaId,
                     'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
-                    'mensagem' => 'NFC-e autorizada na Focus. Houve aviso ao gravar no SAS: '.$e->getMessage(),
+                    'mensagem' => self::mensagemSucessoEmissao($statusDoc).' Houve aviso ao gravar no SAS: '.$e->getMessage(),
                 ];
             }
 
@@ -178,7 +197,7 @@ final class FiscalEmissaoService
             return [
                 'emitida' => true,
                 'skipped' => false,
-                'status' => 'autorizado',
+                'status' => $statusDoc,
                 'chave' => self::normalizarChaveAcesso($out['chave'] ?? null),
                 'numero' => $out['numero'] ?? null,
                 'serie' => $out['serie'] ?? null,
@@ -187,7 +206,7 @@ final class FiscalEmissaoService
                 'ref' => $ref,
                 'venda_id' => $vendaId,
                 'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
-                'mensagem' => 'NFC-e autorizada. PDF e XML disponíveis no sistema.',
+                'mensagem' => self::mensagemSucessoEmissao($statusDoc),
             ];
         }
 
@@ -229,16 +248,17 @@ final class FiscalEmissaoService
     /**
      * @param  array<string, mixed>  $out
      */
-    private static function persistirAutorizacao(int $vendaId, FiscalEmissaoConfig $config, string $ref, array $out, bool $minimo = false): void
+    public static function persistirDocumento(int $vendaId, FiscalEmissaoConfig $config, string $ref, array $out, bool $minimo = false): void
     {
+        $statusDoc = self::statusDocumentoDeResposta($out);
         $chave = self::normalizarChaveAcesso($out['chave'] ?? null);
         $update = [
             'chave_acesso' => $chave,
             'numero_documento' => isset($out['numero']) ? (string) $out['numero'] : null,
             'serie_documento' => isset($out['serie']) ? (string) $out['serie'] : null,
             'emissao_ref' => $ref,
-            'status_documento' => 'autorizado',
-            'emissao_mensagem' => 'NFC-e autorizada via Focus NFe.',
+            'status_documento' => $statusDoc,
+            'emissao_mensagem' => self::mensagemSucessoEmissao($statusDoc),
             'updated_at' => now(),
         ];
         if (! $minimo) {
@@ -295,7 +315,7 @@ final class FiscalEmissaoService
         }
         $ref = (string) ($log->ref ?? $out['ref'] ?? '');
         try {
-            self::persistirAutorizacao($vendaId, $config, $ref, $out);
+            self::persistirDocumento($vendaId, $config, $ref, $out);
             self::atualizarEventoVenda($vendaId);
         } catch (\Throwable $e) {
             report($e);
@@ -331,6 +351,43 @@ final class FiscalEmissaoService
         $nNf = substr($chave, 25, 9);
 
         return ctype_digit($nNf) ? (int) $nNf : null;
+    }
+
+    /** @param array<string, mixed> $out */
+    public static function sefazIndisponivel(array $out): bool
+    {
+        $blob = strtolower((string) ($out['error'] ?? '').' '.(string) ($out['status'] ?? '').' '.(string) ($out['mensagem'] ?? ''));
+        if (preg_match('/\b(108|109)\b/', $blob)) {
+            return true;
+        }
+
+        foreach (['paralisado', 'timeout', 'timed out', 'indispon', '503', '504', 'connection refused', 'could not resolve', 'não foi possível conectar'] as $needle) {
+            if (str_contains($blob, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @param array<string, mixed> $out */
+    private static function statusDocumentoDeResposta(array $out): string
+    {
+        $st = strtolower((string) ($out['status'] ?? ''));
+        if ($st === 'contingencia' || (! empty($out['contingencia_offline']) && empty($out['contingencia_offline_efetivada']))) {
+            return 'contingencia';
+        }
+
+        return 'autorizado';
+    }
+
+    private static function mensagemSucessoEmissao(string $statusDoc): string
+    {
+        if ($statusDoc === 'contingencia') {
+            return 'NFC-e emitida em contingência. Transmita à SEFAZ em até 24 horas (Histórico → Transmitir).';
+        }
+
+        return 'NFC-e autorizada. PDF e XML disponíveis no sistema.';
     }
 
     /** @param array<string, mixed> $resultadoVenda */

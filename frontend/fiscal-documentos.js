@@ -119,6 +119,18 @@
   window.fiscalBaixarDanfePdf = (vendaId) => fiscalEntregarDocumentosVenda(vendaId, { autoPdf: true, autoXml: false });
   window.fiscalBaixarXmlNota = (vendaId) => fiscalEntregarDocumentosVenda(vendaId, { autoPdf: false, autoXml: true });
 
+  async function fiscalDocJson(vendaId, path, opts) {
+    const res = await fetch(`${apiBase()}${path}`, {
+      method: opts?.method || "GET",
+      headers: { ...authHeaders(), Accept: "application/json", "Content-Type": "application/json" },
+      cache: "no-store",
+      body: opts?.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || data.message || data.mensagem || `HTTP ${res.status}`);
+    return data;
+  }
+
   /** Abre o cupom HTML oficial da Focus (QR Code válido). */
   window.fiscalAbrirDanfeHtml = async (vendaId) => {
     const id = Number(vendaId);
@@ -137,28 +149,67 @@
     }
   };
 
-  /** Abre a URL oficial de consulta SEFAZ (qrcode_url completo com hash). */
-  window.fiscalAbrirConsultaSefaz = async (vendaId) => {
+  /** Abre o portal SVRS (consulta oficial da NFC-e de RO) com a chave de 44 dígitos copiada. */
+  window.fiscalAbrirConsultaSvrs = async (vendaId) => {
     const id = Number(vendaId);
     if (!id) return;
     try {
-      const res = await fetch(`${apiBase()}/fiscal/emissao/vendas/${id}/documentos`, {
-        method: "GET",
-        headers: { ...authHeaders(), Accept: "application/json" },
-        cache: "no-store",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
-      const url = data.qrcode_url || data.danfe_focus_url;
-      if (!url) {
-        throw new Error("Link de consulta ainda não disponível. Abra o Cupom ou baixe o PDF novo.");
+      const data = await fiscalDocJson(id, `/fiscal/emissao/vendas/${id}/documentos`);
+      const chave = String(data.chave_acesso || "").replace(/\D/g, "");
+      const portal = data.consulta_svrs_url || "https://dfe-portal.svrs.rs.gov.br/NFCe/Consulta";
+      if (chave.length === 44) {
+        try {
+          await navigator.clipboard.writeText(chave);
+          toast("Chave de 44 dígitos copiada. Cole no portal SVRS.", "success");
+        } catch {
+          toast("Chave: " + chave, "info");
+        }
+      } else if (chave) {
+        toast("Chave incompleta no SAS (" + chave.length + " dígitos). Cole a chave completa no portal.", "warning");
+      } else {
+        toast("Abra o Cupom ou o PDF para ver a chave, depois cole no SVRS.", "warning");
       }
-      if (data.chave_acesso && String(data.chave_acesso).length !== 44) {
-        toast("Atenção: chave incompleta no SAS (" + String(data.chave_acesso).length + " dígitos).", "warning");
-      }
-      window.open(url, "_blank", "noopener,noreferrer");
+      window.open(portal, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast(e?.message || "Não foi possível abrir a consulta SEFAZ.", "warning");
+      toast(e?.message || "Não foi possível abrir a consulta SVRS.", "warning");
+    }
+  };
+  window.fiscalAbrirConsultaSefaz = window.fiscalAbrirConsultaSvrs;
+
+  window.fiscalCancelarNfce = async (vendaId) => {
+    const id = Number(vendaId);
+    if (!id) return;
+    const justificativa = window.prompt("Justificativa do cancelamento (mínimo 15 caracteres, até ~30 min após a autorização):");
+    if (justificativa == null) return;
+    if (String(justificativa).trim().length < 15) {
+      toast("Justificativa deve ter pelo menos 15 caracteres.", "warning");
+      return;
+    }
+    try {
+      const data = await fiscalDocJson(id, `/fiscal/emissao/vendas/${id}/cancelar`, {
+        method: "POST",
+        body: { justificativa: String(justificativa).trim() },
+      });
+      toast(data.mensagem || "NFC-e cancelada.", data.ok === false ? "warning" : "success");
+      return data;
+    } catch (e) {
+      toast(e?.message || "Não foi possível cancelar a NFC-e.", "error");
+    }
+  };
+
+  window.fiscalTransmitirContingencia = async (vendaId) => {
+    const id = Number(vendaId);
+    if (!id) return;
+    try {
+      toast("Consultando SEFAZ / Focus…", "info");
+      const data = await fiscalDocJson(id, `/fiscal/emissao/vendas/${id}/transmitir-contingencia`, { method: "POST" });
+      toast(data.mensagem || "Contingência atualizada.", data.status === "autorizado" ? "success" : "info");
+      if (data.status === "autorizado" && typeof fiscalEntregarDocumentosVenda === "function") {
+        await fiscalEntregarDocumentosVenda(id);
+      }
+      return data;
+    } catch (e) {
+      toast(e?.message || "Não foi possível transmitir a contingência.", "error");
     }
   };
 })();

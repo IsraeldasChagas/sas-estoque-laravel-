@@ -3,10 +3,13 @@
 use App\Support\MigrationRhSafetyChecker;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Schedule::command('fiscal:transmitir-contingencia --limite=50')->everyFifteenMinutes();
 
 Artisan::command('rh:verify-migration-safety', function () {
     $violations = MigrationRhSafetyChecker::scan();

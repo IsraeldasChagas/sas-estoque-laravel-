@@ -224,6 +224,21 @@
               <label>Token CSC<input type="password" id="femCscToken" autocomplete="new-password" placeholder="${cfg.csc_token_configurado ? "Deixe vazio para manter" : ""}" ${femPodeEditar ? "" : "disabled"} /></label>
             </div>
             ${cfg.csc_token_configurado ? `<p class="subtle-text">CSC: ${esc(cfg.csc_token_mascarado)}</p>` : ""}
+            ${
+              femPodeEditar
+                ? `<div class="fem-inut" style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border, #e5e7eb)">
+              <h5 style="margin:0 0 0.4rem">Inutilizar numeração NFC-e</h5>
+              <p class="subtle-text">Use se pulou números (falha de emissão) e precisa inutilizar o intervalo na SEFAZ. Justificativa mínima 15 caracteres.</p>
+              <div class="fem-grid-2">
+                <label>Série<input type="number" id="femInutSerie" min="1" max="999" value="${esc(cfg.serie_nfce ?? "1")}" /></label>
+                <label>Nº inicial<input type="number" id="femInutIni" min="1" /></label>
+                <label>Nº final<input type="number" id="femInutFim" min="1" /></label>
+                <label>Justificativa<input id="femInutJust" maxlength="255" placeholder="Ex.: quebra de sequência por rejeição SEFAZ" /></label>
+              </div>
+              <button type="button" class="btn secondary fem-btn-inline" id="femInutilizar" style="margin-top:0.5rem">Inutilizar na SEFAZ</button>
+            </div>`
+                : ""
+            }
           </div>
 
           <div class="fem-block">
@@ -270,6 +285,7 @@
     root.querySelector("#femSalvar")?.addEventListener("click", () => saveConfig(root));
     root.querySelector("#femValidar")?.addEventListener("click", () => validar(root));
     root.querySelector("#femTestar")?.addEventListener("click", () => testar(root));
+    root.querySelector("#femInutilizar")?.addEventListener("click", () => inutilizarNumeracao(root));
   }
 
   async function saveConfig(root) {
@@ -325,6 +341,40 @@
       toast(res.message || (res.success ? "OK" : "Verifique os dados."), res.success ? "success" : "warning");
     } catch (e) {
       toast(e?.message || "Falha no teste.", "error");
+    }
+  }
+
+  async function inutilizarNumeracao(root) {
+    if (!femEmpresaId || femBusy) return;
+    const serie = root.querySelector("#femInutSerie")?.value || "";
+    const numeroInicial = root.querySelector("#femInutIni")?.value || "";
+    const numeroFinal = root.querySelector("#femInutFim")?.value || "";
+    const justificativa = (root.querySelector("#femInutJust")?.value || "").trim();
+    if (!serie || !numeroInicial || !numeroFinal) {
+      toast("Informe série, número inicial e número final.", "warning");
+      return;
+    }
+    if (justificativa.length < 15) {
+      toast("Justificativa deve ter pelo menos 15 caracteres.", "warning");
+      return;
+    }
+    femBusy = true;
+    try {
+      const res = await fFetch("/fiscal/emissao/inutilizacao", {
+        method: "POST",
+        body: JSON.stringify({
+          empresa_id: femEmpresaId,
+          serie,
+          numero_inicial: numeroInicial,
+          numero_final: numeroFinal,
+          justificativa,
+        }),
+      });
+      toast(res.mensagem || "Numeração inutilizada.", res.ok === false ? "warning" : "success");
+    } catch (e) {
+      toast(e?.message || "Falha na inutilização.", "error");
+    } finally {
+      femBusy = false;
     }
   }
 

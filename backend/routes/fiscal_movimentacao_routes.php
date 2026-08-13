@@ -121,3 +121,17 @@ Route::get('/fiscal/relatorio/transferencias', function (Request $request) {
         'entre_cnpjs' => $rows->where('tipo_movimentacao', 'operacao_entre_cnpjs')->values(),
     ]);
 });
+
+Route::post('/fiscal/movimentacoes/{id}/nfe', function (Request $request, $id) {
+    $uid = $request->header('X-Usuario-Id');
+    $u = $uid ? DB::table('usuarios')->where('id', $uid)->where('ativo', 1)->first() : null;
+    $perfil = strtoupper(trim((string) ($u->perfil ?? '')));
+    if (! in_array($perfil, ['ADMIN', 'ADMINISTRADOR', 'GERENTE'], true)) {
+        return response()->json(['error' => 'Sem permissão para emitir NF-e.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+    $result = \App\Services\Fiscal\FiscalNfeTransferenciaService::emitirParaMovimentacao((int) $id);
+    $code = ($result['emitida'] ?? false) ? 200 : 422;
+
+    return response()->json($result, $code)->header('Access-Control-Allow-Origin', '*');
+});

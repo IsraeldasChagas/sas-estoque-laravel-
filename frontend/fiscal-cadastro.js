@@ -479,6 +479,16 @@
             <label>Município<input name="municipio" maxlength="120" /></label>
             <label>Status<select name="ativo"><option value="1">Ativa</option><option value="0">Inativa</option></select></label>
           </div>
+          <p class="subtle-text" style="margin:0.75rem 0 0.35rem">Endereço (obrigatório para NF-e de transferência entre empresas)</p>
+          <div class="fiscal-form-grid-2">
+            <label class="fiscal-field-full">Logradouro<input name="logradouro" maxlength="255" placeholder="Rua, avenida..." /></label>
+          </div>
+          <div class="fiscal-form-grid-2">
+            <label>Número<input name="numero" maxlength="20" placeholder="S/N" /></label>
+            <label>Bairro<input name="bairro" maxlength="120" /></label>
+            <label>CEP<input name="cep" maxlength="10" placeholder="00000-000" /></label>
+            <label>Cód. IBGE município<input name="codigo_municipio" maxlength="7" placeholder="1100205" /></label>
+          </div>
         </section>
       </form></div></div>`;
 
@@ -532,6 +542,11 @@
       form.elements.inscricao_municipal.value = emp.inscricao_municipal || "";
       form.elements.uf.value = emp.uf || "";
       form.elements.municipio.value = emp.municipio || "";
+      if (form.elements.logradouro) form.elements.logradouro.value = emp.logradouro || "";
+      if (form.elements.numero) form.elements.numero.value = emp.numero || "";
+      if (form.elements.bairro) form.elements.bairro.value = emp.bairro || "";
+      if (form.elements.cep) form.elements.cep.value = emp.cep || "";
+      if (form.elements.codigo_municipio) form.elements.codigo_municipio.value = emp.codigo_municipio || "";
       setEmpresaRegimeValue(form, emp.regime_tributario || "", false);
       if (emp.crt) form.dataset.crtManual = "1";
       setEmpresaCrtSelect(form, emp.crt);
@@ -571,6 +586,11 @@
       inscricao_municipal: form.elements.inscricao_municipal.value.trim() || null,
       uf: form.elements.uf.value.trim().toUpperCase() || null,
       municipio: form.elements.municipio.value.trim() || null,
+      logradouro: form.elements.logradouro?.value.trim() || null,
+      numero: form.elements.numero?.value.trim() || null,
+      bairro: form.elements.bairro?.value.trim() || null,
+      cep: form.elements.cep?.value.trim() || null,
+      codigo_municipio: form.elements.codigo_municipio?.value.trim() || null,
       regime_tributario: form.elements.regime_tributario.value || null,
       crt: form.elements.crt.value.trim() || null,
       ativo: form.elements.ativo.value === "1",

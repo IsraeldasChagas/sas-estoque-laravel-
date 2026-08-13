@@ -860,6 +860,53 @@
   border: 1px dashed rgba(0, 71, 171, 0.25);
   background: rgba(0, 71, 171, 0.03);
 }
+.cpdv-pgto-nota__titulo {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1a237e;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.cpdv-pgto-nota__opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.cpdv-pgto-nota__opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.7rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid #c5cae9;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1a237e;
+}
+.cpdv-pgto-nota__opt:has(input:checked) {
+  border-color: #1565c0;
+  background: #e3f2fd;
+  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.18);
+}
+.cpdv-pgto-nota__opt input {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  flex-shrink: 0;
+}
+.cpdv-pgto-nota small {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #607d8b;
+  line-height: 1.4;
+  font-weight: 400;
+}
 .cpdv-pgto-nota__label {
   display: flex;
   gap: 0.65rem;

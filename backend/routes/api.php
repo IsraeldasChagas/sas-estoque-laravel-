@@ -3964,6 +3964,11 @@ Route::post('/saida', function (Request $request) {
                 'forcar' => filter_var($request->input('forcar'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
             ]);
         }
+        if ($request->has('emitir_nfe')) {
+            $request->merge([
+                'emitir_nfe' => filter_var($request->input('emitir_nfe'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+            ]);
+        }
 
         DB::beginTransaction();
         
@@ -3984,6 +3989,7 @@ Route::post('/saida', function (Request $request) {
             'chave_acesso_documento' => 'nullable|string|max:44',
             'modelo_documento' => 'nullable|string|max:4',
             'numero_ocorrencia' => 'nullable|string|max:60',
+            'emitir_nfe' => 'nullable|boolean',
         ]);
         
         $produtoId = $data['produto_id'];
@@ -4043,6 +4049,19 @@ Route::post('/saida', function (Request $request) {
         if ($errFiscal) {
             DB::rollBack();
             return response()->json(['error' => 'Validação fiscal', 'message' => $errFiscal], 422);
+        }
+
+        $querNfe = \App\Services\Fiscal\FiscalNfeTransferenciaService::querEmitir($data);
+        if ($isTransferencia && $querNfe && $paraUnidadeId) {
+            $errNfe = \App\Services\Fiscal\FiscalNfeTransferenciaService::validarAntesDeTransferir(
+                (int) $unidadeId,
+                (int) $paraUnidadeId,
+                (int) $produtoId
+            );
+            if ($errNfe) {
+                DB::rollBack();
+                return response()->json(['error' => 'NF-e de transferência', 'message' => $errNfe], 422);
+            }
         }
         
         // Verifica se o produto está ativo
@@ -4429,12 +4448,18 @@ Route::post('/saida', function (Request $request) {
         // Não é necessário criar uma movimentação ENTRADA adicional
         
         DB::commit();
-        
+
+        $nfe = null;
+        if ($isTransferencia && ! empty($querNfe) && $movimentacaoId) {
+            $nfe = \App\Services\Fiscal\FiscalNfeTransferenciaService::emitirParaMovimentacao((int) $movimentacaoId);
+        }
+
         return response()->json([
             'message' => $isTransferencia ? 'Transferência realizada com sucesso' : 'Saída registrada com sucesso',
             'movimentacao_id' => $movimentacaoId,
             'lotes_usados' => $lotesUsados,
             'custo_medio' => $custoMedio,
+            'nfe' => $nfe,
         ], 201);
         
     } catch (\Illuminate\Validation\ValidationException $e) {

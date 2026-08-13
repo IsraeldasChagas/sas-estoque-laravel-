@@ -380,15 +380,24 @@
 
   function cpdvMarkupEmitirNota(inputId, wrapCard) {
     const o = cpdvState.emissaoPdv;
-    if (!o?.mostrar_opcao_nota) return "";
-    const checked = o.emitir_nota_padrao ? " checked" : "";
-    const aviso = o.pode_emitir_agora
-      ? "Marque para gerar NFC-e, PDF e XML ao confirmar."
-      : "Checklist fiscal incompleto — venda entra sem nota; emita depois no histórico.";
-    const inner = `<label class="cpdv-pgto-nota__label">
-      <input type="checkbox" id="${inputId}"${checked} />
-      <span><strong>Emitir NFC-e (cupom fiscal)</strong><small>${aviso}</small></span>
-    </label>`;
+    if (o && o.mostrar_opcao_nota === false) return "";
+    const comNota = !!o?.emitir_nota_padrao;
+    const aviso = o?.pode_emitir_agora
+      ? "Escolha se esta venda sai com NFC-e (cupom) ou só no histórico, para emitir depois."
+      : "Pode marcar com nota; se o checklist fiscal estiver incompleto, a venda entra sem cupom e você emite depois.";
+    const inner = `
+      <p class="cpdv-pgto-nota__titulo">Nota fiscal nesta venda</p>
+      <div class="cpdv-pgto-nota__opts" role="radiogroup" aria-label="Com nota ou sem nota">
+        <label class="cpdv-pgto-nota__opt">
+          <input type="radio" name="${inputId}Group" id="${inputId}" value="1"${comNota ? " checked" : ""} />
+          <span>Com nota</span>
+        </label>
+        <label class="cpdv-pgto-nota__opt">
+          <input type="radio" name="${inputId}Group" value="0"${comNota ? "" : " checked"} />
+          <span>Sem nota</span>
+        </label>
+      </div>
+      <small>${aviso}</small>`;
     if (wrapCard === false) return inner;
     return `<div class="cpdv-pgto-nota">${inner}</div>`;
   }
@@ -842,11 +851,18 @@
     if (scope !== "mesa") cpdvAtualizarTrocoPagamento();
     const nota = document.getElementById(scope === "mesa" ? "cpdvMesaEmitirNota" : "cpdvPgtoEmitirNota");
     if (nota) {
+      const wrap = nota.closest(".cpdv-pgto-nota");
+      const radios = wrap ? wrap.querySelectorAll('input[type="radio"]') : [nota];
       if (forma === "Conta assinada") {
-        nota.checked = false;
-        nota.disabled = true;
+        radios.forEach((r) => {
+          r.disabled = true;
+          if (r.value === "0") r.checked = true;
+          if (r.value === "1") r.checked = false;
+        });
       } else {
-        nota.disabled = false;
+        radios.forEach((r) => {
+          r.disabled = false;
+        });
       }
     }
   }
@@ -1051,15 +1067,16 @@
   }
 
   function cpdvPayloadEmitirNota(inputId) {
-    const o = cpdvState.emissaoPdv;
-    if (!o?.mostrar_opcao_nota) return {};
     const el = document.getElementById(inputId || "cpdvPgtoEmitirNota");
-    return { emitir_nota: !!el?.checked };
+    if (!el) return {};
+    return { emitir_nota: !!el.checked };
   }
 
   function cpdvBadgeNota(v) {
     const st = String(v.status_documento || "").toLowerCase();
     if (st === "autorizado" || st === "autorizada") return '<span class="fiscal-badge fiscal-badge--ok">Com nota</span>';
+    if (st === "contingencia") return '<span class="fiscal-badge fiscal-badge--warn">Contingência</span>';
+    if (st === "cancelado" || st === "cancelada") return '<span class="fiscal-badge fiscal-badge--pend">Cancelada</span>';
     if (st === "rejeitado") return '<span class="fiscal-badge fiscal-badge--warn">Rejeitada</span>';
     return '<span class="fiscal-badge fiscal-badge--pend">Sem nota</span>';
   }
@@ -1070,7 +1087,18 @@
     if (st === "autorizado" || st === "autorizada") {
       return `<button type="button" class="btn neutral btn-sm" data-cpdv-pdf="${id}">PDF</button>
         <button type="button" class="btn neutral btn-sm" data-cpdv-xml="${id}">XML</button>
-        <button type="button" class="btn neutral btn-sm" data-cpdv-danfe="${id}">Cupom</button>`;
+        <button type="button" class="btn neutral btn-sm" data-cpdv-danfe="${id}">Cupom</button>
+        <button type="button" class="btn neutral btn-sm" data-cpdv-consultar="${id}">Consultar</button>
+        <button type="button" class="btn secondary btn-sm" data-cpdv-cancelar="${id}">Cancelar</button>`;
+    }
+    if (st === "contingencia") {
+      return `<button type="button" class="btn primary btn-sm" data-cpdv-transmitir="${id}">Transmitir</button>
+        <button type="button" class="btn neutral btn-sm" data-cpdv-danfe="${id}">Cupom</button>
+        <button type="button" class="btn neutral btn-sm" data-cpdv-consultar="${id}">Consultar</button>`;
+    }
+    if (st === "cancelado" || st === "cancelada") {
+      return `<button type="button" class="btn neutral btn-sm" data-cpdv-pdf="${id}">PDF</button>
+        <button type="button" class="btn neutral btn-sm" data-cpdv-xml="${id}">XML</button>`;
     }
     return `<button type="button" class="btn secondary btn-sm" data-cpdv-emitir="${id}">Emitir nota</button>`;
   }
@@ -1080,8 +1108,8 @@
       toast("Emitindo NFC-e…", "info");
       const r = await cpdvFetch(`/fiscal/emissao/vendas/${vendaId}/nfce`, { method: "POST" });
       if (r.emitida || r.skipped) {
-        toast(r.mensagem || r.motivo_skip || "NFC-e processada.", r.emitida ? "success" : "info");
-        if (r.emitida && window.fiscalEntregarDocumentosVenda) await window.fiscalEntregarDocumentosVenda(vendaId);
+        toast(r.mensagem || r.motivo_skip || "NFC-e processada.", r.emitida && r.status !== "contingencia" ? "success" : "info");
+        if (r.emitida && r.status !== "contingencia" && window.fiscalEntregarDocumentosVenda) await window.fiscalEntregarDocumentosVenda(vendaId);
         cpdvRenderHistorico();
       } else {
         toast(r.mensagem || "Não foi possível emitir.", "warning");
@@ -1104,10 +1132,25 @@
     root.querySelectorAll("[data-cpdv-danfe]").forEach((btn) => {
       btn.addEventListener("click", () => window.fiscalAbrirDanfeHtml?.(Number(btn.dataset.cpdvDanfe)));
     });
+    root.querySelectorAll("[data-cpdv-consultar]").forEach((btn) => {
+      btn.addEventListener("click", () => window.fiscalAbrirConsultaSvrs?.(Number(btn.dataset.cpdvConsultar)));
+    });
+    root.querySelectorAll("[data-cpdv-cancelar]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await window.fiscalCancelarNfce?.(Number(btn.dataset.cpdvCancelar));
+        cpdvRenderHistorico();
+      });
+    });
+    root.querySelectorAll("[data-cpdv-transmitir]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await window.fiscalTransmitirContingencia?.(Number(btn.dataset.cpdvTransmitir));
+        cpdvRenderHistorico();
+      });
+    });
   }
 
   async function cpdvPosEmissao(r) {
-    if (r?.emissao?.emitida && r?.venda_id && typeof window.fiscalEntregarDocumentosVenda === "function") {
+    if (r?.emissao?.emitida && r?.emissao?.status !== "contingencia" && r?.venda_id && typeof window.fiscalEntregarDocumentosVenda === "function") {
       await window.fiscalEntregarDocumentosVenda(r.venda_id);
     }
   }
@@ -1725,6 +1768,7 @@
         <div id="cpdvMesaTotalFinal" class="total">Total: ${moeda(com.valor_total)}</div></div>
       <div class="cpdv-pgto-mesa">
         <h4 class="cpdv-pgto-mesa__title">Fechar conta</h4>
+        ${cpdvMarkupEmitirNota("cpdvMesaEmitirNota")}
         ${cpdvHtmlBlocoEncargos("mesa")}
         <label class="cpdv-pgto-field">Forma de pagamento
           <select id="cpdvMesaFormaPgto">
@@ -1752,7 +1796,6 @@
         </div>
         ${cpdvHtmlBlocoContaAssinada("cpdvMesa")}
         ${cpdvHtmlBlocoPix("mesa", seg.exigir_identificador_pix)}
-        ${cpdvMarkupEmitirNota("cpdvMesaEmitirNota")}
         <div class="cpdv-pgto-mesa__actions">
           <button type="button" class="btn neutral" id="cpdvMesaPreConta">Pré-conta</button>
           <button type="button" class="btn primary" id="cpdvMesaPagar">Confirmar pagamento</button>
@@ -2071,6 +2114,7 @@
           <strong class="cpdv-pgto-hero__valor" id="cpdvPgtoHeroValor">${moeda(encVals.total)}</strong>
           <span class="cpdv-pgto-hero__meta">${qtdItens} item(ns) · ${escHtml(cpdvUnidadeLabel())}</span>
       </div>
+        ${cpdvMarkupEmitirNota("cpdvPgtoEmitirNota")}
         ${cpdvHtmlBlocoEncargos("balcao")}
         <div class="cpdv-pgto-resumo">
           <h4>Resumo do pedido</h4>
@@ -2119,7 +2163,6 @@
             <input type="text" id="cpdvPgtoObs" placeholder="Ex.: cliente VIP, mesa externa…" maxlength="200" />
           </label>
         </div>
-        ${cpdvMarkupEmitirNota("cpdvPgtoEmitirNota")}
       </div>`;
     const acts = `<button type="button" class="btn primary" id="cpdvPgtoConfirm">Confirmar pagamento</button>
       <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>`;

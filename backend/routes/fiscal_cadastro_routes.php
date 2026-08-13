@@ -71,6 +71,11 @@ $mapEmpresa = static function ($row) use ($fiscalRowGet) {
         'crt' => $fiscalRowGet($row, 'crt'),
         'uf' => $fiscalRowGet($row, 'uf'),
         'municipio' => $fiscalRowGet($row, 'municipio'),
+        'logradouro' => $fiscalRowGet($row, 'logradouro'),
+        'numero' => $fiscalRowGet($row, 'numero'),
+        'bairro' => $fiscalRowGet($row, 'bairro'),
+        'cep' => $fiscalRowGet($row, 'cep'),
+        'codigo_municipio' => $fiscalRowGet($row, 'codigo_municipio'),
         'ativo' => (bool) ($fiscalRowGet($row, 'ativo', true)),
         'created_at' => $fiscalRowGet($row, 'created_at'),
         'updated_at' => $fiscalRowGet($row, 'updated_at'),
@@ -171,6 +176,11 @@ Route::post('/fiscal/empresas', function (Request $request) use ($fiscalAuth, $f
         'crt' => 'nullable|string|max:2',
         'uf' => 'nullable|string|size:2',
         'municipio' => 'nullable|string|max:120',
+        'logradouro' => 'nullable|string|max:255',
+        'numero' => 'nullable|string|max:20',
+        'bairro' => 'nullable|string|max:120',
+        'cep' => 'nullable|string|max:10',
+        'codigo_municipio' => 'nullable|string|max:7',
         'ativo' => 'nullable|boolean',
     ]);
     $cnpj = FiscalCadastroSupport::normalizarCnpj($data['cnpj'] ?? null);
@@ -178,7 +188,7 @@ Route::post('/fiscal/empresas', function (Request $request) use ($fiscalAuth, $f
         return $fiscalJson(['error' => 'CNPJ inválido', 'message' => 'CNPJ deve conter 14 dígitos.'], 422);
     }
     $now = now();
-    $id = DB::table('empresas')->insertGetId([
+    $insert = [
         'razao_social' => $data['razao_social'],
         'nome_fantasia' => $data['nome_fantasia'] ?? null,
         'cnpj' => $cnpj,
@@ -191,7 +201,20 @@ Route::post('/fiscal/empresas', function (Request $request) use ($fiscalAuth, $f
         'ativo' => array_key_exists('ativo', $data) ? (int) (bool) $data['ativo'] : 1,
         'created_at' => $now,
         'updated_at' => $now,
-    ]);
+    ];
+    foreach (['logradouro', 'numero', 'bairro'] as $k) {
+        if (Schema::hasColumn('empresas', $k)) {
+            $insert[$k] = $data[$k] ?? null;
+        }
+    }
+    if (Schema::hasColumn('empresas', 'cep')) {
+        $cepDigits = isset($data['cep']) ? preg_replace('/\D+/', '', (string) $data['cep']) : null;
+        $insert['cep'] = $cepDigits !== '' ? $cepDigits : null;
+    }
+    if (Schema::hasColumn('empresas', 'codigo_municipio')) {
+        $insert['codigo_municipio'] = $data['codigo_municipio'] ?? null;
+    }
+    $id = DB::table('empresas')->insertGetId($insert);
     AuditLog::registrar((int) $u->id, 'criar', 'empresa_fiscal', $id, 'Empresa fiscal criada', null, $request);
 
     return $fiscalJson($mapEmpresa(DB::table('empresas')->where('id', $id)->first()), 201);
@@ -217,13 +240,25 @@ Route::put('/fiscal/empresas/{id}', function (Request $request, $id) use ($fisca
         'crt' => 'nullable|string|max:2',
         'uf' => 'nullable|string|size:2',
         'municipio' => 'nullable|string|max:120',
+        'logradouro' => 'nullable|string|max:255',
+        'numero' => 'nullable|string|max:20',
+        'bairro' => 'nullable|string|max:120',
+        'cep' => 'nullable|string|max:10',
+        'codigo_municipio' => 'nullable|string|max:7',
         'ativo' => 'nullable|boolean',
     ]);
     $update = ['updated_at' => now()];
-    foreach (['razao_social', 'nome_fantasia', 'inscricao_estadual', 'inscricao_municipal', 'regime_tributario', 'crt', 'municipio'] as $k) {
-        if (array_key_exists($k, $data)) {
+    foreach (['razao_social', 'nome_fantasia', 'inscricao_estadual', 'inscricao_municipal', 'regime_tributario', 'crt', 'municipio', 'logradouro', 'numero', 'bairro', 'codigo_municipio'] as $k) {
+        if (array_key_exists($k, $data) && ($k === 'razao_social' || Schema::hasColumn('empresas', $k) || in_array($k, ['nome_fantasia', 'inscricao_estadual', 'inscricao_municipal', 'regime_tributario', 'crt', 'municipio'], true))) {
+            if (in_array($k, ['logradouro', 'numero', 'bairro', 'codigo_municipio'], true) && ! Schema::hasColumn('empresas', $k)) {
+                continue;
+            }
             $update[$k] = $data[$k];
         }
+    }
+    if (array_key_exists('cep', $data) && Schema::hasColumn('empresas', 'cep')) {
+        $cepDigits = preg_replace('/\D+/', '', (string) ($data['cep'] ?? ''));
+        $update['cep'] = $cepDigits !== '' ? $cepDigits : null;
     }
     if (array_key_exists('uf', $data)) {
         $update['uf'] = $data['uf'] ? strtoupper($data['uf']) : null;
