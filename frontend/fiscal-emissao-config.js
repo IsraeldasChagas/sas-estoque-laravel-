@@ -173,8 +173,9 @@
               <li><strong>Empresas → Adicionar</strong> — mesmo CNPJ do SAS; informe certificado <strong>A1</strong> (.pfx) e senha no painel Focus (obrigatório lá).</li>
               <li><strong>Painel API → Tokens</strong> — copie o token do <strong>mesmo ambiente</strong> escolhido acima (produção ≠ homologação).</li>
               <li>Cole o token abaixo. A URL acompanha o ambiente.</li>
-              <li>CSC NFC-e: portal SEFAZ do estado (ex. PA) → gerar CSC → preencher <strong>ID</strong> e <strong>Token</strong> nesta tela e <strong>Salvar</strong> (o SAS envia para a empresa na Focus).</li>
-              <li>Se a Focus disser “CSC/Id Token não configurado”, abra o painel Focus → Empresas → <strong>DETALHES</strong> e confira <strong>CSC / Id Token de produção</strong> (ou homologação). Só no SAS não basta.</li>
+              <li>Token Focus: use o <strong>Token principal produção</strong> (olho no topo em Painel API → Tokens). O token da linha da empresa às vezes não gerencia CSC.</li>
+              <li>CSC NFC-e: portal SEFAZ → gerar CSC → preencher <strong>ID</strong> e <strong>Token</strong> nesta tela e <strong>Salvar</strong> (o SAS tenta enviar para a Focus).</li>
+              <li>Se der HTTP 401 no sync, ou “CSC/Id Token não configurado”: Focus → Empresas → <strong>DETALHES</strong> → preencha CSC e Id Token de <strong>produção</strong> e salve.</li>
             </ol>
             <p class="subtle-text">Textos de ajuda abaixo podem citar as duas URLs — isso é só referência, não significa que o ambiente está em homologação.</p>
           </div>

@@ -45,7 +45,17 @@ final class FocusEmpresaCscSync
 
         $list = $client->listarEmpresas($cnpj);
         if (! ($list['ok'] ?? false)) {
-            $msg = self::extrairMensagem($list['body'] ?? null) ?: ('HTTP '.($list['http_status'] ?? '?'));
+            $status = (int) ($list['http_status'] ?? 0);
+            $msg = self::extrairMensagem($list['body'] ?? null) ?: ('HTTP '.$status);
+            if ($status === 401 || $status === 403) {
+                return [
+                    'ok' => false,
+                    'auth_error' => true,
+                    'motivo' => 'Token Focus sem permissão na API de empresas (HTTP '.$status.'). '
+                        .'No painel Focus → Tokens, use o **Token principal produção** (olho no topo), '
+                        .'não só o token da linha da empresa. Ou cadastre o CSC manualmente em Empresas → DETALHES.',
+                ];
+            }
 
             return ['ok' => false, 'motivo' => 'Falha ao consultar empresa na Focus: '.$msg];
         }

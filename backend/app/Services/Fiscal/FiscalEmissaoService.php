@@ -95,9 +95,11 @@ final class FiscalEmissaoService
             return self::fail($vendaId, $empresaId, $config, $e->getMessage());
         }
 
-        // Focus usa CSC no cadastro da empresa (/v2/empresas), não só no JSON da NFC-e.
+        // Focus usa CSC no cadastro da empresa (/v2/empresas). Tentamos sincronizar;
+        // se o token não puder gerenciar empresas (401), seguimos a emissão — o CSC
+        // precisa já estar no painel Focus (DETALHES).
         $syncCsc = FocusEmpresaCscSync::sincronizar($config, $empresa);
-        if (! ($syncCsc['ok'] ?? false) && empty($syncCsc['skipped'])) {
+        if (! ($syncCsc['ok'] ?? false) && empty($syncCsc['skipped']) && empty($syncCsc['auth_error'])) {
             return self::fail(
                 $vendaId,
                 $empresaId,
@@ -118,9 +120,10 @@ final class FiscalEmissaoService
         if (! ($out['success'] ?? false)) {
             $err = (string) ($out['error'] ?? '');
             if (stripos($err, 'CSC') !== false || stripos($err, 'Id Token') !== false) {
-                $out['error'] = $err
-                    .' | O CSC precisa estar na empresa Focus (produção: csc_nfce_producao / id_token_nfce_producao).'
-                    .' Salve de novo em Emissão NF-e / NFC-e para sincronizar, ou preencha no painel Focus.';
+                $hint = ! empty($syncCsc['auth_error'])
+                    ? ' Sync automático falhou (token sem permissão de empresas). No Focus: Tokens → Token principal produção no SAS, OU Empesas → DETALHES → preencher CSC/Id Token produção.'
+                    : ' Preencha CSC/Id Token em Focus → Empresas → DETALHES (produção), ou salve de novo no SAS com Token principal.';
+                $out['error'] = $err.' |'.$hint;
             }
         }
 
