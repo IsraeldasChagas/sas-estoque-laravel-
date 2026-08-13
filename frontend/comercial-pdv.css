@@ -259,6 +259,7 @@
 .cpdv-cart-totais { margin-top: 0.75rem; display: grid; gap: 0.35rem; font-size: 0.9rem; }
 .cpdv-cart-totais .total { font-size: 1.15rem; font-weight: 800; color: #1a237e; }
 .cpdv-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
+.cpdv-actions .cpdv-pgto-nota { flex: 1 1 100%; }
 
 /* Caixa principal com a mesma linguagem visual do PDV local */
 #comercialPdvSection {
@@ -697,7 +698,18 @@
 }
 
 #cpdvModal .modal { max-width: 640px; width: 96%; }
-#cpdvModal.cpdv-modal--pgto .modal { max-width: 520px; }
+#cpdvModal.cpdv-modal--pgto .modal {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+#cpdvModal.cpdv-modal--pgto .modal header {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding: 1.1rem 1.35rem 0.65rem;
+}
 #cpdvModal .cpdv-modal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -707,12 +719,27 @@
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background: rgba(0, 71, 171, 0.02);
 }
-#cpdvModal.cpdv-modal--pgto .cpdv-modal-actions .btn {
+#cpdvModal.cpdv-modal--pgto .cpdv-modal-actions {
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+#cpdvModal.cpdv-modal--pgto .cpdv-modal-actions__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+#cpdvModal.cpdv-modal--pgto .cpdv-modal-actions .btn,
+#cpdvModal.cpdv-modal--pgto .cpdv-modal-actions__btns .btn {
   flex: 1 1 10rem;
   min-height: 2.75rem;
   justify-content: center;
 }
 #cpdvModal.cpdv-modal--pgto .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 0;
 }
 
@@ -855,10 +882,10 @@
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.12);
 }
 .cpdv-pgto-nota {
-  padding: 0.85rem 1rem;
+  padding: 0.95rem 1rem;
   border-radius: 12px;
-  border: 1px dashed rgba(0, 71, 171, 0.25);
-  background: rgba(0, 71, 171, 0.03);
+  border: 2px solid #f9a825;
+  background: #fff8e1;
 }
 .cpdv-pgto-nota__titulo {
   margin: 0 0 0.55rem;

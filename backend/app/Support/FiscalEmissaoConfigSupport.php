@@ -213,15 +213,21 @@ final class FiscalEmissaoConfigSupport
         if (! $config || ! $config->is_active || ! $config->emitir_nfce_pdv) {
             return false;
         }
+        if ($emitirNotaRequest === true) {
+            return true;
+        }
+        if ($emitirNotaRequest === false) {
+            return false;
+        }
         $modo = (string) ($config->modo_emissao_pdv ?? 'opcional');
         if ($modo === 'desligada') {
             return false;
         }
         if ($modo === 'automatica') {
-            return $emitirNotaRequest !== false;
+            return true;
         }
 
-        return $emitirNotaRequest === true;
+        return false;
     }
 
     /** @return array<string, mixed> Metadados para o PDV (checkbox, padrão, etc.) */
@@ -247,7 +253,7 @@ final class FiscalEmissaoConfigSupport
             'motor_emissao_ativo' => $motorAtivo,
             'modo_emissao_pdv' => $modo,
             'modo_label' => self::MODOS_EMISSAO_PDV[$modo] ?? $modo,
-            'mostrar_opcao_nota' => $modo !== 'desligada',
+            'mostrar_opcao_nota' => true,
             'emitir_nota_padrao' => $motorAtivo && $modo === 'automatica',
             'pode_emitir_agora' => $motorAtivo && ($prontidao['pronto'] ?? false),
             'checklist_pronto' => (bool) ($prontidao['pronto'] ?? false),

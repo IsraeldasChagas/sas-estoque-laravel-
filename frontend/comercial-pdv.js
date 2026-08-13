@@ -380,13 +380,9 @@
 
   function cpdvMarkupEmitirNota(inputId, wrapCard) {
     const o = cpdvState.emissaoPdv;
-    if (o && o.mostrar_opcao_nota === false) return "";
     const comNota = !!o?.emitir_nota_padrao;
-    const aviso = o?.pode_emitir_agora
-      ? "Escolha se esta venda sai com NFC-e (cupom) ou só no histórico, para emitir depois."
-      : "Pode marcar com nota; se o checklist fiscal estiver incompleto, a venda entra sem cupom e você emite depois.";
     const inner = `
-      <p class="cpdv-pgto-nota__titulo">Nota fiscal nesta venda</p>
+      <p class="cpdv-pgto-nota__titulo">Nota fiscal (NFC-e)</p>
       <div class="cpdv-pgto-nota__opts" role="radiogroup" aria-label="Com nota ou sem nota">
         <label class="cpdv-pgto-nota__opt">
           <input type="radio" name="${inputId}Group" id="${inputId}" value="1"${comNota ? " checked" : ""} />
@@ -397,9 +393,21 @@
           <span>Sem nota</span>
         </label>
       </div>
-      <small>${aviso}</small>`;
+      <small>Com nota emite o cupom agora. Sem nota só registra a venda.</small>`;
     if (wrapCard === false) return inner;
-    return `<div class="cpdv-pgto-nota">${inner}</div>`;
+    return `<div class="cpdv-pgto-nota" id="${inputId}Box">${inner}</div>`;
+  }
+
+  function cpdvInjetarNotaSeFaltar(inputId, afterSelector) {
+    if (document.getElementById(inputId)) return;
+    const html = cpdvMarkupEmitirNota(inputId);
+    const after = afterSelector ? document.querySelector(afterSelector) : null;
+    if (after) {
+      after.insertAdjacentHTML("afterend", html);
+      return;
+    }
+    const actions = document.getElementById("cpdvModalActions");
+    if (actions) actions.insertAdjacentHTML("afterbegin", html);
   }
 
   function cpdvUnidadeLabel() {
@@ -981,7 +989,7 @@
       observacao: obs || undefined,
       ...cpdvLerDadosPagamento("balcao"),
       ...cpdvPayloadEncargos("balcao"),
-      ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
+      ...cpdvLerEscolhaNota(),
     };
     if (forma === "Conta assinada") {
       payloadBase.sem_emissao = true;
@@ -1039,7 +1047,7 @@
           unidadeId,
           formaPagamento: forma,
           itens,
-          ...cpdvPayloadEmitirNota("cpdvPgtoEmitirNota"),
+          ...cpdvLerEscolhaNota(),
         });
         toast(`Venda fiscal #${r.venda_id} registrada.${msgEmissao(r.emissao)}`, r.emissao?.emitida ? "success" : r.emissao?.skipped ? "info" : "warning");
         await cpdvPosEmissao(r);
@@ -1066,9 +1074,18 @@
     }
   }
 
+  function cpdvLerEscolhaNota() {
+    const ids = ["cpdvPgtoEmitirNota", "cpdvCartEmitirNota", "cpdvMesaEmitirNota"];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) return { emitir_nota: !!el.checked };
+    }
+    return { emitir_nota: false };
+  }
+
   function cpdvPayloadEmitirNota(inputId) {
     const el = document.getElementById(inputId || "cpdvPgtoEmitirNota");
-    if (!el) return {};
+    if (!el) return cpdvLerEscolhaNota();
     return { emitir_nota: !!el.checked };
   }
 
@@ -1552,6 +1569,7 @@
                 <div class="total"><span>Total</span><strong>${moeda(cpdvTotal())}</strong></div>
               </div>
               <div class="cpdv-actions">
+                ${cpdvMarkupEmitirNota("cpdvCartEmitirNota")}
                 <button type="button" class="btn neutral" data-cpdv-proto="Desconto aplicado">Desconto</button>
                 <button type="button" class="btn neutral" data-cpdv-proto="Acréscimo aplicado">Acréscimo</button>
                 <button type="button" class="btn neutral" data-cpdv-proto="Venda suspensa">Suspender</button>
@@ -2088,9 +2106,16 @@
   }
 
   function cpdvAbrirModalPagamento() {
-    cpdvRefreshEmissaoOpcoes().then(() => {
-      cpdvAbrirModalPagamentoInner();
-    });
+    cpdvAbrirModalPagamentoInner();
+    const cart = document.getElementById("cpdvCartEmitirNota");
+    const pgto = document.getElementById("cpdvPgtoEmitirNota");
+    if (cart && pgto) {
+      pgto.checked = cart.checked;
+      const sem = pgto.closest(".cpdv-pgto-nota")?.querySelector('input[value="0"]');
+      if (sem) sem.checked = !cart.checked;
+    }
+    cpdvInjetarNotaSeFaltar("cpdvPgtoEmitirNota", ".cpdv-pgto-hero");
+    cpdvRefreshEmissaoOpcoes().catch(() => {});
   }
 
   function cpdvAbrirModalPagamentoInner() {
@@ -2113,7 +2138,7 @@
           <span class="cpdv-pgto-hero__label">Total a receber</span>
           <strong class="cpdv-pgto-hero__valor" id="cpdvPgtoHeroValor">${moeda(encVals.total)}</strong>
           <span class="cpdv-pgto-hero__meta">${qtdItens} item(ns) · ${escHtml(cpdvUnidadeLabel())}</span>
-      </div>
+        </div>
         ${cpdvMarkupEmitirNota("cpdvPgtoEmitirNota")}
         ${cpdvHtmlBlocoEncargos("balcao")}
         <div class="cpdv-pgto-resumo">
@@ -2164,8 +2189,10 @@
           </label>
         </div>
       </div>`;
-    const acts = `<button type="button" class="btn primary" id="cpdvPgtoConfirm">Confirmar pagamento</button>
-      <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>`;
+    const acts = `<div class="cpdv-modal-actions__btns">
+        <button type="button" class="btn primary" id="cpdvPgtoConfirm">Confirmar pagamento</button>
+        <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>
+      </div>`;
     openCpdvModal("Pagamento", body, acts, { pagamento: true });
     cpdvBindPagamentoModal();
     cpdvBindEncargosPagamento("balcao");

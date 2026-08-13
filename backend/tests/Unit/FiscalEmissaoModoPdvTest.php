@@ -31,8 +31,10 @@ class FiscalEmissaoModoPdvTest extends TestCase
         $this->assertTrue(FiscalEmissaoConfigSupport::deveEmitirNoPdv($this->cfg('opcional'), true));
     }
 
-    public function test_modo_desligada_nunca_emite(): void
+    public function test_modo_desligada_respeita_marcacao_do_operador(): void
     {
-        $this->assertFalse(FiscalEmissaoConfigSupport::deveEmitirNoPdv($this->cfg('desligada'), true));
+        $this->assertFalse(FiscalEmissaoConfigSupport::deveEmitirNoPdv($this->cfg('desligada'), null));
+        $this->assertTrue(FiscalEmissaoConfigSupport::deveEmitirNoPdv($this->cfg('desligada'), true));
+        $this->assertFalse(FiscalEmissaoConfigSupport::deveEmitirNoPdv($this->cfg('desligada'), false));
     }
 }
