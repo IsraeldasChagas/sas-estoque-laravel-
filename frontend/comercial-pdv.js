@@ -1075,7 +1075,7 @@
   }
 
   function cpdvLerEscolhaNota() {
-    const ids = ["cpdvPgtoEmitirNota", "cpdvCartEmitirNota", "cpdvMesaEmitirNota"];
+    const ids = ["cpdvPgtoEmitirNota", "cpdvMesaEmitirNota"];
     for (const id of ids) {
       const el = document.getElementById(id);
       if (el) return { emitir_nota: !!el.checked };
@@ -1569,7 +1569,6 @@
                 <div class="total"><span>Total</span><strong>${moeda(cpdvTotal())}</strong></div>
               </div>
               <div class="cpdv-actions">
-                ${cpdvMarkupEmitirNota("cpdvCartEmitirNota")}
                 <button type="button" class="btn neutral" data-cpdv-proto="Desconto aplicado">Desconto</button>
                 <button type="button" class="btn neutral" data-cpdv-proto="Acréscimo aplicado">Acréscimo</button>
                 <button type="button" class="btn neutral" data-cpdv-proto="Venda suspensa">Suspender</button>
@@ -2107,13 +2106,6 @@
 
   function cpdvAbrirModalPagamento() {
     cpdvAbrirModalPagamentoInner();
-    const cart = document.getElementById("cpdvCartEmitirNota");
-    const pgto = document.getElementById("cpdvPgtoEmitirNota");
-    if (cart && pgto) {
-      pgto.checked = cart.checked;
-      const sem = pgto.closest(".cpdv-pgto-nota")?.querySelector('input[value="0"]');
-      if (sem) sem.checked = !cart.checked;
-    }
     cpdvInjetarNotaSeFaltar("cpdvPgtoEmitirNota", ".cpdv-pgto-hero");
     cpdvRefreshEmissaoOpcoes().catch(() => {});
   }

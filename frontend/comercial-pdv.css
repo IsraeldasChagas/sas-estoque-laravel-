@@ -259,7 +259,6 @@
 .cpdv-cart-totais { margin-top: 0.75rem; display: grid; gap: 0.35rem; font-size: 0.9rem; }
 .cpdv-cart-totais .total { font-size: 1.15rem; font-weight: 800; color: #1a237e; }
 .cpdv-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
-.cpdv-actions .cpdv-pgto-nota { flex: 1 1 100%; }
 
 /* Caixa principal com a mesma linguagem visual do PDV local */
 #comercialPdvSection {
