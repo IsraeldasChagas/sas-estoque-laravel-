@@ -265,7 +265,7 @@ final class FiscalDocumentoService
     }
 
     /**
-     * Ajusta o HTML Focus para impressão A4: bloco centralizado, logo menor.
+     * Ajusta o HTML Focus para impressão A4: simetria no topo, espaço e texto dentro das bordas.
      */
     private static function prepararHtmlDanfeA4(string $html): string
     {
@@ -276,13 +276,21 @@ final class FiscalDocumentoService
                 $attrs = $m[2];
                 $attrs = preg_replace('/\s(width|height|style)\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $attrs) ?? $attrs;
 
-                return $m[1].$attrs.' width="48" height="48" style="max-width:48px;max-height:32px;width:auto;height:auto;display:block;margin:0 auto 2px auto;"'.$m[3];
+                return $m[1].$attrs.' width="40" height="40" style="max-width:40px;max-height:28px;width:auto;height:auto;display:block;margin:0 auto;"'.$m[3];
             },
             $html,
             1
         ) ?? $html;
 
-        // Dompdf centraliza melhor com tabela wrapper do que margin:auto.
+        // Simetria no cabeçalho: título NFC-e alinhado ao centro como a logo.
+        $html = preg_replace(
+            '#(<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?)align=["\']left["\']#is',
+            '$1align="center"',
+            $html,
+            1
+        ) ?? $html;
+
+        // Dompdf centraliza o bloco na página com tabela wrapper.
         if (! str_contains($html, 'sas-danfe-center-wrap')) {
             $html = preg_replace(
                 '#<div\s+class=["\']content["\']>#i',
@@ -291,7 +299,6 @@ final class FiscalDocumentoService
                 $html,
                 1
             ) ?? $html;
-            // Fecha o wrapper antes do </body> (após o .content original).
             if (stripos($html, '</body>') !== false) {
                 $html = preg_replace(
                     '#</div>\s*</body>#i',
@@ -302,12 +309,9 @@ final class FiscalDocumentoService
             }
         }
 
-        // Centraliza células alinhadas à esquerda no HTML Focus.
-        $html = preg_replace('#align=["\']left["\']#i', 'align="center"', $html) ?? $html;
-
         $css = <<<'CSS'
 <style type="text/css" id="sas-danfe-a4">
-@page { size: A4 portrait; margin: 16mm 18mm; }
+@page { size: A4 portrait; margin: 12mm 12mm; }
 html, body {
   margin: 0 !important;
   padding: 0 !important;
@@ -315,8 +319,8 @@ html, body {
   color: #111111;
   font-family: DejaVu Sans, Arial, Helvetica, sans-serif !important;
   font-size: 10px !important;
-  line-height: 1.4;
-  text-align: center;
+  line-height: 1.45;
+  text-align: left;
 }
 .sas-danfe-center-wrap {
   width: 100%;
@@ -324,73 +328,125 @@ html, body {
   padding: 0;
 }
 .content {
-  width: 118mm !important;
-  max-width: 118mm !important;
+  width: 170mm !important;
+  max-width: 170mm !important;
   margin: 0 auto !important;
-  padding: 12px 16px 18px 16px !important;
-  border: 1px solid #c8c8c8 !important;
+  padding: 14px 18px 20px 18px !important;
+  border: 1px solid #bfbfbf !important;
   box-sizing: border-box;
-  text-align: center !important;
+  text-align: left !important;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 .logomarca {
   text-align: center !important;
-  margin: 0 0 10px 0;
-  padding: 0 0 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  margin: 0 0 12px 0;
+  padding: 2px 0 10px 0;
+  border-bottom: 1px solid #dddddd;
 }
-.logomarca table,
+.logomarca table {
+  width: 100% !important;
+  margin: 0 auto;
+}
 .logomarca td {
   text-align: center !important;
+  vertical-align: middle !important;
 }
 .logomarca img {
-  max-width: 48px !important;
-  max-height: 32px !important;
+  max-width: 40px !important;
+  max-height: 28px !important;
   width: auto !important;
   height: auto !important;
   display: block !important;
-  margin: 0 auto 2px auto !important;
+  margin: 0 auto 4px auto !important;
 }
 .logomarca span,
 .logomarca strong,
 .logomarca em {
   font-size: 11px !important;
   font-style: normal !important;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: #222222;
 }
-.dados-da-empresa,
-.dados-da-empresa table,
+.dados-da-empresa {
+  margin: 0 0 10px 0;
+}
+.dados-da-empresa table {
+  width: 100% !important;
+  table-layout: fixed;
+}
 .dados-da-empresa td {
-  text-align: center !important;
+  text-align: left !important;
   font-size: 10px !important;
+  line-height: 1.5;
+  padding: 2px 4px !important;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+.documento-auxiliar {
+  margin: 8px 0 10px 0;
+}
+.documento-auxiliar td {
+  text-align: center !important;
+  font-size: 9.5px !important;
   line-height: 1.45;
+  padding: 4px 6px !important;
 }
 .linha {
   border-bottom: 1px solid #222 !important;
-  margin: 8px auto !important;
+  margin: 10px 0 !important;
   width: 100%;
+  height: 0;
 }
 .tabela-nfce,
-.tabela-nfce table {
+.lista-produtos,
+.tabela-nfce table,
+.lista-produtos table {
   width: 100% !important;
-  margin: 0 auto !important;
+  max-width: 100% !important;
+  table-layout: fixed;
+  border-collapse: collapse;
 }
 .tabela-nfce td,
-.tabela-nfce th {
-  font-size: 9.5px !important;
+.tabela-nfce th,
+.lista-produtos td,
+.lista-produtos th {
+  font-size: 9px !important;
   vertical-align: top;
-  text-align: center !important;
+  padding: 3px 4px !important;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
 }
+.lista-produtos th:nth-child(1),
+.lista-produtos td:nth-child(1) { width: 14%; }
+.lista-produtos th:nth-child(2),
+.lista-produtos td:nth-child(2) { width: 38%; }
+.lista-produtos th:nth-child(3),
+.lista-produtos td:nth-child(3) { width: 10%; }
+.lista-produtos th:nth-child(4),
+.lista-produtos td:nth-child(4) { width: 8%; }
+.lista-produtos th:nth-child(5),
+.lista-produtos td:nth-child(5),
+.lista-produtos th:nth-child(6),
+.lista-produtos td:nth-child(6) { width: 15%; }
 #qr-code0, #qr-code1 {
   display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 .sas-qr-block {
   text-align: center !important;
-  margin: 14px auto 4px auto;
-  padding: 12px 8px;
+  margin: 16px 0 2px 0;
+  padding: 14px 10px 6px 10px;
   border-top: 1px solid #d0d0d0;
   page-break-inside: avoid;
   width: 100%;
+  box-sizing: border-box;
 }
 .sas-qr-block .sas-qr-title {
   font-size: 11px;
@@ -399,22 +455,27 @@ html, body {
   letter-spacing: 0.02em;
 }
 .sas-qr-block img {
-  width: 120px;
-  height: 120px;
+  width: 110px;
+  height: 110px;
   display: block;
   margin: 0 auto;
 }
-.sas-qr-block .sas-qr-chave {
-  font-size: 9px;
+.sas-qr-block .sas-qr-chave,
+.sas-qr-block .sas-qr-url {
+  font-size: 8px;
   margin-top: 8px;
+  padding: 0 6px;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
   word-break: break-all;
   color: #222;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .sas-qr-block .sas-qr-url {
   font-size: 7px;
-  margin-top: 4px;
-  word-break: break-all;
   color: #666;
+  margin-top: 4px;
 }
 </style>
 CSS;
