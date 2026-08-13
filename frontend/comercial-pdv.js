@@ -2183,7 +2183,7 @@
       </div>`;
     const acts = `<div class="cpdv-modal-actions__btns">
         <button type="button" class="btn primary" id="cpdvPgtoConfirm">Confirmar pagamento</button>
-        <button type="button" class="btn neutral" id="cpdvPgtoCancel">Cancelar</button>
+        <button type="button" class="btn danger" id="cpdvPgtoCancel">Cancelar</button>
       </div>`;
     openCpdvModal("Pagamento", body, acts, { pagamento: true });
     cpdvBindPagamentoModal();
