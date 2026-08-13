@@ -58,6 +58,12 @@ final class FocusNfeDocumentEmitter implements FiscalDocumentEmitterInterface
         $body = $http['body'] ?? [];
         $status = strtolower((string) ($body['status'] ?? ''));
         $chave = $body['chave_nfe'] ?? $body['chave'] ?? null;
+        if (is_string($chave)) {
+            $digits = preg_replace('/\D+/', '', $chave);
+            if (is_string($digits) && strlen($digits) >= 44) {
+                $chave = substr($digits, -44);
+            }
+        }
         $numero = isset($body['numero']) ? (string) $body['numero'] : null;
         $serie = isset($body['serie']) ? (string) $body['serie'] : null;
         $danfe = $body['caminho_danfe'] ?? $body['url_danfe'] ?? $body['qrcode_url'] ?? null;

@@ -29,7 +29,8 @@ final class FiscalEmissaoService
         }
 
         $stDoc = strtolower(trim((string) ($venda->status_documento ?? '')));
-        if (! $forcar && in_array($stDoc, ['autorizado', 'autorizada'], true)) {
+        // Já autorizada: nunca reemite (mesmo com forçar), para não gerar duplicidade.
+        if (in_array($stDoc, ['autorizado', 'autorizada'], true)) {
             return [
                 'emitida' => true,
                 'skipped' => true,
@@ -38,6 +39,21 @@ final class FiscalEmissaoService
                 'chave' => $venda->chave_acesso ?? null,
                 'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
             ];
+        }
+
+        // Recuperação: autorização ficou só no log (ex.: 500 ao gravar chave).
+        if ($forcar) {
+            $cfgTmp = null;
+            $empresaIdTmp = (int) ($venda->empresa_id ?? 0);
+            if ($empresaIdTmp > 0) {
+                $cfgTmp = FiscalEmissaoConfig::query()->where('empresa_id', $empresaIdTmp)->first();
+            }
+            if ($cfgTmp) {
+                $recuperada = self::recuperarAutorizacaoDoLog($vendaId, $cfgTmp);
+                if ($recuperada !== null) {
+                    return $recuperada;
+                }
+            }
         }
 
         $empresaId = (int) ($venda->empresa_id ?? 0);
@@ -130,45 +146,55 @@ final class FiscalEmissaoService
         self::registrarLog($vendaId, $empresaId, $ref, $out);
 
         if ($out['success'] ?? false) {
-            $update = [
-                'chave_acesso' => $out['chave'] ?? null,
-                'numero_documento' => $out['numero'] ?? null,
-                'serie_documento' => $out['serie'] ?? null,
-                'url_danfe' => $out['danfe_url'] ?? null,
-                'emissao_ref' => $ref,
-                'status_documento' => 'autorizado',
-                'emissao_mensagem' => 'NFC-e autorizada via Focus NFe.',
-                'updated_at' => now(),
-            ];
-            if (Schema::hasColumn('vendas', 'url_xml')) {
-                $update['url_xml'] = $out['xml'] ?? null;
-            }
-            DB::table('vendas')->where('id', $vendaId)->update($update);
+            try {
+                self::persistirAutorizacao($vendaId, $config, $ref, $out);
+            } catch (\Throwable $e) {
+                // Nota já autorizada na Focus — não pode “sumir” no SAS.
+                report($e);
+                try {
+                    self::persistirAutorizacao($vendaId, $config, $ref, $out, true);
+                } catch (\Throwable $e2) {
+                    report($e2);
+                }
 
-            if ($config->numero_proximo_nfce) {
-                $config->numero_proximo_nfce = (int) $config->numero_proximo_nfce + 1;
-                $config->status_emissao = 'ready';
-                $config->save();
+                return [
+                    'emitida' => true,
+                    'skipped' => false,
+                    'status' => 'autorizado',
+                    'chave' => self::normalizarChaveAcesso($out['chave'] ?? null),
+                    'numero' => $out['numero'] ?? null,
+                    'serie' => $out['serie'] ?? null,
+                    'url_danfe' => $out['danfe_url'] ?? null,
+                    'url_xml' => $out['xml'] ?? null,
+                    'ref' => $ref,
+                    'venda_id' => $vendaId,
+                    'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
+                    'mensagem' => 'NFC-e autorizada na Focus. Houve aviso ao gravar no SAS: '.$e->getMessage(),
+                ];
             }
 
             self::atualizarEventoVenda($vendaId);
-
-            $documentos = FiscalDocumentoService::rotasRelativas($vendaId);
 
             return [
                 'emitida' => true,
                 'skipped' => false,
                 'status' => 'autorizado',
-                'chave' => $out['chave'] ?? null,
+                'chave' => self::normalizarChaveAcesso($out['chave'] ?? null),
                 'numero' => $out['numero'] ?? null,
                 'serie' => $out['serie'] ?? null,
                 'url_danfe' => $out['danfe_url'] ?? null,
                 'url_xml' => $out['xml'] ?? null,
                 'ref' => $ref,
                 'venda_id' => $vendaId,
-                'documentos' => $documentos,
+                'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
                 'mensagem' => 'NFC-e autorizada. PDF e XML disponíveis no sistema.',
             ];
+        }
+
+        // Se esta venda já teve autorização anterior (ex.: 500 após sucesso), recupera em vez de insistir.
+        $recuperada = self::recuperarAutorizacaoDoLog($vendaId, $config);
+        if ($recuperada !== null) {
+            return $recuperada;
         }
 
         $err = (string) ($out['error'] ?? 'Falha na emissão Focus.');
@@ -197,6 +223,100 @@ final class FiscalEmissaoService
             'ref' => $ref,
             'mensagem' => $err,
             'venda_id' => $vendaId,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $out
+     */
+    private static function persistirAutorizacao(int $vendaId, FiscalEmissaoConfig $config, string $ref, array $out, bool $minimo = false): void
+    {
+        $chave = self::normalizarChaveAcesso($out['chave'] ?? null);
+        $update = [
+            'chave_acesso' => $chave,
+            'numero_documento' => isset($out['numero']) ? (string) $out['numero'] : null,
+            'serie_documento' => isset($out['serie']) ? (string) $out['serie'] : null,
+            'emissao_ref' => $ref,
+            'status_documento' => 'autorizado',
+            'emissao_mensagem' => 'NFC-e autorizada via Focus NFe.',
+            'updated_at' => now(),
+        ];
+        if (! $minimo) {
+            $update['url_danfe'] = $out['danfe_url'] ?? null;
+            if (Schema::hasColumn('vendas', 'url_xml')) {
+                $update['url_xml'] = $out['xml'] ?? null;
+            }
+        }
+        DB::table('vendas')->where('id', $vendaId)->update($update);
+
+        if ($config->numero_proximo_nfce) {
+            $num = (int) ($out['numero'] ?? 0);
+            $proximo = max((int) $config->numero_proximo_nfce, $num + 1);
+            $config->numero_proximo_nfce = $proximo;
+            $config->status_emissao = 'ready';
+            $config->save();
+        }
+    }
+
+    /** Remove prefixo NFe/NFCe — coluna chave_acesso tem 44 dígitos. */
+    private static function normalizarChaveAcesso(mixed $chave): ?string
+    {
+        if ($chave === null) {
+            return null;
+        }
+        $digits = preg_replace('/\D+/', '', (string) $chave);
+        if ($digits === null || $digits === '') {
+            return null;
+        }
+        if (strlen($digits) > 44) {
+            $digits = substr($digits, -44);
+        }
+
+        return $digits;
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function recuperarAutorizacaoDoLog(int $vendaId, FiscalEmissaoConfig $config): ?array
+    {
+        if (! Schema::hasTable('fiscal_emissao_logs')) {
+            return null;
+        }
+        $log = DB::table('fiscal_emissao_logs')
+            ->where('venda_id', $vendaId)
+            ->where('status', 'autorizado')
+            ->orderByDesc('id')
+            ->first();
+        if (! $log) {
+            return null;
+        }
+        $out = json_decode((string) ($log->resposta_json ?? ''), true);
+        if (! is_array($out) || empty($out['success'])) {
+            return null;
+        }
+        $ref = (string) ($log->ref ?? $out['ref'] ?? '');
+        try {
+            self::persistirAutorizacao($vendaId, $config, $ref, $out);
+            self::atualizarEventoVenda($vendaId);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        return [
+            'emitida' => true,
+            'skipped' => false,
+            'recuperada' => true,
+            'status' => 'autorizado',
+            'chave' => self::normalizarChaveAcesso($out['chave'] ?? null),
+            'numero' => $out['numero'] ?? null,
+            'serie' => $out['serie'] ?? null,
+            'url_danfe' => $out['danfe_url'] ?? null,
+            'url_xml' => $out['xml'] ?? null,
+            'ref' => $ref,
+            'venda_id' => $vendaId,
+            'documentos' => FiscalDocumentoService::rotasRelativas($vendaId),
+            'mensagem' => 'NFC-e já estava autorizada na Focus — vínculo recuperado no SAS.',
         ];
     }
 
