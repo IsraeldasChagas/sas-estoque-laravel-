@@ -129,9 +129,9 @@ final class FiscalDocumentoService
             }
             if (self::pareceHtml($bin)) {
                 return [
-                    'body' => $bin['body'],
-                    'content_type' => 'text/html; charset=utf-8',
-                    'filename' => self::nomeArquivo($venda, 'html'),
+                    'body' => self::htmlParaPdf($bin['body']),
+                    'content_type' => 'application/pdf',
+                    'filename' => $filename,
                 ];
             }
         }
@@ -153,15 +153,44 @@ final class FiscalDocumentoService
                 }
                 if (self::pareceHtml($bin)) {
                     return [
-                        'body' => $bin['body'],
-                        'content_type' => 'text/html; charset=utf-8',
-                        'filename' => self::nomeArquivo($venda, 'html'),
+                        'body' => self::htmlParaPdf($bin['body']),
+                        'content_type' => 'application/pdf',
+                        'filename' => $filename,
                     ];
                 }
             }
         }
 
         throw new \RuntimeException('DANFE/PDF não disponível na Focus para esta venda. Tente novamente ou abra no painel Focus.');
+    }
+
+    /** Converte HTML do DANFCe Focus em PDF (NFC-e costuma vir só em HTML). */
+    private static function htmlParaPdf(string $html): string
+    {
+        if (! class_exists(\Dompdf\Dompdf::class)) {
+            throw new \RuntimeException('Gerador de PDF indisponível no servidor (dompdf).');
+        }
+        // Dompdf lida melhor com HTML relativamente simples; remove scripts.
+        $html = preg_replace('#<script\b[^>]*>.*?</script>#is', '', $html) ?? $html;
+        if (! str_contains(strtolower($html), '<html')) {
+            $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'.$html.'</body></html>';
+        }
+
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        $out = $dompdf->output();
+        if (! is_string($out) || $out === '' || ! str_starts_with($out, '%PDF')) {
+            throw new \RuntimeException('Falha ao gerar PDF do cupom NFC-e.');
+        }
+
+        return $out;
     }
 
     /** @return array{venda: object, client: FocusNfeClient, base_url: string} */

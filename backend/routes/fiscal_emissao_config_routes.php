@@ -391,7 +391,7 @@ Route::get('/fiscal/emissao/vendas/{vendaId}/danfe.pdf', function (Request $requ
     try {
         $bin = FiscalDocumentoService::obterPdf((int) $vendaId);
 
-        return $fiscalEmFileResponse($bin, 'inline');
+        return $fiscalEmFileResponse($bin, 'attachment');
     } catch (\Throwable $e) {
         return $fiscalEmJson(['error' => $e->getMessage()], 422);
     }

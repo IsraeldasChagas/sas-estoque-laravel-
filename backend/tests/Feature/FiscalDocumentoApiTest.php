@@ -134,12 +134,13 @@ class FiscalDocumentoApiTest extends TestCase
         Http::fake([
             'homologacao.focusnfe.com.br/v2/nfce/sas-v9001-test.pdf' => Http::response('{"status":"autorizado","chave_nfe":"NFe123"}', 200, ['Content-Type' => 'application/json']),
             'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.pdf' => Http::response('not found', 404),
-            'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.html' => Http::response('<html><body>DANFE</body></html>', 200, ['Content-Type' => 'text/html']),
+            'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.html' => Http::response('<html><body><h1>DANFE</h1><p>Cupom teste</p></body></html>', 200, ['Content-Type' => 'text/html']),
         ]);
 
         $pdf = $this->withHeaders(['X-Usuario-Id' => '1'])->get('/api/fiscal/emissao/vendas/9001/danfe.pdf');
         $pdf->assertOk();
-        $this->assertStringContainsString('text/html', (string) $pdf->headers->get('content-type'));
-        $this->assertStringContainsString('DANFE', $pdf->getContent());
+        $this->assertStringContainsString('application/pdf', (string) $pdf->headers->get('content-type'));
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
+        $this->assertStringContainsString('attachment', (string) $pdf->headers->get('content-disposition'));
     }
 }

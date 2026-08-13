@@ -26,6 +26,29 @@
     else alert(msg);
   }
 
+  function filenameFromDisposition(header, fallback) {
+    if (!header) return fallback;
+    const m = /filename\*?=(?:UTF-8''|")?([^";]+)"?/i.exec(header);
+    if (!m) return fallback;
+    try {
+      return decodeURIComponent(m[1].trim());
+    } catch {
+      return m[1].trim() || fallback;
+    }
+  }
+
+  function baixarBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+  }
+
   async function fiscalDocFetch(vendaId, tipo) {
     const path =
       tipo === "xml"
@@ -49,13 +72,22 @@
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     const blob = await res.blob();
     if (ct.includes("json") || (blob.type && blob.type.includes("json"))) {
-      throw new Error("A Focus não retornou o DANFE/PDF. Tente de novo ou abra no painel Focus.");
+      throw new Error("A Focus não retornou o arquivo da nota. Tente de novo.");
     }
-    return { blob, res, contentType: ct };
+    if (tipo === "pdf" && !ct.includes("pdf")) {
+      // Ainda assim tenta baixar se o corpo for PDF (alguns proxies omitem header).
+      const head = await blob.slice(0, 4).text();
+      if (!head.startsWith("%PDF")) {
+        throw new Error("Não foi possível gerar o PDF da nota.");
+      }
+    }
+    const fallback = tipo === "xml" ? `nfce-venda-${vendaId}.xml` : `nfce-venda-${vendaId}.pdf`;
+    const filename = filenameFromDisposition(res.headers.get("content-disposition"), fallback);
+    return { blob, contentType: ct, filename };
   }
 
   /**
-   * Após emissão autorizada: abre PDF/DANFE em nova aba e baixa XML automaticamente.
+   * Baixa PDF e/ou XML da NFC-e autorizada.
    * @param {number|string} vendaId
    * @param {{ autoPdf?: boolean, autoXml?: boolean }} [opts]
    */
@@ -66,29 +98,17 @@
     const autoXml = opts?.autoXml !== false;
     try {
       if (autoPdf) {
-        const { blob, contentType } = await fiscalDocFetch(id, "pdf");
-        const url = URL.createObjectURL(blob);
-        const w = window.open(url, "_blank", "noopener,noreferrer");
-        if (!w) toast("Permita pop-ups para abrir o cupom/DANFE da nota.", "warning");
-        else if (contentType.includes("html")) {
-          toast("Cupom NFC-e aberto (DANFE). Para PDF, use Imprimir → Salvar como PDF.", "info");
-        }
-        setTimeout(() => URL.revokeObjectURL(url), 120000);
+        const { blob, filename } = await fiscalDocFetch(id, "pdf");
+        baixarBlob(blob, filename.endsWith(".pdf") ? filename : `nfce-venda-${id}.pdf`);
+        toast("PDF da nota baixado.", "success");
       }
       if (autoXml) {
-        const { blob } = await fiscalDocFetch(id, "xml");
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `nfce-venda-${id}.xml`;
-        a.rel = "noopener";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        const { blob, filename } = await fiscalDocFetch(id, "xml");
+        baixarBlob(blob, filename.endsWith(".xml") ? filename : `nfce-venda-${id}.xml`);
+        toast("XML da nota baixado.", "success");
       }
     } catch (e) {
-      toast(e?.message || "Não foi possível obter PDF/XML da nota.", "warning");
+      toast(e?.message || "Não foi possível baixar PDF/XML da nota.", "warning");
     }
   }
 
