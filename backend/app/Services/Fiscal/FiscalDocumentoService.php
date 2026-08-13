@@ -276,14 +276,15 @@ final class FiscalDocumentoService
                 if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
                     return $m[0];
                 }
-                $logo = self::logoParaPdf($img[1], 112);
+                // Mesmo tamanho da logo da nota Focus (241×250), sem distorcer.
+                $logo = self::logoParaPdf($img[1], 250);
                 $src = htmlspecialchars($logo['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $w = (int) $logo['width'];
                 $h = (int) $logo['height'];
 
                 return '<div class="logomarca">'
                     .'<table width="100%" border="0" cellpadding="0" cellspacing="0">'
-                    .'<tr><td align="center" style="text-align:center;padding:0 0 10px 0;">'
+                    .'<tr><td align="center" style="text-align:center;padding:0 0 4px 0;">'
                     .'<img src="'.$src.'" width="'.$w.'" height="'.$h.'" '
                     .'style="width:'.$w.'px;height:'.$h.'px;display:block;margin:0 auto;border:0;" />'
                     .'</td></tr>'
@@ -328,7 +329,7 @@ final class FiscalDocumentoService
         if (! str_contains($html, 'sas-danfe-center-wrap')) {
             $html = preg_replace(
                 '#<div\s+class=["\']content["\']>#i',
-                '<table class="sas-danfe-center-wrap" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="top" style="padding-top:8px;">'
+                '<table class="sas-danfe-center-wrap" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="top" style="padding-top:4px;">'
                 .'<div class="content">',
                 $html,
                 1
@@ -364,8 +365,8 @@ html, body {
 .content {
   width: 168mm !important;
   max-width: 168mm !important;
-  margin: 8px auto 0 auto !important;
-  padding: 28px 22px 24px 22px !important;
+  margin: 6px auto 0 auto !important;
+  padding: 14px 18px 18px 18px !important;
   border: 1px solid #bfbfbf !important;
   box-sizing: border-box;
   text-align: left !important;
@@ -375,8 +376,8 @@ html, body {
 .logomarca {
   text-align: center !important;
   width: 100% !important;
-  margin: 0 0 16px 0 !important;
-  padding: 8px 0 18px 0 !important;
+  margin: 0 0 8px 0 !important;
+  padding: 2px 0 8px 0 !important;
   border-bottom: 1px solid #dddddd;
 }
 .logomarca table {
@@ -389,7 +390,7 @@ html, body {
 }
 .logomarca img {
   display: block !important;
-  margin: 0 auto 10px auto !important;
+  margin: 0 auto 4px auto !important;
   border: 0 !important;
 }
 .sas-nfce-titulo,
@@ -568,8 +569,8 @@ CSS;
                 $nh = $maxSide;
             }
 
-            // Escala pelo maior lado para caber em maxSide sem distorcer.
-            $scale = $maxSide / max($nw, $nh);
+            // Mantém tamanho natural se couber; só reduz se passar do maxSide (sem distorcer).
+            $scale = max($nw, $nh) > $maxSide ? ($maxSide / max($nw, $nh)) : 1.0;
             $w = max(1, (int) round($nw * $scale));
             $h = max(1, (int) round($nh * $scale));
 
