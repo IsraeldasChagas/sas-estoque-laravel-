@@ -46,11 +46,16 @@
       }
       throw new Error(msg);
     }
-    return { blob: await res.blob(), res };
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const blob = await res.blob();
+    if (ct.includes("json") || (blob.type && blob.type.includes("json"))) {
+      throw new Error("A Focus não retornou o DANFE/PDF. Tente de novo ou abra no painel Focus.");
+    }
+    return { blob, res, contentType: ct };
   }
 
   /**
-   * Após emissão autorizada: abre PDF em nova aba e baixa XML automaticamente.
+   * Após emissão autorizada: abre PDF/DANFE em nova aba e baixa XML automaticamente.
    * @param {number|string} vendaId
    * @param {{ autoPdf?: boolean, autoXml?: boolean }} [opts]
    */
@@ -61,10 +66,13 @@
     const autoXml = opts?.autoXml !== false;
     try {
       if (autoPdf) {
-        const { blob } = await fiscalDocFetch(id, "pdf");
+        const { blob, contentType } = await fiscalDocFetch(id, "pdf");
         const url = URL.createObjectURL(blob);
         const w = window.open(url, "_blank", "noopener,noreferrer");
-        if (!w) toast("Permita pop-ups para abrir o PDF da nota.", "warning");
+        if (!w) toast("Permita pop-ups para abrir o cupom/DANFE da nota.", "warning");
+        else if (contentType.includes("html")) {
+          toast("Cupom NFC-e aberto (DANFE). Para PDF, use Imprimir → Salvar como PDF.", "info");
+        }
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       }
       if (autoXml) {

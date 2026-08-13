@@ -124,4 +124,22 @@ class FiscalDocumentoApiTest extends TestCase
         $xml->assertOk();
         $this->assertStringContainsString('<nfeProc>', $xml->getContent());
     }
+
+    public function test_danfe_html_quando_focus_nao_tem_pdf(): void
+    {
+        DB::table('vendas')->where('id', 9001)->update([
+            'url_danfe' => '/notas_fiscais_consumidor/NFe123.html',
+        ]);
+
+        Http::fake([
+            'homologacao.focusnfe.com.br/v2/nfce/sas-v9001-test.pdf' => Http::response('{"status":"autorizado","chave_nfe":"NFe123"}', 200, ['Content-Type' => 'application/json']),
+            'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.pdf' => Http::response('not found', 404),
+            'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.html' => Http::response('<html><body>DANFE</body></html>', 200, ['Content-Type' => 'text/html']),
+        ]);
+
+        $pdf = $this->withHeaders(['X-Usuario-Id' => '1'])->get('/api/fiscal/emissao/vendas/9001/danfe.pdf');
+        $pdf->assertOk();
+        $this->assertStringContainsString('text/html', (string) $pdf->headers->get('content-type'));
+        $this->assertStringContainsString('DANFE', $pdf->getContent());
+    }
 }

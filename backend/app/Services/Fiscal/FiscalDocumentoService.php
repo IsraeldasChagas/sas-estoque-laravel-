@@ -56,43 +56,115 @@ final class FiscalDocumentoService
     {
         $ctx = self::contextoVenda($vendaId);
         $venda = $ctx['venda'];
+        $client = $ctx['client'];
+        $baseUrl = $ctx['base_url'];
         if (! self::documentoDisponivel($venda)) {
             throw new \RuntimeException('Nota fiscal ainda não autorizada para esta venda.');
         }
 
         $ref = trim((string) ($venda->emissao_ref ?? ''));
-        $client = $ctx['client'];
-        $ext = $tipo === 'xml' ? 'xml' : 'pdf';
-        $contentType = $tipo === 'xml' ? 'application/xml; charset=utf-8' : 'application/pdf';
-        $filename = self::nomeArquivo($venda, $ext);
+        $filename = self::nomeArquivo($venda, $tipo === 'xml' ? 'xml' : 'pdf');
 
+        if ($tipo === 'xml') {
+            if ($ref !== '') {
+                $bin = $client->baixarNfceXml($ref);
+                if (self::pareceXml($bin)) {
+                    return [
+                        'body' => $bin['body'],
+                        'content_type' => 'application/xml; charset=utf-8',
+                        'filename' => $filename,
+                    ];
+                }
+            }
+            $urlXml = self::urlAbsolutaFocus($baseUrl, $venda->url_xml ?? null);
+            if ($urlXml) {
+                $bin = $client->baixarUrl($urlXml);
+                if (self::pareceXml($bin)) {
+                    return [
+                        'body' => $bin['body'],
+                        'content_type' => 'application/xml; charset=utf-8',
+                        'filename' => $filename,
+                    ];
+                }
+            }
+            throw new \RuntimeException('XML não disponível na Focus para esta venda.');
+        }
+
+        // PDF / DANFCe (NFC-e Focus costuma entregar HTML em caminho_danfe)
         if ($ref !== '') {
-            $bin = $tipo === 'xml' ? $client->baixarNfceXml($ref) : $client->baixarNfcePdf($ref);
-            if ($bin['ok'] && ($bin['body'] ?? '') !== '') {
+            $bin = $client->baixarNfcePdf($ref);
+            if (self::parecePdf($bin)) {
                 return [
                     'body' => $bin['body'],
-                    'content_type' => $bin['content_type'] ?: $contentType,
+                    'content_type' => 'application/pdf',
                     'filename' => $filename,
                 ];
             }
         }
 
-        $url = $tipo === 'xml' ? ($venda->url_xml ?? null) : ($venda->url_danfe ?? null);
-        if ($url) {
-            $bin = $client->baixarUrl((string) $url);
-            if ($bin['ok'] && ($bin['body'] ?? '') !== '') {
+        $urlDanfe = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null);
+        if ($urlDanfe) {
+            // tenta .pdf no lugar de .html
+            if (str_ends_with(strtolower(parse_url($urlDanfe, PHP_URL_PATH) ?: ''), '.html')) {
+                $pdfUrl = preg_replace('/\.html$/i', '.pdf', $urlDanfe);
+                if (is_string($pdfUrl) && $pdfUrl !== $urlDanfe) {
+                    $binPdf = $client->baixarUrl($pdfUrl);
+                    if (self::parecePdf($binPdf)) {
+                        return [
+                            'body' => $binPdf['body'],
+                            'content_type' => 'application/pdf',
+                            'filename' => $filename,
+                        ];
+                    }
+                }
+            }
+
+            $bin = $client->baixarUrl($urlDanfe);
+            if (self::parecePdf($bin)) {
                 return [
                     'body' => $bin['body'],
-                    'content_type' => $bin['content_type'] ?: $contentType,
+                    'content_type' => 'application/pdf',
                     'filename' => $filename,
+                ];
+            }
+            if (self::pareceHtml($bin)) {
+                return [
+                    'body' => $bin['body'],
+                    'content_type' => 'text/html; charset=utf-8',
+                    'filename' => self::nomeArquivo($venda, 'html'),
                 ];
             }
         }
 
-        throw new \RuntimeException('PDF/XML não disponível na Focus para esta venda. Tente reemitir ou consulte o painel Focus.');
+        // Último recurso: consulta a nota na Focus e usa caminho_danfe da resposta.
+        if ($ref !== '') {
+            $consulta = $client->consultarNfce($ref);
+            $body = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
+            $caminho = $body['caminho_danfe'] ?? null;
+            $abs = self::urlAbsolutaFocus($baseUrl, is_string($caminho) ? $caminho : null);
+            if ($abs) {
+                $bin = $client->baixarUrl($abs);
+                if (self::parecePdf($bin)) {
+                    return [
+                        'body' => $bin['body'],
+                        'content_type' => 'application/pdf',
+                        'filename' => $filename,
+                    ];
+                }
+                if (self::pareceHtml($bin)) {
+                    return [
+                        'body' => $bin['body'],
+                        'content_type' => 'text/html; charset=utf-8',
+                        'filename' => self::nomeArquivo($venda, 'html'),
+                    ];
+                }
+            }
+        }
+
+        throw new \RuntimeException('DANFE/PDF não disponível na Focus para esta venda. Tente novamente ou abra no painel Focus.');
     }
 
-    /** @return array{venda: object, client: FocusNfeClient} */
+    /** @return array{venda: object, client: FocusNfeClient, base_url: string} */
     private static function contextoVenda(int $vendaId): array
     {
         if (! Schema::hasTable('vendas')) {
@@ -116,10 +188,10 @@ final class FiscalDocumentoService
             throw new \RuntimeException('Configure o token Focus em Emissão NF-e / NFC-e.');
         }
 
-        $baseUrl = $config->api_url ?: FiscalEmissaoConfigSupport::focusBaseUrl((string) $config->environment);
+        $baseUrl = rtrim((string) ($config->api_url ?: FiscalEmissaoConfigSupport::focusBaseUrl((string) $config->environment)), '/');
         $client = new FocusNfeClient($baseUrl, (string) $config->api_token);
 
-        return ['venda' => $venda, 'client' => $client];
+        return ['venda' => $venda, 'client' => $client, 'base_url' => $baseUrl];
     }
 
     private static function documentoDisponivel(object $venda): bool
@@ -136,5 +208,68 @@ final class FiscalDocumentoService
         $num = $venda->numero_documento ?? $venda->id ?? 'nota';
 
         return 'nfce-'.preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $num).'.'.$ext;
+    }
+
+    private static function urlAbsolutaFocus(string $baseUrl, mixed $url): ?string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+        if (preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+        if ($url[0] !== '/') {
+            $url = '/'.$url;
+        }
+
+        return rtrim($baseUrl, '/').$url;
+    }
+
+    /** @param array{ok?: bool, body?: string, content_type?: string|null, http_status?: int} $bin */
+    private static function parecePdf(array $bin): bool
+    {
+        if (! ($bin['ok'] ?? false)) {
+            return false;
+        }
+        $body = (string) ($bin['body'] ?? '');
+        if ($body === '' || str_starts_with(ltrim($body), '{') || str_starts_with(ltrim($body), '[')) {
+            return false;
+        }
+        $ct = strtolower((string) ($bin['content_type'] ?? ''));
+
+        return str_starts_with($body, '%PDF') || str_contains($ct, 'pdf');
+    }
+
+    /** @param array{ok?: bool, body?: string, content_type?: string|null} $bin */
+    private static function pareceXml(array $bin): bool
+    {
+        if (! ($bin['ok'] ?? false)) {
+            return false;
+        }
+        $body = ltrim((string) ($bin['body'] ?? ''));
+        if ($body === '' || str_starts_with($body, '{')) {
+            return false;
+        }
+
+        return str_starts_with($body, '<?xml') || str_starts_with($body, '<');
+    }
+
+    /** @param array{ok?: bool, body?: string, content_type?: string|null} $bin */
+    private static function pareceHtml(array $bin): bool
+    {
+        if (! ($bin['ok'] ?? false)) {
+            return false;
+        }
+        $body = ltrim((string) ($bin['body'] ?? ''));
+        if ($body === '' || str_starts_with($body, '{')) {
+            return false;
+        }
+        $ct = strtolower((string) ($bin['content_type'] ?? ''));
+
+        return str_contains($ct, 'html')
+            || str_starts_with($body, '<!DOCTYPE')
+            || str_starts_with($body, '<html')
+            || str_contains(strtolower(substr($body, 0, 200)), '<html');
     }
 }
