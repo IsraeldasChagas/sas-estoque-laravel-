@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Schema;
 
 final class FiscalDocumentoService
 {
+    /** Mesmo tamanho da logo na barra superior (.topbar__logo). */
+    private const LOGO_MAX_WIDTH = 165;
+
+    private const LOGO_MAX_HEIGHT = 54;
+
     /** @return array{pdf: string, xml: string, info: string, danfe_html?: string} */
     public static function rotasRelativas(int $vendaId): array
     {
@@ -96,8 +101,13 @@ final class FiscalDocumentoService
             throw new \RuntimeException('Não foi possível obter o cupom HTML na Focus.');
         }
 
+        $body = $bin['body'];
+        if (self::pareceHtml($bin)) {
+            $body = self::aplicarLogoBarraSuperior($body);
+        }
+
         return [
-            'body' => $bin['body'],
+            'body' => $body,
             'content_type' => self::parecePdf($bin) ? 'application/pdf' : 'text/html; charset=utf-8',
             'filename' => self::nomeArquivo($venda, self::parecePdf($bin) ? 'pdf' : 'html'),
         ];
@@ -273,27 +283,7 @@ final class FiscalDocumentoService
         // Estilos da Focus (display:table, max-width cupom) quebram/esvaziam o Dompdf.
         $html = preg_replace('#<style\b[^>]*>.*?</style>#is', '', $html) ?? $html;
 
-        // Logo do cupom bem menor (~36px), proporcional.
-        $html = preg_replace_callback(
-            '#<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?</div>#is',
-            static function (array $m): string {
-                if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
-                    return $m[0];
-                }
-                $logo = self::logoParaPdf($img[1], 36);
-                $src = htmlspecialchars($logo['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $w = (int) $logo['width'];
-                $h = (int) $logo['height'];
-
-                return '<div class="logomarca" align="center">'
-                    .'<img src="'.$src.'" width="'.$w.'" height="'.$h.'" '
-                    .'style="width:'.$w.'px;height:'.$h.'px;display:block;margin:0 auto 4px auto;border:0;" />'
-                    .'<div class="sas-nfce-titulo">NFC-e</div>'
-                    .'</div>';
-            },
-            $html,
-            1
-        ) ?? $html;
+        $html = self::aplicarLogoBarraSuperior($html, true, false);
 
         // Remove placeholders de QR da Focus (dependem de JS).
         $html = preg_replace('#<div[^>]*id=["\']qr-code\d*["\'][^>]*>.*?</div>#is', '', $html) ?? $html;
@@ -326,6 +316,9 @@ body {
   display: block;
   margin: 0 auto 4px auto;
   border: 0;
+  height: 54px;
+  width: auto;
+  max-width: 165px;
 }
 .sas-nfce-titulo {
   font-size: 13px;
@@ -398,14 +391,70 @@ CSS;
     }
 
     /**
-     * Redimensiona a logo (GD) e embute data-URI leve, sem distorcer.
+     * Aplica a logo no tamanho da barra superior (.topbar__logo: 54px de altura, máx. 165px).
+     */
+    private static function aplicarLogoBarraSuperior(string $html, bool $incluirTituloNfce = false, bool $injetarCss = true): string
+    {
+        $html = preg_replace_callback(
+            '#<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?</div>#is',
+            static function (array $m) use ($incluirTituloNfce): string {
+                if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
+                    return $m[0];
+                }
+                $logo = self::logoParaPdf($img[1]);
+                $src = htmlspecialchars($logo['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $w = (int) $logo['width'];
+                $h = (int) $logo['height'];
+                $titulo = $incluirTituloNfce ? '<div class="sas-nfce-titulo">NFC-e</div>' : '';
+
+                return '<div class="logomarca" align="center">'
+                    .'<img src="'.$src.'" width="'.$w.'" height="'.$h.'" '
+                    .'style="width:'.$w.'px;height:'.$h.'px;max-width:165px;max-height:54px;display:block;margin:0 auto 4px auto;border:0;" />'
+                    .$titulo
+                    .'</div>';
+            },
+            $html,
+            1
+        ) ?? $html;
+
+        if (! $injetarCss) {
+            return $html;
+        }
+
+        $css = <<<'CSS'
+<style type="text/css" id="sas-logo-topbar">
+.logomarca { text-align: center; }
+.logomarca img {
+  height: 54px !important;
+  width: auto !important;
+  max-width: 165px !important;
+  max-height: 54px !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 auto 4px auto !important;
+}
+</style>
+CSS;
+
+        if (stripos($html, '</head>') !== false) {
+            return preg_replace('#</head>#i', $css.'</head>', $html, 1) ?? ($html.$css);
+        }
+
+        return $css.$html;
+    }
+
+    /**
+     * Redimensiona a logo (GD) no tamanho da barra superior, sem distorcer.
      *
      * @return array{src: string, width: int, height: int}
      */
-    private static function logoParaPdf(string $src, int $maxSide = 36): array
-    {
+    private static function logoParaPdf(
+        string $src,
+        int $maxWidth = self::LOGO_MAX_WIDTH,
+        int $maxHeight = self::LOGO_MAX_HEIGHT
+    ): array {
         $src = trim($src);
-        $fallback = ['src' => $src, 'width' => $maxSide, 'height' => $maxSide];
+        $fallback = ['src' => $src, 'width' => $maxWidth, 'height' => $maxHeight];
         if ($src === '') {
             return $fallback;
         }
@@ -435,7 +484,7 @@ CSS;
                 return $fallback;
             }
 
-            $scale = max($nw, $nh) > $maxSide ? ($maxSide / max($nw, $nh)) : 1.0;
+            $scale = min(1.0, $maxWidth / $nw, $maxHeight / $nh);
             $w = max(1, (int) round($nw * $scale));
             $h = max(1, (int) round($nh * $scale));
 
