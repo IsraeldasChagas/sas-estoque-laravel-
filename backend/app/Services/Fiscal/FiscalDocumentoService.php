@@ -265,26 +265,49 @@ final class FiscalDocumentoService
     }
 
     /**
-     * Ajusta o HTML Focus para impressão A4: logo pequena, margens e tipografia limpas.
+     * Ajusta o HTML Focus para impressão A4: bloco centralizado, logo menor.
      */
     private static function prepararHtmlDanfeA4(string $html): string
     {
-        // Logo bem menor (Focus manda a imagem sem size).
+        // Logo menor (Focus manda a imagem sem size).
         $html = preg_replace_callback(
             '#(<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?<img)([^>]*)(>)#is',
             static function (array $m): string {
                 $attrs = $m[2];
                 $attrs = preg_replace('/\s(width|height|style)\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $attrs) ?? $attrs;
 
-                return $m[1].$attrs.' width="72" height="72" style="max-width:72px;max-height:48px;width:auto;height:auto;display:block;margin:0 auto 4px auto;"'.$m[3];
+                return $m[1].$attrs.' width="48" height="48" style="max-width:48px;max-height:32px;width:auto;height:auto;display:block;margin:0 auto 2px auto;"'.$m[3];
             },
             $html,
             1
         ) ?? $html;
 
+        // Dompdf centraliza melhor com tabela wrapper do que margin:auto.
+        if (! str_contains($html, 'sas-danfe-center-wrap')) {
+            $html = preg_replace(
+                '#<div\s+class=["\']content["\']>#i',
+                '<table class="sas-danfe-center-wrap" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="top">'
+                .'<div class="content">',
+                $html,
+                1
+            ) ?? $html;
+            // Fecha o wrapper antes do </body> (após o .content original).
+            if (stripos($html, '</body>') !== false) {
+                $html = preg_replace(
+                    '#</div>\s*</body>#i',
+                    '</div></td></tr></table></body>',
+                    $html,
+                    1
+                ) ?? $html;
+            }
+        }
+
+        // Centraliza células alinhadas à esquerda no HTML Focus.
+        $html = preg_replace('#align=["\']left["\']#i', 'align="center"', $html) ?? $html;
+
         $css = <<<'CSS'
 <style type="text/css" id="sas-danfe-a4">
-@page { size: A4 portrait; margin: 12mm 14mm; }
+@page { size: A4 portrait; margin: 16mm 18mm; }
 html, body {
   margin: 0 !important;
   padding: 0 !important;
@@ -292,63 +315,82 @@ html, body {
   color: #111111;
   font-family: DejaVu Sans, Arial, Helvetica, sans-serif !important;
   font-size: 10px !important;
-  line-height: 1.35;
+  line-height: 1.4;
+  text-align: center;
+}
+.sas-danfe-center-wrap {
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 .content {
-  max-width: 180mm !important;
-  width: 100% !important;
+  width: 118mm !important;
+  max-width: 118mm !important;
   margin: 0 auto !important;
-  padding: 10px 14px 16px 14px !important;
+  padding: 12px 16px 18px 16px !important;
   border: 1px solid #c8c8c8 !important;
   box-sizing: border-box;
+  text-align: center !important;
 }
 .logomarca {
-  text-align: center;
-  margin: 0 0 8px 0;
-  padding: 0 0 6px 0;
+  text-align: center !important;
+  margin: 0 0 10px 0;
+  padding: 0 0 8px 0;
   border-bottom: 1px solid #e0e0e0;
 }
+.logomarca table,
+.logomarca td {
+  text-align: center !important;
+}
 .logomarca img {
-  max-width: 72px !important;
-  max-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 32px !important;
   width: auto !important;
   height: auto !important;
   display: block !important;
-  margin: 0 auto 4px auto !important;
+  margin: 0 auto 2px auto !important;
 }
 .logomarca span,
 .logomarca strong,
 .logomarca em {
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-style: normal !important;
   letter-spacing: 0.04em;
   color: #222222;
 }
+.dados-da-empresa,
+.dados-da-empresa table,
 .dados-da-empresa td {
+  text-align: center !important;
   font-size: 10px !important;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 .linha {
   border-bottom: 1px solid #222 !important;
-  margin: 8px 0 !important;
+  margin: 8px auto !important;
+  width: 100%;
 }
+.tabela-nfce,
 .tabela-nfce table {
   width: 100% !important;
+  margin: 0 auto !important;
 }
 .tabela-nfce td,
 .tabela-nfce th {
   font-size: 9.5px !important;
   vertical-align: top;
+  text-align: center !important;
 }
 #qr-code0, #qr-code1 {
   display: none !important;
 }
 .sas-qr-block {
-  text-align: center;
-  margin: 14px 0 4px 0;
-  padding: 12px 10px;
+  text-align: center !important;
+  margin: 14px auto 4px auto;
+  padding: 12px 8px;
   border-top: 1px solid #d0d0d0;
   page-break-inside: avoid;
+  width: 100%;
 }
 .sas-qr-block .sas-qr-title {
   font-size: 11px;
@@ -357,8 +399,8 @@ html, body {
   letter-spacing: 0.02em;
 }
 .sas-qr-block img {
-  width: 128px;
-  height: 128px;
+  width: 120px;
+  height: 120px;
   display: block;
   margin: 0 auto;
 }
@@ -408,6 +450,15 @@ CSS;
         // Remove imagens de QR quebradas/relativas que o Dompdf não carrega.
         $html = preg_replace('#<img[^>]*(qrcode|qr-code|qr_code)[^>]*>#i', '', $html) ?? $html;
 
+        // Prefere ficar dentro do .content centralizado.
+        if (preg_match('#</div>\s*</td>\s*</tr>\s*</table>\s*</body>#i', $html)) {
+            return preg_replace(
+                '#</div>(\s*</td>\s*</tr>\s*</table>\s*</body>)#i',
+                $bloco.'</div>$1',
+                $html,
+                1
+            ) ?? ($html.$bloco);
+        }
         if (stripos($html, '</body>') !== false) {
             return preg_replace('#</body>#i', $bloco.'</body>', $html, 1) ?? ($html.$bloco);
         }
