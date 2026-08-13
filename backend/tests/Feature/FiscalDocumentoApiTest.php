@@ -129,10 +129,17 @@ class FiscalDocumentoApiTest extends TestCase
     {
         DB::table('vendas')->where('id', 9001)->update([
             'url_danfe' => '/notas_fiscais_consumidor/NFe123.html',
+            'emissao_ref' => 'sas-v9001-test',
         ]);
 
         Http::fake([
-            'homologacao.focusnfe.com.br/v2/nfce/sas-v9001-test.pdf' => Http::response('{"status":"autorizado","chave_nfe":"NFe123"}', 200, ['Content-Type' => 'application/json']),
+            'homologacao.focusnfe.com.br/v2/nfce/sas-v9001-test' => Http::response([
+                'status' => 'autorizado',
+                'chave_nfe' => 'NFe35260104052123000190550010000000011000000001',
+                'caminho_danfe' => '/notas_fiscais_consumidor/NFe123.html',
+                'qrcode_url' => 'http://www.fazenda.pr.gov.br/nfce/qrcode/?p=35260104052123000190550010000000011000000001|2|1|1|ABC',
+            ], 200),
+            'homologacao.focusnfe.com.br/v2/nfce/sas-v9001-test.pdf' => Http::response('{"status":"autorizado"}', 200, ['Content-Type' => 'application/json']),
             'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.pdf' => Http::response('not found', 404),
             'homologacao.focusnfe.com.br/notas_fiscais_consumidor/NFe123.html' => Http::response('<html><body><h1>DANFE</h1><p>Cupom teste</p></body></html>', 200, ['Content-Type' => 'text/html']),
         ]);

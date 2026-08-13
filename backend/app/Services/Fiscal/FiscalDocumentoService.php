@@ -91,6 +91,24 @@ final class FiscalDocumentoService
         }
 
         // PDF / DANFCe (NFC-e Focus costuma entregar HTML em caminho_danfe)
+        $qrcodeUrl = null;
+        $focusBody = [];
+        $urlDanfeFromFocus = null;
+        $chave = preg_replace('/\D+/', '', (string) ($venda->chave_acesso ?? ''));
+        if ($ref !== '') {
+            $consulta = $client->consultarNfce($ref);
+            $focusBody = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
+            if (! empty($focusBody['qrcode_url']) && is_string($focusBody['qrcode_url'])) {
+                $qrcodeUrl = $focusBody['qrcode_url'];
+            }
+            if ($chave === '' && ! empty($focusBody['chave_nfe'])) {
+                $chave = preg_replace('/\D+/', '', (string) $focusBody['chave_nfe']) ?? '';
+            }
+            if (! empty($focusBody['caminho_danfe'])) {
+                $urlDanfeFromFocus = self::urlAbsolutaFocus($baseUrl, (string) $focusBody['caminho_danfe']);
+            }
+        }
+
         if ($ref !== '') {
             $bin = $client->baixarNfcePdf($ref);
             if (self::parecePdf($bin)) {
@@ -102,7 +120,8 @@ final class FiscalDocumentoService
             }
         }
 
-        $urlDanfe = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null);
+        $urlDanfe = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null)
+            ?? ($urlDanfeFromFocus ?? null);
         if ($urlDanfe) {
             // tenta .pdf no lugar de .html
             if (str_ends_with(strtolower(parse_url($urlDanfe, PHP_URL_PATH) ?: ''), '.html')) {
@@ -129,18 +148,16 @@ final class FiscalDocumentoService
             }
             if (self::pareceHtml($bin)) {
                 return [
-                    'body' => self::htmlParaPdf($bin['body']),
+                    'body' => self::htmlParaPdf($bin['body'], $qrcodeUrl, $chave ?: null),
                     'content_type' => 'application/pdf',
                     'filename' => $filename,
                 ];
             }
         }
 
-        // Último recurso: consulta a nota na Focus e usa caminho_danfe da resposta.
-        if ($ref !== '') {
-            $consulta = $client->consultarNfce($ref);
-            $body = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
-            $caminho = $body['caminho_danfe'] ?? null;
+        // Último recurso: caminho_danfe da consulta Focus.
+        if ($ref !== '' && isset($focusBody) && is_array($focusBody)) {
+            $caminho = $focusBody['caminho_danfe'] ?? null;
             $abs = self::urlAbsolutaFocus($baseUrl, is_string($caminho) ? $caminho : null);
             if ($abs) {
                 $bin = $client->baixarUrl($abs);
@@ -153,7 +170,7 @@ final class FiscalDocumentoService
                 }
                 if (self::pareceHtml($bin)) {
                     return [
-                        'body' => self::htmlParaPdf($bin['body']),
+                        'body' => self::htmlParaPdf($bin['body'], $qrcodeUrl, $chave ?: null),
                         'content_type' => 'application/pdf',
                         'filename' => $filename,
                     ];
@@ -164,14 +181,17 @@ final class FiscalDocumentoService
         throw new \RuntimeException('DANFE/PDF não disponível na Focus para esta venda. Tente novamente ou abra no painel Focus.');
     }
 
-    /** Converte HTML do DANFCe Focus em PDF (NFC-e costuma vir só em HTML). */
-    private static function htmlParaPdf(string $html): string
+    /**
+     * Converte HTML do DANFCe Focus em PDF e garante QR Code da consulta SEFAZ.
+     */
+    private static function htmlParaPdf(string $html, ?string $qrcodeUrl = null, ?string $chave = null): string
     {
         if (! class_exists(\Dompdf\Dompdf::class)) {
             throw new \RuntimeException('Gerador de PDF indisponível no servidor (dompdf).');
         }
         // Dompdf lida melhor com HTML relativamente simples; remove scripts.
         $html = preg_replace('#<script\b[^>]*>.*?</script>#is', '', $html) ?? $html;
+        $html = self::injetarQrCodeNoHtml($html, $qrcodeUrl, $chave);
         if (! str_contains(strtolower($html), '<html')) {
             $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'.$html.'</body></html>';
         }
@@ -183,7 +203,7 @@ final class FiscalDocumentoService
 
         $dompdf = new \Dompdf\Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->setPaper([0, 0, 226.77, 841.89], 'portrait'); // ~80mm largura cupom
         $dompdf->render();
         $out = $dompdf->output();
         if (! is_string($out) || $out === '' || ! str_starts_with($out, '%PDF')) {
@@ -191,6 +211,66 @@ final class FiscalDocumentoService
         }
 
         return $out;
+    }
+
+    private static function injetarQrCodeNoHtml(string $html, ?string $qrcodeUrl, ?string $chave): string
+    {
+        $qrcodeUrl = trim((string) $qrcodeUrl);
+        if ($qrcodeUrl === '') {
+            return $html;
+        }
+
+        $dataUri = self::gerarQrDataUri($qrcodeUrl);
+        if ($dataUri === null) {
+            return $html;
+        }
+
+        $chaveTxt = $chave ? htmlspecialchars($chave, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '';
+        $urlTxt = htmlspecialchars($qrcodeUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $bloco = '<div style="text-align:center;margin:16px 0;page-break-inside:avoid">'
+            .'<div style="font-size:11px;font-weight:bold;margin-bottom:6px">Consulta via QR Code</div>'
+            .'<img src="'.$dataUri.'" width="150" height="150" alt="QR Code NFC-e" />'
+            .($chaveTxt !== '' ? '<div style="font-size:9px;margin-top:8px;word-break:break-all">Chave: '.$chaveTxt.'</div>' : '')
+            .'<div style="font-size:7px;margin-top:4px;word-break:break-all;color:#444">'.$urlTxt.'</div>'
+            .'</div>';
+
+        // Remove imagens de QR quebradas/relativas que o Dompdf não carrega.
+        $html = preg_replace('#<img[^>]*(qrcode|qr-code|qr_code)[^>]*>#i', '', $html) ?? $html;
+
+        if (stripos($html, '</body>') !== false) {
+            return preg_replace('#</body>#i', $bloco.'</body>', $html, 1) ?? ($html.$bloco);
+        }
+
+        return $html.$bloco;
+    }
+
+    private static function gerarQrDataUri(string $conteudo): ?string
+    {
+        try {
+            if (class_exists(\Endroid\QrCode\Builder\Builder::class)) {
+                $builder = new \Endroid\QrCode\Builder\Builder(
+                    writer: new \Endroid\QrCode\Writer\PngWriter(),
+                    data: $conteudo,
+                    size: 240,
+                    margin: 8,
+                );
+                $result = $builder->build();
+
+                return $result->getDataUri();
+            }
+
+            if (class_exists(\Endroid\QrCode\QrCode::class)) {
+                $qrCode = new \Endroid\QrCode\QrCode($conteudo);
+                $writer = new \Endroid\QrCode\Writer\PngWriter();
+                $result = $writer->write($qrCode);
+
+                return $result->getDataUri();
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
     }
 
     /** @return array{venda: object, client: FocusNfeClient, base_url: string} */

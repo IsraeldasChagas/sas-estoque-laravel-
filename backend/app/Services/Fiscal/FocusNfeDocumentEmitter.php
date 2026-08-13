@@ -83,6 +83,8 @@ final class FocusNfeDocumentEmitter implements FiscalDocumentEmitterInterface
                 'serie' => $serie,
                 'danfe_url' => $danfe ? (string) $danfe : null,
                 'xml' => isset($body['caminho_xml_nota_fiscal']) ? (string) $body['caminho_xml_nota_fiscal'] : null,
+                'qrcode_url' => isset($body['qrcode_url']) ? (string) $body['qrcode_url'] : null,
+                'url_consulta_nf' => isset($body['url_consulta_nf']) ? (string) $body['url_consulta_nf'] : null,
             ];
         }
 
