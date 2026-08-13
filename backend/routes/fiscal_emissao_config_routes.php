@@ -404,7 +404,7 @@ Route::get('/fiscal/emissao/vendas/{vendaId}/danfe.html', function (Request $req
         return $fiscalEmJson(['error' => 'Não autorizado'], 401);
     }
     try {
-        $bin = FiscalDocumentoService::obterPdf((int) $vendaId);
+        $bin = FiscalDocumentoService::obterDanfeHtml((int) $vendaId);
 
         return $fiscalEmFileResponse($bin, 'inline');
     } catch (\Throwable $e) {
