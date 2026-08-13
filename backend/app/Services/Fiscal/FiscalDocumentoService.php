@@ -276,7 +276,7 @@ final class FiscalDocumentoService
                 $attrs = $m[2];
                 $attrs = preg_replace('/\s(width|height|style)\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $attrs) ?? $attrs;
 
-                return $m[1].$attrs.' width="40" height="40" style="max-width:40px;max-height:28px;width:auto;height:auto;display:block;margin:0 auto;"'.$m[3];
+                return $m[1].$attrs.' width="120" height="120" style="max-width:120px;max-height:84px;width:auto;height:auto;display:block;margin:0 auto;"'.$m[3];
             },
             $html,
             1
@@ -354,12 +354,12 @@ html, body {
   vertical-align: middle !important;
 }
 .logomarca img {
-  max-width: 40px !important;
-  max-height: 28px !important;
+  max-width: 120px !important;
+  max-height: 84px !important;
   width: auto !important;
   height: auto !important;
   display: block !important;
-  margin: 0 auto 4px auto !important;
+  margin: 0 auto 6px auto !important;
 }
 .logomarca span,
 .logomarca strong,
