@@ -720,19 +720,28 @@
 }
 #cpdvModal.cpdv-modal--pgto .cpdv-modal-actions {
   flex-shrink: 0;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.75rem;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem 0.7rem;
 }
 #cpdvModal.cpdv-modal--pgto .cpdv-modal-actions__btns {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  justify-content: flex-end;
+  gap: 0.4rem;
 }
 #cpdvModal.cpdv-modal--pgto .cpdv-modal-actions .btn,
 #cpdvModal.cpdv-modal--pgto .cpdv-modal-actions__btns .btn {
-  flex: 1 1 10rem;
-  min-height: 2.75rem;
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 8px;
+  box-shadow: none;
   justify-content: center;
 }
 #cpdvModal.cpdv-modal--pgto .modal-body {
