@@ -173,7 +173,8 @@
               <li><strong>Empresas → Adicionar</strong> — mesmo CNPJ do SAS; informe certificado <strong>A1</strong> (.pfx) e senha no painel Focus (obrigatório lá).</li>
               <li><strong>Painel API → Tokens</strong> — copie o token do <strong>mesmo ambiente</strong> escolhido acima (produção ≠ homologação).</li>
               <li>Cole o token abaixo. A URL acompanha o ambiente.</li>
-              <li>CSC NFC-e: portal SEFAZ do estado (ex. PA) → cadastro NFC-e → gerar CSC → preencher ID e código nesta tela.</li>
+              <li>CSC NFC-e: portal SEFAZ do estado (ex. PA) → gerar CSC → preencher <strong>ID</strong> e <strong>Token</strong> nesta tela e <strong>Salvar</strong> (o SAS envia para a empresa na Focus).</li>
+              <li>Se a Focus disser “CSC/Id Token não configurado”, abra o painel Focus → Empresas → <strong>DETALHES</strong> e confira <strong>CSC / Id Token de produção</strong> (ou homologação). Só no SAS não basta.</li>
             </ol>
             <p class="subtle-text">Textos de ajuda abaixo podem citar as duas URLs — isso é só referência, não significa que o ambiente está em homologação.</p>
           </div>
@@ -278,12 +279,19 @@
       const file = root.querySelector("#femCertFile")?.files?.[0];
       if (file) body.certificado_pfx_base64 = await loadCertBase64(file);
       const res = await fFetch(`/fiscal/emissao/config/${femEmpresaId}`, { method: "PUT", body: JSON.stringify(body) });
-      toast(
-        body.environment === "production"
-          ? "Salvo em PRODUÇÃO. Textos de ajuda podem ainda citar homologação — ignore; o ambiente ativo é produção."
-          : "Salvo em HOMOLOGAÇÃO (testes).",
-        "success"
-      );
+      const sync = res.focus_csc_sync;
+      if (sync && sync.ok === false && !sync.skipped) {
+        toast("Salvo no SAS, mas CSC não foi para a Focus: " + (sync.motivo || "erro"), "error");
+      } else if (sync && sync.ok && sync.mensagem) {
+        toast(sync.mensagem, "success");
+      } else {
+        toast(
+          body.environment === "production"
+            ? "Salvo em PRODUÇÃO. Textos de ajuda podem ainda citar homologação — ignore; o ambiente ativo é produção."
+            : "Salvo em HOMOLOGAÇÃO (testes).",
+          "success"
+        );
+      }
       const cl = root.querySelector("#femChecklist");
       if (cl && res.prontidao) cl.innerHTML = checklistHtml(res.prontidao);
       // Recarrega formulário para o banner refletir o ambiente salvo

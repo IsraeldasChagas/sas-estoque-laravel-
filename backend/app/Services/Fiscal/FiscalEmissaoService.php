@@ -4,6 +4,7 @@ namespace App\Services\Fiscal;
 
 use App\Models\FiscalEmissaoConfig;
 use App\Support\FiscalEmissaoConfigSupport;
+use App\Support\FocusEmpresaCscSync;
 use App\Support\FocusNfcePayloadBuilder;
 use App\Support\VendaFiscalSupport;
 use Illuminate\Support\Facades\DB;
@@ -94,6 +95,18 @@ final class FiscalEmissaoService
             return self::fail($vendaId, $empresaId, $config, $e->getMessage());
         }
 
+        // Focus usa CSC no cadastro da empresa (/v2/empresas), não só no JSON da NFC-e.
+        $syncCsc = FocusEmpresaCscSync::sincronizar($config, $empresa);
+        if (! ($syncCsc['ok'] ?? false) && empty($syncCsc['skipped'])) {
+            return self::fail(
+                $vendaId,
+                $empresaId,
+                $config,
+                'CSC não sincronizado na Focus: '.($syncCsc['motivo'] ?? 'falha desconhecida')
+                    .' — confira ID/Token CSC no SAS e no painel Focus (Empresas → DETALHES).'
+            );
+        }
+
         $ref = 'sas-v' . $vendaId . '-' . time();
         $payload['_ref'] = $ref;
 
@@ -101,6 +114,15 @@ final class FiscalEmissaoService
         $client = new FocusNfeClient($baseUrl, (string) $config->api_token);
         $emitter = new FocusNfeDocumentEmitter($client);
         $out = $emitter->emitirNfce($empresaId, $payload);
+
+        if (! ($out['success'] ?? false)) {
+            $err = (string) ($out['error'] ?? '');
+            if (stripos($err, 'CSC') !== false || stripos($err, 'Id Token') !== false) {
+                $out['error'] = $err
+                    .' | O CSC precisa estar na empresa Focus (produção: csc_nfce_producao / id_token_nfce_producao).'
+                    .' Salve de novo em Emissão NF-e / NFC-e para sincronizar, ou preencha no painel Focus.';
+            }
+        }
 
         self::registrarLog($vendaId, $empresaId, $ref, $out);
 

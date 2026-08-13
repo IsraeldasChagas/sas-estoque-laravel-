@@ -257,10 +257,32 @@ Route::put('/fiscal/emissao/config/{empresaId}', function (Request $request, $em
         : 'Revise os itens pendentes no checklist.';
 
     $cfg->save();
+    $cfg = $cfg->fresh();
+
+    $syncFocus = null;
+    if (($cfg->provider ?? '') === 'focus_nfe'
+        && ! empty($cfg->csc_id)
+        && ! empty($cfg->csc_token)
+        && ! empty($cfg->api_token)
+    ) {
+        $empresaRow = DB::table('empresas')->where('id', $empresaId)->first();
+        if ($empresaRow) {
+            $syncFocus = \App\Support\FocusEmpresaCscSync::sincronizar($cfg, $empresaRow);
+            if (! ($syncFocus['ok'] ?? false) && empty($syncFocus['skipped'])) {
+                $cfg->last_validation_message = 'Salvo no SAS, mas CSC não foi para a Focus: '
+                    .($syncFocus['motivo'] ?? 'erro');
+                $cfg->save();
+            } elseif (! empty($syncFocus['mensagem'])) {
+                $cfg->last_validation_message = $syncFocus['mensagem'];
+                $cfg->save();
+            }
+        }
+    }
 
     return $fiscalEmJson([
         'config' => $cfg->fresh()->paraPainel(),
         'prontidao' => $prontidao,
+        'focus_csc_sync' => $syncFocus,
     ]);
 });
 

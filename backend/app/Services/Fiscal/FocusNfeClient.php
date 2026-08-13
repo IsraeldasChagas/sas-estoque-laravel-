@@ -51,6 +51,30 @@ final class FocusNfeClient
         ];
     }
 
+    /**
+     * API de empresas Focus (produção). Lista por CNPJ (14 dígitos).
+     *
+     * @return array{http_status: int, body: array<string, mixed>|list<mixed>, ok: bool}
+     */
+    public function listarEmpresas(?string $cnpj = null): array
+    {
+        $path = '/v2/empresas';
+        if ($cnpj !== null && $cnpj !== '') {
+            $path .= '?cnpj='.rawurlencode(preg_replace('/\D+/', '', $cnpj) ?? '');
+        }
+
+        return $this->request('GET', $path, null);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{http_status: int, body: array<string, mixed>, ok: bool}
+     */
+    public function atualizarEmpresa(string|int $empresaFocusId, array $payload): array
+    {
+        return $this->request('PUT', '/v2/empresas/'.rawurlencode((string) $empresaFocusId), $payload);
+    }
+
     /** @return array{http_status: int, body: string, content_type: string|null, ok: bool} */
     private function requestBinary(string $method, string $path): array
     {
@@ -67,7 +91,7 @@ final class FocusNfeClient
         ];
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{http_status: int, body: array<string, mixed>|list<mixed>, ok: bool} */
     private function request(string $method, string $path, ?array $body): array
     {
         $url = rtrim($this->baseUrl, '/').$path;
@@ -75,9 +99,12 @@ final class FocusNfeClient
             ->acceptJson()
             ->timeout($this->timeoutSeconds);
 
-        $response = $method === 'GET'
-            ? $pending->get($url)
-            : $pending->post($url, $body ?? []);
+        $response = match (strtoupper($method)) {
+            'GET' => $pending->get($url),
+            'PUT' => $pending->put($url, $body ?? []),
+            'POST' => $pending->post($url, $body ?? []),
+            default => $pending->send($method, $url, ['json' => $body ?? []]),
+        };
 
         $json = $response->json();
         if (! is_array($json)) {
