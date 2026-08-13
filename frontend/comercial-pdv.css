@@ -1071,3 +1071,131 @@ body.cpdv-topbar-expanded .cpdv-topbar-reveal {
   color: #9a4a00;
   font-size: 0.9rem;
 }
+
+#comercialHistoricoSection,
+#comercialHistoricoSection .cpdv-page-wrap,
+#comercialHistoricoSection .table-card,
+#comercialHistoricoSection .cpdv-hist-card-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+#comercialHistoricoSection {
+  overflow-x: hidden;
+}
+#comercialHistoricoSection .cpdv-hist-card-wrap {
+  overflow: hidden;
+}
+
+.cpdv-hist-cards {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+.cpdv-hist-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #d7d0c4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+.cpdv-hist-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.92rem;
+}
+.cpdv-hist-card__row span {
+  flex: 0 0 36%;
+  max-width: 7.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted, #607d8b);
+  padding-top: 0.15rem;
+}
+.cpdv-hist-card__row strong {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.cpdv-hist-card__acoes {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  width: 100%;
+  margin: 0.7rem 0 0;
+}
+.cpdv-hist-card__acoes .btn {
+  flex: 1 1 calc(50% - 0.4rem);
+  min-height: 2.7rem;
+  max-width: none !important;
+  width: auto;
+  justify-content: center;
+}
+.cpdv-hist-empty-msg {
+  margin: 0;
+  padding: 1rem 0.25rem;
+  text-align: center;
+}
+
+/* Celular e janela estreita: só os cards. */
+#comercialHistoricoSection .cpdv-hist-table {
+  display: none !important;
+}
+
+@media (min-width: 1181px) {
+  #comercialHistoricoSection .cpdv-hist-cards {
+    display: none !important;
+  }
+  #comercialHistoricoSection .cpdv-hist-table {
+    display: block !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #comercialHistoricoSection .cpdv-hist-table table {
+    width: 100%;
+    min-width: 0;
+  }
+  #comercialHistoricoSection .cpdv-hist-table .cpdv-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+  }
+  #comercialHistoricoSection .cpdv-hist-table .cpdv-actions .btn {
+    max-width: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  #comercialHistoricoSection {
+    padding: 0.1rem 0 1.4rem;
+  }
+  #comercialHistoricoSection .cpdv-section-head {
+    padding: 0 0.1rem 0.25rem;
+    margin-bottom: 0.65rem;
+  }
+  #comercialHistoricoSection .cpdv-section-head h2 {
+    font-size: 1.15rem;
+    line-height: 1.25;
+  }
+  #comercialHistoricoSection .cpdv-section-head .subtle-text {
+    font-size: 0.8rem;
+  }
+  #comercialHistoricoSection .table-card > header {
+    padding: 0.8rem 1rem;
+  }
+  #comercialHistoricoSection .cpdv-aviso-proto {
+    font-size: 0.82rem;
+    padding: 0.7rem 0.85rem;
+  }
+}

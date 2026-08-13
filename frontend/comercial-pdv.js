@@ -2248,44 +2248,78 @@
     });
   }
 
+  function cpdvHistCardHtml(campos, acoes) {
+    const linhas = campos.map(([rotulo, valor]) =>
+      `<div class="cpdv-hist-card__row"><span>${rotulo}</span><strong>${valor}</strong></div>`
+    ).join("");
+    return `<article class="cpdv-hist-card">${linhas}<div class="cpdv-hist-card__acoes cpdv-actions">${acoes}</div></article>`;
+  }
+
+  function cpdvHistTrHtml(campos, acoes) {
+    const tds = campos.map(([rotulo, valor]) => `<td data-label="${rotulo}">${valor}</td>`).join("");
+    return `<tr>${tds}<td class="cpdv-actions" data-label="Ações">${acoes}</td></tr>`;
+  }
+
   async function cpdvRenderHistorico() {
     const root = cpdvRoot("comercialHistoricoRoot");
     if (!root) return;
     await cpdvInitApi();
     let rows = "";
+    let cards = "";
     if (cpdvState.apiReady) {
       try {
         const vendas = await cpdvFetch("/pdv/vendas?limit=50");
-        rows = (vendas || []).map((v) =>
-          `<tr>
-            <td>#${v.id}</td><td>${escHtml(String(v.data_venda || "").slice(0, 16))}</td><td>${escHtml(v.unidade_nome || "")}</td>
-            <td>${escHtml(v.numero_mesa || v.nome_mesa || "—")}</td><td>${escHtml(v.origem_venda || "pdv")}</td>
-            <td>${cpdvBadgeNota(v)}</td>
-            <td>${moeda(v.valor_liquido)}</td><td>${escHtml(v.forma_pagamento || "")}</td>
-            <td>${cpdvStatusBadge(v.status === "cancelada" ? "fechamento" : "aberto")}</td>
-            <td class="cpdv-actions" style="margin:0;flex-wrap:nowrap">${cpdvAcoesNota(v)}</td>
-          </tr>`
-        ).join("") || '<tr><td colspan="10">Nenhuma venda registrada.</td></tr>';
+        if (vendas && vendas.length) {
+          rows = vendas.map((v) => {
+            const campos = [
+              ["Nº", `#${v.id}`],
+              ["Data/hora", escHtml(String(v.data_venda || "").slice(0, 16))],
+              ["Unidade", escHtml(v.unidade_nome || "—")],
+              ["Mesa", escHtml(v.numero_mesa || v.nome_mesa || "—")],
+              ["Origem", escHtml(v.origem_venda || "pdv")],
+              ["Nota", cpdvBadgeNota(v)],
+              ["Total", moeda(v.valor_liquido)],
+              ["Pagamento", escHtml(v.forma_pagamento || "—")],
+              ["Status", cpdvStatusBadge(v.status === "cancelada" ? "fechamento" : "aberto")],
+            ];
+            const acoes = cpdvAcoesNota(v);
+            cards += cpdvHistCardHtml(campos, acoes);
+            return cpdvHistTrHtml(campos, acoes);
+          }).join("");
+        }
       } catch {
         rows = "";
+        cards = "";
       }
     }
     if (!rows) {
-      rows = DADOS_DEMONSTRACAO_PDV.vendas.map((v) =>
-      `<tr>
-        <td>#${v.id}</td><td>${escHtml(v.data)} ${escHtml(v.hora)}</td><td>${escHtml(v.unidade)}</td>
-        <td>${v.mesa}</td><td>${escHtml(v.cliente)}</td><td>${escHtml(v.operador)}</td>
-        <td>${moeda(v.total)}</td><td>${escHtml(v.forma)}</td>
-        <td>${cpdvStatusBadge(v.status)}</td>
-          <td class="cpdv-actions" style="margin:0"><button type="button" class="btn neutral btn-sm" data-cpdv-proto="Ver venda #${v.id}">Ver</button></td>
-      </tr>`
-    ).join("");
+      rows = DADOS_DEMONSTRACAO_PDV.vendas.map((v) => {
+        const campos = [
+          ["Nº", `#${v.id}`],
+          ["Data/hora", `${escHtml(v.data)} ${escHtml(v.hora)}`],
+          ["Unidade", escHtml(v.unidade)],
+          ["Mesa", String(v.mesa ?? "—")],
+          ["Cliente", escHtml(v.cliente)],
+          ["Operador", escHtml(v.operador)],
+          ["Total", moeda(v.total)],
+          ["Pagamento", escHtml(v.forma)],
+          ["Status", cpdvStatusBadge(v.status)],
+        ];
+        const acoes = `<button type="button" class="btn neutral btn-sm" data-cpdv-proto="Ver venda #${v.id}">Ver</button>`;
+        cards += cpdvHistCardHtml(campos, acoes);
+        return cpdvHistTrHtml(campos, acoes);
+      }).join("");
+    }
+    if (!cards) {
+      cards = '<p class="subtle-text cpdv-hist-empty-msg">Nenhuma venda registrada.</p>';
+      rows = '<tr class="cpdv-hist-empty"><td colspan="10">Nenhuma venda registrada.</td></tr>';
     }
     root.innerHTML = `
       ${cpdvAvisoProto()}
-      <div class="table-card">
+      <div class="table-card cpdv-hist-card-wrap">
         <header><h3>Histórico de vendas (PDV / mesa)</h3></header>
-        <div class="table-wrap"><table class="data-table">
+        <div class="cpdv-hist-cards">${cards}</div>
+        <div class="table-wrapper cpdv-hist-table"><table class="data-table">
           <thead><tr><th>Nº</th><th>Data/hora</th><th>Unidade</th><th>Mesa</th><th>Origem</th><th>Nota</th><th>Total</th><th>Pagamento</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
