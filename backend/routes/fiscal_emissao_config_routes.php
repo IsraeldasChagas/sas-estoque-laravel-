@@ -80,6 +80,7 @@ foreach ([
     '/fiscal/emissao/vendas/{vendaId}/nfce',
     '/fiscal/emissao/vendas/{vendaId}/documentos',
     '/fiscal/emissao/vendas/{vendaId}/danfe.pdf',
+    '/fiscal/emissao/vendas/{vendaId}/danfe.html',
     '/fiscal/emissao/vendas/{vendaId}/xml',
 ] as $p) {
     Route::options($p, $fiscalEmCors);
@@ -392,6 +393,20 @@ Route::get('/fiscal/emissao/vendas/{vendaId}/danfe.pdf', function (Request $requ
         $bin = FiscalDocumentoService::obterPdf((int) $vendaId);
 
         return $fiscalEmFileResponse($bin, 'attachment');
+    } catch (\Throwable $e) {
+        return $fiscalEmJson(['error' => $e->getMessage()], 422);
+    }
+});
+
+Route::get('/fiscal/emissao/vendas/{vendaId}/danfe.html', function (Request $request, $vendaId) use ($fiscalEmAuth, $fiscalEmPodeVer, $fiscalEmJson, $fiscalEmFileResponse) {
+    $u = $fiscalEmAuth($request);
+    if (! $fiscalEmPodeVer($u)) {
+        return $fiscalEmJson(['error' => 'Não autorizado'], 401);
+    }
+    try {
+        $bin = FiscalDocumentoService::obterDanfeHtml((int) $vendaId);
+
+        return $fiscalEmFileResponse($bin, 'inline');
     } catch (\Throwable $e) {
         return $fiscalEmJson(['error' => $e->getMessage()], 422);
     }

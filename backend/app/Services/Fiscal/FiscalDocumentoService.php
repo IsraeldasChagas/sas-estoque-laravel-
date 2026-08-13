@@ -10,12 +10,13 @@ use Illuminate\Support\Facades\Schema;
 
 final class FiscalDocumentoService
 {
-    /** @return array{pdf: string, xml: string, info: string} */
+    /** @return array{pdf: string, xml: string, info: string, danfe_html?: string} */
     public static function rotasRelativas(int $vendaId): array
     {
         return [
             'pdf' => "/fiscal/emissao/vendas/{$vendaId}/danfe.pdf",
             'xml' => "/fiscal/emissao/vendas/{$vendaId}/xml",
+            'danfe_html' => "/fiscal/emissao/vendas/{$vendaId}/danfe.html",
             'info' => "/fiscal/emissao/vendas/{$vendaId}/documentos",
         ];
     }
@@ -24,18 +25,81 @@ final class FiscalDocumentoService
     public static function info(int $vendaId): array
     {
         $ctx = self::contextoVenda($vendaId);
+        $venda = $ctx['venda'];
+        $client = $ctx['client'];
+        $baseUrl = $ctx['base_url'];
+
+        $qrcodeUrl = null;
+        $urlConsulta = null;
+        $danfeFocus = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null);
+        $ref = trim((string) ($venda->emissao_ref ?? ''));
+        if ($ref !== '') {
+            $consulta = $client->consultarNfce($ref);
+            $body = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
+            if (! empty($body['qrcode_url']) && is_string($body['qrcode_url'])) {
+                $qrcodeUrl = $body['qrcode_url'];
+            }
+            if (! empty($body['url_consulta_nf']) && is_string($body['url_consulta_nf'])) {
+                $urlConsulta = $body['url_consulta_nf'];
+            }
+            if (! $danfeFocus && ! empty($body['caminho_danfe'])) {
+                $danfeFocus = self::urlAbsolutaFocus($baseUrl, (string) $body['caminho_danfe']);
+            }
+        }
+
+        $chave = preg_replace('/\D+/', '', (string) ($venda->chave_acesso ?? ''));
 
         return [
             'venda_id' => $vendaId,
-            'status_documento' => $ctx['venda']->status_documento ?? null,
-            'chave_acesso' => $ctx['venda']->chave_acesso ?? null,
-            'numero_documento' => $ctx['venda']->numero_documento ?? null,
-            'serie_documento' => $ctx['venda']->serie_documento ?? null,
-            'emissao_ref' => $ctx['venda']->emissao_ref ?? null,
-            'url_danfe' => $ctx['venda']->url_danfe ?? null,
-            'url_xml' => $ctx['venda']->url_xml ?? null,
+            'status_documento' => $venda->status_documento ?? null,
+            'chave_acesso' => $chave !== '' ? $chave : null,
+            'chave_completa' => is_string($chave) && strlen($chave) === 44,
+            'numero_documento' => $venda->numero_documento ?? null,
+            'serie_documento' => $venda->serie_documento ?? null,
+            'emissao_ref' => $venda->emissao_ref ?? null,
+            'url_danfe' => $venda->url_danfe ?? null,
+            'url_xml' => $venda->url_xml ?? null,
+            'qrcode_url' => $qrcodeUrl,
+            'url_consulta_nf' => $urlConsulta,
+            'danfe_focus_url' => $danfeFocus,
             'documentos' => self::rotasRelativas($vendaId),
-            'disponivel' => self::documentoDisponivel($ctx['venda']),
+            'disponivel' => self::documentoDisponivel($venda),
+        ];
+    }
+
+    /** HTML oficial do cupom (DANFCe) na Focus — inclui QR Code válido. */
+    public static function obterDanfeHtml(int $vendaId): array
+    {
+        $ctx = self::contextoVenda($vendaId);
+        $venda = $ctx['venda'];
+        $client = $ctx['client'];
+        $baseUrl = $ctx['base_url'];
+        if (! self::documentoDisponivel($venda)) {
+            throw new \RuntimeException('Nota fiscal ainda não autorizada para esta venda.');
+        }
+
+        $urlDanfe = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null);
+        $ref = trim((string) ($venda->emissao_ref ?? ''));
+        if (! $urlDanfe && $ref !== '') {
+            $consulta = $client->consultarNfce($ref);
+            $body = is_array($consulta['body'] ?? null) ? $consulta['body'] : [];
+            if (! empty($body['caminho_danfe'])) {
+                $urlDanfe = self::urlAbsolutaFocus($baseUrl, (string) $body['caminho_danfe']);
+            }
+        }
+        if (! $urlDanfe) {
+            throw new \RuntimeException('DANFE HTML não disponível na Focus.');
+        }
+
+        $bin = $client->baixarUrl($urlDanfe);
+        if (! self::pareceHtml($bin) && ! self::parecePdf($bin)) {
+            throw new \RuntimeException('Não foi possível obter o cupom HTML na Focus.');
+        }
+
+        return [
+            'body' => $bin['body'],
+            'content_type' => self::parecePdf($bin) ? 'application/pdf' : 'text/html; charset=utf-8',
+            'filename' => self::nomeArquivo($venda, self::parecePdf($bin) ? 'pdf' : 'html'),
         ];
     }
 
@@ -109,6 +173,49 @@ final class FiscalDocumentoService
             }
         }
 
+        // Preferimos HTML → PDF A4 estilizado (logo menor) em vez do PDF cru da Focus.
+        $urlDanfe = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null)
+            ?? ($urlDanfeFromFocus ?? null);
+        if ($urlDanfe) {
+            $bin = $client->baixarUrl($urlDanfe);
+            if (self::pareceHtml($bin)) {
+                return [
+                    'body' => self::htmlParaPdf($bin['body'], $qrcodeUrl, $chave ?: null),
+                    'content_type' => 'application/pdf',
+                    'filename' => $filename,
+                ];
+            }
+            if (self::parecePdf($bin)) {
+                return [
+                    'body' => $bin['body'],
+                    'content_type' => 'application/pdf',
+                    'filename' => $filename,
+                ];
+            }
+        }
+
+        if ($ref !== '' && is_array($focusBody)) {
+            $caminho = $focusBody['caminho_danfe'] ?? null;
+            $abs = self::urlAbsolutaFocus($baseUrl, is_string($caminho) ? $caminho : null);
+            if ($abs && $abs !== $urlDanfe) {
+                $bin = $client->baixarUrl($abs);
+                if (self::pareceHtml($bin)) {
+                    return [
+                        'body' => self::htmlParaPdf($bin['body'], $qrcodeUrl, $chave ?: null),
+                        'content_type' => 'application/pdf',
+                        'filename' => $filename,
+                    ];
+                }
+                if (self::parecePdf($bin)) {
+                    return [
+                        'body' => $bin['body'],
+                        'content_type' => 'application/pdf',
+                        'filename' => $filename,
+                    ];
+                }
+            }
+        }
+
         if ($ref !== '') {
             $bin = $client->baixarNfcePdf($ref);
             if (self::parecePdf($bin)) {
@@ -120,69 +227,11 @@ final class FiscalDocumentoService
             }
         }
 
-        $urlDanfe = self::urlAbsolutaFocus($baseUrl, $venda->url_danfe ?? null)
-            ?? ($urlDanfeFromFocus ?? null);
-        if ($urlDanfe) {
-            // tenta .pdf no lugar de .html
-            if (str_ends_with(strtolower(parse_url($urlDanfe, PHP_URL_PATH) ?: ''), '.html')) {
-                $pdfUrl = preg_replace('/\.html$/i', '.pdf', $urlDanfe);
-                if (is_string($pdfUrl) && $pdfUrl !== $urlDanfe) {
-                    $binPdf = $client->baixarUrl($pdfUrl);
-                    if (self::parecePdf($binPdf)) {
-                        return [
-                            'body' => $binPdf['body'],
-                            'content_type' => 'application/pdf',
-                            'filename' => $filename,
-                        ];
-                    }
-                }
-            }
-
-            $bin = $client->baixarUrl($urlDanfe);
-            if (self::parecePdf($bin)) {
-                return [
-                    'body' => $bin['body'],
-                    'content_type' => 'application/pdf',
-                    'filename' => $filename,
-                ];
-            }
-            if (self::pareceHtml($bin)) {
-                return [
-                    'body' => self::htmlParaPdf($bin['body'], $qrcodeUrl, $chave ?: null),
-                    'content_type' => 'application/pdf',
-                    'filename' => $filename,
-                ];
-            }
-        }
-
-        // Último recurso: caminho_danfe da consulta Focus.
-        if ($ref !== '' && isset($focusBody) && is_array($focusBody)) {
-            $caminho = $focusBody['caminho_danfe'] ?? null;
-            $abs = self::urlAbsolutaFocus($baseUrl, is_string($caminho) ? $caminho : null);
-            if ($abs) {
-                $bin = $client->baixarUrl($abs);
-                if (self::parecePdf($bin)) {
-                    return [
-                        'body' => $bin['body'],
-                        'content_type' => 'application/pdf',
-                        'filename' => $filename,
-                    ];
-                }
-                if (self::pareceHtml($bin)) {
-                    return [
-                        'body' => self::htmlParaPdf($bin['body'], $qrcodeUrl, $chave ?: null),
-                        'content_type' => 'application/pdf',
-                        'filename' => $filename,
-                    ];
-                }
-            }
-        }
-
         throw new \RuntimeException('DANFE/PDF não disponível na Focus para esta venda. Tente novamente ou abra no painel Focus.');
     }
 
     /**
-     * Converte HTML do DANFCe Focus em PDF e garante QR Code da consulta SEFAZ.
+     * Converte HTML do DANFCe Focus em PDF A4 e garante QR Code da consulta SEFAZ.
      */
     private static function htmlParaPdf(string $html, ?string $qrcodeUrl = null, ?string $chave = null): string
     {
@@ -191,6 +240,7 @@ final class FiscalDocumentoService
         }
         // Dompdf lida melhor com HTML relativamente simples; remove scripts.
         $html = preg_replace('#<script\b[^>]*>.*?</script>#is', '', $html) ?? $html;
+        $html = self::prepararHtmlDanfeA4($html);
         $html = self::injetarQrCodeNoHtml($html, $qrcodeUrl, $chave);
         if (! str_contains(strtolower($html), '<html')) {
             $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'.$html.'</body></html>';
@@ -200,10 +250,11 @@ final class FiscalDocumentoService
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
         $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('dpi', 110);
 
         $dompdf = new \Dompdf\Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper([0, 0, 226.77, 841.89], 'portrait'); // ~80mm largura cupom
+        $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
         $out = $dompdf->output();
         if (! is_string($out) || $out === '' || ! str_starts_with($out, '%PDF')) {
@@ -211,6 +262,126 @@ final class FiscalDocumentoService
         }
 
         return $out;
+    }
+
+    /**
+     * Ajusta o HTML Focus para impressão A4: logo pequena, margens e tipografia limpas.
+     */
+    private static function prepararHtmlDanfeA4(string $html): string
+    {
+        // Logo bem menor (Focus manda a imagem sem size).
+        $html = preg_replace_callback(
+            '#(<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?<img)([^>]*)(>)#is',
+            static function (array $m): string {
+                $attrs = $m[2];
+                $attrs = preg_replace('/\s(width|height|style)\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $attrs) ?? $attrs;
+
+                return $m[1].$attrs.' width="72" height="72" style="max-width:72px;max-height:48px;width:auto;height:auto;display:block;margin:0 auto 4px auto;"'.$m[3];
+            },
+            $html,
+            1
+        ) ?? $html;
+
+        $css = <<<'CSS'
+<style type="text/css" id="sas-danfe-a4">
+@page { size: A4 portrait; margin: 12mm 14mm; }
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #ffffff;
+  color: #111111;
+  font-family: DejaVu Sans, Arial, Helvetica, sans-serif !important;
+  font-size: 10px !important;
+  line-height: 1.35;
+}
+.content {
+  max-width: 180mm !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 10px 14px 16px 14px !important;
+  border: 1px solid #c8c8c8 !important;
+  box-sizing: border-box;
+}
+.logomarca {
+  text-align: center;
+  margin: 0 0 8px 0;
+  padding: 0 0 6px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+.logomarca img {
+  max-width: 72px !important;
+  max-height: 48px !important;
+  width: auto !important;
+  height: auto !important;
+  display: block !important;
+  margin: 0 auto 4px auto !important;
+}
+.logomarca span,
+.logomarca strong,
+.logomarca em {
+  font-size: 12px !important;
+  font-style: normal !important;
+  letter-spacing: 0.04em;
+  color: #222222;
+}
+.dados-da-empresa td {
+  font-size: 10px !important;
+  line-height: 1.4;
+}
+.linha {
+  border-bottom: 1px solid #222 !important;
+  margin: 8px 0 !important;
+}
+.tabela-nfce table {
+  width: 100% !important;
+}
+.tabela-nfce td,
+.tabela-nfce th {
+  font-size: 9.5px !important;
+  vertical-align: top;
+}
+#qr-code0, #qr-code1 {
+  display: none !important;
+}
+.sas-qr-block {
+  text-align: center;
+  margin: 14px 0 4px 0;
+  padding: 12px 10px;
+  border-top: 1px solid #d0d0d0;
+  page-break-inside: avoid;
+}
+.sas-qr-block .sas-qr-title {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.sas-qr-block img {
+  width: 128px;
+  height: 128px;
+  display: block;
+  margin: 0 auto;
+}
+.sas-qr-block .sas-qr-chave {
+  font-size: 9px;
+  margin-top: 8px;
+  word-break: break-all;
+  color: #222;
+}
+.sas-qr-block .sas-qr-url {
+  font-size: 7px;
+  margin-top: 4px;
+  word-break: break-all;
+  color: #666;
+}
+</style>
+CSS;
+
+        if (stripos($html, '</head>') !== false) {
+            return preg_replace('#</head>#i', $css.'</head>', $html, 1) ?? ($html.$css);
+        }
+
+        return $css.$html;
     }
 
     private static function injetarQrCodeNoHtml(string $html, ?string $qrcodeUrl, ?string $chave): string
@@ -227,11 +398,11 @@ final class FiscalDocumentoService
 
         $chaveTxt = $chave ? htmlspecialchars($chave, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '';
         $urlTxt = htmlspecialchars($qrcodeUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $bloco = '<div style="text-align:center;margin:16px 0;page-break-inside:avoid">'
-            .'<div style="font-size:11px;font-weight:bold;margin-bottom:6px">Consulta via QR Code</div>'
-            .'<img src="'.$dataUri.'" width="150" height="150" alt="QR Code NFC-e" />'
-            .($chaveTxt !== '' ? '<div style="font-size:9px;margin-top:8px;word-break:break-all">Chave: '.$chaveTxt.'</div>' : '')
-            .'<div style="font-size:7px;margin-top:4px;word-break:break-all;color:#444">'.$urlTxt.'</div>'
+        $bloco = '<div class="sas-qr-block">'
+            .'<div class="sas-qr-title">Consulta via QR Code</div>'
+            .'<img src="'.$dataUri.'" width="128" height="128" alt="QR Code NFC-e" />'
+            .($chaveTxt !== '' ? '<div class="sas-qr-chave">Chave: '.$chaveTxt.'</div>' : '')
+            .'<div class="sas-qr-url">'.$urlTxt.'</div>'
             .'</div>';
 
         // Remove imagens de QR quebradas/relativas que o Dompdf não carrega.

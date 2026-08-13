@@ -1069,7 +1069,9 @@
     const id = v.id;
     if (st === "autorizado" || st === "autorizada") {
       return `<button type="button" class="btn neutral btn-sm" data-cpdv-pdf="${id}">PDF</button>
-        <button type="button" class="btn neutral btn-sm" data-cpdv-xml="${id}">XML</button>`;
+        <button type="button" class="btn neutral btn-sm" data-cpdv-xml="${id}">XML</button>
+        <button type="button" class="btn neutral btn-sm" data-cpdv-danfe="${id}">Cupom</button>
+        <button type="button" class="btn neutral btn-sm" data-cpdv-consulta="${id}">Consultar</button>`;
     }
     return `<button type="button" class="btn secondary btn-sm" data-cpdv-emitir="${id}">Emitir nota</button>`;
   }
@@ -1099,6 +1101,12 @@
     });
     root.querySelectorAll("[data-cpdv-xml]").forEach((btn) => {
       btn.addEventListener("click", () => window.fiscalBaixarXmlNota?.(Number(btn.dataset.cpdvXml)));
+    });
+    root.querySelectorAll("[data-cpdv-danfe]").forEach((btn) => {
+      btn.addEventListener("click", () => window.fiscalAbrirDanfeHtml?.(Number(btn.dataset.cpdvDanfe)));
+    });
+    root.querySelectorAll("[data-cpdv-consulta]").forEach((btn) => {
+      btn.addEventListener("click", () => window.fiscalAbrirConsultaSefaz?.(Number(btn.dataset.cpdvConsulta)));
     });
   }
 

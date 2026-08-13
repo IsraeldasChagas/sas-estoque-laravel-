@@ -53,7 +53,9 @@
     const path =
       tipo === "xml"
         ? `/fiscal/emissao/vendas/${vendaId}/xml`
-        : `/fiscal/emissao/vendas/${vendaId}/danfe.pdf`;
+        : tipo === "html"
+          ? `/fiscal/emissao/vendas/${vendaId}/danfe.html`
+          : `/fiscal/emissao/vendas/${vendaId}/danfe.pdf`;
     const res = await fetch(`${apiBase()}${path}`, {
       method: "GET",
       headers: authHeaders(),
@@ -81,7 +83,8 @@
         throw new Error("Não foi possível gerar o PDF da nota.");
       }
     }
-    const fallback = tipo === "xml" ? `nfce-venda-${vendaId}.xml` : `nfce-venda-${vendaId}.pdf`;
+    const fallback =
+      tipo === "xml" ? `nfce-venda-${vendaId}.xml` : tipo === "html" ? `nfce-venda-${vendaId}.html` : `nfce-venda-${vendaId}.pdf`;
     const filename = filenameFromDisposition(res.headers.get("content-disposition"), fallback);
     return { blob, contentType: ct, filename };
   }
@@ -115,4 +118,47 @@
   window.fiscalEntregarDocumentosVenda = fiscalEntregarDocumentosVenda;
   window.fiscalBaixarDanfePdf = (vendaId) => fiscalEntregarDocumentosVenda(vendaId, { autoPdf: true, autoXml: false });
   window.fiscalBaixarXmlNota = (vendaId) => fiscalEntregarDocumentosVenda(vendaId, { autoPdf: false, autoXml: true });
+
+  /** Abre o cupom HTML oficial da Focus (QR Code válido). */
+  window.fiscalAbrirDanfeHtml = async (vendaId) => {
+    const id = Number(vendaId);
+    if (!id) return;
+    try {
+      const { blob, contentType } = await fiscalDocFetch(id, "html");
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) toast("Permita pop-ups para abrir o cupom.", "warning");
+      else if (!contentType.includes("html") && !contentType.includes("pdf")) {
+        toast("Cupom aberto.", "info");
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 180000);
+    } catch (e) {
+      toast(e?.message || "Não foi possível abrir o cupom.", "warning");
+    }
+  };
+
+  /** Abre a URL oficial de consulta SEFAZ (qrcode_url completo com hash). */
+  window.fiscalAbrirConsultaSefaz = async (vendaId) => {
+    const id = Number(vendaId);
+    if (!id) return;
+    try {
+      const res = await fetch(`${apiBase()}/fiscal/emissao/vendas/${id}/documentos`, {
+        method: "GET",
+        headers: { ...authHeaders(), Accept: "application/json" },
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+      const url = data.qrcode_url || data.danfe_focus_url;
+      if (!url) {
+        throw new Error("Link de consulta ainda não disponível. Abra o Cupom ou baixe o PDF novo.");
+      }
+      if (data.chave_acesso && String(data.chave_acesso).length !== 44) {
+        toast("Atenção: chave incompleta no SAS (" + String(data.chave_acesso).length + " dígitos).", "warning");
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast(e?.message || "Não foi possível abrir a consulta SEFAZ.", "warning");
+    }
+  };
 })();
