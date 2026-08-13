@@ -265,32 +265,30 @@ final class FiscalDocumentoService
     }
 
     /**
-     * Ajusta o HTML Focus para impressão A4: logo centralizada, espaço no topo e texto nas bordas.
+     * Ajusta o HTML Focus para impressão A4: logo proporcional, tipografia legível, respiro no topo.
      */
     private static function prepararHtmlDanfeA4(string $html): string
     {
-        // Reescreve o bloco da logo: tamanho fixo + centro (Dompdf ignora max-width em img remota).
+        // Reescreve o bloco da logo: proporção real + centro.
         $html = preg_replace_callback(
             '#<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?</div>#is',
             static function (array $m): string {
                 if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
                     return $m[0];
                 }
-                $srcRaw = $img[1];
-                $src = self::logoSrcParaPdf($srcRaw);
-                $src = htmlspecialchars($src, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                // ~3x o tamanho “pequeno” anterior (40×28) → 120×84, forçado em atributos + style.
-                $w = 120;
-                $h = 84;
+                $logo = self::logoParaPdf($img[1], 112);
+                $src = htmlspecialchars($logo['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $w = (int) $logo['width'];
+                $h = (int) $logo['height'];
 
-                return '<div class="logomarca" style="text-align:center;width:100%;margin:0;padding:18px 0 16px 0;">'
-                    .'<table width="100%" border="0" cellpadding="0" cellspacing="0" style="width:100%;margin:0 auto;">'
-                    .'<tr><td align="center" valign="middle" style="text-align:center;padding:0 0 8px 0;">'
+                return '<div class="logomarca">'
+                    .'<table width="100%" border="0" cellpadding="0" cellspacing="0">'
+                    .'<tr><td align="center" style="text-align:center;padding:0 0 10px 0;">'
                     .'<img src="'.$src.'" width="'.$w.'" height="'.$h.'" '
                     .'style="width:'.$w.'px;height:'.$h.'px;display:block;margin:0 auto;border:0;" />'
                     .'</td></tr>'
-                    .'<tr><td align="center" valign="middle" style="text-align:center;padding:0;">'
-                    .'<span style="font-size:12px;font-weight:bold;letter-spacing:0.04em;">NFC-e</span>'
+                    .'<tr><td align="center" style="text-align:center;padding:0;">'
+                    .'<span class="sas-nfce-titulo">NFC-e</span>'
                     .'</td></tr>'
                     .'</table></div>';
             },
@@ -298,11 +296,39 @@ final class FiscalDocumentoService
             1
         ) ?? $html;
 
+        // Remove font-size inline minúsculo do Focus (8–10px) que o Dompdf prioriza.
+        $html = preg_replace_callback(
+            '#style=(["\'])(.*?)\1#is',
+            static function (array $m): string {
+                $style = preg_replace_callback(
+                    '#font-size\s*:\s*([\d.]+)\s*px#i',
+                    static function (array $fs): string {
+                        $px = (float) $fs[1];
+                        if ($px <= 10) {
+                            return 'font-size:12px';
+                        }
+                        if ($px <= 12) {
+                            return 'font-size:13px';
+                        }
+                        if ($px <= 16) {
+                            return 'font-size:15px';
+                        }
+
+                        return $fs[0];
+                    },
+                    $m[2]
+                ) ?? $m[2];
+
+                return 'style='.$m[1].$style.$m[1];
+            },
+            $html
+        ) ?? $html;
+
         // Dompdf centraliza o bloco na página com tabela wrapper.
         if (! str_contains($html, 'sas-danfe-center-wrap')) {
             $html = preg_replace(
                 '#<div\s+class=["\']content["\']>#i',
-                '<table class="sas-danfe-center-wrap" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="top">'
+                '<table class="sas-danfe-center-wrap" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" valign="top" style="padding-top:8px;">'
                 .'<div class="content">',
                 $html,
                 1
@@ -319,15 +345,15 @@ final class FiscalDocumentoService
 
         $css = <<<'CSS'
 <style type="text/css" id="sas-danfe-a4">
-@page { size: A4 portrait; margin: 12mm 12mm; }
+@page { size: A4 portrait; margin: 14mm 12mm; }
 html, body {
   margin: 0 !important;
   padding: 0 !important;
   background: #ffffff;
   color: #111111;
   font-family: DejaVu Sans, Arial, Helvetica, sans-serif !important;
-  font-size: 10px !important;
-  line-height: 1.45;
+  font-size: 12px !important;
+  line-height: 1.5;
   text-align: left;
 }
 .sas-danfe-center-wrap {
@@ -336,22 +362,21 @@ html, body {
   padding: 0;
 }
 .content {
-  width: 170mm !important;
-  max-width: 170mm !important;
-  margin: 0 auto !important;
-  padding: 22px 20px 22px 20px !important;
+  width: 168mm !important;
+  max-width: 168mm !important;
+  margin: 8px auto 0 auto !important;
+  padding: 28px 22px 24px 22px !important;
   border: 1px solid #bfbfbf !important;
   box-sizing: border-box;
   text-align: left !important;
-  overflow: hidden;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
 .logomarca {
   text-align: center !important;
   width: 100% !important;
-  margin: 0 0 14px 0 !important;
-  padding: 18px 0 16px 0 !important;
+  margin: 0 0 16px 0 !important;
+  padding: 8px 0 18px 0 !important;
   border-bottom: 1px solid #dddddd;
 }
 .logomarca table {
@@ -363,27 +388,22 @@ html, body {
   vertical-align: middle !important;
 }
 .logomarca img {
-  width: 120px !important;
-  height: 84px !important;
-  max-width: 120px !important;
-  max-height: 84px !important;
   display: block !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  margin-bottom: 8px !important;
+  margin: 0 auto 10px auto !important;
   border: 0 !important;
 }
+.sas-nfce-titulo,
 .logomarca span,
 .logomarca strong,
 .logomarca em {
-  font-size: 12px !important;
+  font-size: 15px !important;
   font-style: normal !important;
   font-weight: bold !important;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: #222222;
 }
 .dados-da-empresa {
-  margin: 0 0 10px 0;
+  margin: 0 0 12px 0;
 }
 .dados-da-empresa table {
   width: 100% !important;
@@ -391,24 +411,24 @@ html, body {
 }
 .dados-da-empresa td {
   text-align: left !important;
-  font-size: 10px !important;
-  line-height: 1.5;
-  padding: 2px 4px !important;
+  font-size: 12px !important;
+  line-height: 1.55;
+  padding: 3px 4px !important;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
 .documento-auxiliar {
-  margin: 8px 0 10px 0;
+  margin: 10px 0 12px 0;
 }
 .documento-auxiliar td {
   text-align: center !important;
-  font-size: 9.5px !important;
-  line-height: 1.45;
-  padding: 4px 6px !important;
+  font-size: 11px !important;
+  line-height: 1.5;
+  padding: 6px 8px !important;
 }
 .linha {
   border-bottom: 1px solid #222 !important;
-  margin: 10px 0 !important;
+  margin: 12px 0 !important;
   width: 100%;
   height: 0;
 }
@@ -425,9 +445,9 @@ html, body {
 .tabela-nfce th,
 .lista-produtos td,
 .lista-produtos th {
-  font-size: 9px !important;
+  font-size: 11px !important;
   vertical-align: top;
-  padding: 3px 4px !important;
+  padding: 4px 5px !important;
   word-wrap: break-word;
   overflow-wrap: anywhere;
   white-space: normal !important;
@@ -454,30 +474,30 @@ html, body {
 }
 .sas-qr-block {
   text-align: center !important;
-  margin: 16px 0 2px 0;
-  padding: 14px 10px 6px 10px;
+  margin: 18px 0 2px 0;
+  padding: 16px 10px 8px 10px;
   border-top: 1px solid #d0d0d0;
   page-break-inside: avoid;
   width: 100%;
   box-sizing: border-box;
 }
 .sas-qr-block .sas-qr-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   letter-spacing: 0.02em;
 }
 .sas-qr-block img {
-  width: 110px;
-  height: 110px;
+  width: 120px;
+  height: 120px;
   display: block;
   margin: 0 auto;
 }
 .sas-qr-block .sas-qr-chave,
 .sas-qr-block .sas-qr-url {
-  font-size: 8px;
-  margin-top: 8px;
-  padding: 0 6px;
+  font-size: 10px;
+  margin-top: 10px;
+  padding: 0 8px;
   word-wrap: break-word;
   overflow-wrap: anywhere;
   word-break: break-all;
@@ -486,9 +506,9 @@ html, body {
   box-sizing: border-box;
 }
 .sas-qr-block .sas-qr-url {
-  font-size: 7px;
+  font-size: 8px;
   color: #666;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 </style>
 CSS;
@@ -500,34 +520,66 @@ CSS;
         return $css.$html;
     }
 
-    /** Embute a logo em data-URI para o Dompdf respeitar width/height. */
-    private static function logoSrcParaPdf(string $src): string
+    /**
+     * Embute a logo e calcula width/height sem distorcer (proporção original).
+     *
+     * @return array{src: string, width: int, height: int}
+     */
+    private static function logoParaPdf(string $src, int $maxSide = 112): array
     {
         $src = trim($src);
-        if ($src === '' || str_starts_with($src, 'data:')) {
-            return $src;
+        $fallback = ['src' => $src, 'width' => $maxSide, 'height' => $maxSide];
+        if ($src === '') {
+            return $fallback;
         }
+
         try {
-            $ctx = stream_context_create([
-                'http' => ['timeout' => 8, 'follow_location' => 1],
-                'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
-            ]);
-            $bin = @file_get_contents($src, false, $ctx);
-            if (! is_string($bin) || $bin === '') {
-                return $src;
-            }
+            $bin = null;
             $mime = 'image/png';
-            if (str_starts_with($bin, "\xFF\xD8\xFF")) {
-                $mime = 'image/jpeg';
-            } elseif (str_starts_with($bin, 'RIFF')) {
-                $mime = 'image/webp';
-            } elseif (str_starts_with($bin, '<svg') || str_starts_with($bin, '<?xml')) {
-                return $src;
+            if (str_starts_with($src, 'data:')) {
+                if (preg_match('#^data:([^;]+);base64,(.+)$#s', $src, $m)) {
+                    $mime = $m[1];
+                    $bin = base64_decode($m[2], true);
+                }
+            } else {
+                $ctx = stream_context_create([
+                    'http' => ['timeout' => 8, 'follow_location' => 1],
+                    'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+                ]);
+                $bin = @file_get_contents($src, false, $ctx);
+                if (is_string($bin) && $bin !== '') {
+                    if (str_starts_with($bin, "\xFF\xD8\xFF")) {
+                        $mime = 'image/jpeg';
+                    } elseif (str_starts_with($bin, 'RIFF')) {
+                        $mime = 'image/webp';
+                    }
+                }
             }
 
-            return 'data:'.$mime.';base64,'.base64_encode($bin);
+            if (! is_string($bin) || $bin === '') {
+                return $fallback;
+            }
+
+            $info = @getimagesizefromstring($bin);
+            $nw = is_array($info) ? (int) ($info[0] ?? 0) : 0;
+            $nh = is_array($info) ? (int) ($info[1] ?? 0) : 0;
+            if ($nw <= 0 || $nh <= 0) {
+                $nw = $maxSide;
+                $nh = $maxSide;
+            }
+
+            // Escala pelo maior lado para caber em maxSide sem distorcer.
+            $scale = $maxSide / max($nw, $nh);
+            $w = max(1, (int) round($nw * $scale));
+            $h = max(1, (int) round($nh * $scale));
+
+            return [
+                'src' => 'data:'.$mime.';base64,'.base64_encode($bin),
+                'width' => $w,
+                'height' => $h,
+            ];
         } catch (\Throwable) {
-            return $src;
+            return $fallback;
         }
     }
 
