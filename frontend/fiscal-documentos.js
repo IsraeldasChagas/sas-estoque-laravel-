@@ -119,23 +119,27 @@
   window.fiscalBaixarDanfePdf = (vendaId) => fiscalEntregarDocumentosVenda(vendaId, { autoPdf: true, autoXml: false });
   window.fiscalBaixarXmlNota = (vendaId) => fiscalEntregarDocumentosVenda(vendaId, { autoPdf: false, autoXml: true });
 
-  /** Abre o cupom HTML oficial da Focus (QR Code válido). */
+  /** Abre o cupom fiscal em PDF (mesma DANFE da nota, para ver/imprimir). */
   window.fiscalAbrirDanfeHtml = async (vendaId) => {
     const id = Number(vendaId);
     if (!id) return;
     try {
-      const { blob, contentType } = await fiscalDocFetch(id, "html");
-      const url = URL.createObjectURL(blob);
+      const { blob } = await fiscalDocFetch(id, "pdf");
+      const pdfBlob = blob.type && blob.type.includes("pdf") ? blob : new Blob([blob], { type: "application/pdf" });
+      const url = URL.createObjectURL(pdfBlob);
       const w = window.open(url, "_blank", "noopener,noreferrer");
-      if (!w) toast("Permita pop-ups para abrir o cupom.", "warning");
-      else if (!contentType.includes("html") && !contentType.includes("pdf")) {
-        toast("Cupom aberto.", "info");
+      if (!w) {
+        baixarBlob(pdfBlob, `nfce-venda-${id}.pdf`);
+        toast("Pop-up bloqueado: cupom PDF baixado.", "info");
+      } else {
+        toast("Cupom fiscal em PDF aberto.", "success");
       }
       setTimeout(() => URL.revokeObjectURL(url), 180000);
     } catch (e) {
-      toast(e?.message || "Não foi possível abrir o cupom.", "warning");
+      toast(e?.message || "Não foi possível abrir o cupom em PDF.", "warning");
     }
   };
+  window.fiscalAbrirCupomPdf = window.fiscalAbrirDanfeHtml;
 
   /** Abre a URL oficial de consulta SEFAZ (qrcode_url completo com hash). */
   window.fiscalAbrirConsultaSefaz = async (vendaId) => {
