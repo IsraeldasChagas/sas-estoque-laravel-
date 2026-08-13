@@ -273,14 +273,14 @@ final class FiscalDocumentoService
         // Estilos da Focus (display:table, max-width cupom) quebram/esvaziam o Dompdf.
         $html = preg_replace('#<style\b[^>]*>.*?</style>#is', '', $html) ?? $html;
 
-        // Logo menor (metade do tamanho anterior ~125px → ~62px), proporcional, PNG leve.
+        // Logo do cupom bem menor (~36px), proporcional.
         $html = preg_replace_callback(
             '#<div[^>]*class=["\'][^"\']*logomarca[^"\']*["\'][^>]*>.*?</div>#is',
             static function (array $m): string {
                 if (! preg_match('#<img[^>]+src=["\']([^"\']+)["\']#i', $m[0], $img)) {
                     return $m[0];
                 }
-                $logo = self::logoParaPdf($img[1], 62);
+                $logo = self::logoParaPdf($img[1], 36);
                 $src = htmlspecialchars($logo['src'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $w = (int) $logo['width'];
                 $h = (int) $logo['height'];
@@ -402,7 +402,7 @@ CSS;
      *
      * @return array{src: string, width: int, height: int}
      */
-    private static function logoParaPdf(string $src, int $maxSide = 62): array
+    private static function logoParaPdf(string $src, int $maxSide = 36): array
     {
         $src = trim($src);
         $fallback = ['src' => $src, 'width' => $maxSide, 'height' => $maxSide];
