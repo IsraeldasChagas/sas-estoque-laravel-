@@ -5336,12 +5336,19 @@ function applyPermissions() {
   const pmLista = normalizarPermissoesMenuLista(currentUser?.permissoes_menu);
   const permPersonalizadas = currentUser && pmLista && pmLista.length > 0;
   let sections = permPersonalizadas ? [...pmLista] : (regrasBase.sections || []);
+  const perfilCfgAuto = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const perfilAdminPlataforma = perfilCfgAuto === "ADMIN";
+  const perfilGerentePlataforma = perfilCfgAuto === "GERENTE";
+  const perfilExpandeModulosNovos =
+    !permPersonalizadas &&
+    ["ADMIN", "GERENTE", "ASSISTENTE_ADMINISTRATIVO", "FINANCEIRO"].includes(perfilCfgAuto);
+
   // ADMIN e GERENTE sempre têm acesso a Logs (mesmo com permissões personalizadas)
   if (["ADMIN", "GERENTE"].includes(perfil) && !sections.includes("logs")) {
     sections = [...sections, "logs"];
   }
-  // Auxiliar administrativo: auditoria + dashboard de fechamento (mesmo nível que ADMIN)
-  if (perfil === "ASSISTENTE_ADMINISTRATIVO") {
+  // Auxiliar administrativo sem menu personalizado: auditoria + dashboard de fechamento
+  if (!permPersonalizadas && perfil === "ASSISTENTE_ADMINISTRATIVO") {
     if (!sections.includes("fechamento")) sections = [...sections, "fechamento"];
     if (!sections.includes("fechamentoDash")) sections = [...sections, "fechamentoDash"];
   }
@@ -5351,127 +5358,102 @@ function applyPermissions() {
     const faltando = sempre.filter((s) => !sections.includes(s));
     if (faltando.length) sections = [...faltando, ...sections];
   }
-  // Despesas fixas: módulo novo no Financeiro (permissoes_menu antigas não incluem automaticamente).
-  // Se o usuário já tem acesso a qualquer item financeiro, libera o acesso ao módulo também.
-  if (
-    (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos") || sections.includes("fechamento") || sections.includes("fechamentoDash")) &&
-    !sections.includes("despesasFixas")
-  ) {
-    sections = [...sections, "despesasFixas"];
-  }
-  if (sections.includes("boletao") && !sections.includes("impostos")) {
-    sections = [...sections, "impostos"];
-  }
-  if (
-    (sections.includes("boletao") ||
+  // Compatibilidade só para perfis administrativos sem atribuição explícita.
+  // Menu personalizado (Atendente Caixa e demais) obedece exatamente o que foi marcado.
+  if (perfilExpandeModulosNovos) {
+    if (
+      (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos") || sections.includes("fechamento") || sections.includes("fechamentoDash")) &&
+      !sections.includes("despesasFixas")
+    ) {
+      sections = [...sections, "despesasFixas"];
+    }
+    if (sections.includes("boletao") && !sections.includes("impostos")) {
+      sections = [...sections, "impostos"];
+    }
+    if (
+      (sections.includes("boletao") ||
+        sections.includes("alvara") ||
+        sections.includes("proventos") ||
+        sections.includes("fechamento") ||
+        sections.includes("fechamentoDash") ||
+        sections.includes("despesasFixas")) &&
+      !sections.includes("valeConsumo")
+    ) {
+      sections = [...sections, "valeConsumo"];
+    }
+    if (
+      (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos")) &&
+      !sections.includes("fechamento")
+    ) {
+      sections = [...sections, "fechamento"];
+    }
+    if (sections.includes("fechamento") && !sections.includes("fechamentoDash")) {
+      sections = [...sections, "fechamentoDash"];
+    }
+    if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
+      sections = [...sections, "fechamento"];
+    }
+    const invSectionsAuto = ["investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios"];
+    const temBaseFinanceiroInv =
+      sections.includes("boletao") ||
       sections.includes("alvara") ||
       sections.includes("proventos") ||
+      sections.includes("despesasFixas") ||
+      sections.includes("valeConsumo") ||
+      sections.includes("reciboAjuda") ||
       sections.includes("fechamento") ||
-      sections.includes("fechamentoDash") ||
-      sections.includes("despesasFixas")) &&
-    !sections.includes("valeConsumo")
-  ) {
-    sections = [...sections, "valeConsumo"];
+      sections.includes("fechamentoDash");
+    if (temBaseFinanceiroInv) {
+      invSectionsAuto.forEach((s) => {
+        if (!sections.includes(s)) sections = [...sections, s];
+      });
+    }
+    const fgSectionsAuto = [
+      "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre",
+      "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
+    ];
+    if (temBaseFinanceiroInv) {
+      fgSectionsAuto.forEach((s) => {
+        if (!sections.includes(s)) sections = [...sections, s];
+      });
+    }
+    if ((sections.includes("funcionarios") || sections.includes("rhRelatorios")) && !sections.includes("rhFolhaPonto")) {
+      sections = [...sections, "rhFolhaPonto"];
+    }
   }
-  // Auditoria fechamento caixa (id fechamento): permissoes_menu antigas sem o módulo novo mantêm acesso junto a Boleto/Alvará/Proventos
-  if (
-    (sections.includes("boletao") || sections.includes("alvara") || sections.includes("proventos")) &&
-    !sections.includes("fechamento")
-  ) {
-    sections = [...sections, "fechamento"];
-  }
-  if (sections.includes("fechamento") && !sections.includes("fechamentoDash")) {
-    sections = [...sections, "fechamentoDash"];
-  }
-  // Quem acessa pela hash #fechamentoDash precisa do mesmo módulo no menu que "Auditoria fechamento" (id fechamento).
-  if (sections.includes("fechamentoDash") && !sections.includes("fechamento")) {
-    sections = [...sections, "fechamento"];
-  }
-  const cardapioAuto = (modulos) => modulos.some((m) => sections.includes(m));
-  if (
-    cardapioAuto(["deliveryProdutos", "deliveryCategorias", "deliveryCatalogo", "deliveryAdicionais", "comercialPdv", "comercialMesas"])
-  ) {
-    CARDAPIO_SECTION_IDS.forEach((s) => {
-      if (!sections.includes(s)) sections = [...sections, s];
-    });
-  }
-  if (cardapioAuto(CARDAPIO_SECTION_IDS)) {
-    [
-      ["cardapioItens", "deliveryProdutos"],
-      ["cardapioCategorias", "deliveryCategorias"],
-      ["cardapioConsulta", "deliveryCatalogo"],
-      ["cardapioAdicionais", "deliveryAdicionais"],
-    ].forEach(([cardapio, delivery]) => {
-      if (sections.includes(cardapio) && !sections.includes(delivery)) sections = [...sections, delivery];
-    });
-  }
-  // Investimento: quem já tem acesso financeiro ganha o submenu novo (permissoes_menu antigas).
-  const invSectionsAuto = ["investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios"];
-  const temBaseFinanceiroInv =
-    sections.includes("boletao") ||
-    sections.includes("alvara") ||
-    sections.includes("proventos") ||
-    sections.includes("despesasFixas") ||
-    sections.includes("valeConsumo") ||
-    sections.includes("reciboAjuda") ||
-    sections.includes("fechamento") ||
-    sections.includes("fechamentoDash");
-  if (temBaseFinanceiroInv) {
-    invSectionsAuto.forEach((s) => {
-      if (!sections.includes(s)) sections = [...sections, s];
-    });
-  }
-  // Financeiro Gerencial: quem já tem acesso financeiro ganha os novos submódulos (permissoes_menu antigas).
-  const fgSectionsAuto = [
-    "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre",
-    "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
-  ];
-  if (temBaseFinanceiroInv) {
-    fgSectionsAuto.forEach((s) => {
-      if (!sections.includes(s)) sections = [...sections, s];
-    });
-  }
-  // RH: documentos de contratação ficam em Candidatos — permissoes_menu antigas com rhDocumentos viram rhCandidatos.
   if (sections.includes("rhDocumentos") && !sections.includes("rhCandidatos")) {
     sections = [...sections, "rhCandidatos"];
   }
   sections = sections.filter((s) => s !== "rhDocumentos");
-  // Folha de ponto: quem já tinha Funcionários ou Relatório RH ganha o item novo sem precisar regravar permissões.
-  if ((sections.includes("funcionarios") || sections.includes("rhRelatorios")) && !sections.includes("rhFolhaPonto")) {
-    sections = [...sections, "rhFolhaPonto"];
-  }
-  const perfilCfgAuto = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  // ADMIN sempre visualiza o protótipo completo, inclusive com permissões antigas personalizadas.
-  if (perfilCfgAuto === "ADMIN") {
+  if (perfilAdminPlataforma) {
     [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS, ...DELIVERY_SECTION_IDS, ...CARDAPIO_SECTION_IDS].forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
   }
-  if (perfilCfgAuto === "ADMIN" && !sections.includes("openClawIntegracao")) {
+  if (perfilAdminPlataforma && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
   ["fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07"].forEach((s) => {
-    if ((perfilCfgAuto === "ADMIN" || perfilCfgAuto === "GERENTE") && !sections.includes(s)) {
+    if ((perfilAdminPlataforma || perfilGerentePlataforma) && !sections.includes(s)) {
       sections = [...sections, s];
     }
   });
   const integracoesSecoes = ["integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes"];
-  if (perfilCfgAuto === "ADMIN") {
+  if (perfilAdminPlataforma) {
     integracoesSecoes.forEach((s) => { if (!sections.includes(s)) sections = [...sections, s]; });
-  } else if (perfilCfgAuto === "GERENTE") {
+  } else if (perfilGerentePlataforma) {
     ["integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs"].forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
   }
-  // Ayla IA: ADMIN tem acesso completo ao módulo; GERENTE apenas ao Dashboard.
   const aylaAdminSecoes = ["aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"];
-  if (perfilCfgAuto === "ADMIN") {
+  if (perfilAdminPlataforma) {
     aylaAdminSecoes.forEach((s) => { if (!sections.includes(s)) sections = [...sections, s]; });
-  } else if (perfilCfgAuto === "GERENTE" && !sections.includes("aylaDashboard")) {
+  } else if (perfilGerentePlataforma && !sections.includes("aylaDashboard")) {
     sections = [...sections, "aylaDashboard"];
   }
   const rrSectionsAuto = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];
-  if (sections.includes("funcionarios") || sections.includes("rhRelatorios") || sections.includes("rhFolhaPonto")) {
+  if (perfilExpandeModulosNovos && (sections.includes("funcionarios") || sections.includes("rhRelatorios") || sections.includes("rhFolhaPonto"))) {
     rrSectionsAuto.forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
@@ -12640,6 +12622,14 @@ async function submitUnidade(event, formOverride = null) {
 
 let submittingUsuario = false;
 
+function aplicarPermissoesPadraoDoPerfil() {
+  const perfil = (dom.usuarioForm?.elements?.perfil?.value || "").toUpperCase();
+  const sections = (perfil && PERMISSOES[perfil]) ? PERMISSOES[perfil].sections : [];
+  document.querySelectorAll('input[name="perm_module"]').forEach((cb) => {
+    cb.checked = sections.includes(cb.value);
+  });
+}
+
 function updateUsuarioAtendeCaixaVisibility() {
   const wrap = document.getElementById("usuarioAtendeCaixaWrap");
   const cb = document.getElementById("usuarioAtendeCaixa");
@@ -14315,7 +14305,10 @@ function setupModals() {
     updateUsuarioAtendeCaixaVisibility();
     toggleModal(dom.usuarioModal, true);
   });
-  document.getElementById("usuarioPerfilSelect")?.addEventListener("change", updateUsuarioAtendeCaixaVisibility);
+  document.getElementById("usuarioPerfilSelect")?.addEventListener("change", () => {
+    updateUsuarioAtendeCaixaVisibility();
+    aplicarPermissoesPadraoDoPerfil();
+  });
   dom.closeUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
 
   document.getElementById("closeUsuarioVer")?.addEventListener("click", () => closeUsuarioVerModal());
@@ -14331,11 +14324,7 @@ function setupModals() {
   });
   dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   document.getElementById("usuarioPermissoesPadrao")?.addEventListener("click", () => {
-    const perfil = dom.usuarioForm?.elements?.perfil?.value?.toUpperCase();
-    const sections = (perfil && PERMISSOES[perfil]) ? PERMISSOES[perfil].sections : [];
-    document.querySelectorAll('input[name="perm_module"]').forEach(cb => {
-      cb.checked = sections.includes(cb.value);
-    });
+    aplicarPermissoesPadraoDoPerfil();
     showToast("Permissões preenchidas com o padrão do perfil.", "info");
   });
 

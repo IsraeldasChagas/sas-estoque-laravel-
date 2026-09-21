@@ -7902,20 +7902,18 @@ $podeAcessarFechamentoCaixa = function ($u) {
     if (!$u) {
         return false;
     }
-    $p = strtoupper(trim($u->perfil ?? ''));
-    // ADMIN e Auxiliar Administrativo: acesso completo (auditoria, edição, exclusão, dashboard, PDF).
-    $perfis = ['ADMIN', 'ASSISTENTE_ADMINISTRATIVO', 'GERENTE', 'FINANCEIRO', 'ATENDENTE_CAIXA', 'FUNCIONARIO'];
-    if (in_array($p, $perfis, true)) {
-        return true;
-    }
     $pm = $u->permissoes_menu ?? null;
     if (is_string($pm)) {
-        $dec = json_decode($pm, true);
-
-        return is_array($dec) && (in_array('fechamento', $dec, true) || in_array('fechamentoDash', $dec, true));
+        $decoded = json_decode($pm, true);
+        $pm = is_array($decoded) ? $decoded : null;
     }
+    if (is_array($pm) && count($pm) > 0) {
+        return in_array('fechamento', $pm, true) || in_array('fechamentoDash', $pm, true);
+    }
+    $p = strtoupper(trim($u->perfil ?? ''));
+    $perfis = ['ADMIN', 'ASSISTENTE_ADMINISTRATIVO', 'GERENTE', 'FINANCEIRO', 'ATENDENTE_CAIXA', 'FUNCIONARIO'];
 
-    return false;
+    return in_array($p, $perfis, true);
 };
 
 Route::get('/fechamentos-caixa', function (Request $request) use ($fechamentoCaixaAuth, $podeAcessarFechamentoCaixa) {
