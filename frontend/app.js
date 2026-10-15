@@ -11171,8 +11171,7 @@ function renderRhCandidatos(lista) {
   const esc = (s) => escapeHtml(String(s ?? ""));
   tb.innerHTML = lista.map((c, idx) => {
     const num = idx + 1;
-    const tel = (c.telefone || "").toString().replace(/\D+/g, "");
-    const waLabel = tel ? `+55 ${tel}` : "";
+    const waBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, c.vaga_titulo, "rh-wa-btn--mini", "-");
     const temCurriculo = c.tem_curriculo === true || c.tem_curriculo === 1 || String(c.tem_curriculo ?? "").toLowerCase() === "1";
     const temFoto = c.tem_foto === true || c.tem_foto === 1 || String(c.tem_foto ?? "").toLowerCase() === "1";
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
@@ -11184,7 +11183,7 @@ function renderRhCandidatos(lista) {
       <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
       <td data-label="Inscrição">${esc(rhFormatDataInscricao(c))}</td>
       <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
-      <td data-label="WhatsApp">${waLabel ? `<span>${esc(waLabel)}</span>` : "-"}</td>
+      <td data-label="WhatsApp">${waBtn}</td>
       <td data-label="Ações" class="table-actions">
         <button type="button" class="table-action btn-rh-toggle" data-id="${esc(c.id)}">Abrir</button>
       </td>
@@ -11203,11 +11202,27 @@ function closeRhCandidatoInlineRow() {
 }
 
 /** Monta link wa.me a partir do telefone do candidato (somente dígitos, BR com 55). */
-function rhWhatsAppHrefFromTelefone(telRaw) {
+function rhWhatsAppHrefFromTelefone(telRaw, texto) {
   const d = String(telRaw || "").replace(/\D/g, "");
   if (d.length < 10) return "";
   const n = d.startsWith("55") ? d : `55${d}`;
-  return `https://wa.me/${n}`;
+  const msg = String(texto || "").trim();
+  return msg ? `https://wa.me/${n}?text=${encodeURIComponent(msg)}` : `https://wa.me/${n}`;
+}
+
+function rhMensagemWhatsAppCandidato(nome, vaga) {
+  const n = String(nome || "").trim();
+  const v = String(vaga || "").trim();
+  const vagaTxt = v && v !== "-" ? ` Entramos em contato sobre a vaga ${v}.` : "";
+  return `Olá${n ? `, ${n}` : ""}! Aqui é o RH do Grupo Sabor Paraense.${vagaTxt}`;
+}
+
+function rhWhatsAppBtnHtml(telRaw, nome, vaga, extraClass, vazioHtml) {
+  const href = rhWhatsAppHrefFromTelefone(telRaw, rhMensagemWhatsAppCandidato(nome, vaga));
+  const cls = `btn rh-wa-btn${extraClass ? ` ${extraClass}` : ""}`;
+  if (!href) return vazioHtml || `<button type="button" class="${cls}" disabled>Sem WhatsApp</button>`;
+  const icon = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.41a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 13.9c-.24.68-1.4 1.3-1.94 1.38-.5.08-1.12.11-1.81-.11-.42-.14-.95-.3-1.64-.59-2.88-1.24-4.76-4.14-4.9-4.33-.14-.2-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.26.64-.38 1.02-.38.12 0 .23 0 .33.01.3.01.44.03.64.5.24.58.82 2 .89 2.15.07.14.12.32.02.5-.09.2-.14.32-.28.49-.14.17-.29.38-.42.51-.14.14-.28.29-.12.56.16.26.7 1.15 1.5 1.86 1.03.92 1.9 1.2 2.17 1.34.26.14.42.12.58-.07.16-.2.67-.78.85-1.05.18-.26.35-.22.58-.13.24.09 1.5.71 1.76.84.26.13.43.19.49.3.07.11.07.64-.17 1.32z"/></svg>`;
+  return `<a class="${cls}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${icon} Enviar mensagem</a>`;
 }
 
 /** Nome sugerido para download/visualização a partir dos metadados do documento (API). */
@@ -11330,10 +11345,8 @@ function renderRhCandidatoInlineRow(payload) {
   const docsLista = Array.isArray(payload?.documentos) ? payload.documentos : [];
   const nomeCandTbl = esc(c.nome || "-");
   const vagaTbl = esc(vagaTitulo || "-");
-  const waHref = rhWhatsAppHrefFromTelefone(c.telefone);
-  const waHeaderBtn = waHref
-    ? `<a href="${esc(waHref)}" target="_blank" rel="noopener noreferrer" class="btn primary" style="text-decoration:none;font-size:.88rem;">WhatsApp candidato</a>`
-    : `<span class="subtle-text" style="font-size:.82rem;">Sem telefone para WhatsApp</span>`;
+  const waBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, vagaTitulo);
+  const waHeaderBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, vagaTitulo, "rh-wa-btn--mini", `<span class="subtle-text" style="font-size:.82rem;">Sem WhatsApp</span>`);
 
   const docRowsHtml =
     docsLista.length === 0
@@ -11368,8 +11381,8 @@ function renderRhCandidatoInlineRow(payload) {
               <label>Nome
                 <input type="text" value="${esc(c.nome)}" readonly />
               </label>
-              <label>Telefone
-                <input type="text" value="${esc(c.telefone || "")}" readonly />
+              <label>WhatsApp
+                ${waBtn}
               </label>
               <label>Email
                 <input type="text" value="${esc(c.email || "")}" readonly />
@@ -11445,7 +11458,7 @@ function renderRhCandidatoInlineRow(payload) {
               <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
             </div>
             <div class="subtle-text" style="margin-top:.45rem;">
-              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. <strong>WhatsApp candidato</strong> abre o chat com o telefone cadastrado.
+              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. <strong>Enviar mensagem</strong> abre o WhatsApp no número cadastrado, com o texto pronto.
             </div>
             <div class="subtle-text" style="margin-top:.35rem;">
               Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia os arquivos pela página pública.
