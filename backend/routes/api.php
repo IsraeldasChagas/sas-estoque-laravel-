@@ -6,6 +6,7 @@ use App\Support\FiscalCadastroSupport;
 use App\Support\FiscalCompraEntradaSupport;
 use App\Support\FiscalMovimentacaoSupport;
 use App\Support\AuditLog;
+use App\Support\ProdutoDuplicado;
 use App\Support\Rh\RhFuncionarioUnicidade;
 use App\Support\Rh\RhRescisaoCalculo;
 use App\Support\SasMapaSistemaPdf;
@@ -575,15 +576,11 @@ Route::post('/produtos', function (Request $request) use ($salvarFotoProduto, $r
         
         \Log::info('✅ Dados validados:', $data);
         
-        // Verifica duplicata por nome (ignorando maiúsculas/minúsculas e espaços)
-        $nomeNorm = strtolower(trim($data['nome']));
-        $existe = DB::table('produtos')
-            ->whereRaw('LOWER(TRIM(nome)) = ?', [$nomeNorm])
-            ->exists();
-        if ($existe) {
+        $duplicata = ProdutoDuplicado::mensagem($data['nome'] ?? null);
+        if ($duplicata) {
             return response()->json([
-                'error' => 'Já existe um produto com este nome.',
-                'message' => 'Já existe um produto com este nome.',
+                'error' => $duplicata,
+                'message' => $duplicata,
             ], 422);
         }
         
@@ -658,18 +655,12 @@ $atualizarProduto = function (Request $request, $id, bool $permitirFoto = false)
             return response()->json(['error' => $e->getMessage(), 'message' => $e->getMessage()], 422);
         }
 
-        if (!empty($data['nome'])) {
-            $nomeNorm = strtolower(trim($data['nome']));
-            $existe = DB::table('produtos')
-                ->whereRaw('LOWER(TRIM(nome)) = ?', [$nomeNorm])
-                ->where('id', '!=', $id)
-                ->exists();
-            if ($existe) {
-                return response()->json([
-                    'error' => 'Já existe um produto com este nome.',
-                    'message' => 'Já existe um produto com este nome.',
-                ], 422);
-            }
+        $duplicata = ProdutoDuplicado::mensagem($data['nome'] ?? $produto->nome, (int) $id);
+        if ($duplicata) {
+            return response()->json([
+                'error' => $duplicata,
+                'message' => $duplicata,
+            ], 422);
         }
 
         // Não apaga código interno quando o front envia null/vazio/placeholder

@@ -12426,6 +12426,39 @@ function handleLogout() {
 
 let submittingProduto = false;
 
+function nomeProdutoComparavel(nome) {
+  return String(nome || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+async function mensagemProdutoDuplicado(nome, excetoId) {
+  const alvo = nomeProdutoComparavel(nome);
+  if (!alvo) return "";
+  let lista = state.produtos || [];
+  try {
+    const todos = await fetchJSON("/produtos?todas=1");
+    if (Array.isArray(todos)) lista = todos;
+  } catch (_) {
+    /* Usa a lista já carregada na tela. */
+  }
+  const existente = lista.find((produto) => {
+    if (excetoId && String(produto.id) === String(excetoId)) return false;
+    return nomeProdutoComparavel(produto.nome) === alvo;
+  });
+  return existente ? "Já existe um produto com este nome." : "";
+}
+
+function mostrarFeedbackProduto(mensagem) {
+  const feedback = dom.produtoFormFeedback || document.getElementById("produtoFormFeedback");
+  if (!feedback) return;
+  feedback.textContent = mensagem || "";
+  feedback.className = mensagem ? "form-feedback error" : "form-feedback hidden";
+}
+
 async function submitProduto(event) {
   event.preventDefault();
   if (submittingProduto) return;
@@ -12463,8 +12496,17 @@ async function submitProduto(event) {
     payload.codigo_barras = codigoBarras;
   }
 
+  mostrarFeedbackProduto("");
   if (!payload.nome || !payload.categoria || !payload.unidade_base) {
-    showToast("Preencha os campos obrigatorios.", "error");
+    mostrarFeedbackProduto("Preencha os campos obrigatórios.");
+    showToast("Preencha os campos obrigatórios.", "error");
+    return;
+  }
+
+  const duplicata = await mensagemProdutoDuplicado(payload.nome, id);
+  if (duplicata) {
+    mostrarFeedbackProduto(duplicata);
+    showToast(duplicata, "error");
     return;
   }
 
@@ -12544,6 +12586,7 @@ async function submitProduto(event) {
   } catch (err) {
     console.error('❌ Erro ao salvar produto:', err);
     console.error('❌ Stack:', err.stack);
+    mostrarFeedbackProduto(err.message || "Falha ao salvar produto.");
     showToast(err.message || "Falha ao salvar produto.", "error");
   } finally {
     submittingProduto = false;
