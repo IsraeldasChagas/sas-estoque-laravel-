@@ -11345,8 +11345,6 @@ function renderRhCandidatoInlineRow(payload) {
   const docsLista = Array.isArray(payload?.documentos) ? payload.documentos : [];
   const nomeCandTbl = esc(c.nome || "-");
   const vagaTbl = esc(vagaTitulo || "-");
-  const waBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, vagaTitulo);
-  const waHeaderBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, vagaTitulo, "rh-wa-btn--mini", `<span class="subtle-text" style="font-size:.82rem;">Sem WhatsApp</span>`);
 
   const docRowsHtml =
     docsLista.length === 0
@@ -11382,7 +11380,7 @@ function renderRhCandidatoInlineRow(payload) {
                 <input type="text" value="${esc(c.nome)}" readonly />
               </label>
               <label>WhatsApp
-                ${waBtn}
+                <input type="text" value="${esc(c.telefone || "")}" readonly />
               </label>
               <label>Email
                 <input type="text" value="${esc(c.email || "")}" readonly />
@@ -11426,9 +11424,8 @@ function renderRhCandidatoInlineRow(payload) {
             <textarea class="rh-cand-obs" style="width:100%; min-height: 110px;">${esc(c.observacoes_internas || "")}</textarea>
 
             <div class="table-card form-card--wide" style="margin-top:1rem;">
-              <header style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.65rem;padding:.75rem 1rem;">
+              <header style="padding:.75rem 1rem;">
                 <span>Documentos enviados</span>
-                ${waHeaderBtn}
               </header>
               <div class="table-wrapper">
                 <table>
@@ -11458,7 +11455,7 @@ function renderRhCandidatoInlineRow(payload) {
               <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
             </div>
             <div class="subtle-text" style="margin-top:.45rem;">
-              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. <strong>Enviar mensagem</strong> abre o WhatsApp no número cadastrado, com o texto pronto.
+              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. O botão <strong>Enviar mensagem</strong> fica na lista, acima.
             </div>
             <div class="subtle-text" style="margin-top:.35rem;">
               Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia os arquivos pela página pública.
