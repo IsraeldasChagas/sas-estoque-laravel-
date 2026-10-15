@@ -1634,7 +1634,7 @@ function syncUrlSectionHash(section) {
   } catch (_) {}
 }
 
-/** Seção inicial após login/F5: hash na URL > localStorage > Boas-vindas. */
+/** Toda abertura ou novo login começa em Boas-vindas. O QR de saída de lote continua abrindo o dashboard. */
 function resolveInitialSection() {
   const hash = window.location.hash || "";
   const m = hash.match(/[?&]lote=(\d+)/);
@@ -1642,22 +1642,8 @@ function resolveInitialSection() {
   if (hashSaidaMatch) {
     return { section: "dashboard", hashSaidaMatch };
   }
-  if (hash.length > 1) {
-    const raw = hash.slice(1).split(/[?&]/)[0];
-    if (raw === "rhDocumentos") return { section: "rhCandidatos", hashSaidaMatch: null };
-    if (raw && ALL_NAV_SECTION_IDS.has(raw)) return { section: raw, hashSaidaMatch: null };
-  }
   try {
-    const saved = localStorage.getItem(currentSectionKey);
-    if (saved) {
-      const normalized = saved === "rhDocumentos" ? "rhCandidatos" : saved;
-      if (ALL_NAV_SECTION_IDS.has(normalized)) {
-        const regras = applyPermissions();
-        if (regras.sections.includes(normalized)) {
-          return { section: normalized, hashSaidaMatch: null };
-        }
-      }
-    }
+    localStorage.setItem(currentSectionKey, "boasVindas");
   } catch (_) {}
   return { section: "boasVindas", hashSaidaMatch: null };
 }
@@ -12052,7 +12038,7 @@ async function startAppSession(user) {
     loadRelatorio({}).catch(err => console.error("Erro ao carregar relatório:", err)),
   ]).then(() => {});
   
-  // Navegação inicial: restaura última seção (F5) ou hash na URL; exceção QR de saída de lote.
+  // Navegação inicial: sempre Boas-vindas; exceção só o QR de saída de lote.
   (() => {
     const { section: sectionToNavigate, hashSaidaMatch } = resolveInitialSection();
 
