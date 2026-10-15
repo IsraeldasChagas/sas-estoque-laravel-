@@ -1094,6 +1094,128 @@ body.sidebar-open {
   font-size: 0.85rem;
 }
 
+#rhCandidatosSection .rh-cand-list {
+  display: grid;
+  gap: 12px;
+}
+
+#rhCandidatosSection .rh-cand-empty {
+  margin: 0;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+#rhCandidatosSection .rh-cand-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(16, 40, 63, 0.07);
+  padding: 14px 16px;
+}
+
+#rhCandidatosSection .rh-cand-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+#rhCandidatosSection .rh-cand-card__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+#rhCandidatosSection .rh-cand-card__sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+#rhCandidatosSection .rh-cand-card__meta {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#rhCandidatosSection .rh-cand-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+#rhCandidatosSection .rh-cand-card__row span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+#rhCandidatosSection .rh-cand-card__row strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+#rhCandidatosSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+#rhCandidatosSection .rh-cand-card__actions .rh-wa-btn {
+  width: auto;
+  margin-top: 0;
+}
+
+#rhCandidatosSection .rh-cand-card .btn-rh-toggle {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+#rhCandidatosSection .rh-cand-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+#rhCandidatosSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
+#rhCandidatosSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
+#rhCandidatosSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
+#rhCandidatosSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
+
+#rhCandidatosSection .rh-cand-card__details {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+#rhCandidatosSection .rh-cand-detail {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+@media (max-width: 720px) {
+  #rhCandidatosSection .rh-cand-card__actions .btn {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+}
+
 /* Grade de cartoes da dashboard */
 .cards {
   display: grid;

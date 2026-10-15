@@ -11165,29 +11165,54 @@ function renderRhCandidatos(lista) {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum candidato encontrado.</td></tr>';
+    tb.innerHTML = '<p class="rh-cand-empty">Nenhum candidato encontrado.</p>';
     return;
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
-  tb.innerHTML = lista.map((c, idx) => {
-    const num = idx + 1;
-    const waBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, c.vaga_titulo, "rh-wa-btn--mini", "-");
+  const statusLabel = {
+    novo: "Novo",
+    em_analise: "Em análise",
+    entrevista: "Entrevista",
+    em_teste: "Em teste",
+    aprovado: "Aprovado",
+    em_contratacao: "Em contratação",
+    contratado: "Contratado",
+    reprovado: "Reprovado",
+    banco_talentos: "Banco de talentos",
+  };
+  tb.innerHTML = lista.map((c) => {
+    const st = String(c.status || "");
+    const stTxt = statusLabel[st] || st.replace(/_/g, " ") || "—";
+    const stTone = ["aprovado", "contratado", "em_contratacao"].includes(st)
+      ? "ok"
+      : st === "reprovado"
+        ? "danger"
+        : ["em_teste", "em_analise"].includes(st)
+          ? "warn"
+          : "info";
+    const waBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, c.vaga_titulo, "rh-wa-btn--mini", "");
     const temCurriculo = c.tem_curriculo === true || c.tem_curriculo === 1 || String(c.tem_curriculo ?? "").toLowerCase() === "1";
     const temFoto = c.tem_foto === true || c.tem_foto === 1 || String(c.tem_foto ?? "").toLowerCase() === "1";
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
     const badgeFoto = temFoto ? ' <span title="Tem foto anexada" aria-label="Tem foto anexada">🖼️</span>' : "";
-    return `<tr data-id="${esc(c.id)}">
-      <td data-label="#">${num}</td>
-      <td data-label="ID">${esc(c.id)}</td>
-      <td data-label="Nome">${esc(c.nome)}${badgeCurriculo}${badgeFoto}</td>
-      <td data-label="Vaga">${esc(c.vaga_titulo || "-")}</td>
-      <td data-label="Inscrição">${esc(rhFormatDataInscricao(c))}</td>
-      <td data-label="Status">${esc((c.status || "").replace(/_/g," ").toUpperCase())}</td>
-      <td data-label="WhatsApp">${waBtn}</td>
-      <td data-label="Ações" class="table-actions">
-        <button type="button" class="table-action btn-rh-toggle" data-id="${esc(c.id)}">Abrir</button>
-      </td>
-    </tr>`;
+    const tel = String(c.telefone || "").trim();
+    return `<article class="rh-cand-card" data-id="${esc(c.id)}">
+      <div class="rh-cand-card__head">
+        <div>
+          <h3 class="rh-cand-card__name">${esc(c.nome || "—")}${badgeCurriculo}${badgeFoto}</h3>
+          <p class="rh-cand-card__sub">${esc(c.vaga_titulo || "Sem vaga")}</p>
+        </div>
+        <span class="rh-cand-pill rh-cand-pill--${stTone}">${esc(stTxt)}</span>
+      </div>
+      <div class="rh-cand-card__meta">
+        <div class="rh-cand-card__row"><span>Inscrição</span><strong>${esc(rhFormatDataInscricao(c))}</strong></div>
+        <div class="rh-cand-card__row"><span>WhatsApp</span><strong>${esc(tel || "—")}</strong></div>
+      </div>
+      <div class="rh-cand-card__actions">
+        ${waBtn}
+        <button type="button" class="btn btn-rh-toggle" data-id="${esc(c.id)}">Abrir</button>
+      </div>
+    </article>`;
   }).join("");
 }
 
@@ -11196,7 +11221,7 @@ let rhCandidatoInlineOpenId = null;
 function closeRhCandidatoInlineRow() {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
-  const openRow = tb.querySelector('tr[data-rh-candidato-inline="1"]');
+  const openRow = tb.querySelector('[data-rh-candidato-inline="1"]');
   if (openRow) openRow.remove();
   rhCandidatoInlineOpenId = null;
 }
@@ -11368,8 +11393,7 @@ function renderRhCandidatoInlineRow(payload) {
           .join("");
 
   return `
-    <td colspan="8" style="padding: 0;">
-      <div class="form-card" style="margin: .75rem; border: 1px solid rgba(255,255,255,.08);">
+      <div class="form-card rh-cand-detail">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
             ${temFoto ? `<img data-rh-cand-foto="1" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
@@ -11466,7 +11490,6 @@ function renderRhCandidatoInlineRow(payload) {
           </div>
         </div>
       </div>
-    </td>
   `;
 }
 
@@ -17163,8 +17186,8 @@ function setupNavigation() {
       e.preventDefault();
       const id = Number(btnToggle.dataset.id || "");
       if (!id) return;
-      const tr = btnToggle.closest("tr");
-      if (!tr) return;
+      const card = btnToggle.closest(".rh-cand-card");
+      if (!card) return;
 
       // Toggle: se já está aberto, fecha.
       if (rhCandidatoInlineOpenId === id) {
@@ -17180,17 +17203,18 @@ function setupNavigation() {
         const html = renderRhCandidatoInlineRow(payload);
         if (!html) throw new Error("Não foi possível montar os detalhes do candidato.");
 
-        const detailsTr = document.createElement("tr");
-        detailsTr.dataset.rhCandidatoInline = "1";
-        detailsTr.innerHTML = html;
-        tr.insertAdjacentElement("afterend", detailsTr);
+        const details = document.createElement("div");
+        details.className = "rh-cand-card__details";
+        details.dataset.rhCandidatoInline = "1";
+        details.innerHTML = html;
+        card.appendChild(details);
 
         // Preenche status selecionado
-        const statusSel = detailsTr.querySelector(".rh-cand-status");
+        const statusSel = details.querySelector(".rh-cand-status");
         if (statusSel) statusSel.value = payload?.candidato?.status || "novo";
 
         // Carrega foto (se existir) via API (não depende de /storage público).
-        const img = detailsTr.querySelector('img[data-rh-cand-foto="1"]');
+        const img = details.querySelector('img[data-rh-cand-foto="1"]');
         if (img) {
           try {
             const blob = await fetchBlob(`/rh/candidatos/${id}/foto`);
@@ -17209,11 +17233,11 @@ function setupNavigation() {
         }
 
         // Botões
-        detailsTr.querySelector(".rh-cand-fechar")?.addEventListener("click", () => {
+        details.querySelector(".rh-cand-fechar")?.addEventListener("click", () => {
           closeRhCandidatoInlineRow();
         });
-        detailsTr.querySelector(".rh-cand-cv")?.addEventListener("click", async () => {
-          const hasCv = detailsTr.querySelector(".rh-cand-cv")?.getAttribute("data-has-cv") === "1";
+        details.querySelector(".rh-cand-cv")?.addEventListener("click", async () => {
+          const hasCv = details.querySelector(".rh-cand-cv")?.getAttribute("data-has-cv") === "1";
           if (!hasCv) {
             showToast("Este candidato não tem currículo anexado.", "info");
             return;
@@ -17230,9 +17254,9 @@ function setupNavigation() {
             showToast(err?.message || "Erro ao abrir currículo.", "error");
           }
         });
-        detailsTr.querySelector(".rh-cand-salvar")?.addEventListener("click", async () => {
-          const status = detailsTr.querySelector(".rh-cand-status")?.value || "novo";
-          const obs = detailsTr.querySelector(".rh-cand-obs")?.value || "";
+        details.querySelector(".rh-cand-salvar")?.addEventListener("click", async () => {
+          const status = details.querySelector(".rh-cand-status")?.value || "novo";
+          const obs = details.querySelector(".rh-cand-obs")?.value || "";
           try {
             await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
             await fetchJSON(`/rh/candidatos/${id}/observacoes`, { method: "PUT", body: JSON.stringify({ observacoes_internas: obs }) });
@@ -17245,15 +17269,15 @@ function setupNavigation() {
           }
         });
         const syncRhCandDocLinkBtn = () => {
-          const st = (detailsTr.querySelector(".rh-cand-status")?.value || "").toString();
-          const btn = detailsTr.querySelector(".rh-cand-doc-link");
+          const st = (details.querySelector(".rh-cand-status")?.value || "").toString();
+          const btn = details.querySelector(".rh-cand-doc-link");
           if (!btn) return;
           btn.disabled = !(st === "aprovado" || st === "em_contratacao");
         };
-        detailsTr.querySelector(".rh-cand-status")?.addEventListener("change", syncRhCandDocLinkBtn);
+        details.querySelector(".rh-cand-status")?.addEventListener("change", syncRhCandDocLinkBtn);
         syncRhCandDocLinkBtn();
 
-        detailsTr.querySelector(".rh-cand-doc-link")?.addEventListener("click", async () => {
+        details.querySelector(".rh-cand-doc-link")?.addEventListener("click", async () => {
           try {
             const out = await fetchJSON(`/rh/candidatos/${id}/documentacao-link`, { method: "POST", body: "{}" });
             const url = (out && out.url) ? String(out.url).trim() : "";
@@ -17269,12 +17293,10 @@ function setupNavigation() {
             showToast(err?.message || "Erro ao gerar link.", "error");
           }
         });
-        detailsTr.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
+        details.querySelector(".rh-cand-del")?.addEventListener("click", async () => {
           if (!confirm("EXCLUIR candidato definitivamente?\n\nIsso vai apagar TUDO: dados, entrevistas, histórico, currículo, documentos e arquivos.\n\nEssa ação NÃO pode ser desfeita.")) return;
           const tbCand = document.getElementById("rhCandidatosTable");
-          const mainCandRow = tbCand?.querySelector(
-            `tr[data-id="${String(id)}"]:not([data-rh-candidato-inline="1"])`
-          );
+          const mainCandRow = tbCand?.querySelector(`.rh-cand-card[data-id="${String(id)}"]`);
           closeRhCandidatoInlineRow();
           rhCandidatoInlineOpenId = null;
           mainCandRow?.remove();
