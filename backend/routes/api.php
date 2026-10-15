@@ -27,6 +27,102 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Mail;
 
+if (! function_exists('sasFiltrarColunas')) {
+    function sasFiltrarColunas(string $tabela, array $dados, bool $novo = false): array
+    {
+        if (! Schema::hasTable($tabela)) {
+            return $dados;
+        }
+        $cols = array_flip(Schema::getColumnListing($tabela));
+        $out = array_intersect_key($dados, $cols);
+        if ($novo && isset($cols['created_at']) && ! array_key_exists('created_at', $out)) {
+            $out['created_at'] = now();
+        }
+        if (isset($cols['updated_at']) && ! array_key_exists('updated_at', $out)) {
+            $out['updated_at'] = now();
+        }
+
+        return $out;
+    }
+}
+
+if (! function_exists('sasErroFuncionario')) {
+    function sasErroFuncionario(string $msg): string
+    {
+        if (stripos($msg, 'Base table') !== false || stripos($msg, "doesn't exist") !== false) {
+            return 'Tabela de funcionários não encontrada. Execute no servidor: php artisan migrate --force';
+        }
+        if (preg_match("/Field '([^']+)' doesn't have a default value/i", $msg, $m)) {
+            return 'Não foi possível salvar o funcionário. Campo obrigatório ausente: '.$m[1].'.';
+        }
+        if (preg_match("/Unknown column '([^']+)'/i", $msg, $m)) {
+            return 'Não foi possível salvar o funcionário. Coluna não encontrada: '.$m[1].'.';
+        }
+        if (stripos($msg, 'SQLSTATE') !== false || strlen($msg) > 220) {
+            return 'Não foi possível salvar o funcionário. Verifique os dados e tente novamente.';
+        }
+
+        return $msg;
+    }
+}
+
+if (! function_exists('sasMenuEfetivo')) {
+    function sasMenuEfetivo(object $usuario): array
+    {
+        $perfil = strtoupper(trim((string) ($usuario->perfil ?? '')));
+        $menu = $usuario->permissoes_menu ?? null;
+        if (is_string($menu)) {
+            $decoded = json_decode($menu, true);
+            $menu = is_array($decoded) ? $decoded : null;
+        }
+        if (is_array($menu) && $menu !== [] && array_is_list($menu)) {
+            return array_values(array_map('strval', $menu));
+        }
+        if ($perfil === 'ADMIN' || $perfil === 'GERENTE' || $perfil === 'ASSISTENTE_ADMINISTRATIVO') {
+            return ['funcionarios', 'unidades', 'locais', 'usuarios', 'produtos', 'compras', 'movimentacoes', 'lotes'];
+        }
+
+        return [];
+    }
+}
+
+if (! function_exists('sasTemModulo')) {
+    function sasTemModulo(object $usuario, string $modulo): bool
+    {
+        return in_array($modulo, sasMenuEfetivo($usuario), true);
+    }
+}
+
+if (! function_exists('sasPodeOperarModulo')) {
+    function sasPodeOperarModulo(object $usuario, string $modulo): bool
+    {
+        $perfil = strtoupper(trim((string) ($usuario->perfil ?? '')));
+        if ($perfil === 'ADMIN') {
+            return true;
+        }
+        if ($perfil !== 'ASSISTENTE_ADMINISTRATIVO') {
+            return false;
+        }
+
+        return sasTemModulo($usuario, $modulo);
+    }
+}
+
+if (! function_exists('sasPodeGerenciarFuncionarios')) {
+    function sasPodeGerenciarFuncionarios(object $usuario): bool
+    {
+        $perfil = strtoupper(trim((string) ($usuario->perfil ?? '')));
+        if ($perfil === 'ADMIN') {
+            return true;
+        }
+        if ($perfil === 'GERENTE') {
+            return sasTemModulo($usuario, 'funcionarios');
+        }
+
+        return sasPodeOperarModulo($usuario, 'funcionarios');
+    }
+}
+
 // ============================================
 // AUTENTICAÇÃO
 // ============================================
@@ -1727,9 +1823,8 @@ Route::post('/unidades', function (Request $request) use ($unidadePayloadFromReq
             ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id');
     }
     
-    // Verifica se é ADMIN
     $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
-    if ($perfil !== 'ADMIN') {
+    if ($perfil !== 'ADMIN' && ! sasPodeOperarModulo($usuarioAutenticado, 'unidades')) {
         return response()->json(['error' => 'Apenas administradores podem criar unidades'], 403)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -1780,7 +1875,7 @@ Route::put('/unidades/{id}', function (Request $request, $id) use ($unidadePaylo
     
     // Verifica se é ADMIN
     $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
-    if ($perfil !== 'ADMIN') {
+    if ($perfil !== 'ADMIN' && ! sasPodeOperarModulo($usuarioAutenticado, 'unidades')) {
         return response()->json(['error' => 'Apenas administradores podem editar unidades'], 403)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
@@ -2659,7 +2754,7 @@ Route::post('/locais', function (Request $request) {
     
     // Verifica se é ADMIN
     $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
-    if ($perfil !== 'ADMIN') {
+    if ($perfil !== 'ADMIN' && ! sasPodeOperarModulo($usuarioAutenticado, 'locais')) {
         return response()->json(['error' => 'Apenas administradores podem criar locais'], 403)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -2711,7 +2806,7 @@ Route::put('/locais/{id}', function (Request $request, $id) {
     
     // Verifica se é ADMIN
     $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
-    if ($perfil !== 'ADMIN') {
+    if ($perfil !== 'ADMIN' && ! sasPodeOperarModulo($usuarioAutenticado, 'locais')) {
         return response()->json(['error' => 'Apenas administradores podem editar locais'], 403)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'PUT, OPTIONS')
@@ -2757,7 +2852,7 @@ Route::patch('/locais/{id}/status', function (Request $request, $id) {
     
     // Verifica se é ADMIN
     $perfil = strtoupper(trim($usuarioAutenticado->perfil ?? ''));
-    if ($perfil !== 'ADMIN') {
+    if ($perfil !== 'ADMIN' && ! sasPodeOperarModulo($usuarioAutenticado, 'locais')) {
         return response()->json(['error' => 'Apenas administradores podem alterar o status de locais'], 403)
             ->header('Access-Control-Allow-Origin', '*')
             ->header('Access-Control-Allow-Methods', 'PATCH, OPTIONS')
@@ -2979,8 +3074,8 @@ Route::get('/lotes/{id}/etiqueta.pdf', function (Request $request, $id) {
         }
         
         $perfil = strtoupper(trim($usuario->perfil ?? ''));
-        // ADMIN, GERENTE e ESTOQUISTA podem imprimir etiquetas
-        if ($perfil !== 'ADMIN' && $perfil !== 'GERENTE' && $perfil !== 'ESTOQUISTA') {
+        // Quem tem o módulo de lotes no perfil pode imprimir etiquetas
+        if ($perfil !== 'ADMIN' && $perfil !== 'GERENTE' && $perfil !== 'ESTOQUISTA' && $perfil !== 'ASSISTENTE_ADMINISTRATIVO') {
             return response()->json(['error' => 'Sem permissão para imprimir etiquetas'], 403)
                 ->header('Access-Control-Allow-Origin', '*');
         }
@@ -7406,6 +7501,10 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
         return response()->json(['error' => 'Faça login novamente. Sessão expirada ou usuário não identificado.'], 401)
             ->header('Access-Control-Allow-Origin', '*');
     }
+    if (! sasPodeGerenciarFuncionarios($usuarioLogado)) {
+        return response()->json(['error' => 'Seu perfil não tem permissão para cadastrar funcionário.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
+    }
 
     $data = $request->all();
     $cpfLimpo = preg_replace('/\D/', '', $data['cpf'] ?? '');
@@ -7463,14 +7562,14 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             if (DB::table('usuarios')->where('email', $login)->exists()) {
                 return response()->json(['error' => 'E-mail/login já cadastrado para outro usuário'], 422)->header('Access-Control-Allow-Origin', '*');
             }
-            $usuarioId = DB::table('usuarios')->insertGetId([
+            $usuarioId = DB::table('usuarios')->insertGetId(sasFiltrarColunas('usuarios', [
                 'nome' => trim($data['nome_completo']),
                 'email' => $login,
                 'perfil' => $data['perfil_usuario'] ?? 'FUNCIONARIO',
                 'senha_hash' => Hash::make($data['senha_usuario']),
                 'ativo' => 1,
                 'unidade_id' => !empty($data['unidade_id']) ? (int)$data['unidade_id'] : null,
-            ]);
+            ], true));
         }
     }
 
@@ -7532,10 +7631,11 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
         $foto->move($uploadDir, $nomeArquivo);
         $insert['foto'] = 'uploads/funcionarios/' . $nomeArquivo;
     }
+    $insert = sasFiltrarColunas('funcionarios', $insert, true);
     $id = DB::table('funcionarios')->insertGetId($insert);
     if ($salarioInicial > 0 && Schema::hasTable('funcionarios_salarios')) {
         $vig = ! empty($data['data_admissao']) ? $data['data_admissao'] : now()->toDateString();
-        DB::table('funcionarios_salarios')->insert([
+        DB::table('funcionarios_salarios')->insert(sasFiltrarColunas('funcionarios_salarios', [
             'funcionario_id' => (int) $id,
             'valor' => $salarioInicial,
             'vigencia_inicio' => $vig,
@@ -7543,25 +7643,26 @@ Route::post('/funcionarios', function (Request $request) use ($normalizeFunciona
             'criado_por' => (int) $userId,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], true));
     }
     $funcionario = DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first();
     return response()->json($funcionario, 201)->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /funcionarios: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-        $msg = $e->getMessage();
-        if (strpos($msg, 'Base table') !== false || strpos($msg, 'doesn\'t exist') !== false) {
-            $msg = 'Tabela de funcionários não encontrada. Execute no servidor: php artisan migrate --force';
-        }
-        return response()->json(['error' => $msg], 500)->header('Access-Control-Allow-Origin', '*');
+        return response()->json(['error' => sasErroFuncionario($e->getMessage())], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 
 Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use ($normalizeFuncionarioFormacaoJson, $normalizeTipoVinculo, $funcionariosTableHasColumn) {
     try {
     $userId = $request->header('X-Usuario-Id');
-    if (!$userId || !DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first()) {
+    $usuarioLogado = $userId ? DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->first() : null;
+    if (!$usuarioLogado) {
         return response()->json(['error' => 'Não autorizado'], 401)->header('Access-Control-Allow-Origin', '*');
+    }
+    if (! sasPodeGerenciarFuncionarios($usuarioLogado)) {
+        return response()->json(['error' => 'Seu perfil não tem permissão para alterar funcionário.'], 403)
+            ->header('Access-Control-Allow-Origin', '*');
     }
 
     $existente = DB::table('funcionarios')->where('id', $id)->first();
@@ -7639,14 +7740,14 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
             if (DB::table('usuarios')->where('email', $login)->exists()) {
                 return response()->json(['error' => 'E-mail/login já cadastrado para outro usuário'], 422)->header('Access-Control-Allow-Origin', '*');
             }
-            $usuarioId = DB::table('usuarios')->insertGetId([
+            $usuarioId = DB::table('usuarios')->insertGetId(sasFiltrarColunas('usuarios', [
                 'nome' => trim($data['nome_completo']),
                 'email' => $login,
                 'perfil' => $data['perfil_usuario'] ?? 'FUNCIONARIO',
                 'senha_hash' => Hash::make($data['senha_usuario']),
                 'ativo' => 1,
                 'unidade_id' => !empty($data['unidade_id']) ? (int)$data['unidade_id'] : null,
-            ]);
+            ], true));
         }
     }
 
@@ -7714,18 +7815,13 @@ Route::post('/funcionarios/{id}/atualizar', function (Request $request, $id) use
     if (! $funcionariosTableHasColumn('cpf_limpo')) {
         unset($update['cpf_limpo']);
     }
+    $update = sasFiltrarColunas('funcionarios', $update, false);
     DB::table('funcionarios')->where('id', $id)->update($update);
     return response()->json(DB::table('funcionarios')->leftJoin('unidades', 'funcionarios.unidade_id', '=', 'unidades.id')->select('funcionarios.*', 'unidades.nome as unidade_nome')->where('funcionarios.id', $id)->first())
         ->header('Access-Control-Allow-Origin', '*');
     } catch (\Exception $e) {
         \Log::error('POST /funcionarios/{id}/atualizar: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-        $msg = $e->getMessage();
-        if (strpos($msg, 'Base table') !== false || strpos($msg, 'doesn\'t exist') !== false) {
-            $msg = 'Tabela ou coluna não encontrada. Execute no servidor: php artisan migrate --force';
-        } elseif (strpos($msg, 'Unknown column') !== false) {
-            $msg = 'Banco de dados desatualizado (coluna ausente). Execute: php artisan migrate --force';
-        }
-        return response()->json(['error' => $msg], 500)->header('Access-Control-Allow-Origin', '*');
+        return response()->json(['error' => sasErroFuncionario($e->getMessage())], 500)->header('Access-Control-Allow-Origin', '*');
     }
 });
 

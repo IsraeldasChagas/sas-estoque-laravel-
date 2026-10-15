@@ -4074,6 +4074,12 @@ function isAdminOrGerente() {
   return perfil === "ADMIN" || perfil === "GERENTE";
 }
 
+function auxiliarPodeExecutar(modulo) {
+  const perfil = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  if (perfil !== "ASSISTENTE_ADMINISTRATIVO") return false;
+  return getSectionsUsuarioAtual().includes(modulo);
+}
+
 /** Seções efetivas do usuário (permissoes_menu personalizado ou padrão do perfil). */
 function getSectionsUsuarioAtual() {
   const perfil = currentUser?.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
@@ -5092,6 +5098,7 @@ function canManageProdutos() {
 }
 
 function canManageUnidades() {
+  if (auxiliarPodeExecutar("unidades")) return true;
   const perfil = currentUser && currentUser.perfil ? currentUser.perfil.toUpperCase() : "VISUALIZADOR";
   const regras = PERMISSOES[perfil] || PERMISSOES.VISUALIZADOR;
   return Boolean(regras.canManageUnidades);
@@ -5631,22 +5638,26 @@ function applyPermissions() {
   });
 
   if (dom.openProdutoBtn) dom.openProdutoBtn.classList.toggle("hidden", !regras.canManageProdutos);
-  // BAR pode criar usuários BAR, mesmo sem canManageUsuarios
-  const podeGerenciarUsuarios = regras.canManageUsuarios || canManageUsuariosBar();
+  const perfilAuxiliar = perfil === "ASSISTENTE_ADMINISTRATIVO";
+  const modulosAtuais = getSectionsUsuarioAtual();
+  // BAR pode criar usuários BAR, mesmo sem canManageUsuarios.
+  // Auxiliar administrativo executa o módulo Usuários quando ele está na lista do Ver.
+  const podeGerenciarUsuarios = regras.canManageUsuarios || canManageUsuariosBar() || (perfilAuxiliar && modulosAtuais.includes("usuarios"));
   if (dom.openUsuarioBtn) dom.openUsuarioBtn.classList.toggle("hidden", !podeGerenciarUsuarios);
-  updateUnidadeInlineUI(regras.canManageUnidades);
+  const mostrarAcoes = perfil === "ADMIN";
+  const mostrarAcoesUnidades = mostrarAcoes || (perfilAuxiliar && modulosAtuais.includes("unidades"));
+  const mostrarAcoesLocais = mostrarAcoes || (perfilAuxiliar && modulosAtuais.includes("locais"));
+  updateUnidadeInlineUI(mostrarAcoesUnidades);
 
-  // Oculta coluna Acoes e botão Novo nas tabelas de Unidades e Locais para quem não é ADMIN
   const unidadesAcoesHeader = document.getElementById("unidadesAcoesHeader");
   const locaisAcoesHeader = document.getElementById("locaisAcoesHeader");
-  const mostrarAcoes = perfil === "ADMIN";
-  if (unidadesAcoesHeader) unidadesAcoesHeader.style.display = mostrarAcoes ? "" : "none";
-  if (locaisAcoesHeader) locaisAcoesHeader.style.display = mostrarAcoes ? "" : "none";
-  if (dom.openLocalModalBtn) dom.openLocalModalBtn.classList.toggle("hidden", !mostrarAcoes);
+  if (unidadesAcoesHeader) unidadesAcoesHeader.style.display = mostrarAcoesUnidades ? "" : "none";
+  if (locaisAcoesHeader) locaisAcoesHeader.style.display = mostrarAcoesLocais ? "" : "none";
+  if (dom.openLocalModalBtn) dom.openLocalModalBtn.classList.toggle("hidden", !mostrarAcoesLocais);
 
   // Oculta coluna Acoes da tabela de Usuários para GERENTE (só ADMIN pode editar/excluir)
   const usuariosAcoesHeader = document.getElementById("usuariosAcoesHeader");
-  const mostrarAcoesUsuarios = perfil === "ADMIN";
+  const mostrarAcoesUsuarios = perfil === "ADMIN" || podeGerenciarUsuarios;
   if (usuariosAcoesHeader) usuariosAcoesHeader.style.display = mostrarAcoesUsuarios ? "" : "none";
 
   // Oculta coluna Acoes das tabelas de Movimentações para quem não é ADMIN (excluir entrada/saída)
@@ -5682,7 +5693,7 @@ function applyPermissions() {
   updateNovaListaButton();
   // Sugestões de Compras: apenas ADMIN e GERENTE
   if (dom.openSugestoesComprasBtn) {
-    const podeVerSugestoes = perfil === "ADMIN" || perfil === "GERENTE";
+    const podeVerSugestoes = (perfil === "ADMIN" || perfil === "GERENTE" || perfil === "ASSISTENTE_ADMINISTRATIVO") && regras.canManageCompras;
     dom.openSugestoesComprasBtn.classList.toggle("hidden", !podeVerSugestoes);
   }
   if (dom.listaCompraAdicionarItem) dom.listaCompraAdicionarItem.classList.toggle("hidden", !regras.canManageCompras);
@@ -6617,7 +6628,7 @@ function openLocalVerModal(local) {
   if (title) title.textContent = local.nome ? `Local — ${local.nome}` : "Local";
   body.innerHTML = renderLocalVerHtml(local);
   if (editBtn) {
-    const podeEditar = isAdmin();
+    const podeEditar = isAdmin() || auxiliarPodeExecutar("locais");
     editBtn.classList.toggle("hidden", !podeEditar);
     editBtn.dataset.id = podeEditar ? String(local.id) : "";
   }
@@ -6629,7 +6640,8 @@ function closeLocalVerModal() {
 }
 
 function renderLocais(lista) {
-  const podeEditar = isAdmin();
+  const podeEditar = isAdmin() || auxiliarPodeExecutar("locais");
+  const podeExcluir = isAdmin();
   const header = document.getElementById("locaisAcoesHeader");
   if (header) header.style.display = "";
   const rows = (lista || []).map((local) => {
@@ -6650,7 +6662,7 @@ function renderLocais(lista) {
           ? '<button type="button" class="table-action danger" data-action="disable">Desativar</button>'
           : '<button type="button" class="table-action" data-action="enable">Ativar</button>'
       );
-      botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+      if (podeExcluir) botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
     }
     const acoesCell = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
     return `<tr data-id="${escapeHtml(String(local.id))}">
@@ -6709,7 +6721,8 @@ function closeUnidadeVerModal() {
 }
 
 function renderUnidades(lista) {
-  const podeEditar = isAdmin();
+  const podeEditar = isAdmin() || auxiliarPodeExecutar("unidades");
+  const podeExcluir = isAdmin();
   const header = document.getElementById("unidadesAcoesHeader");
   if (header) header.style.display = "";
   const rows = (lista || []).map((unidade) => {
@@ -6720,7 +6733,7 @@ function renderUnidades(lista) {
       botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
       if (ativo) botoes.push('<button type="button" class="table-action danger" data-action="disable">Desativar</button>');
       else botoes.push('<button type="button" class="table-action" data-action="enable">Ativar</button>');
-      botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+      if (podeExcluir) botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
     }
     const acoesCell = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
     return `<tr data-id="${unidade.id}">
@@ -6756,9 +6769,15 @@ function usuarioPodeSerGerenciadoNaLista(usuario) {
   const isAdminUser = isAdmin();
   const podeGerenciarBar = canManageUsuariosBar();
   if (isAdminUser) return true;
+  const perfilAlvo = (usuario.perfil || "").toString().trim().toUpperCase();
+  if (perfilAlvo === "ADMIN") return false;
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  if (perfilAtual === "ASSISTENTE_ADMINISTRATIVO" && getSectionsUsuarioAtual().includes("usuarios")) {
+    return true;
+  }
   return (
     canManageUsuario(usuario) ||
-    (podeGerenciarBar && (usuario.perfil || "").toString().trim().toUpperCase() === "BAR")
+    (podeGerenciarBar && perfilAlvo === "BAR")
   );
 }
 
@@ -13166,7 +13185,7 @@ async function submitLote(event) {
 async function submitLocal(event) {
   event.preventDefault();
   event.stopPropagation();
-  if (!isAdmin()) {
+  if (!isAdmin() && !auxiliarPodeExecutar("locais")) {
     showToast("Apenas administradores podem criar ou editar locais.", "warning");
     return;
   }
@@ -13846,7 +13865,7 @@ function setupTables() {
       openLocalVerModal(local);
       return;
     }
-    if (!isAdmin()) {
+    if (!isAdmin() && !auxiliarPodeExecutar("locais")) {
       showToast("Apenas administradores podem gerenciar locais.", "warning");
       return;
     }
@@ -15800,7 +15819,7 @@ function setupModals() {
   });
 
   dom.openLocalModalBtn?.addEventListener("click", async () => {
-    if (!isAdmin()) {
+    if (!isAdmin() && !auxiliarPodeExecutar("locais")) {
       showToast("Apenas administradores podem gerenciar locais.", "warning");
       return;
     }
