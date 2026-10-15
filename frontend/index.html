@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20261015-rh-foto" />
+    <meta name="theme-color" content="#070403" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Sabor Paraense" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="imagens/icon-192.png" />
+    <link rel="stylesheet" href="style.css?v=20261015-pwa" />
     <script>
       (function () {
         try {
@@ -68,7 +76,6 @@
     <link rel="stylesheet" href="style-delivery-orders-vf.css?v=20260719-vf-exact" />
     <link rel="stylesheet" href="style-delivery-logistics-vf.css?v=20260717-vf1" />
     <link rel="stylesheet" href="style-delivery-store-vf.css?v=20260719-pagamento-online" />
-    <link rel="icon" type="image/png" href="imagens/favicon.png" />
   </head>
   <body>
     <!-- Tela exibida antes do usuario se autenticar -->
@@ -137,6 +144,8 @@
               ENTRAR
             </button>
           </form>
+          <button type="button" class="btn pwa-install" data-pwa-install hidden>Instalar aplicativo</button>
+          <p class="pwa-ios-hint" data-pwa-ios hidden>No iPhone, toque em Compartilhar e depois em Adicionar à Tela de Início.</p>
           <footer class="login-panel__footer">
             <span>Precisa de ajuda? Contate o suporte TI.</span>
             <small>Desenvolvido pelo Grupo Sabor Paraense</small>
@@ -476,6 +485,7 @@
             </div>
           </div>
           <div class="topbar__actions">
+            <button type="button" class="pwa-install" data-pwa-install hidden>Instalar</button>
             <button type="button" id="logoutBtn">Sair</button>
           </div>
         </header>
@@ -7954,6 +7964,7 @@
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
+    <script src="pwa.js?v=20261015-pwa"></script>
     <script src="app.js?v=20261015-rh-foto"></script>
     <script src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>

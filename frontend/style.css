@@ -478,10 +478,41 @@ body.sidebar-open {
   justify-content: space-between;
   align-items: center;
   padding: 18px 28px;
+  padding-top: calc(18px + env(safe-area-inset-top));
   background: var(--topbar-bg);
   color: var(--topbar-text);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.pwa-install {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-panel .pwa-install {
+  width: 100%;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.pwa-ios-hint {
+  margin: 12px 0 0;
+  color: #5c6d7e;
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.pwa-install[hidden],
+.pwa-ios-hint[hidden] {
+  display: none !important;
 }
 
 .topbar .user-info strong {
@@ -4624,6 +4655,7 @@ body.image-lightbox-open {
     flex-wrap: wrap;
     gap: 12px;
     padding: 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top));
   }
   .topbar__actions {
     width: 100%;
