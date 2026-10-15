@@ -1001,7 +1001,30 @@ body.sidebar-open {
   box-shadow: 0 12px 32px rgba(16, 40, 63, 0.07);
 }
 
-#rhDashboardSection .rh-stat span {
+#rhDashboardSection .rh-stat__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#rhDashboardSection .rh-stat__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #0f766e;
+  background: #d7f3ee;
+}
+
+#rhDashboardSection .rh-stat__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+#rhDashboardSection .rh-stat__top > span:first-child {
   color: var(--muted);
   font-weight: 600;
   font-size: 14px;
