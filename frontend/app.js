@@ -2431,18 +2431,10 @@ const APP_THEME_DEFAULT = {
   pageBg: "#f6f7fb",
   pagePrimary: "#0047ab",
 };
-const THEME_SWATCHES = {
-  menuBg: ["#070403", "#071428", "#1a0a04", "#1b3a1b", "#1a237e", "#263238", "#37474f"],
-  menuAccent: ["#de4309", "#1565c0", "#e53935", "#2e7d32", "#6a1b9a", "#ff6d00", "#00897b"],
-  topbarBg: ["#ffffff", "#f6f7fb", "#e3f2fd", "#fff8e1", "#eceff1", "#263238", "#071428", "#0047ab"],
-  pageBg: ["#f6f7fb", "#e3f2fd", "#fff8e1", "#f3e5f5", "#e8f5e9", "#ffffff", "#eceff1"],
-  pagePrimary: ["#0047ab", "#1565c0", "#c62828", "#2e7d32", "#6a1b9a", "#ef6c00", "#00695c"],
-};
 const THEME_PRESETS = [
-  { id: "padrao", label: "Padrão", ...APP_THEME_DEFAULT },
-  { id: "azul", label: "Azul", menuBg: "#071428", menuAccent: "#1565c0", topbarBg: "#e3f2fd", pageBg: "#e8f1fb", pagePrimary: "#0d47a1" },
-  { id: "laranja", label: "Laranja", menuBg: "#2d1408", menuAccent: "#ff6d00", topbarBg: "#fff3e0", pageBg: "#fff8f1", pagePrimary: "#e65100" },
-  { id: "verde", label: "Verde", menuBg: "#1b3a1b", menuAccent: "#2e7d32", topbarBg: "#e8f5e9", pageBg: "#e8f5e9", pagePrimary: "#1b5e20" },
+  { id: "claro", label: "Claro", menuBg: "#10283f", menuAccent: "#0f766e", topbarBg: "#ffffff", pageBg: "#eef3f6", pagePrimary: "#0f766e" },
+  { id: "escuro", label: "Escuro", menuBg: "#0d1722", menuAccent: "#0f766e", topbarBg: "#10283f", pageBg: "#0d1722", pagePrimary: "#0f766e" },
+  { id: "rosa", label: "Rosa", menuBg: "#8a2f55", menuAccent: "#e25b8a", topbarBg: "#fffafc", pageBg: "#fff1f6", pagePrimary: "#e25b8a" },
 ];
 
 let themeCurrentConfig = { ...APP_THEME_DEFAULT };
@@ -2511,9 +2503,7 @@ function themeUpdatePanelMeta() {
   const hint = document.getElementById("themePanelHint");
   const saveGlobalBtn = document.getElementById("themePanelSaveGlobal");
   if (hint) {
-    hint.textContent = themeMeta.fonte === "usuario"
-      ? "Tema pessoal salvo na sua conta — vale em qualquer dispositivo ao fazer login."
-      : "Usando o tema padrão do sistema. Personalize e ficará salvo só para você.";
+    hint.textContent = "A cor muda na hora. Clique em Salvar para guardar.";
   }
   if (saveGlobalBtn) {
     const isAdmin = (currentUser?.perfil || "").toString().trim().toUpperCase() === "ADMIN" || themeMeta.pode_editar_global;
@@ -2521,21 +2511,22 @@ function themeUpdatePanelMeta() {
   }
 }
 
-function themeSchedulePersist(cfg) {
+async function themePersistNow() {
   if (!currentUser?.id || typeof fetchJSON !== "function") return;
   if (themePersistTimer) clearTimeout(themePersistTimer);
-  themePersistTimer = setTimeout(async () => {
-    try {
-      await fetchJSON("/usuarios/me/tema-cores", {
-        method: "PUT",
-        body: JSON.stringify({ tema: cfg }),
-      });
-      themeMeta.fonte = "usuario";
-      themeUpdatePanelMeta();
-    } catch (e) {
-      console.warn("Falha ao salvar tema do usuário:", e);
-    }
-  }, 700);
+  const cfg = themeGetCurrentConfig();
+  try {
+    await fetchJSON("/usuarios/me/tema-cores", {
+      method: "PUT",
+      body: JSON.stringify({ tema: cfg }),
+    });
+    themeMeta.fonte = "usuario";
+    themeCacheLocal(cfg, themeMeta);
+    themeUpdatePanelMeta();
+    if (typeof showToast === "function") showToast("Tema salvo.", "success");
+  } catch (e) {
+    if (typeof showToast === "function") showToast(e?.message || "Erro ao salvar tema", "error");
+  }
 }
 
 async function themeFetchAndApply() {
@@ -2603,7 +2594,7 @@ async function themeSaveAsGlobal() {
   }
 }
 
-function applyAppTheme(config, { save = true } = {}) {
+function applyAppTheme(config) {
   const cfg = themeNormalizeConfig(config);
   themeCurrentConfig = cfg;
   const root = document.documentElement;
@@ -2623,67 +2614,32 @@ function applyAppTheme(config, { save = true } = {}) {
   root.style.setProperty("--topbar-muted", themeIsDarkBg(topbarBg) ? "rgba(255, 255, 255, 0.78)" : "#607d8b");
   root.style.setProperty("--bg", pageBg);
   root.style.setProperty("--primary", pagePrimary);
-
-  const fields = {
-    menuBg: { input: "themeMenuBg", preview: "themePreviewMenuBg", hex: "themeHexMenuBg" },
-    menuAccent: { input: "themeMenuAccent", preview: "themePreviewMenuAccent", hex: "themeHexMenuAccent" },
-    topbarBg: { input: "themeTopbarBg", preview: "themePreviewTopbarBg", hex: "themeHexTopbarBg" },
-    pageBg: { input: "themePageBg", preview: "themePreviewPageBg", hex: "themeHexPageBg" },
-    pagePrimary: { input: "themePagePrimary", preview: "themePreviewPagePrimary", hex: "themeHexPagePrimary" },
-  };
-  Object.entries(fields).forEach(([key, ids]) => {
-    const val = cfg[key];
-    document.getElementById(ids.input)?.setAttribute("value", val);
-    const input = document.getElementById(ids.input);
-    if (input) input.value = val;
-    document.getElementById(ids.preview)?.style.setProperty("background", val);
-    const hexEl = document.getElementById(ids.hex);
-    if (hexEl) hexEl.textContent = val.toUpperCase();
-  });
-
-  document.querySelectorAll(".theme-swatch").forEach((sw) => {
-    sw.classList.toggle("is-active", sw.dataset.color?.toLowerCase() === cfg[sw.dataset.field]?.toLowerCase());
-  });
-
   const activePreset = THEME_PRESETS.find((p) =>
     Object.keys(APP_THEME_DEFAULT).every((k) => p[k]?.toLowerCase() === cfg[k]?.toLowerCase())
   );
+  if (activePreset?.id === "escuro") {
+    root.style.setProperty("--text", "#e8eef5");
+    root.style.setProperty("--muted", "#a9bacb");
+    root.style.setProperty("--card-bg", "#162433");
+    root.style.setProperty("--border", "#2c4156");
+  } else if (activePreset?.id === "rosa") {
+    root.style.setProperty("--text", "#4a2033");
+    root.style.setProperty("--muted", "#8d5b70");
+    root.style.setProperty("--card-bg", "#fffafc");
+    root.style.setProperty("--border", "#f3c6d6");
+  } else if (activePreset?.id === "claro") {
+    root.style.setProperty("--text", "#142333");
+    root.style.setProperty("--muted", "#5c6d7e");
+    root.style.setProperty("--card-bg", "#ffffff");
+    root.style.setProperty("--border", "#d7e2ea");
+  }
+
   document.querySelectorAll(".theme-preset-btn").forEach((btn) => {
     btn.classList.toggle("is-active", activePreset && btn.dataset.preset === activePreset.id);
   });
 
   themeCacheLocal(cfg, themeMeta);
-  if (save) themeSchedulePersist(cfg);
   return cfg;
-}
-
-function themeSetField(field, color) {
-  const cfg = themeGetCurrentConfig();
-  cfg[field] = color;
-  applyAppTheme(cfg);
-}
-
-function themeRenderSwatches() {
-  const map = {
-    menuBg: "themeSwatchesMenuBg",
-    menuAccent: "themeSwatchesMenuAccent",
-    topbarBg: "themeSwatchesTopbarBg",
-    pageBg: "themeSwatchesPageBg",
-    pagePrimary: "themeSwatchesPagePrimary",
-  };
-  Object.entries(map).forEach(([field, containerId]) => {
-    const el = document.getElementById(containerId);
-    if (!el || el.dataset.rendered === "1") return;
-    el.dataset.rendered = "1";
-    el.innerHTML = (THEME_SWATCHES[field] || []).map((color) =>
-      `<button type="button" class="theme-swatch" data-field="${field}" data-color="${color}" style="background:${color}" title="${color}" aria-label="Cor ${color}"></button>`
-    ).join("");
-    el.addEventListener("click", (ev) => {
-      const sw = ev.target.closest(".theme-swatch");
-      if (!sw) return;
-      themeSetField(sw.dataset.field, sw.dataset.color);
-    });
-  });
 }
 
 function themeRenderPresets() {
@@ -2691,7 +2647,7 @@ function themeRenderPresets() {
   if (!el || el.dataset.rendered === "1") return;
   el.dataset.rendered = "1";
   el.innerHTML = THEME_PRESETS.map((p) =>
-    `<button type="button" class="theme-preset-btn" data-preset="${p.id}">${p.label}</button>`
+    `<button type="button" class="theme-preset-btn${p.id === "rosa" ? " theme-rosa" : ""}" data-preset="${p.id}">${p.label}</button>`
   ).join("");
   el.addEventListener("click", (ev) => {
     const btn = ev.target.closest(".theme-preset-btn");
@@ -2710,15 +2666,38 @@ function themeSetPanelOpen(open) {
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
 }
 
+function themeInstallChooser() {
+  if (document.getElementById("sasTemaStyle")) return;
+  const style = document.createElement("style");
+  style.id = "sasTemaStyle";
+  style.textContent = [
+    ".aparencia-page{max-width:920px}",
+    ".aparencia-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}",
+    ".aparencia-head h2{margin:0 0 4px}",
+    ".aparencia-sub{margin:0;color:var(--muted)}",
+    ".theme-choice{border:1px solid #2c4156;border-radius:16px;padding:16px;background:#0d1722;color:#e8eef5}",
+    ".theme-choice__label{display:block;margin-bottom:12px;font-weight:700}",
+    ".theme-choice__actions{display:flex;flex-wrap:wrap;gap:10px}",
+    ".aparencia-foot{display:flex;gap:8px;margin-top:12px}",
+    ".theme-preset-btn{padding:10px 18px;border:1px solid #3d546c;border-radius:12px;background:transparent;color:#e8eef5;font-weight:700;cursor:pointer}",
+    ".theme-preset-btn.is-active{background:#0f766e;border-color:#0f766e;color:#fff}",
+    ".theme-preset-btn.theme-rosa{background:#ffd6e6;border-color:#ffd6e6;color:#b4236a}",
+    ".theme-preset-btn.theme-rosa.is-active{background:#e25b8a;border-color:#e25b8a;color:#fff}",
+    "#themePanelSave{background:#0f766e;border-color:#0f766e;color:#fff}",
+  ].join("");
+  document.head.appendChild(style);
+}
+
 function setupThemePanel() {
+  themeInstallChooser();
   themeRenderPresets();
-  themeRenderSwatches();
   themeFetchAndApply().catch(() => {});
 
   const toggle = document.getElementById("themePanelToggle");
   const panel = document.getElementById("themePanel");
   const closeBtn = document.getElementById("themePanelClose");
   const resetBtn = document.getElementById("themePanelReset");
+  const saveBtn = document.getElementById("themePanelSave");
   const saveGlobalBtn = document.getElementById("themePanelSaveGlobal");
 
   toggle?.addEventListener("click", (e) => {
@@ -2729,20 +2708,8 @@ function setupThemePanel() {
 
   closeBtn?.addEventListener("click", () => themeSetPanelOpen(false));
   resetBtn?.addEventListener("click", () => themeResetToGlobal());
+  saveBtn?.addEventListener("click", () => themePersistNow());
   saveGlobalBtn?.addEventListener("click", () => themeSaveAsGlobal());
-
-  const themeInputMap = {
-    themeMenuBg: "menuBg",
-    themeMenuAccent: "menuAccent",
-    themeTopbarBg: "topbarBg",
-    themePageBg: "pageBg",
-    themePagePrimary: "pagePrimary",
-  };
-  Object.entries(themeInputMap).forEach(([id, key]) => {
-    const input = document.getElementById(id);
-    if (!input) return;
-    input.addEventListener("input", () => themeSetField(key, input.value));
-  });
 
   document.addEventListener("click", (e) => {
     if (!panel || panel.classList.contains("hidden")) return;
@@ -5361,7 +5328,7 @@ function applyPermissions() {
   }
   // Boas-vindas e Minha conta: sempre acessíveis (permissoes_menu antigas podem omitir)
   if (currentUser) {
-    const sempre = ["boasVindas", "minhaConta"];
+    const sempre = ["boasVindas", "minhaConta", "aparencia"];
     const faltando = sempre.filter((s) => !sections.includes(s));
     if (faltando.length) sections = [...faltando, ...sections];
   }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20260719-fid-catalogo-picker" />
+    <link rel="stylesheet" href="style.css?v=20261015-aparencia" />
     <script>
       (function () {
         try {
@@ -153,6 +153,7 @@
         <nav>
           <a href="#" class="nav-link active" data-section="boasVindas"><span class="nav-icon" aria-hidden="true">👋</span><span class="nav-label">Boas-vindas</span></a>
           <a href="#" class="nav-link" data-section="minhaConta"><span class="nav-icon" aria-hidden="true">👤</span><span class="nav-label">Minha conta</span></a>
+          <a href="#" class="nav-link" data-section="aparencia"><span class="nav-icon" aria-hidden="true">🎨</span><span class="nav-label">Aparência</span></a>
           <a href="#" class="nav-link" data-section="dashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
           <a href="#" class="nav-link" data-section="kanbanAdministrativo"><span class="nav-icon" aria-hidden="true">📌</span><span class="nav-label">Kanban Administrativo</span></a>
           <a href="#" class="nav-link" data-section="unidades"><span class="nav-icon" aria-hidden="true">🏢</span><span class="nav-label">Unidades</span></a>
@@ -475,77 +476,6 @@
             </div>
           </div>
           <div class="topbar__actions">
-            <div class="theme-panel-wrap">
-              <button type="button" id="themePanelToggle" class="theme-panel-toggle" aria-expanded="false" aria-controls="themePanel" title="Personalizar cores">
-                <span aria-hidden="true">🎨</span> Cores
-              </button>
-              <div id="themePanel" class="theme-panel hidden" role="dialog" aria-label="Personalizar cores do sistema" aria-hidden="true">
-                <header class="theme-panel__head">
-                  <h4>Personalizar cores</h4>
-                  <button type="button" class="theme-panel__close" id="themePanelClose" aria-label="Fechar">×</button>
-                </header>
-                <div class="theme-panel__presets" id="themePresets"></div>
-                <section class="theme-panel__block">
-                  <h5>Menu lateral</h5>
-                  <div class="theme-color-row" data-theme-field="menuBg">
-                    <span class="theme-color-row__label">Fundo do menu</span>
-                    <div class="theme-swatches" id="themeSwatchesMenuBg"></div>
-                    <label class="theme-color-bar">
-                      <span class="theme-color-bar__preview" id="themePreviewMenuBg"></span>
-                      <input type="color" id="themeMenuBg" value="#070403" />
-                      <span class="theme-color-bar__hex" id="themeHexMenuBg">#070403</span>
-                    </label>
-                  </div>
-                  <div class="theme-color-row" data-theme-field="menuAccent">
-                    <span class="theme-color-row__label">Cor de destaque</span>
-                    <div class="theme-swatches" id="themeSwatchesMenuAccent"></div>
-                    <label class="theme-color-bar">
-                      <span class="theme-color-bar__preview" id="themePreviewMenuAccent"></span>
-                      <input type="color" id="themeMenuAccent" value="#de4309" />
-                      <span class="theme-color-bar__hex" id="themeHexMenuAccent">#de4309</span>
-                    </label>
-                  </div>
-                </section>
-                <section class="theme-panel__block">
-                  <h5>Barra superior (topo)</h5>
-                  <div class="theme-color-row" data-theme-field="topbarBg">
-                    <span class="theme-color-row__label">Fundo do topo</span>
-                    <div class="theme-swatches" id="themeSwatchesTopbarBg"></div>
-                    <label class="theme-color-bar">
-                      <span class="theme-color-bar__preview" id="themePreviewTopbarBg"></span>
-                      <input type="color" id="themeTopbarBg" value="#ffffff" />
-                      <span class="theme-color-bar__hex" id="themeHexTopbarBg">#ffffff</span>
-                    </label>
-                  </div>
-                </section>
-                <section class="theme-panel__block">
-                  <h5>Página</h5>
-                  <div class="theme-color-row" data-theme-field="pageBg">
-                    <span class="theme-color-row__label">Fundo da página</span>
-                    <div class="theme-swatches" id="themeSwatchesPageBg"></div>
-                    <label class="theme-color-bar">
-                      <span class="theme-color-bar__preview" id="themePreviewPageBg"></span>
-                      <input type="color" id="themePageBg" value="#f6f7fb" />
-                      <span class="theme-color-bar__hex" id="themeHexPageBg">#f6f7fb</span>
-                    </label>
-                  </div>
-                  <div class="theme-color-row" data-theme-field="pagePrimary">
-                    <span class="theme-color-row__label">Cor principal</span>
-                    <div class="theme-swatches" id="themeSwatchesPagePrimary"></div>
-                    <label class="theme-color-bar">
-                      <span class="theme-color-bar__preview" id="themePreviewPagePrimary"></span>
-                      <input type="color" id="themePagePrimary" value="#0047ab" />
-                      <span class="theme-color-bar__hex" id="themeHexPagePrimary">#0047ab</span>
-                    </label>
-                  </div>
-                </section>
-                <p class="theme-panel__hint" id="themePanelHint">Suas cores são salvas na sua conta.</p>
-                <footer class="theme-panel__foot">
-                  <button type="button" class="btn secondary" id="themePanelReset">Usar padrão do sistema</button>
-                  <button type="button" class="btn primary hidden" id="themePanelSaveGlobal">Salvar como padrão global</button>
-                </footer>
-              </div>
-            </div>
             <button type="button" id="logoutBtn">Sair</button>
           </div>
         </header>
@@ -560,6 +490,30 @@
                 <p>“Ao Senhor declaro: "Tu és o meu Senhor; não tenho bem nenhum além de ti."”</p>
                 <cite>— Salmos 12:2</cite>
               </blockquote>
+            </div>
+          </section>
+
+          <section id="aparenciaSection" class="view-section hidden">
+            <div class="aparencia-page">
+              <div class="aparencia-head">
+                <div>
+                  <h2>Aparência</h2>
+                  <p class="aparencia-sub">A cor muda na hora. Clique em Salvar para guardar.</p>
+                </div>
+                <button type="button" class="btn primary" id="themePanelSave">Salvar</button>
+              </div>
+              <div class="theme-choice" id="themePanel">
+                <span class="theme-choice__label">Tema</span>
+                <div class="theme-choice__actions" id="themePresets">
+                  <button type="button" class="theme-preset-btn" data-preset="claro">Claro</button>
+                  <button type="button" class="theme-preset-btn" data-preset="escuro">Escuro</button>
+                  <button type="button" class="theme-preset-btn theme-rosa" data-preset="rosa">Rosa</button>
+                </div>
+              </div>
+              <div class="aparencia-foot">
+                <button type="button" class="btn secondary" id="themePanelReset">Usar padrão do sistema</button>
+                <button type="button" class="btn secondary hidden" id="themePanelSaveGlobal">Salvar como padrão global</button>
+              </div>
             </div>
           </section>
 
@@ -7988,7 +7942,7 @@
     <script src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
     <script src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
-    <script src="app.js?v=20260813-nfe-transf"></script>
+    <script src="app.js?v=20261015-aparencia"></script>
     <script src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
