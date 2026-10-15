@@ -452,22 +452,8 @@ Route::get('/produtos', function (Request $request) use ($decorarProdutoComFisca
         
         // Garante que o campo 'ativo' existe e está no formato correto
         $produtos = $produtos->map(function ($produto) use ($decorarProdutoComFiscal) {
-            // Se ativo não existir, verifica se a coluna existe na tabela
-            if (!isset($produto->ativo)) {
-                // Tenta verificar se a coluna existe no banco
-                try {
-                    $schema = DB::select("SHOW COLUMNS FROM produtos LIKE 'ativo'");
-                    if (empty($schema)) {
-                        // Se a coluna não existir, assume que todos os produtos estão ativos
-                        $produto->ativo = 1;
-                    } else {
-                        // Se a coluna existir mas o valor for null, assume ativo
-                        $produto->ativo = 1;
-                    }
-                } catch (\Exception $e) {
-                    // Em caso de erro, assume que está ativo
-                    $produto->ativo = 1;
-                }
+            if (!isset($produto->ativo) || $produto->ativo === null) {
+                $produto->ativo = 1;
             }
             // Converte para inteiro se for string ou boolean
             if (is_bool($produto->ativo)) {
@@ -3680,49 +3666,27 @@ Route::get('/movimentacoes', function (Request $request) {
         
         $limit = $request->has('limit') ? (int)$request->limit : 50;
         $movimentacoes = $query->orderBy('movimentacoes.id', 'desc')->orderBy('movimentacoes.data_mov', 'desc')->limit($limit)->get();
+
+        $eventosPorMov = collect();
+        if (Schema::hasTable('eventos_fiscais')) {
+            $idsMov = $movimentacoes->pluck('id')->filter()->values();
+            if ($idsMov->isNotEmpty()) {
+                $eventosPorMov = DB::table('eventos_fiscais')
+                    ->whereIn('movimentacao_id', $idsMov)
+                    ->whereNotIn('status', ['cancelado'])
+                    ->orderByDesc('id')
+                    ->get(['id', 'movimentacao_id', 'tipo_evento', 'status'])
+                    ->groupBy('movimentacao_id')
+                    ->map(fn ($grupo) => $grupo->first());
+            }
+        }
         
         // Garante que os campos esperados pelo frontend estejam presentes
-        $movimentacoes = $movimentacoes->map(function($mov) {
-            // Busca nome da unidade de origem se não tiver
-            if (!$mov->unidade_origem_nome && $mov->de_unidade_id) {
-                $unidadeOrigem = DB::table('unidades')->where('id', $mov->de_unidade_id)->first();
-                if ($unidadeOrigem) {
-                    $mov->unidade_origem_nome = $unidadeOrigem->nome;
-                }
-            }
-            
-            // Busca nome da unidade de destino se não tiver
-            if (!$mov->unidade_destino_nome && $mov->para_unidade_id) {
-                $unidadeDestino = DB::table('unidades')->where('id', $mov->para_unidade_id)->first();
-                if ($unidadeDestino) {
-                    $mov->unidade_destino_nome = $unidadeDestino->nome;
-                }
-            }
-            
-            // Se não tiver unidade_nome, usa a unidade de origem
-            if (!$mov->unidade_nome) {
-                if ($mov->unidade_origem_nome) {
-                    $mov->unidade_nome = $mov->unidade_origem_nome;
-                } elseif ($mov->de_unidade_id) {
-                    $unidade = DB::table('unidades')->where('id', $mov->de_unidade_id)->first();
-                    if ($unidade) {
-                        $mov->unidade_nome = $unidade->nome;
-                        $mov->unidade_origem_nome = $unidade->nome;
-                    }
-                }
-            } else {
-                // Se já tem unidade_nome mas não tem unidade_origem_nome, usa o unidade_nome
-                if (!$mov->unidade_origem_nome) {
-                    $mov->unidade_origem_nome = $mov->unidade_nome;
-                }
-            }
-            
-            // Se não tiver responsavel_nome, tenta buscar do usuário
-            if (!$mov->responsavel_nome && $mov->usuario_id) {
-                $usuario = DB::table('usuarios')->where('id', $mov->usuario_id)->first();
-                if ($usuario) {
-                    $mov->responsavel_nome = $usuario->nome;
-                }
+        $movimentacoes = $movimentacoes->map(function($mov) use ($eventosPorMov) {
+            if (!$mov->unidade_nome && $mov->unidade_origem_nome) {
+                $mov->unidade_nome = $mov->unidade_origem_nome;
+            } elseif ($mov->unidade_nome && !$mov->unidade_origem_nome) {
+                $mov->unidade_origem_nome = $mov->unidade_nome;
             }
             // data_mov em ISO 8601 com timezone para o frontend converter para horário local
             if (!empty($mov->data_mov)) {
@@ -3733,17 +3697,11 @@ Route::get('/movimentacoes', function (Request $request) {
                     // mantém o valor original em caso de erro
                 }
             }
-            if (Schema::hasTable('eventos_fiscais')) {
-                $ev = DB::table('eventos_fiscais')
-                    ->where('movimentacao_id', $mov->id)
-                    ->whereNotIn('status', ['cancelado'])
-                    ->orderByDesc('id')
-                    ->first(['id', 'tipo_evento', 'status']);
-                if ($ev) {
-                    $mov->evento_fiscal_id = $ev->id;
-                    $mov->evento_fiscal_tipo = $ev->tipo_evento;
-                    $mov->evento_fiscal_status = $ev->status;
-                }
+            $ev = $eventosPorMov->get($mov->id);
+            if ($ev) {
+                $mov->evento_fiscal_id = $ev->id;
+                $mov->evento_fiscal_tipo = $ev->tipo_evento;
+                $mov->evento_fiscal_status = $ev->status;
             }
             return $mov;
         });

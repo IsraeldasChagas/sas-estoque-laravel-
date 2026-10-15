@@ -2911,6 +2911,7 @@ function setupResponsiveSidebar() {
 function initMatrixBackground() {
   const canvas = dom.matrixCanvas;
   if (!canvas) return null;
+  if (window.matchMedia("(max-width: 720px), (prefers-reduced-motion: reduce)").matches) return null;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
@@ -12024,19 +12025,8 @@ async function startAppSession(user) {
   if (btnBackup) btnBackup.style.display = isAdminUser ? 'block' : 'none';
 
   setSidebarOpen(false);
-  
-  // Carrega dados iniciais em background (não bloqueia o login)
-  Promise.allSettled([
-    loadDashboard().catch(err => console.error("Erro ao carregar dashboard:", err)),
-    loadProdutos().catch(err => console.error("Erro ao carregar produtos:", err)),
-    loadUnidades().catch(err => console.error("Erro ao carregar unidades:", err)),
-    loadLocais().catch(err => console.error("Erro ao carregar locais:", err)),
-    loadUsuarios().catch(err => console.error("Erro ao carregar usuários:", err)),
-    loadLotes().catch(err => console.error("Erro ao carregar lotes:", err)),
-    loadMovimentacoesDetalhadas().catch(err => console.error("Erro ao carregar movimentações:", err)),
-    loadListasCompras().catch(err => console.error("Erro ao carregar listas:", err)),
-    loadRelatorio({}).catch(err => console.error("Erro ao carregar relatório:", err)),
-  ]).then(() => {});
+
+  // Cada tela carrega os próprios dados ao ser aberta. Não buscar tudo na entrada.
   
   // Navegação inicial: sempre Boas-vindas; exceção só o QR de saída de lote.
   (() => {
