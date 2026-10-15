@@ -1117,6 +1117,26 @@ body.sidebar-open {
   padding: 14px 16px;
 }
 
+#rhCandidatosSection .rh-cand-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+#rhCandidatosSection .rh-cand-card__photo {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+#rhCandidatosSection .rh-cand-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
 #rhCandidatosSection .rh-cand-card__head {
   display: flex;
   justify-content: space-between;

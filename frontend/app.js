@@ -11164,6 +11164,9 @@ async function loadRhCandidatos(filtros = {}, opts = {}) {
 function renderRhCandidatos(lista) {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
+  tb.querySelectorAll("img[data-object-url]").forEach((img) => {
+    try { URL.revokeObjectURL(img.dataset.objectUrl); } catch (_) {}
+  });
   if (!lista.length) {
     tb.innerHTML = '<p class="rh-cand-empty">Nenhum candidato encontrado.</p>';
     return;
@@ -11194,19 +11197,26 @@ function renderRhCandidatos(lista) {
     const temCurriculo = c.tem_curriculo === true || c.tem_curriculo === 1 || String(c.tem_curriculo ?? "").toLowerCase() === "1";
     const temFoto = c.tem_foto === true || c.tem_foto === 1 || String(c.tem_foto ?? "").toLowerCase() === "1";
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
-    const badgeFoto = temFoto ? ' <span title="Tem foto anexada" aria-label="Tem foto anexada">🖼️</span>' : "";
+    const foto = temFoto
+      ? `<img class="rh-cand-card__photo" data-rh-cand-foto-card="${esc(c.id)}" alt="Foto de ${esc(c.nome || "candidato")}" />`
+      : `<div class="rh-cand-card__photo usuarios-foto--placeholder" aria-hidden="true"></div>`;
     const tel = String(c.telefone || "").trim();
     return `<article class="rh-cand-card" data-id="${esc(c.id)}">
-      <div class="rh-cand-card__head">
-        <div>
-          <h3 class="rh-cand-card__name">${esc(c.nome || "—")}${badgeCurriculo}${badgeFoto}</h3>
-          <p class="rh-cand-card__sub">${esc(c.vaga_titulo || "Sem vaga")}</p>
+      <div class="rh-cand-card__top">
+        ${foto}
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(c.nome || "—")}${badgeCurriculo}</h3>
+              <p class="rh-cand-card__sub">${esc(c.vaga_titulo || "Sem vaga")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${stTone}">${esc(stTxt)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Inscrição</span><strong>${esc(rhFormatDataInscricao(c))}</strong></div>
+            <div class="rh-cand-card__row"><span>WhatsApp</span><strong>${esc(tel || "—")}</strong></div>
+          </div>
         </div>
-        <span class="rh-cand-pill rh-cand-pill--${stTone}">${esc(stTxt)}</span>
-      </div>
-      <div class="rh-cand-card__meta">
-        <div class="rh-cand-card__row"><span>Inscrição</span><strong>${esc(rhFormatDataInscricao(c))}</strong></div>
-        <div class="rh-cand-card__row"><span>WhatsApp</span><strong>${esc(tel || "—")}</strong></div>
       </div>
       <div class="rh-cand-card__actions">
         ${waBtn}
@@ -11214,6 +11224,29 @@ function renderRhCandidatos(lista) {
       </div>
     </article>`;
   }).join("");
+  rhCarregarFotosCandidatos();
+}
+
+function rhCarregarFotosCandidatos() {
+  const root = document.getElementById("rhCandidatosTable");
+  if (!root) return;
+  root.querySelectorAll("img[data-rh-cand-foto-card]").forEach((img) => {
+    const id = img.getAttribute("data-rh-cand-foto-card");
+    if (!id) return;
+    fetchBlob(`/rh/candidatos/${encodeURIComponent(id)}/foto`)
+      .then((blob) => {
+        if (!img.isConnected) return;
+        const url = URL.createObjectURL(blob);
+        img.src = url;
+        img.dataset.objectUrl = url;
+      })
+      .catch(() => {
+        img.replaceWith(Object.assign(document.createElement("div"), {
+          className: "rh-cand-card__photo usuarios-foto--placeholder",
+          ariaHidden: "true",
+        }));
+      });
+  });
 }
 
 let rhCandidatoInlineOpenId = null;
@@ -11247,7 +11280,7 @@ function rhWhatsAppBtnHtml(telRaw, nome, vaga, extraClass, vazioHtml) {
   const cls = `btn rh-wa-btn${extraClass ? ` ${extraClass}` : ""}`;
   if (!href) return vazioHtml || `<button type="button" class="${cls}" disabled>Sem WhatsApp</button>`;
   const icon = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.41a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 13.9c-.24.68-1.4 1.3-1.94 1.38-.5.08-1.12.11-1.81-.11-.42-.14-.95-.3-1.64-.59-2.88-1.24-4.76-4.14-4.9-4.33-.14-.2-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.26.64-.38 1.02-.38.12 0 .23 0 .33.01.3.01.44.03.64.5.24.58.82 2 .89 2.15.07.14.12.32.02.5-.09.2-.14.32-.28.49-.14.17-.29.38-.42.51-.14.14-.28.29-.12.56.16.26.7 1.15 1.5 1.86 1.03.92 1.9 1.2 2.17 1.34.26.14.42.12.58-.07.16-.2.67-.78.85-1.05.18-.26.35-.22.58-.13.24.09 1.5.71 1.76.84.26.13.43.19.49.3.07.11.07.64-.17 1.32z"/></svg>`;
-  return `<a class="${cls}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${icon} Enviar mensagem</a>`;
+  return `<a class="${cls}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${icon} Mensagem</a>`;
 }
 
 /** Nome sugerido para download/visualização a partir dos metadados do documento (API). */
@@ -11479,7 +11512,7 @@ function renderRhCandidatoInlineRow(payload) {
               <button type="button" class="btn rh-cand-del" style="background:#b71c1c;color:#fff;">Excluir definitivamente</button>
             </div>
             <div class="subtle-text" style="margin-top:.45rem;">
-              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. O botão <strong>Enviar mensagem</strong> fica na lista, acima.
+              Use <strong>Excluir</strong> na tabela se o PDF estiver ilegível ou errado — o candidato pode reenviar pelo mesmo link. O botão <strong>Mensagem</strong> abre o WhatsApp.
             </div>
             <div class="subtle-text" style="margin-top:.35rem;">
               Link documentos: só use com status <strong>Aprovado</strong> ou <strong>Em contratação</strong>. Cada novo link invalida o anterior. O candidato envia os arquivos pela página pública.
