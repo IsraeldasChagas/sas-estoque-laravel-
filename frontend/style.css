@@ -982,6 +982,55 @@ body.sidebar-open {
   color: rgba(255, 255, 255, 0.75);
 }
 
+/* Cards do dashboard de RH / Recrutamento, no mesmo formato do saborparaense.app.br */
+#rhDashboardSection .rh-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+#rhDashboardSection .rh-stat {
+  min-height: 118px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(16, 40, 63, 0.07);
+}
+
+#rhDashboardSection .rh-stat span {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+#rhDashboardSection .rh-stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text);
+}
+
+#rhDashboardSection .rh-stat em {
+  margin-top: 8px;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (min-width: 720px) {
+  #rhDashboardSection .rh-stats {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
 /* Grade de cartoes da dashboard */
 .cards {
   display: grid;

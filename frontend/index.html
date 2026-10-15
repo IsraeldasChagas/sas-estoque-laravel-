@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="Cache-Control" content="max-age=0, must-revalidate" />
     <title>Grupo Sabor Paraense</title>
-    <link rel="stylesheet" href="style.css?v=20261015-aparencia3" />
+    <link rel="stylesheet" href="style.css?v=20261015-rh-cards" />
     <script>
       (function () {
         try {
@@ -2122,27 +2122,32 @@
                 <p class="subtle-text">Resumo do recrutamento.</p>
               </div>
             </div>
-            <div class="cards-grid" id="rhDashboardCards">
-              <div class="card-metric">
-                <div class="card-metric__label">Vagas abertas</div>
-                <div class="card-metric__value" id="rhDashVagasAbertas">—</div>
-              </div>
-              <div class="card-metric">
-                <div class="card-metric__label">Candidatos</div>
-                <div class="card-metric__value" id="rhDashCandidatosTotal">—</div>
-              </div>
-              <div class="card-metric">
-                <div class="card-metric__label">Entrevistas</div>
-                <div class="card-metric__value" id="rhDashEntrevistasTotal">—</div>
-              </div>
-              <div class="card-metric">
-                <div class="card-metric__label">Em teste</div>
-                <div class="card-metric__value" id="rhDashCandidatosNovos">—</div>
-              </div>
-              <div class="card-metric">
-                <div class="card-metric__label">Aprovados</div>
-                <div class="card-metric__value" id="rhDashAprovados">—</div>
-              </div>
+            <div class="rh-stats" id="rhDashboardCards">
+              <article class="rh-stat">
+                <span>Vagas abertas</span>
+                <strong id="rhDashVagasAbertas">—</strong>
+                <em>com status aberta</em>
+              </article>
+              <article class="rh-stat">
+                <span>Candidatos</span>
+                <strong id="rhDashCandidatosTotal">—</strong>
+                <em>cadastrados no recrutamento</em>
+              </article>
+              <article class="rh-stat">
+                <span>Entrevistas</span>
+                <strong id="rhDashEntrevistasTotal">—</strong>
+                <em>registradas no total</em>
+              </article>
+              <article class="rh-stat">
+                <span>Em teste</span>
+                <strong id="rhDashCandidatosNovos">—</strong>
+                <em>candidatos em teste</em>
+              </article>
+              <article class="rh-stat">
+                <span>Aprovados</span>
+                <strong id="rhDashAprovados">—</strong>
+                <em>aprovados ou em contratação</em>
+              </article>
             </div>
           </section>
 
