@@ -11083,9 +11083,8 @@ function renderRhVagas(lista) {
         <span class="rh-vaga-pill rh-vaga-pill--${statusTone[st] || "info"}">${esc(statusLabel[st] || st)}</span>
       </div>
       <div class="rh-vaga-card__meta">
-        ${qtd ? `<div class="rh-vaga-card__row"><span>Quantidade</span><strong>${esc(qtd)}</strong></div>` : ""}
-        ${v.tipo_contratacao ? `<div class="rh-vaga-card__row"><span>Contratação</span><strong>${esc(v.tipo_contratacao)}</strong></div>` : ""}
-        ${v.horarios_trabalho ? `<div class="rh-vaga-card__row"><span>Horário</span><strong>${esc(v.horarios_trabalho)}</strong></div>` : ""}
+        <div class="rh-vaga-card__row"><span>Quantidade</span><strong>${esc(qtd || "—")}</strong></div>
+        <div class="rh-vaga-card__row"><span>Contratação</span><strong>${esc(v.tipo_contratacao || "—")}</strong></div>
       </div>
       <div class="rh-vaga-card__actions">
         <button type="button" class="btn btn-rh-vaga-copiar-link" data-link="${esc(link)}">Copiar link</button>
