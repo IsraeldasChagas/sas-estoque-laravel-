@@ -11064,26 +11064,36 @@ function renderRhVagas(lista) {
   const tb = document.getElementById("rhVagasTable");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhuma vaga encontrada.</td></tr>';
+    tb.innerHTML = '<p class="rh-vaga-empty">Nenhuma vaga encontrada.</p>';
     return;
   }
   const esc = (s) => escapeHtml(String(s ?? ""));
+  const statusLabel = { aberta: "Aberta", pausada: "Pausada", encerrada: "Encerrada" };
+  const statusTone = { aberta: "ok", pausada: "warn", encerrada: "danger" };
   tb.innerHTML = lista.map((v) => {
     const link = getRhVagasBoardPublicUrl();
-    return `<tr data-id="${esc(v.id)}" data-slug="${esc(v.slug)}">
-      <td data-label="ID">${esc(v.id)}</td>
-      <td data-label="Título">${esc(v.titulo)}</td>
-      <td data-label="Unidade">${esc(v.unidade || "-")}</td>
-      <td data-label="Setor">${esc(v.setor || "-")}</td>
-      <td data-label="Status">${esc((v.status || "").toUpperCase())}</td>
-      <td data-label="Link"><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">Abrir</a></td>
-      <td data-label="Ações" class="table-actions">
-        <button type="button" class="table-action btn-rh-vaga-copiar-link" data-link="${esc(link)}">Copiar link</button>
-        <button type="button" class="table-action btn-rh-vaga-qrcode" data-id="${esc(v.id)}">QR Code</button>
-        <button type="button" class="table-action btn-rh-vaga-editar" data-id="${esc(v.id)}">Editar</button>
-        <button type="button" class="table-action danger btn-rh-vaga-excluir" data-id="${esc(v.id)}">Excluir</button>
-      </td>
-    </tr>`;
+    const st = String(v.status || "aberta").toLowerCase();
+    const qtd = v.quantidade != null && String(v.quantidade) !== "" ? String(v.quantidade) : "";
+    return `<article class="rh-vaga-card" data-id="${esc(v.id)}" data-slug="${esc(v.slug)}">
+      <div class="rh-vaga-card__head">
+        <div>
+          <h3 class="rh-vaga-card__name">${esc(v.titulo || "Sem título")}</h3>
+          <p class="rh-vaga-card__sub">${esc([v.unidade, v.setor].filter(Boolean).join(" · ") || "Sem unidade")}</p>
+        </div>
+        <span class="rh-vaga-pill rh-vaga-pill--${statusTone[st] || "info"}">${esc(statusLabel[st] || st)}</span>
+      </div>
+      <div class="rh-vaga-card__meta">
+        ${qtd ? `<div class="rh-vaga-card__row"><span>Quantidade</span><strong>${esc(qtd)}</strong></div>` : ""}
+        ${v.tipo_contratacao ? `<div class="rh-vaga-card__row"><span>Contratação</span><strong>${esc(v.tipo_contratacao)}</strong></div>` : ""}
+        ${v.horarios_trabalho ? `<div class="rh-vaga-card__row"><span>Horário</span><strong>${esc(v.horarios_trabalho)}</strong></div>` : ""}
+      </div>
+      <div class="rh-vaga-card__actions">
+        <button type="button" class="btn btn-rh-vaga-copiar-link" data-link="${esc(link)}">Copiar link</button>
+        <button type="button" class="btn btn-rh-vaga-qrcode" data-id="${esc(v.id)}">QR Code</button>
+        <button type="button" class="btn btn-rh-vaga-editar" data-id="${esc(v.id)}">Editar</button>
+        <button type="button" class="btn danger btn-rh-vaga-excluir" data-id="${esc(v.id)}">Excluir</button>
+      </div>
+    </article>`;
   }).join("");
 }
 
@@ -17173,7 +17183,7 @@ function setupNavigation() {
       e.preventDefault();
       let link = btnCopy.dataset.link || "";
       if (!link) {
-        const tr = btnCopy.closest("tr");
+        const tr = btnCopy.closest(".rh-vaga-card");
         const slug = tr?.dataset?.slug || "";
         if (slug) link = getVagaPublicUrl(slug);
       }
@@ -17215,7 +17225,7 @@ function setupNavigation() {
     if (btnQr) {
       e.preventDefault();
       try {
-        const tr = btnQr.closest("tr");
+        const tr = btnQr.closest(".rh-vaga-card");
         // QR Code único do quadro público (/vagas), mesmo para todas as linhas.
         const url = `${getPublicBaseUrl().replace(/\/$/, "")}/vagas/qrcode`;
         // Evita bloqueio de popup: abre via <a target=_blank>.

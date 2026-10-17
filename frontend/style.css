@@ -1256,6 +1256,101 @@ body.sidebar-open {
 #rhCandidatosSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
 #rhCandidatosSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
 
+#rhVagasSection .rh-vaga-list {
+  display: grid;
+  gap: 12px;
+}
+
+#rhVagasSection .rh-vaga-empty {
+  margin: 0;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+#rhVagasSection .rh-vaga-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(16, 40, 63, 0.07);
+  padding: 14px 16px;
+}
+
+#rhVagasSection .rh-vaga-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+#rhVagasSection .rh-vaga-card__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+#rhVagasSection .rh-vaga-card__sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+#rhVagasSection .rh-vaga-card__meta {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#rhVagasSection .rh-vaga-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+#rhVagasSection .rh-vaga-card__row span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+#rhVagasSection .rh-vaga-card__row strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+#rhVagasSection .rh-vaga-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+#rhVagasSection .rh-vaga-card__actions .btn.danger {
+  background: #b71c1c;
+  border-color: #b71c1c;
+  color: #fff;
+}
+
+#rhVagasSection .rh-vaga-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+#rhVagasSection .rh-vaga-pill--ok { background: #d9f5ef; color: #0f766e; }
+#rhVagasSection .rh-vaga-pill--warn { background: #fff1dc; color: #9a5b08; }
+#rhVagasSection .rh-vaga-pill--danger { background: #fde8e8; color: #b42323; }
+#rhVagasSection .rh-vaga-pill--info { background: #e6f1fb; color: #1d4e89; }
+
 #rhCandidatosSection .rh-cand-card__details {
   margin-top: 14px;
   padding-top: 14px;

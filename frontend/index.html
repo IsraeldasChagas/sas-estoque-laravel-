@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261017-rh6" />
+    <link rel="stylesheet" href="style.css?v=20261017-rh10" />
     <script>
       (function () {
         try {
@@ -2221,26 +2221,8 @@
                 <button type="button" class="btn" id="rhVagasLimparFiltros">Limpar</button>
               </div>
             </form>
-            <div class="table-card form-card--wide">
-              <header>Vagas</header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Título</th>
-                      <th>Unidade</th>
-                      <th>Setor</th>
-                      <th>Status</th>
-                      <th>Link</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="rhVagasTable">
-                    <tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando...</td></tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="rh-vaga-list" id="rhVagasTable">
+              <p class="rh-vaga-empty">Carregando...</p>
             </div>
           </section>
 
@@ -7966,7 +7948,7 @@
     <script defer src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script defer src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script defer src="pwa.js?v=20261015-pwa"></script>
-    <script defer src="app.js?v=20261017-rh9"></script>
+    <script defer src="app.js?v=20261017-rh10"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
