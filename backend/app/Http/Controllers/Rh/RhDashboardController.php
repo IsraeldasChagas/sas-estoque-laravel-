@@ -15,18 +15,18 @@ class RhDashboardController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $abertas = DB::table('rh_vagas')->where('status', 'aberta')->count();
-        $totalCandidatos = DB::table('rh_candidatos')->count();
-        $emTeste = DB::table('rh_candidatos')->where('status', 'em_teste')->count();
-        $entrevistas = DB::table('rh_entrevistas')->count();
-        $aprovados = DB::table('rh_candidatos')->whereIn('status', ['aprovado', 'em_contratacao'])->count();
+        $cand = DB::table('rh_candidatos')->selectRaw(
+            "COUNT(*) as total,
+             SUM(CASE WHEN status = 'em_teste' THEN 1 ELSE 0 END) as em_teste,
+             SUM(CASE WHEN status IN ('aprovado', 'em_contratacao') THEN 1 ELSE 0 END) as aprovados"
+        )->first();
 
         return response()->json([
-            'vagas_abertas' => $abertas,
-            'candidatos_total' => $totalCandidatos,
-            'candidatos_em_teste' => $emTeste,
-            'entrevistas_total' => $entrevistas,
-            'aprovados' => $aprovados,
+            'vagas_abertas' => DB::table('rh_vagas')->where('status', 'aberta')->count(),
+            'candidatos_total' => (int) ($cand->total ?? 0),
+            'candidatos_em_teste' => (int) ($cand->em_teste ?? 0),
+            'entrevistas_total' => DB::table('rh_entrevistas')->count(),
+            'aprovados' => (int) ($cand->aprovados ?? 0),
         ])->header('Access-Control-Allow-Origin', '*');
     }
 }

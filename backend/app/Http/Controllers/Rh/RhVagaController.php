@@ -21,7 +21,20 @@ class RhVagaController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $q = DB::table('rh_vagas')->orderByDesc('id');
+        $q = DB::table('rh_vagas')
+            ->select([
+                'id',
+                'titulo',
+                'unidade',
+                'setor',
+                'quantidade',
+                'tipo_contratacao',
+                'horarios_trabalho',
+                'status',
+                'slug',
+                'created_at',
+            ])
+            ->orderByDesc('id');
 
         if ($request->filled('status')) $q->where('status', $request->status);
         if ($request->filled('unidade')) $q->where('unidade', 'like', '%' . $request->unidade . '%');
@@ -29,6 +42,20 @@ class RhVagaController extends Controller
         if ($request->filled('titulo')) $q->where('titulo', 'like', '%' . $request->titulo . '%');
 
         return response()->json($q->get())->header('Access-Control-Allow-Origin', '*');
+    }
+
+    public function show(Request $request, int $id)
+    {
+        if (! RhAcesso::pode($request, 'rh.vagas') && ! RhAcesso::pode($request, 'rh.candidatos')) {
+            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        $vaga = DB::table('rh_vagas')->where('id', $id)->first();
+        if (! $vaga) {
+            return response()->json(['error' => 'Vaga não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        return response()->json($vaga)->header('Access-Control-Allow-Origin', '*');
     }
 
     public function store(Request $request)

@@ -18,7 +18,15 @@ class RhEntrevistaController extends Controller
         $q = DB::table('rh_entrevistas')
             ->join('rh_candidatos', 'rh_entrevistas.candidato_id', '=', 'rh_candidatos.id')
             ->leftJoin('rh_vagas', 'rh_candidatos.vaga_id', '=', 'rh_vagas.id')
-            ->select('rh_entrevistas.*', 'rh_candidatos.nome as candidato_nome', 'rh_vagas.titulo as vaga_titulo')
+            ->select(
+                'rh_entrevistas.id',
+                'rh_entrevistas.data',
+                'rh_entrevistas.hora',
+                'rh_entrevistas.local',
+                'rh_entrevistas.status',
+                'rh_candidatos.nome as candidato_nome',
+                'rh_vagas.titulo as vaga_titulo'
+            )
             ->orderByDesc('rh_entrevistas.id');
 
         if ($request->filled('status')) $q->where('rh_entrevistas.status', $request->status);

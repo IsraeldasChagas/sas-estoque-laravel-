@@ -185,7 +185,7 @@ Route::post('/login', function (Request $request) {
         $token = bin2hex(random_bytes(32));
 
         // Registra login no audit_logs (rastreabilidade para comprovação)
-        if (Schema::hasTable('audit_logs')) {
+        try {
             DB::table('audit_logs')->insert([
                 'usuario_id' => $usuario->id,
                 'acao' => 'login',
@@ -195,6 +195,8 @@ Route::post('/login', function (Request $request) {
                 'user_agent' => $request->userAgent(),
                 'created_at' => now(),
             ]);
+        } catch (\Throwable $auditError) {
+            \Log::warning('Login sem audit_logs: '.$auditError->getMessage());
         }
 
         // PASSO 7: Retorna dados do usuário autenticado
@@ -205,15 +207,13 @@ Route::post('/login', function (Request $request) {
             $decoded = json_decode($permissoesMenu, true);
             $permissoesMenu = is_array($decoded) ? $decoded : null;
         }
-        $foto = null;
-        if (Schema::hasColumn('usuarios', 'foto') && ! empty($usuario->foto)) {
-            $foto = $usuario->foto;
-        } elseif (Schema::hasColumn('usuarios', 'foto_path') && ! empty($usuario->foto_path)) {
-            $foto = $usuario->foto_path;
+        $foto = $usuario->foto ?? ($usuario->foto_path ?? null);
+        if ($foto === '') {
+            $foto = null;
         }
 
         $temaCores = null;
-        if (Schema::hasColumn('usuarios', 'tema_cores') && ! empty($usuario->tema_cores)) {
+        if (! empty($usuario->tema_cores ?? null)) {
             $decodedTema = json_decode($usuario->tema_cores, true);
             if (is_array($decodedTema)) {
                 $temaCores = $decodedTema;
@@ -376,11 +376,15 @@ $mesclarProdutoFiscalValidado = static function (array $data) {
     return $fiscal;
 };
 
-$decorarProdutoComFiscal = static function ($produto) {
+$produtoTemTipoFiscal = null;
+$decorarProdutoComFiscal = static function ($produto) use (&$produtoTemTipoFiscal) {
     if (! $produto) {
         return $produto;
     }
-    if (Schema::hasColumn('produtos', 'tipo_fiscal')) {
+    if ($produtoTemTipoFiscal === null) {
+        $produtoTemTipoFiscal = Schema::hasColumn('produtos', 'tipo_fiscal');
+    }
+    if ($produtoTemTipoFiscal) {
         $status = FiscalCadastroSupport::statusFiscalProduto($produto);
         $produto->status_fiscal = $status;
         $produto->status_fiscal_label = FiscalCadastroSupport::labelStatusFiscal($status);
@@ -392,14 +396,27 @@ $decorarProdutoComFiscal = static function ($produto) {
 
 Route::get('/produtos', function (Request $request) use ($decorarProdutoComFiscal) {
     try {
+        $resumo = $request->query('resumo') === '1';
         // Faz join com unidades para trazer o nome da unidade responsável
         $query = DB::table('produtos')
-            ->leftJoin('unidades', 'produtos.unidade_id', '=', 'unidades.id')
-            ->select(
-                'produtos.*',
-                'unidades.nome as unidade_nome'  // Adiciona o nome da unidade
+            ->leftJoin('unidades', 'produtos.unidade_id', '=', 'unidades.id');
+        if ($resumo) {
+            $query->select(
+                'produtos.id',
+                'produtos.nome',
+                'produtos.ativo',
+                'produtos.categoria',
+                'produtos.unidade_base',
+                'produtos.unidade_id',
+                'unidades.nome as unidade_nome'
             );
-        if (Schema::hasTable('perfis_tributarios') && Schema::hasColumn('produtos', 'perfil_tributario_id')) {
+        } else {
+            $query->select(
+                'produtos.*',
+                'unidades.nome as unidade_nome'
+            );
+        }
+        if (! $resumo && Schema::hasTable('perfis_tributarios') && Schema::hasColumn('produtos', 'perfil_tributario_id')) {
             $query->leftJoin('perfis_tributarios', 'produtos.perfil_tributario_id', '=', 'perfis_tributarios.id')
                 ->addSelect('perfis_tributarios.nome as perfil_tributario_nome');
         }
@@ -451,7 +468,7 @@ Route::get('/produtos', function (Request $request) use ($decorarProdutoComFisca
         $produtos = $query->orderBy('produtos.nome')->get();
         
         // Garante que o campo 'ativo' existe e está no formato correto
-        $produtos = $produtos->map(function ($produto) use ($decorarProdutoComFiscal) {
+        $produtos = $produtos->map(function ($produto) use ($decorarProdutoComFiscal, $resumo) {
             if (!isset($produto->ativo) || $produto->ativo === null) {
                 $produto->ativo = 1;
             }
@@ -461,7 +478,7 @@ Route::get('/produtos', function (Request $request) use ($decorarProdutoComFisca
             } else {
                 $produto->ativo = is_numeric($produto->ativo) ? (int)$produto->ativo : ($produto->ativo ? 1 : 0);
             }
-            return $decorarProdutoComFiscal($produto);
+            return $resumo ? $produto : $decorarProdutoComFiscal($produto);
         });
 
         $filtroFiscal = strtolower(trim((string) $request->query('status_fiscal', '')));
@@ -2967,54 +2984,32 @@ Route::get('/lotes', function (Request $request) {
 });
 
 Route::get('/lotes/stats', function () {
-    // Calcula lotes a vencer (15 dias) - baseado em data_validade e ativo
     $dataLimite15 = now()->addDays(15)->format('Y-m-d');
     $hoje = now()->format('Y-m-d');
-    
-    $lotesAVencer15 = DB::table('lotes')
-        ->where('data_validade', '<=', $dataLimite15)
-        ->where('data_validade', '>=', $hoje)
-        ->where('ativo', 1)
-        ->where('qtd_atual', '>', 0)
-        ->count();
-    
-    // Calcula lotes vencidos - baseado em data_validade
-    $lotesVencidos = DB::table('lotes')
-        ->where('data_validade', '<', $hoje)
-        ->where('ativo', 1)
-        ->where('qtd_atual', '>', 0)
-        ->count();
-    
-    // Calcula estatísticas por status dinâmico
-    $totalLotes = DB::table('lotes')->count();
-    $lotesAtivos = DB::table('lotes')
-        ->where('ativo', 1)
-        ->where('qtd_atual', '>', 0)
-        ->where(function($query) use ($hoje) {
-            $query->whereNull('data_validade')
-                  ->orWhere('data_validade', '>=', $hoje);
-        })
-        ->count();
-    
-    $lotesInativos = DB::table('lotes')
-        ->where('ativo', 0)
-        ->count();
-    
-    $lotesEsgotados = DB::table('lotes')
-        ->where('qtd_atual', '<=', 0)
-        ->where('ativo', 1)
-        ->count();
-    
+
+    $row = DB::table('lotes')->selectRaw(
+        'SUM(CASE WHEN data_validade <= ? AND data_validade >= ? AND ativo = 1 AND qtd_atual > 0 THEN 1 ELSE 0 END) as a_vencer,
+         SUM(CASE WHEN data_validade < ? AND ativo = 1 AND qtd_atual > 0 THEN 1 ELSE 0 END) as vencidos,
+         COUNT(*) as total,
+         SUM(CASE WHEN ativo = 1 AND qtd_atual > 0 AND (data_validade IS NULL OR data_validade >= ?) THEN 1 ELSE 0 END) as ativos,
+         SUM(CASE WHEN ativo = 0 THEN 1 ELSE 0 END) as inativos,
+         SUM(CASE WHEN qtd_atual <= 0 AND ativo = 1 THEN 1 ELSE 0 END) as esgotados',
+        [$dataLimite15, $hoje, $hoje, $hoje]
+    )->first();
+
+    $lotesAVencer15 = (int) ($row->a_vencer ?? 0);
+    $lotesVencidos = (int) ($row->vencidos ?? 0);
+
     return response()->json([
         'status' => [
-            'ATIVO' => $lotesAtivos,
-            'INATIVO' => $lotesInativos,
-            'ESGOTADO' => $lotesEsgotados,
-            'VENCIDO' => $lotesVencidos
+            'ATIVO' => (int) ($row->ativos ?? 0),
+            'INATIVO' => (int) ($row->inativos ?? 0),
+            'ESGOTADO' => (int) ($row->esgotados ?? 0),
+            'VENCIDO' => $lotesVencidos,
         ],
         'a_vencer' => $lotesAVencer15,
         'vencidos' => $lotesVencidos,
-        'total' => $totalLotes
+        'total' => (int) ($row->total ?? 0),
     ]);
 });
 
@@ -4524,12 +4519,6 @@ Route::post('/saida', function (Request $request) {
 // ============================================
 
 Route::get('/estoque-abaixo-minimo', function () {
-    // Produtos que já tiveram ao menos uma movimentação de ENTRADA (já foram abastecidos)
-    $produtosComEntrada = DB::table('movimentacoes')
-        ->where('tipo', 'ENTRADA')
-        ->distinct()
-        ->pluck('produto_id');
-
     $produtos = DB::table('produtos')
         ->leftJoin('stock_lotes', function($join) {
             $join->on('produtos.id', '=', 'stock_lotes.produto_id')
@@ -4545,7 +4534,12 @@ Route::get('/estoque-abaixo-minimo', function () {
         )
         ->where('produtos.ativo', 1)
         ->where('produtos.estoque_minimo', '>', 0)
-        ->whereIn('produtos.id', $produtosComEntrada)
+        ->whereExists(function ($q) {
+            $q->select(DB::raw(1))
+                ->from('movimentacoes')
+                ->whereColumn('movimentacoes.produto_id', 'produtos.id')
+                ->where('movimentacoes.tipo', 'ENTRADA');
+        })
         ->groupBy(
             'produtos.id',
             'produtos.nome',
@@ -4563,19 +4557,17 @@ Route::get('/estoque-abaixo-minimo', function () {
 });
 
 Route::get('/perdas-recentes', function () {
-    $movimentacoes = DB::table('movimentacoes')
+    $row = DB::table('movimentacoes')
         ->where('tipo', 'SAIDA')
         ->where('motivo', 'PERDA')
         ->where('data_mov', '>=', now()->subDays(30)->format('Y-m-d H:i:s'))
-        ->orderBy('data_mov', 'desc')
-        ->get();
-    
-    $quantidadeTotal = $movimentacoes->sum('qtd');
-    
+        ->selectRaw('COUNT(*) as total_registros, COALESCE(SUM(qtd), 0) as quantidade_total')
+        ->first();
+
     return response()->json([
-        'total_registros' => $movimentacoes->count(),
-        'quantidade_total' => $quantidadeTotal,
-        'movimentacoes' => $movimentacoes
+        'total_registros' => (int) ($row->total_registros ?? 0),
+        'quantidade_total' => (float) ($row->quantidade_total ?? 0),
+        'movimentacoes' => [],
     ]);
 });
 
@@ -4604,10 +4596,20 @@ Route::get('/lotes-a-vencer', function (Request $request) {
 
 Route::get('/listas', function (Request $request) {
     try {
+    if ($request->query('contagem') === '1') {
+        $ativas = DB::table('listas_compras')
+            ->whereRaw("UPPER(COALESCE(status, '')) <> 'FINALIZADA'")
+            ->count();
+
+        return response()->json(['ativas' => $ativas]);
+    }
+
+    $temEmpresas = Schema::hasTable('empresas');
+    $temEmpresaNaLista = $temEmpresas && Schema::hasColumn('listas_compras', 'empresa_id');
     $query = DB::table('listas_compras')
         ->leftJoin('unidades', 'listas_compras.unidade_id', '=', 'unidades.id')
         ->leftJoin('usuarios', 'listas_compras.responsavel_id', '=', 'usuarios.id');
-    if (Schema::hasTable('empresas') && Schema::hasColumn('listas_compras', 'empresa_id')) {
+    if ($temEmpresaNaLista) {
         $query->leftJoin('empresas', 'listas_compras.empresa_id', '=', 'empresas.id');
     }
     $select = [
@@ -4615,54 +4617,85 @@ Route::get('/listas', function (Request $request) {
         'unidades.nome as unidade_nome',
         'usuarios.nome as responsavel_nome',
     ];
-    if (Schema::hasTable('empresas') && Schema::hasColumn('listas_compras', 'empresa_id')) {
+    if ($temEmpresaNaLista) {
         $select[] = 'empresas.razao_social as empresa_nome';
         $select[] = 'empresas.cnpj as empresa_cnpj';
     }
     $listas = $query->select($select)
         ->orderBy('listas_compras.criado_em', 'desc')
         ->get();
-    
-    // Para cada lista, calcula totais e contagem de itens
-    $listas = $listas->map(function($lista) {
-        $itens = DB::table('listas_itens')
-            ->where('lista_id', $lista->id)
-            ->get();
-        
-        $itensComprados = $itens->filter(function($item) {
-            return ($item->status ?? '') === 'COMPRADO';
-        });
-        
-        $lista->itens_total = $itens->count();
-        $lista->itens_comprados = $itensComprados->count();
-        $lista->total_planejado = $itens->sum('valor_planejado') ?? 0;
-        $lista->total_realizado = $itens->sum('valor_total') ?? 0;
+
+    $listaIds = $listas->pluck('id')->filter()->values();
+    $totaisPorLista = collect();
+    if ($listaIds->isNotEmpty()) {
+        $totaisPorLista = DB::table('listas_itens')
+            ->whereIn('lista_id', $listaIds)
+            ->groupBy('lista_id')
+            ->select('lista_id')
+            ->selectRaw('COUNT(*) as itens_total')
+            ->selectRaw("SUM(CASE WHEN status = 'COMPRADO' THEN 1 ELSE 0 END) as itens_comprados")
+            ->selectRaw('COALESCE(SUM(valor_planejado), 0) as total_planejado')
+            ->selectRaw('COALESCE(SUM(valor_total), 0) as total_realizado')
+            ->get()
+            ->keyBy(fn ($row) => (int) $row->lista_id);
+    }
+
+    $temNotas = Schema::hasTable('notas_fiscais_entrada');
+    $notasPorLista = collect();
+    if ($temNotas && $listaIds->isNotEmpty()) {
+        $notasPorLista = DB::table('notas_fiscais_entrada')
+            ->whereIn('lista_compra_id', $listaIds)
+            ->orderByDesc('id')
+            ->get(['id', 'lista_compra_id', 'numero', 'chave_acesso', 'valor_total', 'status'])
+            ->unique(fn ($row) => (int) $row->lista_compra_id)
+            ->keyBy(fn ($row) => (int) $row->lista_compra_id);
+    }
+
+    $temEmpresaUnidade = $temEmpresas && Schema::hasColumn('unidades', 'empresa_id');
+    $empresasPorUnidade = collect();
+    if ($temEmpresaUnidade) {
+        $unidadeIds = $listas->pluck('unidade_id')->filter()->unique()->values();
+        if ($unidadeIds->isNotEmpty()) {
+            $empresasPorUnidade = DB::table('unidades')
+                ->join('empresas', 'unidades.empresa_id', '=', 'empresas.id')
+                ->whereIn('unidades.id', $unidadeIds)
+                ->get([
+                    'unidades.id as unidade_id',
+                    'empresas.id as empresa_id',
+                    'empresas.razao_social',
+                    'empresas.cnpj',
+                ])
+                ->keyBy(fn ($row) => (int) $row->unidade_id);
+        }
+    }
+
+    $listas = $listas->map(function ($lista) use ($totaisPorLista, $notasPorLista, $temNotas, $empresasPorUnidade) {
+        $totais = $totaisPorLista->get((int) $lista->id);
+        $lista->itens_total = (int) ($totais->itens_total ?? 0);
+        $lista->itens_comprados = (int) ($totais->itens_comprados ?? 0);
+        $lista->total_planejado = $totais->total_planejado ?? 0;
+        $lista->total_realizado = $totais->total_realizado ?? 0;
 
         if (! isset($lista->status_fiscal) || $lista->status_fiscal === '') {
             $lista->status_fiscal = 'pendente';
         }
-        if (empty($lista->empresa_nome) && Schema::hasColumn('unidades', 'empresa_id') && ! empty($lista->unidade_id)) {
-            $empId = DB::table('unidades')->where('id', $lista->unidade_id)->value('empresa_id');
-            if ($empId && Schema::hasTable('empresas')) {
-                $e = DB::table('empresas')->where('id', $empId)->first();
-                if ($e) {
-                    $lista->empresa_resolvida_id = (int) $empId;
-                    $lista->empresa_nome = $lista->empresa_nome ?? $e->razao_social;
-                    $lista->empresa_cnpj = $lista->empresa_cnpj ?? $e->cnpj;
-                }
+        if (empty($lista->empresa_nome) && ! empty($lista->unidade_id)) {
+            $e = $empresasPorUnidade->get((int) $lista->unidade_id);
+            if ($e) {
+                $lista->empresa_resolvida_id = (int) $e->empresa_id;
+                $lista->empresa_nome = $lista->empresa_nome ?? $e->razao_social;
+                $lista->empresa_cnpj = $lista->empresa_cnpj ?? $e->cnpj;
             }
         }
-        if (Schema::hasTable('notas_fiscais_entrada')) {
-            $nota = DB::table('notas_fiscais_entrada')
-                ->where('lista_compra_id', $lista->id)
-                ->first(['numero', 'chave_acesso', 'valor_total', 'status']);
-            $lista->nf_numero = $nota?->numero ?? null;
-            $chave = $nota?->chave_acesso ?? null;
+        if ($temNotas) {
+            $nota = $notasPorLista->get((int) $lista->id);
+            $lista->nf_numero = $nota->numero ?? null;
+            $chave = $nota->chave_acesso ?? null;
             $lista->nf_chave_resumo = $chave ? substr($chave, 0, 8).'…' : null;
-            $lista->nf_valor_total = $nota?->valor_total ?? null;
-            $lista->nf_status = $nota?->status ?? null;
+            $lista->nf_valor_total = $nota->valor_total ?? null;
+            $lista->nf_status = $nota->status ?? null;
         }
-        
+
         return $lista;
     });
 
@@ -11701,6 +11734,7 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
 
     // Vagas
     Route::get('/vagas', [RhVagaController::class, 'index']);
+    Route::get('/vagas/{id}', [RhVagaController::class, 'show'])->whereNumber('id');
     Route::post('/vagas', [RhVagaController::class, 'store']);
     Route::put('/vagas/{id}', [RhVagaController::class, 'update']);
     Route::delete('/vagas/{id}', [RhVagaController::class, 'destroy']);
@@ -11708,7 +11742,8 @@ Route::middleware(['sas.usuario'])->prefix('rh')->group(function () {
 
     // Candidatos
     Route::get('/candidatos', [RhCandidatoController::class, 'index']);
-    Route::get('/candidatos/{id}', [RhCandidatoController::class, 'show']);
+    Route::get('/candidatos/fotos', [RhCandidatoController::class, 'fotosLote']);
+    Route::get('/candidatos/{id}', [RhCandidatoController::class, 'show'])->whereNumber('id');
     Route::get('/candidatos/{id}/curriculo', [RhCandidatoController::class, 'downloadCurriculo']);
     Route::get('/candidatos/{id}/foto', [RhCandidatoController::class, 'downloadFoto']);
     Route::put('/candidatos/{id}/status', [RhCandidatoController::class, 'updateStatus']);

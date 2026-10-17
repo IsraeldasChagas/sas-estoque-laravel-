@@ -1932,11 +1932,14 @@ const dom = {
 };
 
 /** Recarrega seções e links do menu dentro do appShell (evita cache de NodeList após mudanças no HTML). */
+let shellNavCacheReady = false;
 function refreshDomShellNav() {
+  if (shellNavCacheReady && dom.sections?.length && dom.navLinks?.length) return;
   const shell = document.getElementById("appShell");
   if (!shell) return;
   dom.sections = Array.from(shell.querySelectorAll(".view-section"));
   dom.navLinks = Array.from(shell.querySelectorAll(".nav-link[data-section]"));
+  if (dom.sections.length && dom.navLinks.length) shellNavCacheReady = true;
 }
 
 let stopMatrixAnimation = null;
@@ -2155,6 +2158,8 @@ const state = {
   listaComprasFiltroEmpresa: "",
   listaComprasFiltroStatusFiscal: "",
   listasComprasAtivasSnapshot: [],
+  listasComprasCarregadas: false,
+  comprasAtivasCount: 0,
   estabelecimentosGlobais: [],
   unidadeInlineVisivel: false,
   lotes: [],
@@ -5195,9 +5200,13 @@ function updateNovaListaButton() {
 }
 
 function updateComprasDashboardCard() {
-  if (dom.kpiComprasAtivas) {
-    dom.kpiComprasAtivas.textContent = state.listasComprasAtivasSnapshot.length || 0;
+  if (!dom.kpiComprasAtivas) return;
+  if (state.listasComprasCarregadas) {
+    const n = Array.isArray(state.listasComprasAtivasSnapshot) ? state.listasComprasAtivasSnapshot.length : 0;
+    dom.kpiComprasAtivas.textContent = String(n);
+    return;
   }
+  dom.kpiComprasAtivas.textContent = String(Number(state.comprasAtivasCount || 0));
 }
 
 function updateMinimoDashboardCard() {
@@ -5701,6 +5710,8 @@ function applyPermissions() {
   return regras;
 }
 
+let visibleSectionEl = null;
+
 function navigateTo(section) {
   if (section === "rhDocumentos") section = "rhCandidatos";
   const contentSection = cardapioContentSection(section);
@@ -5721,8 +5732,26 @@ function navigateTo(section) {
   // Usa alternância de seções (conteúdo no index.html) - evita fetch que pode falhar em produção
   const sidebarNavScroll = document.querySelector(".sidebar-nav-scroll");
   const sidebarScrollTop = sidebarNavScroll ? sidebarNavScroll.scrollTop : 0;
-  dom.navLinks.forEach((link) => link.classList.toggle("active", link.dataset.section === section));
-  dom.sections.forEach((sec) => sec.classList.toggle("hidden", sec.id !== `${contentSection}Section`));
+  const nextSectionId = `${contentSection}Section`;
+  for (const link of dom.navLinks) {
+    const on = link.dataset.section === section;
+    if (on) {
+      if (!link.classList.contains("active")) link.classList.add("active");
+    } else if (link.classList.contains("active")) {
+      link.classList.remove("active");
+    }
+  }
+  if (!visibleSectionEl || !visibleSectionEl.isConnected) {
+    dom.sections.forEach((sec) => {
+      if (sec.id !== nextSectionId) sec.classList.add("hidden");
+    });
+    visibleSectionEl = document.getElementById(nextSectionId);
+    visibleSectionEl?.classList.remove("hidden");
+  } else if (visibleSectionEl.id !== nextSectionId) {
+    visibleSectionEl.classList.add("hidden");
+    visibleSectionEl = document.getElementById(nextSectionId);
+    visibleSectionEl?.classList.remove("hidden");
+  }
   window.cpdvSyncTopbarFocus?.(section);
   const contentScroll = document.querySelector(".content");
   if (contentScroll) contentScroll.scrollTop = 0;
@@ -7650,6 +7679,7 @@ async function loadListasCompras() {
     const ativas = listas.filter((item) => (item.status || "").toUpperCase() !== "FINALIZADA");
     const finalizadas = listas.filter((item) => (item.status || "").toUpperCase() === "FINALIZADA");
     state.listasComprasAtivasSnapshot = ativas;
+    state.listasComprasCarregadas = true;
 
     let exibicao;
     if (statusFiltro === "finalizadas") exibicao = finalizadas;
@@ -9630,25 +9660,16 @@ function atualizarCardsDashboard(dados) {
 
 async function loadDashboard() {
   try {
-    // Carrega listas de compras para o card de compras
-    try {
-      await loadListasCompras().catch(() => {});
-    } catch (err) {
-      console.error("Erro ao carregar listas:", err);
-    }
-    
-    const estoqueMinimoPromise = fetchJSON("/estoque-abaixo-minimo").catch(() => ({ total: 0, produtos: [] }));
-    const perdasPromise = fetchJSON("/perdas-recentes").catch(() => ({ total_registros: 0, quantidade_total: 0, movimentacoes: [] }));
-    const lotesStatsPromise = fetchJSON("/lotes/stats").catch(() => null);
-    
-    const [produtos, lotes, movs, minimos, perdas, lotesStatsRaw] = await Promise.all([
-      fetchJSON("/produtos?todas=1").catch(() => []),
+    const [produtos, lotes, movs, minimos, perdas, lotesStatsRaw, comprasResumo] = await Promise.all([
+      fetchJSON("/produtos?todas=1&resumo=1").catch(() => []),
       fetchJSON("/lotes-a-vencer").catch(() => []),
-      fetchJSON(`/movimentacoes?limit=50&_=${Date.now()}`).catch(() => []),
-      estoqueMinimoPromise,
-      perdasPromise,
-      lotesStatsPromise,
+      fetchJSON("/movimentacoes?limit=10").catch(() => []),
+      fetchJSON("/estoque-abaixo-minimo").catch(() => ({ total: 0, produtos: [] })),
+      fetchJSON("/perdas-recentes").catch(() => ({ total_registros: 0, quantidade_total: 0, movimentacoes: [] })),
+      fetchJSON("/lotes/stats").catch(() => null),
+      fetchJSON("/listas?contagem=1").catch(() => ({ ativas: 0 })),
     ]);
+    state.comprasAtivasCount = Number(comprasResumo?.ativas || 0);
     
     const lotesStats = lotesStatsRaw && typeof lotesStatsRaw === "object" ? lotesStatsRaw : {};
     const produtosSection = document.getElementById("produtosSection");
@@ -9671,45 +9692,21 @@ async function loadDashboard() {
     state.movimentacoes = movsOrdenados;
     state.movimentacoesRecentes = movsOrdenados;
     
-    // Atualiza cards imediatamente
-    atualizarCardsDashboard({
+    const comprasAtivas = state.comprasAtivasCount;
+    const pintarCards = () => atualizarCardsDashboard({
       produtos,
       lotes,
       minimos,
       perdas,
       lotesStats,
-      comprasAtivas: state.listasComprasAtivasSnapshot?.length ?? 0
+      comprasAtivas,
     });
-    
-    // Aguarda e atualiza novamente para garantir
-    setTimeout(() => {
-      atualizarCardsDashboard({
-        produtos,
-        lotes,
-        minimos,
-        perdas,
-        lotesStats,
-        comprasAtivas: state.listasComprasAtivasSnapshot?.length ?? 0
-      });
-      
-      // Renderiza tabelas e gráficos
-      renderMovimentacoesDashboard(movsOrdenados);
-      renderLotesDashboard(lotes);
-      renderProdutosDashboard(produtos);
-      refreshProdutoSelects();
-    }, 300);
-    
-    // Tenta mais uma vez após 1 segundo para garantir
-    setTimeout(() => {
-      atualizarCardsDashboard({
-        produtos,
-        lotes,
-        minimos,
-        perdas,
-        lotesStats,
-        comprasAtivas: state.listasComprasAtivasSnapshot?.length ?? 0
-      });
-    }, 1000);
+    pintarCards();
+    renderMovimentacoesDashboard(movsOrdenados);
+    renderLotesDashboard(lotes);
+    renderProdutosDashboard(produtos);
+    refreshProdutoSelects();
+    requestAnimationFrame(pintarCards);
     
   } catch (err) {
     console.error("Erro ao carregar dashboard:", err);
@@ -11136,19 +11133,39 @@ function rhFormatDataInscricao(c) {
   return fmt ? fmt.split(" ")[0] : String(raw).slice(0, 10);
 }
 
+const RH_CAND_PAGE = 24;
+let rhCandOffset = 0;
+let rhCandAcumulado = [];
+let rhCandLoadSeq = 0;
+
 async function loadRhCandidatos(filtros = {}, opts = {}) {
+  const append = opts.append === true;
+  if (!append) {
+    rhCandLoadSeq += 1;
+    rhCandOffset = 0;
+    rhCandAcumulado = [];
+  }
+  const seq = rhCandLoadSeq;
   const qs = new URLSearchParams();
   ["status", "nome", "vaga_id"].forEach((k) => {
     if (filtros[k]) qs.append(k, filtros[k]);
   });
+  qs.set("limit", String(RH_CAND_PAGE));
+  qs.set("offset", String(append ? rhCandOffset : 0));
   if (opts.bustCache) qs.append("_t", String(Date.now()));
-  const q = qs.toString();
-  const path = `/rh/candidatos${q ? `?${q}` : ""}`;
-  const lista = await fetchJSON(path);
-  renderRhCandidatos(Array.isArray(lista) ? lista : []);
+  const lista = await fetchJSON(`/rh/candidatos?${qs.toString()}`);
+  if (seq !== rhCandLoadSeq) return;
+  const page = Array.isArray(lista) ? lista : [];
+  rhCandAcumulado = append ? rhCandAcumulado.concat(page) : page;
+  rhCandOffset = rhCandAcumulado.length;
+  renderRhCandidatos(rhCandAcumulado, page.length === RH_CAND_PAGE);
 }
 
-function renderRhCandidatos(lista) {
+function rhSim(v) {
+  return v === true || v === 1 || v === "1" || v === "true";
+}
+
+function renderRhCandidatos(lista, temMais) {
   const tb = document.getElementById("rhCandidatosTable");
   if (!tb) return;
   tb.querySelectorAll("img[data-object-url]").forEach((img) => {
@@ -11181,12 +11198,15 @@ function renderRhCandidatos(lista) {
           ? "warn"
           : "info";
     const waBtn = rhWhatsAppBtnHtml(c.telefone, c.nome, c.vaga_titulo, "rh-wa-btn--mini", "");
-    const temCurriculo = c.tem_curriculo === true || c.tem_curriculo === 1 || String(c.tem_curriculo ?? "").toLowerCase() === "1";
-    const temFoto = c.tem_foto === true || c.tem_foto === 1 || String(c.tem_foto ?? "").toLowerCase() === "1";
+    rhCandPorId.set(Number(c.id), c);
+    const temCurriculo = rhSim(c.tem_curriculo);
+    const temFoto = rhSim(c.tem_foto);
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
-    const foto = temFoto
-      ? `<img class="rh-cand-card__photo" data-rh-cand-foto-card="${esc(c.id)}" alt="Foto de ${esc(c.nome || "candidato")}" />`
-      : `<div class="rh-cand-card__photo usuarios-foto--placeholder" aria-hidden="true"></div>`;
+    const fotoPronta = c.foto_url ? rhUrlFotoPronta(c.foto_url) : "";
+    if (fotoPronta) rhFotoCache.set(String(c.id), fotoPronta);
+    const foto = fotoPronta
+      ? `<img class="rh-cand-card__photo" alt="" decoding="async" loading="lazy" data-rh-foto-id="${esc(c.id)}" src="${esc(fotoPronta)}" />`
+      : `<div class="rh-cand-card__photo rh-cand-card__photo--wait"${temFoto ? ` data-rh-cand-foto-card="${esc(c.id)}"` : ""} aria-hidden="true">${esc(rhIniciais(c.nome))}</div>`;
     const tel = String(c.telefone || "").trim();
     return `<article class="rh-cand-card" data-id="${esc(c.id)}">
       <div class="rh-cand-card__top">
@@ -11211,32 +11231,205 @@ function renderRhCandidatos(lista) {
       </div>
     </article>`;
   }).join("");
+  if (temMais) {
+    tb.insertAdjacentHTML(
+      "beforeend",
+      `<div class="rh-cand-more" style="display:flex;justify-content:center;padding:12px 0 4px;"><button type="button" class="btn" id="rhCandCarregarMais">Carregar mais</button></div>`
+    );
+    document.getElementById("rhCandCarregarMais")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const btn = event.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "Carregando...";
+      loadRhCandidatos(getRhCandidatosFiltrosForm(), { append: true }).catch((err) => {
+        showToast(err?.message || "Erro ao carregar mais candidatos.", "error");
+        btn.disabled = false;
+        btn.textContent = "Carregar mais";
+      });
+    });
+  }
   rhCarregarFotosCandidatos();
 }
+
+const rhFotoCache = new Map();
+const rhCandPorId = new Map();
+let rhFotoLoteSeq = 0;
+
+function rhIniciais(nome) {
+  const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
+  const a = partes[0] ? partes[0].charAt(0) : "?";
+  const b = partes.length > 1 ? partes[partes.length - 1].charAt(0) : "";
+  return (a + b).toLocaleUpperCase("pt-BR");
+}
+
+function rhAplicarFotoNoEl(el, url) {
+  if (!el || !url) return;
+  if (el.tagName === "IMG") {
+    el.src = url;
+    el.alt = "";
+    return;
+  }
+  const img = document.createElement("img");
+  img.className = "rh-cand-card__photo";
+  img.alt = "";
+  img.decoding = "async";
+  const idFoto = String(url).match(/cand-(\d+)\.jpg/);
+  if (idFoto) img.dataset.rhFotoId = idFoto[1];
+  img.src = url;
+  el.replaceWith(img);
+}
+
+function rhPayloadDaLista(c) {
+  if (!c) return null;
+  return {
+    candidato: {
+      id: c.id,
+      nome: c.nome,
+      telefone: c.telefone || "",
+      email: c.email || "",
+      status: c.status || "novo",
+      unidade: c.unidade || "",
+      cidade: c.cidade || "",
+      bairro: c.bairro || "",
+      data_inscricao: c.data_inscricao,
+      created_at: c.created_at,
+      consentimento_lgpd: c.consentimento_lgpd,
+      consentimento_em: c.consentimento_em,
+      grau_instrucao_escolar: c.grau_instrucao_escolar || "",
+      etnia_racial: c.etnia_racial || "",
+      observacoes_internas: "",
+    },
+    vaga: { titulo: c.vaga_titulo || "" },
+    tem_curriculo: rhSim(c.tem_curriculo),
+    tem_foto: rhSim(c.tem_foto),
+    documentos: [],
+    documentos_carregando: true,
+  };
+}
+
+function rhMontarDocsHtml(docs, nome, vaga) {
+  const lista = Array.isArray(docs) ? docs : [];
+  if (!lista.length) {
+    return '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>';
+  }
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  const nomeCandTbl = esc(nome || "-");
+  const vagaTbl = esc(vaga || "-");
+  return lista.map((d) => {
+    const tipoU = esc(rhTipoDocumentoLabel(d?.tipo));
+    const dt = esc(String(d?.created_at || "").slice(0, 19).replace("T", " "));
+    const rid = esc(String(d?.id ?? ""));
+    const nomeViewer = esc(rhNomeArquivoDocumentoParaViewer(d));
+    return `<tr data-doc-id="${rid}">
+    <td>${rid}</td>
+    <td>${nomeCandTbl}</td>
+    <td>${vagaTbl}</td>
+    <td>${tipoU}</td>
+    <td><button type="button" class="table-action btn-rh-doc-download" data-id="${rid}" data-nome-arquivo="${nomeViewer}">Baixar / ver</button></td>
+    <td>${dt}</td>
+    <td><button type="button" class="table-action danger btn-rh-doc-delete" data-id="${rid}">Excluir</button></td>
+  </tr>`;
+  }).join("");
+}
+
+function rhAplicarDetalheRemoto(details, payload) {
+  if (!details || !payload?.candidato) return;
+  const c = payload.candidato;
+  const obs = details.querySelector(".rh-cand-obs");
+  if (obs && obs.dataset.tocado !== "1") obs.value = c.observacoes_internas || "";
+  const setCampo = (campo, valor) => {
+    const el = details.querySelector(`[data-campo="${campo}"]`);
+    if (!el || el.dataset.tocado === "1") return;
+    if (!el.value || el.value === "-" || el.value === "—") el.value = valor || "";
+  };
+  setCampo("email", c.email || "");
+  setCampo("cidade", [c.cidade, c.bairro].filter(Boolean).join(" / ") || "-");
+  setCampo("grau", c.grau_instrucao_escolar || "");
+  setCampo("etnia", c.etnia_racial || "");
+  const lgpd = c.consentimento_lgpd ? `OK (${String(c.consentimento_em || "").slice(0, 19).replace("T", " ")})` : "NÃO";
+  setCampo("lgpd", lgpd);
+  const statusSel = details.querySelector(".rh-cand-status");
+  if (statusSel && statusSel.dataset.trocado !== "1") statusSel.value = c.status || "novo";
+  const tbody = details.querySelector(".rh-cand-docs-body");
+  if (tbody) {
+    const vaga = payload?.vaga?.titulo || "";
+    tbody.innerHTML = rhMontarDocsHtml(payload.documentos, c.nome, vaga);
+  }
+  const foto = details.querySelector("[data-rh-cand-foto]");
+  const url = rhFotoCache.get(String(c.id));
+  if (foto && url) rhAplicarFotoNoEl(foto, url);
+}
+
+function rhUrlFotoPronta(urlOuId) {
+  const s = String(urlOuId || "");
+  if (!s) return "";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  if (s.includes("storage/")) return `${BASE_URL}/${s.replace(/^\//, "")}`;
+  return `${BASE_URL}/storage/rh/thumbs/cand-${s}.jpg`;
+}
+
+const rhFotoFila = [];
+let rhFotoGerando = false;
+let rhFotoTimer = 0;
 
 function rhCarregarFotosCandidatos() {
   const root = document.getElementById("rhCandidatosTable");
   if (!root) return;
-  root.querySelectorAll("img[data-rh-cand-foto-card]").forEach((img) => {
-    const id = img.getAttribute("data-rh-cand-foto-card");
+  root.querySelectorAll("[data-rh-cand-foto-card]").forEach((el) => {
+    const id = el.getAttribute("data-rh-cand-foto-card");
     if (!id) return;
-    fetchBlob(`/rh/candidatos/${encodeURIComponent(id)}/foto`)
-      .then((blob) => {
-        if (!img.isConnected) return;
-        const url = URL.createObjectURL(blob);
-        img.src = url;
-        img.dataset.objectUrl = url;
-      })
-      .catch(() => {
-        img.replaceWith(Object.assign(document.createElement("div"), {
-          className: "rh-cand-card__photo usuarios-foto--placeholder",
-          ariaHidden: "true",
-        }));
-      });
+    const pronta = rhFotoCache.get(String(id));
+    if (pronta) {
+      rhAplicarFotoNoEl(el, pronta);
+      return;
+    }
+    if (el.dataset.fotoFila === "1") return;
+    el.dataset.fotoFila = "1";
+    if (!rhFotoFila.includes(String(id))) rhFotoFila.push(String(id));
   });
+  if (!rhFotoFila.length || rhFotoGerando || rhFotoTimer) return;
+  rhFotoTimer = window.setTimeout(() => {
+    rhFotoTimer = 0;
+    rhGerarProximaFoto();
+  }, 700);
+}
+
+async function rhGerarProximaFoto() {
+  if (rhFotoGerando) return;
+  const sec = document.getElementById("rhCandidatosSection");
+  if (!sec || sec.classList.contains("hidden")) {
+    rhFotoFila.length = 0;
+    return;
+  }
+  const id = rhFotoFila.shift();
+  if (!id) return;
+  rhFotoGerando = true;
+  try {
+    const out = await fetchJSON(`/rh/candidatos/${encodeURIComponent(id)}/foto?preparar=1`);
+    const url = rhUrlFotoPronta(out && out.url ? out.url : id);
+    rhFotoCache.set(String(id), url);
+    const el = document.querySelector(`#rhCandidatosTable [data-rh-cand-foto-card="${CSS.escape(String(id))}"]`);
+    if (el) {
+      const img = document.createElement("img");
+      img.className = "rh-cand-card__photo";
+      img.alt = "";
+      img.decoding = "async";
+      img.dataset.rhFotoId = String(id);
+      img.src = url;
+      el.replaceWith(img);
+    }
+    if (String(rhCandidatoInlineOpenId) === String(id)) {
+      const aberto = document.querySelector('#rhCandidatosTable [data-rh-cand-foto="1"]');
+      if (aberto) rhAplicarFotoNoEl(aberto, url);
+    }
+  } catch (_) {}
+  rhFotoGerando = false;
+  if (rhFotoFila.length) window.setTimeout(rhGerarProximaFoto, 80);
 }
 
 let rhCandidatoInlineOpenId = null;
+const rhCandDetalheCache = new Map();
 
 function closeRhCandidatoInlineRow() {
   const tb = document.getElementById("rhCandidatosTable");
@@ -11391,8 +11584,9 @@ function renderRhCandidatoInlineRow(payload) {
   const nomeCandTbl = esc(c.nome || "-");
   const vagaTbl = esc(vagaTitulo || "-");
 
-  const docRowsHtml =
-    docsLista.length === 0
+  const docRowsHtml = payload?.documentos_carregando
+      ? `<tr><td colspan="7" style="text-align:center;color:#607d8b">Carregando documentos...</td></tr>`
+      : docsLista.length === 0
       ? `<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhum documento enviado.</td></tr>`
       : docsLista
           .map((d) => {
@@ -11416,7 +11610,7 @@ function renderRhCandidatoInlineRow(payload) {
       <div class="form-card rh-cand-detail">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
-            ${temFoto ? `<img data-rh-cand-foto="1" alt="Foto do candidato" style="width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12);" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
+            ${temFoto ? `<div data-rh-cand-foto="1" style="width:110px;height:110px;border-radius:10px;background:#e5e7eb;"></div>` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
           </div>
           <div style="flex:1; min-width: 260px;">
             <div class="filters-grid">
@@ -11427,7 +11621,7 @@ function renderRhCandidatoInlineRow(payload) {
                 <input type="text" value="${esc(c.telefone || "")}" readonly />
               </label>
               <label>Email
-                <input type="text" value="${esc(c.email || "")}" readonly />
+                <input type="text" data-campo="email" value="${esc(c.email || "")}" readonly />
               </label>
               <label>Status
                 <select class="rh-cand-status">
@@ -11452,16 +11646,16 @@ function renderRhCandidatoInlineRow(payload) {
                 <input type="text" value="${esc(c.unidade || "-")}" readonly />
               </label>
               <label>Cidade / Bairro
-                <input type="text" value="${esc([c.cidade, c.bairro].filter(Boolean).join(" / ") || "-")}" readonly />
+                <input type="text" data-campo="cidade" value="${esc([c.cidade, c.bairro].filter(Boolean).join(" / ") || "-")}" readonly />
               </label>
               <label>Grau de instrução
-                <input type="text" value="${esc(c.grau_instrucao_escolar || "")}" readonly placeholder="—" />
+                <input type="text" data-campo="grau" value="${esc(c.grau_instrucao_escolar || "")}" readonly placeholder="—" />
               </label>
               <label>Cor ou raça (autodeclaração)
-                <input type="text" value="${esc(c.etnia_racial || "")}" readonly placeholder="—" />
+                <input type="text" data-campo="etnia" value="${esc(c.etnia_racial || "")}" readonly placeholder="—" />
               </label>
               <label>Consentimento LGPD
-                <input type="text" value="${esc(lgpd)}" readonly />
+                <input type="text" data-campo="lgpd" value="${esc(lgpd)}" readonly />
               </label>
             </div>
             <label style="display:block; margin: .6rem 0 .35rem;">Observações internas</label>
@@ -11484,7 +11678,7 @@ function renderRhCandidatoInlineRow(payload) {
                       <th>Ações</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody class="rh-cand-docs-body">
                     ${docRowsHtml}
                   </tbody>
                 </table>
@@ -12175,8 +12369,10 @@ async function startAppSession(user) {
         else if (sectionToNavigate === "rhDashboard") await loadRhDashboard();
         else if (sectionToNavigate === "rhVagas") await loadRhVagas();
         else if (sectionToNavigate === "rhCandidatos") {
-          await refreshRhCandidatosFiltroVagas();
-          await loadRhCandidatos(getRhCandidatosFiltrosForm());
+          await Promise.all([
+            refreshRhCandidatosFiltroVagas(),
+            loadRhCandidatos(getRhCandidatosFiltrosForm()),
+          ]);
         }
         else if (sectionToNavigate === "rhEntrevistas") await loadRhEntrevistas();
         else if (sectionToNavigate === "rhBancoTalentos") await loadRhBancoTalentos();
@@ -12319,6 +12515,8 @@ function resetForms() {
   state.relatorioDetalhes = [];
   state.listaComprasFiltroStatus = "ativas";
   state.listasComprasAtivasSnapshot = [];
+  state.listasComprasCarregadas = false;
+  state.comprasAtivasCount = 0;
   state.unidadeInlineVisivel = false;
   usuariosCarregando = null;
   if (dom.listaCompraFiltroStatus) dom.listaCompraFiltroStatus.value = "ativas";
@@ -16630,8 +16828,10 @@ function wireSidebarSectionNavClicks() {
       else if (target === "rhDashboard") await loadRhDashboard();
       else if (target === "rhVagas") await loadRhVagas();
       else if (target === "rhCandidatos") {
-        await refreshRhCandidatosFiltroVagas();
-        await loadRhCandidatos(getRhCandidatosFiltrosForm());
+        await Promise.all([
+          refreshRhCandidatosFiltroVagas(),
+          loadRhCandidatos(getRhCandidatosFiltrosForm()),
+        ]);
       }
       else if (target === "rhEntrevistas") await loadRhEntrevistas();
       else if (target === "rhBancoTalentos") await loadRhBancoTalentos();
@@ -17040,10 +17240,18 @@ function setupNavigation() {
       e.preventDefault();
       const id = Number(btnEditar.dataset.id || "");
       if (!id) return;
-      const vaga = (state.rhVagas || []).find((v) => Number(v?.id) === id);
+      let vaga = (state.rhVagas || []).find((v) => Number(v?.id) === id);
       if (!vaga) {
         showToast("Vaga não encontrada na lista. Recarregue.", "warning");
         return;
+      }
+      if (vaga.descricao === undefined) {
+        try {
+          vaga = await fetchJSON(`/rh/vagas/${id}`);
+        } catch (err) {
+          showToast(err?.message || "Não foi possível abrir a vaga.", "error");
+          return;
+        }
       }
       const modal = document.getElementById("rhVagaModal");
       const form = document.getElementById("rhVagaForm");
@@ -17129,6 +17337,7 @@ function setupNavigation() {
     loadRhCandidatos().catch(() => {});
   });
   document.getElementById("rhCandidatosSection")?.addEventListener("click", async (e) => {
+    if (e.target.closest("a.rh-wa-btn")) return;
     const btnCvTable = e.target.closest(".btn-rh-cv");
     if (btnCvTable) {
       e.preventDefault();
@@ -17207,38 +17416,37 @@ function setupNavigation() {
       closeRhCandidatoInlineRow();
       rhCandidatoInlineOpenId = id;
 
+      const details = document.createElement("div");
+      details.className = "rh-cand-card__details";
+      details.dataset.rhCandidatoInline = "1";
+      const payloadInicial = rhCandDetalheCache.get(id) || rhPayloadDaLista(rhCandPorId.get(id));
+      const htmlInicial = renderRhCandidatoInlineRow(payloadInicial);
+      if (!htmlInicial) {
+        showToast("Não foi possível abrir o candidato.", "error");
+        rhCandidatoInlineOpenId = null;
+        return;
+      }
+      details.innerHTML = htmlInicial;
+      card.appendChild(details);
+
       try {
-        const payload = await fetchJSON(`/rh/candidatos/${id}`);
-        const html = renderRhCandidatoInlineRow(payload);
-        if (!html) throw new Error("Não foi possível montar os detalhes do candidato.");
-
-        const details = document.createElement("div");
-        details.className = "rh-cand-card__details";
-        details.dataset.rhCandidatoInline = "1";
-        details.innerHTML = html;
-        card.appendChild(details);
-
-        // Preenche status selecionado
+        const payload = payloadInicial;
         const statusSel = details.querySelector(".rh-cand-status");
         if (statusSel) statusSel.value = payload?.candidato?.status || "novo";
-
-        // Carrega foto (se existir) via API (não depende de /storage público).
-        const img = details.querySelector('img[data-rh-cand-foto="1"]');
-        if (img) {
-          try {
-            const blob = await fetchBlob(`/rh/candidatos/${id}/foto`);
-            const url = URL.createObjectURL(blob);
-            img.src = url;
-            img.addEventListener("load", () => {
-              setTimeout(() => URL.revokeObjectURL(url), 120000);
-            }, { once: true });
-            img.addEventListener("error", () => {
-              try { URL.revokeObjectURL(url); } catch (_) {}
-              showToast("Não foi possível carregar a foto do candidato.", "warning");
-            }, { once: true });
-          } catch (_) {
-            showToast("Não foi possível carregar a foto do candidato.", "warning");
-          }
+        const fotoAberta = details.querySelector("[data-rh-cand-foto]");
+        const fotoPronta = rhFotoCache.get(String(id));
+        if (fotoAberta && fotoPronta) rhAplicarFotoNoEl(fotoAberta, fotoPronta);
+        if (!rhCandDetalheCache.has(id)) {
+          fetchJSON(`/rh/candidatos/${id}`).then((completo) => {
+            rhCandDetalheCache.set(id, completo);
+            if (rhCandidatoInlineOpenId !== id || !details.isConnected) return;
+            rhAplicarDetalheRemoto(details, completo);
+          }).catch(() => {
+            const tbody = details.querySelector(".rh-cand-docs-body");
+            if (tbody && details.isConnected) {
+              tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Não foi possível carregar os documentos.</td></tr>';
+            }
+          });
         }
 
         // Botões
@@ -17270,6 +17478,7 @@ function setupNavigation() {
             await fetchJSON(`/rh/candidatos/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
             await fetchJSON(`/rh/candidatos/${id}/observacoes`, { method: "PUT", body: JSON.stringify({ observacoes_internas: obs }) });
             showToast("Candidato atualizado.", "success");
+            rhCandDetalheCache.delete(id);
             await loadRhCandidatos(getRhCandidatosFiltrosForm());
             // Reabre os detalhes (já com dados atualizados) opcionalmente
             rhCandidatoInlineOpenId = null;
@@ -17283,7 +17492,13 @@ function setupNavigation() {
           if (!btn) return;
           btn.disabled = !(st === "aprovado" || st === "em_contratacao");
         };
-        details.querySelector(".rh-cand-status")?.addEventListener("change", syncRhCandDocLinkBtn);
+        details.querySelector(".rh-cand-obs")?.addEventListener("input", (ev) => {
+          ev.currentTarget.dataset.tocado = "1";
+        });
+        details.querySelector(".rh-cand-status")?.addEventListener("change", (ev) => {
+          ev.currentTarget.dataset.trocado = "1";
+          syncRhCandDocLinkBtn();
+        });
         syncRhCandDocLinkBtn();
 
         details.querySelector(".rh-cand-doc-link")?.addEventListener("click", async () => {
@@ -17324,6 +17539,7 @@ function setupNavigation() {
         });
       } catch (err) {
         rhCandidatoInlineOpenId = null;
+        details.remove();
         showToast(err?.message || "Erro ao abrir candidato.", "error");
       }
       return;
@@ -27071,6 +27287,11 @@ function setupFichaTecnicaForm() {
 
 // Sequencia de inicializacao que amarra todos os componentes e listeners.
 async function init() {
+  if (dom.loginForm && dom.loginForm.dataset.loginBound !== "1") {
+    dom.loginForm.dataset.loginBound = "1";
+    dom.loginForm.addEventListener("submit", handleLogin);
+  }
+
   // Verifica se está usando file:// e mostra aviso
   if (window.location.protocol === 'file:') {
     console.warn('⚠️ Arquivo aberto via file://. Para funcionar corretamente, use um servidor HTTP.');
@@ -27115,20 +27336,19 @@ async function init() {
   if (typeof setupRhRescisaoModule === "function") setupRhRescisaoModule();
   if (typeof setupComercialPdvModule === "function") setupComercialPdvModule();
   if (typeof setupIntegracoesModule === "function") setupIntegracoesModule();
-  if (!stopMatrixAnimation) {
-    stopMatrixAnimation = initMatrixBackground();
-  }
-  if (dom.loginForm) {
-    dom.loginForm.addEventListener("submit", handleLogin);
-  } else {
+  const startMatrix = () => {
+    if (dom.loginOverlay?.classList.contains("hidden")) return;
+    if (!stopMatrixAnimation) stopMatrixAnimation = initMatrixBackground();
+  };
+  if (window.requestIdleCallback) requestIdleCallback(startMatrix, { timeout: 1200 });
+  else setTimeout(startMatrix, 300);
+  if (!dom.loginForm) {
     console.error('❌ ERRO: Formulário de login não encontrado! ID: loginForm');
-    // Tenta encontrar novamente após um delay
     setTimeout(() => {
       const form = document.getElementById("loginForm");
-      if (form) {
+      if (form && form.dataset.loginBound !== "1") {
+        form.dataset.loginBound = "1";
         form.addEventListener("submit", handleLogin);
-      } else {
-        console.error('❌ Formulário ainda não encontrado após delay');
       }
     }, 500);
   }

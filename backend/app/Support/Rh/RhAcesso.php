@@ -19,7 +19,7 @@ class RhAcesso
         $uid = $request->header('X-Usuario-Id');
         if (! $uid) return false;
 
-        $u = DB::table('usuarios')->where('id', $uid)->first();
+        $u = DB::table('usuarios')->where('id', $uid)->first(['id', 'ativo', 'perfil', 'permissoes_menu']);
         if (! $u || (int) ($u->ativo ?? 0) !== 1) return false;
 
         $perfil = strtoupper(trim((string) ($u->perfil ?? '')));

@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class RhCandidatoController extends Controller
 {
+    private static ?bool $temDataInscricao = null;
+
     private const STATUS = [
         'novo',
         'em_analise',
@@ -50,14 +52,34 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
+        if (self::$temDataInscricao === null) {
+            self::$temDataInscricao = Schema::hasColumn('rh_candidatos', 'data_inscricao');
+        }
+
+        $cols = [
+            'rh_candidatos.id',
+            'rh_candidatos.nome',
+            'rh_candidatos.telefone',
+            'rh_candidatos.email',
+            'rh_candidatos.cidade',
+            'rh_candidatos.bairro',
+            'rh_candidatos.status',
+            'rh_candidatos.vaga_id',
+            'rh_candidatos.unidade',
+            'rh_candidatos.consentimento_lgpd',
+            'rh_candidatos.consentimento_em',
+            'rh_candidatos.created_at',
+            'rh_vagas.titulo as vaga_titulo',
+        ];
+        if (self::$temDataInscricao) {
+            $cols[] = 'rh_candidatos.data_inscricao';
+        }
+
         $q = DB::table('rh_candidatos')
             ->leftJoin('rh_vagas', 'rh_candidatos.vaga_id', '=', 'rh_vagas.id')
-            ->select(
-                'rh_candidatos.*',
-                'rh_vagas.titulo as vaga_titulo',
-                'rh_vagas.slug as vaga_slug',
-                DB::raw('(SELECT cv.arquivo_path FROM rh_curriculos cv WHERE cv.candidato_id = rh_candidatos.id ORDER BY cv.id DESC LIMIT 1) as curriculo_path')
-            )
+            ->select($cols)
+            ->selectRaw("(rh_candidatos.foto_path IS NOT NULL AND rh_candidatos.foto_path <> '') as tem_foto")
+            ->selectRaw("EXISTS (SELECT 1 FROM rh_curriculos cv WHERE cv.candidato_id = rh_candidatos.id AND cv.arquivo_path IS NOT NULL AND cv.arquivo_path <> '') as tem_curriculo")
             ->orderByDesc('rh_candidatos.id');
 
         if ($request->filled('status')) $q->where('rh_candidatos.status', $request->status);
@@ -66,17 +88,27 @@ class RhCandidatoController extends Controller
             $q->where('rh_candidatos.nome', 'like', '%' . $request->nome . '%');
         }
 
+        $limit = (int) $request->query('limit', 0);
+        if ($limit > 0) {
+            $q->limit(min($limit, 100))->offset(max(0, (int) $request->query('offset', 0)));
+        }
+
         $rows = $q->get();
-        // Garante flags corretas (arquivo pode ter sido removido/anônimo/LGPD).
-        foreach ($rows as $r) {
-            $cvPath = $r->curriculo_path ?? null;
-            $r->tem_curriculo = (bool) ($cvPath && Storage::disk('public')->exists($cvPath));
-            $r->tem_foto = (bool) (! empty($r->foto_path) && Storage::disk('public')->exists($r->foto_path));
-            unset($r->curriculo_path);
-            unset($r->documentacao_token_hash);
+        foreach ($rows as $row) {
+            $thumb = storage_path('app/public/rh/thumbs/cand-'.$row->id.'.jpg');
+            $row->foto_url = is_file($thumb) ? 'storage/rh/thumbs/cand-'.$row->id.'.jpg' : null;
         }
 
         return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
+    }
+
+    public function fotosLote(Request $request)
+    {
+        if (! RhAcesso::pode($request, 'rh.candidatos')) {
+            return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
+        }
+
+        return response()->json([])->header('Access-Control-Allow-Origin', '*');
     }
 
     public function show(Request $request, int $id)
@@ -88,35 +120,39 @@ class RhCandidatoController extends Controller
         $c = DB::table('rh_candidatos')->where('id', $id)->first();
         if (! $c) return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
 
-        $vaga = $c->vaga_id ? DB::table('rh_vagas')->where('id', $c->vaga_id)->first() : null;
-        $curriculo = DB::table('rh_curriculos')->where('candidato_id', $id)->orderByDesc('id')->first();
-        if ($curriculo && (! $curriculo->arquivo_path || ! Storage::disk('public')->exists($curriculo->arquivo_path))) {
-            $curriculo = null;
-        }
-
-        $fotoOk = false;
-        if (! empty($c->foto_path) && Storage::disk('public')->exists($c->foto_path)) {
-            $fotoOk = true;
-        }
-        $entrevistas = DB::table('rh_entrevistas')->where('candidato_id', $id)->orderByDesc('id')->get();
-        $documentos = DB::table('rh_documentos')->where('candidato_id', $id)->orderByDesc('id')->get();
-        $historico = DB::table('rh_historico')->where('candidato_id', $id)->orderByDesc('id')->get();
+        $vaga = ! empty($c->vaga_id)
+            ? DB::table('rh_vagas')->where('id', $c->vaga_id)->first(['id', 'titulo'])
+            : null;
+        $curriculo = DB::table('rh_curriculos')
+            ->where('candidato_id', $id)
+            ->whereNotNull('arquivo_path')
+            ->where('arquivo_path', '<>', '')
+            ->orderByDesc('id')
+            ->first(['id', 'arquivo_nome_original', 'mime']);
+        $documentos = DB::table('rh_documentos')
+            ->where('candidato_id', $id)
+            ->orderByDesc('id')
+            ->get(['id', 'tipo', 'arquivo_nome_original', 'mime', 'created_at']);
 
         $docTokenGerado = $c->documentacao_token_gerado_em ?? null;
         $docPublicaAtiva = (bool) (! empty($c->documentacao_token_hash));
+        $temFoto = ! empty($c->foto_path);
 
-        $candidatoApi = (array) $c;
-        unset($candidatoApi['documentacao_token_hash']);
+        unset(
+            $c->experiencia,
+            $c->consentimento_ip,
+            $c->consentimento_user_agent,
+            $c->documentacao_token_hash,
+            $c->foto_path
+        );
 
         return response()->json([
-            'candidato' => (object) $candidatoApi,
+            'candidato' => $c,
             'vaga' => $vaga,
             'curriculo' => $curriculo,
             'tem_curriculo' => (bool) $curriculo,
-            'tem_foto' => $fotoOk,
-            'entrevistas' => $entrevistas,
+            'tem_foto' => $temFoto,
             'documentos' => $documentos,
-            'historico' => $historico,
             'documentacao_publica_ativa' => $docPublicaAtiva,
             'documentacao_publica_gerada_em' => $docTokenGerado,
         ])->header('Access-Control-Allow-Origin', '*');
@@ -278,6 +314,7 @@ class RhCandidatoController extends Controller
         if ($c->foto_path) {
             Storage::disk('public')->delete($c->foto_path);
         }
+        Storage::disk('public')->delete('rh/thumbs/cand-'.$id.'.jpg');
         $curriculos = DB::table('rh_curriculos')->where('candidato_id', $id)->get();
         foreach ($curriculos as $cv) {
             if ($cv->arquivo_path) Storage::disk('public')->delete($cv->arquivo_path);
@@ -311,6 +348,7 @@ class RhCandidatoController extends Controller
         // Coleta paths antes de apagar no banco.
         $paths = [];
         if (! empty($c->foto_path)) $paths[] = $c->foto_path;
+        $paths[] = 'rh/thumbs/cand-'.$id.'.jpg';
 
         $curriculos = DB::table('rh_curriculos')->where('candidato_id', $id)->get();
         foreach ($curriculos as $cv) {
@@ -433,26 +471,78 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $c = DB::table('rh_candidatos')->where('id', $id)->first();
-        if (! $c) return response()->json(['error' => 'Candidato não encontrado'], 404)->header('Access-Control-Allow-Origin', '*');
-
-        $path = $c->foto_path ?? null;
-        if (! $path || ! Storage::disk('public')->exists($path)) {
-            return response()->json(['error' => 'Foto não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
+        $rel = 'rh/thumbs/cand-'.$id.'.jpg';
+        $abs = storage_path('app/public/'.$rel);
+        if (! is_file($abs)) {
+            $path = DB::table('rh_candidatos')->where('id', $id)->value('foto_path');
+            if (! $path || ! $this->gravarMiniatura(Storage::disk('public'), (string) $path, $id) || ! is_file($abs)) {
+                return response()->json(['error' => 'Foto não encontrada'], 404)->header('Access-Control-Allow-Origin', '*');
+            }
         }
 
-        // Para <img> renderizar corretamente, precisamos responder com o mime real.
-        $mime = Storage::disk('public')->mimeType($path) ?: 'application/octet-stream';
-        $content = Storage::disk('public')->get($path);
+        if ($request->query('preparar') === '1') {
+            return response()->json(['url' => 'storage/'.$rel])->header('Access-Control-Allow-Origin', '*');
+        }
 
-        $res = response($content, 200)
-            ->header('Content-Type', $mime)
-            ->header('Access-Control-Allow-Origin', '*')
-            ->header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Usuario-Id, X-Device-Model, X-Device-Platform')
-            ->header('Access-Control-Expose-Headers', 'Content-Type, Content-Length');
+        return response()->file($abs, [
+            'Content-Type' => 'image/jpeg',
+            'Cache-Control' => 'private, max-age=604800',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    }
 
-        return $res;
+    private function gravarMiniatura($disk, string $path, int $id): bool
+    {
+        $dir = storage_path('app/public/rh/thumbs');
+        $dest = $dir.'/cand-'.$id.'.jpg';
+        if (is_file($dest) && filesize($dest) > 0) {
+            return true;
+        }
+        if (! function_exists('imagecreatefromstring')) {
+            return false;
+        }
+        try {
+            $tamanho = $disk->size($path);
+            if (is_numeric($tamanho) && (int) $tamanho > 8000000) {
+                return false;
+            }
+            $raw = $disk->get($path);
+        } catch (\Throwable $e) {
+            return false;
+        }
+        if (! is_string($raw) || $raw === '') {
+            return false;
+        }
+
+        $src = @imagecreatefromstring($raw);
+        unset($raw);
+        if (! $src) {
+            return false;
+        }
+
+        $w = imagesx($src);
+        $h = imagesy($src);
+        $max = 96;
+        $scale = min($max / max($w, 1), $max / max($h, 1), 1);
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+        $dst = imagecreatetruecolor($nw, $nh);
+        if (! $dst) {
+            imagedestroy($src);
+
+            return false;
+        }
+        $branco = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $nw, $nh, $branco);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagedestroy($src);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        $ok = imagejpeg($dst, $dest, 68);
+        imagedestroy($dst);
+
+        return $ok && is_file($dest);
     }
 }
 
