@@ -1329,10 +1329,40 @@ body.sidebar-open {
   margin-top: 14px;
 }
 
+#rhVagasSection .rh-vaga-card__actions .btn {
+  box-shadow: none;
+  font-weight: 700;
+}
+
+#rhVagasSection .btn-rh-vaga-copiar-link {
+  background: #e6f1fb;
+  border-color: #c5ddf3;
+  color: #1d4e89;
+}
+
+#rhVagasSection .btn-rh-vaga-qrcode {
+  background: #efeaf8;
+  border-color: #ddd2f0;
+  color: #5b3f8c;
+}
+
+#rhVagasSection .btn-rh-vaga-editar {
+  background: #d9f5ef;
+  border-color: #b7e6dc;
+  color: #0f766e;
+}
+
 #rhVagasSection .rh-vaga-card__actions .btn.danger {
-  background: #b71c1c;
-  border-color: #b71c1c;
-  color: #fff;
+  background: #fde8e8;
+  border-color: #f3c7c7;
+  color: #b42323;
+}
+
+#rhVagasSection .filters-actions .btn:not(.primary) {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #374151;
+  box-shadow: none;
 }
 
 #rhVagasSection .rh-vaga-pill {
