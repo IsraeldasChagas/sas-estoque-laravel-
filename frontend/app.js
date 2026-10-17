@@ -11088,9 +11088,11 @@ function renderRhVagas(lista) {
 }
 
 /** Atualiza o select de vagas em Candidatos (todas cadastradas, sem filtro da tela Vagas). */
-async function refreshRhCandidatosFiltroVagas() {
+let rhVagasFiltroProntas = false;
+async function refreshRhCandidatosFiltroVagas(force) {
   const sel = document.getElementById("rhCandidatosFiltroVagaId");
   if (!sel) return;
+  if (!force && rhVagasFiltroProntas) return;
   const prev = sel.value;
   try {
     const lista = await fetchJSON("/rh/vagas");
@@ -11111,6 +11113,7 @@ async function refreshRhCandidatosFiltroVagas() {
     });
     sel.innerHTML = opts.join("");
     sel.value = prev && vagas.some((v) => String(v.id) === prev) ? prev : "";
+    rhVagasFiltroProntas = true;
   } catch (err) {
     console.warn("Não foi possível carregar vagas para o filtro de candidatos:", err);
   }
@@ -11708,7 +11711,7 @@ function renderRhCandidatoInlineRow(payload) {
 }
 
 async function loadRhBancoTalentos() {
-  const lista = await fetchJSON("/rh/candidatos?status=banco_talentos");
+  const lista = await fetchJSON("/rh/candidatos?status=banco_talentos&todos=1");
   const tb = document.getElementById("rhBancoTalentosTable");
   if (!tb) return;
   const items = Array.isArray(lista) ? lista : [];
@@ -17165,7 +17168,7 @@ function setupNavigation() {
         unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
         setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
       });
-      await refreshRhCandidatosFiltroVagas();
+      await refreshRhCandidatosFiltroVagas(true);
     } catch (err) {
       showToast(err?.message || (window.__rhVagaEditId ? "Erro ao editar vaga." : "Erro ao criar vaga."), "error");
     }
@@ -17316,7 +17319,7 @@ function setupNavigation() {
           unidade: document.getElementById("rhVagasFiltroUnidade")?.value?.trim() || "",
           setor: document.getElementById("rhVagasFiltroSetor")?.value?.trim() || "",
         });
-        await refreshRhCandidatosFiltroVagas();
+        await refreshRhCandidatosFiltroVagas(true);
       } catch (err) {
         showToast(err?.message || "Erro ao excluir vaga.", "error");
       }

@@ -13,8 +13,6 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class RhCandidatoController extends Controller
 {
-    private static ?bool $temDataInscricao = null;
-
     private const STATUS = [
         'novo',
         'em_analise',
@@ -52,10 +50,6 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
-        if (self::$temDataInscricao === null) {
-            self::$temDataInscricao = Schema::hasColumn('rh_candidatos', 'data_inscricao');
-        }
-
         $cols = [
             'rh_candidatos.id',
             'rh_candidatos.nome',
@@ -68,12 +62,10 @@ class RhCandidatoController extends Controller
             'rh_candidatos.unidade',
             'rh_candidatos.consentimento_lgpd',
             'rh_candidatos.consentimento_em',
+            'rh_candidatos.data_inscricao',
             'rh_candidatos.created_at',
             'rh_vagas.titulo as vaga_titulo',
         ];
-        if (self::$temDataInscricao) {
-            $cols[] = 'rh_candidatos.data_inscricao';
-        }
 
         $q = DB::table('rh_candidatos')
             ->leftJoin('rh_vagas', 'rh_candidatos.vaga_id', '=', 'rh_vagas.id')
@@ -88,8 +80,13 @@ class RhCandidatoController extends Controller
             $q->where('rh_candidatos.nome', 'like', '%' . $request->nome . '%');
         }
 
-        $limit = (int) $request->query('limit', 0);
-        if ($limit > 0) {
+        if ($request->query('todos') === '1') {
+            $q->limit(500);
+        } else {
+            $limit = (int) $request->query('limit', 24);
+            if ($limit <= 0) {
+                $limit = 24;
+            }
             $q->limit(min($limit, 100))->offset(max(0, (int) $request->query('offset', 0)));
         }
 
