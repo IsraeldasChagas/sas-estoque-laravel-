@@ -11142,26 +11142,19 @@ let rhCandAcumulado = [];
 let rhCandLoadSeq = 0;
 
 async function loadRhCandidatos(filtros = {}, opts = {}) {
-  const append = opts.append === true;
-  if (!append) {
-    rhCandLoadSeq += 1;
-    rhCandOffset = 0;
-    rhCandAcumulado = [];
-  }
+  rhCandLoadSeq += 1;
   const seq = rhCandLoadSeq;
   const qs = new URLSearchParams();
   ["status", "nome", "vaga_id"].forEach((k) => {
     if (filtros[k]) qs.append(k, filtros[k]);
   });
-  qs.set("limit", String(RH_CAND_PAGE));
-  qs.set("offset", String(append ? rhCandOffset : 0));
   if (opts.bustCache) qs.append("_t", String(Date.now()));
-  const lista = await fetchJSON(`/rh/candidatos?${qs.toString()}`);
+  const url = qs.toString() ? `/rh/candidatos?${qs}` : "/rh/candidatos";
+  const lista = await fetchJSON(url);
   if (seq !== rhCandLoadSeq) return;
-  const page = Array.isArray(lista) ? lista : [];
-  rhCandAcumulado = append ? rhCandAcumulado.concat(page) : page;
+  rhCandAcumulado = Array.isArray(lista) ? lista : [];
   rhCandOffset = rhCandAcumulado.length;
-  renderRhCandidatos(rhCandAcumulado, page.length === RH_CAND_PAGE);
+  renderRhCandidatos(rhCandAcumulado, false);
 }
 
 function rhSim(v) {
@@ -11205,11 +11198,11 @@ function renderRhCandidatos(lista, temMais) {
     const temCurriculo = rhSim(c.tem_curriculo);
     const temFoto = rhSim(c.tem_foto);
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
-    const fotoPronta = c.foto_url ? rhUrlFotoPronta(c.foto_url) : "";
-    if (fotoPronta) rhFotoCache.set(String(c.id), fotoPronta);
-    const foto = fotoPronta
-      ? `<img class="rh-cand-card__photo" alt="" decoding="async" loading="lazy" data-rh-foto-id="${esc(c.id)}" src="${esc(fotoPronta)}" />`
-      : `<div class="rh-cand-card__photo rh-cand-card__photo--wait"${temFoto ? ` data-rh-cand-foto-card="${esc(c.id)}"` : ""} aria-hidden="true">${esc(rhIniciais(c.nome))}</div>`;
+    const fotoUrl = getUsuarioFotoUrl(c.foto || "");
+    if (fotoUrl) rhFotoCache.set(String(c.id), fotoUrl);
+    const foto = fotoUrl
+      ? `<img class="rh-cand-card__photo" alt="" decoding="async" loading="lazy" src="${esc(fotoUrl)}" />`
+      : `<div class="rh-cand-card__photo rh-cand-card__photo--wait" aria-hidden="true">${esc(rhIniciais(c.nome))}</div>`;
     const tel = String(c.telefone || "").trim();
     return `<article class="rh-cand-card" data-id="${esc(c.id)}">
       <div class="rh-cand-card__top">
@@ -11252,7 +11245,6 @@ function renderRhCandidatos(lista, temMais) {
       });
     });
   }
-  rhCarregarFotosCandidatos();
 }
 
 const rhFotoCache = new Map();
@@ -11299,6 +11291,7 @@ function rhPayloadDaLista(c) {
       created_at: c.created_at,
       consentimento_lgpd: c.consentimento_lgpd,
       consentimento_em: c.consentimento_em,
+      foto: c.foto || "",
       grau_instrucao_escolar: c.grau_instrucao_escolar || "",
       etnia_racial: c.etnia_racial || "",
       observacoes_internas: "",
@@ -11577,7 +11570,8 @@ function renderRhCandidatoInlineRow(payload) {
   if (!c) return "";
   const vagaTitulo = payload?.vaga?.titulo || payload?.vaga?.titulo_vaga || payload?.vaga?.titulo || payload?.candidato?.vaga_titulo || "";
   const temCurriculo = !!payload?.tem_curriculo || !!payload?.curriculo;
-  const temFoto = !!payload?.tem_foto || !!c.foto_path;
+  const temFoto = !!payload?.tem_foto || !!c.foto || !!c.foto_path;
+  const fotoUrl = getUsuarioFotoUrl(c.foto || (c.foto_path ? `storage/${String(c.foto_path).replace(/^storage\//, "")}` : ""));
   const esc = (s) => escapeHtml(String(s ?? ""));
   const lgpd = c.consentimento_lgpd ? `OK (${(c.consentimento_em || "").toString().slice(0,19).replace("T"," ")})` : "NÃO";
   const stCand = (c.status || "novo").toString();
@@ -11613,7 +11607,7 @@ function renderRhCandidatoInlineRow(payload) {
       <div class="form-card rh-cand-detail">
         <div style="display:flex; gap: 1rem; align-items:flex-start; flex-wrap:wrap;">
           <div style="min-width: 120px;">
-            ${temFoto ? `<div data-rh-cand-foto="1" style="width:110px;height:110px;border-radius:10px;background:#e5e7eb;"></div>` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
+            ${fotoUrl ? `<img src="${esc(fotoUrl)}" alt="" class="rh-cand-card__photo" style="width:110px;height:110px;" loading="lazy" />` : `<div class="usuarios-foto usuarios-foto--placeholder" style="width:110px;height:110px;border-radius:10px;"></div>`}
           </div>
           <div style="flex:1; min-width: 260px;">
             <div class="filters-grid">

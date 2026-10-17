@@ -64,6 +64,7 @@ class RhCandidatoController extends Controller
             'rh_candidatos.consentimento_em',
             'rh_candidatos.data_inscricao',
             'rh_candidatos.created_at',
+            'rh_candidatos.foto_path',
             'rh_vagas.titulo as vaga_titulo',
         ];
 
@@ -80,20 +81,13 @@ class RhCandidatoController extends Controller
             $q->where('rh_candidatos.nome', 'like', '%' . $request->nome . '%');
         }
 
-        if ($request->query('todos') === '1') {
-            $q->limit(500);
-        } else {
-            $limit = (int) $request->query('limit', 24);
-            if ($limit <= 0) {
-                $limit = 24;
-            }
-            $q->limit(min($limit, 100))->offset(max(0, (int) $request->query('offset', 0)));
-        }
+        $q->limit(500);
 
         $rows = $q->get();
         foreach ($rows as $row) {
-            $thumb = storage_path('app/public/rh/thumbs/cand-'.$row->id.'.jpg');
-            $row->foto_url = is_file($thumb) ? 'storage/rh/thumbs/cand-'.$row->id.'.jpg' : null;
+            $path = trim((string) ($row->foto_path ?? ''));
+            $row->foto = $path !== '' ? 'storage/'.$path : null;
+            unset($row->foto_path);
         }
 
         return response()->json($rows)->header('Access-Control-Allow-Origin', '*');
@@ -134,6 +128,7 @@ class RhCandidatoController extends Controller
         $docTokenGerado = $c->documentacao_token_gerado_em ?? null;
         $docPublicaAtiva = (bool) (! empty($c->documentacao_token_hash));
         $temFoto = ! empty($c->foto_path);
+        $c->foto = $temFoto ? 'storage/'.$c->foto_path : null;
 
         unset(
             $c->experiencia,
