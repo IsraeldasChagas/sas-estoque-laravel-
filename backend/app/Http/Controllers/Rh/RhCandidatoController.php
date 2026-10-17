@@ -71,8 +71,6 @@ class RhCandidatoController extends Controller
         $q = DB::table('rh_candidatos')
             ->leftJoin('rh_vagas', 'rh_candidatos.vaga_id', '=', 'rh_vagas.id')
             ->select($cols)
-            ->selectRaw("(rh_candidatos.foto_path IS NOT NULL AND rh_candidatos.foto_path <> '') as tem_foto")
-            ->selectRaw("EXISTS (SELECT 1 FROM rh_curriculos cv WHERE cv.candidato_id = rh_candidatos.id AND cv.arquivo_path IS NOT NULL AND cv.arquivo_path <> '') as tem_curriculo")
             ->orderByDesc('rh_candidatos.id');
 
         if ($request->filled('status')) $q->where('rh_candidatos.status', $request->status);
@@ -84,9 +82,22 @@ class RhCandidatoController extends Controller
         $q->limit(500);
 
         $rows = $q->get();
+        $ids = $rows->pluck('id')->filter()->values();
+        $comCv = $ids->isEmpty()
+            ? collect()
+            : DB::table('rh_curriculos')
+                ->whereIn('candidato_id', $ids)
+                ->whereNotNull('arquivo_path')
+                ->where('arquivo_path', '<>', '')
+                ->distinct()
+                ->pluck('candidato_id')
+                ->flip();
         foreach ($rows as $row) {
             $path = trim((string) ($row->foto_path ?? ''));
-            $row->foto = $path !== '' ? 'storage/'.$path : null;
+            $publica = public_path('uploads/candidatos/'.$row->id.'.jpg');
+            $row->tem_foto = $path !== '' ? 1 : 0;
+            $row->foto = is_file($publica) ? 'uploads/candidatos/'.$row->id.'.jpg' : null;
+            $row->tem_curriculo = isset($comCv[$row->id]) ? 1 : 0;
             unset($row->foto_path);
         }
 
@@ -128,7 +139,8 @@ class RhCandidatoController extends Controller
         $docTokenGerado = $c->documentacao_token_gerado_em ?? null;
         $docPublicaAtiva = (bool) (! empty($c->documentacao_token_hash));
         $temFoto = ! empty($c->foto_path);
-        $c->foto = $temFoto ? 'storage/'.$c->foto_path : null;
+        $publica = public_path('uploads/candidatos/'.$id.'.jpg');
+        $c->foto = is_file($publica) ? 'uploads/candidatos/'.$id.'.jpg' : null;
 
         unset(
             $c->experiencia,
@@ -463,8 +475,8 @@ class RhCandidatoController extends Controller
             return response()->json(['error' => 'Sem permissão.'], 403)->header('Access-Control-Allow-Origin', '*');
         }
 
-        $rel = 'rh/thumbs/cand-'.$id.'.jpg';
-        $abs = storage_path('app/public/'.$rel);
+        $rel = 'uploads/candidatos/'.$id.'.jpg';
+        $abs = public_path($rel);
         if (! is_file($abs)) {
             $path = DB::table('rh_candidatos')->where('id', $id)->value('foto_path');
             if (! $path || ! $this->gravarMiniatura(Storage::disk('public'), (string) $path, $id) || ! is_file($abs)) {
@@ -473,7 +485,7 @@ class RhCandidatoController extends Controller
         }
 
         if ($request->query('preparar') === '1') {
-            return response()->json(['url' => 'storage/'.$rel])->header('Access-Control-Allow-Origin', '*');
+            return response()->json(['url' => $rel])->header('Access-Control-Allow-Origin', '*');
         }
 
         return response()->file($abs, [
@@ -485,8 +497,8 @@ class RhCandidatoController extends Controller
 
     private function gravarMiniatura($disk, string $path, int $id): bool
     {
-        $dir = storage_path('app/public/rh/thumbs');
-        $dest = $dir.'/cand-'.$id.'.jpg';
+        $dir = public_path('uploads/candidatos');
+        $dest = $dir.'/'.$id.'.jpg';
         if (is_file($dest) && filesize($dest) > 0) {
             return true;
         }
@@ -514,7 +526,7 @@ class RhCandidatoController extends Controller
 
         $w = imagesx($src);
         $h = imagesy($src);
-        $max = 96;
+        $max = 200;
         $scale = min($max / max($w, 1), $max / max($h, 1), 1);
         $nw = max(1, (int) round($w * $scale));
         $nh = max(1, (int) round($h * $scale));

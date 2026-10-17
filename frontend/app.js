@@ -11198,11 +11198,11 @@ function renderRhCandidatos(lista, temMais) {
     const temCurriculo = rhSim(c.tem_curriculo);
     const temFoto = rhSim(c.tem_foto);
     const badgeCurriculo = temCurriculo ? ' <span title="Tem currículo anexado" aria-label="Tem currículo anexado">📎</span>' : "";
-    const fotoUrl = getUsuarioFotoUrl(c.foto || "");
+    const fotoUrl = c.foto ? getUsuarioFotoUrl(c.foto) : null;
     if (fotoUrl) rhFotoCache.set(String(c.id), fotoUrl);
     const foto = fotoUrl
-      ? `<img class="rh-cand-card__photo" alt="" decoding="async" loading="lazy" src="${esc(fotoUrl)}" />`
-      : `<div class="rh-cand-card__photo rh-cand-card__photo--wait" aria-hidden="true">${esc(rhIniciais(c.nome))}</div>`;
+      ? `<img src="${esc(fotoUrl)}" alt="" class="usuarios-foto rh-cand-card__photo" loading="lazy" />`
+      : `<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo"${temFoto ? ` data-rh-cand-foto-card="${esc(c.id)}"` : ""} aria-label="Sem foto"></div>`;
     const tel = String(c.telefone || "").trim();
     return `<article class="rh-cand-card" data-id="${esc(c.id)}">
       <div class="rh-cand-card__top">
@@ -11245,6 +11245,7 @@ function renderRhCandidatos(lista, temMais) {
       });
     });
   }
+  rhCarregarFotosCandidatos();
 }
 
 const rhFotoCache = new Map();
@@ -11403,15 +11404,14 @@ async function rhGerarProximaFoto() {
   rhFotoGerando = true;
   try {
     const out = await fetchJSON(`/rh/candidatos/${encodeURIComponent(id)}/foto?preparar=1`);
-    const url = rhUrlFotoPronta(out && out.url ? out.url : id);
-    rhFotoCache.set(String(id), url);
+    const url = getUsuarioFotoUrl(out && out.url ? out.url : "");
+    if (url) rhFotoCache.set(String(id), url);
     const el = document.querySelector(`#rhCandidatosTable [data-rh-cand-foto-card="${CSS.escape(String(id))}"]`);
-    if (el) {
+    if (el && url) {
       const img = document.createElement("img");
-      img.className = "rh-cand-card__photo";
+      img.className = "usuarios-foto rh-cand-card__photo";
       img.alt = "";
-      img.decoding = "async";
-      img.dataset.rhFotoId = String(id);
+      img.loading = "lazy";
       img.src = url;
       el.replaceWith(img);
     }
