@@ -1334,6 +1334,12 @@ body.sidebar-open {
   font-weight: 700;
 }
 
+#rhVagasSection .btn-rh-vaga-ver {
+  background: #eef2f6;
+  border-color: #d5dde6;
+  color: #334155;
+}
+
 #rhVagasSection .btn-rh-vaga-copiar-link {
   background: #e6f1fb;
   border-color: #c5ddf3;
@@ -1374,6 +1380,41 @@ body.sidebar-open {
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+#rhVagaVerBody .rh-vaga-ver__sub {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+#rhVagaVerBody .rh-vaga-ver__grid {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#rhVagaVerBody .rh-vaga-ver__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#rhVagaVerBody .rh-vaga-ver__row span {
+  color: var(--muted);
+}
+
+#rhVagaVerBody .rh-vaga-ver__bloco {
+  margin-top: 12px;
+}
+
+#rhVagaVerBody .rh-vaga-ver__bloco h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+#rhVagaVerBody .rh-vaga-ver__bloco p {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 #rhVagasSection .rh-vaga-pill--ok { background: #d9f5ef; color: #0f766e; }

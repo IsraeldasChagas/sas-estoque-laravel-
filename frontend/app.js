@@ -11087,6 +11087,7 @@ function renderRhVagas(lista) {
         <div class="rh-vaga-card__row"><span>Contratação</span><strong>${esc(v.tipo_contratacao || "—")}</strong></div>
       </div>
       <div class="rh-vaga-card__actions">
+        <button type="button" class="btn btn-rh-vaga-ver" data-id="${esc(v.id)}">Ver</button>
         <button type="button" class="btn btn-rh-vaga-copiar-link" data-link="${esc(link)}">Copiar link</button>
         <button type="button" class="btn btn-rh-vaga-qrcode" data-id="${esc(v.id)}">QR Code</button>
         <button type="button" class="btn btn-rh-vaga-editar" data-id="${esc(v.id)}">Editar</button>
@@ -17135,10 +17136,18 @@ function setupNavigation() {
   document.getElementById("rhVagaModal")?.addEventListener("click", (e) => {
     if (e.target && e.target.id === "rhVagaModal") fecharRhVagaModal();
   });
+  const fecharRhVagaVer = () => {
+    document.getElementById("rhVagaVerModal")?.classList.remove("active");
+  };
+  document.getElementById("rhVagaVerFechar")?.addEventListener("click", fecharRhVagaVer);
+  document.getElementById("rhVagaVerModal")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "rhVagaVerModal") fecharRhVagaVer();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       const modal = document.getElementById("rhVagaModal");
       if (modal?.classList?.contains("active")) fecharRhVagaModal();
+      fecharRhVagaVer();
     }
   });
 
@@ -17252,6 +17261,49 @@ function setupNavigation() {
         a.remove();
       } catch (err) {
         showToast(err?.message || "Erro ao gerar QR Code.", "error");
+      }
+      return;
+    }
+
+    const btnVer = e.target.closest(".btn-rh-vaga-ver");
+    if (btnVer) {
+      e.preventDefault();
+      const id = Number(btnVer.dataset.id || "");
+      if (!id) return;
+      const modal = document.getElementById("rhVagaVerModal");
+      const body = document.getElementById("rhVagaVerBody");
+      const tituloEl = document.getElementById("rhVagaVerTitulo");
+      if (!modal || !body) return;
+      body.innerHTML = "<p>Carregando...</p>";
+      if (tituloEl) tituloEl.textContent = "Vaga";
+      modal.classList.add("active");
+      try {
+        const vaga = await fetchJSON(`/rh/vagas/${id}`);
+        const esc = (s) => escapeHtml(String(s ?? ""));
+        const statusLabel = { aberta: "Aberta", pausada: "Pausada", encerrada: "Encerrada" };
+        const st = String(vaga.status || "aberta").toLowerCase();
+        const bloco = (rotulo, texto) => {
+          const t = String(texto || "").trim();
+          if (!t) return "";
+          return `<div class="rh-vaga-ver__bloco"><h3>${rotulo}</h3><p>${esc(t)}</p></div>`;
+        };
+        if (tituloEl) tituloEl.textContent = vaga.titulo || "Vaga";
+        body.innerHTML = `
+          <p class="rh-vaga-ver__sub">${esc([vaga.unidade, vaga.setor].filter(Boolean).join(" · ") || "Sem unidade")}</p>
+          <div class="rh-vaga-ver__grid">
+            <div class="rh-vaga-ver__row"><span>Status</span><strong>${esc(statusLabel[st] || st)}</strong></div>
+            <div class="rh-vaga-ver__row"><span>Quantidade</span><strong>${esc(vaga.quantidade ?? "—")}</strong></div>
+            <div class="rh-vaga-ver__row"><span>Contratação</span><strong>${esc(vaga.tipo_contratacao || "—")}</strong></div>
+            <div class="rh-vaga-ver__row"><span>Horário</span><strong>${esc(vaga.horarios_trabalho || "—")}</strong></div>
+          </div>
+          ${bloco("Descrição", vaga.descricao)}
+          ${bloco("Requisitos", vaga.requisitos)}
+          ${bloco("Benefícios", vaga.beneficios)}
+        `;
+      } catch (err) {
+        body.innerHTML = "";
+        modal.classList.remove("active");
+        showToast(err?.message || "Não foi possível abrir a vaga.", "error");
       }
       return;
     }
