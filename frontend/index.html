@@ -96,15 +96,15 @@
             <h2>Acesse sua conta</h2>
             <p>Use suas credenciais corporativas.</p>
           </header>
-          <form id="loginForm" class="login-form">
+          <form id="loginForm" class="login-form" autocomplete="off">
             <label class="login-field">
               <span>Email</span>
-              <input type="email" id="loginEmail" name="username" placeholder="exemplo@empresa.com" autocomplete="username" required />
+              <input type="email" id="loginEmail" name="email" placeholder="exemplo@empresa.com" autocomplete="off" required />
             </label>
             <label class="login-field">
               <span>Senha</span>
               <div class="login-field__input-wrapper">
-                <input type="password" id="loginPassword" name="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+                <input type="password" id="loginPassword" name="sas-acesso" placeholder="Digite sua senha" autocomplete="off" required />
                 <button
                   type="button"
                   class="password-toggle"
@@ -537,15 +537,15 @@
               <form id="minhaContaForm">
                 <label class="form-card__field">
                   Senha atual
-                  <input type="password" name="senha_atual" placeholder="Digite sua senha atual" required />
+                  <input type="password" name="senha_atual" placeholder="Digite sua senha atual" autocomplete="off" required />
                 </label>
                 <label class="form-card__field">
                   Nova senha
-                  <input type="password" name="nova_senha" placeholder="Mínimo 6 caracteres" required minlength="6" />
+                  <input type="password" name="nova_senha" placeholder="Mínimo 6 caracteres" autocomplete="off" required minlength="6" />
                 </label>
                 <label class="form-card__field">
                   Confirmar nova senha
-                  <input type="password" name="confirmar_senha" placeholder="Repita a nova senha" required />
+                  <input type="password" name="confirmar_senha" placeholder="Repita a nova senha" autocomplete="off" required />
                 </label>
                 <button type="submit" class="btn primary">Alterar senha</button>
               </form>
@@ -7948,7 +7948,21 @@
     <script defer src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
     <script defer src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script defer src="pwa.js?v=20261015-pwa"></script>
-    <script defer src="app.js?v=20261017-rh10"></script>
+    <script>
+      (function () {
+        try {
+          if (!localStorage.getItem("sas-estoque-user")) return;
+          document.querySelectorAll('input[type="password"]').forEach(function (el) {
+            el.setAttribute("data-sas-senha", "1");
+            el.setAttribute("autocomplete", "off");
+            el.value = "";
+            el.readOnly = true;
+            el.type = "text";
+          });
+        } catch (e) {}
+      })();
+    </script>
+    <script defer src="app.js?v=20261017-rh11"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

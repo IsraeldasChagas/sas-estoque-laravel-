@@ -12207,6 +12207,15 @@ async function startAppSession(user) {
   }
   
   // Esconde tela de login e mostra aplicação
+  document.querySelectorAll('input[type="password"]').forEach((el) => {
+    el.setAttribute("autocomplete", "off");
+    el.value = el.id === "loginPassword" ? "" : el.value;
+    if (el.id === "loginPassword") {
+      el.readOnly = true;
+      el.type = "text";
+      el.dataset.sasSenha = "1";
+    }
+  });
   if (dom.loginOverlay) {
     dom.loginOverlay.classList.add("hidden");
   } else {
@@ -12649,6 +12658,12 @@ function handleLogout() {
   }
   clearUser();
   resetForms();
+  const campoSenhaLogin = document.getElementById("loginPassword");
+  if (campoSenhaLogin) {
+    campoSenhaLogin.readOnly = false;
+    campoSenhaLogin.type = "password";
+    campoSenhaLogin.value = "";
+  }
   dom.appShell.classList.add("hidden");
   dom.loginOverlay.classList.remove("hidden");
   setSidebarOpen(false);
@@ -27360,6 +27375,13 @@ async function init() {
     }, 500);
   }
   dom.logoutBtn?.addEventListener("click", handleLogout);
+  document.addEventListener("focusin", (event) => {
+    const el = event.target;
+    if (!el || el.tagName !== "INPUT" || el.dataset.sasSenha !== "1") return;
+    if (el.id === "loginPassword" && dom.loginOverlay?.classList.contains("hidden")) return;
+    el.readOnly = false;
+    el.type = "password";
+  });
   
   // Função para atualizar referências do DOM quando uma seção é carregada dinamicamente
   function refreshDOMReferences() {
