@@ -4478,6 +4478,18 @@ body.image-lightbox-open {
 #valeConsumoSection .vale-consumo-lancamentos-head {
   margin-bottom: 0.75rem;
 }
+#valeConsumoSection .table-card.form-card--wide {
+  border: none;
+  background: var(--bg);
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+}
+#valeConsumoSection .table-card.form-card--wide > header {
+  border-bottom: none;
+  background: transparent;
+}
+#valeConsumoSection .vale-consumo-cards {
+  padding: 0 14px 14px;
+}
 #valeConsumoSection .vale-consumo-totais-bar {
   display: flex;
   flex-wrap: wrap;
