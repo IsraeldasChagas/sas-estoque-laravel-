@@ -10732,7 +10732,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
                 . '<td>' . e((string) ($d->funcionario_nome ?? '')) . '</td>'
                 . '<td class="num">' . e($fmt($vv)) . '</td>'
                 . '<td class="num">' . e($fmt($vc)) . '</td>'
-                . '<td class="num" style="background:rgba(21,101,192,0.06);font-weight:600">' . e($fmt($vt)) . '</td>'
+                . '<td class="num" style="background:rgba(21,101,192,0.06);font-weight:bold">' . e($fmt($vt)) . '</td>'
                 . '<td>' . e((string) ($d->usuario_nome ?? '')) . '</td>'
                 . '</tr>';
         }
@@ -10792,6 +10792,7 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
         table.lanc{width:100%;border-collapse:collapse;margin-top:6px;font-size:8.5pt;}
         table.lanc th,table.lanc td{border:1px solid #cfd8dc;padding:4px 5px;}
         table.lanc th{background:#eceff1;text-align:left;font-size:8pt;font-weight:700;}
+        table.lanc tr.lanc-total td{background:#e3f2fd;font-weight:700;color:#0d47a1;border-top:2px solid #1565c0;}
         .num{text-align:right;}
         .pdf-rod{margin-top:14px;font-size:7.5pt;color:#607d8b;border-top:1px solid #e0e0e0;padding-top:6px;text-align:center;}
         </style></head><body>';
@@ -10817,9 +10818,19 @@ Route::get('/financeiro/vale-consumo/relatorio.pdf', function (Request $request)
             . '<div class="tot-bar-cell"><div class="tot-lbl">Total</div><div class="tot-val">R$ ' . e($fmt($totGeral)) . '</div></div>'
             . '</div></div>';
 
+        $rowTotal = $nLanc > 0
+            ? '<tfoot><tr class="lanc-total">'
+                . '<td colspan="3">TOTAL</td>'
+                . '<td class="num">' . e($fmt($totV)) . '</td>'
+                . '<td class="num">' . e($fmt($totC)) . '</td>'
+                . '<td class="num">' . e($fmt($totGeral)) . '</td>'
+                . '<td></td>'
+                . '</tr></tfoot>'
+            : '';
+
         $html .= '<h2>Lançamentos</h2><table class="lanc"><thead><tr>'
             . '<th>ID</th><th>Data</th><th>Funcionário</th><th class="num">Vale</th><th class="num">Consumo</th><th class="num">Total</th><th>Usuário</th>'
-            . '</tr></thead><tbody>' . $rowsDet . '</tbody></table>';
+            . '</tr></thead><tbody>' . $rowsDet . '</tbody>' . $rowTotal . '</table>';
 
         $html .= '<div class="pdf-rod">Grupo Sabor Paraense — relatório gerado pelo sistema.</div></body></html>';
 
