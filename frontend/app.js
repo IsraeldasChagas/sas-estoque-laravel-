@@ -997,7 +997,10 @@ function valeConsumoRenderDetalhe(tb, lista) {
           </div>
         </div>
         <div class="rh-cand-card__actions">
-          <button type="button" class="btn btn-rh-toggle" data-valecons-toggle="${esc(g.chave)}">${aberto ? "Fechar" : "Abrir"}</button>
+          ${aberto
+            ? `<button type="button" class="btn btn-rh-toggle" data-valecons-pdf="${esc(r.funcionario_id ?? "")}">PDF</button>
+          <button type="button" class="btn" data-valecons-toggle="${esc(g.chave)}">Fechar</button>`
+            : `<button type="button" class="btn btn-rh-toggle" data-valecons-toggle="${esc(g.chave)}">Abrir</button>`}
         </div>
         ${aberto ? `<div class="rh-cand-card__details">${valeConsumoCardLancamentos(g.itens, isAtendenteCaixa)}</div>` : ""}
       </article>`;
@@ -1121,13 +1124,19 @@ async function downloadValeConsumoCsv() {
   }, 30_000);
 }
 
-async function abrirValeConsumoRelatorioPdf() {
-  const qs = valeConsumoMontarQueryString();
+async function abrirValeConsumoRelatorioPdf(funcionarioId) {
+  let qs = valeConsumoMontarQueryString();
+  if (funcionarioId) {
+    const p = new URLSearchParams(qs.replace(/^\?/, ""));
+    p.delete("busca");
+    p.set("funcionario_id", String(funcionarioId));
+    qs = `?${p.toString()}`;
+  }
   const di = document.getElementById("valeConsumoDataInicio")?.value || "ini";
   const df = document.getElementById("valeConsumoDataFim")?.value || "fim";
   const sepDl = qs.includes("?") ? "&" : "?";
   await abrirModalPdfNoViewerDoAlvara({
-    nomeArquivo: `vale-consumo-${di}-${df}.pdf`,
+    nomeArquivo: `vale-consumo-${di}-${df}${funcionarioId ? `-func${funcionarioId}` : ""}.pdf`,
     titulo: "📄 Vale / consumo (relatório)",
     viewApiPath: `/financeiro/vale-consumo/relatorio.pdf${qs}`,
     downloadApiPath: `/financeiro/vale-consumo/relatorio.pdf${qs}${sepDl}download=1`,
@@ -1247,6 +1256,14 @@ function valeConsumoBindOnce() {
       if (valeConsumoCardsAbertos.has(chave)) valeConsumoCardsAbertos.delete(chave);
       else valeConsumoCardsAbertos.add(chave);
       valeConsumoRenderDetalhe(document.getElementById("valeConsumoTableDetalhe"), valeConsumoDetalheCache);
+      return;
+    }
+    const pdfBtn = e.target.closest("[data-valecons-pdf]");
+    if (pdfBtn && e.currentTarget.contains(pdfBtn)) {
+      const funcionarioId = pdfBtn.getAttribute("data-valecons-pdf");
+      if (funcionarioId) {
+        await abrirValeConsumoRelatorioPdf(funcionarioId).catch((err) => showToast(err?.message || "Erro ao abrir PDF.", "error"));
+      }
       return;
     }
     const btn = e.target.closest("[data-valecons-action]");
