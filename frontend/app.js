@@ -996,13 +996,15 @@ function valeConsumoRenderDetalhe(tb, lista) {
             </div>
           </div>
         </div>
+        ${aberto
+          ? `<div class="rh-cand-card__details">${valeConsumoCardLancamentos(g.itens, isAtendenteCaixa)}</div>
         <div class="rh-cand-card__actions">
-          ${aberto
-            ? `<button type="button" class="btn btn-rh-toggle" data-valecons-pdf="${esc(r.funcionario_id ?? "")}">PDF</button>
-          <button type="button" class="btn neutral" data-valecons-toggle="${esc(g.chave)}">Fechar</button>`
-            : `<button type="button" class="btn btn-rh-toggle" data-valecons-toggle="${esc(g.chave)}">Abrir</button>`}
-        </div>
-        ${aberto ? `<div class="rh-cand-card__details">${valeConsumoCardLancamentos(g.itens, isAtendenteCaixa)}</div>` : ""}
+          <button type="button" class="btn btn-rh-toggle" data-valecons-pdf="${esc(r.funcionario_id ?? "")}">PDF</button>
+          <button type="button" class="btn neutral" data-valecons-toggle="${esc(g.chave)}">Fechar</button>
+        </div>`
+          : `<div class="rh-cand-card__actions">
+          <button type="button" class="btn btn-rh-toggle" data-valecons-toggle="${esc(g.chave)}">Abrir</button>
+        </div>`}
       </article>`;
     })
     .join("");
