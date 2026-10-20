@@ -1125,12 +1125,14 @@ body.sidebar-open {
   font-size: 0.85rem;
 }
 
-#rhCandidatosSection .rh-cand-list {
+#rhCandidatosSection .rh-cand-list,
+#valeConsumoSection .rh-cand-list {
   display: grid;
   gap: 12px;
 }
 
-#rhCandidatosSection .rh-cand-empty {
+#rhCandidatosSection .rh-cand-empty,
+#valeConsumoSection .rh-cand-empty {
   margin: 0;
   padding: 28px 12px;
   text-align: center;
@@ -1140,7 +1142,8 @@ body.sidebar-open {
   border-radius: 16px;
 }
 
-#rhCandidatosSection .rh-cand-card {
+#rhCandidatosSection .rh-cand-card,
+#valeConsumoSection .rh-cand-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -1148,13 +1151,15 @@ body.sidebar-open {
   padding: 14px 16px;
 }
 
-#rhCandidatosSection .rh-cand-card__top {
+#rhCandidatosSection .rh-cand-card__top,
+#valeConsumoSection .rh-cand-card__top {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
-#rhCandidatosSection .rh-cand-card__photo {
+#rhCandidatosSection .rh-cand-card__photo,
+#valeConsumoSection .rh-cand-card__photo {
   width: 72px;
   height: 72px;
   flex: 0 0 auto;
@@ -1163,7 +1168,8 @@ body.sidebar-open {
   background: #e5e7eb;
 }
 
-#rhCandidatosSection .rh-cand-card__photo--wait {
+#rhCandidatosSection .rh-cand-card__photo--wait,
+#valeConsumoSection .rh-cand-card__photo--wait {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1173,55 +1179,64 @@ body.sidebar-open {
   color: #546e7a;
 }
 
-#rhCandidatosSection .rh-cand-card__main {
+#rhCandidatosSection .rh-cand-card__main,
+#valeConsumoSection .rh-cand-card__main {
   flex: 1;
   min-width: 0;
 }
 
-#rhCandidatosSection .rh-cand-card__head {
+#rhCandidatosSection .rh-cand-card__head,
+#valeConsumoSection .rh-cand-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
 }
 
-#rhCandidatosSection .rh-cand-card__name {
+#rhCandidatosSection .rh-cand-card__name,
+#valeConsumoSection .rh-cand-card__name {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--text);
 }
 
-#rhCandidatosSection .rh-cand-card__sub {
+#rhCandidatosSection .rh-cand-card__sub,
+#valeConsumoSection .rh-cand-card__sub {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.92rem;
 }
 
-#rhCandidatosSection .rh-cand-card__meta {
+#rhCandidatosSection .rh-cand-card__meta,
+#valeConsumoSection .rh-cand-card__meta {
   display: grid;
   gap: 8px;
   margin-top: 12px;
 }
 
-#rhCandidatosSection .rh-cand-card__row {
+#rhCandidatosSection .rh-cand-card__row,
+#valeConsumoSection .rh-cand-card__row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: baseline;
 }
 
-#rhCandidatosSection .rh-cand-card__row span {
+#rhCandidatosSection .rh-cand-card__row span,
+#valeConsumoSection .rh-cand-card__row span {
   color: var(--muted);
   font-size: 0.9rem;
 }
 
-#rhCandidatosSection .rh-cand-card__row strong {
+#rhCandidatosSection .rh-cand-card__row strong,
+#valeConsumoSection .rh-cand-card__row strong {
   text-align: right;
   overflow-wrap: anywhere;
 }
 
-#rhCandidatosSection .rh-cand-card__actions {
+#rhCandidatosSection .rh-cand-card__actions,
+#valeConsumoSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1229,18 +1244,21 @@ body.sidebar-open {
   align-items: center;
 }
 
-#rhCandidatosSection .rh-cand-card__actions .rh-wa-btn {
+#rhCandidatosSection .rh-cand-card__actions .rh-wa-btn,
+#valeConsumoSection .rh-cand-card__actions .rh-wa-btn {
   width: auto;
   margin-top: 0;
 }
 
-#rhCandidatosSection .rh-cand-card .btn-rh-toggle {
+#rhCandidatosSection .rh-cand-card .btn-rh-toggle,
+#valeConsumoSection .rh-cand-card .btn-rh-toggle {
   background: #0f766e;
   border-color: #0f766e;
   color: #fff;
 }
 
-#rhCandidatosSection .rh-cand-pill {
+#rhCandidatosSection .rh-cand-pill,
+#valeConsumoSection .rh-cand-pill {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
@@ -1251,10 +1269,14 @@ body.sidebar-open {
   white-space: nowrap;
 }
 
-#rhCandidatosSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
-#rhCandidatosSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
-#rhCandidatosSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
-#rhCandidatosSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
+#rhCandidatosSection .rh-cand-pill--ok,
+#valeConsumoSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
+#rhCandidatosSection .rh-cand-pill--warn,
+#valeConsumoSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
+#rhCandidatosSection .rh-cand-pill--danger,
+#valeConsumoSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
+#rhCandidatosSection .rh-cand-pill--info,
+#valeConsumoSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
 
 #rhVagasSection .rh-vaga-list {
   display: grid;
@@ -1446,7 +1468,8 @@ body.sidebar-open {
 #rhVagasSection .rh-vaga-pill--danger { background: #fde8e8; color: #b42323; }
 #rhVagasSection .rh-vaga-pill--info { background: #e6f1fb; color: #1d4e89; }
 
-#rhCandidatosSection .rh-cand-card__details {
+#rhCandidatosSection .rh-cand-card__details,
+#valeConsumoSection .rh-cand-card__details {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
@@ -1461,7 +1484,8 @@ body.sidebar-open {
 }
 
 @media (max-width: 720px) {
-  #rhCandidatosSection .rh-cand-card__actions .btn {
+  #rhCandidatosSection .rh-cand-card__actions .btn,
+  #valeConsumoSection .rh-cand-card__actions .btn {
     flex: 1 1 140px;
     justify-content: center;
   }

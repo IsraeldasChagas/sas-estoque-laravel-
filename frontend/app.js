@@ -914,30 +914,24 @@ function valeConsumoAtualizarTotaisBar(lista) {
   eg.textContent = fmtBRLValeConsumo(totalGeral);
 }
 
-function valeConsumoRenderDetalhe(tb, lista) {
-  if (!tb) return;
-  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
-  const isAtendenteCaixa = perfilAtual === "ATENDENTE_CAIXA";
-  const thAcoes = document.getElementById("valeConsumoAcoesHeader");
-  if (thAcoes) thAcoes.style.display = isAtendenteCaixa ? "none" : "";
-  const cols = isAtendenteCaixa ? 8 : 9;
-  if (!lista.length) {
-    valeConsumoAtualizarTotaisBar([]);
-    tb.innerHTML =
-      `<tr class="vale-consumo-tabela-msg"><td colspan="${cols}" style="text-align:center;color:#607d8b">Nenhum lançamento no período / unidade selecionados.</td></tr>`;
-    return;
+const valeConsumoCardsAbertos = new Set();
+
+function valeConsumoAgruparPorFuncionario(lista) {
+  const grupos = new Map();
+  for (const r of lista || []) {
+    const chave = String(r.funcionario_id ?? r.funcionario_nome ?? "");
+    if (!grupos.has(chave)) grupos.set(chave, { chave, primeiro: r, itens: [] });
+    grupos.get(chave).itens.push(r);
   }
-  valeConsumoAtualizarTotaisBar(lista);
-  const linhas = lista
+  return [...grupos.values()].sort((a, b) =>
+    String(a.primeiro.funcionario_nome || "").localeCompare(String(b.primeiro.funcionario_nome || ""), "pt-BR")
+  );
+}
+
+function valeConsumoCardLancamentos(itens, isAtendenteCaixa) {
+  const linhas = itens
     .map((r) => {
       const id = escapeHtml(String(r.id ?? ""));
-      const dt = escapeHtml(valeConsumoFormatarDataBR(r.data_lancamento));
-      const nome = escapeHtml(String(r.funcionario_nome || "—"));
-      const vv = fmtBRLValeConsumo(r.valor_vale);
-      const vc = fmtBRLValeConsumo(r.valor_consumo);
-      const vt = fmtBRLValeConsumo(valeConsumoLinhaTotal(r));
-      const usuario = escapeHtml(String(r.usuario_nome || "—"));
-      const obs = escapeHtml(String(r.observacao || "").slice(0, 80));
       const acoes = isAtendenteCaixa
         ? ""
         : `<td class="table-actions" data-label="Ações">
@@ -945,19 +939,70 @@ function valeConsumoRenderDetalhe(tb, lista) {
           <button type="button" class="table-action danger" data-valecons-action="del" data-id="${id}">Excluir</button>
         </td>`;
       return `<tr>
-        <td data-label="ID">${id}</td>
-        <td data-label="Data">${dt}</td>
-        <td data-label="Funcionário">${nome}</td>
-        <td data-label="Vale">${vv}</td>
-        <td data-label="Consumo">${vc}</td>
-        <td data-label="Total" style="text-align:right;font-weight:600">${vt}</td>
-        <td data-label="Usuário">${usuario}</td>
-        <td data-label="Obs.">${obs || "—"}</td>
+        <td data-label="Data">${escapeHtml(valeConsumoFormatarDataBR(r.data_lancamento))}</td>
+        <td data-label="Vale">${fmtBRLValeConsumo(r.valor_vale)}</td>
+        <td data-label="Consumo">${fmtBRLValeConsumo(r.valor_consumo)}</td>
+        <td data-label="Total" style="text-align:right;font-weight:600">${fmtBRLValeConsumo(valeConsumoLinhaTotal(r))}</td>
+        <td data-label="Usuário">${escapeHtml(String(r.usuario_nome || "—"))}</td>
+        <td data-label="Obs.">${escapeHtml(String(r.observacao || "").slice(0, 80)) || "—"}</td>
         ${acoes}
       </tr>`;
     })
     .join("");
-  tb.innerHTML = linhas;
+  return `<div class="table-wrapper"><table>
+    <thead><tr><th>Data</th><th>Vale</th><th>Consumo</th><th>Total</th><th>Usuário</th><th>Obs.</th>${isAtendenteCaixa ? "" : "<th>Ações</th>"}</tr></thead>
+    <tbody>${linhas}</tbody>
+  </table></div>`;
+}
+
+function valeConsumoRenderDetalhe(tb, lista) {
+  if (!tb) return;
+  const perfilAtual = (currentUser?.perfil || "").toString().trim().toUpperCase();
+  const isAtendenteCaixa = perfilAtual === "ATENDENTE_CAIXA";
+  if (!lista.length) {
+    valeConsumoAtualizarTotaisBar([]);
+    tb.innerHTML = '<p class="rh-cand-empty">Nenhum lançamento no período / unidade selecionados.</p>';
+    return;
+  }
+  valeConsumoAtualizarTotaisBar(lista);
+  const esc = (s) => escapeHtml(String(s ?? ""));
+  tb.innerHTML = valeConsumoAgruparPorFuncionario(lista)
+    .map((g) => {
+      const r = g.primeiro;
+      const func = (state.funcionarios || []).find((f) => String(f.id) === String(r.funcionario_id));
+      const fotoUrl = func?.foto ? getUsuarioFotoUrl(func.foto) : null;
+      const foto = fotoUrl
+        ? `<img src="${esc(fotoUrl)}" alt="" class="usuarios-foto rh-cand-card__photo" loading="lazy" />`
+        : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-label="Sem foto"></div>';
+      const { totalVale, totalConsumo, totalGeral } = valeConsumoSomarTotaisLista(g.itens);
+      const sub = [r.funcionario_cargo || func?.cargo, r.unidade_nome || func?.unidade_nome].filter(Boolean).join(" · ");
+      const qtd = g.itens.length;
+      const aberto = valeConsumoCardsAbertos.has(g.chave);
+      return `<article class="rh-cand-card" data-valecons-card="${esc(g.chave)}">
+        <div class="rh-cand-card__top">
+          ${foto}
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${esc(r.funcionario_nome || "—")}</h3>
+                <p class="rh-cand-card__sub">${esc(sub || "Sem cargo")}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--info">${qtd} ${qtd === 1 ? "lançamento" : "lançamentos"}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Vale</span><strong>${fmtBRLValeConsumo(totalVale)}</strong></div>
+              <div class="rh-cand-card__row"><span>Consumo</span><strong>${fmtBRLValeConsumo(totalConsumo)}</strong></div>
+              <div class="rh-cand-card__row"><span>Total</span><strong>${fmtBRLValeConsumo(totalGeral)}</strong></div>
+            </div>
+          </div>
+        </div>
+        <div class="rh-cand-card__actions">
+          <button type="button" class="btn btn-rh-toggle" data-valecons-toggle="${esc(g.chave)}">${aberto ? "Fechar" : "Abrir"}</button>
+        </div>
+        ${aberto ? `<div class="rh-cand-card__details">${valeConsumoCardLancamentos(g.itens, isAtendenteCaixa)}</div>` : ""}
+      </article>`;
+    })
+    .join("");
 }
 
 async function loadValeConsumoSection() {
@@ -998,7 +1043,7 @@ async function loadValeConsumoSection() {
   }
 
   valeConsumoAtualizarTotaisBar(undefined);
-  tbDet.innerHTML = `<tr class="vale-consumo-tabela-msg"><td colspan="9" style="text-align:center;color:#607d8b">Carregando…</td></tr>`;
+  tbDet.innerHTML = '<p class="rh-cand-empty">Carregando…</p>';
 
   const qs = valeConsumoMontarQueryString();
   try {
@@ -1008,7 +1053,7 @@ async function loadValeConsumoSection() {
   } catch (e) {
     valeConsumoAtualizarTotaisBar(undefined);
     const msg = escapeHtml(String(e?.message || "Erro"));
-    tbDet.innerHTML = `<tr class="vale-consumo-tabela-msg"><td colspan="9" style="text-align:center;color:#c62828">${msg}</td></tr>`;
+    tbDet.innerHTML = `<p class="rh-cand-empty" style="color:#c62828">${msg}</p>`;
   }
 }
 
@@ -1196,6 +1241,14 @@ function valeConsumoBindOnce() {
   });
 
   document.getElementById("valeConsumoSection")?.addEventListener("click", async (e) => {
+    const toggle = e.target.closest("[data-valecons-toggle]");
+    if (toggle && e.currentTarget.contains(toggle)) {
+      const chave = toggle.getAttribute("data-valecons-toggle") || "";
+      if (valeConsumoCardsAbertos.has(chave)) valeConsumoCardsAbertos.delete(chave);
+      else valeConsumoCardsAbertos.add(chave);
+      valeConsumoRenderDetalhe(document.getElementById("valeConsumoTableDetalhe"), valeConsumoDetalheCache);
+      return;
+    }
     const btn = e.target.closest("[data-valecons-action]");
     if (!btn || !e.currentTarget.contains(btn)) return;
     const id = btn.getAttribute("data-id");
