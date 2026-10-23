@@ -451,28 +451,66 @@
       const pu = data.por_unidade || [];
       mk("patChartUnidade", pu.map((x) => x.label || "?"), pu.map((x) => x.total));
     }
-    const movTb = document.getElementById("patDashMovTbody");
+    const movTb = document.getElementById("patDashMovLista");
     if (movTb) {
       const movs = data.ultimas_movimentacoes || [];
       movTb.innerHTML = movs.length
-        ? movs.map((m) => `<tr><td>${fmtData(m.created_at)}</td><td>${esc(m.patrimonio_nome || m.codigo)}</td><td>${esc(m.tipo)}</td><td>${esc((m.observacao || "").slice(0, 80))}</td></tr>`).join("")
-        : '<tr><td colspan="4" style="text-align:center;color:#90a4ae">Nenhuma movimentação recente</td></tr>';
+        ? movs.map((m) => patDashCard({
+            titulo: m.patrimonio_nome || m.codigo,
+            sub: m.codigo ? `Código ${m.codigo}` : "",
+            pill: String(m.tipo || "").replace(/_/g, " ").replace(/^./, (letra) => letra.toUpperCase()),
+            tom: "info",
+            linhas: [["Data", fmtData(m.created_at)], ["Observação", (m.observacao || "").slice(0, 120) || "—"]],
+          })).join("")
+        : '<p class="rh-cand-empty">Nenhuma movimentação recente.</p>';
     }
     const al = document.getElementById("patDashAlertas");
     if (al) {
       const alertas = data.alertas_manutencao || [];
       al.innerHTML = alertas.length
-        ? alertas.map((a) => `<div class="pat-alerta-item"><strong>${esc(a.patrimonio_nome)}</strong> (${esc(a.codigo)}) — manutenção até ${fmtData(a.proxima_manutencao)}</div>`).join("")
-        : '<p class="subtle-text">Nenhum alerta de manutenção nos próximos 30 dias.</p>';
+        ? alertas.map((a) => patDashCard({
+            titulo: a.patrimonio_nome,
+            sub: a.codigo ? `Código ${a.codigo}` : "",
+            pill: "Manutenção",
+            tom: "warn",
+            linhas: [["Manutenção até", fmtData(a.proxima_manutencao)]],
+          })).join("")
+        : '<p class="rh-cand-empty">Nenhum alerta de manutenção nos próximos 30 dias.</p>';
     }
     const gar = document.getElementById("patDashGarantias");
     if (gar) {
       const g = data.garantias_vencendo || [];
       gar.innerHTML = g.length
-        ? g.map((x) => `<div class="pat-alerta-item"><strong>${esc(x.nome)}</strong> (${esc(x.codigo)}) — ${esc(x.tipo_alerta)} vence em ${fmtData(x.data_vencimento)}</div>`).join("")
-        : '<p class="subtle-text">Nenhum vencimento de garantia/IPVA nos próximos 60 dias.</p>';
+        ? g.map((x) => patDashCard({
+            titulo: x.nome,
+            sub: x.codigo ? `Código ${x.codigo}` : "",
+            pill: x.tipo_alerta,
+            tom: "danger",
+            linhas: [["Vence em", fmtData(x.data_vencimento)]],
+          })).join("")
+        : '<p class="rh-cand-empty">Nenhum vencimento de garantia/IPVA nos próximos 60 dias.</p>';
     }
   };
+
+  function patDashCard({ titulo, sub, pill, tom, linhas }) {
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-hidden="true"></div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo || "—")}</h3>
+              ${sub ? `<p class="rh-cand-card__sub">${esc(sub)}</p>` : ""}
+            </div>
+            ${pill ? `<span class="rh-cand-pill rh-cand-pill--${tom}">${esc(pill)}</span>` : ""}
+          </div>
+          <div class="rh-cand-card__meta">
+            ${linhas.map(([rotulo, valor]) => `<div class="rh-cand-card__row"><span>${esc(rotulo)}</span><strong>${esc(valor)}</strong></div>`).join("")}
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
 
   window.loadPatrimonios = async function loadPatrimonios() {
     const tb = document.getElementById("patListaTbody");
