@@ -10796,3 +10796,12 @@ select[size]:not([size="1"]) {
 #patrimonioDashboardSection .pat-dash-lista-card > header h3 {
   margin: 0;
 }
+#patrimonioDashboardSection .table-card,
+#patrimonioDashboardSection .patrimonio-card,
+#patrimonioDashboardSection .patrimonio-chart-box,
+#patrimonioDashboardSection .rh-cand-card {
+  border: none;
+}
+#patrimonioDashboardSection .table-card > header {
+  border-bottom: none;
+}
