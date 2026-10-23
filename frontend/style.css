@@ -10748,3 +10748,12 @@ select[size]:not([size="1"]) {
 #rhFolhaPontoSection .rh-fp-cards {
   padding: 1rem;
 }
+#rhFolhaPontoSection .table-card.rh-fp-lista-card {
+  border: none;
+  background: var(--bg);
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+}
+#rhFolhaPontoSection .table-card.rh-fp-lista-card > header {
+  border-bottom: none;
+  background: transparent;
+}
