@@ -10805,3 +10805,18 @@ select[size]:not([size="1"]) {
 #patrimonioDashboardSection .table-card > header {
   border-bottom: none;
 }
+#patrimonioDashboardSection .pat-page-wrap {
+  background: var(--bg);
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#patrimonioDashboardSection .table-card.pat-dash-lista-card {
+  background: transparent;
+  box-shadow: none;
+}
+#patrimonioDashboardSection .pat-dash-lista-card > header,
+#patrimonioDashboardSection .pat-dash-cards {
+  padding-left: 0;
+  padding-right: 0;
+}
