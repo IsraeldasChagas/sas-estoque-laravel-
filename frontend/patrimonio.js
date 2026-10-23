@@ -647,15 +647,19 @@
     const tb = document.getElementById("patManTbody");
     if (!tb) return;
     tb.innerHTML = rows.length
-      ? rows.map((m) => `<tr>
-          <td>${fmtData(m.data_manutencao)}</td>
-          <td>${esc(m.patrimonio_nome)} (${esc(m.codigo)})</td>
-          <td>${esc(m.tipo_manutencao)}</td>
-          <td>${esc(m.tecnico || "—")}</td>
-          <td>${fmtMoeda(m.custo)}</td>
-          <td>${fmtData(m.proxima_manutencao)}</td>
-        </tr>`).join("")
-      : '<tr><td colspan="6" style="text-align:center">Nenhuma manutenção</td></tr>';
+      ? rows.map((m) => patDashCard({
+          titulo: m.patrimonio_nome || m.codigo,
+          sub: m.codigo ? `Código ${m.codigo}` : "",
+          pill: String(m.tipo_manutencao || "").replace(/_/g, " ").replace(/^./, (letra) => letra.toUpperCase()),
+          tom: "warn",
+          linhas: [
+            ["Data", fmtData(m.data_manutencao)],
+            ["Técnico", m.tecnico || "—"],
+            ["Custo", fmtMoeda(m.custo)],
+            ["Próxima manutenção", fmtData(m.proxima_manutencao)],
+          ],
+        })).join("")
+      : '<p class="rh-cand-empty">Nenhuma manutenção.</p>';
   };
 
   function patRelDescricaoFiltros(f) {
