@@ -875,15 +875,25 @@
     const tb = document.getElementById("patInvListaTbody");
     if (!tb) return;
     tb.innerHTML = rows.length
-      ? rows.map((i) => `<tr>
-          <td>${esc(i.titulo)}</td>
-          <td>${esc(i.unidade_nome || "Todas")}</td>
-          <td>${esc(i.status)}</td>
-          <td>${fmtData(i.data_inicio)}</td>
-          <td><button type="button" class="btn secondary pat-inv-abrir" data-id="${i.id}" data-titulo="${esc(i.titulo)}" data-status="${esc(i.status)}">Conferir</button></td>
-        </tr>`).join("")
-      : '<tr><td colspan="5" style="text-align:center">Nenhum inventário</td></tr>';
+      ? rows.map((i) => {
+          const fechado = i.status === "fechado";
+          return patDashCard({
+            titulo: i.titulo,
+            sub: i.unidade_nome || "Todas as unidades",
+            pill: fechado ? "Encerrado" : String(i.status || "Aberto").replace(/^./, (letra) => letra.toUpperCase()),
+            tom: fechado ? "ok" : "warn",
+            linhas: [["Início", fmtData(i.data_inicio)]],
+            acoes: `<button type="button" class="btn btn-rh-toggle pat-inv-abrir" data-id="${esc(i.id)}" data-titulo="${esc(i.titulo)}" data-status="${esc(i.status)}">Conferir</button>`,
+          });
+        }).join("")
+      : '<p class="rh-cand-empty">Nenhum inventário.</p>';
   };
+
+  function patInvDiffPill(diff) {
+    if (diff === null || diff === undefined || diff === "") return ["A conferir", "info"];
+    const n = Number(diff);
+    return n === 0 ? ["Confere", "ok"] : [`Diferença ${n > 0 ? "+" : ""}${n}`, "danger"];
+  }
 
   async function abrirInventarioItens(id, titulo, status) {
     patState.inventarioId = id;
@@ -893,19 +903,42 @@
     if (fecharBtn) fecharBtn.style.display = status === "fechado" ? "none" : "";
     const itens = await patFetch(`/patrimonio/inventario/${id}/itens`);
     const tb = document.getElementById("patInvItensTbody");
-    tb.innerHTML = itens.map((it) => `
-      <tr>
-        <td>${esc(it.codigo)}</td>
-        <td>${esc(it.patrimonio_nome)}</td>
-        <td>${it.qtd_sistema}</td>
-        <td><input type="number" min="0" class="pat-inv-qtd" data-item="${it.id}" value="${it.qtd_encontrada ?? ""}" style="width:4rem" ${status === "fechado" ? "disabled" : ""} /></td>
-        <td class="pat-inv-diff" data-item="${it.id}">${it.diferenca ?? "—"}</td>
-        <td><input type="text" class="pat-inv-obs" data-item="${it.id}" value="${esc(it.observacao || "")}" ${status === "fechado" ? "disabled" : ""} /></td>
-        <td>
-          ${status === "fechado" ? "" : `<button type="button" class="btn neutral pat-inv-salvar" data-item="${it.id}">OK</button>
-          <label class="btn neutral pat-inv-foto-label" style="margin:0">📷<input type="file" accept="image/*" class="pat-inv-foto-input" data-item="${it.id}" hidden /></label>`}
-        </td>
-      </tr>`).join("");
+    if (!itens.length) {
+      tb.innerHTML = '<p class="rh-cand-empty">Nenhum item neste inventário.</p>';
+      return;
+    }
+    const fechado = status === "fechado";
+    tb.innerHTML = itens.map((it) => {
+      const [pill, tom] = patInvDiffPill(it.diferenca);
+      return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-hidden="true"></div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(it.patrimonio_nome || "—")}</h3>
+              <p class="rh-cand-card__sub">Código ${esc(it.codigo || "—")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${tom} pat-inv-pill" data-item="${esc(it.id)}">${esc(pill)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Qtd no sistema</span><strong>${esc(it.qtd_sistema)}</strong></div>
+            <div class="rh-cand-card__row"><span>Diferença</span><strong class="pat-inv-diff" data-item="${esc(it.id)}">${esc(it.diferenca ?? "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions pat-inv-conferir">
+        <label class="pat-inv-campo">Qtd encontrada
+          <input type="number" min="0" class="pat-inv-qtd" data-item="${esc(it.id)}" data-sistema="${esc(it.qtd_sistema)}" value="${esc(it.qtd_encontrada ?? "")}" ${fechado ? "disabled" : ""} />
+        </label>
+        <label class="pat-inv-campo pat-inv-campo--obs">Observação
+          <input type="text" class="pat-inv-obs" data-item="${esc(it.id)}" value="${esc(it.observacao || "")}" ${fechado ? "disabled" : ""} />
+        </label>
+        ${fechado ? "" : `<button type="button" class="btn btn-rh-toggle pat-inv-salvar" data-item="${esc(it.id)}">OK</button>
+        <label class="btn neutral pat-inv-foto-label" style="margin:0">📷 Foto<input type="file" accept="image/*" class="pat-inv-foto-input" data-item="${esc(it.id)}" hidden /></label>`}
+      </div>
+    </article>`;
+    }).join("");
   }
 
   function toggleCamposEspecificos() {
@@ -1387,8 +1420,17 @@
             body: JSON.stringify({ qtd_encontrada: qtd, observacao: obs, localizacao: "" }),
           });
           const diffEl = document.querySelector(`.pat-inv-diff[data-item="${itemId}"]`);
-          const qtdSis = parseInt(document.querySelector(`.pat-inv-qtd[data-item="${itemId}"]`)?.closest("tr")?.children[2]?.textContent || "0", 10);
-          if (diffEl && qtd !== "") diffEl.textContent = String(parseInt(qtd, 10) - qtdSis);
+          const qtdSis = parseInt(document.querySelector(`.pat-inv-qtd[data-item="${itemId}"]`)?.dataset.sistema || "0", 10);
+          if (qtd !== "") {
+            const diff = parseInt(qtd, 10) - qtdSis;
+            if (diffEl) diffEl.textContent = String(diff);
+            const pillEl = document.querySelector(`.pat-inv-pill[data-item="${itemId}"]`);
+            if (pillEl) {
+              const [texto, tom] = patInvDiffPill(diff);
+              pillEl.textContent = texto;
+              pillEl.className = `rh-cand-pill rh-cand-pill--${tom} pat-inv-pill`;
+            }
+          }
           patToast("Item conferido.", "success");
         } catch (err) {
           patToast(err.message, "error");

@@ -4505,11 +4505,11 @@
           <section id="patrimonioInventarioSection" class="view-section hidden">
             <div class="patrimonio-section-head"><h2>📋 Inventário patrimonial</h2><button type="button" class="btn primary" id="patInvBtnNovo">+ Novo inventário</button></div>
             <div class="pat-page-wrap">
-              <div class="table-card form-card--wide">
+              <div class="table-card form-card--wide pat-dash-lista-card">
                 <header><h3>Inventários</h3></header>
-                <div class="table-wrapper"><table><thead><tr><th>Título</th><th>Unidade</th><th>Status</th><th>Início</th><th>Ações</th></tr></thead><tbody id="patInvListaTbody"></tbody></table></div>
+                <div class="rh-cand-list pat-dash-cards" id="patInvListaTbody"></div>
               </div>
-              <div class="table-card form-card--wide hidden" id="patInvItensCard">
+              <div class="table-card form-card--wide pat-dash-lista-card hidden" id="patInvItensCard">
                 <header class="pat-inv-itens-head">
                   <h3 id="patInvItensTitulo">Itens do inventário</h3>
                   <span class="pat-inv-itens-actions">
@@ -4518,7 +4518,7 @@
                     <button type="button" class="btn primary" id="patInvFechar">Encerrar inventário</button>
                   </span>
                 </header>
-                <div class="table-wrapper"><table><thead><tr><th>Código</th><th>Patrimônio</th><th>Qtd sistema</th><th>Qtd encontrada</th><th>Diferença</th><th>Obs.</th><th></th></tr></thead><tbody id="patInvItensTbody"></tbody></table></div>
+                <div class="rh-cand-list pat-dash-cards" id="patInvItensTbody"></div>
               </div>
             </div>
           </section>
@@ -7885,7 +7885,7 @@
     <!-- Script principal da aplicacao -->
     <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script defer src="energia.js?v=20260615-submenu-fix2"></script>
-    <script defer src="patrimonio.js?v=20261023-pat-man"></script>
+    <script defer src="patrimonio.js?v=20261023-pat-inv"></script>
     <script defer src="investimento.js?v=20260607-investimento-collapse"></script>
     <script defer src="openclaw-integracao.js?v=20260706-oc4"></script>
     <script defer src="ayla-ia.js?v=20260714-ayla-padrao"></script>
