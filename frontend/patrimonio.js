@@ -492,7 +492,7 @@
     }
   };
 
-  function patDashCard({ titulo, sub, pill, tom, linhas }) {
+  function patDashCard({ titulo, sub, pill, tom, linhas, acoes = "" }) {
     return `<article class="rh-cand-card">
       <div class="rh-cand-card__top">
         <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-hidden="true"></div>
@@ -509,13 +509,16 @@
           </div>
         </div>
       </div>
+      ${acoes ? `<div class="rh-cand-card__actions">${acoes}</div>` : ""}
     </article>`;
   }
+
+  const PAT_SITUACAO = { ativo: ["Ativo", "ok"], manutencao: ["Em manutenção", "warn"], baixado: ["Baixado", "danger"], vendido: ["Vendido", "danger"], quebrado: ["Quebrado", "danger"] };
 
   window.loadPatrimonios = async function loadPatrimonios() {
     const tb = document.getElementById("patListaTbody");
     if (tb) {
-      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Carregando patrimônios…</td></tr>';
+      tb.innerHTML = '<p class="rh-cand-empty">Carregando patrimônios…</p>';
     }
     try {
       await Promise.all([
@@ -530,31 +533,30 @@
     } catch (e) {
       patState.patrimonios = [];
       if (tb) {
-        tb.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${esc(e.message || "Erro ao carregar patrimônios")}</td></tr>`;
+        tb.innerHTML = `<p class="rh-cand-empty" style="color:#c62828">${esc(e.message || "Erro ao carregar patrimônios")}</p>`;
       }
       patToast(e.message || "Erro ao buscar patrimônios.", "error");
       return;
     }
     if (!tb) return;
     if (!patState.patrimonios.length) {
-      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado</td></tr>';
+      tb.innerHTML = '<p class="rh-cand-empty">Nenhum patrimônio encontrado.</p>';
       return;
     }
-    tb.innerHTML = patState.patrimonios.map((p) => `
-      <tr>
-        <td data-label="Setor">${esc(p.setor || "—")}</td>
-        <td data-label="Nome">${esc(p.nome)}</td>
-        <td data-label="Categoria">${esc(p.categoria_nome || "—")}</td>
-        <td data-label="Unidade">${esc(p.unidade_nome || "—")}</td>
-        <td data-label="Situação">${situacaoBadge(p.situacao)}</td>
-        <td data-label="Valor">${fmtMoeda(p.valor_atual)}</td>
-        <td data-label="QR"><button type="button" class="pat-action-btn pat-btn-qr" data-token="${esc(p.qr_token)}" title="QR Code">📱</button></td>
-        <td data-label="Ações">
-          <button type="button" class="pat-action-btn pat-btn-ver" data-id="${p.id}" title="Ver ficha patrimônio">👁</button>
-          <button type="button" class="pat-action-btn pat-btn-editar" data-id="${p.id}" title="Editar patrimônio">✎</button>
-          <button type="button" class="pat-action-btn pat-action-btn--danger pat-btn-excluir" data-id="${p.id}" title="Excluir patrimônio">✕</button>
-        </td>
-      </tr>`).join("");
+    tb.innerHTML = patState.patrimonios.map((p) => {
+      const [situacao, tom] = PAT_SITUACAO[p.situacao] || [p.situacao || "—", "info"];
+      return patDashCard({
+        titulo: p.nome,
+        sub: [p.categoria_nome, p.unidade_nome].filter(Boolean).join(" · "),
+        pill: situacao,
+        tom,
+        linhas: [["Código", p.codigo || "—"], ["Setor", p.setor || "—"], ["Valor atual", fmtMoeda(p.valor_atual)]],
+        acoes: `<button type="button" class="btn btn-rh-toggle pat-btn-ver" data-id="${esc(p.id)}">Ver</button>
+          <button type="button" class="btn primary pat-btn-editar" data-id="${esc(p.id)}">Editar</button>
+          <button type="button" class="btn neutral pat-btn-qr" data-token="${esc(p.qr_token)}">QR Code</button>
+          <button type="button" class="btn pat-btn-excluir" data-id="${esc(p.id)}" style="background:#b71c1c;border-color:#b71c1c;color:#fff;">Excluir</button>`,
+      });
+    }).join("");
   };
 
   async function abrirFichaPatrimonio(id) {
