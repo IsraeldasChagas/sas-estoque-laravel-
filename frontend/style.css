@@ -1126,13 +1126,15 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-list,
-#valeConsumoSection .rh-cand-list {
+#valeConsumoSection .rh-cand-list,
+#funcionariosSection .rh-cand-list {
   display: grid;
   gap: 12px;
 }
 
 #rhCandidatosSection .rh-cand-empty,
-#valeConsumoSection .rh-cand-empty {
+#valeConsumoSection .rh-cand-empty,
+#funcionariosSection .rh-cand-empty {
   margin: 0;
   padding: 28px 12px;
   text-align: center;
@@ -1143,7 +1145,8 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card,
-#valeConsumoSection .rh-cand-card {
+#valeConsumoSection .rh-cand-card,
+#funcionariosSection .rh-cand-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -1152,14 +1155,16 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__top,
-#valeConsumoSection .rh-cand-card__top {
+#valeConsumoSection .rh-cand-card__top,
+#funcionariosSection .rh-cand-card__top {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
 #rhCandidatosSection .rh-cand-card__photo,
-#valeConsumoSection .rh-cand-card__photo {
+#valeConsumoSection .rh-cand-card__photo,
+#funcionariosSection .rh-cand-card__photo {
   width: 72px;
   height: 72px;
   flex: 0 0 auto;
@@ -1169,7 +1174,8 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__photo--wait,
-#valeConsumoSection .rh-cand-card__photo--wait {
+#valeConsumoSection .rh-cand-card__photo--wait,
+#funcionariosSection .rh-cand-card__photo--wait {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1180,13 +1186,15 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__main,
-#valeConsumoSection .rh-cand-card__main {
+#valeConsumoSection .rh-cand-card__main,
+#funcionariosSection .rh-cand-card__main {
   flex: 1;
   min-width: 0;
 }
 
 #rhCandidatosSection .rh-cand-card__head,
-#valeConsumoSection .rh-cand-card__head {
+#valeConsumoSection .rh-cand-card__head,
+#funcionariosSection .rh-cand-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1194,7 +1202,8 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__name,
-#valeConsumoSection .rh-cand-card__name {
+#valeConsumoSection .rh-cand-card__name,
+#funcionariosSection .rh-cand-card__name {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
@@ -1202,21 +1211,24 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__sub,
-#valeConsumoSection .rh-cand-card__sub {
+#valeConsumoSection .rh-cand-card__sub,
+#funcionariosSection .rh-cand-card__sub {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.92rem;
 }
 
 #rhCandidatosSection .rh-cand-card__meta,
-#valeConsumoSection .rh-cand-card__meta {
+#valeConsumoSection .rh-cand-card__meta,
+#funcionariosSection .rh-cand-card__meta {
   display: grid;
   gap: 8px;
   margin-top: 12px;
 }
 
 #rhCandidatosSection .rh-cand-card__row,
-#valeConsumoSection .rh-cand-card__row {
+#valeConsumoSection .rh-cand-card__row,
+#funcionariosSection .rh-cand-card__row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -1224,19 +1236,22 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__row span,
-#valeConsumoSection .rh-cand-card__row span {
+#valeConsumoSection .rh-cand-card__row span,
+#funcionariosSection .rh-cand-card__row span {
   color: var(--muted);
   font-size: 0.9rem;
 }
 
 #rhCandidatosSection .rh-cand-card__row strong,
-#valeConsumoSection .rh-cand-card__row strong {
+#valeConsumoSection .rh-cand-card__row strong,
+#funcionariosSection .rh-cand-card__row strong {
   text-align: right;
   overflow-wrap: anywhere;
 }
 
 #rhCandidatosSection .rh-cand-card__actions,
-#valeConsumoSection .rh-cand-card__actions {
+#valeConsumoSection .rh-cand-card__actions,
+#funcionariosSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1245,20 +1260,23 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-card__actions .rh-wa-btn,
-#valeConsumoSection .rh-cand-card__actions .rh-wa-btn {
+#valeConsumoSection .rh-cand-card__actions .rh-wa-btn,
+#funcionariosSection .rh-cand-card__actions .rh-wa-btn {
   width: auto;
   margin-top: 0;
 }
 
 #rhCandidatosSection .rh-cand-card .btn-rh-toggle,
-#valeConsumoSection .rh-cand-card .btn-rh-toggle {
+#valeConsumoSection .rh-cand-card .btn-rh-toggle,
+#funcionariosSection .rh-cand-card .btn-rh-toggle {
   background: #0f766e;
   border-color: #0f766e;
   color: #fff;
 }
 
 #rhCandidatosSection .rh-cand-pill,
-#valeConsumoSection .rh-cand-pill {
+#valeConsumoSection .rh-cand-pill,
+#funcionariosSection .rh-cand-pill {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
@@ -1270,13 +1288,17 @@ body.sidebar-open {
 }
 
 #rhCandidatosSection .rh-cand-pill--ok,
-#valeConsumoSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
+#valeConsumoSection .rh-cand-pill--ok,
+#funcionariosSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
 #rhCandidatosSection .rh-cand-pill--warn,
-#valeConsumoSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
+#valeConsumoSection .rh-cand-pill--warn,
+#funcionariosSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
 #rhCandidatosSection .rh-cand-pill--danger,
-#valeConsumoSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
+#valeConsumoSection .rh-cand-pill--danger,
+#funcionariosSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
 #rhCandidatosSection .rh-cand-pill--info,
-#valeConsumoSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
+#valeConsumoSection .rh-cand-pill--info,
+#funcionariosSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
 
 #rhVagasSection .rh-vaga-list {
   display: grid;
@@ -1469,7 +1491,8 @@ body.sidebar-open {
 #rhVagasSection .rh-vaga-pill--info { background: #e6f1fb; color: #1d4e89; }
 
 #rhCandidatosSection .rh-cand-card__details,
-#valeConsumoSection .rh-cand-card__details {
+#valeConsumoSection .rh-cand-card__details,
+#funcionariosSection .rh-cand-card__details {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
@@ -1485,7 +1508,8 @@ body.sidebar-open {
 
 @media (max-width: 720px) {
   #rhCandidatosSection .rh-cand-card__actions .btn,
-  #valeConsumoSection .rh-cand-card__actions .btn {
+  #valeConsumoSection .rh-cand-card__actions .btn,
+  #funcionariosSection .rh-cand-card__actions .btn {
     flex: 1 1 140px;
     justify-content: center;
   }

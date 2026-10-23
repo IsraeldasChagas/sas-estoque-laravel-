@@ -11952,45 +11952,51 @@ function renderFuncionarios(lista) {
   const target = dom.funcionariosTable;
   if (!target) return;
   if (!Array.isArray(lista) || lista.length === 0) {
-    target.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#607d8b">Nenhum funcionário encontrado.</td></tr>';
+    target.innerHTML = '<p class="rh-cand-empty">Nenhum funcionário encontrado.</p>';
     return;
   }
   const escape = (s) => (s == null || s === undefined ? "" : String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
-  const rows = lista.map(f => {
+  const cards = lista.map(f => {
     const isAtivo = (f.status || "ativo") === "ativo";
-    const statusCls = isAtivo ? "status-pill status-pill--success" : "status-pill status-pill--inactive";
-    const statusLabel = isAtivo ? "Ativo" : "Inativo";
-    const acessoLabel = f.possui_acesso ? "Sim" : "Não";
     const salarioLabel = f.salario_base != null && Number(f.salario_base) > 0 ? formatCurrencyBRL(f.salario_base) : "—";
-    const btnInativar = isAtivo ? `<button type="button" class="table-action btn-inativar-funcionario" data-id="${f.id}" title="Inativar">Inativar</button>` : "";
+    const btnInativar = isAtivo ? `<button type="button" class="btn neutral btn-inativar-funcionario" data-id="${f.id}">Inativar</button>` : "";
     const btnExcluir = isAdmin()
-      ? `<button type="button" class="table-action btn-excluir-funcionario" data-id="${f.id}" title="Excluir" style="background:#b71c1c;color:#fff;">Excluir</button>`
+      ? `<button type="button" class="btn btn-excluir-funcionario" data-id="${f.id}" style="background:#b71c1c;border-color:#b71c1c;color:#fff;">Excluir</button>`
       : "";
     const fotoUrl = f.foto ? getUsuarioFotoUrl(f.foto) : null;
-    const fotoCell = fotoUrl
-      ? `<img src="${fotoUrl}" alt="${escape(f.nome_completo)}" class="usuarios-foto" loading="lazy" />`
-      : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
-    return `<tr data-id="${f.id}"${!isAtivo ? ' class="funcionario-inativo"' : ""}>
-      <td data-label="Foto">${fotoCell}</td>
-      <td data-label="ID">${escape(f.id)}</td>
-      <td data-label="Nome">${escape(f.nome_completo)}</td>
-      <td data-label="CPF">${escape(f.cpf)}</td>
-      <td data-label="Cargo">${escape(f.cargo)}</td>
-      <td data-label="Unidade">${escape(f.unidade_nome || "-")}</td>
-      <td data-label="Salário">${salarioLabel}</td>
-      <td data-label="WhatsApp">${escape(f.whatsapp || "-")}</td>
-      <td data-label="E-mail">${escape(f.email || "-")}</td>
-      <td data-label="Status"><span class="${statusCls}">${statusLabel}</span></td>
-      <td data-label="Acesso">${acessoLabel}</td>
-      <td data-label="Ações" class="table-actions">
-        <button type="button" class="table-action btn-view-funcionario" data-id="${f.id}" title="Visualizar">Visualizar</button>
-        <button type="button" class="table-action btn-edit-funcionario" data-id="${f.id}" title="Editar">Editar</button>
+    const foto = fotoUrl
+      ? `<img src="${escape(fotoUrl)}" alt="" class="usuarios-foto rh-cand-card__photo" loading="lazy" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-label="Sem foto"></div>';
+    const sub = [f.cargo, f.unidade_nome].filter(Boolean).join(" · ") || "Sem cargo";
+    return `<article class="rh-cand-card${isAtivo ? "" : " funcionario-inativo"}" data-id="${escape(f.id)}">
+      <div class="rh-cand-card__top">
+        ${foto}
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escape(f.nome_completo || "—")}</h3>
+              <p class="rh-cand-card__sub">${escape(sub)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${isAtivo ? "ok" : "danger"}">${isAtivo ? "Ativo" : "Inativo"}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>CPF</span><strong>${escape(f.cpf || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>WhatsApp</span><strong>${escape(f.whatsapp || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>E-mail</span><strong>${escape(f.email || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Salário</span><strong>${salarioLabel}</strong></div>
+            <div class="rh-cand-card__row"><span>Acesso ao sistema</span><strong>${f.possui_acesso ? "Sim" : "Não"}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">
+        <button type="button" class="btn btn-rh-toggle btn-view-funcionario" data-id="${f.id}">Visualizar</button>
+        <button type="button" class="btn primary btn-edit-funcionario" data-id="${f.id}">Editar</button>
         ${btnInativar}
         ${btnExcluir}
-      </td>
-    </tr>`;
+      </div>
+    </article>`;
   });
-  target.innerHTML = rows.join("");
+  target.innerHTML = cards.join("");
 }
 
 const PROVENTO_STATUS_LABELS = {
