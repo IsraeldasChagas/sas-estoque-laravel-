@@ -10599,29 +10599,53 @@ async function loadRhFolhasPontoLista() {
   const tb = document.getElementById("rhFpListaBody");
   if (!tb) return;
   if (!lista.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b">Nenhuma folha neste filtro.</td></tr>';
+    tb.innerHTML = '<p class="rh-cand-empty">Nenhuma folha neste filtro.</p>';
     return;
   }
-  const mesesN = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const mesesL = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
   const esc = (s) => escapeHtml(String(s ?? ""));
+  const quando = (raw) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(raw || ""));
+    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : "—";
+  };
   tb.innerHTML = lista
     .map((row) => {
-      const per = `${mesesN[row.mes] || row.mes}/${row.ano}`;
-      const at = (row.updated_at || row.created_at || "").toString().slice(0, 16).replace("T", " ");
-      return `<tr data-id="${esc(row.id)}">
-      <td data-label="ID">${esc(row.id)}</td>
-      <td data-label="Unidade">${esc(row.unidade_nome || "—")}</td>
-      <td data-label="Período">${esc(per)}</td>
-      <td data-label="Funcionário">${esc(row.funcionario_nome)}</td>
-      <td data-label="CPF">${esc(row.funcionario_cpf || "—")}</td>
-      <td data-label="Atualizado">${esc(at || "—")}</td>
-      <td data-label="Ações" class="table-actions">
-        <button type="button" class="table-action btn-rh-fp-ver" data-id="${esc(row.id)}">Ver</button>
-        <button type="button" class="table-action btn-rh-fp-editar" data-id="${esc(row.id)}">Editar</button>
-        <button type="button" class="table-action btn-rh-fp-pdf" data-id="${esc(row.id)}">PDF</button>
-        <button type="button" class="table-action danger btn-rh-fp-excluir" data-id="${esc(row.id)}">Excluir</button>
-      </td>
-    </tr>`;
+      const per = `${mesesL[row.mes] || row.mes}/${row.ano}`;
+      const cpf = String(row.funcionario_cpf || "").replace(/\D/g, "");
+      const nome = String(row.funcionario_nome || "").trim().toLowerCase();
+      const func = (state.funcionarios || []).find((f) =>
+        cpf ? String(f.cpf || "").replace(/\D/g, "") === cpf : String(f.nome_completo || "").trim().toLowerCase() === nome
+      );
+      const fotoUrl = func?.foto ? getUsuarioFotoUrl(func.foto) : null;
+      const foto = fotoUrl
+        ? `<img src="${esc(fotoUrl)}" alt="" class="usuarios-foto rh-cand-card__photo" loading="lazy" />`
+        : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-label="Sem foto"></div>';
+      const sub = [row.funcionario_cargo || func?.cargo, row.unidade_nome].filter(Boolean).join(" · ") || "Sem unidade";
+      return `<article class="rh-cand-card" data-id="${esc(row.id)}">
+      <div class="rh-cand-card__top">
+        ${foto}
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(row.funcionario_nome || "—")}</h3>
+              <p class="rh-cand-card__sub">${esc(sub)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--info">${esc(per)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>CPF</span><strong>${esc(row.funcionario_cpf || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Unidade</span><strong>${esc(row.unidade_nome || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Atualizada em</span><strong>${esc(quando(row.updated_at || row.created_at))}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">
+        <button type="button" class="btn btn-rh-toggle btn-rh-fp-ver" data-id="${esc(row.id)}">Ver</button>
+        <button type="button" class="btn primary btn-rh-fp-editar" data-id="${esc(row.id)}">Editar</button>
+        <button type="button" class="btn neutral btn-rh-fp-pdf" data-id="${esc(row.id)}">PDF</button>
+        <button type="button" class="btn btn-rh-fp-excluir" data-id="${esc(row.id)}" style="background:#b71c1c;border-color:#b71c1c;color:#fff;">Excluir</button>
+      </div>
+    </article>`;
     })
     .join("");
 }
@@ -10674,7 +10698,7 @@ async function loadRhFolhaPontoSection() {
   rhFpRefreshFuncionariosSelect();
   await loadRhFolhasPontoLista().catch((err) => {
     const tb = document.getElementById("rhFpListaBody");
-    if (tb) tb.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao listar.")}</td></tr>`;
+    if (tb) tb.innerHTML = `<p class="rh-cand-empty" style="color:#c62828">${escapeHtml(err?.message || "Erro ao listar.")}</p>`;
   });
   rhFpAplicarUnidadeNoCabecalhoPdf(document.getElementById("rhFpUnidade")?.value || "");
   const tit = document.getElementById("rhFpEditorTitulo");
