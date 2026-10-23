@@ -627,15 +627,19 @@
     const tb = document.getElementById("patMovTbody");
     if (!tb) return;
     tb.innerHTML = rows.length
-      ? rows.map((m) => `<tr>
-          <td>${fmtData(m.created_at)}</td>
-          <td>${esc(m.patrimonio_nome || m.codigo)}</td>
-          <td>${esc(m.tipo)}</td>
-          <td>${esc(m.unidade_origem_nome || "—")} → ${esc(m.unidade_destino_nome || "—")}</td>
-          <td>${esc(m.responsavel_novo || m.responsavel_anterior || "—")}</td>
-          <td>${esc(m.observacao || "")}</td>
-        </tr>`).join("")
-      : '<tr><td colspan="6" style="text-align:center">Nenhuma movimentação</td></tr>';
+      ? rows.map((m) => patDashCard({
+          titulo: m.patrimonio_nome || m.codigo,
+          sub: m.codigo ? `Código ${m.codigo}` : "",
+          pill: String(m.tipo || "").replace(/_/g, " ").replace(/^./, (letra) => letra.toUpperCase()),
+          tom: "info",
+          linhas: [
+            ["Data", fmtData(m.created_at)],
+            ["De → Para", `${m.unidade_origem_nome || "—"} → ${m.unidade_destino_nome || "—"}`],
+            ["Responsável", m.responsavel_novo || m.responsavel_anterior || "—"],
+            ["Observação", m.observacao || "—"],
+          ],
+        })).join("")
+      : '<p class="rh-cand-empty">Nenhuma movimentação.</p>';
   };
 
   window.loadPatrimonioManutencoes = async function loadPatrimonioManutencoes() {

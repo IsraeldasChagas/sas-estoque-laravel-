@@ -1131,7 +1131,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-list,
 #patrimonioDashboardSection .rh-cand-list,
 #patrimoniosSection .rh-cand-list,
-#patrimonioCategoriasSection .rh-cand-list {
+#patrimonioCategoriasSection .rh-cand-list,
+#patrimonioMovimentacoesSection .rh-cand-list {
   display: grid;
   gap: 12px;
 }
@@ -1142,7 +1143,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-empty,
 #patrimonioDashboardSection .rh-cand-empty,
 #patrimoniosSection .rh-cand-empty,
-#patrimonioCategoriasSection .rh-cand-empty {
+#patrimonioCategoriasSection .rh-cand-empty,
+#patrimonioMovimentacoesSection .rh-cand-empty {
   margin: 0;
   padding: 28px 12px;
   text-align: center;
@@ -1158,7 +1160,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card,
 #patrimonioDashboardSection .rh-cand-card,
 #patrimoniosSection .rh-cand-card,
-#patrimonioCategoriasSection .rh-cand-card {
+#patrimonioCategoriasSection .rh-cand-card,
+#patrimonioMovimentacoesSection .rh-cand-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -1172,7 +1175,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__top,
 #patrimonioDashboardSection .rh-cand-card__top,
 #patrimoniosSection .rh-cand-card__top,
-#patrimonioCategoriasSection .rh-cand-card__top {
+#patrimonioCategoriasSection .rh-cand-card__top,
+#patrimonioMovimentacoesSection .rh-cand-card__top {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -1184,7 +1188,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__photo,
 #patrimonioDashboardSection .rh-cand-card__photo,
 #patrimoniosSection .rh-cand-card__photo,
-#patrimonioCategoriasSection .rh-cand-card__photo {
+#patrimonioCategoriasSection .rh-cand-card__photo,
+#patrimonioMovimentacoesSection .rh-cand-card__photo {
   width: 72px;
   height: 72px;
   flex: 0 0 auto;
@@ -1199,7 +1204,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__photo--wait,
 #patrimonioDashboardSection .rh-cand-card__photo--wait,
 #patrimoniosSection .rh-cand-card__photo--wait,
-#patrimonioCategoriasSection .rh-cand-card__photo--wait {
+#patrimonioCategoriasSection .rh-cand-card__photo--wait,
+#patrimonioMovimentacoesSection .rh-cand-card__photo--wait {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1215,7 +1221,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__main,
 #patrimonioDashboardSection .rh-cand-card__main,
 #patrimoniosSection .rh-cand-card__main,
-#patrimonioCategoriasSection .rh-cand-card__main {
+#patrimonioCategoriasSection .rh-cand-card__main,
+#patrimonioMovimentacoesSection .rh-cand-card__main {
   flex: 1;
   min-width: 0;
 }
@@ -1226,7 +1233,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__head,
 #patrimonioDashboardSection .rh-cand-card__head,
 #patrimoniosSection .rh-cand-card__head,
-#patrimonioCategoriasSection .rh-cand-card__head {
+#patrimonioCategoriasSection .rh-cand-card__head,
+#patrimonioMovimentacoesSection .rh-cand-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1239,7 +1247,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__name,
 #patrimonioDashboardSection .rh-cand-card__name,
 #patrimoniosSection .rh-cand-card__name,
-#patrimonioCategoriasSection .rh-cand-card__name {
+#patrimonioCategoriasSection .rh-cand-card__name,
+#patrimonioMovimentacoesSection .rh-cand-card__name {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
@@ -1252,7 +1261,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__sub,
 #patrimonioDashboardSection .rh-cand-card__sub,
 #patrimoniosSection .rh-cand-card__sub,
-#patrimonioCategoriasSection .rh-cand-card__sub {
+#patrimonioCategoriasSection .rh-cand-card__sub,
+#patrimonioMovimentacoesSection .rh-cand-card__sub {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.92rem;
@@ -1264,7 +1274,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__meta,
 #patrimonioDashboardSection .rh-cand-card__meta,
 #patrimoniosSection .rh-cand-card__meta,
-#patrimonioCategoriasSection .rh-cand-card__meta {
+#patrimonioCategoriasSection .rh-cand-card__meta,
+#patrimonioMovimentacoesSection .rh-cand-card__meta {
   display: grid;
   gap: 8px;
   margin-top: 12px;
@@ -1276,7 +1287,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__row,
 #patrimonioDashboardSection .rh-cand-card__row,
 #patrimoniosSection .rh-cand-card__row,
-#patrimonioCategoriasSection .rh-cand-card__row {
+#patrimonioCategoriasSection .rh-cand-card__row,
+#patrimonioMovimentacoesSection .rh-cand-card__row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -1289,7 +1301,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__row span,
 #patrimonioDashboardSection .rh-cand-card__row span,
 #patrimoniosSection .rh-cand-card__row span,
-#patrimonioCategoriasSection .rh-cand-card__row span {
+#patrimonioCategoriasSection .rh-cand-card__row span,
+#patrimonioMovimentacoesSection .rh-cand-card__row span {
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -1300,7 +1313,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__row strong,
 #patrimonioDashboardSection .rh-cand-card__row strong,
 #patrimoniosSection .rh-cand-card__row strong,
-#patrimonioCategoriasSection .rh-cand-card__row strong {
+#patrimonioCategoriasSection .rh-cand-card__row strong,
+#patrimonioMovimentacoesSection .rh-cand-card__row strong {
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -1311,7 +1325,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__actions,
 #patrimonioDashboardSection .rh-cand-card__actions,
 #patrimoniosSection .rh-cand-card__actions,
-#patrimonioCategoriasSection .rh-cand-card__actions {
+#patrimonioCategoriasSection .rh-cand-card__actions,
+#patrimonioMovimentacoesSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1325,7 +1340,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__actions .rh-wa-btn,
 #patrimonioDashboardSection .rh-cand-card__actions .rh-wa-btn,
 #patrimoniosSection .rh-cand-card__actions .rh-wa-btn,
-#patrimonioCategoriasSection .rh-cand-card__actions .rh-wa-btn {
+#patrimonioCategoriasSection .rh-cand-card__actions .rh-wa-btn,
+#patrimonioMovimentacoesSection .rh-cand-card__actions .rh-wa-btn {
   width: auto;
   margin-top: 0;
 }
@@ -1336,7 +1352,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card .btn-rh-toggle,
 #patrimonioDashboardSection .rh-cand-card .btn-rh-toggle,
 #patrimoniosSection .rh-cand-card .btn-rh-toggle,
-#patrimonioCategoriasSection .rh-cand-card .btn-rh-toggle {
+#patrimonioCategoriasSection .rh-cand-card .btn-rh-toggle,
+#patrimonioMovimentacoesSection .rh-cand-card .btn-rh-toggle {
   background: #0f766e;
   border-color: #0f766e;
   color: #fff;
@@ -1348,7 +1365,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-pill,
 #patrimonioDashboardSection .rh-cand-pill,
 #patrimoniosSection .rh-cand-pill,
-#patrimonioCategoriasSection .rh-cand-pill {
+#patrimonioCategoriasSection .rh-cand-pill,
+#patrimonioMovimentacoesSection .rh-cand-pill {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
@@ -1365,28 +1383,32 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-pill--ok,
 #patrimonioDashboardSection .rh-cand-pill--ok,
 #patrimoniosSection .rh-cand-pill--ok,
-#patrimonioCategoriasSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
+#patrimonioCategoriasSection .rh-cand-pill--ok,
+#patrimonioMovimentacoesSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
 #rhCandidatosSection .rh-cand-pill--warn,
 #valeConsumoSection .rh-cand-pill--warn,
 #funcionariosSection .rh-cand-pill--warn,
 #rhFolhaPontoSection .rh-cand-pill--warn,
 #patrimonioDashboardSection .rh-cand-pill--warn,
 #patrimoniosSection .rh-cand-pill--warn,
-#patrimonioCategoriasSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
+#patrimonioCategoriasSection .rh-cand-pill--warn,
+#patrimonioMovimentacoesSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
 #rhCandidatosSection .rh-cand-pill--danger,
 #valeConsumoSection .rh-cand-pill--danger,
 #funcionariosSection .rh-cand-pill--danger,
 #rhFolhaPontoSection .rh-cand-pill--danger,
 #patrimonioDashboardSection .rh-cand-pill--danger,
 #patrimoniosSection .rh-cand-pill--danger,
-#patrimonioCategoriasSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
+#patrimonioCategoriasSection .rh-cand-pill--danger,
+#patrimonioMovimentacoesSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
 #rhCandidatosSection .rh-cand-pill--info,
 #valeConsumoSection .rh-cand-pill--info,
 #funcionariosSection .rh-cand-pill--info,
 #rhFolhaPontoSection .rh-cand-pill--info,
 #patrimonioDashboardSection .rh-cand-pill--info,
 #patrimoniosSection .rh-cand-pill--info,
-#patrimonioCategoriasSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
+#patrimonioCategoriasSection .rh-cand-pill--info,
+#patrimonioMovimentacoesSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
 
 #rhVagasSection .rh-vaga-list {
   display: grid;
@@ -1584,7 +1606,8 @@ body.sidebar-open {
 #rhFolhaPontoSection .rh-cand-card__details,
 #patrimonioDashboardSection .rh-cand-card__details,
 #patrimoniosSection .rh-cand-card__details,
-#patrimonioCategoriasSection .rh-cand-card__details {
+#patrimonioCategoriasSection .rh-cand-card__details,
+#patrimonioMovimentacoesSection .rh-cand-card__details {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
@@ -1605,7 +1628,8 @@ body.sidebar-open {
   #rhFolhaPontoSection .rh-cand-card__actions .btn,
   #patrimonioDashboardSection .rh-cand-card__actions .btn,
   #patrimoniosSection .rh-cand-card__actions .btn,
-  #patrimonioCategoriasSection .rh-cand-card__actions .btn {
+  #patrimonioCategoriasSection .rh-cand-card__actions .btn,
+  #patrimonioMovimentacoesSection .rh-cand-card__actions .btn {
     flex: 1 1 140px;
     justify-content: center;
   }
@@ -10849,7 +10873,8 @@ select[size]:not([size="1"]) {
 #patrimonioDashboardSection .patrimonio-chart-box,
 #patrimonioDashboardSection .rh-cand-card,
 #patrimoniosSection .rh-cand-card,
-#patrimonioCategoriasSection .rh-cand-card {
+#patrimonioCategoriasSection .rh-cand-card,
+#patrimonioMovimentacoesSection .rh-cand-card {
   border: none;
 }
 #patrimonioDashboardSection .table-card > header {
@@ -10878,7 +10903,8 @@ select[size]:not([size="1"]) {
 }
 #patrimoniosSection .table-card,
 #patrimoniosSection .rh-cand-card,
-#patrimonioCategoriasSection .rh-cand-card {
+#patrimonioCategoriasSection .rh-cand-card,
+#patrimonioMovimentacoesSection .rh-cand-card {
   border: none;
 }
 #patrimoniosSection .table-card > header {
@@ -10906,7 +10932,8 @@ select[size]:not([size="1"]) {
   padding: 1rem;
 }
 #patrimonioCategoriasSection .table-card,
-#patrimonioCategoriasSection .rh-cand-card {
+#patrimonioCategoriasSection .rh-cand-card,
+#patrimonioMovimentacoesSection .rh-cand-card {
   border: none;
 }
 #patrimonioCategoriasSection .table-card > header {
@@ -10932,4 +10959,32 @@ select[size]:not([size="1"]) {
   align-items: center;
   justify-content: center;
   font-size: 2rem;
+}
+#patrimonioMovimentacoesSection .pat-page-wrap {
+  background: var(--bg);
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#patrimonioMovimentacoesSection .table-card,
+#patrimonioMovimentacoesSection .rh-cand-card {
+  border: none;
+}
+#patrimonioMovimentacoesSection .table-card > header {
+  border-bottom: none;
+}
+#patrimonioMovimentacoesSection .table-card.pat-dash-lista-card {
+  background: transparent;
+  box-shadow: none;
+}
+#patrimonioMovimentacoesSection .table-card.pat-dash-lista-card > header {
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+#patrimonioMovimentacoesSection .pat-dash-lista-card > header h3 {
+  margin: 0;
+}
+#patrimonioMovimentacoesSection .pat-dash-cards {
+  padding: 1rem 0;
 }
