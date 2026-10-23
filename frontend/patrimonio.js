@@ -492,10 +492,10 @@
     }
   };
 
-  function patDashCard({ titulo, sub, pill, tom, linhas, acoes = "" }) {
+  function patDashCard({ titulo, sub, pill, tom, linhas, acoes = "", icone = "" }) {
     return `<article class="rh-cand-card">
       <div class="rh-cand-card__top">
-        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-hidden="true"></div>
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo${icone ? " pat-card-icone" : ""}" aria-hidden="true">${esc(icone)}</div>
         <div class="rh-cand-card__main">
           <div class="rh-cand-card__head">
             <div>
@@ -607,18 +607,19 @@
     const cats = await loadPatCategorias();
     const tb = document.getElementById("patCatTbody");
     if (!tb) return;
-    tb.innerHTML = cats.map((c) => `
-      <tr>
-        <td>${esc(c.icone || "—")}</td>
-        <td>${esc(c.nome)}</td>
-        <td>${esc(c.tipo_campos || "geral")}</td>
-        <td>${c.ordem ?? 0}</td>
-        <td>${c.ativo ? "Sim" : "Não"}</td>
-        <td>
-          <button type="button" class="btn-icon pat-cat-editar" data-id="${c.id}" data-nome="${esc(c.nome)}" data-icone="${esc(c.icone || "")}" data-tipo="${esc(c.tipo_campos)}" data-ordem="${c.ordem}">✎</button>
-          <button type="button" class="btn-icon danger pat-cat-excluir" data-id="${c.id}">✕</button>
-        </td>
-      </tr>`).join("");
+    if (!cats.length) {
+      tb.innerHTML = '<p class="rh-cand-empty">Nenhuma categoria cadastrada.</p>';
+      return;
+    }
+    tb.innerHTML = cats.map((c) => patDashCard({
+      titulo: c.nome,
+      icone: c.icone || "",
+      pill: c.ativo ? "Ativa" : "Inativa",
+      tom: c.ativo ? "ok" : "danger",
+      linhas: [["Campos específicos", c.tipo_campos || "geral"], ["Ordem", String(c.ordem ?? 0)]],
+      acoes: `<button type="button" class="btn primary pat-cat-editar" data-id="${esc(c.id)}" data-nome="${esc(c.nome)}" data-icone="${esc(c.icone || "")}" data-tipo="${esc(c.tipo_campos)}" data-ordem="${esc(c.ordem)}">Editar</button>
+        <button type="button" class="btn pat-cat-excluir" data-id="${esc(c.id)}" style="background:#b71c1c;border-color:#b71c1c;color:#fff;">Excluir</button>`,
+    })).join("");
   };
 
   window.loadPatrimonioMovimentacoes = async function loadPatrimonioMovimentacoes() {
