@@ -4840,6 +4840,28 @@ body.image-lightbox-open {
   line-height: 1.25;
 }
 
+.login-modulos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px 28px;
+  align-items: center;
+}
+
+.login-modulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.login-modulo__icone {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
 .login-hero p {
   margin: 0;
   font-size: 1rem;
