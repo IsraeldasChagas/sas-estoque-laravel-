@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025290000-submenu" />
+    <link rel="stylesheet" href="style.css?v=20261025300000-boletos" />
     <script>
       (function () {
         try {
@@ -3377,6 +3377,7 @@
 
           <!-- Modulo Financeiro - Boletao -->
           <section id="boletaoSection" class="view-section hidden">
+            <div class="caixa-page-wrap">
             <div class="boletos-header">
               <h2>💰 Controle Financeiro — Boletos</h2>
               <div class="boletos-actions">
@@ -3422,50 +3423,79 @@
             </div>
 
             <!-- Cards de Resumo Financeiro -->
-            <div class="boletos-resumo">
-              <div class="boleto-card boleto-card--hoje">
-                <div class="boleto-card__icon">📅</div>
-                <div class="boleto-card__content">
-                  <div class="boleto-card__label">A pagar hoje</div>
-                  <div class="boleto-card__value" id="boletosParaPagarHoje">0</div>
-                  <div class="boleto-card__hint" id="boletosParaPagarHojeValor">R$ 0,00</div>
+            <div class="boletos-resumo rh-cand-list">
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📅</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div>
+                        <h3 class="rh-cand-card__name">A pagar hoje</h3>
+                        <p class="rh-cand-card__sub" id="boletosParaPagarHojeValor">R$ 0,00</p>
+                      </div>
+                      <span class="rh-cand-pill rh-cand-pill--warn" id="boletosParaPagarHoje">0</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div class="boleto-card boleto-card--total">
-                <div class="boleto-card__icon">💳</div>
-                <div class="boleto-card__content">
-                  <div class="boleto-card__label">Total de boletos do mês</div>
-                  <div class="boleto-card__value" id="boletosTotalMes">R$ 0,00</div>
+              </article>
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💳</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div>
+                        <h3 class="rh-cand-card__name">Total de boletos do mês</h3>
+                        <p class="rh-cand-card__sub">Soma do filtro</p>
+                      </div>
+                      <span class="rh-cand-pill rh-cand-pill--info" id="boletosTotalMes">R$ 0,00</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div class="boleto-card boleto-card--pago">
-                <div class="boleto-card__icon">✅</div>
-                <div class="boleto-card__content">
-                  <div class="boleto-card__label">Total pago em dia</div>
-                  <div class="boleto-card__value" id="boletosPagoEmDia">R$ 0,00</div>
+              </article>
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">✅</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div>
+                        <h3 class="rh-cand-card__name">Total pago em dia</h3>
+                        <p class="rh-cand-card__sub">Pagamentos sem atraso</p>
+                      </div>
+                      <span class="rh-cand-pill rh-cand-pill--ok" id="boletosPagoEmDia">R$ 0,00</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div class="boleto-card boleto-card--juros">
-                <div class="boleto-card__icon">⚠️</div>
-                <div class="boleto-card__content">
-                  <div class="boleto-card__label">Juros/multas pagos</div>
-                  <div class="boleto-card__value" id="boletosJurosPagos">R$ 0,00</div>
+              </article>
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">⚠️</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div>
+                        <h3 class="rh-cand-card__name">Juros/multas pagos</h3>
+                        <p class="rh-cand-card__sub">Acréscimo já pago</p>
+                      </div>
+                      <span class="rh-cand-pill rh-cand-pill--warn" id="boletosJurosPagos">R$ 0,00</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div class="boleto-card boleto-card--atrasados">
-                <div class="boleto-card__icon">⚠️</div>
-                <div class="boleto-card__content">
-                  <div class="boleto-card__label">Boletos pagos com atraso</div>
-                  <div class="boleto-card__value" id="boletosAtrasados">0</div>
+              </article>
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">⚠️</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div>
+                        <h3 class="rh-cand-card__name">Boletos pagos com atraso</h3>
+                        <p class="rh-cand-card__sub">Quantidade no filtro</p>
+                      </div>
+                      <span class="rh-cand-pill rh-cand-pill--danger" id="boletosAtrasados">0</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </article>
             </div>
 
-            <!-- Tabela de Boletos -->
             <div class="table-card form-card--wide">
               <header>
                 <div>
@@ -3476,29 +3506,10 @@
                   🔄 Atualizar
                 </button>
               </header>
-              <div class="table-wrapper">
-                  <table>
-                  <thead>
-                    <tr>
-                      <th>Status</th>
-                      <th>Fornecedor</th>
-                      <th>Vencimento</th>
-                      <th>Dias Restante</th>
-                      <th>Valor</th>
-                      <th>Data Pagamento</th>
-                      <th>Valor Pago</th>
-                      <th>Juros/Multa</th>
-                      <th>Anexo</th>
-                      <th>Acoes</th>
-                    </tr>
-                  </thead>
-                  <tbody id="boletosTable">
-                    <tr>
-                      <td colspan="10" style="text-align: center; color: #607d8b;">Carregando boletos...</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="rh-cand-list" id="boletosTable">
+                <p class="rh-cand-empty">Carregando boletos...</p>
               </div>
+            </div>
             </div>
           </section>
 
@@ -8032,7 +8043,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025290000-submenu"></script>
+    <script defer src="app.js?v=20261025300000-boletos"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

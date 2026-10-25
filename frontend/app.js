@@ -17887,7 +17887,7 @@ async function loadBoletos(filtros = {}) {
   }
   
   // Mostra carregando
-  tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #2196F3; font-size: 1.1rem;">⏳ Carregando boletos...</td></tr>';
+  tbody.innerHTML = '<p class="rh-cand-empty">Carregando boletos...</p>';
   
   try {
     const params = new URLSearchParams();
@@ -17911,7 +17911,7 @@ async function loadBoletos(filtros = {}) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ Erro:', errorText);
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #f44336; font-size: 1.1rem;">❌ Erro ao carregar boletos</td></tr>';
+      tbody.innerHTML = '<p class="rh-cand-empty">Erro ao carregar boletos</p>';
       throw new Error(`HTTP ${response.status}`);
     }
 
@@ -17919,7 +17919,7 @@ async function loadBoletos(filtros = {}) {
     console.log(`✅ ${boletos.length} boletos recebidos`);
     
     if (boletos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #999; font-size: 1.1rem;">📋 Nenhum boleto encontrado</td></tr>';
+      tbody.innerHTML = '<p class="rh-cand-empty">Nenhum boleto encontrado</p>';
       console.log('⚠️ Array de boletos está vazio');
       return;
     }
@@ -17930,7 +17930,7 @@ async function loadBoletos(filtros = {}) {
   } catch (error) {
     console.error('❌ ERRO:', error);
     showToast('Erro ao carregar: ' + error.message, 'error');
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #f44336;">❌ Erro. Tente novamente.</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Erro ao carregar boletos. Tente novamente.</p>';
   }
 }
 
@@ -17946,7 +17946,7 @@ function renderBoletos(boletos) {
 
   if (!boletos || boletos.length === 0) {
     console.warn('⚠️ Nenhum boleto para renderizar');
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #607d8b;">Nenhum boleto encontrado</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Nenhum boleto encontrado</p>';
     return;
   }
 
@@ -17979,21 +17979,21 @@ function renderBoletos(boletos) {
 
     const html = ordenados.map(boleto => {
       const valorJuros = parseFloat(boleto.juros_multa || 0);
-      let statusClass, statusLabel;
+      let pill = 'info';
+      let statusLabel;
       if (boleto.status === 'PAGO') {
-        statusClass = valorJuros > 0 ? 'status-pill--warning' : 'status-pill--success';
+        pill = valorJuros > 0 ? 'warn' : 'ok';
         statusLabel = valorJuros > 0 ? 'Pago com atraso' : 'Pago';
       } else if (boleto.status === 'CANCELADO') {
-        statusClass = 'status-pill--muted';
+        pill = 'info';
         statusLabel = 'Cancelado';
       } else {
-        // Calcula estado real pela data de vencimento (A vencer ou Atrasado)
         const diff = diasEntre(boleto.data_vencimento);
         if (diff < 0) {
-          statusClass = 'status-pill--danger';
+          pill = 'danger';
           statusLabel = 'Atrasado';
         } else {
-          statusClass = 'status-pill--info';
+          pill = 'info';
           statusLabel = 'A vencer';
         }
       }
@@ -18028,31 +18028,48 @@ function renderBoletos(boletos) {
       }
       
       const fmtData = (v) => (formatDate(v) || '').split(' ')[0] || '-';
+      const editarBtn = boleto.status !== 'PAGO'
+        ? `<button type="button" class="btn primary" title="Editar" data-id="${boleto.id}">Editar</button>`
+        : '';
+      const pagarBtn = boleto.status !== 'PAGO'
+        ? `<button type="button" class="btn primary" title="Pagar" data-id="${boleto.id}">Pagar</button>`
+        : '';
       return `
-        <tr>
-          <td data-label="Status"><span class="status-pill ${statusClass}">${statusLabel}</span></td>
-          <td data-label="Fornecedor">${boleto.fornecedor || '-'}</td>
-          <td data-label="Vencimento">${fmtData(boleto.data_vencimento)}</td>
-          <td data-label="Dias Restante">${diasRestante}</td>
-          <td data-label="Valor">${formatCurrencyBRL(boleto.valor || 0)}</td>
-          <td data-label="Data Pagamento">${boleto.data_pagamento ? fmtData(boleto.data_pagamento) : '-'}</td>
-          <td data-label="Valor Pago">${boleto.valor_pago ? formatCurrencyBRL(boleto.valor_pago) : '-'}</td>
-          <td data-label="Juros/Multa">${formatCurrencyBRL(valorJuros)}</td>
-          <td data-label="Anexo" style="text-align: center;">${anexoIcon}</td>
-          <td data-label="Ações">
-            ${boleto.status !== 'PAGO' ? `<button class="btn-icon" title="Editar" data-id="${boleto.id}">✏️</button>` : ''}
-            <button class="btn-icon" title="Detalhes" data-id="${boleto.id}">👁️</button>
-            ${boleto.status !== 'PAGO' ? `<button class="btn-icon btn-icon--primary" title="Pagar" data-id="${boleto.id}">💳</button>` : ''}
-            <button class="btn-icon btn-icon--danger btn-deletar-boleto" title="Excluir" data-id="${boleto.id}" style="color:#c62828;">🗑️</button>
-          </td>
-        </tr>
+        <article class="rh-cand-card">
+          <div class="rh-cand-card__top">
+            <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧾</div>
+            <div class="rh-cand-card__main">
+              <div class="rh-cand-card__head">
+                <div>
+                  <h3 class="rh-cand-card__name">${escapeHtml(boleto.fornecedor || 'Boleto')}</h3>
+                  <p class="rh-cand-card__sub">Vencimento ${escapeHtml(fmtData(boleto.data_vencimento))}</p>
+                </div>
+                <span class="rh-cand-pill rh-cand-pill--${pill}">${statusLabel}</span>
+              </div>
+              <div class="rh-cand-card__meta">
+                <div class="rh-cand-card__row"><span>Dias restante</span><strong>${escapeHtml(diasRestante)}</strong></div>
+                <div class="rh-cand-card__row"><span>Valor</span><strong>${escapeHtml(formatCurrencyBRL(boleto.valor || 0))}</strong></div>
+                <div class="rh-cand-card__row"><span>Data pagamento</span><strong>${escapeHtml(boleto.data_pagamento ? fmtData(boleto.data_pagamento) : '-')}</strong></div>
+                <div class="rh-cand-card__row"><span>Valor pago</span><strong>${escapeHtml(boleto.valor_pago ? formatCurrencyBRL(boleto.valor_pago) : '-')}</strong></div>
+                <div class="rh-cand-card__row"><span>Juros/multa</span><strong>${escapeHtml(formatCurrencyBRL(valorJuros))}</strong></div>
+                <div class="rh-cand-card__row"><span>Anexo</span><strong>${anexoIcon}</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="rh-cand-card__actions">
+            ${editarBtn}
+            <button type="button" class="btn btn-rh-toggle" title="Detalhes" data-id="${boleto.id}">Ver</button>
+            ${pagarBtn}
+            <button type="button" class="btn btn-deletar-boleto" title="Excluir" data-id="${boleto.id}" style="background:#b71c1c;color:#fff;">Excluir</button>
+          </div>
+        </article>
       `;
     }).join('');
     
     tbody.innerHTML = html;
 
     // Listener direto para Editar (evita falha no clique)
-    tbody.querySelectorAll('.btn-icon[title="Editar"]').forEach(btn => {
+    tbody.querySelectorAll('button[title="Editar"]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -18077,7 +18094,7 @@ function renderBoletos(boletos) {
         } catch (e) {
           showToast('Erro ao excluir: ' + (e.message || 'Falha na operação.'), 'error');
           btn.disabled = false;
-          btn.textContent = '🗑️';
+          btn.textContent = 'Excluir';
         }
       });
     });
@@ -18085,7 +18102,7 @@ function renderBoletos(boletos) {
     console.log('✅ Boletos renderizados com sucesso!');
   } catch (error) {
     console.error('❌ Erro ao renderizar boletos:', error);
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: red;">Erro ao renderizar boletos</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Erro ao renderizar boletos</p>';
   }
 }
 
@@ -21857,7 +21874,7 @@ function setupBoletosModule() {
   if (boletosTable) {
     boletosTable.addEventListener('click', async (e) => {
       if (e.target.closest('.btn-deletar-boleto')) return;
-      const btn = e.target.closest('.btn-icon');
+      const btn = e.target.closest('button[title]');
       if (!btn || !boletosTable.contains(btn)) return;
       const title = btn.getAttribute('title');
       const id = btn.getAttribute('data-id');
