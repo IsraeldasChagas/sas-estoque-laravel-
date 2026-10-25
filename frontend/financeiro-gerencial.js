@@ -931,19 +931,45 @@
     const { q } = fgQueryFiltros("fgInd");
     const data = await fgFetch(`/financeiro/indicadores${q}`);
     const ind = data.indicadores || {};
-    const cards = document.getElementById("fgIndCards");
-    const saudeEl = document.getElementById("fgIndSaude");
-    if (cards) {
-      cards.innerHTML = [
-        fgCardHtml("Liquidez (caixa / despesas)", String(ind.liquidez ?? "—")),
-        fgCardHtml("Margem líquida", `${ind.margem_liquida ?? 0}%`),
-        fgCardHtml("Margem bruta", `${ind.margem_bruta ?? 0}%`),
-        fgCardHtml("Endividamento", `${ind.endividamento ?? 0}%`),
-        fgCardHtml("Capital de giro", fmtMoeda(ind.capital_giro)),
-        fgCardHtml("Ponto de equilíbrio", ind.ponto_equilibrio != null ? fmtMoeda(ind.ponto_equilibrio) : "—"),
-      ].join("");
-    }
-    if (saudeEl) saudeEl.innerHTML = fgSaudeHtml(ind.saude_financeira);
+    const saude = ind.saude_financeira || {};
+    const saudeStatus = saude.status || "atencao";
+    const saudePill = saudeStatus === "saudavel" ? "ok" : saudeStatus === "atencao" ? "warn" : "danger";
+    const liquidez = Number(ind.liquidez);
+    const liquidezPill = !Number.isFinite(liquidez) ? "info" : liquidez >= 1 ? "ok" : liquidez >= 0.5 ? "warn" : "danger";
+    const margemLiq = Number(ind.margem_liquida) || 0;
+    const margemBruta = Number(ind.margem_bruta) || 0;
+    const endiv = Number(ind.endividamento) || 0;
+    const endivPill = endiv <= 20 ? "ok" : endiv <= 40 ? "warn" : "danger";
+    const giro = Number(ind.capital_giro) || 0;
+    const html = [
+      fgIndCard("Saúde financeira", "Visão geral do período", "💚", saudePill, saude.label || "Atenção", [["Pontuação", `${saude.percentual ?? 0}%`]]),
+      fgIndCard("Liquidez", "Caixa dividido pelas despesas", "💧", liquidezPill, Number.isFinite(liquidez) ? String(liquidez) : "—", [["Índice", Number.isFinite(liquidez) ? String(liquidez) : "—"]]),
+      fgIndCard("Margem líquida", "Lucro sobre o faturamento", "📈", margemLiq >= 0 ? "ok" : "danger", `${margemLiq}%`, [["Percentual", `${margemLiq}%`]]),
+      fgIndCard("Margem bruta", "Faturamento menos o custo", "📊", margemBruta >= 0 ? "ok" : "danger", `${margemBruta}%`, [["Percentual", `${margemBruta}%`]]),
+      fgIndCard("Endividamento", "Contas vencidas sobre o faturamento", "⚖️", endivPill, `${endiv}%`, [["Percentual", `${endiv}%`]]),
+      fgIndCard("Capital de giro", "Caixa e a receber, menos a pagar", "💰", giro >= 0 ? "ok" : "danger", fmtMoeda(giro), [["Valor", fmtMoeda(giro)]]),
+      fgIndCard("Ponto de equilíbrio", "Faturamento para cobrir os custos", "🎯", "info", ind.ponto_equilibrio != null ? fmtMoeda(ind.ponto_equilibrio) : "—", [["Valor", ind.ponto_equilibrio != null ? fmtMoeda(ind.ponto_equilibrio) : "—"]]),
+    ].join("");
+    fgMostrarLista("fgIndLista", "fgIndCards", html);
+  }
+
+  function fgIndCard(titulo, sub, icone, pillClass, pillText, rows) {
+    const meta = (rows || []).map(([nome, valor]) => `<div class="rh-cand-card__row"><span>${esc(nome)}</span><strong>${esc(valor)}</strong></div>`).join("");
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">${icone}</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo)}</h3>
+              <p class="rh-cand-card__sub">${esc(sub)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pillClass}">${esc(pillText)}</span>
+          </div>
+          <div class="rh-cand-card__meta">${meta}</div>
+        </div>
+      </div>
+    </article>`;
   }
 
   function fgSetupMoeda() {

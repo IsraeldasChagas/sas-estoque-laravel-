@@ -423,7 +423,8 @@
 #financeiroDreSection .fg-page-wrap,
 #financeiroContasReceberSection .fg-page-wrap,
 #financeiroCentrosCustoSection .fg-page-wrap,
-#financeiroOrcamentoSection .fg-page-wrap {
+#financeiroOrcamentoSection .fg-page-wrap,
+#financeiroIndicadoresSection .fg-page-wrap {
   background: var(--bg);
   background: color-mix(in srgb, var(--card-bg) 84%, #000);
   border-radius: 16px;
@@ -447,7 +448,10 @@
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroOrcamentoSection .table-card,
 #financeiroOrcamentoSection .fg-card,
-#financeiroOrcamentoSection .rh-cand-card {
+#financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .table-card,
+#financeiroIndicadoresSection .fg-card,
+#financeiroIndicadoresSection .rh-cand-card {
   border: none;
 }
 #financeiroDashboardSection .table-card > header,
@@ -455,7 +459,8 @@
 #financeiroDreSection .table-card > header,
 #financeiroContasReceberSection .table-card > header,
 #financeiroCentrosCustoSection .table-card > header,
-#financeiroOrcamentoSection .table-card > header {
+#financeiroOrcamentoSection .table-card > header,
+#financeiroIndicadoresSection .table-card > header {
   border-bottom: none;
 }
 #financeiroDashboardSection .table-card.fg-fluxo-lista-card,
@@ -463,7 +468,8 @@
 #financeiroDreSection .table-card.fg-fluxo-lista-card,
 #financeiroContasReceberSection .table-card.fg-fluxo-lista-card,
 #financeiroCentrosCustoSection .table-card.fg-fluxo-lista-card,
-#financeiroOrcamentoSection .table-card.fg-fluxo-lista-card {
+#financeiroOrcamentoSection .table-card.fg-fluxo-lista-card,
+#financeiroIndicadoresSection .table-card.fg-fluxo-lista-card {
   background: transparent;
   box-shadow: none;
 }
@@ -472,7 +478,8 @@
 #financeiroDreSection .table-card.fg-fluxo-lista-card > header,
 #financeiroContasReceberSection .table-card.fg-fluxo-lista-card > header,
 #financeiroCentrosCustoSection .table-card.fg-fluxo-lista-card > header,
-#financeiroOrcamentoSection .table-card.fg-fluxo-lista-card > header {
+#financeiroOrcamentoSection .table-card.fg-fluxo-lista-card > header,
+#financeiroIndicadoresSection .table-card.fg-fluxo-lista-card > header {
   background: transparent;
   padding-left: 0;
   padding-right: 0;
@@ -482,7 +489,8 @@
 #financeiroDreSection .fg-fluxo-lista-card > header h3,
 #financeiroContasReceberSection .fg-fluxo-lista-card > header h3,
 #financeiroCentrosCustoSection .fg-fluxo-lista-card > header h3,
-#financeiroOrcamentoSection .fg-fluxo-lista-card > header h3 {
+#financeiroOrcamentoSection .fg-fluxo-lista-card > header h3,
+#financeiroIndicadoresSection .fg-fluxo-lista-card > header h3 {
   margin: 0;
 }
 #financeiroDashboardSection .fg-fluxo-cards,
@@ -490,6 +498,7 @@
 #financeiroDreSection .fg-fluxo-cards,
 #financeiroContasReceberSection .fg-fluxo-cards,
 #financeiroCentrosCustoSection .fg-fluxo-cards,
-#financeiroOrcamentoSection .fg-fluxo-cards {
+#financeiroOrcamentoSection .fg-fluxo-cards,
+#financeiroIndicadoresSection .fg-fluxo-cards {
   padding: 1rem 0;
 }

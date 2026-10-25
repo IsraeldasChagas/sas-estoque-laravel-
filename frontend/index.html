@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025210000-orc" />
+    <link rel="stylesheet" href="style.css?v=20261025220000-ind" />
     <script>
       (function () {
         try {
@@ -55,7 +55,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-investimento.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20261025210000-orc" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20261025220000-ind" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" media="print" onload="this.media='all'" />
@@ -4138,7 +4138,6 @@
           <section id="financeiroIndicadoresSection" class="view-section hidden">
             <div class="fg-section-head">
               <div><h2>📈 Indicadores Financeiros</h2><p class="subtle-text">Liquidez, margens, endividamento e saúde geral.</p></div>
-              <div id="fgIndSaude"></div>
             </div>
             <div class="fg-page-wrap">
               <div class="table-card form-card--wide">
@@ -4152,7 +4151,10 @@
                   </div>
                 </div>
               </div>
-              <div class="fg-cards" id="fgIndCards"></div>
+              <div class="table-card form-card--wide fg-fluxo-lista-card">
+                <header><h3>Indicadores</h3></header>
+                <div class="rh-cand-list fg-fluxo-cards" id="fgIndLista"></div>
+              </div>
             </div>
           </section>
 
@@ -7949,7 +7951,7 @@
     <script defer src="fiscal-producao.js?v=20260728-cardapio-ficha"></script>
     <script defer src="fiscal-venda-pdv.js?v=20260730-modo-emissao"></script>
     <script defer src="fiscal-modulo-07.js?v=20260728-cfg-ui2"></script>
-    <script defer src="financeiro-gerencial.js?v=20261025210000-orc"></script>
+    <script defer src="financeiro-gerencial.js?v=20261025220000-ind"></script>
      
   </body>
 </html>

@@ -1145,6 +1145,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-list,
 #financeiroDashboardSection .rh-cand-list,
 #financeiroOrcamentoSection .rh-cand-list,
+#financeiroIndicadoresSection .rh-cand-list,
 #financeiroCentrosCustoSection .rh-cand-list,
 #financeiroContasReceberSection .rh-cand-list,
 #financeiroDreSection .rh-cand-list {
@@ -1165,6 +1166,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-empty,
 #financeiroDashboardSection .rh-cand-empty,
 #financeiroOrcamentoSection .rh-cand-empty,
+#financeiroIndicadoresSection .rh-cand-empty,
 #financeiroCentrosCustoSection .rh-cand-empty,
 #financeiroContasReceberSection .rh-cand-empty,
 #financeiroDreSection .rh-cand-empty {
@@ -1190,6 +1192,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -1213,6 +1216,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__top,
 #financeiroDashboardSection .rh-cand-card__top,
 #financeiroOrcamentoSection .rh-cand-card__top,
+#financeiroIndicadoresSection .rh-cand-card__top,
 #financeiroCentrosCustoSection .rh-cand-card__top,
 #financeiroContasReceberSection .rh-cand-card__top,
 #financeiroDreSection .rh-cand-card__top {
@@ -1234,6 +1238,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__photo,
 #financeiroDashboardSection .rh-cand-card__photo,
 #financeiroOrcamentoSection .rh-cand-card__photo,
+#financeiroIndicadoresSection .rh-cand-card__photo,
 #financeiroCentrosCustoSection .rh-cand-card__photo,
 #financeiroContasReceberSection .rh-cand-card__photo,
 #financeiroDreSection .rh-cand-card__photo {
@@ -1258,6 +1263,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__photo--wait,
 #financeiroDashboardSection .rh-cand-card__photo--wait,
 #financeiroOrcamentoSection .rh-cand-card__photo--wait,
+#financeiroIndicadoresSection .rh-cand-card__photo--wait,
 #financeiroCentrosCustoSection .rh-cand-card__photo--wait,
 #financeiroContasReceberSection .rh-cand-card__photo--wait,
 #financeiroDreSection .rh-cand-card__photo--wait {
@@ -1283,6 +1289,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__main,
 #financeiroDashboardSection .rh-cand-card__main,
 #financeiroOrcamentoSection .rh-cand-card__main,
+#financeiroIndicadoresSection .rh-cand-card__main,
 #financeiroCentrosCustoSection .rh-cand-card__main,
 #financeiroContasReceberSection .rh-cand-card__main,
 #financeiroDreSection .rh-cand-card__main {
@@ -1303,6 +1310,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__head,
 #financeiroDashboardSection .rh-cand-card__head,
 #financeiroOrcamentoSection .rh-cand-card__head,
+#financeiroIndicadoresSection .rh-cand-card__head,
 #financeiroCentrosCustoSection .rh-cand-card__head,
 #financeiroContasReceberSection .rh-cand-card__head,
 #financeiroDreSection .rh-cand-card__head {
@@ -1325,6 +1333,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__name,
 #financeiroDashboardSection .rh-cand-card__name,
 #financeiroOrcamentoSection .rh-cand-card__name,
+#financeiroIndicadoresSection .rh-cand-card__name,
 #financeiroCentrosCustoSection .rh-cand-card__name,
 #financeiroContasReceberSection .rh-cand-card__name,
 #financeiroDreSection .rh-cand-card__name {
@@ -1347,6 +1356,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__sub,
 #financeiroDashboardSection .rh-cand-card__sub,
 #financeiroOrcamentoSection .rh-cand-card__sub,
+#financeiroIndicadoresSection .rh-cand-card__sub,
 #financeiroCentrosCustoSection .rh-cand-card__sub,
 #financeiroContasReceberSection .rh-cand-card__sub,
 #financeiroDreSection .rh-cand-card__sub {
@@ -1368,6 +1378,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__meta,
 #financeiroDashboardSection .rh-cand-card__meta,
 #financeiroOrcamentoSection .rh-cand-card__meta,
+#financeiroIndicadoresSection .rh-cand-card__meta,
 #financeiroCentrosCustoSection .rh-cand-card__meta,
 #financeiroContasReceberSection .rh-cand-card__meta,
 #financeiroDreSection .rh-cand-card__meta {
@@ -1389,6 +1400,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__row,
 #financeiroDashboardSection .rh-cand-card__row,
 #financeiroOrcamentoSection .rh-cand-card__row,
+#financeiroIndicadoresSection .rh-cand-card__row,
 #financeiroCentrosCustoSection .rh-cand-card__row,
 #financeiroContasReceberSection .rh-cand-card__row,
 #financeiroDreSection .rh-cand-card__row {
@@ -1411,6 +1423,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__row span,
 #financeiroDashboardSection .rh-cand-card__row span,
 #financeiroOrcamentoSection .rh-cand-card__row span,
+#financeiroIndicadoresSection .rh-cand-card__row span,
 #financeiroCentrosCustoSection .rh-cand-card__row span,
 #financeiroContasReceberSection .rh-cand-card__row span,
 #financeiroDreSection .rh-cand-card__row span {
@@ -1431,6 +1444,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__row strong,
 #financeiroDashboardSection .rh-cand-card__row strong,
 #financeiroOrcamentoSection .rh-cand-card__row strong,
+#financeiroIndicadoresSection .rh-cand-card__row strong,
 #financeiroCentrosCustoSection .rh-cand-card__row strong,
 #financeiroContasReceberSection .rh-cand-card__row strong,
 #financeiroDreSection .rh-cand-card__row strong {
@@ -1451,6 +1465,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__actions,
 #financeiroDashboardSection .rh-cand-card__actions,
 #financeiroOrcamentoSection .rh-cand-card__actions,
+#financeiroIndicadoresSection .rh-cand-card__actions,
 #financeiroCentrosCustoSection .rh-cand-card__actions,
 #financeiroContasReceberSection .rh-cand-card__actions,
 #financeiroDreSection .rh-cand-card__actions {
@@ -1474,6 +1489,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDashboardSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroOrcamentoSection .rh-cand-card__actions .rh-wa-btn,
+#financeiroIndicadoresSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroCentrosCustoSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroContasReceberSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDreSection .rh-cand-card__actions .rh-wa-btn {
@@ -1494,6 +1510,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card .btn-rh-toggle,
 #financeiroDashboardSection .rh-cand-card .btn-rh-toggle,
 #financeiroOrcamentoSection .rh-cand-card .btn-rh-toggle,
+#financeiroIndicadoresSection .rh-cand-card .btn-rh-toggle,
 #financeiroCentrosCustoSection .rh-cand-card .btn-rh-toggle,
 #financeiroContasReceberSection .rh-cand-card .btn-rh-toggle,
 #financeiroDreSection .rh-cand-card .btn-rh-toggle {
@@ -1515,6 +1532,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-pill,
 #financeiroDashboardSection .rh-cand-pill,
 #financeiroOrcamentoSection .rh-cand-pill,
+#financeiroIndicadoresSection .rh-cand-pill,
 #financeiroCentrosCustoSection .rh-cand-pill,
 #financeiroContasReceberSection .rh-cand-pill,
 #financeiroDreSection .rh-cand-pill {
@@ -1541,6 +1559,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-pill--ok,
 #financeiroDashboardSection .rh-cand-pill--ok,
 #financeiroOrcamentoSection .rh-cand-pill--ok,
+#financeiroIndicadoresSection .rh-cand-pill--ok,
 #financeiroCentrosCustoSection .rh-cand-pill--ok,
 #financeiroContasReceberSection .rh-cand-pill--ok,
 #financeiroDreSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
@@ -1557,6 +1576,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-pill--warn,
 #financeiroDashboardSection .rh-cand-pill--warn,
 #financeiroOrcamentoSection .rh-cand-pill--warn,
+#financeiroIndicadoresSection .rh-cand-pill--warn,
 #financeiroCentrosCustoSection .rh-cand-pill--warn,
 #financeiroContasReceberSection .rh-cand-pill--warn,
 #financeiroDreSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
@@ -1573,6 +1593,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-pill--danger,
 #financeiroDashboardSection .rh-cand-pill--danger,
 #financeiroOrcamentoSection .rh-cand-pill--danger,
+#financeiroIndicadoresSection .rh-cand-pill--danger,
 #financeiroCentrosCustoSection .rh-cand-pill--danger,
 #financeiroContasReceberSection .rh-cand-pill--danger,
 #financeiroDreSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
@@ -1589,6 +1610,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-pill--info,
 #financeiroDashboardSection .rh-cand-pill--info,
 #financeiroOrcamentoSection .rh-cand-pill--info,
+#financeiroIndicadoresSection .rh-cand-pill--info,
 #financeiroCentrosCustoSection .rh-cand-pill--info,
 #financeiroContasReceberSection .rh-cand-pill--info,
 #financeiroDreSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
@@ -1796,6 +1818,7 @@ body.sidebar-open {
 #financeiroFluxoCaixaSection .rh-cand-card__details,
 #financeiroDashboardSection .rh-cand-card__details,
 #financeiroOrcamentoSection .rh-cand-card__details,
+#financeiroIndicadoresSection .rh-cand-card__details,
 #financeiroCentrosCustoSection .rh-cand-card__details,
 #financeiroContasReceberSection .rh-cand-card__details,
 #financeiroDreSection .rh-cand-card__details {
@@ -1826,6 +1849,7 @@ body.sidebar-open {
   #financeiroFluxoCaixaSection .rh-cand-card__actions .btn,
   #financeiroDashboardSection .rh-cand-card__actions .btn,
   #financeiroOrcamentoSection .rh-cand-card__actions .btn,
+  #financeiroIndicadoresSection .rh-cand-card__actions .btn,
   #financeiroCentrosCustoSection .rh-cand-card__actions .btn,
   #financeiroContasReceberSection .rh-cand-card__actions .btn,
   #financeiroDreSection .rh-cand-card__actions .btn {
@@ -11101,6 +11125,7 @@ select[size]:not([size="1"]) {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11139,6 +11164,7 @@ select[size]:not([size="1"]) {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11176,6 +11202,7 @@ select[size]:not([size="1"]) {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11218,6 +11245,7 @@ select[size]:not([size="1"]) {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11253,6 +11281,7 @@ select[size]:not([size="1"]) {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11287,6 +11316,7 @@ select[size]:not([size="1"]) {
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
+#financeiroIndicadoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
