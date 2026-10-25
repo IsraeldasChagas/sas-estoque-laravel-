@@ -5359,7 +5359,7 @@ function ensureFinanceiroFechamentoDashNavLink() {
     dash.id = "navFinanceiroFechamentoDash";
     dash.dataset.section = "fechamentoDash";
     dash.title = "Gráficos, totais por unidade e análise dos fechamentos";
-    dash.innerHTML = '<span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span>';
+    dash.innerHTML = '<span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Auditoria de Caixa</span>';
     ref.insertAdjacentElement("afterend", dash);
     return;
   }

@@ -202,7 +202,7 @@
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Lançar, editar e conferir fechamentos de caixa"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Auditoria</span></a>
-              <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
+              <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Auditoria de Caixa</span></a>
             </div>
           </div>
           <div class="nav-submenu">
@@ -351,6 +351,7 @@
               <a href="#" class="nav-link nav-link-child" data-section="financeiroOrcamento"><span class="nav-icon" aria-hidden="true">🎯</span><span class="nav-label">Orçamento Empresarial</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroIndicadores"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Indicadores Financeiros</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fechamento"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Auditoria de Caixa</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="boletao"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Boletos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="impostos"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Impostos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="alvara"><span class="nav-icon" aria-hidden="true">📁</span><span class="nav-label">Documentos empresa</span></a>
@@ -5407,7 +5408,7 @@
           <!-- Financeiro — Dashboard análise fechamentos de caixa -->
           <section id="fechamentoDashSection" class="view-section hidden fechamento-dash">
             <div class="fechamento-dash__head">
-              <h2>📊 Dashboard — fechamentos de caixa</h2>
+              <h2>📊 Dashboard de Auditoria de Caixa</h2>
               <p class="subtle-text">
                 Volume referente aos totais informados nos registros de auditoria (soma <strong>PDV</strong> e <strong>maquinha</strong> nas linhas de pagamento).
                 Quebras e sobras usam o <strong>saldo líquido</strong> do fechamento.
@@ -8023,7 +8024,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025270000-opcoes"></script>
+    <script defer src="app.js?v=20261025280000-auditdash"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
