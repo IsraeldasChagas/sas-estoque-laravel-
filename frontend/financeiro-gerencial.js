@@ -200,7 +200,6 @@
     const data = await fgFetch(`/financeiro/dashboard${q}`);
     const cards = document.getElementById("fgDashCards");
     const saudeEl = document.getElementById("fgDashSaude");
-    const uniTbody = document.getElementById("fgDashUnidadeTbody");
     if (!cards) return;
 
     const lucro = Number(data.lucro_prejuizo || 0);
@@ -223,12 +222,49 @@
 
     if (saudeEl) saudeEl.innerHTML = fgSaudeHtml(data.saude_financeira);
 
-    if (uniTbody) {
-      const rows = data.faturamento_por_unidade || [];
-      uniTbody.innerHTML = rows.length
-        ? rows.map((r) => `<tr><td>${esc(r.unidade_nome)}</td><td>${esc(fmtMoeda(r.faturamento))}</td></tr>`).join("")
-        : `<tr><td colspan="2" class="empty-row">Sem dados no período.</td></tr>`;
+    const unidades = data.faturamento_por_unidade || [];
+    const uniHtml = unidades.length
+      ? unidades.map((r) => fgDashUnidadeCard(r)).join("")
+      : '<p class="rh-cand-empty">Sem dados no período.</p>';
+    fgMostrarLista("fgDashUnidadeLista", "fgDashUnidadeTbody", uniHtml);
+  }
+
+  function fgDashUnidadeCard(r) {
+    const nome = r.unidade_nome || "Unidade";
+    const valor = fmtMoeda(r.faturamento);
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏪</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(nome)}</h3>
+              <p class="rh-cand-card__sub">Faturamento no período</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--info">${esc(valor)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Faturamento</span><strong>${esc(valor)}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function fgMostrarLista(listaId, tbodyId, html) {
+    const lista = document.getElementById(listaId);
+    if (lista) {
+      lista.innerHTML = html;
+      return;
     }
+    const tbody = document.getElementById(tbodyId);
+    const wrap = tbody?.closest(".table-wrapper");
+    if (!wrap) return;
+    const box = document.createElement("div");
+    box.className = "rh-cand-list fg-fluxo-cards";
+    box.id = listaId;
+    box.innerHTML = html;
+    wrap.replaceWith(box);
   }
 
   function fgFiltrarCentrosPadrao(lista) {
@@ -392,7 +428,6 @@
     await Promise.all([fgCarregarUnidades(["fgFluxoFiltroUnidade", "fgFluxoUnidade"]), fgCarregarAuxFluxo()]);
     const { q } = fgQueryFiltros("fgFluxo");
     const data = await fgFetch(`/financeiro/fluxo-caixa${q}`);
-    const tbody = document.getElementById("fgFluxoTbody");
     const rel = data.relatorio || {};
     const resumo = document.getElementById("fgFluxoResumo");
     const proj = document.getElementById("fgFluxoProjecoes");
@@ -414,26 +449,53 @@
 
     const lista = data.lancamentos || [];
     fgState.fluxoLancamentos = lista;
-    if (tbody) {
-      tbody.innerHTML = lista.length
-        ? lista.map((l) => {
-            const tipoCls = l.tipo === "entrada" ? "fg-pill--entrada" : "fg-pill--saida";
-            const tipoLabel = l.tipo === "entrada" ? "Entrada" : "Saída";
-            return `<tr>
-            <td>${esc(fmtData(l.data_competencia))}</td>
-            <td><span class="status-pill ${tipoCls}">${esc(tipoLabel)}</span></td>
-            <td>${esc(l.descricao || l.categoria_nome || "—")}</td>
-            <td>${esc(l.unidade_nome || "—")}</td>
-            <td>${esc(fmtMoeda(l.valor))}</td>
-            <td>${esc(l.status)}</td>
-            <td class="fg-acoes">
-              <button type="button" class="btn btn-sm fg-btn-edit" data-fg-fluxo-edit="${l.id}" title="Editar">Editar</button>
-              <button type="button" class="btn btn-sm fg-btn-del" data-fg-fluxo-del="${l.id}" title="Excluir">Excluir</button>
-            </td>
-          </tr>`;
-          }).join("")
-        : `<tr><td colspan="7" class="empty-row">Nenhum lançamento no período.</td></tr>`;
-    }
+    const html = lista.length
+      ? lista.map((l) => fgFluxoCard(l)).join("")
+      : '<p class="rh-cand-empty">Nenhum lançamento no período.</p>';
+    fgMostrarLista("fgFluxoLista", "fgFluxoTbody", html);
+  }
+
+  const FG_FLUXO_STATUS = {
+    previsto: ["Previsto", "warn"],
+    realizado: ["Realizado", "ok"],
+    atrasado: ["Atrasado", "danger"],
+    cancelado: ["Cancelado", "danger"],
+  };
+
+  function fgFluxoCard(l) {
+    const entrada = l.tipo === "entrada";
+    const [statusLabel] = FG_FLUXO_STATUS[l.status] || [l.status || "—"];
+    const titulo = l.descricao || l.categoria_nome || (entrada ? "Entrada" : "Saída");
+    const sub = [l.descricao && l.categoria_nome ? l.categoria_nome : "", l.unidade_nome].filter(Boolean).join(" · ");
+    const linhas = [
+      ["Competência", fmtData(l.data_competencia)],
+      ["Valor", fmtMoeda(l.valor)],
+      ["Status", statusLabel],
+    ];
+    if (l.data_pagamento) linhas.push(["Pagamento", fmtData(l.data_pagamento)]);
+    if (l.forma_pagamento) linhas.push(["Forma", l.forma_pagamento]);
+    if (l.centro_custo_nome) linhas.push(["Centro de custo", l.centro_custo_nome]);
+    if (l.observacao) linhas.push(["Observação", l.observacao]);
+    const acoes = `<button type="button" class="btn primary" data-fg-fluxo-edit="${esc(l.id)}">Editar</button>
+      <button type="button" class="btn" data-fg-fluxo-del="${esc(l.id)}" style="background:#b71c1c;border-color:#b71c1c;color:#fff;">Excluir</button>`;
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">${entrada ? "＋" : "－"}</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo)}</h3>
+              ${sub ? `<p class="rh-cand-card__sub">${esc(sub)}</p>` : ""}
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${entrada ? "ok" : "danger"}">${entrada ? "Entrada" : "Saída"}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            ${linhas.map(([rotulo, valor]) => `<div class="rh-cand-card__row"><span>${esc(rotulo)}</span><strong>${esc(valor)}</strong></div>`).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">${acoes}</div>
+    </article>`;
   }
 
   async function fgSalvarFluxo(e) {
