@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025320000-docs" />
+    <link rel="stylesheet" href="style.css?v=20261025350000-forn" />
     <script>
       (function () {
         try {
@@ -1134,6 +1134,7 @@
 
           <!-- Fornecedores - CRUD -->
           <section id="fornecedoresSection" class="view-section hidden">
+            <div class="caixa-page-wrap">
             <div class="fornecedores-container">
               <div class="actions" style="flex-wrap: wrap; align-items: center; gap: 0.5rem;">
                 <button class="btn primary" id="openFornecedor">+ Novo Fornecedor</button>
@@ -1143,24 +1144,11 @@
               </div>
               <div class="table-card form-card--wide">
                 <header>Fornecedores cadastrados</header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nome</th>
-                        <th>CNPJ / CPF</th>
-                        <th>Email</th>
-                        <th>Telefone</th>
-                        <th>Status</th>
-                        <th id="fornecedoresAcoesHeader">Acoes</th>
-                      </tr>
-                    </thead>
-                    <tbody id="fornecedoresTable">
-                      <tr><td colspan="6" style="text-align: center; color: #607d8b;">Carregando...</td></tr>
-                    </tbody>
-                  </table>
+                <div class="rh-cand-list" id="fornecedoresTable">
+                  <p class="rh-cand-empty">Carregando...</p>
                 </div>
               </div>
+            </div>
             </div>
           </section>
 
@@ -8015,7 +8003,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025340000-docmenu"></script>
+    <script defer src="app.js?v=20261025350000-forn"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

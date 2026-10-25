@@ -18215,7 +18215,7 @@ let fornecedorParaExcluir = null;
 async function loadFornecedores() {
   const tbody = document.getElementById('fornecedoresTable');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Carregando...</td></tr>';
+  tbody.innerHTML = '<p class="rh-cand-empty">Carregando...</p>';
   const search = document.getElementById('fornecedorSearch')?.value?.trim() || '';
   try {
     const params = new URLSearchParams();
@@ -18224,19 +18224,39 @@ async function loadFornecedores() {
     const isAdmin = (getUser()?.perfil || '').toString().toUpperCase() === 'ADMIN';
     const rows = (data || []).map(f => {
       const cnpjCpf = formatCnpjCpfDisplay(f.cnpj || f.cpf || '');
+      const pill = f.ativo ? 'ok' : 'danger';
+      const status = f.ativo ? 'Ativo' : 'Inativo';
       const acoes = [];
-      acoes.push(`<button type="button" class="btn small primary" data-action="editar" data-id="${f.id}">Editar</button>`);
+      acoes.push(`<button type="button" class="btn primary" data-action="editar" data-id="${f.id}">Editar</button>`);
       if (f.ativo) {
-        acoes.push(`<button type="button" class="btn small secondary" data-action="desativar" data-id="${f.id}">Inativar</button>`);
+        acoes.push(`<button type="button" class="btn neutral" data-action="desativar" data-id="${f.id}">Inativar</button>`);
       } else {
-        acoes.push(`<button type="button" class="btn small primary" data-action="ativar" data-id="${f.id}">Ativar</button>`);
+        acoes.push(`<button type="button" class="btn primary" data-action="ativar" data-id="${f.id}">Ativar</button>`);
       }
       if (isAdmin) {
-        acoes.push(`<button type="button" class="btn small danger" data-action="excluir" data-id="${f.id}">Excluir</button>`);
+        acoes.push(`<button type="button" class="btn" data-action="excluir" data-id="${f.id}" style="background:#b71c1c;color:#fff;">Excluir</button>`);
       }
-      return `<tr><td data-label="Nome">${escapeHtml(f.nome || '-')}</td><td data-label="CNPJ / CPF">${escapeHtml(cnpjCpf)}</td><td data-label="Email">${escapeHtml(f.email || '-')}</td><td data-label="Telefone">${escapeHtml(f.telefone || '-')}</td><td data-label="Status">${f.ativo ? 'Ativo' : 'Inativo'}</td><td data-label="Acoes" class="table-actions">${acoes.join(' ')}</td></tr>`;
+      return `<article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🚚</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${escapeHtml(f.nome || 'Fornecedor')}</h3>
+                <p class="rh-cand-card__sub">${escapeHtml(cnpjCpf || 'Sem CNPJ/CPF')}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${pill}">${status}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Email</span><strong>${escapeHtml(f.email || '-')}</strong></div>
+              <div class="rh-cand-card__row"><span>Telefone</span><strong>${escapeHtml(f.telefone || '-')}</strong></div>
+            </div>
+          </div>
+        </div>
+        <div class="rh-cand-card__actions">${acoes.join('')}</div>
+      </article>`;
     });
-    tbody.innerHTML = rows.length ? rows.join('') : `<tr><td colspan="6" style="text-align:center;color:#607d8b;">${search ? 'Nenhum fornecedor encontrado para esta busca. Clique em Limpar para ver todos.' : 'Nenhum fornecedor cadastrado.'}</td></tr>`;
+    tbody.innerHTML = rows.length ? rows.join('') : `<p class="rh-cand-empty">${search ? 'Nenhum fornecedor encontrado para esta busca. Clique em Limpar para ver todos.' : 'Nenhum fornecedor cadastrado.'}</p>`;
     tbody.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
@@ -18248,7 +18268,7 @@ async function loadFornecedores() {
       });
     });
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#d32f2f;">Erro ao carregar.</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Erro ao carregar.</p>';
     showToast('Erro ao carregar fornecedores', 'error');
   }
 }

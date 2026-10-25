@@ -1152,6 +1152,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-list,
 #impostosSection .rh-cand-list,
 #alvaraSection .rh-cand-list,
+#fornecedoresSection .rh-cand-list,
 #financeiroCentrosCustoSection .rh-cand-list,
 #financeiroContasReceberSection .rh-cand-list,
 #financeiroDreSection .rh-cand-list {
@@ -1178,6 +1179,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-empty,
 #impostosSection .rh-cand-empty,
 #alvaraSection .rh-cand-empty,
+#fornecedoresSection .rh-cand-empty,
 #financeiroCentrosCustoSection .rh-cand-empty,
 #financeiroContasReceberSection .rh-cand-empty,
 #financeiroDreSection .rh-cand-empty {
@@ -1209,6 +1211,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -1238,6 +1241,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__top,
 #impostosSection .rh-cand-card__top,
 #alvaraSection .rh-cand-card__top,
+#fornecedoresSection .rh-cand-card__top,
 #financeiroCentrosCustoSection .rh-cand-card__top,
 #financeiroContasReceberSection .rh-cand-card__top,
 #financeiroDreSection .rh-cand-card__top {
@@ -1265,6 +1269,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__photo,
 #impostosSection .rh-cand-card__photo,
 #alvaraSection .rh-cand-card__photo,
+#fornecedoresSection .rh-cand-card__photo,
 #financeiroCentrosCustoSection .rh-cand-card__photo,
 #financeiroContasReceberSection .rh-cand-card__photo,
 #financeiroDreSection .rh-cand-card__photo {
@@ -1295,6 +1300,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__photo--wait,
 #impostosSection .rh-cand-card__photo--wait,
 #alvaraSection .rh-cand-card__photo--wait,
+#fornecedoresSection .rh-cand-card__photo--wait,
 #financeiroCentrosCustoSection .rh-cand-card__photo--wait,
 #financeiroContasReceberSection .rh-cand-card__photo--wait,
 #financeiroDreSection .rh-cand-card__photo--wait {
@@ -1326,6 +1332,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__main,
 #impostosSection .rh-cand-card__main,
 #alvaraSection .rh-cand-card__main,
+#fornecedoresSection .rh-cand-card__main,
 #financeiroCentrosCustoSection .rh-cand-card__main,
 #financeiroContasReceberSection .rh-cand-card__main,
 #financeiroDreSection .rh-cand-card__main {
@@ -1352,6 +1359,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__head,
 #impostosSection .rh-cand-card__head,
 #alvaraSection .rh-cand-card__head,
+#fornecedoresSection .rh-cand-card__head,
 #financeiroCentrosCustoSection .rh-cand-card__head,
 #financeiroContasReceberSection .rh-cand-card__head,
 #financeiroDreSection .rh-cand-card__head {
@@ -1380,6 +1388,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__name,
 #impostosSection .rh-cand-card__name,
 #alvaraSection .rh-cand-card__name,
+#fornecedoresSection .rh-cand-card__name,
 #financeiroCentrosCustoSection .rh-cand-card__name,
 #financeiroContasReceberSection .rh-cand-card__name,
 #financeiroDreSection .rh-cand-card__name {
@@ -1408,6 +1417,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__sub,
 #impostosSection .rh-cand-card__sub,
 #alvaraSection .rh-cand-card__sub,
+#fornecedoresSection .rh-cand-card__sub,
 #financeiroCentrosCustoSection .rh-cand-card__sub,
 #financeiroContasReceberSection .rh-cand-card__sub,
 #financeiroDreSection .rh-cand-card__sub {
@@ -1435,6 +1445,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__meta,
 #impostosSection .rh-cand-card__meta,
 #alvaraSection .rh-cand-card__meta,
+#fornecedoresSection .rh-cand-card__meta,
 #financeiroCentrosCustoSection .rh-cand-card__meta,
 #financeiroContasReceberSection .rh-cand-card__meta,
 #financeiroDreSection .rh-cand-card__meta {
@@ -1462,6 +1473,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__row,
 #impostosSection .rh-cand-card__row,
 #alvaraSection .rh-cand-card__row,
+#fornecedoresSection .rh-cand-card__row,
 #financeiroCentrosCustoSection .rh-cand-card__row,
 #financeiroContasReceberSection .rh-cand-card__row,
 #financeiroDreSection .rh-cand-card__row {
@@ -1490,6 +1502,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__row span,
 #impostosSection .rh-cand-card__row span,
 #alvaraSection .rh-cand-card__row span,
+#fornecedoresSection .rh-cand-card__row span,
 #financeiroCentrosCustoSection .rh-cand-card__row span,
 #financeiroContasReceberSection .rh-cand-card__row span,
 #financeiroDreSection .rh-cand-card__row span {
@@ -1516,6 +1529,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__row strong,
 #impostosSection .rh-cand-card__row strong,
 #alvaraSection .rh-cand-card__row strong,
+#fornecedoresSection .rh-cand-card__row strong,
 #financeiroCentrosCustoSection .rh-cand-card__row strong,
 #financeiroContasReceberSection .rh-cand-card__row strong,
 #financeiroDreSection .rh-cand-card__row strong {
@@ -1542,6 +1556,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__actions,
 #impostosSection .rh-cand-card__actions,
 #alvaraSection .rh-cand-card__actions,
+#fornecedoresSection .rh-cand-card__actions,
 #financeiroCentrosCustoSection .rh-cand-card__actions,
 #financeiroContasReceberSection .rh-cand-card__actions,
 #financeiroDreSection .rh-cand-card__actions {
@@ -1571,6 +1586,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__actions .rh-wa-btn,
 #impostosSection .rh-cand-card__actions .rh-wa-btn,
 #alvaraSection .rh-cand-card__actions .rh-wa-btn,
+#fornecedoresSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroCentrosCustoSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroContasReceberSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDreSection .rh-cand-card__actions .rh-wa-btn {
@@ -1597,6 +1613,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card .btn-rh-toggle,
 #impostosSection .rh-cand-card .btn-rh-toggle,
 #alvaraSection .rh-cand-card .btn-rh-toggle,
+#fornecedoresSection .rh-cand-card .btn-rh-toggle,
 #financeiroCentrosCustoSection .rh-cand-card .btn-rh-toggle,
 #financeiroContasReceberSection .rh-cand-card .btn-rh-toggle,
 #financeiroDreSection .rh-cand-card .btn-rh-toggle {
@@ -1624,6 +1641,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-pill,
 #impostosSection .rh-cand-pill,
 #alvaraSection .rh-cand-pill,
+#fornecedoresSection .rh-cand-pill,
 #financeiroCentrosCustoSection .rh-cand-pill,
 #financeiroContasReceberSection .rh-cand-pill,
 #financeiroDreSection .rh-cand-pill {
@@ -1656,6 +1674,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-pill--ok,
 #impostosSection .rh-cand-pill--ok,
 #alvaraSection .rh-cand-pill--ok,
+#fornecedoresSection .rh-cand-pill--ok,
 #financeiroCentrosCustoSection .rh-cand-pill--ok,
 #financeiroContasReceberSection .rh-cand-pill--ok,
 #financeiroDreSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
@@ -1678,6 +1697,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-pill--warn,
 #impostosSection .rh-cand-pill--warn,
 #alvaraSection .rh-cand-pill--warn,
+#fornecedoresSection .rh-cand-pill--warn,
 #financeiroCentrosCustoSection .rh-cand-pill--warn,
 #financeiroContasReceberSection .rh-cand-pill--warn,
 #financeiroDreSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
@@ -1700,6 +1720,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-pill--danger,
 #impostosSection .rh-cand-pill--danger,
 #alvaraSection .rh-cand-pill--danger,
+#fornecedoresSection .rh-cand-pill--danger,
 #financeiroCentrosCustoSection .rh-cand-pill--danger,
 #financeiroContasReceberSection .rh-cand-pill--danger,
 #financeiroDreSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
@@ -1722,6 +1743,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-pill--info,
 #impostosSection .rh-cand-pill--info,
 #alvaraSection .rh-cand-pill--info,
+#fornecedoresSection .rh-cand-pill--info,
 #financeiroCentrosCustoSection .rh-cand-pill--info,
 #financeiroContasReceberSection .rh-cand-pill--info,
 #financeiroDreSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
@@ -1935,6 +1957,7 @@ body.sidebar-open {
 #boletaoSection .rh-cand-card__details,
 #impostosSection .rh-cand-card__details,
 #alvaraSection .rh-cand-card__details,
+#fornecedoresSection .rh-cand-card__details,
 #financeiroCentrosCustoSection .rh-cand-card__details,
 #financeiroContasReceberSection .rh-cand-card__details,
 #financeiroDreSection .rh-cand-card__details {
@@ -1971,6 +1994,7 @@ body.sidebar-open {
   #boletaoSection .rh-cand-card__actions .btn,
   #impostosSection .rh-cand-card__actions .btn,
   #alvaraSection .rh-cand-card__actions .btn,
+  #fornecedoresSection .rh-cand-card__actions .btn,
   #financeiroCentrosCustoSection .rh-cand-card__actions .btn,
   #financeiroContasReceberSection .rh-cand-card__actions .btn,
   #financeiroDreSection .rh-cand-card__actions .btn {
@@ -8348,6 +8372,7 @@ select[size]:not([size="1"]) {
 #boletaoSection,
 #impostosSection,
 #alvaraSection,
+#fornecedoresSection,
 #fechamentoSection {
   min-width: 0;
 }
@@ -11254,6 +11279,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11298,6 +11324,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11341,6 +11368,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11389,6 +11417,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11430,6 +11459,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11470,6 +11500,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .rh-cand-card,
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
+#fornecedoresSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11524,6 +11555,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .boletos-filtro,
 #impostosSection .boletos-filtro,
 #alvaraSection .boletos-filtro,
+#fornecedoresSection .boletos-filtro,
 #boletaoSection .rh-cand-card {
   background: var(--card-bg, #fff);
   border: none;
@@ -11541,6 +11573,7 @@ select[size]:not([size="1"]) {
 #boletaoSection .boletos-filtro select,
 #impostosSection .boletos-filtro select,
 #alvaraSection .boletos-filtro select,
+#fornecedoresSection .boletos-filtro select,
 #boletaoSection .boletos-filtro input {
   border: 1.5px solid #c5cdd6;
   background: var(--card-bg, #fff);
@@ -11562,6 +11595,7 @@ select[size]:not([size="1"]) {
 }
 #impostosSection .boletos-filtro,
 #alvaraSection .boletos-filtro,
+#fornecedoresSection .boletos-filtro,
 #impostosSection .rh-cand-card {
   background: var(--card-bg, #fff);
   border: none;
@@ -11578,6 +11612,7 @@ select[size]:not([size="1"]) {
 }
 #impostosSection .boletos-filtro select,
 #alvaraSection .boletos-filtro select,
+#fornecedoresSection .boletos-filtro select,
 #impostosSection .boletos-filtro input {
   border: 1.5px solid #c5cdd6;
   background: var(--card-bg, #fff);
@@ -11598,6 +11633,7 @@ select[size]:not([size="1"]) {
   padding: 1rem;
 }
 #alvaraSection .boletos-filtro,
+#fornecedoresSection .boletos-filtro,
 #alvaraSection .rh-cand-card {
   background: var(--card-bg, #fff);
   border: none;
@@ -11613,6 +11649,7 @@ select[size]:not([size="1"]) {
   background: transparent;
 }
 #alvaraSection .boletos-filtro select,
+#fornecedoresSection .boletos-filtro select,
 #alvaraSection .boletos-filtro input {
   border: 1.5px solid #c5cdd6;
   background: var(--card-bg, #fff);
@@ -11621,6 +11658,42 @@ select[size]:not([size="1"]) {
   padding: 0 1rem 1rem;
 }
 #alvaraSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#fornecedoresSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#fornecedoresSection .actions,
+#fornecedoresSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#fornecedoresSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#fornecedoresSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#fornecedoresSection .actions input {
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+#fornecedoresSection #fornecedoresTable.rh-cand-list {
+  padding: 0 1rem 1rem;
+}
+#fornecedoresSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
