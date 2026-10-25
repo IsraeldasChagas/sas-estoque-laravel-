@@ -828,27 +828,20 @@
     if (uni) q += `&unidade_id=${uni}`;
     const data = await fgFetch(`/financeiro/orcamento${q}`);
     const comp = data.comparativo || {};
-    const cards = document.getElementById("fgOrcCards");
-    if (cards) {
-      cards.innerHTML = [
-        fgCardHtml("Meta faturamento", fmtMoeda(comp.meta?.meta_faturamento)),
-        fgCardHtml("Realizado", fmtMoeda(comp.realizado?.faturamento)),
-        fgCardHtml("Meta despesa", fmtMoeda(comp.meta?.meta_despesa)),
-        fgCardHtml("Despesa real", fmtMoeda(comp.realizado?.despesa)),
-        fgCardHtml("Meta lucro", fmtMoeda(comp.meta?.meta_lucro)),
-        fgCardHtml("Lucro real", fmtMoeda(comp.realizado?.lucro)),
-      ].join("");
-    }
-    const chart = document.getElementById("fgOrcChart");
-    if (chart && data.evolucao_mensal?.length) {
-      const max = Math.max(...data.evolucao_mensal.map((e) => Math.max(e.meta_faturamento, e.realizado_faturamento)), 1);
-      chart.innerHTML = `<div class="fg-chart-bar">${data.evolucao_mensal.map((e) => {
-        const h = Math.round((e.realizado_faturamento / max) * 100);
-        return `<div class="fg-chart-bar__col"><div class="fg-chart-bar__fill" style="height:${h}%"></div><span class="fg-chart-bar__lbl">${esc(e.competencia?.slice(5) || "")}</span></div>`;
-      }).join("")}</div>`;
-    } else if (chart) {
-      chart.innerHTML = "<p class='subtle-text'>Cadastre metas mensais para ver a evolução.</p>";
-    }
+    const meta = comp.meta || {};
+    const real = comp.realizado || {};
+    const variacao = comp.variacao || {};
+    const comparativoHtml = [
+      fgOrcComparativoCard("Faturamento", meta.meta_faturamento, real.faturamento, variacao.faturamento, true),
+      fgOrcComparativoCard("Despesa", meta.meta_despesa, real.despesa, variacao.despesa, false),
+      fgOrcComparativoCard("Lucro", meta.meta_lucro, real.lucro, variacao.lucro, true),
+    ].join("");
+    fgMostrarLista("fgOrcLista", "fgOrcCards", comparativoHtml);
+    const meses = data.evolucao_mensal || [];
+    const evolucaoHtml = meses.length
+      ? meses.map((e) => fgOrcMesCard(e)).join("")
+      : '<p class="rh-cand-empty">Cadastre metas mensais para ver a evolução.</p>';
+    fgMostrarLista("fgOrcEvolucao", "fgOrcChart", evolucaoHtml);
     const metaFat = document.getElementById("fgOrcMetaFat");
     const metaDesp = document.getElementById("fgOrcMetaDesp");
     const metaLuc = document.getElementById("fgOrcMetaLucro");
@@ -857,6 +850,60 @@
       if (metaDesp) metaDesp.value = comp.meta.meta_despesa || "";
       if (metaLuc) metaLuc.value = comp.meta.meta_lucro || "";
     }
+  }
+
+  function fgOrcComparativoCard(titulo, metaValor, realValor, variacao, melhorQuandoMaior) {
+    const metaN = Number(metaValor) || 0;
+    const realN = Number(realValor) || 0;
+    const dif = Number(variacao);
+    const difN = Number.isFinite(dif) ? dif : realN - metaN;
+    const ok = melhorQuandoMaior ? difN >= 0 : difN <= 0;
+    const sinal = difN > 0 ? "+" : "";
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🎯</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo)}</h3>
+              <p class="rh-cand-card__sub">Meta e realizado</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${ok ? "ok" : "danger"}">${esc(sinal + fmtMoeda(difN))}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Meta</span><strong>${esc(fmtMoeda(metaN))}</strong></div>
+            <div class="rh-cand-card__row"><span>Realizado</span><strong>${esc(fmtMoeda(realN))}</strong></div>
+            <div class="rh-cand-card__row"><span>Variação</span><strong>${esc(sinal + fmtMoeda(difN))}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function fgOrcMesCard(e) {
+    const metaN = Number(e.meta_faturamento) || 0;
+    const realN = Number(e.realizado_faturamento) || 0;
+    const comp = String(e.competencia || "");
+    const [ano, mes] = comp.split("-");
+    const titulo = mes && ano ? `${mes}/${ano}` : (comp || "Mês");
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📅</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo)}</h3>
+              <p class="rh-cand-card__sub">Faturamento do mês</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${realN >= metaN ? "ok" : "warn"}">${esc(fmtMoeda(realN))}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Meta</span><strong>${esc(fmtMoeda(metaN))}</strong></div>
+            <div class="rh-cand-card__row"><span>Realizado</span><strong>${esc(fmtMoeda(realN))}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
   }
 
   async function fgSalvarOrcamento(e) {
