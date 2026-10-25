@@ -419,7 +419,8 @@
 }
 
 #financeiroDashboardSection .fg-page-wrap,
-#financeiroFluxoCaixaSection .fg-page-wrap {
+#financeiroFluxoCaixaSection .fg-page-wrap,
+#financeiroDreSection .fg-page-wrap {
   background: var(--bg);
   background: color-mix(in srgb, var(--card-bg) 84%, #000);
   border-radius: 16px;
@@ -431,29 +432,37 @@
 #financeiroFluxoCaixaSection .table-card,
 #financeiroFluxoCaixaSection .fg-card,
 #financeiroFluxoCaixaSection .fg-proj-card,
-#financeiroFluxoCaixaSection .rh-cand-card {
+#financeiroFluxoCaixaSection .rh-cand-card,
+#financeiroDreSection .table-card,
+#financeiroDreSection .fg-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #financeiroDashboardSection .table-card > header,
-#financeiroFluxoCaixaSection .table-card > header {
+#financeiroFluxoCaixaSection .table-card > header,
+#financeiroDreSection .table-card > header {
   border-bottom: none;
 }
 #financeiroDashboardSection .table-card.fg-fluxo-lista-card,
-#financeiroFluxoCaixaSection .table-card.fg-fluxo-lista-card {
+#financeiroFluxoCaixaSection .table-card.fg-fluxo-lista-card,
+#financeiroDreSection .table-card.fg-fluxo-lista-card {
   background: transparent;
   box-shadow: none;
 }
 #financeiroDashboardSection .table-card.fg-fluxo-lista-card > header,
-#financeiroFluxoCaixaSection .table-card.fg-fluxo-lista-card > header {
+#financeiroFluxoCaixaSection .table-card.fg-fluxo-lista-card > header,
+#financeiroDreSection .table-card.fg-fluxo-lista-card > header {
   background: transparent;
   padding-left: 0;
   padding-right: 0;
 }
 #financeiroDashboardSection .fg-fluxo-lista-card > header h3,
-#financeiroFluxoCaixaSection .fg-fluxo-lista-card > header h3 {
+#financeiroFluxoCaixaSection .fg-fluxo-lista-card > header h3,
+#financeiroDreSection .fg-fluxo-lista-card > header h3 {
   margin: 0;
 }
 #financeiroDashboardSection .fg-fluxo-cards,
-#financeiroFluxoCaixaSection .fg-fluxo-cards {
+#financeiroFluxoCaixaSection .fg-fluxo-cards,
+#financeiroDreSection .fg-fluxo-cards {
   padding: 1rem 0;
 }

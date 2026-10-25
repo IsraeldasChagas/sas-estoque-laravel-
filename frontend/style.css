@@ -1136,7 +1136,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-list,
 #patrimonioInventarioSection .rh-cand-list,
 #financeiroFluxoCaixaSection .rh-cand-list,
-#financeiroDashboardSection .rh-cand-list {
+#financeiroDashboardSection .rh-cand-list,
+#financeiroDreSection .rh-cand-list {
   display: grid;
   gap: 12px;
 }
@@ -1152,7 +1153,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-empty,
 #patrimonioInventarioSection .rh-cand-empty,
 #financeiroFluxoCaixaSection .rh-cand-empty,
-#financeiroDashboardSection .rh-cand-empty {
+#financeiroDashboardSection .rh-cand-empty,
+#financeiroDreSection .rh-cand-empty {
   margin: 0;
   padding: 28px 12px;
   text-align: center;
@@ -1173,7 +1175,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -1192,7 +1195,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__top,
 #patrimonioInventarioSection .rh-cand-card__top,
 #financeiroFluxoCaixaSection .rh-cand-card__top,
-#financeiroDashboardSection .rh-cand-card__top {
+#financeiroDashboardSection .rh-cand-card__top,
+#financeiroDreSection .rh-cand-card__top {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -1209,7 +1213,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__photo,
 #patrimonioInventarioSection .rh-cand-card__photo,
 #financeiroFluxoCaixaSection .rh-cand-card__photo,
-#financeiroDashboardSection .rh-cand-card__photo {
+#financeiroDashboardSection .rh-cand-card__photo,
+#financeiroDreSection .rh-cand-card__photo {
   width: 72px;
   height: 72px;
   flex: 0 0 auto;
@@ -1229,7 +1234,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__photo--wait,
 #patrimonioInventarioSection .rh-cand-card__photo--wait,
 #financeiroFluxoCaixaSection .rh-cand-card__photo--wait,
-#financeiroDashboardSection .rh-cand-card__photo--wait {
+#financeiroDashboardSection .rh-cand-card__photo--wait,
+#financeiroDreSection .rh-cand-card__photo--wait {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1250,7 +1256,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__main,
 #patrimonioInventarioSection .rh-cand-card__main,
 #financeiroFluxoCaixaSection .rh-cand-card__main,
-#financeiroDashboardSection .rh-cand-card__main {
+#financeiroDashboardSection .rh-cand-card__main,
+#financeiroDreSection .rh-cand-card__main {
   flex: 1;
   min-width: 0;
 }
@@ -1266,7 +1273,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__head,
 #patrimonioInventarioSection .rh-cand-card__head,
 #financeiroFluxoCaixaSection .rh-cand-card__head,
-#financeiroDashboardSection .rh-cand-card__head {
+#financeiroDashboardSection .rh-cand-card__head,
+#financeiroDreSection .rh-cand-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1284,7 +1292,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__name,
 #patrimonioInventarioSection .rh-cand-card__name,
 #financeiroFluxoCaixaSection .rh-cand-card__name,
-#financeiroDashboardSection .rh-cand-card__name {
+#financeiroDashboardSection .rh-cand-card__name,
+#financeiroDreSection .rh-cand-card__name {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
@@ -1302,7 +1311,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__sub,
 #patrimonioInventarioSection .rh-cand-card__sub,
 #financeiroFluxoCaixaSection .rh-cand-card__sub,
-#financeiroDashboardSection .rh-cand-card__sub {
+#financeiroDashboardSection .rh-cand-card__sub,
+#financeiroDreSection .rh-cand-card__sub {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.92rem;
@@ -1319,7 +1329,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__meta,
 #patrimonioInventarioSection .rh-cand-card__meta,
 #financeiroFluxoCaixaSection .rh-cand-card__meta,
-#financeiroDashboardSection .rh-cand-card__meta {
+#financeiroDashboardSection .rh-cand-card__meta,
+#financeiroDreSection .rh-cand-card__meta {
   display: grid;
   gap: 8px;
   margin-top: 12px;
@@ -1336,7 +1347,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__row,
 #patrimonioInventarioSection .rh-cand-card__row,
 #financeiroFluxoCaixaSection .rh-cand-card__row,
-#financeiroDashboardSection .rh-cand-card__row {
+#financeiroDashboardSection .rh-cand-card__row,
+#financeiroDreSection .rh-cand-card__row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -1354,7 +1366,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__row span,
 #patrimonioInventarioSection .rh-cand-card__row span,
 #financeiroFluxoCaixaSection .rh-cand-card__row span,
-#financeiroDashboardSection .rh-cand-card__row span {
+#financeiroDashboardSection .rh-cand-card__row span,
+#financeiroDreSection .rh-cand-card__row span {
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -1370,7 +1383,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__row strong,
 #patrimonioInventarioSection .rh-cand-card__row strong,
 #financeiroFluxoCaixaSection .rh-cand-card__row strong,
-#financeiroDashboardSection .rh-cand-card__row strong {
+#financeiroDashboardSection .rh-cand-card__row strong,
+#financeiroDreSection .rh-cand-card__row strong {
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -1386,7 +1400,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__actions,
 #patrimonioInventarioSection .rh-cand-card__actions,
 #financeiroFluxoCaixaSection .rh-cand-card__actions,
-#financeiroDashboardSection .rh-cand-card__actions {
+#financeiroDashboardSection .rh-cand-card__actions,
+#financeiroDreSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1405,7 +1420,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__actions .rh-wa-btn,
 #patrimonioInventarioSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroFluxoCaixaSection .rh-cand-card__actions .rh-wa-btn,
-#financeiroDashboardSection .rh-cand-card__actions .rh-wa-btn {
+#financeiroDashboardSection .rh-cand-card__actions .rh-wa-btn,
+#financeiroDreSection .rh-cand-card__actions .rh-wa-btn {
   width: auto;
   margin-top: 0;
 }
@@ -1421,7 +1437,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card .btn-rh-toggle,
 #patrimonioInventarioSection .rh-cand-card .btn-rh-toggle,
 #financeiroFluxoCaixaSection .rh-cand-card .btn-rh-toggle,
-#financeiroDashboardSection .rh-cand-card .btn-rh-toggle {
+#financeiroDashboardSection .rh-cand-card .btn-rh-toggle,
+#financeiroDreSection .rh-cand-card .btn-rh-toggle {
   background: #0f766e;
   border-color: #0f766e;
   color: #fff;
@@ -1438,7 +1455,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-pill,
 #patrimonioInventarioSection .rh-cand-pill,
 #financeiroFluxoCaixaSection .rh-cand-pill,
-#financeiroDashboardSection .rh-cand-pill {
+#financeiroDashboardSection .rh-cand-pill,
+#financeiroDreSection .rh-cand-pill {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
@@ -1460,7 +1478,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-pill--ok,
 #patrimonioInventarioSection .rh-cand-pill--ok,
 #financeiroFluxoCaixaSection .rh-cand-pill--ok,
-#financeiroDashboardSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
+#financeiroDashboardSection .rh-cand-pill--ok,
+#financeiroDreSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
 #rhCandidatosSection .rh-cand-pill--warn,
 #valeConsumoSection .rh-cand-pill--warn,
 #funcionariosSection .rh-cand-pill--warn,
@@ -1472,7 +1491,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-pill--warn,
 #patrimonioInventarioSection .rh-cand-pill--warn,
 #financeiroFluxoCaixaSection .rh-cand-pill--warn,
-#financeiroDashboardSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
+#financeiroDashboardSection .rh-cand-pill--warn,
+#financeiroDreSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
 #rhCandidatosSection .rh-cand-pill--danger,
 #valeConsumoSection .rh-cand-pill--danger,
 #funcionariosSection .rh-cand-pill--danger,
@@ -1484,7 +1504,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-pill--danger,
 #patrimonioInventarioSection .rh-cand-pill--danger,
 #financeiroFluxoCaixaSection .rh-cand-pill--danger,
-#financeiroDashboardSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
+#financeiroDashboardSection .rh-cand-pill--danger,
+#financeiroDreSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
 #rhCandidatosSection .rh-cand-pill--info,
 #valeConsumoSection .rh-cand-pill--info,
 #funcionariosSection .rh-cand-pill--info,
@@ -1496,7 +1517,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-pill--info,
 #patrimonioInventarioSection .rh-cand-pill--info,
 #financeiroFluxoCaixaSection .rh-cand-pill--info,
-#financeiroDashboardSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
+#financeiroDashboardSection .rh-cand-pill--info,
+#financeiroDreSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
 
 #rhVagasSection .rh-vaga-list {
   display: grid;
@@ -1699,7 +1721,8 @@ body.sidebar-open {
 #patrimonioManutencoesSection .rh-cand-card__details,
 #patrimonioInventarioSection .rh-cand-card__details,
 #financeiroFluxoCaixaSection .rh-cand-card__details,
-#financeiroDashboardSection .rh-cand-card__details {
+#financeiroDashboardSection .rh-cand-card__details,
+#financeiroDreSection .rh-cand-card__details {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
@@ -1725,7 +1748,8 @@ body.sidebar-open {
   #patrimonioManutencoesSection .rh-cand-card__actions .btn,
   #patrimonioInventarioSection .rh-cand-card__actions .btn,
   #financeiroFluxoCaixaSection .rh-cand-card__actions .btn,
-  #financeiroDashboardSection .rh-cand-card__actions .btn {
+  #financeiroDashboardSection .rh-cand-card__actions .btn,
+  #financeiroDreSection .rh-cand-card__actions .btn {
     flex: 1 1 140px;
     justify-content: center;
   }
@@ -10996,7 +11020,8 @@ select[size]:not([size="1"]) {
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #patrimonioDashboardSection .table-card > header {
@@ -11030,7 +11055,8 @@ select[size]:not([size="1"]) {
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #patrimoniosSection .table-card > header {
@@ -11063,7 +11089,8 @@ select[size]:not([size="1"]) {
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #patrimonioCategoriasSection .table-card > header {
@@ -11101,7 +11128,8 @@ select[size]:not([size="1"]) {
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #patrimonioMovimentacoesSection .table-card > header {
@@ -11132,7 +11160,8 @@ select[size]:not([size="1"]) {
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #patrimonioManutencoesSection .table-card > header {
@@ -11162,7 +11191,8 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .table-card,
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
-#financeiroDashboardSection .rh-cand-card {
+#financeiroDashboardSection .rh-cand-card,
+#financeiroDreSection .rh-cand-card {
   border: none;
 }
 #patrimonioInventarioSection .table-card > header {

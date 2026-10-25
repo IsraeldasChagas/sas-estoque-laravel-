@@ -638,7 +638,6 @@
     await fgCarregarUnidades(["fgDreFiltroUnidade"]);
     const { q } = fgQueryFiltros("fgDre");
     const data = await fgFetch(`/financeiro/dre${q}`);
-    const tbody = document.getElementById("fgDreTbody");
     const d = data.dre || {};
     const linhas = [
       ["Receita bruta", d.receita_bruta],
@@ -647,20 +646,40 @@
       ["(−) Custo saídas estoque", d.cmv, true],
       ["Lucro bruto", d.lucro_bruto, false, true],
       ["(−) Despesas operacionais", d.despesas_operacionais, true],
-      [" Folha / proventos", d.folha_proventos, true],
-      [" Despesas fixas", d.despesas_fixas, true],
+      ["Folha / proventos", d.folha_proventos, true, false, "Despesa operacional"],
+      ["Despesas fixas", d.despesas_fixas, true, false, "Despesa operacional"],
       ["(−) Outras despesas", d.outras_despesas, true],
       ["Resultado operacional", d.resultado_operacional, false, true],
       ["Investimentos / reservas", d.investimentos_reservas],
       ["Lucro líquido", d.lucro_liquido, false, true],
     ];
-    if (tbody) {
-      tbody.innerHTML = linhas.map(([nome, val, neg, total]) => {
-        const cls = total ? "fg-dre-total" : "";
-        const v = neg && val ? `(${fmtMoeda(val)})` : fmtMoeda(val);
-        return `<tr class="${cls}"><td>${esc(nome)}</td><td>${esc(v)}</td></tr>`;
-      }).join("");
-    }
+    fgMostrarLista("fgDreLista", "fgDreTbody", linhas.map((linha) => fgDreCard(...linha)).join(""));
+  }
+
+  function fgDreCard(nome, val, neg, total, sub) {
+    const n = Number(val);
+    const valor = neg && Number.isFinite(n) ? `(${fmtMoeda(n)})` : fmtMoeda(val);
+    const pill = neg ? "danger" : (total ? (Number.isFinite(n) && n < 0 ? "danger" : "ok") : "info");
+    const titulo = String(nome || "").replace(/^[−\-]\s*/, "").replace(/^ /, "");
+    const detalhe = sub || (total ? "Resultado" : (neg ? "Dedução" : "Conta"));
+    const icone = neg ? "－" : (total ? "＝" : "＋");
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">${icone}</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo)}</h3>
+              <p class="rh-cand-card__sub">${esc(detalhe)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${esc(valor)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Valor</span><strong>${esc(valor)}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
   }
 
   // ——— Custo de saídas de estoque ———
