@@ -21951,9 +21951,13 @@ function renderAlvaras(alvaras) {
   const unidadesPorId = new Map((state.unidades || []).map(u => [String(u.id), u]));
   const fmtData = (v) => (formatDate(v) || '').split(' ')[0] || '-';
   const rows = alvaras.map(a => {
+    const nomeAnexo = (a.anexo_nome || 'Documento.pdf').toString();
     const anexo = a.anexo_path
-      ? `<a href="${API_URL}/alvaras/${a.id}/anexo" target="_blank" title="Baixar ${escapeHtml(a.anexo_nome || 'anexo')}" style="text-decoration:none;font-size:1.2rem;">📎</a>`
-      : '<span style="color:#ccc;">-</span>';
+      ? escapeHtml(nomeAnexo)
+      : '-';
+    const pdfBtn = a.anexo_path
+      ? `<button type="button" class="btn neutral btn-alvara-pdf" title="PDF" data-id="${a.id}" data-anexo-nome="${escapeHtml(nomeAnexo)}" data-anexo-tipo="${escapeHtml(a.anexo_tipo || '')}">Ver PDF</button>`
+      : '';
     const unidadeObj = unidadesPorId.get(String(a.unidade_id || '')) || null;
     const unidadeLabel = unidadeObj ? (unidadeObj.nome || `Unidade ${unidadeObj.id}`) : (a.unidade_id ? `Unidade ${a.unidade_id}` : '-');
     return `
@@ -21979,6 +21983,7 @@ function renderAlvaras(alvaras) {
         <div class="rh-cand-card__actions">
           <button type="button" class="btn primary" title="Editar" data-id="${a.id}">Editar</button>
           <button type="button" class="btn btn-rh-toggle" title="Visualizar" data-id="${a.id}">Ver</button>
+          ${pdfBtn}
           <button type="button" class="btn btn-deletar-alvara" title="Excluir" data-id="${a.id}" style="background:#b71c1c;color:#fff;">Excluir</button>
         </div>
       </article>
@@ -22513,6 +22518,25 @@ function setupAlvarasModule() {
   if (alvarasTable) {
     alvarasTable.addEventListener('click', async (e) => {
       if (e.target.closest('.btn-deletar-alvara')) return;
+      const pdfBtn = e.target.closest('.btn-alvara-pdf');
+      if (pdfBtn && alvarasTable.contains(pdfBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pdfId = pdfBtn.getAttribute('data-id');
+        if (!pdfId) return;
+        const nomeArquivo = pdfBtn.getAttribute('data-anexo-nome') || 'Documento.pdf';
+        try {
+          await abrirModalPdfNoViewerDoAlvara({
+            nomeArquivo,
+            titulo: `📄 ${nomeArquivo}`,
+            viewApiPath: `/alvaras/${pdfId}/anexo`,
+            downloadApiPath: `/alvaras/${pdfId}/anexo?download=1`,
+          });
+        } catch (err) {
+          showToast(err?.message || 'Erro ao abrir PDF.', 'error');
+        }
+        return;
+      }
       const btn = e.target.closest('button[title]');
       if (!btn || !alvarasTable.contains(btn)) return;
       const id = btn.getAttribute('data-id');
