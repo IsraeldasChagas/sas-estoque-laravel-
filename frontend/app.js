@@ -6111,8 +6111,13 @@ function renderMovimentacoes(lista, target, emptyMessage) {
     console.error("Target não fornecido para renderMovimentacoes");
     return;
   }
+  const comoCards = target.id === "relatorioDetalhesTable";
   
   if (!Array.isArray(lista) || lista.length === 0) {
+    if (comoCards) {
+      target.innerHTML = `<p class="rh-cand-empty">${escapeHtml(emptyMessage || "Sem movimentacoes.")}</p>`;
+      return;
+    }
     renderTable(target, "", emptyMessage, 8);
     return;
   }
@@ -6171,8 +6176,33 @@ function renderMovimentacoes(lista, target, emptyMessage) {
     
     const isTransferencia = tipo === "TRANSFERENCIA";
     const btnAcao = isTransferencia
-      ? { title: "Desfazer transferência (restaura estoque)", icon: "↩️" }
-      : { title: "Excluir movimentação (restaura estoque deste produto)", icon: "🗑️" };
+      ? { title: "Desfazer transferência (restaura estoque)", icon: "↩️", rotulo: "Desfazer" }
+      : { title: "Excluir movimentação (restaura estoque deste produto)", icon: "🗑️", rotulo: "Excluir" };
+    const acaoBtn = `<button type="button" class="btn btn-excluir-movimentacao" title="${btnAcao.title}" data-id="${item.id}" data-tipo="${tipo}" data-produto="${escapeHtml(item.produto_nome || "")}" data-motivo="${escapeHtml(item.motivo || "")}" data-qtd="${escapeHtml(String(quantidadeValor))}" style="background:#b71c1c;color:#fff;">${btnAcao.rotulo}</button>`;
+    if (comoCards) {
+      const pill = tipo === "ENTRADA" ? "ok" : (tipo === "SAIDA" || tipo === "PERDA") ? "danger" : (tipo === "AJUSTE" || tipo === "REVERSAO") ? "warn" : "info";
+      return `<article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🔄</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${escapeHtml(item.produto_nome || "—")}</h3>
+                <p class="rh-cand-card__sub">${escapeHtml(unidadeDisplay)}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${pill}">${escapeHtml(tipo || "—")}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Data</span><strong>${escapeHtml(formatDate(item.data_mov) || "—")}</strong></div>
+              <div class="rh-cand-card__row"><span>Quantidade</span><strong>${quantidade}</strong></div>
+              <div class="rh-cand-card__row"><span>Motivo</span><strong>${motivo}</strong></div>
+              <div class="rh-cand-card__row"><span>Responsável</span><strong>${escapeHtml(item.responsavel_nome || "—")}</strong></div>
+            </div>
+          </div>
+        </div>
+        ${isAdmin ? `<div class="rh-cand-card__actions">${acaoBtn}</div>` : ""}
+      </article>`;
+    }
     const acoesCell = isAdmin
       ? `<td data-label="Acoes"><button type="button" class="btn-icon btn-icon--danger btn-excluir-movimentacao" title="${btnAcao.title}" data-id="${item.id}" data-tipo="${tipo}" data-produto="${escapeHtml(item.produto_nome || "")}" data-motivo="${escapeHtml(item.motivo || "")}" data-qtd="${escapeHtml(String(quantidadeValor))}">${btnAcao.icon}</button></td>`
       : `<td data-label="Acoes"></td>`;
@@ -6963,17 +6993,38 @@ function renderUsuarios(lista) {
 function renderRelatorioResumo(lista, label) {
   if (dom.relResumoColuna) dom.relResumoColuna.textContent = label;
   const colLabel = label || "Agrupador";
-  const rows = (lista || []).map((item) => (
-    `<tr>
-      <td data-label="${colLabel}">${escapeHtml(item.nome)}</td>
-      <td data-label="Entradas (Qtd)">${formatNumber(item.entradasQtd, 3)}</td>
-      <td data-label="Entradas (Valor)">R$ ${formatNumber(item.entradasVal, 2)}</td>
-      <td data-label="Saídas (Qtd)">${formatNumber(item.saidasQtd, 3)}</td>
-      <td data-label="Saídas (Valor)">R$ ${formatNumber(item.saidasVal, 2)}</td>
-      <td data-label="Saldo (Qtd)">${formatNumber(item.saldoQtd, 3)}</td>
-    </tr>`
-  )).join("");
-  renderTable(dom.relatorioResumoTable, rows, "Sem dados no periodo.", 6);
+  const target = dom.relatorioResumoTable;
+  if (!target) return;
+  const items = lista || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Sem dados no periodo.</p>';
+    return;
+  }
+  target.innerHTML = items.map((item) => {
+    const saldo = Number(item.saldoQtd || 0);
+    const pill = saldo < 0 ? "danger" : saldo > 0 ? "ok" : "info";
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📊</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(item.nome || "—")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(colLabel)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${escapeHtml(formatNumber(item.saldoQtd, 3))}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Entradas (qtd)</span><strong>${escapeHtml(formatNumber(item.entradasQtd, 3))}</strong></div>
+            <div class="rh-cand-card__row"><span>Entradas (valor)</span><strong>R$ ${escapeHtml(formatNumber(item.entradasVal, 2))}</strong></div>
+            <div class="rh-cand-card__row"><span>Saídas (qtd)</span><strong>${escapeHtml(formatNumber(item.saidasQtd, 3))}</strong></div>
+            <div class="rh-cand-card__row"><span>Saídas (valor)</span><strong>R$ ${escapeHtml(formatNumber(item.saidasVal, 2))}</strong></div>
+            <div class="rh-cand-card__row"><span>Saldo (qtd)</span><strong>${escapeHtml(formatNumber(item.saldoQtd, 3))}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
 }
 
 const renderRelatorioDetalhes = (lista) => renderMovimentacoes(lista, dom.relatorioDetalhesTable, "Sem movimentacoes.");

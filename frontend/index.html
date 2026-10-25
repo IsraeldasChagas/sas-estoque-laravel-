@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025350000-forn" />
+    <link rel="stylesheet" href="style.css?v=20261025360000-relat" />
     <script>
       (function () {
         try {
@@ -1028,6 +1028,7 @@
 
           <!-- Relatorios consolidados e exportacao -->
           <section id="relatoriosSection" class="view-section hidden">
+            <div class="caixa-page-wrap">
             <form id="relatorioFilterForm" class="filters-panel">
               <div class="filters-grid">
                 <label>
@@ -1072,63 +1073,35 @@
               </div>
               <div class="filters-actions">
                 <button type="submit" class="btn primary">Gerar relatorio</button>
-                <button type="button" class="btn" id="relatorioLimpar">Limpar</button>
+                <button type="button" class="btn neutral" id="relatorioLimpar">Limpar</button>
               </div>
             </form>
 
             <div class="report-actions">
-              <button type="button" class="btn secondary" id="relatorioExportCsv">Exportar CSV</button>
-              <button type="button" class="btn secondary" id="relatorioExportPdf">Exportar PDF</button>
+              <button type="button" class="btn neutral" id="relatorioExportCsv">Exportar CSV</button>
+              <button type="button" class="btn neutral" id="relatorioExportPdf">Exportar PDF</button>
             </div>
 
             <div class="relatorios-grid">
               <div class="table-card form-card--wide">
-                <header>Resumo por agrupador</header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th id="relResumoColuna">Agrupador</th>
-                        <th>Entradas (Qtd)</th>
-                        <th>Entradas (Valor)</th>
-                        <th>Saidas (Qtd)</th>
-                        <th>Saidas (Valor)</th>
-                        <th>Saldo (Qtd)</th>
-                      </tr>
-                    </thead>
-                    <tbody id="relatorioResumoTable">
-                      <tr>
-                        <td colspan="6" style="text-align: center; color: #607d8b">Utilize os filtros para gerar o relatorio.</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <header>
+                  <div>
+                    <h3>Resumo por agrupador</h3>
+                    <p class="subtle-text" id="relResumoColuna">Agrupador</p>
+                  </div>
+                </header>
+                <div class="rh-cand-list" id="relatorioResumoTable">
+                  <p class="rh-cand-empty">Utilize os filtros para gerar o relatorio.</p>
                 </div>
               </div>
 
               <div class="table-card form-card--wide">
                 <header>Movimentacoes detalhadas</header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Tipo</th>
-                        <th>Produto</th>
-                        <th>Unidade</th>
-                        <th>Quantidade</th>
-                        <th>Motivo</th>
-                        <th>Responsavel</th>
-                        <th id="relatorioDetalhesAcoesHeader">Acoes</th>
-                      </tr>
-                    </thead>
-                    <tbody id="relatorioDetalhesTable">
-                      <tr>
-                        <td colspan="8" style="text-align: center; color: #607d8b">Utilize os filtros para gerar o relatorio.</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="rh-cand-list" id="relatorioDetalhesTable">
+                  <p class="rh-cand-empty">Utilize os filtros para gerar o relatorio.</p>
                 </div>
               </div>
+            </div>
             </div>
           </section>
 
@@ -8003,7 +7976,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025350000-forn"></script>
+    <script defer src="app.js?v=20261025360000-relat"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
