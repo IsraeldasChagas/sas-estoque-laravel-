@@ -5447,7 +5447,19 @@
               <p class="subtle-text fechamento-dash__hint" id="fechamentoDashHint"></p>
             </div>
 
-            <p class="subtle-text fechamento-dash__cards-legend">Totais, gráficos e o PDF respeitam as datas, o operador e a unidade escolhida: uma loja ou todas.</p>
+            <div class="table-card fechamento-dash__unidades-pick">
+              <header><h3>Unidades nos cards</h3></header>
+              <p class="subtle-text fechamento-dash__unidades-pick-desc">
+                Marque quais unidades aparecem nos cards, nos gráficos e no PDF.
+              </p>
+              <div class="fechamento-dash__unidades-pick-actions">
+                <button type="button" class="btn neutral" id="fechamentoDashCardsUnidadesTodas">Marcar todas</button>
+                <button type="button" class="btn neutral" id="fechamentoDashCardsUnidadesNenhuma">Desmarcar todas</button>
+              </div>
+              <div id="fechamentoDashUnidadesCardsPick" class="fechamento-dash__unidades-pick-list" role="group" aria-label="Unidades exibidas nos cards"></div>
+            </div>
+
+            <p class="subtle-text fechamento-dash__cards-legend">Totais, gráficos e o PDF respeitam as datas, o operador e as unidades marcadas.</p>
 
             <div class="table-card form-card--wide fg-fluxo-lista-card">
               <header><h3>Totais</h3></header>
@@ -8011,7 +8023,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025260000-dashfech"></script>
+    <script defer src="app.js?v=20261025270000-opcoes"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

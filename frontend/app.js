@@ -22901,6 +22901,11 @@ async function downloadFechamentoDashPdf() {
   if (u) qs.set("unidade_id", u);
   const op = document.getElementById("fechamentoDashOperador")?.value?.trim();
   if (op) qs.set("operador_nome", op);
+  const set = fechamentoDashGetUnidadeIdsParaCardsPick();
+  if (set !== null) {
+    if (set.size === 0) qs.set("unidades_cards", "");
+    else qs.set("unidades_cards", [...set].join(","));
+  }
   const headers = {
     ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
     ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
@@ -23739,8 +23744,7 @@ function renderFechamentoDashPorUnidadeCards(rows) {
   if (!host) return;
   const set = fechamentoDashGetUnidadeIdsParaCardsPick();
   if (set && set.size === 0) {
-    host.innerHTML =
-      '<p class="subtle-text fechamento-dash__por-unidade-empty">Marque ao menos uma unidade em <strong>Unidades nos cards</strong> ou clique em <strong>Marcar todas</strong>.</p>';
+    host.innerHTML = '<p class="rh-cand-empty">Marque ao menos uma unidade ou clique em Marcar todas.</p>';
     return;
   }
   const lista = fechamentoDashUnidadesOrdemParaBlocos(rows);
@@ -23977,7 +23981,8 @@ function renderFechamentoDashTop3List(top3) {
 
 function renderFechamentoDashFromCache() {
   const base = fechamentoDashFilteredRows();
-  renderFechamentoDashUI(base);
+  const vis = fechamentoDashFilterRowsByUnidadeCardsPick(base);
+  renderFechamentoDashUI(vis);
 }
 
 function renderFechamentoDashUI(rows) {
