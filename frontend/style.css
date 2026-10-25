@@ -196,6 +196,7 @@ body.sidebar-open {
   overflow: visible;
 }
 
+.nav-submenu.nav-submenu--financeiro .nav-submenu--nested .nav-submenu-content .nav-link-child,
 .nav-submenu.nav-submenu--rh .nav-submenu--nested .nav-submenu-content .nav-link-child {
   padding-left: 44px !important;
 }

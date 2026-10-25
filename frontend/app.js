@@ -5359,7 +5359,7 @@ function ensureFinanceiroFechamentoDashNavLink() {
     dash.id = "navFinanceiroFechamentoDash";
     dash.dataset.section = "fechamentoDash";
     dash.title = "Gráficos, totais por unidade e análise dos fechamentos";
-    dash.innerHTML = '<span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Auditoria de Caixa</span>';
+    dash.innerHTML = '<span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span>';
     ref.insertAdjacentElement("afterend", dash);
     return;
   }
@@ -5630,6 +5630,12 @@ function applyPermissions() {
       regras.sections.includes("fechamento") || regras.sections.includes("fechamentoDash");
     fechamentoNavSubmenu.classList.toggle("hidden", !temAcessoFechamento);
   }
+  const financeiroFechamentoNav = document.getElementById("financeiroFechamentoMenu")?.closest(".nav-submenu");
+  if (financeiroFechamentoNav) {
+    const temAcessoFechamentoFinanceiro =
+      regras.sections.includes("fechamento") || regras.sections.includes("fechamentoDash");
+    financeiroFechamentoNav.classList.toggle("hidden", !temAcessoFechamentoFinanceiro);
+  }
   // Menu Configurações: OpenClaw (ADMIN) e backup (ADMIN).
   const configuracoesNavSubmenu = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenu) {
@@ -5872,6 +5878,14 @@ function navigateTo(section) {
       fechamentoNavSubmenuNav.classList.add("open");
     } else {
       fechamentoNavSubmenuNav.classList.remove("open");
+    }
+  }
+  const financeiroFechamentoNavOpen = document.getElementById("financeiroFechamentoMenu")?.closest(".nav-submenu");
+  if (financeiroFechamentoNavOpen) {
+    if (section === "fechamento" || section === "fechamentoDash") {
+      financeiroFechamentoNavOpen.classList.add("open");
+    } else {
+      financeiroFechamentoNavOpen.classList.remove("open");
     }
   }
   const rrSectionsNav = ["rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios"];

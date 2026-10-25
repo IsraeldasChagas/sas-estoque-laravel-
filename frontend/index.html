@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025260000-dashfech" />
+    <link rel="stylesheet" href="style.css?v=20261025290000-submenu" />
     <script>
       (function () {
         try {
@@ -197,12 +197,12 @@
           <a href="#" class="nav-link" data-section="fornecedores"><span class="nav-icon" aria-hidden="true">🚚</span><span class="nav-label">Fornecedores</span></a>
           <div class="nav-submenu nav-submenu--fechamento">
             <a href="#" class="nav-link nav-link-parent" id="fechamentoCaixaMenu">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">💰</span><span class="nav-label">Fechamento de caixa</span></span>
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">💰</span><span class="nav-label">Fechamento de Caixa</span></span>
               <span class="nav-arrow">▼</span>
             </a>
             <div class="nav-submenu-content">
               <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Lançar, editar e conferir fechamentos de caixa"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Auditoria</span></a>
-              <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Auditoria de Caixa</span></a>
+              <a href="#" class="nav-link nav-link-child" id="navFinanceiroFechamentoDash" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
             </div>
           </div>
           <div class="nav-submenu">
@@ -350,8 +350,16 @@
               <a href="#" class="nav-link nav-link-child" data-section="financeiroCentrosCusto"><span class="nav-icon" aria-hidden="true">🏷️</span><span class="nav-label">Centro de Custos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroOrcamento"><span class="nav-icon" aria-hidden="true">🎯</span><span class="nav-label">Orçamento Empresarial</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="financeiroIndicadores"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Indicadores Financeiros</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="fechamento"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Auditoria de Caixa</span></a>
+              <div class="nav-submenu nav-submenu--nested">
+                <a href="#" class="nav-link nav-link-parent nav-link-child" id="financeiroFechamentoMenu">
+                  <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></span>
+                  <span class="nav-arrow">▼</span>
+                </a>
+                <div class="nav-submenu-content">
+                  <a href="#" class="nav-link nav-link-child" data-section="fechamento" title="Lançar, editar e conferir fechamentos de caixa"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Auditoria</span></a>
+                  <a href="#" class="nav-link nav-link-child" data-section="fechamentoDash" title="Gráficos, totais por unidade e análise dos fechamentos"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard</span></a>
+                </div>
+              </div>
               <a href="#" class="nav-link nav-link-child" data-section="boletao"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Boletos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="impostos"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Impostos</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="alvara"><span class="nav-icon" aria-hidden="true">📁</span><span class="nav-label">Documentos empresa</span></a>
@@ -8024,7 +8032,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025280000-auditdash"></script>
+    <script defer src="app.js?v=20261025290000-submenu"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
