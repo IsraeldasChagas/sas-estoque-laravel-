@@ -450,12 +450,30 @@ class FinanceiroGerencialCalculo
         if ($dataCol && $ate) {
             $q->whereDate($dataCol, '<=', $ate);
         }
-        if ($unidadeId && Schema::hasColumn('financeiro_vale_consumo', 'unidade_id')) {
-            $q->where('unidade_id', $unidadeId);
+        if ($unidadeId) {
+            if (Schema::hasColumn('financeiro_vale_consumo', 'unidade_id')) {
+                $q->where('unidade_id', $unidadeId);
+            } elseif (Schema::hasColumn('financeiro_vale_consumo', 'funcionario_id') && Schema::hasTable('funcionarios')) {
+                $ids = DB::table('funcionarios')->where('unidade_id', $unidadeId)->pluck('id');
+                $q->whereIn('funcionario_id', $ids);
+            }
         }
-        $col = Schema::hasColumn('financeiro_vale_consumo', 'valor_total') ? 'valor_total' : 'valor';
 
-        return round((float) $q->sum($col), 2);
+        if (Schema::hasColumn('financeiro_vale_consumo', 'valor_total')) {
+            return round((float) $q->sum('valor_total'), 2);
+        }
+        if (Schema::hasColumn('financeiro_vale_consumo', 'valor')) {
+            return round((float) $q->sum('valor'), 2);
+        }
+        $total = 0.0;
+        if (Schema::hasColumn('financeiro_vale_consumo', 'valor_vale')) {
+            $total += (float) (clone $q)->sum('valor_vale');
+        }
+        if (Schema::hasColumn('financeiro_vale_consumo', 'valor_consumo')) {
+            $total += (float) (clone $q)->sum('valor_consumo');
+        }
+
+        return round($total, 2);
     }
 
     public static function investimentosCarteira(): float
