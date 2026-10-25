@@ -5617,7 +5617,6 @@ function applyPermissions() {
     const temAcessoFinanceiro =
       regras.sections.includes("boletao") ||
       regras.sections.includes("impostos") ||
-      regras.sections.includes("alvara") ||
       regras.sections.includes("proventos") ||
       regras.sections.includes("despesasFixas") ||
       regras.sections.includes("valeConsumo") ||
@@ -5857,7 +5856,7 @@ function navigateTo(section) {
     const fgFinanceiroSections = [
       "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre",
       "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
-      "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda",
+      "boletao", "impostos", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda",
       "fechamento", "fechamentoDash",
     ];
     if (fgFinanceiroSections.includes(section)) {
