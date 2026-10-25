@@ -187,11 +187,15 @@
   border: 1.5px solid #c5cdd6;
 }
 
+#fechamentoDashSection .fechamento-dash__filters {
+  overflow: visible;
+}
 #fechamentoDashSection .fechamento-dash__filters-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: end;
+  align-items: center;
+  padding: 0 1.5rem 1rem;
 }
 
 #fechamentoDashSection .fechamento-dash__filters-actions .btn,
