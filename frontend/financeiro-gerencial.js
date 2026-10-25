@@ -763,11 +763,36 @@
     const lista = await fgFetch("/financeiro/centros-custo?padrao=1");
     const tbody = document.getElementById("fgCcTbody");
     const rows = fgFiltrarCentrosPadrao(Array.isArray(lista) ? lista : []);
-    if (tbody) {
-      tbody.innerHTML = rows.length
-        ? rows.map((c) => `<tr><td>${esc(c.codigo || "—")}</td><td>${esc(c.nome)}</td><td>Ativo</td></tr>`).join("")
-        : `<tr><td colspan="3" class="empty-row">Nenhum centro cadastrado.</td></tr>`;
+    const html = rows.length
+      ? rows.map((c) => fgCcCard(c)).join("")
+      : '<p class="rh-cand-empty">Nenhum centro cadastrado.</p>';
+    if (tbody || document.getElementById("fgCcLista")) {
+      fgMostrarLista("fgCcLista", "fgCcTbody", html);
     }
+  }
+
+  function fgCcCard(c) {
+    const nome = c.nome || "Centro de custo";
+    const codigo = c.codigo || "—";
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏷️</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(nome)}</h3>
+              <p class="rh-cand-card__sub">Centro de custo</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--ok">Ativo</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Código</span><strong>${esc(codigo)}</strong></div>
+            <div class="rh-cand-card__row"><span>Nome</span><strong>${esc(nome)}</strong></div>
+            <div class="rh-cand-card__row"><span>Status</span><strong>Ativo</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
   }
 
   async function fgSalvarCentroCusto(e) {
