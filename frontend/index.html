@@ -5411,6 +5411,7 @@
               <p class="subtle-text">
                 Volume referente aos totais informados nos registros de auditoria (soma <strong>PDV</strong> e <strong>maquinha</strong> nas linhas de pagamento).
                 Quebras e sobras usam o <strong>saldo líquido</strong> do fechamento.
+                Em <strong>Unidade</strong>, escolha uma loja ou <strong>Todas as unidades</strong>. O PDF sai com o mesmo dashboard da tela.
               </p>
             </div>
 
@@ -5441,24 +5442,12 @@
               </div>
               <div class="fechamento-dash__filters-actions">
                 <button type="button" class="btn primary" id="fechamentoDashAplicarBtn">Atualizar dados</button>
-                <button type="button" class="btn secondary" id="fechamentoDashPdfBtn" title="Relatório em PDF com os filtros atuais (período, unidade, operador e unidades nos cards)">Baixar relatório PDF</button>
+                <button type="button" class="btn secondary" id="fechamentoDashPdfBtn" title="PDF do dashboard com a unidade escolhida: uma loja ou todas">Baixar relatório PDF</button>
               </div>
               <p class="subtle-text fechamento-dash__hint" id="fechamentoDashHint"></p>
             </div>
 
-            <div class="table-card fechamento-dash__unidades-pick">
-              <header><h3>Unidades nos cards</h3></header>
-              <p class="subtle-text fechamento-dash__unidades-pick-desc">
-                Marque quais unidades aparecem nos cards de totais, nos gráficos e nos blocos por unidade abaixo. Se nenhuma estiver marcada, usa-se todas as que têm dados no período.
-              </p>
-              <div class="fechamento-dash__unidades-pick-actions">
-                <button type="button" class="btn neutral" id="fechamentoDashCardsUnidadesTodas">Marcar todas</button>
-                <button type="button" class="btn neutral" id="fechamentoDashCardsUnidadesNenhuma">Desmarcar todas</button>
-              </div>
-              <div id="fechamentoDashUnidadesCardsPick" class="fechamento-dash__unidades-pick-list" role="group" aria-label="Unidades exibidas nos cards"></div>
-            </div>
-
-            <p class="subtle-text fechamento-dash__cards-legend">Totais abaixo respeitam datas, unidade (API), operador e as unidades marcadas em <strong>Unidades nos cards</strong>.</p>
+            <p class="subtle-text fechamento-dash__cards-legend">Totais, gráficos e o PDF respeitam as datas, o operador e a unidade escolhida: uma loja ou todas.</p>
 
             <div class="fechamento-dash__cards" id="fechamentoDashCards">
               <div class="fechamento-dash__card">
@@ -7974,7 +7963,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025230000-fech"></script>
+    <script defer src="app.js?v=20261025250000-pdfuni"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

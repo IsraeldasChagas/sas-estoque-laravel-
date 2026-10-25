@@ -8428,6 +8428,31 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
     $cardQ = $h($fmt($sumQuebra));
     $cardS = $h($fmt($sumSobra));
 
+    $htmlComparativo = '<h2>Por unidade</h2>';
+    if ($unitsRank === []) {
+        $htmlComparativo .= '<p style="color:#90a4ae;font-size:9pt;">Nenhuma unidade no filtro.</p>';
+    } else {
+        $htmlComparativo .= '<table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:8pt;margin:0 0 12px;">'
+            . '<thead><tr style="background:#e3f2fd;">'
+            . '<th align="left">Unidade</th><th align="right">Fechamentos</th><th align="right">Maquinha</th><th align="right">PDV</th><th align="right">Quebras</th><th align="right">Sobras</th><th align="right">Sem dif.</th>'
+            . '</tr></thead><tbody>';
+        foreach ($unitsRank as $uu) {
+            $nUni = (int) $uu['n'];
+            $semUni = (int) $uu['sem'];
+            $pctUni = $nUni > 0 ? (round(($semUni / $nUni) * 1000) / 10) : 0;
+            $htmlComparativo .= '<tr>'
+                . '<td style="border-bottom:1px solid #eceff1;">' . $h($uu['nome']) . '</td>'
+                . '<td align="right" style="border-bottom:1px solid #eceff1;">' . $h((string) $nUni) . '</td>'
+                . '<td align="right" style="border-bottom:1px solid #eceff1;">' . $h($fmt($uu['maq'])) . '</td>'
+                . '<td align="right" style="border-bottom:1px solid #eceff1;">' . $h($fmt($uu['pdv'])) . '</td>'
+                . '<td align="right" style="border-bottom:1px solid #eceff1;">' . $h($fmt($uu['q'])) . '</td>'
+                . '<td align="right" style="border-bottom:1px solid #eceff1;">' . $h($fmt($uu['s'])) . '</td>'
+                . '<td align="right" style="border-bottom:1px solid #eceff1;">' . $h($pctUni . '% (' . $semUni . ')') . '</td>'
+                . '</tr>';
+        }
+        $htmlComparativo .= '</tbody></table>';
+    }
+
     $html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 9pt; color: #222; margin: 12px 14px; }
         .pdf-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; border-bottom: 2px solid #1565c0; padding-bottom: 10px; }
@@ -8483,6 +8508,8 @@ Route::get('/fechamentos-caixa/relatorio-dashboard-pdf', function (Request $requ
         <td class="dash-card ok"><div class="dash-card-label">Soma sobras (R$)</div><div class="dash-card-value">' . $cardS . '</div></td>
         <td class="dash-card"><div class="dash-card-label">Sem diferença líquida</div><div class="dash-card-value">' . $pctSemTxt . '</div></td>
     </tr></table>
+
+    ' . $htmlComparativo . '
 
     <table class="charts-row" width="100%">
         <tr><td colspan="2" style="padding-bottom: 6px;"><div class="chart-wrap">' . $htmlBarUnidades . '</div></td></tr>

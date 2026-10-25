@@ -22886,7 +22886,7 @@ async function downloadFechamentoCaixaPdf(id) {
   URL.revokeObjectURL(url);
 }
 
-/** PDF do dashboard de fechamentos: mesmos filtros da tela (datas, unidade API, operador, checkboxes “Unidades nos cards”). */
+/** PDF do dashboard: mesmas datas, uma unidade ou todas, e o operador da tela. */
 async function downloadFechamentoDashPdf() {
   const de = document.getElementById("fechamentoDashDe")?.value?.trim();
   const ate = document.getElementById("fechamentoDashAte")?.value?.trim();
@@ -22901,11 +22901,6 @@ async function downloadFechamentoDashPdf() {
   if (u) qs.set("unidade_id", u);
   const op = document.getElementById("fechamentoDashOperador")?.value?.trim();
   if (op) qs.set("operador_nome", op);
-  const set = fechamentoDashGetUnidadeIdsParaCardsPick();
-  if (set !== null) {
-    if (set.size === 0) qs.set("unidades_cards", "");
-    else qs.set("unidades_cards", [...set].join(","));
-  }
   const headers = {
     ...(currentUser?.token ? { Authorization: `Bearer ${currentUser.token}` } : {}),
     ...(currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {}),
@@ -23957,8 +23952,7 @@ function renderFechamentoDashTop3List(top3) {
 
 function renderFechamentoDashFromCache() {
   const base = fechamentoDashFilteredRows();
-  const vis = fechamentoDashFilterRowsByUnidadeCardsPick(base);
-  renderFechamentoDashUI(vis);
+  renderFechamentoDashUI(base);
 }
 
 function renderFechamentoDashUI(rows) {
@@ -24288,6 +24282,9 @@ function setupFechamentoDashPanel() {
   });
   document.getElementById("fechamentoDashOperador")?.addEventListener("change", () => {
     renderFechamentoDashFromCache();
+  });
+  document.getElementById("fechamentoDashUnidade")?.addEventListener("change", () => {
+    loadFechamentoDashSection();
   });
   document.getElementById("fechamentoDashUnidadesCardsPick")?.addEventListener("change", () => {
     fechamentoDashPersistCardUnidadeSelection();
