@@ -339,3 +339,59 @@
     padding: 0.25rem 0.85rem 1rem;
   }
 }
+
+#fechamentoSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#fechamentoSection .table-card,
+#fechamentoSection .rh-cand-card {
+  border: none;
+  box-shadow: none;
+}
+#fechamentoSection .table-card {
+  background: transparent;
+}
+#fechamentoSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#fechamentoSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#fechamentoSection .fechamento-forma-campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+#fechamentoSection .fechamento-forma-campos label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+#fechamentoSection .fechamento-forma-campos input,
+#fechamentoSection .rh-cand-card .fechamento-audit__forma-nome {
+  width: 100%;
+  box-sizing: border-box;
+  font-weight: 400;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+}
+#fechamentoSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+@media (max-width: 640px) {
+  #fechamentoSection .fechamento-forma-campos {
+    grid-template-columns: 1fr;
+  }
+}

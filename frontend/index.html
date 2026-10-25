@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025220000-ind" />
+    <link rel="stylesheet" href="style.css?v=20261025230000-fech" />
     <script>
       (function () {
         try {
@@ -56,7 +56,7 @@
     <link rel="stylesheet" href="style-patrimonio.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-investimento.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20261025220000-ind" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="style-caixa-padrao.css?v=20261025230000-fech" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="cfg-module-layout.css?v=20260728-cfg-ui2" media="print" onload="this.media='all'" />
@@ -5242,74 +5242,122 @@
                   <button type="button" class="btn secondary" id="fechamentoAddFormaBtn" title="Adiciona uma linha para outra forma de pagamento">+ Forma de pagamento</button>
                 </div>
               </header>
-              <div class="table-wrapper fechamento-audit__table-wrap">
-                <table class="fechamento-audit__table fechamento-audit__table--simples">
-                  <thead>
-                    <tr>
-                      <th>Forma de pagamento</th>
-                      <th>PDV (R$)</th>
-                      <th>Maquinha (R$)</th>
-                      <th title="Maquinha − PDV nesta forma">Diferença (R$)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="fechamentoTbodyValores">
-                    <tr data-fechamento-key="dinheiro" data-fechamento-fixa="1">
-                      <td data-label="Forma"><strong>Dinheiro</strong></td>
-                      <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Diferença" id="fechamento_diff_linha_dinheiro" class="fechamento-audit__diff-cell">R$ 0,00</td>
-                    </tr>
-                    <tr data-fechamento-key="debito" data-fechamento-fixa="1">
-                      <td data-label="Forma"><strong>Débito</strong></td>
-                      <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Diferença" id="fechamento_diff_linha_debito" class="fechamento-audit__diff-cell">R$ 0,00</td>
-                    </tr>
-                    <tr data-fechamento-key="credito" data-fechamento-fixa="1">
-                      <td data-label="Forma"><strong>Crédito</strong></td>
-                      <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Diferença" id="fechamento_diff_linha_credito" class="fechamento-audit__diff-cell">R$ 0,00</td>
-                    </tr>
-                    <tr data-fechamento-key="pix" data-fechamento-fixa="1">
-                      <td data-label="Forma"><strong>PIX</strong></td>
-                      <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Diferença" id="fechamento_diff_linha_pix" class="fechamento-audit__diff-cell">R$ 0,00</td>
-                    </tr>
-                    <tr data-fechamento-key="pix_thiago" data-fechamento-fixa="1">
-                      <td data-label="Forma"><strong>PIX Thiago</strong></td>
-                      <td data-label="PDV"><input type="text" class="fechamento-audit__money" id="fechamento_sis_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Maquinha"><input type="text" class="fechamento-audit__money" id="fechamento_maq_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></td>
-                      <td data-label="Diferença" id="fechamento_diff_linha_pix_thiago" class="fechamento-audit__diff-cell">R$ 0,00</td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th style="text-align:right">Totais</th>
-                      <th id="fechamentoFootPdv">R$ 0,00</th>
-                      <th id="fechamentoFootMaq">R$ 0,00</th>
-                      <th id="fechamentoFootDiff" title="Soma (maquinha−PDV) por linha — zero = compensado entre formas">R$ 0,00</th>
-                    </tr>
-                  </tfoot>
-                </table>
+              <div class="rh-cand-list fg-fluxo-cards" id="fechamentoTbodyValores">
+                <article class="rh-cand-card" data-fechamento-key="dinheiro" data-fechamento-fixa="1">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💵</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Dinheiro</h3><p class="rh-cand-card__sub">Forma de pagamento</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info fechamento-audit__diff-cell" id="fechamento_diff_linha_dinheiro">R$ 0,00</span>
+                      </div>
+                      <div class="fechamento-forma-campos">
+                        <label>PDV<input type="text" class="fechamento-audit__money" id="fechamento_sis_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                        <label>Maquinha<input type="text" class="fechamento-audit__money" id="fechamento_maq_dinheiro" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card" data-fechamento-key="debito" data-fechamento-fixa="1">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💳</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Débito</h3><p class="rh-cand-card__sub">Forma de pagamento</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info fechamento-audit__diff-cell" id="fechamento_diff_linha_debito">R$ 0,00</span>
+                      </div>
+                      <div class="fechamento-forma-campos">
+                        <label>PDV<input type="text" class="fechamento-audit__money" id="fechamento_sis_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                        <label>Maquinha<input type="text" class="fechamento-audit__money" id="fechamento_maq_debito" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card" data-fechamento-key="credito" data-fechamento-fixa="1">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💳</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Crédito</h3><p class="rh-cand-card__sub">Forma de pagamento</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info fechamento-audit__diff-cell" id="fechamento_diff_linha_credito">R$ 0,00</span>
+                      </div>
+                      <div class="fechamento-forma-campos">
+                        <label>PDV<input type="text" class="fechamento-audit__money" id="fechamento_sis_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                        <label>Maquinha<input type="text" class="fechamento-audit__money" id="fechamento_maq_credito" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card" data-fechamento-key="pix" data-fechamento-fixa="1">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">⚡</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">PIX</h3><p class="rh-cand-card__sub">Forma de pagamento</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info fechamento-audit__diff-cell" id="fechamento_diff_linha_pix">R$ 0,00</span>
+                      </div>
+                      <div class="fechamento-forma-campos">
+                        <label>PDV<input type="text" class="fechamento-audit__money" id="fechamento_sis_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                        <label>Maquinha<input type="text" class="fechamento-audit__money" id="fechamento_maq_pix" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card" data-fechamento-key="pix_thiago" data-fechamento-fixa="1">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📱</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">PIX Thiago</h3><p class="rh-cand-card__sub">Forma de pagamento</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info fechamento-audit__diff-cell" id="fechamento_diff_linha_pix_thiago">R$ 0,00</span>
+                      </div>
+                      <div class="fechamento-forma-campos">
+                        <label>PDV<input type="text" class="fechamento-audit__money" id="fechamento_sis_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                        <label>Maquinha<input type="text" class="fechamento-audit__money" id="fechamento_maq_pix_thiago" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+                      </div>
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
 
-            <div class="fechamento-audit__resumo">
-              <div class="fechamento-audit__card">
-                <span class="fechamento-audit__card-label">Total PDV</span>
-                <span class="fechamento-audit__card-value" id="fechamentoTotalSistemaPdv">R$ 0,00</span>
-              </div>
-              <div class="fechamento-audit__card">
-                <span class="fechamento-audit__card-label">Total maquinas</span>
-                <span class="fechamento-audit__card-value" id="fechamentoTotalMaquinas">R$ 0,00</span>
-              </div>
-              <div class="fechamento-audit__card fechamento-audit__card--status fechamento-audit__card--destaque">
-                <span class="fechamento-audit__card-label">Fechamento</span>
-                <span class="fechamento-audit__status" id="fechamentoStatusBadge">Preencha PDV e maquinha</span>
-                <span class="fechamento-audit__sit-valor" id="fechamentoStatusValor">Valor: —</span>
-              </div>
+            <div class="rh-cand-list fg-fluxo-cards" id="fechamentoResumoLista">
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🖥️</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div><h3 class="rh-cand-card__name">Total PDV</h3><p class="rh-cand-card__sub">Soma das formas</p></div>
+                      <span class="rh-cand-pill rh-cand-pill--info" id="fechamentoTotalSistemaPdv">R$ 0,00</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧾</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div><h3 class="rh-cand-card__name">Total maquininhas</h3><p class="rh-cand-card__sub">Soma das formas</p></div>
+                      <span class="rh-cand-pill rh-cand-pill--info" id="fechamentoTotalMaquinas">R$ 0,00</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+              <article class="rh-cand-card">
+                <div class="rh-cand-card__top">
+                  <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧮</div>
+                  <div class="rh-cand-card__main">
+                    <div class="rh-cand-card__head">
+                      <div><h3 class="rh-cand-card__name">Fechamento</h3><p class="rh-cand-card__sub">Saldo líquido</p></div>
+                      <span class="rh-cand-pill rh-cand-pill--warn" id="fechamentoStatusBadge">Preencha PDV e maquinha</span>
+                    </div>
+                    <div class="rh-cand-card__meta">
+                      <div class="rh-cand-card__row"><span>Valor</span><strong id="fechamentoStatusValor">—</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </article>
             </div>
 
             <div class="table-card form-card--wide fechamento-audit__resumo-mes">
@@ -5349,24 +5397,8 @@
                   <p class="subtle-text">Histórico armazenado no servidor — baixe o PDF para arquivo</p>
                 </div>
               </header>
-              <div class="table-wrapper">
-                <table id="fechamentoHistoricoTable">
-                  <thead>
-                    <tr>
-                      <th>Nº</th>
-                      <th>Data</th>
-                      <th>Unidade</th>
-                      <th>Operador</th>
-                      <th>Total maquinha</th>
-                      <th>Fechamento</th>
-                      <th>Valor</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="fechamentosCaixaHistoricoBody">
-                    <tr><td colspan="8" style="text-align:center;color:#607d8b">Carregando…</td></tr>
-                  </tbody>
-                </table>
+              <div class="rh-cand-list fg-fluxo-cards" id="fechamentoHistoricoLista">
+                <p class="rh-cand-empty">Carregando…</p>
               </div>
             </div>
             </div>
@@ -7942,7 +7974,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025195000-menu"></script>
+    <script defer src="app.js?v=20261025230000-fech"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

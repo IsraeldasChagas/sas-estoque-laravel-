@@ -22528,7 +22528,7 @@ function fechamentoTbodyValores() {
 function fechamentoColetarLinhasTr() {
   const tb = fechamentoTbodyValores();
   if (!tb) return [];
-  return Array.from(tb.querySelectorAll("tr[data-fechamento-key]"));
+  return Array.from(tb.querySelectorAll("[data-fechamento-key]"));
 }
 
 function fechamentoMoneyInputsFromTr(tr) {
@@ -22553,49 +22553,35 @@ function fechamentoGerarChaveExtra() {
 function fechamentoRemoverLinhasExtras() {
   const tb = fechamentoTbodyValores();
   if (!tb) return;
-  tb.querySelectorAll('tr[data-fechamento-extra="1"]').forEach((el) => el.remove());
+  tb.querySelectorAll('[data-fechamento-extra="1"]').forEach((el) => el.remove());
 }
 
 function appendFechamentoCaixaLinhaExtra({ key, label, sis, maq }) {
   const tb = fechamentoTbodyValores();
   if (!tb) return;
   const k = (key && String(key).trim()) || fechamentoGerarChaveExtra();
-  const tr = document.createElement("tr");
+  const tr = document.createElement("article");
+  tr.className = "rh-cand-card";
   tr.setAttribute("data-fechamento-key", k);
   tr.setAttribute("data-fechamento-extra", "1");
-
-  const tdForma = document.createElement("td");
-  tdForma.setAttribute("data-label", "Forma");
-  const nameInp = document.createElement("input");
-  nameInp.type = "text";
-  nameInp.className = "fechamento-audit__forma-nome";
-  nameInp.maxLength = 120;
-  nameInp.placeholder = "Nome da forma";
-  nameInp.value = (label != null ? String(label) : "").slice(0, 120);
-  tdForma.appendChild(nameInp);
-
-  const mkMoneyTd = (dataLabel) => {
-    const td = document.createElement("td");
-    td.setAttribute("data-label", dataLabel);
-    const inp = document.createElement("input");
-    inp.type = "text";
-    inp.className = "fechamento-audit__money";
-    inp.setAttribute("data-currency", "1");
-    inp.setAttribute("inputmode", "decimal");
-    inp.setAttribute("placeholder", "0,00");
-    td.appendChild(inp);
-    return td;
-  };
-
-  const tdDiff = document.createElement("td");
-  tdDiff.setAttribute("data-label", "Diferença");
-  tdDiff.className = "fechamento-audit__diff-cell";
-  tdDiff.textContent = formatFechamentoSignedDiff(0);
-
-  tr.appendChild(tdForma);
-  tr.appendChild(mkMoneyTd("PDV"));
-  tr.appendChild(mkMoneyTd("Maquinha"));
-  tr.appendChild(tdDiff);
+  tr.innerHTML = `<div class="rh-cand-card__top">
+      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">➕</div>
+      <div class="rh-cand-card__main">
+        <div class="rh-cand-card__head">
+          <div style="flex:1">
+            <input type="text" class="fechamento-audit__forma-nome" maxlength="120" placeholder="Nome da forma" />
+            <p class="rh-cand-card__sub">Forma de pagamento</p>
+          </div>
+          <span class="rh-cand-pill rh-cand-pill--info fechamento-audit__diff-cell">${formatFechamentoSignedDiff(0)}</span>
+        </div>
+        <div class="fechamento-forma-campos">
+          <label>PDV<input type="text" class="fechamento-audit__money" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+          <label>Maquinha<input type="text" class="fechamento-audit__money" data-currency="1" inputmode="decimal" placeholder="0,00" /></label>
+        </div>
+      </div>
+    </div>`;
+  const nameInp = tr.querySelector(".fechamento-audit__forma-nome");
+  if (nameInp) nameInp.value = (label != null ? String(label) : "").slice(0, 120);
   tb.appendChild(tr);
 
   const { sis: sisEl, maq: maqEl } = fechamentoMoneyInputsFromTr(tr);
@@ -23019,14 +23005,13 @@ function fechamentoMaquinhaValorHtml(maqTotal, titleNegativo) {
 }
 
 function renderFechamentosCaixaHistorico(rows) {
-  const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
-  if (!tbody) return;
+  const lista = document.getElementById("fechamentoHistoricoLista");
+  if (!lista) return;
   if (!rows.length) {
-    tbody.innerHTML =
-      '<tr><td colspan="8" style="text-align:center;color:#607d8b">Nenhum registro salvo ainda. Preencha e clique em Salvar registro.</td></tr>';
+    lista.innerHTML = '<p class="rh-cand-empty">Nenhum registro salvo ainda. Preencha e clique em Salvar registro.</p>';
     return;
   }
-  tbody.innerHTML = rows
+  lista.innerHTML = rows
     .map((r) => {
       const op = escapeHtml((r.operador_nome || "—").toString());
       const un = escapeHtml((r.unidade_nome || "—").toString());
@@ -23036,44 +23021,63 @@ function renderFechamentosCaixaHistorico(rows) {
       const sem = Number(r.sem_quebra) === 1 || Math.abs(saldo) < tol;
       let rotuloFech;
       let valorFech;
+      let pill;
       if (sem) {
-        rotuloFech = "Sem quebra (compensado)";
+        rotuloFech = "Sem quebra";
         valorFech = formatCurrencyBRL(0);
+        pill = "ok";
       } else if (saldo > 0) {
         rotuloFech = "Sobras";
         valorFech = formatCurrencyBRL(saldo);
+        pill = "ok";
       } else {
-        rotuloFech = "Quebra de caixa";
+        rotuloFech = "Quebra";
         valorFech = formatCurrencyBRL(Math.abs(saldo));
+        pill = "danger";
       }
-      return `<tr>
-        <td data-label="Nº">${escapeHtml(String(r.id ?? ""))}</td>
-        <td data-label="Data">${escapeHtml(fmtDataComDiaSemanaCurto(r.data_fechamento))} ${r.hora_fechamento ? `<small>${escapeHtml(String(r.hora_fechamento))}</small>` : ""}</td>
-        <td data-label="Unidade">${un}</td>
-        <td data-label="Operador">${op}</td>
-        <td data-label="Total maquinha">${fechamentoMaquinhaValorHtml(tot, `Negativo no histórico: fechamento nº ${r.id ?? "—"}, data ${fmtDataComDiaSemanaCurto(r.data_fechamento)}`)}</td>
-        <td data-label="Fechamento">${escapeHtml(rotuloFech)}</td>
-        <td data-label="Valor">${escapeHtml(valorFech)}</td>
-        <td data-label="Ações" class="fechamento-audit__acoes">
-          <button type="button" class="btn secondary fechamento-caixa-ver-btn" data-fechamento-ver="${escapeHtml(String(r.id))}">Ver</button>
-          <button type="button" class="btn secondary fechamento-caixa-edit-btn" data-fechamento-edit="${escapeHtml(String(r.id))}">Editar</button>
-          <button type="button" class="btn danger fechamento-caixa-del-btn" data-fechamento-del="${escapeHtml(String(r.id))}">Excluir</button>
-          <button type="button" class="btn secondary fechamento-caixa-pdf-btn" data-fechamento-pdf="${escapeHtml(String(r.id))}">PDF</button>
-        </td>
-      </tr>`;
+      const id = escapeHtml(String(r.id ?? ""));
+      const hora = r.hora_fechamento ? escapeHtml(String(r.hora_fechamento)) : "—";
+      const negHint = `Negativo no histórico: fechamento nº ${r.id ?? "—"}, data ${fmtDataComDiaSemanaCurto(r.data_fechamento)}`;
+      return `<article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧮</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">Nº ${id}</h3>
+                <p class="rh-cand-card__sub">${escapeHtml(fmtDataComDiaSemanaCurto(r.data_fechamento))}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${pill}">${escapeHtml(rotuloFech)}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Unidade</span><strong>${un}</strong></div>
+              <div class="rh-cand-card__row"><span>Operador</span><strong>${op}</strong></div>
+              <div class="rh-cand-card__row"><span>Hora</span><strong>${hora}</strong></div>
+              <div class="rh-cand-card__row"><span>Total maquinha</span><strong>${fechamentoMaquinhaValorHtml(tot, negHint)}</strong></div>
+              <div class="rh-cand-card__row"><span>Valor</span><strong>${escapeHtml(valorFech)}</strong></div>
+            </div>
+            <div class="rh-cand-card__actions">
+              <button type="button" class="btn btn-rh-toggle fechamento-caixa-ver-btn" data-fechamento-ver="${id}">Ver</button>
+              <button type="button" class="btn primary fechamento-caixa-edit-btn" data-fechamento-edit="${id}">Editar</button>
+              <button type="button" class="btn neutral fechamento-caixa-pdf-btn" data-fechamento-pdf="${id}">PDF</button>
+              <button type="button" class="btn fechamento-caixa-del-btn" style="background:#b71c1c;color:#fff" data-fechamento-del="${id}">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </article>`;
     })
     .join("");
 }
 
 async function loadFechamentosCaixaHistorico() {
-  const tbody = document.getElementById("fechamentosCaixaHistoricoBody");
-  if (!tbody) return;
+  const lista = document.getElementById("fechamentoHistoricoLista");
+  if (!lista) return;
   try {
     const list = await fetchJSON("/fechamentos-caixa?limit=200");
     renderFechamentosCaixaHistorico(Array.isArray(list) ? list : []);
   } catch (err) {
     console.error(err);
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#c62828">${escapeHtml(err?.message || "Erro ao carregar histórico.")}</td></tr>`;
+    lista.innerHTML = `<p class="rh-cand-empty">${escapeHtml(err?.message || "Erro ao carregar histórico.")}</p>`;
   }
 }
 
@@ -23090,33 +23094,50 @@ function renderFechamentoResumoMensal(rows, ym, unidadeLabel) {
       const maq = fechamentoTotalMaquinasFromRow(r);
       sumMaq = roundToCurrency(sumMaq + maq);
       const op = escapeHtml((r.operador_nome || "—").toString());
-      const hora = r.hora_fechamento ? ` <small>${escapeHtml(String(r.hora_fechamento))}</small>` : "";
+      const hora = r.hora_fechamento ? escapeHtml(String(r.hora_fechamento)) : "—";
       const dataFmt = escapeHtml(fmtDataComDiaSemanaCurto(r.data_fechamento));
       const negHint = `Negativo na linha: fechamento nº ${r.id ?? "—"}, data ${fmtDataComDiaSemanaCurto(r.data_fechamento)}`;
-      return `<tr>
-        <td>${escapeHtml(String(r.id ?? ""))}</td>
-        <td>${dataFmt}${hora}</td>
-        <td>${op}</td>
-        <td style="text-align:right">${fechamentoMaquinhaValorHtml(maq, negHint)}</td>
-      </tr>`;
+      const pill = maq < -FECHAMENTO_NEG_TOL ? "danger" : "info";
+      return `<article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📅</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">Nº ${escapeHtml(String(r.id ?? ""))}</h3>
+                <p class="rh-cand-card__sub">${dataFmt}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${pill}">${fechamentoMaquinhaValorHtml(maq, negHint)}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Operador</span><strong>${op}</strong></div>
+              <div class="rh-cand-card__row"><span>Hora</span><strong>${hora}</strong></div>
+            </div>
+          </div>
+        </div>
+      </article>`;
     })
     .join("");
   const totNeg = sumMaq < -FECHAMENTO_NEG_TOL;
-  const totBoxClass = totNeg ? "fechamento-resumo-mes-totais fechamento-resumo-mes-totais--negativo" : "fechamento-resumo-mes-totais";
   const totStrong = fechamentoMaquinhaValorHtml(sumMaq, "Total maquinha do mês negativo (soma dos registros)");
   out.innerHTML = `
     <p class="fechamento-resumo-mes-head"><strong>${escapeHtml(unidadeLabel)}</strong> — ${escapeHtml(ym)} · ${rows.length} registro(s)</p>
-    <div class="table-wrapper">
-      <table>
-        <thead><tr>
-          <th>Nº</th><th>Data</th><th>Operador</th>
-          <th style="text-align:right">Total maquinha</th>
-        </tr></thead>
-        <tbody>${body}</tbody>
-      </table>
-    </div>
-    <div class="${totBoxClass}">
-      Total maquinha no mês: <strong>${totStrong}</strong>
+    <div class="rh-cand-list fg-fluxo-cards">
+      <article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💰</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">Total do mês</h3>
+                <p class="rh-cand-card__sub">${rows.length} registro(s)</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${totNeg ? "danger" : "ok"}">${totStrong}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+      ${body}
     </div>
   `;
 }
@@ -23321,10 +23342,14 @@ function recalcFechamentoCaixa() {
       document.getElementById(`fechamento_diff_linha_${key}`);
     if (diffEl) {
       diffEl.textContent = formatFechamentoSignedDiff(diffLinha);
-      diffEl.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero");
-      if (Math.abs(diffLinha) < tol) diffEl.classList.add("fechamento-audit__diff--zero");
-      else if (diffLinha > 0) diffEl.classList.add("fechamento-audit__diff--pos");
-      else diffEl.classList.add("fechamento-audit__diff--neg");
+      diffEl.classList.remove("fechamento-audit__diff--pos", "fechamento-audit__diff--neg", "fechamento-audit__diff--zero", "rh-cand-pill--ok", "rh-cand-pill--danger", "rh-cand-pill--info", "rh-cand-pill--warn");
+      if (Math.abs(diffLinha) < tol) {
+        diffEl.classList.add("fechamento-audit__diff--zero", "rh-cand-pill--info");
+      } else if (diffLinha > 0) {
+        diffEl.classList.add("fechamento-audit__diff--pos", "rh-cand-pill--ok");
+      } else {
+        diffEl.classList.add("fechamento-audit__diff--neg", "rh-cand-pill--danger");
+      }
     }
   });
 
@@ -23355,15 +23380,15 @@ function recalcFechamentoCaixa() {
   if (valorEl) {
     valorEl.classList.remove("fechamento-audit__sit-valor--zero", "fechamento-audit__sit-valor--pos", "fechamento-audit__sit-valor--neg");
     if (!temValores) {
-      valorEl.textContent = "Valor: —";
+      valorEl.textContent = "—";
     } else if (Math.abs(delta) < tol) {
-      valorEl.textContent = `Valor: ${formatCurrencyBRL(0)}`;
+      valorEl.textContent = formatCurrencyBRL(0);
       valorEl.classList.add("fechamento-audit__sit-valor--zero");
     } else if (delta > 0) {
-      valorEl.textContent = `Valor: ${formatCurrencyBRL(delta)}`;
+      valorEl.textContent = formatCurrencyBRL(delta);
       valorEl.classList.add("fechamento-audit__sit-valor--pos");
     } else {
-      valorEl.textContent = `Valor: ${formatCurrencyBRL(Math.abs(delta))}`;
+      valorEl.textContent = formatCurrencyBRL(Math.abs(delta));
       valorEl.classList.add("fechamento-audit__sit-valor--neg");
     }
   }
@@ -23371,16 +23396,16 @@ function recalcFechamentoCaixa() {
   if (badge) {
     if (!temValores) {
       badge.textContent = "Preencha PDV e maquinha";
-      badge.className = "fechamento-audit__status fechamento-audit__status--neutral";
+      badge.className = "rh-cand-pill rh-cand-pill--warn";
     } else if (Math.abs(delta) < tol) {
-      badge.textContent = "Sem quebra (compensado entre formas)";
-      badge.className = "fechamento-audit__status fechamento-audit__status--ok";
+      badge.textContent = "Sem quebra";
+      badge.className = "rh-cand-pill rh-cand-pill--ok";
     } else if (delta > 0) {
-      badge.textContent = "Sobras no fechamento";
-      badge.className = "fechamento-audit__status fechamento-audit__status--ok";
+      badge.textContent = "Sobras";
+      badge.className = "rh-cand-pill rh-cand-pill--ok";
     } else {
-      badge.textContent = "Quebra de caixa";
-      badge.className = "fechamento-audit__status fechamento-audit__status--alert";
+      badge.textContent = "Quebra";
+      badge.className = "rh-cand-pill rh-cand-pill--danger";
     }
   }
 }
@@ -23497,7 +23522,7 @@ function setupFechamentoCaixaAuditoria() {
     appendFechamentoCaixaLinhaExtra({ key: fechamentoGerarChaveExtra(), label: "Nova forma", sis: 0, maq: 0 });
     ensureFechamentoCaixaCurrencyMasks();
     scheduleRecalcFechamentoCaixa();
-    const extras = fechamentoTbodyValores()?.querySelectorAll('tr[data-fechamento-extra="1"]');
+    const extras = fechamentoTbodyValores()?.querySelectorAll('[data-fechamento-extra="1"]');
     const tr = extras && extras.length ? extras[extras.length - 1] : null;
     tr?.querySelector(".fechamento-audit__forma-nome")?.focus();
   });
@@ -23541,7 +23566,7 @@ function setupFechamentoCaixaAuditoria() {
     limparFechamentoResumoMes();
   });
 
-  document.getElementById("fechamentoHistoricoTable")?.addEventListener("click", async (e) => {
+  document.getElementById("fechamentoHistoricoLista")?.addEventListener("click", async (e) => {
     const pdfBtn = e.target.closest("[data-fechamento-pdf]");
     if (pdfBtn) {
       const id = pdfBtn.getAttribute("data-fechamento-pdf");
