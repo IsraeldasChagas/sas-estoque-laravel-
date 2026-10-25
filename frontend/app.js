@@ -23768,20 +23768,33 @@ function renderFechamentoDashPorUnidadeCards(rows) {
         else sumSobra = roundToCurrency(sumSobra + saldo);
       });
       const pctSem = n ? `${Math.round((nSem / n) * 1000) / 10}% (${nSem} reg.)` : "—";
-      return `<article class="fechamento-dash__unidade-bloco">
-        <h4 class="fechamento-dash__unidade-bloco-title">${escapeHtml(nome)}</h4>
-        <div class="fechamento-dash__unidade-bloco-grid">
-          <div class="fechamento-dash__unidade-metric"><span>Fechamentos</span><strong>${n}</strong></div>
-          <div class="fechamento-dash__unidade-metric"><span>Maquinha</span><strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong></div>
-          <div class="fechamento-dash__unidade-metric"><span>PDV</span><strong>${escapeHtml(formatCurrencyBRL(sumPdv))}</strong></div>
-          <div class="fechamento-dash__unidade-metric fechamento-dash__unidade-metric--alert"><span>Quebras</span><strong>${escapeHtml(formatCurrencyBRL(sumQuebra))}</strong></div>
-          <div class="fechamento-dash__unidade-metric fechamento-dash__unidade-metric--ok"><span>Sobras</span><strong>${escapeHtml(formatCurrencyBRL(sumSobra))}</strong></div>
-          <div class="fechamento-dash__unidade-metric"><span>Sem dif. líquida</span><strong>${escapeHtml(pctSem)}</strong></div>
+      const pill = sumQuebra > 0.009 ? "danger" : sumSobra > 0.009 ? "ok" : "info";
+      const pillText = sumQuebra > 0.009 ? "Quebra" : sumSobra > 0.009 ? "Sobra" : "Sem diferença";
+      return `<article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏪</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${escapeHtml(nome)}</h3>
+                <p class="rh-cand-card__sub">Comparativo da unidade</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${pill}">${pillText}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Fechamentos</span><strong>${n}</strong></div>
+              <div class="rh-cand-card__row"><span>Maquinha</span><strong>${escapeHtml(formatCurrencyBRL(sumMaq))}</strong></div>
+              <div class="rh-cand-card__row"><span>PDV</span><strong>${escapeHtml(formatCurrencyBRL(sumPdv))}</strong></div>
+              <div class="rh-cand-card__row"><span>Quebras</span><strong>${escapeHtml(formatCurrencyBRL(sumQuebra))}</strong></div>
+              <div class="rh-cand-card__row"><span>Sobras</span><strong>${escapeHtml(formatCurrencyBRL(sumSobra))}</strong></div>
+              <div class="rh-cand-card__row"><span>Sem diferença</span><strong>${escapeHtml(pctSem)}</strong></div>
+            </div>
+          </div>
         </div>
       </article>`;
     })
     .join("");
-  host.innerHTML = `<h3 class="fechamento-dash__por-unidade-heading">Por unidade</h3><div class="fechamento-dash__unidade-blocos">${blocos}</div>`;
+  host.innerHTML = blocos || '<p class="rh-cand-empty">Nenhum fechamento no período.</p>';
 }
 
 function fechamentoDashRowSituation(r) {
@@ -23936,16 +23949,28 @@ function renderFechamentoDashTop3List(top3) {
   const ol = document.getElementById("fechamentoDashTop3List");
   if (!ol) return;
   if (!top3.length) {
-    ol.innerHTML =
-      '<li class="subtle-text">Nenhum fechamento no período/filtro para ranquear dias por PDV.</li>';
+    ol.innerHTML = '<p class="rh-cand-empty">Nenhum fechamento no período para ranquear os dias.</p>';
     return;
   }
   ol.innerHTML = top3
     .map(
-      (x, i) =>
-        `<li><strong>${i + 1}º</strong> — ${escapeHtml(fmtDataComDiaSemanaCurto(x.data))}: <strong>${escapeHtml(
-          formatCurrencyBRL(x.total)
-        )}</strong> em PDV (${escapeHtml(String(x.nRegs))} fechamento(s) neste dia)</li>`
+      (x, i) => `<article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📅</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${i + 1}º ${escapeHtml(fmtDataComDiaSemanaCurto(x.data))}</h3>
+                <p class="rh-cand-card__sub">${escapeHtml(String(x.nRegs))} fechamento(s) neste dia</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--info">${escapeHtml(formatCurrencyBRL(x.total))}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>PDV</span><strong>${escapeHtml(formatCurrencyBRL(x.total))}</strong></div>
+            </div>
+          </div>
+        </div>
+      </article>`
     )
     .join("");
 }

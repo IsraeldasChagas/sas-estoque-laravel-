@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025230000-fech" />
+    <link rel="stylesheet" href="style.css?v=20261025260000-dashfech" />
     <script>
       (function () {
         try {
@@ -56,7 +56,7 @@
     <link rel="stylesheet" href="style-patrimonio.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-investimento.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20261025220000-ind" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-caixa-padrao.css?v=20261025240000-pdfdash" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="style-caixa-padrao.css?v=20261025260000-dashfech" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="cfg-module-layout.css?v=20260728-cfg-ui2" media="print" onload="this.media='all'" />
@@ -5449,34 +5449,82 @@
 
             <p class="subtle-text fechamento-dash__cards-legend">Totais, gráficos e o PDF respeitam as datas, o operador e a unidade escolhida: uma loja ou todas.</p>
 
-            <div class="fechamento-dash__cards" id="fechamentoDashCards">
-              <div class="fechamento-dash__card">
-                <span class="fechamento-dash__card-label">Fechamentos no filtro</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardRegs">—</span>
-              </div>
-              <div class="fechamento-dash__card">
-                <span class="fechamento-dash__card-label">Total maquinha (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardMaq">—</span>
-              </div>
-              <div class="fechamento-dash__card">
-                <span class="fechamento-dash__card-label">Total PDV (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardPdv">—</span>
-              </div>
-              <div class="fechamento-dash__card fechamento-dash__card--alert">
-                <span class="fechamento-dash__card-label">Soma quebras (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardQuebra">—</span>
-              </div>
-              <div class="fechamento-dash__card fechamento-dash__card--ok">
-                <span class="fechamento-dash__card-label">Soma sobras (R$)</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardSobra">—</span>
-              </div>
-              <div class="fechamento-dash__card">
-                <span class="fechamento-dash__card-label">Sem diferença líquida</span>
-                <span class="fechamento-dash__card-value" id="fechamentoDashCardPctSem">—</span>
+            <div class="table-card form-card--wide fg-fluxo-lista-card">
+              <header><h3>Totais</h3></header>
+              <div class="rh-cand-list fg-fluxo-cards" id="fechamentoDashCards">
+                <article class="rh-cand-card">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📋</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Fechamentos</h3><p class="rh-cand-card__sub">Registros no filtro</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info" id="fechamentoDashCardRegs">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧾</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Total maquinha</h3><p class="rh-cand-card__sub">Soma do período</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info" id="fechamentoDashCardMaq">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🖥️</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Total PDV</h3><p class="rh-cand-card__sub">Soma do período</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--info" id="fechamentoDashCardPdv">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">⚠️</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Quebras</h3><p class="rh-cand-card__sub">Soma do saldo negativo</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--danger" id="fechamentoDashCardQuebra">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">✅</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Sobras</h3><p class="rh-cand-card__sub">Soma do saldo positivo</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--ok" id="fechamentoDashCardSobra">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🎯</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div><h3 class="rh-cand-card__name">Sem diferença</h3><p class="rh-cand-card__sub">Fechamentos compensados</p></div>
+                        <span class="rh-cand-pill rh-cand-pill--ok" id="fechamentoDashCardPctSem">—</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
 
-            <div id="fechamentoDashCardsPorUnidade" class="fechamento-dash__por-unidade" aria-live="polite"></div>
+            <div class="table-card form-card--wide fg-fluxo-lista-card">
+              <header><h3>Por unidade</h3></header>
+              <div class="rh-cand-list fg-fluxo-cards" id="fechamentoDashCardsPorUnidade" aria-live="polite"></div>
+            </div>
 
             <div class="fechamento-dash__charts">
               <div class="table-card fechamento-dash__chart-card">
@@ -5508,13 +5556,13 @@
               </div>
             </div>
 
-            <div class="table-card fechamento-dash__top3">
+            <div class="table-card form-card--wide fg-fluxo-lista-card">
               <header>
                 <h3>Ranking — 3 dias com maior venda (PDV)</h3>
               </header>
-              <ol class="fechamento-dash__top3-list" id="fechamentoDashTop3List">
-                <li class="subtle-text">Atualize os dados para ver o ranking.</li>
-              </ol>
+              <div class="rh-cand-list fg-fluxo-cards" id="fechamentoDashTop3List">
+                <p class="rh-cand-empty">Atualize os dados para ver o ranking.</p>
+              </div>
             </div>
             </div>
           </section>
@@ -7963,7 +8011,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025250000-pdfuni"></script>
+    <script defer src="app.js?v=20261025260000-dashfech"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

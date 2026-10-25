@@ -394,6 +394,30 @@
   gap: 8px;
   margin-top: 10px;
 }
+#fechamentoDashSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#fechamentoDashSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#fechamentoDashSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#fechamentoDashSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#fechamentoDashSection .fechamento-dash__filters input,
+#fechamentoDashSection .fechamento-dash__filters select {
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+}
 @media (max-width: 640px) {
   #fechamentoSection .fechamento-forma-campos {
     grid-template-columns: 1fr;
