@@ -7454,29 +7454,49 @@ function formatCnpjLista(cnpj) {
 }
 
 function renderListasCompras(listas) {
-  const rows = (listas || []).map((lista) => {
+  const target = dom.listasComprasTable;
+  if (!target) return;
+  const items = listas || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Nenhuma lista de compras cadastrada.</p>';
+    return;
+  }
+  target.innerHTML = items.map((lista) => {
     const selecionada = state.listaCompraAtual && Number(state.listaCompraAtual.id) === Number(lista.id);
-    const classe = selecionada ? "selected" : "";
+    const st = (lista.status || "").toUpperCase();
+    const pill = st === "PAUSADA" ? "warn" : st === "RASCUNHO" ? "info" : "ok";
+    const fiscal = (lista.status_fiscal || "pendente").toLowerCase();
+    const fiscalLabel = { pendente: "Pendente", com_alerta: "Alerta", validada: "Validada", processada: "Processada" }[fiscal] || fiscal;
     const podeExcluir = listaPermiteExcluir(lista);
     const btnExcluir = podeExcluir
-      ? `<button type="button" class="table-action danger" data-action="delete-lista" data-id="${lista.id}" title="Excluir lista">Excluir</button>`
-      : `<span class="subtle-text">—</span>`;
-    const empresaLabel = lista.empresa_nome
-      ? `${escapeHtml(lista.empresa_nome)}<br><small class="subtle-text">${escapeHtml(formatCnpjLista(lista.empresa_cnpj))}</small>`
+      ? `<button type="button" class="btn" data-action="delete-lista" data-id="${lista.id}" title="Excluir lista" style="background:#b71c1c;color:#fff;">Excluir</button>`
+      : "";
+    const empresa = lista.empresa_nome
+      ? `${escapeHtml(lista.empresa_nome)} · ${escapeHtml(formatCnpjLista(lista.empresa_cnpj))}`
       : "—";
-    return `<tr data-id="${lista.id}" class="${classe}">
-      <td data-label="Lista">${escapeHtml(lista.nome)}</td>
-      <td data-label="Empresa">${empresaLabel}</td>
-      <td data-label="Unidade">${escapeHtml(lista.unidade_nome || "--")}</td>
-      <td data-label="NF">${escapeHtml(lista.nf_numero || "—")}</td>
-      <td data-label="Status">${buildListaStatusPill(lista.status)}</td>
-      <td data-label="Fiscal">${buildListaStatusFiscalPill(lista.status_fiscal)}</td>
-      <td data-label="Realizado">${formatCurrency(lista.total_realizado || 0)}</td>
-      <td data-label="Itens">${Number(lista.itens_comprados || 0)} / ${Number(lista.itens_total || 0)}</td>
-      <td data-label="Ações" class="table-actions">${btnExcluir}</td>
-    </tr>`;
+    return `<article class="rh-cand-card${selecionada ? " selected" : ""}" data-id="${lista.id}">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🛒</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(lista.nome || "Lista")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(lista.unidade_nome || "—")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${escapeHtml(LISTA_STATUS_LABEL[st] || st || "—")}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Empresa</span><strong>${empresa}</strong></div>
+            <div class="rh-cand-card__row"><span>NF</span><strong>${escapeHtml(lista.nf_numero || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Fiscal</span><strong>${escapeHtml(fiscalLabel)}</strong></div>
+            <div class="rh-cand-card__row"><span>Realizado</span><strong>${escapeHtml(formatCurrency(lista.total_realizado || 0))}</strong></div>
+            <div class="rh-cand-card__row"><span>Itens</span><strong>${Number(lista.itens_comprados || 0)} / ${Number(lista.itens_total || 0)}</strong></div>
+          </div>
+        </div>
+      </div>
+      ${btnExcluir ? `<div class="rh-cand-card__actions">${btnExcluir}</div>` : ""}
+    </article>`;
   }).join("");
-  renderTable(dom.listasComprasTable, rows, "Nenhuma lista de compras cadastrada.", 9);
 }
 
 function renderListaCompraDetalhes(lista) {
@@ -7586,32 +7606,53 @@ function renderListaCompraDetalhes(lista) {
 }
 
 function renderListaCompraItens(itens) {
+  const target = dom.listaComprasItensTable;
+  if (!target) return;
   const podeEditar = listaPermiteEdicao();
-  // ADMIN e GERENTE podem editar tudo. Estoquista e Cozinha não podem editar/deletar itens existentes
   const podeEditarItens = podeEditar && (isAdminOrGerente() || !canOnlyCreateAndAddItems());
   const inputAttrs = podeEditarItens ? "" : "disabled";
-  const rows = (itens || []).map((item) => {
+  const items = itens || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Nenhum item cadastrado nesta lista.</p>';
+    return;
+  }
+  target.innerHTML = items.map((item) => {
     const id = item.id;
-    return `<tr data-id="${id}">
-      <td data-label="Produto">${escapeHtml(item.produto_nome || "--")}</td>
-      <td data-label="Planejado"><input class="lista-compras-item-input" data-field="quantidade_planejada" type="number" step="0.01" min="0" value="${formatQuantityDisplay(item.quantidade_planejada)}" ${inputAttrs} /></td>
-      <td data-label="Comprado"><input class="lista-compras-item-input" data-field="quantidade_comprada" type="number" step="0.01" min="0" value="${formatQuantityDisplay(item.quantidade_comprada)}" ${inputAttrs} /></td>
-      <td data-label="Preco unitario"><input class="lista-compras-item-input" data-field="valor_unitario" type="number" step="0.01" min="0" value="${formatUnitValue(item.valor_unitario || 0)}" ${inputAttrs} /></td>
-      <td data-label="Total" class="lista-compras-total-cell" data-total="${item.valor_total || 0}">${formatCurrency(item.valor_total || 0)}</td>
-      <td data-label="Status"><select class="lista-compras-item-select" data-field="status" ${inputAttrs}>
-        <option value="PENDENTE" ${(item.status || "").toUpperCase() === "PENDENTE" ? "selected" : ""}>Pendente</option>
-        <option value="COMPRADO" ${(item.status || "").toUpperCase() === "COMPRADO" ? "selected" : ""}>Comprado</option>
-        <option value="CANCELADO" ${(item.status || "").toUpperCase() === "CANCELADO" ? "selected" : ""}>Cancelado</option>
-      </select></td>
-      <td data-label="Estabelecimento"><select class="lista-compras-item-select" data-field="estabelecimento_id" ${inputAttrs}>${buildEstabelecimentoOptions(item.estabelecimento_id)}</select></td>
-      <td data-label="Observacoes"><textarea class="lista-compras-item-textarea" data-field="observacoes" ${inputAttrs}>${escapeHtml(item.observacoes || "")}</textarea></td>
-      <td data-label="Acoes" class="compras-table-actions">
-        <button class="table-action" data-action="edit" ${podeEditarItens ? "" : "disabled"}>Editar</button>
-        <button class="table-action danger" data-action="delete" ${podeEditarItens ? "" : "disabled"}>Excluir</button>
-      </td>
-    </tr>`;
+    const st = (item.status || "").toUpperCase();
+    const pill = st === "COMPRADO" ? "ok" : st === "CANCELADO" ? "danger" : "warn";
+    const statusLabel = st === "COMPRADO" ? "Comprado" : st === "CANCELADO" ? "Cancelado" : "Pendente";
+    return `<article class="rh-cand-card" data-id="${id}">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📦</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(item.produto_nome || "Item")}</h3>
+              <p class="rh-cand-card__sub">Item da lista</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${statusLabel}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Planejado</span><input class="lista-compras-item-input" data-field="quantidade_planejada" type="number" step="0.01" min="0" value="${formatQuantityDisplay(item.quantidade_planejada)}" ${inputAttrs} /></div>
+            <div class="rh-cand-card__row"><span>Comprado</span><input class="lista-compras-item-input" data-field="quantidade_comprada" type="number" step="0.01" min="0" value="${formatQuantityDisplay(item.quantidade_comprada)}" ${inputAttrs} /></div>
+            <div class="rh-cand-card__row"><span>Preço unitário</span><input class="lista-compras-item-input" data-field="valor_unitario" type="number" step="0.01" min="0" value="${formatUnitValue(item.valor_unitario || 0)}" ${inputAttrs} /></div>
+            <div class="rh-cand-card__row"><span>Total</span><strong class="lista-compras-total-cell" data-total="${item.valor_total || 0}">${formatCurrency(item.valor_total || 0)}</strong></div>
+            <div class="rh-cand-card__row"><span>Status</span><select class="lista-compras-item-select" data-field="status" ${inputAttrs}>
+              <option value="PENDENTE" ${st === "PENDENTE" ? "selected" : ""}>Pendente</option>
+              <option value="COMPRADO" ${st === "COMPRADO" ? "selected" : ""}>Comprado</option>
+              <option value="CANCELADO" ${st === "CANCELADO" ? "selected" : ""}>Cancelado</option>
+            </select></div>
+            <div class="rh-cand-card__row"><span>Estabelecimento</span><select class="lista-compras-item-select" data-field="estabelecimento_id" ${inputAttrs}>${buildEstabelecimentoOptions(item.estabelecimento_id)}</select></div>
+            <div class="rh-cand-card__row"><span>Observações</span><textarea class="lista-compras-item-textarea" data-field="observacoes" ${inputAttrs}>${escapeHtml(item.observacoes || "")}</textarea></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">
+        <button type="button" class="btn primary" data-action="edit" ${podeEditarItens ? "" : "disabled"}>Editar</button>
+        <button type="button" class="btn" data-action="delete" ${podeEditarItens ? "" : "disabled"} style="background:#b71c1c;color:#fff;">Excluir</button>
+      </div>
+    </article>`;
   }).join("");
-  renderTable(dom.listaComprasItensTable, rows, "Nenhum item cadastrado nesta lista.", 9);
 }
 
 function renderListaCompraEstabelecimentos(estabelecimentos) {
@@ -7621,7 +7662,14 @@ function renderListaCompraEstabelecimentos(estabelecimentos) {
   // Busca os itens da lista atual para verificar vínculos
   const itensLista = state.listaCompraAtual?.itens || [];
   
-  const rows = (estabelecimentos || []).map((est) => {
+  const target = dom.listaComprasEstabelecimentosTable;
+  if (!target) return;
+  const items = estabelecimentos || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Nenhum estabelecimento registrado.</p>';
+    return;
+  }
+  target.innerHTML = items.map((est) => {
     // Conta quantos itens estão vinculados a este estabelecimento
     const itensVinculados = itensLista.filter(item => 
       item.estabelecimento_id && Number(item.estabelecimento_id) === Number(est.id)
@@ -7643,38 +7691,59 @@ function renderListaCompraEstabelecimentos(estabelecimentos) {
     
     // Classe para destacar estabelecimentos com vínculo
     const temVinculo = quantidadeVinculados > 0;
-    const classeLinha = temVinculo ? "tem-vinculo" : "";
-    
-    return `<tr data-id="${est.id}" class="${classeLinha}">
-      <td data-label="Nome">${escapeHtml(est.nome)}</td>
-      <td data-label="Localizacao">${escapeHtml(est.localizacao || "--")}</td>
-      <td data-label="Pagamento">${escapeHtml(est.forma_pagamento || "--")}</td>
-      <td data-label="Vinculo" class="vinculo-cell" title="${escapeHtml(vinculoTexto)}">
-        ${temVinculo 
-          ? `<span class="vinculo-badge" title="${escapeHtml(vinculoTexto)}">${quantidadeVinculados} item(ns)</span>` 
-          : '<span class="sem-vinculo">Sem vínculo</span>'}
-      </td>
-      <td data-label="Observacoes">${escapeHtml(est.observacoes || "--")}</td>
-      <td data-label="Acoes" class="compras-table-actions">
-        <button class="table-action" data-action="editar" ${podeGerenciar ? "" : "disabled"}>Editar</button>
-        <button class="table-action danger" data-action="deletar" ${podeGerenciar ? "" : "disabled"}>Deletar</button>
-      </td>
-    </tr>`;
+
+    return `<article class="rh-cand-card${temVinculo ? " selected" : ""}" data-id="${est.id}">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏪</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(est.nome || "Estabelecimento")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(est.localizacao || "—")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${temVinculo ? "ok" : "info"}">${temVinculo ? `${quantidadeVinculados} item(ns)` : "Sem vínculo"}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Pagamento</span><strong>${escapeHtml(est.forma_pagamento || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Vínculo</span><strong>${escapeHtml(vinculoTexto === "--" ? "Sem vínculo" : vinculoTexto)}</strong></div>
+            <div class="rh-cand-card__row"><span>Observações</span><strong>${escapeHtml(est.observacoes || "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">
+        <button type="button" class="btn primary" data-action="editar" ${podeGerenciar ? "" : "disabled"}>Editar</button>
+        <button type="button" class="btn" data-action="deletar" ${podeGerenciar ? "" : "disabled"} style="background:#b71c1c;color:#fff;">Excluir</button>
+      </div>
+    </article>`;
   }).join("");
-  renderTable(dom.listaComprasEstabelecimentosTable, rows, "Nenhum estabelecimento registrado.", 6);
 }
 
 function renderListaCompraAnexos(anexos) {
   if (!dom.listaComprasAnexos) return;
   if (!anexos || anexos.length === 0) {
-    dom.listaComprasAnexos.innerHTML = "<li>Nenhum anexo enviado.</li>";
+    dom.listaComprasAnexos.innerHTML = '<p class="rh-cand-empty">Nenhum anexo enviado.</p>';
     return;
   }
   dom.listaComprasAnexos.innerHTML = anexos.map((anexo) => {
     const caminho = anexo.arquivo_path ? `${API_URL}${anexo.arquivo_path.startsWith("/") ? anexo.arquivo_path : `/${anexo.arquivo_path}`}` : "#";
     const nome = anexo.nome_original || `Arquivo ${anexo.id}`;
-    const criado = anexo.criado_em ? formatDate(anexo.criado_em) : "--";
-    return `<li><a href="${caminho}" target="_blank" rel="noopener">${escapeHtml(nome)}</a><span>Enviado em ${criado}</span></li>`;
+    const criado = anexo.criado_em ? formatDate(anexo.criado_em) : "—";
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📎</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(nome)}</h3>
+              <p class="rh-cand-card__sub">Enviado em ${escapeHtml(criado)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">
+        <a class="btn neutral" href="${caminho}" target="_blank" rel="noopener">Abrir</a>
+      </div>
+    </article>`;
   }).join("");
 }
 
@@ -7708,7 +7777,7 @@ const flushItemUpdates = debounce(async () => {
       if (payload.quantidade_planejada !== undefined || 
           payload.quantidade_comprada !== undefined || 
           payload.valor_unitario !== undefined) {
-        const row = dom.listaComprasItensTable?.querySelector(`tr[data-id="${itemId}"]`);
+        const row = dom.listaComprasItensTable?.querySelector(`article[data-id="${itemId}"]`);
         if (row) {
           const novoTotal = calcularTotalItemLinha(row);
           payload.valor_total = novoTotal;
@@ -7776,7 +7845,7 @@ function queueItemUpdate(itemId, field, value) {
   
   // Atualiza visualmente o total se os campos relevantes foram alterados
   if (["quantidade_planejada", "quantidade_comprada", "valor_unitario"].includes(field)) {
-    const row = dom.listaComprasItensTable?.querySelector(`tr[data-id="${itemId}"]`);
+    const row = dom.listaComprasItensTable?.querySelector(`article[data-id="${itemId}"]`);
     if (row) {
       atualizarTotalItemLinha(row);
     }
@@ -14337,7 +14406,7 @@ function setupTables() {
       await excluirListaCompra(btnExcluir.dataset.id);
       return;
     }
-    const row = event.target.closest("tr[data-id]");
+    const row = event.target.closest("article[data-id]");
     if (!row) return;
     if (event.target.closest("button")) return;
     await selecionarListaCompra(row.dataset.id);
@@ -14354,7 +14423,7 @@ function setupTables() {
     }
     
     if (!listaPermiteEdicao()) return;
-    const row = button.closest("tr[data-id]");
+    const row = button.closest("article[data-id]");
     if (!row) return;
     const item = state.listaCompraAtual?.itens?.find((it) => Number(it.id) === Number(row.dataset.id));
     if (!item) return;
@@ -14372,7 +14441,7 @@ function setupTables() {
     if (!listaPermiteEdicao()) return;
     const field = event.target?.dataset?.field;
     if (!field) return;
-    const row = event.target.closest("tr[data-id]");
+    const row = event.target.closest("article[data-id]");
     if (!row) return;
     const itemId = Number(row.dataset.id);
     if (!itemId) return;
@@ -14409,7 +14478,7 @@ function setupTables() {
     if (!listaPermiteEdicao()) return;
     const field = event.target?.dataset?.field;
     if (!field) return;
-    const row = event.target.closest("tr[data-id]");
+    const row = event.target.closest("article[data-id]");
     if (!row) return;
     const itemId = Number(row.dataset.id);
     if (!itemId) return;
@@ -14500,7 +14569,7 @@ function setupTables() {
     if (!canManageCompras()) return;
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    const row = button.closest("tr[data-id]");
+    const row = button.closest("article[data-id]");
     if (!row) return;
     const estId = Number(row.dataset.id);
     if (!estId) return;

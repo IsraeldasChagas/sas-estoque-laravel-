@@ -1154,6 +1154,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-list,
 #fornecedoresSection .rh-cand-list,
 #relatoriosSection .rh-cand-list,
+#comprasSection .rh-cand-list,
 #financeiroCentrosCustoSection .rh-cand-list,
 #financeiroContasReceberSection .rh-cand-list,
 #financeiroDreSection .rh-cand-list {
@@ -1182,6 +1183,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-empty,
 #fornecedoresSection .rh-cand-empty,
 #relatoriosSection .rh-cand-empty,
+#comprasSection .rh-cand-empty,
 #financeiroCentrosCustoSection .rh-cand-empty,
 #financeiroContasReceberSection .rh-cand-empty,
 #financeiroDreSection .rh-cand-empty {
@@ -1215,6 +1217,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -1246,6 +1249,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__top,
 #fornecedoresSection .rh-cand-card__top,
 #relatoriosSection .rh-cand-card__top,
+#comprasSection .rh-cand-card__top,
 #financeiroCentrosCustoSection .rh-cand-card__top,
 #financeiroContasReceberSection .rh-cand-card__top,
 #financeiroDreSection .rh-cand-card__top {
@@ -1275,6 +1279,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__photo,
 #fornecedoresSection .rh-cand-card__photo,
 #relatoriosSection .rh-cand-card__photo,
+#comprasSection .rh-cand-card__photo,
 #financeiroCentrosCustoSection .rh-cand-card__photo,
 #financeiroContasReceberSection .rh-cand-card__photo,
 #financeiroDreSection .rh-cand-card__photo {
@@ -1307,6 +1312,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__photo--wait,
 #fornecedoresSection .rh-cand-card__photo--wait,
 #relatoriosSection .rh-cand-card__photo--wait,
+#comprasSection .rh-cand-card__photo--wait,
 #financeiroCentrosCustoSection .rh-cand-card__photo--wait,
 #financeiroContasReceberSection .rh-cand-card__photo--wait,
 #financeiroDreSection .rh-cand-card__photo--wait {
@@ -1340,6 +1346,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__main,
 #fornecedoresSection .rh-cand-card__main,
 #relatoriosSection .rh-cand-card__main,
+#comprasSection .rh-cand-card__main,
 #financeiroCentrosCustoSection .rh-cand-card__main,
 #financeiroContasReceberSection .rh-cand-card__main,
 #financeiroDreSection .rh-cand-card__main {
@@ -1368,6 +1375,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__head,
 #fornecedoresSection .rh-cand-card__head,
 #relatoriosSection .rh-cand-card__head,
+#comprasSection .rh-cand-card__head,
 #financeiroCentrosCustoSection .rh-cand-card__head,
 #financeiroContasReceberSection .rh-cand-card__head,
 #financeiroDreSection .rh-cand-card__head {
@@ -1398,6 +1406,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__name,
 #fornecedoresSection .rh-cand-card__name,
 #relatoriosSection .rh-cand-card__name,
+#comprasSection .rh-cand-card__name,
 #financeiroCentrosCustoSection .rh-cand-card__name,
 #financeiroContasReceberSection .rh-cand-card__name,
 #financeiroDreSection .rh-cand-card__name {
@@ -1428,6 +1437,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__sub,
 #fornecedoresSection .rh-cand-card__sub,
 #relatoriosSection .rh-cand-card__sub,
+#comprasSection .rh-cand-card__sub,
 #financeiroCentrosCustoSection .rh-cand-card__sub,
 #financeiroContasReceberSection .rh-cand-card__sub,
 #financeiroDreSection .rh-cand-card__sub {
@@ -1457,6 +1467,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__meta,
 #fornecedoresSection .rh-cand-card__meta,
 #relatoriosSection .rh-cand-card__meta,
+#comprasSection .rh-cand-card__meta,
 #financeiroCentrosCustoSection .rh-cand-card__meta,
 #financeiroContasReceberSection .rh-cand-card__meta,
 #financeiroDreSection .rh-cand-card__meta {
@@ -1486,6 +1497,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row,
 #fornecedoresSection .rh-cand-card__row,
 #relatoriosSection .rh-cand-card__row,
+#comprasSection .rh-cand-card__row,
 #financeiroCentrosCustoSection .rh-cand-card__row,
 #financeiroContasReceberSection .rh-cand-card__row,
 #financeiroDreSection .rh-cand-card__row {
@@ -1516,6 +1528,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row span,
 #fornecedoresSection .rh-cand-card__row span,
 #relatoriosSection .rh-cand-card__row span,
+#comprasSection .rh-cand-card__row span,
 #financeiroCentrosCustoSection .rh-cand-card__row span,
 #financeiroContasReceberSection .rh-cand-card__row span,
 #financeiroDreSection .rh-cand-card__row span {
@@ -1544,6 +1557,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row strong,
 #fornecedoresSection .rh-cand-card__row strong,
 #relatoriosSection .rh-cand-card__row strong,
+#comprasSection .rh-cand-card__row strong,
 #financeiroCentrosCustoSection .rh-cand-card__row strong,
 #financeiroContasReceberSection .rh-cand-card__row strong,
 #financeiroDreSection .rh-cand-card__row strong {
@@ -1572,6 +1586,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__actions,
 #fornecedoresSection .rh-cand-card__actions,
 #relatoriosSection .rh-cand-card__actions,
+#comprasSection .rh-cand-card__actions,
 #financeiroCentrosCustoSection .rh-cand-card__actions,
 #financeiroContasReceberSection .rh-cand-card__actions,
 #financeiroDreSection .rh-cand-card__actions {
@@ -1603,6 +1618,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__actions .rh-wa-btn,
 #fornecedoresSection .rh-cand-card__actions .rh-wa-btn,
 #relatoriosSection .rh-cand-card__actions .rh-wa-btn,
+#comprasSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroCentrosCustoSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroContasReceberSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDreSection .rh-cand-card__actions .rh-wa-btn {
@@ -1631,6 +1647,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card .btn-rh-toggle,
 #fornecedoresSection .rh-cand-card .btn-rh-toggle,
 #relatoriosSection .rh-cand-card .btn-rh-toggle,
+#comprasSection .rh-cand-card .btn-rh-toggle,
 #financeiroCentrosCustoSection .rh-cand-card .btn-rh-toggle,
 #financeiroContasReceberSection .rh-cand-card .btn-rh-toggle,
 #financeiroDreSection .rh-cand-card .btn-rh-toggle {
@@ -1660,6 +1677,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill,
 #fornecedoresSection .rh-cand-pill,
 #relatoriosSection .rh-cand-pill,
+#comprasSection .rh-cand-pill,
 #financeiroCentrosCustoSection .rh-cand-pill,
 #financeiroContasReceberSection .rh-cand-pill,
 #financeiroDreSection .rh-cand-pill {
@@ -1694,6 +1712,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--ok,
 #fornecedoresSection .rh-cand-pill--ok,
 #relatoriosSection .rh-cand-pill--ok,
+#comprasSection .rh-cand-pill--ok,
 #financeiroCentrosCustoSection .rh-cand-pill--ok,
 #financeiroContasReceberSection .rh-cand-pill--ok,
 #financeiroDreSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
@@ -1718,6 +1737,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--warn,
 #fornecedoresSection .rh-cand-pill--warn,
 #relatoriosSection .rh-cand-pill--warn,
+#comprasSection .rh-cand-pill--warn,
 #financeiroCentrosCustoSection .rh-cand-pill--warn,
 #financeiroContasReceberSection .rh-cand-pill--warn,
 #financeiroDreSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
@@ -1742,6 +1762,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--danger,
 #fornecedoresSection .rh-cand-pill--danger,
 #relatoriosSection .rh-cand-pill--danger,
+#comprasSection .rh-cand-pill--danger,
 #financeiroCentrosCustoSection .rh-cand-pill--danger,
 #financeiroContasReceberSection .rh-cand-pill--danger,
 #financeiroDreSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
@@ -1766,6 +1787,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--info,
 #fornecedoresSection .rh-cand-pill--info,
 #relatoriosSection .rh-cand-pill--info,
+#comprasSection .rh-cand-pill--info,
 #financeiroCentrosCustoSection .rh-cand-pill--info,
 #financeiroContasReceberSection .rh-cand-pill--info,
 #financeiroDreSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
@@ -1981,6 +2003,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__details,
 #fornecedoresSection .rh-cand-card__details,
 #relatoriosSection .rh-cand-card__details,
+#comprasSection .rh-cand-card__details,
 #financeiroCentrosCustoSection .rh-cand-card__details,
 #financeiroContasReceberSection .rh-cand-card__details,
 #financeiroDreSection .rh-cand-card__details {
@@ -2019,6 +2042,7 @@ body.sidebar-open {
   #alvaraSection .rh-cand-card__actions .btn,
   #fornecedoresSection .rh-cand-card__actions .btn,
   #relatoriosSection .rh-cand-card__actions .btn,
+  #comprasSection .rh-cand-card__actions .btn,
   #financeiroCentrosCustoSection .rh-cand-card__actions .btn,
   #financeiroContasReceberSection .rh-cand-card__actions .btn,
   #financeiroDreSection .rh-cand-card__actions .btn {
@@ -2684,7 +2708,7 @@ table {
   gap: 12px;
 }
 
-.compras-detalhes-resumo div {
+.compras-detalhes-resumo > div {
   background: rgba(0, 71, 171, 0.08);
   border-radius: 12px;
   padding: 12px;
@@ -11307,6 +11331,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11353,6 +11378,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11398,6 +11424,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11448,6 +11475,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11491,6 +11519,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11533,6 +11562,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
+#comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
 #financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
@@ -11777,4 +11807,57 @@ select[size]:not([size="1"]) {
 #relatoriosSection .report-actions {
   margin: 0.75rem 0;
   padding: 0.75rem 1rem;
+}
+
+#comprasSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#comprasSection .actions,
+#comprasSection .lista-compras__filtro,
+#comprasSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#comprasSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#comprasSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#comprasSection .rh-cand-list {
+  padding: 0 0 1rem;
+}
+#comprasSection .compras-detalhes-resumo.rh-cand-list {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+#comprasSection .rh-cand-card.selected {
+  box-shadow: 0 0 0 3px var(--sidebar-link-hover, #de4309), 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#comprasSection .compras-listas-card .rh-cand-card {
+  cursor: pointer;
+}
+#comprasSection .rh-cand-card__row input,
+#comprasSection .rh-cand-card__row select,
+#comprasSection .rh-cand-card__row textarea {
+  width: min(60%, 220px);
+  box-sizing: border-box;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+}
+#comprasSection .rh-cand-card__row textarea {
+  min-height: 60px;
+}
+#comprasSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
