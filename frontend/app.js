@@ -21926,7 +21926,7 @@ function collectAlvarasListFiltersFromDOM() {
 async function loadAlvaras(filtros = {}) {
   const tbody = document.getElementById('alvarasTable');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#2196F3;padding:30px;">⏳ Carregando documentos empresa...</td></tr>';
+  tbody.innerHTML = '<p class="rh-cand-empty">Carregando documentos empresa...</p>';
   try {
     const params = new URLSearchParams();
     if (filtros.mes_ano) params.append('mes_ano', filtros.mes_ano);
@@ -21937,7 +21937,7 @@ async function loadAlvaras(filtros = {}) {
     const alvaras = await res.json();
     renderAlvaras(Array.isArray(alvaras) ? alvaras : []);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#d32f2f;padding:30px;">❌ Erro ao carregar documentos empresa</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Erro ao carregar documentos empresa</p>';
   }
 }
 
@@ -21945,7 +21945,7 @@ function renderAlvaras(alvaras) {
   const tbody = document.getElementById('alvarasTable');
   if (!tbody) return;
   if (!alvaras.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#607d8b;padding:20px;">Nenhum documento empresa encontrado.</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Nenhum documento empresa encontrado.</p>';
     return;
   }
   const unidadesPorId = new Map((state.unidades || []).map(u => [String(u.id), u]));
@@ -21957,19 +21957,31 @@ function renderAlvaras(alvaras) {
     const unidadeObj = unidadesPorId.get(String(a.unidade_id || '')) || null;
     const unidadeLabel = unidadeObj ? (unidadeObj.nome || `Unidade ${unidadeObj.id}`) : (a.unidade_id ? `Unidade ${a.unidade_id}` : '-');
     return `
-      <tr>
-        <td data-label="Tipo">${escapeHtml(a.tipo || '-')}</td>
-        <td data-label="Unidade">${escapeHtml(unidadeLabel)}</td>
-        <td data-label="Início">${fmtData(a.data_inicio)}</td>
-        <td data-label="Vencimento">${fmtData(a.data_vencimento)}</td>
-        <td data-label="Valor pago">${formatCurrencyBRL(a.valor_pago || 0)}</td>
-        <td data-label="Anexo" style="text-align:center;">${anexo}</td>
-        <td data-label="Ações">
-          <button class="btn-icon" title="Editar" data-id="${a.id}">✏️</button>
-          <button class="btn-icon" title="Visualizar" data-id="${a.id}">👁️</button>
-          <button class="btn-icon btn-icon--danger btn-deletar-alvara" title="Excluir" data-id="${a.id}" style="color:#c62828;">🗑️</button>
-        </td>
-      </tr>
+      <article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧾</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${escapeHtml(a.tipo || 'Documento')}</h3>
+                <p class="rh-cand-card__sub">${escapeHtml(unidadeLabel)}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--info">Documento</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Início</span><strong>${escapeHtml(fmtData(a.data_inicio))}</strong></div>
+              <div class="rh-cand-card__row"><span>Vencimento</span><strong>${escapeHtml(fmtData(a.data_vencimento))}</strong></div>
+              <div class="rh-cand-card__row"><span>Valor pago</span><strong>${escapeHtml(formatCurrencyBRL(a.valor_pago || 0))}</strong></div>
+              <div class="rh-cand-card__row"><span>Anexo</span><strong>${anexo}</strong></div>
+            </div>
+          </div>
+        </div>
+        <div class="rh-cand-card__actions">
+          <button type="button" class="btn primary" title="Editar" data-id="${a.id}">Editar</button>
+          <button type="button" class="btn btn-rh-toggle" title="Visualizar" data-id="${a.id}">Ver</button>
+          <button type="button" class="btn btn-deletar-alvara" title="Excluir" data-id="${a.id}" style="background:#b71c1c;color:#fff;">Excluir</button>
+        </div>
+      </article>
     `;
   }).join('');
   tbody.innerHTML = rows;
@@ -22501,7 +22513,7 @@ function setupAlvarasModule() {
   if (alvarasTable) {
     alvarasTable.addEventListener('click', async (e) => {
       if (e.target.closest('.btn-deletar-alvara')) return;
-      const btn = e.target.closest('.btn-icon');
+      const btn = e.target.closest('button[title]');
       if (!btn || !alvarasTable.contains(btn)) return;
       const id = btn.getAttribute('data-id');
       const title = btn.getAttribute('title');
