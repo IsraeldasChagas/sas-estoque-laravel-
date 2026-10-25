@@ -170,12 +170,12 @@
     filtros = filtros || filtrosAtivos();
     var tbody = el("impostosTable");
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Carregando…</td></tr>';
+    tbody.innerHTML = '<p class="rh-cand-empty">Carregando…</p>';
     try {
       var qs = new URLSearchParams(filtros).toString();
       var lista = await api("/impostos" + (qs ? "?" + qs : ""));
       if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Nenhum imposto cadastrado.</td></tr>';
+        tbody.innerHTML = '<p class="rh-cand-empty">Nenhum imposto cadastrado.</p>';
         return;
       }
       tbody.innerHTML = lista.map(function (imp) {
@@ -183,39 +183,52 @@
         var boletoHtml = "—";
         if (boleto?.id) {
           var pag = boleto.status === "PAGO"
-            ? '<br><small>Pago ' + fmtData(boleto.data_pagamento) + " — " + fmtMoeda(boleto.valor_pago) + "</small>"
-            : "";
-          boletoHtml = '<span>Boleto #' + boleto.id + pag + '</span>';
+            ? "Pago " + fmtData(boleto.data_pagamento) + " — " + fmtMoeda(boleto.valor_pago)
+            : "Ainda não pago";
+          boletoHtml = "Boleto #" + boleto.id + " · " + pag;
         }
         var anexos = (imp.anexos || []).length
           ? imp.anexos.map(function (a) {
               return '<a href="' + esc((typeof API_URL !== "undefined" ? API_URL : "") + "/impostos/anexos/" + a.id) + '" target="_blank" title="' + esc(a.nome) + '">📎</a>';
             }).join(" ")
           : "—";
+        var pill = { A_VENCER: "info", VENCIDO: "danger", PAGO: "ok", CANCELADO: "info" }[imp.status] || "info";
+        var acaoBoleto = boleto?.id
+          ? (boleto.status === "PAGO"
+            ? ""
+            : '<button type="button" class="btn primary imp-pagar" data-boleto="' + boleto.id + '">Pagar no boleto</button>')
+          : '<button type="button" class="btn primary imp-gerar-boleto" data-id="' + imp.id + '">Gerar boleto</button>';
         return (
-          "<tr>" +
-            '<td><span class="status-badge ' + statusClass(imp.status) + '">' + statusLabel(imp.status) + "</span></td>" +
-            "<td>" + esc(imp.tipo_imposto) + "</td>" +
-            "<td>" + esc(imp.descricao) + "</td>" +
-            "<td>" + esc(imp.competencia || "—") + "</td>" +
-            "<td>" + fmtData(imp.data_vencimento) + "</td>" +
-            "<td>" + fmtMoeda(imp.valor) + "</td>" +
-            "<td>" + boletoHtml + "</td>" +
-            "<td>" + anexos + "</td>" +
-            '<td class="table-actions">' +
-              '<button type="button" class="btn secondary btn-sm imp-editar" data-id="' + imp.id + '">Editar</button> ' +
-              (boleto?.id
-                ? (boleto.status === "PAGO"
-                  ? ""
-                  : '<button type="button" class="btn primary btn-sm imp-pagar" data-boleto="' + boleto.id + '">Pagar no boleto</button> ')
-                : '<button type="button" class="btn primary btn-sm imp-gerar-boleto" data-id="' + imp.id + '">Gerar boleto</button> ') +
-              '<button type="button" class="btn danger btn-sm imp-excluir" data-id="' + imp.id + '">Excluir</button>' +
-            "</td>" +
-          "</tr>"
+          '<article class="rh-cand-card">' +
+            '<div class="rh-cand-card__top">' +
+              '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏛️</div>' +
+              '<div class="rh-cand-card__main">' +
+                '<div class="rh-cand-card__head">' +
+                  "<div>" +
+                    '<h3 class="rh-cand-card__name">' + esc(imp.tipo_imposto || "Imposto") + "</h3>" +
+                    '<p class="rh-cand-card__sub">' + esc(imp.descricao || "—") + "</p>" +
+                  "</div>" +
+                  '<span class="rh-cand-pill rh-cand-pill--' + pill + '">' + esc(statusLabel(imp.status)) + "</span>" +
+                "</div>" +
+                '<div class="rh-cand-card__meta">' +
+                  '<div class="rh-cand-card__row"><span>Competência</span><strong>' + esc(imp.competencia || "—") + "</strong></div>" +
+                  '<div class="rh-cand-card__row"><span>Vencimento</span><strong>' + fmtData(imp.data_vencimento) + "</strong></div>" +
+                  '<div class="rh-cand-card__row"><span>Valor</span><strong>' + esc(fmtMoeda(imp.valor)) + "</strong></div>" +
+                  '<div class="rh-cand-card__row"><span>Boleto / pagamento</span><strong>' + esc(boletoHtml) + "</strong></div>" +
+                  '<div class="rh-cand-card__row"><span>Anexos</span><strong>' + anexos + "</strong></div>" +
+                "</div>" +
+              "</div>" +
+            "</div>" +
+            '<div class="rh-cand-card__actions">' +
+              '<button type="button" class="btn primary imp-editar" data-id="' + imp.id + '">Editar</button>' +
+              acaoBoleto +
+              '<button type="button" class="btn imp-excluir" data-id="' + imp.id + '" style="background:#b71c1c;color:#fff;">Excluir</button>' +
+            "</div>" +
+          "</article>"
         );
       }).join("");
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Erro ao carregar.</td></tr>';
+      tbody.innerHTML = '<p class="rh-cand-empty">Erro ao carregar.</p>';
       toast(e?.message || "Erro ao carregar impostos", "error");
     }
   }

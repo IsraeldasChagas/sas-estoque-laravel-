@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025300000-boletos" />
+    <link rel="stylesheet" href="style.css?v=20261025310000-impostos" />
     <script>
       (function () {
         try {
@@ -3515,6 +3515,7 @@
 
           <!-- Módulo Financeiro - Impostos (cadastro; pagamento em Boletos) -->
           <section id="impostosSection" class="view-section hidden">
+            <div class="caixa-page-wrap">
             <div class="boletos-header">
               <h2>🏛️ Controle Financeiro — Impostos</h2>
               <div class="boletos-actions">
@@ -3560,26 +3561,10 @@
                 </div>
                 <button class="btn secondary" id="recarregarImpostos" style="margin-left: auto;">🔄 Atualizar</button>
               </header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Status</th>
-                      <th>Tipo</th>
-                      <th>Descrição</th>
-                      <th>Competência</th>
-                      <th>Vencimento</th>
-                      <th>Valor</th>
-                      <th>Boleto / Pagamento</th>
-                      <th>Anexos</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="impostosTable">
-                    <tr><td colspan="9" class="empty-row">Carregando…</td></tr>
-                  </tbody>
-                </table>
+              <div class="rh-cand-list" id="impostosTable">
+                <p class="rh-cand-empty">Carregando…</p>
               </div>
+            </div>
             </div>
           </section>
 
@@ -8016,7 +8001,7 @@
     <script defer src="openclaw-integracao.js?v=20260706-oc4"></script>
     <script defer src="ayla-ia.js?v=20260714-ayla-padrao"></script>
     <script defer src="rh-rescisao.js?v=20260608-trct"></script>
-    <script defer src="impostos.js?v=20260622-impostos"></script>
+    <script defer src="impostos.js?v=20261025310000-impostos"></script>
     <script defer src="fiscal-documentos.js?v=20260813-ciclo-nfce"></script>
     <script defer src="comercial-pdv.js?v=20260813-cancel-red"></script>
     <script defer src="integracoes.js?v=20260728-cfg-ui2"></script>
