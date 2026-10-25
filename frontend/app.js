@@ -5805,12 +5805,15 @@ function navigateTo(section) {
   const sidebarNavScroll = document.querySelector(".sidebar-nav-scroll");
   const sidebarScrollTop = sidebarNavScroll ? sidebarNavScroll.scrollTop : 0;
   const nextSectionId = `${contentSection}Section`;
+  let activeNavLink = null;
   for (const link of dom.navLinks) {
     const on = link.dataset.section === section;
+    link.classList.toggle("active", on);
     if (on) {
-      if (!link.classList.contains("active")) link.classList.add("active");
-    } else if (link.classList.contains("active")) {
-      link.classList.remove("active");
+      link.setAttribute("aria-current", "page");
+      activeNavLink = link;
+    } else {
+      link.removeAttribute("aria-current");
     }
   }
   if (!visibleSectionEl || !visibleSectionEl.isConnected) {
@@ -5828,6 +5831,13 @@ function navigateTo(section) {
   const contentScroll = document.querySelector(".content");
   if (contentScroll) contentScroll.scrollTop = 0;
   if (sidebarNavScroll) sidebarNavScroll.scrollTop = sidebarScrollTop;
+  if (activeNavLink && sidebarNavScroll) {
+    const linkBox = activeNavLink.getBoundingClientRect();
+    const menuBox = sidebarNavScroll.getBoundingClientRect();
+    if (linkBox.top < menuBox.top || linkBox.bottom > menuBox.bottom) {
+      activeNavLink.scrollIntoView({ block: "nearest" });
+    }
+  }
   const reservaNavSubmenu = document.getElementById("reservaMenu")?.closest(".nav-submenu");
   if (reservaNavSubmenu) {
     if (section === "reservaDashboard" || section === "reservaMesa" || section === "reservaFormasPagamento" || section === "historicoReservas") {

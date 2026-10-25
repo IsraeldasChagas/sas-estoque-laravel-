@@ -589,19 +589,49 @@
       ].join("");
     }
     const lista = data.contas || [];
-    if (tbody) {
-      tbody.innerHTML = lista.length
-        ? lista.map((c) => `<tr>
-            <td>${esc(c.cliente_nome || "—")}</td>
-            <td>${esc(c.descricao || "—")}</td>
-            <td>${c.parcela_num}/${c.total_parcelas}</td>
-            <td>${esc(fmtData(c.data_vencimento))}</td>
-            <td>${esc(fmtMoeda(c.valor))}</td>
-            <td>${esc(c.status)}</td>
-            <td>${c.status !== "recebido" ? `<button type="button" class="btn btn-sm primary" data-fg-cr-rec="${c.id}">Receber</button>` : "—"}</td>
-          </tr>`).join("")
-        : `<tr><td colspan="7" class="empty-row">Nenhuma conta no período.</td></tr>`;
+    const html = lista.length
+      ? lista.map((c) => fgCrCard(c)).join("")
+      : '<p class="rh-cand-empty">Nenhuma conta no período.</p>';
+    if (tbody || document.getElementById("fgCrLista")) {
+      fgMostrarLista("fgCrLista", "fgCrTbody", html);
     }
+  }
+
+  function fgCrCard(c) {
+    const status = String(c.status || "").toLowerCase();
+    const statusLabel = status === "recebido" ? "Recebido" : status === "vencido" ? "Vencido" : status === "aberto" ? "Aberto" : (c.status || "—");
+    const pill = status === "recebido" ? "ok" : status === "vencido" ? "danger" : status === "aberto" ? "warn" : "info";
+    const titulo = c.cliente_nome || "Cliente";
+    const sub = [c.descricao, c.parcela_num ? `Parcela ${c.parcela_num}/${c.total_parcelas}` : ""].filter(Boolean).join(" · ");
+    const linhas = [
+      ["Vencimento", fmtData(c.data_vencimento)],
+      ["Valor", fmtMoeda(c.valor)],
+      ["Status", statusLabel],
+    ];
+    if (c.forma_recebimento) linhas.push(["Forma", c.forma_recebimento]);
+    if (c.unidade_nome) linhas.push(["Unidade", c.unidade_nome]);
+    if (c.observacao) linhas.push(["Observação", c.observacao]);
+    const acao = status !== "recebido"
+      ? `<div class="rh-cand-card__actions"><button type="button" class="btn btn-rh-toggle" data-fg-cr-rec="${esc(c.id)}">Receber</button></div>`
+      : "";
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📥</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${esc(titulo)}</h3>
+              ${sub ? `<p class="rh-cand-card__sub">${esc(sub)}</p>` : ""}
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${esc(statusLabel)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            ${linhas.map(([rotulo, valor]) => `<div class="rh-cand-card__row"><span>${esc(rotulo)}</span><strong>${esc(valor)}</strong></div>`).join("")}
+          </div>
+        </div>
+      </div>
+      ${acao}
+    </article>`;
   }
 
   async function fgSalvarContaReceber(e) {

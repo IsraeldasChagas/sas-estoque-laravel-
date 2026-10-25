@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025190000-dre" />
+    <link rel="stylesheet" href="style.css?v=20261025195000-cr" />
     <script>
       (function () {
         try {
@@ -55,7 +55,7 @@
     <link rel="stylesheet" href="style-energia.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-patrimonio.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-investimento.css?v=20260715-btn-sym" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20261025190000-dre" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="style-financeiro-gerencial.css?v=20261025195000-cr" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-caixa-padrao.css?v=20260714-caixa-toggle" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-rh-rescisao.css?v=20260608-trct" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-configuracoes.css?v=20260714-oc-padrao" media="print" onload="this.media='all'" />
@@ -4000,7 +4000,7 @@
               </div>
               <div class="fg-cards" id="fgCrInadimplencia"></div>
               <div class="table-card form-card--wide">
-                <header><h3>Novo recebimento</h3><button type="button" class="btn btn-sm" id="fgCrNovoCliente">+ Cliente</button></header>
+                <header><h3>Novo recebimento</h3><button type="button" class="btn primary btn-sm" id="fgCrNovoCliente">+ Cliente</button></header>
                 <div class="fg-form-body">
                   <form id="fgCrForm" class="fg-form-grid">
                     <label>Cliente<select id="fgCrCliente"><option value="">—</option></select></label>
@@ -4017,9 +4017,9 @@
                   </form>
                 </div>
               </div>
-              <div class="table-card form-card--wide">
+              <div class="table-card form-card--wide fg-fluxo-lista-card">
                 <header><h3>Recebimentos</h3></header>
-                <div class="table-wrapper"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Parc.</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="fgCrTbody"></tbody></table></div>
+                <div class="rh-cand-list fg-fluxo-cards" id="fgCrLista"></div>
               </div>
             </div>
           </section>
@@ -7934,7 +7934,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025145636-rh15"></script>
+    <script defer src="app.js?v=20261025195000-menu"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
@@ -7943,7 +7943,7 @@
     <script defer src="fiscal-producao.js?v=20260728-cardapio-ficha"></script>
     <script defer src="fiscal-venda-pdv.js?v=20260730-modo-emissao"></script>
     <script defer src="fiscal-modulo-07.js?v=20260728-cfg-ui2"></script>
-    <script defer src="financeiro-gerencial.js?v=20261025190000-dre"></script>
+    <script defer src="financeiro-gerencial.js?v=20261025195000-cr"></script>
      
   </body>
 </html>

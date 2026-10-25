@@ -226,6 +226,13 @@ body.sidebar-open {
   background: var(--sidebar-child-hover) !important;
 }
 
+.sidebar nav a.nav-link.active {
+  background: var(--sidebar-link-hover) !important;
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 #fff;
+}
+
 .sidebar.is-open {
   transform: translateX(0);
 }
@@ -1137,6 +1144,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-list,
 #financeiroFluxoCaixaSection .rh-cand-list,
 #financeiroDashboardSection .rh-cand-list,
+#financeiroContasReceberSection .rh-cand-list,
 #financeiroDreSection .rh-cand-list {
   display: grid;
   gap: 12px;
@@ -1154,6 +1162,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-empty,
 #financeiroFluxoCaixaSection .rh-cand-empty,
 #financeiroDashboardSection .rh-cand-empty,
+#financeiroContasReceberSection .rh-cand-empty,
 #financeiroDreSection .rh-cand-empty {
   margin: 0;
   padding: 28px 12px;
@@ -1176,6 +1185,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -1196,6 +1206,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__top,
 #financeiroFluxoCaixaSection .rh-cand-card__top,
 #financeiroDashboardSection .rh-cand-card__top,
+#financeiroContasReceberSection .rh-cand-card__top,
 #financeiroDreSection .rh-cand-card__top {
   display: flex;
   align-items: flex-start;
@@ -1214,6 +1225,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__photo,
 #financeiroFluxoCaixaSection .rh-cand-card__photo,
 #financeiroDashboardSection .rh-cand-card__photo,
+#financeiroContasReceberSection .rh-cand-card__photo,
 #financeiroDreSection .rh-cand-card__photo {
   width: 72px;
   height: 72px;
@@ -1235,6 +1247,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__photo--wait,
 #financeiroFluxoCaixaSection .rh-cand-card__photo--wait,
 #financeiroDashboardSection .rh-cand-card__photo--wait,
+#financeiroContasReceberSection .rh-cand-card__photo--wait,
 #financeiroDreSection .rh-cand-card__photo--wait {
   display: flex;
   align-items: center;
@@ -1257,6 +1270,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__main,
 #financeiroFluxoCaixaSection .rh-cand-card__main,
 #financeiroDashboardSection .rh-cand-card__main,
+#financeiroContasReceberSection .rh-cand-card__main,
 #financeiroDreSection .rh-cand-card__main {
   flex: 1;
   min-width: 0;
@@ -1274,6 +1288,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__head,
 #financeiroFluxoCaixaSection .rh-cand-card__head,
 #financeiroDashboardSection .rh-cand-card__head,
+#financeiroContasReceberSection .rh-cand-card__head,
 #financeiroDreSection .rh-cand-card__head {
   display: flex;
   justify-content: space-between;
@@ -1293,6 +1308,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__name,
 #financeiroFluxoCaixaSection .rh-cand-card__name,
 #financeiroDashboardSection .rh-cand-card__name,
+#financeiroContasReceberSection .rh-cand-card__name,
 #financeiroDreSection .rh-cand-card__name {
   margin: 0;
   font-size: 1.05rem;
@@ -1312,6 +1328,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__sub,
 #financeiroFluxoCaixaSection .rh-cand-card__sub,
 #financeiroDashboardSection .rh-cand-card__sub,
+#financeiroContasReceberSection .rh-cand-card__sub,
 #financeiroDreSection .rh-cand-card__sub {
   margin: 4px 0 0;
   color: var(--muted);
@@ -1330,6 +1347,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__meta,
 #financeiroFluxoCaixaSection .rh-cand-card__meta,
 #financeiroDashboardSection .rh-cand-card__meta,
+#financeiroContasReceberSection .rh-cand-card__meta,
 #financeiroDreSection .rh-cand-card__meta {
   display: grid;
   gap: 8px;
@@ -1348,6 +1366,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__row,
 #financeiroFluxoCaixaSection .rh-cand-card__row,
 #financeiroDashboardSection .rh-cand-card__row,
+#financeiroContasReceberSection .rh-cand-card__row,
 #financeiroDreSection .rh-cand-card__row {
   display: flex;
   justify-content: space-between;
@@ -1367,6 +1386,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__row span,
 #financeiroFluxoCaixaSection .rh-cand-card__row span,
 #financeiroDashboardSection .rh-cand-card__row span,
+#financeiroContasReceberSection .rh-cand-card__row span,
 #financeiroDreSection .rh-cand-card__row span {
   color: var(--muted);
   font-size: 0.9rem;
@@ -1384,6 +1404,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__row strong,
 #financeiroFluxoCaixaSection .rh-cand-card__row strong,
 #financeiroDashboardSection .rh-cand-card__row strong,
+#financeiroContasReceberSection .rh-cand-card__row strong,
 #financeiroDreSection .rh-cand-card__row strong {
   text-align: right;
   overflow-wrap: anywhere;
@@ -1401,6 +1422,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__actions,
 #financeiroFluxoCaixaSection .rh-cand-card__actions,
 #financeiroDashboardSection .rh-cand-card__actions,
+#financeiroContasReceberSection .rh-cand-card__actions,
 #financeiroDreSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
@@ -1421,6 +1443,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroFluxoCaixaSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDashboardSection .rh-cand-card__actions .rh-wa-btn,
+#financeiroContasReceberSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDreSection .rh-cand-card__actions .rh-wa-btn {
   width: auto;
   margin-top: 0;
@@ -1438,6 +1461,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card .btn-rh-toggle,
 #financeiroFluxoCaixaSection .rh-cand-card .btn-rh-toggle,
 #financeiroDashboardSection .rh-cand-card .btn-rh-toggle,
+#financeiroContasReceberSection .rh-cand-card .btn-rh-toggle,
 #financeiroDreSection .rh-cand-card .btn-rh-toggle {
   background: #0f766e;
   border-color: #0f766e;
@@ -1456,6 +1480,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-pill,
 #financeiroFluxoCaixaSection .rh-cand-pill,
 #financeiroDashboardSection .rh-cand-pill,
+#financeiroContasReceberSection .rh-cand-pill,
 #financeiroDreSection .rh-cand-pill {
   display: inline-flex;
   align-items: center;
@@ -1479,6 +1504,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-pill--ok,
 #financeiroFluxoCaixaSection .rh-cand-pill--ok,
 #financeiroDashboardSection .rh-cand-pill--ok,
+#financeiroContasReceberSection .rh-cand-pill--ok,
 #financeiroDreSection .rh-cand-pill--ok { background: #d9f5ef; color: #0f766e; }
 #rhCandidatosSection .rh-cand-pill--warn,
 #valeConsumoSection .rh-cand-pill--warn,
@@ -1492,6 +1518,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-pill--warn,
 #financeiroFluxoCaixaSection .rh-cand-pill--warn,
 #financeiroDashboardSection .rh-cand-pill--warn,
+#financeiroContasReceberSection .rh-cand-pill--warn,
 #financeiroDreSection .rh-cand-pill--warn { background: #fff1dc; color: #9a5b08; }
 #rhCandidatosSection .rh-cand-pill--danger,
 #valeConsumoSection .rh-cand-pill--danger,
@@ -1505,6 +1532,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-pill--danger,
 #financeiroFluxoCaixaSection .rh-cand-pill--danger,
 #financeiroDashboardSection .rh-cand-pill--danger,
+#financeiroContasReceberSection .rh-cand-pill--danger,
 #financeiroDreSection .rh-cand-pill--danger { background: #fde8e8; color: #b42323; }
 #rhCandidatosSection .rh-cand-pill--info,
 #valeConsumoSection .rh-cand-pill--info,
@@ -1518,6 +1546,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-pill--info,
 #financeiroFluxoCaixaSection .rh-cand-pill--info,
 #financeiroDashboardSection .rh-cand-pill--info,
+#financeiroContasReceberSection .rh-cand-pill--info,
 #financeiroDreSection .rh-cand-pill--info { background: #e6f1fb; color: #1d4e89; }
 
 #rhVagasSection .rh-vaga-list {
@@ -1722,6 +1751,7 @@ body.sidebar-open {
 #patrimonioInventarioSection .rh-cand-card__details,
 #financeiroFluxoCaixaSection .rh-cand-card__details,
 #financeiroDashboardSection .rh-cand-card__details,
+#financeiroContasReceberSection .rh-cand-card__details,
 #financeiroDreSection .rh-cand-card__details {
   margin-top: 14px;
   padding-top: 14px;
@@ -1749,6 +1779,7 @@ body.sidebar-open {
   #patrimonioInventarioSection .rh-cand-card__actions .btn,
   #financeiroFluxoCaixaSection .rh-cand-card__actions .btn,
   #financeiroDashboardSection .rh-cand-card__actions .btn,
+  #financeiroContasReceberSection .rh-cand-card__actions .btn,
   #financeiroDreSection .rh-cand-card__actions .btn {
     flex: 1 1 140px;
     justify-content: center;
@@ -11021,6 +11052,7 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   border: none;
 }
@@ -11056,6 +11088,7 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   border: none;
 }
@@ -11090,6 +11123,7 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   border: none;
 }
@@ -11129,6 +11163,7 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   border: none;
 }
@@ -11161,6 +11196,7 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   border: none;
 }
@@ -11192,6 +11228,7 @@ select[size]:not([size="1"]) {
 #patrimonioInventarioSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
+#financeiroContasReceberSection .rh-cand-card,
 #financeiroDreSection .rh-cand-card {
   border: none;
 }
