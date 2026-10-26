@@ -1181,6 +1181,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-list,
 #fornecedoresSection .rh-cand-list,
 #unidadesSection .rh-cand-list,
+#produtosSection .rh-cand-list,
 #relatoriosSection .rh-cand-list,
 #comprasSection .rh-cand-list,
 #financeiroCentrosCustoSection .rh-cand-list,
@@ -1211,6 +1212,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-empty,
 #fornecedoresSection .rh-cand-empty,
 #unidadesSection .rh-cand-empty,
+#produtosSection .rh-cand-empty,
 #relatoriosSection .rh-cand-empty,
 #comprasSection .rh-cand-empty,
 #financeiroCentrosCustoSection .rh-cand-empty,
@@ -1246,6 +1248,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -1279,6 +1282,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__top,
 #fornecedoresSection .rh-cand-card__top,
 #unidadesSection .rh-cand-card__top,
+#produtosSection .rh-cand-card__top,
 #relatoriosSection .rh-cand-card__top,
 #comprasSection .rh-cand-card__top,
 #financeiroCentrosCustoSection .rh-cand-card__top,
@@ -1310,6 +1314,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__photo,
 #fornecedoresSection .rh-cand-card__photo,
 #unidadesSection .rh-cand-card__photo,
+#produtosSection .rh-cand-card__photo,
 #relatoriosSection .rh-cand-card__photo,
 #comprasSection .rh-cand-card__photo,
 #financeiroCentrosCustoSection .rh-cand-card__photo,
@@ -1344,6 +1349,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__photo--wait,
 #fornecedoresSection .rh-cand-card__photo--wait,
 #unidadesSection .rh-cand-card__photo--wait,
+#produtosSection .rh-cand-card__photo--wait,
 #relatoriosSection .rh-cand-card__photo--wait,
 #comprasSection .rh-cand-card__photo--wait,
 #financeiroCentrosCustoSection .rh-cand-card__photo--wait,
@@ -1379,6 +1385,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__main,
 #fornecedoresSection .rh-cand-card__main,
 #unidadesSection .rh-cand-card__main,
+#produtosSection .rh-cand-card__main,
 #relatoriosSection .rh-cand-card__main,
 #comprasSection .rh-cand-card__main,
 #financeiroCentrosCustoSection .rh-cand-card__main,
@@ -1409,6 +1416,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__head,
 #fornecedoresSection .rh-cand-card__head,
 #unidadesSection .rh-cand-card__head,
+#produtosSection .rh-cand-card__head,
 #relatoriosSection .rh-cand-card__head,
 #comprasSection .rh-cand-card__head,
 #financeiroCentrosCustoSection .rh-cand-card__head,
@@ -1441,6 +1449,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__name,
 #fornecedoresSection .rh-cand-card__name,
 #unidadesSection .rh-cand-card__name,
+#produtosSection .rh-cand-card__name,
 #relatoriosSection .rh-cand-card__name,
 #comprasSection .rh-cand-card__name,
 #financeiroCentrosCustoSection .rh-cand-card__name,
@@ -1473,6 +1482,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__sub,
 #fornecedoresSection .rh-cand-card__sub,
 #unidadesSection .rh-cand-card__sub,
+#produtosSection .rh-cand-card__sub,
 #relatoriosSection .rh-cand-card__sub,
 #comprasSection .rh-cand-card__sub,
 #financeiroCentrosCustoSection .rh-cand-card__sub,
@@ -1504,6 +1514,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__meta,
 #fornecedoresSection .rh-cand-card__meta,
 #unidadesSection .rh-cand-card__meta,
+#produtosSection .rh-cand-card__meta,
 #relatoriosSection .rh-cand-card__meta,
 #comprasSection .rh-cand-card__meta,
 #financeiroCentrosCustoSection .rh-cand-card__meta,
@@ -1535,6 +1546,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row,
 #fornecedoresSection .rh-cand-card__row,
 #unidadesSection .rh-cand-card__row,
+#produtosSection .rh-cand-card__row,
 #relatoriosSection .rh-cand-card__row,
 #comprasSection .rh-cand-card__row,
 #financeiroCentrosCustoSection .rh-cand-card__row,
@@ -1567,6 +1579,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row span,
 #fornecedoresSection .rh-cand-card__row span,
 #unidadesSection .rh-cand-card__row span,
+#produtosSection .rh-cand-card__row span,
 #relatoriosSection .rh-cand-card__row span,
 #comprasSection .rh-cand-card__row span,
 #financeiroCentrosCustoSection .rh-cand-card__row span,
@@ -1597,6 +1610,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row strong,
 #fornecedoresSection .rh-cand-card__row strong,
 #unidadesSection .rh-cand-card__row strong,
+#produtosSection .rh-cand-card__row strong,
 #relatoriosSection .rh-cand-card__row strong,
 #comprasSection .rh-cand-card__row strong,
 #financeiroCentrosCustoSection .rh-cand-card__row strong,
@@ -1627,6 +1641,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__actions,
 #fornecedoresSection .rh-cand-card__actions,
 #unidadesSection .rh-cand-card__actions,
+#produtosSection .rh-cand-card__actions,
 #relatoriosSection .rh-cand-card__actions,
 #comprasSection .rh-cand-card__actions,
 #financeiroCentrosCustoSection .rh-cand-card__actions,
@@ -1660,6 +1675,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__actions .rh-wa-btn,
 #fornecedoresSection .rh-cand-card__actions .rh-wa-btn,
 #unidadesSection .rh-cand-card__actions .rh-wa-btn,
+#produtosSection .rh-cand-card__actions .rh-wa-btn,
 #relatoriosSection .rh-cand-card__actions .rh-wa-btn,
 #comprasSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroCentrosCustoSection .rh-cand-card__actions .rh-wa-btn,
@@ -1690,6 +1706,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card .btn-rh-toggle,
 #fornecedoresSection .rh-cand-card .btn-rh-toggle,
 #unidadesSection .rh-cand-card .btn-rh-toggle,
+#produtosSection .rh-cand-card .btn-rh-toggle,
 #relatoriosSection .rh-cand-card .btn-rh-toggle,
 #comprasSection .rh-cand-card .btn-rh-toggle,
 #financeiroCentrosCustoSection .rh-cand-card .btn-rh-toggle,
@@ -1721,6 +1738,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill,
 #fornecedoresSection .rh-cand-pill,
 #unidadesSection .rh-cand-pill,
+#produtosSection .rh-cand-pill,
 #relatoriosSection .rh-cand-pill,
 #comprasSection .rh-cand-pill,
 #financeiroCentrosCustoSection .rh-cand-pill,
@@ -1757,6 +1775,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--ok,
 #fornecedoresSection .rh-cand-pill--ok,
 #unidadesSection .rh-cand-pill--ok,
+#produtosSection .rh-cand-pill--ok,
 #relatoriosSection .rh-cand-pill--ok,
 #comprasSection .rh-cand-pill--ok,
 #financeiroCentrosCustoSection .rh-cand-pill--ok,
@@ -1783,6 +1802,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--warn,
 #fornecedoresSection .rh-cand-pill--warn,
 #unidadesSection .rh-cand-pill--warn,
+#produtosSection .rh-cand-pill--warn,
 #relatoriosSection .rh-cand-pill--warn,
 #comprasSection .rh-cand-pill--warn,
 #financeiroCentrosCustoSection .rh-cand-pill--warn,
@@ -1809,6 +1829,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--danger,
 #fornecedoresSection .rh-cand-pill--danger,
 #unidadesSection .rh-cand-pill--danger,
+#produtosSection .rh-cand-pill--danger,
 #relatoriosSection .rh-cand-pill--danger,
 #comprasSection .rh-cand-pill--danger,
 #financeiroCentrosCustoSection .rh-cand-pill--danger,
@@ -1835,6 +1856,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--info,
 #fornecedoresSection .rh-cand-pill--info,
 #unidadesSection .rh-cand-pill--info,
+#produtosSection .rh-cand-pill--info,
 #relatoriosSection .rh-cand-pill--info,
 #comprasSection .rh-cand-pill--info,
 #financeiroCentrosCustoSection .rh-cand-pill--info,
@@ -2052,6 +2074,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__details,
 #fornecedoresSection .rh-cand-card__details,
 #unidadesSection .rh-cand-card__details,
+#produtosSection .rh-cand-card__details,
 #relatoriosSection .rh-cand-card__details,
 #comprasSection .rh-cand-card__details,
 #financeiroCentrosCustoSection .rh-cand-card__details,
@@ -2092,6 +2115,7 @@ body.sidebar-open {
   #alvaraSection .rh-cand-card__actions .btn,
   #fornecedoresSection .rh-cand-card__actions .btn,
   #unidadesSection .rh-cand-card__actions .btn,
+  #produtosSection .rh-cand-card__actions .btn,
   #relatoriosSection .rh-cand-card__actions .btn,
   #comprasSection .rh-cand-card__actions .btn,
   #financeiroCentrosCustoSection .rh-cand-card__actions .btn,
@@ -11382,6 +11406,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11430,6 +11455,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11477,6 +11503,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11529,6 +11556,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11574,6 +11602,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11618,6 +11647,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
+#produtosSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11976,6 +12006,43 @@ select[size]:not([size="1"]) {
   padding: 0 1rem 1rem;
 }
 #unidadesSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#produtosSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#produtosSection > .caixa-page-wrap > .actions,
+#produtosSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#produtosSection > .caixa-page-wrap > .actions {
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+#produtosSection .rh-cand-card.produto-abaixo-minimo {
+  box-shadow: inset 4px 0 0 #b71c1c, 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#produtosSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#produtosSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#produtosSection #produtosTable.rh-cand-list {
+  padding: 0 1rem 1rem;
+}
+#produtosSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025430000-logomenu" />
+    <link rel="stylesheet" href="style.css?v=20261025440000-produtos" />
     <script>
       (function () {
         try {
@@ -1543,6 +1543,7 @@
 
           <!-- Inventario de produtos com grades e edicao -->
           <section id="produtosSection" class="view-section hidden">
+            <div class="caixa-page-wrap">
             <div class="actions">
               <button class="btn primary" id="openProduto">+ Novo produto</button>
               <form class="produto-search-form" role="search" autocomplete="off" onsubmit="return false;">
@@ -1577,32 +1578,10 @@
             </div>
             <div class="table-card">
               <header>Produtos cadastrados</header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Foto</th>
-                      <th>Nome</th>
-                      <th>Categoria</th>
-                      <th>Unidade base</th>
-                      <th>Codigo interno</th>
-                      <th>Custo medio</th>
-                      <th>Estoque minimo</th>
-                      <th>Unidade</th>
-                      <th>Status</th>
-                      <th>Tipo fiscal</th>
-                      <th>Perfil trib.</th>
-                      <th>Fiscal</th>
-                      <th>Acoes</th>
-                    </tr>
-                  </thead>
-                  <tbody id="produtosTable">
-                    <tr>
-                      <td colspan="13" style="text-align: center; color: #607d8b">Carregando...</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="rh-cand-list" id="produtosTable">
+                <p class="rh-cand-empty">Carregando...</p>
               </div>
+            </div>
             </div>
           </section>
 
@@ -7769,7 +7748,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025420000-unidades"></script>
+    <script defer src="app.js?v=20261025440000-produtos"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

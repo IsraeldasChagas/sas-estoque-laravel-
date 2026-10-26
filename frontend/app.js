@@ -6530,69 +6530,71 @@ function renderProdutos(lista) {
   
   const podeGerenciar = produtoPodeSerGerenciadoNaLista();
   
-  const produtosTable = dom.produtosTable;
-  if (produtosTable) {
-    const thead = produtosTable.closest("table")?.querySelector("thead");
-    if (thead) {
-      const thAcoes = thead.querySelector("th:last-child");
-      if (thAcoes && thAcoes.textContent.trim() === "Acoes") {
-        thAcoes.style.display = "";
-      }
-    }
+  const target = dom.produtosTable;
+  if (!target) return;
+  const items = lista || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Nenhum produto cadastrado.</p>';
+    return;
   }
-  
-  const rows = (lista || []).map((produto) => {
+
+  target.innerHTML = items.map((produto) => {
     const ativo = Number(produto.ativo) === 1;
     const infoMinimo = abaixoMinimoMap.get(String(produto.id));
-    const rowClass = infoMinimo ? ' class="produto-abaixo-minimo"' : "";
-    const badge = infoMinimo
-      ? `<span class="table-flag danger" title="Estoque atual: ${formatNumber(infoMinimo.estoque_atual, 3)}">Estoque atual: ${formatNumber(
-          infoMinimo.estoque_atual,
-          3,
-        )}</span>`
+    const abaixo = infoMinimo
+      ? `<div class="rh-cand-card__row"><span>Estoque atual</span><strong style="color:#b71c1c;">${escapeHtml(formatNumber(infoMinimo.estoque_atual, 3))} (abaixo do mínimo)</strong></div>`
       : "";
-    
-    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+
+    const botoes = ['<button type="button" class="btn btn-rh-toggle" data-action="view">Ver</button>'];
     if (podeGerenciar) {
-      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
+      botoes.push('<button type="button" class="btn primary" data-action="edit">Editar</button>');
       botoes.push(
         ativo
-          ? '<button type="button" class="table-action danger" data-action="disable">Desativar</button>'
-          : '<button type="button" class="table-action" data-action="enable">Ativar</button>'
+          ? '<button type="button" class="btn neutral" data-action="disable">Desativar</button>'
+          : '<button type="button" class="btn primary" data-action="enable">Ativar</button>'
       );
-      botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+      botoes.push('<button type="button" class="btn" data-action="delete" style="background:#b71c1c;color:#fff;">Excluir</button>');
     }
-    
-    const colunaAcoes = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
+
     const fotoUrl = getUsuarioFotoUrl(produto.foto);
-    const fotoCell = fotoUrl
-      ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto img-lightbox-trigger" loading="lazy" title="Clique para ampliar" />`
-      : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
-    const tipoFiscal = produto.tipo_fiscal_label || (typeof window.fiscalLabelTipo === "function" ? window.fiscalLabelTipo(produto.tipo_fiscal) : produto.tipo_fiscal) || "--";
-    const perfilFiscal = produto.perfil_tributario_nome || "--";
+    const foto = fotoUrl
+      ? `<img src="${fotoUrl}" alt="${escapeHtml(produto.nome)}" class="usuarios-foto rh-cand-card__photo img-lightbox-trigger" loading="lazy" title="Clique para ampliar" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-label="Sem foto">📦</div>';
+    const tipoFiscal = produto.tipo_fiscal_label || (typeof window.fiscalLabelTipo === "function" ? window.fiscalLabelTipo(produto.tipo_fiscal) : produto.tipo_fiscal) || "—";
+    const perfilFiscal = produto.perfil_tributario_nome || "—";
     const fiscalBadge =
       typeof window.fiscalBadgeStatus === "function"
         ? window.fiscalBadgeStatus(produto.status_fiscal)
-        : escapeHtml(produto.status_fiscal_label || produto.status_fiscal || "--");
-    
-    return `<tr data-id="${produto.id}"${rowClass}>
-        <td data-label="Foto">${fotoCell}</td>
-        <td data-label="Nome">${escapeHtml(produto.nome)}</td>
-        <td data-label="Categoria">${escapeHtml(produto.categoria)}</td>
-        <td data-label="Unidade base">${escapeHtml(normalizarUnidadeBase(produto.unidade_base))}</td>
-        <td data-label="Codigo de barras">${escapeHtml(produto.codigo_barras || "--")}</td>
-        <td data-label="Custo medio">R$ ${formatNumber(produto.custo_medio, 2)}</td>
-        <td data-label="Estoque minimo">${formatNumber(produto.estoque_minimo, 3)}${badge}</td>
-        <td data-label="Unidade">${escapeHtml(produto.unidade_nome || "--")}</td>
-        <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${ativo ? "Ativo" : "Inativo"}</span></td>
-        <td data-label="Tipo fiscal">${escapeHtml(tipoFiscal)}</td>
-        <td data-label="Perfil trib.">${escapeHtml(perfilFiscal)}</td>
-        <td data-label="Fiscal">${fiscalBadge}</td>
-        ${colunaAcoes}
-      </tr>`;
+        : escapeHtml(produto.status_fiscal_label || produto.status_fiscal || "—");
+    const pill = !ativo ? "danger" : infoMinimo ? "warn" : "ok";
+    const pillTxt = !ativo ? "Inativo" : infoMinimo ? "Abaixo do mínimo" : "Ativo";
+
+    return `<article class="rh-cand-card${infoMinimo ? " produto-abaixo-minimo" : ""}" data-id="${produto.id}">
+      <div class="rh-cand-card__top">
+        ${foto}
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(produto.nome || "Produto")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(produto.categoria || "Sem categoria")} · ${escapeHtml(normalizarUnidadeBase(produto.unidade_base) || "—")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${pillTxt}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Código interno</span><strong>${escapeHtml(produto.codigo_barras || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Custo médio</span><strong>R$ ${escapeHtml(formatNumber(produto.custo_medio, 2))}</strong></div>
+            <div class="rh-cand-card__row"><span>Estoque mínimo</span><strong>${escapeHtml(formatNumber(produto.estoque_minimo, 3))}</strong></div>
+            ${abaixo}
+            <div class="rh-cand-card__row"><span>Unidade</span><strong>${escapeHtml(produto.unidade_nome || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Tipo fiscal</span><strong>${escapeHtml(tipoFiscal)}</strong></div>
+            <div class="rh-cand-card__row"><span>Perfil trib.</span><strong>${escapeHtml(perfilFiscal)}</strong></div>
+            <div class="rh-cand-card__row"><span>Fiscal</span><strong>${fiscalBadge}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">${botoes.join("")}</div>
+    </article>`;
   }).join("");
-  
-  renderTable(dom.produtosTable, rows, "Nenhum produto cadastrado.", 13);
 }
 
 function renderProdutosDashboard(lista) {
@@ -14012,7 +14014,7 @@ function setupTables() {
   dom.produtosTable?.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    const row = button.closest("tr");
+    const row = button.closest("[data-id]");
     const id = row?.dataset.id;
     const produto = state.produtos.find((item) => String(item.id) === String(id));
     if (!produto) return;
@@ -14726,7 +14728,7 @@ function setupModals() {
     const id = document.getElementById("produtoVerEditar")?.dataset?.id;
     if (!id) return;
     closeProdutoVerModal();
-    dom.produtosTable?.querySelector(`tr[data-id="${id}"]`)?.querySelector('button[data-action="edit"]')?.click();
+    dom.produtosTable?.querySelector(`[data-id="${id}"]`)?.querySelector('button[data-action="edit"]')?.click();
   });
   dom.cancelProdutoBtn?.addEventListener("click", () => toggleModal(dom.produtosModal, false));
 
