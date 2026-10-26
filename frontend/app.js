@@ -6749,32 +6749,46 @@ function closeUnidadeVerModal() {
 function renderUnidades(lista) {
   const podeEditar = isAdmin() || auxiliarPodeExecutar("unidades");
   const podeExcluir = isAdmin();
-  const header = document.getElementById("unidadesAcoesHeader");
-  if (header) header.style.display = "";
-  const rows = (lista || []).map((unidade) => {
+  const target = dom.unidadesTable;
+  if (!target) return;
+  const items = lista || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Nenhuma unidade cadastrada.</p>';
+    return;
+  }
+  target.innerHTML = items.map((unidade) => {
     const ativo = Number(unidade.ativo) === 1;
     const statusLabel = ativo ? "Ativa" : "Desativada";
-    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+    const botoes = ['<button type="button" class="btn btn-rh-toggle" data-action="view">Ver</button>'];
     if (podeEditar) {
-      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
-      if (ativo) botoes.push('<button type="button" class="table-action danger" data-action="disable">Desativar</button>');
-      else botoes.push('<button type="button" class="table-action" data-action="enable">Ativar</button>');
-      if (podeExcluir) botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+      botoes.push('<button type="button" class="btn primary" data-action="edit">Editar</button>');
+      if (ativo) botoes.push('<button type="button" class="btn neutral" data-action="disable">Desativar</button>');
+      else botoes.push('<button type="button" class="btn primary" data-action="enable">Ativar</button>');
+      if (podeExcluir) botoes.push('<button type="button" class="btn" data-action="delete" style="background:#b71c1c;color:#fff;">Excluir</button>');
     }
-    const acoesCell = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
-    return `<tr data-id="${unidade.id}">
-      <td data-label="Nome">${escapeHtml(unidade.nome)}</td>
-      <td data-label="Endereco">${escapeHtml(unidade.endereco || "--")}</td>
-      <td data-label="CNPJ">${escapeHtml(unidade.cnpj || "--")}</td>
-      <td data-label="Gerente">${escapeHtml(unidade.gerente_nome || "--")}</td>
-      <td data-label="Telefone">${escapeHtml(unidade.telefone || "--")}</td>
-      <td data-label="Email">${escapeHtml(unidade.email || "--")}</td>
-      <td data-label="Observacoes">${escapeHtml(unidade.observacoes || "--")}</td>
-      <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${statusLabel}</span></td>
-      ${acoesCell}
-    </tr>`;
+    return `<article class="rh-cand-card" data-id="${unidade.id}">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏢</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(unidade.nome || "Unidade")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(unidade.endereco || "Sem endereço")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${ativo ? "ok" : "danger"}">${statusLabel}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>CNPJ</span><strong>${escapeHtml(unidade.cnpj || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Gerente</span><strong>${escapeHtml(unidade.gerente_nome || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Telefone</span><strong>${escapeHtml(unidade.telefone || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Email</span><strong>${escapeHtml(unidade.email || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Observações</span><strong>${escapeHtml(unidade.observacoes || "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">${botoes.join("")}</div>
+    </article>`;
   }).join("");
-  renderTable(dom.unidadesTable, rows, "Nenhuma unidade cadastrada.", 9);
 }
 
 function parseUsuarioPermissoesMenu(usuario) {
@@ -14154,7 +14168,7 @@ function setupTables() {
   dom.unidadesTable?.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    const row = button.closest("tr");
+    const row = button.closest("[data-id]");
     if (!row) return;
     const { id } = row.dataset;
     if (!id) return;
@@ -16186,7 +16200,7 @@ function setupModals() {
     const id = document.getElementById("unidadeVerEditar")?.dataset?.id;
     if (!id) return;
     closeUnidadeVerModal();
-    const row = dom.unidadesTable?.querySelector(`tr[data-id="${id}"]`);
+    const row = dom.unidadesTable?.querySelector(`[data-id="${id}"]`);
     row?.querySelector('button[data-action="edit"]')?.click();
   });
   dom.cancelInlineUnidadeBtn?.addEventListener("click", () => {
