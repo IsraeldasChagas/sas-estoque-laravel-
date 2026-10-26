@@ -11861,3 +11861,31 @@ select[size]:not([size="1"]) {
   gap: 8px;
   margin-top: 10px;
 }
+#comprasSection > .caixa-page-wrap > .actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+#comprasSection > .caixa-page-wrap > .actions > .btn,
+#comprasSection > .caixa-page-wrap > .actions > .lista-compras__filtro {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+#comprasSection > .caixa-page-wrap > .actions > .lista-compras__filtro {
+  max-width: 160px;
+  border: 1.5px solid #c5cdd6;
+  box-shadow: none;
+}
