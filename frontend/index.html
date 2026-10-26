@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025470000-textoescuro" />
+    <link rel="stylesheet" href="style.css?v=20261025480000-pat-cards" />
     <script>
       (function () {
         try {
@@ -4361,44 +4361,155 @@
                 </div>
               </div>
 
-              <div class="pat-rel-totais hidden" id="patRelTotais"></div>
-              <div class="pat-rel-grupos hidden" id="patRelGrupos"></div>
-              <div class="table-card form-card--wide hidden" id="patRelResultadoCard">
+              <div class="rh-cand-list pat-rel-totais hidden" id="patRelTotais"></div>
+              <div class="rh-cand-list pat-rel-grupos hidden" id="patRelGrupos"></div>
+              <div class="table-card form-card--wide pat-dash-lista-card hidden" id="patRelResultadoCard">
                 <header>
                   <h3 id="patRelResultadoTitulo">Resultado do relatório</h3>
                   <p class="subtle-text" id="patRelResultadoMeta"></p>
                 </header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Código</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Setor</th><th>Situação</th><th>Responsável</th><th>Valor compra</th><th>Valor atual</th>
-                      </tr>
-                    </thead>
-                    <tbody id="patRelTbody"></tbody>
-                  </table>
-                </div>
+                <div class="rh-cand-list pat-dash-cards" id="patRelTbody"></div>
               </div>
 
               <details class="pat-rel-outros table-card form-card--wide">
                 <summary>Outros relatórios rápidos (sem filtro)</summary>
                 <div class="pat-form-body">
                   <p class="subtle-text">Exportações em PDF (visualizar/imprimir) ou CSV (abre no Excel). Ficha patrimonial: informe o ID na listagem de patrimônios.</p>
-                  <div class="patrimonio-relatorios-grid">
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="resumo" data-formato="csv">Resumo geral (CSV)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="pdf">Movimentações (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="csv">Movimentações (CSV)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="pdf">Manutenções (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="manutencoes" data-formato="csv">Manutenções (CSV)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="pdf">Depreciação (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="depreciacao" data-formato="csv">Depreciação (CSV)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="pdf">Ativos por unidade (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-unidade" data-formato="csv">Ativos por unidade (CSV)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="pdf">Por categoria (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="por-categoria" data-formato="csv">Por categoria (CSV)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="ficha" data-formato="pdf">Ficha patrimonial (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="pdf">Inventário aberto (PDF)</button>
-                    <button type="button" class="btn secondary pat-relatorio-btn" data-relatorio="inventario" data-formato="csv">Inventário aberto (CSV)</button>
+                  <div class="rh-cand-list pat-rel-rapidos">
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📋</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Resumo geral</h3>
+                            <p class="rh-cand-card__sub">Todos os patrimônios</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="resumo" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🔄</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Movimentações</h3>
+                            <p class="rh-cand-card__sub">Transferências e mudanças de local</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="pdf">PDF</button>
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="movimentacoes" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🛠️</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Manutenções</h3>
+                            <p class="rh-cand-card__sub">Histórico de manutenções</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="manutencoes" data-formato="pdf">PDF</button>
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="manutencoes" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📉</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Depreciação</h3>
+                            <p class="rh-cand-card__sub">Valor de compra x valor atual</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="depreciacao" data-formato="pdf">PDF</button>
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="depreciacao" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏢</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Ativos por unidade</h3>
+                            <p class="rh-cand-card__sub">Quantidade e valor por unidade</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="por-unidade" data-formato="pdf">PDF</button>
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="por-unidade" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏷️</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Por categoria</h3>
+                            <p class="rh-cand-card__sub">Quantidade e valor por categoria</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="por-categoria" data-formato="pdf">PDF</button>
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="por-categoria" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🧾</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Ficha patrimonial</h3>
+                            <p class="rh-cand-card__sub">Informe o ID na listagem de patrimônios</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="ficha" data-formato="pdf">PDF</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📋</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Inventário aberto</h3>
+                            <p class="rh-cand-card__sub">Itens do inventário em andamento</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn neutral pat-relatorio-btn" data-relatorio="inventario" data-formato="pdf">PDF</button>
+                      <button type="button" class="btn btn-rh-toggle pat-relatorio-btn" data-relatorio="inventario" data-formato="csv">CSV</button>
+                    </div>
+                  </article>
                   </div>
                 </div>
               </details>
@@ -4413,42 +4524,99 @@
               </div>
             </div>
             <div class="pat-page-wrap">
-              <div class="pat-config-grid">
-                <article class="pat-config-card">
-                  <span class="pat-config-card__icon" aria-hidden="true">🏷️</span>
-                  <h3 class="pat-config-card__title">Categorias</h3>
-                  <p class="pat-config-card__text">Veículos, Informática, Refrigeração e demais tipos com campos específicos.</p>
-                  <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioCategorias">Abrir categorias</button>
-                </article>
-                <article class="pat-config-card">
-                  <span class="pat-config-card__icon" aria-hidden="true">📦</span>
-                  <h3 class="pat-config-card__title">Patrimônios</h3>
-                  <p class="pat-config-card__text">Cadastro, edição, fotos, documentos e valores em <strong>R$</strong>.</p>
-                  <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonios">Ver patrimônios</button>
-                </article>
-                <article class="pat-config-card">
-                  <span class="pat-config-card__icon" aria-hidden="true">🔢</span>
-                  <h3 class="pat-config-card__title">Código automático</h3>
-                  <p class="pat-config-card__text">Formato <code class="pat-config-code">PAT-UNI-ANO-SEQ</code> gerado ao salvar cada item.</p>
-                </article>
-                <article class="pat-config-card">
-                  <span class="pat-config-card__icon" aria-hidden="true">📉</span>
-                  <h3 class="pat-config-card__title">Depreciação</h3>
-                  <p class="pat-config-card__text">Cálculo linear por valor de compra, data da compra e vida útil em meses.</p>
-                </article>
-                <article class="pat-config-card">
-                  <span class="pat-config-card__icon" aria-hidden="true">📱</span>
-                  <h3 class="pat-config-card__title">QR Code</h3>
-                  <p class="pat-config-card__text">Código único por patrimônio — botão 📱 na listagem para imprimir ou abrir a ficha.</p>
-                </article>
-                <article class="pat-config-card">
-                  <span class="pat-config-card__icon" aria-hidden="true">🏢</span>
-                  <h3 class="pat-config-card__title">Multiunidade</h3>
-                  <p class="pat-config-card__text">Cada bem vinculado à unidade/filial; filtros por unidade no dashboard e na lista.</p>
-                  <button type="button" class="btn secondary pat-config-go" data-pat-section="patrimonioDashboard">Abrir dashboard</button>
-                </article>
+              <div class="table-card form-card--wide pat-dash-lista-card">
+                <header><h3>Atalhos e regras</h3></header>
+                <div class="rh-cand-list pat-dash-cards pat-config-cards">
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏷️</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Categorias</h3>
+                            <p class="rh-cand-card__sub">Veículos, Informática, Refrigeração e demais tipos com campos específicos.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn btn-rh-toggle pat-config-go" data-pat-section="patrimonioCategorias">Abrir categorias</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📦</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Patrimônios</h3>
+                            <p class="rh-cand-card__sub">Cadastro, edição, fotos, documentos e valores em R$.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn btn-rh-toggle pat-config-go" data-pat-section="patrimonios">Ver patrimônios</button>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🔢</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Código automático</h3>
+                            <p class="rh-cand-card__sub">Formato PAT-UNI-ANO-SEQ gerado ao salvar cada item.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📉</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Depreciação</h3>
+                            <p class="rh-cand-card__sub">Cálculo linear por valor de compra, data da compra e vida útil em meses.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📱</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">QR Code</h3>
+                            <p class="rh-cand-card__sub">Código único por patrimônio — botão 📱 na listagem para imprimir ou abrir a ficha.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <article class="rh-cand-card">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏢</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Multiunidade</h3>
+                            <p class="rh-cand-card__sub">Cada bem vinculado à unidade/filial; filtros por unidade no dashboard e na lista.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rh-cand-card__actions">
+                      <button type="button" class="btn btn-rh-toggle pat-config-go" data-pat-section="patrimonioDashboard">Abrir dashboard</button>
+                    </div>
+                  </article>
+                </div>
               </div>
-              <div class="table-card form-card--wide pat-config-setores-card">
+              <div class="table-card form-card--wide pat-dash-lista-card pat-config-setores-card">
                 <header class="pat-config-setores-head">
                   <div>
                     <h3 class="pat-config-panel__title">Setores</h3>
@@ -4456,12 +4624,7 @@
                   </div>
                   <button type="button" class="btn primary" id="patSetorBtnNova">+ Novo setor</button>
                 </header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead><tr><th>Nome</th><th>Descrição</th><th>Ordem</th><th>Ativo</th><th>Ações</th></tr></thead>
-                    <tbody id="patSetorTbody"></tbody>
-                  </table>
-                </div>
+                <div class="rh-cand-list pat-dash-cards" id="patSetorTbody"></div>
               </div>
               <div class="pat-config-panel">
                 <h3 class="pat-config-panel__title">Resumo rápido</h3>
@@ -7724,7 +7887,7 @@
     <!-- Script principal da aplicacao -->
     <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script defer src="energia.js?v=20260615-submenu-fix2"></script>
-    <script defer src="patrimonio.js?v=20261023-pat-inv"></script>
+    <script defer src="patrimonio.js?v=20261025480000-pat-cards"></script>
     <script defer src="investimento.js?v=20260607-investimento-collapse"></script>
     <script defer src="openclaw-integracao.js?v=20260706-oc4"></script>
     <script defer src="ayla-ia.js?v=20260714-ayla-padrao"></script>

@@ -750,14 +750,35 @@
     return f;
   }
 
-  function patRelRenderGrupo(titulo, grupos) {
+  function patRelCardTotal(icone, titulo, valor, tom) {
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">${icone}</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div><h3 class="rh-cand-card__name">${esc(titulo)}</h3></div>
+            <span class="rh-cand-pill rh-cand-pill--${tom}">${esc(valor)}</span>
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function patRelRenderGrupo(icone, titulo, grupos) {
     if (!grupos?.length) return "";
     const rows = grupos.map((g) => `
-      <tr><td>${esc(g.label)}</td><td>${g.quantidade ?? 0}</td><td>${fmtMoeda(g.valor_atual)}</td></tr>`).join("");
-    return `<div class="pat-rel-grupo-box">
-      <h4>${esc(titulo)}</h4>
-      <table><thead><tr><th>Grupo</th><th>Qtd</th><th>Valor atual</th></tr></thead><tbody>${rows}</tbody></table>
-    </div>`;
+      <div class="rh-cand-card__row"><span>${esc(g.label)}</span><strong>${g.quantidade ?? 0} · ${esc(fmtMoeda(g.valor_atual))}</strong></div>`).join("");
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">${icone}</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div><h3 class="rh-cand-card__name">${esc(titulo)}</h3><p class="rh-cand-card__sub">Qtd · valor atual</p></div>
+          </div>
+          <div class="rh-cand-card__meta">${rows}</div>
+        </div>
+      </div>
+    </article>`;
   }
 
   function patRelRenderResultado(data) {
@@ -765,22 +786,20 @@
     const totaisEl = document.getElementById("patRelTotais");
     if (totaisEl) {
       totaisEl.classList.remove("hidden");
-      totaisEl.innerHTML = `
-        <div class="patrimonio-card"><span class="patrimonio-card__label">Itens</span><span class="patrimonio-card__value">${tot.quantidade ?? 0}</span></div>
-        <div class="patrimonio-card"><span class="patrimonio-card__label">Valor compra</span><span class="patrimonio-card__value">${fmtMoeda(tot.valor_compra)}</span></div>
-        <div class="patrimonio-card"><span class="patrimonio-card__label">Valor atual</span><span class="patrimonio-card__value">${fmtMoeda(tot.valor_atual)}</span></div>
-        <div class="patrimonio-card"><span class="patrimonio-card__label">Depreciação</span><span class="patrimonio-card__value">${fmtMoeda(tot.depreciacao)}</span></div>`;
+      totaisEl.innerHTML =
+        patRelCardTotal("📦", "Itens", String(tot.quantidade ?? 0), "info") +
+        patRelCardTotal("💵", "Valor compra", fmtMoeda(tot.valor_compra), "info") +
+        patRelCardTotal("💰", "Valor atual", fmtMoeda(tot.valor_atual), "ok") +
+        patRelCardTotal("📉", "Depreciação", fmtMoeda(tot.depreciacao), "warn");
     }
     const gruposEl = document.getElementById("patRelGrupos");
     if (gruposEl) {
       gruposEl.classList.remove("hidden");
-      gruposEl.innerHTML = `
-        <div class="pat-rel-grupos-grid">
-          ${patRelRenderGrupo("Por categoria", data.resumo_por_categoria)}
-          ${patRelRenderGrupo("Por unidade", data.resumo_por_unidade)}
-          ${patRelRenderGrupo("Por situação", data.resumo_por_situacao)}
-          ${patRelRenderGrupo("Por setor", data.resumo_por_setor)}
-        </div>`;
+      gruposEl.innerHTML =
+        patRelRenderGrupo("🏷️", "Por categoria", data.resumo_por_categoria) +
+        patRelRenderGrupo("🏢", "Por unidade", data.resumo_por_unidade) +
+        patRelRenderGrupo("📌", "Por situação", data.resumo_por_situacao) +
+        patRelRenderGrupo("🗂️", "Por setor", data.resumo_por_setor);
     }
     const meta = document.getElementById("patRelResultadoMeta");
     if (meta) {
@@ -793,21 +812,33 @@
     const itens = data.itens || [];
     if (!tb) return;
     if (!itens.length) {
-      tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#90a4ae">Nenhum patrimônio encontrado com os filtros informados.</td></tr>';
+      tb.innerHTML = '<p class="rh-cand-empty">Nenhum patrimônio encontrado com os filtros informados.</p>';
       return;
     }
+    const tomSit = { ativo: "ok", manutencao: "warn", baixado: "danger", vendido: "info", quebrado: "danger" };
     tb.innerHTML = itens.map((p) => `
-      <tr>
-        <td data-label="Código">${esc(p.codigo)}</td>
-        <td data-label="Nome">${esc(p.nome)}</td>
-        <td data-label="Categoria">${esc(p.categoria_nome || "—")}</td>
-        <td data-label="Unidade">${esc(p.unidade_nome || "—")}</td>
-        <td data-label="Setor">${esc(p.setor || "—")}</td>
-        <td data-label="Situação">${situacaoBadge(p.situacao)}</td>
-        <td data-label="Responsável">${esc(p.responsavel || "—")}</td>
-        <td data-label="Valor compra">${fmtMoeda(p.valor_compra)}</td>
-        <td data-label="Valor atual">${fmtMoeda(p.valor_atual)}</td>
-      </tr>`).join("");
+      <article class="rh-cand-card">
+        <div class="rh-cand-card__top">
+          <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏷️</div>
+          <div class="rh-cand-card__main">
+            <div class="rh-cand-card__head">
+              <div>
+                <h3 class="rh-cand-card__name">${esc(p.nome || "—")}</h3>
+                <p class="rh-cand-card__sub">Código ${esc(p.codigo || "—")}</p>
+              </div>
+              <span class="rh-cand-pill rh-cand-pill--${tomSit[p.situacao] || "info"}">${esc(PAT_SIT_LABEL[p.situacao] || p.situacao || "—")}</span>
+            </div>
+            <div class="rh-cand-card__meta">
+              <div class="rh-cand-card__row"><span>Categoria</span><strong>${esc(p.categoria_nome || "—")}</strong></div>
+              <div class="rh-cand-card__row"><span>Unidade</span><strong>${esc(p.unidade_nome || "—")}</strong></div>
+              <div class="rh-cand-card__row"><span>Setor</span><strong>${esc(p.setor || "—")}</strong></div>
+              <div class="rh-cand-card__row"><span>Responsável</span><strong>${esc(p.responsavel || "—")}</strong></div>
+              <div class="rh-cand-card__row"><span>Valor compra</span><strong>${esc(fmtMoeda(p.valor_compra))}</strong></div>
+              <div class="rh-cand-card__row"><span>Valor atual</span><strong>${esc(fmtMoeda(p.valor_atual))}</strong></div>
+            </div>
+          </div>
+        </div>
+      </article>`).join("");
   }
 
   window.loadPatrimonioRelatorios = async function loadPatrimonioRelatorios() {
@@ -822,7 +853,7 @@
     const filtros = patRelColetarFiltros();
     const qs = new URLSearchParams(filtros);
     const tb = document.getElementById("patRelTbody");
-    if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Gerando relatório…</td></tr>';
+    if (tb) tb.innerHTML = '<p class="rh-cand-empty">Gerando relatório…</p>';
     document.getElementById("patRelResultadoCard")?.classList.remove("hidden");
     document.getElementById("patRelTotais")?.classList.add("hidden");
     document.getElementById("patRelGrupos")?.classList.add("hidden");
@@ -847,24 +878,35 @@
       const tb = document.getElementById("patSetorTbody");
       if (!tb) return;
       if (!setores.length) {
-        tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#90a4ae">Nenhum setor cadastrado. Clique em + Novo setor.</td></tr>';
+        tb.innerHTML = '<p class="rh-cand-empty">Nenhum setor cadastrado. Clique em + Novo setor.</p>';
         return;
       }
       tb.innerHTML = setores.map((s) => `
-        <tr>
-          <td>${esc(s.nome)}</td>
-          <td>${esc(s.descricao || "—")}</td>
-          <td>${s.ordem ?? 0}</td>
-          <td>${s.ativo ? "Sim" : "Não"}</td>
-          <td>
-            <button type="button" class="btn-icon pat-setor-editar" data-id="${s.id}" data-nome="${esc(s.nome)}" data-descricao="${esc(s.descricao || "")}" data-ordem="${s.ordem ?? 50}" data-ativo="${s.ativo ? "1" : "0"}">✎</button>
-            <button type="button" class="btn-icon danger pat-setor-excluir" data-id="${s.id}">✕</button>
-          </td>
-        </tr>`).join("");
+        <article class="rh-cand-card">
+          <div class="rh-cand-card__top">
+            <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🗂️</div>
+            <div class="rh-cand-card__main">
+              <div class="rh-cand-card__head">
+                <div>
+                  <h3 class="rh-cand-card__name">${esc(s.nome)}</h3>
+                  <p class="rh-cand-card__sub">${esc(s.descricao || "Sem descrição")}</p>
+                </div>
+                <span class="rh-cand-pill rh-cand-pill--${s.ativo ? "ok" : "danger"}">${s.ativo ? "Ativo" : "Inativo"}</span>
+              </div>
+              <div class="rh-cand-card__meta">
+                <div class="rh-cand-card__row"><span>Ordem</span><strong>${esc(s.ordem ?? 0)}</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="rh-cand-card__actions">
+            <button type="button" class="btn primary pat-setor-editar" data-id="${s.id}" data-nome="${esc(s.nome)}" data-descricao="${esc(s.descricao || "")}" data-ordem="${s.ordem ?? 50}" data-ativo="${s.ativo ? "1" : "0"}">Editar</button>
+            <button type="button" class="btn pat-setor-excluir" data-id="${s.id}" style="background:#b71c1c;color:#fff;">Excluir</button>
+          </div>
+        </article>`).join("");
     } catch (e) {
       const tb = document.getElementById("patSetorTbody");
       if (tb) {
-        tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c62828">${esc(e.message)}</td></tr>`;
+        tb.innerHTML = `<p class="rh-cand-empty">${esc(e.message)}</p>`;
       }
     }
   };

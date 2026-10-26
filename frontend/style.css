@@ -1170,6 +1170,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-list,
 #patrimonioManutencoesSection .rh-cand-list,
 #patrimonioInventarioSection .rh-cand-list,
+#patrimonioRelatoriosSection .rh-cand-list,
+#patrimonioConfiguracoesSection .rh-cand-list,
 #financeiroFluxoCaixaSection .rh-cand-list,
 #financeiroDashboardSection .rh-cand-list,
 #financeiroOrcamentoSection .rh-cand-list,
@@ -1203,6 +1205,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-empty,
 #patrimonioManutencoesSection .rh-cand-empty,
 #patrimonioInventarioSection .rh-cand-empty,
+#patrimonioRelatoriosSection .rh-cand-empty,
+#patrimonioConfiguracoesSection .rh-cand-empty,
 #financeiroFluxoCaixaSection .rh-cand-empty,
 #financeiroDashboardSection .rh-cand-empty,
 #financeiroOrcamentoSection .rh-cand-empty,
@@ -1241,6 +1245,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card,
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -1277,6 +1283,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__top,
 #patrimonioManutencoesSection .rh-cand-card__top,
 #patrimonioInventarioSection .rh-cand-card__top,
+#patrimonioRelatoriosSection .rh-cand-card__top,
+#patrimonioConfiguracoesSection .rh-cand-card__top,
 #financeiroFluxoCaixaSection .rh-cand-card__top,
 #financeiroDashboardSection .rh-cand-card__top,
 #financeiroOrcamentoSection .rh-cand-card__top,
@@ -1311,6 +1319,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__photo,
 #patrimonioManutencoesSection .rh-cand-card__photo,
 #patrimonioInventarioSection .rh-cand-card__photo,
+#patrimonioRelatoriosSection .rh-cand-card__photo,
+#patrimonioConfiguracoesSection .rh-cand-card__photo,
 #financeiroFluxoCaixaSection .rh-cand-card__photo,
 #financeiroDashboardSection .rh-cand-card__photo,
 #financeiroOrcamentoSection .rh-cand-card__photo,
@@ -1348,6 +1358,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__photo--wait,
 #patrimonioManutencoesSection .rh-cand-card__photo--wait,
 #patrimonioInventarioSection .rh-cand-card__photo--wait,
+#patrimonioRelatoriosSection .rh-cand-card__photo--wait,
+#patrimonioConfiguracoesSection .rh-cand-card__photo--wait,
 #financeiroFluxoCaixaSection .rh-cand-card__photo--wait,
 #financeiroDashboardSection .rh-cand-card__photo--wait,
 #financeiroOrcamentoSection .rh-cand-card__photo--wait,
@@ -1386,6 +1398,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__main,
 #patrimonioManutencoesSection .rh-cand-card__main,
 #patrimonioInventarioSection .rh-cand-card__main,
+#patrimonioRelatoriosSection .rh-cand-card__main,
+#patrimonioConfiguracoesSection .rh-cand-card__main,
 #financeiroFluxoCaixaSection .rh-cand-card__main,
 #financeiroDashboardSection .rh-cand-card__main,
 #financeiroOrcamentoSection .rh-cand-card__main,
@@ -1419,6 +1433,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__head,
 #patrimonioManutencoesSection .rh-cand-card__head,
 #patrimonioInventarioSection .rh-cand-card__head,
+#patrimonioRelatoriosSection .rh-cand-card__head,
+#patrimonioConfiguracoesSection .rh-cand-card__head,
 #financeiroFluxoCaixaSection .rh-cand-card__head,
 #financeiroDashboardSection .rh-cand-card__head,
 #financeiroOrcamentoSection .rh-cand-card__head,
@@ -1454,6 +1470,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__name,
 #patrimonioManutencoesSection .rh-cand-card__name,
 #patrimonioInventarioSection .rh-cand-card__name,
+#patrimonioRelatoriosSection .rh-cand-card__name,
+#patrimonioConfiguracoesSection .rh-cand-card__name,
 #financeiroFluxoCaixaSection .rh-cand-card__name,
 #financeiroDashboardSection .rh-cand-card__name,
 #financeiroOrcamentoSection .rh-cand-card__name,
@@ -1489,6 +1507,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__sub,
 #patrimonioManutencoesSection .rh-cand-card__sub,
 #patrimonioInventarioSection .rh-cand-card__sub,
+#patrimonioRelatoriosSection .rh-cand-card__sub,
+#patrimonioConfiguracoesSection .rh-cand-card__sub,
 #financeiroFluxoCaixaSection .rh-cand-card__sub,
 #financeiroDashboardSection .rh-cand-card__sub,
 #financeiroOrcamentoSection .rh-cand-card__sub,
@@ -1523,6 +1543,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__meta,
 #patrimonioManutencoesSection .rh-cand-card__meta,
 #patrimonioInventarioSection .rh-cand-card__meta,
+#patrimonioRelatoriosSection .rh-cand-card__meta,
+#patrimonioConfiguracoesSection .rh-cand-card__meta,
 #financeiroFluxoCaixaSection .rh-cand-card__meta,
 #financeiroDashboardSection .rh-cand-card__meta,
 #financeiroOrcamentoSection .rh-cand-card__meta,
@@ -1557,6 +1579,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__row,
 #patrimonioManutencoesSection .rh-cand-card__row,
 #patrimonioInventarioSection .rh-cand-card__row,
+#patrimonioRelatoriosSection .rh-cand-card__row,
+#patrimonioConfiguracoesSection .rh-cand-card__row,
 #financeiroFluxoCaixaSection .rh-cand-card__row,
 #financeiroDashboardSection .rh-cand-card__row,
 #financeiroOrcamentoSection .rh-cand-card__row,
@@ -1592,6 +1616,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__row span,
 #patrimonioManutencoesSection .rh-cand-card__row span,
 #patrimonioInventarioSection .rh-cand-card__row span,
+#patrimonioRelatoriosSection .rh-cand-card__row span,
+#patrimonioConfiguracoesSection .rh-cand-card__row span,
 #financeiroFluxoCaixaSection .rh-cand-card__row span,
 #financeiroDashboardSection .rh-cand-card__row span,
 #financeiroOrcamentoSection .rh-cand-card__row span,
@@ -1625,6 +1651,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__row strong,
 #patrimonioManutencoesSection .rh-cand-card__row strong,
 #patrimonioInventarioSection .rh-cand-card__row strong,
+#patrimonioRelatoriosSection .rh-cand-card__row strong,
+#patrimonioConfiguracoesSection .rh-cand-card__row strong,
 #financeiroFluxoCaixaSection .rh-cand-card__row strong,
 #financeiroDashboardSection .rh-cand-card__row strong,
 #financeiroOrcamentoSection .rh-cand-card__row strong,
@@ -1658,6 +1686,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__actions,
 #patrimonioManutencoesSection .rh-cand-card__actions,
 #patrimonioInventarioSection .rh-cand-card__actions,
+#patrimonioRelatoriosSection .rh-cand-card__actions,
+#patrimonioConfiguracoesSection .rh-cand-card__actions,
 #financeiroFluxoCaixaSection .rh-cand-card__actions,
 #financeiroDashboardSection .rh-cand-card__actions,
 #financeiroOrcamentoSection .rh-cand-card__actions,
@@ -1694,6 +1724,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__actions .rh-wa-btn,
 #patrimonioManutencoesSection .rh-cand-card__actions .rh-wa-btn,
 #patrimonioInventarioSection .rh-cand-card__actions .rh-wa-btn,
+#patrimonioRelatoriosSection .rh-cand-card__actions .rh-wa-btn,
+#patrimonioConfiguracoesSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroFluxoCaixaSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroDashboardSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroOrcamentoSection .rh-cand-card__actions .rh-wa-btn,
@@ -1727,6 +1759,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card .btn-rh-toggle,
 #patrimonioManutencoesSection .rh-cand-card .btn-rh-toggle,
 #patrimonioInventarioSection .rh-cand-card .btn-rh-toggle,
+#patrimonioRelatoriosSection .rh-cand-card .btn-rh-toggle,
+#patrimonioConfiguracoesSection .rh-cand-card .btn-rh-toggle,
 #financeiroFluxoCaixaSection .rh-cand-card .btn-rh-toggle,
 #financeiroDashboardSection .rh-cand-card .btn-rh-toggle,
 #financeiroOrcamentoSection .rh-cand-card .btn-rh-toggle,
@@ -1761,6 +1795,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-pill,
 #patrimonioManutencoesSection .rh-cand-pill,
 #patrimonioInventarioSection .rh-cand-pill,
+#patrimonioRelatoriosSection .rh-cand-pill,
+#patrimonioConfiguracoesSection .rh-cand-pill,
 #financeiroFluxoCaixaSection .rh-cand-pill,
 #financeiroDashboardSection .rh-cand-pill,
 #financeiroOrcamentoSection .rh-cand-pill,
@@ -1800,6 +1836,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-pill--ok,
 #patrimonioManutencoesSection .rh-cand-pill--ok,
 #patrimonioInventarioSection .rh-cand-pill--ok,
+#patrimonioRelatoriosSection .rh-cand-pill--ok,
+#patrimonioConfiguracoesSection .rh-cand-pill--ok,
 #financeiroFluxoCaixaSection .rh-cand-pill--ok,
 #financeiroDashboardSection .rh-cand-pill--ok,
 #financeiroOrcamentoSection .rh-cand-pill--ok,
@@ -1829,6 +1867,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-pill--warn,
 #patrimonioManutencoesSection .rh-cand-pill--warn,
 #patrimonioInventarioSection .rh-cand-pill--warn,
+#patrimonioRelatoriosSection .rh-cand-pill--warn,
+#patrimonioConfiguracoesSection .rh-cand-pill--warn,
 #financeiroFluxoCaixaSection .rh-cand-pill--warn,
 #financeiroDashboardSection .rh-cand-pill--warn,
 #financeiroOrcamentoSection .rh-cand-pill--warn,
@@ -1858,6 +1898,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-pill--danger,
 #patrimonioManutencoesSection .rh-cand-pill--danger,
 #patrimonioInventarioSection .rh-cand-pill--danger,
+#patrimonioRelatoriosSection .rh-cand-pill--danger,
+#patrimonioConfiguracoesSection .rh-cand-pill--danger,
 #financeiroFluxoCaixaSection .rh-cand-pill--danger,
 #financeiroDashboardSection .rh-cand-pill--danger,
 #financeiroOrcamentoSection .rh-cand-pill--danger,
@@ -1887,6 +1929,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-pill--info,
 #patrimonioManutencoesSection .rh-cand-pill--info,
 #patrimonioInventarioSection .rh-cand-pill--info,
+#patrimonioRelatoriosSection .rh-cand-pill--info,
+#patrimonioConfiguracoesSection .rh-cand-pill--info,
 #financeiroFluxoCaixaSection .rh-cand-pill--info,
 #financeiroDashboardSection .rh-cand-pill--info,
 #financeiroOrcamentoSection .rh-cand-pill--info,
@@ -2107,6 +2151,8 @@ body.sidebar-open {
 #patrimonioMovimentacoesSection .rh-cand-card__details,
 #patrimonioManutencoesSection .rh-cand-card__details,
 #patrimonioInventarioSection .rh-cand-card__details,
+#patrimonioRelatoriosSection .rh-cand-card__details,
+#patrimonioConfiguracoesSection .rh-cand-card__details,
 #financeiroFluxoCaixaSection .rh-cand-card__details,
 #financeiroDashboardSection .rh-cand-card__details,
 #financeiroOrcamentoSection .rh-cand-card__details,
@@ -2150,6 +2196,8 @@ body.sidebar-open {
   #patrimonioMovimentacoesSection .rh-cand-card__actions .btn,
   #patrimonioManutencoesSection .rh-cand-card__actions .btn,
   #patrimonioInventarioSection .rh-cand-card__actions .btn,
+  #patrimonioRelatoriosSection .rh-cand-card__actions .btn,
+  #patrimonioConfiguracoesSection .rh-cand-card__actions .btn,
   #financeiroFluxoCaixaSection .rh-cand-card__actions .btn,
   #financeiroDashboardSection .rh-cand-card__actions .btn,
   #financeiroOrcamentoSection .rh-cand-card__actions .btn,
@@ -11443,6 +11491,8 @@ select[size]:not([size="1"]) {
 #patrimonioMovimentacoesSection .rh-cand-card,
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -11494,6 +11544,8 @@ select[size]:not([size="1"]) {
 #patrimonioMovimentacoesSection .rh-cand-card,
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -11544,6 +11596,8 @@ select[size]:not([size="1"]) {
 #patrimonioMovimentacoesSection .rh-cand-card,
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -11599,6 +11653,8 @@ select[size]:not([size="1"]) {
 #patrimonioMovimentacoesSection .rh-cand-card,
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -11647,6 +11703,8 @@ select[size]:not([size="1"]) {
 #patrimonioManutencoesSection .table-card,
 #patrimonioManutencoesSection .rh-cand-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -11694,6 +11752,8 @@ select[size]:not([size="1"]) {
 }
 #patrimonioInventarioSection .table-card,
 #patrimonioInventarioSection .rh-cand-card,
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
 #financeiroFluxoCaixaSection .rh-cand-card,
 #financeiroDashboardSection .rh-cand-card,
 #financeiroOrcamentoSection .rh-cand-card,
@@ -12222,4 +12282,64 @@ select[size]:not([size="1"]) {
 .caixa-page-wrap > .subtle-text,
 .caixa-page-wrap .rh-cand-empty {
   color: #37474f;
+}
+
+#patrimonioRelatoriosSection .pat-page-wrap,
+#patrimonioConfiguracoesSection .pat-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#patrimonioRelatoriosSection .rh-cand-card,
+#patrimonioConfiguracoesSection .rh-cand-card,
+#patrimonioRelatoriosSection .pat-rel-filtros-card,
+#patrimonioRelatoriosSection .pat-rel-outros {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#patrimonioRelatoriosSection .table-card.pat-dash-lista-card,
+#patrimonioConfiguracoesSection .table-card.pat-dash-lista-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+#patrimonioRelatoriosSection .table-card.pat-dash-lista-card > header,
+#patrimonioConfiguracoesSection .table-card.pat-dash-lista-card > header {
+  background: transparent;
+  border-bottom: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+#patrimonioRelatoriosSection .pat-dash-lista-card > header h3,
+#patrimonioConfiguracoesSection .pat-dash-lista-card > header h3 {
+  margin: 0;
+}
+#patrimonioRelatoriosSection .pat-dash-cards,
+#patrimonioConfiguracoesSection .pat-dash-cards {
+  padding: 1rem 0;
+}
+#patrimonioRelatoriosSection .pat-rel-totais,
+#patrimonioRelatoriosSection .pat-rel-grupos {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1rem;
+}
+#patrimonioRelatoriosSection .pat-rel-totais.hidden,
+#patrimonioRelatoriosSection .pat-rel-grupos.hidden {
+  display: none;
+}
+#patrimonioRelatoriosSection .pat-rel-rapidos {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+#patrimonioRelatoriosSection .pat-rel-filtros-card select,
+#patrimonioRelatoriosSection .pat-rel-filtros-card input {
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+}
+#patrimonioRelatoriosSection .rh-cand-card__actions,
+#patrimonioConfiguracoesSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
