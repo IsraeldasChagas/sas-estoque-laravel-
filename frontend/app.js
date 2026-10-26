@@ -6028,7 +6028,7 @@ function renderMovimentacoes(lista, target, emptyMessage) {
     console.error("Target não fornecido para renderMovimentacoes");
     return;
   }
-  const comoCards = target.id === "relatorioDetalhesTable";
+  const comoCards = target.id === "relatorioDetalhesTable" || target.id === "movTable";
   
   if (!Array.isArray(lista) || lista.length === 0) {
     if (comoCards) {
@@ -6163,7 +6163,7 @@ function renderMovimentacoesDashboard(lista) {
 
   if (listaParaUsar.length === 0) {
     console.warn("Nenhuma movimentação disponível para renderizar");
-    renderTable(dom.movTable, "", "Sem movimentacoes recentes.", 7);
+    dom.movTable.innerHTML = '<p class="rh-cand-empty">Sem movimentacoes recentes.</p>';
     return;
   }
   
@@ -6208,19 +6208,36 @@ function renderLotesDashboard(lista) {
     return;
   }
   
-  const rows = (lista || []).slice(0, 10).map((lote) => {
+  const items = (lista || []).slice(0, 10);
+  if (!items.length) {
+    dom.lotesTable.innerHTML = '<p class="rh-cand-empty">Nenhum lote a vencer</p>';
+    return;
+  }
+  dom.lotesTable.innerHTML = items.map((lote) => {
     const quantidade = `${formatNumber(lote.qtd_atual ?? lote.quantidade ?? 0, 3)} ${escapeHtml(normalizarUnidadeBase(lote.unidade))}`;
-    return `<tr>
-      <td data-label="Produto">${escapeHtml(lote.produto_nome || "--")}</td>
-      <td data-label="Lote">${escapeHtml(lote.numero_lote || lote.codigo_lote || "--")}</td>
-      <td data-label="Validade">${formatDate(lote.data_validade)}</td>
-      <td data-label="Qtd">${quantidade}</td>
-      <td data-label="Unidade">${escapeHtml(lote.unidade_nome || "--")}</td>
-      <td data-label="Status">${buildStatusPill(lote.status || "--")}</td>
-      <td data-label="Responsavel">${escapeHtml(lote.responsavel_nome || "--")}</td>
-    </tr>`;
+    const st = String(lote.status || "").trim().toLowerCase();
+    const pill = st === "vencido" ? "danger" : st === "ativo" || st === "disponivel" ? "ok" : "warn";
+    return `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏷️</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(lote.produto_nome || "—")}</h3>
+              <p class="rh-cand-card__sub">Lote ${escapeHtml(lote.numero_lote || lote.codigo_lote || "—")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${escapeHtml(lote.status || "—")}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Validade</span><strong>${escapeHtml(formatDate(lote.data_validade) || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Quantidade</span><strong>${quantidade}</strong></div>
+            <div class="rh-cand-card__row"><span>Unidade</span><strong>${escapeHtml(lote.unidade_nome || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Responsável</span><strong>${escapeHtml(lote.responsavel_nome || "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`;
   }).join("");
-  renderTable(dom.lotesTable, rows, "Nenhum lote a vencer", 7);
 }
 
 // Renderiza gráfico de lotes por status
@@ -6607,14 +6624,30 @@ function renderProdutosDashboard(lista) {
     return;
   }
   
-  const rows = (lista || [])
+  const items = (lista || [])
     .filter((produto) => Number(produto.ativo ?? 1) === 1)
-    .slice(0, 10)
-    .map((produto) => (
-      `<tr><td>${escapeHtml(produto.nome)}</td><td>${escapeHtml(produto.categoria)}</td><td>${escapeHtml(normalizarUnidadeBase(produto.unidade_base))}</td><td>${escapeHtml(produto.unidade_nome || "--")}</td></tr>`
-    ))
-    .join("");
-  renderTable(dom.produtosDashboardTable, rows, "Nenhum produto.", 4);
+    .slice(0, 10);
+  if (!items.length) {
+    dom.produtosDashboardTable.innerHTML = '<p class="rh-cand-empty">Nenhum produto.</p>';
+    return;
+  }
+  dom.produtosDashboardTable.innerHTML = items.map((produto) => `<article class="rh-cand-card">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📦</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(produto.nome || "—")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(produto.categoria || "Sem categoria")}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--info">${escapeHtml(normalizarUnidadeBase(produto.unidade_base) || "—")}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Unidade</span><strong>${escapeHtml(produto.unidade_nome || "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+    </article>`).join("");
 }
 
 function renderLocalVerHtml(local) {

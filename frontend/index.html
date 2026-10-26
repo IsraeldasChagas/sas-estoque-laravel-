@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025480000-pat-cards" />
+    <link rel="stylesheet" href="style.css?v=20261025490000-dash" />
     <script>
       (function () {
         try {
@@ -525,7 +525,8 @@
 
           <!-- Dashboard com indicadores e dados recentes -->
           <section id="dashboardSection" class="view-section hidden">
-                          <div class="actions">
+            <div class="caixa-page-wrap">
+            <div class="actions">
               <button class="btn primary" id="openEntrada">
                 + Registrar Entrada
               </button>
@@ -534,116 +535,133 @@
               </button>
             </div>
 
-            <div class="cards">
-              <div class="card">
-                <h3>Produtos ativos</h3>
-                <div class="value" id="kpiProdutos">0</div>
-              </div>
-              <div class="card">
-                <h3>Lotes a vencer (7 dias)</h3>
-                <div class="value" id="kpiVencer">0</div>
-              </div>
-              <div class="card" id="cardLotesAVencer">
-                <h3>Lotes a vencer (15 dias)</h3>
-                <div class="value" id="kpiLotesAVencer">0</div>
-                <small>Visualizar detalhes</small>
-              </div>
-              <div class="card card--clickable" id="cardComprasAndamento">
-                <h3>Compras em andamento</h3>
-                <div class="value" id="kpiComprasAtivas">0</div>
-                <small>Abrir listas de compras</small>
-              </div>
-              <div class="card" id="cardLotesVencidos">
-                <h3>Lotes vencidos</h3>
-                <div class="value danger" id="kpiLotesVencidos">0</div>
-                <small>Visualizar detalhes</small>
-              </div>
-              <div class="card" id="cardMinimo">
-                <h3>Abaixo do minimo</h3>
-                <div class="value" id="kpiMinimo">0</div>
-                <div id="cardMinimoArea">
-                  <small id="cardMinimoHint">Ver produtos abaixo do minimo</small>
-                  <select id="cardMinimoSelect" class="card-minimo-select" style="display:none;">
-                    <option value="">Selecione um produto</option>
-                  </select>
-                </div>
-              </div>
-              <div class="card card--clickable" id="cardPerdas">
-                <h3>Perdas</h3>
-                <div class="value" id="kpiPerdas">0</div>
-                <small id="cardPerdasHint">Sem perdas registradas</small>
+            <div class="table-card form-card--wide dash-lista-card">
+              <header>Resumo do estoque</header>
+              <div class="rh-cand-list dash-kpis">
+                <article class="rh-cand-card dash-kpi">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📦</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Produtos ativos</h3>
+                          
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--info" id="kpiProdutos">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card dash-kpi">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">⏳</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Lotes a vencer (7 dias)</h3>
+                          
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--warn" id="kpiVencer">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card dash-kpi dash-kpi--click" id="cardLotesAVencer">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📅</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Lotes a vencer (15 dias)</h3>
+                          <p class="rh-cand-card__sub">Visualizar detalhes</p>
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--warn" id="kpiLotesAVencer">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card dash-kpi dash-kpi--click" id="cardComprasAndamento">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🛒</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Compras em andamento</h3>
+                          <p class="rh-cand-card__sub">Abrir listas de compras</p>
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--info" id="kpiComprasAtivas">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card dash-kpi dash-kpi--click" id="cardLotesVencidos">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">⛔</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Lotes vencidos</h3>
+                          <p class="rh-cand-card__sub">Visualizar detalhes</p>
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--danger" id="kpiLotesVencidos">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card dash-kpi" id="cardMinimo">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📉</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Abaixo do mínimo</h3>
+                          <p class="rh-cand-card__sub" id="cardMinimoHint">Ver produtos abaixo do minimo</p>
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--danger" id="kpiMinimo">0</span>
+                      </div>
+                      <div id="cardMinimoArea">
+                        <select id="cardMinimoSelect" class="card-minimo-select" style="display:none;">
+                          <option value="">Selecione um produto</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+                <article class="rh-cand-card dash-kpi dash-kpi--click" id="cardPerdas">
+                  <div class="rh-cand-card__top">
+                    <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🗑️</div>
+                    <div class="rh-cand-card__main">
+                      <div class="rh-cand-card__head">
+                        <div>
+                          <h3 class="rh-cand-card__name">Perdas</h3>
+                          <p class="rh-cand-card__sub" id="cardPerdasHint">Sem perdas registradas</p>
+                        </div>
+                        <span class="rh-cand-pill rh-cand-pill--danger" id="kpiPerdas">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
 
-            <div class="tables">
-              <div class="table-card form-card--wide">
-                <header>Movimentacoes recentes</header>
-                <div class="table-wrapper dashboard-mov-recentes">
-                  <table>
-                    <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Tipo</th>
-                      <th>Produto</th>
-                      <th>Unidade</th>
-                      <th>Qtd</th>
-                      <th>Motivo</th>
-                      <th>Responsavel</th>
-                      <th id="movTableAcoesHeader">Acoes</th>
-                    </tr>
-                  </thead>
-                  <tbody id="movTable">
-                    <tr>
-                        <td colspan="8" style="text-align: center; color: #607d8b">Carregando...</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+            <div class="table-card form-card--wide dash-lista-card">
+              <header>Movimentacoes recentes</header>
+              <div class="rh-cand-list" id="movTable">
+                <p class="rh-cand-empty">Carregando...</p>
               </div>
-              <div class="table-card form-card--wide">
-                <header>Lotes a vencer (7 dias)</header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Produto</th>
-                        <th>Lote</th>
-                        <th>Validade</th>
-                        <th>Qtd</th>
-                        <th>Unidade</th>
-                        <th>Status</th>
-                        <th>Resp.</th>
-                      </tr>
-                    </thead>
-                    <tbody id="lotesTable">
-                      <tr>
-                        <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+            </div>
+            <div class="table-card form-card--wide dash-lista-card">
+              <header>Lotes a vencer (7 dias)</header>
+              <div class="rh-cand-list" id="lotesTable">
+                <p class="rh-cand-empty">Carregando...</p>
               </div>
-              <div class="table-card form-card--wide">
-                <header>Produtos ativos (amostra)</header>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nome</th>
-                        <th>Categoria</th>
-                        <th>Unid. base</th>
-                        <th>Unidade</th>
-                      </tr>
-                    </thead>
-                    <tbody id="produtosDashboardTable">
-                      <tr>
-                        <td colspan="4" style="text-align: center; color: #607d8b">Carregando...</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+            </div>
+            <div class="table-card form-card--wide dash-lista-card">
+              <header>Produtos ativos (amostra)</header>
+              <div class="rh-cand-list" id="produtosDashboardTable">
+                <p class="rh-cand-empty">Carregando...</p>
               </div>
-
+            </div>
             </div>
           </section>
 
@@ -7912,7 +7930,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025460000-estoque"></script>
+    <script defer src="app.js?v=20261025490000-dash"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
