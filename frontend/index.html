@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025420000-unidades" />
+    <link rel="stylesheet" href="style.css?v=20261025430000-logomenu" />
     <script>
       (function () {
         try {
@@ -169,6 +169,14 @@
     <div class="app-shell hidden" id="appShell">
       <!-- Barra lateral com navegacao e atalhos -->
       <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+          <img
+            src="imagens/logosemfundo.png"
+            alt="Grupo Sabor Paraense"
+            class="sidebar-brand__logo"
+            onerror="this.onerror=null;this.src='imagens/logo.png';"
+          />
+        </div>
         <div class="sidebar-nav-scroll">
         <nav>
           <a href="#" class="nav-link active" data-section="boasVindas"><span class="nav-icon" aria-hidden="true">👋</span><span class="nav-label">Boas-vindas</span></a>
@@ -438,12 +446,6 @@
               <span></span>
             </button>
             <div class="user-info">
-              <img
-                src="imagens/logosemfundo.png"
-                alt="Grupo Sabor Paraense"
-                class="topbar__logo"
-                onerror="this.onerror=null;this.src='imagens/logo.png';"
-              />
               <div id="topbarUserPhoto" class="topbar__user-photo usuarios-foto usuarios-foto--placeholder" aria-hidden="true"></div>
               <div>
                 <strong id="userName">Visitante</strong>
