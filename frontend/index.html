@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025450000-ficha" />
+    <link rel="stylesheet" href="style.css?v=20261025460000-estoque" />
     <script>
       (function () {
         try {
@@ -1827,19 +1827,28 @@
 
           <!-- Consulta de Estoque por Produto -->
           <section id="estoqueSection" class="view-section hidden">
+            <div class="caixa-page-wrap">
             <div class="actions">
               <h2>Consulta de Estoque</h2>
             </div>
-            <div class="estoque-resumo-card" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; padding: 1rem; background: #f5f9ff; border-radius: 8px;">
-              <div style="flex: 1; min-width: 200px;">
-                <label style="display: block; font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Total do estoque em valor</label>
-                <div id="estoqueResumoValor" style="font-size: 1.75rem; font-weight: 700; color: #1976d2;">R$ 0,00</div>
-              </div>
-              <div style="min-width: 200px;">
-                <label style="display: block; font-size: 0.875rem; color: #666; margin-bottom: 0.25rem;">Filtrar por unidade</label>
-                <select id="estoqueResumoUnidade" style="width: 100%; padding: 0.6rem 0.75rem; font-size: 1rem; border: 1px solid #ddd; border-radius: 6px;">
-                  <option value="">Todas as unidades</option>
-                </select>
+            <div class="estoque-resumo-card rh-cand-card">
+              <div class="rh-cand-card__top">
+                <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💰</div>
+                <div class="rh-cand-card__main">
+                  <div class="rh-cand-card__head">
+                    <div>
+                      <h3 class="rh-cand-card__name">Total do estoque em valor</h3>
+                      <p class="rh-cand-card__sub">Soma de todos os produtos no filtro</p>
+                    </div>
+                    <span class="rh-cand-pill rh-cand-pill--info" id="estoqueResumoValor">R$ 0,00</span>
+                  </div>
+                  <label class="estoque-resumo-filtro">
+                    Filtrar por unidade
+                    <select id="estoqueResumoUnidade">
+                      <option value="">Todas as unidades</option>
+                    </select>
+                  </label>
+                </div>
               </div>
             </div>
             <div class="table-card">
@@ -1869,43 +1878,48 @@
                 </select>
               </form>
               <div id="estoqueInfo" style="display: none;">
-                <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                  <h3 id="estoqueProdutoNome" style="margin: 0 0 1rem 0; color: #1976d2;"></h3>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div id="estoqueCardQtd" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Quantidade Total</div>
-                      <div id="estoqueTotalQtd" style="font-size: 1.5rem; font-weight: 700; color: #1976d2;">0</div>
-                      <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;" id="estoqueUnidadeBase"></div>
-                    </div>
-                    <div id="estoqueCardUnitario" style="display:none;">
-                      <div id="estoqueTotalUnitario"></div>
-                    </div>
-                    <div id="estoqueCardTotal" style="background: white; padding: 1rem; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                      <div style="font-size: 0.875rem; color: #666; margin-bottom: 0.5rem;">Valor Total</div>
-                      <div id="estoqueTotalValor" style="font-size: 1.5rem; font-weight: 700; color: #4caf50;">R$ 0,00</div>
-                    </div>
-                  </div>
+                <div class="estoque-info-head">
+                  <h3 id="estoqueProdutoNome"></h3>
                 </div>
-                <div class="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Unidade</th>
-                        <th>Local</th>
-                        <th>Quantidade</th>
-                        <th class="estoque-col-valor-total">Valor Total</th>
-                        <th>Lotes (código)</th>
-                        <th>Detalhes</th>
-                      </tr>
-                    </thead>
-                    <tbody id="estoqueTable">
-                      <tr>
-                        <td colspan="7" style="text-align: center; color: #607d8b;">Carregando...</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="rh-cand-list estoque-info-cards">
+                  <article class="rh-cand-card" id="estoqueCardQtd">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">📦</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Quantidade total</h3>
+                            <p class="rh-cand-card__sub" id="estoqueUnidadeBase"></p>
+                          </div>
+                          <span class="rh-cand-pill rh-cand-pill--info" id="estoqueTotalQtd">0</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                  <div id="estoqueCardUnitario" style="display:none;">
+                    <div id="estoqueTotalUnitario"></div>
+                  </div>
+                  <article class="rh-cand-card" id="estoqueCardTotal">
+                    <div class="rh-cand-card__top">
+                      <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">💵</div>
+                      <div class="rh-cand-card__main">
+                        <div class="rh-cand-card__head">
+                          <div>
+                            <h3 class="rh-cand-card__name">Valor total</h3>
+                            <p class="rh-cand-card__sub">Deste produto</p>
+                          </div>
+                          <span class="rh-cand-pill rh-cand-pill--ok" id="estoqueTotalValor">R$ 0,00</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+                <h3 class="estoque-por-unidade-titulo">Por unidade</h3>
+                <div class="rh-cand-list" id="estoqueTable">
+                  <p class="rh-cand-empty">Carregando...</p>
                 </div>
               </div>
+            </div>
             </div>
           </section>
 
@@ -7735,7 +7749,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025450000-ficha"></script>
+    <script defer src="app.js?v=20261025460000-estoque"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

@@ -1183,6 +1183,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-list,
 #produtosSection .rh-cand-list,
 #fechaTecnicaSection .rh-cand-list,
+#estoqueSection .rh-cand-list,
 #relatoriosSection .rh-cand-list,
 #comprasSection .rh-cand-list,
 #financeiroCentrosCustoSection .rh-cand-list,
@@ -1215,6 +1216,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-empty,
 #produtosSection .rh-cand-empty,
 #fechaTecnicaSection .rh-cand-empty,
+#estoqueSection .rh-cand-empty,
 #relatoriosSection .rh-cand-empty,
 #comprasSection .rh-cand-empty,
 #financeiroCentrosCustoSection .rh-cand-empty,
@@ -1252,6 +1254,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -1287,6 +1290,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__top,
 #produtosSection .rh-cand-card__top,
 #fechaTecnicaSection .rh-cand-card__top,
+#estoqueSection .rh-cand-card__top,
 #relatoriosSection .rh-cand-card__top,
 #comprasSection .rh-cand-card__top,
 #financeiroCentrosCustoSection .rh-cand-card__top,
@@ -1320,6 +1324,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__photo,
 #produtosSection .rh-cand-card__photo,
 #fechaTecnicaSection .rh-cand-card__photo,
+#estoqueSection .rh-cand-card__photo,
 #relatoriosSection .rh-cand-card__photo,
 #comprasSection .rh-cand-card__photo,
 #financeiroCentrosCustoSection .rh-cand-card__photo,
@@ -1356,6 +1361,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__photo--wait,
 #produtosSection .rh-cand-card__photo--wait,
 #fechaTecnicaSection .rh-cand-card__photo--wait,
+#estoqueSection .rh-cand-card__photo--wait,
 #relatoriosSection .rh-cand-card__photo--wait,
 #comprasSection .rh-cand-card__photo--wait,
 #financeiroCentrosCustoSection .rh-cand-card__photo--wait,
@@ -1393,6 +1399,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__main,
 #produtosSection .rh-cand-card__main,
 #fechaTecnicaSection .rh-cand-card__main,
+#estoqueSection .rh-cand-card__main,
 #relatoriosSection .rh-cand-card__main,
 #comprasSection .rh-cand-card__main,
 #financeiroCentrosCustoSection .rh-cand-card__main,
@@ -1425,6 +1432,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__head,
 #produtosSection .rh-cand-card__head,
 #fechaTecnicaSection .rh-cand-card__head,
+#estoqueSection .rh-cand-card__head,
 #relatoriosSection .rh-cand-card__head,
 #comprasSection .rh-cand-card__head,
 #financeiroCentrosCustoSection .rh-cand-card__head,
@@ -1459,6 +1467,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__name,
 #produtosSection .rh-cand-card__name,
 #fechaTecnicaSection .rh-cand-card__name,
+#estoqueSection .rh-cand-card__name,
 #relatoriosSection .rh-cand-card__name,
 #comprasSection .rh-cand-card__name,
 #financeiroCentrosCustoSection .rh-cand-card__name,
@@ -1493,6 +1502,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__sub,
 #produtosSection .rh-cand-card__sub,
 #fechaTecnicaSection .rh-cand-card__sub,
+#estoqueSection .rh-cand-card__sub,
 #relatoriosSection .rh-cand-card__sub,
 #comprasSection .rh-cand-card__sub,
 #financeiroCentrosCustoSection .rh-cand-card__sub,
@@ -1526,6 +1536,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__meta,
 #produtosSection .rh-cand-card__meta,
 #fechaTecnicaSection .rh-cand-card__meta,
+#estoqueSection .rh-cand-card__meta,
 #relatoriosSection .rh-cand-card__meta,
 #comprasSection .rh-cand-card__meta,
 #financeiroCentrosCustoSection .rh-cand-card__meta,
@@ -1559,6 +1570,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__row,
 #produtosSection .rh-cand-card__row,
 #fechaTecnicaSection .rh-cand-card__row,
+#estoqueSection .rh-cand-card__row,
 #relatoriosSection .rh-cand-card__row,
 #comprasSection .rh-cand-card__row,
 #financeiroCentrosCustoSection .rh-cand-card__row,
@@ -1593,6 +1605,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__row span,
 #produtosSection .rh-cand-card__row span,
 #fechaTecnicaSection .rh-cand-card__row span,
+#estoqueSection .rh-cand-card__row span,
 #relatoriosSection .rh-cand-card__row span,
 #comprasSection .rh-cand-card__row span,
 #financeiroCentrosCustoSection .rh-cand-card__row span,
@@ -1625,6 +1638,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__row strong,
 #produtosSection .rh-cand-card__row strong,
 #fechaTecnicaSection .rh-cand-card__row strong,
+#estoqueSection .rh-cand-card__row strong,
 #relatoriosSection .rh-cand-card__row strong,
 #comprasSection .rh-cand-card__row strong,
 #financeiroCentrosCustoSection .rh-cand-card__row strong,
@@ -1657,6 +1671,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__actions,
 #produtosSection .rh-cand-card__actions,
 #fechaTecnicaSection .rh-cand-card__actions,
+#estoqueSection .rh-cand-card__actions,
 #relatoriosSection .rh-cand-card__actions,
 #comprasSection .rh-cand-card__actions,
 #financeiroCentrosCustoSection .rh-cand-card__actions,
@@ -1692,6 +1707,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__actions .rh-wa-btn,
 #produtosSection .rh-cand-card__actions .rh-wa-btn,
 #fechaTecnicaSection .rh-cand-card__actions .rh-wa-btn,
+#estoqueSection .rh-cand-card__actions .rh-wa-btn,
 #relatoriosSection .rh-cand-card__actions .rh-wa-btn,
 #comprasSection .rh-cand-card__actions .rh-wa-btn,
 #financeiroCentrosCustoSection .rh-cand-card__actions .rh-wa-btn,
@@ -1724,6 +1740,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card .btn-rh-toggle,
 #produtosSection .rh-cand-card .btn-rh-toggle,
 #fechaTecnicaSection .rh-cand-card .btn-rh-toggle,
+#estoqueSection .rh-cand-card .btn-rh-toggle,
 #relatoriosSection .rh-cand-card .btn-rh-toggle,
 #comprasSection .rh-cand-card .btn-rh-toggle,
 #financeiroCentrosCustoSection .rh-cand-card .btn-rh-toggle,
@@ -1757,6 +1774,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-pill,
 #produtosSection .rh-cand-pill,
 #fechaTecnicaSection .rh-cand-pill,
+#estoqueSection .rh-cand-pill,
 #relatoriosSection .rh-cand-pill,
 #comprasSection .rh-cand-pill,
 #financeiroCentrosCustoSection .rh-cand-pill,
@@ -1795,6 +1813,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-pill--ok,
 #produtosSection .rh-cand-pill--ok,
 #fechaTecnicaSection .rh-cand-pill--ok,
+#estoqueSection .rh-cand-pill--ok,
 #relatoriosSection .rh-cand-pill--ok,
 #comprasSection .rh-cand-pill--ok,
 #financeiroCentrosCustoSection .rh-cand-pill--ok,
@@ -1823,6 +1842,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-pill--warn,
 #produtosSection .rh-cand-pill--warn,
 #fechaTecnicaSection .rh-cand-pill--warn,
+#estoqueSection .rh-cand-pill--warn,
 #relatoriosSection .rh-cand-pill--warn,
 #comprasSection .rh-cand-pill--warn,
 #financeiroCentrosCustoSection .rh-cand-pill--warn,
@@ -1851,6 +1871,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-pill--danger,
 #produtosSection .rh-cand-pill--danger,
 #fechaTecnicaSection .rh-cand-pill--danger,
+#estoqueSection .rh-cand-pill--danger,
 #relatoriosSection .rh-cand-pill--danger,
 #comprasSection .rh-cand-pill--danger,
 #financeiroCentrosCustoSection .rh-cand-pill--danger,
@@ -1879,6 +1900,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-pill--info,
 #produtosSection .rh-cand-pill--info,
 #fechaTecnicaSection .rh-cand-pill--info,
+#estoqueSection .rh-cand-pill--info,
 #relatoriosSection .rh-cand-pill--info,
 #comprasSection .rh-cand-pill--info,
 #financeiroCentrosCustoSection .rh-cand-pill--info,
@@ -2098,6 +2120,7 @@ body.sidebar-open {
 #unidadesSection .rh-cand-card__details,
 #produtosSection .rh-cand-card__details,
 #fechaTecnicaSection .rh-cand-card__details,
+#estoqueSection .rh-cand-card__details,
 #relatoriosSection .rh-cand-card__details,
 #comprasSection .rh-cand-card__details,
 #financeiroCentrosCustoSection .rh-cand-card__details,
@@ -2140,6 +2163,7 @@ body.sidebar-open {
   #unidadesSection .rh-cand-card__actions .btn,
   #produtosSection .rh-cand-card__actions .btn,
   #fechaTecnicaSection .rh-cand-card__actions .btn,
+  #estoqueSection .rh-cand-card__actions .btn,
   #relatoriosSection .rh-cand-card__actions .btn,
   #comprasSection .rh-cand-card__actions .btn,
   #financeiroCentrosCustoSection .rh-cand-card__actions .btn,
@@ -11432,6 +11456,7 @@ select[size]:not([size="1"]) {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11482,6 +11507,7 @@ select[size]:not([size="1"]) {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11531,6 +11557,7 @@ select[size]:not([size="1"]) {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11585,6 +11612,7 @@ select[size]:not([size="1"]) {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11632,6 +11660,7 @@ select[size]:not([size="1"]) {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -11678,6 +11707,7 @@ select[size]:not([size="1"]) {
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
+#estoqueSection .rh-cand-card,
 #relatoriosSection .rh-cand-card,
 #comprasSection .rh-cand-card,
 #financeiroCentrosCustoSection .rh-cand-card,
@@ -12108,6 +12138,75 @@ select[size]:not([size="1"]) {
   padding: 0 1rem 1rem;
 }
 #fechaTecnicaSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#estoqueSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#estoqueSection > .caixa-page-wrap > .actions,
+#estoqueSection .estoque-produto-form,
+#estoqueSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#estoqueSection > .caixa-page-wrap > .actions {
+  padding: 8px 14px;
+  border-radius: 12px;
+}
+#estoqueSection .estoque-resumo-card {
+  margin-bottom: 1rem;
+}
+#estoqueSection .estoque-resumo-filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  max-width: 320px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+#estoqueSection .estoque-resumo-filtro select,
+#estoqueSection .estoque-produto-form input,
+#estoqueSection .estoque-produto-form select {
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+#estoqueSection .estoque-produto-form {
+  border-radius: 14px;
+  margin: 0 1rem 1rem;
+  padding: 1rem;
+}
+#estoqueSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#estoqueSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#estoqueSection #estoqueInfo {
+  padding: 0 1rem 1rem;
+}
+#estoqueSection .estoque-info-head h3,
+#estoqueSection .estoque-por-unidade-titulo {
+  margin: 0.5rem 0 0.75rem;
+  color: #fff;
+}
+#estoqueSection .estoque-info-cards {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1rem;
+}
+#estoqueSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

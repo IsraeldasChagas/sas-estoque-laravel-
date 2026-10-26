@@ -10146,38 +10146,44 @@ async function loadEstoqueProduto(produtoId) {
 
     // Renderiza tabela de estoque por unidade
     if (!dados.estoque_por_unidade || dados.estoque_por_unidade.length === 0) {
-      const colspan = isCozinhaOuBar ? "5" : "7";
-      estoqueTable.innerHTML = `
-        <tr>
-          <td colspan="${colspan}" style="text-align: center; color: #607d8b;">
-            Nenhum estoque encontrado para este produto
-          </td>
-        </tr>
-      `;
+      estoqueTable.innerHTML = '<p class="rh-cand-empty">Nenhum estoque encontrado para este produto</p>';
     } else {
-      const tbody = document.getElementById('estoqueTable');
-      tbody.innerHTML = '';
+      estoqueTable.innerHTML = '';
+      const unidadeBase = normalizarUnidadeBase(dados.produto.unidade_base);
 
       dados.estoque_por_unidade.forEach((item) => {
-        const tr = document.createElement('tr');
+        const card = document.createElement('article');
+        card.className = 'rh-cand-card';
+        const qtd = (item.qtd_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+        const valorRow = isCozinhaOuBar ? '' : `
+          <div class="rh-cand-card__row estoque-col-valor-total"><span>Valor total</span><strong>R$ ${(item.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>`;
+        const lotes = item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—");
 
-        const valorTotalCell = isCozinhaOuBar ? '' : `
-          <td data-label="Valor Total" class="estoque-col-valor-total">R$ ${(item.valor_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        card.innerHTML = `
+          <div class="rh-cand-card__top">
+            <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏢</div>
+            <div class="rh-cand-card__main">
+              <div class="rh-cand-card__head">
+                <div>
+                  <h3 class="rh-cand-card__name">${escapeHtml(item.unidade_nome || "N/A")}</h3>
+                  <p class="rh-cand-card__sub">${item.locais ? escapeHtml(item.locais) : "Sem local"}</p>
+                </div>
+                <span class="rh-cand-pill rh-cand-pill--info">${qtd} ${escapeHtml(unidadeBase || "")}</span>
+              </div>
+              <div class="rh-cand-card__meta">
+                ${valorRow}
+                <div class="rh-cand-card__row"><span>Lotes (código)</span><strong>${lotes}</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="rh-cand-card__actions">
+            <button type="button" class="btn btn-rh-toggle btn-estoque-detalhe">Ver</button>
+          </div>
         `;
 
-        tr.innerHTML = `
-          <td data-label="Unidade">${escapeHtml(item.unidade_nome || "N/A")}</td>
-          <td data-label="Local">${item.locais ? escapeHtml(item.locais) : "—"}</td>
-          <td data-label="Quantidade">${(item.qtd_total || 0).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 })}</td>
-          ${valorTotalCell}
-          <td data-label="Lotes (código)">${item.codigos_lote ? escapeHtml(item.codigos_lote) : (item.num_lotes ? `${item.num_lotes} lote(s)` : "—")}</td>
-          <td data-label="Detalhes" class="table-actions"><button type="button" class="table-action btn-estoque-detalhe">Ver</button></td>
-        `;
+        card.querySelector('.btn-estoque-detalhe').addEventListener('click', () => abrirEstoqueLotesModal(item, dados.produto));
 
-        // Listener direto no botão
-        tr.querySelector('.btn-estoque-detalhe').addEventListener('click', () => abrirEstoqueLotesModal(item, dados.produto));
-
-        tbody.appendChild(tr);
+        estoqueTable.appendChild(card);
       });
     }
     
