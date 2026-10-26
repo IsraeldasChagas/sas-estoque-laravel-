@@ -12200,7 +12200,7 @@ select[size]:not([size="1"]) {
 #estoqueSection .estoque-info-head h3,
 #estoqueSection .estoque-por-unidade-titulo {
   margin: 0.5rem 0 0.75rem;
-  color: #fff;
+  color: var(--text, #263238);
 }
 #estoqueSection .estoque-info-cards {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -12211,4 +12211,15 @@ select[size]:not([size="1"]) {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.caixa-page-wrap .table-card > header,
+.caixa-page-wrap .table-card > header h3 {
+  color: var(--text, #263238);
+  font-weight: 700;
+}
+.caixa-page-wrap .table-card > header .subtle-text,
+.caixa-page-wrap > .subtle-text,
+.caixa-page-wrap .rh-cand-empty {
+  color: #37474f;
 }
