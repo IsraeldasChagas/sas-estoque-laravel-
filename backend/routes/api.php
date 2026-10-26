@@ -6390,13 +6390,8 @@ Route::put('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaContr
 Route::delete('/reservas-mesas/{id}', fn (Request $r, $id) => (new ReservaMesaController())->destroy($r, $id)->withHeaders($cors));
 Route::post('/reservas-mesas/{id}/cancelar', fn (Request $r, $id) => (new ReservaMesaController())->cancelar($id)->withHeaders($cors));
 Route::patch('/reservas-mesas/{id}/status', fn (Request $r, $id) => (new ReservaMesaController())->alterarStatus($r, $id)->withHeaders($cors));
-Route::patch('/reservas-mesas/{id}/participa-fidelidade', fn (Request $r, $id) => (new ReservaMesaController())->participaFidelidade($r, $id)->withHeaders($cors));
-Route::patch('/reservas-mesas/{id}/fidelidade-dados', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeDados($r, $id)->withHeaders($cors));
-Route::get('/reservas-mesas/{id}/fidelidade', fn (Request $r, $id) => (new ReservaMesaController())->fidelidade($r, $id)->withHeaders($cors));
-Route::post('/reservas-mesas/{id}/fidelidade/selo', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeSelo($r, $id)->withHeaders($cors));
-Route::post('/reservas-mesas/{id}/fidelidade/garantir', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeGarantir($r, $id)->withHeaders($cors));
-Route::post('/reservas-mesas/{id}/fidelidade/conta-paga', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeContaPaga($r, $id)->withHeaders($cors));
-Route::post('/reservas-mesas/{id}/fidelidade/resgatar', fn (Request $r, $id) => (new ReservaMesaController())->fidelidadeResgatar($r, $id)->withHeaders($cors));
+Route::get('/reservas-mesas/{id}/conta', fn (Request $r, $id) => (new ReservaMesaController())->conta($r, $id)->withHeaders($cors));
+Route::post('/reservas-mesas/{id}/conta-paga', fn (Request $r, $id) => (new ReservaMesaController())->contaPaga($r, $id)->withHeaders($cors));
 
 /** Chave esperada para backup/listar/baixar/restaurar (igual ao frontend Configurações ou ADMIN_BACKUP_KEY no .env). */
 $sasAdminBackupKeyValid = static function (?string $chave): bool {
@@ -11835,8 +11830,6 @@ require __DIR__ . '/ayla_routes.php';
 require __DIR__ . '/ayla_admin_routes.php';
 require __DIR__ . '/integrations_routes.php';
 require __DIR__ . '/orcamentos_routes.php';
-require __DIR__ . '/fidelidade_routes.php';
-
 // ============================================
 // DEPLOY - Atualiza o servidor via git pull
 // ============================================
