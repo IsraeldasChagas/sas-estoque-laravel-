@@ -27207,34 +27207,50 @@ function setupFichaTecnicaForm() {
       const tb = new Date(b.updatedAt || 0).getTime();
       return tb - ta;
     });
-    const wrap = listaTbody?.closest('.table-wrapper');
     if (!listaTbody) return;
     if (!list.length) {
       listaTbody.innerHTML = '';
+      listaTbody.hidden = true;
       if (listaEmpty) listaEmpty.hidden = false;
-      if (wrap) wrap.style.display = 'none';
       return;
     }
     if (listaEmpty) listaEmpty.hidden = true;
-    if (wrap) wrap.style.display = '';
+    listaTbody.hidden = false;
     listaTbody.innerHTML = list
       .map((p) => {
         const idAttr = escapeHtml(String(p.id));
         const prec = p.preco_prato != null ? formatCurrencyBRL(p.preco_prato) : '—';
         const sug = p.sugestao_venda != null ? formatCurrencyBRL(p.sugestao_venda) : '—';
-        return `<tr>
-        <td data-label="Prato">${escapeHtml(p.nome_prato || '')}</td>
-        <td data-label="Data">${escapeHtml(formatFichaTecnicaDataBr(p.data_ficha))}</td>
-        <td data-label="Tempo de preparo">${escapeHtml(p.tempo_preparo || '')}</td>
-        <td data-label="Responsável">${escapeHtml(p.responsavel_tecnico || '')}</td>
-        <td data-label="Preço">${prec}</td>
-        <td data-label="Sugestão de venda">${sug}</td>
-        <td class="ficha-tecnica-acoes" data-label="Ações">
-          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="ver" data-ficha-id="${idAttr}">PDF</button>
-          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="editar" data-ficha-id="${idAttr}">Editar</button>
-          <button type="button" class="btn neutral ficha-tecnica-acao-btn" data-ficha-acao="excluir" data-ficha-id="${idAttr}">Excluir</button>
-        </td>
-      </tr>`;
+        const fotoSrc = p.foto_base64 && String(p.foto_base64).trim() ? String(p.foto_base64) : '';
+        const foto = fotoSrc
+          ? `<img src="${escapeHtml(fotoSrc)}" alt="" class="usuarios-foto rh-cand-card__photo img-lightbox-trigger" loading="lazy" title="Clique para ampliar" />`
+          : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🍽️</div>';
+        const nIng = Array.isArray(p.ingredientes) ? p.ingredientes.length : 0;
+        return `<article class="rh-cand-card" data-ficha-card="${idAttr}">
+      <div class="rh-cand-card__top">
+        ${foto}
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(p.nome_prato || 'Prato')}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(formatFichaTecnicaDataBr(p.data_ficha) || '—')}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--info">${nIng} ingrediente${nIng === 1 ? '' : 's'}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Tempo de preparo</span><strong>${escapeHtml(p.tempo_preparo || '—')}</strong></div>
+            <div class="rh-cand-card__row"><span>Responsável</span><strong>${escapeHtml(p.responsavel_tecnico || '—')}</strong></div>
+            <div class="rh-cand-card__row"><span>Preço do prato</span><strong>${escapeHtml(prec)}</strong></div>
+            <div class="rh-cand-card__row"><span>Sugestão de venda</span><strong>${escapeHtml(sug)}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">
+        <button type="button" class="btn primary" data-ficha-acao="editar" data-ficha-id="${idAttr}">Editar</button>
+        <button type="button" class="btn neutral" data-ficha-acao="ver" data-ficha-id="${idAttr}">PDF</button>
+        <button type="button" class="btn" data-ficha-acao="excluir" data-ficha-id="${idAttr}" style="background:#b71c1c;color:#fff;">Excluir</button>
+      </div>
+    </article>`;
       })
       .join('');
   };
