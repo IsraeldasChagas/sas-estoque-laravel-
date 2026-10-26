@@ -11826,8 +11826,6 @@ require __DIR__ . '/venda_fiscal_routes.php';
 require __DIR__ . '/fiscal_modulo_07_routes.php';
 require __DIR__ . '/fiscal_emissao_config_routes.php';
 require __DIR__ . '/fiscal_pacote_contador_routes.php';
-require __DIR__ . '/pdv_routes.php';
-require __DIR__ . '/cardapio_estoque_routes.php';
 require __DIR__ . '/imposto_routes.php';
 require __DIR__ . '/tema_routes.php';
 require __DIR__ . '/rh_rescisao_routes.php';
@@ -11838,7 +11836,6 @@ require __DIR__ . '/ayla_admin_routes.php';
 require __DIR__ . '/integrations_routes.php';
 require __DIR__ . '/orcamentos_routes.php';
 require __DIR__ . '/fidelidade_routes.php';
-require __DIR__ . '/delivery_routes.php';
 
 // ============================================
 // DEPLOY - Atualiza o servidor via git pull

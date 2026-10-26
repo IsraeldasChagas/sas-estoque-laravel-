@@ -8,7 +8,6 @@ use App\Http\Controllers\Integrations\HealthCheckController;
 use App\Http\Controllers\Integrations\IntegrationController;
 use App\Http\Controllers\Integrations\IntegrationLogController;
 use App\Http\Controllers\Integrations\VendaFacilController;
-use App\Http\Controllers\Integrations\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 $intCors = fn () => response()->json([])
@@ -55,5 +54,3 @@ Route::post('/integracoes/vendafacil/sincronizar', [VendaFacilController::class,
 Route::post('/integracoes/vendafacil/limpar-cache', [VendaFacilController::class, 'limparCache']);
 Route::post('/integracoes/vendafacil/desconectar', [VendaFacilController::class, 'desconectar']);
 
-Route::get('/integracoes/webhooks', [WebhookController::class, 'index']);
-Route::post('/integracoes/webhooks/{provider}', [WebhookController::class, 'receive']);

@@ -1,10 +1,5 @@
 <?php
 
-use App\Http\Controllers\Delivery\DeliveryCalcularEntregaController;
-use App\Http\Controllers\Delivery\DeliveryPublicController;
-use App\Http\Controllers\Delivery\DeliveryPublicEntregadorController;
-use App\Http\Controllers\Delivery\DeliveryPublicMotoboyController;
-use App\Http\Controllers\Delivery\DeliveryFidelidadePublicController;
 use App\Http\Controllers\KanbanTaskController;
 use App\Http\Controllers\Rh\RhPublicoController;
 use Illuminate\Support\Facades\Response;
@@ -13,70 +8,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect('/dashboard');
 });
-
-Route::prefix('loja/{slug}')->name('delivery.public.')->group(function () {
-    Route::get('/', [DeliveryPublicController::class, 'loja'])->name('store');
-    Route::get('/produto/{id}', [DeliveryPublicController::class, 'produto'])->whereNumber('id')->name('product');
-    Route::get('/fidelidade', [DeliveryFidelidadePublicController::class, 'show'])->name('fidelity');
-    Route::get('/fidelidade/privacidade', [DeliveryFidelidadePublicController::class, 'privacidade'])->name('fidelity.privacy');
-    Route::post('/fidelidade/aceitar-lgpd', [DeliveryFidelidadePublicController::class, 'aceitarLgpd'])
-        ->middleware('throttle:20,1')->name('fidelity.lgpd');
-    Route::post('/fidelidade/solicitar-codigo', [DeliveryFidelidadePublicController::class, 'solicitarCodigo'])
-        ->middleware('throttle:12,1')->name('fidelity.request');
-    Route::post('/fidelidade/reenviar-codigo', [DeliveryFidelidadePublicController::class, 'reenviarCodigo'])
-        ->middleware('throttle:12,1')->name('fidelity.resend');
-    Route::post('/fidelidade/cancelar-otp', [DeliveryFidelidadePublicController::class, 'cancelarOtp'])
-        ->middleware('throttle:20,1')->name('fidelity.cancel');
-    Route::post('/fidelidade/sair', [DeliveryFidelidadePublicController::class, 'sair'])
-        ->middleware('throttle:20,1')->name('fidelity.logout');
-    Route::post('/fidelidade/verificar-codigo', [DeliveryFidelidadePublicController::class, 'verificarCodigo'])
-        ->middleware('throttle:30,1')->name('fidelity.verify');
-    Route::post('/fidelidade/resgatar', [DeliveryFidelidadePublicController::class, 'resgatar'])
-        ->middleware('throttle:10,1')->name('fidelity.redeem');
-    Route::post('/fidelidade/cadastro', [DeliveryFidelidadePublicController::class, 'cadastrar'])
-        ->middleware('throttle:15,1')->name('fidelity.register');
-    Route::get('/checkout', [DeliveryPublicController::class, 'checkout'])->name('checkout');
-    Route::get('/carrinho', [DeliveryPublicController::class, 'carrinho'])->name('cart');
-    Route::post('/carrinho/entrega-prefs', [DeliveryPublicController::class, 'carrinhoEntregaPrefs'])
-        ->middleware('throttle:30,1')->name('cart.prefs');
-    Route::post('/frete', [DeliveryPublicController::class, 'frete'])->middleware('throttle:30,1')->name('freight');
-    Route::post('/frete-resumo', [DeliveryPublicController::class, 'freteResumo'])->middleware('throttle:30,1')->name('freight.summary');
-    Route::post('/checkout', [DeliveryPublicController::class, 'finalizar'])->middleware('throttle:10,1')->name('finish');
-    Route::get('/sucesso/{codigo}/{token}', [DeliveryPublicController::class, 'sucesso'])
-        ->where('token', '[a-f0-9]{64}')->name('success');
-    Route::post('/sucesso/{codigo}/{token}/fidelidade', [DeliveryPublicController::class, 'fidelidadePedido'])
-        ->where('token', '[a-f0-9]{64}')->middleware('throttle:15,1')->name('success.fidelity');
-    Route::get('/pedido/{codigo}/{token}', [DeliveryPublicController::class, 'pedido'])
-        ->where('token', '[a-f0-9]{64}')->name('order');
-    Route::get('/pedido/{codigo}/{token}/pagamento-status', [DeliveryPublicController::class, 'pagamentoStatus'])
-        ->where('token', '[a-f0-9]{64}')->middleware('throttle:60,1')->name('payment.status');
-    Route::get('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'show'])
-        ->name('entregador.show');
-    Route::post('/entrega/{codigo}/{token}', [DeliveryPublicEntregadorController::class, 'registrar'])
-        ->middleware('throttle:30,1')->name('entregador.registrar');
-    Route::get('/motoboy/{acessoToken}', [DeliveryPublicMotoboyController::class, 'app'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->name('motoboy.app');
-    Route::get('/motoboy/{acessoToken}/manifest.webmanifest', [DeliveryPublicMotoboyController::class, 'manifest'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->name('motoboy.manifest');
-    Route::get('/motoboy/{acessoToken}/sessao.json', [DeliveryPublicMotoboyController::class, 'sessao'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:60,1')->name('motoboy.sessao');
-    Route::post('/motoboy/{acessoToken}/desbloquear', [DeliveryPublicMotoboyController::class, 'desbloquear'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:20,1')->name('motoboy.desbloquear');
-    Route::post('/motoboy/{acessoToken}/bloquear', [DeliveryPublicMotoboyController::class, 'bloquear'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:20,1')->name('motoboy.bloquear');
-    Route::post('/motoboy/{acessoToken}/recebendo', [DeliveryPublicMotoboyController::class, 'recebendo'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:30,1')->name('motoboy.recebendo');
-    Route::get('/motoboy/{acessoToken}/ofertas.json', [DeliveryPublicMotoboyController::class, 'ofertas'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->middleware('throttle:60,1')->name('motoboy.ofertas');
-    Route::post('/motoboy/{acessoToken}/aceitar/{pedidoId}', [DeliveryPublicMotoboyController::class, 'aceitar'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->whereNumber('pedidoId')->middleware('throttle:30,1')->name('motoboy.aceitar');
-    Route::post('/motoboy/{acessoToken}/recusar/{pedidoId}', [DeliveryPublicMotoboyController::class, 'recusar'])
-        ->where('acessoToken', '[a-z0-9]{20,64}')->whereNumber('pedidoId')->middleware('throttle:30,1')->name('motoboy.recusar');
-});
-
-Route::post('/api/calcular-entrega', DeliveryCalcularEntregaController::class)
-    ->middleware('throttle:30,1')
-    ->name('delivery.public.calcular-entrega');
 
 Route::get('/dashboard', function () {
     return view('dashboard.index');

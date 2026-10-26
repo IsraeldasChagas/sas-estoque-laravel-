@@ -1651,24 +1651,6 @@ const ORCAMENTOS_SECTION_IDS = [
 const FIDELIDADE_SECTION_IDS = [
   "fidelidadePrograma", "fidelidadeCartoes", "fidelidadeHistorico", "fidelidadeRecompensas", "fidelidadeRelatorios",
 ];
-const DELIVERY_SECTION_IDS = [
-  "deliveryDashboard", "deliveryCatalogo", "deliveryCategorias", "deliveryProdutos", "deliveryAdicionais",
-  "deliveryVitrine", "deliveryPedidos", "deliveryFretes", "deliveryEntregadores", "deliveryConfiguracoes",
-];
-const CARDAPIO_SECTION_IDS = [
-  "cardapioItens", "cardapioEstoque", "cardapioCategorias", "cardapioConsulta", "cardapioAdicionais",
-];
-/** Seções Cardápio reutilizam telas do Delivery (mesmo DOM). */
-const CARDAPIO_VIEW_SECTION = {
-  cardapioItens: "deliveryProdutos",
-  cardapioEstoque: "cardapioEstoque",
-  cardapioCategorias: "deliveryCategorias",
-  cardapioConsulta: "deliveryCatalogo",
-  cardapioAdicionais: "deliveryAdicionais",
-};
-function cardapioContentSection(section) {
-  return CARDAPIO_VIEW_SECTION[section] || section;
-}
 const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
   "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
@@ -1682,17 +1664,12 @@ const ALL_NAV_SECTION_IDS = new Set([
   "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes",
   "investimentoDashboard", "investimentoReservas", "investimentoSimulador",
   "investimentoCarteira", "investimentoResgates", "investimentoRelatorios",
-  "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha",
-  "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico",
-  "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal",
   "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs",
   "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes",
-  "openClawIntegracao", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07",
+  "openClawIntegracao", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalPainelModulo07",
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
-  ...DELIVERY_SECTION_IDS,
-  ...CARDAPIO_SECTION_IDS,
 ]);
 
 function syncUrlSectionHash(section) {
@@ -2050,7 +2027,7 @@ function labelTipoVinculo(value) {
 // Regras de permissao utilizadas para montar menus, botoes e acoes por perfil.
 const PERMISSOES = {
   ADMIN: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica", "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "integracaoVendafacil", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "integracaoWebhooks", "integracaoTokens", "integracaoConfiguracoes", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "openClawIntegracao", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes"],
     canManageUsuarios: true,
     canManageProdutos: true,
     canManageUnidades: true,
@@ -2058,7 +2035,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: true,
   },
   GERENTE: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "comercialDashboard", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialHistorico", "comercialRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "locais", "compras", "produtos", "fechaTecnica", "estoque", "lotes", "movimentacoes", "relatorios", "fornecedores", "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash", "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv", "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores", "investimentoDashboard", "investimentoReservas", "investimentoSimulador", "investimentoCarteira", "investimentoResgates", "investimentoRelatorios", "integracaoAplicacoes", "integracaoHealthCheck", "integracaoLogs", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "funcionarios", "rhDashboard", "rhVagas", "rhCandidatos", "rhBancoTalentos", "rhRelatorios", "rhFolhaPonto", "rhRescisaoDashboard", "rhRescisaoSimulador", "rhRescisaoCalculo", "rhRescisaoComparativo", "rhRescisaoHistorico", "rhRescisaoRelatorios", "energiaDashboard", "energiaEquipamentos", "energiaProjecao", "energiaRelatorios", "patrimonioDashboard", "patrimonios", "patrimonioCategorias", "patrimonioMovimentacoes", "patrimonioManutencoes", "patrimonioInventario", "patrimonioRelatorios", "patrimonioConfiguracoes", "fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "logs", "aylaDashboard"],
     canManageUsuarios: false,
     canManageProdutos: true,
     canManageUnidades: false,
@@ -2122,7 +2099,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   ATENDENTE_CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas", "comercialPdv", "comercialPagamentos", "comercialFechamento"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "proventos", "reciboAjuda", "fechamento", "fechamentoDash", "fechaTecnica", "reservaDashboard", "reservaMesa", "reservaFormasPagamento", "historicoReservas"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2130,7 +2107,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   CAIXA: {
-    sections: ["boasVindas", "minhaConta", "dashboard", "comercialPdv", "comercialPagamentos", "comercialFechamento", "fechaTecnica"],
+    sections: ["boasVindas", "minhaConta", "dashboard", "fechaTecnica"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2138,7 +2115,7 @@ const PERMISSOES = {
     canRegistrarMovimentacoes: false,
   },
   GARCOM: {
-    sections: ["boasVindas", "minhaConta", "comercialMesas", "comercialPedidos", "reservaDashboard", "reservaMesa"],
+    sections: ["boasVindas", "minhaConta", "reservaDashboard", "reservaMesa"],
     canManageUsuarios: false,
     canManageProdutos: false,
     canManageUnidades: false,
@@ -2171,12 +2148,6 @@ const PERMISSOES = {
     if (!sections.includes(section)) sections.push(section);
   });
   FIDELIDADE_SECTION_IDS.forEach((section) => {
-    if (!sections.includes(section)) sections.push(section);
-  });
-  DELIVERY_SECTION_IDS.forEach((section) => {
-    if (!sections.includes(section)) sections.push(section);
-  });
-  CARDAPIO_SECTION_IDS.forEach((section) => {
     if (!sections.includes(section)) sections.push(section);
   });
 });
@@ -5469,14 +5440,14 @@ function applyPermissions() {
   }
   sections = sections.filter((s) => s !== "rhDocumentos");
   if (perfilAdminPlataforma) {
-    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS, ...DELIVERY_SECTION_IDS, ...CARDAPIO_SECTION_IDS].forEach((s) => {
+    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS].forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
   }
   if (perfilAdminPlataforma && !sections.includes("openClawIntegracao")) {
     sections = [...sections, "openClawIntegracao"];
   }
-  ["fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalVendaPdv", "fiscalPainelModulo07"].forEach((s) => {
+  ["fiscalPacoteContador", "fiscalEmissaoConfig", "fiscalEmpresas", "fiscalPerfisTributarios", "fiscalComprasRelatorio", "fiscalMovimentacoesRelatorio", "fiscalProducao", "fiscalPainelModulo07"].forEach((s) => {
     if ((perfilAdminPlataforma || perfilGerentePlataforma) && !sections.includes(s)) {
       sections = [...sections, s];
     }
@@ -5588,12 +5559,6 @@ function applyPermissions() {
       regras.sections.includes("investimentoRelatorios");
     investimentoNavSubmenu.classList.toggle("hidden", !temAcessoInvestimento);
   }
-  const comercialNavSubmenu = document.getElementById("comercialMenu")?.closest(".nav-submenu");
-  if (comercialNavSubmenu) {
-    const comercialKeys = ["comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal"];
-    const temAcessoComercial = comercialKeys.some((k) => regras.sections.includes(k));
-    comercialNavSubmenu.classList.toggle("hidden", !temAcessoComercial);
-  }
   const orcamentosNavSubmenu = document.getElementById("orcamentosMenu")?.closest(".nav-submenu");
   if (orcamentosNavSubmenu) {
     const temAcessoOrcamentos = ORCAMENTOS_SECTION_IDS.some((s) => regras.sections.includes(s));
@@ -5602,14 +5567,6 @@ function applyPermissions() {
   const fidelidadeNavSubmenu = document.getElementById("fidelidadeMenu")?.closest(".nav-submenu");
   if (fidelidadeNavSubmenu) {
     fidelidadeNavSubmenu.classList.toggle("hidden", !FIDELIDADE_SECTION_IDS.some((s) => regras.sections.includes(s)));
-  }
-  const deliveryNavSubmenu = document.getElementById("deliveryMenu")?.closest(".nav-submenu");
-  if (deliveryNavSubmenu) {
-    deliveryNavSubmenu.classList.toggle("hidden", !DELIVERY_SECTION_IDS.some((s) => regras.sections.includes(s)));
-  }
-  const cardapioNavSubmenu = document.getElementById("cardapioMenu")?.closest(".nav-submenu");
-  if (cardapioNavSubmenu) {
-    cardapioNavSubmenu.classList.toggle("hidden", !CARDAPIO_SECTION_IDS.some((s) => regras.sections.includes(s)));
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
@@ -5791,7 +5748,7 @@ let visibleSectionEl = null;
 
 function navigateTo(section) {
   if (section === "rhDocumentos") section = "rhCandidatos";
-  const contentSection = cardapioContentSection(section);
+  const contentSection = section;
   refreshDomShellNav();
   if (!dom.sections.length) {
     refreshDomShellNav();
@@ -5832,7 +5789,6 @@ function navigateTo(section) {
     visibleSectionEl = document.getElementById(nextSectionId);
     visibleSectionEl?.classList.remove("hidden");
   }
-  window.cpdvSyncTopbarFocus?.(section);
   const contentScroll = document.querySelector(".content");
   if (contentScroll) contentScroll.scrollTop = 0;
   if (sidebarNavScroll) sidebarNavScroll.scrollTop = sidebarScrollTop;
@@ -5937,7 +5893,7 @@ function navigateTo(section) {
   }
   const configuracoesNavSubmenuNav = document.getElementById("configuracoesMenu")?.closest(".nav-submenu");
   if (configuracoesNavSubmenuNav) {
-    if (section === "openClawIntegracao" || section === "fiscalPacoteContador" || section === "fiscalEmissaoConfig" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalVendaPdv" || section === "fiscalPainelModulo07") {
+    if (section === "openClawIntegracao" || section === "fiscalPacoteContador" || section === "fiscalEmissaoConfig" || section === "fiscalEmpresas" || section === "fiscalPerfisTributarios" || section === "fiscalComprasRelatorio" || section === "fiscalMovimentacoesRelatorio" || section === "fiscalProducao" || section === "fiscalPainelModulo07") {
       configuracoesNavSubmenuNav.classList.add("open");
     } else {
       configuracoesNavSubmenuNav.classList.remove("open");
@@ -5954,12 +5910,6 @@ function navigateTo(section) {
     if (patSections.includes(section)) patrimonioNavSubmenuNav.classList.add("open");
     else patrimonioNavSubmenuNav.classList.remove("open");
   }
-  const comercialNavSubmenuNav = document.getElementById("comercialMenu")?.closest(".nav-submenu");
-  if (comercialNavSubmenuNav) {
-    const cpdvSections = ["comercialDashboard", "comercialPdv", "comercialMesas", "comercialPedidos", "comercialCozinha", "comercialPagamentos", "comercialFechamento", "comercialClientes", "comercialHistorico", "comercialRelatorios", "comercialConfiguracoes", "comercialFiscal"];
-    if (cpdvSections.includes(section)) comercialNavSubmenuNav.classList.add("open");
-    else comercialNavSubmenuNav.classList.remove("open");
-  }
   const orcamentosNavSubmenuNav = document.getElementById("orcamentosMenu")?.closest(".nav-submenu");
   if (orcamentosNavSubmenuNav) {
     if (ORCAMENTOS_SECTION_IDS.includes(section)) orcamentosNavSubmenuNav.classList.add("open");
@@ -5968,14 +5918,6 @@ function navigateTo(section) {
   const fidelidadeNavSubmenuNav = document.getElementById("fidelidadeMenu")?.closest(".nav-submenu");
   if (fidelidadeNavSubmenuNav) {
     fidelidadeNavSubmenuNav.classList.toggle("open", FIDELIDADE_SECTION_IDS.includes(section));
-  }
-  const deliveryNavSubmenuNav = document.getElementById("deliveryMenu")?.closest(".nav-submenu");
-  if (deliveryNavSubmenuNav) {
-    deliveryNavSubmenuNav.classList.toggle("open", DELIVERY_SECTION_IDS.includes(section));
-  }
-  const cardapioNavSubmenuNav = document.getElementById("cardapioMenu")?.closest(".nav-submenu");
-  if (cardapioNavSubmenuNav) {
-    cardapioNavSubmenuNav.classList.toggle("open", CARDAPIO_SECTION_IDS.includes(section));
   }
   const integracoesNavSubmenuNav = document.getElementById("integracoesMenu")?.closest(".nav-submenu");
   if (integracoesNavSubmenuNav) {
@@ -5997,18 +5939,6 @@ function navigateTo(section) {
   else if (section === "investimentoCarteira") loadInvestimentoCarteira?.().catch(() => {});
   else if (section === "investimentoResgates") loadInvestimentoResgates?.().catch(() => {});
   else if (section === "investimentoRelatorios") loadInvestimentoRelatorios?.().catch(() => {});
-  else if (section === "comercialDashboard") loadComercialDashboard?.().catch(() => {});
-  else if (section === "comercialPdv") loadComercialPdv?.().catch(() => {});
-  else if (section === "comercialMesas") loadComercialMesas?.().catch(() => {});
-  else if (section === "comercialPedidos") loadComercialPedidos?.().catch(() => {});
-  else if (section === "comercialCozinha") loadComercialCozinha?.().catch(() => {});
-  else if (section === "comercialPagamentos") loadComercialPagamentos?.().catch(() => {});
-  else if (section === "comercialFechamento") loadComercialFechamento?.().catch(() => {});
-  else if (section === "comercialClientes") loadComercialClientes?.().catch(() => {});
-  else if (section === "comercialHistorico") loadComercialHistorico?.().catch(() => {});
-  else if (section === "comercialRelatorios") loadComercialRelatorios?.().catch(() => {});
-  else if (section === "comercialConfiguracoes") loadComercialConfiguracoes?.().catch(() => {});
-  else if (section === "comercialFiscal") loadComercialFiscal?.().catch(() => {});
   else if (section === "financeiroDashboard") loadFinanceiroDashboard?.().catch(() => {});
   else if (section === "financeiroFluxoCaixa") loadFinanceiroFluxoCaixa?.().catch(() => {});
   else if (section === "financeiroContasReceber") loadFinanceiroContasReceber?.().catch(() => {});
@@ -6032,8 +5962,6 @@ function navigateTo(section) {
     window.loadFiscalMovimentacoesRelatorio?.().catch((e) => showToast(e?.message || "Falha ao carregar relatório fiscal de movimentações.", "error"));
   } else if (section === "fiscalProducao") {
     window.loadFiscalProducao?.().catch((e) => showToast(e?.message || "Falha ao carregar produção fiscal.", "error"));
-  } else if (section === "fiscalVendaPdv") {
-    window.loadFiscalVendaPdv?.().catch((e) => showToast(e?.message || "Falha ao carregar vendas fiscais.", "error"));
   } else if (section === "fiscalPainelModulo07") {
     window.loadFiscalPainelModulo07?.().catch((e) => showToast(e?.message || "Falha ao carregar painel fiscal M7.", "error"));
   }
@@ -6064,17 +5992,6 @@ function navigateTo(section) {
   else if (section === "fidelidadeHistorico") Promise.resolve(loadFidelidadeHistorico?.()).catch((e) => showToast(e?.message || "Falha ao carregar o extrato.", "error"));
   else if (section === "fidelidadeRecompensas") Promise.resolve(loadFidelidadeRecompensas?.()).catch((e) => showToast(e?.message || "Falha ao carregar recompensas.", "error"));
   else if (section === "fidelidadeRelatorios") Promise.resolve(loadFidelidadeRelatorios?.()).catch((e) => showToast(e?.message || "Falha ao carregar relatórios.", "error"));
-  else if (section === "deliveryDashboard") Promise.resolve(loadDeliveryDashboard?.()).catch((e) => showToast(e?.message || "Falha ao carregar Delivery.", "error"));
-  else if (section === "deliveryCatalogo" || section === "cardapioConsulta") Promise.resolve(loadDeliveryCatalogo?.()).catch((e) => showToast(e?.message || "Falha ao carregar o catálogo.", "error"));
-  else if (section === "deliveryCategorias" || section === "cardapioCategorias") Promise.resolve(loadDeliveryCategorias?.()).catch((e) => showToast(e?.message || "Falha ao carregar categorias.", "error"));
-  else if (section === "deliveryProdutos" || section === "cardapioItens") Promise.resolve(loadDeliveryProdutos?.()).catch((e) => showToast(e?.message || "Falha ao carregar produtos.", "error"));
-  else if (section === "cardapioEstoque") Promise.resolve(loadCardapioEstoque?.()).catch((e) => showToast(e?.message || "Falha ao carregar estoque do cardápio.", "error"));
-  else if (section === "deliveryAdicionais" || section === "cardapioAdicionais") Promise.resolve(loadDeliveryAdicionais?.()).catch((e) => showToast(e?.message || "Falha ao carregar adicionais.", "error"));
-  else if (section === "deliveryVitrine") Promise.resolve(loadDeliveryVitrine?.()).catch((e) => showToast(e?.message || "Falha ao carregar a página de venda.", "error"));
-  else if (section === "deliveryPedidos") Promise.resolve(loadDeliveryPedidos?.()).catch((e) => showToast(e?.message || "Falha ao carregar pedidos.", "error"));
-  else if (section === "deliveryFretes") Promise.resolve(loadDeliveryFretes?.()).catch((e) => showToast(e?.message || "Falha ao carregar fretes.", "error"));
-  else if (section === "deliveryEntregadores") Promise.resolve(loadDeliveryEntregadores?.()).catch((e) => showToast(e?.message || "Falha ao carregar entregadores.", "error"));
-  else if (section === "deliveryConfiguracoes") Promise.resolve(loadDeliveryConfiguracoes?.()).catch((e) => showToast(e?.message || "Falha ao carregar configurações.", "error"));
   else if (section === "rhRescisaoDashboard") loadRhRescisaoDashboard?.().catch(() => {});
   else if (section === "rhRescisaoSimulador") loadRhRescisaoSimulador?.().catch(() => {});
   else if (section === "rhRescisaoCalculo") loadRhRescisaoCalculo?.().catch(() => {});
@@ -27777,7 +27694,6 @@ async function init() {
   if (typeof setupPatrimonioModule === "function") setupPatrimonioModule();
   if (typeof setupInvestimentoModule === "function") setupInvestimentoModule();
   if (typeof setupRhRescisaoModule === "function") setupRhRescisaoModule();
-  if (typeof setupComercialPdvModule === "function") setupComercialPdvModule();
   if (typeof setupIntegracoesModule === "function") setupIntegracoesModule();
   const startMatrix = () => {
     if (dom.loginOverlay?.classList.contains("hidden")) return;

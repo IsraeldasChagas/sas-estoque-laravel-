@@ -4,8 +4,6 @@ namespace App\Services\Fidelidade;
 
 use App\Models\ReservaMesa;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Gera link público da vitrine fidelidade para o cliente consultar selos.
@@ -79,28 +77,10 @@ final class FidelidadeVitrineLinkService
         return rtrim((string) config('app.url'), '/');
     }
 
+    /** A página pública de fidelidade ficava na loja do Delivery, que foi removida. */
     private function resolverLoja(int $unidadeId): ?object
     {
-        if ($unidadeId <= 0 || ! Schema::hasTable('dlv_loja_config')) {
-            return null;
-        }
-
-        $query = DB::table('dlv_loja_config')->where('ativo', 1);
-
-        if (Schema::hasColumn('dlv_loja_config', 'unidade_fidelidade_id')) {
-            $loja = (clone $query)->where('unidade_fidelidade_id', $unidadeId)->orderBy('id')->first();
-            if ($loja && ! empty($loja->slug)) {
-                return $loja;
-            }
-        }
-
-        $loja = DB::table('dlv_loja_config')
-            ->where('ativo', 1)
-            ->where('unidade_id', $unidadeId)
-            ->orderBy('id')
-            ->first();
-
-        return ($loja && ! empty($loja->slug)) ? $loja : null;
+        return null;
     }
 
     /** @return array{url:?string,slug:?string,nome_loja:?string,whatsapp_url:?string,mensagem_whatsapp:?string} */

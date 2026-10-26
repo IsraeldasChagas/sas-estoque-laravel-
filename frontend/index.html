@@ -63,20 +63,13 @@
     <link rel="stylesheet" href="fiscal-compras.css?v=20260727-fiscal-m2-ready" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="fiscal-movimentacoes.css?v=20260727-fiscal-m3" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="fiscal-producao.css?v=20260728-ficha-vinculo" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="fiscal-venda-pdv.css?v=20260727-fiscal-m6" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="fiscal-modulo-07.css?v=20260727-fiscal-m7" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="fiscal-pacote-contador.css?v=20260728-pacote" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="fiscal-emissao-config.css?v=20260728-focus" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="comercial-pdv.css?v=20260813-btns-sm" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto3" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-delivery.css?v=20260719-prod-indisponivel" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-delivery-catalog-admin.css?v=20260728-select-compacto" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-delivery-orders-vf.css?v=20260719-vf-exact" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-delivery-logistics-vf.css?v=20260717-vf1" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="style-delivery-store-vf.css?v=20260719-pagamento-online" media="print" onload="this.media='all'" />
   </head>
   <body>
     <!-- Tela exibida antes do usuario se autenticar -->
@@ -247,37 +240,6 @@
               <a href="#" class="nav-link nav-link-child" data-section="fidelidadeRelatorios"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Relatórios</span></a>
             </div>
           </div>
-          <div class="nav-submenu nav-submenu--cardapio">
-            <a href="#" class="nav-link nav-link-parent" id="cardapioMenu">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Cardápio</span></span>
-              <span class="nav-arrow">▼</span>
-            </a>
-            <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="cardapioItens" title="Itens, preços e visibilidade PDV/delivery"><span class="nav-icon" aria-hidden="true">◆</span><span class="nav-label">Itens</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="cardapioEstoque" title="Saldo para venda no PDV, mesas e delivery"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Estoque</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="cardapioCategorias"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label">Categorias</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="cardapioConsulta"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Consulta</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="cardapioAdicionais"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">Adicionais</span></a>
-            </div>
-          </div>
-          <div class="nav-submenu nav-submenu--delivery">
-            <a href="#" class="nav-link nav-link-parent" id="deliveryMenu">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🛵</span><span class="nav-label">Delivery</span></span>
-              <span class="nav-arrow">▼</span>
-            </a>
-            <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryDashboard"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Dashboard</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryCatalogo"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Catálogo (Consulta)</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryCategorias"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label">Categorias</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryProdutos"><span class="nav-icon" aria-hidden="true">◆</span><span class="nav-label">Produtos Delivery</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryAdicionais"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">Adicionais</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryVitrine"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label">Página de Venda</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryPedidos"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Pedidos</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryFretes"><span class="nav-icon" aria-hidden="true">📍</span><span class="nav-label">Fretes</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryEntregadores"><span class="nav-icon" aria-hidden="true">◎</span><span class="nav-label">Entregadores</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="deliveryConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-label">Configurações</span></a>
-            </div>
-          </div>
           <div class="nav-submenu nav-submenu--rh">
             <a href="#" class="nav-link nav-link-parent" id="rhMenu">
               <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">👔</span><span class="nav-label">RH</span></span>
@@ -383,26 +345,6 @@
               <a href="#" class="nav-link nav-link-child" data-section="investimentoRelatorios"><span class="nav-icon" aria-hidden="true">📑</span><span class="nav-label">Relatórios</span></a>
             </div>
           </div>
-          <div class="nav-submenu nav-submenu--comercial">
-            <a href="#" class="nav-link nav-link-parent" id="comercialMenu">
-              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Comercial</span></span>
-              <span class="nav-arrow">▼</span>
-            </a>
-            <div class="nav-submenu-content">
-              <a href="#" class="nav-link nav-link-child" data-section="comercialDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard Comercial</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialPdv"><span class="nav-icon" aria-hidden="true">🖥️</span><span class="nav-label">PDV / Caixa</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialMesas"><span class="nav-icon" aria-hidden="true">🍽️</span><span class="nav-label">Mesas e Comandas</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialPedidos"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Pedidos</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialCozinha"><span class="nav-icon" aria-hidden="true">👨‍🍳</span><span class="nav-label">Cozinha / Produção</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialPagamentos"><span class="nav-icon" aria-hidden="true">💳</span><span class="nav-label">Pagamentos</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialFechamento"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Fechamento de Caixa</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialClientes"><span class="nav-icon" aria-hidden="true">👤</span><span class="nav-label">Clientes</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialHistorico"><span class="nav-icon" aria-hidden="true">🕘</span><span class="nav-label">Histórico de Vendas</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialRelatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatórios Comerciais</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações do PDV</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="comercialFiscal"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Fiscal</span></a>
-            </div>
-          </div>
           <div class="nav-submenu nav-submenu--patrimonio">
             <a href="#" class="nav-link nav-link-parent" id="patrimonioMenu">
               <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🏛️</span><span class="nav-label">Patrimônio</span></span>
@@ -433,7 +375,6 @@
               <a href="#" class="nav-link nav-link-child" data-section="fiscalComprasRelatorio"><span class="nav-icon" aria-hidden="true">📥</span><span class="nav-label">Entradas fiscais (compras)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalMovimentacoesRelatorio"><span class="nav-icon" aria-hidden="true">📤</span><span class="nav-label">Movimentações e eventos fiscais</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalProducao"><span class="nav-icon" aria-hidden="true">🍳</span><span class="nav-label">Produção (ficha técnica)</span></a>
-              <a href="#" class="nav-link nav-link-child" data-section="fiscalVendaPdv"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Vendas PDV (fiscal)</span></a>
               <a href="#" class="nav-link nav-link-child" data-section="fiscalPainelModulo07"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Fiscal — consolidação (M7)</span></a>
               <div class="nav-submenu-divider-label">Integrações</div>
               <a href="#" class="nav-link nav-link-child" data-section="openClawIntegracao"><span class="nav-icon" aria-hidden="true">🦞</span><span class="nav-label">OpenClaw / Assistente IA</span></a>
@@ -4296,54 +4237,6 @@
             </div>
           </section>
 
-          <!-- Módulo Comercial / PDV — protótipo visual -->
-          <section id="comercialDashboardSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🛒 Dashboard Comercial</h2><p class="subtle-text">Visão demonstrativa de vendas, mesas e produção.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialDashboardRoot"></div>
-          </section>
-          <section id="comercialPdvSection" class="view-section hidden">
-            <div class="cpdv-page-wrap" id="comercialPdvRoot"></div>
-          </section>
-          <section id="comercialMesasSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🍽️ Mesas e Comandas</h2><p class="subtle-text">Mapa de mesas e fluxo de comanda (demo).</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialMesasRoot"></div>
-          </section>
-          <section id="comercialPedidosSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🧾 Pedidos</h2><p class="subtle-text">Listagem demonstrativa de pedidos.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialPedidosRoot"></div>
-          </section>
-          <section id="comercialCozinhaSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>👨‍🍳 Cozinha / Produção</h2><p class="subtle-text">KDS visual — cozinha, bar e sobremesas.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialCozinhaRoot"></div>
-          </section>
-          <section id="comercialPagamentosSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>💳 Pagamentos</h2><p class="subtle-text">Simulação de recebimentos e troco.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialPagamentosRoot"></div>
-          </section>
-          <section id="comercialFechamentoSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🧮 Fechamento de Caixa (PDV)</h2><p class="subtle-text">Protótipo separado do fechamento financeiro existente.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialFechamentoRoot"></div>
-          </section>
-          <section id="comercialClientesSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>👤 Clientes</h2><p class="subtle-text">Cadastro demonstrativo — sem persistência.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialClientesRoot"></div>
-          </section>
-          <section id="comercialHistoricoSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🕘 Histórico de Vendas</h2><p class="subtle-text">Consulta visual de vendas demonstrativas.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialHistoricoRoot"></div>
-          </section>
-          <section id="comercialRelatoriosSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>📈 Relatórios Comerciais</h2><p class="subtle-text">Cards de relatório — PDF/Excel apenas visuais.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialRelatoriosRoot"></div>
-          </section>
-          <section id="comercialConfiguracoesSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>⚙️ Configurações do PDV</h2><p class="subtle-text">Somente protótipo das futuras configurações.</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialConfiguracoesRoot"></div>
-          </section>
-          <section id="comercialFiscalSection" class="view-section hidden">
-            <div class="cpdv-section-head"><div><h2>🏛️ Fiscal</h2><p class="subtle-text">Consolidação, PDV com estoque, NFC-e Focus (após configuração) e empresas (CNPJ).</p></div></div>
-            <div class="cpdv-page-wrap" id="comercialFiscalRoot"></div>
-          </section>
 
           <!-- Módulo Patrimônio -->
           <section id="patrimonioDashboardSection" class="view-section hidden">
@@ -4715,10 +4608,6 @@
           <section id="fiscalProducaoSection" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>🍳 Produção fiscal</h2><p class="subtle-text">Ordem de produção a partir da ficha técnica — baixa de insumos, entrada do produto final e evento fiscal.</p></div></div>
             <div id="fiscalProducaoRoot" class="int-page-wrap"></div>
-          </section>
-          <section id="fiscalVendaPdvSection" class="view-section hidden cfg-module-section">
-            <div class="cfg-section-head"><div><h2>🛒 Vendas PDV (fiscal)</h2><p class="subtle-text">Venda com baixa de estoque — trava CNPJ do PDV × estoque. Integração opcional no PDV/Caixa.</p></div></div>
-            <div id="fiscalVendaPdvRoot" class="int-page-wrap"></div>
           </section>
           <section id="fiscalPainelModulo07Section" class="view-section hidden cfg-module-section">
             <div class="cfg-section-head"><div><h2>📊 Fiscal — consolidação (M7)</h2><p class="subtle-text">Visão gerencial, apuração estimada e simulador tributário (não substitui escrituração oficial).</p></div></div>
@@ -5534,17 +5423,6 @@
         <section id="fidelidadeHistoricoSection" class="view-section hidden"><div id="fidelidadeHistoricoRoot" class="orc-root"></div></section>
         <section id="fidelidadeRecompensasSection" class="view-section hidden"><div id="fidelidadeRecompensasRoot" class="orc-root"></div></section>
         <section id="fidelidadeRelatoriosSection" class="view-section hidden"><div id="fidelidadeRelatoriosRoot" class="orc-root"></div></section>
-        <section id="deliveryDashboardSection" class="view-section hidden"><div id="deliveryDashboardRoot" class="orc-root"></div></section>
-        <section id="deliveryCatalogoSection" class="view-section hidden"><div id="deliveryCatalogoRoot" class="orc-root"></div></section>
-        <section id="deliveryCategoriasSection" class="view-section hidden"><div id="deliveryCategoriasRoot" class="orc-root"></div></section>
-        <section id="deliveryProdutosSection" class="view-section hidden"><div id="deliveryProdutosRoot" class="orc-root"></div></section>
-        <section id="deliveryAdicionaisSection" class="view-section hidden"><div id="deliveryAdicionaisRoot" class="orc-root"></div></section>
-        <section id="deliveryVitrineSection" class="view-section hidden"><div id="deliveryVitrineRoot" class="orc-root"></div></section>
-        <section id="deliveryPedidosSection" class="view-section hidden"><div id="deliveryPedidosRoot" class="orc-root"></div></section>
-        <section id="deliveryFretesSection" class="view-section hidden"><div id="deliveryFretesRoot" class="orc-root"></div></section>
-        <section id="deliveryEntregadoresSection" class="view-section hidden"><div id="deliveryEntregadoresRoot" class="orc-root"></div></section>
-        <section id="deliveryConfiguracoesSection" class="view-section hidden"><div id="deliveryConfiguracoesRoot" class="orc-root"></div></section>
-        <section id="cardapioEstoqueSection" class="view-section hidden"><div id="cardapioEstoqueRoot" class="orc-root"></div></section>
       </main>
     </div>
 
@@ -6280,24 +6158,6 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeHistorico" /> Fidelidade — Extrato</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeRecompensas" /> Fidelidade — Recompensas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeRelatorios" /> Fidelidade — Relatórios</label>
-            <div style="margin-top:0.5rem;"><strong>Submenu: Delivery</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryDashboard" /> Delivery — Dashboard</label>
-            <div style="margin-top:0.5rem;"><strong>Submenu: Cardápio (PDV, mesas e delivery)</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioItens" /> Cardápio — Itens</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioEstoque" /> Cardápio — Estoque</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioCategorias" /> Cardápio — Categorias</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioConsulta" /> Cardápio — Consulta</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="cardapioAdicionais" /> Cardápio — Adicionais</label>
-            <div style="margin-top:0.5rem;"><strong>Submenu: Delivery</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCatalogo" /> Delivery — Catálogo (Consulta)</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryCategorias" /> Delivery — Categorias</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryProdutos" /> Delivery — Produtos</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryAdicionais" /> Delivery — Adicionais</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryVitrine" /> Delivery — Página de Venda</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryPedidos" /> Delivery — Pedidos</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryFretes" /> Delivery — Fretes</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryEntregadores" /> Delivery — Entregadores</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="deliveryConfiguracoes" /> Delivery — Configurações</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRelatorios" /> RH — Relatório</label>
@@ -6355,19 +6215,6 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoCarteira" /> Investimento — Carteira</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoResgates" /> Investimento — Resgates</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="investimentoRelatorios" /> Investimento — Relatórios</label>
-            <div style="margin-top:0.5rem;"><strong>Submenu: Comercial / PDV (protótipo)</strong></div>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialDashboard" /> Comercial — Dashboard</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialPdv" /> Comercial — PDV / Caixa</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialMesas" /> Comercial — Mesas e Comandas</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialPedidos" /> Comercial — Pedidos</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialCozinha" /> Comercial — Cozinha / Produção</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialPagamentos" /> Comercial — Pagamentos</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFechamento" /> Comercial — Fechamento de Caixa</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialClientes" /> Comercial — Clientes</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialHistorico" /> Comercial — Histórico de Vendas</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialRelatorios" /> Comercial — Relatórios</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialConfiguracoes" /> Comercial — Configurações do PDV</label>
-            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comercialFiscal" /> Comercial — Fiscal</label>
             <div style="margin-top:0.5rem;"><strong>Menu: Integrações</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoVendafacil" /> Integrações — VendaFácil</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="integracaoAplicacoes" /> Integrações — Aplicações Conectadas</label>
@@ -7919,16 +7766,9 @@
     <script defer src="rh-rescisao.js?v=20260608-trct"></script>
     <script defer src="impostos.js?v=20261025310000-impostos"></script>
     <script defer src="fiscal-documentos.js?v=20260813-ciclo-nfce"></script>
-    <script defer src="comercial-pdv.js?v=20260813-cancel-red"></script>
     <script defer src="integracoes.js?v=20260728-cfg-ui2"></script>
     <script defer src="orcamentos.js?v=20260717-functional1"></script>
     <script defer src="fidelidade.js?v=20260720-selo-minimo"></script>
-    <script defer src="delivery.js?v=20260728-select-compacto"></script>
-    <script defer src="cardapio-estoque.js?v=20260809-estoque-b5"></script>
-    <script defer src="delivery-catalog-admin.js?v=20260717-vf1"></script>
-    <script defer src="delivery-orders-vf.js?v=20260720-motoboy-oferta"></script>
-    <script defer src="delivery-logistics-vf.js?v=20260720-motoboy-pin2"></script>
-    <script defer src="delivery-store-vf.js?v=20260724-pagina-venda-menu"></script>
     <script defer src="pwa.js?v=20261015-pwa"></script>
     <script>
       (function () {
@@ -7944,14 +7784,13 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025370000-compras"></script>
+    <script defer src="app.js?v=20261025390000-semdelivery"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
     <script defer src="fiscal-compras.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-movimentacoes.js?v=20260813-nfe-transf"></script>
     <script defer src="fiscal-producao.js?v=20260728-cardapio-ficha"></script>
-    <script defer src="fiscal-venda-pdv.js?v=20260730-modo-emissao"></script>
     <script defer src="fiscal-modulo-07.js?v=20260728-cfg-ui2"></script>
     <script defer src="financeiro-gerencial.js?v=20261025220000-ind"></script>
      
