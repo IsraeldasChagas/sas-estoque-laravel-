@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Mesa;
 use App\Models\ReservaMesa;
-use App\Services\Reservas\ReservaContaService;
+use App\Services\Fidelidade\ReservaFidelidadeService;
 use App\Services\Reservas\ReservaMeioPagamentoService;
 use App\Support\ReservaMesaAcesso;
 use Illuminate\Http\Request;
@@ -491,6 +491,8 @@ class ReservaMesaController extends Controller
 
         $reserva = ReservaMesa::create($data);
 
+        $reserva = app(ReservaFidelidadeService::class)->aplicarParticipanteExistente($reserva);
+
         $mesa->update(['status' => Mesa::STATUS_RESERVADA]);
         $this->sincronizarVinculoPrincipal($reserva, $extrasReq);
 
@@ -604,7 +606,7 @@ class ReservaMesaController extends Controller
             'hora_reserva', 'qtd_pessoas', 'status', 'observacao', 'local', 'ocasiao'
         ]));
 
-        $reserva = $reserva->fresh();
+        $reserva = app(ReservaFidelidadeService::class)->aplicarParticipanteExistente($reserva->fresh());
 
         $this->sincronizarVinculoPrincipal($reserva, $extrasEfetivas);
         $reserva->load(['mesa:id,numero_mesa,nome_mesa,capacidade,capacidade_base,capacidade_maxima,permite_cadeiras_extras,cadeiras_extras_max', 'usuario:id,nome']);
@@ -682,24 +684,44 @@ class ReservaMesaController extends Controller
     }
 
     /**
-     * Conta da reserva: valor, pagamentos registrados e formas cadastradas.
+     * Snapshot fidelidade da reserva (cartão, saldo, programa).
      */
-    public function conta(Request $request, $id)
+    public function fidelidade(Request $request, $id)
     {
         $ctx = $this->autorizarReservaOu403($request, $id);
         if ($ctx instanceof \Illuminate\Http\JsonResponse) {
             return $ctx;
         }
+        ['reserva' => $reserva] = $ctx;
 
-        return response()->json(app(ReservaContaService::class)->resumo($ctx['reserva']));
+        $fid = app(ReservaFidelidadeService::class);
+        $snap = $fid->snapshot($reserva);
+        $recompensas = ($snap['disponivel'] && $snap['programa_ativo'])
+            ? $fid->listarRecompensas((int) $reserva->unidade_id)
+            : [];
+        $vitrine = app(\App\Services\Fidelidade\FidelidadeVitrineLinkService::class)->paraReserva($reserva, $request);
+
+        return response()->json(array_merge($snap, [
+            'recompensas' => $recompensas,
+            'reserva_id' => (int) $reserva->id,
+            'vitrine_fidelidade' => $vitrine,
+            'recompensa_programa' => ($snap['programa'] ?? null)
+                ? app(\App\Services\Fidelidade\FidelidadeProgramaApresentacaoService::class)
+                    ->resumoRecompensa($snap['programa'], $snap['conta'] ? (int) $snap['conta']->id : null)
+                : null,
+        ]));
     }
 
-    public function contaPaga(Request $request, $id)
+    /**
+     * Conta paga: registra valor, cria cartão se necessário e libera o selo.
+     */
+    public function fidelidadeContaPaga(Request $request, $id)
     {
         $ctx = $this->autorizarReservaOu403($request, $id);
         if ($ctx instanceof \Illuminate\Http\JsonResponse) {
             return $ctx;
         }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
 
         $data = Validator::make($request->all(), [
             'valor_conta' => 'required|numeric|min:0|max:9999999.99',
@@ -710,10 +732,11 @@ class ReservaMesaController extends Controller
         ])->validate();
 
         try {
-            $result = app(ReservaContaService::class)->registrarContaPaga(
-                $ctx['reserva'],
+            $result = app(ReservaFidelidadeService::class)->registrarContaPaga(
+                $reserva,
                 (float) $data['valor_conta'],
-                $data['pagamentos']
+                $data['pagamentos'],
+                $usuario ? (int) $usuario->id : null
             );
         } catch (ValidationException $e) {
             return response()->json([
@@ -722,9 +745,214 @@ class ReservaMesaController extends Controller
             ], 422);
         }
 
+        $msg = $result['replayed']
+            ? 'Conta já estava paga.'.($result['selo_liberado'] ? ' Selo desta reserva já havia sido creditado.' : '')
+            : ((bool) ($result['reserva']->participa_fidelidade ?? false)
+                ? ($result['selo_liberado']
+                    ? ($result['criado_conta']
+                        ? 'Conta paga registrada. Cartão criado e selo liberado.'
+                        : 'Conta paga registrada. Selo liberado.')
+                    : ($result['selo_motivo'] ?: 'Conta paga registrada. Selo não liberado (valor abaixo do mínimo).'))
+                : 'Conta paga registrada. Você já pode liberar a mesa.');
+
         return response()->json([
-            'message' => $result['replayed'] ? 'Conta já estava paga.' : 'Conta paga registrada. Você já pode liberar a mesa.',
+            'message' => $msg,
             'reserva' => $result['reserva'],
+            'conta' => $result['conta'],
+            'ledger' => $result['ledger'],
+            'replayed' => $result['replayed'],
+            'criado_conta' => $result['criado_conta'],
+            'selo_liberado' => (bool) ($result['selo_liberado'] ?? false),
+            'selo_motivo' => $result['selo_motivo'] ?? null,
+            'vitrine_fidelidade' => app(\App\Services\Fidelidade\FidelidadeVitrineLinkService::class)
+                ->paraReserva($result['reserva'], $request),
+        ], $result['replayed'] ? 200 : 201);
+    }
+
+    /**
+     * Credita selo manualmente pela reserva.
+     */
+    public function fidelidadeSelo(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        try {
+            $result = app(ReservaFidelidadeService::class)->creditarSelo(
+                $reserva,
+                $usuario ? (int) $usuario->id : null,
+                true
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível creditar o selo.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => $result['replayed'] ? 'Selo já havia sido creditado nesta reserva.' : 'Selo creditado.',
+            'conta' => $result['conta'],
+            'ledger' => $result['ledger'],
+            'replayed' => $result['replayed'],
+            'criado_conta' => $result['criado_conta'],
+        ], $result['replayed'] ? 200 : 201);
+    }
+
+    /**
+     * Marca se o cliente deseja participar do programa fidelidade nesta reserva.
+     */
+    public function participaFidelidade(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva] = $ctx;
+
+        if ($reserva->conta_paga) {
+            return response()->json(['message' => 'Conta já paga; não é possível alterar a opção de fidelidade.'], 422);
+        }
+
+        $data = Validator::make($request->all(), [
+            'participa_fidelidade' => 'required|boolean',
+        ])->validate();
+
+        $participa = (bool) $data['participa_fidelidade'];
+
+        if (! $participa && app(ReservaFidelidadeService::class)->reservaTemCartaoExistente($reserva)) {
+            return response()->json([
+                'message' => 'Cliente já possui cartão fidelidade. A participação é automática nesta reserva.',
+            ], 422);
+        }
+
+        if (! $participa) {
+            $reserva->participa_fidelidade = false;
+            app(ReservaFidelidadeService::class)->limparDadosFidelidade($reserva);
+        } else {
+            $reserva->participa_fidelidade = true;
+            $reserva->save();
+        }
+
+        return response()->json([
+            'message' => $reserva->participa_fidelidade
+                ? 'Cliente participará do fidelidade. Informe nome, CPF e e-mail antes de liberar o selo.'
+                : 'Cliente não participará do fidelidade. Registre apenas valor e pagamento.',
+            'reserva' => $reserva->fresh(['mesa', 'usuario']),
+        ]);
+    }
+
+    /**
+     * Salva nome, CPF e e-mail do cliente para o cartão fidelidade (com validação de unicidade).
+     */
+    public function fidelidadeDados(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva] = $ctx;
+
+        if ($reserva->conta_paga) {
+            return response()->json(['message' => 'Conta já paga; não é possível alterar os dados de fidelidade.'], 422);
+        }
+
+        $data = Validator::make($request->all(), [
+            'fidelidade_nome' => 'required|string|min:3|max:160',
+            'fidelidade_cpf' => 'required|string|max:20',
+            'fidelidade_email' => 'required|email|max:160',
+        ])->validate();
+
+        try {
+            app(ReservaFidelidadeService::class)->salvarDadosFidelidade(
+                $reserva,
+                $data['fidelidade_nome'],
+                $data['fidelidade_cpf'],
+                $data['fidelidade_email']
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível validar os dados.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        $reserva->participa_fidelidade = true;
+        $reserva->save();
+
+        return response()->json([
+            'message' => 'Dados do cartão fidelidade confirmados.',
+            'reserva' => $reserva->fresh(['mesa', 'usuario']),
+        ]);
+    }
+
+    /**
+     * Garante cartão fidelidade pelo telefone da reserva (sem creditar selo).
+     */
+    public function fidelidadeGarantir(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        try {
+            $conta = app(ReservaFidelidadeService::class)->garantirConta(
+                $reserva,
+                $usuario ? (int) $usuario->id : null
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível criar o cartão.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Cartão fidelidade pronto.',
+            'conta' => $conta,
+        ]);
+    }
+
+    /**
+     * Paga / resgata recompensa com selos na reserva.
+     */
+    public function fidelidadeResgatar(Request $request, $id)
+    {
+        $ctx = $this->autorizarReservaOu403($request, $id);
+        if ($ctx instanceof \Illuminate\Http\JsonResponse) {
+            return $ctx;
+        }
+        ['reserva' => $reserva, 'usuario' => $usuario] = $ctx;
+
+        $data = Validator::make($request->all(), [
+            'recompensa_id' => 'nullable|integer',
+            'observacao' => 'nullable|string|max:500',
+        ])->validate();
+
+        try {
+            $result = app(ReservaFidelidadeService::class)->pagarComSelos(
+                $reserva,
+                isset($data['recompensa_id']) ? (int) $data['recompensa_id'] : null,
+                $usuario ? (int) $usuario->id : null,
+                $data['observacao'] ?? null
+            );
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->first() ?: 'Não foi possível resgatar.',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Resgate realizado com selos.',
+            'resgate' => $result['resgate'],
+            'conta' => $result['conta'],
+            'ledger' => $result['ledger'],
             'replayed' => $result['replayed'],
         ], $result['replayed'] ? 200 : 201);
     }
@@ -845,9 +1073,9 @@ class ReservaMesaController extends Controller
             $contagemPorCliente[$key] = ($contagemPorCliente[$key] ?? 0) + 1;
         }
 
-        $contaSvc = app(ReservaContaService::class);
+        $fid = app(ReservaFidelidadeService::class);
 
-        $result = $reservas->map(function ($r) use ($chaveCliente, $contagemPorCliente, $contaSvc) {
+        $result = $reservas->map(function ($r) use ($chaveCliente, $contagemPorCliente, $fid) {
             $key = $chaveCliente($r);
             return [
                 'id' => $r->id,
@@ -863,7 +1091,7 @@ class ReservaMesaController extends Controller
                 'conta_paga' => (bool) $r->conta_paga,
                 'valor_conta' => $r->valor_conta !== null ? round((float) $r->valor_conta, 2) : null,
                 'conta_paga_em' => $r->conta_paga_em,
-                'pagamentos_conta' => $contaSvc->pagamentosDaReserva($r),
+                'pagamentos_conta' => $fid->pagamentosContaReserva($r),
             ];
         });
 
